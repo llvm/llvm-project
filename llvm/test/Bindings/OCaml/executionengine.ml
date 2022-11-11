@@ -31,7 +31,7 @@ let define_getglobal m pg =
   let fty = function_type i32_type [||] in
   let fn = define_function "getglobal" fty m in
   let b = builder_at_end (global_context ()) (entry_block fn) in
-  let g = build_call2 fty pg [||] "" b in
+  let g = build_call fty pg [||] "" b in
   ignore (build_ret g b);
   fn
 

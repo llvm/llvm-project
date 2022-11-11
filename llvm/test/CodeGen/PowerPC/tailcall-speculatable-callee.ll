@@ -4,7 +4,7 @@
 ; The tests check the behavior of the tail call decision when the callee is speculatable.
 
 ; Callee should be tail called in this function since it is at a tail call position.
-define dso_local double @speculatable_callee_return_use_only (double* nocapture %res, double %a) #0 {
+define dso_local double @speculatable_callee_return_use_only (ptr nocapture %res, double %a) #0 {
 ; CHECK-LABEL: speculatable_callee_return_use_only:
 ; CHECK: # %bb.0: # %entry
 ; CHECK-NEXT: b callee
@@ -14,7 +14,7 @@ entry:
 }
 
 ; Callee should not be tail called since it is not at a tail call position.
-define dso_local void @speculatable_callee_non_return_use_only (double* nocapture %res, double %a) #0 {
+define dso_local void @speculatable_callee_non_return_use_only (ptr nocapture %res, double %a) #0 {
 ; CHECK-LABEL: speculatable_callee_non_return_use_only:
 ; CHECK: # %bb.0: # %entry
 ; CHECK-NEXT: mflr r0
@@ -31,12 +31,12 @@ define dso_local void @speculatable_callee_non_return_use_only (double* nocaptur
 ; CHECK-NEXT: blr
 entry:
   %call = tail call double @callee(double %a) #2
-  store double %call, double* %res, align 8
+  store double %call, ptr %res, align 8
   ret void
 }
 
 ; Callee should not be tail called since it is not at a tail call position.
-define dso_local double @speculatable_callee_multi_use (double* nocapture %res, double %a) #0 {
+define dso_local double @speculatable_callee_multi_use (ptr nocapture %res, double %a) #0 {
   ; CHECK-LABEL: speculatable_callee_multi_use:
   ; CHECK: # %bb.0: # %entry
   ; CHECK-NEXT: mflr r0
@@ -53,13 +53,13 @@ define dso_local double @speculatable_callee_multi_use (double* nocapture %res, 
   ; CHECK-NEXT: blr
   entry:
   %call = tail call double @callee(double %a) #2
-  store double %call, double* %res, align 8
+  store double %call, ptr %res, align 8
   ret double %call
 }
 
 ; Callee should not be tail called since it is not at a tail call position.
 ; FIXME: A speculatable callee can be tail called if it is moved into a valid tail call position.
-define dso_local double @speculatable_callee_intermediate_instructions (double* nocapture %res, double %a) #0 {
+define dso_local double @speculatable_callee_intermediate_instructions (ptr nocapture %res, double %a) #0 {
   ; CHECK-LABEL: speculatable_callee_intermediate_instructions:
   ; CHECK: # %bb.0: # %entry
   ; CHECK-NEXT: mflr r0
@@ -82,7 +82,7 @@ define dso_local double @speculatable_callee_intermediate_instructions (double* 
 
   entry:
   %call = tail call double @callee(double %a) #2
-  store double 5.2, double* %res, align 8
+  store double 5.2, ptr %res, align 8
   ret double %call
 }
 

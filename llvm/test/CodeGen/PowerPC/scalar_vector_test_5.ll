@@ -8,7 +8,7 @@
 ; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
 ; RUN:    -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s --check-prefix=P8BE
 
-define i8 @scalar_to_vector_half(i16* nocapture readonly %ad) {
+define i8 @scalar_to_vector_half(ptr nocapture readonly %ad) {
 ; P9LE-LABEL: scalar_to_vector_half:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lhz r3, 0(r3)
@@ -36,9 +36,8 @@ define i8 @scalar_to_vector_half(i16* nocapture readonly %ad) {
 ; P8BE-NEXT:    rldicl r3, r3, 8, 56
 ; P8BE-NEXT:    blr
 entry:
-    %0 = bitcast i16* %ad to <2 x i8>*
-    %1 = load <2 x i8>, <2 x i8>* %0, align 1
-    %2 = extractelement <2 x i8> %1, i32 0
-    ret i8 %2
+    %0 = load <2 x i8>, ptr %ad, align 1
+    %1 = extractelement <2 x i8> %0, i32 0
+    ret i8 %1
 }
 

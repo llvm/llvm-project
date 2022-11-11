@@ -108,7 +108,7 @@
     macro (kmp_mutex_impl_queuing, 2)      /* based on some fair policy */           \
     macro (kmp_mutex_impl_speculative, 3)  /* based on HW-supported speculation */
 
-#define FOREACH_OMPT_EVENT(macro)                                                                                        \
+#define FOREACH_OMPT_HOST_EVENT(macro)                                                                                   \
                                                                                                                          \
     /*--- Mandatory Events ---*/                                                                                         \
     macro (ompt_callback_thread_begin,      ompt_callback_thread_begin_t,       1) /* thread begin                    */ \
@@ -121,17 +121,7 @@
     macro (ompt_callback_task_schedule,     ompt_callback_task_schedule_t,      6) /* task schedule                   */ \
     macro (ompt_callback_implicit_task,     ompt_callback_implicit_task_t,      7) /* implicit task                   */ \
                                                                                                                          \
-    macro (ompt_callback_target,            ompt_callback_target_t,             8) /* target                          */ \
-    macro (ompt_callback_target_data_op,    ompt_callback_target_data_op_t,     9) /* target data op                  */ \
-    macro (ompt_callback_target_submit,     ompt_callback_target_submit_t,     10) /* target  submit                  */ \
-                                                                                                                         \
     macro (ompt_callback_control_tool,      ompt_callback_control_tool_t,      11) /* control tool                    */ \
-                                                                                                                         \
-    macro (ompt_callback_device_initialize, ompt_callback_device_initialize_t, 12) /* device initialize               */ \
-    macro (ompt_callback_device_finalize,   ompt_callback_device_finalize_t,   13) /* device finalize                 */ \
-                                                                                                                         \
-    macro (ompt_callback_device_load,       ompt_callback_device_load_t,       14) /* device load                     */ \
-    macro (ompt_callback_device_unload,     ompt_callback_device_unload_t,     15) /* device unload                   */ \
                                                                                                                          \
     /* Optional Events */                                                                                                \
     macro (ompt_callback_sync_region_wait,  ompt_callback_sync_region_t,       16) /* sync region wait begin or end   */ \
@@ -144,8 +134,6 @@
     macro (ompt_callback_work,              ompt_callback_work_t,              20) /* task at work begin or end       */ \
                                                                                                                          \
     macro (ompt_callback_masked,            ompt_callback_masked_t,            21) /* task at masked begin or end     */ \
-                                                                                                                         \
-    macro (ompt_callback_target_map,        ompt_callback_target_map_t,        22) /* target map                      */ \
                                                                                                                          \
     macro (ompt_callback_sync_region,       ompt_callback_sync_region_t,       23) /* sync region begin or end        */ \
                                                                                                                          \
@@ -164,11 +152,50 @@
     macro (ompt_callback_reduction,         ompt_callback_sync_region_t,       31) /* reduction                       */ \
                                                                                                                          \
     macro (ompt_callback_dispatch,          ompt_callback_dispatch_t,          32) /* dispatch of work                */ \
+    macro (ompt_callback_error,             ompt_callback_error_t,             37) /* error                           */
+
+#define FOREACH_OMPT_DEVICE_EVENT(macro)                                                                                 \
+    /*--- Mandatory Events ---*/                                                                                         \
+    macro (ompt_callback_device_initialize, ompt_callback_device_initialize_t, 12) /* device initialize               */ \
+    macro (ompt_callback_device_finalize,   ompt_callback_device_finalize_t,   13) /* device finalize                 */ \
+                                                                                                                         \
+    macro (ompt_callback_device_load,       ompt_callback_device_load_t,       14) /* device load                     */ \
+    macro (ompt_callback_device_unload,     ompt_callback_device_unload_t,     15) /* device unload                   */
+
+#define FOREACH_OMPT_NOEMI_EVENT(macro)                                                                                  \
+    /*--- Mandatory Events ---*/                                                                                         \
+    macro (ompt_callback_target,            ompt_callback_target_t,             8) /* target                          */ \
+    macro (ompt_callback_target_data_op,    ompt_callback_target_data_op_t,     9) /* target data op                  */ \
+    macro (ompt_callback_target_submit,     ompt_callback_target_submit_t,     10) /* target  submit                  */ \
+    /* Optional Events */                                                                                                \
+    macro (ompt_callback_target_map,        ompt_callback_target_map_t,        22) /* target map                      */
+
+#define FOREACH_OMPT_EMI_EVENT(macro)                                                                                    \
+    /*--- Mandatory Events ---*/                                                                                         \
     macro (ompt_callback_target_emi,        ompt_callback_target_emi_t,        33) /* target                          */ \
     macro (ompt_callback_target_data_op_emi,ompt_callback_target_data_op_emi_t,34) /* target data op                  */ \
     macro (ompt_callback_target_submit_emi, ompt_callback_target_submit_emi_t, 35) /* target submit                   */ \
-    macro (ompt_callback_target_map_emi,    ompt_callback_target_map_emi_t,    36) /* target map                      */ \
-    macro (ompt_callback_error,             ompt_callback_error_t,             37) /* error                           */
+    /* Optional Events */                                                                                                \
+    macro (ompt_callback_target_map_emi,    ompt_callback_target_map_emi_t,    36) /* target map                      */
+
+#define FOREACH_OMPT_50_TARGET_EVENT(macro)                                                                              \
+    FOREACH_OMPT_DEVICE_EVENT(macro)                                                                                     \
+    FOREACH_OMPT_NOEMI_EVENT(macro) 
+
+#define FOREACH_OMPT_51_TARGET_EVENT(macro)                                                                              \
+    FOREACH_OMPT_DEVICE_EVENT(macro)                                                                                     \
+    FOREACH_OMPT_EMI_EVENT(macro) 
+
+#define FOREACH_OMPT_EVENT(macro)                                                                                        \
+    FOREACH_OMPT_HOST_EVENT(macro)                                                                                       \
+    FOREACH_OMPT_DEVICE_EVENT(macro)                                                                                     \
+    FOREACH_OMPT_NOEMI_EVENT(macro)                                                                                      \
+    FOREACH_OMPT_EMI_EVENT(macro)
+
+#define FOREACH_OMPT_51_EVENT(macro)                                                                                     \
+    FOREACH_OMPT_HOST_EVENT(macro)                                                                                       \
+    FOREACH_OMPT_DEVICE_EVENT(macro)                                                                                     \
+    FOREACH_OMPT_EMI_EVENT(macro)
 
 /*****************************************************************************
  * implementation specific types

@@ -10,7 +10,7 @@ define void @test_vsseg2_nxv16i16(<vscale x 16 x i16> %val, i16* %base, i32 %vl)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -23,7 +23,7 @@ define void @test_vsseg2_mask_nxv16i16(<vscale x 16 x i16> %val, i16* %base, <vs
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -39,7 +39,7 @@ define void @test_vsseg2_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -52,7 +52,7 @@ define void @test_vsseg2_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, <vscale 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -69,7 +69,7 @@ define void @test_vsseg3_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg3e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -83,7 +83,7 @@ define void @test_vsseg3_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg3e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -101,7 +101,7 @@ define void @test_vsseg4_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg4e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -116,7 +116,7 @@ define void @test_vsseg4_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg4e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -135,7 +135,7 @@ define void @test_vsseg5_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg5e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -151,7 +151,7 @@ define void @test_vsseg5_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg5e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -171,7 +171,7 @@ define void @test_vsseg6_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg6e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -188,7 +188,7 @@ define void @test_vsseg6_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg6e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -209,7 +209,7 @@ define void @test_vsseg7_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg7e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -227,7 +227,7 @@ define void @test_vsseg7_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg7e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -249,7 +249,7 @@ define void @test_vsseg8_nxv1i8(<vscale x 1 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg8e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -268,7 +268,7 @@ define void @test_vsseg8_mask_nxv1i8(<vscale x 1 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsseg8e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -284,7 +284,7 @@ define void @test_vsseg2_nxv16i8(<vscale x 16 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -297,7 +297,7 @@ define void @test_vsseg2_mask_nxv16i8(<vscale x 16 x i8> %val, i8* %base, <vscal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -314,7 +314,7 @@ define void @test_vsseg3_nxv16i8(<vscale x 16 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -328,7 +328,7 @@ define void @test_vsseg3_mask_nxv16i8(<vscale x 16 x i8> %val, i8* %base, <vscal
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -346,7 +346,7 @@ define void @test_vsseg4_nxv16i8(<vscale x 16 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -361,7 +361,7 @@ define void @test_vsseg4_mask_nxv16i8(<vscale x 16 x i8> %val, i8* %base, <vscal
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -377,7 +377,7 @@ define void @test_vsseg2_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -390,7 +390,7 @@ define void @test_vsseg2_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, <vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -407,7 +407,7 @@ define void @test_vsseg3_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -421,7 +421,7 @@ define void @test_vsseg3_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -439,7 +439,7 @@ define void @test_vsseg4_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -454,7 +454,7 @@ define void @test_vsseg4_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -473,7 +473,7 @@ define void @test_vsseg5_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -489,7 +489,7 @@ define void @test_vsseg5_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -509,7 +509,7 @@ define void @test_vsseg6_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -526,7 +526,7 @@ define void @test_vsseg6_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -547,7 +547,7 @@ define void @test_vsseg7_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -565,7 +565,7 @@ define void @test_vsseg7_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -587,7 +587,7 @@ define void @test_vsseg8_nxv2i32(<vscale x 2 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -606,7 +606,7 @@ define void @test_vsseg8_mask_nxv2i32(<vscale x 2 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -622,7 +622,7 @@ define void @test_vsseg2_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -635,7 +635,7 @@ define void @test_vsseg2_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, <vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -652,7 +652,7 @@ define void @test_vsseg3_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -666,7 +666,7 @@ define void @test_vsseg3_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -684,7 +684,7 @@ define void @test_vsseg4_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -699,7 +699,7 @@ define void @test_vsseg4_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -718,7 +718,7 @@ define void @test_vsseg5_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -734,7 +734,7 @@ define void @test_vsseg5_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -754,7 +754,7 @@ define void @test_vsseg6_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -771,7 +771,7 @@ define void @test_vsseg6_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -792,7 +792,7 @@ define void @test_vsseg7_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -810,7 +810,7 @@ define void @test_vsseg7_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -832,7 +832,7 @@ define void @test_vsseg8_nxv4i16(<vscale x 4 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -851,7 +851,7 @@ define void @test_vsseg8_mask_nxv4i16(<vscale x 4 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -867,7 +867,7 @@ define void @test_vsseg2_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -880,7 +880,7 @@ define void @test_vsseg2_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, <vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -897,7 +897,7 @@ define void @test_vsseg3_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -911,7 +911,7 @@ define void @test_vsseg3_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -929,7 +929,7 @@ define void @test_vsseg4_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -944,7 +944,7 @@ define void @test_vsseg4_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -963,7 +963,7 @@ define void @test_vsseg5_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg5e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -979,7 +979,7 @@ define void @test_vsseg5_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg5e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -999,7 +999,7 @@ define void @test_vsseg6_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg6e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1016,7 +1016,7 @@ define void @test_vsseg6_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg6e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1037,7 +1037,7 @@ define void @test_vsseg7_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg7e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1055,7 +1055,7 @@ define void @test_vsseg7_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg7e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1077,7 +1077,7 @@ define void @test_vsseg8_nxv1i32(<vscale x 1 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg8e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1096,7 +1096,7 @@ define void @test_vsseg8_mask_nxv1i32(<vscale x 1 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg8e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1112,7 +1112,7 @@ define void @test_vsseg2_nxv8i16(<vscale x 8 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1125,7 +1125,7 @@ define void @test_vsseg2_mask_nxv8i16(<vscale x 8 x i16> %val, i16* %base, <vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1142,7 +1142,7 @@ define void @test_vsseg3_nxv8i16(<vscale x 8 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1156,7 +1156,7 @@ define void @test_vsseg3_mask_nxv8i16(<vscale x 8 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1174,7 +1174,7 @@ define void @test_vsseg4_nxv8i16(<vscale x 8 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1189,7 +1189,7 @@ define void @test_vsseg4_mask_nxv8i16(<vscale x 8 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1205,7 +1205,7 @@ define void @test_vsseg2_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1218,7 +1218,7 @@ define void @test_vsseg2_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, <vscale 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1235,7 +1235,7 @@ define void @test_vsseg3_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1249,7 +1249,7 @@ define void @test_vsseg3_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1267,7 +1267,7 @@ define void @test_vsseg4_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1282,7 +1282,7 @@ define void @test_vsseg4_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1301,7 +1301,7 @@ define void @test_vsseg5_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1317,7 +1317,7 @@ define void @test_vsseg5_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1337,7 +1337,7 @@ define void @test_vsseg6_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1354,7 +1354,7 @@ define void @test_vsseg6_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1375,7 +1375,7 @@ define void @test_vsseg7_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1393,7 +1393,7 @@ define void @test_vsseg7_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1415,7 +1415,7 @@ define void @test_vsseg8_nxv8i8(<vscale x 8 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1434,7 +1434,7 @@ define void @test_vsseg8_mask_nxv8i8(<vscale x 8 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1450,7 +1450,7 @@ define void @test_vsseg2_nxv8i32(<vscale x 8 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1463,7 +1463,7 @@ define void @test_vsseg2_mask_nxv8i32(<vscale x 8 x i32> %val, i32* %base, <vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1479,7 +1479,7 @@ define void @test_vsseg2_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1492,7 +1492,7 @@ define void @test_vsseg2_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, <vscale 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1509,7 +1509,7 @@ define void @test_vsseg3_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg3e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1523,7 +1523,7 @@ define void @test_vsseg3_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg3e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1541,7 +1541,7 @@ define void @test_vsseg4_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg4e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1556,7 +1556,7 @@ define void @test_vsseg4_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg4e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1575,7 +1575,7 @@ define void @test_vsseg5_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg5e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1591,7 +1591,7 @@ define void @test_vsseg5_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg5e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1611,7 +1611,7 @@ define void @test_vsseg6_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg6e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1628,7 +1628,7 @@ define void @test_vsseg6_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg6e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1649,7 +1649,7 @@ define void @test_vsseg7_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg7e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1667,7 +1667,7 @@ define void @test_vsseg7_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg7e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1689,7 +1689,7 @@ define void @test_vsseg8_nxv4i8(<vscale x 4 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg8e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1708,7 +1708,7 @@ define void @test_vsseg8_mask_nxv4i8(<vscale x 4 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsseg8e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1724,7 +1724,7 @@ define void @test_vsseg2_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1737,7 +1737,7 @@ define void @test_vsseg2_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, <vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1754,7 +1754,7 @@ define void @test_vsseg3_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1768,7 +1768,7 @@ define void @test_vsseg3_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1786,7 +1786,7 @@ define void @test_vsseg4_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1801,7 +1801,7 @@ define void @test_vsseg4_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1820,7 +1820,7 @@ define void @test_vsseg5_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1836,7 +1836,7 @@ define void @test_vsseg5_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1856,7 +1856,7 @@ define void @test_vsseg6_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1873,7 +1873,7 @@ define void @test_vsseg6_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1894,7 +1894,7 @@ define void @test_vsseg7_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1912,7 +1912,7 @@ define void @test_vsseg7_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1934,7 +1934,7 @@ define void @test_vsseg8_nxv1i16(<vscale x 1 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1953,7 +1953,7 @@ define void @test_vsseg8_mask_nxv1i16(<vscale x 1 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1969,7 +1969,7 @@ define void @test_vsseg2_nxv32i8(<vscale x 32 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -1982,7 +1982,7 @@ define void @test_vsseg2_mask_nxv32i8(<vscale x 32 x i8> %val, i8* %base, <vscal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -1998,7 +1998,7 @@ define void @test_vsseg2_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2011,7 +2011,7 @@ define void @test_vsseg2_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, <vscale 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg2e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2028,7 +2028,7 @@ define void @test_vsseg3_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg3e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2042,7 +2042,7 @@ define void @test_vsseg3_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg3e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2060,7 +2060,7 @@ define void @test_vsseg4_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg4e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2075,7 +2075,7 @@ define void @test_vsseg4_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg4e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2094,7 +2094,7 @@ define void @test_vsseg5_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg5e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2110,7 +2110,7 @@ define void @test_vsseg5_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg5e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2130,7 +2130,7 @@ define void @test_vsseg6_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg6e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2147,7 +2147,7 @@ define void @test_vsseg6_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg6e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2168,7 +2168,7 @@ define void @test_vsseg7_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg7e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2186,7 +2186,7 @@ define void @test_vsseg7_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg7e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2208,7 +2208,7 @@ define void @test_vsseg8_nxv2i8(<vscale x 2 x i8> %val, i8* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg8e8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2227,7 +2227,7 @@ define void @test_vsseg8_mask_nxv2i8(<vscale x 2 x i8> %val, i8* %base, <vscale 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsseg8e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2243,7 +2243,7 @@ define void @test_vsseg2_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2256,7 +2256,7 @@ define void @test_vsseg2_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, <vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2273,7 +2273,7 @@ define void @test_vsseg3_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2287,7 +2287,7 @@ define void @test_vsseg3_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2305,7 +2305,7 @@ define void @test_vsseg4_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2320,7 +2320,7 @@ define void @test_vsseg4_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2339,7 +2339,7 @@ define void @test_vsseg5_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2355,7 +2355,7 @@ define void @test_vsseg5_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2375,7 +2375,7 @@ define void @test_vsseg6_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2392,7 +2392,7 @@ define void @test_vsseg6_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2413,7 +2413,7 @@ define void @test_vsseg7_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2431,7 +2431,7 @@ define void @test_vsseg7_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2453,7 +2453,7 @@ define void @test_vsseg8_nxv2i16(<vscale x 2 x i16> %val, i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2472,7 +2472,7 @@ define void @test_vsseg8_mask_nxv2i16(<vscale x 2 x i16> %val, i16* %base, <vsca
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2488,7 +2488,7 @@ define void @test_vsseg2_nxv4i32(<vscale x 4 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2501,7 +2501,7 @@ define void @test_vsseg2_mask_nxv4i32(<vscale x 4 x i32> %val, i32* %base, <vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2518,7 +2518,7 @@ define void @test_vsseg3_nxv4i32(<vscale x 4 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2532,7 +2532,7 @@ define void @test_vsseg3_mask_nxv4i32(<vscale x 4 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2550,7 +2550,7 @@ define void @test_vsseg4_nxv4i32(<vscale x 4 x i32> %val, i32* %base, i32 %vl) {
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2565,7 +2565,7 @@ define void @test_vsseg4_mask_nxv4i32(<vscale x 4 x i32> %val, i32* %base, <vsca
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2581,7 +2581,7 @@ define void @test_vsseg2_nxv16f16(<vscale x 16 x half> %val, half* %base, i32 %v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2594,7 +2594,7 @@ define void @test_vsseg2_mask_nxv16f16(<vscale x 16 x half> %val, half* %base, <
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2610,7 +2610,7 @@ define void @test_vsseg2_nxv4f64(<vscale x 4 x double> %val, double* %base, i32 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e64.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2623,7 +2623,7 @@ define void @test_vsseg2_mask_nxv4f64(<vscale x 4 x double> %val, double* %base,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2639,7 +2639,7 @@ define void @test_vsseg2_nxv1f64(<vscale x 1 x double> %val, double* %base, i32 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e64.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2652,7 +2652,7 @@ define void @test_vsseg2_mask_nxv1f64(<vscale x 1 x double> %val, double* %base,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2669,7 +2669,7 @@ define void @test_vsseg3_nxv1f64(<vscale x 1 x double> %val, double* %base, i32 
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e64.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2683,7 +2683,7 @@ define void @test_vsseg3_mask_nxv1f64(<vscale x 1 x double> %val, double* %base,
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2701,7 +2701,7 @@ define void @test_vsseg4_nxv1f64(<vscale x 1 x double> %val, double* %base, i32 
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e64.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2716,7 +2716,7 @@ define void @test_vsseg4_mask_nxv1f64(<vscale x 1 x double> %val, double* %base,
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2735,7 +2735,7 @@ define void @test_vsseg5_nxv1f64(<vscale x 1 x double> %val, double* %base, i32 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e64.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2751,7 +2751,7 @@ define void @test_vsseg5_mask_nxv1f64(<vscale x 1 x double> %val, double* %base,
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2771,7 +2771,7 @@ define void @test_vsseg6_nxv1f64(<vscale x 1 x double> %val, double* %base, i32 
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e64.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2788,7 +2788,7 @@ define void @test_vsseg6_mask_nxv1f64(<vscale x 1 x double> %val, double* %base,
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2809,7 +2809,7 @@ define void @test_vsseg7_nxv1f64(<vscale x 1 x double> %val, double* %base, i32 
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e64.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2827,7 +2827,7 @@ define void @test_vsseg7_mask_nxv1f64(<vscale x 1 x double> %val, double* %base,
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2849,7 +2849,7 @@ define void @test_vsseg8_nxv1f64(<vscale x 1 x double> %val, double* %base, i32 
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e64.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2868,7 +2868,7 @@ define void @test_vsseg8_mask_nxv1f64(<vscale x 1 x double> %val, double* %base,
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2884,7 +2884,7 @@ define void @test_vsseg2_nxv2f32(<vscale x 2 x float> %val, float* %base, i32 %v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2897,7 +2897,7 @@ define void @test_vsseg2_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, <
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2914,7 +2914,7 @@ define void @test_vsseg3_nxv2f32(<vscale x 2 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2928,7 +2928,7 @@ define void @test_vsseg3_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, <
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2946,7 +2946,7 @@ define void @test_vsseg4_nxv2f32(<vscale x 2 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2961,7 +2961,7 @@ define void @test_vsseg4_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, <
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -2980,7 +2980,7 @@ define void @test_vsseg5_nxv2f32(<vscale x 2 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -2996,7 +2996,7 @@ define void @test_vsseg5_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, <
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3016,7 +3016,7 @@ define void @test_vsseg6_nxv2f32(<vscale x 2 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3033,7 +3033,7 @@ define void @test_vsseg6_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, <
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3054,7 +3054,7 @@ define void @test_vsseg7_nxv2f32(<vscale x 2 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3072,7 +3072,7 @@ define void @test_vsseg7_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, <
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3094,7 +3094,7 @@ define void @test_vsseg8_nxv2f32(<vscale x 2 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3113,7 +3113,7 @@ define void @test_vsseg8_mask_nxv2f32(<vscale x 2 x float> %val, float* %base, <
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3129,7 +3129,7 @@ define void @test_vsseg2_nxv1f16(<vscale x 1 x half> %val, half* %base, i32 %vl)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3142,7 +3142,7 @@ define void @test_vsseg2_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, <vs
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3159,7 +3159,7 @@ define void @test_vsseg3_nxv1f16(<vscale x 1 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3173,7 +3173,7 @@ define void @test_vsseg3_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3191,7 +3191,7 @@ define void @test_vsseg4_nxv1f16(<vscale x 1 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3206,7 +3206,7 @@ define void @test_vsseg4_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3225,7 +3225,7 @@ define void @test_vsseg5_nxv1f16(<vscale x 1 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3241,7 +3241,7 @@ define void @test_vsseg5_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3261,7 +3261,7 @@ define void @test_vsseg6_nxv1f16(<vscale x 1 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3278,7 +3278,7 @@ define void @test_vsseg6_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3299,7 +3299,7 @@ define void @test_vsseg7_nxv1f16(<vscale x 1 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3317,7 +3317,7 @@ define void @test_vsseg7_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3339,7 +3339,7 @@ define void @test_vsseg8_nxv1f16(<vscale x 1 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3358,7 +3358,7 @@ define void @test_vsseg8_mask_nxv1f16(<vscale x 1 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3374,7 +3374,7 @@ define void @test_vsseg2_nxv1f32(<vscale x 1 x float> %val, float* %base, i32 %v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3387,7 +3387,7 @@ define void @test_vsseg2_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, <
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3404,7 +3404,7 @@ define void @test_vsseg3_nxv1f32(<vscale x 1 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3418,7 +3418,7 @@ define void @test_vsseg3_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, <
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3436,7 +3436,7 @@ define void @test_vsseg4_nxv1f32(<vscale x 1 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3451,7 +3451,7 @@ define void @test_vsseg4_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, <
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3470,7 +3470,7 @@ define void @test_vsseg5_nxv1f32(<vscale x 1 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg5e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3486,7 +3486,7 @@ define void @test_vsseg5_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, <
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg5e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3506,7 +3506,7 @@ define void @test_vsseg6_nxv1f32(<vscale x 1 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg6e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3523,7 +3523,7 @@ define void @test_vsseg6_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, <
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg6e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3544,7 +3544,7 @@ define void @test_vsseg7_nxv1f32(<vscale x 1 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg7e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3562,7 +3562,7 @@ define void @test_vsseg7_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, <
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg7e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3584,7 +3584,7 @@ define void @test_vsseg8_nxv1f32(<vscale x 1 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg8e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3603,7 +3603,7 @@ define void @test_vsseg8_mask_nxv1f32(<vscale x 1 x float> %val, float* %base, <
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg8e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3619,7 +3619,7 @@ define void @test_vsseg2_nxv8f16(<vscale x 8 x half> %val, half* %base, i32 %vl)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3632,7 +3632,7 @@ define void @test_vsseg2_mask_nxv8f16(<vscale x 8 x half> %val, half* %base, <vs
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3649,7 +3649,7 @@ define void @test_vsseg3_nxv8f16(<vscale x 8 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3663,7 +3663,7 @@ define void @test_vsseg3_mask_nxv8f16(<vscale x 8 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3681,7 +3681,7 @@ define void @test_vsseg4_nxv8f16(<vscale x 8 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3696,7 +3696,7 @@ define void @test_vsseg4_mask_nxv8f16(<vscale x 8 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3712,7 +3712,7 @@ define void @test_vsseg2_nxv8f32(<vscale x 8 x float> %val, float* %base, i32 %v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3725,7 +3725,7 @@ define void @test_vsseg2_mask_nxv8f32(<vscale x 8 x float> %val, float* %base, <
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3741,7 +3741,7 @@ define void @test_vsseg2_nxv2f64(<vscale x 2 x double> %val, double* %base, i32 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e64.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3754,7 +3754,7 @@ define void @test_vsseg2_mask_nxv2f64(<vscale x 2 x double> %val, double* %base,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3771,7 +3771,7 @@ define void @test_vsseg3_nxv2f64(<vscale x 2 x double> %val, double* %base, i32 
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e64.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3785,7 +3785,7 @@ define void @test_vsseg3_mask_nxv2f64(<vscale x 2 x double> %val, double* %base,
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3803,7 +3803,7 @@ define void @test_vsseg4_nxv2f64(<vscale x 2 x double> %val, double* %base, i32 
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e64.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3818,7 +3818,7 @@ define void @test_vsseg4_mask_nxv2f64(<vscale x 2 x double> %val, double* %base,
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3834,7 +3834,7 @@ define void @test_vsseg2_nxv4f16(<vscale x 4 x half> %val, half* %base, i32 %vl)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3847,7 +3847,7 @@ define void @test_vsseg2_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, <vs
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3864,7 +3864,7 @@ define void @test_vsseg3_nxv4f16(<vscale x 4 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3878,7 +3878,7 @@ define void @test_vsseg3_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3896,7 +3896,7 @@ define void @test_vsseg4_nxv4f16(<vscale x 4 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3911,7 +3911,7 @@ define void @test_vsseg4_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3930,7 +3930,7 @@ define void @test_vsseg5_nxv4f16(<vscale x 4 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3946,7 +3946,7 @@ define void @test_vsseg5_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -3966,7 +3966,7 @@ define void @test_vsseg6_nxv4f16(<vscale x 4 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -3983,7 +3983,7 @@ define void @test_vsseg6_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4004,7 +4004,7 @@ define void @test_vsseg7_nxv4f16(<vscale x 4 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4022,7 +4022,7 @@ define void @test_vsseg7_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4044,7 +4044,7 @@ define void @test_vsseg8_nxv4f16(<vscale x 4 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4063,7 +4063,7 @@ define void @test_vsseg8_mask_nxv4f16(<vscale x 4 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4079,7 +4079,7 @@ define void @test_vsseg2_nxv2f16(<vscale x 2 x half> %val, half* %base, i32 %vl)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4092,7 +4092,7 @@ define void @test_vsseg2_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, <vs
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4109,7 +4109,7 @@ define void @test_vsseg3_nxv2f16(<vscale x 2 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4123,7 +4123,7 @@ define void @test_vsseg3_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8_v9_v10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg3e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4141,7 +4141,7 @@ define void @test_vsseg4_nxv2f16(<vscale x 2 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4156,7 +4156,7 @@ define void @test_vsseg4_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg4e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4175,7 +4175,7 @@ define void @test_vsseg5_nxv2f16(<vscale x 2 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4191,7 +4191,7 @@ define void @test_vsseg5_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg5e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4211,7 +4211,7 @@ define void @test_vsseg6_nxv2f16(<vscale x 2 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4228,7 +4228,7 @@ define void @test_vsseg6_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg6e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4249,7 +4249,7 @@ define void @test_vsseg7_nxv2f16(<vscale x 2 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4267,7 +4267,7 @@ define void @test_vsseg7_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg7e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4289,7 +4289,7 @@ define void @test_vsseg8_nxv2f16(<vscale x 2 x half> %val, half* %base, i32 %vl)
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4308,7 +4308,7 @@ define void @test_vsseg8_mask_nxv2f16(<vscale x 2 x half> %val, half* %base, <vs
 ; CHECK-NEXT:    vmv1r.v v13, v8
 ; CHECK-NEXT:    vmv1r.v v14, v8
 ; CHECK-NEXT:    vmv1r.v v15, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg8e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4324,7 +4324,7 @@ define void @test_vsseg2_nxv4f32(<vscale x 4 x float> %val, float* %base, i32 %v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4337,7 +4337,7 @@ define void @test_vsseg2_mask_nxv4f32(<vscale x 4 x float> %val, float* %base, <
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4354,7 +4354,7 @@ define void @test_vsseg3_nxv4f32(<vscale x 4 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4368,7 +4368,7 @@ define void @test_vsseg3_mask_nxv4f32(<vscale x 4 x float> %val, float* %base, <
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 def $v8m2_v10m2_v12m2
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg3e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -4386,7 +4386,7 @@ define void @test_vsseg4_nxv4f32(<vscale x 4 x float> %val, float* %base, i32 %v
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -4401,7 +4401,7 @@ define void @test_vsseg4_mask_nxv4f32(<vscale x 4 x float> %val, float* %base, <
 ; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:

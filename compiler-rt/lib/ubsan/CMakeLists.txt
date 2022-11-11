@@ -62,7 +62,10 @@ endif()
 
 set(UBSAN_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
-set(UBSAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARIES} ${SANITIZER_COMMON_LINK_LIBS})
+set(UBSAN_DYNAMIC_LIBS
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
+  ${SANITIZER_CXX_ABI_LIBRARIES}
+  ${SANITIZER_COMMON_LINK_LIBS})
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl UBSAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log UBSAN_DYNAMIC_LIBS)
@@ -192,7 +195,8 @@ else()
     add_compiler_rt_runtime(clang_rt.ubsan_standalone
       STATIC
       ARCHS ${UBSAN_SUPPORTED_ARCH}
-      SOURCES ubsan_init_standalone_preinit.cpp
+      SOURCES
+        ubsan_init_standalone_preinit.cpp
       ADDITIONAL_HEADERS ${UBSAN_HEADERS}
       OBJECT_LIBS RTSanitizerCommon
               RTSanitizerCommonLibc

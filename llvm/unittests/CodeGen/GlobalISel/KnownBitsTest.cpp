@@ -924,6 +924,36 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsTrunc) {
   EXPECT_EQ(5u, Info.computeNumSignBits(CopyTrunc7));
 }
 
+TEST_F(AArch64GISelMITest, TestNumSignBitsCmp) {
+  StringRef MIRString =
+      "  %v1:_(<4 x s32>) = G_IMPLICIT_DEF\n"
+      "  %v2:_(<4 x s32>) = G_IMPLICIT_DEF\n"
+      "  %s1:_(s64) = G_IMPLICIT_DEF\n"
+      "  %s2:_(s64) = G_IMPLICIT_DEF\n"
+      "  %cmp:_(<4 x s32>) = G_FCMP floatpred(ogt), %v1, %v2\n"
+      "  %cpy1:_(<4 x s32>) = COPY %cmp\n"
+      "  %cmp2:_(<4 x s32>) = G_ICMP intpred(eq), %v1, %v2\n"
+      "  %cpy2:_(<4 x s32>) = COPY %cmp2\n"
+      "  %cmp3:_(s32) = G_FCMP floatpred(ogt), %s1, %s2\n"
+      "  %cpy3:_(s32) = COPY %cmp3\n"
+      "  %cmp4:_(s32) = G_ICMP intpred(eq), %s1, %s2\n"
+      "  %cpy4:_(s32) = COPY %cmp4\n";
+
+  setUp(MIRString);
+  if (!TM)
+    return;
+  Register CopyVecFCMP = Copies[Copies.size() - 4];
+  Register CopyVecICMP = Copies[Copies.size() - 3];
+  Register CopyScalarFCMP = Copies[Copies.size() - 2];
+  Register CopyScalarICMP = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  EXPECT_EQ(32u, Info.computeNumSignBits(CopyVecFCMP));
+  EXPECT_EQ(32u, Info.computeNumSignBits(CopyVecICMP));
+  EXPECT_EQ(31u, Info.computeNumSignBits(CopyScalarFCMP));
+  EXPECT_EQ(31u, Info.computeNumSignBits(CopyScalarICMP));
+}
+
 TEST_F(AMDGPUGISelMITest, TestNumSignBitsTrunc) {
   StringRef MIRString =
     "  %3:_(<4 x s32>) = G_IMPLICIT_DEF\n"
@@ -1923,26 +1953,20 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
    %val:_(s64) = COPY $vgpr0_vgpr1
    %ptrval:_(p1) = COPY $vgpr0_vgpr1
 
-   %assert_align0:_(s64) = G_ASSERT_ALIGN %val, 0
-   %copy_assert_align0:_(s64) = COPY %assert_align0
-
    %assert_align1:_(s64) = G_ASSERT_ALIGN %val, 1
    %copy_assert_align1:_(s64) = COPY %assert_align1
 
    %assert_align2:_(s64) = G_ASSERT_ALIGN %val, 2
    %copy_assert_align2:_(s64) = COPY %assert_align2
 
-   %assert_align3:_(s64) = G_ASSERT_ALIGN %val, 3
-   %copy_assert_align3:_(s64) = COPY %assert_align3
+   %assert_align4:_(s64) = G_ASSERT_ALIGN %val, 4
+   %copy_assert_align4:_(s64) = COPY %assert_align4
 
    %assert_align8:_(s64) = G_ASSERT_ALIGN %val, 8
    %copy_assert_align8:_(s64) = COPY %assert_align8
 
-   %assert_maxalign:_(s64) = G_ASSERT_ALIGN %val, 30
-   %copy_assert_maxalign:_(s64) = COPY %assert_maxalign
-
-   %assert_ptr_align5:_(p1) = G_ASSERT_ALIGN %ptrval, 5
-   %copy_assert_ptr_align5:_(p1) = COPY %assert_ptr_align5
+   %assert_align16:_(s64) = G_ASSERT_ALIGN %val, 16
+   %copy_assert_maxalign:_(s64) = COPY %assert_align16
 )MIR";
   setUp(MIRString);
   if (!TM)
@@ -1959,18 +1983,17 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
   auto CheckBits = [&](unsigned NumBits, unsigned Idx) {
     Res = GetKB(Idx);
     EXPECT_EQ(64u, Res.getBitWidth());
-    EXPECT_EQ(NumBits, Res.Zero.countTrailingOnes());
+    EXPECT_EQ(NumBits - 1, Res.Zero.countTrailingOnes());
     EXPECT_EQ(64u, Res.One.countTrailingZeros());
-    EXPECT_EQ(Align(1ull << NumBits), Info.computeKnownAlignment(Copies[Idx]));
+    EXPECT_EQ(Align(1ull << (NumBits - 1)), Info.computeKnownAlignment(Copies[Idx]));
   };
 
-  CheckBits(0, Copies.size() - 7);
-  CheckBits(1, Copies.size() - 6);
-  CheckBits(2, Copies.size() - 5);
-  CheckBits(3, Copies.size() - 4);
-  CheckBits(8, Copies.size() - 3);
-  CheckBits(30, Copies.size() - 2);
-  CheckBits(5, Copies.size() - 1);
+  const unsigned NumSetupCopies = 5;
+  CheckBits(1, NumSetupCopies);
+  CheckBits(2, NumSetupCopies + 1);
+  CheckBits(3, NumSetupCopies + 2);
+  CheckBits(4, NumSetupCopies + 3);
+  CheckBits(5, NumSetupCopies + 4);
 }
 
 TEST_F(AArch64GISelMITest, TestKnownBitsUADDO) {

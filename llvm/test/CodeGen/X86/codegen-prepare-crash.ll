@@ -8,7 +8,7 @@ define void @f(i32 %u) {
   br label %P.Proc8.exit
 
 P.Proc8.exit:
-  %valueindex35.i = getelementptr [10 x i32], [10 x i32]* @g, i32 0, i32 %1
-  store i32 %u, i32* %valueindex35.i
+  %valueindex35.i = getelementptr [10 x i32], ptr @g, i32 0, i32 %1
+  store i32 %u, ptr %valueindex35.i
   ret void
 }

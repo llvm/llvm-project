@@ -9,6 +9,7 @@
 #include "CPlusPlusNameParser.h"
 
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Threading.h"
 
@@ -55,8 +56,8 @@ Optional<ParsedName> CPlusPlusNameParser::ParseAsFullName() {
   if (HasMoreTokens())
     return None;
   ParsedName result;
-  result.basename = GetTextForRange(name_ranges.getValue().basename_range);
-  result.context = GetTextForRange(name_ranges.getValue().context_range);
+  result.basename = GetTextForRange(name_ranges.value().basename_range);
+  result.context = GetTextForRange(name_ranges.value().context_range);
   return result;
 }
 
@@ -104,10 +105,16 @@ clang::Token &CPlusPlusNameParser::Peek() {
 Optional<ParsedFunction>
 CPlusPlusNameParser::ParseFunctionImpl(bool expect_return_type) {
   Bookmark start_position = SetBookmark();
+
+  ParsedFunction result;
   if (expect_return_type) {
+    size_t return_start = GetCurrentPosition();
     // Consume return type if it's expected.
-    if (!ConsumeTypename())
+    if (!ConsumeToken(tok::kw_auto) && !ConsumeTypename())
       return None;
+
+    size_t return_end = GetCurrentPosition();
+    result.return_type = GetTextForRange(Range(return_start, return_end));
   }
 
   auto maybe_name = ParseFullNameImpl();
@@ -124,9 +131,8 @@ CPlusPlusNameParser::ParseFunctionImpl(bool expect_return_type) {
   SkipFunctionQualifiers();
   size_t end_position = GetCurrentPosition();
 
-  ParsedFunction result;
-  result.name.basename = GetTextForRange(maybe_name.getValue().basename_range);
-  result.name.context = GetTextForRange(maybe_name.getValue().context_range);
+  result.name.basename = GetTextForRange(maybe_name.value().basename_range);
+  result.name.context = GetTextForRange(maybe_name.value().context_range);
   result.arguments = GetTextForRange(Range(argument_start, qualifiers_start));
   result.qualifiers = GetTextForRange(Range(qualifiers_start, end_position));
   start_position.Remove();
@@ -135,6 +141,16 @@ CPlusPlusNameParser::ParseFunctionImpl(bool expect_return_type) {
 
 Optional<ParsedFunction>
 CPlusPlusNameParser::ParseFuncPtr(bool expect_return_type) {
+  // This function parses a function definition
+  // that returns a pointer type.
+  // E.g., double (*(*func(long))(int))(float)
+
+  // Step 1:
+  // Remove the return type of the innermost
+  // function pointer type.
+  //
+  // Leaves us with:
+  //   (*(*func(long))(int))(float)
   Bookmark start_position = SetBookmark();
   if (expect_return_type) {
     // Consume return type.
@@ -142,11 +158,22 @@ CPlusPlusNameParser::ParseFuncPtr(bool expect_return_type) {
       return None;
   }
 
+  // Step 2:
+  //
+  // Skip a pointer and parenthesis pair.
+  //
+  // Leaves us with:
+  //   (*func(long))(int))(float)
   if (!ConsumeToken(tok::l_paren))
     return None;
   if (!ConsumePtrsAndRefs())
     return None;
 
+  // Step 3:
+  //
+  // Consume inner function name. This will fail unless
+  // we stripped all the pointers on the left hand side
+  // of the funciton name.
   {
     Bookmark before_inner_function_pos = SetBookmark();
     auto maybe_inner_function_name = ParseFunctionImpl(false);
@@ -160,6 +187,24 @@ CPlusPlusNameParser::ParseFuncPtr(bool expect_return_type) {
         }
   }
 
+  // Step 4:
+  //
+  // Parse the remaining string as a function pointer again.
+  // This time don't consume the inner-most typename since
+  // we're left with pointers only. This will strip another
+  // layer of pointers until we're left with the innermost
+  // function name/argument. I.e., func(long))(int))(float)
+  //
+  // Once we successfully stripped all pointers and gotten
+  // the innermost function name from ParseFunctionImpl above,
+  // we consume a single ')' and the arguments '(...)' that follows.
+  //
+  // Leaves us with:
+  //   )(float)
+  //
+  // This is the remnant of the outer function pointers' arguments.
+  // Unwinding the recursive calls will remove the remaining
+  // arguments.
   auto maybe_inner_function_ptr_name = ParseFuncPtr(false);
   if (maybe_inner_function_ptr_name)
     if (ConsumeToken(tok::r_paren))
@@ -168,6 +213,7 @@ CPlusPlusNameParser::ParseFuncPtr(bool expect_return_type) {
         start_position.Remove();
         return maybe_inner_function_ptr_name;
       }
+
   return None;
 }
 
@@ -225,9 +271,15 @@ bool CPlusPlusNameParser::ConsumeTemplateArgs() {
       Advance();
       break;
     case tok::l_square:
-      if (!ConsumeBrackets(tok::l_square, tok::r_square))
+      // Handle templates tagged with an ABI tag.
+      // An example demangled/prettified version is:
+      //   func[abi:tag1][abi:tag2]<type[abi:tag3]>(int)
+      if (ConsumeAbiTag())
+        can_open_template = true;
+      else if (ConsumeBrackets(tok::l_square, tok::r_square))
+        can_open_template = false;
+      else
         return false;
-      can_open_template = false;
       break;
     case tok::l_paren:
       if (!ConsumeArguments())
@@ -244,6 +296,32 @@ bool CPlusPlusNameParser::ConsumeTemplateArgs() {
   if (template_counter != 0) {
     return false;
   }
+  start_position.Remove();
+  return true;
+}
+
+bool CPlusPlusNameParser::ConsumeAbiTag() {
+  Bookmark start_position = SetBookmark();
+  if (!ConsumeToken(tok::l_square))
+    return false;
+
+  if (HasMoreTokens() && Peek().is(tok::raw_identifier) &&
+      Peek().getRawIdentifier() == "abi")
+    Advance();
+  else
+    return false;
+
+  if (!ConsumeToken(tok::colon))
+    return false;
+
+  // Consume the actual tag string (and allow some special characters)
+  while (ConsumeToken(tok::raw_identifier, tok::comma, tok::period,
+                      tok::numeric_constant))
+    ;
+
+  if (!ConsumeToken(tok::r_square))
+    return false;
+
   start_position.Remove();
   return true;
 }
@@ -505,7 +583,7 @@ CPlusPlusNameParser::ParseFullNameImpl() {
   Bookmark start_position = SetBookmark();
   State state = State::Beginning;
   bool continue_parsing = true;
-  Optional<size_t> last_coloncolon_position = None;
+  Optional<size_t> last_coloncolon_position;
 
   while (continue_parsing && HasMoreTokens()) {
     const auto &token = Peek();
@@ -518,6 +596,22 @@ CPlusPlusNameParser::ParseFullNameImpl() {
       Advance();
       state = State::AfterIdentifier;
       break;
+    case tok::l_square: {
+      // Handles types or functions that were tagged
+      // with, e.g.,
+      //   [[gnu::abi_tag("tag1","tag2")]] func()
+      // and demangled/prettified into:
+      //   func[abi:tag1][abi:tag2]()
+
+      // ABI tags only appear after a method or type name
+      const bool valid_state =
+          state == State::AfterIdentifier || state == State::AfterOperator;
+      if (!valid_state || !ConsumeAbiTag()) {
+        continue_parsing = false;
+      }
+
+      break;
+    }
     case tok::l_paren: {
       if (state == State::Beginning || state == State::AfterTwoColons) {
         // (anonymous namespace)
@@ -617,9 +711,9 @@ CPlusPlusNameParser::ParseFullNameImpl() {
     ParsedNameRanges result;
     if (last_coloncolon_position) {
       result.context_range = Range(start_position.GetSavedPosition(),
-                                   last_coloncolon_position.getValue());
+                                   last_coloncolon_position.value());
       result.basename_range =
-          Range(last_coloncolon_position.getValue() + 1, GetCurrentPosition());
+          Range(last_coloncolon_position.value() + 1, GetCurrentPosition());
     } else {
       result.basename_range =
           Range(start_position.GetSavedPosition(), GetCurrentPosition());

@@ -17,13 +17,14 @@
 
 #include <chrono>
 #include <cassert>
+#include <cstdint>
 #include <ratio>
 #include <utility>
 
 #include "test_macros.h"
 
 template <typename Duration>
-constexpr long check_seconds(Duration d)
+constexpr int64_t check_seconds(Duration d)
 {
     using HMS = std::chrono::hh_mm_ss<Duration>;
     ASSERT_SAME_TYPE(std::chrono::seconds, decltype(std::declval<HMS>().seconds()));

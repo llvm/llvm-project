@@ -58,7 +58,7 @@ mwait
 # CHECK-NEXT:  1      6     0.50    *                   lddqu	(%rax), %xmm2
 # CHECK-NEXT:  1      100   0.25                  U     monitor
 # CHECK-NEXT:  1      1     1.00                        movddup	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     0.50    *                   movddup	(%rax), %xmm2
+# CHECK-NEXT:  1      6     0.50    *                   movddup	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        movshdup	%xmm0, %xmm2
 # CHECK-NEXT:  1      6     0.50    *                   movshdup	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        movsldup	%xmm0, %xmm2

@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
@@ -22,15 +20,13 @@ class TestCase(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
+        size_type = "size_type"
+        value_type = "value_type"
+        iterator = "iterator"
+        riterator = "reverse_iterator"
 
         # Test inspecting an array of integers.
         array_type = "std::array<int, 3>"
-        size_type = "std::array::size_type"
-        value_type = array_type + "::value_type"
-
-        iterator = array_type + "::iterator"
-        riterator = array_type + "::reverse_iterator"
-
         self.expect_expr("a",
                          result_type=array_type,
                          result_children=[
@@ -57,11 +53,7 @@ class TestCase(TestBase):
 
         # Same again with an array that has an element type from debug info.
         array_type = "std::array<DbgInfo, 1>"
-        size_type = "std::array::size_type"
-        value_type = array_type + "::value_type"
 
-        iterator = array_type + "::iterator"
-        riterator = array_type + "::reverse_iterator"
         dbg_info_elem_children = [ValueCheck(value="4")]
         dbg_info_elem = [ValueCheck(children=dbg_info_elem_children)]
 

@@ -15,7 +15,7 @@ target triple = "x86_64-apple-macosx"
 ; CHECK-NEXT: callq ___asan_report_load4
 define  void @sanitize() #0 {
 entry:
-  %tmp = load i8, i8* inttoptr (i64 17592186044421 to i8*)
+  %tmp = load i8, ptr inttoptr (i64 17592186044421 to ptr)
   %tmp1 = icmp ne i8 %tmp, 0
   br i1 %tmp1, label %if.then, label %else
 
@@ -29,9 +29,9 @@ else:
   unreachable
 
 end:
-  %tmp6 = load i32, i32* inttoptr (i64 40 to i32*), align 8
+  %tmp6 = load i32, ptr inttoptr (i64 40 to ptr), align 8
   %inc = add nsw i32 %tmp6, 1
-  store i32 %inc, i32* inttoptr (i64 40 to i32*), align 8
+  store i32 %inc, ptr inttoptr (i64 40 to ptr), align 8
   ret void
 }
 

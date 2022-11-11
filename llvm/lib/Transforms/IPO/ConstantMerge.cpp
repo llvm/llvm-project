@@ -80,12 +80,12 @@ static void copyDebugLocMetadata(const GlobalVariable *From,
                                  GlobalVariable *To) {
   SmallVector<DIGlobalVariableExpression *, 1> MDs;
   From->getDebugInfo(MDs);
-  for (auto MD : MDs)
+  for (auto *MD : MDs)
     To->addDebugInfo(MD);
 }
 
 static Align getAlign(GlobalVariable *GV) {
-  return GV->getAlign().getValueOr(
+  return GV->getAlign().value_or(
       GV->getParent()->getDataLayout().getPreferredAlign(GV));
 }
 

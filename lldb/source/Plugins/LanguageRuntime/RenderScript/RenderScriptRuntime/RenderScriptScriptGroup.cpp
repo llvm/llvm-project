@@ -39,7 +39,10 @@ public:
             interpreter, "renderscript scriptgroup breakpoint set",
             "Place a breakpoint on all kernels forming a script group.",
             "renderscript scriptgroup breakpoint set <group_name>",
-            eCommandRequiresProcess | eCommandProcessMustBeLaunched) {}
+            eCommandRequiresProcess | eCommandProcessMustBeLaunched) {
+    CommandArgumentData name_arg{eArgTypeName, eArgRepeatPlus};
+    m_arguments.push_back({name_arg});
+  }
 
   ~CommandObjectRenderScriptScriptGroupBreakpointSet() override = default;
 

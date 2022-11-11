@@ -181,11 +181,11 @@ define i128 @remu128ri(i128 %a) {
 ; CHECK-NEXT:    lea %s2, __umodti3@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __umodti3@hi(, %s2)
-; CHECK-NEXT:    or %s2, 3, (0)1
+; CHECK-NEXT:    or %s2, 11, (0)1
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %r = urem i128 %a, 3
+  %r = urem i128 %a, 11
   ret i128 %r
 }
 

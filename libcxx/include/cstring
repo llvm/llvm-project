@@ -58,7 +58,16 @@ size_t strlen(const char* s);
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+
 #include <string.h>
+
+#ifndef _LIBCPP_STRING_H
+#   error <cstring> tried including <string.h> but didn't find libc++'s <string.h> header. \
+          This usually means that your header search paths are not configured properly. \
+          The header search paths should contain the C++ Standard Library headers before \
+          any C Standard Library, and you are probably using compiler flags that make that \
+          not be the case.
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64 -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm %s \
 // RUN:   -o - | FileCheck -check-prefixes=CHECK,NATIVE %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -target-feature -a -emit-llvm %s \
+// RUN: %clang_cc1 -triple riscv32 -target-feature -a -emit-llvm %s \
 // RUN:   -o - | FileCheck -check-prefixes=CHECK,LIBCALL %s
 
 void foo(int x)
@@ -10,35 +10,35 @@ void foo(int x)
   // Check that multiply / divides on atomics produce a cmpxchg loop
   i *= 2;
   // NATIVE: mul nsw i32
-  // NATIVE: cmpxchg i32* {{.*}} seq_cst, align 4
+  // NATIVE: cmpxchg ptr {{.*}} seq_cst, align 4
   // LIBCALL: mul nsw i32
   // LIBCALL: i1 @__atomic_compare_exchange(i32 noundef 4,
   i /= 2;
   // NATIVE: sdiv i32
-  // NATIVE: cmpxchg i32* {{.*}} seq_cst, align 4
+  // NATIVE: cmpxchg ptr {{.*}} seq_cst, align 4
   // LIBCALL: sdiv i32
   // LIBCALL: i1 @__atomic_compare_exchange(i32 noundef 4,
   j /= x;
   // NATIVE: sdiv i32
-  // NATIVE: cmpxchg i16* {{.*}} seq_cst, align 2
+  // NATIVE: cmpxchg ptr {{.*}} seq_cst, align 2
   // LIBCALL: sdiv i32
   // LIBCALL: i1 @__atomic_compare_exchange(i32 noundef 2,
 
 }
 
-// LIBCALL: declare void @__atomic_load(i32, i8*, i8*, i32) [[LC_ATTRS:#[0-9]+]]
-// LIBCALL: declare i1 @__atomic_compare_exchange(i32, i8*, i8*, i8*, i32, i32) [[LC_ATTRS:#[0-9]+]]
+// LIBCALL: declare void @__atomic_load(i32, ptr, ptr, i32) [[LC_ATTRS:#[0-9]+]]
+// LIBCALL: declare i1 @__atomic_compare_exchange(i32, ptr, ptr, ptr, i32, i32) [[LC_ATTRS:#[0-9]+]]
 
 extern _Atomic _Bool b;
 
 _Bool bar(void) {
 // NATIVE-LABEL: @bar
-// NATIVE: %[[load:.*]] = load atomic i8, i8* @b seq_cst, align 1
+// NATIVE: %[[load:.*]] = load atomic i8, ptr @b seq_cst, align 1
 // NATIVE: %[[tobool:.*]] = trunc i8 %[[load]] to i1
 // NATIVE: ret i1 %[[tobool]]
 // LIBCALL-LABEL: @bar
-// LIBCALL: call void @__atomic_load(i32 noundef 1, i8* noundef @b, i8* noundef %atomic-temp, i32 noundef 5)
-// LIBCALL: %[[load:.*]] = load i8, i8* %atomic-temp
+// LIBCALL: call void @__atomic_load(i32 noundef 1, ptr noundef @b, ptr noundef %atomic-temp, i32 noundef 5)
+// LIBCALL: %[[load:.*]] = load i8, ptr %atomic-temp
 // LIBCALL: %[[tobool:.*]] = trunc i8 %[[load]] to i1
 // LIBCALL: ret i1 %[[tobool]]
 
@@ -56,11 +56,11 @@ void baz(int y) {
   x += y;
 }
 
-// LIBCALL: declare void @__atomic_store(i32, i8*, i8*, i32) [[LC_ATTRS:#[0-9]+]]
+// LIBCALL: declare void @__atomic_store(i32, ptr, ptr, i32) [[LC_ATTRS:#[0-9]+]]
 
 _Atomic(int) compound_add(_Atomic(int) in) {
 // CHECK-LABEL: @compound_add
-// CHECK: [[OLD:%.*]] = atomicrmw add i32* {{.*}}, i32 5 seq_cst, align 4
+// CHECK: [[OLD:%.*]] = atomicrmw add ptr {{.*}}, i32 5 seq_cst, align 4
 // CHECK: [[NEW:%.*]] = add i32 [[OLD]], 5
 // CHECK: ret i32 [[NEW]]
 
@@ -69,7 +69,7 @@ _Atomic(int) compound_add(_Atomic(int) in) {
 
 _Atomic(int) compound_sub(_Atomic(int) in) {
 // CHECK-LABEL: @compound_sub
-// CHECK: [[OLD:%.*]] = atomicrmw sub i32* {{.*}}, i32 5 seq_cst, align 4
+// CHECK: [[OLD:%.*]] = atomicrmw sub ptr {{.*}}, i32 5 seq_cst, align 4
 // CHECK: [[NEW:%.*]] = sub i32 [[OLD]], 5
 // CHECK: ret i32 [[NEW]]
 
@@ -78,7 +78,7 @@ _Atomic(int) compound_sub(_Atomic(int) in) {
 
 _Atomic(int) compound_xor(_Atomic(int) in) {
 // CHECK-LABEL: @compound_xor
-// CHECK: [[OLD:%.*]] = atomicrmw xor i32* {{.*}}, i32 5 seq_cst, align 4
+// CHECK: [[OLD:%.*]] = atomicrmw xor ptr {{.*}}, i32 5 seq_cst, align 4
 // CHECK: [[NEW:%.*]] = xor i32 [[OLD]], 5
 // CHECK: ret i32 [[NEW]]
 
@@ -87,7 +87,7 @@ _Atomic(int) compound_xor(_Atomic(int) in) {
 
 _Atomic(int) compound_or(_Atomic(int) in) {
 // CHECK-LABEL: @compound_or
-// CHECK: [[OLD:%.*]] = atomicrmw or i32* {{.*}}, i32 5 seq_cst, align 4
+// CHECK: [[OLD:%.*]] = atomicrmw or ptr {{.*}}, i32 5 seq_cst, align 4
 // CHECK: [[NEW:%.*]] = or i32 [[OLD]], 5
 // CHECK: ret i32 [[NEW]]
 
@@ -96,7 +96,7 @@ _Atomic(int) compound_or(_Atomic(int) in) {
 
 _Atomic(int) compound_and(_Atomic(int) in) {
 // CHECK-LABEL: @compound_and
-// CHECK: [[OLD:%.*]] = atomicrmw and i32* {{.*}}, i32 5 seq_cst, align 4
+// CHECK: [[OLD:%.*]] = atomicrmw and ptr {{.*}}, i32 5 seq_cst, align 4
 // CHECK: [[NEW:%.*]] = and i32 [[OLD]], 5
 // CHECK: ret i32 [[NEW]]
 
@@ -105,7 +105,7 @@ _Atomic(int) compound_and(_Atomic(int) in) {
 
 _Atomic(int) compound_mul(_Atomic(int) in) {
 // NATIVE-LABEL: @compound_mul
-// NATIVE: cmpxchg i32* {{%.*}}, i32 {{%.*}}, i32 [[NEW:%.*]] seq_cst seq_cst, align 4
+// NATIVE: cmpxchg ptr {{%.*}}, i32 {{%.*}}, i32 [[NEW:%.*]] seq_cst seq_cst, align 4
 // NATIVE: ret i32 [[NEW]]
 // LIBCALL-LABEL: @compound_mul
 // LIBCALL: i1 @__atomic_compare_exchange(i32 noundef 4,

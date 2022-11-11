@@ -25,7 +25,7 @@ exit:
 
 declare void @bar()
 
-define void @foo(i32 %a, i32 %b) nounwind personality i32 (...)* @__gxx_personality_v0 {
+define void @foo(i32 %a, i32 %b) nounwind personality ptr @__gxx_personality_v0 {
 entry:
   %q = add i32 %a, 7
   %r = add i32 %b, 9
@@ -39,7 +39,7 @@ true:
 return:
   ret void
 unw:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
   unreachable
 }

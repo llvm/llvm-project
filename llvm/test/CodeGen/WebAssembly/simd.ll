@@ -483,7 +483,7 @@ define <8 x i16> @shuffle_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_undef_v8i16 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
-; SIMD128-SAME: 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0{{$}}
+; SIMD128-SAME: 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @shuffle_undef_v8i16(<8 x i16> %x, <8 x i16> %y) {
   %res = shufflevector <8 x i16> %x, <8 x i16> %y,
@@ -644,7 +644,7 @@ define <4 x i32> @shuffle_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_undef_v4i32 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
-; SIMD128-SAME: 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0{{$}}
+; SIMD128-SAME: 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @shuffle_undef_v4i32(<4 x i32> %x, <4 x i32> %y) {
   %res = shufflevector <4 x i32> %x, <4 x i32> %y,
@@ -793,7 +793,7 @@ define <2 x i64> @shuffle_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_undef_v2i64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
-; SIMD128-SAME: 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0{{$}}
+; SIMD128-SAME: 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @shuffle_undef_v2i64(<2 x i64> %x, <2 x i64> %y) {
   %res = shufflevector <2 x i64> %x, <2 x i64> %y,
@@ -942,7 +942,7 @@ define <4 x float> @shuffle_v4f32(<4 x float> %x, <4 x float> %y) {
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_undef_v4f32 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
-; SIMD128-SAME: 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0{{$}}
+; SIMD128-SAME: 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @shuffle_undef_v4f32(<4 x float> %x, <4 x float> %y) {
   %res = shufflevector <4 x float> %x, <4 x float> %y,
@@ -1092,7 +1092,7 @@ define <2 x double> @shuffle_v2f64(<2 x double> %x, <2 x double> %y) {
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_undef_v2f64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
-; SIMD128-SAME: 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0{{$}}
+; SIMD128-SAME: 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @shuffle_undef_v2f64(<2 x double> %x, <2 x double> %y) {
   %res = shufflevector <2 x double> %x, <2 x double> %y,

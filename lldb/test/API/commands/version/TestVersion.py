@@ -4,8 +4,6 @@ from lldbsuite.test.decorators import *
 
 class VersionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_version(self):
         # Should work even when people patch the output,
@@ -16,4 +14,4 @@ class VersionTestCase(TestBase):
     @no_debug_info_test
     def test_version_invalid_invocation(self):
         self.expect("version a", error=True,
-                    substrs=['the version command takes no arguments.'])
+                    substrs=["'version' doesn't take any arguments."])

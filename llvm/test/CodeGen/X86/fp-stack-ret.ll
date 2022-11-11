@@ -6,8 +6,8 @@
 ; CHECK: test1
 ; CHECK: fldl
 ; CHECK-NEXT: ret
-define double @test1(double *%P) {
-        %A = load double, double* %P
+define double @test1(ptr%P) {
+        %A = load double, ptr %P
         ret double %A
 }
 
@@ -34,7 +34,7 @@ define fastcc double @test3(<4 x float> %A) {
 ; CHECK: call
 ; CHECK: fstp
 ; CHECK: ret
-define void @test4(double *%P) {
-  %A = call double @test1(double *%P)
+define void @test4(ptr%P) {
+  %A = call double @test1(ptr%P)
   ret void
 }

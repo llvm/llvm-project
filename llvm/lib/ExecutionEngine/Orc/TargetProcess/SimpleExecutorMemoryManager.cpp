@@ -126,14 +126,15 @@ Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
           inconvertibleErrorCode()));
 
     char *Mem = Seg.Addr.toPtr<char *>();
-    memcpy(Mem, Seg.Content.data(), Seg.Content.size());
+    if (!Seg.Content.empty())
+      memcpy(Mem, Seg.Content.data(), Seg.Content.size());
     memset(Mem + Seg.Content.size(), 0, Seg.Size - Seg.Content.size());
     assert(Seg.Size <= std::numeric_limits<size_t>::max());
     if (auto EC = sys::Memory::protectMappedMemory(
             {Mem, static_cast<size_t>(Seg.Size)},
-            tpctypes::fromWireProtectionFlags(Seg.Prot)))
+            toSysMemoryProtectionFlags(Seg.AG.getMemProt())))
       return BailOut(errorCodeToError(EC));
-    if (Seg.Prot & tpctypes::WPF_Exec)
+    if ((Seg.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
       sys::Memory::InvalidateInstructionCache(Mem, Seg.Size);
   }
 

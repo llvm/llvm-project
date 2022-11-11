@@ -4,7 +4,7 @@
 
 ; Test i128 (tied) operands.
 
-define i32 @fun0(i8* %p1, i32 signext %l1, i8* %p2, i32 signext %l2, i8 zeroext %pad) {
+define i32 @fun0(ptr %p1, i32 signext %l1, ptr %p2, i32 signext %l2, i8 zeroext %pad) {
 ; CHECK-LABEL: fun0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lgr %r0, %r5
@@ -24,8 +24,8 @@ define i32 @fun0(i8* %p1, i32 signext %l1, i8* %p2, i32 signext %l2, i8 zeroext 
 ; CHECK-NEXT:    srl %r2, 31
 ; CHECK-NEXT:    br %r14
 entry:
-  %0 = ptrtoint i8* %p1 to i64
-  %1 = ptrtoint i8* %p2 to i64
+  %0 = ptrtoint ptr %p1 to i64
+  %1 = ptrtoint ptr %p2 to i64
   %and5 = and i32 %l2, 16777215
   %2 = zext i32 %and5 to i64
   %conv7 = zext i8 %pad to i64
@@ -51,7 +51,7 @@ entry:
 }
 
 ; Test a phys-reg def.
-define void @fun1(i128* %Src, i128* %Dst) {
+define void @fun1(ptr %Src, ptr %Dst) {
 ; CHECK-LABEL: fun1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
@@ -62,12 +62,12 @@ define void @fun1(i128* %Src, i128* %Dst) {
 ; CHECK-NEXT:    br %r14
 entry:
    %IAsm = call i128 asm "BLA $0", "={r4}"()
-  store volatile i128 %IAsm, i128* %Dst
+  store volatile i128 %IAsm, ptr %Dst
   ret void
 }
 
 ; Test a phys-reg use.
-define void @fun2(i128* %Src, i128* %Dst) {
+define void @fun2(ptr %Src, ptr %Dst) {
 ; CHECK-LABEL: fun2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lg %r5, 8(%r2)
@@ -77,13 +77,13 @@ define void @fun2(i128* %Src, i128* %Dst) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    br %r14
 entry:
-  %L = load i128, i128* %Src
+  %L = load i128, ptr %Src
   call void asm "BLA $0", "{r4}"(i128 %L)
   ret void
 }
 
 ; Test phys-reg use and phys-reg def.
-define void @fun3(i128* %Src, i128* %Dst) {
+define void @fun3(ptr %Src, ptr %Dst) {
 ; CHECK-LABEL: fun3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lg %r1, 8(%r2)
@@ -95,14 +95,14 @@ define void @fun3(i128* %Src, i128* %Dst) {
 ; CHECK-NEXT:    stg %r4, 0(%r3)
 ; CHECK-NEXT:    br %r14
 entry:
-  %L = load i128, i128* %Src
+  %L = load i128, ptr %Src
   %IAsm = call i128 asm "BLA $0, $1", "={r4},{r0}"(i128 %L)
-  store volatile i128 %IAsm, i128* %Dst
+  store volatile i128 %IAsm, ptr %Dst
   ret void
 }
 
 ; Test a tied phys-reg.
-define void @fun4(i128* %Src, i128* %Dst) {
+define void @fun4(ptr %Src, ptr %Dst) {
 ; CHECK-LABEL: fun4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lg %r5, 8(%r2)
@@ -114,9 +114,9 @@ define void @fun4(i128* %Src, i128* %Dst) {
 ; CHECK-NEXT:    stg %r4, 0(%r3)
 ; CHECK-NEXT:    br %r14
 entry:
-  %L = load i128, i128* %Src
+  %L = load i128, ptr %Src
   %IAsm = call i128 asm "BLA $0, $1", "={r4},0"(i128 %L)
-  store volatile i128 %IAsm, i128* %Dst
+  store volatile i128 %IAsm, ptr %Dst
   ret void
 }
 
@@ -151,8 +151,8 @@ define i32 @fun6() {
 ; CHECK-NEXT:    stg %r3, 8(%r1)
 ; CHECK-NEXT:    br %r14
 entry:
-  %0 = load i128, i128* @V128
+  %0 = load i128, ptr @V128
   %1 = tail call i128 asm "ltgr ${0:N},${0:N}", "=&d,0"(i128 %0)
-  store i128 %1, i128* @V128
+  store i128 %1, ptr @V128
   ret i32 undef
 }

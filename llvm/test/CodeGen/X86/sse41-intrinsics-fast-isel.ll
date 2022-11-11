@@ -574,8 +574,7 @@ define <2 x i64> @test_mm_insert_epi8(<2 x i64> %a0, i8 %a1) {
 ;
 ; X64-AVX-LABEL: test_mm_insert_epi8:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    movzbl %dil, %eax
-; X64-AVX-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpinsrb $1, %edi, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %res = insertelement <16 x i8> %arg0, i8 %a1,i32 1
@@ -947,7 +946,7 @@ define <4 x float> @test_mm_round_ss(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %res
 }
 
-define <2 x i64> @test_mm_stream_load_si128(<2 x i64>* %a0) {
+define <2 x i64> @test_mm_stream_load_si128(ptr %a0) {
 ; X86-SSE-LABEL: test_mm_stream_load_si128:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -969,11 +968,10 @@ define <2 x i64> @test_mm_stream_load_si128(<2 x i64>* %a0) {
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovntdqa (%rdi), %xmm0
 ; X64-AVX-NEXT:    retq
-  %arg0 = bitcast <2 x i64>* %a0 to i8*
-  %res = call <2 x i64> @llvm.x86.sse41.movntdqa(i8* %arg0)
+  %res = call <2 x i64> @llvm.x86.sse41.movntdqa(ptr %a0)
   ret <2 x i64> %res
 }
-declare <2 x i64> @llvm.x86.sse41.movntdqa(i8*) nounwind readnone
+declare <2 x i64> @llvm.x86.sse41.movntdqa(ptr) nounwind readnone
 
 define i32 @test_mm_test_all_ones(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_test_all_ones:

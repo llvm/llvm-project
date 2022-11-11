@@ -33,7 +33,7 @@ subroutine in_io(x)
   ! CHECK: %[[io_embox_cast:.*]] = fir.convert %[[io_embox]] : (!fir.box<!fir.array<?x!fir.logical<1>>>) -> !fir.box<none>
   ! CHECK: fir.call @_Fortran{{.*}}ioOutputDescriptor({{.*}}, %[[io_embox_cast]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
   print *, all(x, 1)
-  ! CHECK: fir.freemem %[[res_addr]]
+  ! CHECK: fir.freemem %[[res_addr]] : !fir.heap<!fir.array<?x!fir.logical<1>>>
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest2Pin_call(
@@ -52,7 +52,7 @@ subroutine in_call(x)
   ! CHECK: %[[call_embox:.*]] = fir.embox %[[res_addr]](%[[res_shape]]) : (!fir.heap<!fir.array<?x!fir.logical<1>>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?x!fir.logical<1>>>
   ! CHECK: fir.call @_QPtakes_array_desc(%[[call_embox]]) : (!fir.box<!fir.array<?x!fir.logical<1>>>) -> ()
   call takes_array_desc(all(x, 1))
-  ! CHECK: fir.freemem %[[res_addr]]
+  ! CHECK: fir.freemem %[[res_addr]] : !fir.heap<!fir.array<?x!fir.logical<1>>>
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest2Pin_implicit_call(
@@ -66,7 +66,7 @@ subroutine in_implicit_call(x)
   ! CHECK: %[[res_addr_cast:.*]] = fir.convert %[[res_addr]] : (!fir.heap<!fir.array<?x!fir.logical<1>>>) -> !fir.ref<!fir.array<?x!fir.logical<1>>>
   ! CHECK: fir.call @_QPtakes_implicit_array(%[[res_addr_cast]]) : (!fir.ref<!fir.array<?x!fir.logical<1>>>) -> ()
   call takes_implicit_array(all(x, 1))
-  ! CHECK: fir.freemem %[[res_addr]]
+  ! CHECK: fir.freemem %[[res_addr]] : !fir.heap<!fir.array<?x!fir.logical<1>>>
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest2Pin_assignment(
@@ -89,7 +89,7 @@ subroutine in_assignment(x, y)
   ! CHECK: }
   ! CHECK: fir.array_merge_store %[[y_load]], %[[assign]] to %[[arg1]] : !fir.array<?x!fir.logical<1>>, !fir.array<?x!fir.logical<1>>, !fir.box<!fir.array<?x!fir.logical<1>>>
   y = all(x, 1)
-  ! CHECK: fir.freemem %[[res_addr]]
+  ! CHECK: fir.freemem %[[res_addr]] : !fir.heap<!fir.array<?x!fir.logical<1>>>
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest2Pin_elem_expr(
@@ -118,7 +118,7 @@ subroutine in_elem_expr(x, y, z)
   ! CHECK: }
   ! CHECK: fir.array_merge_store %[[z_load]], %[[elem_expr]] to %[[arg2]] : !fir.array<?x!fir.logical<1>>, !fir.array<?x!fir.logical<1>>, !fir.box<!fir.array<?x!fir.logical<1>>>
   z = y .neqv. all(x, 1)
-  ! CHECK: fir.freemem %[[res_addr]]
+  ! CHECK: fir.freemem %[[res_addr]] : !fir.heap<!fir.array<?x!fir.logical<1>>>
 end subroutine
 
 ! CSHIFT
@@ -179,7 +179,7 @@ end subroutine
   ! CHECK:           fir.result %[[VAL_53:.*]] : !fir.array<3x3xi32>
   ! CHECK:         }
   ! CHECK:         fir.array_merge_store %[[VAL_16]], %[[VAL_54:.*]] to %[[VAL_8]] : !fir.array<3x3xi32>, !fir.array<3x3xi32>, !fir.ref<!fir.array<3x3xi32>>
-  ! CHECK:         fir.freemem %[[VAL_38]]
+  ! CHECK:         fir.freemem %[[VAL_38]] : !fir.heap<!fir.array<?x?xi32>>
   ! CHECK:         %[[VAL_55:.*]] = fir.shape %[[VAL_13]] : (index) -> !fir.shape<1>
   ! CHECK:         %[[VAL_56:.*]] = fir.array_load %[[VAL_14]](%[[VAL_55]]) : (!fir.ref<!fir.array<6xi32>>, !fir.shape<1>) -> !fir.array<6xi32>
   ! CHECK:         %[[VAL_57:.*]] = arith.constant 3 : i32
@@ -214,7 +214,7 @@ end subroutine
   ! CHECK:           fir.result %[[VAL_85]] : !fir.array<6xi32>
   ! CHECK:         }
   ! CHECK:         fir.array_merge_store %[[VAL_56]], %[[VAL_86:.*]] to %[[VAL_14]] : !fir.array<6xi32>, !fir.array<6xi32>, !fir.ref<!fir.array<6xi32>>
-  ! CHECK:         fir.freemem %[[VAL_75]]
+  ! CHECK:         fir.freemem %[[VAL_75]] : !fir.heap<!fir.array<?xi32>>
   ! CHECK:         return
   ! CHECK:       }
 
@@ -263,7 +263,7 @@ subroutine unpack_test()
   ! CHECK: fir.call @_FortranAUnpack(%[[a19]], %[[a20]], %[[a21]], %[[a22]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
   ! CHECK-NEXT: %[[a22:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
   ! CHECK: %[[a25:.*]] = fir.box_addr %[[a22]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
-  ! CHECK: fir.freemem %[[a25]]
+  ! CHECK: fir.freemem %[[a25]] : !fir.heap<!fir.array<?x?xi32>>
   ! CHECK: %[[a36:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
   ! CHECK: %[[a38:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
   ! CHECK-NEXT: %[[a39:.*]] = fir.embox %[[a6]](%[[a38]]) : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<3xi32>>
@@ -282,7 +282,7 @@ subroutine unpack_test()
   ! CHECK: fir.call @_FortranAUnpack(%[[a47]], %[[a48]], %[[a49]], %[[a50]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
   ! CHECK: %[[a53:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
   ! CHECK: %[[a56:.*]] = fir.box_addr %[[a53]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
-  ! CHECK: fir.freemem %[[a56]]
+  ! CHECK: fir.freemem %[[a56]] : !fir.heap<!fir.array<?x?xi32>>
   ! CHECK-NEXT: return
 end subroutine unpack_test
 

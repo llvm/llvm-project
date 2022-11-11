@@ -1,14 +1,14 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin
 ; rdar://r6661945
 
-	%struct.WINDOW = type { i16, i16, i16, i16, i16, i16, i16, i32, i32, i8, i8, i8, i8, i8, i8, i8, i8, i8, i32, %struct.ldat*, i16, i16, i32, i32, %struct.WINDOW*, %struct.pdat, i16, %struct.cchar_t }
+	%struct.WINDOW = type { i16, i16, i16, i16, i16, i16, i16, i32, i32, i8, i8, i8, i8, i8, i8, i8, i8, i8, i32, ptr, i16, i16, i32, i32, ptr, %struct.pdat, i16, %struct.cchar_t }
 	%struct.cchar_t = type { i32, [5 x i32] }
-	%struct.ldat = type { %struct.cchar_t*, i16, i16, i16 }
+	%struct.ldat = type { ptr, i16, i16, i16 }
 	%struct.pdat = type { i16, i16, i16, i16, i16, i16 }
 
-define i32 @pnoutrefresh(%struct.WINDOW* %win, i32 %pminrow, i32 %pmincol, i32 %sminrow, i32 %smincol, i32 %smaxrow, i32 %smaxcol) nounwind optsize ssp {
+define i32 @pnoutrefresh(ptr %win, i32 %pminrow, i32 %pmincol, i32 %sminrow, i32 %smincol, i32 %smaxrow, i32 %smaxcol) nounwind optsize ssp {
 entry:
-	%0 = load i16, i16* null, align 4		; <i16> [#uses=2]
+	%0 = load i16, ptr null, align 4		; <i16> [#uses=2]
 	%1 = icmp sgt i16 0, %0		; <i1> [#uses=1]
 	br i1 %1, label %bb12, label %bb13
 

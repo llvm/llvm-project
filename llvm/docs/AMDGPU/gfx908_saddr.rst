@@ -12,7 +12,7 @@ saddr
 
 An optional 64-bit flat global address. Must be specified as :ref:`off<amdgpu_synid_off>` if not used.
 
-See :ref:`vaddr<amdgpu_synid_gfx908_vaddr>` for description of available addressing modes.
+See :ref:`vaddr<amdgpu_synid_gfx908_vaddr_0212e3>` for description of available addressing modes.
 
 *Size:* 2 dwords.
 

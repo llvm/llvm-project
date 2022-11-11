@@ -152,7 +152,7 @@ Optional<SVal> getTaintedPointeeOrPointer(const CheckerContext &C, SVal Arg) {
 
 bool isTaintedOrPointsToTainted(const Expr *E, const ProgramStateRef &State,
                                 CheckerContext &C) {
-  return getTaintedPointeeOrPointer(C, C.getSVal(E)).hasValue();
+  return getTaintedPointeeOrPointer(C, C.getSVal(E)).has_value();
 }
 
 /// ArgSet is used to describe arguments relevant for taint detection or
@@ -732,7 +732,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
   }
 
   GenericTaintRuleParser::RulesContTy Rules{
-      ConfigParser.parseConfiguration(Option, std::move(Config.getValue()))};
+      ConfigParser.parseConfiguration(Option, std::move(*Config))};
 
   DynamicTaintRules.emplace(std::make_move_iterator(Rules.begin()),
                             std::make_move_iterator(Rules.end()));
@@ -824,7 +824,7 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
   /// Check for taint sinks.
   ForEachCallArg([this, &Checker, &C, &State](ArgIdxTy I, const Expr *E, SVal) {
     if (SinkArgs.contains(I) && isTaintedOrPointsToTainted(E, State, C))
-      Checker.generateReportIfTainted(E, SinkMsg.getValueOr(MsgCustomSink), C);
+      Checker.generateReportIfTainted(E, SinkMsg.value_or(MsgCustomSink), C);
   });
 
   /// Check for taint filters.

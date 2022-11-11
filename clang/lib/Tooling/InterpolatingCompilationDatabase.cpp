@@ -51,7 +51,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/Debug.h"
@@ -165,8 +164,8 @@ struct TransferableCommand {
       const unsigned OldPos = Pos;
       std::unique_ptr<llvm::opt::Arg> Arg(OptTable.ParseOneArg(
           ArgList, Pos,
-          /* Include */ ClangCLMode ? CoreOption | CLOption : 0,
-          /* Exclude */ ClangCLMode ? 0 : CLOption));
+          /* Include */ ClangCLMode ? CoreOption | CLOption | CLDXCOption : 0,
+          /* Exclude */ ClangCLMode ? 0 : CLOption | CLDXCOption));
 
       if (!Arg)
         continue;

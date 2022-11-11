@@ -22,9 +22,9 @@ define void @inner_loop_reduction(double* noalias nocapture readonly %a.in, doub
 ; CHECK-NEXT: %[[FOR1_INDEX:.*]] = phi i64 [ 0, %[[LABEL_PR:.*]] ], [ %{{.*}}, %[[LABEL_FOR1_LATCH:.*]] ]
 ; CHECK: %[[VEC_INDEX:.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[LABEL_PR]] ], [ %{{.*}}, %[[LABEL_FOR1_LATCH]] ]
 ; CHECK-NEXT: %[[A_PTR:.*]] = getelementptr inbounds double, double* %a.in, <4 x i64> %[[VEC_INDEX]]
-; CHECK-NEXT: %[[MASKED_GATHER1:.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> %[[A_PTR]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x double> undef)
+; CHECK-NEXT: %[[MASKED_GATHER1:.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> %[[A_PTR]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x double> poison)
 ; CHECK-NEXT: %[[B_PTR:.*]] = getelementptr inbounds double, double* %b.in, <4 x i64> %[[VEC_INDEX]]
-; CHECK-NEXT: %[[MASKED_GATHER2:.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> %[[B_PTR]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x double> undef)
+; CHECK-NEXT: %[[MASKED_GATHER2:.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> %[[B_PTR]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x double> poison)
 ; CHECK-NEXT: br label %[[FOR2_HEADER:.*]]
 
 ; CHECK: [[FOR2_HEADER]]:

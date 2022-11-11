@@ -8,7 +8,7 @@ entry:
 }
 
 %struct = type { i32 }
-@func_ptr = common global void (i32, %struct*)* null, align 8
+@func_ptr = common global ptr null, align 8
 
 define void @test() {
 ; Even though value profiling suggests @va_func is the call target, don't do
@@ -20,8 +20,8 @@ define void @test() {
 ; CHECK: ret void
 
   %s = alloca %struct
-  %tmp = load void (i32, %struct*)*, void (i32, %struct*)** @func_ptr, align 8
-  call void %tmp(i32 1, %struct* sret(%struct) %s), !prof !1
+  %tmp = load ptr, ptr @func_ptr, align 8
+  call void %tmp(i32 1, ptr sret(%struct) %s), !prof !1
   ret void
 }
 

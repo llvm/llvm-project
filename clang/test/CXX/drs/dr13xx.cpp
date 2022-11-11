@@ -18,7 +18,7 @@ namespace dr1305 { // dr1305: yes
 struct Incomplete; // expected-note {{forward declaration of 'dr1305::Incomplete'}}
 struct Complete {};
 
-int incomplete = alignof(Incomplete(&)[]); // expected-error {{invalid application of 'alignof' to an incomplete type 'dr1305::Incomplete'}}
+int incomplete = alignof(Incomplete(&)[]); // expected-error {{invalid application of 'alignof' to an incomplete type 'Incomplete'}}
 int complete = alignof(Complete(&)[]);
 }
 #endif
@@ -454,6 +454,17 @@ namespace dr1394 { // dr1394: 15
 #if __cplusplus >= 201103L
 struct Incomplete;
 Incomplete f(Incomplete) = delete; // well-formed
+#endif
+}
+
+namespace dr1395 { // dr1395: 16
+#if __cplusplus >= 201103L
+  template <typename T, typename... U> void f(T, U...);
+  template <typename T> void f(T);
+  void h(int i) {
+    // This is made ambiguous by dr692, but made valid again by dr1395.
+    f(&i);
+  }
 #endif
 }
 

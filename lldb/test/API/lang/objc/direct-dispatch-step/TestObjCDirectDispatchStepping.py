@@ -1,8 +1,5 @@
 """Test stepping through ObjC method dispatch in various forms."""
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -10,8 +7,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestObjCDirectDispatchStepping(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):

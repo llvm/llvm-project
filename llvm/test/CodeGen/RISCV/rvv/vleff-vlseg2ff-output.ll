@@ -50,7 +50,7 @@ define i64 @test_vleff_nxv8i8_mask(<vscale x 8 x i8> %maskedoff, <vscale x 8 x i
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
   ; CHECK-NEXT:   $v0 = COPY [[COPY1]]
-  ; CHECK-NEXT:   [[PseudoVLE8FF_V_M1_MASK:%[0-9]+]]:vrnov0, [[PseudoVLE8FF_V_M1_MASK1:%[0-9]+]]:gpr = PseudoVLE8FF_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 3 /* e8 */, 0, implicit-def dead $vl
+  ; CHECK-NEXT:   [[PseudoVLE8FF_V_M1_MASK:%[0-9]+]]:vrnov0, [[PseudoVLE8FF_V_M1_MASK1:%[0-9]+]]:gpr = PseudoVLE8FF_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 3 /* e8 */, 0 /* tu, mu */, implicit-def dead $vl
   ; CHECK-NEXT:   $x10 = COPY [[PseudoVLE8FF_V_M1_MASK1]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
 entry:
@@ -104,7 +104,7 @@ define i64 @test_vlseg2ff_nxv8i8_mask(<vscale x 8 x i8> %val, i8* %base, <vscale
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vr = COPY $v8
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vrn2m1nov0 = REG_SEQUENCE [[COPY3]], %subreg.sub_vrm1_0, [[COPY3]], %subreg.sub_vrm1_1
   ; CHECK-NEXT:   $v0 = COPY [[COPY1]]
-  ; CHECK-NEXT:   [[PseudoVLSEG2E8FF_V_M1_MASK:%[0-9]+]]:vrn2m1nov0, [[PseudoVLSEG2E8FF_V_M1_MASK1:%[0-9]+]]:gpr = PseudoVLSEG2E8FF_V_M1_MASK [[REG_SEQUENCE]], [[COPY2]], $v0, [[COPY]], 3 /* e8 */, 0, implicit-def dead $vl
+  ; CHECK-NEXT:   [[PseudoVLSEG2E8FF_V_M1_MASK:%[0-9]+]]:vrn2m1nov0, [[PseudoVLSEG2E8FF_V_M1_MASK1:%[0-9]+]]:gpr = PseudoVLSEG2E8FF_V_M1_MASK [[REG_SEQUENCE]], [[COPY2]], $v0, [[COPY]], 3 /* e8 */, 0 /* tu, mu */, implicit-def dead $vl
   ; CHECK-NEXT:   $x10 = COPY [[PseudoVLSEG2E8FF_V_M1_MASK1]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
 entry:

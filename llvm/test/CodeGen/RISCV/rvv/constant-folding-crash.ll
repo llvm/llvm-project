@@ -22,23 +22,23 @@ define void @constant_folding_crash(i8* %v54, <4 x <4 x i32>*> %lanes.a, <4 x <4
 ; RV32-NEXT:    vmv1r.v v10, v0
 ; RV32-NEXT:    andi a0, a0, 1
 ; RV32-NEXT:    seqz a0, a0
-; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv.v.x v11, a0
 ; RV32-NEXT:    vmsne.vi v0, v11, 0
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV32-NEXT:    vmerge.vvm v8, v9, v8, v0
-; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv.v.i v9, 0
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv1r.v v0, v10
 ; RV32-NEXT:    vmerge.vim v8, v9, 1, v0
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    andi a1, a1, 1
 ; RV32-NEXT:    vmv.v.x v8, a1
 ; RV32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v8, 10
 ; RV32-NEXT:    vse32.v v8, (a0), v0.t
 ; RV32-NEXT:    ret
@@ -49,23 +49,23 @@ define void @constant_folding_crash(i8* %v54, <4 x <4 x i32>*> %lanes.a, <4 x <4
 ; RV64-NEXT:    vmv1r.v v12, v0
 ; RV64-NEXT:    andi a0, a0, 1
 ; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv.v.x v13, a0
 ; RV64-NEXT:    vmsne.vi v0, v13, 0
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vmerge.vvm v8, v10, v8, v0
-; RV64-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
+; RV64-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vmv.x.s a0, v8
-; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv1r.v v0, v12
 ; RV64-NEXT:    vmerge.vim v8, v10, 1, v0
 ; RV64-NEXT:    vmv.x.s a1, v8
 ; RV64-NEXT:    andi a1, a1, 1
 ; RV64-NEXT:    vmv.v.x v8, a1
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 10
 ; RV64-NEXT:    vse32.v v8, (a0), v0.t
 ; RV64-NEXT:    ret

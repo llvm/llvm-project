@@ -37,7 +37,7 @@ protected:
 
 public:
   /// Compiles the function into the module.
-  llvm::Expected<Function *> compileFunc(const FunctionDecl *F);
+  llvm::Expected<Function *> compileFunc(const FunctionDecl *FuncDecl);
 
 protected:
   ByteCodeEmitter(Context &Ctx, Program &P) : Ctx(Ctx), P(P) {}

@@ -9,7 +9,7 @@
 ; Function Attrs: nofree noinline norecurse nounwind uwtable writeonly
 define dso_local void @ext() local_unnamed_addr #0 {
 entry:
-  store i32 0, i32* @a, align 4
+  store i32 0, ptr @a, align 4
   ret void
 }
 
@@ -17,7 +17,7 @@ entry:
 define dso_local i32 @main() local_unnamed_addr #1 {
 entry:
   tail call fastcc void @foo()
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   ret i32 %0
 }
 
@@ -31,6 +31,6 @@ entry:
 !llvm.module.flags = !{!0, !1, !2, !3}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{i32 4, !"cf-protection-return", i32 1}
-!2 = !{i32 4, !"cf-protection-branch", i32 1}
+!1 = !{i32 8, !"cf-protection-return", i32 1}
+!2 = !{i32 8, !"cf-protection-branch", i32 1}
 !3 = !{i32 1, !"Code Model", i32 4}

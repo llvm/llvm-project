@@ -7,7 +7,6 @@
 # For the shells sh, bash:
 #   PYTHONPATH=/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Resources/Python ./globals.py <path> [<path> ...]
 #----------------------------------------------------------------------
-from __future__ import print_function
 
 import lldb
 import optparse

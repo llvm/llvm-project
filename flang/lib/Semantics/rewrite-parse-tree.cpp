@@ -41,7 +41,6 @@ public:
   void Post(parser::Name &);
   void Post(parser::SpecificationPart &);
   bool Pre(parser::ExecutionPart &);
-  void Post(parser::IoUnit &);
   void Post(parser::ReadStmt &);
   void Post(parser::WriteStmt &);
 
@@ -128,29 +127,6 @@ bool RewriteMutator::Pre(parser::ExecutionPart &x) {
   }
   stmtFuncsToConvert_.clear();
   return true;
-}
-
-// Convert a syntactically ambiguous io-unit internal-file-variable to a
-// file-unit-number.
-void RewriteMutator::Post(parser::IoUnit &x) {
-  if (auto *var{std::get_if<parser::Variable>(&x.u)}) {
-    const parser::Name &last{parser::GetLastName(*var)};
-    DeclTypeSpec *type{last.symbol ? last.symbol->GetType() : nullptr};
-    if (!type || type->category() != DeclTypeSpec::Character) {
-      // If the Variable is not known to be character (any kind), transform
-      // the I/O unit in situ to a FileUnitNumber so that automatic expression
-      // constraint checking will be applied.
-      auto source{var->GetSource()};
-      auto expr{common::visit(
-          [](auto &&indirection) {
-            return parser::Expr{std::move(indirection)};
-          },
-          std::move(var->u))};
-      expr.source = source;
-      x.u = parser::FileUnitNumber{
-          parser::ScalarIntExpr{parser::IntExpr{std::move(expr)}}};
-    }
-  }
 }
 
 // When a namelist group name appears (without NML=) in a READ or WRITE

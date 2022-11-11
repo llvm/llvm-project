@@ -45,7 +45,7 @@ template <>          struct __libcpp_is_integral<__int128_t>         { enum { va
 template <>          struct __libcpp_is_integral<__uint128_t>        { enum { value = 1 }; };
 #endif
 
-#if __has_keyword(__is_integral)
+#if __has_builtin(__is_integral)
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_integral : _BoolConstant<__is_integral(_Tp)> { };
@@ -58,14 +58,14 @@ inline constexpr bool is_integral_v = __is_integral(_Tp);
 #else
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_integral
-    : public _BoolConstant<__libcpp_is_integral<typename remove_cv<_Tp>::type>::value> {};
+    : public _BoolConstant<__libcpp_is_integral<__remove_cv_t<_Tp> >::value> {};
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
 inline constexpr bool is_integral_v = is_integral<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_integral)
+#endif // __has_builtin(__is_integral)
 
 _LIBCPP_END_NAMESPACE_STD
 

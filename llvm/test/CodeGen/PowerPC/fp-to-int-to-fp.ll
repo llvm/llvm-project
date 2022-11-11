@@ -84,35 +84,35 @@ define float @fooul(float %X) #0 {
 ; PPC64-NEXT:    addi 3, 5, 0
 ; PPC64-NEXT:  .LBB2_2: # %entry
 ; PPC64-NEXT:    sradi 4, 3, 53
-; PPC64-NEXT:    clrldi 5, 3, 63
+; PPC64-NEXT:    rldicl 5, 3, 63, 1
 ; PPC64-NEXT:    addi 4, 4, 1
+; PPC64-NEXT:    clrldi 6, 3, 63
 ; PPC64-NEXT:    cmpldi 4, 1
-; PPC64-NEXT:    rldicl 4, 3, 63, 1
-; PPC64-NEXT:    or 5, 5, 4
-; PPC64-NEXT:    rldicl 6, 5, 11, 53
-; PPC64-NEXT:    addi 6, 6, 1
-; PPC64-NEXT:    clrldi 7, 5, 53
-; PPC64-NEXT:    cmpldi 1, 6, 1
-; PPC64-NEXT:    clrldi 6, 3, 53
+; PPC64-NEXT:    clrldi 4, 3, 53
+; PPC64-NEXT:    or 6, 6, 5
+; PPC64-NEXT:    clrldi 7, 6, 53
+; PPC64-NEXT:    addi 4, 4, 2047
 ; PPC64-NEXT:    addi 7, 7, 2047
-; PPC64-NEXT:    addi 6, 6, 2047
-; PPC64-NEXT:    or 4, 7, 4
-; PPC64-NEXT:    or 6, 6, 3
-; PPC64-NEXT:    rldicl 4, 4, 53, 11
-; PPC64-NEXT:    rldicr 6, 6, 0, 52
+; PPC64-NEXT:    or 4, 4, 3
+; PPC64-NEXT:    or 5, 7, 5
+; PPC64-NEXT:    rldicl 7, 3, 10, 54
+; PPC64-NEXT:    rldicr 4, 4, 0, 52
+; PPC64-NEXT:    addi 7, 7, 1
 ; PPC64-NEXT:    bc 12, 1, .LBB2_4
 ; PPC64-NEXT:  # %bb.3: # %entry
-; PPC64-NEXT:    ori 6, 3, 0
+; PPC64-NEXT:    ori 4, 3, 0
 ; PPC64-NEXT:    b .LBB2_4
 ; PPC64-NEXT:  .LBB2_4: # %entry
-; PPC64-NEXT:    rldicl 4, 4, 11, 1
-; PPC64-NEXT:    cmpdi 3, 0
-; PPC64-NEXT:    std 6, -32(1)
-; PPC64-NEXT:    bc 12, 5, .LBB2_6
+; PPC64-NEXT:    rldicl 5, 5, 53, 11
+; PPC64-NEXT:    std 4, -32(1)
+; PPC64-NEXT:    rldicl 4, 5, 11, 1
+; PPC64-NEXT:    cmpldi 7, 1
+; PPC64-NEXT:    bc 12, 1, .LBB2_6
 ; PPC64-NEXT:  # %bb.5: # %entry
-; PPC64-NEXT:    ori 4, 5, 0
+; PPC64-NEXT:    ori 4, 6, 0
 ; PPC64-NEXT:    b .LBB2_6
 ; PPC64-NEXT:  .LBB2_6: # %entry
+; PPC64-NEXT:    cmpdi 3, 0
 ; PPC64-NEXT:    std 4, -24(1)
 ; PPC64-NEXT:    bc 12, 0, .LBB2_8
 ; PPC64-NEXT:  # %bb.7: # %entry

@@ -11,16 +11,16 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @foo(i1 %b, i8* %p) {
+define i32 @foo(i1 %b, ptr %p) {
 bb1: 
   br i1 %b, label %bb2, label %bb3
 
 bb2:
-  %a1 = icmp eq i8* %p, null
+  %a1 = icmp eq ptr %p, null
   br i1 %a1, label %bb4, label %bb5, !dbg !6
   
 bb3:
-  %a2 = icmp eq i8* %p, null
+  %a2 = icmp eq ptr %p, null
   br i1 %a2, label %bb4, label %bb5, !dbg !6
 
 bb4:

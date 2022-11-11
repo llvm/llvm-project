@@ -5,9 +5,9 @@
 
 define i64 @_Z8wyhash64v() {
 ; CHECK-LABEL: @_Z8wyhash64v(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* @wyhash64_x, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @wyhash64_x, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 6971258582664805397
-; CHECK-NEXT:    store i64 [[TMP2]], i64* @wyhash64_x, align 8
+; CHECK-NEXT:    store i64 [[TMP2]], ptr @wyhash64_x, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i64 [[TMP2]] to i128
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i128 [[TMP3]], 11795372955171141389
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i128 [[TMP4]], 64
@@ -19,9 +19,9 @@ define i64 @_Z8wyhash64v() {
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i128 [[TMP9]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP10]]
 ;
-  %1 = load i64, i64* @wyhash64_x, align 8
+  %1 = load i64, ptr @wyhash64_x, align 8
   %2 = add i64 %1, 6971258582664805397
-  store i64 %2, i64* @wyhash64_x, align 8
+  store i64 %2, ptr @wyhash64_x, align 8
   %3 = zext i64 %2 to i128
   %4 = mul i128 %3, 11795372955171141389
   %5 = lshr i128 %4, 64

@@ -23,7 +23,7 @@
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
-class SPV_Attr<string attrName, string attrMnemonic>
+class SPIRV_Attr<string attrName, string attrMnemonic>
     : AttrDef<SPIRV_Dialect, attrName> {
   let mnemonic = attrMnemonic;
 }
@@ -31,22 +31,22 @@ class SPV_Attr<string attrName, string attrMnemonic>
 // For entry functions, this attribute specifies information related to entry
 // points in the generated SPIR-V module:
 // 1) WorkGroup Size.
-def SPV_EntryPointABIAttr : SPV_Attr<"EntryPointABI", "entry_point_abi"> {
+def SPIRV_EntryPointABIAttr : SPIRV_Attr<"EntryPointABI", "entry_point_abi"> {
   let parameters = (ins OptionalParameter<"DenseIntElementsAttr">:$local_size);
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def SPV_ExtensionArrayAttr : TypedArrayAttrBase<
-    SPV_ExtensionAttr, "SPIR-V extension array attribute">;
+def SPIRV_ExtensionArrayAttr : TypedArrayAttrBase<
+    SPIRV_ExtensionAttr, "SPIR-V extension array attribute">;
 
-def SPV_CapabilityArrayAttr : TypedArrayAttrBase<
-    SPV_CapabilityAttr, "SPIR-V capability array attribute">;
+def SPIRV_CapabilityArrayAttr : TypedArrayAttrBase<
+    SPIRV_CapabilityAttr, "SPIR-V capability array attribute">;
 
 // Description of cooperative matrix operations supported on the
 // target. Represents `VkCooperativeMatrixPropertiesNV`. See
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkCooperativeMatrixPropertiesNV.html
-def SPV_CooperativeMatrixPropertiesNVAttr :
-    SPV_Attr<"CooperativeMatrixPropertiesNV", "coop_matrix_props"> {
+def SPIRV_CooperativeMatrixPropertiesNVAttr :
+    SPIRV_Attr<"CooperativeMatrixPropertiesNV", "coop_matrix_props"> {
   let parameters = (ins
     "int":$m_size,
     "int":$n_size,
@@ -60,9 +60,30 @@ def SPV_CooperativeMatrixPropertiesNVAttr :
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def SPV_CooperativeMatrixPropertiesNVArrayAttr :
-    TypedArrayAttrBase<SPV_CooperativeMatrixPropertiesNVAttr,
+def SPIRV_CooperativeMatrixPropertiesNVArrayAttr :
+    TypedArrayAttrBase<SPIRV_CooperativeMatrixPropertiesNVAttr,
                        "CooperativeMatrixPropertiesNV array attribute">;
+
+// Description of the supported joint matrix operations. See
+// https://github.com/intel/llvm/blob/sycl/sycl/doc/design/spirv-extensions/SPV_INTEL_joint_matrix.asciidoc
+def SPIRV_JointMatrixPropertiesINTELAttr :
+    SPIRV_Attr<"JointMatrixPropertiesINTEL", "joint_matrix_props"> {
+  let parameters = (ins
+    "int":$m_size,
+    "int":$n_size,
+    "int":$k_size,
+    "mlir::Type":$a_type,
+    "mlir::Type":$b_type,
+    "mlir::Type":$c_type,
+    "mlir::Type":$result_type,
+    "mlir::spirv::ScopeAttr":$scope
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def SPIRV_JointMatrixPropertiesINTELArrayAttr :
+    TypedArrayAttrBase<SPIRV_JointMatrixPropertiesINTELAttr,
+                       "JointMatrixPropertiesINTEL array attribute">;
 
 // This attribute specifies the limits for various resources on the target
 // architecture.
@@ -72,7 +93,7 @@ def SPV_CooperativeMatrixPropertiesNVArrayAttr :
 // The following ones are those affecting SPIR-V CodeGen. Their default value
 // are the from Vulkan limit requirements:
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#limits-minmax
-def SPV_ResourceLimitsAttr : SPV_Attr<"ResourceLimits", "resource_limits"> {
+def SPIRV_ResourceLimitsAttr : SPIRV_Attr<"ResourceLimits", "resource_limits"> {
   let parameters = (ins
     // The maximum total storage size, in bytes, available for variables
     // declared with the Workgroup storage class.

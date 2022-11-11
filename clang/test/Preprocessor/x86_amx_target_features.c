@@ -20,7 +20,7 @@
 
 // NOAMX-BF16-NOT: #define __AMXBF16__ 1
 
-// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -amx-bf16 -mno-amx-tile -x c -E -dM -o - %s | FileCheck  -check-prefix=NOAMX-BF16 %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mamx-bf16 -mno-amx-tile -x c -E -dM -o - %s | FileCheck  -check-prefix=NOAMX-BF16 %s
 
 // NOAMX-BF16-NOT: #define __AMXTILE__ 1
 // NOAMX-BF16-NOT: #define __AMXBF16__ 1
@@ -29,7 +29,7 @@
 
 // NOAMX-INT8-NOT: #define __AMXINT8__ 1
 
-// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -amx-int8 -mno-amx-tile -x c -E -dM -o - %s | FileCheck  -check-prefix=NOAMX-INT8 %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mamx-int8 -mno-amx-tile -x c -E -dM -o - %s | FileCheck  -check-prefix=NOAMX-INT8 %s
 
 // NOAMX-INT8-NOT: #define __AMXTILE__ 1
 // NOAMX-INT8-NOT: #define __AMXINT8__ 1

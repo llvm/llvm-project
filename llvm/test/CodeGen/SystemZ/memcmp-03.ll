@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 ; REQUIRES: asserts
 
-declare i32 @memcmp(i8* nocapture, i8* nocapture, i64)
+declare i32 @memcmp(ptr nocapture, ptr nocapture, i64)
 
 define hidden void @fun() {
 ; CHECK-LABEL: fun
@@ -12,7 +12,7 @@ entry:
   br i1 undef, label %end, label %call
 
 call:
-  %res = tail call signext i32 @memcmp(i8* noundef undef, i8* noundef undef, i64 noundef %len)
+  %res = tail call signext i32 @memcmp(ptr noundef undef, ptr noundef undef, i64 noundef %len)
   unreachable
 
 end:

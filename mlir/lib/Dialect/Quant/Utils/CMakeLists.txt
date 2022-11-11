@@ -1,5 +1,4 @@
 add_mlir_dialect_library(MLIRQuantUtils
-  QuantizeUtils.cpp
   UniformSupport.cpp
   FakeQuantSupport.cpp
 

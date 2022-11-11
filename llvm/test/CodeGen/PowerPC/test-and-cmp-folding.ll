@@ -23,7 +23,7 @@ if.then14.i:                                      ; preds = %sw.bb52
   br i1 undef, label %dummy.exit.i, label %if.then.i.i.i636
 
 if.then.i.i.i636:                                 ; preds = %if.then14.i
-  %0 = load i8*, i8** undef, align 8
+  %0 = load ptr, ptr undef, align 8
   call void @free() #3
   br label %dummy.exit.i
 

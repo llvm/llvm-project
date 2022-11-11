@@ -4,8 +4,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 class SBPlatformAPICase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote # Remote environment not supported.

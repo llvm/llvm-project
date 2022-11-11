@@ -21,7 +21,7 @@ namespace abseil {
 /// case of zero and suggests `ZeroDuration()`.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil-duration-factory-scale.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-factory-scale.html
 class DurationFactoryScaleCheck : public ClangTidyCheck {
 public:
   DurationFactoryScaleCheck(StringRef Name, ClangTidyContext *Context)

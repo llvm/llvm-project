@@ -2,8 +2,8 @@
 
 declare void @ProcessCLRException()
 declare void @f(i32)
-declare void @g(i8 addrspace(1)*)
-declare i8 addrspace(1)* @llvm.eh.exceptionpointer.p1i8(token)
+declare void @g(ptr addrspace(1))
+declare ptr addrspace(1) @llvm.eh.exceptionpointer.p1(token)
 
 ; Simplified IR for pseudo-C# like the following:
 ; void test1() {
@@ -29,7 +29,7 @@ declare i8 addrspace(1)* @llvm.eh.exceptionpointer.p1i8(token)
 ;
 ; CHECK-LABEL: test1:     # @test1
 ; CHECK-NEXT: [[test1_begin:.*func_begin.*]]:
-define void @test1() personality i8* bitcast (void ()* @ProcessCLRException to i8*) {
+define void @test1() personality ptr @ProcessCLRException {
 entry:
 ; CHECK: # %entry
 ; CHECK: leaq [[FPOffset:[0-9]+]](%rsp), %rbp
@@ -64,8 +64,8 @@ catch1:
 ; CHECK: movq %rdx, %rcx
 ;             ^ exception pointer passed in rdx
 ; CHECK-NEXT: callq g
-  %exn1 = call i8 addrspace(1)* @llvm.eh.exceptionpointer.p1i8(token %catch.pad1)
-  call void @g(i8 addrspace(1)* %exn1) [ "funclet"(token %catch.pad1) ]
+  %exn1 = call ptr addrspace(1) @llvm.eh.exceptionpointer.p1(token %catch.pad1)
+  call void @g(ptr addrspace(1) %exn1) [ "funclet"(token %catch.pad1) ]
 ; CHECK: [[test1_before_f3:.+]]:
 ; CHECK-NEXT: movl $3, %ecx
 ; CHECK-NEXT: callq f
@@ -87,8 +87,8 @@ catch2:
 ; CHECK: movq %rdx, %rcx
 ;             ^ exception pointer passed in rdx
 ; CHECK-NEXT: callq g
-  %exn2 = call i8 addrspace(1)* @llvm.eh.exceptionpointer.p1i8(token %catch.pad2)
-  call void @g(i8 addrspace(1)* %exn2) [ "funclet"(token %catch.pad2) ]
+  %exn2 = call ptr addrspace(1) @llvm.eh.exceptionpointer.p1(token %catch.pad2)
+  call void @g(ptr addrspace(1) %exn2) [ "funclet"(token %catch.pad2) ]
 ; CHECK: [[test1_before_f4:.+]]:
 ; CHECK-NEXT: movl $4, %ecx
 ; CHECK-NEXT: callq f
@@ -283,7 +283,7 @@ tail:
 ;   }
 ; }
 ;
-define void @test2() personality i8* bitcast (void ()* @ProcessCLRException to i8*) {
+define void @test2() personality ptr @ProcessCLRException {
 entry:
   invoke void @f(i32 1)
     to label %exit unwind label %fault
@@ -442,7 +442,7 @@ unreachable:
 ;
 ; CHECK-LABEL: test3:     # @test3
 ; CHECK-NEXT: [[test3_begin:.*func_begin.*]]:
-define void @test3() personality i8* bitcast (void ()* @ProcessCLRException to i8*) {
+define void @test3() personality ptr @ProcessCLRException {
 entry:
 ; CHECK: .seh_endprologue
 ; CHECK: [[test3_before_f1:.+]]:

@@ -3,8 +3,6 @@
 
 
 
-import unittest2
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,9 +11,8 @@ from lldbsuite.test import lldbutil
 
 class ModulesInlineFunctionsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
-    @skipIf(macos_version=["<", "10.12"], debug_info=no_match(["gmodules"]))
+    @add_test_categories(["gmodules"])
+    @skipIf(macos_version=["<", "10.12"])
     def test_expr(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

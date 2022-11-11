@@ -704,15 +704,15 @@ LanaiAsmParser::parseRegister(bool RestoreOnFailure) {
   if (Lexer.getKind() == AsmToken::Identifier) {
     RegNum = MatchRegisterName(Lexer.getTok().getIdentifier());
     if (RegNum == 0) {
-      if (PercentTok.hasValue() && RestoreOnFailure)
-        Lexer.UnLex(PercentTok.getValue());
+      if (PercentTok && RestoreOnFailure)
+        Lexer.UnLex(PercentTok.value());
       return nullptr;
     }
     Parser.Lex(); // Eat identifier token
     return LanaiOperand::createReg(RegNum, Start, End);
   }
-  if (PercentTok.hasValue() && RestoreOnFailure)
-    Lexer.UnLex(PercentTok.getValue());
+  if (PercentTok && RestoreOnFailure)
+    Lexer.UnLex(PercentTok.value());
   return nullptr;
 }
 
@@ -812,7 +812,7 @@ std::unique_ptr<LanaiOperand> LanaiAsmParser::parseImmediate() {
   case AsmToken::Dot:
     if (!Parser.parseExpression(ExprVal))
       return LanaiOperand::createImm(ExprVal, Start, End);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return nullptr;
   }

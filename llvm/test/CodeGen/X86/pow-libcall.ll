@@ -4,7 +4,7 @@
 ; Ensure vectorized FPOWs are not widened/unrolled such that they get lowered
 ; into libcalls on undef elements.
 
-define float @test_fpow_v2f32_multiuse(<2 x float> %a0, <2 x float> %a1, <2 x float> *%p3) nounwind {
+define float @test_fpow_v2f32_multiuse(<2 x float> %a0, <2 x float> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: test_fpow_v2f32_multiuse:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -31,7 +31,7 @@ define float @test_fpow_v2f32_multiuse(<2 x float> %a0, <2 x float> %a1, <2 x fl
   %fp0 = extractelement <2 x float> %fp, i32 0
   %fp1 = extractelement <2 x float> %fp, i32 1
   %res = fadd float %fp0, %fp1
-  store <2 x float> %fp, <2 x float> *%p3
+  store <2 x float> %fp, ptr%p3
   ret float %res
 }
 declare <2 x float> @llvm.pow.v2f32(<2 x float>, <2 x float>)

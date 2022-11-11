@@ -11,12 +11,7 @@
 // class year;
 
 // constexpr bool operator==(const year& x, const year& y) noexcept;
-// constexpr bool operator!=(const year& x, const year& y) noexcept;
-// constexpr bool operator< (const year& x, const year& y) noexcept;
-// constexpr bool operator> (const year& x, const year& y) noexcept;
-// constexpr bool operator<=(const year& x, const year& y) noexcept;
-// constexpr bool operator>=(const year& x, const year& y) noexcept;
-
+// constexpr strong_ordering operator<=>(const year& x, const year& y) noexcept;
 
 #include <chrono>
 #include <type_traits>
@@ -25,24 +20,31 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
+constexpr bool test() {
+  using year = std::chrono::year;
 
-int main(int, char**)
-{
-    using year = std::chrono::year;
+  // Validate valid value. The range [-32768, 32767] is guaranteed to be allowed.
+  assert(testOrderValues<year>(-32768, -32768));
+  assert(testOrderValues<year>(-32768, -32767));
+  // Largest positive
+  assert(testOrderValues<year>(32767, 32766));
+  assert(testOrderValues<year>(32767, 32767));
 
-    AssertComparisons6AreNoexcept<year>();
-    AssertComparisons6ReturnBool<year>();
+  // Validate some valid values.
+  for (int i = 1; i < 10; ++i)
+    for (int j = 1; j < 10; ++j)
+      assert(testOrderValues<year>(i, j));
 
-    static_assert(testComparisons6Values<year>(0,0), "");
-    static_assert(testComparisons6Values<year>(0,1), "");
+  return true;
+}
 
-    //  Some 'ok' values as well
-    static_assert(testComparisons6Values<year>( 5, 5), "");
-    static_assert(testComparisons6Values<year>( 5,10), "");
+int main(int, char**) {
+  using year = std::chrono::year;
+  AssertOrderAreNoexcept<year>();
+  AssertOrderReturn<std::strong_ordering, year>();
 
-    for (int i = 1; i < 10; ++i)
-        for (int j = 1; j < 10; ++j)
-            assert(testComparisons6Values<year>(i, j));
+  test();
+  static_assert(test());
 
-    return 0;
+  return 0;
 }

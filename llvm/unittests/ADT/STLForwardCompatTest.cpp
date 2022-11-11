@@ -11,37 +11,6 @@
 
 namespace {
 
-TEST(STLForwardCompatTest, NegationTest) {
-  EXPECT_TRUE((llvm::negation<std::false_type>::value));
-  EXPECT_FALSE((llvm::negation<std::true_type>::value));
-}
-
-struct incomplete_type;
-
-TEST(STLForwardCompatTest, ConjunctionTest) {
-  EXPECT_TRUE((llvm::conjunction<>::value));
-  EXPECT_FALSE((llvm::conjunction<std::false_type>::value));
-  EXPECT_TRUE((llvm::conjunction<std::true_type>::value));
-  EXPECT_FALSE((llvm::conjunction<std::false_type, incomplete_type>::value));
-  EXPECT_FALSE((llvm::conjunction<std::false_type, std::true_type>::value));
-  EXPECT_FALSE((llvm::conjunction<std::true_type, std::false_type>::value));
-  EXPECT_TRUE((llvm::conjunction<std::true_type, std::true_type>::value));
-  EXPECT_TRUE((llvm::conjunction<std::true_type, std::true_type,
-                                 std::true_type>::value));
-}
-
-TEST(STLForwardCompatTest, DisjunctionTest) {
-  EXPECT_FALSE((llvm::disjunction<>::value));
-  EXPECT_FALSE((llvm::disjunction<std::false_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::true_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::true_type, incomplete_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::false_type, std::true_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::true_type, std::false_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::true_type, std::true_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::true_type, std::true_type,
-                                 std::true_type>::value));
-}
-
 template <typename T>
 class STLForwardCompatRemoveCVRefTest : public ::testing::Test {};
 

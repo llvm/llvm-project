@@ -57,7 +57,6 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -292,7 +291,8 @@ namespace {
 LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
          << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper;
+         << (void *)&llvm_orc_registerJITLoaderGDBWrapper
+         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
 
 //===----------------------------------------------------------------------===//
@@ -371,53 +371,6 @@ private:
     CacheName.replace(pos, CacheName.length() - pos, ".o");
     return true;
   }
-};
-
-class ORCPlatformSupport : public orc::LLJIT::PlatformSupport {
-public:
-  ORCPlatformSupport(orc::LLJIT &J) : J(J) {}
-
-  Error initialize(orc::JITDylib &JD) override {
-    using llvm::orc::shared::SPSExecutorAddr;
-    using llvm::orc::shared::SPSString;
-    using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
-    enum dlopen_mode : int32_t {
-      ORC_RT_RTLD_LAZY = 0x1,
-      ORC_RT_RTLD_NOW = 0x2,
-      ORC_RT_RTLD_LOCAL = 0x4,
-      ORC_RT_RTLD_GLOBAL = 0x8
-    };
-
-    if (auto WrapperAddr = J.lookup("__orc_rt_jit_dlopen_wrapper")) {
-      return J.getExecutionSession().callSPSWrapper<SPSDLOpenSig>(
-          *WrapperAddr, DSOHandles[&JD], JD.getName(),
-          int32_t(ORC_RT_RTLD_LAZY));
-    } else
-      return WrapperAddr.takeError();
-  }
-
-  Error deinitialize(orc::JITDylib &JD) override {
-    using llvm::orc::shared::SPSExecutorAddr;
-    using SPSDLCloseSig = int32_t(SPSExecutorAddr);
-
-    if (auto WrapperAddr = J.lookup("__orc_rt_jit_dlclose_wrapper")) {
-      int32_t result;
-      auto E = J.getExecutionSession().callSPSWrapper<SPSDLCloseSig>(
-          *WrapperAddr, result, DSOHandles[&JD]);
-      if (E)
-        return E;
-      else if (result)
-        return make_error<StringError>("dlclose failed",
-                                       inconvertibleErrorCode());
-      DSOHandles.erase(&JD);
-    } else
-      return WrapperAddr.takeError();
-    return Error::success();
-  }
-
-private:
-  orc::LLJIT &J;
-  DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
 };
 
 // On Mingw and Cygwin, an external symbol named '__main' is called from the
@@ -536,9 +489,9 @@ int main(int argc, char **argv, char * const *envp) {
   builder.setMCPU(codegen::getCPUStr());
   builder.setMAttrs(codegen::getFeatureList());
   if (auto RM = codegen::getExplicitRelocModel())
-    builder.setRelocationModel(RM.getValue());
+    builder.setRelocationModel(RM.value());
   if (auto CM = codegen::getExplicitCodeModel())
-    builder.setCodeModel(CM.getValue());
+    builder.setCodeModel(CM.value());
   builder.setErrorStr(&ErrorMsg);
   builder.setEngineKind(ForceInterpreter
                         ? EngineKind::Interpreter
@@ -969,10 +922,7 @@ int runOrcJIT(const char *ProgName) {
   }
   switch (P) {
   case LLJITPlatform::ORC:
-    Builder.setPlatformSetUp([](llvm::orc::LLJIT &J) -> llvm::Error {
-      J.setPlatformSupport(std::make_unique<ORCPlatformSupport>(J));
-      return Error::success();
-    });
+    Builder.setPlatformSetUp(orc::setUpOrcPlatform);
     break;
   case LLJITPlatform::GenericIR:
     // Nothing to do: LLJITBuilder will use this by default.

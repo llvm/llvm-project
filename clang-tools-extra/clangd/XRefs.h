@@ -20,6 +20,7 @@
 #include "support/Path.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <vector>
 
@@ -59,10 +60,11 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
 // AST-based resolution does not work, such as comments, strings, and PP
 // disabled regions.
 // (This is for internal use by locateSymbolAt, and is exposed for testing).
-std::vector<LocatedSymbol>
-locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
-                      const SymbolIndex *Index, const std::string &MainFilePath,
-                      ASTNodeKind NodeKind);
+std::vector<LocatedSymbol> locateSymbolTextually(const SpelledWord &Word,
+                                                 ParsedAST &AST,
+                                                 const SymbolIndex *Index,
+                                                 llvm::StringRef MainFilePath,
+                                                 ASTNodeKind NodeKind);
 
 // Try to find a proximate occurrence of `Word` as an identifier, which can be
 // used to resolve it.
@@ -115,16 +117,25 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
 /// Get info about symbols at \p Pos.
 std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos);
 
-/// Find the record type references at \p Pos.
-const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos);
+/// Find the record types referenced at \p Pos.
+std::vector<const CXXRecordDecl *> findRecordTypeAt(ParsedAST &AST,
+                                                    Position Pos);
 
 /// Given a record type declaration, find its base (parent) types.
 std::vector<const CXXRecordDecl *> typeParents(const CXXRecordDecl *CXXRD);
 
 /// Get type hierarchy information at \p Pos.
-llvm::Optional<TypeHierarchyItem> getTypeHierarchy(
+std::vector<TypeHierarchyItem> getTypeHierarchy(
     ParsedAST &AST, Position Pos, int Resolve, TypeHierarchyDirection Direction,
     const SymbolIndex *Index = nullptr, PathRef TUPath = PathRef{});
+
+/// Returns direct parents of a TypeHierarchyItem using SymbolIDs stored inside
+/// the item.
+llvm::Optional<std::vector<TypeHierarchyItem>>
+superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index);
+/// Returns direct children of a TypeHierarchyItem.
+std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,
+                                        const SymbolIndex *Index);
 
 void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
                           TypeHierarchyDirection Direction,

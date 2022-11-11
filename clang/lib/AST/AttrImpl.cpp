@@ -168,24 +168,24 @@ OMPDeclareTargetDeclAttr::getActiveAttr(const ValueDecl *VD) {
 llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
 OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(const ValueDecl *VD) {
   llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
-  if (ActiveAttr.hasValue())
-    return ActiveAttr.getValue()->getMapType();
+  if (ActiveAttr)
+    return ActiveAttr.value()->getMapType();
   return llvm::None;
 }
 
 llvm::Optional<OMPDeclareTargetDeclAttr::DevTypeTy>
 OMPDeclareTargetDeclAttr::getDeviceType(const ValueDecl *VD) {
   llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
-  if (ActiveAttr.hasValue())
-    return ActiveAttr.getValue()->getDevType();
+  if (ActiveAttr)
+    return ActiveAttr.value()->getDevType();
   return llvm::None;
 }
 
 llvm::Optional<SourceLocation>
 OMPDeclareTargetDeclAttr::getLocation(const ValueDecl *VD) {
   llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
-  if (ActiveAttr.hasValue())
-    return ActiveAttr.getValue()->getRange().getBegin();
+  if (ActiveAttr)
+    return ActiveAttr.value()->getRange().getBegin();
   return llvm::None;
 }
 
@@ -222,18 +222,18 @@ void OMPDeclareVariantAttr::printPrettyPragma(
     OS << ")";
   }
 
-  auto PrintInteropTypes = [&OS](InteropType *Begin, InteropType *End) {
-    for (InteropType *I = Begin; I != End; ++I) {
+  auto PrintInteropInfo = [&OS](OMPInteropInfo *Begin, OMPInteropInfo *End) {
+    for (OMPInteropInfo *I = Begin; I != End; ++I) {
       if (I != Begin)
         OS << ", ";
       OS << "interop(";
-      OS << ConvertInteropTypeToStr(*I);
+      OS << getInteropTypeString(I);
       OS << ")";
     }
   };
   if (appendArgs_size()) {
     OS << " append_args(";
-    PrintInteropTypes(appendArgs_begin(), appendArgs_end());
+    PrintInteropInfo(appendArgs_begin(), appendArgs_end());
     OS << ")";
   }
 }

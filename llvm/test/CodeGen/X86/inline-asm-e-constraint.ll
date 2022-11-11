@@ -10,7 +10,7 @@
 define void @pr40890() {
 entry:
   ; This pointer cannot be used as an integer constant expression.
-  tail call void asm sideeffect "\0A#define GLOBAL_A abcd$0\0A", "e,~{dirflag},~{fpsr},~{flags}"(i32* getelementptr inbounds (%struct.s, %struct.s* @pr40890.s, i64 0, i32 0))
+  tail call void asm sideeffect "\0A#define GLOBAL_A abcd$0\0A", "e,~{dirflag},~{fpsr},~{flags}"(ptr @pr40890.s)
   ; Floating-point is also not okay.
   tail call void asm sideeffect "\0A#define PI abcd$0\0A", "e,~{dirflag},~{fpsr},~{flags}"(float 0x40091EB860000000)
   ret void

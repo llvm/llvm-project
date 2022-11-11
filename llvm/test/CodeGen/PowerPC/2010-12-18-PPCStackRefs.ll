@@ -11,12 +11,12 @@ entry:
   %retval = alloca i32
   %0 = alloca i32
   %"alloca point" = bitcast i32 0 to i32
-  store i32 0, i32* %0, align 4
-  %1 = load i32, i32* %0, align 4
-  store i32 %1, i32* %retval, align 4
+  store i32 0, ptr %0, align 4
+  %1 = load i32, ptr %0, align 4
+  store i32 %1, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %entry
-  %retval1 = load i32, i32* %retval
+  %retval1 = load i32, ptr %retval
   ret i32 %retval1
 }

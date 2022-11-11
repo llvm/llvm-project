@@ -6,9 +6,9 @@
 ; Attempt the import now, ensure below that file containing noinline
 ; is not imported by default but imported with -force-import-all.
 
-; RUN: opt -function-import -summary-file %t.summary.thinlto.bc %t.main.bc -S 2>&1 \
+; RUN: opt -passes=function-import -summary-file %t.summary.thinlto.bc %t.main.bc -S 2>&1 \
 ; RUN:   | FileCheck -check-prefix=NOIMPORT %s
-; RUN: opt -function-import -force-import-all -summary-file %t.summary.thinlto.bc \
+; RUN: opt -passes=function-import -force-import-all -summary-file %t.summary.thinlto.bc \
 ; RUN:   %t.main.bc -S 2>&1 | FileCheck -check-prefix=IMPORT %s
 
 define i32 @main() #0 {

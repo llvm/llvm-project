@@ -22,5 +22,5 @@ define ptr @gep_constexpr_inttoptr() {
 ; CHECK-LABEL: @gep_constexpr_inttoptr(
 ; CHECK-NEXT:    ret ptr getelementptr (i8, ptr inttoptr (i64 mul (i64 ptrtoint (ptr @g to i64), i64 2) to ptr), i64 20)
 ;
-  ret ptr getelementptr([16 x i16], ptr inttoptr (i64 mul (i64 ptrtoint ([16 x i16]* @g to i64), i64 2) to ptr), i64 0, i64 10)
+  ret ptr getelementptr([16 x i16], ptr inttoptr (i64 mul (i64 ptrtoint (ptr @g to i64), i64 2) to ptr), i64 0, i64 10)
 }

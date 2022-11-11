@@ -105,20 +105,25 @@ defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">,
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtA] in {
-
-/// Atomic loads and stores
-
+// Atomic load/store are available under both +a and +force-atomics.
 // Fences will be inserted for atomic load/stores according to the logic in
 // RISCVTargetLowering::{emitLeadingFence,emitTrailingFence}.
+let Predicates = [HasAtomicLdSt] in {
+  defm : LdPat<atomic_load_8,  LB>;
+  defm : LdPat<atomic_load_16, LH>;
+  defm : LdPat<atomic_load_32, LW>;
 
-defm : LdPat<atomic_load_8,  LB>;
-defm : LdPat<atomic_load_16, LH>;
-defm : LdPat<atomic_load_32, LW>;
+  defm : AtomicStPat<atomic_store_8,  SB, GPR>;
+  defm : AtomicStPat<atomic_store_16, SH, GPR>;
+  defm : AtomicStPat<atomic_store_32, SW, GPR>;
+}
 
-defm : AtomicStPat<atomic_store_8,  SB, GPR>;
-defm : AtomicStPat<atomic_store_16, SH, GPR>;
-defm : AtomicStPat<atomic_store_32, SW, GPR>;
+let Predicates = [HasAtomicLdSt, IsRV64] in {
+  defm : LdPat<atomic_load_64, LD, i64>;
+  defm : AtomicStPat<atomic_store_64, SD, GPR, i64>;
+}
+
+let Predicates = [HasStdExtA] in {
 
 /// AMOs
 
@@ -303,13 +308,6 @@ def : Pat<(int_riscv_masked_cmpxchg_i32
 } // Predicates = [HasStdExtA]
 
 let Predicates = [HasStdExtA, IsRV64] in {
-
-/// 64-bit atomic loads and stores
-
-// Fences will be inserted for atomic load/stores according to the logic in
-// RISCVTargetLowering::{emitLeadingFence,emitTrailingFence}.
-defm : LdPat<atomic_load_64, LD, i64>;
-defm : AtomicStPat<atomic_store_64, SD, GPR, i64>;
 
 defm : AMOPat<"atomic_swap_64", "AMOSWAP_D">;
 defm : AMOPat<"atomic_load_add_64", "AMOADD_D">;

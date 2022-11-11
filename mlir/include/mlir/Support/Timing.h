@@ -270,7 +270,7 @@ private:
 /// started and stopped.
 class TimingScope {
 public:
-  TimingScope() : timer() {}
+  TimingScope() {}
   TimingScope(const Timer &other) : timer(other) {
     if (timer)
       timer.start();

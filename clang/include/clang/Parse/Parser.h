@@ -194,6 +194,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MSConstSeg;
   std::unique_ptr<PragmaHandler> MSCodeSeg;
   std::unique_ptr<PragmaHandler> MSSection;
+  std::unique_ptr<PragmaHandler> MSStrictGuardStackCheck;
   std::unique_ptr<PragmaHandler> MSRuntimeChecks;
   std::unique_ptr<PragmaHandler> MSIntrinsic;
   std::unique_ptr<PragmaHandler> MSFunction;
@@ -215,6 +216,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> AttributePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
+  std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -724,10 +726,14 @@ private:
                              SourceLocation PragmaLocation);
   bool HandlePragmaMSInitSeg(StringRef PragmaName,
                              SourceLocation PragmaLocation);
+  bool HandlePragmaMSStrictGuardStackCheck(StringRef PragmaName,
+                                           SourceLocation PragmaLocation);
   bool HandlePragmaMSFunction(StringRef PragmaName,
                               SourceLocation PragmaLocation);
   bool HandlePragmaMSAllocText(StringRef PragmaName,
                                SourceLocation PragmaLocation);
+  bool HandlePragmaMSOptimize(StringRef PragmaName,
+                              SourceLocation PragmaLocation);
 
   /// Handle the annotation token produced for
   /// #pragma align...
@@ -851,16 +857,20 @@ private:
 public:
   // If NeedType is true, then TryAnnotateTypeOrScopeToken will try harder to
   // find a type name by attempting typo correction.
-  bool TryAnnotateTypeOrScopeToken();
-  bool TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
-                                                 bool IsNewScope);
+  bool
+  TryAnnotateTypeOrScopeToken(ImplicitTypenameContext AllowImplicitTypename =
+                                  ImplicitTypenameContext::No);
+  bool TryAnnotateTypeOrScopeTokenAfterScopeSpec(
+      CXXScopeSpec &SS, bool IsNewScope,
+      ImplicitTypenameContext AllowImplicitTypename);
   bool TryAnnotateCXXScopeToken(bool EnteringContext = false);
 
   bool MightBeCXXScopeToken() {
-    return Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
-           (Tok.is(tok::annot_template_id) &&
-            NextToken().is(tok::coloncolon)) ||
-           Tok.is(tok::kw_decltype) || Tok.is(tok::kw___super);
+    return getLangOpts().CPlusPlus &&
+           (Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
+            (Tok.is(tok::annot_template_id) &&
+             NextToken().is(tok::coloncolon)) ||
+            Tok.is(tok::kw_decltype) || Tok.is(tok::kw___super));
   }
   bool TryAnnotateOptionalCXXScopeToken(bool EnteringContext = false) {
     return MightBeCXXScopeToken() && TryAnnotateCXXScopeToken(EnteringContext);
@@ -879,7 +889,11 @@ private:
     /// Annotation was successful.
     ANK_Success
   };
-  AnnotatedNameKind TryAnnotateName(CorrectionCandidateCallback *CCC = nullptr);
+
+  AnnotatedNameKind
+  TryAnnotateName(CorrectionCandidateCallback *CCC = nullptr,
+                  ImplicitTypenameContext AllowImplicitTypename =
+                      ImplicitTypenameContext::No);
 
   /// Push a tok::annot_cxxscope token onto the token stream.
   void AnnotateScopeToken(CXXScopeSpec &SS, bool IsNewAnnotation);
@@ -1041,7 +1055,7 @@ private:
   /// If the next token is not a semicolon, this emits the specified diagnostic,
   /// or, if there's just some closing-delimiter noise (e.g., ')' or ']') prior
   /// to the semicolon, consumes that extra token.
-  bool ExpectAndConsumeSemi(unsigned DiagID);
+  bool ExpectAndConsumeSemi(unsigned DiagID , StringRef TokenUsed = "");
 
   /// The kind of extra semi diagnostic to emit.
   enum ExtraSemiKind {
@@ -1973,7 +1987,8 @@ private:
   /// simple-type-specifier.
   void ParseCXXSimpleTypeSpecifier(DeclSpec &DS);
 
-  bool ParseCXXTypeSpecifierSeq(DeclSpec &DS);
+  bool ParseCXXTypeSpecifierSeq(
+      DeclSpec &DS, DeclaratorContext Context = DeclaratorContext::TypeName);
 
   //===--------------------------------------------------------------------===//
   // C++ 5.3.4 and 5.3.5: C++ new and delete
@@ -2088,6 +2103,7 @@ private:
   StmtResult ParseCompoundStatement(bool isStmtExpr,
                                     unsigned ScopeFlags);
   void ParseCompoundStatementLeadingPragmas();
+  void DiagnoseLabelAtEndOfCompoundStatement();
   bool ConsumeNullStmt(StmtVector &Stmts);
   StmtResult ParseCompoundStatementBody(bool isStmtExpr = false);
   bool ParseParenExprOrCondition(StmtResult *InitStmt,
@@ -2187,16 +2203,19 @@ private:
   /// out, there are other significant restrictions on specifiers than
   /// would be best implemented in the parser.
   enum class DeclSpecContext {
-    DSC_normal, // normal context
-    DSC_class,  // class context, enables 'friend'
+    DSC_normal,         // normal context
+    DSC_class,          // class context, enables 'friend'
     DSC_type_specifier, // C++ type-specifier-seq or C specifier-qualifier-list
     DSC_trailing, // C++11 trailing-type-specifier in a trailing return type
-    DSC_alias_declaration, // C++11 type-specifier-seq in an alias-declaration
-    DSC_top_level, // top-level/namespace declaration context
-    DSC_template_param, // template parameter context
-    DSC_template_type_arg, // template type argument context
-    DSC_objc_method_result, // ObjC method result context, enables 'instancetype'
-    DSC_condition, // condition declaration context
+    DSC_alias_declaration,  // C++11 type-specifier-seq in an alias-declaration
+    DSC_conv_operator,      // C++ type-specifier-seq in an conversion operator
+    DSC_top_level,          // top-level/namespace declaration context
+    DSC_template_param,     // template parameter context
+    DSC_template_arg,       // template argument context
+    DSC_template_type_arg,  // template type argument context
+    DSC_objc_method_result, // ObjC method result context, enables
+                            // 'instancetype'
+    DSC_condition,          // condition declaration context
     DSC_association // A _Generic selection expression's type association
   };
 
@@ -2206,6 +2225,7 @@ private:
     switch (DSC) {
     case DeclSpecContext::DSC_normal:
     case DeclSpecContext::DSC_template_param:
+    case DeclSpecContext::DSC_template_arg:
     case DeclSpecContext::DSC_class:
     case DeclSpecContext::DSC_top_level:
     case DeclSpecContext::DSC_objc_method_result:
@@ -2214,6 +2234,7 @@ private:
 
     case DeclSpecContext::DSC_template_type_arg:
     case DeclSpecContext::DSC_type_specifier:
+    case DeclSpecContext::DSC_conv_operator:
     case DeclSpecContext::DSC_trailing:
     case DeclSpecContext::DSC_alias_declaration:
     case DeclSpecContext::DSC_association:
@@ -2263,6 +2284,8 @@ private:
                          : AllowDefiningTypeSpec::Yes;
 
     case DeclSpecContext::DSC_trailing:
+    case DeclSpecContext::DSC_conv_operator:
+    case DeclSpecContext::DSC_template_arg:
       return AllowDefiningTypeSpec::No;
     }
     llvm_unreachable("Missing DeclSpecContext case");
@@ -2284,6 +2307,9 @@ private:
     case DeclSpecContext::DSC_type_specifier:
     case DeclSpecContext::DSC_trailing:
     case DeclSpecContext::DSC_association:
+    case DeclSpecContext::DSC_conv_operator:
+    case DeclSpecContext::DSC_template_arg:
+
       return false;
     }
     llvm_unreachable("Missing DeclSpecContext case");
@@ -2295,11 +2321,13 @@ private:
     switch (DSC) {
     case DeclSpecContext::DSC_normal:
     case DeclSpecContext::DSC_template_param:
+    case DeclSpecContext::DSC_template_arg:
     case DeclSpecContext::DSC_class:
     case DeclSpecContext::DSC_top_level:
     case DeclSpecContext::DSC_condition:
     case DeclSpecContext::DSC_type_specifier:
     case DeclSpecContext::DSC_association:
+    case DeclSpecContext::DSC_conv_operator:
       return true;
 
     case DeclSpecContext::DSC_objc_method_result:
@@ -2307,6 +2335,30 @@ private:
     case DeclSpecContext::DSC_trailing:
     case DeclSpecContext::DSC_alias_declaration:
       return false;
+    }
+    llvm_unreachable("Missing DeclSpecContext case");
+  }
+
+  // Is this a context in which an implicit 'typename' is allowed?
+  static ImplicitTypenameContext
+  getImplicitTypenameContext(DeclSpecContext DSC) {
+    switch (DSC) {
+    case DeclSpecContext::DSC_class:
+    case DeclSpecContext::DSC_top_level:
+    case DeclSpecContext::DSC_type_specifier:
+    case DeclSpecContext::DSC_template_type_arg:
+    case DeclSpecContext::DSC_trailing:
+    case DeclSpecContext::DSC_alias_declaration:
+    case DeclSpecContext::DSC_template_param:
+      return ImplicitTypenameContext::Yes;
+
+    case DeclSpecContext::DSC_normal:
+    case DeclSpecContext::DSC_objc_method_result:
+    case DeclSpecContext::DSC_condition:
+    case DeclSpecContext::DSC_template_arg:
+    case DeclSpecContext::DSC_conv_operator:
+    case DeclSpecContext::DSC_association:
+      return ImplicitTypenameContext::No;
     }
     llvm_unreachable("Missing DeclSpecContext case");
   }
@@ -2366,13 +2418,28 @@ private:
       const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
       AccessSpecifier AS = AS_none,
       DeclSpecContext DSC = DeclSpecContext::DSC_normal,
-      LateParsedAttrList *LateAttrs = nullptr);
+      LateParsedAttrList *LateAttrs = nullptr) {
+    return ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, LateAttrs,
+                                      getImplicitTypenameContext(DSC));
+  }
+  void ParseDeclarationSpecifiers(
+      DeclSpec &DS, const ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
+      DeclSpecContext DSC, LateParsedAttrList *LateAttrs,
+      ImplicitTypenameContext AllowImplicitTypename);
+
   bool DiagnoseMissingSemiAfterTagDefinition(
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,
       LateParsedAttrList *LateAttrs = nullptr);
 
   void ParseSpecifierQualifierList(
       DeclSpec &DS, AccessSpecifier AS = AS_none,
+      DeclSpecContext DSC = DeclSpecContext::DSC_normal) {
+    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC);
+  }
+
+  void ParseSpecifierQualifierList(
+      DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
+      AccessSpecifier AS = AS_none,
       DeclSpecContext DSC = DeclSpecContext::DSC_normal);
 
   void ParseObjCTypeQualifierList(ObjCDeclSpec &DS,
@@ -2389,7 +2456,8 @@ private:
       ParsingDeclSpec &DS,
       llvm::function_ref<void(ParsingFieldDeclarator &)> FieldsCallback);
 
-  bool isDeclarationSpecifier(bool DisambiguatingWithExpression = false);
+  bool isDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
+                              bool DisambiguatingWithExpression = false);
   bool isTypeSpecifierQualifier();
 
   /// isKnownToBeTypeSpecifier - Return true if we know that the specified token
@@ -2402,8 +2470,9 @@ private:
   /// cast. Return false if it's no a decl-specifier, or we're not sure.
   bool isKnownToBeDeclarationSpecifier() {
     if (getLangOpts().CPlusPlus)
-      return isCXXDeclarationSpecifier() == TPResult::True;
-    return isDeclarationSpecifier(true);
+      return isCXXDeclarationSpecifier(ImplicitTypenameContext::No) ==
+             TPResult::True;
+    return isDeclarationSpecifier(ImplicitTypenameContext::No, true);
   }
 
   /// isDeclarationStatement - Disambiguates between a declaration or an
@@ -2412,7 +2481,7 @@ private:
   bool isDeclarationStatement() {
     if (getLangOpts().CPlusPlus)
       return isCXXDeclarationStatement();
-    return isDeclarationSpecifier(true);
+    return isDeclarationSpecifier(ImplicitTypenameContext::No, true);
   }
 
   /// isForInitDeclaration - Disambiguates between a declaration or an
@@ -2425,7 +2494,7 @@ private:
     if (getLangOpts().CPlusPlus)
       return Tok.is(tok::kw_using) ||
              isCXXSimpleDeclaration(/*AllowForRangeDecl=*/true);
-    return isDeclarationSpecifier(true);
+    return isDeclarationSpecifier(ImplicitTypenameContext::No, true);
   }
 
   /// Determine whether this is a C++1z for-range-identifier.
@@ -2438,7 +2507,9 @@ private:
   /// Starting with a scope specifier, identifier, or
   /// template-id that refers to the current class, determine whether
   /// this is a constructor declarator.
-  bool isConstructorDeclarator(bool Unqualified, bool DeductionGuide = false);
+  bool isConstructorDeclarator(
+      bool Unqualified, bool DeductionGuide = false,
+      DeclSpec::FriendSpecified IsFriend = DeclSpec::FriendSpecified::No);
 
   /// Specifies the context in which type-id/expression
   /// disambiguation will occur.
@@ -2492,7 +2563,9 @@ private:
   /// might be a constructor-style initializer.
   /// If during the disambiguation process a parsing error is encountered,
   /// the function returns true to let the declaration parsing code handle it.
-  bool isCXXFunctionDeclarator(bool *IsAmbiguous = nullptr);
+  bool isCXXFunctionDeclarator(bool *IsAmbiguous = nullptr,
+                               ImplicitTypenameContext AllowImplicitTypename =
+                                   ImplicitTypenameContext::No);
 
   struct ConditionDeclarationOrInitStatementState;
   enum class ConditionOrInitStatement {
@@ -2538,7 +2611,8 @@ private:
   /// BracedCastResult.
   /// Doesn't consume tokens.
   TPResult
-  isCXXDeclarationSpecifier(TPResult BracedCastResult = TPResult::False,
+  isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
+                            TPResult BracedCastResult = TPResult::False,
                             bool *InvalidAsDeclSpec = nullptr);
 
   /// Given that isCXXDeclarationSpecifier returns \c TPResult::True or
@@ -2576,9 +2650,10 @@ private:
   TPResult TryParseInitDeclaratorList();
   TPResult TryParseDeclarator(bool mayBeAbstract, bool mayHaveIdentifier = true,
                               bool mayHaveDirectInit = false);
-  TPResult
-  TryParseParameterDeclarationClause(bool *InvalidAsDeclaration = nullptr,
-                                     bool VersusTemplateArg = false);
+  TPResult TryParseParameterDeclarationClause(
+      bool *InvalidAsDeclaration = nullptr, bool VersusTemplateArg = false,
+      ImplicitTypenameContext AllowImplicitTypename =
+          ImplicitTypenameContext::No);
   TPResult TryParseFunctionDeclarator();
   TPResult TryParseBracketDeclarator();
   TPResult TryConsumeDeclarationSpecifier();
@@ -2807,14 +2882,26 @@ private:
       Sema::AttributeCompletion Completion = Sema::AttributeCompletion::None,
       const IdentifierInfo *EnclosingScope = nullptr);
 
+  void MaybeParseHLSLSemantics(Declarator &D,
+                               SourceLocation *EndLoc = nullptr) {
+    assert(getLangOpts().HLSL && "MaybeParseHLSLSemantics is for HLSL only");
+    if (Tok.is(tok::colon)) {
+      ParsedAttributes Attrs(AttrFactory);
+      ParseHLSLSemantics(Attrs, EndLoc);
+      D.takeAttributes(Attrs);
+    }
+  }
+
   void MaybeParseHLSLSemantics(ParsedAttributes &Attrs,
                                SourceLocation *EndLoc = nullptr) {
+    assert(getLangOpts().HLSL && "MaybeParseHLSLSemantics is for HLSL only");
     if (getLangOpts().HLSL && Tok.is(tok::colon))
       ParseHLSLSemantics(Attrs, EndLoc);
   }
 
   void ParseHLSLSemantics(ParsedAttributes &Attrs,
                           SourceLocation *EndLoc = nullptr);
+  Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
 
   void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
     if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
@@ -2846,6 +2933,8 @@ private:
   void ParseOpenCLQualifiers(ParsedAttributes &Attrs);
   void ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs);
   void ParseCUDAFunctionAttributes(ParsedAttributes &attrs);
+  bool isHLSLQualifier(const Token &Tok) const;
+  void ParseHLSLQualifiers(ParsedAttributes &Attrs);
 
   VersionTuple ParseVersionTuple(SourceRange &Range);
   void ParseAvailabilityAttribute(IdentifierInfo &Availability,
@@ -2903,7 +2992,6 @@ private:
   void AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
                                          SourceLocation StartLoc,
                                          SourceLocation EndLoc);
-  void ParseUnderlyingTypeSpecifier(DeclSpec &DS);
   void ParseAtomicSpecifier(DeclSpec &DS);
 
   ExprResult ParseAlignArgument(SourceLocation Start,
@@ -2995,12 +3083,23 @@ private:
          Declarator &D,
          SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo);
   void ParseParameterDeclarationClause(
-         DeclaratorContext DeclaratorContext,
-         ParsedAttributes &attrs,
-         SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-         SourceLocation &EllipsisLoc);
+      Declarator &D, ParsedAttributes &attrs,
+      SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
+      SourceLocation &EllipsisLoc) {
+    return ParseParameterDeclarationClause(
+        D.getContext(), attrs, ParamInfo, EllipsisLoc,
+        D.getCXXScopeSpec().isSet() &&
+            D.isFunctionDeclaratorAFunctionDeclaration());
+  }
+  void ParseParameterDeclarationClause(
+      DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
+      SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
+      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false);
+
   void ParseBracketDeclarator(Declarator &D);
   void ParseMisplacedBracketDeclarator(Declarator &D);
+  bool MaybeParseTypeTransformTypeSpecifier(DeclSpec &DS);
+  DeclSpec::TST TypeTransformTokToDeclSpec();
 
   //===--------------------------------------------------------------------===//
   // C++ 7: Declarations [dcl.dcl]
@@ -3176,8 +3275,7 @@ private:
   bool parseOMPContextSelectors(SourceLocation Loc, OMPTraitInfo &TI);
 
   /// Parse an 'append_args' clause for '#pragma omp declare variant'.
-  bool parseOpenMPAppendArgs(
-      SmallVectorImpl<OMPDeclareVariantAttr::InteropType> &InterOpTypes);
+  bool parseOpenMPAppendArgs(SmallVectorImpl<OMPInteropInfo> &InteropInfos);
 
   /// Parse a `match` clause for an '#pragma omp declare variant'. Return true
   /// if there was an error.
@@ -3329,6 +3427,9 @@ private:
   /// '(' { <allocator> [ '(' <allocator_traits> ')' ] }+ ')'
   OMPClause *ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind);
 
+  /// Parses the 'interop' parts of the 'append_args' and 'init' clauses.
+  bool ParseOMPInteropInfo(OMPInteropInfo &InteropInfo, OpenMPClauseKind Kind);
+
   /// Parses clause with an interop variable of kind \a Kind.
   ///
   /// \param Kind Kind of current clause.
@@ -3420,8 +3521,10 @@ private:
                                UnqualifiedId &TemplateName,
                                bool AllowTypeAnnotation = true,
                                bool TypeConstraint = false);
-  void AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
-                                     bool IsClassName = false);
+  void
+  AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
+                                ImplicitTypenameContext AllowImplicitTypename,
+                                bool IsClassName = false);
   bool ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
                                  TemplateTy Template, SourceLocation OpenLoc);
   ParsedTemplateArgument ParseTemplateTemplateArgument();

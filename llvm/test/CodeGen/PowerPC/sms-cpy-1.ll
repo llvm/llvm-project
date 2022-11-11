@@ -82,7 +82,7 @@ define void @print_res() nounwind {
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    bl printf
 ; CHECK-NEXT:    nop
-  %1 = load i32, i32* undef, align 4
+  %1 = load i32, ptr undef, align 4
   %2 = add i32 %1, -1
   %3 = zext i32 %2 to i64
   %4 = zext i32 3 to i64
@@ -94,8 +94,8 @@ define void @print_res() nounwind {
   %8 = trunc i64 %6 to i32
   %9 = sub i32 0, %8
   %10 = zext i32 %9 to i64
-  %11 = getelementptr inbounds i8, i8* null, i64 %10
-  %12 = load i8, i8* %11, align 1
+  %11 = getelementptr inbounds i8, ptr null, i64 %10
+  %12 = load i8, ptr %11, align 1
   %13 = icmp eq i8 %12, 84
   %14 = zext i1 %13 to i32
   %15 = add i32 %7, %14
@@ -107,8 +107,8 @@ define void @print_res() nounwind {
 
 20:                                               ; preds = %5
   %21 = trunc i64 %16 to i32
-  call void (i8*, ...) @printf(i8* getelementptr inbounds ([69 x i8], [69 x i8]* @.str.28, i64 0, i64 0), i32 zeroext 3, i32 zeroext undef, i32 zeroext %15, i32 zeroext undef, i32 zeroext 3, i8* undef, i32 zeroext undef, i32 zeroext 3, i32 zeroext %21, i8* undef, i32 zeroext undef) #1
+  call void (ptr, ...) @printf(ptr @.str.28, i32 zeroext 3, i32 zeroext undef, i32 zeroext %15, i32 zeroext undef, i32 zeroext 3, ptr undef, i32 zeroext undef, i32 zeroext 3, i32 zeroext %21, ptr undef, i32 zeroext undef) #1
   unreachable
 }
 
-declare void @printf(i8*, ...) local_unnamed_addr #0
+declare void @printf(ptr, ...) local_unnamed_addr #0

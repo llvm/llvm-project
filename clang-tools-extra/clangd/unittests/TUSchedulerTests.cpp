@@ -264,7 +264,7 @@ TEST_F(TUSchedulerTests, Debounce) {
   Notification N;
   updateWithDiags(S, Path, "auto (timed out)", WantDiagnostics::Auto,
                   [&](std::vector<Diag>) { N.notify(); });
-  EXPECT_TRUE(N.wait(timeoutSeconds(1)));
+  EXPECT_TRUE(N.wait(timeoutSeconds(5)));
 
   // Once we start shutting down the TUScheduler, this one becomes a dead write.
   updateWithDiags(S, Path, "auto (discarded)", WantDiagnostics::Auto,
@@ -891,7 +891,7 @@ TEST_F(TUSchedulerTests, MissingHeader) {
                         << "Didn't expect new diagnostics when adding a/foo.h";
                   });
 
-  // Forcing the reload should should cause a rebuild.
+  // Forcing the reload should cause a rebuild.
   Inputs.ForceRebuild = true;
   updateWithDiags(
       S, Source, Inputs, WantDiagnostics::Yes,
@@ -1035,7 +1035,7 @@ TEST_F(TUSchedulerTests, TUStatus) {
                   // Starts handling the update action and blocks until the
                   // first preamble is built.
                   ASTAction::RunningAction,
-                  // Afterwqards it builds an AST for that preamble to publish
+                  // Afterwards it builds an AST for that preamble to publish
                   // diagnostics.
                   ASTAction::Building,
                   // Then goes idle.
@@ -1227,12 +1227,15 @@ TEST_F(TUSchedulerTests, IncluderCache) {
   auto GetFlags = [&](PathRef Header) {
     S.update(Header, getInputs(Header, ";"), WantDiagnostics::Yes);
     EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    Notification CmdDone;
     tooling::CompileCommand Cmd;
     S.runWithPreamble("GetFlags", Header, TUScheduler::StaleOrAbsent,
                       [&](llvm::Expected<InputsAndPreamble> Inputs) {
                         ASSERT_FALSE(!Inputs) << Inputs.takeError();
                         Cmd = std::move(Inputs->Command);
+                        CmdDone.notify();
                       });
+    CmdDone.wait();
     EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
     return Cmd.CommandLine;
   };
@@ -1372,6 +1375,157 @@ TEST_F(TUSchedulerTests, PreservesLastActiveFile) {
     CheckNoFileActionsSeesLastActiveFile(LastActive);
   }
 }
+
+TEST_F(TUSchedulerTests, PreambleThrottle) {
+  const int NumRequests = 4;
+  // Silly throttler that waits for 4 requests, and services them in reverse.
+  // Doesn't honor cancellation but records it.
+  struct : public PreambleThrottler {
+    std::mutex Mu;
+    std::vector<std::string> Acquires;
+    std::vector<RequestID> Releases;
+    llvm::DenseMap<RequestID, Callback> Callbacks;
+    // If set, the notification is signalled after acquiring the specified ID.
+    llvm::Optional<std::pair<RequestID, Notification *>> Notify;
+
+    RequestID acquire(llvm::StringRef Filename, Callback CB) override {
+      RequestID ID;
+      Callback Invoke;
+      {
+        std::lock_guard<std::mutex> Lock(Mu);
+        ID = Acquires.size();
+        Acquires.emplace_back(Filename);
+        // If we're full, satisfy this request immediately.
+        if (Acquires.size() == NumRequests) {
+          Invoke = std::move(CB);
+        } else {
+          Callbacks.try_emplace(ID, std::move(CB));
+        }
+      }
+      if (Invoke)
+        Invoke();
+      {
+        std::lock_guard<std::mutex> Lock(Mu);
+        if (Notify && ID == Notify->first) {
+          Notify->second->notify();
+          Notify.reset();
+        }
+      }
+      return ID;
+    }
+
+    void release(RequestID ID) override {
+      Callback SatisfyNext;
+      {
+        std::lock_guard<std::mutex> Lock(Mu);
+        Releases.push_back(ID);
+        if (ID > 0 && Acquires.size() == NumRequests)
+          SatisfyNext = std::move(Callbacks[ID - 1]);
+      }
+      if (SatisfyNext)
+        SatisfyNext();
+    }
+
+    void reset() {
+      Acquires.clear();
+      Releases.clear();
+      Callbacks.clear();
+    }
+  } Throttler;
+
+  struct CaptureBuiltFilenames : public ParsingCallbacks {
+    std::vector<std::string> &Filenames;
+    CaptureBuiltFilenames(std::vector<std::string> &Filenames)
+        : Filenames(Filenames) {}
+    void onPreambleAST(PathRef Path, llvm::StringRef Version,
+                       const CompilerInvocation &CI, ASTContext &Ctx,
+                       Preprocessor &PP, const CanonicalIncludes &) override {
+      // Deliberately no synchronization.
+      // The PreambleThrottler should serialize these calls, if not then tsan
+      // will find a bug here.
+      Filenames.emplace_back(Path);
+    }
+  };
+
+  auto Opts = optsForTest();
+  Opts.AsyncThreadsCount = 2 * NumRequests; // throttler is the bottleneck
+  Opts.PreambleThrottler = &Throttler;
+
+  std::vector<std::string> Filenames;
+
+  {
+    std::vector<std::string> BuiltFilenames;
+    TUScheduler S(CDB, Opts,
+                  std::make_unique<CaptureBuiltFilenames>(BuiltFilenames));
+    for (unsigned I = 0; I < NumRequests; ++I) {
+      auto Path = testPath(std::to_string(I) + ".cc");
+      Filenames.push_back(Path);
+      S.update(Path, getInputs(Path, ""), WantDiagnostics::Yes);
+    }
+    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+
+    // The throttler saw all files, and we built them.
+    EXPECT_THAT(Throttler.Acquires,
+                testing::UnorderedElementsAreArray(Filenames));
+    EXPECT_THAT(BuiltFilenames,
+                testing::UnorderedElementsAreArray(Filenames));
+    // We built the files in reverse order that the throttler saw them.
+    EXPECT_THAT(BuiltFilenames,
+                testing::ElementsAreArray(Throttler.Acquires.rbegin(),
+                                          Throttler.Acquires.rend()));
+    // Resources for each file were correctly released.
+    EXPECT_THAT(Throttler.Releases, ElementsAre(3, 2, 1, 0));
+  }
+
+  Throttler.reset();
+
+  // This time, enqueue 2 files, then cancel one of them while still waiting.
+  // Finally shut down the server. Observe that everything gets cleaned up.
+  Notification AfterAcquire2;
+  Notification AfterFinishA;
+  Throttler.Notify = {1, &AfterAcquire2};
+  std::vector<std::string> BuiltFilenames;
+  auto A = testPath("a.cc");
+  auto B = testPath("b.cc");
+  Filenames = {A, B};
+  {
+    TUScheduler S(CDB, Opts,
+                  std::make_unique<CaptureBuiltFilenames>(BuiltFilenames));
+    updateWithCallback(S, A, getInputs(A, ""), WantDiagnostics::Yes,
+                       [&] { AfterFinishA.notify(); });
+    S.update(B, getInputs(B, ""), WantDiagnostics::Yes);
+    AfterAcquire2.wait();
+
+    // The throttler saw all files, but we built none.
+    EXPECT_THAT(Throttler.Acquires,
+                testing::UnorderedElementsAreArray(Filenames));
+    EXPECT_THAT(BuiltFilenames, testing::IsEmpty());
+    // We haven't released anything yet, we're still waiting.
+    EXPECT_THAT(Throttler.Releases, testing::IsEmpty());
+
+    // FIXME: This is flaky, becaues the request can be destroyed after shutdown
+    // if it hasn't been dequeued yet (stop() resets NextRequest).
+#if 0
+    // Now close file A, which will shut down its AST worker.
+    S.remove(A);
+    // Request is destroyed after the queue shutdown, so release() has happened.
+    AfterFinishA.wait();
+    // We still didn't build anything.
+    EXPECT_THAT(BuiltFilenames, testing::IsEmpty());
+    // But we've cancelled the request to build A (not sure which its ID is).
+    EXPECT_THAT(Throttler.Releases, ElementsAre(AnyOf(1, 0)));
+#endif
+
+    // Now shut down the TU Scheduler.
+  }
+  // The throttler saw all files, but we built none.
+  EXPECT_THAT(Throttler.Acquires,
+              testing::UnorderedElementsAreArray(Filenames));
+  EXPECT_THAT(BuiltFilenames, testing::IsEmpty());
+  // We gave up waiting and everything got released (in some order).
+  EXPECT_THAT(Throttler.Releases, UnorderedElementsAre(1, 0));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

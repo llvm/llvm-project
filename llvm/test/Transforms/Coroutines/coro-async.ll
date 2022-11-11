@@ -145,7 +145,7 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
 ; CHECK:   store i64 1, i64* [[ADDR2]]
 ; CHECK:   tail call void @some_may_write(i64* nonnull %proj.1)
 ; CHECK:   [[TASK:%.*]] = bitcast %async.task* %task to i8*
-; CHECK:   [[CALLEE_CTXT:%.*]] = tail call i8* @llvm.coro.async.context.alloc(i8* [[TASK]], i8* bitcast (<{ i32, i32 }>* @my_other_async_function_fp to i8*))
+; CHECK:   [[CALLEE_CTXT:%.*]] = tail call i8* @llvm.coro.async.context.alloc(i8* [[TASK]], i8* nonnull bitcast (<{ i32, i32 }>* @my_other_async_function_fp to i8*))
 ; CHECK:   [[CALLEE_CTXT_SPILL:%.*]] = getelementptr inbounds i8, i8* %async.ctxt, i64 160
 ; CHECK:   [[CAST2:%.*]] = bitcast i8* [[CALLEE_CTXT_SPILL]] to i8**
 ; CHECK:   store i8* [[CALLEE_CTXT]], i8** [[CAST2]]
@@ -566,7 +566,7 @@ entry:
 ; CHECK-LABEL: define swiftcc void @undefined_coro_async_resume
 ; CHECK-NOT: @llvm.coro.async.resume
 ; CHECK: call void @use(i8* null)
-; CHECK: unreachable
+; CHECK: ret
 
 declare { i8*, i8*, i8*, i8* } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32, i8*, i8*, ...)
 declare i8* @llvm.coro.prepare.async(i8*)

@@ -10,7 +10,7 @@ CF79:                                             ; preds = %CF79, %BB
   br i1 undef, label %CF79, label %CF84.critedge.critedge
 
 CF84.critedge.critedge:                           ; preds = %CF79
-  %L35 = load <8 x i32>, <8 x i32>* undef
+  %L35 = load <8 x i32>, ptr undef
   br label %CF85
 
 CF85:                                             ; preds = %CF85, %CF84.critedge.critedge

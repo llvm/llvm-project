@@ -30,11 +30,11 @@ define dso_local void @_Z4buzzv() {
 ; X86-NON-CONST-NEXT:    retq
 entry:
   %a = alloca i32, align 4
-  store i32 10, i32* %a, align 4
+  store i32 10, ptr %a, align 4
   ret void
 }
 
-define dso_local i32 @_Z3barPi(i32* %p) {
+define dso_local i32 @_Z3barPi(ptr %p) {
 ; CHECK-LABEL: _Z3barPi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfence
@@ -143,37 +143,36 @@ define dso_local i32 @_Z3barPi(i32* %p) {
 ; X86-NON-CONST-NEXT:    retq
 entry:
   %retval = alloca i32, align 4
-  %p.addr = alloca i32*, align 8
+  %p.addr = alloca ptr, align 8
   %a = alloca [4 x i32], align 16
   %len = alloca i32, align 4
-  store i32* %p, i32** %p.addr, align 8
-  %0 = bitcast [4 x i32]* %a to i8*
-  store i32 4, i32* %len, align 4
-  %1 = load i32*, i32** %p.addr, align 8
-  %2 = load i32, i32* %1, align 4
-  %3 = load i32, i32* %len, align 4
-  %cmp = icmp slt i32 %2, %3
+  store ptr %p, ptr %p.addr, align 8
+  store i32 4, ptr %len, align 4
+  %0 = load ptr, ptr %p.addr, align 8
+  %1 = load i32, ptr %0, align 4
+  %2 = load i32, ptr %len, align 4
+  %cmp = icmp slt i32 %1, %2
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %4 = load i32*, i32** %p.addr, align 8
-  %5 = load i32, i32* %4, align 4
-  %idxprom = sext i32 %5 to i64
-  %arrayidx = getelementptr inbounds [4 x i32], [4 x i32]* %a, i64 0, i64 %idxprom
-  %6 = load i32, i32* %arrayidx, align 4
-  store i32 %6, i32* %retval, align 4
+  %3 = load ptr, ptr %p.addr, align 8
+  %4 = load i32, ptr %3, align 4
+  %idxprom = sext i32 %4 to i64
+  %arrayidx = getelementptr inbounds [4 x i32], ptr %a, i64 0, i64 %idxprom
+  %5 = load i32, ptr %arrayidx, align 4
+  store i32 %5, ptr %retval, align 4
   br label %return
 
 if.else:                                          ; preds = %entry
-  store i32 -1, i32* %retval, align 4
+  store i32 -1, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %if.else, %if.then
-  %7 = load i32, i32* %retval, align 4
-  ret i32 %7
+  %6 = load i32, ptr %retval, align 4
+  ret i32 %6
 }
 
-define dso_local i32 (i32*)* @_Z3bazv() {
+define dso_local ptr @_Z3bazv() {
 ; CHECK-LABEL: _Z3bazv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfence
@@ -216,14 +215,14 @@ define dso_local i32 (i32*)* @_Z3bazv() {
 ; X86-NON-CONST-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X86-NON-CONST-NEXT:    retq
 entry:
-  %p = alloca i32 (i32*)*, align 8
-  store i32 (i32*)* @_Z3barPi, i32 (i32*)** %p, align 8
-  call void asm sideeffect "", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(i32 (i32*)** elementtype(i32 (i32*)*) %p, i32 (i32*)** elementtype(i32 (i32*)*) %p) #3, !srcloc !2
-  %0 = load i32 (i32*)*, i32 (i32*)** %p, align 8
-  ret i32 (i32*)* %0
+  %p = alloca ptr, align 8
+  store ptr @_Z3barPi, ptr %p, align 8
+  call void asm sideeffect "", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(ptr) %p, ptr elementtype(ptr) %p) #3, !srcloc !2
+  %0 = load ptr, ptr %p, align 8
+  ret ptr %0
 }
 
-define dso_local void @_Z3fooPi(i32* %p) {
+define dso_local void @_Z3fooPi(ptr %p) {
 ; CHECK-LABEL: _Z3fooPi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -286,14 +285,14 @@ define dso_local void @_Z3fooPi(i32* %p) {
 ; X86-NON-CONST-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NON-CONST-NEXT:    retq
 entry:
-  %p.addr = alloca i32*, align 8
-  %t = alloca i32 (i32*)*, align 8
-  store i32* %p, i32** %p.addr, align 8
-  %call = call i32 (i32*)* @_Z3bazv()
-  store i32 (i32*)* %call, i32 (i32*)** %t, align 8
-  %0 = load i32 (i32*)*, i32 (i32*)** %t, align 8
-  %1 = load i32*, i32** %p.addr, align 8
-  %call1 = call i32 %0(i32* %1)
+  %p.addr = alloca ptr, align 8
+  %t = alloca ptr, align 8
+  store ptr %p, ptr %p.addr, align 8
+  %call = call ptr @_Z3bazv()
+  store ptr %call, ptr %t, align 8
+  %0 = load ptr, ptr %t, align 8
+  %1 = load ptr, ptr %p.addr, align 8
+  %call1 = call i32 %0(ptr %1)
   ret void
 }
 

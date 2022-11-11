@@ -73,3 +73,39 @@ Symbols:
     Index:   SHN_ABS
   - Name:    local
     Section: .text
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-symbolizer --obj=%t3 'DATA 0x1001' 2>&1 | FileCheck %s --check-prefix=CHECK3
+
+# CHECK3:      code
+# CHECK3-NEXT: 4096 2
+# CHECK3-NEXT: ??:?
+# CHECK3-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    1
+  - Name:    .debug
+    Type:    SHT_PROGBITS
+    Address: 0x0000
+    Size:    0xFFFF
+Symbols:
+  - Name:    debug
+    Section: .debug
+    Binding: STB_WEAK
+    Value:   0x1001
+    Size:    0
+  - Name:    code
+    Section: .text
+    Binding: STB_WEAK
+    Value:   0x1000
+    Size:    2

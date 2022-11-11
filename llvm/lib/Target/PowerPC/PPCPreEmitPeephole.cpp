@@ -38,6 +38,8 @@ STATISTIC(NumberOfSelfCopies,
           "Number of self copy instructions eliminated");
 STATISTIC(NumFrameOffFoldInPreEmit,
           "Number of folding frame offset by using r+r in pre-emit peephole");
+STATISTIC(NumCmpsInPreEmit,
+          "Number of compares eliminated in pre-emit peephole");
 
 static cl::opt<bool>
 EnablePCRelLinkerOpt("ppc-pcrel-linker-opt", cl::Hidden, cl::init(true),
@@ -291,7 +293,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
               !BBI->modifiesRegister(Pair.DefReg, TRI))
             continue;
 
-          // The use needs to be used in the address compuation and not
+          // The use needs to be used in the address computation and not
           // as the register being stored for a store.
           const MachineOperand *UseOp =
               hasPCRelativeForm(*BBI) ? &BBI->getOperand(2) : nullptr;
@@ -507,6 +509,13 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
             NumFrameOffFoldInPreEmit++;
             LLVM_DEBUG(dbgs() << "Frame offset folding by using index form: ");
             LLVM_DEBUG(MI.dump());
+          }
+          if (TII->optimizeCmpPostRA(MI)) {
+            Changed = true;
+            NumCmpsInPreEmit++;
+            LLVM_DEBUG(dbgs() << "Optimize compare by using record form: ");
+            LLVM_DEBUG(MI.dump());
+            InstrsToErase.push_back(&MI);
           }
         }
 

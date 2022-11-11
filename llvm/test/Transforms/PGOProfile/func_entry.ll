@@ -12,7 +12,7 @@ define void @cold() {
 ; CHECK-SAME: !prof ![[FUNC_ENTRY_COUNT_ZERO:[0-9]+]]
 
 entry:
-  store i32 1, i32* @s, align 4
+  store i32 1, ptr @s, align 4
   ret void
 }
 
@@ -21,9 +21,9 @@ define void @hot() {
 ; CHECK-SAME: #[[HOT_ATTR:[0-1]+]]
 ; CHECK-SAME: !prof ![[FUNC_ENTRY_COUNT_NON_ZERO:[0-9]+]]
 entry:
-  %0 = load i32, i32* @s, align 4
+  %0 = load i32, ptr @s, align 4
   %add = add nsw i32 %0, 4
-  store i32 %add, i32* @s, align 4
+  store i32 %add, ptr @s, align 4
   ret void
 }
 
@@ -33,7 +33,7 @@ define void @med() {
 ; CHECK-SAME: !prof ![[FUNC_ENTRY_COUNT_MED:[0-9]+]]
 
 entry:
-  store i32 1, i32* @s, align 4
+  store i32 1, ptr @s, align 4
   ret void
 }
 

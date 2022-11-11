@@ -23,7 +23,7 @@ namespace misc {
 /// and displays one example of possible call graph loop (recursion).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-no-recursion.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/no-recursion.html
 class NoRecursionCheck : public ClangTidyCheck {
 public:
   NoRecursionCheck(StringRef Name, ClangTidyContext *Context)

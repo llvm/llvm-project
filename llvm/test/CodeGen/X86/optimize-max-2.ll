@@ -6,7 +6,7 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 
-define void @foo(double* nocapture %p, i64 %x, i64 %y) nounwind {
+define void @foo(ptr nocapture %p, i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rdx, %rdx
@@ -34,10 +34,10 @@ entry:
 
 bb4:		; preds = %bb4, %entry
 	%i.07 = phi i64 [ 0, %entry ], [ %2, %bb4 ]		; <i64> [#uses=2]
-	%scevgep = getelementptr double, double* %p, i64 %i.07		; <double*> [#uses=2]
-	%0 = load double, double* %scevgep, align 8		; <double> [#uses=1]
+	%scevgep = getelementptr double, ptr %p, i64 %i.07		; <ptr> [#uses=2]
+	%0 = load double, ptr %scevgep, align 8		; <double> [#uses=1]
 	%1 = fmul double %0, 2.000000e+00		; <double> [#uses=1]
-	store double %1, double* %scevgep, align 8
+	store double %1, ptr %scevgep, align 8
 	%2 = add i64 %i.07, 1		; <i64> [#uses=2]
 	%exitcond = icmp eq i64 %2, %umax9		; <i1> [#uses=1]
 	br i1 %exitcond, label %return, label %bb4

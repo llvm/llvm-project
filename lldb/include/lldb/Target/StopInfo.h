@@ -17,7 +17,7 @@
 
 namespace lldb_private {
 
-class StopInfo {
+class StopInfo : public std::enable_shared_from_this<StopInfo> {
   friend class Process::ProcessEventData;
   friend class ThreadPlanBase;
 

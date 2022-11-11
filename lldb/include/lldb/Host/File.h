@@ -410,7 +410,7 @@ public:
   llvm::Expected<OpenOptions> GetOptions() const override;
 
   static char ID;
-  virtual bool isA(const void *classID) const override {
+  bool isA(const void *classID) const override {
     return classID == &ID || File::isA(classID);
   }
   static bool classof(const File *file) { return file->isA(&ID); }
@@ -458,7 +458,7 @@ public:
   Status Close() override;
 
   static char ID;
-  virtual bool isA(const void *classID) const override {
+  bool isA(const void *classID) const override {
     return classID == &ID || File::isA(classID);
   }
   static bool classof(const File *file) { return file->isA(&ID); }

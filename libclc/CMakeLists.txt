@@ -136,8 +136,8 @@ set( LLVM_VERSION_DEFINE "-DHAVE_LLVM=0x${LLVM_MAJOR}0${LLVM_MINOR}" )
 
 # LLVM 13 enables standard includes by default
 if( ${LLVM_VERSION} VERSION_GREATER "12.99.99" )
-				set( CMAKE_LLAsm_FLAGS ${CMAKE_LLAsm_FLAGS} -cl-no-stdinc )
-				set( CMAKE_CLC_FLAGS ${CMAKE_CLC_FLAGS} -cl-no-stdinc )
+				set( CMAKE_LLAsm_FLAGS "${CMAKE_LLAsm_FLAGS} -cl-no-stdinc")
+				set( CMAKE_CLC_FLAGS "${CMAKE_CLC_FLAGS} -cl-no-stdinc")
 endif()
 
 enable_language( CLC LLAsm )

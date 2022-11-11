@@ -6,9 +6,9 @@
 
 define void @noDebug() {
 entry:
-  %0 = load i64, i64* @a, align 8
-  %1 = load i64, i64* @a, align 8
-  %2 = load i64, i64* @a, align 8
+  %0 = load i64, ptr @a, align 8
+  %1 = load i64, ptr @a, align 8
+  %2 = load i64, ptr @a, align 8
   %3 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %0, i64 %1)
   %4 = extractvalue { i64, i1 } %3, 0
   %5 = tail call i64 @fn1(i64 %4, i64 %2)
@@ -28,9 +28,9 @@ entry:
 
 define void @withDebug() !dbg !18 {
 entry:
-  %0 = load i64, i64* @a, align 8
-  %1 = load i64, i64* @a, align 8
-  %2 = load i64, i64* @a, align 8
+  %0 = load i64, ptr @a, align 8
+  %1 = load i64, ptr @a, align 8
+  %2 = load i64, ptr @a, align 8
   %3 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %0, i64 %1)
   %4 = extractvalue { i64, i1 } %3, 0
   %5 = tail call i64 @fn1(i64 %4, i64 %2)

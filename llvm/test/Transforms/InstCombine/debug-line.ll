@@ -5,11 +5,11 @@
 
 define void @foo() nounwind ssp !dbg !0 {
 ;CHECK: call i32 @putchar{{.+}} !dbg
-  %1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i32 97), !dbg !5
+  %1 = call i32 (ptr, ...) @printf(ptr @.str, i32 97), !dbg !5
   ret void, !dbg !7
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!10}

@@ -439,11 +439,71 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("loongarch32-unknown-linux-gnu");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
+
+  T = Triple("loongarch32-unknown-linux-gnuf32");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUF32, T.getEnvironment());
+
+  T = Triple("loongarch32-unknown-linux-gnuf64");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUF64, T.getEnvironment());
+
+  T = Triple("loongarch32-unknown-linux-gnusf");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUSF, T.getEnvironment());
+
+  T = Triple("loongarch32-unknown-linux-musl");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::Musl, T.getEnvironment());
+
   T = Triple("loongarch64-unknown-linux");
   EXPECT_EQ(Triple::loongarch64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("loongarch64-unknown-linux-gnu");
+  EXPECT_EQ(Triple::loongarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
+
+  T = Triple("loongarch64-unknown-linux-gnuf32");
+  EXPECT_EQ(Triple::loongarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUF32, T.getEnvironment());
+
+  T = Triple("loongarch64-unknown-linux-gnuf64");
+  EXPECT_EQ(Triple::loongarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUF64, T.getEnvironment());
+
+  T = Triple("loongarch64-unknown-linux-gnusf");
+  EXPECT_EQ(Triple::loongarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUSF, T.getEnvironment());
+
+  T = Triple("loongarch64-unknown-linux-musl");
+  EXPECT_EQ(Triple::loongarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::Musl, T.getEnvironment());
 
   T = Triple("riscv32-unknown-unknown");
   EXPECT_EQ(Triple::riscv32, T.getArch());
@@ -704,91 +764,105 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Pixel, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-vertex");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Vertex, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-geometry");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Geometry, T.getEnvironment());
-
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-hull");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Hull, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-domain");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Domain, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-compute");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Compute, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-library");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Library, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-raygeneration");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::RayGeneration, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-intersection");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Intersection, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-anyhit");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::AnyHit, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-closesthit");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::ClosestHit, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-miss");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Miss, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-callable");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Callable, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
   
   T = Triple("dxil-unknown-shadermodel-mesh");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Mesh, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-amplification");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Amplification, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
@@ -1841,70 +1915,6 @@ TEST(TripleTest, NormalizeAndroid) {
             Triple::normalize("aarch64-linux-android21"));
 }
 
-TEST(TripleTest, getARMCPUForArch) {
-  // Platform specific defaults.
-  {
-    llvm::Triple Triple("arm--nacl");
-    EXPECT_EQ("cortex-a8", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("arm--openbsd");
-    EXPECT_EQ("cortex-a8", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armv6-unknown-freebsd");
-    EXPECT_EQ("arm1176jzf-s", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("thumbv6-unknown-freebsd");
-    EXPECT_EQ("arm1176jzf-s", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armebv6-unknown-freebsd");
-    EXPECT_EQ("arm1176jzf-s", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("arm--win32");
-    EXPECT_EQ("cortex-a9", Triple.getARMCPUForArch());
-    EXPECT_EQ("generic", Triple.getARMCPUForArch("armv8-a"));
-  }
-  // Some alternative architectures
-  {
-    llvm::Triple Triple("armv7k-apple-ios9");
-    EXPECT_EQ("cortex-a7", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armv7k-apple-watchos3");
-    EXPECT_EQ("cortex-a7", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armv7k-apple-tvos9");
-    EXPECT_EQ("cortex-a7", Triple.getARMCPUForArch());
-  }
-  // armeb is permitted, but armebeb is not
-  {
-    llvm::Triple Triple("armeb-none-eabi");
-    EXPECT_EQ("arm7tdmi", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armebeb-none-eabi");
-    EXPECT_EQ("", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armebv6eb-none-eabi");
-    EXPECT_EQ("", Triple.getARMCPUForArch());
-  }
-  // xscaleeb is permitted, but armebxscale is not
-  {
-    llvm::Triple Triple("xscaleeb-none-eabi");
-    EXPECT_EQ("xscale", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armebxscale-none-eabi");
-    EXPECT_EQ("", Triple.getARMCPUForArch());
-  }
-}
-
 TEST(TripleTest, NormalizeARM) {
   EXPECT_EQ("armv6-unknown-netbsd-eabi",
             Triple::normalize("armv6-netbsd-eabi"));
@@ -1975,6 +1985,16 @@ TEST(TripleTest, ParseARMArch) {
     Triple T = Triple("arm64e");
     EXPECT_EQ(Triple::aarch64, T.getArch());
     EXPECT_EQ(Triple::AArch64SubArch_arm64e, T.getSubArch());
+  }
+  {
+    Triple T = Triple("arm64ec");
+    EXPECT_EQ(Triple::aarch64, T.getArch());
+    EXPECT_EQ(Triple::AArch64SubArch_arm64ec, T.getSubArch());
+  }
+  {
+    Triple T;
+    T.setArch(Triple::aarch64, Triple::AArch64SubArch_arm64ec);
+    EXPECT_EQ("arm64ec", T.getArchName());
   }
 }
 

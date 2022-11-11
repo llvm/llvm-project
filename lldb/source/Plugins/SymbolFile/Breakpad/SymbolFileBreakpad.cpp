@@ -294,7 +294,7 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
   ParseInlineOriginRecords();
   // A vector of current each level's parent block. For example, when parsing
   // "INLINE 0 ...", the current level is 0 and its parent block is the
-  // funciton block at index 0.
+  // function block at index 0.
   std::vector<Block *> blocks;
   Block &block = func.GetBlock(false);
   block.AddRange(Block::Range(0, func.GetAddressRange().GetByteSize()));
@@ -421,12 +421,13 @@ uint32_t SymbolFileBreakpad::ResolveSymbolContext(
 }
 
 void SymbolFileBreakpad::FindFunctions(
-    ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    FunctionNameType name_type_mask, bool include_inlines,
+    const Module::LookupInfo &lookup_info,
+    const CompilerDeclContext &parent_decl_ctx, bool include_inlines,
     SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // TODO: Implement this with supported FunctionNameType.
 
+  ConstString name = lookup_info.GetLookupName();
   for (uint32_t i = 0; i < GetNumCompileUnits(); ++i) {
     CompUnitSP cu_sp = GetCompileUnitAtIndex(i);
     FunctionSP func_sp = GetOrCreateFunction(*cu_sp);
@@ -488,8 +489,8 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
         /*is_global*/ true, /*is_debug*/ false,
         /*is_trampoline*/ false, /*is_artificial*/ false,
         AddressRange(section_sp, address - section_sp->GetFileAddress(),
-                     size.getValueOr(0)),
-        size.hasValue(), /*contains_linker_annotations*/ false, /*flags*/ 0);
+                     size.value_or(0)),
+        size.has_value(), /*contains_linker_annotations*/ false, /*flags*/ 0);
   };
 
   for (llvm::StringRef line : lines(Record::Public)) {
@@ -511,7 +512,7 @@ SymbolFileBreakpad::GetParameterStackSize(Symbol &symbol) {
           symbol.GetAddress().GetFileAddress())) {
     auto record = StackWinRecord::parse(
         *LineIterator(*m_objfile_sp, Record::StackWin, entry->data));
-    assert(record.hasValue());
+    assert(record);
     return record->ParameterSize;
   }
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -655,7 +656,7 @@ SymbolFileBreakpad::ParseCFIUnwindPlan(const Bookmark &bookmark,
   LineIterator It(*m_objfile_sp, Record::StackCFI, bookmark),
       End(*m_objfile_sp);
   llvm::Optional<StackCFIRecord> init_record = StackCFIRecord::parse(*It);
-  assert(init_record.hasValue() && init_record->Size.hasValue() &&
+  assert(init_record && init_record->Size &&
          "Record already parsed successfully in ParseUnwindData!");
 
   auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindLLDB);
@@ -674,9 +675,9 @@ SymbolFileBreakpad::ParseCFIUnwindPlan(const Bookmark &bookmark,
   plan_sp->AppendRow(row_sp);
   for (++It; It != End; ++It) {
     llvm::Optional<StackCFIRecord> record = StackCFIRecord::parse(*It);
-    if (!record.hasValue())
+    if (!record)
       return nullptr;
-    if (record->Size.hasValue())
+    if (record->Size)
       break;
 
     row_sp = std::make_shared<UnwindPlan::Row>(*row_sp);
@@ -698,8 +699,7 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
 
   LineIterator It(*m_objfile_sp, Record::StackWin, bookmark);
   llvm::Optional<StackWinRecord> record = StackWinRecord::parse(*It);
-  assert(record.hasValue() &&
-         "Record already parsed successfully in ParseUnwindData!");
+  assert(record && "Record already parsed successfully in ParseUnwindData!");
 
   auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindLLDB);
   plan_sp->SetSourceName("breakpad STACK WIN");
@@ -806,7 +806,7 @@ void SymbolFileBreakpad::ParseFileRecords() {
     if (record->Number >= m_files->size())
       m_files->resize(record->Number + 1);
     FileSpec::Style style = FileSpec::GuessPathStyle(record->Name)
-                                .getValueOr(FileSpec::Style::native);
+                                .value_or(FileSpec::Style::native);
     (*m_files)[record->Number] = FileSpec(record->Name, style);
   }
 }

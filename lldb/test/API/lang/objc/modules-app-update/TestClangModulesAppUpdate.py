@@ -1,5 +1,4 @@
 
-import unittest2
 import os
 import shutil
 
@@ -10,9 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestClangModuleAppUpdate(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(debug_info=no_match(["gmodules"]))
+    @add_test_categories(["gmodules"])
     def test_rebuild_app_modules_untouched(self):
         with open(self.getBuildArtifact("module.modulemap"), "w") as f:
             f.write("""

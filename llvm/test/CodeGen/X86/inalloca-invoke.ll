@@ -5,31 +5,30 @@
 %frame.reverse = type { %Iter, %Iter }
 
 declare i32 @pers(...)
-declare void @llvm.stackrestore(i8*)
-declare i8* @llvm.stacksave()
-declare void @begin(%Iter* sret(%Iter))
-declare void @plus(%Iter* sret(%Iter), %Iter*, i32)
-declare void @reverse(%frame.reverse* inalloca(%frame.reverse) align 4)
+declare void @llvm.stackrestore(ptr)
+declare ptr @llvm.stacksave()
+declare void @begin(ptr sret(%Iter))
+declare void @plus(ptr sret(%Iter), ptr, i32)
+declare void @reverse(ptr inalloca(%frame.reverse) align 4)
 
-define i32 @main() personality i32 (...)* @pers {
+define i32 @main() personality ptr @pers {
   %temp.lvalue = alloca %Iter
   br label %blah
 
 blah:
-  %inalloca.save = call i8* @llvm.stacksave()
+  %inalloca.save = call ptr @llvm.stacksave()
   %rev_args = alloca inalloca %frame.reverse, align 4
-  %beg = getelementptr %frame.reverse, %frame.reverse* %rev_args, i32 0, i32 0
-  %end = getelementptr %frame.reverse, %frame.reverse* %rev_args, i32 0, i32 1
+  %end = getelementptr %frame.reverse, ptr %rev_args, i32 0, i32 1
 
 ; CHECK:  pushl   %eax
 ; CHECK:  subl    $20, %esp
 ; CHECK:  movl %esp, %[[beg:[^ ]*]]
 ; CHECK:  leal 12(%[[beg]]), %[[end:[^ ]*]]
 
-  call void @begin(%Iter* sret(%Iter) %temp.lvalue)
+  call void @begin(ptr sret(%Iter) %temp.lvalue)
 ; CHECK:  calll _begin
 
-  invoke void @plus(%Iter* sret(%Iter) %end, %Iter* %temp.lvalue, i32 4)
+  invoke void @plus(ptr sret(%Iter) %end, ptr %temp.lvalue, i32 4)
           to label %invoke.cont unwind label %lpad
 
 ;  Uses end as sret param.
@@ -37,20 +36,20 @@ blah:
 ; CHECK:  calll _plus
 
 invoke.cont:
-  call void @begin(%Iter* sret(%Iter) %beg)
+  call void @begin(ptr sret(%Iter) %rev_args)
 
 ; CHECK:  pushl %[[beg]]
 ; CHECK:  calll _begin
 
-  invoke void @reverse(%frame.reverse* inalloca(%frame.reverse) align 4 %rev_args)
+  invoke void @reverse(ptr inalloca(%frame.reverse) align 4 %rev_args)
           to label %invoke.cont5 unwind label %lpad
 
 invoke.cont5:                                     ; preds = %invoke.cont
-  call void @llvm.stackrestore(i8* %inalloca.save)
+  call void @llvm.stackrestore(ptr %inalloca.save)
   ret i32 0
 
 lpad:                                             ; preds = %invoke.cont, %entry
-  %lp = landingpad { i8*, i32 }
+  %lp = landingpad { ptr, i32 }
           cleanup
   unreachable
 }

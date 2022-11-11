@@ -1,8 +1,5 @@
 """Test Python APIs for process IO."""
 
-from __future__ import print_function
-
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -11,8 +8,6 @@ from lldbsuite.test import lldbutil
 
 
 class ProcessIOTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setup_test(self):
@@ -211,7 +206,7 @@ class ProcessIOTestCase(TestBase):
         # Let process continue so it will exit
         self.process.Continue()
         state = self.process.GetState()
-        self.assertEqual(state, lldb.eStateExited, PROCESS_IS_VALID)
+        self.assertState(state, lldb.eStateExited, PROCESS_IS_VALID)
 
     def check_process_output(self, output, error):
             # Since we launched the process without specifying stdin/out/err,

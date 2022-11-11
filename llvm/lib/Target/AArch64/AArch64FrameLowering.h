@@ -18,8 +18,6 @@
 
 namespace llvm {
 
-class MCCFIInstruction;
-
 class AArch64FrameLowering : public TargetFrameLowering {
 public:
   explicit AArch64FrameLowering()

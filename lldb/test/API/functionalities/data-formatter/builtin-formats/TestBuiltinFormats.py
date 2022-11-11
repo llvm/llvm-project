@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def getFormatted(self, format, expr):
         """
         Evaluates the expression and formats the result with the given format.
@@ -24,7 +22,7 @@ class TestCase(TestBase):
     @no_debug_info_test
     @skipIfWindows
     # uint128_t not available on arm.
-    @skipIf(archs=['arm', 'aarch64'])
+    @skipIf(archs=['arm'])
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))

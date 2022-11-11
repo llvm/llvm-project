@@ -105,6 +105,7 @@ int main(int, char**) {
   CHECK_ALIGNMENT(struct LLIArr16 { long long int i[16]; });
   CHECK_ALIGNMENT(struct Padding { char c; /* padding */ long long int i; });
   CHECK_ALIGNMENT(union IntFloat { int i; float f; });
+  CHECK_ALIGNMENT(enum class StrongEnum { foo });
 
   return 0;
 }

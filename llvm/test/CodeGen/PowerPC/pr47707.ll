@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-grtev4-linux-gnu"
 
-define void @foo(i64* %p1, i64 %v1, i8 %v2, i64 %v3) {
+define void @foo(ptr %p1, i64 %v1, i8 %v2, i64 %v3) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mr 7, 5
@@ -22,7 +22,7 @@ define void @foo(i64* %p1, i64 %v1, i8 %v2, i64 %v3) {
 ; CHECK-NEXT:  # %bb.3: # %bb3
 ; CHECK-NEXT:    std 6, 0(3)
 ; CHECK-NEXT:    blr
-  store i64 0, i64* %p1, align 8
+  store i64 0, ptr %p1, align 8
   %ext = zext i8 %v2 to i64
   %shift = shl nuw i64 %v1, 8
   %merge = or i64 %shift, %ext
@@ -32,14 +32,14 @@ define void @foo(i64* %p1, i64 %v1, i8 %v2, i64 %v3) {
   br i1 %cond1, label %bb2, label %bb1    ; be used by this conditional branch
 
 bb1:
-  store i64 %v1, i64* %p1, align 8
+  store i64 %v1, ptr %p1, align 8
   br label %bb2
 
 bb2:
   br i1 %not0, label %exit, label %bb3
 
 bb3:
-  store i64 %v3, i64* %p1, align 8
+  store i64 %v3, ptr %p1, align 8
   br label %exit
 
 exit:

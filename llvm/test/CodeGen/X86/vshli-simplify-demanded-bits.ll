@@ -47,7 +47,7 @@ define <8 x i8> @vshli_target_constant(<8 x i16> %arg, <8 x i32> %arg1) {
 bb:
   %tmp = udiv <8 x i32> %arg1, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   %tmp2 = and <8 x i32> %tmp, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
-  %tmp3 = load <8 x i8>, <8 x i8>* undef, align 1
+  %tmp3 = load <8 x i8>, ptr undef, align 1
   %tmp4 = zext <8 x i8> %tmp3 to <8 x i32>
   %tmp5 = mul nuw nsw <8 x i32> %tmp2, %tmp4
   %tmp6 = add nuw nsw <8 x i32> %tmp5, <i32 128, i32 128, i32 128, i32 128, i32 128, i32 128, i32 128, i32 128>

@@ -331,6 +331,41 @@ inline static unsigned getNZCVToSatisfyCondCode(CondCode Code) {
   case LE: return Z; // Z == 1 || N != V
   }
 }
+
+/// Return true if Code is a reflexive relationship:
+/// forall x. (CSET Code (CMP x x)) == 1
+inline static bool isReflexive(CondCode Code) {
+  switch (Code) {
+  case EQ:
+  case HS:
+  case PL:
+  case LS:
+  case GE:
+  case LE:
+  case AL:
+  case NV:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Return true if Code is an irreflexive relationship:
+/// forall x. (CSET Code (CMP x x)) == 0
+inline static bool isIrreflexive(CondCode Code) {
+  switch (Code) {
+  case NE:
+  case LO:
+  case MI:
+  case HI:
+  case LT:
+  case GT:
+    return true;
+  default:
+    return false;
+  }
+}
+
 } // end namespace AArch64CC
 
 struct SysAlias {
@@ -343,7 +378,8 @@ struct SysAlias {
       : Name(N), Encoding(E), FeaturesRequired(F) {}
 
   bool haveFeatures(FeatureBitset ActiveFeatures) const {
-    return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
+    return ActiveFeatures[llvm::AArch64::FeatureAll] ||
+           (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
   }
 
   FeatureBitset getRequiredFeatures() const { return FeaturesRequired; }
@@ -453,6 +489,15 @@ namespace AArch64SVEPredPattern {
 #define GET_SVEPREDPAT_DECL
 #include "AArch64GenSystemOperands.inc"
 }
+
+namespace AArch64SVEVecLenSpecifier {
+  struct SVEVECLENSPECIFIER {
+    const char *Name;
+    uint16_t Encoding;
+  };
+#define GET_SVEVECLENSPECIFIER_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64SVEVecLenSpecifier
 
 /// Return the number of active elements for VL1 to VL256 predicate pattern,
 /// zero for all other patterns.
@@ -634,7 +679,8 @@ namespace AArch64SysReg {
     FeatureBitset FeaturesRequired;
 
     bool haveFeatures(FeatureBitset ActiveFeatures) const {
-      return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
+      return ActiveFeatures[llvm::AArch64::FeatureAll] ||
+             (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
     }
   };
 
@@ -746,8 +792,57 @@ namespace AArch64II {
     /// SP-relative load or store instruction (which do not check tags), or to
     /// an LDG instruction to obtain the tag value.
     MO_TAGGED = 0x400,
+
+    /// MO_DLLIMPORTAUX - Symbol refers to "auxilliary" import stub. On
+    /// Arm64EC, there are two kinds of import stubs used for DLL import of
+    /// functions: MO_DLLIMPORT refers to natively callable Arm64 code, and
+    /// MO_DLLIMPORTAUX refers to the original address which can be compared
+    /// for equality.
+    MO_DLLIMPORTAUX = 0x800,
   };
 } // end namespace AArch64II
+
+//===----------------------------------------------------------------------===//
+// v8.3a Pointer Authentication
+//
+
+namespace AArch64PACKey {
+enum ID : uint8_t {
+  IA = 0,
+  IB = 1,
+  DA = 2,
+  DB = 3,
+  LAST = DB
+};
+} // namespace AArch64PACKey
+
+/// Return 2-letter identifier string for numeric key ID.
+inline static StringRef AArch64PACKeyIDToString(AArch64PACKey::ID KeyID) {
+  switch (KeyID) {
+  case AArch64PACKey::IA:
+    return StringRef("ia");
+  case AArch64PACKey::IB:
+    return StringRef("ib");
+  case AArch64PACKey::DA:
+    return StringRef("da");
+  case AArch64PACKey::DB:
+    return StringRef("db");
+  }
+}
+
+/// Return numeric key ID for 2-letter identifier string.
+inline static Optional<AArch64PACKey::ID>
+AArch64StringToPACKeyID(StringRef Name) {
+  if (Name == "ia")
+    return AArch64PACKey::IA;
+  if (Name == "ib")
+    return AArch64PACKey::IB;
+  if (Name == "da")
+    return AArch64PACKey::DA;
+  if (Name == "db")
+    return AArch64PACKey::DB;
+  return None;
+}
 
 namespace AArch64 {
 // The number of bits in a SVE register is architecturally defined

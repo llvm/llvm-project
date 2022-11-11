@@ -1,6 +1,6 @@
 ; RUN: opt -passes=licm %s -S | FileCheck %s
 
-; CHECK: %arrayidx4.promoted = load i32, i32* %arrayidx4, align 4, !tbaa !{{[0-9]+$}}
+; CHECK: %arrayidx4.promoted = load i32, ptr %arrayidx4, align 4, !tbaa !{{[0-9]+$}}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -15,11 +15,10 @@ declare i16 @e(i32)
 define i16 @g() !dbg !13 {
 entry:
   %l_284 = alloca [2 x [3 x [6 x i32]]], align 16
-  %0 = bitcast [2 x [3 x [6 x i32]]]* %l_284 to i8*, !dbg !24
-  call void @llvm.lifetime.start.p0i8(i64 144, i8* nonnull %0), !dbg !24
-  call void @llvm.dbg.declare(metadata [2 x [3 x [6 x i32]]]* %l_284, metadata !17, metadata !DIExpression()), !dbg !25
-  %1 = load i16, i16* @a, align 2, !dbg !26, !tbaa !29
-  %cmp11 = icmp sgt i16 %1, -1, !dbg !33
+  call void @llvm.lifetime.start.p0(i64 144, ptr nonnull %l_284), !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %l_284, metadata !17, metadata !DIExpression()), !dbg !25
+  %0 = load i16, ptr @a, align 2, !dbg !26, !tbaa !29
+  %cmp11 = icmp sgt i16 %0, -1, !dbg !33
   br i1 %cmp11, label %for.body.lr.ph, label %cleanup, !dbg !34
 
 for.body.lr.ph:                                   ; preds = %entry
@@ -31,16 +30,16 @@ for.body:                                         ; preds = %for.cond2, %for.bod
   br i1 %tobool, label %for.cond2, label %for.body.cleanup_crit_edge, !dbg !38
 
 for.cond2:                                        ; preds = %for.body
-  %arrayidx4 = getelementptr inbounds [2 x [3 x [6 x i32]]], [2 x [3 x [6 x i32]]]* %l_284, i64 0, i64 1, i64 2, i64 5, !dbg !39
-  %l = load i32, i32* %arrayidx4, !dbg !43, !tbaa !44
+  %arrayidx4 = getelementptr inbounds [2 x [3 x [6 x i32]]], ptr %l_284, i64 0, i64 1, i64 2, i64 5, !dbg !39
+  %l = load i32, ptr %arrayidx4, !dbg !43, !tbaa !44
   %add = add i32 %l, 1, !dbg !43
-  store i32 %add, i32* %arrayidx4, align 4, !dbg !43, !tbaa !44
-  %arrayidx8 = getelementptr inbounds [2 x [3 x [6 x i32]]], [2 x [3 x [6 x i32]]]* %l_284, i64 0, i64 1, i64 1, i64 4, !dbg !46
-  %2 = load i32, i32* %arrayidx8, align 8, !dbg !46, !tbaa !44
-  %conv9 = trunc i32 %2 to i16, !dbg !46
-  store i16 %conv9, i16* @b, align 2, !dbg !47, !tbaa !29
-  %3 = load i16, i16* @a, align 2, !dbg !26, !tbaa !29
-  %cmp = icmp sgt i16 %3, -1, !dbg !33
+  store i32 %add, ptr %arrayidx4, align 4, !dbg !43, !tbaa !44
+  %arrayidx8 = getelementptr inbounds [2 x [3 x [6 x i32]]], ptr %l_284, i64 0, i64 1, i64 1, i64 4, !dbg !46
+  %1 = load i32, ptr %arrayidx8, align 8, !dbg !46, !tbaa !44
+  %conv9 = trunc i32 %1 to i16, !dbg !46
+  store i16 %conv9, ptr @b, align 2, !dbg !47, !tbaa !29
+  %2 = load i16, ptr @a, align 2, !dbg !26, !tbaa !29
+  %cmp = icmp sgt i16 %2, -1, !dbg !33
   br i1 %cmp, label %for.body, label %for.cond.cleanup_crit_edge, !dbg !34, !llvm.loop !48
 
 for.cond.cleanup_crit_edge:                       ; preds = %for.cond2
@@ -50,15 +49,15 @@ for.body.cleanup_crit_edge:                       ; preds = %for.body
   br label %cleanup, !dbg !38
 
 cleanup:                                          ; preds = %for.body.cleanup_crit_edge, %for.cond.cleanup_crit_edge, %entry
-  call void @llvm.lifetime.end.p0i8(i64 144, i8* nonnull %0), !dbg !51
+  call void @llvm.lifetime.end.p0(i64 144, ptr nonnull %l_284), !dbg !51
   ret i16 1, !dbg !51
 }
 
 ; Function Attrs: argmemonly nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: argmemonly nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #0

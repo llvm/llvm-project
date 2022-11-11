@@ -150,7 +150,7 @@ TEST_F(CompletionStringTest, SnippetsInPatterns) {
 
   // When completing a pattern, the last placeholder holds the cursor position.
   computeSignature(MakeCCS(), /*CompletingPattern=*/true);
-  EXPECT_EQ(Snippet, " ${1:name} = ${0:target};");
+  EXPECT_EQ(Snippet, " ${1:name} = $0;");
 }
 
 TEST_F(CompletionStringTest, IgnoreInformativeQualifier) {

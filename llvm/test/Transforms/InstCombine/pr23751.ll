@@ -5,7 +5,7 @@
 define i1 @f(i8 zeroext %p) #1 {
 ; CHECK-NOT: ret i1 false
   %1 = zext i8 %p to i32
-  %2 = load i32, i32* @d, align 4
+  %2 = load i32, ptr @d, align 4
   %3 = or i32 %2, -2
   %4 = add nsw i32 %3, %1
   %5 = icmp ugt i32 %1, %4

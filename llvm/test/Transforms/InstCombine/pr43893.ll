@@ -6,9 +6,9 @@
 
 define dso_local i32 @main() !dbg !13 {
 entry:
-  %0 = load i8, i8* @a, align 1, !dbg !17
+  %0 = load i8, ptr @a, align 1, !dbg !17
   %dec = add i8 %0, -1, !dbg !17
-  store i8 %dec, i8* @a, align 1, !dbg !17
+  store i8 %dec, ptr @a, align 1, !dbg !17
 ;CHECK: call void @llvm.dbg.value(metadata i32 undef
 ;CHECK: call void @llvm.dbg.value(metadata i32 -8
 ;CHECK: call void @llvm.dbg.value(metadata i32 undef
@@ -17,7 +17,7 @@ entry:
   call void @llvm.dbg.value(metadata i32 %udiv, metadata !18, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata i32 -8, metadata !20, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata i32 %udiv, metadata !20, metadata !DIExpression()), !dbg !19
-  store i8 0, i8* @b, align 1, !dbg !21
+  store i8 0, ptr @b, align 1, !dbg !21
   %cmp = icmp sgt i32 %conv, 0, !dbg !22
   %conv1 = zext i1 %cmp to i32, !dbg !22
   ret i32 0, !dbg !23

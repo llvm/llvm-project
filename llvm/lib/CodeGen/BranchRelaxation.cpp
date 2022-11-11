@@ -23,6 +23,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -431,7 +432,8 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
 
 bool BranchRelaxation::fixupUnconditionalBranch(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
-
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
   unsigned OldBrSize = TII->getInstSizeInBytes(MI);
   MachineBasicBlock *DestBB = TII->getBranchDestBlock(MI);
 
@@ -443,6 +445,20 @@ bool BranchRelaxation::fixupUnconditionalBranch(MachineInstr &MI) {
   BlockInfo[MBB->getNumber()].Size -= OldBrSize;
 
   MachineBasicBlock *BranchBB = MBB;
+
+  auto RemoveBranch = [&](MachineBasicBlock *MBB) {
+    unsigned &BBSize = BlockInfo[MBB->getNumber()].Size;
+    int RemovedSize = 0;
+    TII->removeBranch(*MBB, &RemovedSize);
+    BBSize -= RemovedSize;
+  };
+
+  auto InsertUncondBranch = [&](MachineBasicBlock *MBB,
+                                MachineBasicBlock *Dst) {
+    TII->insertUnconditionalBranch(*MBB, Dst, DebugLoc());
+    // Recalculate the block size.
+    BlockInfo[MBB->getNumber()].Size = computeBlockSize(*MBB);
+  };
 
   // If this was an expanded conditional branch, there is already a single
   // unconditional branch in a block.
@@ -482,11 +498,15 @@ bool BranchRelaxation::fixupUnconditionalBranch(MachineInstr &MI) {
     // restore blocks are just duplicated for each far branch.
     assert(!DestBB->isEntryBlock());
     MachineBasicBlock *PrevBB = &*std::prev(DestBB->getIterator());
-    if (auto *FT = PrevBB->getFallThrough()) {
-      assert(FT == DestBB);
-      TII->insertUnconditionalBranch(*PrevBB, FT, DebugLoc());
-      // Recalculate the block size.
-      BlockInfo[PrevBB->getNumber()].Size = computeBlockSize(*PrevBB);
+    // Fall through only if PrevBB has no unconditional branch as one of its
+    // terminators.
+    if (TII->analyzeBranch(*PrevBB, TBB, FBB, Cond))
+      report_fatal_error("Could not analyze terminators.");
+    if (!FBB) {
+      if (!Cond.empty() && TBB && TBB == DestBB)
+        RemoveBranch(PrevBB);
+      if (!TBB || (TBB && !Cond.empty()))
+        InsertUncondBranch(PrevBB, DestBB);
     }
     // Now, RestoreBB could be placed directly before DestBB.
     MF->splice(DestBB->getIterator(), RestoreBB->getIterator());

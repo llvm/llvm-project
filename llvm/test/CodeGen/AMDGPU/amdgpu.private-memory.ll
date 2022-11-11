@@ -28,7 +28,7 @@
 ; HSA-PROMOTE: workgroup_group_segment_byte_size = 5120
 ; HSA-PROMOTE: .end_amd_kernel_code_t
 
-; HSA-PROMOTE: s_load_dword s{{[0-9]+}}, s[4:5], 0x2
+; HSA-PROMOTE: s_load_dwordx2 s[{{[0-9:]+}}], s[4:5], 0x1
 
 ; SI-PROMOTE: ds_write_b32
 ; SI-PROMOTE: ds_write_b32

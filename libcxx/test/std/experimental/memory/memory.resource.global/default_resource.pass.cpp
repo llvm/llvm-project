@@ -8,7 +8,17 @@
 
 // UNSUPPORTED: c++03
 
+// test_memory_resource requires RTTI for dynamic_cast
+// UNSUPPORTED: no-rtti
+
+// Aligned allocation is required by std::experimental::pmr, but it was not provided
+// before macosx10.13 and as a result we get linker errors when deploying to older than
+// macosx10.13.
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+
 // <experimental/memory_resource>
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 //-----------------------------------------------------------------------------
 // TESTING memory_resource * get_default_resource() noexcept;

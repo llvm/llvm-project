@@ -299,22 +299,23 @@ read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAA
 //  intel-pt supports both "thread tracing" and "process tracing".
 //
 //  "Process tracing" is implemented in two different ways. If the
-//  "perCoreTracing" option is false, then each thread is traced individually
+//  "perCpuTracing" option is false, then each thread is traced individually
 //  but managed by the same "process trace" instance. This means that the
 //  amount of trace buffers used is proportional to the number of running
 //  threads. This is the recommended option unless the number of threads is
-//  huge. If "perCoreTracing" is true, then each cpu core is traced invidually
+//  huge. If "perCpuTracing" is true, then each cpu core is traced invidually
 //  instead of each thread, which uses a fixed number of trace buffers, but
 //  might result in less data available for less frequent threads. See
-//  "perCoreTracing" below for more information.
+//  "perCpuTracing" below for more information.
 //
-//  Each actual trace buffer, either from "process tracing" or "thread tracing",
-//  is stored in an in-memory circular buffer, which keeps the most recent data.
+//  Each actual intel pt trace buffer, either from "process tracing" or "thread
+//  tracing", is stored in an in-memory circular buffer, which keeps the most
+//  recent data.
 //
 //  Additional params in the input schema:
 //   {
-//     "traceBufferSize": <decimal integer>,
-//         Size in bytes used by each individual per-thread or per-core trace
+//     "iptTraceSize": <decimal integer>,
+//         Size in bytes used by each individual per-thread or per-cpu trace
 //         buffer. It must be a power of 2 greater than or equal to 4096 (2^12)
 //         bytes.
 //
@@ -351,7 +352,7 @@ read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAA
 //          0 if supported.
 //
 //     /* process tracing only */
-//     "perCoreTracing": <boolean>
+//     "perCpuTracing": <boolean>
 //         Instead of having an individual trace buffer per thread, this option
 //         triggers the collection on a per cpu core basis. This effectively
 //         traces the entire activity on all cores. At decoding time, in order
@@ -369,17 +370,17 @@ read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAA
 //     /* process tracing only */
 //     "processBufferSizeLimit": <decimal integer>,
 //         Maximum total buffer size per process in bytes.
-//         This limit applies to the sum of the sizes of all thread or core
+//         This limit applies to the sum of the sizes of all thread or cpu core
 //         buffers for the current process, excluding the ones started with
 //         "thread tracing".
 //
-//         If "perCoreTracing" is false, whenever a thread is attempted to be
+//         If "perCpuTracing" is false, whenever a thread is attempted to be
 //         traced due to "process tracing" and the limit would be reached, the
 //         process is stopped with a "tracing" reason along with a meaningful
 //         description, so that the user can retrace the process if needed.
 //
-//         If "perCoreTracing" is true, then starting the system-wide trace
-//         session fails if all the individual per-core trace buffers require
+//         If "perCpuTracing" is true, then starting the system-wide trace
+//         session fails if all the individual per-cpu trace buffers require
 //         in total more memory that the limit impossed by this parameter.
 //   }
 //
@@ -482,7 +483,7 @@ read packet: OK/E<error code>;AAAAAAAAA
 //            Size in bytes of this thread data.
 //      },
 //    ],
-//    "cores"?: [
+//    "cpus"?: [
 //      "id": <decimal integer>,
 //          Identifier for this CPU logical core.
 //      "binaryData": [
@@ -495,11 +496,10 @@ read packet: OK/E<error code>;AAAAAAAAA
 //        },
 //      ]
 //    ],
-//    "counters"?: {
-//      "info_kind": {...parameters specific to the provided counter info kind},
-//          Each entry includes information related to counters associated with
-//          the trace. They are described below.
-//    }
+//    "warnings"?: [<string>],
+//        Non-fatal messages useful for troubleshooting.
+//
+//    ... other attributes specific to the given tracing technology
 //  }
 //
 // NOTES
@@ -508,34 +508,34 @@ read packet: OK/E<error code>;AAAAAAAAA
 //
 // INTEL PT
 //
-//  If per-core process tracing is enabled, "tracedThreads" will contain all
+//  If per-cpu process tracing is enabled, "tracedThreads" will contain all
 //  the threads of the process without any trace buffers. Besides that, the
-//  "cores" field will also be returned with per core trace buffers.
-//  A side effect of per-core tracing is that all the threads of unrelated
+//  "cpus" field will also be returned with per cpu core trace buffers.
+//  A side effect of per-cpu tracing is that all the threads of unrelated
 //  processes will also be traced, thus polluting the tracing data.
 //
 //  Binary data kinds:
-//    - traceBuffer: trace buffer for a thread or a core.
+//    - iptTrace: trace buffer for a thread or a cpu.
+//    - perfContextSwitchTrace: context switch trace for a cpu generated by
+//                              perf_event_open.
 //    - procfsCpuInfo: contents of the /proc/cpuinfo file.
 //
-//  Counter info kinds:
-//    tsc-perf-zero-conversion:
+//  Additional attributes:
+//    tscPerfZeroConversion:
 //
-//    This field allows converting Intel processor's TSC values to a wall time.
+//    This field allows converting Intel processor's TSC values to nanoseconds.
 //    It is available through the Linux perf_event API when cap_user_time and cap_user_time_zero
 //    are set.
 //    See the documentation of time_zero in
 //    https://man7.org/linux/man-pages/man2/perf_event_open.2.html for more information about
 //    the calculation and the meaning of the values in the schema below.
 ///
-//    Sub-schema for this field:
+//    Schema for this field:
 //
-//    {
-//      "tsc-perf-zero-conversion": {
-//        "time_mult": <decimal integer>,
-//        "time_shift": <decimal integer>,
-//        "time_zero": <decimal integer>,
-//      }
+//    "tscPerfZeroConversion": {
+//      "timeMult": <decimal integer>,
+//      "timeShift": <decimal integer>,
+//      "timeZero": <decimal integer>,
 //    }
 //----------------------------------------------------------------------
 
@@ -559,21 +559,11 @@ read packet: {...object}/E<error code>;AAAAAAAAA
 //       Tracing technology name, e.g. intel-pt, arm-etm.
 //   "kind": <string>,
 //       Identifier for the data.
-//   "coreId": <Optional decimal>,
+//   "cpuId": <Optional decimal>,
 //       Core id in decimal if the data belongs to a CPU core.
 //   "tid"?: <Optional decimal>,
 //       Tid in decimal if the data belongs to a thread.
-//   "offset": <decimal>,
-//       Offset of the data in bytes.
-//   "size": <decimal>,
-//      Number of bytes in to read starting from the offset.
 //  }
-//
-// INTEL PT
-//
-//  Binary data kinds:
-//    - traceBuffer: trace buffer for a thread or a core.
-//    - procfsCpuInfo: contents of the /proc/cpuinfo file.
 //----------------------------------------------------------------------
 
 send packet: jLLDBTraceGetBinaryData:{"type":<type>,"kind":<query>,"tid":<tid>,"offset":<offset>,"size":<size>}]
@@ -1082,6 +1072,12 @@ ptrsize: is a number that represents how big pointers are in bytes
 main-binary-uuid: is the UUID of a firmware type binary that the gdb stub knows about
 main-binary-address: is the load address of the firmware type binary
 main-binary-slide: is the slide of the firmware type binary, if address isn't known
+
+binary-addresses: A comma-separated list of binary load addresses base16.  
+                  lldb will parse the binaries in memory to get UUIDs, then
+                  try to find the binaries & debug info by UUID.  Intended for
+                  use with a small number of firmware type binaries where the 
+                  search for binary/debug info may be expensive.
 
 //----------------------------------------------------------------------
 // "qShlibInfoAddr"
@@ -1930,7 +1926,10 @@ for this region.
 //       The libcompression APIs on darwin systems call this COMPRESSION_LZ4_RAW.
 //
 //    lzfse
-//       An Apple proprietary compression algorithm implemented in libcompression.
+//       Compression algorithm added in macOS 10.11, with open source C reference
+//       implementation on github.
+//       https://en.wikipedia.org/wiki/LZFSE
+//       https://github.com/lzfse/lzfse
 //
 //    lzma
 //       libcompression implements "LZMA level 6", the default compression for the
@@ -2137,3 +2136,20 @@ Example packet:
     { "port": 5432 },
     { "socket_name": "foo" }
 ]
+
+//----------------------------------------------------------------------
+// "QSetDetachOnError"
+//
+// BRIEF
+//  Sets what the server should do when the communication channel with LLDB
+//  goes down. Either kill the inferior process (0) or remove breakpoints and
+//  detach (1).
+//
+// PRIORITY TO IMPLEMENT
+//  Low. Only required if the target wants to keep the inferior process alive
+//  when the communication channel goes down.
+//----------------------------------------------------------------------
+
+The data in this packet is a single a character, which should be '0' if the
+inferior process should be killed, or '1' if the server should remove all
+breakpoints and detach from the inferior.

@@ -1,4 +1,5 @@
-; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve < %s -S | FileCheck %s
+; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve \
+; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s -S | FileCheck %s
 
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

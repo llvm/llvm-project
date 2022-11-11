@@ -92,10 +92,11 @@ function(tf_find_and_compile model default_url default_path test_model_generator
   else()
     if ("${model}" STREQUAL "download")
       # Crash if the user wants to download a model but a URL is set to "TO_BE_UPDATED"
-      if ("${default_url}" STREQUAL "TO_BE_UPDATED")
-          message(FATAL_ERROR "Default URL was set to 'download' but there is no"
-          " model url currently specified in cmake - likely, the model interface"
-          " recently changed, and so there is not a released model available.")
+      if ("${default_url}" STREQUAL "<UNSPECIFIED>")
+          message(FATAL_ERROR "Model path was set to 'download' but there is no"
+          " model url currently specified in cmake. You can generate a model"
+          " using, for example, the tools at http://github.com/google/ml-compiler-opt."
+          " Some reference models are also periodically released there.")
       endif()
 
       set(model ${default_url})
@@ -114,4 +115,19 @@ function(tf_find_and_compile model default_url default_path test_model_generator
   set(MLDeps ${MLDeps} tf_xla_runtime PARENT_SCOPE)
   set(MLLinkDeps ${MLLinkDeps} tf_xla_runtime PARENT_SCOPE)
   add_definitions(-DLLVM_HAVE_TF_AOT_${fname_allcaps})
+endfunction()
+
+function(build_proto)
+  foreach (P ${ARGV})
+    set(PB_SRCS ${PB_SRCS} ${LLVM_PROTOBUF_OUT_DIR}/${P}.pb.cc)
+    set(PB_HDRS ${PB_HDRS} ${LLVM_PROTOBUF_OUT_DIR}/${P}.pb.h)
+    set(PBS ${PBS} ${TENSORFLOW_SRC_DIR}/${P}.proto)
+  endforeach()
+  add_custom_command(OUTPUT ${PB_SRCS} ${PB_HDRS}
+    COMMAND protobuf::protoc 
+    ARGS --proto_path=${TENSORFLOW_SRC_DIR} --cpp_out=${LLVM_PROTOBUF_OUT_DIR} ${PBS})
+  set_source_files_properties(${PB_SRCS} PROPERTIES
+    GENERATED 1)
+  set(GeneratedMLSources ${GeneratedMLSources} ${PB_SRCS} PARENT_SCOPE)
+  set(MLDeps ${MLDeps} ${MLDeps} PARENT_SCOPE)
 endfunction()

@@ -115,7 +115,7 @@ auto& f4() {
 }
 auto& f5() {
   return i;
-  return void(); // expected-error@-2 {{cannot form a reference to 'void'}}
+  return void(); // expected-error {{deduced as 'int' in earlier return statement}}
 }
 auto& f6() { return 42; } // expected-error {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
 
@@ -130,9 +130,9 @@ auto l4 = []() -> auto& {
   return i;
   return; // expected-error {{cannot deduce return type 'auto &' from omitted return expression}}
 };
-auto l5 = []() -> auto& { // expected-error {{cannot form a reference to 'void'}}
+auto l5 = []() -> auto & {
   return i;
-  return void();
+  return void(); // expected-error {{deduced as 'int' in earlier return statement}}
 };
 auto l6 = []() -> auto& {
   return 42; // expected-error {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}

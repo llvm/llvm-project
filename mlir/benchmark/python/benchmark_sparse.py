@@ -10,7 +10,7 @@ import time
 
 from mlir import ir
 from mlir import runtime as rt
-from mlir.dialects import builtin
+from mlir.dialects import func
 from mlir.dialects.linalg.opdsl import lang as dsl
 from mlir.execution_engine import ExecutionEngine
 

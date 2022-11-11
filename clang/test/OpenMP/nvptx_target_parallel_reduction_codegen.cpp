@@ -12,9 +12,9 @@
 // CHECK-DAG: [[TRANSFER_STORAGE:@.+]] = weak addrspace([[SHARED_ADDRSPACE:[0-9]+]]) global [32 x i32]
 
 // Check that the execution mode of all 3 target regions is set to Spmd Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l27}}_exec_mode = weak constant i8 2
-// CHECK-DAG: {{@__omp_offloading_.+l32}}_exec_mode = weak constant i8 2
-// CHECK-DAG: {{@__omp_offloading_.+l38}}_exec_mode = weak constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l27}}_exec_mode = weak protected constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l32}}_exec_mode = weak protected constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l38}}_exec_mode = weak protected constant i8 2
 
 template<typename tx>
 tx ftemplate(int n) {

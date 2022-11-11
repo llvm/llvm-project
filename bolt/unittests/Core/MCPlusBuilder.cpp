@@ -115,7 +115,7 @@ TEST_P(MCPlusBuilderTester, ReplaceRegWithImm) {
   if (GetParam() != Triple::x86_64)
     GTEST_SKIP();
   BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
-  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock(0);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
   MCInst Inst; // cmpl    %eax, %ebx
   Inst.setOpcode(X86::CMP32rr);
   Inst.addOperand(MCOperand::createReg(X86::EAX));
@@ -141,8 +141,8 @@ TEST_P(MCPlusBuilderTester, Annotation) {
   BC->MIB->addEHInfo(Inst, MCPlus::MCLandingPad(LPSymbol, Value));
   // Round-trip encoding-decoding check for negative values
   Optional<MCPlus::MCLandingPad> EHInfo = BC->MIB->getEHInfo(Inst);
-  ASSERT_TRUE(EHInfo.hasValue());
-  MCPlus::MCLandingPad LP = EHInfo.getValue();
+  ASSERT_TRUE(EHInfo.has_value());
+  MCPlus::MCLandingPad LP = EHInfo.value();
   uint64_t DecodedValue = LP.second;
   ASSERT_EQ(Value, DecodedValue);
 

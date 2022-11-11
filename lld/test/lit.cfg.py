@@ -104,6 +104,9 @@ if (lit.util.which('cvtres', config.environment['PATH']) or
         config.have_libxml2):
     config.available_features.add('manifest_tool')
 
+if config.enable_backtrace:
+    config.available_features.add('backtrace')
+
 if config.have_libxar:
     config.available_features.add('xar')
 

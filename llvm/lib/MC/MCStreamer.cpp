@@ -1102,7 +1102,8 @@ void MCStreamer::emitInstruction(const MCInst &Inst, const MCSubtargetInfo &) {
 
 void MCStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
                                  uint64_t Attr,
-                                 const MCPseudoProbeInlineStack &InlineStack) {
+                                 const MCPseudoProbeInlineStack &InlineStack,
+                                 MCSymbol *FnSym) {
   auto &Context = getContext();
 
   // Create a symbol at in the current section for use in the probe.
@@ -1116,7 +1117,7 @@ void MCStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
 
   // Add the probe entry to this section's entries.
   Context.getMCPseudoProbeTable().getProbeSections().addPseudoProbe(
-      getCurrentSectionOnly(), Probe, InlineStack);
+      FnSym, Probe, InlineStack);
 }
 
 void MCStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi, const MCSymbol *Lo,
@@ -1188,6 +1189,15 @@ void MCStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
 
 void MCStreamer::emitXCOFFRefDirective(StringRef Name) {
   llvm_unreachable("emitXCOFFRefDirective is only supported on XCOFF targets");
+}
+
+void MCStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
+                                          MCSymbol *Trap, unsigned Lang,
+                                          unsigned Reason,
+                                          unsigned FunctionSize,
+                                          bool hasDebug) {
+  report_fatal_error("emitXCOFFExceptDirective is only supported on "
+                     "XCOFF targets");
 }
 
 void MCStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {}
@@ -1286,7 +1296,7 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
     // Mac Catalyst always uses the build version load command.
     if (Target.isMacCatalystEnvironment())
       return VersionTuple();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Triple::TvOS:
     return VersionTuple(12);
   case Triple::WatchOS:
@@ -1371,15 +1381,14 @@ void MCStreamer::emitVersionForTarget(
       emitDarwinTargetVariantBuildVersion(
           getMachoBuildVersionPlatformType(Target),
           LinkedTargetVersion.getMajor(),
-          LinkedTargetVersion.getMinor().getValueOr(0),
-          LinkedTargetVersion.getSubminor().getValueOr(0), SDKVersion);
+          LinkedTargetVersion.getMinor().value_or(0),
+          LinkedTargetVersion.getSubminor().value_or(0), SDKVersion);
       return;
     }
     emitBuildVersion(getMachoBuildVersionPlatformType(Target),
                      LinkedTargetVersion.getMajor(),
-                     LinkedTargetVersion.getMinor().getValueOr(0),
-                     LinkedTargetVersion.getSubminor().getValueOr(0),
-                     SDKVersion);
+                     LinkedTargetVersion.getMinor().value_or(0),
+                     LinkedTargetVersion.getSubminor().value_or(0), SDKVersion);
     ShouldEmitBuildVersion = true;
   }
 
@@ -1390,8 +1399,8 @@ void MCStreamer::emitVersionForTarget(
       emitDarwinTargetVariantBuildVersion(
           getMachoBuildVersionPlatformType(*TVT),
           TVLinkedTargetVersion.getMajor(),
-          TVLinkedTargetVersion.getMinor().getValueOr(0),
-          TVLinkedTargetVersion.getSubminor().getValueOr(0),
+          TVLinkedTargetVersion.getMinor().value_or(0),
+          TVLinkedTargetVersion.getSubminor().value_or(0),
           DarwinTargetVariantSDKVersion);
     }
   }
@@ -1401,6 +1410,6 @@ void MCStreamer::emitVersionForTarget(
 
   emitVersionMin(getMachoVersionMinLoadCommandType(Target),
                  LinkedTargetVersion.getMajor(),
-                 LinkedTargetVersion.getMinor().getValueOr(0),
-                 LinkedTargetVersion.getSubminor().getValueOr(0), SDKVersion);
+                 LinkedTargetVersion.getMinor().value_or(0),
+                 LinkedTargetVersion.getSubminor().value_or(0), SDKVersion);
 }

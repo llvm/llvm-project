@@ -308,6 +308,8 @@ void NaClToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
   // if the value is libc++, and emits an error for other values.
   GetCXXStdlibType(Args);
   CmdArgs.push_back("-lc++");
+  if (Args.hasArg(options::OPT_fexperimental_library))
+    CmdArgs.push_back("-lc++experimental");
 }
 
 void NaClToolChain::addLibCxxIncludePaths(

@@ -142,14 +142,8 @@ define i32 @test_v3i32(<3 x i32> %a) nounwind {
 define i1 @test_v4i1(<4 x i1> %a) nounwind {
 ; CHECK-LABEL: test_v4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    umov w9, v0.h[0]
-; CHECK-NEXT:    umov w10, v0.h[2]
-; CHECK-NEXT:    umov w11, v0.h[3]
-; CHECK-NEXT:    orr w8, w9, w8
-; CHECK-NEXT:    orr w8, w8, w10
-; CHECK-NEXT:    orr w8, w8, w11
+; CHECK-NEXT:    umaxv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %b = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> %a)

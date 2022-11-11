@@ -102,7 +102,7 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
     }
 
     // Add allocated arguments to the final DAL.
-    for (auto ArgPtr : AllocatedArgs)
+    for (auto *ArgPtr : AllocatedArgs)
       Entry->AddSynthesizedArg(ArgPtr);
   }
 
@@ -283,9 +283,9 @@ void Compilation::initCompilationForDiagnostics() {
       options::OPT_o,  options::OPT_MD, options::OPT_MMD, options::OPT_M,
       options::OPT_MM, options::OPT_MF, options::OPT_MG,  options::OPT_MJ,
       options::OPT_MQ, options::OPT_MT, options::OPT_MV};
-  for (unsigned i = 0, e = llvm::array_lengthof(OutputOpts); i != e; ++i) {
-    if (TranslatedArgs->hasArg(OutputOpts[i]))
-      TranslatedArgs->eraseArg(OutputOpts[i]);
+  for (const auto &Opt : OutputOpts) {
+    if (TranslatedArgs->hasArg(Opt))
+      TranslatedArgs->eraseArg(Opt);
   }
   TranslatedArgs->ClaimAllArgs();
 

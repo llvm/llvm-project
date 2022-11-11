@@ -20,8 +20,8 @@ bb1:                                              ; preds = %bb1, %bb
   br i1 undef, label %bb2, label %bb1
 
 bb2:                                              ; preds = %bb1
-  store i32 0, i32* getelementptr inbounds ([1 x [10 x [8 x i32]]], [1 x [10 x [8 x i32]]]* @g_317, i64 0, i64 0, i64 9, i64 2), align 4
-  %i = load i32, i32* getelementptr inbounds ([1 x [10 x [8 x i32]]], [1 x [10 x [8 x i32]]]* @g_317, i64 0, i64 0, i64 9, i64 2), align 4
+  store i32 0, ptr getelementptr inbounds ([1 x [10 x [8 x i32]]], ptr @g_317, i64 0, i64 0, i64 9, i64 2), align 4
+  %i = load i32, ptr getelementptr inbounds ([1 x [10 x [8 x i32]]], ptr @g_317, i64 0, i64 0, i64 9, i64 2), align 4
   %i3 = insertelement <8 x i32> undef, i32 %i, i32 0
   %i4 = shufflevector <8 x i32> %i3, <8 x i32> undef, <8 x i32> zeroinitializer
   %i5 = add nsw <8 x i8> zeroinitializer, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
@@ -38,7 +38,7 @@ bb2:                                              ; preds = %bb1
   %i16 = xor i32 %i15, 0
   %i17 = shl i32 %i16, 24
   %i18 = ashr exact i32 %i17, 24
-  store i32 %i18, i32* getelementptr inbounds ([9 x i32], [9 x i32]* @g_150, i64 0, i64 3), align 4
+  store i32 %i18, ptr getelementptr inbounds ([9 x i32], ptr @g_150, i64 0, i64 3), align 4
   unreachable
 }
 

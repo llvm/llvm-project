@@ -1,5 +1,5 @@
-; RUN: opt -S -lowertypetests -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck --check-prefixes=CHECK,X64 %s
-; RUN: opt -S -lowertypetests -mtriple=wasm32-unknown-unknown < %s | FileCheck --check-prefixes=CHECK,WASM32 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,X64 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=wasm32-unknown-unknown %s | FileCheck --check-prefixes=CHECK,WASM32 %s
 
 ; Tests that we correctly handle external references, including the case where
 ; all functions in a bitset are external references.

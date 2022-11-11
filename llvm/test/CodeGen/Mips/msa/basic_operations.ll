@@ -1315,7 +1315,7 @@ define i32 @extract_sext_v16i8_vidx() nounwind {
 ; N64-NEXT:    ld.b $w0, 0($2)
 ; N64-NEXT:    addv.b $w0, $w0, $w0
 ; N64-NEXT:    ld $1, %got_disp(i32)($1)
-; N64-NEXT:    lw $1, 0($1)
+; N64-NEXT:    lwu $1, 0($1)
 ; N64-NEXT:    splat.b $w0, $w0[$1]
 ; N64-NEXT:    mfc1 $1, $f0
 ; N64-NEXT:    sra $1, $1, 24
@@ -1371,7 +1371,7 @@ define i32 @extract_sext_v8i16_vidx() nounwind {
 ; N64-NEXT:    ld.h $w0, 0($2)
 ; N64-NEXT:    addv.h $w0, $w0, $w0
 ; N64-NEXT:    ld $1, %got_disp(i32)($1)
-; N64-NEXT:    lw $1, 0($1)
+; N64-NEXT:    lwu $1, 0($1)
 ; N64-NEXT:    splat.h $w0, $w0[$1]
 ; N64-NEXT:    mfc1 $1, $f0
 ; N64-NEXT:    sra $1, $1, 16
@@ -1423,7 +1423,7 @@ define i32 @extract_sext_v4i32_vidx() nounwind {
 ; N64-NEXT:    ld.w $w0, 0($2)
 ; N64-NEXT:    addv.w $w0, $w0, $w0
 ; N64-NEXT:    ld $1, %got_disp(i32)($1)
-; N64-NEXT:    lw $1, 0($1)
+; N64-NEXT:    lwu $1, 0($1)
 ; N64-NEXT:    splat.w $w0, $w0[$1]
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    mfc1 $2, $f0
@@ -1495,7 +1495,7 @@ define i64 @extract_sext_v2i64_vidx() nounwind {
 ; N64-NEXT:    ld.d $w0, 0($2)
 ; N64-NEXT:    addv.d $w0, $w0, $w0
 ; N64-NEXT:    ld $1, %got_disp(i32)($1)
-; N64-NEXT:    lw $1, 0($1)
+; N64-NEXT:    lwu $1, 0($1)
 ; N64-NEXT:    splat.d $w0, $w0[$1]
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    dmfc1 $2, $f0
@@ -1546,7 +1546,7 @@ define i32 @extract_zext_v16i8_vidx() nounwind {
 ; N64-NEXT:    ld.b $w0, 0($2)
 ; N64-NEXT:    addv.b $w0, $w0, $w0
 ; N64-NEXT:    ld $1, %got_disp(i32)($1)
-; N64-NEXT:    lw $1, 0($1)
+; N64-NEXT:    lwu $1, 0($1)
 ; N64-NEXT:    splat.b $w0, $w0[$1]
 ; N64-NEXT:    mfc1 $1, $f0
 ; N64-NEXT:    jr $ra
@@ -1599,7 +1599,7 @@ define i32 @extract_zext_v8i16_vidx() nounwind {
 ; N64-NEXT:    ld.h $w0, 0($2)
 ; N64-NEXT:    addv.h $w0, $w0, $w0
 ; N64-NEXT:    ld $1, %got_disp(i32)($1)
-; N64-NEXT:    lw $1, 0($1)
+; N64-NEXT:    lwu $1, 0($1)
 ; N64-NEXT:    splat.h $w0, $w0[$1]
 ; N64-NEXT:    mfc1 $1, $f0
 ; N64-NEXT:    jr $ra
@@ -1650,7 +1650,7 @@ define i32 @extract_zext_v4i32_vidx() nounwind {
 ; N64-NEXT:    ld.w $w0, 0($2)
 ; N64-NEXT:    addv.w $w0, $w0, $w0
 ; N64-NEXT:    ld $1, %got_disp(i32)($1)
-; N64-NEXT:    lw $1, 0($1)
+; N64-NEXT:    lwu $1, 0($1)
 ; N64-NEXT:    splat.w $w0, $w0[$1]
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    mfc1 $2, $f0
@@ -1722,7 +1722,7 @@ define i64 @extract_zext_v2i64_vidx() nounwind {
 ; N64-NEXT:    ld.d $w0, 0($2)
 ; N64-NEXT:    addv.d $w0, $w0, $w0
 ; N64-NEXT:    ld $1, %got_disp(i32)($1)
-; N64-NEXT:    lw $1, 0($1)
+; N64-NEXT:    lwu $1, 0($1)
 ; N64-NEXT:    splat.d $w0, $w0[$1]
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    dmfc1 $2, $f0
@@ -1934,7 +1934,7 @@ define void @insert_v16i8_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v16i8_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    ld $1, %got_disp(v16i8)($1)
 ; N64-NEXT:    ld.b $w0, 0($1)
 ; N64-NEXT:    sld.b $w0, $w0[$2]
@@ -1994,7 +1994,7 @@ define void @insert_v8i16_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v8i16_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    ld $1, %got_disp(v8i16)($1)
 ; N64-NEXT:    ld.h $w0, 0($1)
 ; N64-NEXT:    dsll $2, $2, 1
@@ -2055,7 +2055,7 @@ define void @insert_v4i32_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v4i32_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    ld $1, %got_disp(v4i32)($1)
 ; N64-NEXT:    ld.w $w0, 0($1)
 ; N64-NEXT:    dsll $2, $2, 2
@@ -2124,7 +2124,7 @@ define void @insert_v2i64_vidx(i64 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v2i64_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    ld $1, %got_disp(v2i64)($1)
 ; N64-NEXT:    ld.d $w0, 0($1)
 ; N64-NEXT:    dsll $2, $2, 3

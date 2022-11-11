@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 ; PR11350: Check that SimplifyIndvar handles a cycle of useless self-phis.
 
 ; CHECK-LABEL: @test(

@@ -82,6 +82,7 @@ bool PPCLinuxToolChain::SupportIEEEFloat128(
       (StdLib == CST_Libstdcxx &&
        GCCInstallation.getVersion().isOlderThan(12, 1, 0));
 
-  return GlibcSupportsFloat128(Linux::getDynamicLinker(Args)) &&
+  std::string Linker = Linux::getDynamicLinker(Args);
+  return GlibcSupportsFloat128((Twine(D.DyldPrefix) + Linker).str()) &&
          !(D.CCCIsCXX() && HasUnsupportedCXXLib);
 }

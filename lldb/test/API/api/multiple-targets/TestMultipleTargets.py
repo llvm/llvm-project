@@ -1,8 +1,5 @@
 """Test the lldb public C++ api when creating multiple targets simultaneously."""
 
-from __future__ import print_function
-
-
 import os
 
 import lldb
@@ -12,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestMultipleTargets(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])

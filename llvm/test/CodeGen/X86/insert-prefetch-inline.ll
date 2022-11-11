@@ -9,14 +9,14 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: norecurse nounwind readonly uwtable
-define dso_local i32 @sum(i32* nocapture readonly %arr, i32 %pos1, i32 %pos2) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @sum(ptr nocapture readonly %arr, i32 %pos1, i32 %pos2) local_unnamed_addr #0 !dbg !7 {
 entry:
   %idxprom = sext i32 %pos1 to i64, !dbg !10
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 %idxprom, !dbg !10
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !10, !tbaa !11
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 %idxprom, !dbg !10
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !10, !tbaa !11
   %idxprom1 = sext i32 %pos2 to i64, !dbg !15
-  %arrayidx2 = getelementptr inbounds i32, i32* %arr, i64 %idxprom1, !dbg !15
-  %1 = load i32, i32* %arrayidx2, align 4, !dbg !15, !tbaa !11
+  %arrayidx2 = getelementptr inbounds i32, ptr %arr, i64 %idxprom1, !dbg !15
+  %1 = load i32, ptr %arrayidx2, align 4, !dbg !15, !tbaa !11
   %add = add nsw i32 %1, %0, !dbg !16
   ret i32 %add, !dbg !17
 }
@@ -25,11 +25,11 @@ entry:
 ; in "caller" that came from "sum"'s inlining.
 ;
 ; Function Attrs: norecurse nounwind readonly uwtable
-define dso_local i32 @caller(i32* nocapture readonly %arr) local_unnamed_addr #0 !dbg !18 {
+define dso_local i32 @caller(ptr nocapture readonly %arr) local_unnamed_addr #0 !dbg !18 {
 entry:
-  %0 = load i32, i32* %arr, align 4, !dbg !19, !tbaa !11
-  %arrayidx2.i = getelementptr inbounds i32, i32* %arr, i64 2, !dbg !21
-  %1 = load i32, i32* %arrayidx2.i, align 4, !dbg !21, !tbaa !11
+  %0 = load i32, ptr %arr, align 4, !dbg !19, !tbaa !11
+  %arrayidx2.i = getelementptr inbounds i32, ptr %arr, i64 2, !dbg !21
+  %1 = load i32, ptr %arrayidx2.i, align 4, !dbg !21, !tbaa !11
   %add.i = add nsw i32 %1, %0, !dbg !22
   ret i32 %add.i, !dbg !23
 }

@@ -1,9 +1,6 @@
 ! Verify that the driver correctly rejects invalid values for -fget-definition
 
-!-----------
-! RUN LINES
-!-----------
-! RUN: not %flang_fc1 -fget-definition 45 1 2 %s 2>&1 | FileCheck --check-prefix=OK %s
+! RUN: not %flang_fc1 -fget-definition 36 1 2 %s 2>&1 | FileCheck --check-prefix=OK %s
 ! RUN: not %flang_fc1 -fget-definition a 1 1 %s 2>&1 | FileCheck --check-prefix=ERROR-a %s
 ! RUN: not %flang_fc1 -fget-definition 1 b 1 %s 2>&1 | FileCheck --check-prefix=ERROR-b %s
 ! RUN: not %flang_fc1 -fget-definition 1 1 c %s 2>&1 | FileCheck --check-prefix=ERROR-c %s
@@ -12,9 +9,6 @@
 ! RUN: not %flang_fc1 -fget-definition 1 b c %s 2>&1 | FileCheck --check-prefix=ERROR-bc %s
 ! RUN: not %flang_fc1 -fget-definition a 1 c %s 2>&1 | FileCheck --check-prefix=ERROR-ac %s
 
-!-----------------
-! EXPECTED OUTPUT
-!-----------------
 ! OK: String range: >m<
 ! OK-NOT: error
 
@@ -39,8 +33,5 @@
 ! ERROR-abc: error: invalid value 'a' in 'fget-definition'
 ! ERROR-abc-NOT: String range: >m<
 
-!-------
-! INPUT
-!-------
 module m
 end module

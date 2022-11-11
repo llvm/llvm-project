@@ -24,14 +24,15 @@ namespace lldb_private {
 // List of data kinds used by jLLDBGetState and jLLDBGetBinaryData.
 struct IntelPTDataKinds {
   static const char *kProcFsCpuInfo;
-  static const char *kTraceBuffer;
+  static const char *kIptTrace;
+  static const char *kPerfContextSwitchTrace;
 };
 
 /// jLLDBTraceStart gdb-remote packet
 /// \{
 struct TraceIntelPTStartRequest : TraceStartRequest {
   /// Size in bytes to use for each thread's trace buffer.
-  uint64_t trace_buffer_size;
+  uint64_t ipt_trace_size;
 
   /// Whether to enable TSC
   bool enable_tsc;
@@ -46,16 +47,35 @@ struct TraceIntelPTStartRequest : TraceStartRequest {
   /// then a "tracing" stop event is triggered.
   llvm::Optional<uint64_t> process_buffer_size_limit;
 
-  /// Whether to have a trace buffer per thread or per cpu core.
-  llvm::Optional<bool> per_core_tracing;
+  /// Whether to have a trace buffer per thread or per cpu cpu.
+  llvm::Optional<bool> per_cpu_tracing;
 
-  bool IsPerCoreTracing() const;
+  /// Disable the cgroup filtering that is automatically applied in per cpu
+  /// mode.
+  llvm::Optional<bool> disable_cgroup_filtering;
+
+  bool IsPerCpuTracing() const;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceIntelPTStartRequest &packet,
               llvm::json::Path path);
 
 llvm::json::Value toJSON(const TraceIntelPTStartRequest &packet);
+/// \}
+
+/// Helper structure to help parse long numbers that can't
+/// be easily represented by a JSON number that is compatible with
+/// Javascript (52 bits) or that can also be represented as hex.
+///
+/// \{
+struct JSONUINT64 {
+  uint64_t value;
+};
+
+llvm::json::Value toJSON(const JSONUINT64 &uint64, bool hex);
+
+bool fromJSON(const llvm::json::Value &value, JSONUINT64 &uint64,
+              llvm::json::Path path);
 /// \}
 
 /// jLLDBTraceGetState gdb-remote packet
@@ -66,45 +86,38 @@ llvm::json::Value toJSON(const TraceIntelPTStartRequest &packet);
 /// See the documentation of `time_zero` in
 /// https://man7.org/linux/man-pages/man2/perf_event_open.2.html for more
 /// information.
-class LinuxPerfZeroTscConversion
-    : public TraceCounterConversion<std::chrono::nanoseconds> {
-public:
-  /// Create new \a LinuxPerfZeroTscConversion object from the conversion values
-  /// defined in the Linux perf_event_open API.
-  LinuxPerfZeroTscConversion(uint32_t time_mult, uint16_t time_shift,
-                             uint64_t time_zero)
-      : m_time_mult(time_mult), m_time_shift(time_shift),
-        m_time_zero(time_zero) {}
-
+struct LinuxPerfZeroTscConversion {
   /// Convert TSC value to nanosecond wall time. The beginning of time (0
   /// nanoseconds) is defined by the kernel at boot time and has no particularly
   /// useful meaning. On the other hand, this value is constant for an entire
   /// trace session.
-  //  See 'time_zero' section of
-  //  https://man7.org/linux/man-pages/man2/perf_event_open.2.html
+  /// See 'time_zero' section of
+  /// https://man7.org/linux/man-pages/man2/perf_event_open.2.html
   ///
   /// \param[in] tsc
   ///   The TSC value to be converted.
   ///
   /// \return
   ///   Nanosecond wall time.
-  std::chrono::nanoseconds Convert(uint64_t raw_counter_value) override;
+  uint64_t ToNanos(uint64_t tsc) const;
 
-  llvm::json::Value toJSON() override;
+  uint64_t ToTSC(uint64_t nanos) const;
 
-private:
-  uint32_t m_time_mult;
-  uint16_t m_time_shift;
-  uint64_t m_time_zero;
+  uint32_t time_mult;
+  uint16_t time_shift;
+  JSONUINT64 time_zero;
 };
 
 struct TraceIntelPTGetStateResponse : TraceGetStateResponse {
   /// The TSC to wall time conversion if it exists, otherwise \b nullptr.
-  TraceTscConversionUP tsc_conversion;
+  llvm::Optional<LinuxPerfZeroTscConversion> tsc_perf_zero_conversion;
+  bool using_cgroup_filtering = false;
 };
 
 bool fromJSON(const llvm::json::Value &value,
-              TraceTscConversionUP &tsc_conversion, llvm::json::Path path);
+              LinuxPerfZeroTscConversion &packet, llvm::json::Path path);
+
+llvm::json::Value toJSON(const LinuxPerfZeroTscConversion &packet);
 
 bool fromJSON(const llvm::json::Value &value,
               TraceIntelPTGetStateResponse &packet, llvm::json::Path path);

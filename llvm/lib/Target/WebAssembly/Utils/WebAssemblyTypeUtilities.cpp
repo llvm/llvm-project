@@ -13,6 +13,7 @@
 
 #include "WebAssemblyTypeUtilities.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 // Get register classes enum.
 #define GET_REGINFO_ENUM
@@ -168,6 +169,11 @@ wasm::ValType WebAssembly::regClassToValType(unsigned RC) {
   }
 }
 
+wasm::ValType WebAssembly::regClassToValType(const TargetRegisterClass *RC) {
+  assert(RC != nullptr);
+  return regClassToValType(RC->getID());
+}
+
 void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
                                     const SmallVector<MVT, 1> &VTs) {
   assert(!Sym->getType());
@@ -175,33 +181,28 @@ void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
   // Tables are represented as Arrays in LLVM IR therefore
   // they reach this point as aggregate Array types with an element type
   // that is a reference type.
-  wasm::ValType Type;
+  wasm::ValType ValTy;
   bool IsTable = false;
   if (GlobalVT->isArrayTy() &&
       WebAssembly::isRefType(GlobalVT->getArrayElementType())) {
-    MVT VT;
     IsTable = true;
-    switch (GlobalVT->getArrayElementType()->getPointerAddressSpace()) {
-    case WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF:
-      VT = MVT::funcref;
-      break;
-    case WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF:
-      VT = MVT::externref;
-      break;
-    default:
-      report_fatal_error("unhandled address space type");
-    }
-    Type = WebAssembly::toValType(VT);
+    const Type *ElTy = GlobalVT->getArrayElementType();
+    if (WebAssembly::isExternrefType(ElTy))
+      ValTy = wasm::ValType::EXTERNREF;
+    else if (WebAssembly::isFuncrefType(ElTy))
+      ValTy = wasm::ValType::FUNCREF;
+    else
+      report_fatal_error("unhandled reference type");
   } else if (VTs.size() == 1) {
-    Type = WebAssembly::toValType(VTs[0]);
+    ValTy = WebAssembly::toValType(VTs[0]);
   } else
     report_fatal_error("Aggregate globals not yet implemented");
 
   if (IsTable) {
     Sym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
-    Sym->setTableType(Type);
+    Sym->setTableType(ValTy);
   } else {
     Sym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-    Sym->setGlobalType(wasm::WasmGlobalType{uint8_t(Type), /*Mutable=*/true});
+    Sym->setGlobalType(wasm::WasmGlobalType{uint8_t(ValTy), /*Mutable=*/true});
   }
 }

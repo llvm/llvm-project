@@ -23,10 +23,6 @@ TSAN_FLAG(bool, enable_annotations, true,
 TSAN_FLAG(bool, suppress_equal_stacks, true,
           "Suppress a race report if we've already output another race report "
           "with the same stack.")
-TSAN_FLAG(bool, suppress_equal_addresses, true,
-          "Suppress a race report if we've already output another race report "
-          "on the same address.")
-
 TSAN_FLAG(bool, report_bugs, true,
           "Turns off bug reporting entirely (useful for benchmarking).")
 TSAN_FLAG(bool, report_thread_leaks, true, "Report thread leaks at exit?")

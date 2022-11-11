@@ -10,9 +10,8 @@ from lldbsuite.test import lldbutil
 
 class TestInlineStepping(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(['pyapi'])
+    @skipIf(oslist=['windows'], archs=['aarch64']) # Flaky on buildbot
     @expectedFailureAll(
         compiler="icc",
         bugnumber="# Not really a bug.  ICC combines two inlined functions.")

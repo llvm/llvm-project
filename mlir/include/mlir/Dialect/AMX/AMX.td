@@ -78,7 +78,7 @@ class AMX_IntrOp<string mnemonic, int numResults, list<Trait> traits = []> :
 // Tile reset.
 //
 
-def TileZeroOp : AMX_Op<"tile_zero", [NoSideEffect]> {
+def TileZeroOp : AMX_Op<"tile_zero", [Pure]> {
   let summary = "tile zero operation";
   let description = [{
     Zeroes the destination tile, with the shape defined by the 2-dim
@@ -95,7 +95,7 @@ def TileZeroOp : AMX_Op<"tile_zero", [NoSideEffect]> {
     VectorOfRankAndType<[2], [F32, BF16, I32, I8]>:$res);
   let extraClassDeclaration = [{
     VectorType getVectorType() {
-      return res().getType().cast<VectorType>();
+      return getRes().getType().cast<VectorType>();
     }
   }];
   let assemblyFormat = "attr-dict `:` type($res)";
@@ -106,7 +106,7 @@ def TileZeroOp : AMX_Op<"tile_zero", [NoSideEffect]> {
 // Tile memory operations.
 //
 
-def TileLoadOp : AMX_Op<"tile_load", [NoSideEffect]> {
+def TileLoadOp : AMX_Op<"tile_load", [Pure]> {
   let summary = "tile load operation";
   let description = [{
     Loads a tile from memory defined by a base and indices, with the
@@ -126,10 +126,10 @@ def TileLoadOp : AMX_Op<"tile_load", [NoSideEffect]> {
     VectorOfRankAndType<[2], [F32, BF16, I32, I8]>:$res);
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
-      return base().getType().cast<MemRefType>();
+      return getBase().getType().cast<MemRefType>();
     }
     VectorType getVectorType() {
-      return res().getType().cast<VectorType>();
+      return getRes().getType().cast<VectorType>();
     }
   }];
   let assemblyFormat = "$base `[` $indices `]` attr-dict `:` "
@@ -156,10 +156,10 @@ def TileStoreOp : AMX_Op<"tile_store"> {
                    VectorOfRankAndType<[2], [F32, BF16, I32, I8]>:$val);
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
-      return base().getType().cast<MemRefType>();
+      return getBase().getType().cast<MemRefType>();
     }
     VectorType getVectorType() {
-      return val().getType().cast<VectorType>();
+      return getVal().getType().cast<VectorType>();
     }
   }];
   let assemblyFormat = "$base `[` $indices `]` `,` $val attr-dict `:` "
@@ -171,7 +171,8 @@ def TileStoreOp : AMX_Op<"tile_store"> {
 // Tile arithmetic operations.
 //
 
-def TileMulFOp : AMX_Op<"tile_mulf", [NoSideEffect, AllTypesMatch<["acc", "res"]>]> {
+def TileMulFOp : AMX_Op<"tile_mulf", [
+    Pure, AllTypesMatch<["acc", "res"]>]> {
   let summary = "tile multiplication operation (floating-point)";
   let description = [{
     Multiplies a "m x k" tile with a "k x n" tile and accumulates the results
@@ -192,13 +193,13 @@ def TileMulFOp : AMX_Op<"tile_mulf", [NoSideEffect, AllTypesMatch<["acc", "res"]
   let results = (outs VectorOfRankAndType<[2], [F32, BF16]>:$res);
   let extraClassDeclaration = [{
     VectorType getLhsVectorType() {
-      return lhs().getType().cast<VectorType>();
+      return getLhs().getType().cast<VectorType>();
     }
     VectorType getRhsVectorType() {
-      return rhs().getType().cast<VectorType>();
+      return getRhs().getType().cast<VectorType>();
     }
     VectorType getVectorType() {
-      return res().getType().cast<VectorType>();
+      return getRes().getType().cast<VectorType>();
     }
   }];
   let assemblyFormat = "$lhs `,` $rhs `,` $acc attr-dict `:` "
@@ -206,7 +207,8 @@ def TileMulFOp : AMX_Op<"tile_mulf", [NoSideEffect, AllTypesMatch<["acc", "res"]
   let hasVerifier = 1;
 }
 
-def TileMulIOp : AMX_Op<"tile_muli", [NoSideEffect, AllTypesMatch<["acc", "res"]>]> {
+def TileMulIOp : AMX_Op<"tile_muli", [
+    Pure, AllTypesMatch<["acc", "res"]>]> {
   let summary = "tile multiplication operation (integer)";
   let description = [{
     Multiplies a "m x k" tile with a "k x n" tile and accumulates the results
@@ -233,13 +235,13 @@ def TileMulIOp : AMX_Op<"tile_muli", [NoSideEffect, AllTypesMatch<["acc", "res"]
   let results = (outs VectorOfRankAndType<[2], [I32, I8]>:$res);
   let extraClassDeclaration = [{
     VectorType getLhsVectorType() {
-      return lhs().getType().cast<VectorType>();
+      return getLhs().getType().cast<VectorType>();
     }
     VectorType getRhsVectorType() {
-      return rhs().getType().cast<VectorType>();
+      return getRhs().getType().cast<VectorType>();
     }
     VectorType getVectorType() {
-      return res().getType().cast<VectorType>();
+      return getRes().getType().cast<VectorType>();
     }
   }];
   let assemblyFormat = "$lhs (`zext` $isZextLhs^)? `,` $rhs (`zext` $isZextRhs^)? `,` $acc attr-dict `:` "

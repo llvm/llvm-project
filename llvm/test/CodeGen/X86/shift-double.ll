@@ -8,7 +8,7 @@ define i64 @test1(i64 %X, i8 %C) nounwind {
 ; X86-LABEL: test1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %esi, %eax
@@ -39,7 +39,7 @@ define i64 @test2(i64 %X, i8 %C) nounwind {
 ; X86-LABEL: test2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl %esi, %edx
@@ -71,7 +71,7 @@ define i64 @test3(i64 %X, i8 %C) nounwind {
 ; X86-LABEL: test3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl %esi, %edx
@@ -103,7 +103,7 @@ define i64 @test3(i64 %X, i8 %C) nounwind {
 define i32 @test4(i32 %A, i32 %B, i8 %C) nounwind {
 ; X86-LABEL: test4:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shldl %cl, %edx, %eax
@@ -130,7 +130,7 @@ define i16 @test5(i16 %A, i16 %B, i8 %C) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
 ; X86-NEXT:    shldw %cl, %dx, %ax
 ; X86-NEXT:    retl
@@ -158,7 +158,7 @@ define i16 @test5(i16 %A, i16 %B, i8 %C) nounwind {
 define i32 @test6(i32 %A, i32 %B, i8 %C) nounwind {
 ; X86-LABEL: test6:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrdl %cl, %edx, %eax
@@ -185,7 +185,7 @@ define i16 @test7(i16 %A, i16 %B, i8 %C) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
 ; X86-NEXT:    shrdw %cl, %dx, %ax
 ; X86-NEXT:    retl
@@ -214,7 +214,7 @@ define i64 @test8(i64 %val, i32 %bits) nounwind {
 ; X86-LABEL: test8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %esi, %eax
@@ -240,7 +240,7 @@ define i64 @test8(i64 %val, i32 %bits) nounwind {
 define i64 @test9(i64 %val, i32 %bits) nounwind {
 ; X86-LABEL: test9:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shrdl %cl, %edx, %eax
@@ -264,7 +264,7 @@ define i64 @test9(i64 %val, i32 %bits) nounwind {
 define i64 @test10(i64 %val, i32 %bits) nounwind {
 ; X86-LABEL: test10:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shrdl %cl, %edx, %eax
@@ -290,7 +290,7 @@ define i64 @test10(i64 %val, i32 %bits) nounwind {
 define i32 @test11(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X86-LABEL: test11:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shldl %cl, %edx, %eax
@@ -314,7 +314,7 @@ define i32 @test11(i32 %hi, i32 %lo, i32 %bits) nounwind {
 define i32 @test12(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X86-LABEL: test12:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrdl %cl, %edx, %eax
@@ -338,7 +338,7 @@ define i32 @test12(i32 %hi, i32 %lo, i32 %bits) nounwind {
 define i32 @test13(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X86-LABEL: test13:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shldl %cl, %edx, %eax
@@ -361,7 +361,7 @@ define i32 @test13(i32 %hi, i32 %lo, i32 %bits) nounwind {
 define i32 @test14(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X86-LABEL: test14:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrdl %cl, %edx, %eax
@@ -384,7 +384,7 @@ define i32 @test14(i32 %hi, i32 %lo, i32 %bits) nounwind {
 define i32 @test15(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X86-LABEL: test15:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shldl %cl, %edx, %eax
@@ -408,7 +408,7 @@ define i32 @test15(i32 %hi, i32 %lo, i32 %bits) nounwind {
 define i32 @test16(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X86-LABEL: test16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrdl %cl, %edx, %eax
@@ -432,7 +432,7 @@ define i32 @test16(i32 %hi, i32 %lo, i32 %bits) nounwind {
 define i32 @test17(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X86-LABEL: test17:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrdl %cl, %edx, %eax
@@ -456,7 +456,7 @@ define i32 @test17(i32 %hi, i32 %lo, i32 %bits) nounwind {
 define i32 @test18(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X86-LABEL: test18:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shldl %cl, %edx, %eax
@@ -488,7 +488,7 @@ define i32 @not_shld_i32(i32, i32, i32) {
 ; X86-LABEL: not_shld_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shll %cl, %edx
 ; X86-NEXT:    negb %cl
@@ -519,7 +519,7 @@ define i32 @not_shrd_i32(i32, i32, i32) {
 ; X86-LABEL: not_shrd_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shrl %cl, %edx
 ; X86-NEXT:    negb %cl

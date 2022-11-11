@@ -13,15 +13,13 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @_ZN2bg2baIiEC2ES_(i64 %v) {
 ; CHECK-LABEL: @_ZN2bg2baIiEC2ES_(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(%struct.bi* undef) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(ptr undef) ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %y = alloca i64, align 8
-  store i64 %v, i64* %y, align 8
-  %0 = bitcast i64* %y to %struct.n.2*
-  %1 = bitcast %struct.n.2* %0 to %struct.bi*
-  call void @llvm.assume(i1 true) [ "nonnull"(%struct.bi* %1) ]
+  store i64 %v, ptr %y, align 8
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %y) ]
   ret void
 }
 

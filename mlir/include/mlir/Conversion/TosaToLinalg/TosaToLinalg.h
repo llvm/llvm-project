@@ -17,6 +17,11 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+
+#define GEN_PASS_DECL_TOSATOLINALG
+#define GEN_PASS_DECL_TOSATOLINALGNAMED
+#include "mlir/Conversion/Passes.h.inc"
+
 namespace tosa {
 
 std::unique_ptr<Pass> createTosaToLinalg();

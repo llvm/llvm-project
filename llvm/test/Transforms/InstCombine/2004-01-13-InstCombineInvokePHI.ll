@@ -7,23 +7,23 @@
 ;
 ; RUN: opt < %s -passes=instcombine -disable-output
 
-declare i8* @test()
+declare ptr @test()
 
-define i32 @foo() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @foo() personality ptr @__gxx_personality_v0 {
 entry:
         br i1 true, label %cont, label %call
 
 call:           ; preds = %entry
-        %P = invoke i32* bitcast (i8* ()* @test to i32* ()*)( )
-                        to label %cont unwind label %N          ; <i32*> [#uses=1]
+        %P = invoke ptr @test( )
+                        to label %cont unwind label %N          ; <ptr> [#uses=1]
 
 cont:           ; preds = %call, %entry
-        %P2 = phi i32* [ %P, %call ], [ null, %entry ]          ; <i32*> [#uses=1]
-        %V = load i32, i32* %P2              ; <i32> [#uses=1]
+        %P2 = phi ptr [ %P, %call ], [ null, %entry ]          ; <ptr> [#uses=1]
+        %V = load i32, ptr %P2              ; <i32> [#uses=1]
         ret i32 %V
 
 N:              ; preds = %call
-        %exn = landingpad {i8*, i32}
+        %exn = landingpad {ptr, i32}
                  cleanup
         ret i32 0
 }

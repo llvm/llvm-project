@@ -3,7 +3,10 @@
 ## Check how we dump an empty archive.
 
 # RUN: yaml2obj %s --docnum=1 -o %t.empty.a
-# RUN: obj2yaml %t.empty.a | FileCheck %s --check-prefix=EMPTY
+# RUN: obj2yaml %t.empty.a > %t.stdout.yaml
+# RUN: obj2yaml %t.empty.a -o %t.file.yaml 2>&1 | count 0
+# RUN: FileCheck --input-file=%t.stdout.yaml %s --check-prefix=EMPTY
+# RUN: diff %t.stdout.yaml %t.file.yaml
 
 # EMPTY:      --- !Arch
 # EMPTY-NEXT: Members: []

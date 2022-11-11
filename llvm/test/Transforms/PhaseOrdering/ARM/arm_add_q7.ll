@@ -22,14 +22,14 @@ define dso_local void @arm_add_q7(i8* %pSrcA, i8* %pSrcB, i8* noalias %pDst, i32
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, i8* [[PSRCA:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP14:%.*]] = getelementptr i8, i8* [[PDST:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP15:%.*]] = getelementptr i8, i8* [[PSRCB:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[BLOCKSIZE]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = tail call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[BLOCKSIZE]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[NEXT_GEP]] to <16 x i8>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP0]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP0]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[NEXT_GEP15]] to <16 x i8>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD18:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP1]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[WIDE_MASKED_LOAD]], <16 x i8> [[WIDE_MASKED_LOAD18]])
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD16:%.*]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP1]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[WIDE_MASKED_LOAD]], <16 x i8> [[WIDE_MASKED_LOAD16]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[NEXT_GEP14]] to <16 x i8>*
-; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> [[TMP2]], <16 x i8>* [[TMP3]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> [[TMP2]], <16 x i8>* [[TMP3]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[WHILE_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

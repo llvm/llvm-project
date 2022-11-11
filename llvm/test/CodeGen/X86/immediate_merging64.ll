@@ -7,54 +7,54 @@
 ; Immediates with multiple users should not be pulled into instructions when
 ; optimizing for code size (but 8-bit immediates are exceptions).
 
-define i1 @imm_multiple_users(i64 %a, i64* %b) optsize {
+define i1 @imm_multiple_users(i64 %a, ptr %b) optsize {
 ; CHECK-LABEL: imm_multiple_users:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq $-1, (%rsi)
 ; CHECK-NEXT:    cmpq $-1, %rdi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
-  store i64 -1, i64* %b, align 8
+  store i64 -1, ptr %b, align 8
   %cmp = icmp eq i64 %a, -1
   ret i1 %cmp
 }
 
-define i1 @imm_multiple_users_pgso(i64 %a, i64* %b) !prof !14 {
+define i1 @imm_multiple_users_pgso(i64 %a, ptr %b) !prof !14 {
 ; CHECK-LABEL: imm_multiple_users_pgso:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq $-1, (%rsi)
 ; CHECK-NEXT:    cmpq $-1, %rdi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
-  store i64 -1, i64* %b, align 8
+  store i64 -1, ptr %b, align 8
   %cmp = icmp eq i64 %a, -1
   ret i1 %cmp
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
 
 ; Inlined memsets requiring multiple same-sized stores should be lowered using
 ; the register, rather than immediate, form of stores when optimizing for
 ; code size.
-define void @memset_zero(i8* noalias nocapture %D) optsize {
+define void @memset_zero(ptr noalias nocapture %D) optsize {
 ; CHECK-LABEL: memset_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movq %rax, 7(%rdi)
 ; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %D, i8 0, i64 15, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr %D, i8 0, i64 15, i1 false)
   ret void
 }
 
-define void @memset_zero_pgso(i8* noalias nocapture %D) !prof !14 {
+define void @memset_zero_pgso(ptr noalias nocapture %D) !prof !14 {
 ; CHECK-LABEL: memset_zero_pgso:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movq %rax, 7(%rdi)
 ; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %D, i8 0, i64 15, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr %D, i8 0, i64 15, i1 false)
   ret void
 }
 

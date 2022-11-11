@@ -37,7 +37,6 @@
 # NDATA-DAG: __DATA,__objc_catlist __DATA__objc_catlist
 # NDATA-DAG: __DATA,__objc_nlcatlist __DATA__objc_nlcatlist
 # NDATA-DAG: __DATA,__objc_protolist __DATA__objc_protolist
-# NDATA-DAG: __DATA,__objc_imageinfo __DATA__objc_imageinfo
 # NDATA-DAG: __DATA,__nl_symbol_ptr __IMPORT__pointers
 
 # YDATA-DAG: __DATA_CONST,__auth_got __DATA__auth_got
@@ -52,8 +51,24 @@
 # YDATA-DAG: __DATA_CONST,__objc_catlist __DATA__objc_catlist
 # YDATA-DAG: __DATA_CONST,__objc_nlcatlist __DATA__objc_nlcatlist
 # YDATA-DAG: __DATA_CONST,__objc_protolist __DATA__objc_protolist
-# YDATA-DAG: __DATA_CONST,__objc_imageinfo __DATA__objc_imageinfo
 # YDATA-DAG: __DATA_CONST,__nl_symbol_ptr __IMPORT__pointers
+
+## Check that the SG_READ_ONLY flag is set on __DATA_CONST.
+# RUN: llvm-otool -v -l %t/ydata | \
+# RUN:     FileCheck %s --check-prefix=FLAGS
+
+# FLAGS-LABEL: Load command 2
+# FLAGS-NEXT:      cmd LC_SEGMENT_64
+# FLAGS-NEXT:  cmdsize
+# FLAGS-NEXT:  segname __DATA_CONST
+# FLAGS-NEXT:   vmaddr
+# FLAGS-NEXT:   vmsize
+# FLAGS-NEXT:  fileoff
+# FLAGS-NEXT: filesize
+# FLAGS-NEXT:  maxprot rw-
+# FLAGS-NEXT: initprot rw-
+# FLAGS-NEXT:   nsects 13
+# FLAGS-NEXT:    flags SG_READ_ONLY
 
 ## LLD doesn't support defining symbols in synthetic sections, so we test them
 ## via this slightly more awkward route.
@@ -133,10 +148,14 @@ __DATA__objc_nlcatlist:
 __DATA__objc_protolist:
   .space 8
 
-.section __DATA,__objc_imageinfo
-.global __DATA__objc_imageinfo
-__DATA__objc_imageinfo:
-  .space 8
+## __objc_imageinfo should get moved under __DATA_CONST as well, but symbols
+## within __objc_imageinfo get dropped during link, so we are cannot test this
+## case using the output of `llvm-objdump --syms`. TODO: rewrite test to use
+## `llvm-readobj --section-headers`, which will avoid this issue.
+# .section __DATA,__objc_imageinfo
+# .global __DATA__objc_imageinfo
+# __DATA__objc_imageinfo:
+#   .space 8
 
 .section __IMPORT,__pointers,non_lazy_symbol_pointers
 .global __IMPORT__pointers

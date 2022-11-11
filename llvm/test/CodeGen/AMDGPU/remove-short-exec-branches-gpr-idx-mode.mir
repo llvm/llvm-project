@@ -9,14 +9,18 @@ name: need_skip_gpr_idx_mode
 body: |
   ; CHECK-LABEL: name: need_skip_gpr_idx_mode
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   S_CBRANCH_EXECZ %bb.2, implicit $exec
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK:   S_SET_GPR_IDX_MODE 0, implicit-def $mode, implicit-def $m0, implicit $mode, implicit $m0
-  ; CHECK: bb.2:
-  ; CHECK:   S_ENDPGM 0
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   S_SET_GPR_IDX_MODE 0, implicit-def $mode, implicit-def $m0, implicit $mode, implicit $m0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_CBRANCH_EXECZ %bb.2, implicit $exec
 
@@ -34,14 +38,20 @@ name: need_skip_gpr_idx_on
 body: |
   ; CHECK-LABEL: name: need_skip_gpr_idx_on
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   S_CBRANCH_EXECZ %bb.2, implicit $exec
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK:   S_SET_GPR_IDX_ON $sgpr0, 0, implicit-def $mode, implicit-def $m0, implicit $mode, implicit $m0
-  ; CHECK: bb.2:
-  ; CHECK:   S_ENDPGM 0
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   S_SET_GPR_IDX_ON $sgpr0, 0, implicit-def $mode, implicit-def $m0, implicit $mode, implicit $m0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $sgpr0
     S_CBRANCH_EXECZ %bb.2, implicit $exec
@@ -61,14 +71,18 @@ name: need_skip_gpr_idx_off
 body: |
   ; CHECK-LABEL: name: need_skip_gpr_idx_off
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   S_CBRANCH_EXECZ %bb.2, implicit $exec
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK:   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
-  ; CHECK: bb.2:
-  ; CHECK:   S_ENDPGM 0
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_CBRANCH_EXECZ %bb.2, implicit $exec
 
@@ -86,14 +100,20 @@ name: need_skip_gpr_idx_idx
 body: |
   ; CHECK-LABEL: name: need_skip_gpr_idx_idx
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   S_CBRANCH_EXECZ %bb.2, implicit $exec
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK:   S_SET_GPR_IDX_IDX $sgpr0, implicit-def $mode, implicit-def $m0, implicit $mode, implicit $m0
-  ; CHECK: bb.2:
-  ; CHECK:   S_ENDPGM 0
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   S_SET_GPR_IDX_IDX $sgpr0, implicit-def $mode, implicit-def $m0, implicit $mode, implicit $m0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $sgpr0
     S_CBRANCH_EXECZ %bb.2, implicit $exec

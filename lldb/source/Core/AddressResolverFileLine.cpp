@@ -61,7 +61,7 @@ AddressResolverFileLine::SearchCallback(SearchFilter &filter,
                   line_start.GetFileAddress(),
                   m_src_location_spec.GetFileSpec().GetFilename().AsCString(
                       "<Unknown>"),
-                  m_src_location_spec.GetLine().getValueOr(0));
+                  m_src_location_spec.GetLine().value_or(0));
       }
     }
   }
@@ -76,5 +76,5 @@ void AddressResolverFileLine::GetDescription(Stream *s) {
   s->Printf(
       "File and line address - file: \"%s\" line: %u",
       m_src_location_spec.GetFileSpec().GetFilename().AsCString("<Unknown>"),
-      m_src_location_spec.GetLine().getValueOr(0));
+      m_src_location_spec.GetLine().value_or(0));
 }

@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir %s  -split-input-file --verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: @nvvm_special_regs
 llvm.func @nvvm_special_regs() -> i32 {
@@ -349,3 +349,90 @@ llvm.func @kernel_func() attributes {nvvm.kernel} {
 // CHECK:     !nvvm.annotations =
 // CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+
+// -----
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32]} {
+  llvm.return
+}
+
+// CHECK:     !nvvm.annotations =
+// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
+// CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
+// CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
+// -----
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = [1,23,32]} {
+  llvm.return
+}
+
+// CHECK:     !nvvm.annotations =
+// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"reqntidx", i32 1}
+// CHECK:     {ptr @kernel_func, !"reqntidy", i32 23}
+// CHECK:     {ptr @kernel_func, !"reqntidz", i32 32}
+// -----
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = 16} {
+  llvm.return
+}
+
+// CHECK:     !nvvm.annotations =
+// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
+// -----
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
+  llvm.return
+}
+
+// CHECK:     !nvvm.annotations =
+// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
+// -----
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32], 
+                                     nvvm.minctasm = 16, nvvm.maxnreg = 32} {
+  llvm.return
+}
+
+// CHECK:     !nvvm.annotations =
+// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// CHECK:     {ptr @kernel_func, !"maxnreg", i32 32}
+// CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
+// CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
+// CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
+// CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
+
+// -----
+// expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}  
+llvm.func @kernel_func() attributes {nvvm.kernel, 
+nvvm.minctasm = "foo"} {
+  llvm.return
+}
+
+
+// -----
+// expected-error @below {{'"nvvm.maxnreg"' attribute must be integer constant}}  
+llvm.func @kernel_func() attributes {nvvm.kernel, 
+nvvm.maxnreg = "boo"} {
+  llvm.return
+}
+// -----
+// expected-error @below {{'"nvvm.reqntid"' attribute must be integer array with maximum 3 index}}  
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = [3,4,5,6]} {
+  llvm.return
+}
+
+// -----
+// expected-error @below {{'"nvvm.maxntid"' attribute must be integer array with maximum 3 index}}  
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [3,4,5,6]} {
+  llvm.return
+}
+

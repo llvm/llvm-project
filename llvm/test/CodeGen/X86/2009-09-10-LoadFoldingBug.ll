@@ -9,24 +9,24 @@
 
 %struct.ComplexType = type { i32 }
 
-define i32 @t(i32 %clientPort, i32 %pluginID, i32 %requestID, i32 %objectID, i64 %serverIdentifier, i64 %argumentsData, i32 %argumentsLength) ssp personality i32 (...)* @__gxx_personality_v0 {
+define i32 @t(i32 %clientPort, i32 %pluginID, i32 %requestID, i32 %objectID, i64 %serverIdentifier, i64 %argumentsData, i32 %argumentsLength) ssp personality ptr @__gxx_personality_v0 {
 entry:
 ; CHECK: _t:
 ; CHECK: movl 16(%rbp),
   %0 = zext i32 %argumentsLength to i64           ; <i64> [#uses=1]
   %1 = zext i32 %clientPort to i64                ; <i64> [#uses=1]
-  %2 = inttoptr i64 %1 to %struct.ComplexType*    ; <%struct.ComplexType*> [#uses=1]
-  %3 = invoke i8* @pluginInstance(i8* undef, i32 %pluginID)
-          to label %invcont unwind label %lpad    ; <i8*> [#uses=1]
+  %2 = inttoptr i64 %1 to ptr    ; <ptr> [#uses=1]
+  %3 = invoke ptr @pluginInstance(ptr undef, i32 %pluginID)
+          to label %invcont unwind label %lpad    ; <ptr> [#uses=1]
 
 invcont:                                          ; preds = %entry
   %4 = add i32 %requestID, %pluginID              ; <i32> [#uses=0]
-  %5 = invoke zeroext i8 @invoke(i8* %3, i32 %objectID, i8* undef, i64 %argumentsData, i32 %argumentsLength, i64* undef, i32* undef)
+  %5 = invoke zeroext i8 @invoke(ptr %3, i32 %objectID, ptr undef, i64 %argumentsData, i32 %argumentsLength, ptr undef, ptr undef)
           to label %invcont1 unwind label %lpad   ; <i8> [#uses=0]
 
 invcont1:                                         ; preds = %invcont
-  %6 = getelementptr inbounds %struct.ComplexType, %struct.ComplexType* %2, i64 0, i32 0 ; <i32*> [#uses=1]
-  %7 = load i32, i32* %6, align 4                      ; <i32> [#uses=1]
+  %6 = getelementptr inbounds %struct.ComplexType, ptr %2, i64 0, i32 0 ; <ptr> [#uses=1]
+  %7 = load i32, ptr %6, align 4                      ; <i32> [#uses=1]
   invoke void @booleanAndDataReply(i32 %7, i32 undef, i32 %requestID, i32 undef, i64 undef, i32 undef)
           to label %invcont2 unwind label %lpad
 
@@ -34,7 +34,7 @@ invcont2:                                         ; preds = %invcont1
   ret i32 0
 
 lpad:                                             ; preds = %invcont1, %invcont, %entry
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
   %8 = call i32 @vm_deallocate(i32 undef, i64 0, i64 %0) ; <i32> [#uses=0]
   unreachable
@@ -42,9 +42,9 @@ lpad:                                             ; preds = %invcont1, %invcont,
 
 declare i32 @vm_deallocate(i32, i64, i64)
 
-declare i8* @pluginInstance(i8*, i32)
+declare ptr @pluginInstance(ptr, i32)
 
-declare zeroext i8 @invoke(i8*, i32, i8*, i64, i32, i64*, i32*)
+declare zeroext i8 @invoke(ptr, i32, ptr, i64, i32, ptr, ptr)
 
 declare void @booleanAndDataReply(i32, i32, i32, i32, i64, i32)
 

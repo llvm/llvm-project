@@ -803,8 +803,8 @@ struct Allocator {
     sptr offset = 0;
     if (!m1 || AsanChunkView(m1).AddrIsAtLeft(addr, 1, &offset)) {
       // The address is in the chunk's left redzone, so maybe it is actually
-      // a right buffer overflow from the other chunk to the left.
-      // Search a bit to the left to see if there is another chunk.
+      // a right buffer overflow from the other chunk before.
+      // Search a bit before to see if there is another chunk.
       AsanChunk *m2 = nullptr;
       for (uptr l = 1; l < GetPageSizeCached(); l++) {
         m2 = GetAsanChunkByAddr(addr - l);

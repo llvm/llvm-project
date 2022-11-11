@@ -509,7 +509,7 @@ void PredicateInfoBuilder::buildPredicateInfo() {
   // Collect operands to rename from all conditional branch terminators, as well
   // as assume statements.
   SmallVector<Value *, 8> OpsToRename;
-  for (auto DTN : depth_first(DT.getRootNode())) {
+  for (auto *DTN : depth_first(DT.getRootNode())) {
     BasicBlock *BranchBB = DTN->getBlock();
     if (auto *BI = dyn_cast<BranchInst>(BranchBB->getTerminator())) {
       if (!BI->isConditional())
@@ -626,7 +626,7 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
     // Insert the possible copies into the def/use list.
     // They will become real copies if we find a real use for them, and never
     // created otherwise.
-    for (auto &PossibleCopy : ValueInfo.Infos) {
+    for (const auto &PossibleCopy : ValueInfo.Infos) {
       ValueDFS VD;
       // Determine where we are going to place the copy by the copy type.
       // The predicate info for branches always come first, they will get
@@ -772,7 +772,7 @@ PredicateInfo::~PredicateInfo() {
   // Collect function pointers in set first, as SmallSet uses a SmallVector
   // internally and we have to remove the asserting value handles first.
   SmallPtrSet<Function *, 20> FunctionPtrs;
-  for (auto &F : CreatedDeclarations)
+  for (const auto &F : CreatedDeclarations)
     FunctionPtrs.insert(&*F);
   CreatedDeclarations.clear();
 

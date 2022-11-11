@@ -54,7 +54,6 @@ enum class StatepointFlags {
 // These two are defined in IntrinsicInst since they're part of the
 // IntrinsicInst class hierarchy.
 class GCRelocateInst;
-class GCResultInst;
 
 /// Represents a gc.statepoint intrinsic call.  This extends directly from
 /// CallBase as the IntrinsicInst only supports calls and gc.statepoint is

@@ -141,10 +141,8 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (volatile load (s8), addrspace 1)
-    ; CHECK-NEXT: %k:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], %k
-    ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (volatile load (s8), addrspace 1)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_LOAD %0 :: (volatile load (s8), align 1, addrspace 1)
     %k:_(s32) = G_CONSTANT i32 255
@@ -183,10 +181,8 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (volatile load (s16), addrspace 1)
-    ; CHECK-NEXT: %k:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], %k
-    ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (volatile load (s16), addrspace 1)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_LOAD %0 :: (volatile load (s16), align 2, addrspace 1)
     %k:_(s32) = G_CONSTANT i32 65535

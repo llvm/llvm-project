@@ -33,6 +33,7 @@ LLVM and API reference documentation.
    MarkedUpDisassembly
    MIRLangRef
    OptBisect
+   PCSectionsMetadata
    PDB/index
    PointerAuth
    ScudoHardenedAllocator
@@ -43,6 +44,7 @@ LLVM and API reference documentation.
    StackMaps
    SpeculativeLoadHardening
    Statepoints
+   SymbolizerMarkupFormat
    SystemLibrary
    TestingGuide
    TransformMetadata
@@ -78,6 +80,9 @@ Command Line Utilities
 
 :doc:`OptBisect`
   A command line option for debugging optimization-induced failures.
+
+:doc:`SymbolizerMarkupFormat`
+  A reference for the log symbolizer markup accepted by ``llvm-symbolizer``.
 
 :doc:`The Microsoft PDB File Format <PDB/index>`
   A detailed description of the Microsoft PDB (Program Database) file format.

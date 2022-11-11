@@ -30,6 +30,5 @@ static void removeFlagsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceInstructionFlagsMIRDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Instruction flags...\n";
-  runDeltaPass(Test, removeFlagsFromModule);
+  runDeltaPass(Test, removeFlagsFromModule, "Reducing Instruction Flags");
 }

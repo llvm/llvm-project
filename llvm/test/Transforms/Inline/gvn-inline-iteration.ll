@@ -1,4 +1,3 @@
-; RUN: opt -basic-aa -inline -gvn -S -max-devirt-iterations=1 < %s -enable-new-pm=0 | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='devirt<1>(inline,function(gvn))' -S < %s | FileCheck %s
 ; rdar://6295824 and PR6724
 

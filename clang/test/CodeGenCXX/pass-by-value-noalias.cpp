@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fpass-by-value-is-noalias -triple arm64-apple-iphoneos -emit-llvm -disable-llvm-optzns %s -o - 2>&1 | FileCheck --check-prefix=WITH_NOALIAS %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-iphoneos -emit-llvm -disable-llvm-optzns %s -o - 2>&1 | FileCheck --check-prefix=NO_NOALIAS %s
+// RUN: %clang_cc1 -fpass-by-value-is-noalias -triple arm64-apple-iphoneos -emit-llvm -disable-llvm-optzns %s -o - 2>&1 | FileCheck --check-prefix=WITH_NOALIAS %s
+// RUN: %clang_cc1 -triple arm64-apple-iphoneos -emit-llvm -disable-llvm-optzns %s -o - 2>&1 | FileCheck --check-prefix=NO_NOALIAS %s
 
 // A trivial struct large enough so it is not passed in registers on ARM64.
 struct Foo {
@@ -14,8 +14,8 @@ struct Foo {
 // Make sure noalias is added to indirect arguments with trivially copyable types
 // if -fpass-by-value-is-noalias is provided.
 
-// WITH_NOALIAS: define{{.*}} void @_Z4take3Foo(%struct.Foo* noalias noundef %arg)
-// NO_NOALIAS: define{{.*}} void @_Z4take3Foo(%struct.Foo* noundef %arg)
+// WITH_NOALIAS: define{{.*}} void @_Z4take3Foo(ptr noalias noundef %arg)
+// NO_NOALIAS: define{{.*}} void @_Z4take3Foo(ptr noundef %arg)
 void take(Foo arg) {}
 
 int G;
@@ -38,8 +38,8 @@ struct NonTrivial {
 // Make sure noalias is not added to indirect arguments that are not trivially
 // copyable even if -fpass-by-value-is-noalias is provided.
 
-// WITH_NOALIAS: define{{.*}} void @_Z4take10NonTrivial(%struct.NonTrivial* noundef %arg)
-// NO_NOALIAS:   define{{.*}} void @_Z4take10NonTrivial(%struct.NonTrivial* noundef %arg)
+// WITH_NOALIAS: define{{.*}} void @_Z4take10NonTrivial(ptr noundef %arg)
+// NO_NOALIAS:   define{{.*}} void @_Z4take10NonTrivial(ptr noundef %arg)
 void take(NonTrivial arg) {}
 
 // Escape examples. Pointers to the objects passed to take() may escape, depending on whether a temporary copy is created or not (e.g. due to NRVO).
@@ -54,12 +54,12 @@ struct A {
 };
 A *p;
 
-// WITH_NOALIAS: define{{.*}} void @_Z4take1A(%struct.A* noalias noundef %arg)
-// NO_NOALIAS: define{{.*}} void @_Z4take1A(%struct.A* noundef %arg)
+// WITH_NOALIAS: define{{.*}} void @_Z4take1A(ptr noalias noundef %arg)
+// NO_NOALIAS: define{{.*}} void @_Z4take1A(ptr noundef %arg)
 void take(A arg) {}
 
-// WITH_NOALIAS: define{{.*}} void @_Z7CreateAPP1A(%struct.A* noalias sret(%struct.A) align 1 %agg.result, %struct.A** noundef %where)
-// NO_NOALIAS: define{{.*}} void @_Z7CreateAPP1A(%struct.A* noalias sret(%struct.A) align 1 %agg.result, %struct.A** noundef %where)
+// WITH_NOALIAS: define{{.*}} void @_Z7CreateAPP1A(ptr noalias sret(%struct.A) align 1 %agg.result, ptr noundef %where)
+// NO_NOALIAS: define{{.*}} void @_Z7CreateAPP1A(ptr noalias sret(%struct.A) align 1 %agg.result, ptr noundef %where)
 A CreateA(A **where) {
   A justlikethis;
   *where = &justlikethis; //Escaped pointer 2 (should also be UB, then)

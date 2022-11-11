@@ -18,7 +18,6 @@
 #include "M68kISelLowering.h"
 #include "M68kInstrInfo.h"
 
-#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -52,7 +51,7 @@ protected:
   enum SubtargetEnum { M00, M10, M20, M30, M40, M60 };
   SubtargetEnum SubtargetKind = M00;
 
-  BitVector UserReservedRegister;
+  std::bitset<M68k::NUM_TARGET_REGS> UserReservedRegister;
 
   InstrItineraryData InstrItins;
 
@@ -124,7 +123,8 @@ public:
   /// Classify a global function reference for the current subtarget.
   unsigned char classifyGlobalFunctionReference(const GlobalValue *GV,
                                                 const Module &M) const;
-  unsigned char classifyGlobalFunctionReference(const GlobalValue *GV) const;
+  unsigned char
+  classifyGlobalFunctionReference(const GlobalValue *GV) const override;
 
   /// Classify a blockaddress reference for the current subtarget according to
   /// how we should reference it in a non-pcrel context.

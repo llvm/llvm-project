@@ -33,14 +33,14 @@ define dso_local float @ld_0_float_uint8_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = inttoptr i64 %ptr to i8*
-  %1 = load i8, i8* %0, align 1
+  %0 = inttoptr i64 %ptr to ptr
+  %1 = load i8, ptr %0, align 1
   %conv = uitofp i8 %1 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align16_float_uint8_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align16_float_uint8_t(ptr nocapture readonly %ptr) {
 ; CHECK-POSTP8-LABEL: ld_align16_float_uint8_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    addi r3, r3, 8
@@ -55,14 +55,14 @@ define dso_local float @ld_align16_float_uint8_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = load i8, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  %0 = load i8, ptr %add.ptr, align 1
   %conv = uitofp i8 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align32_float_uint8_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align32_float_uint8_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_float_uint8_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 99999000
@@ -87,14 +87,14 @@ define dso_local float @ld_align32_float_uint8_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = load i8, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  %0 = load i8, ptr %add.ptr, align 1
   %conv = uitofp i8 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align64_float_uint8_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align64_float_uint8_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align64_float_uint8_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -122,14 +122,14 @@ define dso_local float @ld_align64_float_uint8_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = load i8, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  %0 = load i8, ptr %add.ptr, align 1
   %conv = uitofp i8 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_reg_float_uint8_t(i8* nocapture readonly %ptr, i64 %off) {
+define dso_local float @ld_reg_float_uint8_t(ptr nocapture readonly %ptr, i64 %off) {
 ; CHECK-POSTP8-LABEL: ld_reg_float_uint8_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    lxsibzx f0, r3, r4
@@ -143,8 +143,8 @@ define dso_local float @ld_reg_float_uint8_t(i8* nocapture readonly %ptr, i64 %o
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = load i8, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  %0 = load i8, ptr %add.ptr, align 1
   %conv = uitofp i8 %0 to float
   ret float %conv
 }
@@ -168,8 +168,8 @@ define dso_local float @ld_or_float_uint8_t(i64 %ptr, i8 zeroext %off) {
 entry:
   %conv = zext i8 %off to i64
   %or = or i64 %conv, %ptr
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 1
   %conv1 = uitofp i8 %1 to float
   ret float %conv1
 }
@@ -192,8 +192,8 @@ define dso_local float @ld_not_disjoint16_float_uint8_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 1
   %conv = uitofp i8 %1 to float
   ret float %conv
 }
@@ -218,8 +218,8 @@ define dso_local float @ld_disjoint_align16_float_uint8_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 8
   %conv = uitofp i8 %1 to float
   ret float %conv
 }
@@ -244,8 +244,8 @@ define dso_local float @ld_not_disjoint32_float_uint8_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 1
   %conv = uitofp i8 %1 to float
   ret float %conv
 }
@@ -284,8 +284,8 @@ define dso_local float @ld_disjoint_align32_float_uint8_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 16
   %conv = uitofp i8 %1 to float
   ret float %conv
 }
@@ -326,8 +326,8 @@ define dso_local float @ld_not_disjoint64_float_uint8_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 1
   %conv = uitofp i8 %1 to float
   ret float %conv
 }
@@ -366,8 +366,8 @@ define dso_local float @ld_disjoint_align64_float_uint8_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1099511627776
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 4096
   %conv = uitofp i8 %1 to float
   ret float %conv
 }
@@ -388,7 +388,7 @@ define dso_local float @ld_cst_align16_float_uint8_t() {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i8, i8* inttoptr (i64 4080 to i8*), align 16
+  %0 = load i8, ptr inttoptr (i64 4080 to ptr), align 16
   %conv = uitofp i8 %0 to float
   ret float %conv
 }
@@ -418,7 +418,7 @@ define dso_local float @ld_cst_align32_float_uint8_t() {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i8, i8* inttoptr (i64 9999900 to i8*), align 4
+  %0 = load i8, ptr inttoptr (i64 9999900 to ptr), align 4
   %conv = uitofp i8 %0 to float
   ret float %conv
 }
@@ -452,7 +452,7 @@ define dso_local float @ld_cst_align64_float_uint8_t() {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i8, i8* inttoptr (i64 1000000000000 to i8*), align 4096
+  %0 = load i8, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   %conv = uitofp i8 %0 to float
   ret float %conv
 }
@@ -474,14 +474,14 @@ define dso_local float @ld_0_float_int8_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = inttoptr i64 %ptr to i8*
-  %1 = load i8, i8* %0, align 1
+  %0 = inttoptr i64 %ptr to ptr
+  %1 = load i8, ptr %0, align 1
   %conv = sitofp i8 %1 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align16_float_int8_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align16_float_int8_t(ptr nocapture readonly %ptr) {
 ; CHECK-POSTP8-LABEL: ld_align16_float_int8_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    addi r3, r3, 8
@@ -498,14 +498,14 @@ define dso_local float @ld_align16_float_int8_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = load i8, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  %0 = load i8, ptr %add.ptr, align 1
   %conv = sitofp i8 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align32_float_int8_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align32_float_int8_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_float_int8_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 99999000
@@ -533,14 +533,14 @@ define dso_local float @ld_align32_float_int8_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = load i8, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  %0 = load i8, ptr %add.ptr, align 1
   %conv = sitofp i8 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align64_float_int8_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align64_float_int8_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align64_float_int8_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -571,14 +571,14 @@ define dso_local float @ld_align64_float_int8_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = load i8, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  %0 = load i8, ptr %add.ptr, align 1
   %conv = sitofp i8 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_reg_float_int8_t(i8* nocapture readonly %ptr, i64 %off) {
+define dso_local float @ld_reg_float_int8_t(ptr nocapture readonly %ptr, i64 %off) {
 ; CHECK-POSTP8-LABEL: ld_reg_float_int8_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    lxsibzx v2, r3, r4
@@ -594,8 +594,8 @@ define dso_local float @ld_reg_float_int8_t(i8* nocapture readonly %ptr, i64 %of
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = load i8, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  %0 = load i8, ptr %add.ptr, align 1
   %conv = sitofp i8 %0 to float
   ret float %conv
 }
@@ -621,8 +621,8 @@ define dso_local float @ld_or_float_int8_t(i64 %ptr, i8 zeroext %off) {
 entry:
   %conv = zext i8 %off to i64
   %or = or i64 %conv, %ptr
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 1
   %conv1 = sitofp i8 %1 to float
   ret float %conv1
 }
@@ -647,8 +647,8 @@ define dso_local float @ld_not_disjoint16_float_int8_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 1
   %conv = sitofp i8 %1 to float
   ret float %conv
 }
@@ -675,8 +675,8 @@ define dso_local float @ld_disjoint_align16_float_int8_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 8
   %conv = sitofp i8 %1 to float
   ret float %conv
 }
@@ -703,8 +703,8 @@ define dso_local float @ld_not_disjoint32_float_int8_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 1
   %conv = sitofp i8 %1 to float
   ret float %conv
 }
@@ -746,8 +746,8 @@ define dso_local float @ld_disjoint_align32_float_int8_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 16
   %conv = sitofp i8 %1 to float
   ret float %conv
 }
@@ -791,8 +791,8 @@ define dso_local float @ld_not_disjoint64_float_int8_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 1
   %conv = sitofp i8 %1 to float
   ret float %conv
 }
@@ -834,8 +834,8 @@ define dso_local float @ld_disjoint_align64_float_int8_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1099511627776
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i8*
-  %1 = load i8, i8* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i8, ptr %0, align 4096
   %conv = sitofp i8 %1 to float
   ret float %conv
 }
@@ -858,7 +858,7 @@ define dso_local float @ld_cst_align16_float_int8_t() {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i8, i8* inttoptr (i64 4080 to i8*), align 16
+  %0 = load i8, ptr inttoptr (i64 4080 to ptr), align 16
   %conv = sitofp i8 %0 to float
   ret float %conv
 }
@@ -891,7 +891,7 @@ define dso_local float @ld_cst_align32_float_int8_t() {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i8, i8* inttoptr (i64 9999900 to i8*), align 4
+  %0 = load i8, ptr inttoptr (i64 9999900 to ptr), align 4
   %conv = sitofp i8 %0 to float
   ret float %conv
 }
@@ -928,7 +928,7 @@ define dso_local float @ld_cst_align64_float_int8_t() {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i8, i8* inttoptr (i64 1000000000000 to i8*), align 4096
+  %0 = load i8, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   %conv = sitofp i8 %0 to float
   ret float %conv
 }
@@ -948,14 +948,14 @@ define dso_local float @ld_0_float_uint16_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = inttoptr i64 %ptr to i16*
-  %1 = load i16, i16* %0, align 2
+  %0 = inttoptr i64 %ptr to ptr
+  %1 = load i16, ptr %0, align 2
   %conv = uitofp i16 %1 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align16_float_uint16_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align16_float_uint16_t(ptr nocapture readonly %ptr) {
 ; CHECK-POSTP8-LABEL: ld_align16_float_uint16_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    addi r3, r3, 8
@@ -970,15 +970,14 @@ define dso_local float @ld_align16_float_uint16_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i16*
-  %1 = load i16, i16* %0, align 2
-  %conv = uitofp i16 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  %0 = load i16, ptr %add.ptr, align 2
+  %conv = uitofp i16 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align32_float_uint16_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align32_float_uint16_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_float_uint16_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 99999000
@@ -1003,15 +1002,14 @@ define dso_local float @ld_align32_float_uint16_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i16*
-  %1 = load i16, i16* %0, align 2
-  %conv = uitofp i16 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  %0 = load i16, ptr %add.ptr, align 2
+  %conv = uitofp i16 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align64_float_uint16_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align64_float_uint16_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align64_float_uint16_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -1039,15 +1037,14 @@ define dso_local float @ld_align64_float_uint16_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i16*
-  %1 = load i16, i16* %0, align 2
-  %conv = uitofp i16 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  %0 = load i16, ptr %add.ptr, align 2
+  %conv = uitofp i16 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_reg_float_uint16_t(i8* nocapture readonly %ptr, i64 %off) {
+define dso_local float @ld_reg_float_uint16_t(ptr nocapture readonly %ptr, i64 %off) {
 ; CHECK-POSTP8-LABEL: ld_reg_float_uint16_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    lxsihzx f0, r3, r4
@@ -1061,10 +1058,9 @@ define dso_local float @ld_reg_float_uint16_t(i8* nocapture readonly %ptr, i64 %
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i16*
-  %1 = load i16, i16* %0, align 2
-  %conv = uitofp i16 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  %0 = load i16, ptr %add.ptr, align 2
+  %conv = uitofp i16 %0 to float
   ret float %conv
 }
 
@@ -1087,8 +1083,8 @@ define dso_local float @ld_or_float_uint16_t(i64 %ptr, i8 zeroext %off) {
 entry:
   %conv = zext i8 %off to i64
   %or = or i64 %conv, %ptr
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 2
   %conv1 = uitofp i16 %1 to float
   ret float %conv1
 }
@@ -1111,8 +1107,8 @@ define dso_local float @ld_not_disjoint16_float_uint16_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 2
   %conv = uitofp i16 %1 to float
   ret float %conv
 }
@@ -1137,8 +1133,8 @@ define dso_local float @ld_disjoint_align16_float_uint16_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 8
   %conv = uitofp i16 %1 to float
   ret float %conv
 }
@@ -1163,8 +1159,8 @@ define dso_local float @ld_not_disjoint32_float_uint16_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 2
   %conv = uitofp i16 %1 to float
   ret float %conv
 }
@@ -1203,8 +1199,8 @@ define dso_local float @ld_disjoint_align32_float_uint16_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 16
   %conv = uitofp i16 %1 to float
   ret float %conv
 }
@@ -1245,8 +1241,8 @@ define dso_local float @ld_not_disjoint64_float_uint16_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 2
   %conv = uitofp i16 %1 to float
   ret float %conv
 }
@@ -1285,8 +1281,8 @@ define dso_local float @ld_disjoint_align64_float_uint16_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1099511627776
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 4096
   %conv = uitofp i16 %1 to float
   ret float %conv
 }
@@ -1307,7 +1303,7 @@ define dso_local float @ld_cst_align16_float_uint16_t() {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i16, i16* inttoptr (i64 4080 to i16*), align 16
+  %0 = load i16, ptr inttoptr (i64 4080 to ptr), align 16
   %conv = uitofp i16 %0 to float
   ret float %conv
 }
@@ -1337,7 +1333,7 @@ define dso_local float @ld_cst_align32_float_uint16_t() {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i16, i16* inttoptr (i64 9999900 to i16*), align 4
+  %0 = load i16, ptr inttoptr (i64 9999900 to ptr), align 4
   %conv = uitofp i16 %0 to float
   ret float %conv
 }
@@ -1371,7 +1367,7 @@ define dso_local float @ld_cst_align64_float_uint16_t() {
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i16, i16* inttoptr (i64 1000000000000 to i16*), align 4096
+  %0 = load i16, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   %conv = uitofp i16 %0 to float
   ret float %conv
 }
@@ -1392,14 +1388,14 @@ define dso_local float @ld_0_float_int16_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = inttoptr i64 %ptr to i16*
-  %1 = load i16, i16* %0, align 2
+  %0 = inttoptr i64 %ptr to ptr
+  %1 = load i16, ptr %0, align 2
   %conv = sitofp i16 %1 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align16_float_int16_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align16_float_int16_t(ptr nocapture readonly %ptr) {
 ; CHECK-POSTP8-LABEL: ld_align16_float_int16_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    addi r3, r3, 8
@@ -1415,15 +1411,14 @@ define dso_local float @ld_align16_float_int16_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i16*
-  %1 = load i16, i16* %0, align 2
-  %conv = sitofp i16 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  %0 = load i16, ptr %add.ptr, align 2
+  %conv = sitofp i16 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align32_float_int16_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align32_float_int16_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_float_int16_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 99999000
@@ -1450,15 +1445,14 @@ define dso_local float @ld_align32_float_int16_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i16*
-  %1 = load i16, i16* %0, align 2
-  %conv = sitofp i16 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  %0 = load i16, ptr %add.ptr, align 2
+  %conv = sitofp i16 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align64_float_int16_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align64_float_int16_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align64_float_int16_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -1488,15 +1482,14 @@ define dso_local float @ld_align64_float_int16_t(i8* nocapture readonly %ptr) {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i16*
-  %1 = load i16, i16* %0, align 2
-  %conv = sitofp i16 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  %0 = load i16, ptr %add.ptr, align 2
+  %conv = sitofp i16 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_reg_float_int16_t(i8* nocapture readonly %ptr, i64 %off) {
+define dso_local float @ld_reg_float_int16_t(ptr nocapture readonly %ptr, i64 %off) {
 ; CHECK-POSTP8-LABEL: ld_reg_float_int16_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    lxsihzx v2, r3, r4
@@ -1511,10 +1504,9 @@ define dso_local float @ld_reg_float_int16_t(i8* nocapture readonly %ptr, i64 %o
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i16*
-  %1 = load i16, i16* %0, align 2
-  %conv = sitofp i16 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  %0 = load i16, ptr %add.ptr, align 2
+  %conv = sitofp i16 %0 to float
   ret float %conv
 }
 
@@ -1538,8 +1530,8 @@ define dso_local float @ld_or_float_int16_t(i64 %ptr, i8 zeroext %off) {
 entry:
   %conv = zext i8 %off to i64
   %or = or i64 %conv, %ptr
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 2
   %conv1 = sitofp i16 %1 to float
   ret float %conv1
 }
@@ -1563,8 +1555,8 @@ define dso_local float @ld_not_disjoint16_float_int16_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 2
   %conv = sitofp i16 %1 to float
   ret float %conv
 }
@@ -1590,8 +1582,8 @@ define dso_local float @ld_disjoint_align16_float_int16_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 8
   %conv = sitofp i16 %1 to float
   ret float %conv
 }
@@ -1617,8 +1609,8 @@ define dso_local float @ld_not_disjoint32_float_int16_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 2
   %conv = sitofp i16 %1 to float
   ret float %conv
 }
@@ -1659,8 +1651,8 @@ define dso_local float @ld_disjoint_align32_float_int16_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 16
   %conv = sitofp i16 %1 to float
   ret float %conv
 }
@@ -1703,8 +1695,8 @@ define dso_local float @ld_not_disjoint64_float_int16_t(i64 %ptr) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 2
   %conv = sitofp i16 %1 to float
   ret float %conv
 }
@@ -1745,8 +1737,8 @@ define dso_local float @ld_disjoint_align64_float_int16_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1099511627776
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i16*
-  %1 = load i16, i16* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i16, ptr %0, align 4096
   %conv = sitofp i16 %1 to float
   ret float %conv
 }
@@ -1768,7 +1760,7 @@ define dso_local float @ld_cst_align16_float_int16_t() {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i16, i16* inttoptr (i64 4080 to i16*), align 16
+  %0 = load i16, ptr inttoptr (i64 4080 to ptr), align 16
   %conv = sitofp i16 %0 to float
   ret float %conv
 }
@@ -1800,7 +1792,7 @@ define dso_local float @ld_cst_align32_float_int16_t() {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i16, i16* inttoptr (i64 9999900 to i16*), align 4
+  %0 = load i16, ptr inttoptr (i64 9999900 to ptr), align 4
   %conv = sitofp i16 %0 to float
   ret float %conv
 }
@@ -1836,7 +1828,7 @@ define dso_local float @ld_cst_align64_float_int16_t() {
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i16, i16* inttoptr (i64 1000000000000 to i16*), align 4096
+  %0 = load i16, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   %conv = sitofp i16 %0 to float
   ret float %conv
 }
@@ -1849,14 +1841,14 @@ define dso_local float @ld_0_float_uint32_t(i64 %ptr) {
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = inttoptr i64 %ptr to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = inttoptr i64 %ptr to ptr
+  %1 = load i32, ptr %0, align 4
   %conv = uitofp i32 %1 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align16_float_uint32_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align16_float_uint32_t(ptr nocapture readonly %ptr) {
 ; CHECK-LABEL: ld_align16_float_uint32_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r3, r3, 8
@@ -1864,15 +1856,14 @@ define dso_local float @ld_align16_float_uint32_t(i8* nocapture readonly %ptr) {
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i32*
-  %1 = load i32, i32* %0, align 4
-  %conv = uitofp i32 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  %0 = load i32, ptr %add.ptr, align 4
+  %conv = uitofp i32 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align32_float_uint32_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align32_float_uint32_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_float_uint32_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 99999000
@@ -1888,15 +1879,14 @@ define dso_local float @ld_align32_float_uint32_t(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    xscvuxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i32*
-  %1 = load i32, i32* %0, align 4
-  %conv = uitofp i32 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  %0 = load i32, ptr %add.ptr, align 4
+  %conv = uitofp i32 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align64_float_uint32_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align64_float_uint32_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align64_float_uint32_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -1914,25 +1904,23 @@ define dso_local float @ld_align64_float_uint32_t(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    xscvuxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i32*
-  %1 = load i32, i32* %0, align 4
-  %conv = uitofp i32 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  %0 = load i32, ptr %add.ptr, align 4
+  %conv = uitofp i32 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_reg_float_uint32_t(i8* nocapture readonly %ptr, i64 %off) {
+define dso_local float @ld_reg_float_uint32_t(ptr nocapture readonly %ptr, i64 %off) {
 ; CHECK-LABEL: ld_reg_float_uint32_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfiwzx f0, r3, r4
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i32*
-  %1 = load i32, i32* %0, align 4
-  %conv = uitofp i32 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  %0 = load i32, ptr %add.ptr, align 4
+  %conv = uitofp i32 %0 to float
   ret float %conv
 }
 
@@ -1947,8 +1935,8 @@ define dso_local float @ld_or_float_uint32_t(i64 %ptr, i8 zeroext %off) {
 entry:
   %conv = zext i8 %off to i64
   %or = or i64 %conv, %ptr
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 4
   %conv1 = uitofp i32 %1 to float
   ret float %conv1
 }
@@ -1963,8 +1951,8 @@ define dso_local float @ld_not_disjoint16_float_uint32_t(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 4
   %conv = uitofp i32 %1 to float
   ret float %conv
 }
@@ -1981,8 +1969,8 @@ define dso_local float @ld_disjoint_align16_float_uint32_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 8
   %conv = uitofp i32 %1 to float
   ret float %conv
 }
@@ -1998,8 +1986,8 @@ define dso_local float @ld_not_disjoint32_float_uint32_t(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 4
   %conv = uitofp i32 %1 to float
   ret float %conv
 }
@@ -2037,8 +2025,8 @@ define dso_local float @ld_disjoint_align32_float_uint32_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 16
   %conv = uitofp i32 %1 to float
   ret float %conv
 }
@@ -2067,8 +2055,8 @@ define dso_local float @ld_not_disjoint64_float_uint32_t(i64 %ptr) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 4
   %conv = uitofp i32 %1 to float
   ret float %conv
 }
@@ -2096,8 +2084,8 @@ define dso_local float @ld_disjoint_align64_float_uint32_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1099511627776
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 4096
   %conv = uitofp i32 %1 to float
   ret float %conv
 }
@@ -2111,7 +2099,7 @@ define dso_local float @ld_cst_align16_float_uint32_t() {
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* inttoptr (i64 4080 to i32*), align 16
+  %0 = load i32, ptr inttoptr (i64 4080 to ptr), align 16
   %conv = uitofp i32 %0 to float
   ret float %conv
 }
@@ -2133,7 +2121,7 @@ define dso_local float @ld_cst_align32_float_uint32_t() {
 ; CHECK-PREP10-NEXT:    xscvuxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %0 = load i32, i32* inttoptr (i64 9999900 to i32*), align 4
+  %0 = load i32, ptr inttoptr (i64 9999900 to ptr), align 4
   %conv = uitofp i32 %0 to float
   ret float %conv
 }
@@ -2157,7 +2145,7 @@ define dso_local float @ld_cst_align64_float_uint32_t() {
 ; CHECK-PREP10-NEXT:    xscvuxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %0 = load i32, i32* inttoptr (i64 1000000000000 to i32*), align 4096
+  %0 = load i32, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   %conv = uitofp i32 %0 to float
   ret float %conv
 }
@@ -2170,14 +2158,14 @@ define dso_local float @ld_0_float_int32_t(i64 %ptr) {
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = inttoptr i64 %ptr to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = inttoptr i64 %ptr to ptr
+  %1 = load i32, ptr %0, align 4
   %conv = sitofp i32 %1 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align16_float_int32_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align16_float_int32_t(ptr nocapture readonly %ptr) {
 ; CHECK-LABEL: ld_align16_float_int32_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r3, r3, 8
@@ -2185,15 +2173,14 @@ define dso_local float @ld_align16_float_int32_t(i8* nocapture readonly %ptr) {
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i32*
-  %1 = load i32, i32* %0, align 4
-  %conv = sitofp i32 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  %0 = load i32, ptr %add.ptr, align 4
+  %conv = sitofp i32 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align32_float_int32_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align32_float_int32_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_float_int32_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 99999000
@@ -2209,15 +2196,14 @@ define dso_local float @ld_align32_float_int32_t(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    xscvsxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i32*
-  %1 = load i32, i32* %0, align 4
-  %conv = sitofp i32 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  %0 = load i32, ptr %add.ptr, align 4
+  %conv = sitofp i32 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align64_float_int32_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align64_float_int32_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align64_float_int32_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -2235,25 +2221,23 @@ define dso_local float @ld_align64_float_int32_t(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    xscvsxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i32*
-  %1 = load i32, i32* %0, align 4
-  %conv = sitofp i32 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  %0 = load i32, ptr %add.ptr, align 4
+  %conv = sitofp i32 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_reg_float_int32_t(i8* nocapture readonly %ptr, i64 %off) {
+define dso_local float @ld_reg_float_int32_t(ptr nocapture readonly %ptr, i64 %off) {
 ; CHECK-LABEL: ld_reg_float_int32_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfiwax f0, r3, r4
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i32*
-  %1 = load i32, i32* %0, align 4
-  %conv = sitofp i32 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  %0 = load i32, ptr %add.ptr, align 4
+  %conv = sitofp i32 %0 to float
   ret float %conv
 }
 
@@ -2268,8 +2252,8 @@ define dso_local float @ld_or_float_int32_t(i64 %ptr, i8 zeroext %off) {
 entry:
   %conv = zext i8 %off to i64
   %or = or i64 %conv, %ptr
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 4
   %conv1 = sitofp i32 %1 to float
   ret float %conv1
 }
@@ -2284,8 +2268,8 @@ define dso_local float @ld_not_disjoint16_float_int32_t(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 4
   %conv = sitofp i32 %1 to float
   ret float %conv
 }
@@ -2302,8 +2286,8 @@ define dso_local float @ld_disjoint_align16_float_int32_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 8
   %conv = sitofp i32 %1 to float
   ret float %conv
 }
@@ -2319,8 +2303,8 @@ define dso_local float @ld_not_disjoint32_float_int32_t(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 4
   %conv = sitofp i32 %1 to float
   ret float %conv
 }
@@ -2358,8 +2342,8 @@ define dso_local float @ld_disjoint_align32_float_int32_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 16
   %conv = sitofp i32 %1 to float
   ret float %conv
 }
@@ -2388,8 +2372,8 @@ define dso_local float @ld_not_disjoint64_float_int32_t(i64 %ptr) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 4
   %conv = sitofp i32 %1 to float
   ret float %conv
 }
@@ -2417,8 +2401,8 @@ define dso_local float @ld_disjoint_align64_float_int32_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1099511627776
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i32*
-  %1 = load i32, i32* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i32, ptr %0, align 4096
   %conv = sitofp i32 %1 to float
   ret float %conv
 }
@@ -2432,7 +2416,7 @@ define dso_local float @ld_cst_align16_float_int32_t() {
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* inttoptr (i64 4080 to i32*), align 16
+  %0 = load i32, ptr inttoptr (i64 4080 to ptr), align 16
   %conv = sitofp i32 %0 to float
   ret float %conv
 }
@@ -2454,7 +2438,7 @@ define dso_local float @ld_cst_align32_float_int32_t() {
 ; CHECK-PREP10-NEXT:    xscvsxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %0 = load i32, i32* inttoptr (i64 9999900 to i32*), align 4
+  %0 = load i32, ptr inttoptr (i64 9999900 to ptr), align 4
   %conv = sitofp i32 %0 to float
   ret float %conv
 }
@@ -2478,7 +2462,7 @@ define dso_local float @ld_cst_align64_float_int32_t() {
 ; CHECK-PREP10-NEXT:    xscvsxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %0 = load i32, i32* inttoptr (i64 1000000000000 to i32*), align 4096
+  %0 = load i32, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   %conv = sitofp i32 %0 to float
   ret float %conv
 }
@@ -2491,29 +2475,28 @@ define dso_local float @ld_0_float_uint64_t(i64 %ptr) {
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = inttoptr i64 %ptr to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %ptr to ptr
+  %1 = load i64, ptr %0, align 8
   %conv = uitofp i64 %1 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align16_float_uint64_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align16_float_uint64_t(ptr nocapture readonly %ptr) {
 ; CHECK-LABEL: ld_align16_float_uint64_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd f0, 8(r3)
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i64*
-  %1 = load i64, i64* %0, align 8
-  %conv = uitofp i64 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  %0 = load i64, ptr %add.ptr, align 8
+  %conv = uitofp i64 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align32_float_uint64_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align32_float_uint64_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_float_uint64_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    plfd f0, 99999000(r3), 0
@@ -2528,15 +2511,14 @@ define dso_local float @ld_align32_float_uint64_t(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    xscvuxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i64*
-  %1 = load i64, i64* %0, align 8
-  %conv = uitofp i64 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  %0 = load i64, ptr %add.ptr, align 8
+  %conv = uitofp i64 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align64_float_uint64_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align64_float_uint64_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align64_float_uint64_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -2554,25 +2536,23 @@ define dso_local float @ld_align64_float_uint64_t(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    xscvuxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i64*
-  %1 = load i64, i64* %0, align 8
-  %conv = uitofp i64 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  %0 = load i64, ptr %add.ptr, align 8
+  %conv = uitofp i64 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_reg_float_uint64_t(i8* nocapture readonly %ptr, i64 %off) {
+define dso_local float @ld_reg_float_uint64_t(ptr nocapture readonly %ptr, i64 %off) {
 ; CHECK-LABEL: ld_reg_float_uint64_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfdx f0, r3, r4
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i64*
-  %1 = load i64, i64* %0, align 8
-  %conv = uitofp i64 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  %0 = load i64, ptr %add.ptr, align 8
+  %conv = uitofp i64 %0 to float
   ret float %conv
 }
 
@@ -2587,8 +2567,8 @@ define dso_local float @ld_or_float_uint64_t(i64 %ptr, i8 zeroext %off) {
 entry:
   %conv = zext i8 %off to i64
   %or = or i64 %conv, %ptr
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 8
   %conv1 = uitofp i64 %1 to float
   ret float %conv1
 }
@@ -2603,8 +2583,8 @@ define dso_local float @ld_not_disjoint16_float_uint64_t(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 8
   %conv = uitofp i64 %1 to float
   ret float %conv
 }
@@ -2620,8 +2600,8 @@ define dso_local float @ld_disjoint_align16_float_uint64_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 8
   %conv = uitofp i64 %1 to float
   ret float %conv
 }
@@ -2637,8 +2617,8 @@ define dso_local float @ld_not_disjoint32_float_uint64_t(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 8
   %conv = uitofp i64 %1 to float
   ret float %conv
 }
@@ -2675,8 +2655,8 @@ define dso_local float @ld_disjoint_align32_float_uint64_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 16
   %conv = uitofp i64 %1 to float
   ret float %conv
 }
@@ -2705,8 +2685,8 @@ define dso_local float @ld_not_disjoint64_float_uint64_t(i64 %ptr) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 8
   %conv = uitofp i64 %1 to float
   ret float %conv
 }
@@ -2734,8 +2714,8 @@ define dso_local float @ld_disjoint_align64_float_uint64_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1099511627776
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 4096
   %conv = uitofp i64 %1 to float
   ret float %conv
 }
@@ -2748,7 +2728,7 @@ define dso_local float @ld_cst_align16_float_uint64_t() {
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* inttoptr (i64 4080 to i64*), align 16
+  %0 = load i64, ptr inttoptr (i64 4080 to ptr), align 16
   %conv = uitofp i64 %0 to float
   ret float %conv
 }
@@ -2762,7 +2742,7 @@ define dso_local float @ld_cst_align32_float_uint64_t() {
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* inttoptr (i64 9999900 to i64*), align 8
+  %0 = load i64, ptr inttoptr (i64 9999900 to ptr), align 8
   %conv = uitofp i64 %0 to float
   ret float %conv
 }
@@ -2786,7 +2766,7 @@ define dso_local float @ld_cst_align64_float_uint64_t() {
 ; CHECK-PREP10-NEXT:    xscvuxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %0 = load i64, i64* inttoptr (i64 1000000000000 to i64*), align 4096
+  %0 = load i64, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   %conv = uitofp i64 %0 to float
   ret float %conv
 }
@@ -2799,29 +2779,28 @@ define dso_local float @ld_0_float_int64_t(i64 %ptr) {
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = inttoptr i64 %ptr to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %ptr to ptr
+  %1 = load i64, ptr %0, align 8
   %conv = sitofp i64 %1 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align16_float_int64_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align16_float_int64_t(ptr nocapture readonly %ptr) {
 ; CHECK-LABEL: ld_align16_float_int64_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd f0, 8(r3)
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i64*
-  %1 = load i64, i64* %0, align 8
-  %conv = sitofp i64 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  %0 = load i64, ptr %add.ptr, align 8
+  %conv = sitofp i64 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align32_float_int64_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align32_float_int64_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_float_int64_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    plfd f0, 99999000(r3), 0
@@ -2836,15 +2815,14 @@ define dso_local float @ld_align32_float_int64_t(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    xscvsxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i64*
-  %1 = load i64, i64* %0, align 8
-  %conv = sitofp i64 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  %0 = load i64, ptr %add.ptr, align 8
+  %conv = sitofp i64 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align64_float_int64_t(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align64_float_int64_t(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align64_float_int64_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -2862,25 +2840,23 @@ define dso_local float @ld_align64_float_int64_t(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    xscvsxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i64*
-  %1 = load i64, i64* %0, align 8
-  %conv = sitofp i64 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  %0 = load i64, ptr %add.ptr, align 8
+  %conv = sitofp i64 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_reg_float_int64_t(i8* nocapture readonly %ptr, i64 %off) {
+define dso_local float @ld_reg_float_int64_t(ptr nocapture readonly %ptr, i64 %off) {
 ; CHECK-LABEL: ld_reg_float_int64_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfdx f0, r3, r4
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i64*
-  %1 = load i64, i64* %0, align 8
-  %conv = sitofp i64 %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  %0 = load i64, ptr %add.ptr, align 8
+  %conv = sitofp i64 %0 to float
   ret float %conv
 }
 
@@ -2895,8 +2871,8 @@ define dso_local float @ld_or_float_int64_t(i64 %ptr, i8 zeroext %off) {
 entry:
   %conv = zext i8 %off to i64
   %or = or i64 %conv, %ptr
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 8
   %conv1 = sitofp i64 %1 to float
   ret float %conv1
 }
@@ -2911,8 +2887,8 @@ define dso_local float @ld_not_disjoint16_float_int64_t(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 8
   %conv = sitofp i64 %1 to float
   ret float %conv
 }
@@ -2928,8 +2904,8 @@ define dso_local float @ld_disjoint_align16_float_int64_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 8
   %conv = sitofp i64 %1 to float
   ret float %conv
 }
@@ -2945,8 +2921,8 @@ define dso_local float @ld_not_disjoint32_float_int64_t(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 8
   %conv = sitofp i64 %1 to float
   ret float %conv
 }
@@ -2983,8 +2959,8 @@ define dso_local float @ld_disjoint_align32_float_int64_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 16
   %conv = sitofp i64 %1 to float
   ret float %conv
 }
@@ -3013,8 +2989,8 @@ define dso_local float @ld_not_disjoint64_float_int64_t(i64 %ptr) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 8
   %conv = sitofp i64 %1 to float
   ret float %conv
 }
@@ -3042,8 +3018,8 @@ define dso_local float @ld_disjoint_align64_float_int64_t(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1099511627776
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i64*
-  %1 = load i64, i64* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  %1 = load i64, ptr %0, align 4096
   %conv = sitofp i64 %1 to float
   ret float %conv
 }
@@ -3056,7 +3032,7 @@ define dso_local float @ld_cst_align16_float_int64_t() {
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* inttoptr (i64 4080 to i64*), align 16
+  %0 = load i64, ptr inttoptr (i64 4080 to ptr), align 16
   %conv = sitofp i64 %0 to float
   ret float %conv
 }
@@ -3070,7 +3046,7 @@ define dso_local float @ld_cst_align32_float_int64_t() {
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* inttoptr (i64 9999900 to i64*), align 8
+  %0 = load i64, ptr inttoptr (i64 9999900 to ptr), align 8
   %conv = sitofp i64 %0 to float
   ret float %conv
 }
@@ -3094,7 +3070,7 @@ define dso_local float @ld_cst_align64_float_int64_t() {
 ; CHECK-PREP10-NEXT:    xscvsxdsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %0 = load i64, i64* inttoptr (i64 1000000000000 to i64*), align 4096
+  %0 = load i64, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   %conv = sitofp i64 %0 to float
   ret float %conv
 }
@@ -3106,26 +3082,25 @@ define dso_local float @ld_0_float_float(i64 %ptr) {
 ; CHECK-NEXT:    lfs f1, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = inttoptr i64 %ptr to float*
-  %1 = load float, float* %0, align 4
+  %0 = inttoptr i64 %ptr to ptr
+  %1 = load float, ptr %0, align 4
   ret float %1
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align16_float_float(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align16_float_float(ptr nocapture readonly %ptr) {
 ; CHECK-LABEL: ld_align16_float_float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs f1, 8(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to float*
-  %1 = load float, float* %0, align 4
-  ret float %1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  %0 = load float, ptr %add.ptr, align 4
+  ret float %0
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align32_float_float(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align32_float_float(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_float_float:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    plfs f1, 99999000(r3), 0
@@ -3138,14 +3113,13 @@ define dso_local float @ld_align32_float_float(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    lfsx f1, r3, r4
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to float*
-  %1 = load float, float* %0, align 4
-  ret float %1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  %0 = load float, ptr %add.ptr, align 4
+  ret float %0
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align64_float_float(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align64_float_float(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align64_float_float:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -3161,23 +3135,21 @@ define dso_local float @ld_align64_float_float(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    lfsx f1, r3, r4
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to float*
-  %1 = load float, float* %0, align 4
-  ret float %1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  %0 = load float, ptr %add.ptr, align 4
+  ret float %0
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_reg_float_float(i8* nocapture readonly %ptr, i64 %off) {
+define dso_local float @ld_reg_float_float(ptr nocapture readonly %ptr, i64 %off) {
 ; CHECK-LABEL: ld_reg_float_float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfsx f1, r3, r4
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to float*
-  %1 = load float, float* %0, align 4
-  ret float %1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  %0 = load float, ptr %add.ptr, align 4
+  ret float %0
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
@@ -3190,8 +3162,8 @@ define dso_local float @ld_or_float_float(i64 %ptr, i8 zeroext %off) {
 entry:
   %conv = zext i8 %off to i64
   %or = or i64 %conv, %ptr
-  %0 = inttoptr i64 %or to float*
-  %1 = load float, float* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load float, ptr %0, align 4
   ret float %1
 }
 
@@ -3204,8 +3176,8 @@ define dso_local float @ld_not_disjoint16_float_float(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to float*
-  %1 = load float, float* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load float, ptr %0, align 4
   ret float %1
 }
 
@@ -3219,8 +3191,8 @@ define dso_local float @ld_disjoint_align16_float_float(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to float*
-  %1 = load float, float* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load float, ptr %0, align 8
   ret float %1
 }
 
@@ -3234,8 +3206,8 @@ define dso_local float @ld_not_disjoint32_float_float(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to float*
-  %1 = load float, float* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load float, ptr %0, align 4
   ret float %1
 }
 
@@ -3268,8 +3240,8 @@ define dso_local float @ld_disjoint_align32_float_float(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to float*
-  %1 = load float, float* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  %1 = load float, ptr %0, align 16
   ret float %1
 }
 
@@ -3295,8 +3267,8 @@ define dso_local float @ld_not_disjoint64_float_float(i64 %ptr) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to float*
-  %1 = load float, float* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  %1 = load float, ptr %0, align 4
   ret float %1
 }
 
@@ -3321,8 +3293,8 @@ define dso_local float @ld_disjoint_align64_float_float(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1099511627776
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to float*
-  %1 = load float, float* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  %1 = load float, ptr %0, align 4096
   ret float %1
 }
 
@@ -3333,7 +3305,7 @@ define dso_local float @ld_cst_align16_float_float() {
 ; CHECK-NEXT:    lfs f1, 4080(0)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load float, float* inttoptr (i64 4080 to float*), align 16
+  %0 = load float, ptr inttoptr (i64 4080 to ptr), align 16
   ret float %0
 }
 
@@ -3345,7 +3317,7 @@ define dso_local float @ld_cst_align32_float_float() {
 ; CHECK-NEXT:    lfs f1, -27108(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load float, float* inttoptr (i64 9999900 to float*), align 4
+  %0 = load float, ptr inttoptr (i64 9999900 to ptr), align 4
   ret float %0
 }
 
@@ -3366,7 +3338,7 @@ define dso_local float @ld_cst_align64_float_float() {
 ; CHECK-PREP10-NEXT:    lfs f1, 0(r3)
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %0 = load float, float* inttoptr (i64 1000000000000 to float*), align 4096
+  %0 = load float, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret float %0
 }
 
@@ -3378,29 +3350,28 @@ define dso_local float @ld_0_float_double(i64 %ptr) {
 ; CHECK-NEXT:    xsrsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = inttoptr i64 %ptr to double*
-  %1 = load double, double* %0, align 8
+  %0 = inttoptr i64 %ptr to ptr
+  %1 = load double, ptr %0, align 8
   %conv = fptrunc double %1 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align16_float_double(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align16_float_double(ptr nocapture readonly %ptr) {
 ; CHECK-LABEL: ld_align16_float_double:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd f0, 8(r3)
 ; CHECK-NEXT:    xsrsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to double*
-  %1 = load double, double* %0, align 8
-  %conv = fptrunc double %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  %0 = load double, ptr %add.ptr, align 8
+  %conv = fptrunc double %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align32_float_double(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align32_float_double(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_float_double:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    plfd f0, 99999000(r3), 0
@@ -3415,15 +3386,14 @@ define dso_local float @ld_align32_float_double(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    xsrsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to double*
-  %1 = load double, double* %0, align 8
-  %conv = fptrunc double %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  %0 = load double, ptr %add.ptr, align 8
+  %conv = fptrunc double %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_align64_float_double(i8* nocapture readonly %ptr) {
+define dso_local float @ld_align64_float_double(ptr nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align64_float_double:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -3441,25 +3411,23 @@ define dso_local float @ld_align64_float_double(i8* nocapture readonly %ptr) {
 ; CHECK-PREP10-NEXT:    xsrsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to double*
-  %1 = load double, double* %0, align 8
-  %conv = fptrunc double %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  %0 = load double, ptr %add.ptr, align 8
+  %conv = fptrunc double %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
-define dso_local float @ld_reg_float_double(i8* nocapture readonly %ptr, i64 %off) {
+define dso_local float @ld_reg_float_double(ptr nocapture readonly %ptr, i64 %off) {
 ; CHECK-LABEL: ld_reg_float_double:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfdx f0, r3, r4
 ; CHECK-NEXT:    xsrsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to double*
-  %1 = load double, double* %0, align 8
-  %conv = fptrunc double %1 to float
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  %0 = load double, ptr %add.ptr, align 8
+  %conv = fptrunc double %0 to float
   ret float %conv
 }
 
@@ -3474,8 +3442,8 @@ define dso_local float @ld_or_float_double(i64 %ptr, i8 zeroext %off) {
 entry:
   %conv = zext i8 %off to i64
   %or = or i64 %conv, %ptr
-  %0 = inttoptr i64 %or to double*
-  %1 = load double, double* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load double, ptr %0, align 8
   %conv1 = fptrunc double %1 to float
   ret float %conv1
 }
@@ -3490,8 +3458,8 @@ define dso_local float @ld_not_disjoint16_float_double(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to double*
-  %1 = load double, double* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load double, ptr %0, align 8
   %conv = fptrunc double %1 to float
   ret float %conv
 }
@@ -3507,8 +3475,8 @@ define dso_local float @ld_disjoint_align16_float_double(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to double*
-  %1 = load double, double* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load double, ptr %0, align 8
   %conv = fptrunc double %1 to float
   ret float %conv
 }
@@ -3524,8 +3492,8 @@ define dso_local float @ld_not_disjoint32_float_double(i64 %ptr) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to double*
-  %1 = load double, double* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load double, ptr %0, align 8
   %conv = fptrunc double %1 to float
   ret float %conv
 }
@@ -3562,8 +3530,8 @@ define dso_local float @ld_disjoint_align32_float_double(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to double*
-  %1 = load double, double* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  %1 = load double, ptr %0, align 16
   %conv = fptrunc double %1 to float
   ret float %conv
 }
@@ -3592,8 +3560,8 @@ define dso_local float @ld_not_disjoint64_float_double(i64 %ptr) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to double*
-  %1 = load double, double* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  %1 = load double, ptr %0, align 8
   %conv = fptrunc double %1 to float
   ret float %conv
 }
@@ -3621,8 +3589,8 @@ define dso_local float @ld_disjoint_align64_float_double(i64 %ptr) {
 entry:
   %and = and i64 %ptr, -1099511627776
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to double*
-  %1 = load double, double* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  %1 = load double, ptr %0, align 4096
   %conv = fptrunc double %1 to float
   ret float %conv
 }
@@ -3635,7 +3603,7 @@ define dso_local float @ld_cst_align16_float_double() {
 ; CHECK-NEXT:    xsrsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load double, double* inttoptr (i64 4080 to double*), align 16
+  %0 = load double, ptr inttoptr (i64 4080 to ptr), align 16
   %conv = fptrunc double %0 to float
   ret float %conv
 }
@@ -3649,7 +3617,7 @@ define dso_local float @ld_cst_align32_float_double() {
 ; CHECK-NEXT:    xsrsp f1, f0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load double, double* inttoptr (i64 9999900 to double*), align 8
+  %0 = load double, ptr inttoptr (i64 9999900 to ptr), align 8
   %conv = fptrunc double %0 to float
   ret float %conv
 }
@@ -3673,7 +3641,7 @@ define dso_local float @ld_cst_align64_float_double() {
 ; CHECK-PREP10-NEXT:    xsrsp f1, f0
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %0 = load double, double* inttoptr (i64 1000000000000 to double*), align 4096
+  %0 = load double, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   %conv = fptrunc double %0 to float
   ret float %conv
 }
@@ -3694,13 +3662,13 @@ define dso_local void @st_0_float_uint8_t(i64 %ptr, float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i8
-  %0 = inttoptr i64 %ptr to i8*
-  store i8 %conv, i8* %0, align 1
+  %0 = inttoptr i64 %ptr to ptr
+  store i8 %conv, ptr %0, align 1
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align16_float_uint8_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align16_float_uint8_t(ptr nocapture %ptr, float %str) {
 ; CHECK-POSTP8-LABEL: st_align16_float_uint8_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    xscvdpuxws f0, f1
@@ -3716,13 +3684,13 @@ define dso_local void @st_align16_float_uint8_t(i8* nocapture %ptr, float %str) 
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i8
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  store i8 %conv, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  store i8 %conv, ptr %add.ptr, align 1
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align32_float_uint8_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align32_float_uint8_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align32_float_uint8_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpuxws f0, f1
@@ -3748,13 +3716,13 @@ define dso_local void @st_align32_float_uint8_t(i8* nocapture %ptr, float %str) 
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i8
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  store i8 %conv, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  store i8 %conv, ptr %add.ptr, align 1
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align64_float_uint8_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align64_float_uint8_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align64_float_uint8_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpuxws f0, f1
@@ -3783,13 +3751,13 @@ define dso_local void @st_align64_float_uint8_t(i8* nocapture %ptr, float %str) 
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i8
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  store i8 %conv, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  store i8 %conv, ptr %add.ptr, align 1
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_reg_float_uint8_t(i8* nocapture %ptr, i64 %off, float %str) {
+define dso_local void @st_reg_float_uint8_t(ptr nocapture %ptr, i64 %off, float %str) {
 ; CHECK-POSTP8-LABEL: st_reg_float_uint8_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    xscvdpuxws f0, f1
@@ -3804,8 +3772,8 @@ define dso_local void @st_reg_float_uint8_t(i8* nocapture %ptr, i64 %off, float 
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i8
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  store i8 %conv, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  store i8 %conv, ptr %add.ptr, align 1
   ret void
 }
 
@@ -3829,8 +3797,8 @@ entry:
   %conv = fptoui float %str to i8
   %conv1 = zext i8 %off to i64
   %or = or i64 %conv1, %ptr
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 1
   ret void
 }
 
@@ -3853,8 +3821,8 @@ define dso_local void @st_not_disjoint16_float_uint8_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i8
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 1
   ret void
 }
 
@@ -3879,8 +3847,8 @@ entry:
   %and = and i64 %ptr, -4096
   %conv = fptoui float %str to i8
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 8
   ret void
 }
 
@@ -3905,8 +3873,8 @@ define dso_local void @st_not_disjoint32_float_uint8_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i8
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 1
   ret void
 }
 
@@ -3945,8 +3913,8 @@ entry:
   %and = and i64 %ptr, -1000341504
   %conv = fptoui float %str to i8
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 16
   ret void
 }
 
@@ -3987,8 +3955,8 @@ define dso_local void @st_not_disjoint64_float_uint8_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i8
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 1
   ret void
 }
 
@@ -4027,8 +3995,8 @@ entry:
   %and = and i64 %ptr, -1099511627776
   %conv = fptoui float %str to i8
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 4096
   ret void
 }
 
@@ -4049,7 +4017,7 @@ define dso_local void @st_cst_align16_float_uint8_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i8
-  store i8 %conv, i8* inttoptr (i64 4080 to i8*), align 16
+  store i8 %conv, ptr inttoptr (i64 4080 to ptr), align 16
   ret void
 }
 
@@ -4079,7 +4047,7 @@ define dso_local void @st_cst_align32_float_uint8_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i8
-  store i8 %conv, i8* inttoptr (i64 9999900 to i8*), align 4
+  store i8 %conv, ptr inttoptr (i64 9999900 to ptr), align 4
   ret void
 }
 
@@ -4113,7 +4081,7 @@ define dso_local void @st_cst_align64_float_uint8_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i8
-  store i8 %conv, i8* inttoptr (i64 1000000000000 to i8*), align 4096
+  store i8 %conv, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret void
 }
 
@@ -4133,13 +4101,13 @@ define dso_local void @st_0_float_int8_t(i64 %ptr, float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i8
-  %0 = inttoptr i64 %ptr to i8*
-  store i8 %conv, i8* %0, align 1
+  %0 = inttoptr i64 %ptr to ptr
+  store i8 %conv, ptr %0, align 1
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align16_float_int8_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align16_float_int8_t(ptr nocapture %ptr, float %str) {
 ; CHECK-POSTP8-LABEL: st_align16_float_int8_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    xscvdpsxws f0, f1
@@ -4155,13 +4123,13 @@ define dso_local void @st_align16_float_int8_t(i8* nocapture %ptr, float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i8
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  store i8 %conv, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  store i8 %conv, ptr %add.ptr, align 1
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align32_float_int8_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align32_float_int8_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align32_float_int8_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f1
@@ -4187,13 +4155,13 @@ define dso_local void @st_align32_float_int8_t(i8* nocapture %ptr, float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i8
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  store i8 %conv, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  store i8 %conv, ptr %add.ptr, align 1
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align64_float_int8_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align64_float_int8_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align64_float_int8_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f1
@@ -4222,13 +4190,13 @@ define dso_local void @st_align64_float_int8_t(i8* nocapture %ptr, float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i8
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  store i8 %conv, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  store i8 %conv, ptr %add.ptr, align 1
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_reg_float_int8_t(i8* nocapture %ptr, i64 %off, float %str) {
+define dso_local void @st_reg_float_int8_t(ptr nocapture %ptr, i64 %off, float %str) {
 ; CHECK-POSTP8-LABEL: st_reg_float_int8_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    xscvdpsxws f0, f1
@@ -4243,8 +4211,8 @@ define dso_local void @st_reg_float_int8_t(i8* nocapture %ptr, i64 %off, float %
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i8
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  store i8 %conv, i8* %add.ptr, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  store i8 %conv, ptr %add.ptr, align 1
   ret void
 }
 
@@ -4268,8 +4236,8 @@ entry:
   %conv = fptosi float %str to i8
   %conv1 = zext i8 %off to i64
   %or = or i64 %conv1, %ptr
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 1
   ret void
 }
 
@@ -4292,8 +4260,8 @@ define dso_local void @st_not_disjoint16_float_int8_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i8
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 1
   ret void
 }
 
@@ -4318,8 +4286,8 @@ entry:
   %and = and i64 %ptr, -4096
   %conv = fptosi float %str to i8
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 8
   ret void
 }
 
@@ -4344,8 +4312,8 @@ define dso_local void @st_not_disjoint32_float_int8_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i8
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 1
   ret void
 }
 
@@ -4384,8 +4352,8 @@ entry:
   %and = and i64 %ptr, -1000341504
   %conv = fptosi float %str to i8
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 16
   ret void
 }
 
@@ -4426,8 +4394,8 @@ define dso_local void @st_not_disjoint64_float_int8_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i8
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 1
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 1
   ret void
 }
 
@@ -4466,8 +4434,8 @@ entry:
   %and = and i64 %ptr, -1099511627776
   %conv = fptosi float %str to i8
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i8*
-  store i8 %conv, i8* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  store i8 %conv, ptr %0, align 4096
   ret void
 }
 
@@ -4488,7 +4456,7 @@ define dso_local void @st_cst_align16_float_int8_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i8
-  store i8 %conv, i8* inttoptr (i64 4080 to i8*), align 16
+  store i8 %conv, ptr inttoptr (i64 4080 to ptr), align 16
   ret void
 }
 
@@ -4518,7 +4486,7 @@ define dso_local void @st_cst_align32_float_int8_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i8
-  store i8 %conv, i8* inttoptr (i64 9999900 to i8*), align 4
+  store i8 %conv, ptr inttoptr (i64 9999900 to ptr), align 4
   ret void
 }
 
@@ -4552,7 +4520,7 @@ define dso_local void @st_cst_align64_float_int8_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i8
-  store i8 %conv, i8* inttoptr (i64 1000000000000 to i8*), align 4096
+  store i8 %conv, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret void
 }
 
@@ -4572,13 +4540,13 @@ define dso_local void @st_0_float_uint16_t(i64 %ptr, float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i16
-  %0 = inttoptr i64 %ptr to i16*
-  store i16 %conv, i16* %0, align 2
+  %0 = inttoptr i64 %ptr to ptr
+  store i16 %conv, ptr %0, align 2
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align16_float_uint16_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align16_float_uint16_t(ptr nocapture %ptr, float %str) {
 ; CHECK-POSTP8-LABEL: st_align16_float_uint16_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    xscvdpuxws f0, f1
@@ -4594,14 +4562,13 @@ define dso_local void @st_align16_float_uint16_t(i8* nocapture %ptr, float %str)
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i16
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i16*
-  store i16 %conv, i16* %0, align 2
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  store i16 %conv, ptr %add.ptr, align 2
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align32_float_uint16_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align32_float_uint16_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align32_float_uint16_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpuxws f0, f1
@@ -4627,14 +4594,13 @@ define dso_local void @st_align32_float_uint16_t(i8* nocapture %ptr, float %str)
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i16
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i16*
-  store i16 %conv, i16* %0, align 2
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  store i16 %conv, ptr %add.ptr, align 2
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align64_float_uint16_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align64_float_uint16_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align64_float_uint16_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpuxws f0, f1
@@ -4663,14 +4629,13 @@ define dso_local void @st_align64_float_uint16_t(i8* nocapture %ptr, float %str)
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i16
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i16*
-  store i16 %conv, i16* %0, align 2
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  store i16 %conv, ptr %add.ptr, align 2
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_reg_float_uint16_t(i8* nocapture %ptr, i64 %off, float %str) {
+define dso_local void @st_reg_float_uint16_t(ptr nocapture %ptr, i64 %off, float %str) {
 ; CHECK-POSTP8-LABEL: st_reg_float_uint16_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    xscvdpuxws f0, f1
@@ -4685,9 +4650,8 @@ define dso_local void @st_reg_float_uint16_t(i8* nocapture %ptr, i64 %off, float
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i16
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i16*
-  store i16 %conv, i16* %0, align 2
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  store i16 %conv, ptr %add.ptr, align 2
   ret void
 }
 
@@ -4711,8 +4675,8 @@ entry:
   %conv = fptoui float %str to i16
   %conv1 = zext i8 %off to i64
   %or = or i64 %conv1, %ptr
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 2
   ret void
 }
 
@@ -4735,8 +4699,8 @@ define dso_local void @st_not_disjoint16_float_uint16_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i16
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 2
   ret void
 }
 
@@ -4761,8 +4725,8 @@ entry:
   %and = and i64 %ptr, -4096
   %conv = fptoui float %str to i16
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 8
   ret void
 }
 
@@ -4787,8 +4751,8 @@ define dso_local void @st_not_disjoint32_float_uint16_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i16
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 2
   ret void
 }
 
@@ -4827,8 +4791,8 @@ entry:
   %and = and i64 %ptr, -1000341504
   %conv = fptoui float %str to i16
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 16
   ret void
 }
 
@@ -4869,8 +4833,8 @@ define dso_local void @st_not_disjoint64_float_uint16_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i16
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 2
   ret void
 }
 
@@ -4909,8 +4873,8 @@ entry:
   %and = and i64 %ptr, -1099511627776
   %conv = fptoui float %str to i16
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 4096
   ret void
 }
 
@@ -4931,7 +4895,7 @@ define dso_local void @st_cst_align16_float_uint16_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i16
-  store i16 %conv, i16* inttoptr (i64 4080 to i16*), align 16
+  store i16 %conv, ptr inttoptr (i64 4080 to ptr), align 16
   ret void
 }
 
@@ -4961,7 +4925,7 @@ define dso_local void @st_cst_align32_float_uint16_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i16
-  store i16 %conv, i16* inttoptr (i64 9999900 to i16*), align 4
+  store i16 %conv, ptr inttoptr (i64 9999900 to ptr), align 4
   ret void
 }
 
@@ -4995,7 +4959,7 @@ define dso_local void @st_cst_align64_float_uint16_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i16
-  store i16 %conv, i16* inttoptr (i64 1000000000000 to i16*), align 4096
+  store i16 %conv, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret void
 }
 
@@ -5015,13 +4979,13 @@ define dso_local void @st_0_float_int16_t(i64 %ptr, float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i16
-  %0 = inttoptr i64 %ptr to i16*
-  store i16 %conv, i16* %0, align 2
+  %0 = inttoptr i64 %ptr to ptr
+  store i16 %conv, ptr %0, align 2
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align16_float_int16_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align16_float_int16_t(ptr nocapture %ptr, float %str) {
 ; CHECK-POSTP8-LABEL: st_align16_float_int16_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    xscvdpsxws f0, f1
@@ -5037,14 +5001,13 @@ define dso_local void @st_align16_float_int16_t(i8* nocapture %ptr, float %str) 
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i16
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i16*
-  store i16 %conv, i16* %0, align 2
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  store i16 %conv, ptr %add.ptr, align 2
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align32_float_int16_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align32_float_int16_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align32_float_int16_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f1
@@ -5070,14 +5033,13 @@ define dso_local void @st_align32_float_int16_t(i8* nocapture %ptr, float %str) 
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i16
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i16*
-  store i16 %conv, i16* %0, align 2
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  store i16 %conv, ptr %add.ptr, align 2
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align64_float_int16_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align64_float_int16_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align64_float_int16_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f1
@@ -5106,14 +5068,13 @@ define dso_local void @st_align64_float_int16_t(i8* nocapture %ptr, float %str) 
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i16
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i16*
-  store i16 %conv, i16* %0, align 2
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  store i16 %conv, ptr %add.ptr, align 2
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_reg_float_int16_t(i8* nocapture %ptr, i64 %off, float %str) {
+define dso_local void @st_reg_float_int16_t(ptr nocapture %ptr, i64 %off, float %str) {
 ; CHECK-POSTP8-LABEL: st_reg_float_int16_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    xscvdpsxws f0, f1
@@ -5128,9 +5089,8 @@ define dso_local void @st_reg_float_int16_t(i8* nocapture %ptr, i64 %off, float 
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i16
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i16*
-  store i16 %conv, i16* %0, align 2
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  store i16 %conv, ptr %add.ptr, align 2
   ret void
 }
 
@@ -5154,8 +5114,8 @@ entry:
   %conv = fptosi float %str to i16
   %conv1 = zext i8 %off to i64
   %or = or i64 %conv1, %ptr
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 2
   ret void
 }
 
@@ -5178,8 +5138,8 @@ define dso_local void @st_not_disjoint16_float_int16_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i16
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 2
   ret void
 }
 
@@ -5204,8 +5164,8 @@ entry:
   %and = and i64 %ptr, -4096
   %conv = fptosi float %str to i16
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 8
   ret void
 }
 
@@ -5230,8 +5190,8 @@ define dso_local void @st_not_disjoint32_float_int16_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i16
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 2
   ret void
 }
 
@@ -5270,8 +5230,8 @@ entry:
   %and = and i64 %ptr, -1000341504
   %conv = fptosi float %str to i16
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 16
   ret void
 }
 
@@ -5312,8 +5272,8 @@ define dso_local void @st_not_disjoint64_float_int16_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i16
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 2
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 2
   ret void
 }
 
@@ -5352,8 +5312,8 @@ entry:
   %and = and i64 %ptr, -1099511627776
   %conv = fptosi float %str to i16
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i16*
-  store i16 %conv, i16* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  store i16 %conv, ptr %0, align 4096
   ret void
 }
 
@@ -5374,7 +5334,7 @@ define dso_local void @st_cst_align16_float_int16_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i16
-  store i16 %conv, i16* inttoptr (i64 4080 to i16*), align 16
+  store i16 %conv, ptr inttoptr (i64 4080 to ptr), align 16
   ret void
 }
 
@@ -5404,7 +5364,7 @@ define dso_local void @st_cst_align32_float_int16_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i16
-  store i16 %conv, i16* inttoptr (i64 9999900 to i16*), align 4
+  store i16 %conv, ptr inttoptr (i64 9999900 to ptr), align 4
   ret void
 }
 
@@ -5438,7 +5398,7 @@ define dso_local void @st_cst_align64_float_int16_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i16
-  store i16 %conv, i16* inttoptr (i64 1000000000000 to i16*), align 4096
+  store i16 %conv, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret void
 }
 
@@ -5451,13 +5411,13 @@ define dso_local void @st_0_float_uint32_t(i64 %ptr, float %str) {
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptoui float %str to i32
-  %0 = inttoptr i64 %ptr to i32*
-  store i32 %conv, i32* %0, align 4
+  %0 = inttoptr i64 %ptr to ptr
+  store i32 %conv, ptr %0, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align16_float_uint32_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align16_float_uint32_t(ptr nocapture %ptr, float %str) {
 ; CHECK-LABEL: st_align16_float_uint32_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxws f0, f1
@@ -5466,14 +5426,13 @@ define dso_local void @st_align16_float_uint32_t(i8* nocapture %ptr, float %str)
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptoui float %str to i32
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i32*
-  store i32 %conv, i32* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  store i32 %conv, ptr %add.ptr, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align32_float_uint32_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align32_float_uint32_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align32_float_uint32_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpuxws f0, f1
@@ -5490,14 +5449,13 @@ define dso_local void @st_align32_float_uint32_t(i8* nocapture %ptr, float %str)
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptoui float %str to i32
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i32*
-  store i32 %conv, i32* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  store i32 %conv, ptr %add.ptr, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align64_float_uint32_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align64_float_uint32_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align64_float_uint32_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpuxws f0, f1
@@ -5516,14 +5474,13 @@ define dso_local void @st_align64_float_uint32_t(i8* nocapture %ptr, float %str)
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptoui float %str to i32
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i32*
-  store i32 %conv, i32* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  store i32 %conv, ptr %add.ptr, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_reg_float_uint32_t(i8* nocapture %ptr, i64 %off, float %str) {
+define dso_local void @st_reg_float_uint32_t(ptr nocapture %ptr, i64 %off, float %str) {
 ; CHECK-LABEL: st_reg_float_uint32_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxws f0, f1
@@ -5531,9 +5488,8 @@ define dso_local void @st_reg_float_uint32_t(i8* nocapture %ptr, i64 %off, float
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptoui float %str to i32
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i32*
-  store i32 %conv, i32* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  store i32 %conv, ptr %add.ptr, align 4
   ret void
 }
 
@@ -5549,8 +5505,8 @@ entry:
   %conv = fptoui float %str to i32
   %conv1 = zext i8 %off to i64
   %or = or i64 %conv1, %ptr
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 4
   ret void
 }
 
@@ -5565,8 +5521,8 @@ define dso_local void @st_not_disjoint16_float_uint32_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i32
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 4
   ret void
 }
 
@@ -5583,8 +5539,8 @@ entry:
   %and = and i64 %ptr, -4096
   %conv = fptoui float %str to i32
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 8
   ret void
 }
 
@@ -5600,8 +5556,8 @@ define dso_local void @st_not_disjoint32_float_uint32_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i32
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 4
   ret void
 }
 
@@ -5639,8 +5595,8 @@ entry:
   %and = and i64 %ptr, -1000341504
   %conv = fptoui float %str to i32
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 16
   ret void
 }
 
@@ -5680,8 +5636,8 @@ define dso_local void @st_not_disjoint64_float_uint32_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i32
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 4
   ret void
 }
 
@@ -5709,8 +5665,8 @@ entry:
   %and = and i64 %ptr, -1099511627776
   %conv = fptoui float %str to i32
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 4096
   ret void
 }
 
@@ -5724,7 +5680,7 @@ define dso_local void @st_cst_align16_float_uint32_t(float %str) {
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptoui float %str to i32
-  store i32 %conv, i32* inttoptr (i64 4080 to i32*), align 16
+  store i32 %conv, ptr inttoptr (i64 4080 to ptr), align 16
   ret void
 }
 
@@ -5746,7 +5702,7 @@ define dso_local void @st_cst_align32_float_uint32_t(float %str) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptoui float %str to i32
-  store i32 %conv, i32* inttoptr (i64 9999900 to i32*), align 4
+  store i32 %conv, ptr inttoptr (i64 9999900 to ptr), align 4
   ret void
 }
 
@@ -5770,7 +5726,7 @@ define dso_local void @st_cst_align64_float_uint32_t(float %str) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptoui float %str to i32
-  store i32 %conv, i32* inttoptr (i64 1000000000000 to i32*), align 4096
+  store i32 %conv, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret void
 }
 
@@ -5783,13 +5739,13 @@ define dso_local void @st_0_float_int32_t(i64 %ptr, float %str) {
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptosi float %str to i32
-  %0 = inttoptr i64 %ptr to i32*
-  store i32 %conv, i32* %0, align 4
+  %0 = inttoptr i64 %ptr to ptr
+  store i32 %conv, ptr %0, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align16_float_int32_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align16_float_int32_t(ptr nocapture %ptr, float %str) {
 ; CHECK-LABEL: st_align16_float_int32_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
@@ -5798,14 +5754,13 @@ define dso_local void @st_align16_float_int32_t(i8* nocapture %ptr, float %str) 
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptosi float %str to i32
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i32*
-  store i32 %conv, i32* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  store i32 %conv, ptr %add.ptr, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align32_float_int32_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align32_float_int32_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align32_float_int32_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f1
@@ -5822,14 +5777,13 @@ define dso_local void @st_align32_float_int32_t(i8* nocapture %ptr, float %str) 
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptosi float %str to i32
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i32*
-  store i32 %conv, i32* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  store i32 %conv, ptr %add.ptr, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align64_float_int32_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align64_float_int32_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align64_float_int32_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f1
@@ -5848,14 +5802,13 @@ define dso_local void @st_align64_float_int32_t(i8* nocapture %ptr, float %str) 
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptosi float %str to i32
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i32*
-  store i32 %conv, i32* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  store i32 %conv, ptr %add.ptr, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_reg_float_int32_t(i8* nocapture %ptr, i64 %off, float %str) {
+define dso_local void @st_reg_float_int32_t(ptr nocapture %ptr, i64 %off, float %str) {
 ; CHECK-LABEL: st_reg_float_int32_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws f0, f1
@@ -5863,9 +5816,8 @@ define dso_local void @st_reg_float_int32_t(i8* nocapture %ptr, i64 %off, float 
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptosi float %str to i32
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i32*
-  store i32 %conv, i32* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  store i32 %conv, ptr %add.ptr, align 4
   ret void
 }
 
@@ -5881,8 +5833,8 @@ entry:
   %conv = fptosi float %str to i32
   %conv1 = zext i8 %off to i64
   %or = or i64 %conv1, %ptr
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 4
   ret void
 }
 
@@ -5897,8 +5849,8 @@ define dso_local void @st_not_disjoint16_float_int32_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i32
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 4
   ret void
 }
 
@@ -5915,8 +5867,8 @@ entry:
   %and = and i64 %ptr, -4096
   %conv = fptosi float %str to i32
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 8
   ret void
 }
 
@@ -5932,8 +5884,8 @@ define dso_local void @st_not_disjoint32_float_int32_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i32
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 4
   ret void
 }
 
@@ -5971,8 +5923,8 @@ entry:
   %and = and i64 %ptr, -1000341504
   %conv = fptosi float %str to i32
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 16
   ret void
 }
 
@@ -6012,8 +5964,8 @@ define dso_local void @st_not_disjoint64_float_int32_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i32
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 4
   ret void
 }
 
@@ -6041,8 +5993,8 @@ entry:
   %and = and i64 %ptr, -1099511627776
   %conv = fptosi float %str to i32
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i32*
-  store i32 %conv, i32* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  store i32 %conv, ptr %0, align 4096
   ret void
 }
 
@@ -6056,7 +6008,7 @@ define dso_local void @st_cst_align16_float_int32_t(float %str) {
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptosi float %str to i32
-  store i32 %conv, i32* inttoptr (i64 4080 to i32*), align 16
+  store i32 %conv, ptr inttoptr (i64 4080 to ptr), align 16
   ret void
 }
 
@@ -6078,7 +6030,7 @@ define dso_local void @st_cst_align32_float_int32_t(float %str) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptosi float %str to i32
-  store i32 %conv, i32* inttoptr (i64 9999900 to i32*), align 4
+  store i32 %conv, ptr inttoptr (i64 9999900 to ptr), align 4
   ret void
 }
 
@@ -6102,7 +6054,7 @@ define dso_local void @st_cst_align64_float_int32_t(float %str) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptosi float %str to i32
-  store i32 %conv, i32* inttoptr (i64 1000000000000 to i32*), align 4096
+  store i32 %conv, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret void
 }
 
@@ -6121,13 +6073,13 @@ define dso_local void @st_0_float_uint64_t(i64 %ptr, float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i64
-  %0 = inttoptr i64 %ptr to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %ptr to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align16_float_uint64_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align16_float_uint64_t(ptr nocapture %ptr, float %str) {
 ; CHECK-POSTP8-LABEL: st_align16_float_uint64_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    xscvdpuxds v2, f1
@@ -6142,14 +6094,13 @@ define dso_local void @st_align16_float_uint64_t(i8* nocapture %ptr, float %str)
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i64
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  store i64 %conv, ptr %add.ptr, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align32_float_uint64_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align32_float_uint64_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align32_float_uint64_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpuxds v2, f1
@@ -6165,14 +6116,13 @@ define dso_local void @st_align32_float_uint64_t(i8* nocapture %ptr, float %str)
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptoui float %str to i64
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  store i64 %conv, ptr %add.ptr, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align64_float_uint64_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align64_float_uint64_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align64_float_uint64_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpuxds f0, f1
@@ -6191,14 +6141,13 @@ define dso_local void @st_align64_float_uint64_t(i8* nocapture %ptr, float %str)
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptoui float %str to i64
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  store i64 %conv, ptr %add.ptr, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_reg_float_uint64_t(i8* nocapture %ptr, i64 %off, float %str) {
+define dso_local void @st_reg_float_uint64_t(ptr nocapture %ptr, i64 %off, float %str) {
 ; CHECK-LABEL: st_reg_float_uint64_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxds f0, f1
@@ -6206,9 +6155,8 @@ define dso_local void @st_reg_float_uint64_t(i8* nocapture %ptr, i64 %off, float
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptoui float %str to i64
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  store i64 %conv, ptr %add.ptr, align 8
   ret void
 }
 
@@ -6231,8 +6179,8 @@ entry:
   %conv = fptoui float %str to i64
   %conv1 = zext i8 %off to i64
   %or = or i64 %conv1, %ptr
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
@@ -6254,8 +6202,8 @@ define dso_local void @st_not_disjoint16_float_uint64_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i64
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
@@ -6279,8 +6227,8 @@ entry:
   %and = and i64 %ptr, -4096
   %conv = fptoui float %str to i64
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
@@ -6304,8 +6252,8 @@ define dso_local void @st_not_disjoint32_float_uint64_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i64
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
@@ -6342,8 +6290,8 @@ entry:
   %and = and i64 %ptr, -1000341504
   %conv = fptoui float %str to i64
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 16
   ret void
 }
 
@@ -6383,8 +6331,8 @@ define dso_local void @st_not_disjoint64_float_uint64_t(i64 %ptr, float %str) {
 entry:
   %conv = fptoui float %str to i64
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
@@ -6412,8 +6360,8 @@ entry:
   %and = and i64 %ptr, -1099511627776
   %conv = fptoui float %str to i64
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 4096
   ret void
 }
 
@@ -6433,7 +6381,7 @@ define dso_local void @st_cst_align16_float_uint64_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i64
-  store i64 %conv, i64* inttoptr (i64 4080 to i64*), align 16
+  store i64 %conv, ptr inttoptr (i64 4080 to ptr), align 16
   ret void
 }
 
@@ -6455,7 +6403,7 @@ define dso_local void @st_cst_align32_float_uint64_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i64
-  store i64 %conv, i64* inttoptr (i64 9999900 to i64*), align 8
+  store i64 %conv, ptr inttoptr (i64 9999900 to ptr), align 8
   ret void
 }
 
@@ -6488,7 +6436,7 @@ define dso_local void @st_cst_align64_float_uint64_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui float %str to i64
-  store i64 %conv, i64* inttoptr (i64 1000000000000 to i64*), align 4096
+  store i64 %conv, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret void
 }
 
@@ -6507,13 +6455,13 @@ define dso_local void @st_0_float_int64_t(i64 %ptr, float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i64
-  %0 = inttoptr i64 %ptr to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %ptr to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align16_float_int64_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align16_float_int64_t(ptr nocapture %ptr, float %str) {
 ; CHECK-POSTP8-LABEL: st_align16_float_int64_t:
 ; CHECK-POSTP8:       # %bb.0: # %entry
 ; CHECK-POSTP8-NEXT:    xscvdpsxds v2, f1
@@ -6528,14 +6476,13 @@ define dso_local void @st_align16_float_int64_t(i8* nocapture %ptr, float %str) 
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i64
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  store i64 %conv, ptr %add.ptr, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align32_float_int64_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align32_float_int64_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align32_float_int64_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpsxds v2, f1
@@ -6551,14 +6498,13 @@ define dso_local void @st_align32_float_int64_t(i8* nocapture %ptr, float %str) 
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptosi float %str to i64
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  store i64 %conv, ptr %add.ptr, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align64_float_int64_t(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align64_float_int64_t(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align64_float_int64_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    xscvdpsxds f0, f1
@@ -6577,14 +6523,13 @@ define dso_local void @st_align64_float_int64_t(i8* nocapture %ptr, float %str) 
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fptosi float %str to i64
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  store i64 %conv, ptr %add.ptr, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_reg_float_int64_t(i8* nocapture %ptr, i64 %off, float %str) {
+define dso_local void @st_reg_float_int64_t(ptr nocapture %ptr, i64 %off, float %str) {
 ; CHECK-LABEL: st_reg_float_int64_t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxds f0, f1
@@ -6592,9 +6537,8 @@ define dso_local void @st_reg_float_int64_t(i8* nocapture %ptr, i64 %off, float 
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptosi float %str to i64
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  store i64 %conv, ptr %add.ptr, align 8
   ret void
 }
 
@@ -6617,8 +6561,8 @@ entry:
   %conv = fptosi float %str to i64
   %conv1 = zext i8 %off to i64
   %or = or i64 %conv1, %ptr
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
@@ -6640,8 +6584,8 @@ define dso_local void @st_not_disjoint16_float_int64_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i64
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
@@ -6665,8 +6609,8 @@ entry:
   %and = and i64 %ptr, -4096
   %conv = fptosi float %str to i64
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
@@ -6690,8 +6634,8 @@ define dso_local void @st_not_disjoint32_float_int64_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i64
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
@@ -6728,8 +6672,8 @@ entry:
   %and = and i64 %ptr, -1000341504
   %conv = fptosi float %str to i64
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 16
   ret void
 }
 
@@ -6769,8 +6713,8 @@ define dso_local void @st_not_disjoint64_float_int64_t(i64 %ptr, float %str) {
 entry:
   %conv = fptosi float %str to i64
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 8
   ret void
 }
 
@@ -6798,8 +6742,8 @@ entry:
   %and = and i64 %ptr, -1099511627776
   %conv = fptosi float %str to i64
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to i64*
-  store i64 %conv, i64* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  store i64 %conv, ptr %0, align 4096
   ret void
 }
 
@@ -6819,7 +6763,7 @@ define dso_local void @st_cst_align16_float_int64_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i64
-  store i64 %conv, i64* inttoptr (i64 4080 to i64*), align 16
+  store i64 %conv, ptr inttoptr (i64 4080 to ptr), align 16
   ret void
 }
 
@@ -6841,7 +6785,7 @@ define dso_local void @st_cst_align32_float_int64_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i64
-  store i64 %conv, i64* inttoptr (i64 9999900 to i64*), align 8
+  store i64 %conv, ptr inttoptr (i64 9999900 to ptr), align 8
   ret void
 }
 
@@ -6874,7 +6818,7 @@ define dso_local void @st_cst_align64_float_int64_t(float %str) {
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi float %str to i64
-  store i64 %conv, i64* inttoptr (i64 1000000000000 to i64*), align 4096
+  store i64 %conv, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret void
 }
 
@@ -6885,26 +6829,25 @@ define dso_local void @st_0_float_float(i64 %ptr, float %str) {
 ; CHECK-NEXT:    stfs f1, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = inttoptr i64 %ptr to float*
-  store float %str, float* %0, align 4
+  %0 = inttoptr i64 %ptr to ptr
+  store float %str, ptr %0, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align16_float_float(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align16_float_float(ptr nocapture %ptr, float %str) {
 ; CHECK-LABEL: st_align16_float_float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stfs f1, 8(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to float*
-  store float %str, float* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  store float %str, ptr %add.ptr, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align32_float_float(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align32_float_float(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align32_float_float:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pstfs f1, 99999000(r3), 0
@@ -6917,14 +6860,13 @@ define dso_local void @st_align32_float_float(i8* nocapture %ptr, float %str) {
 ; CHECK-PREP10-NEXT:    stfsx f1, r3, r4
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to float*
-  store float %str, float* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  store float %str, ptr %add.ptr, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align64_float_float(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align64_float_float(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align64_float_float:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -6940,22 +6882,20 @@ define dso_local void @st_align64_float_float(i8* nocapture %ptr, float %str) {
 ; CHECK-PREP10-NEXT:    stfsx f1, r3, r4
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to float*
-  store float %str, float* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  store float %str, ptr %add.ptr, align 4
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_reg_float_float(i8* nocapture %ptr, i64 %off, float %str) {
+define dso_local void @st_reg_float_float(ptr nocapture %ptr, i64 %off, float %str) {
 ; CHECK-LABEL: st_reg_float_float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stfsx f1, r3, r4
 ; CHECK-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to float*
-  store float %str, float* %0, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  store float %str, ptr %add.ptr, align 4
   ret void
 }
 
@@ -6969,8 +6909,8 @@ define dso_local void @st_or1_float_float(i64 %ptr, i8 zeroext %off, float %str)
 entry:
   %conv = zext i8 %off to i64
   %or = or i64 %conv, %ptr
-  %0 = inttoptr i64 %or to float*
-  store float %str, float* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store float %str, ptr %0, align 4
   ret void
 }
 
@@ -6983,8 +6923,8 @@ define dso_local void @st_not_disjoint16_float_float(i64 %ptr, float %str) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to float*
-  store float %str, float* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store float %str, ptr %0, align 4
   ret void
 }
 
@@ -6998,8 +6938,8 @@ define dso_local void @st_disjoint_align16_float_float(i64 %ptr, float %str) {
 entry:
   %and = and i64 %ptr, -4096
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to float*
-  store float %str, float* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store float %str, ptr %0, align 8
   ret void
 }
 
@@ -7013,8 +6953,8 @@ define dso_local void @st_not_disjoint32_float_float(i64 %ptr, float %str) {
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to float*
-  store float %str, float* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store float %str, ptr %0, align 4
   ret void
 }
 
@@ -7047,8 +6987,8 @@ define dso_local void @st_disjoint_align32_float_float(i64 %ptr, float %str) {
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to float*
-  store float %str, float* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  store float %str, ptr %0, align 16
   ret void
 }
 
@@ -7074,8 +7014,8 @@ define dso_local void @st_not_disjoint64_float_float(i64 %ptr, float %str) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to float*
-  store float %str, float* %0, align 4
+  %0 = inttoptr i64 %or to ptr
+  store float %str, ptr %0, align 4
   ret void
 }
 
@@ -7100,8 +7040,8 @@ define dso_local void @st_disjoint_align64_float_float(i64 %ptr, float %str) {
 entry:
   %and = and i64 %ptr, -1099511627776
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to float*
-  store float %str, float* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  store float %str, ptr %0, align 4096
   ret void
 }
 
@@ -7112,7 +7052,7 @@ define dso_local void @st_cst_align16_float_float(float %str) {
 ; CHECK-NEXT:    stfs f1, 4080(0)
 ; CHECK-NEXT:    blr
 entry:
-  store float %str, float* inttoptr (i64 4080 to float*), align 16
+  store float %str, ptr inttoptr (i64 4080 to ptr), align 16
   ret void
 }
 
@@ -7124,7 +7064,7 @@ define dso_local void @st_cst_align32_float_float(float %str) {
 ; CHECK-NEXT:    stfs f1, -27108(r3)
 ; CHECK-NEXT:    blr
 entry:
-  store float %str, float* inttoptr (i64 9999900 to float*), align 4
+  store float %str, ptr inttoptr (i64 9999900 to ptr), align 4
   ret void
 }
 
@@ -7145,7 +7085,7 @@ define dso_local void @st_cst_align64_float_float(float %str) {
 ; CHECK-PREP10-NEXT:    stfs f1, 0(r3)
 ; CHECK-PREP10-NEXT:    blr
 entry:
-  store float %str, float* inttoptr (i64 1000000000000 to float*), align 4096
+  store float %str, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret void
 }
 
@@ -7157,27 +7097,26 @@ define dso_local void @st_0_float_double(i64 %ptr, float %str) {
 ; CHECK-NEXT:    blr
 entry:
   %conv = fpext float %str to double
-  %0 = inttoptr i64 %ptr to double*
-  store double %conv, double* %0, align 8
+  %0 = inttoptr i64 %ptr to ptr
+  store double %conv, ptr %0, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align16_float_double(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align16_float_double(ptr nocapture %ptr, float %str) {
 ; CHECK-LABEL: st_align16_float_double:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stfd f1, 8(r3)
 ; CHECK-NEXT:    blr
 entry:
   %conv = fpext float %str to double
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
-  %0 = bitcast i8* %add.ptr to double*
-  store double %conv, double* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 8
+  store double %conv, ptr %add.ptr, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align32_float_double(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align32_float_double(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align32_float_double:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pstfd f1, 99999000(r3), 0
@@ -7191,14 +7130,13 @@ define dso_local void @st_align32_float_double(i8* nocapture %ptr, float %str) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fpext float %str to double
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
-  %0 = bitcast i8* %add.ptr to double*
-  store double %conv, double* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 99999000
+  store double %conv, ptr %add.ptr, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_align64_float_double(i8* nocapture %ptr, float %str) {
+define dso_local void @st_align64_float_double(ptr nocapture %ptr, float %str) {
 ; CHECK-P10-LABEL: st_align64_float_double:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli r4, 244140625
@@ -7215,23 +7153,21 @@ define dso_local void @st_align64_float_double(i8* nocapture %ptr, float %str) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fpext float %str to double
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
-  %0 = bitcast i8* %add.ptr to double*
-  store double %conv, double* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 1000000000000
+  store double %conv, ptr %add.ptr, align 8
   ret void
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
-define dso_local void @st_reg_float_double(i8* nocapture %ptr, i64 %off, float %str) {
+define dso_local void @st_reg_float_double(ptr nocapture %ptr, i64 %off, float %str) {
 ; CHECK-LABEL: st_reg_float_double:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stfdx f1, r3, r4
 ; CHECK-NEXT:    blr
 entry:
   %conv = fpext float %str to double
-  %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
-  %0 = bitcast i8* %add.ptr to double*
-  store double %conv, double* %0, align 8
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %off
+  store double %conv, ptr %add.ptr, align 8
   ret void
 }
 
@@ -7246,8 +7182,8 @@ entry:
   %conv = fpext float %str to double
   %conv1 = zext i8 %off to i64
   %or = or i64 %conv1, %ptr
-  %0 = inttoptr i64 %or to double*
-  store double %conv, double* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store double %conv, ptr %0, align 8
   ret void
 }
 
@@ -7261,8 +7197,8 @@ define dso_local void @st_not_disjoint16_float_double(i64 %ptr, float %str) {
 entry:
   %conv = fpext float %str to double
   %or = or i64 %ptr, 6
-  %0 = inttoptr i64 %or to double*
-  store double %conv, double* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store double %conv, ptr %0, align 8
   ret void
 }
 
@@ -7277,8 +7213,8 @@ entry:
   %and = and i64 %ptr, -4096
   %conv = fpext float %str to double
   %or = or i64 %and, 24
-  %0 = inttoptr i64 %or to double*
-  store double %conv, double* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store double %conv, ptr %0, align 8
   ret void
 }
 
@@ -7293,8 +7229,8 @@ define dso_local void @st_not_disjoint32_float_double(i64 %ptr, float %str) {
 entry:
   %conv = fpext float %str to double
   %or = or i64 %ptr, 99999
-  %0 = inttoptr i64 %or to double*
-  store double %conv, double* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store double %conv, ptr %0, align 8
   ret void
 }
 
@@ -7328,8 +7264,8 @@ entry:
   %and = and i64 %ptr, -1000341504
   %conv = fpext float %str to double
   %or = or i64 %and, 999990000
-  %0 = inttoptr i64 %or to double*
-  store double %conv, double* %0, align 16
+  %0 = inttoptr i64 %or to ptr
+  store double %conv, ptr %0, align 16
   ret void
 }
 
@@ -7356,8 +7292,8 @@ define dso_local void @st_not_disjoint64_float_double(i64 %ptr, float %str) {
 entry:
   %conv = fpext float %str to double
   %or = or i64 %ptr, 1000000000001
-  %0 = inttoptr i64 %or to double*
-  store double %conv, double* %0, align 8
+  %0 = inttoptr i64 %or to ptr
+  store double %conv, ptr %0, align 8
   ret void
 }
 
@@ -7383,8 +7319,8 @@ entry:
   %and = and i64 %ptr, -1099511627776
   %conv = fpext float %str to double
   %or = or i64 %and, 1000000000000
-  %0 = inttoptr i64 %or to double*
-  store double %conv, double* %0, align 4096
+  %0 = inttoptr i64 %or to ptr
+  store double %conv, ptr %0, align 4096
   ret void
 }
 
@@ -7396,7 +7332,7 @@ define dso_local void @st_cst_align16_float_double(float %str) {
 ; CHECK-NEXT:    blr
 entry:
   %conv = fpext float %str to double
-  store double %conv, double* inttoptr (i64 4080 to double*), align 16
+  store double %conv, ptr inttoptr (i64 4080 to ptr), align 16
   ret void
 }
 
@@ -7409,7 +7345,7 @@ define dso_local void @st_cst_align32_float_double(float %str) {
 ; CHECK-NEXT:    blr
 entry:
   %conv = fpext float %str to double
-  store double %conv, double* inttoptr (i64 9999900 to double*), align 8
+  store double %conv, ptr inttoptr (i64 9999900 to ptr), align 8
   ret void
 }
 
@@ -7431,6 +7367,6 @@ define dso_local void @st_cst_align64_float_double(float %str) {
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %conv = fpext float %str to double
-  store double %conv, double* inttoptr (i64 1000000000000 to double*), align 4096
+  store double %conv, ptr inttoptr (i64 1000000000000 to ptr), align 4096
   ret void
 }

@@ -11,7 +11,6 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/ManagedStatic.h"
 
 #include <cstdint>
 #include <mutex>
@@ -67,9 +66,6 @@ LLVM_ATTRIBUTE_NOINLINE void __jit_debug_register_code() {
 using namespace llvm;
 using namespace llvm::orc;
 
-// Serialize rendezvous with the debugger as well as access to shared data.
-ManagedStatic<std::mutex> JITDebugLock;
-
 // Register debug object, return error message or null for success.
 static void registerJITLoaderGDBImpl(const char *ObjAddr, size_t Size) {
   LLVM_DEBUG({
@@ -85,7 +81,9 @@ static void registerJITLoaderGDBImpl(const char *ObjAddr, size_t Size) {
   E->symfile_size = Size;
   E->prev_entry = nullptr;
 
-  std::lock_guard<std::mutex> Lock(*JITDebugLock);
+  // Serialize rendezvous with the debugger as well as access to shared data.
+  static std::mutex JITDebugLock;
+  std::lock_guard<std::mutex> Lock(JITDebugLock);
 
   // Insert this entry at the head of the list.
   jit_code_entry *NextEntry = __jit_debug_descriptor.first_entry;

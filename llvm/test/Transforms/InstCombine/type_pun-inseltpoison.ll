@@ -53,17 +53,17 @@ define i32 @type_pun_misaligned(<16 x i8> %in) {
 }
 
 ; Type punning to an array of pointers.
-define i32* @type_pun_pointer(<16 x i8> %in) {
+define ptr @type_pun_pointer(<16 x i8> %in) {
 ; CHECK-LABEL: @type_pun_pointer(
 ; CHECK-NEXT:    [[SROA_BC:%.*]] = bitcast <16 x i8> [[IN:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[SROA_EXTRACT:%.*]] = extractelement <4 x i32> [[SROA_BC]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i32 [[SROA_EXTRACT]] to i32*
-; CHECK-NEXT:    ret i32* [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i32 [[SROA_EXTRACT]] to ptr
+; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   %sroa = shufflevector <16 x i8> %in, <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %1 = bitcast <4 x i8> %sroa to i32
-  %2 = inttoptr i32 %1 to i32*
-  ret i32* %2
+  %2 = inttoptr i32 %1 to ptr
+  ret ptr %2
 }
 
 ; Type punning to an array of 32-bit floating-point values.

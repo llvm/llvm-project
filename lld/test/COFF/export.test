@@ -6,7 +6,6 @@
 CHECK1:      Export Table:
 CHECK1:      DLL name: export.test.tmp.dll
 CHECK1:      Ordinal      RVA  Name
-CHECK1-NEXT:       0        0
 CHECK1-NEXT:       1   0x1008  exportfn1
 CHECK1-NEXT:       2   0x1010  exportfn2
 
@@ -16,7 +15,6 @@ CHECK1-NEXT:       2   0x1010  exportfn2
 CHECK2:      Export Table:
 CHECK2:      DLL name: export.test.tmp.dll
 CHECK2:      Ordinal      RVA  Name
-CHECK2-NEXT:       0        0
 CHECK2-NEXT:       1        0
 CHECK2-NEXT:       2        0
 CHECK2-NEXT:       3        0
@@ -31,7 +29,6 @@ CHECK2-NEXT:       7   0x1010  exportfn3
 CHECK3:      Export Table:
 CHECK3:      DLL name: export.test.tmp.dll
 CHECK3:      Ordinal      RVA  Name
-CHECK3-NEXT:       0        0
 CHECK3-NEXT:       1        0
 CHECK3-NEXT:       2        0
 CHECK3-NEXT:       3        0
@@ -46,7 +43,6 @@ CHECK3-NEXT:       6   0x1010  exportfn2
 CHECK4:      Export Table:
 CHECK4:      DLL name: export.test.tmp.dll
 CHECK4:      Ordinal      RVA  Name
-CHECK4-NEXT:       0        0
 CHECK4-NEXT:       1   0x1010  exportfn3
 CHECK4-NEXT:       2   0x1008  f1
 CHECK4-NEXT:       3   0x1010  f2
@@ -61,7 +57,6 @@ CHECK4-NM: 00000000 T f2
 CHECK5:      Export Table:
 CHECK5:      DLL name: export.test.tmp.dll
 CHECK5:      Ordinal      RVA  Name
-CHECK5-NEXT:       0        0
 CHECK5-NEXT:       1        0
 CHECK5-NEXT:       2   0x1010  fn2
 CHECK5-NEXT:       3   0x1008  exportfn1
@@ -92,9 +87,8 @@ SYMTAB: exportfn3 in export.test.tmp.DLL
 
 FORWARDER: Export Table:
 FORWARDER:  DLL name: export.test.tmp.dll
-FORWARDER:  Ordinal base: 0
+FORWARDER:  Ordinal base: 1
 FORWARDER:  Ordinal      RVA  Name
-FORWARDER:        0        0
 FORWARDER:        1   0x1010  exportfn
 FORWARDER:        2           foo (forwarded to kernel32.foobar)
 
@@ -103,6 +97,5 @@ FORWARDER:        2           foo (forwarded to kernel32.foobar)
 
 MERGE:      DLL name: export.test.tmp.dll
 MERGE:      Ordinal      RVA  Name
-MERGE-NEXT:       0        0
 MERGE-NEXT:       1   0x1008  exportfn1
 MERGE-NEXT:       2   0x1010  exportfn2

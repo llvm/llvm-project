@@ -52,11 +52,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_size_xy:
-; SI-NOHSA-DAG: s_load_dword [[X:s[0-9]+]], s[0:1], 0x6
-; SI-NOHSA-DAG: s_load_dword [[Y:s[0-9]+]], s[0:1], 0x7
-; VI-NOHSA-DAG: s_load_dword [[X:s[0-9]+]], s[0:1], 0x18
-; VI-NOHSA-DAG: s_load_dword [[Y:s[0-9]+]], s[0:1], 0x1c
-; GCN: s_mul_i32 [[VAL:s[0-9]+]], [[X]], [[Y]]
+; SI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9+]]]], s[0:1], 0x6
+; VI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9+]]]], s[0:1], 0x18
+; GCN: s_mul_i32 [[VAL:s[0-9]+]], s[[X]], s[[Y]]
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_xy(i32 addrspace(1)* %out) {
@@ -91,11 +89,9 @@ entry:
 ; HSA: enable_sgpr_private_segment_buffer = 1
 ; HSA: enable_sgpr_dispatch_ptr = 1
 
-; SI-NOHSA-DAG: s_load_dword [[Y:s[0-9]+]], s[0:1], 0x7
-; SI-NOHSA-DAG: s_load_dword [[Z:s[0-9]+]], s[0:1], 0x8
-; VI-NOHSA-DAG: s_load_dword [[Y:s[0-9]+]], s[0:1], 0x1c
-; VI-NOHSA-DAG: s_load_dword [[Z:s[0-9]+]], s[0:1], 0x20
-; GCN: s_mul_i32 [[VAL:s[0-9]+]], [[Y]], [[Z]]
+; SI-NOHSA-DAG: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s[0:1], 0x7
+; VI-NOHSA-DAG: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s[0:1], 0x1c
+; GCN: s_mul_i32 [[VAL:s[0-9]+]], s[[#LOAD + 0]], s[[#LOAD + 1]]
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_yz(i32 addrspace(1)* %out) {
@@ -111,14 +107,12 @@ entry:
 ; HSA: enable_sgpr_private_segment_buffer = 1
 ; HSA: enable_sgpr_dispatch_ptr = 1
 
-; SI-NOHSA-DAG: s_load_dword [[X:s[0-9]+]], s[0:1], 0x6
-; SI-NOHSA-DAG: s_load_dword [[Y:s[0-9]+]], s[0:1], 0x7
-; SI-NOHSA-DAG: s_load_dword [[Z:s[0-9]+]], s[0:1], 0x8
-; VI-NOHSA-DAG: s_load_dword [[X:s[0-9]+]], s[0:1], 0x18
-; VI-NOHSA-DAG: s_load_dword [[Y:s[0-9]+]], s[0:1], 0x1c
-; VI-NOHSA-DAG: s_load_dword [[Z:s[0-9]+]], s[0:1], 0x20
-; GCN: s_mul_i32 [[M:s[0-9]+]], [[X]], [[Y]]
-; GCN: s_add_i32 [[VAL:s[0-9]+]], [[M]], [[Z]]
+; SI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9]+]]], s[0:1], 0x6
+; SI-NOHSA-DAG: s_load_dword s[[Z:[0-9]+]], s[0:1], 0x8
+; VI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9]+]]], s[0:1], 0x18
+; VI-NOHSA-DAG: s_load_dword s[[Z:[0-9]+]], s[0:1], 0x20
+; GCN: s_mul_i32 [[M:s[0-9]+]], s[[X]], s[[Y]]
+; GCN: s_add_i32 [[VAL:s[0-9]+]], [[M]], s[[Z]]
 ; GCN-DAG: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_xyz(i32 addrspace(1)* %out) {

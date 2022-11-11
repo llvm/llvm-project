@@ -1,4 +1,4 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/nodebug.prof
+; RUN: opt %s -passes=sample-profile -sample-profile-file=%S/Inputs/nodebug.prof
 
 define void @foo() !dbg !3 {
   call void @bar(), !dbg !4

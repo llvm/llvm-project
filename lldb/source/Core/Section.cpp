@@ -184,7 +184,7 @@ Section::Section(const lldb::SectionSP &parent_section_sp,
     m_parent_wp = parent_section_sp;
 }
 
-Section::~Section() {}
+Section::~Section() = default;
 
 addr_t Section::GetFileAddress() const {
   SectionSP parent_sp(GetParent());

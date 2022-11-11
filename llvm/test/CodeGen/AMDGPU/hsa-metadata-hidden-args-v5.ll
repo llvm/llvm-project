@@ -63,28 +63,22 @@
 ; CHECK-NEXT:      - .offset:         88
 ; CHECK-NEXT:        .size:           2
 ; CHECK-NEXT:        .value_kind:     hidden_grid_dims
-; CHECK-NEXT:      - .address_space:  global
-; CHECK-NEXT:        .offset:         96
+; CHECK-NEXT:      - .offset:         96
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_printf_buffer
-; CHECK-NEXT:      - .address_space:  global
-; CHECK-NEXT:        .offset:         104
+; CHECK-NEXT:      - .offset:         104
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_hostcall_buffer
-; CHECK-NEXT:      - .address_space:  global
-; CHECK-NEXT:        .offset:         112
+; CHECK-NEXT:      - .offset:         112
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_multigrid_sync_arg
-; CHECK-NEXT:	    - .address_space:  global
-; CHECK-NEXT:        .offset:         120
+; CHECK-NEXT:      - .offset:         120
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_heap_v1
-; CHECK-NEXT:      - .address_space:  global
-; CHECK-NEXT:        .offset:         128
+; CHECK-NEXT:      - .offset:         128
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_default_queue
-; CHECK-NEXT:      - .address_space:  global
-; CHECK-NEXT:        .offset:         136
+; CHECK-NEXT:      - .offset:         136
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_completion_action
 ; GFX8-NEXT:      - .offset:         216
@@ -93,8 +87,7 @@
 ; GFX8-NEXT:      - .offset:         220
 ; GFX8-NEXT:        .size:           4
 ; GFX8-NEXT:        .value_kind:     hidden_shared_base
-; CHECK:      - .address_space:  global
-; CHECK-NEXT:        .offset:         224
+; CHECK:      - .offset:         224
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_queue_ptr
 

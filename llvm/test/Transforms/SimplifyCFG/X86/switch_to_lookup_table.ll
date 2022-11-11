@@ -1333,8 +1333,8 @@ define i32 @reuse_cmp1(i32 %x) {
 ; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[X]], 10
 ; CHECK-NEXT:    [[R_0:%.*]] = select i1 [[TMP0]], i32 [[SWITCH_OFFSET]], i32 0
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[R_0]], 0
-; CHECK-NEXT:    [[DOTR_0:%.*]] = select i1 [[INVERTED_CMP]], i32 100, i32 [[R_0]]
-; CHECK-NEXT:    ret i32 [[DOTR_0]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[INVERTED_CMP]], i32 100, i32 [[R_0]]
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -1401,8 +1401,8 @@ define i32 @no_reuse_cmp(i32 %x) {
 ; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[X]], 10
 ; CHECK-NEXT:    [[R_0:%.*]] = select i1 [[TMP0]], i32 [[SWITCH_OFFSET]], i32 12
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[R_0]], 0
-; CHECK-NEXT:    [[R_0_:%.*]] = select i1 [[CMP]], i32 [[R_0]], i32 100
-; CHECK-NEXT:    ret i32 [[R_0_]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i32 [[R_0]], i32 100
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -1661,3 +1661,149 @@ cleanup2:
 }
 
 declare i32 @__CxxFrameHandler3(...)
+
+define i1 @use_x_as_index(i32 %x) {
+; CHECK-LABEL: @use_x_as_index(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[X]] to i9
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul i9 [[SWITCH_CAST]], 1
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i9 -234, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i9 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
+; CHECK-NEXT:    ret i1 [[STOREMERGE]]
+;
+entry:
+  switch i32 %x, label %sw.default [
+  i32 1, label %sw.bb
+  i32 2, label %sw.bb
+  i32 4, label %sw.bb
+  i32 8, label %sw.bb
+  ]
+
+sw.bb:
+  br label %return
+
+sw.default:
+  br label %return
+
+return:
+  %storemerge = phi i1 [ true, %sw.bb ], [ false, %sw.default ]
+  ret i1 %storemerge
+}
+
+define i32 @signed_overflow1(i8 %n) {
+; CHECK-LABEL: @signed_overflow1(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i2
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TRUNC]], -2
+; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i3
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.signed_overflow1, i32 0, i3 [[SWITCH_TABLEIDX_ZEXT]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+;
+start:
+  %trunc = trunc i8 %n to i2
+  switch i2 %trunc, label %bb1 [
+  i2 0, label %bb6
+  i2 1, label %bb3
+  i2 -2, label %bb4
+  i2 -1, label %bb5
+  ]
+
+bb1:                                              ; preds = %start
+  unreachable
+
+bb3:                                              ; preds = %start
+  br label %bb6
+
+bb4:                                              ; preds = %start
+  br label %bb6
+
+bb5:                                              ; preds = %start
+  br label %bb6
+
+bb6:                                              ; preds = %start, %bb3, %bb4, %bb5
+  %.sroa.0.0 = phi i32 [ 4444, %bb5 ], [ 3333, %bb4 ], [ 2222, %bb3 ], [ 1111, %start ]
+  ret i32 %.sroa.0.0
+}
+
+define i32 @signed_overflow2(i8 %n) {
+; CHECK-LABEL: @signed_overflow2(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i2
+; CHECK-NEXT:    switch i2 [[TRUNC]], label [[BB1:%.*]] [
+; CHECK-NEXT:    i2 1, label [[BB6:%.*]]
+; CHECK-NEXT:    i2 -2, label [[BB4:%.*]]
+; CHECK-NEXT:    i2 -1, label [[BB5:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB6]]
+; CHECK:       bb5:
+; CHECK-NEXT:    br label [[BB6]]
+; CHECK:       bb6:
+; CHECK-NEXT:    [[DOTSROA_0_0:%.*]] = phi i32 [ 4444, [[BB5]] ], [ 3333, [[BB4]] ], [ 2222, [[START:%.*]] ]
+; CHECK-NEXT:    ret i32 [[DOTSROA_0_0]]
+;
+start:
+  %trunc = trunc i8 %n to i2
+  switch i2 %trunc, label %bb1 [
+  i2 1, label %bb3
+  i2 -2, label %bb4
+  i2 -1, label %bb5
+  ]
+
+bb1:                                              ; preds = %start
+  unreachable
+
+bb3:                                              ; preds = %start
+  br label %bb6
+
+bb4:                                              ; preds = %start
+  br label %bb6
+
+bb5:                                              ; preds = %start
+  br label %bb6
+
+bb6:                                              ; preds = %start, %bb3, %bb4, %bb5
+  %.sroa.0.0 = phi i32 [ 4444, %bb5 ], [ 3333, %bb4 ], [ 2222, %bb3 ]
+  ret i32 %.sroa.0.0
+}
+
+define i32 @signed_overflow_negative(i8 %n) {
+; CHECK-LABEL: @signed_overflow_negative(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i2
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TRUNC]], -2
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i32
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul i32 [[SWITCH_IDX_CAST]], 1111
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[SWITCH_IDX_MULT]], 1111
+; CHECK-NEXT:    ret i32 [[SWITCH_OFFSET]]
+;
+start:
+  %trunc = trunc i8 %n to i2
+  switch i2 %trunc, label %bb1 [
+  i2 0, label %bb6
+  i2 1, label %bb3
+  i2 -2, label %bb4
+  i2 -1, label %bb5
+  ]
+
+bb1:                                              ; preds = %start
+  unreachable
+
+bb3:                                              ; preds = %start
+  br label %bb6
+
+bb4:                                              ; preds = %start
+  br label %bb6
+
+bb5:                                              ; preds = %start
+  br label %bb6
+
+bb6:                                              ; preds = %start, %bb3, %bb4, %bb5
+  %.sroa.0.0 = phi i32 [ 2222, %bb5 ], [ 1111, %bb4 ], [ 4444, %bb3 ], [ 3333, %start ]
+  ret i32 %.sroa.0.0
+}

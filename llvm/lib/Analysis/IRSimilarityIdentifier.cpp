@@ -64,7 +64,7 @@ void IRInstructionData::initializeInstruction() {
   // Here we collect the operands and their types for determining whether
   // the structure of the operand use matches between two different candidates.
   for (Use &OI : Inst->operands()) {
-    if (isa<CmpInst>(Inst) && RevisedPredicate.hasValue()) {
+    if (isa<CmpInst>(Inst) && RevisedPredicate) {
       // If we have a CmpInst where the predicate is reversed, it means the
       // operands must be reversed as well.
       OperVals.insert(OperVals.begin(), OI.get());
@@ -183,9 +183,9 @@ CmpInst::Predicate IRInstructionData::getPredicate() const {
   assert(isa<CmpInst>(Inst) &&
          "Can only get a predicate from a compare instruction");
 
-  if (RevisedPredicate.hasValue())
-    return RevisedPredicate.getValue();
-  
+  if (RevisedPredicate)
+    return RevisedPredicate.value();
+
   return cast<CmpInst>(Inst)->getPredicate();
 }
 
@@ -193,7 +193,7 @@ StringRef IRInstructionData::getCalleeName() const {
   assert(isa<CallInst>(Inst) &&
          "Can only get a name from a call instruction");
 
-  assert(CalleeName.hasValue() && "CalleeName has not been set");
+  assert(CalleeName && "CalleeName has not been set");
 
   return *CalleeName;
 }
@@ -1205,7 +1205,7 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(
   populateMapper(Modules, InstrList, IntegerMapping);
   findCandidates(InstrList, IntegerMapping);
 
-  return SimilarityCandidates.getValue();
+  return *SimilarityCandidates;
 }
 
 SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(Module &M) {
@@ -1222,7 +1222,7 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(Module &M) {
   populateMapper(M, InstrList, IntegerMapping);
   findCandidates(InstrList, IntegerMapping);
 
-  return SimilarityCandidates.getValue();
+  return *SimilarityCandidates;
 }
 
 INITIALIZE_PASS(IRSimilarityIdentifierWrapperPass, "ir-similarity-identifier",

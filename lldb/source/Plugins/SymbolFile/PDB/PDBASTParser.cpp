@@ -686,7 +686,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       if (TypeSystemClang::StartTagDeclarationDefinition(element_ast_type)) {
         TypeSystemClang::CompleteTagDeclarationDefinition(element_ast_type);
       } else {
-        // We are not able to start defintion.
+        // We are not able to start definition.
         return nullptr;
       }
     }
@@ -711,7 +711,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       bytes = size;
     Encoding encoding = TranslateBuiltinEncoding(builtin_kind);
     CompilerType builtin_ast_type = GetBuiltinTypeForPDBEncodingAndBitSize(
-        m_ast, *builtin_type, encoding, bytes.getValueOr(0) * 8);
+        m_ast, *builtin_type, encoding, bytes.value_or(0) * 8);
 
     if (builtin_type->isConstType())
       builtin_ast_type = builtin_ast_type.AddConstModifier();

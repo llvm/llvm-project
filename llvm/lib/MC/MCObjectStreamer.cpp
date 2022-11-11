@@ -796,7 +796,7 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
                                      const MCExpr *Expr, SMLoc Loc,
                                      const MCSubtargetInfo &STI) {
   Optional<MCFixupKind> MaybeKind = Assembler->getBackend().getFixupKind(Name);
-  if (!MaybeKind.hasValue())
+  if (!MaybeKind)
     return std::make_pair(true, std::string("unknown relocation name"));
 
   MCFixupKind Kind = *MaybeKind;
@@ -912,7 +912,6 @@ void MCObjectStreamer::emitAddrsig() {
 }
 
 void MCObjectStreamer::emitAddrsigSym(const MCSymbol *Sym) {
-  getAssembler().registerSymbol(*Sym);
   getAssembler().getWriter().addAddrsigSymbol(Sym);
 }
 

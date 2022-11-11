@@ -24,10 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-class __mem_fn
-#if _LIBCPP_STD_VER <= 17 || !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public __weak_result_type<_Tp>
-#endif
+class __mem_fn : public __weak_result_type<_Tp>
 {
 public:
     // types
@@ -36,12 +33,13 @@ private:
     type __f_;
 
 public:
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     __mem_fn(type __f) _NOEXCEPT : __f_(__f) {}
 
     // invoke
     template <class... _ArgTypes>
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+
     typename __invoke_return<type, _ArgTypes...>::type
     operator() (_ArgTypes&&... __args) const {
         return std::__invoke(__f_, std::forward<_ArgTypes>(__args)...);
@@ -49,7 +47,7 @@ public:
 };
 
 template<class _Rp, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 __mem_fn<_Rp _Tp::*>
 mem_fn(_Rp _Tp::* __pm) _NOEXCEPT
 {

@@ -16,6 +16,7 @@
 #include <utility>
 
 namespace mlir {
+class Operation;
 
 /// This class acts as an owning reference to an op, and will automatically
 /// destroy the held op on destruction if the held op is valid.
@@ -29,7 +30,7 @@ public:
   /// The underlying operation type stored in this reference.
   using OperationT = OpTy;
 
-  OwningOpRef(std::nullptr_t = nullptr) {}
+  OwningOpRef(std::nullptr_t = nullptr) : op(nullptr) {}
   OwningOpRef(OpTy op) : op(op) {}
   OwningOpRef(OwningOpRef &&other) : op(other.release()) {}
   ~OwningOpRef() {
@@ -51,9 +52,12 @@ public:
   OpTy *operator->() { return &op; }
   explicit operator bool() const { return op; }
 
+  /// Downcast to generic operation.
+  operator OwningOpRef<Operation *>() && { return release().getOperation(); }
+
   /// Release the referenced op.
   OpTy release() {
-    OpTy released;
+    OpTy released(nullptr);
     std::swap(released, op);
     return released;
   }

@@ -14,13 +14,13 @@ entry:
   ret <4 x i32> %0
 }
 
-define <4 x i32> @test_sha1rnds4rm(<4 x i32> %a, <4 x i32>* %b) nounwind uwtable {
+define <4 x i32> @test_sha1rnds4rm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ; CHECK-LABEL: test_sha1rnds4rm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sha1rnds4 $3, (%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %b
+  %0 = load <4 x i32>, ptr %b
   %1 = tail call <4 x i32> @llvm.x86.sha1rnds4(<4 x i32> %a, <4 x i32> %0, i8 3)
   ret <4 x i32> %1
 }
@@ -37,13 +37,13 @@ entry:
   ret <4 x i32> %0
 }
 
-define <4 x i32> @test_sha1nexterm(<4 x i32> %a, <4 x i32>* %b) nounwind uwtable {
+define <4 x i32> @test_sha1nexterm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ; CHECK-LABEL: test_sha1nexterm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sha1nexte (%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %b
+  %0 = load <4 x i32>, ptr %b
   %1 = tail call <4 x i32> @llvm.x86.sha1nexte(<4 x i32> %a, <4 x i32> %0)
   ret <4 x i32> %1
 }
@@ -60,13 +60,13 @@ entry:
   ret <4 x i32> %0
 }
 
-define <4 x i32> @test_sha1msg1rm(<4 x i32> %a, <4 x i32>* %b) nounwind uwtable {
+define <4 x i32> @test_sha1msg1rm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ; CHECK-LABEL: test_sha1msg1rm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sha1msg1 (%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %b
+  %0 = load <4 x i32>, ptr %b
   %1 = tail call <4 x i32> @llvm.x86.sha1msg1(<4 x i32> %a, <4 x i32> %0)
   ret <4 x i32> %1
 }
@@ -83,13 +83,13 @@ entry:
   ret <4 x i32> %0
 }
 
-define <4 x i32> @test_sha1msg2rm(<4 x i32> %a, <4 x i32>* %b) nounwind uwtable {
+define <4 x i32> @test_sha1msg2rm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ; CHECK-LABEL: test_sha1msg2rm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sha1msg2 (%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %b
+  %0 = load <4 x i32>, ptr %b
   %1 = tail call <4 x i32> @llvm.x86.sha1msg2(<4 x i32> %a, <4 x i32> %0)
   ret <4 x i32> %1
 }
@@ -117,7 +117,7 @@ entry:
   ret <4 x i32> %0
 }
 
-define <4 x i32> @test_sha256rnds2rm(<4 x i32> %a, <4 x i32>* %b, <4 x i32> %c) nounwind uwtable {
+define <4 x i32> @test_sha256rnds2rm(<4 x i32> %a, ptr %b, <4 x i32> %c) nounwind uwtable {
 ; SSE-LABEL: test_sha256rnds2rm:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movaps %xmm0, %xmm2
@@ -134,7 +134,7 @@ define <4 x i32> @test_sha256rnds2rm(<4 x i32> %a, <4 x i32>* %b, <4 x i32> %c) 
 ; AVX-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %b
+  %0 = load <4 x i32>, ptr %b
   %1 = tail call <4 x i32> @llvm.x86.sha256rnds2(<4 x i32> %a, <4 x i32> %0, <4 x i32> %c)
   ret <4 x i32> %1
 }
@@ -151,13 +151,13 @@ entry:
   ret <4 x i32> %0
 }
 
-define <4 x i32> @test_sha256msg1rm(<4 x i32> %a, <4 x i32>* %b) nounwind uwtable {
+define <4 x i32> @test_sha256msg1rm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ; CHECK-LABEL: test_sha256msg1rm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sha256msg1 (%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %b
+  %0 = load <4 x i32>, ptr %b
   %1 = tail call <4 x i32> @llvm.x86.sha256msg1(<4 x i32> %a, <4 x i32> %0)
   ret <4 x i32> %1
 }
@@ -174,19 +174,19 @@ entry:
   ret <4 x i32> %0
 }
 
-define <4 x i32> @test_sha256msg2rm(<4 x i32> %a, <4 x i32>* %b) nounwind uwtable {
+define <4 x i32> @test_sha256msg2rm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ; CHECK-LABEL: test_sha256msg2rm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sha256msg2 (%rdi), %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %b
+  %0 = load <4 x i32>, ptr %b
   %1 = tail call <4 x i32> @llvm.x86.sha256msg2(<4 x i32> %a, <4 x i32> %0)
   ret <4 x i32> %1
 }
 
 ; Make sure we don't forget that sha instructions have no VEX equivalents and thus don't zero YMM/ZMM.
-define <8 x i32> @test_sha1rnds4_zero_extend(<4 x i32> %a, <4 x i32>* %b) nounwind uwtable {
+define <8 x i32> @test_sha1rnds4_zero_extend(<4 x i32> %a, ptr %b) nounwind uwtable {
 ; SSE-LABEL: test_sha1rnds4_zero_extend:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    sha1rnds4 $3, (%rdi), %xmm0
@@ -199,7 +199,7 @@ define <8 x i32> @test_sha1rnds4_zero_extend(<4 x i32> %a, <4 x i32>* %b) nounwi
 ; AVX-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %b
+  %0 = load <4 x i32>, ptr %b
   %1 = tail call <4 x i32> @llvm.x86.sha1rnds4(<4 x i32> %a, <4 x i32> %0, i8 3)
   %2 = shufflevector <4 x i32> %1, <4 x i32> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %2

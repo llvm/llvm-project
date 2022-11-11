@@ -48,40 +48,48 @@
 // CK2-LABEL: implicit_maps_reference{{.*}}(
 void implicit_maps_reference (int a, int *b){
   int &i = a;
-  // CK2-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** null, i8** null)
-  // CK2-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK2-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK2-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK2-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK2-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i[[sz:64|32]]*
-  // CK2-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i[[sz]]*
-  // CK2-DAG: store i[[sz]] [[VAL:%[^,]+]], i[[sz]]* [[CBP1]]
-  // CK2-DAG: store i[[sz]] [[VAL]], i[[sz]]* [[CP1]]
-  // CK2-DAG: [[VAL]] = load i[[sz]], i[[sz]]* [[ADDR:%.+]],
-  // CK2-64-DAG: [[CADDR:%.+]] = bitcast i[[sz]]* [[ADDR]] to i32*
-  // CK2-64-DAG: store i32 {{.+}}, i32* [[CADDR]],
+// CK2-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK2-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK2-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK2-DAG: [[PGEP:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK2-DAG: store i8** [[PGEP:%.+]], i8*** [[BPARG]]
+// CK2-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK2-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK2-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK2-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK2-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i[[sz:64|32]]*
+// CK2-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i[[sz]]*
+// CK2-DAG: store i[[sz]] [[VAL:%[^,]+]], i[[sz]]* [[CBP1]]
+// CK2-DAG: store i[[sz]] [[VAL]], i[[sz]]* [[CP1]]
+// CK2-DAG: [[VAL]] = load i[[sz]], i[[sz]]* [[ADDR:%.+]],
+// CK2-64-DAG: [[CADDR:%.+]] = bitcast i[[sz]]* [[ADDR]] to i32*
+// CK2-64-DAG: store i32 {{.+}}, i32* [[CADDR]],
 
-  // CK2: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
-  #pragma omp target
+// CK2: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
+#pragma omp target
   {
    ++i;
   }
 
   int *&p = b;
-  // CK2-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES2]]{{.+}}, {{.+}}[[TYPES2]]{{.+}}, i8** null, i8** null)
-  // CK2-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK2-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK2-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK2-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK2-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
-  // CK2-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
-  // CK2-DAG: store i32* [[VAL:%[^,]+]], i32** [[CBP1]]
-  // CK2-DAG: store i32* [[VAL]], i32** [[CP1]]
-  // CK2-DAG: [[VAL]] = load i32*, i32** [[ADDR:%.+]],
-  // CK2-DAG: [[ADDR]] = load i32**, i32*** [[ADDR2:%.+]],
+// CK2-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK2-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK2-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK2-DAG: [[PGEP:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK2-DAG: store i8** [[PGEP:%.+]], i8*** [[BPARG]]
+// CK2-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK2-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK2-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK2-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK2-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
+// CK2-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
+// CK2-DAG: store i32* [[VAL:%[^,]+]], i32** [[CBP1]]
+// CK2-DAG: store i32* [[VAL]], i32** [[CP1]]
+// CK2-DAG: [[VAL]] = load i32*, i32** [[ADDR:%.+]],
+// CK2-DAG: [[ADDR]] = load i32**, i32*** [[ADDR2:%.+]],
 
-  // CK2: call void [[KERNEL2:@.+]](i32* [[VAL]])
-  #pragma omp target
+// CK2: call void [[KERNEL2:@.+]](i32* [[VAL]])
+#pragma omp target
   {
    ++p;
   }

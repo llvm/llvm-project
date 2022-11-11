@@ -15,13 +15,13 @@
 ; bit of any CR field is spilled. We need to test the spilling of a CR bit
 ; other than the LT bit. Hence this test case is rather complex.
 
-%0 = type { i32, %1*, %0*, [1 x i8], i8*, i8*, i8*, i8*, i64, i32, [20 x i8] }
-%1 = type { %1*, %0*, i32 }
-%2 = type { [200 x i8], [200 x i8], %3*, %3*, %4*, %4*, %4*, %4*, %4*, i64 }
-%3 = type { i64, i32, %3*, %3*, %3*, %3*, %4*, %4*, %4*, %4*, i64, i32, i32 }
-%4 = type { i32, i64, %3*, %3*, i16, %4*, %4*, i64, i64 }
+%0 = type { i32, ptr, ptr, [1 x i8], ptr, ptr, ptr, ptr, i64, i32, [20 x i8] }
+%1 = type { ptr, ptr, i32 }
+%2 = type { [200 x i8], [200 x i8], ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64 }
+%3 = type { i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64, i32, i32 }
+%4 = type { i32, i64, ptr, ptr, i16, ptr, ptr, i64, i64 }
 
-define dso_local double @P10_Spill_CR_EQ(%2* %arg) local_unnamed_addr #0 {
+define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-LABEL: P10_Spill_CR_EQ:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mfcr r12
@@ -187,10 +187,10 @@ define dso_local double @P10_Spill_CR_EQ(%2* %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    xsadddp f1, f0, f1
 ; CHECK-NEXT:    blr
 bb:
-  %tmp = getelementptr inbounds %4, %4* null, i64 undef, i32 7
-  %tmp1 = load i64, i64* undef, align 8
-  %tmp2 = load i64, i64* null, align 8
-  %tmp3 = load i64, i64* %tmp, align 8
+  %tmp = getelementptr inbounds %4, ptr null, i64 undef, i32 7
+  %tmp1 = load i64, ptr undef, align 8
+  %tmp2 = load i64, ptr null, align 8
+  %tmp3 = load i64, ptr %tmp, align 8
   %tmp4 = icmp eq i64 %tmp1, 0
   %tmp5 = icmp eq i64 %tmp2, 0
   %tmp6 = icmp eq i64 %tmp3, 0
@@ -200,7 +200,7 @@ bb:
   br i1 %tmp4, label %bb12, label %bb10
 
 bb10:                                             ; preds = %bb
-  %tmp11 = load i32, i32* undef, align 8
+  %tmp11 = load i32, ptr undef, align 8
   br label %bb12
 
 bb12:                                             ; preds = %bb10, %bb
@@ -208,7 +208,7 @@ bb12:                                             ; preds = %bb10, %bb
   br i1 %tmp5, label %bb16, label %bb14
 
 bb14:                                             ; preds = %bb12
-  %tmp15 = load i32, i32* undef, align 8
+  %tmp15 = load i32, ptr undef, align 8
   br label %bb16
 
 bb16:                                             ; preds = %bb14, %bb12
@@ -216,7 +216,7 @@ bb16:                                             ; preds = %bb14, %bb12
   br i1 %tmp6, label %bb20, label %bb18
 
 bb18:                                             ; preds = %bb16
-  %tmp19 = load i32, i32* undef, align 8
+  %tmp19 = load i32, ptr undef, align 8
   br label %bb20
 
 bb20:                                             ; preds = %bb18, %bb16
@@ -236,7 +236,7 @@ bb20:                                             ; preds = %bb18, %bb16
   br i1 %tmp31, label %bb34, label %bb36
 
 bb34:                                             ; preds = %bb20
-  %tmp35 = load i64, i64* undef, align 8
+  %tmp35 = load i64, ptr undef, align 8
   br label %bb36
 
 bb36:                                             ; preds = %bb34, %bb20
@@ -244,7 +244,7 @@ bb36:                                             ; preds = %bb34, %bb20
   br i1 %tmp33, label %bb38, label %bb40
 
 bb38:                                             ; preds = %bb36
-  %tmp39 = load i64, i64* undef, align 8
+  %tmp39 = load i64, ptr undef, align 8
   br label %bb40
 
 bb40:                                             ; preds = %bb38, %bb36
@@ -258,15 +258,15 @@ bb40:                                             ; preds = %bb38, %bb36
   br i1 %tmp47, label %bb48, label %bb50
 
 bb48:                                             ; preds = %bb40
-  %tmp49 = load %3*, %3** undef, align 8
+  %tmp49 = load ptr, ptr undef, align 8
   br label %bb50
 
 bb50:                                             ; preds = %bb48, %bb40
-  %tmp51 = phi %3* [ undef, %bb40 ], [ %tmp49, %bb48 ]
+  %tmp51 = phi ptr [ undef, %bb40 ], [ %tmp49, %bb48 ]
   br i1 %tmp45, label %bb52, label %bb54
 
 bb52:                                             ; preds = %bb50
-  %tmp53 = load i32, i32* undef, align 8
+  %tmp53 = load i32, ptr undef, align 8
   br label %bb54
 
 bb54:                                             ; preds = %bb52, %bb50
@@ -274,13 +274,13 @@ bb54:                                             ; preds = %bb52, %bb50
   br i1 %tmp46, label %bb56, label %bb58
 
 bb56:                                             ; preds = %bb54
-  %tmp57 = load i32, i32* undef, align 8
+  %tmp57 = load i32, ptr undef, align 8
   br label %bb58
 
 bb58:                                             ; preds = %bb56, %bb54
   %tmp59 = phi i32 [ undef, %bb54 ], [ %tmp57, %bb56 ]
-  %tmp60 = getelementptr inbounds %3, %3* %tmp51, i64 0, i32 12
-  %tmp61 = load i32, i32* %tmp60, align 8
+  %tmp60 = getelementptr inbounds %3, ptr %tmp51, i64 0, i32 12
+  %tmp61 = load i32, ptr %tmp60, align 8
   %tmp62 = icmp slt i32 %tmp55, 1
   %tmp63 = icmp slt i32 %tmp59, 1
   %tmp64 = icmp slt i32 %tmp61, 1
@@ -290,12 +290,12 @@ bb58:                                             ; preds = %bb56, %bb54
   br i1 %tmp65, label %bb68, label %bb70
 
 bb68:                                             ; preds = %bb58
-  %tmp69 = load i64, i64* undef, align 8
+  %tmp69 = load i64, ptr undef, align 8
   br label %bb70
 
 bb70:                                             ; preds = %bb68, %bb58
   %tmp71 = phi i64 [ undef, %bb58 ], [ %tmp69, %bb68 ]
-  %tmp72 = load i64, i64* undef, align 8
+  %tmp72 = load i64, ptr undef, align 8
   %tmp73 = xor i1 %tmp25, true
   %tmp74 = xor i1 %tmp26, true
   %tmp75 = xor i1 %tmp27, true

@@ -160,7 +160,5 @@
 // ARCH64-SAME: "-triple" "x86_64-
 // ARCH32-SAME: "-triple" "i386-
 // CHECK-SAME: "-fcuda-include-gpubinary" "[[FATBINARY]]"
-// RDC-SAME: "-fgpu-rdc"
-// CHECK-NOT: "-fgpu-rdc"
 
 // CHK-PTXAS-VERBOSE: ptxas{{.*}}" "-v"

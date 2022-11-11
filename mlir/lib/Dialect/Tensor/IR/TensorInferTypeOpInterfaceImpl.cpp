@@ -8,8 +8,8 @@
 
 #include "mlir/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 
 using namespace mlir;
@@ -134,16 +134,6 @@ getReshapeOutputShapeFromInputShape(OpBuilder &builder, Location loc, Value src,
                    builder, loc, src, dstStaticShape, reassocation);
 }
 
-/// Helper function to convert a vector of `OpFoldResult`s into a vector of
-/// `Value`s.
-static SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
-                                      ArrayRef<OpFoldResult> valueOrAttrVec) {
-  return llvm::to_vector<4>(
-      llvm::map_range(valueOrAttrVec, [&](OpFoldResult value) -> Value {
-        return getValueOrCreateConstantIndexOp(b, loc, value);
-      }));
-}
-
 template <typename OpTy>
 struct ReifyExpandOrCollapseShapeOp
     : public ReifyRankedShapedTypeOpInterface::ExternalModel<
@@ -154,7 +144,7 @@ struct ReifyExpandOrCollapseShapeOp
     auto loc = op->getLoc();
     auto reshapeOp = cast<OpTy>(op);
     auto resultShape = getReshapeOutputShapeFromInputShape(
-        b, loc, reshapeOp.src(), reshapeOp.getResultType().getShape(),
+        b, loc, reshapeOp.getSrc(), reshapeOp.getResultType().getShape(),
         reshapeOp.getReassociationMaps());
     reifiedReturnShapes.push_back(getAsValues(b, loc, resultShape));
     return success();
@@ -178,7 +168,7 @@ struct ReifyPadOp
       // Shape along each dimension is source dim + low pad + high pad.
       SmallVector<Value> mapOperands;
       mapOperands.push_back(
-          b.createOrFold<tensor::DimOp>(loc, padOp.source(), dim));
+          b.createOrFold<tensor::DimOp>(loc, padOp.getSource(), dim));
       AffineExpr expr = b.getAffineDimExpr(0);
       unsigned numSymbols = 0;
       auto addOpFoldResult = [&](OpFoldResult valueOrAttr) {

@@ -141,6 +141,15 @@ class CCAssignToStackWithShadow<int size,
   list<Register> ShadowRegList = shadowList;
 }
 
+/// CCAssignToRegAndStack - Same as CCAssignToReg, but also allocates a stack
+/// slot, when some register is used. Basically, it works like:
+/// CCIf<CCAssignToReg<regList>, CCAssignToStack<size, align>>.
+class CCAssignToRegAndStack<list<Register> regList, int size, int align>
+    : CCAssignToReg<regList> {
+  int Size = size;
+  int Align = align;
+}
+
 /// CCPassByVal - This action always matches: it assigns the value to a stack
 /// slot to implement ByVal aggregate parameter passing. Size and alignment
 /// specify the minimum size and alignment for the stack slot.

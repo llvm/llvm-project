@@ -8,11 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// GCC's implementation of class template deduction is still immature and runs
-// into issues with libc++. However GCC accepts this code when compiling
-// against libstdc++.
-// XFAIL: gcc-11
-
 // <tuple>
 
 // Test that the constructors offered by std::tuple are formulated

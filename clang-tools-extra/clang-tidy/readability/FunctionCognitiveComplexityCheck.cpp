@@ -43,7 +43,7 @@ struct CognitiveComplexity final {
   // For details you can look at the Specification at
   // https://www.sonarsource.com/docs/CognitiveComplexity.pdf
   // or user-facing docs at
-  // http://clang.llvm.org/extra/clang-tidy/checks/readability-function-cognitive-complexity.html
+  // http://clang.llvm.org/extra/clang-tidy/checks/readability/function-cognitive-complexity.html
   // Here are all the possible reasons:
   enum Criteria : uint8_t {
     None = 0U,
@@ -170,18 +170,14 @@ static const std::array<const StringRef, 4> Msgs = {{
 CognitiveComplexity::Criteria operator|(CognitiveComplexity::Criteria LHS,
                                         CognitiveComplexity::Criteria RHS) {
   return static_cast<CognitiveComplexity::Criteria>(
-      static_cast<std::underlying_type<CognitiveComplexity::Criteria>::type>(
-          LHS) |
-      static_cast<std::underlying_type<CognitiveComplexity::Criteria>::type>(
-          RHS));
+      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(LHS) |
+      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(RHS));
 }
 CognitiveComplexity::Criteria operator&(CognitiveComplexity::Criteria LHS,
                                         CognitiveComplexity::Criteria RHS) {
   return static_cast<CognitiveComplexity::Criteria>(
-      static_cast<std::underlying_type<CognitiveComplexity::Criteria>::type>(
-          LHS) &
-      static_cast<std::underlying_type<CognitiveComplexity::Criteria>::type>(
-          RHS));
+      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(LHS) &
+      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(RHS));
 }
 CognitiveComplexity::Criteria &operator|=(CognitiveComplexity::Criteria &LHS,
                                           CognitiveComplexity::Criteria RHS) {

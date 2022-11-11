@@ -3,7 +3,6 @@ Test lldb-vscode setBreakpoints request
 """
 
 
-import unittest2
 import vscode
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,8 +12,6 @@ import os
 
 
 class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     name_key_path = ['name']
     source_key_path = ['source', 'path']
     line_key_path = ['line']

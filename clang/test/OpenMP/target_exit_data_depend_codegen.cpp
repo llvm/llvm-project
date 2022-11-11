@@ -284,6 +284,7 @@ void foo(int arg) {
   {++arg;}
 
   // Region 04
+  // CK1: [[DIV:%.+]] = sdiv exact i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
   // CK1: [[BP0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP:%.+]], i32 0, i32 0
   // CK1: [[BP0_BC:%.+]] = bitcast i8** [[BP0]] to %struct.ST**
   // CK1: store %struct.ST* @gb, %struct.ST** [[BP0_BC]],
@@ -291,7 +292,7 @@ void foo(int arg) {
   // CK1: [[P0_BC:%.+]] = bitcast i8** [[P0]] to double***
   // CK1: store double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), double*** [[P0_BC]],
   // CK1: [[PS0:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[PS:%.+]], i32 0, i32 0
-  // CK1: store i64 sdiv exact (i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)), i64* [[PS0]],
+  // CK1: store i64 [[DIV]], i64* [[PS0]],
   // CK1: [[BP1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP]], i32 0, i32 1
   // CK1: [[BP1_BC:%.+]] = bitcast i8** [[BP1]] to double***
   // CK1: store double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), double*** [[BP1_BC]],

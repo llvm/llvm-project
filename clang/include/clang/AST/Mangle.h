@@ -61,6 +61,7 @@ private:
   llvm::DenseMap<const BlockDecl*, unsigned> GlobalBlockIds;
   llvm::DenseMap<const BlockDecl*, unsigned> LocalBlockIds;
   llvm::DenseMap<const NamedDecl*, uint64_t> AnonStructIds;
+  llvm::DenseMap<const FunctionDecl*, unsigned> FuncAnonStructSize;
 
 public:
   ManglerKind getKind() const { return Kind; }
@@ -87,9 +88,17 @@ public:
     return Result.first->second;
   }
 
-  uint64_t getAnonymousStructId(const NamedDecl *D) {
+  uint64_t getAnonymousStructId(const NamedDecl *D,
+                                const FunctionDecl *FD = nullptr) {
+    auto FindResult = AnonStructIds.find(D);
+    if (FindResult != AnonStructIds.end())
+      return FindResult->second;
+
+    // If FunctionDecl is passed in, the anonymous structID will be per-function
+    // based.
+    unsigned Id = FD ? FuncAnonStructSize[FD]++ : AnonStructIds.size();
     std::pair<llvm::DenseMap<const NamedDecl *, uint64_t>::iterator, bool>
-        Result = AnonStructIds.insert(std::make_pair(D, AnonStructIds.size()));
+        Result = AnonStructIds.insert(std::make_pair(D, Id));
     return Result.first->second;
   }
 

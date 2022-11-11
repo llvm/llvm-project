@@ -49,7 +49,7 @@ int main() {
   void *trace[100];
   size_t num_frames = 100;
   int thread_id;
-  uint64_t *thread_os_id;
+  uint64_t thread_os_id;
   num_frames =
       __tsan_get_alloc_stack(mem, trace, num_frames, &thread_id, &thread_os_id);
 

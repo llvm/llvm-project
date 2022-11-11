@@ -10,15 +10,15 @@ public:
   int *a;
 };
 
-#pragma omp declare mapper(id: C s) map(s.a[0:NUM])
+#pragma omp declare mapper(id : C s) map(s.a[0 : NUM])
 
 int main() {
   C c;
-  c.a = (int*) malloc(sizeof(int)*NUM);
+  c.a = (int *)malloc(sizeof(int) * NUM);
   for (int i = 0; i < NUM; i++) {
     c.a[i] = 1;
   }
-  #pragma omp target teams distribute parallel for map(mapper(id),tofrom: c)
+#pragma omp target teams distribute parallel for map(mapper(id), tofrom : c)
   for (int i = 0; i < NUM; i++) {
     ++c.a[i];
   }
@@ -30,4 +30,3 @@ int main() {
   printf("Sum = %d\n", sum);
   return 0;
 }
-

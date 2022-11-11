@@ -373,7 +373,9 @@ include "CSKYInstrInfo.td"
 // CSKY processors supported.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"generic", NoSchedModel, []>;
+// btsti16 is one of most basic instructions should be enable
+// even in generic processor to avoid failure codegen.
+def : ProcessorModel<"generic", NoSchedModel, [FeatureBTST16]>;
 
 // CK801 series
 class CK801<string n, SchedMachineModel m, list<SubtargetFeature> f,

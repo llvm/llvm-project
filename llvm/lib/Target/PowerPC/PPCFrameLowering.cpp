@@ -229,23 +229,23 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
       CALLEE_SAVED_FPRS, CALLEE_SAVED_GPRS64, CALLEE_SAVED_VRS};
 
   if (Subtarget.is64BitELFABI()) {
-    NumEntries = array_lengthof(ELFOffsets64);
+    NumEntries = std::size(ELFOffsets64);
     return ELFOffsets64;
   }
 
   if (Subtarget.is32BitELFABI()) {
-    NumEntries = array_lengthof(ELFOffsets32);
+    NumEntries = std::size(ELFOffsets32);
     return ELFOffsets32;
   }
 
   assert(Subtarget.isAIXABI() && "Unexpected ABI.");
 
   if (Subtarget.isPPC64()) {
-    NumEntries = array_lengthof(AIXOffsets64);
+    NumEntries = std::size(AIXOffsets64);
     return AIXOffsets64;
   }
 
-  NumEntries = array_lengthof(AIXOffsets32);
+  NumEntries = std::size(AIXOffsets32);
   return AIXOffsets32;
 }
 

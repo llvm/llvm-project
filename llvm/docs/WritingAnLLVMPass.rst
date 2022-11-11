@@ -377,7 +377,7 @@ should only ask for the ``DominatorTree`` for function definitions, not
 declarations.
 
 To write a correct ``ModulePass`` subclass, derive from ``ModulePass`` and
-overload the ``runOnModule`` method with the following signature:
+override the ``runOnModule`` method with the following signature:
 
 The ``runOnModule`` method
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -485,7 +485,7 @@ To be explicit, ``FunctionPass`` subclasses are not allowed to:
 
 Implementing a ``FunctionPass`` is usually straightforward (See the :ref:`Hello
 World <writing-an-llvm-pass-basiccode>` pass for example).
-``FunctionPass``\ es may overload three virtual methods to do their work.  All
+``FunctionPass``\ es may override three virtual methods to do their work.  All
 of these methods should return ``true`` if they modified the program, or
 ``false`` if they didn't.
 
@@ -550,7 +550,7 @@ loops in loop nest order such that outer most loop is processed last.
 
 ``LoopPass`` subclasses are allowed to update loop nest using ``LPPassManager``
 interface.  Implementing a loop pass is usually straightforward.
-``LoopPass``\ es may overload three virtual methods to do their work.  All
+``LoopPass``\ es may override three virtual methods to do their work.  All
 these methods should return ``true`` if they modified the program, or ``false``
 if they didn't.
 
@@ -611,7 +611,7 @@ but executes on each single entry single exit region in the function.
 region is processed last.
 
 ``RegionPass`` subclasses are allowed to update the region tree by using the
-``RGPassManager`` interface.  You may overload three virtual methods of
+``RGPassManager`` interface.  You may override three virtual methods of
 ``RegionPass`` to implement your own region pass.  All these methods should
 return ``true`` if they modified the program, or ``false`` if they did not.
 
@@ -1182,51 +1182,6 @@ the :ref:`getAnalysis <writing-an-llvm-pass-getAnalysis>` method) you should
 implement ``releaseMemory`` to, well, release the memory allocated to maintain
 this internal state.  This method is called after the ``run*`` method for the
 class, before the next call of ``run*`` in your pass.
-
-Building pass plugins
-=====================
-
-As an alternative to using ``PLUGIN_TOOL``, LLVM provides a mechanism to
-automatically register pass plugins within ``clang``, ``opt`` and ``bugpoint``.
-One first needs to create an independent project and add it to either ``tools/``
-or, using the MonoRepo layout, at the root of the repo alongside other projects.
-This project must contain the following minimal ``CMakeLists.txt``:
-
-.. code-block:: cmake
-
-    add_llvm_pass_plugin(Name source0.cpp)
-
-The pass must provide two entry points for the new pass manager, one for static
-registration and one for dynamically loaded plugins:
-
-- ``llvm::PassPluginLibraryInfo get##Name##PluginInfo();``
-- ``extern "C" ::llvm::PassPluginLibraryInfo llvmGetPassPluginInfo() LLVM_ATTRIBUTE_WEAK;``
-
-Pass plugins are compiled and link dynamically by default, but it's
-possible to set the following variables to change this behavior:
-
-- ``LLVM_${NAME}_LINK_INTO_TOOLS``, when set to ``ON``, turns the project into
-  a statically linked extension
-
-
-When building a tool that uses the new pass manager, one can use the following snippet to
-include statically linked pass plugins:
-
-.. code-block:: c++
-
-    // fetch the declaration
-    #define HANDLE_EXTENSION(Ext) llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
-    #include "llvm/Support/Extension.def"
-
-    [...]
-
-    // use them, PB is an llvm::PassBuilder instance
-    #define HANDLE_EXTENSION(Ext) get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
-    #include "llvm/Support/Extension.def"
-
-
-
-
 
 Registering dynamically loaded passes
 =====================================

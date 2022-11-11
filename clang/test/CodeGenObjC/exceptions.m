@@ -25,12 +25,11 @@ void f1(void) {
     // CHECK-NEXT: icmp
     // CHECK-NEXT: br i1
     @try {
+    // CHECK:      call void asm sideeffect "", "=*m"
     // CHECK:      call void asm sideeffect "", "*m"
     // CHECK-NEXT: call void @foo()
       foo();
     // CHECK:      call void @objc_exception_try_exit
-    // CHECK:      try.handler:
-    // CHECK:      call void asm sideeffect "", "=*m"
 
     } @finally {
       break;
@@ -54,6 +53,12 @@ int f2(void) {
   // CHECK-NEXT:   [[CAUGHT:%.*]] = icmp eq i32 [[SETJMP]], 0
   // CHECK-NEXT:   br i1 [[CAUGHT]]
   @try {
+    // Landing pad.  Note that we elide the re-enter.
+    // CHECK:      call void asm sideeffect "", "=*m,=*m"(i32* nonnull elementtype(i32) [[X]]
+    // CHECK-NEXT: call i8* @objc_exception_extract
+    // CHECK-NEXT: [[T1:%.*]] = load i32, i32* [[X]]
+    // CHECK-NEXT: [[T2:%.*]] = add nsw i32 [[T1]], -1
+
     // CHECK: store i32 6, i32* [[X]]
     x++;
     // CHECK-NEXT: call void asm sideeffect "", "*m,*m"(i32* nonnull elementtype(i32) [[X]]
@@ -62,12 +67,6 @@ int f2(void) {
     // CHECK-NEXT: [[T:%.*]] = load i32, i32* [[X]]
     foo();
   } @catch (id) {
-    // Landing pad.  Note that we elide the re-enter.
-    // CHECK:      call void asm sideeffect "", "=*m,=*m"(i32* nonnull elementtype(i32) [[X]]
-    // CHECK-NEXT: call i8* @objc_exception_extract
-    // CHECK-NEXT: [[T1:%.*]] = load i32, i32* [[X]]
-    // CHECK-NEXT: [[T2:%.*]] = add nsw i32 [[T1]], -1
-
     x--;
   }
 

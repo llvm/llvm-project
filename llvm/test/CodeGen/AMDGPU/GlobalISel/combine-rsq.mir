@@ -10,10 +10,12 @@ body:             |
     ; CHECK: $vgpr0 = COPY %3
     ; CHECK: SI_RETURN_TO_EPILOG implicit $vgpr0
     ; GCN-LABEL: name: rcp_sqrt_test
-    ; GCN: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; GCN: [[INT:%[0-9]+]]:_(s32) = afn G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
-    ; GCN: $vgpr0 = COPY [[INT]](s32)
-    ; GCN: SI_RETURN_TO_EPILOG implicit $vgpr0
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+    ; GCN-NEXT: [[INT:%[0-9]+]]:_(s32) = afn G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
+    ; GCN-NEXT: $vgpr0 = COPY [[INT]](s32)
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:_(s32) = COPY $sgpr0
     %2:_(s32) = G_FSQRT %0:_
     %3:_(s32) = afn G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %2:_(s32)
@@ -29,10 +31,12 @@ body:             |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: sqrt_rcp_test
-    ; GCN: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; GCN: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
-    ; GCN: $vgpr0 = COPY [[INT]](s32)
-    ; GCN: SI_RETURN_TO_EPILOG implicit $vgpr0
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+    ; GCN-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
+    ; GCN-NEXT: $vgpr0 = COPY [[INT]](s32)
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:_(s32) = COPY $sgpr0
     %2:_(s32) = afn G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %0:_(s32)
     %3:_(s32) = G_FSQRT %2:_

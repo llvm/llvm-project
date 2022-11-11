@@ -38,67 +38,42 @@ testAlloc(S s, SV sv, const typename S::allocator_type& a)
     assert(s.get_allocator() == a);
 }
 
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  typedef std::string_view SV;
+  test(S(), SV(), S());
+  test(S(), SV("12345"), S("12345"));
+  test(S(), SV("1234567890"), S("1234567890"));
+  test(S(), SV("12345678901234567890"), S("12345678901234567890"));
+
+  test(S("12345"), SV(), S());
+  test(S("12345"), SV("12345"), S("12345"));
+  test(S("12345"), SV("1234567890"), S("1234567890"));
+  test(S("12345"), SV("12345678901234567890"), S("12345678901234567890"));
+
+  test(S("1234567890"), SV(), S());
+  test(S("1234567890"), SV("12345"), S("12345"));
+  test(S("1234567890"), SV("1234567890"), S("1234567890"));
+  test(S("1234567890"), SV("12345678901234567890"), S("12345678901234567890"));
+
+  test(S("12345678901234567890"), SV(), S());
+  test(S("12345678901234567890"), SV("12345"), S("12345"));
+  test(S("12345678901234567890"), SV("1234567890"), S("1234567890"));
+  test(S("12345678901234567890"), SV("12345678901234567890"),
+        S("12345678901234567890"));
+
+  using A = typename S::allocator_type;
+
+  testAlloc(S(), SV(), A());
+  testAlloc(S(), SV("12345"), A());
+  testAlloc(S(), SV("1234567890"), A());
+  testAlloc(S(), SV("12345678901234567890"), A());
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    typedef std::string_view SV;
-    test(S(), SV(), S());
-    test(S(), SV("12345"), S("12345"));
-    test(S(), SV("1234567890"), S("1234567890"));
-    test(S(), SV("12345678901234567890"), S("12345678901234567890"));
-
-    test(S("12345"), SV(), S());
-    test(S("12345"), SV("12345"), S("12345"));
-    test(S("12345"), SV("1234567890"), S("1234567890"));
-    test(S("12345"), SV("12345678901234567890"), S("12345678901234567890"));
-
-    test(S("1234567890"), SV(), S());
-    test(S("1234567890"), SV("12345"), S("12345"));
-    test(S("1234567890"), SV("1234567890"), S("1234567890"));
-    test(S("1234567890"), SV("12345678901234567890"), S("12345678901234567890"));
-
-    test(S("12345678901234567890"), SV(), S());
-    test(S("12345678901234567890"), SV("12345"), S("12345"));
-    test(S("12345678901234567890"), SV("1234567890"), S("1234567890"));
-    test(S("12345678901234567890"), SV("12345678901234567890"),
-         S("12345678901234567890"));
-
-    testAlloc(S(), SV(), std::allocator<char>());
-    testAlloc(S(), SV("12345"), std::allocator<char>());
-    testAlloc(S(), SV("1234567890"), std::allocator<char>());
-    testAlloc(S(), SV("12345678901234567890"), std::allocator<char>());
-  }
-
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string     <char, std::char_traits<char>, min_allocator<char>> S;
-    typedef std::basic_string_view<char, std::char_traits<char> > SV;
-    test(S(), SV(), S());
-    test(S(), SV("12345"), S("12345"));
-    test(S(), SV("1234567890"), S("1234567890"));
-    test(S(), SV("12345678901234567890"), S("12345678901234567890"));
-
-    test(S("12345"), SV(), S());
-    test(S("12345"), SV("12345"), S("12345"));
-    test(S("12345"), SV("1234567890"), S("1234567890"));
-    test(S("12345"), SV("12345678901234567890"), S("12345678901234567890"));
-
-    test(S("1234567890"), SV(), S());
-    test(S("1234567890"), SV("12345"), S("12345"));
-    test(S("1234567890"), SV("1234567890"), S("1234567890"));
-    test(S("1234567890"), SV("12345678901234567890"), S("12345678901234567890"));
-
-    test(S("12345678901234567890"), SV(), S());
-    test(S("12345678901234567890"), SV("12345"), S("12345"));
-    test(S("12345678901234567890"), SV("1234567890"), S("1234567890"));
-    test(S("12345678901234567890"), SV("12345678901234567890"),
-         S("12345678901234567890"));
-
-    testAlloc(S(), SV(), min_allocator<char>());
-    testAlloc(S(), SV("12345"), min_allocator<char>());
-    testAlloc(S(), SV("1234567890"), min_allocator<char>());
-    testAlloc(S(), SV("12345678901234567890"), min_allocator<char>());
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
 
   return true;

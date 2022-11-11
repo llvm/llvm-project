@@ -20,7 +20,7 @@
 
 ; CHECK: cleanup:
 ; CHECK-NEXT: MemoryUse([[NO7]])
-; CHECK-NEXT:  %cleanup.dest = load i32, i32* undef, align 1
+; CHECK-NEXT:  %cleanup.dest = load i32, ptr undef, align 1
 
 ; CHECK: lbl1.backedge:
 ; CHECK-NEXT:  [[NO9]] = MemoryPhi({cleanup,[[NO7]]},{if.else,2})
@@ -28,9 +28,9 @@
 
 ; CHECK: cleanup.cont:
 ; CHECK-NEXT: ; [[NO6:.*]] = MemoryDef([[NO7]])
-; CHECK-NEXT:   store i16 undef, i16* %e, align 1
+; CHECK-NEXT:   store i16 undef, ptr %e, align 1
 ; CHECK-NEXT:  3 = MemoryDef([[NO6]])
-; CHECK-NEXT:   call void @llvm.lifetime.end.p0i8(i64 1, i8* null)
+; CHECK-NEXT:   call void @llvm.lifetime.end.p0(i64 1, ptr null)
 
 define void @f() {
 entry:
@@ -38,7 +38,7 @@ entry:
   br label %lbl1
 
 lbl1:                                             ; preds = %if.else, %cleanup, %entry
-  store i16 undef, i16* %e, align 1
+  store i16 undef, ptr %e, align 1
   call void @g()
   br i1 undef, label %for.end, label %if.else
 
@@ -52,12 +52,12 @@ lbl3:                                             ; preds = %lbl2, %for.end
   br i1 undef, label %lbl2, label %cleanup
 
 cleanup:                                          ; preds = %lbl3
-  %cleanup.dest = load i32, i32* undef, align 1
+  %cleanup.dest = load i32, ptr undef, align 1
   %switch = icmp ult i32 %cleanup.dest, 1
   br i1 %switch, label %cleanup.cont, label %lbl1
 
 cleanup.cont:                                     ; preds = %cleanup
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* null)
+  call void @llvm.lifetime.end.p0(i64 1, ptr null)
   ret void
 
 if.else:                                          ; preds = %lbl1
@@ -67,4 +67,4 @@ if.else:                                          ; preds = %lbl1
 declare void @g()
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)

@@ -10,7 +10,7 @@ program omp_do
   integer i
 
   !$omp do  firstprivate(k)
-  !DEF: /omp_do/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /omp_do/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
     print *, "Hello"
   end do

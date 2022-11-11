@@ -35,11 +35,9 @@ public:
   struct ArgEntry {
   private:
     friend class Args;
-    friend struct llvm::yaml::MappingTraits<Args>;
-    friend struct llvm::yaml::MappingTraits<Args::ArgEntry>;
 
     std::unique_ptr<char[]> ptr;
-    char quote;
+    char quote = '\0';
 
     char *data() { return ptr.get(); }
 
@@ -287,8 +285,6 @@ public:
                                                char quote_char);
 
 private:
-  friend struct llvm::yaml::MappingTraits<Args>;
-
   std::vector<ArgEntry> m_entries;
   /// The arguments as C strings with a trailing nullptr element.
   ///
@@ -382,29 +378,5 @@ private:
 };
 
 } // namespace lldb_private
-
-namespace llvm {
-namespace yaml {
-template <> struct MappingTraits<lldb_private::Args::ArgEntry> {
-  class NormalizedArgEntry {
-  public:
-    NormalizedArgEntry(IO &) {}
-    NormalizedArgEntry(IO &, lldb_private::Args::ArgEntry &entry)
-        : value(entry.ref()), quote(entry.quote) {}
-    lldb_private::Args::ArgEntry denormalize(IO &) {
-      return lldb_private::Args::ArgEntry(value, quote);
-    }
-    StringRef value;
-    uint8_t quote;
-  };
-  static void mapping(IO &io, lldb_private::Args::ArgEntry &v);
-};
-template <> struct MappingTraits<lldb_private::Args> {
-  static void mapping(IO &io, lldb_private::Args &v);
-};
-} // namespace yaml
-} // namespace llvm
-
-LLVM_YAML_IS_SEQUENCE_VECTOR(lldb_private::Args::ArgEntry)
 
 #endif // LLDB_UTILITY_ARGS_H

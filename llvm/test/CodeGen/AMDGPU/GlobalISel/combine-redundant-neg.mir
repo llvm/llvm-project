@@ -8,7 +8,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_add_rhs
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FSUB]](s32)
@@ -26,7 +28,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_add_lhs
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FSUB]](s32)
@@ -44,7 +48,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_sub
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FADD]](s32)
@@ -62,7 +68,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_mul
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FMUL]](s32)
@@ -81,7 +89,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_div
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FDIV:%[0-9]+]]:_(s32) = G_FDIV [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FDIV]](s32)
@@ -100,7 +110,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: test_fmad
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[FMAD:%[0-9]+]]:_(s32) = G_FMAD [[COPY]], [[COPY1]], [[COPY2]]
@@ -121,7 +133,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: test_fma
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]

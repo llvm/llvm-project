@@ -19,23 +19,23 @@ if1:                                              ; predfs = %entry
   br i1 %a, label %else1, label %if2
 
 else1:                                            ; preds = %if1
-  %ptr.else1 = getelementptr inbounds [3 x i32], [3 x i32]* @data, i64 0, i32 1
+  %ptr.else1 = getelementptr inbounds [3 x i32], ptr @data, i64 0, i32 1
   br label %phi_join
 
 if2:                                              ; preds = %if1
   br i1 %b, label %then2, label %else2
 
 then2:                                            ; preds = %if2
-  %ptr.then2 = getelementptr inbounds [3 x i32], [3 x i32]* @data, i64 0, i32 1
+  %ptr.then2 = getelementptr inbounds [3 x i32], ptr @data, i64 0, i32 1
   br label %phi_join
 
 else2:                                            ; preds = %if2
-  %ptr.else2 = getelementptr inbounds [3 x i32], [3 x i32]* @data, i64 0, i32 2
+  %ptr.else2 = getelementptr inbounds [3 x i32], ptr @data, i64 0, i32 2
   br label %phi_join
 
 phi_join:                                         ; preds = %else1, %then2, %else2
-  %val.ptr = phi i32* [ %ptr.else1, %else1 ], [ %ptr.then2, %then2 ], [ %ptr.else2, %else2 ]
-  %val = load i32, i32* %val.ptr, align 4
-  store i32 %val, i32* @store, align 4
+  %val.ptr = phi ptr [ %ptr.else1, %else1 ], [ %ptr.then2, %then2 ], [ %ptr.else2, %else2 ]
+  %val = load i32, ptr %val.ptr, align 4
+  store i32 %val, ptr @store, align 4
   ret void
 }

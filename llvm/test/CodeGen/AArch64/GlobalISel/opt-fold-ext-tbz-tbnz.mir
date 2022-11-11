@@ -31,8 +31,7 @@ body:             |
     %fold_me:gpr(s64) = G_ZEXT %copy(s32)
     %and:gpr(s64) = G_AND %fold_me, %bit
     %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -64,8 +63,7 @@ body:             |
     %fold_me:gpr(s64) = G_ANYEXT %copy(s32)
     %and:gpr(s64) = G_AND %fold_me, %bit
     %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -100,8 +98,7 @@ body:             |
     %ext2:gpr(s64) = G_ANYEXT %ext1(s32)
     %and:gpr(s64) = G_AND %ext2, %bit
     %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -138,8 +135,7 @@ body:             |
     %zext:gpr(s64) = G_ZEXT %copy(s32)
     %and:gpr(s64) = G_AND %zext, %bit
     %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     $x0 = COPY %zext:gpr(s64)

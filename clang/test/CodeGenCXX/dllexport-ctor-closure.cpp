@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-msvc -emit-llvm -std=c++14 \
+// RUN: %clang_cc1 -triple i686-windows-msvc -emit-llvm -std=c++14 \
 // RUN:    -fno-threadsafe-statics -fms-extensions -O1 -mconstructor-aliases \
 // RUN:    -disable-llvm-passes -o - %s -w -fms-compatibility-version=19.00 | \
 // RUN:    FileCheck %s
@@ -6,10 +6,10 @@
 struct CtorWithClosure {
   __declspec(dllexport) CtorWithClosure(...) {}
 // CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FCtorWithClosure@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
-// CHECK:   %[[this_addr:.*]] = alloca %struct.CtorWithClosure*, align 4
-// CHECK:   store %struct.CtorWithClosure* %this, %struct.CtorWithClosure** %[[this_addr]], align 4
-// CHECK:   %[[this:.*]] = load %struct.CtorWithClosure*, %struct.CtorWithClosure** %[[this_addr]]
-// CHECK:   call noundef %struct.CtorWithClosure* (%struct.CtorWithClosure*, ...) @"??0CtorWithClosure@@QAA@ZZ"(%struct.CtorWithClosure* {{[^,]*}} %[[this]])
+// CHECK:   %[[this_addr:.*]] = alloca ptr, align 4
+// CHECK:   store ptr %this, ptr %[[this_addr]], align 4
+// CHECK:   %[[this:.*]] = load ptr, ptr %[[this_addr]]
+// CHECK:   call noundef ptr (ptr, ...) @"??0CtorWithClosure@@QAA@ZZ"(ptr {{[^,]*}} %[[this]])
 // CHECK:   ret void
 };
 
@@ -29,10 +29,10 @@ struct __declspec(dllexport) ClassWithClosure {
   DELETE_IMPLICIT_MEMBERS(ClassWithClosure);
   ClassWithClosure(...) {}
 // CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FClassWithClosure@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
-// CHECK:   %[[this_addr:.*]] = alloca %struct.ClassWithClosure*, align 4
-// CHECK:   store %struct.ClassWithClosure* %this, %struct.ClassWithClosure** %[[this_addr]], align 4
-// CHECK:   %[[this:.*]] = load %struct.ClassWithClosure*, %struct.ClassWithClosure** %[[this_addr]]
-// CHECK:   call noundef %struct.ClassWithClosure* (%struct.ClassWithClosure*, ...) @"??0ClassWithClosure@@QAA@ZZ"(%struct.ClassWithClosure* {{[^,]*}} %[[this]])
+// CHECK:   %[[this_addr:.*]] = alloca ptr, align 4
+// CHECK:   store ptr %this, ptr %[[this_addr]], align 4
+// CHECK:   %[[this:.*]] = load ptr, ptr %[[this_addr]]
+// CHECK:   call noundef ptr (ptr, ...) @"??0ClassWithClosure@@QAA@ZZ"(ptr {{[^,]*}} %[[this]])
 // CHECK:   ret void
 };
 

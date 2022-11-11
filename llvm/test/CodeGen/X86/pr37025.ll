@@ -8,13 +8,13 @@
 ;
 ;void func2();
 ;
-;void func(_Atomic(unsigned long) * obj, void * obj2)
+;void func(_Atomic(unsigned long) * obj, ptr obj2)
 ;{
 ;        if (atomic_fetch_sub(obj, 1) == 1 && obj2)
 ;                func2();
 ;}
 
-define void @test_dec_select(i64* nocapture %0, i8* readnone %1) {
+define void @test_dec_select(ptr nocapture %0, ptr readnone %1) {
 ; CHECK-LABEL: test_dec_select:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lock decq (%rdi)
@@ -26,9 +26,9 @@ define void @test_dec_select(i64* nocapture %0, i8* readnone %1) {
 ; CHECK-NEXT:    jmp func2 # TAILCALL
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    retq
-  %3 = atomicrmw sub i64* %0, i64 1 seq_cst
+  %3 = atomicrmw sub ptr %0, i64 1 seq_cst
   %4 = icmp eq i64 %3, 1
-  %5 = icmp ne i8* %1, null
+  %5 = icmp ne ptr %1, null
   %6 = select i1 %4, i1 %5, i1 false
   br i1 %6, label %7, label %8
 
@@ -40,7 +40,7 @@ define void @test_dec_select(i64* nocapture %0, i8* readnone %1) {
   ret void
 }
 
-define void @test_dec_select_commute(i64* nocapture %0, i8* readnone %1) {
+define void @test_dec_select_commute(ptr nocapture %0, ptr readnone %1) {
 ; CHECK-LABEL: test_dec_select_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq $-1, %rax
@@ -54,9 +54,9 @@ define void @test_dec_select_commute(i64* nocapture %0, i8* readnone %1) {
 ; CHECK-NEXT:    jmp func2 # TAILCALL
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    retq
-  %3 = atomicrmw sub i64* %0, i64 1 seq_cst
+  %3 = atomicrmw sub ptr %0, i64 1 seq_cst
   %4 = icmp eq i64 %3, 1
-  %5 = icmp ne i8* %1, null
+  %5 = icmp ne ptr %1, null
   %6 = select i1 %5, i1 %4, i1 false
   br i1 %6, label %7, label %8
 
@@ -68,7 +68,7 @@ define void @test_dec_select_commute(i64* nocapture %0, i8* readnone %1) {
   ret void
 }
 
-define void @test_dec_and(i64* nocapture %0, i8* readnone %1) {
+define void @test_dec_and(ptr nocapture %0, ptr readnone %1) {
 ; CHECK-LABEL: test_dec_and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq $-1, %rax
@@ -82,9 +82,9 @@ define void @test_dec_and(i64* nocapture %0, i8* readnone %1) {
 ; CHECK-NEXT:    jmp func2 # TAILCALL
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    retq
-  %3 = atomicrmw sub i64* %0, i64 1 seq_cst
+  %3 = atomicrmw sub ptr %0, i64 1 seq_cst
   %4 = icmp eq i64 %3, 1
-  %5 = icmp ne i8* %1, null
+  %5 = icmp ne ptr %1, null
   %6 = and i1 %5, %4
   br i1 %6, label %7, label %8
 
@@ -96,7 +96,7 @@ define void @test_dec_and(i64* nocapture %0, i8* readnone %1) {
   ret void
 }
 
-define void @test_dec_and_commute(i64* nocapture %0, i8* readnone %1) {
+define void @test_dec_and_commute(ptr nocapture %0, ptr readnone %1) {
 ; CHECK-LABEL: test_dec_and_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lock decq (%rdi)
@@ -108,9 +108,9 @@ define void @test_dec_and_commute(i64* nocapture %0, i8* readnone %1) {
 ; CHECK-NEXT:    jmp func2 # TAILCALL
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    retq
-  %3 = atomicrmw sub i64* %0, i64 1 seq_cst
+  %3 = atomicrmw sub ptr %0, i64 1 seq_cst
   %4 = icmp eq i64 %3, 1
-  %5 = icmp ne i8* %1, null
+  %5 = icmp ne ptr %1, null
   %6 = and i1 %4, %5
   br i1 %6, label %7, label %8
 

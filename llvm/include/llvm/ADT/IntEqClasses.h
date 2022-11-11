@@ -35,11 +35,11 @@ class IntEqClasses {
 
   /// NumClasses - The number of equivalence classes when compressed, or 0 when
   /// uncompressed.
-  unsigned NumClasses;
+  unsigned NumClasses = 0;
 
 public:
   /// IntEqClasses - Create an equivalence class mapping for 0 .. N-1.
-  IntEqClasses(unsigned N = 0) : NumClasses(0) { grow(N); }
+  IntEqClasses(unsigned N = 0) { grow(N); }
 
   /// grow - Increase capacity to hold 0 .. N-1, putting new integers in unique
   /// equivalence classes.

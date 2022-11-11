@@ -1,5 +1,3 @@
-import("//llvm/utils/TableGen/tablegen.gni")
-
 static_library("IR") {
   output_name = "LLVMCore"
   public_deps = [
@@ -63,6 +61,7 @@ static_library("IR") {
     "PassRegistry.cpp",
     "PassTimingInfo.cpp",
     "PrintPasses.cpp",
+    "ProfDataUtils.cpp",
     "ProfileSummary.cpp",
     "PseudoProbe.cpp",
     "ReplaceConstant.cpp",
@@ -72,6 +71,7 @@ static_library("IR") {
     "StructuralHash.cpp",
     "Type.cpp",
     "TypeFinder.cpp",
+    "TypedPointerType.cpp",
     "Use.cpp",
     "User.cpp",
     "Value.cpp",

@@ -54,13 +54,13 @@ define void @test1(i64 %x) nounwind {
 ; DISABLED-NEXT:  .LBB0_4: # %sw.epilog
 ; DISABLED-NEXT:    retq
 entry:
-  %a = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 0
-  %tmp = load i32, i32* %a, align 4
-  %b = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 1
-  %tmp1 = load i32, i32* %b, align 4
+  %a = getelementptr inbounds [65 x %struct.anon1], ptr @arr1, i64 0, i64 %x, i32 0
+  %tmp = load i32, ptr %a, align 4
+  %b = getelementptr inbounds [65 x %struct.anon1], ptr @arr1, i64 0, i64 %x, i32 1
+  %tmp1 = load i32, ptr %b, align 4
   %sub = sub i32 %tmp, %tmp1
-  %c = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 2
-  %tmp2 = load i32, i32* %c, align 4
+  %c = getelementptr inbounds [65 x %struct.anon1], ptr @arr1, i64 0, i64 %x, i32 2
+  %tmp2 = load i32, ptr %c, align 4
   %add = add nsw i32 %sub, %tmp2
   switch i32 %add, label %sw.epilog [
     i32 1, label %sw.bb.1
@@ -68,13 +68,13 @@ entry:
   ]
 
 sw.bb.1:                                          ; preds = %entry
-  store i32 111, i32* %b, align 4
-  store i32 222, i32* %c, align 4
+  store i32 111, ptr %b, align 4
+  store i32 222, ptr %c, align 4
   br label %sw.epilog
 
 sw.bb.2:                                          ; preds = %entry
-  store i32 333, i32* %b, align 4
-  store i32 444, i32* %c, align 4
+  store i32 333, ptr %b, align 4
+  store i32 444, ptr %c, align 4
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %sw.bb.2, %sw.bb.1, %entry
@@ -127,13 +127,13 @@ define void @test2(i64 %x) nounwind optsize {
 ; DISABLED-NEXT:  .LBB1_4: # %sw.epilog
 ; DISABLED-NEXT:    retq
 entry:
-  %a = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 0
-  %tmp = load i32, i32* %a, align 4
-  %b = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 1
-  %tmp1 = load i32, i32* %b, align 4
+  %a = getelementptr inbounds [65 x %struct.anon1], ptr @arr1, i64 0, i64 %x, i32 0
+  %tmp = load i32, ptr %a, align 4
+  %b = getelementptr inbounds [65 x %struct.anon1], ptr @arr1, i64 0, i64 %x, i32 1
+  %tmp1 = load i32, ptr %b, align 4
   %sub = sub i32 %tmp, %tmp1
-  %c = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 2
-  %tmp2 = load i32, i32* %c, align 4
+  %c = getelementptr inbounds [65 x %struct.anon1], ptr @arr1, i64 0, i64 %x, i32 2
+  %tmp2 = load i32, ptr %c, align 4
   %add = add nsw i32 %sub, %tmp2
   switch i32 %add, label %sw.epilog [
     i32 1, label %sw.bb.1
@@ -141,13 +141,13 @@ entry:
   ]
 
 sw.bb.1:                                          ; preds = %entry
-  store i32 111, i32* %b, align 4
-  store i32 222, i32* %c, align 4
+  store i32 111, ptr %b, align 4
+  store i32 222, ptr %c, align 4
   br label %sw.epilog
 
 sw.bb.2:                                          ; preds = %entry
-  store i32 333, i32* %b, align 4
-  store i32 444, i32* %c, align 4
+  store i32 333, ptr %b, align 4
+  store i32 444, ptr %c, align 4
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %sw.bb.2, %sw.bb.1, %entry
@@ -205,10 +205,10 @@ define void @test3(i64 %x) nounwind optsize {
 ; DISABLED-NEXT:  .LBB2_4: # %sw.epilog
 ; DISABLED-NEXT:    retq
 entry:
-  %a = getelementptr inbounds [65 x %struct.anon2], [65 x %struct.anon2]* @arr2, i64 0, i64 %x, i32 2
-  %tmp = load i32, i32* %a, align 4
-  %b = getelementptr inbounds [65 x %struct.anon2], [65 x %struct.anon2]* @arr2, i64 0, i64 %x, i32 0
-  %tmp1 = load i32, i32* %b, align 4
+  %a = getelementptr inbounds [65 x %struct.anon2], ptr @arr2, i64 0, i64 %x, i32 2
+  %tmp = load i32, ptr %a, align 4
+  %b = getelementptr inbounds [65 x %struct.anon2], ptr @arr2, i64 0, i64 %x, i32 0
+  %tmp1 = load i32, ptr %b, align 4
   %add = add nsw i32 %tmp, %tmp1
   switch i32 %add, label %sw.epilog [
     i32 1, label %sw.bb.1
@@ -216,15 +216,15 @@ entry:
   ]
 
 sw.bb.1:                                          ; preds = %entry
-  store i32 111, i32* %a, align 4
-  store i32 222, i32* %b, align 4
+  store i32 111, ptr %a, align 4
+  store i32 222, ptr %b, align 4
   br label %sw.epilog
 
 sw.bb.2:                                          ; preds = %entry
-  store i32 333, i32* %a, align 4
+  store i32 333, ptr %a, align 4
   ; Make sure the REG3's definition LEA won't be removed as redundant.
-  %cvt = ptrtoint i32* %b to i32
-  store i32 %cvt, i32* %b, align 4
+  %cvt = ptrtoint ptr %b to i32
+  store i32 %cvt, ptr %b, align 4
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %sw.bb.2, %sw.bb.1, %entry
@@ -281,13 +281,13 @@ define void @test4(i64 %x) nounwind minsize {
 ; DISABLED-NEXT:  .LBB3_4: # %sw.epilog
 ; DISABLED-NEXT:    retq
 entry:
-  %a = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 0
-  %tmp = load i32, i32* %a, align 4
-  %b = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 1
-  %tmp1 = load i32, i32* %b, align 4
+  %a = getelementptr inbounds [65 x %struct.anon1], ptr @arr1, i64 0, i64 %x, i32 0
+  %tmp = load i32, ptr %a, align 4
+  %b = getelementptr inbounds [65 x %struct.anon1], ptr @arr1, i64 0, i64 %x, i32 1
+  %tmp1 = load i32, ptr %b, align 4
   %sub = sub i32 %tmp, %tmp1
-  %c = getelementptr inbounds [65 x %struct.anon1], [65 x %struct.anon1]* @arr1, i64 0, i64 %x, i32 2
-  %tmp2 = load i32, i32* %c, align 4
+  %c = getelementptr inbounds [65 x %struct.anon1], ptr @arr1, i64 0, i64 %x, i32 2
+  %tmp2 = load i32, ptr %c, align 4
   %add = add nsw i32 %sub, %tmp2
   switch i32 %add, label %sw.epilog [
     i32 1, label %sw.bb.1
@@ -295,13 +295,13 @@ entry:
   ]
 
 sw.bb.1:                                          ; preds = %entry
-  store i32 111, i32* %b, align 4
-  store i32 222, i32* %c, align 4
+  store i32 111, ptr %b, align 4
+  store i32 222, ptr %c, align 4
   br label %sw.epilog
 
 sw.bb.2:                                          ; preds = %entry
-  store i32 333, i32* %b, align 4
-  store i32 444, i32* %c, align 4
+  store i32 333, ptr %b, align 4
+  store i32 444, ptr %c, align 4
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %sw.bb.2, %sw.bb.1, %entry

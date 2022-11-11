@@ -13,7 +13,6 @@
 @g5 = addrspace(1) global <2 x i32> undef, align 4
 
 
-; Function Attrs: norecurse nounwind readnone
 define dso_local spir_kernel void @test(i8 %x8, i16 %x16, i32 %x32, i64 %x64, <2 x i32> %x2i32) local_unnamed_addr {
 entry:
   %0 = tail call i8 @llvm.ctpop.i8(i8 %x8)
@@ -30,17 +29,12 @@ entry:
   ret void
 }
 
-; Function Attrs: inaccessiblememonly nounwind willreturn
 declare i8 @llvm.ctpop.i8(i8)
 
-; Function Attrs: inaccessiblememonly nounwind willreturn
 declare i16 @llvm.ctpop.i16(i16)
 
-; Function Attrs: inaccessiblememonly nounwind willreturn
 declare i32 @llvm.ctpop.i32(i32)
 
-; Function Attrs: inaccessiblememonly nounwind willreturn
 declare i64 @llvm.ctpop.i64(i64)
 
-; Function Attrs: inaccessiblememonly nounwind willreturn
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)

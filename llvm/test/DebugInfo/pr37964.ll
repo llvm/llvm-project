@@ -17,7 +17,7 @@ for.cond.loopexit:                                ; preds = %for.cond.loopexit.l
   br label %for.cond
 
 for.cond:                                         ; preds = %for.cond.loopexit, %entry
-  %.pr = load i32, i32* @foo, align 4
+  %.pr = load i32, ptr @foo, align 4
   %tobool1 = icmp eq i32 %.pr, 0
   br i1 %tobool1, label %for.cond.loopexit, label %for.inc.preheader
 
@@ -25,9 +25,9 @@ for.inc.preheader:                                ; preds = %for.cond
   br label %for.inc
 
 for.inc:                                          ; preds = %for.inc.preheader, %for.inc
-  %val = load i8, i8* @x
+  %val = load i8, ptr @x
   %conv = sext i8 %val to i32
-  store i32 %conv, i32* @foo, align 4
+  store i32 %conv, ptr @foo, align 4
   %tobool = icmp eq i8 %val, 0
   br i1 %tobool, label %for.cond.loopexit.loopexit, label %for.inc
 }

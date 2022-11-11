@@ -31,13 +31,13 @@
 ; CS-NEXT:   2017bf->201760:6
 ; CS-NEXT:   2017cf->20179e:6
 ; CS-NEXT:   2017d8->2017e3:1
-; CS-NEXT: [0x7f4]
+; CS-NEXT: [0x2017f4]
 ; CS-NEXT:   1
 ; CS-NEXT:   2017c4-2017cf:1
 ; CS-NEXT:   2
 ; CS-NEXT:   2017bf->201760:1
 ; CS-NEXT:   2017cf->20179e:2
-; CS-NEXT: [0x7f4 @ 0x7bf]
+; CS-NEXT: [0x2017f4 @ 0x2017bf]
 ; CS-NEXT:   1
 ; CS-NEXT:   201760-20177f:1
 ; CS-NEXT:   1

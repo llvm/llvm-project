@@ -303,7 +303,6 @@ public:
 
   llvm::Instruction *asInstruction() const { return I; }
 
-private:
   bool isLoad() const { return I && llvm::isa<llvm::LoadInst>(I); }
   bool isStore() const { return I && llvm::isa<llvm::StoreInst>(I); }
   bool isCallInst() const { return I && llvm::isa<llvm::CallInst>(I); }

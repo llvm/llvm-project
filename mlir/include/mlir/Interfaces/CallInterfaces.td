@@ -82,7 +82,7 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
         Returns the results types that the callable region produces when
         executed.
       }],
-      "::mlir::ArrayRef<::mlir::Type>", "getCallableResults"
+      "::llvm::ArrayRef<::mlir::Type>", "getCallableResults"
     >,
   ];
 }

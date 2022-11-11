@@ -4,7 +4,7 @@
 // Not implemented yet.
 
 func.func @select_case_charachter(%arg0: !fir.char<2, 10>, %arg1: !fir.char<2, 10>, %arg2: !fir.char<2, 10>) {
-// CHECK: not yet implemented fir.select_case codegen with character type
+// CHECK: not yet implemented: fir.select_case codegen with character type
   fir.select_case %arg0 : !fir.char<2, 10> [#fir.point, %arg1, ^bb1,
                                             #fir.point, %arg2, ^bb2,
                                             unit, ^bb3]

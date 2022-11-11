@@ -78,45 +78,13 @@ define float @finite_f32_estimate_ieee(float %f) #1 {
 define float @finite_f32_estimate_ieee_ninf(float %f) #1 {
 ; SSE-LABEL: finite_f32_estimate_ieee_ninf:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    rsqrtss %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    mulss %xmm1, %xmm2
-; SSE-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE-NEXT:    mulss %xmm2, %xmm3
-; SSE-NEXT:    mulss %xmm1, %xmm2
-; SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE-NEXT:    mulss %xmm3, %xmm2
-; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    cmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    sqrtss %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: finite_f32_estimate_ieee_ninf:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
-; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vcmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: finite_f32_estimate_ieee_ninf:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
-; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm2
-; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm0 * xmm1) + mem
-; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vcmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %k1
-; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
-; AVX512-NEXT:    retq
+; AVX-LABEL: finite_f32_estimate_ieee_ninf:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %call = tail call ninf afn float @__sqrtf_finite(float %f) #2
   ret float %call
 }
@@ -138,44 +106,13 @@ define float @finite_f32_estimate_daz(float %f) #4 {
 define float @finite_f32_estimate_daz_ninf(float %f) #4 {
 ; SSE-LABEL: finite_f32_estimate_daz_ninf:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    rsqrtss %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    mulss %xmm1, %xmm2
-; SSE-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE-NEXT:    mulss %xmm2, %xmm3
-; SSE-NEXT:    mulss %xmm1, %xmm2
-; SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE-NEXT:    mulss %xmm3, %xmm2
-; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    cmpeqss %xmm1, %xmm0
-; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    sqrtss %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: finite_f32_estimate_daz_ninf:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
-; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vcmpeqss %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: finite_f32_estimate_daz_ninf:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
-; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
-; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vcmpeqss %xmm2, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vmovaps %xmm1, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: finite_f32_estimate_daz_ninf:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %call = tail call ninf afn float @__sqrtf_finite(float %f) #2
   ret float %call
 }
@@ -221,45 +158,13 @@ define float @sqrtf_check_denorms(float %x) #3 {
 define float @sqrtf_check_denorms_ninf(float %x) #3 {
 ; SSE-LABEL: sqrtf_check_denorms_ninf:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    rsqrtss %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    mulss %xmm1, %xmm2
-; SSE-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE-NEXT:    mulss %xmm2, %xmm3
-; SSE-NEXT:    mulss %xmm1, %xmm2
-; SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE-NEXT:    mulss %xmm3, %xmm2
-; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    cmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    sqrtss %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: sqrtf_check_denorms_ninf:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
-; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vcmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: sqrtf_check_denorms_ninf:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
-; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm2
-; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm0 * xmm1) + mem
-; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vcmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %k1
-; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
-; AVX512-NEXT:    retq
+; AVX-LABEL: sqrtf_check_denorms_ninf:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %call = tail call ninf afn float @__sqrtf_finite(float %x) #2
   ret float %call
 }
@@ -385,32 +290,13 @@ define float @f32_estimate(float %x) #1 {
 define float @f32_estimate2(float %x) #5 {
 ; SSE-LABEL: f32_estimate2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    rsqrtss %xmm0, %xmm1
-; SSE-NEXT:    mulss %xmm0, %xmm1
-; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    cmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    andnps %xmm1, %xmm0
+; SSE-NEXT:    sqrtss %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: f32_estimate2:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
-; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vcmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: f32_estimate2:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm2
-; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vcmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %k1
-; AVX512-NEXT:    vmulss %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
-; AVX512-NEXT:    retq
+; AVX-LABEL: f32_estimate2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %sqrt = tail call fast float @llvm.sqrt.f32(float %x)
   ret float %sqrt
 }
@@ -995,7 +881,7 @@ define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
   ret <2 x double> %r
 }
 
-define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwind {
+define double @sqrt_fdiv_common_operand_extra_use(double %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_fdiv_common_operand_extra_use:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
@@ -1008,12 +894,12 @@ define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwin
 ; AVX-NEXT:    vmovsd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
   %sqrt = call fast double @llvm.sqrt.f64(double %x)
-  store double %sqrt, double* %p
+  store double %sqrt, ptr %p
   %r = fdiv fast double %x, %sqrt
   ret double %r
 }
 
-define double @sqrt_simplify_before_recip(double %x, double* %p) nounwind {
+define double @sqrt_simplify_before_recip(double %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
@@ -1032,11 +918,11 @@ define double @sqrt_simplify_before_recip(double %x, double* %p) nounwind {
   %sqrt = tail call fast double @llvm.sqrt.f64(double %x)
   %rsqrt = fdiv fast double 1.0, %sqrt
   %sqrt_fast = fdiv fast double %x, %sqrt
-  store double %rsqrt, double* %p, align 8
+  store double %rsqrt, ptr %p, align 8
   ret double %sqrt_fast
 }
 
-define <2 x double> @sqrt_simplify_before_recip_vec(<2 x double> %x, <2 x double>* %p) nounwind {
+define <2 x double> @sqrt_simplify_before_recip_vec(<2 x double> %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip_vec:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtpd %xmm0, %xmm0
@@ -1055,11 +941,11 @@ define <2 x double> @sqrt_simplify_before_recip_vec(<2 x double> %x, <2 x double
   %sqrt = tail call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> %x)
   %rsqrt = fdiv fast <2 x double> <double 1.0, double 1.0>, %sqrt
   %sqrt_fast = fdiv fast <2 x double> %x, %sqrt
-  store <2 x double> %rsqrt, <2 x double>* %p, align 8
+  store <2 x double> %rsqrt, ptr %p, align 8
   ret <2 x double> %sqrt_fast
 }
 
-define double @sqrt_simplify_before_recip_order(double %x, double* %p) nounwind {
+define double @sqrt_simplify_before_recip_order(double %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip_order:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
@@ -1078,7 +964,7 @@ define double @sqrt_simplify_before_recip_order(double %x, double* %p) nounwind 
   %sqrt = tail call fast double @llvm.sqrt.f64(double %x)
   %sqrt_fast = fdiv fast double %x, %sqrt
   %rsqrt = fdiv fast double 42.0, %sqrt
-  store double %rsqrt, double* %p, align 8
+  store double %rsqrt, ptr %p, align 8
   ret double %sqrt_fast
 }
 

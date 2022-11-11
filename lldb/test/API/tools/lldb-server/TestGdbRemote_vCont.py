@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def vCont_supports_mode(self, mode, inferior_args=None):
         # Setup the stub and set the gdb remote command stream.
         procs = self.prep_debug_monitor_and_inferior(
@@ -40,6 +38,11 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_vCont_supports_S(self):
         self.build()
         self.vCont_supports_mode("S")
+
+    @add_test_categories(["llgs"])
+    def test_vCont_supports_t(self):
+        self.build()
+        self.vCont_supports_mode("t")
 
     @skipIfWindows # No pty support to test O* & I* notification packets.
     @skipIf(triple='^mips')

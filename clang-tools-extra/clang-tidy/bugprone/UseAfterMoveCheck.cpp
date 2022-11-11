@@ -14,6 +14,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include "../utils/ExprSequence.h"
 
@@ -228,10 +229,9 @@ void UseAfterMoveFinder::getUsesAndReinits(
   }
 
   // Sort the uses by their occurrence in the source code.
-  std::sort(Uses->begin(), Uses->end(),
-            [](const DeclRefExpr *D1, const DeclRefExpr *D2) {
-              return D1->getExprLoc() < D2->getExprLoc();
-            });
+  llvm::sort(*Uses, [](const DeclRefExpr *D1, const DeclRefExpr *D2) {
+    return D1->getExprLoc() < D2->getExprLoc();
+  });
 }
 
 bool isStandardSmartPointer(const ValueDecl *VD) {

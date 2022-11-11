@@ -228,7 +228,7 @@ public:
   /// found. If any symbol is not found then the function returns an error.
   Error getBootstrapSymbols(
       ArrayRef<std::pair<ExecutorAddr &, StringRef>> Pairs) const {
-    for (auto &KV : Pairs) {
+    for (const auto &KV : Pairs) {
       auto I = BootstrapSymbols.find(KV.second);
       if (I == BootstrapSymbols.end())
         return make_error<StringError>("Symbol \"" + KV.second +
@@ -258,6 +258,15 @@ public:
   /// Run function with a main-like signature.
   virtual Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) = 0;
+
+  // TODO: move this to ORC runtime.
+  /// Run function with a int (*)(void) signature.
+  virtual Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) = 0;
+
+  // TODO: move this to ORC runtime.
+  /// Run function with a int (*)(int) signature.
+  virtual Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr,
+                                             int Arg) = 0;
 
   /// Run a wrapper function in the executor. The given WFRHandler will be
   /// called on the result when it is returned.
@@ -397,6 +406,14 @@ public:
     llvm_unreachable("Unsupported");
   }
 
+  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override {
+    llvm_unreachable("Unsupported");
+  }
+
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override {
@@ -434,6 +451,10 @@ public:
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
+  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override;
+
+  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override;
+
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
@@ -462,7 +483,6 @@ private:
 
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   char GlobalManglingPrefix = 0;
-  std::vector<std::unique_ptr<sys::DynamicLibrary>> DynamicLibraries;
 };
 
 } // end namespace orc

@@ -22,7 +22,7 @@ namespace bugprone {
 /// very similar name and an identical signature defined in a base class.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-virtual-near-miss.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/virtual-near-miss.html
 class VirtualNearMissCheck : public ClangTidyCheck {
 public:
   VirtualNearMissCheck(StringRef Name, ClangTidyContext *Context)

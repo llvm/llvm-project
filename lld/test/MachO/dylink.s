@@ -20,7 +20,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/dylink.o
 # RUN: %lld -o %t/dylink -L%t -lhello -lgoodbye %t/dylink.o
-# RUN: llvm-objdump --bind -d --no-show-raw-insn %t/dylink | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --bind -d --no-show-raw-insn %t/dylink | FileCheck %s
 
 # CHECK: movq [[#%u, HELLO_OFF:]](%rip), %rsi
 # CHECK-NEXT: [[#%x, HELLO_RIP:]]:
@@ -52,6 +52,9 @@
 # RUN: llvm-objdump --macho --all-headers %t/dylink | FileCheck %s \
 # RUN:   --check-prefix=LOAD --implicit-check-not LC_LOAD_DYLIB
 
+# LOAD:                        cmd LC_LOAD_DYLIB
+# LOAD-NEXT:               cmdsize
+# LOAD-NEXT:                  name /usr/lib/libSystem.dylib
 # LOAD:                        cmd LC_LOAD_DYLIB
 # LOAD-NEXT:               cmdsize
 # LOAD-NEXT:                  name @executable_path/libhello.dylib

@@ -1,0 +1,266 @@
+// RUN: mlir-lsp-server -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"mlir","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.mlir",
+  "languageId":"mlir",
+  "version":1,
+  "text":"#attr = i32\n!alias = i32\nfunc.func private @foo(%arg: i32) -> i32 {\n%cast = \"builtin.unrealized_conversion_cast\"() : () -> (!pdl.value)\nreturn %"
+}}}
+// -----
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":2,"character":0}
+}}
+// CHECK-LABEL: "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "isIncomplete": false,
+// CHECK-NEXT:    "items": [
+// CHECK:           {
+// CHECK:             "detail": "dialect",
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 9,
+// CHECK:             "label": "builtin",
+// CHECK:             "sortText": "3"
+// CHECK:           },
+// CHECK:           {
+// CHECK:             "detail": "operation",
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 5,
+// CHECK:             "label": "module",
+// CHECK:             "sortText": "1"
+// CHECK:           }
+// CHECK:         ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":3,"character":9}
+}}
+// CHECK-LABEL: "id": 2
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "isIncomplete": false,
+// CHECK-NEXT:    "items": [
+// CHECK:           {
+// CHECK:             "detail": "dialect",
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 9,
+// CHECK:             "label": "builtin",
+// CHECK:             "sortText": "3"
+// CHECK:           },
+// CHECK-NOT:       "detail": "operation",
+// CHECK:         ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":3,"character":17}
+}}
+// CHECK-LABEL: "id": 3
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "isIncomplete": false,
+// CHECK-NEXT:    "items": [
+// CHECK-NOT:       "detail": "dialect",
+// CHECK:           {
+// CHECK:             "detail": "operation",
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 5,
+// CHECK:             "label": "module",
+// CHECK:             "sortText": "1"
+// CHECK:           }
+// CHECK:         ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":4,"character":8}
+}}
+// CHECK-LABEL: "id": 4
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "isIncomplete": false,
+// CHECK-NEXT:    "items": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "detail": "builtin.unrealized_conversion_cast: !pdl.value",
+// CHECK-NEXT:        "insertText": "cast",
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 6,
+// CHECK-NEXT:        "label": "%cast"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "detail": "arg #0: i32",
+// CHECK-NEXT:        "insertText": "arg",
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 6,
+// CHECK-NEXT:        "label": "%arg"
+// CHECK-NEXT:      }
+// CHECK:         ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":5,"method":"textDocument/completion","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":2,"character":10}
+}}
+// CHECK-LABEL: "id": 5
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "isIncomplete": false,
+// CHECK-NEXT:    "items": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "detail": "optional",
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "public",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "detail": "optional",
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "private",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "detail": "optional",
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "nested",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":6,"method":"textDocument/completion","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":0,"character":8}
+}}
+// CHECK-LABEL: "id": 6
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "isIncomplete": false,
+// CHECK-NEXT:    "items": [
+// CHECK:           {
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 5,
+// CHECK:             "label": "false"
+// CHECK:           },
+// CHECK:           {
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 5,
+// CHECK:             "label": "loc"
+// CHECK:           },
+// CHECK:           {
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 5,
+// CHECK:             "label": "true"
+// CHECK:           },
+// CHECK:           {
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 5,
+// CHECK:             "label": "unit"
+// CHECK:           }
+// CHECK:    ]
+// CHECK:  }
+// -----
+{"jsonrpc":"2.0","id":7,"method":"textDocument/completion","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":3,"character":56}
+}}
+// CHECK-LABEL: "id": 7
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "isIncomplete": false,
+// CHECK-NEXT:    "items": [
+// CHECK:           {
+// CHECK:              "insertTextFormat": 1,
+// CHECK:              "kind": 5,
+// CHECK:             "label": "index"
+// CHECK:           },
+// CHECK:           {
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 5,
+// CHECK:             "label": "none"
+// CHECK:           },
+// CHECK:           {
+// CHECK:             "insertText": "i",
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 5,
+// CHECK:             "label": "i<N>"
+// CHECK:           }
+// CHECK:         ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":8,"method":"textDocument/completion","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":3,"character":57}
+}}
+// CHECK-LABEL: "id": 8
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "isIncomplete": false,
+// CHECK-NEXT:    "items": [
+// CHECK:           {
+// CHECK:             "detail": "dialect",
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 9,
+// CHECK:             "label": "builtin",
+// CHECK:             "sortText": "3"
+// CHECK:           },
+// CHECK:           {
+// CHECK:             "detail": "alias: i32",
+// CHECK:             "insertTextFormat": 1,
+// CHECK:             "kind": 5,
+// CHECK:             "label": "alias",
+// CHECK:             "sortText": "2"
+// CHECK:           }
+// CHECK:         ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":9,"method":"textDocument/completion","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":3,"character":61}
+}}
+// CHECK-LABEL: "id": 9
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "isIncomplete": false,
+// CHECK-NEXT:    "items": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "attribute",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "operation",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "range",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "type",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "value",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":10,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}

@@ -18,7 +18,7 @@ namespace readability {
 /// Warn when a pointer function parameter can be const.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-non-const-parameter.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/non-const-parameter.html
 class NonConstParameterCheck : public ClangTidyCheck {
 public:
   NonConstParameterCheck(StringRef Name, ClangTidyContext *Context)

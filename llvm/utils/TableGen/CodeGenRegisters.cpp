@@ -154,8 +154,8 @@ CodeGenRegister::CodeGenRegister(Record *R, unsigned Enum)
     : TheDef(R), EnumValue(Enum),
       CostPerUse(R->getValueAsListOfInts("CostPerUse")),
       CoveredBySubRegs(R->getValueAsBit("CoveredBySubRegs")),
-      HasDisjunctSubRegs(false), SubRegsComplete(false),
-      SuperRegsComplete(false), TopoSig(~0u) {
+      HasDisjunctSubRegs(false), Constant(R->getValueAsBit("isConstant")),
+      SubRegsComplete(false), SuperRegsComplete(false), TopoSig(~0u) {
   Artificial = R->getValueAsBit("isArtificial");
 }
 
@@ -803,9 +803,11 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
   Allocatable = R->getValueAsBit("isAllocatable");
   AltOrderSelect = R->getValueAsString("AltOrderSelect");
   int AllocationPriority = R->getValueAsInt("AllocationPriority");
-  if (AllocationPriority < 0 || AllocationPriority > 63)
-    PrintFatalError(R->getLoc(), "AllocationPriority out of range [0,63]");
+  if (!isUInt<5>(AllocationPriority))
+    PrintFatalError(R->getLoc(), "AllocationPriority out of range [0,31]");
   this->AllocationPriority = AllocationPriority;
+
+  GlobalPriority = R->getValueAsBit("GlobalPriority");
 
   BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
   for (unsigned I = 0, E = TSF->getNumBits(); I != E; ++I) {
@@ -821,7 +823,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
                                            StringRef Name, Key Props)
     : Members(*Props.Members), TheDef(nullptr), Name(std::string(Name)),
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), RSI(Props.RSI),
-      CopyCost(0), Allocatable(true), AllocationPriority(0), TSFlags(0) {
+      CopyCost(0), Allocatable(true), AllocationPriority(0),
+      GlobalPriority(false), TSFlags(0) {
   Artificial = true;
   GeneratePressureSet = false;
   for (const auto R : Members) {
@@ -849,6 +852,7 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
   });
   AltOrderSelect = Super.AltOrderSelect;
   AllocationPriority = Super.AllocationPriority;
+  GlobalPriority = Super.GlobalPriority;
   TSFlags = Super.TSFlags;
   GeneratePressureSet |= Super.GeneratePressureSet;
 
@@ -859,6 +863,26 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
     for (unsigned j = 0, je = Super.Orders[i].size(); j != je; ++j)
       if (contains(RegBank.getReg(Super.Orders[i][j])))
         Orders[i].push_back(Super.Orders[i][j]);
+}
+
+bool CodeGenRegisterClass::hasType(const ValueTypeByHwMode &VT) const {
+  if (llvm::is_contained(VTs, VT))
+    return true;
+
+  // If VT is not identical to any of this class's types, but is a simple
+  // type, check if any of the types for this class contain it under some
+  // mode.
+  // The motivating example came from RISCV, where (likely because of being
+  // guarded by "64-bit" predicate), the type of X5 was {*:[i64]}, but the
+  // type in GRC was {*:[i32], m1:[i64]}.
+  if (VT.isSimple()) {
+    MVT T = VT.getSimple();
+    for (const ValueTypeByHwMode &OurVT : VTs) {
+      if (llvm::count_if(OurVT, [T](auto &&P) { return P.second == T; }))
+        return true;
+    }
+  }
+  return false;
 }
 
 bool CodeGenRegisterClass::contains(const CodeGenRegister *Reg) const {

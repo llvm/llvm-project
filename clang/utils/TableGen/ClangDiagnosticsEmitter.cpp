@@ -325,7 +325,7 @@ bool InferPedantic::isOffByDefault(const Record *Diag) {
 bool InferPedantic::groupInPedantic(const Record *Group, bool increment) {
   GMap::mapped_type &V = GroupCount[Group];
   // Lazily compute the threshold value for the group count.
-  if (!V.second.hasValue()) {
+  if (!V.second) {
     const GroupInfo &GI =
         DiagsInGroup[std::string(Group->getValueAsString("GroupName"))];
     V.second = GI.SubGroups.size() + GI.DiagsInGroup.size();
@@ -337,7 +337,7 @@ bool InferPedantic::groupInPedantic(const Record *Group, bool increment) {
   // Consider a group in -Wpendatic IFF if has at least one diagnostic
   // or subgroup AND all of those diagnostics and subgroups are covered
   // by -Wpedantic via our computation.
-  return V.first != 0 && V.first == V.second.getValue();
+  return V.first != 0 && V.first == *V.second;
 }
 
 void InferPedantic::markGroup(const Record *Group) {
@@ -404,17 +404,14 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (!groupInPedantic(Group))
       continue;
 
-    unsigned ParentsInPedantic = 0;
     const std::vector<Record*> &Parents = DiagGroupParents.getParents(Group);
-    for (unsigned j = 0, ej = Parents.size(); j != ej; ++j) {
-      if (groupInPedantic(Parents[j]))
-        ++ParentsInPedantic;
-    }
+    bool AllParentsInPedantic =
+        llvm::all_of(Parents, [&](Record *R) { return groupInPedantic(R); });
     // If all the parents are in -Wpedantic, this means that this diagnostic
     // group will be indirectly included by -Wpedantic already.  In that
     // case, do not add it directly to -Wpedantic.  If the group has no
     // parents, obviously it should go into -Wpedantic.
-    if (Parents.size() > 0 && ParentsInPedantic == Parents.size())
+    if (Parents.size() > 0 && AllParentsInPedantic)
       continue;
 
     if (RecordVec *V = GroupsInPedantic.dyn_cast<RecordVec*>())

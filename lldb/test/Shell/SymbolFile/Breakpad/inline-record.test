@@ -5,46 +5,46 @@
 # CHECK-LABEL: (lldb) image lookup -a 0x400010 -v
 # CHECK:       Summary: inline-record.out`f1 [inlined] inlined_f1 at a.c:3
 # CHECK-NEXT:           inline-record.out`f1 at a.c:8
-# CHECK:      Function: id = {0x00000000}, name = "f1", range = [0x0000000000400010-0x0000000000400020)
-# CHECK-NEXT:   Blocks: id = {0x00000000}, range = [0x00400010-0x00400020)
-# CHECK-NEXT:           id = {0x00000010}, ranges = [0x00400010-0x00400015)[0x00400017-0x0040001b), name = "inlined_f1"
+# CHECK:      Function: id = {{.*}}, name = "f1", range = [0x0000000000400010-0x0000000000400020)
+# CHECK-NEXT:   Blocks: id = {{.*}}, range = [0x00400010-0x00400020)
+# CHECK-NEXT:           id = {{.*}}, ranges = [0x00400010-0x00400015)[0x00400017-0x0040001b), name = "inlined_f1"
 
 # CHECK-LABEL: (lldb) image lookup -a 0x400016 -v
 # CHECK:       Summary: inline-record.out`f1 + 6 at a.c:3
 # CHECK-NOT:            inline-record.out`f1
-# CHECK:      Function: id = {0x00000000}, name = "f1", range = [0x0000000000400010-0x0000000000400020)
-# CHECK-NEXT:   Blocks: id = {0x00000000}, range = [0x00400010-0x00400020)
+# CHECK:      Function: id = {{.*}}, name = "f1", range = [0x0000000000400010-0x0000000000400020)
+# CHECK-NEXT:   Blocks: id = {{.*}}, range = [0x00400010-0x00400020)
 
 # CHECK-LABEL: (lldb) image lookup -a 0x400023 -v
 # CHECK:      Summary: inline-record.out`f2 + 3 [inlined] inlined_f2 at b.c:2
 # CHECK-NEXT:          inline-record.out`f2 + 3 [inlined] inlined_f1 at b.c:4
 # CHECK-NEXT:          inline-record.out`f2 + 3 at a.c:3
-# CHECK:      Function: id = {0x00000001}, name = "f2", range = [0x0000000000400020-0x0000000000400030)
-# CHECK-NEXT:   Blocks: id = {0x00000001}, range = [0x00400020-0x00400030)
-# CHECK-NEXT:           id = {0x00000043}, range = [0x00400023-0x0040002d), name = "inlined_f1"
-# CHECK-NEXT:           id = {0x00000057}, range = [0x00400023-0x00400028), name = "inlined_f2"
+# CHECK:      Function: id = {{.*}}, name = "f2", range = [0x0000000000400020-0x0000000000400030)
+# CHECK-NEXT:   Blocks: id = {{.*}}, range = [0x00400020-0x00400030)
+# CHECK-NEXT:           id = {{.*}}, range = [0x00400023-0x0040002d), name = "inlined_f1"
+# CHECK-NEXT:           id = {{.*}}, range = [0x00400023-0x00400028), name = "inlined_f2"
 
 # CHECK-LABEL: (lldb) image lookup -a 0x400029 -v
 # CHECK:      Summary: inline-record.out`f2 + 9 [inlined] inlined_f1 + 6 at b.c:2
 # CHECK-NEXT:          inline-record.out`f2 + 3 at a.c:3
-# CHECK:      Function: id = {0x00000001}, name = "f2", range = [0x0000000000400020-0x0000000000400030)
-# CHECK-NEXT:   Blocks: id = {0x00000001}, range = [0x00400020-0x00400030)
-# CHECK-NEXT:           id = {0x00000043}, range = [0x00400023-0x0040002d), name = "inlined_f1"
+# CHECK:      Function: id = {{.*}}, name = "f2", range = [0x0000000000400020-0x0000000000400030)
+# CHECK-NEXT:   Blocks: id = {{.*}}, range = [0x00400020-0x00400030)
+# CHECK-NEXT:           id = {{.*}}, range = [0x00400023-0x0040002d), name = "inlined_f1"
 
 # CHECK-LABEL: (lldb) image lookup -a 0x400030 -v
 # CHECK:       Summary: inline-record.out`f3 [inlined] inlined_f1 at b.c:3
 # CHECK-NEXT:           inline-record.out`f3 at 3
-# CHECK:      Function: id = {0x00000002}, name = "f3", range = [0x0000000000400030-0x0000000000400040)
-# CHECK-NEXT:   Blocks: id = {0x00000002}, range = [0x00400030-0x00400040)
-# CHECK-NEXT:           id = {0x00000085}, range = [0x00400030-0x00400035), name = "inlined_f1"
+# CHECK:      Function: id = {{.*}}, name = "f3", range = [0x0000000000400030-0x0000000000400040)
+# CHECK-NEXT:   Blocks: id = {{.*}}, range = [0x00400030-0x00400040)
+# CHECK-NEXT:           id = {{.*}}, range = [0x00400030-0x00400035), name = "inlined_f1"
 
 
 # CHECK-LABEL: (lldb) image lookup -a 0x400035 -v
 # CHECK:      Summary: inline-record.out`f3 + 5 [inlined]  at b.c:3
 # CHECK-NEXT:          inline-record.out`f3 + 5 at a.c:3
-# CHECK:      Function: id = {0x00000002}, name = "f3", range = [0x0000000000400030-0x0000000000400040)
-# CHECK-NEXT:   Blocks: id = {0x00000002}, range = [0x00400030-0x00400040)
-# CHECK-NEXT:           id = {0x0000009b}, range = [0x00400035-0x0040003a)
+# CHECK:      Function: id = {{.*}}, name = "f3", range = [0x0000000000400030-0x0000000000400040)
+# CHECK-NEXT:   Blocks: id = {{.*}}, range = [0x00400030-0x00400040)
+# CHECK-NEXT:           id = {{.*}}, range = [0x00400035-0x0040003a)
 
 image lookup -a 0x400010 -v
 image lookup -a 0x400016 -v

@@ -186,13 +186,9 @@ int main(int argc, char **argv) {
     return processBuffer(os, std::move(chunkBuffer), outputType, includeDirs,
                          dumpODS, includedFiles);
   };
-  if (splitInputFile) {
-    if (failed(splitAndProcessBuffer(std::move(inputFile), processFn,
-                                     outputStrOS)))
-      return 1;
-  } else if (failed(processFn(std::move(inputFile), outputStrOS))) {
+  if (failed(splitAndProcessBuffer(std::move(inputFile), processFn, outputStrOS,
+                                   splitInputFile)))
     return 1;
-  }
 
   // Write the output.
   bool shouldWriteOutput = true;

@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILPointerType.h"
 #include "PointerTypeAnalysis.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/TypedPointerType.h"
 #include "llvm/Support/SourceMgr.h"
 
 #include "gmock/gmock.h"
@@ -26,16 +26,6 @@ using namespace llvm::dxil;
 template <typename T> struct IsA {
   friend bool operator==(const Value *V, const IsA &) { return isa<T>(V); }
 };
-
-TEST(DXILPointerType, PrintTest) {
-  std::string Buffer;
-  LLVMContext Context;
-  raw_string_ostream OS(Buffer);
-
-  Type *I8Ptr = TypedPointerType::get(Type::getInt8Ty(Context), 0);
-  I8Ptr->print(OS);
-  EXPECT_TRUE(StringRef(Buffer).startswith("dxil-ptr ("));
-}
 
 TEST(PointerTypeAnalysis, DigressToi8) {
   StringRef Assembly = R"(
@@ -56,8 +46,9 @@ TEST(PointerTypeAnalysis, DigressToi8) {
   Type *I8Ptr = TypedPointerType::get(Type::getInt8Ty(Context), 0);
   Type *FnTy = FunctionType::get(Type::getInt64Ty(Context), {I8Ptr}, false);
 
-  EXPECT_THAT(Map, Contains(Pair(IsA<Function>(), FnTy)));
-  EXPECT_THAT(Map, Contains(Pair(IsA<Argument>(), I8Ptr)));  
+  EXPECT_THAT(Map,
+              Contains(Pair(IsA<Function>(), TypedPointerType::get(FnTy, 0))));
+  EXPECT_THAT(Map, Contains(Pair(IsA<Argument>(), I8Ptr)));
 }
 
 TEST(PointerTypeAnalysis, DiscoverStore) {
@@ -78,7 +69,8 @@ TEST(PointerTypeAnalysis, DiscoverStore) {
   Type *I32Ptr = TypedPointerType::get(Type::getInt32Ty(Context), 0);
   Type *FnTy = FunctionType::get(Type::getInt32Ty(Context), {I32Ptr}, false);
 
-  EXPECT_THAT(Map, Contains(Pair(IsA<Function>(), FnTy)));
+  EXPECT_THAT(Map,
+              Contains(Pair(IsA<Function>(), TypedPointerType::get(FnTy, 0))));
   EXPECT_THAT(Map, Contains(Pair(IsA<Argument>(), I32Ptr)));
 }
 
@@ -100,7 +92,8 @@ TEST(PointerTypeAnalysis, DiscoverLoad) {
   Type *I32Ptr = TypedPointerType::get(Type::getInt32Ty(Context), 0);
   Type *FnTy = FunctionType::get(Type::getInt32Ty(Context), {I32Ptr}, false);
 
-  EXPECT_THAT(Map, Contains(Pair(IsA<Function>(), FnTy)));
+  EXPECT_THAT(Map,
+              Contains(Pair(IsA<Function>(), TypedPointerType::get(FnTy, 0))));
   EXPECT_THAT(Map, Contains(Pair(IsA<Argument>(), I32Ptr)));
 }
 
@@ -123,7 +116,8 @@ TEST(PointerTypeAnalysis, DiscoverGEP) {
   Type *I64Ptr = TypedPointerType::get(Type::getInt64Ty(Context), 0);
   Type *FnTy = FunctionType::get(I64Ptr, {I64Ptr}, false);
 
-  EXPECT_THAT(Map, Contains(Pair(IsA<Function>(), FnTy)));
+  EXPECT_THAT(Map,
+              Contains(Pair(IsA<Function>(), TypedPointerType::get(FnTy, 0))));
   EXPECT_THAT(Map, Contains(Pair(IsA<Argument>(), I64Ptr)));
   EXPECT_THAT(Map, Contains(Pair(IsA<GetElementPtrInst>(), I64Ptr)));
 }
@@ -149,7 +143,8 @@ TEST(PointerTypeAnalysis, TraceIndirect) {
   Type *I64PtrPtr = TypedPointerType::get(I64Ptr, 0);
   Type *FnTy = FunctionType::get(Type::getInt64Ty(Context), {I64PtrPtr}, false);
 
-  EXPECT_THAT(Map, Contains(Pair(IsA<Function>(), FnTy)));
+  EXPECT_THAT(Map,
+              Contains(Pair(IsA<Function>(), TypedPointerType::get(FnTy, 0))));
   EXPECT_THAT(Map, Contains(Pair(IsA<Argument>(), I64PtrPtr)));
   EXPECT_THAT(Map, Contains(Pair(IsA<LoadInst>(), I64Ptr)));
 }
@@ -178,7 +173,8 @@ TEST(PointerTypeAnalysis, WithNoOpCasts) {
   Type *I64Ptr = TypedPointerType::get(Type::getInt64Ty(Context), 0);
   Type *FnTy = FunctionType::get(Type::getInt64Ty(Context), {I8Ptr}, false);
 
-  EXPECT_THAT(Map, Contains(Pair(IsA<Function>(), FnTy)));
+  EXPECT_THAT(Map,
+              Contains(Pair(IsA<Function>(), TypedPointerType::get(FnTy, 0))));
   EXPECT_THAT(Map, Contains(Pair(IsA<Argument>(), I8Ptr)));
   EXPECT_THAT(Map, Contains(Pair(IsA<BitCastInst>(), I64Ptr)));
   EXPECT_THAT(Map, Contains(Pair(IsA<BitCastInst>(), I32Ptr)));

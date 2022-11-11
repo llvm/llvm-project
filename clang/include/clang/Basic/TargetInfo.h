@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_TARGETINFO_H
 
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -49,15 +50,31 @@ class LangOptions;
 class CodeGenOptions;
 class MacroBuilder;
 
+/// Contains information gathered from parsing the contents of TargetAttr.
+struct ParsedTargetAttr {
+  std::vector<std::string> Features;
+  StringRef CPU;
+  StringRef Tune;
+  StringRef BranchProtection;
+  StringRef Duplicate;
+  bool operator ==(const ParsedTargetAttr &Other) const {
+    return Duplicate == Other.Duplicate && CPU == Other.CPU &&
+           Tune == Other.Tune && BranchProtection == Other.BranchProtection &&
+           Features == Other.Features;
+  }
+};
+
 namespace Builtin { struct Info; }
 
 enum class FloatModeKind {
-  NoFloat = 255,
-  Float = 0,
-  Double,
-  LongDouble,
-  Float128,
-  Ibm128
+  NoFloat = 0,
+  Half = 1 << 0,
+  Float = 1 << 1,
+  Double = 1 << 2,
+  LongDouble = 1 << 3,
+  Float128 = 1 << 4,
+  Ibm128 = 1 << 5,
+  LLVM_MARK_AS_BITMASK_ENUM(Ibm128)
 };
 
 /// Fields controlling how types are laid out in memory; these may need to
@@ -75,6 +92,7 @@ struct TransferrableTargetInfo {
   unsigned char LargeArrayMinWidth, LargeArrayAlign;
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
+  unsigned char Int128Align;
 
   // Fixed point bit widths
   unsigned char ShortAccumWidth, ShortAccumAlign;
@@ -197,6 +215,7 @@ protected:
   bool NoAsmVariants;  // True if {|} are normal characters.
   bool HasLegalHalfType; // True if the backend supports operations on the half
                          // LLVM IR type.
+  bool HalfArgsAndReturns;
   bool HasFloat128;
   bool HasFloat16;
   bool HasBFloat16;
@@ -219,7 +238,7 @@ protected:
   mutable VersionTuple PlatformMinVersion;
 
   unsigned HasAlignMac68kSupport : 1;
-  unsigned RealTypeUsesObjCFPRet : 3;
+  unsigned RealTypeUsesObjCFPRetMask : llvm::BitWidth<FloatModeKind>;
   unsigned ComplexLongDoubleUsesFP2Ret : 1;
 
   unsigned HasBuiltinMSVaList : 1;
@@ -467,6 +486,9 @@ public:
   unsigned getLongLongWidth() const { return LongLongWidth; }
   unsigned getLongLongAlign() const { return LongLongAlign; }
 
+  /// getInt128Align() - Returns the alignment of Int128.
+  unsigned getInt128Align() const { return Int128Align; }
+
   /// getShortAccumWidth/Align - Return the size of 'signed short _Accum' and
   /// 'unsigned short _Accum' for this target, in bits.
   unsigned getShortAccumWidth() const { return ShortAccumWidth; }
@@ -613,6 +635,9 @@ public:
 
   /// Determine whether _Float16 is supported on this target.
   virtual bool hasLegalHalfType() const { return HasLegalHalfType; }
+
+  /// Whether half args and returns are supported.
+  virtual bool allowHalfArgsAndReturns() const { return HalfArgsAndReturns; }
 
   /// Determine whether the __float128 type is supported on this target.
   virtual bool hasFloat128Type() const { return HasFloat128; }
@@ -888,7 +913,7 @@ public:
   /// Check whether the given real type should use the "fpret" flavor of
   /// Objective-C message passing on this target.
   bool useObjCFPRetForRealType(FloatModeKind T) const {
-    return RealTypeUsesObjCFPRet & (1 << (int)T);
+    return (int)((FloatModeKind)RealTypeUsesObjCFPRetMask & T);
   }
 
   /// Check whether _Complex long double should use the "fp2ret" flavor
@@ -904,6 +929,8 @@ public:
   virtual bool useFP16ConversionIntrinsics() const {
     return true;
   }
+
+  virtual bool shouldEmitFloat16WithExcessPrecision() const { return false; }
 
   /// Specify if mangling based on address space map should be used or
   /// not for language specific address spaces
@@ -1268,6 +1295,8 @@ public:
     return isValidCPUName(Name);
   }
 
+  virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
+
   /// brief Determine whether this TargetInfo supports tune in target attribute.
   virtual bool supportsTargetAttributeTune() const {
     return false;
@@ -1355,7 +1384,9 @@ public:
   bool supportsMultiVersioning() const { return getTriple().isX86(); }
 
   /// Identify whether this target supports IFuncs.
-  bool supportsIFunc() const { return getTriple().isOSBinFormatELF(); }
+  bool supportsIFunc() const {
+    return getTriple().isOSBinFormatELF() && !getTriple().isOSFuchsia();
+  }
 
   // Validate the contents of the __builtin_cpu_supports(const char*)
   // argument.
@@ -1534,6 +1565,14 @@ public:
   };
 
   virtual CallingConvKind getCallingConvKind(bool ClangABICompat4) const;
+
+  /// Controls whether explicitly defaulted (`= default`) special member
+  /// functions disqualify something from being POD-for-the-purposes-of-layout.
+  /// Historically, Clang didn't consider these acceptable for POD, but GCC
+  /// does. So in newer Clang ABIs they are acceptable for POD to be compatible
+  /// with GCC/Itanium ABI, and remains disqualifying for targets that need
+  /// Clang backwards compatibility rather than GCC/Itanium ABI compatibility.
+  virtual bool areDefaultedSMFStillPOD(const LangOptions&) const;
 
   /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.

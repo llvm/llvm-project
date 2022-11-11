@@ -6,7 +6,7 @@
 
 @a = common dso_local local_unnamed_addr global i32 0, align 4
 
-define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
+define dso_local signext i32 @test1(ptr %b) local_unnamed_addr  {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
@@ -46,15 +46,15 @@ define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
 ; CHECK-32BIT-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-32BIT-NEXT:    jmp callNonVoid@PLT # TAILCALL
 entry:
-  %0 = load i32, i32* @a, align 4, !tbaa !2
+  %0 = load i32, ptr @a, align 4, !tbaa !2
   %conv = sext i32 %0 to i64
-  %1 = inttoptr i64 %conv to i32*
-  %cmp = icmp eq i32* %1, %b
+  %1 = inttoptr i64 %conv to ptr
+  %cmp = icmp eq ptr %1, %b
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %call = tail call signext i32 bitcast (i32 (...)* @callVoid to i32 ()*)()
-  %call2 = tail call signext i32 @callNonVoid(i32* %b)
+  %call = tail call signext i32 @callVoid()
+  %call2 = tail call signext i32 @callNonVoid(ptr %b)
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -64,9 +64,9 @@ if.end:                                           ; preds = %if.then, %entry
 
 declare signext i32 @callVoid(...) local_unnamed_addr
 
-declare signext i32 @callNonVoid(i32*) local_unnamed_addr
+declare signext i32 @callNonVoid(ptr) local_unnamed_addr
 
-define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
+define dso_local signext i32 @test2(ptr %p1) local_unnamed_addr  {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
@@ -114,19 +114,19 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-32BIT-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-32BIT-NEXT:    jmp callNonVoid@PLT # TAILCALL
 entry:
-  %tobool = icmp eq i32* %p1, null
+  %tobool = icmp eq ptr %p1, null
   br i1 %tobool, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
-  %0 = load i32, i32* @a, align 4, !tbaa !2
+  %0 = load i32, ptr @a, align 4, !tbaa !2
   %conv = sext i32 %0 to i64
-  %1 = inttoptr i64 %conv to i32*
-  %cmp = icmp eq i32* %1, %p1
+  %1 = inttoptr i64 %conv to ptr
+  %cmp = icmp eq ptr %1, %p1
   br i1 %cmp, label %if.then2, label %return
 
 if.then2:                                         ; preds = %if.end
-  %call = tail call signext i32 bitcast (i32 (...)* @callVoid to i32 ()*)()
-  %call3 = tail call signext i32 @callNonVoid(i32* nonnull %p1)
+  %call = tail call signext i32 @callVoid()
+  %call3 = tail call signext i32 @callNonVoid(ptr nonnull %p1)
   br label %return
 
 return:                                           ; preds = %if.end, %entry, %if.then2
@@ -135,7 +135,7 @@ return:                                           ; preds = %if.end, %entry, %if
 }
 
 
-define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_addr  {
+define dso_local ptr @test3(ptr nocapture %p1, i8 zeroext %p2) local_unnamed_addr  {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %r14
@@ -201,20 +201,20 @@ define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_ad
 ; CHECK-32BIT-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-32BIT-NEXT:    retl
 entry:
-  %0 = load i8*, i8** %p1, align 8, !tbaa !6
-  %tobool = icmp eq i8* %0, null
+  %0 = load ptr, ptr %p1, align 8, !tbaa !6
+  %tobool = icmp eq ptr %0, null
   br i1 %tobool, label %land.end, label %land.rhs
 
 land.rhs:                                         ; preds = %entry
-  %call = tail call i8* @bar(i8* nonnull %0, i8 zeroext %p2)
-  store i8* %call, i8** %p1, align 8, !tbaa !6
+  %call = tail call ptr @bar(ptr nonnull %0, i8 zeroext %p2)
+  store ptr %call, ptr %p1, align 8, !tbaa !6
   br label %land.end
 
 land.end:                                         ; preds = %entry, %land.rhs
-  ret i8* %0
+  ret ptr %0
 }
 
-declare i8* @bar(i8*, i8 zeroext) local_unnamed_addr
+declare ptr @bar(ptr, i8 zeroext) local_unnamed_addr
 
 
 !llvm.module.flags = !{!0}

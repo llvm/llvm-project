@@ -191,12 +191,12 @@ bool differentReplacedTemplateParams(const QualType &VarType,
           getSubstitutedType(VarType, Context)) {
     if (const SubstTemplateTypeParmType *InitializerTmplType =
             getSubstitutedType(InitializerType, Context)) {
-      return VarTmplType->getReplacedParameter()
-                 ->desugar()
-                 .getCanonicalType() !=
-             InitializerTmplType->getReplacedParameter()
-                 ->desugar()
-                 .getCanonicalType();
+      const TemplateTypeParmDecl *VarTTP = VarTmplType->getReplacedParameter();
+      const TemplateTypeParmDecl *InitTTP =
+          InitializerTmplType->getReplacedParameter();
+      return (VarTTP->getDepth() != InitTTP->getDepth() ||
+              VarTTP->getIndex() != InitTTP->getIndex() ||
+              VarTTP->isParameterPack() != InitTTP->isParameterPack());
     }
   }
   return false;

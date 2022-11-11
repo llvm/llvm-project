@@ -29,40 +29,37 @@ namespace {
 
 struct ARM64_32 : ARM64Common {
   ARM64_32();
-  void writeStub(uint8_t *buf, const Symbol &) const override;
+  void writeStub(uint8_t *buf, const Symbol &, uint64_t) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
-  const RelocAttrs &getRelocAttrs(uint8_t type) const override;
+  void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                            uint64_t stubOffset, uint64_t selrefsVA,
+                            uint64_t selectorIndex, uint64_t gotAddr,
+                            uint64_t msgSendIndex) const override;
 };
 
 } // namespace
 
 // These are very similar to ARM64's relocation attributes, except that we don't
 // have the BYTE8 flag set.
-const RelocAttrs &ARM64_32::getRelocAttrs(uint8_t type) const {
-  static const std::array<RelocAttrs, 11> relocAttrsArray{{
+static constexpr std::array<RelocAttrs, 11> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
-      {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
-      {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4)},
-      {"BRANCH26", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
-      {"PAGE21", B(PCREL) | B(EXTERN) | B(BYTE4)},
-      {"PAGEOFF12", B(ABSOLUTE) | B(EXTERN) | B(BYTE4)},
-      {"GOT_LOAD_PAGE21", B(PCREL) | B(EXTERN) | B(GOT) | B(BYTE4)},
-      {"GOT_LOAD_PAGEOFF12",
-       B(ABSOLUTE) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
-      {"POINTER_TO_GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
-      {"TLVP_LOAD_PAGE21", B(PCREL) | B(EXTERN) | B(TLV) | B(BYTE4)},
-      {"TLVP_LOAD_PAGEOFF12",
-       B(ABSOLUTE) | B(EXTERN) | B(TLV) | B(LOAD) | B(BYTE4)},
-      {"ADDEND", B(ADDEND)},
+    {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
+    {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4)},
+    {"BRANCH26", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
+    {"PAGE21", B(PCREL) | B(EXTERN) | B(BYTE4)},
+    {"PAGEOFF12", B(ABSOLUTE) | B(EXTERN) | B(BYTE4)},
+    {"GOT_LOAD_PAGE21", B(PCREL) | B(EXTERN) | B(GOT) | B(BYTE4)},
+    {"GOT_LOAD_PAGEOFF12",
+     B(ABSOLUTE) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
+    {"POINTER_TO_GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
+    {"TLVP_LOAD_PAGE21", B(PCREL) | B(EXTERN) | B(TLV) | B(BYTE4)},
+    {"TLVP_LOAD_PAGEOFF12",
+     B(ABSOLUTE) | B(EXTERN) | B(TLV) | B(LOAD) | B(BYTE4)},
+    {"ADDEND", B(ADDEND)},
 #undef B
-  }};
-  assert(type < relocAttrsArray.size() && "invalid relocation type");
-  if (type >= relocAttrsArray.size())
-    return invalidRelocAttrs;
-  return relocAttrsArray[type];
-}
+}};
 
 // The stub code is fairly similar to ARM64's, except that we load pointers into
 // 32-bit 'w' registers, instead of the 64-bit 'x' ones.
@@ -73,8 +70,9 @@ static constexpr uint32_t stubCode[] = {
     0xd61f0200, // 08: br    x16
 };
 
-void ARM64_32::writeStub(uint8_t *buf8, const Symbol &sym) const {
-  ::writeStub<ILP32>(buf8, stubCode, sym);
+void ARM64_32::writeStub(uint8_t *buf8, const Symbol &sym,
+                         uint64_t pointerVA) const {
+  ::writeStub(buf8, stubCode, sym, pointerVA);
 }
 
 static constexpr uint32_t stubHelperHeaderCode[] = {
@@ -101,6 +99,14 @@ void ARM64_32::writeStubHelperEntry(uint8_t *buf8, const Symbol &sym,
   ::writeStubHelperEntry(buf8, stubHelperEntryCode, sym, entryVA);
 }
 
+void ARM64_32::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym,
+                                    uint64_t stubsAddr, uint64_t stubOffset,
+                                    uint64_t selrefsVA, uint64_t selectorIndex,
+                                    uint64_t gotAddr,
+                                    uint64_t msgSendIndex) const {
+  fatal("TODO: implement this");
+}
+
 ARM64_32::ARM64_32() : ARM64Common(ILP32()) {
   cpuType = CPU_TYPE_ARM64_32;
   cpuSubtype = CPU_SUBTYPE_ARM64_V8;
@@ -112,6 +118,8 @@ ARM64_32::ARM64_32() : ARM64Common(ILP32()) {
   stubSize = sizeof(stubCode);
   stubHelperHeaderSize = sizeof(stubHelperHeaderCode);
   stubHelperEntrySize = sizeof(stubHelperEntryCode);
+
+  relocAttrs = {relocAttrsArray.data(), relocAttrsArray.size()};
 }
 
 TargetInfo *macho::createARM64_32TargetInfo() {

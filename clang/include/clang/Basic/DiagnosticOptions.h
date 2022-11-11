@@ -46,20 +46,20 @@ enum class DiagnosticLevelMask : unsigned {
 };
 
 inline DiagnosticLevelMask operator~(DiagnosticLevelMask M) {
-  using UT = std::underlying_type<DiagnosticLevelMask>::type;
+  using UT = std::underlying_type_t<DiagnosticLevelMask>;
   return static_cast<DiagnosticLevelMask>(~static_cast<UT>(M));
 }
 
 inline DiagnosticLevelMask operator|(DiagnosticLevelMask LHS,
                                      DiagnosticLevelMask RHS) {
-  using UT = std::underlying_type<DiagnosticLevelMask>::type;
+  using UT = std::underlying_type_t<DiagnosticLevelMask>;
   return static_cast<DiagnosticLevelMask>(
     static_cast<UT>(LHS) | static_cast<UT>(RHS));
 }
 
 inline DiagnosticLevelMask operator&(DiagnosticLevelMask LHS,
                                      DiagnosticLevelMask RHS) {
-  using UT = std::underlying_type<DiagnosticLevelMask>::type;
+  using UT = std::underlying_type_t<DiagnosticLevelMask>;
   return static_cast<DiagnosticLevelMask>(
     static_cast<UT>(LHS) & static_cast<UT>(RHS));
 }
@@ -74,7 +74,7 @@ class DiagnosticOptions : public RefCountedBase<DiagnosticOptions>{
   friend class CompilerInvocation;
 
 public:
-  enum TextDiagnosticFormat { Clang, MSVC, Vi };
+  enum TextDiagnosticFormat { Clang, MSVC, Vi, SARIF };
 
   // Default values.
   enum {

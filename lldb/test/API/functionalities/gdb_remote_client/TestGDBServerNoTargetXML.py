@@ -1,4 +1,3 @@
-from __future__ import print_function
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
@@ -9,8 +8,6 @@ import binascii
 
 
 class TestGDBServerTargetXML(GDBRemoteTestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @staticmethod
     def filecheck_to_blob(fc):

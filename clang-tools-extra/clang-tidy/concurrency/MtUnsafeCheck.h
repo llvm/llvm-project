@@ -18,7 +18,7 @@ namespace concurrency {
 /// Checks that non-thread-safe functions are not used.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/threads-mt-unsafe.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/threads/mt-unsafe.html
 class MtUnsafeCheck : public ClangTidyCheck {
 public:
   MtUnsafeCheck(StringRef Name, ClangTidyContext *Context);

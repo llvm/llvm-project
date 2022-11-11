@@ -24,7 +24,7 @@ entry:
   %tobool = fcmp une double %mul, 0.000000e+00
   %cond = select i1 %tobool, double %conv, double 0.000000e+00
   %conv3 = fptosi double %cond to i16
-  store i16 %conv3, i16* undef
+  store i16 %conv3, ptr undef
   ret void
 }
 

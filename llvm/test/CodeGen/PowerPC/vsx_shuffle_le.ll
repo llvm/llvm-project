@@ -9,24 +9,23 @@
 ; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-P9 --implicit-check-not xxswapd
 
-define <2 x double> @test00(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test00(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test00:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    xxspltd 34, 0, 0
+; CHECK-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test00:
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 0, i32 0>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test01(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test01(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test01:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
@@ -37,13 +36,13 @@ define <2 x double> @test01(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lxv 34, 0(3)
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 0, i32 1>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test02(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test02(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test02:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
@@ -59,13 +58,13 @@ define <2 x double> @test02(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9-NEXT:    lxv 1, 0(4)
 ; CHECK-P9-NEXT:    xxmrgld 34, 1, 0
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 0, i32 2>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test03(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test03(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test03:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
@@ -81,13 +80,13 @@ define <2 x double> @test03(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9-NEXT:    lxv 1, 0(4)
 ; CHECK-P9-NEXT:    xxpermdi 34, 1, 0, 1
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 0, i32 3>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test10(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test10(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 34, 0, 3
@@ -97,17 +96,17 @@ define <2 x double> @test10(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lxvd2x 34, 0, 3
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 1, i32 0>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test11(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test11(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    xxspltd 34, 0, 1
+; CHECK-NEXT:    addi 3, 3, 8
+; CHECK-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test11:
@@ -115,13 +114,13 @@ define <2 x double> @test11(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9-NEXT:    addi 3, 3, 8
 ; CHECK-P9-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 1, i32 1>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test12(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test12(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test12:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
@@ -137,13 +136,13 @@ define <2 x double> @test12(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9-NEXT:    lxv 1, 0(4)
 ; CHECK-P9-NEXT:    xxpermdi 34, 1, 0, 2
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 1, i32 2>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test13(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test13(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test13:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
@@ -159,13 +158,13 @@ define <2 x double> @test13(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9-NEXT:    lxv 1, 0(4)
 ; CHECK-P9-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 1, i32 3>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test20(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test20(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test20:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
@@ -181,13 +180,13 @@ define <2 x double> @test20(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9-NEXT:    lxv 1, 0(4)
 ; CHECK-P9-NEXT:    xxmrgld 34, 0, 1
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 2, i32 0>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test21(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test21(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test21:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
@@ -203,30 +202,29 @@ define <2 x double> @test21(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9-NEXT:    lxv 1, 0(4)
 ; CHECK-P9-NEXT:    xxpermdi 34, 0, 1, 1
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 2, i32 1>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test22(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test22(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test22:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 4
-; CHECK-NEXT:    xxspltd 34, 0, 0
+; CHECK-NEXT:    lxvdsx 34, 0, 4
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test22:
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lxvdsx 34, 0, 4
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 2, i32 2>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test23(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test23(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test23:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 0, 0, 4
@@ -237,13 +235,13 @@ define <2 x double> @test23(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lxv 34, 0(4)
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 2, i32 3>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test30(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test30(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test30:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
@@ -259,13 +257,13 @@ define <2 x double> @test30(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9-NEXT:    lxv 1, 0(4)
 ; CHECK-P9-NEXT:    xxpermdi 34, 0, 1, 2
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 3, i32 0>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test31(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test31(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test31:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
@@ -281,13 +279,13 @@ define <2 x double> @test31(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9-NEXT:    lxv 1, 0(4)
 ; CHECK-P9-NEXT:    xxmrghd 34, 0, 1
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 3, i32 1>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test32(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test32(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x 34, 0, 4
@@ -297,17 +295,17 @@ define <2 x double> @test32(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lxvd2x 34, 0, 4
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 3, i32 2>
   ret <2 x double> %v3
 }
 
-define <2 x double> @test33(<2 x double>* %p1, <2 x double>* %p2) {
+define <2 x double> @test33(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test33:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 4
-; CHECK-NEXT:    xxspltd 34, 0, 1
+; CHECK-NEXT:    addi 3, 4, 8
+; CHECK-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test33:
@@ -315,8 +313,8 @@ define <2 x double> @test33(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-P9-NEXT:    addi 3, 4, 8
 ; CHECK-P9-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-P9-NEXT:    blr
-  %v1 = load <2 x double>, <2 x double>* %p1
-  %v2 = load <2 x double>, <2 x double>* %p2
+  %v1 = load <2 x double>, ptr %p1
+  %v2 = load <2 x double>, ptr %p2
   %v3 = shufflevector <2 x double> %v1, <2 x double> %v2, <2 x i32> < i32 3, i32 3>
   ret <2 x double> %v3
 }

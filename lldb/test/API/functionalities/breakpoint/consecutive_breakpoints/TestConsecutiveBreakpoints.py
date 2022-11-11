@@ -4,7 +4,6 @@ Test that we handle breakpoints on consecutive instructions correctly.
 
 
 
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class ConsecutiveBreakpointsTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def prepare_test(self):
         self.build()

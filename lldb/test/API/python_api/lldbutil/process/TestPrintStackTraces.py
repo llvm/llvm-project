@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class ThreadsStackTracesTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_stack_traces(self):
         """Test SBprocess and SBThread APIs with printing of the stack traces."""
         self.build()

@@ -93,9 +93,9 @@ module {
     llvm.return
   }
 
-  // CHECK: llvm.func @sretattr(%{{.*}}: !llvm.ptr<i32> {llvm.sret})
-  // LOCINFO: llvm.func @sretattr(%{{.*}}: !llvm.ptr<i32> {llvm.sret} loc("some_source_loc"))
-  llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret} loc("some_source_loc")) {
+  // CHECK: llvm.func @sretattr(%{{.*}}: !llvm.ptr<i32> {llvm.sret = i32})
+  // LOCINFO: llvm.func @sretattr(%{{.*}}: !llvm.ptr<i32> {llvm.sret = i32} loc("some_source_loc"))
+  llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret = i32} loc("some_source_loc")) {
     llvm.return
   }
 
@@ -103,6 +103,24 @@ module {
   llvm.func @nestattr(%arg0: !llvm.ptr<i32> {llvm.nest}) {
     llvm.return
   }
+
+  // CHECK: llvm.func @llvm_noalias_decl(!llvm.ptr<f32> {llvm.noalias})
+  llvm.func @llvm_noalias_decl(!llvm.ptr<f32> {llvm.noalias})
+  // CHECK: llvm.func @byrefattr_decl(!llvm.ptr<i32> {llvm.byref = i32})
+  llvm.func @byrefattr_decl(!llvm.ptr<i32> {llvm.byref = i32})
+  // CHECK: llvm.func @byvalattr_decl(!llvm.ptr<i32> {llvm.byval = i32})
+  llvm.func @byvalattr_decl(!llvm.ptr<i32> {llvm.byval = i32})
+  // CHECK: llvm.func @sretattr_decl(!llvm.ptr<i32> {llvm.sret = i32})
+  llvm.func @sretattr_decl(!llvm.ptr<i32> {llvm.sret = i32})
+  // CHECK: llvm.func @nestattr_decl(!llvm.ptr<i32> {llvm.nest})
+  llvm.func @nestattr_decl(!llvm.ptr<i32> {llvm.nest})
+  // CHECK: llvm.func @noundefattr_decl(i32 {llvm.noundef})
+  llvm.func @noundefattr_decl(i32 {llvm.noundef})
+  // CHECK: llvm.func @llvm_align_decl(!llvm.ptr<f32> {llvm.align = 4 : i64})
+  llvm.func @llvm_align_decl(!llvm.ptr<f32> {llvm.align = 4})
+  // CHECK: llvm.func @inallocaattr_decl(!llvm.ptr<i32> {llvm.inalloca = i32})
+  llvm.func @inallocaattr_decl(!llvm.ptr<i32> {llvm.inalloca = i32})
+
 
   // CHECK: llvm.func @variadic(...)
   llvm.func @variadic(...)
@@ -157,6 +175,11 @@ module {
 
   // CHECK: llvm.func weak fastcc @cconv3
   llvm.func weak fastcc @cconv3() {
+    llvm.return
+  }
+
+  // CHECK-LABEL: llvm.func @variadic_def
+  llvm.func @variadic_def(...) {
     llvm.return
   }
 }
@@ -233,15 +256,6 @@ module {
 // -----
 
 module {
-  // expected-error@+1 {{only external functions can be variadic}}
-  llvm.func @variadic_def(...) {
-    llvm.return
-  }
-}
-
-// -----
-
-module {
   // expected-error@+1 {{cannot attach result attributes to functions with a void return}}
   llvm.func @variadic_def() -> (!llvm.void {llvm.noalias})
 }
@@ -277,7 +291,26 @@ module {
 // -----
 
 module {
-  // expected-error@+2 {{unknown calling convention: cc_12}}
   "llvm.func"() ({
+  // expected-error @below {{invalid Calling Conventions specification: cc_12}}
+  // expected-error @below {{failed to parse CConvAttr parameter 'CallingConv' which is to be a `CConv`}}
   }) {sym_name = "generic_unknown_calling_convention", CConv = #llvm.cconv<cc_12>, function_type = !llvm.func<i64 (i64, i64)>} : () -> ()
+}
+
+// -----
+
+module {
+  // expected-error@+3 {{'llvm.readnone' is permitted only on FunctionOpInterface operations}}
+  "llvm.func"() ({
+  ^bb0:
+    llvm.return {llvm.readnone}
+  }) {sym_name = "readnone_return", function_type = !llvm.func<void ()>} : () -> ()
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{op expected 'llvm.readnone' to be a unit attribute}}
+  "llvm.func"() ({
+  }) {sym_name = "readnone_func", llvm.readnone = true, function_type = !llvm.func<void ()>} : () -> ()
 }

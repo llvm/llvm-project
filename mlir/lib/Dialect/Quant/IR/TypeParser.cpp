@@ -13,7 +13,6 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SourceMgr.h"
@@ -30,7 +29,7 @@ static IntegerType parseStorageType(DialectAsmParser &parser, bool &isSigned) {
   StringRef identifier;
   unsigned storageTypeWidth = 0;
   OptionalParseResult result = parser.parseOptionalType(type);
-  if (result.hasValue()) {
+  if (result.has_value()) {
     if (!succeeded(*result))
       return nullptr;
     isSigned = !type.isUnsigned();

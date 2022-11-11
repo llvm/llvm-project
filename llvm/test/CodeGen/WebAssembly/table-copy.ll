@@ -1,12 +1,11 @@
 ; RUN: llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types < %s | FileCheck %s
 
-%extern = type opaque
-%externref = type %extern addrspace(10)* ;; addrspace 10 is nonintegral
+%externref = type ptr addrspace(10) ;; addrspace 10 is nonintegral
 
 @externref_table1 = local_unnamed_addr addrspace(1) global [0 x %externref] undef
 @externref_table2 = local_unnamed_addr addrspace(1) global [0 x %externref] undef
 
-declare void @llvm.wasm.table.copy(i8 addrspace(1)*, i8 addrspace(1)*, i32, i32, i32) nounwind readonly
+declare void @llvm.wasm.table.copy(ptr addrspace(1), ptr addrspace(1), i32, i32, i32) nounwind readonly
 
 define void @table_copy(i32 %dst, i32 %src, i32 %len) {
 ; CHECK-LABEL: table_copy:
@@ -16,11 +15,9 @@ define void @table_copy(i32 %dst, i32 %src, i32 %len) {
 ; CHECK-NEXT:  local.get    2
 ; CHECK-NEXT:  table.copy	externref_table1, externref_table2
 ; CHECK-NEXT:  end_function
-  %tableptr1 = getelementptr [0 x %externref], [0 x %externref] addrspace(1)* @externref_table1, i32 0, i32 0
-  %tb1 = bitcast %externref addrspace(1)* %tableptr1 to i8 addrspace(1)*
-  %tableptr2 = getelementptr [0 x %externref], [0 x %externref] addrspace(1)* @externref_table2, i32 0, i32 0
-  %tb2 = bitcast %externref addrspace(1)* %tableptr2 to i8 addrspace(1)*
-  call void @llvm.wasm.table.copy(i8 addrspace(1)* %tb1, i8 addrspace(1)* %tb2, i32 %dst, i32 %src, i32 %len)
+  %tableptr1 = getelementptr [0 x %externref], ptr addrspace(1) @externref_table1, i32 0, i32 0
+  %tableptr2 = getelementptr [0 x %externref], ptr addrspace(1) @externref_table2, i32 0, i32 0
+  call void @llvm.wasm.table.copy(ptr addrspace(1) %tableptr1, ptr addrspace(1) %tableptr2, i32 %dst, i32 %src, i32 %len)
   ret void
 }
 
@@ -37,8 +34,7 @@ define void @self_table_copy(i32 %src, i32 %off, i32 %len) {
 ; CHECK-NEXT:  table.copy	externref_table1, externref_table1
 ; CHECK-NEXT:  end_function
   %dst = add nsw i32 %src, %off
-  %tableptr1 = getelementptr [0 x %externref], [0 x %externref] addrspace(1)* @externref_table1, i32 0, i32 0
-  %tb1 = bitcast %externref addrspace(1)* %tableptr1 to i8 addrspace(1)*
-  call void @llvm.wasm.table.copy(i8 addrspace(1)* %tb1, i8 addrspace(1)* %tb1, i32 %dst, i32 %src, i32 %len)
+  %tableptr1 = getelementptr [0 x %externref], ptr addrspace(1) @externref_table1, i32 0, i32 0
+  call void @llvm.wasm.table.copy(ptr addrspace(1) %tableptr1, ptr addrspace(1) %tableptr1, i32 %dst, i32 %src, i32 %len)
   ret void
 }

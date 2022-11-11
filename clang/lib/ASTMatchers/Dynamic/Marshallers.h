@@ -174,7 +174,7 @@ public:
     return Value.isString();
   }
   static bool hasCorrectValue(const VariantValue& Value) {
-    return getAttrKind(Value.getString()).hasValue();
+    return getAttrKind(Value.getString()).has_value();
   }
 
   static attr::Kind get(const VariantValue &Value) {
@@ -204,7 +204,7 @@ public:
     return Value.isString();
   }
   static bool hasCorrectValue(const VariantValue& Value) {
-    return getCastKind(Value.getString()).hasValue();
+    return getCastKind(Value.getString()).has_value();
   }
 
   static CastKind get(const VariantValue &Value) {
@@ -227,7 +227,7 @@ public:
     return Value.isString();
   }
   static bool hasCorrectValue(const VariantValue& Value) {
-    return getFlags(Value.getString()).hasValue();
+    return getFlags(Value.getString()).has_value();
   }
 
   static llvm::Regex::RegexFlags get(const VariantValue &Value) {
@@ -254,7 +254,7 @@ public:
     return Value.isString();
   }
   static bool hasCorrectValue(const VariantValue& Value) {
-    return getClauseKind(Value.getString()).hasValue();
+    return getClauseKind(Value.getString()).has_value();
   }
 
   static OpenMPClauseKind get(const VariantValue &Value) {
@@ -285,7 +285,7 @@ public:
     return Value.isString();
   }
   static bool hasCorrectValue(const VariantValue& Value) {
-    return getUnaryOrTypeTraitKind(Value.getString()).hasValue();
+    return getUnaryOrTypeTraitKind(Value.getString()).has_value();
   }
 
   static UnaryExprOrTypeTrait get(const VariantValue &Value) {

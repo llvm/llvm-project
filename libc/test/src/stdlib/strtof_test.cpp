@@ -10,12 +10,17 @@
 #include "src/stdlib/strtof.h"
 
 #include "utils/UnitTest/Test.h"
+#include "utils/testutils/RoundingModeUtils.h"
 
 #include <errno.h>
 #include <limits.h>
 #include <stddef.h>
 
-class LlvmLibcStrToFTest : public __llvm_libc::testing::Test {
+using __llvm_libc::testutils::ForceRoundingModeTest;
+using __llvm_libc::testutils::RoundingMode;
+
+class LlvmLibcStrToFTest : public __llvm_libc::testing::Test,
+                           ForceRoundingModeTest<RoundingMode::Nearest> {
 public:
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
                 const uint32_t expectedRawData, const int expectedErrno = 0) {

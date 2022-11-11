@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <numeric>
 
 using namespace mlir;
 
@@ -239,6 +240,17 @@ AffineMap::inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList) {
 SmallVector<AffineMap, 4>
 AffineMap::inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList) {
   return ::inferFromExprList(exprsList);
+}
+
+uint64_t AffineMap::getLargestKnownDivisorOfMapExprs() {
+  uint64_t gcd = 0;
+  for (AffineExpr resultExpr : getResults()) {
+    uint64_t thisGcd = resultExpr.getLargestKnownDivisor();
+    gcd = std::gcd(gcd, thisGcd);
+  }
+  if (gcd == 0)
+    gcd = std::numeric_limits<uint64_t>::max();
+  return gcd;
 }
 
 AffineMap AffineMap::getMultiDimIdentityMap(unsigned numDims,
@@ -560,12 +572,7 @@ AffineMap mlir::compressDims(AffineMap map,
 }
 
 AffineMap mlir::compressUnusedDims(AffineMap map) {
-  llvm::SmallBitVector unusedDims(map.getNumDims(), true);
-  map.walkExprs([&](AffineExpr expr) {
-    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>())
-      unusedDims.reset(dimExpr.getPosition());
-  });
-  return compressDims(map, unusedDims);
+  return compressDims(map, getUnusedDimsBitVector({map}));
 }
 
 static SmallVector<AffineMap>
@@ -720,6 +727,18 @@ AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps) {
 AffineMap mlir::getProjectedMap(AffineMap map,
                                 const llvm::SmallBitVector &unusedDims) {
   return compressUnusedSymbols(compressDims(map, unusedDims));
+}
+
+llvm::SmallBitVector mlir::getUnusedDimsBitVector(ArrayRef<AffineMap> maps) {
+  unsigned numDims = maps[0].getNumDims();
+  llvm::SmallBitVector numDimsBitVector(numDims, true);
+  for (const auto &m : maps) {
+    for (unsigned i = 0; i < numDims; ++i) {
+      if (m.isFunctionOfDim(i))
+        numDimsBitVector.reset(i);
+    }
+  }
+  return numDimsBitVector;
 }
 
 //===----------------------------------------------------------------------===//

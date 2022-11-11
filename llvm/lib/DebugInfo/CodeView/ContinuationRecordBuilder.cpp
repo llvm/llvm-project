@@ -49,7 +49,7 @@ ContinuationRecordBuilder::ContinuationRecordBuilder()
 ContinuationRecordBuilder::~ContinuationRecordBuilder() = default;
 
 void ContinuationRecordBuilder::begin(ContinuationRecordKind RecordKind) {
-  assert(!Kind.hasValue());
+  assert(!Kind);
   Kind = RecordKind;
   Buffer.clear();
   SegmentWriter.setOffset(0);
@@ -76,7 +76,7 @@ void ContinuationRecordBuilder::begin(ContinuationRecordKind RecordKind) {
 
 template <typename RecordType>
 void ContinuationRecordBuilder::writeMemberType(RecordType &Record) {
-  assert(Kind.hasValue());
+  assert(Kind);
 
   uint32_t OriginalOffset = SegmentWriter.getOffset();
   CVMemberRecord CVMR;
@@ -158,7 +158,7 @@ CVType ContinuationRecordBuilder::createSegmentRecord(
   RecordPrefix *Prefix = reinterpret_cast<RecordPrefix *>(Data.data());
   Prefix->RecordLen = Data.size() - sizeof(RecordPrefix::RecordLen);
 
-  if (RefersTo.hasValue()) {
+  if (RefersTo) {
     auto Continuation = Data.take_back(ContinuationLength);
     ContinuationRecord *CR =
         reinterpret_cast<ContinuationRecord *>(Continuation.data());

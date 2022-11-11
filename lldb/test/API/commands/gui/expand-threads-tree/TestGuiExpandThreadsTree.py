@@ -11,13 +11,12 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 class TestGuiExpandThreadsTree(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfCursesSupportMissing
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(bugnumber="rdar://97460266")
     def test_gui(self):
         self.build()
 

@@ -11,4 +11,3 @@ int main(void) {
 // DEBUG: Libomptarget
 // NDEBUG-NOT: Libomptarget
 // NDEBUG-NOT: Target
-

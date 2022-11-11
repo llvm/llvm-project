@@ -117,7 +117,7 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   if (co->validReg(regNum)) {
     co->setReg(regNum, (pint_t)value);
-    // specical case altering IP to re-find info (being called by personality
+    // special case altering IP to re-find info (being called by personality
     // function)
     if (regNum == UNW_REG_IP) {
       unw_proc_info_t info;
@@ -180,6 +180,15 @@ _LIBUNWIND_HIDDEN int __unw_step(unw_cursor_t *cursor) {
   return co->step();
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_step, unw_step)
+
+// Move cursor to next frame and for stage2 of unwinding.
+// This resets MTE tags of tagged frames to zero.
+extern "C" _LIBUNWIND_HIDDEN int __unw_step_stage2(unw_cursor_t *cursor) {
+  _LIBUNWIND_TRACE_API("__unw_step_stage2(cursor=%p)",
+                       static_cast<void *>(cursor));
+  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  return co->step(true);
+}
 
 /// Get unwind info at cursor position in stack frame.
 _LIBUNWIND_HIDDEN int __unw_get_proc_info(unw_cursor_t *cursor,

@@ -62,7 +62,7 @@ public:
         "<DSOHandleMU>", TT, PointerSize, Endianness,
         jitlink::getGenericEdgeKindName);
     auto &DSOHandleSection =
-        G->createSection(".data.__dso_handle", jitlink::MemProt::Read);
+        G->createSection(".data.__dso_handle", MemProt::Read);
     auto &DSOHandleBlock = G->createContentBlock(
         DSOHandleSection, getDSOHandleContent(PointerSize), orc::ExecutorAddr(),
         8, 0);
@@ -839,11 +839,13 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
 Error ELFNixPlatform::ELFNixPlatformPlugin::fixTLVSectionsAndEdges(
     jitlink::LinkGraph &G, JITDylib &JD) {
 
-  // TODO implement TLV support
-  for (auto *Sym : G.external_symbols())
+  for (auto *Sym : G.external_symbols()) {
     if (Sym->getName() == "__tls_get_addr") {
       Sym->setName("___orc_rt_elfnix_tls_get_addr");
+    } else if (Sym->getName() == "__tlsdesc_resolver") {
+      Sym->setName("___orc_rt_elfnix_tlsdesc_resolver");
     }
+  }
 
   auto *TLSInfoEntrySection = G.findSectionByName("$__TLSINFO");
 

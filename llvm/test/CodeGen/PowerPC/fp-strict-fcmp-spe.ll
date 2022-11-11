@@ -30,13 +30,11 @@ define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_oge_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmplt cr0, r5, r6
-; SPE-NEXT:    efscmplt cr1, r5, r6
-; SPE-NEXT:    crnor 4*cr5+lt, gt, 4*cr1+gt
 ; SPE-NEXT:    efscmpeq cr0, r6, r6
 ; SPE-NEXT:    efscmpeq cr1, r5, r5
-; SPE-NEXT:    crand 4*cr5+gt, 4*cr1+gt, gt
-; SPE-NEXT:    crand 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
+; SPE-NEXT:    crand 4*cr5+lt, 4*cr1+gt, gt
+; SPE-NEXT:    efscmplt cr0, r5, r6
+; SPE-NEXT:    crandc 4*cr5+lt, 4*cr5+lt, gt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0
@@ -62,13 +60,11 @@ define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ole_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpgt cr0, r5, r6
-; SPE-NEXT:    efscmpgt cr1, r5, r6
-; SPE-NEXT:    crnor 4*cr5+lt, gt, 4*cr1+gt
 ; SPE-NEXT:    efscmpeq cr0, r6, r6
 ; SPE-NEXT:    efscmpeq cr1, r5, r5
-; SPE-NEXT:    crand 4*cr5+gt, 4*cr1+gt, gt
-; SPE-NEXT:    crand 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
+; SPE-NEXT:    crand 4*cr5+lt, 4*cr1+gt, gt
+; SPE-NEXT:    efscmpgt cr0, r5, r6
+; SPE-NEXT:    crandc 4*cr5+lt, 4*cr5+lt, gt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0
@@ -127,13 +123,9 @@ define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ugt_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpeq cr0, r6, r6
-; SPE-NEXT:    efscmpeq cr1, r6, r6
-; SPE-NEXT:    crnor 4*cr5+lt, gt, 4*cr1+gt
 ; SPE-NEXT:    efscmpeq cr0, r5, r5
-; SPE-NEXT:    efscmpeq cr1, r5, r5
-; SPE-NEXT:    crnor 4*cr5+gt, gt, 4*cr1+gt
-; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; SPE-NEXT:    efscmpeq cr1, r6, r6
+; SPE-NEXT:    crnand 4*cr5+lt, 4*cr1+gt, gt
 ; SPE-NEXT:    efscmpgt cr0, r5, r6
 ; SPE-NEXT:    cror 4*cr5+lt, gt, 4*cr5+lt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
@@ -149,11 +141,10 @@ define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_uge_s:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    efscmplt cr0, r5, r6
-; SPE-NEXT:    efscmplt cr1, r5, r6
-; SPE-NEXT:    crnor 4*cr5+lt, gt, 4*cr1+gt
-; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
-; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    ori r3, r4, 0
+; SPE-NEXT:    bc 12, gt, .LBB9_1
+; SPE-NEXT:    blr
+; SPE-NEXT:  .LBB9_1:
+; SPE-NEXT:    addi r3, r4, 0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"uge", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -163,13 +154,9 @@ define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ult_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpeq cr0, r6, r6
-; SPE-NEXT:    efscmpeq cr1, r6, r6
-; SPE-NEXT:    crnor 4*cr5+lt, gt, 4*cr1+gt
 ; SPE-NEXT:    efscmpeq cr0, r5, r5
-; SPE-NEXT:    efscmpeq cr1, r5, r5
-; SPE-NEXT:    crnor 4*cr5+gt, gt, 4*cr1+gt
-; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; SPE-NEXT:    efscmpeq cr1, r6, r6
+; SPE-NEXT:    crnand 4*cr5+lt, 4*cr1+gt, gt
 ; SPE-NEXT:    efscmplt cr0, r5, r6
 ; SPE-NEXT:    cror 4*cr5+lt, gt, 4*cr5+lt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
@@ -185,11 +172,10 @@ define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ule_s:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    efscmpgt cr0, r5, r6
-; SPE-NEXT:    efscmpgt cr1, r5, r6
-; SPE-NEXT:    crnor 4*cr5+lt, gt, 4*cr1+gt
-; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
-; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    ori r3, r4, 0
+; SPE-NEXT:    bc 12, gt, .LBB11_1
+; SPE-NEXT:    blr
+; SPE-NEXT:  .LBB11_1:
+; SPE-NEXT:    addi r3, r4, 0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"ule", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -200,11 +186,10 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_une_s:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    efscmpeq cr0, r5, r6
-; SPE-NEXT:    efscmpeq cr1, r5, r6
-; SPE-NEXT:    crnor 4*cr5+lt, gt, 4*cr1+gt
-; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
-; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    ori r3, r4, 0
+; SPE-NEXT:    bc 12, gt, .LBB12_1
+; SPE-NEXT:    blr
+; SPE-NEXT:  .LBB12_1:
+; SPE-NEXT:    addi r3, r4, 0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"une", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -214,13 +199,9 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_uno_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpeq cr0, r6, r6
-; SPE-NEXT:    efscmpeq cr1, r6, r6
-; SPE-NEXT:    crnor 4*cr5+lt, gt, 4*cr1+gt
 ; SPE-NEXT:    efscmpeq cr0, r5, r5
-; SPE-NEXT:    efscmpeq cr1, r5, r5
-; SPE-NEXT:    crnor 4*cr5+gt, gt, 4*cr1+gt
-; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; SPE-NEXT:    efscmpeq cr1, r6, r6
+; SPE-NEXT:    crnand 4*cr5+lt, 4*cr1+gt, gt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0
@@ -263,15 +244,13 @@ define i32 @test_f64_ogt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_oge_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    evmergelo r7, r7, r8
 ; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmplt cr0, r5, r7
-; SPE-NEXT:    efdcmplt cr1, r5, r7
-; SPE-NEXT:    efdcmpeq cr5, r7, r7
-; SPE-NEXT:    efdcmpeq cr6, r5, r5
-; SPE-NEXT:    crnor 4*cr7+lt, gt, 4*cr1+gt
-; SPE-NEXT:    crand 4*cr5+lt, 4*cr6+gt, 4*cr5+gt
-; SPE-NEXT:    crand 4*cr5+lt, 4*cr7+lt, 4*cr5+lt
+; SPE-NEXT:    evmergelo r6, r7, r8
+; SPE-NEXT:    efdcmpeq cr0, r6, r6
+; SPE-NEXT:    efdcmpeq cr1, r5, r5
+; SPE-NEXT:    efdcmplt cr5, r5, r6
+; SPE-NEXT:    crand 4*cr6+lt, 4*cr1+gt, gt
+; SPE-NEXT:    crandc 4*cr5+lt, 4*cr6+lt, 4*cr5+gt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0
@@ -299,15 +278,13 @@ define i32 @test_f64_olt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_ole_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    evmergelo r7, r7, r8
 ; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmpgt cr0, r5, r7
-; SPE-NEXT:    efdcmpgt cr1, r5, r7
-; SPE-NEXT:    efdcmpeq cr5, r7, r7
-; SPE-NEXT:    efdcmpeq cr6, r5, r5
-; SPE-NEXT:    crnor 4*cr7+lt, gt, 4*cr1+gt
-; SPE-NEXT:    crand 4*cr5+lt, 4*cr6+gt, 4*cr5+gt
-; SPE-NEXT:    crand 4*cr5+lt, 4*cr7+lt, 4*cr5+lt
+; SPE-NEXT:    evmergelo r6, r7, r8
+; SPE-NEXT:    efdcmpeq cr0, r6, r6
+; SPE-NEXT:    efdcmpeq cr1, r5, r5
+; SPE-NEXT:    efdcmpgt cr5, r5, r6
+; SPE-NEXT:    crand 4*cr6+lt, 4*cr1+gt, gt
+; SPE-NEXT:    crandc 4*cr5+lt, 4*cr6+lt, 4*cr5+gt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0
@@ -372,17 +349,13 @@ define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_ugt_s:
 ; SPE:       # %bb.0:
+; SPE-NEXT:    evmergelo r7, r7, r8
 ; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    evmergelo r6, r7, r8
-; SPE-NEXT:    efdcmpeq cr0, r6, r6
-; SPE-NEXT:    efdcmpeq cr1, r6, r6
-; SPE-NEXT:    efdcmpeq cr5, r5, r5
-; SPE-NEXT:    efdcmpeq cr6, r5, r5
-; SPE-NEXT:    efdcmpgt cr7, r5, r6
-; SPE-NEXT:    crnor 4*cr1+lt, gt, 4*cr1+gt
-; SPE-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr6+gt
-; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+lt, 4*cr1+lt
-; SPE-NEXT:    cror 4*cr5+lt, 4*cr7+gt, 4*cr5+lt
+; SPE-NEXT:    efdcmpeq cr0, r5, r5
+; SPE-NEXT:    efdcmpeq cr1, r7, r7
+; SPE-NEXT:    efdcmpgt cr5, r5, r7
+; SPE-NEXT:    crnand 4*cr6+lt, 4*cr1+gt, gt
+; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr6+lt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0
@@ -398,11 +371,10 @@ define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    evmergelo r7, r7, r8
 ; SPE-NEXT:    evmergelo r5, r5, r6
 ; SPE-NEXT:    efdcmplt cr0, r5, r7
-; SPE-NEXT:    efdcmplt cr1, r5, r7
-; SPE-NEXT:    crnor 4*cr5+lt, gt, 4*cr1+gt
-; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
-; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    ori r3, r4, 0
+; SPE-NEXT:    bc 12, gt, .LBB23_1
+; SPE-NEXT:    blr
+; SPE-NEXT:  .LBB23_1:
+; SPE-NEXT:    addi r3, r4, 0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"uge", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -412,17 +384,13 @@ define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_ult_s:
 ; SPE:       # %bb.0:
+; SPE-NEXT:    evmergelo r7, r7, r8
 ; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    evmergelo r6, r7, r8
-; SPE-NEXT:    efdcmpeq cr0, r6, r6
-; SPE-NEXT:    efdcmpeq cr1, r6, r6
-; SPE-NEXT:    efdcmpeq cr5, r5, r5
-; SPE-NEXT:    efdcmpeq cr6, r5, r5
-; SPE-NEXT:    efdcmplt cr7, r5, r6
-; SPE-NEXT:    crnor 4*cr1+lt, gt, 4*cr1+gt
-; SPE-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr6+gt
-; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+lt, 4*cr1+lt
-; SPE-NEXT:    cror 4*cr5+lt, 4*cr7+gt, 4*cr5+lt
+; SPE-NEXT:    efdcmpeq cr0, r5, r5
+; SPE-NEXT:    efdcmpeq cr1, r7, r7
+; SPE-NEXT:    efdcmplt cr5, r5, r7
+; SPE-NEXT:    crnand 4*cr6+lt, 4*cr1+gt, gt
+; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr6+lt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0
@@ -438,11 +406,10 @@ define i32 @test_f64_ule_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    evmergelo r7, r7, r8
 ; SPE-NEXT:    evmergelo r5, r5, r6
 ; SPE-NEXT:    efdcmpgt cr0, r5, r7
-; SPE-NEXT:    efdcmpgt cr1, r5, r7
-; SPE-NEXT:    crnor 4*cr5+lt, gt, 4*cr1+gt
-; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
-; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    ori r3, r4, 0
+; SPE-NEXT:    bc 12, gt, .LBB25_1
+; SPE-NEXT:    blr
+; SPE-NEXT:  .LBB25_1:
+; SPE-NEXT:    addi r3, r4, 0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"ule", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -455,11 +422,10 @@ define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    evmergelo r7, r7, r8
 ; SPE-NEXT:    evmergelo r5, r5, r6
 ; SPE-NEXT:    efdcmpeq cr0, r5, r7
-; SPE-NEXT:    efdcmpeq cr1, r5, r7
-; SPE-NEXT:    crnor 4*cr5+lt, gt, 4*cr1+gt
-; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
-; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    ori r3, r4, 0
+; SPE-NEXT:    bc 12, gt, .LBB26_1
+; SPE-NEXT:    blr
+; SPE-NEXT:  .LBB26_1:
+; SPE-NEXT:    addi r3, r4, 0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"une", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -469,15 +435,11 @@ define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_uno_s:
 ; SPE:       # %bb.0:
+; SPE-NEXT:    evmergelo r7, r7, r8
 ; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    evmergelo r6, r7, r8
-; SPE-NEXT:    efdcmpeq cr0, r6, r6
-; SPE-NEXT:    efdcmpeq cr1, r6, r6
-; SPE-NEXT:    efdcmpeq cr5, r5, r5
-; SPE-NEXT:    efdcmpeq cr6, r5, r5
-; SPE-NEXT:    crnor 4*cr7+lt, gt, 4*cr1+gt
-; SPE-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr6+gt
-; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+lt, 4*cr7+lt
+; SPE-NEXT:    efdcmpeq cr0, r5, r5
+; SPE-NEXT:    efdcmpeq cr1, r7, r7
+; SPE-NEXT:    crnand 4*cr5+lt, 4*cr1+gt, gt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0

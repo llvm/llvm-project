@@ -1195,6 +1195,8 @@ enum NodeType {
   ATOMIC_LOAD_UMAX,
   ATOMIC_LOAD_FADD,
   ATOMIC_LOAD_FSUB,
+  ATOMIC_LOAD_FMAX,
+  ATOMIC_LOAD_FMIN,
 
   // Masked load and store - consecutive vector load and store operations
   // with additional mask operand that prevents memory accesses to the
@@ -1284,6 +1286,17 @@ enum NodeType {
   VECREDUCE_SMIN,
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
+
+  // The `llvm.experimental.stackmap` intrinsic.
+  // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
+  // Outputs: output chain, glue
+  STACKMAP,
+
+  // The `llvm.experimental.patchpoint.*` intrinsic.
+  // Operands: input chain, [glue], reg-mask, <id>, <numShadowBytes>, callee,
+  //   <numArgs>, cc, ...
+  // Outputs: [rv], output chain, glue
+  PATCHPOINT,
 
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
@@ -1472,6 +1485,11 @@ inline unsigned getUnorderedFlavor(CondCode Cond) {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid
 /// SetCC operation.
 CondCode getSetCCInverse(CondCode Operation, EVT Type);
+
+inline bool isExtOpcode(unsigned Opcode) {
+  return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||
+         Opcode == ISD::SIGN_EXTEND;
+}
 
 namespace GlobalISel {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid

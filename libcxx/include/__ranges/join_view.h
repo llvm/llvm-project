@@ -25,6 +25,7 @@
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/maybe_const.h>
 #include <__utility/forward.h>
 #include <optional>
 #include <type_traits>
@@ -35,7 +36,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 namespace ranges {
   template<class>
@@ -210,7 +211,7 @@ namespace ranges {
 
   public:
     using iterator_concept = _If<
-      __ref_is_glvalue && bidirectional_range<_Base> && bidirectional_range<range_reference_t<_Base>> && 
+      __ref_is_glvalue && bidirectional_range<_Base> && bidirectional_range<range_reference_t<_Base>> &&
           common_range<range_reference_t<_Base>>,
       bidirectional_iterator_tag,
       _If<
@@ -345,7 +346,7 @@ namespace ranges {
 
   template<class _Range>
   explicit join_view(_Range&&) -> join_view<views::all_t<_Range>>;
-  
+
 namespace views {
 namespace __join_view {
 struct __fn : __range_adaptor_closure<__fn> {
@@ -363,7 +364,7 @@ inline namespace __cpo {
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

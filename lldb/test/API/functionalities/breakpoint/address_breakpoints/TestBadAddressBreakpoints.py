@@ -11,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class BadAddressBreakpointTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_bad_address_breakpoints(self):

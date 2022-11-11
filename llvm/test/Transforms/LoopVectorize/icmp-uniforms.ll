@@ -50,7 +50,7 @@ for.end:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[COND:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
-; CHECK-NEXT:   WIDEN ir<%cond0> = icmp ir<%iv>, ir<13>
+; CHECK-NEXT:   WIDEN ir<%cond0> = icmp ult ir<%iv>, ir<13>
 ; CHECK-NEXT:   WIDEN-SELECT ir<%s> = select ir<%cond0>, ir<10>, ir<20>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:

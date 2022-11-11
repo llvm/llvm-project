@@ -827,7 +827,7 @@ define <4 x float> @stack_fold_shufps(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %2
 }
 
-define <4 x float> @stack_fold_shufps_mask(<4 x float>* %passthru, <4 x float> %a0, <4 x float> %a1, i8 %mask) {
+define <4 x float> @stack_fold_shufps_mask(ptr %passthru, <4 x float> %a0, <4 x float> %a1, i8 %mask) {
 ; CHECK-LABEL: stack_fold_shufps_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -844,7 +844,7 @@ define <4 x float> @stack_fold_shufps_mask(<4 x float>* %passthru, <4 x float> %
   %2 = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 2, i32 4, i32 7>
   %3 = bitcast i8 %mask to <8 x i1>
   %4 = shufflevector <8 x i1> %3, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %5 = load <4 x float>, <4 x float>* %passthru
+  %5 = load <4 x float>, ptr %passthru
   %6 = select <4 x i1> %4, <4 x float> %2, <4 x float> %5
   ret <4 x float> %6
 }

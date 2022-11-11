@@ -7,7 +7,6 @@ import binascii
 import os
 
 class TestGdbSaveCore(gdbremote_testcase.GdbRemoteTestCaseBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def coredump_test(self, core_path=None, expect_path=None):
         self.build()

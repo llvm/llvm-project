@@ -13,10 +13,11 @@ define i32 @o() #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8*, i8** bitcast (i64* @d to i8**), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* @f, align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label [[TMP17:%.*]], label [[DOTLR_PH2:%.*]]
-; CHECK:       .lr.ph2:
+; CHECK-NEXT:    br i1 [[TMP4]], label [[TMP17:%.*]], label [[DOTLR_PH4:%.*]]
+; CHECK:       .lr.ph4:
 ; CHECK-NEXT:    br label [[TMP5:%.*]]
-; CHECK:         [[TMP6:%.*]] = phi i32 [ [[TMP3]], [[DOTLR_PH2]] ], [ [[TMP15:%.*]], [[M_EXIT:%.*]] ]
+; CHECK:       5:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP3]], [[DOTLR_PH4]] ], [ [[TMP15:%.*]], [[M_EXIT:%.*]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i1 [[TMP7]] to i32
 ; CHECK-NEXT:    store i32 [[TMP8]], i32* @g, align 4
@@ -30,26 +31,31 @@ define i32 @o() #0 {
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[M_EXIT]], label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
 ; CHECK-NEXT:    br label [[TMP13:%.*]]
-; CHECK:         [[DOT11:%.*]] = phi i32 [ undef, [[DOTLR_PH]] ], [ [[TMP14:%.*]], [[J_EXIT_I:%.*]] ]
-; CHECK-NEXT:    callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@o, [[M_EXIT]])) #1
-; CHECK-NEXT:    to label [[J_EXIT_I]] [label %m.exit]
+; CHECK:       13:
+; CHECK-NEXT:    [[DOT11:%.*]] = phi i32 [ undef, [[DOTLR_PH]] ], [ [[TMP14:%.*]], [[J_EXIT_I:%.*]] ]
+; CHECK-NEXT:    callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    to label [[J_EXIT_I]] [label %.m.exit_crit_edge]
 ; CHECK:       j.exit.i:
-; CHECK-NEXT:    [[TMP14]] = tail call i32 asm "", "={ax},~{dirflag},~{fpsr},~{flags}"() #2
-; CHECK-NEXT:    br i1 [[TMP12]], label [[DOTM_EXIT_CRIT_EDGE:%.*]], label [[TMP13]]
+; CHECK-NEXT:    [[TMP14]] = tail call i32 asm "", "={ax},~{dirflag},~{fpsr},~{flags}"() #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[DOTM_EXIT_CRIT_EDGE2:%.*]], label [[TMP13]]
 ; CHECK:       .m.exit_crit_edge:
-; CHECK-NEXT:    [[SPLIT:%.*]] = phi i32 [ [[TMP14]], [[J_EXIT_I]] ]
+; CHECK-NEXT:    [[SPLIT:%.*]] = phi i32 [ [[DOT11]], [[TMP13]] ]
+; CHECK-NEXT:    br label [[M_EXIT]]
+; CHECK:       .m.exit_crit_edge2:
+; CHECK-NEXT:    [[SPLIT3:%.*]] = phi i32 [ [[TMP14]], [[J_EXIT_I]] ]
 ; CHECK-NEXT:    br label [[M_EXIT]]
 ; CHECK:       m.exit:
-; CHECK-NEXT:    [[DOT1_LCSSA:%.*]] = phi i32 [ [[DOT11]], [[TMP13]] ], [ [[SPLIT]], [[DOTM_EXIT_CRIT_EDGE]] ], [ undef, [[THREAD_PRE_SPLIT]] ]
+; CHECK-NEXT:    [[DOT1_LCSSA:%.*]] = phi i32 [ [[SPLIT]], [[DOTM_EXIT_CRIT_EDGE:%.*]] ], [ [[SPLIT3]], [[DOTM_EXIT_CRIT_EDGE2]] ], [ undef, [[THREAD_PRE_SPLIT]] ]
 ; CHECK-NEXT:    store i32 [[DOT1_LCSSA]], i32* @h, align 4
 ; CHECK-NEXT:    [[TMP15]] = load i32, i32* @f, align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 0
-; CHECK-NEXT:    br i1 [[TMP16]], label [[DOT_CRIT_EDGE3:%.*]], label [[TMP5]]
+; CHECK-NEXT:    br i1 [[TMP16]], label [[DOT_CRIT_EDGE5:%.*]], label [[TMP5]]
 ; CHECK:       ._crit_edge:
 ; CHECK-NEXT:    br label [[TMP17]]
-; CHECK:       ._crit_edge3:
+; CHECK:       ._crit_edge5:
 ; CHECK-NEXT:    br label [[TMP17]]
-; CHECK:         ret i32 undef
+; CHECK:       17:
+; CHECK-NEXT:    ret i32 undef
 ;
   %1 = alloca [1 x i32], align 4
   %2 = load i8*, i8** bitcast (i64* @d to i8**), align 8
@@ -79,7 +85,7 @@ thread-pre-split:                                 ; preds = %6
   br i1 %13, label %m.exit, label %14
 
 ; <label>:14:                                     ; preds = %12
-  callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@o, %m.exit)) #1
+  callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"() #1
   to label %j.exit.i [label %m.exit]
 
 j.exit.i:                                         ; preds = %14

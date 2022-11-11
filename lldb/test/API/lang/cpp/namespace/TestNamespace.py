@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class NamespaceBreakpointTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
     @expectedFailureAll(oslist=["windows"])
     def test_breakpoints_func_auto(self):
@@ -98,8 +96,6 @@ class NamespaceBreakpointTestCase(TestBase):
 
 
 class NamespaceTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().

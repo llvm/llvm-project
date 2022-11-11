@@ -2,12 +2,12 @@
 ; PR3117
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32"
 target triple = "i386-pc-linux-gnu"
-@g_118 = external dso_local global i8		; <i8*> [#uses=1]
-@g_7 = external dso_local global i32		; <i32*> [#uses=1]
+@g_118 = external dso_local global i8		; <ptr> [#uses=1]
+@g_7 = external dso_local global i32		; <ptr> [#uses=1]
 
 define i32 @func_73(i32 %p_74) nounwind {
 entry:
-	%0 = load i32, i32* @g_7, align 4		; <i32> [#uses=1]
+	%0 = load i32, ptr @g_7, align 4		; <i32> [#uses=1]
 	%1 = or i8 0, 118		; <i8> [#uses=1]
 	%2 = zext i8 %1 to i64		; <i64> [#uses=1]
 	%3 = icmp ne i32 %0, 0		; <i1> [#uses=1]
@@ -32,6 +32,6 @@ entry:
 	%22 = icmp sle i64 %21, %5		; <i1> [#uses=1]
 	%23 = zext i1 %22 to i8		; <i8> [#uses=1]
 	%24 = or i8 %23, 118		; <i8> [#uses=1]
-	store i8 %24, i8* @g_118, align 1
+	store i8 %24, ptr @g_118, align 1
 	ret i32 undef
 }

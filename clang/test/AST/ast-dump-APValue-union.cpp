@@ -39,25 +39,25 @@ union U3 {
 
 void Test() {
   constexpr U0 u0{};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u0 'const U0' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u0 'const U0':'const U0' constexpr listinit
   // CHECK-NEXT:  |   |-value: Union .i Int 42
 
   constexpr U1 u1{};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u1 'const U1' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u1 'const U1':'const U1' constexpr listinit
   // CHECK-NEXT:  |   |-value: Union .uinner Union .f Float 3.141500e+00
 
   constexpr U2 u2{};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u2 'const U2' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u2 'const U2':'const U2' constexpr listinit
   // CHECK-NEXT:  |   |-value: Union .uinner
   // CHECK-NEXT:  |   | `-Union .arr
   // CHECK-NEXT:  |   |   `-Array size=2
   // CHECK-NEXT:  |   |     `-elements: Int 1, Int 2
 
   constexpr U3 u3a = {.f = 3.1415};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u3a 'const U3' constexpr cinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u3a 'const U3':'const U3' constexpr cinit
   // CHECK-NEXT:  |   |-value: Union .f Float 3.141500e+00
 
   constexpr U3 u3b = {.uinner = {}};
-  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u3b 'const U3' constexpr cinit
+  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u3b 'const U3':'const U3' constexpr cinit
   // CHECK-NEXT:      |-value: Union .uinner Union .d Float 3.141500e+00
 }

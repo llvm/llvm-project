@@ -10,6 +10,8 @@
 
 // <locale>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // wbuffer_convert<Codecvt, Elem, Tr>
 
 // int_type underflow();

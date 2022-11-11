@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestBreakpointIt(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIf(archs=no_match(["arm"]))
@@ -26,7 +24,7 @@ class TestBreakpointIt(TestBase):
                 extra_options="--skip-prologue 0")
 
         self.runCmd("run")
-        self.assertEqual(self.process().GetState(), lldb.eStateExited,
+        self.assertState(self.process().GetState(), lldb.eStateExited,
                 "Breakpoint does not get hit")
 
     @skipIf(archs=no_match(["arm"]))

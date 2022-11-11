@@ -10,7 +10,7 @@ define <3 x float> @liveout_undef_subrange(<3 x float> %arg) {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_f32_e32 v3, v2, v2
-; CHECK-NEXT:    v_add_f32_e32 v1, v1, v1
+; CHECK-NEXT:    ; kill: killed $vgpr1
 ; CHECK-NEXT:    v_add_f32_e32 v0, v0, v0
 ; CHECK-NEXT:  .LBB0_1: ; %bb1
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1

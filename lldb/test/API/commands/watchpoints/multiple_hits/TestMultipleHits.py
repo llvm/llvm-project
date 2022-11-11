@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class MultipleHitsTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIf(bugnumber="llvm.org/pr30758", oslist=["linux"], archs=["arm", "aarch64", "powerpc64le"])
@@ -47,5 +45,5 @@ class MultipleHitsTestCase(TestBase):
 
         process.Continue();
         self.assertState(process.GetState(), lldb.eStateStopped)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonWatchpoint)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonWatchpoint)
 

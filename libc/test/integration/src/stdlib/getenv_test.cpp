@@ -27,7 +27,7 @@ static bool my_streq(const char *lhs, const char *rhs) {
   return *l == '\0' && *r == '\0';
 }
 
-int main(int argc, char **argv, char **envp) {
+TEST_MAIN(int argc, char **argv, char **envp) {
   ASSERT_TRUE(my_streq(__llvm_libc::getenv(""), static_cast<char *>(nullptr)));
   ASSERT_TRUE(my_streq(__llvm_libc::getenv("="), static_cast<char *>(nullptr)));
   ASSERT_TRUE(my_streq(__llvm_libc::getenv("MISSING ENV VARIABLE"),

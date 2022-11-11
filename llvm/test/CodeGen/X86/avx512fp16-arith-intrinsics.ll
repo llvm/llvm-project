@@ -12,7 +12,7 @@ define <32 x half> @test_int_x86_avx512fp16_add_ph_512(<32 x half> %x1, <32 x ha
   ret <32 x half> %res
 }
 
-define <32 x half> @test_int_x86_avx512fp16_mask_add_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_mask_add_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_mask_add_ph_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -24,7 +24,7 @@ define <32 x half> @test_int_x86_avx512fp16_mask_add_ph_512(<32 x half> %src, <3
   ret <32 x half> %res
 }
 
-define <32 x half> @test_int_x86_avx512fp16_maskz_add_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_maskz_add_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_maskz_add_ph_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -33,7 +33,7 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_add_ph_512(<32 x half> %src, <
 ; CHECK-NEXT:    vaddph %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %mask = bitcast i32 %msk to <32 x i1>
-  %val = load <32 x half>, <32 x half>* %ptr
+  %val = load <32 x half>, ptr %ptr
   %res0 = call <32 x half> @llvm.x86.avx512fp16.add.ph.512(<32 x half> %x1, <32 x half> %x2, i32 4)
   %res1 = select <32 x i1> %mask, <32 x half> %res0, <32 x half> zeroinitializer
   %t2 = call <32 x half> @llvm.x86.avx512fp16.add.ph.512(<32 x half> %x1, <32 x half> %val, i32 4)
@@ -42,7 +42,7 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_add_ph_512(<32 x half> %src, <
   ret <32 x half> %res3
 }
 
-define <32 x half> @test_int_x86_avx512fp16_add_ph_512_round(<32 x half> %x1, <32 x half> %x2, <32 x half> %src, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_add_ph_512_round(<32 x half> %x1, <32 x half> %x2, <32 x half> %src, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_add_ph_512_round:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -66,7 +66,7 @@ define <32 x half> @test_int_x86_avx512fp16_sub_ph_512(<32 x half> %x1, <32 x ha
   ret <32 x half> %res
 }
 
-define <32 x half> @test_int_x86_avx512fp16_mask_sub_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_mask_sub_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_mask_sub_ph_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -78,7 +78,7 @@ define <32 x half> @test_int_x86_avx512fp16_mask_sub_ph_512(<32 x half> %src, <3
   ret <32 x half> %res
 }
 
-define <32 x half> @test_int_x86_avx512fp16_maskz_sub_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_maskz_sub_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_maskz_sub_ph_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -87,7 +87,7 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_sub_ph_512(<32 x half> %src, <
 ; CHECK-NEXT:    vsubph %zmm1, %zmm0, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = bitcast i32 %msk to <32 x i1>
-  %val = load <32 x half>, <32 x half>* %ptr
+  %val = load <32 x half>, ptr %ptr
   %res0 = call <32 x half> @llvm.x86.avx512fp16.sub.ph.512(<32 x half> %x1, <32 x half> %x2, i32 4)
   %res1 = select <32 x i1> %mask, <32 x half> %res0, <32 x half> zeroinitializer
   %t2 = call <32 x half> @llvm.x86.avx512fp16.sub.ph.512(<32 x half> %x1, <32 x half> %val, i32 4)
@@ -96,7 +96,7 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_sub_ph_512(<32 x half> %src, <
   ret <32 x half> %res3
 }
 
-define <32 x half> @test_int_x86_avx512fp16_sub_ph_512_round(<32 x half> %x1, <32 x half> %x2, <32 x half> %src, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_sub_ph_512_round(<32 x half> %x1, <32 x half> %x2, <32 x half> %src, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_sub_ph_512_round:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -120,7 +120,7 @@ define <32 x half> @test_int_x86_avx512fp16_mul_ph_512(<32 x half> %x1, <32 x ha
   ret <32 x half> %res
 }
 
-define <32 x half> @test_int_x86_avx512fp16_mask_mul_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_mask_mul_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_mask_mul_ph_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -132,7 +132,7 @@ define <32 x half> @test_int_x86_avx512fp16_mask_mul_ph_512(<32 x half> %src, <3
   ret <32 x half> %res
 }
 
-define <32 x half> @test_int_x86_avx512fp16_maskz_mul_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_maskz_mul_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_maskz_mul_ph_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -141,7 +141,7 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_mul_ph_512(<32 x half> %src, <
 ; CHECK-NEXT:    vmulph %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %mask = bitcast i32 %msk to <32 x i1>
-  %val = load <32 x half>, <32 x half>* %ptr
+  %val = load <32 x half>, ptr %ptr
   %res0 = call <32 x half> @llvm.x86.avx512fp16.mul.ph.512(<32 x half> %x1, <32 x half> %x2, i32 4)
   %res1 = select <32 x i1> %mask, <32 x half> %res0, <32 x half> zeroinitializer
   %t2 = call <32 x half> @llvm.x86.avx512fp16.mul.ph.512(<32 x half> %x1, <32 x half> %val, i32 4)
@@ -150,7 +150,7 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_mul_ph_512(<32 x half> %src, <
   ret <32 x half> %res3
 }
 
-define <32 x half> @test_int_x86_avx512fp16_mul_ph_512_round(<32 x half> %x1, <32 x half> %x2, <32 x half> %src, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_mul_ph_512_round(<32 x half> %x1, <32 x half> %x2, <32 x half> %src, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_mul_ph_512_round:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -174,7 +174,7 @@ define <32 x half> @test_int_x86_avx512fp16_div_ph_512(<32 x half> %x1, <32 x ha
   ret <32 x half> %res
 }
 
-define <32 x half> @test_int_x86_avx512fp16_mask_div_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_mask_div_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_mask_div_ph_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -186,7 +186,7 @@ define <32 x half> @test_int_x86_avx512fp16_mask_div_ph_512(<32 x half> %src, <3
   ret <32 x half> %res
 }
 
-define <32 x half> @test_int_x86_avx512fp16_maskz_div_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_maskz_div_ph_512(<32 x half> %src, <32 x half> %x1, <32 x half> %x2, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_maskz_div_ph_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -195,7 +195,7 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_div_ph_512(<32 x half> %src, <
 ; CHECK-NEXT:    vdivph %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %mask = bitcast i32 %msk to <32 x i1>
-  %val = load <32 x half>, <32 x half>* %ptr
+  %val = load <32 x half>, ptr %ptr
   %res0 = call <32 x half> @llvm.x86.avx512fp16.div.ph.512(<32 x half> %x1, <32 x half> %x2, i32 4)
   %res1 = select <32 x i1> %mask, <32 x half> %res0, <32 x half> zeroinitializer
   %t2 = call <32 x half> @llvm.x86.avx512fp16.div.ph.512(<32 x half> %x1, <32 x half> %val, i32 4)
@@ -204,7 +204,7 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_div_ph_512(<32 x half> %src, <
   ret <32 x half> %res3
 }
 
-define <32 x half> @test_int_x86_avx512fp16_div_ph_512_round(<32 x half> %x1, <32 x half> %x2, <32 x half> %src, i32 %msk, <32 x half>* %ptr) {
+define <32 x half> @test_int_x86_avx512fp16_div_ph_512_round(<32 x half> %x1, <32 x half> %x2, <32 x half> %src, i32 %msk, ptr %ptr) {
 ; CHECK-LABEL: test_int_x86_avx512fp16_div_ph_512_round:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
@@ -316,13 +316,13 @@ define <8 x double> @test_int_x86_avx512_mask_vcvt_ph2pd_nomask(<8 x half> %x0, 
   ret <8 x double> %res
 }
 
-define <8 x double> @test_int_x86_avx512_mask_vcvt_ph2pd_load(<8 x half>* %px0, <8 x double> %x1, i8 %x2) {
+define <8 x double> @test_int_x86_avx512_mask_vcvt_ph2pd_load(ptr %px0, <8 x double> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vcvt_ph2pd_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vcvtph2pd (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %x0 = load <8 x half>, <8 x half>* %px0, align 16
+  %x0 = load <8 x half>, ptr %px0, align 16
   %res = call <8 x double> @llvm.x86.avx512fp16.mask.vcvtph2pd.512(<8 x half> %x0, <8 x double> %x1, i8 %x2, i32 4)
   ret <8 x double> %res
 }
@@ -353,13 +353,13 @@ define <8 x half> @test_int_x86_avx512_mask_vcvt_pd2ph_r(<8 x double> %x0, <8 x 
   ret <8 x half> %res
 }
 
-define <8 x half> @test_int_x86_avx512_mask_vcvt_pd2ph_load(<8 x double>* %px0, <8 x half> %x1, i8 %x2) {
+define <8 x half> @test_int_x86_avx512_mask_vcvt_pd2ph_load(ptr %px0, <8 x half> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vcvt_pd2ph_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vcvtpd2phz (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %x0 = load <8 x double>, <8 x double>* %px0, align 64
+  %x0 = load <8 x double>, ptr %px0, align 64
   %res = call <8 x half> @llvm.x86.avx512fp16.mask.vcvtpd2ph.512(<8 x double> %x0, <8 x half> %x1, i8 %x2, i32 4)
   ret <8 x half> %res
 }

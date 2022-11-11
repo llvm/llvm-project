@@ -13,18 +13,18 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_v_s32
     ; WAVE64: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE64: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
     ; WAVE32-LABEL: name: constant_v_s32
     ; WAVE32: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE32: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
     %0:vgpr(s32) = G_CONSTANT i32 0
     %1:vgpr(s32) = G_CONSTANT i32 1
     %2:vgpr(s32) = G_CONSTANT i32 -1
@@ -43,18 +43,18 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_s_s32
     ; WAVE64: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE64: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE64: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE64: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
-    ; WAVE64: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
-    ; WAVE64: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
+    ; WAVE64-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE64-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE64-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
+    ; WAVE64-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
     ; WAVE32-LABEL: name: constant_s_s32
     ; WAVE32: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE32: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE32: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE32: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
-    ; WAVE32: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
-    ; WAVE32: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
+    ; WAVE32-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE32-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE32-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
+    ; WAVE32-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
     %0:sgpr(s32) = G_CONSTANT i32 0
     %1:sgpr(s32) = G_CONSTANT i32 1
     %2:sgpr(s32) = G_CONSTANT i32 -1
@@ -73,18 +73,18 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_v_s16
     ; WAVE64: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE64: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
     ; WAVE32-LABEL: name: constant_v_s16
     ; WAVE32: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE32: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
     %0:vgpr(s16) = G_CONSTANT i16 0
     %1:vgpr(s16) = G_CONSTANT i16 1
     %2:vgpr(s16) = G_CONSTANT i16 -1
@@ -103,18 +103,18 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_s_s16
     ; WAVE64: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE64: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE64: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE64: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
-    ; WAVE64: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
-    ; WAVE64: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
+    ; WAVE64-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE64-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE64-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
+    ; WAVE64-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
     ; WAVE32-LABEL: name: constant_s_s16
     ; WAVE32: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE32: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE32: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE32: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
-    ; WAVE32: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
-    ; WAVE32: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
+    ; WAVE32-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE32-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE32-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
+    ; WAVE32-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
     %0:sgpr(s16) = G_CONSTANT i16 0
     %1:sgpr(s16) = G_CONSTANT i16 1
     %2:sgpr(s16) = G_CONSTANT i16 -1
@@ -133,56 +133,56 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_v_s64
     ; WAVE64: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
-    ; WAVE64: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
     ; WAVE32-LABEL: name: constant_v_s64
     ; WAVE32: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
-    ; WAVE32: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
     %0:vgpr(s64) = G_CONSTANT i64 0
     %1:vgpr(s64) = G_CONSTANT i64 1
     %2:vgpr(s64) = G_CONSTANT i64 -1
@@ -204,40 +204,40 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_s_s64
     ; WAVE64: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-    ; WAVE64: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
-    ; WAVE64: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
-    ; WAVE64: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
-    ; WAVE64: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE64: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-    ; WAVE64: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
-    ; WAVE64: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
-    ; WAVE64: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE64: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
-    ; WAVE64: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE64: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE64: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
-    ; WAVE64: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
-    ; WAVE64: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
-    ; WAVE64: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
-    ; WAVE64: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
+    ; WAVE64-NEXT: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
+    ; WAVE64-NEXT: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
+    ; WAVE64-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
+    ; WAVE64-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; WAVE64-NEXT: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
+    ; WAVE64-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
+    ; WAVE64-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE64-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
+    ; WAVE64-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE64-NEXT: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
+    ; WAVE64-NEXT: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
+    ; WAVE64-NEXT: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
+    ; WAVE64-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
     ; WAVE32-LABEL: name: constant_s_s64
     ; WAVE32: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-    ; WAVE32: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
-    ; WAVE32: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
-    ; WAVE32: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
-    ; WAVE32: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE32: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-    ; WAVE32: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
-    ; WAVE32: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
-    ; WAVE32: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE32: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
-    ; WAVE32: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE32: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE32: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
-    ; WAVE32: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
-    ; WAVE32: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
-    ; WAVE32: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
-    ; WAVE32: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
+    ; WAVE32-NEXT: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
+    ; WAVE32-NEXT: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
+    ; WAVE32-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
+    ; WAVE32-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE32-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; WAVE32-NEXT: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
+    ; WAVE32-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
+    ; WAVE32-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE32-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
+    ; WAVE32-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE32-NEXT: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE32-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
+    ; WAVE32-NEXT: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
+    ; WAVE32-NEXT: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
+    ; WAVE32-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
     %0:sgpr(s64) = G_CONSTANT i64 0
     %1:sgpr(s64) = G_CONSTANT i64 1
     %2:sgpr(s64) = G_CONSTANT i64 -1
@@ -260,12 +260,12 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_i1_vcc
     ; WAVE64: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 -1
-    ; WAVE64: [[S_MOV_B64_1:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 0
-    ; WAVE64: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]]
+    ; WAVE64-NEXT: [[S_MOV_B64_1:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 0
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]]
     ; WAVE32-LABEL: name: constant_i1_vcc
     ; WAVE32: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 -1
-    ; WAVE32: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 0
-    ; WAVE32: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]]
+    ; WAVE32-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 0
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]]
     %0:vcc(s1) = G_CONSTANT i1 true
     %1:vcc(s1) = G_CONSTANT i1 false
     S_ENDPGM 0 , implicit %0 , implicit %1
@@ -283,18 +283,18 @@ body: |
 
     ; WAVE64-LABEL: name: constant_s_p3
     ; WAVE64: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE64: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE64: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE64: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
-    ; WAVE64: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
-    ; WAVE64: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
+    ; WAVE64-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE64-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE64-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
+    ; WAVE64-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
     ; WAVE32-LABEL: name: constant_s_p3
     ; WAVE32: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE32: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE32: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE32: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
-    ; WAVE32: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
-    ; WAVE32: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
+    ; WAVE32-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE32-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE32-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -54
+    ; WAVE32-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 27
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]], implicit [[S_MOV_B32_4]]
     %0:sgpr(p3) = G_CONSTANT i32 0
     %1:sgpr(p3) = G_CONSTANT i32 1
     %2:sgpr(p3) = G_CONSTANT i32 -1
@@ -313,18 +313,18 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_v_p3
     ; WAVE64: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE64: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
     ; WAVE32-LABEL: name: constant_v_p3
     ; WAVE32: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE32: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -54, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]], implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]], implicit [[V_MOV_B32_e32_4]]
     %0:vgpr(p3) = G_CONSTANT i32 0
     %1:vgpr(p3) = G_CONSTANT i32 1
     %2:vgpr(p3) = G_CONSTANT i32 -1
@@ -343,40 +343,40 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_s_p1
     ; WAVE64: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-    ; WAVE64: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
-    ; WAVE64: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
-    ; WAVE64: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
-    ; WAVE64: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE64: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-    ; WAVE64: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
-    ; WAVE64: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
-    ; WAVE64: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE64: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
-    ; WAVE64: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE64: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE64: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
-    ; WAVE64: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
-    ; WAVE64: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
-    ; WAVE64: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
-    ; WAVE64: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
+    ; WAVE64-NEXT: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
+    ; WAVE64-NEXT: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
+    ; WAVE64-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
+    ; WAVE64-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; WAVE64-NEXT: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
+    ; WAVE64-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
+    ; WAVE64-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE64-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
+    ; WAVE64-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE64-NEXT: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
+    ; WAVE64-NEXT: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
+    ; WAVE64-NEXT: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
+    ; WAVE64-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
     ; WAVE32-LABEL: name: constant_s_p1
     ; WAVE32: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-    ; WAVE32: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
-    ; WAVE32: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
-    ; WAVE32: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
-    ; WAVE32: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE32: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-    ; WAVE32: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
-    ; WAVE32: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
-    ; WAVE32: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE32: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
-    ; WAVE32: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE32: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE32: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
-    ; WAVE32: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
-    ; WAVE32: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
-    ; WAVE32: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
-    ; WAVE32: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
+    ; WAVE32-NEXT: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
+    ; WAVE32-NEXT: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
+    ; WAVE32-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
+    ; WAVE32-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE32-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; WAVE32-NEXT: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
+    ; WAVE32-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
+    ; WAVE32-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE32-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
+    ; WAVE32-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE32-NEXT: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE32-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
+    ; WAVE32-NEXT: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
+    ; WAVE32-NEXT: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
+    ; WAVE32-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
     %0:sgpr(p1) = G_CONSTANT i64 0
     %1:sgpr(p1) = G_CONSTANT i64 1
     %2:sgpr(p1) = G_CONSTANT i64 -1
@@ -398,56 +398,56 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_v_p1
     ; WAVE64: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
-    ; WAVE64: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
     ; WAVE32-LABEL: name: constant_v_p1
     ; WAVE32: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
-    ; WAVE32: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
     %0:vgpr(p1) = G_CONSTANT i64 0
     %1:vgpr(p1) = G_CONSTANT i64 1
     %2:vgpr(p1) = G_CONSTANT i64 -1
@@ -469,40 +469,40 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_s_p999
     ; WAVE64: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-    ; WAVE64: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
-    ; WAVE64: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
-    ; WAVE64: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
-    ; WAVE64: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE64: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-    ; WAVE64: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
-    ; WAVE64: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
-    ; WAVE64: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE64: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
-    ; WAVE64: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE64: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE64: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
-    ; WAVE64: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
-    ; WAVE64: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
-    ; WAVE64: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
-    ; WAVE64: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
+    ; WAVE64-NEXT: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
+    ; WAVE64-NEXT: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
+    ; WAVE64-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
+    ; WAVE64-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; WAVE64-NEXT: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
+    ; WAVE64-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
+    ; WAVE64-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE64-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
+    ; WAVE64-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE64-NEXT: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
+    ; WAVE64-NEXT: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
+    ; WAVE64-NEXT: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
+    ; WAVE64-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
     ; WAVE32-LABEL: name: constant_s_p999
     ; WAVE32: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-    ; WAVE32: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
-    ; WAVE32: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
-    ; WAVE32: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
-    ; WAVE32: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; WAVE32: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-    ; WAVE32: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
-    ; WAVE32: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
-    ; WAVE32: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE32: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
-    ; WAVE32: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; WAVE32: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; WAVE32: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
-    ; WAVE32: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
-    ; WAVE32: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
-    ; WAVE32: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
-    ; WAVE32: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
+    ; WAVE32-NEXT: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
+    ; WAVE32-NEXT: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
+    ; WAVE32-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967242
+    ; WAVE32-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; WAVE32-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; WAVE32-NEXT: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 27
+    ; WAVE32-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967295
+    ; WAVE32-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE32-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
+    ; WAVE32-NEXT: [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; WAVE32-NEXT: [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; WAVE32-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_4]], %subreg.sub0, [[S_MOV_B32_5]], %subreg.sub1
+    ; WAVE32-NEXT: [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 23255
+    ; WAVE32-NEXT: [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
+    ; WAVE32-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_6]], %subreg.sub0, [[S_MOV_B32_7]], %subreg.sub1
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[S_MOV_B64_1]], implicit [[S_MOV_B64_2]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_3]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
     %0:sgpr(p999) = G_CONSTANT i64 0
     %1:sgpr(p999) = G_CONSTANT i64 1
     %2:sgpr(p999) = G_CONSTANT i64 -1
@@ -524,56 +524,56 @@ body: |
   bb.0:
     ; WAVE64-LABEL: name: constant_v_p999
     ; WAVE64: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
-    ; WAVE64: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
-    ; WAVE64: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
-    ; WAVE64: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
-    ; WAVE64: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
+    ; WAVE64-NEXT: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
+    ; WAVE64-NEXT: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
     ; WAVE32-LABEL: name: constant_v_p999
     ; WAVE32: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
-    ; WAVE32: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
-    ; WAVE32: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
-    ; WAVE32: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
-    ; WAVE32: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967242, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 27, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_8]], %subreg.sub0, [[V_MOV_B32_e32_9]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_10:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967295, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_11:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_10]], %subreg.sub0, [[V_MOV_B32_e32_11]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_12:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE6:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_12]], %subreg.sub0, [[V_MOV_B32_e32_13]], %subreg.sub1
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_14:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 23255, implicit $exec
+    ; WAVE32-NEXT: [[V_MOV_B32_e32_15:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
+    ; WAVE32-NEXT: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_14]], %subreg.sub0, [[V_MOV_B32_e32_15]], %subreg.sub1
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]], implicit [[REG_SEQUENCE1]], implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]], implicit [[REG_SEQUENCE4]], implicit [[REG_SEQUENCE5]], implicit [[REG_SEQUENCE6]], implicit [[REG_SEQUENCE7]]
     %0:vgpr(p999) = G_CONSTANT i64 0
     %1:vgpr(p999) = G_CONSTANT i64 1
     %2:vgpr(p999) = G_CONSTANT i64 -1

@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("OrcJITTests") {
   deps = [
@@ -22,11 +22,14 @@ unittest("OrcJITTests") {
     "JITTargetMachineBuilderTest.cpp",
     "LazyCallThroughAndReexportsTest.cpp",
     "LookupAndRecordAddrsTest.cpp",
+    "MapperJITLinkMemoryManagerTest.cpp",
+    "MemoryMapperTest.cpp",
     "ObjectLinkingLayerTest.cpp",
     "OrcCAPITest.cpp",
     "OrcTestCommon.cpp",
     "RTDyldObjectLinkingLayerTest.cpp",
     "ResourceTrackerTest.cpp",
+    "SharedMemoryMapperTest.cpp",
     "SimpleExecutorMemoryManagerTest.cpp",
     "SimplePackedSerializationTest.cpp",
     "SymbolStringPoolTest.cpp",

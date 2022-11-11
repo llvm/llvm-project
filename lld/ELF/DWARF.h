@@ -14,8 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/ELF.h"
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 
 class InputSection;
 
@@ -100,7 +99,6 @@ private:
   StringRef lineStrSection;
 };
 
-} // namespace elf
-} // namespace lld
+} // namespace lld::elf
 
 #endif

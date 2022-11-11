@@ -39,7 +39,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 namespace ranges {
   template<class _Int>
@@ -221,6 +221,7 @@ namespace ranges {
         return !(__x < __y);
       }
 
+      _LIBCPP_HIDE_FROM_ABI
       friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
         requires totally_ordered<_Start> && three_way_comparable<_Start>
       {
@@ -401,7 +402,7 @@ inline namespace __cpo {
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

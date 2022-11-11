@@ -94,7 +94,7 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_set_6b", 2, 6, 0},
       {"fixup_riscv_sub_6b", 2, 6, 0},
   };
-  static_assert((array_lengthof(Infos)) == RISCV::NumTargetFixupKinds,
+  static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
 
   // Fixup kinds from .reloc directive are like R_RISCV_NONE. They
@@ -354,19 +354,27 @@ bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
 
 bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                    const MCSubtargetInfo *STI) const {
-  bool HasStdExtC = STI->getFeatureBits()[RISCV::FeatureStdExtC];
-  unsigned MinNopLen = HasStdExtC ? 2 : 4;
+  // We mostly follow binutils' convention here: align to even boundary with a
+  // 0-fill padding.  We emit up to 1 2-byte nop, though we use c.nop if RVC is
+  // enabled or 0-fill otherwise.  The remainder is now padded with 4-byte nops.
 
-  if ((Count % MinNopLen) != 0)
-    return false;
+  // Instructions always are at even addresses.  We must be in a data area or
+  // be unaligned due to some other reason.
+  if (Count % 2) {
+    OS.write("\0", 1);
+    Count -= 1;
+  }
+
+  // The canonical nop on RVC is c.nop.
+  if (Count % 4 == 2) {
+    OS.write(STI->getFeatureBits()[RISCV::FeatureStdExtC] ? "\x01\0" : "\0\0",
+             2);
+    Count -= 2;
+  }
 
   // The canonical nop on RISC-V is addi x0, x0, 0.
   for (; Count >= 4; Count -= 4)
     OS.write("\x13\0\0\0", 4);
-
-  // The canonical nop on RVC is c.nop.
-  if (Count && HasStdExtC)
-    OS.write("\x01\0", 2);
 
   return true;
 }

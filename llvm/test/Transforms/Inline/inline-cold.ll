@@ -1,15 +1,12 @@
-; RUN: opt < %s -inline -S -inlinecold-threshold=25 -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -S -inlinecold-threshold=25 | FileCheck %s
 ; Test that functions with attribute Cold are not inlined while the 
 ; same function without attribute Cold will be inlined.
 
-; RUN: opt < %s -inline -S -inline-threshold=600 -enable-new-pm=0 | FileCheck %s -check-prefix=OVERRIDE
-; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -S -inline-threshold=600 -enable-new-pm=0 | FileCheck %s -check-prefix=OVERRIDE
+; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -S -inline-threshold=600 | FileCheck %s -check-prefix=OVERRIDE
 ; The command line argument for inline-threshold should override
 ; the default cold threshold, so a cold function with size bigger
 ; than the default cold threshold (225) will be inlined.
 
-; RUN: opt < %s -inline -S -enable-new-pm=0 | FileCheck %s -check-prefix=DEFAULT
 ; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -S | FileCheck %s -check-prefix=DEFAULT
 ; The same cold function will not be inlined with the default behavior.
 

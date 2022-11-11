@@ -44,7 +44,7 @@ define void @foo(i32* noalias nocapture %a, i32* noalias nocapture readonly %b) 
 ; SSE:       for.cond.cleanup:
 ; SSE-NEXT:    ret void
 ; SSE:       for.body:
-; SSE-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; SSE-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ;
 ; AVX1-LABEL: @foo(
 ; AVX1-NEXT:  entry:
@@ -106,7 +106,7 @@ define void @foo(i32* noalias nocapture %a, i32* noalias nocapture readonly %b) 
 ; AVX1:       for.cond.cleanup:
 ; AVX1-NEXT:    ret void
 ; AVX1:       for.body:
-; AVX1-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; AVX1-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ;
 ; AVX2-LABEL: @foo(
 ; AVX2-NEXT:  entry:
@@ -168,7 +168,7 @@ define void @foo(i32* noalias nocapture %a, i32* noalias nocapture readonly %b) 
 ; AVX2:       for.cond.cleanup:
 ; AVX2-NEXT:    ret void
 ; AVX2:       for.body:
-; AVX2-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; AVX2-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ;
 ; ATOM-LABEL: @foo(
 ; ATOM-NEXT:  entry:

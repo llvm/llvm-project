@@ -100,7 +100,7 @@ TEST(AddressRangeTest, TestRanges) {
   EXPECT_FALSE(Ranges.contains(AddressRange(0x1000, 0x1000)));
   EXPECT_TRUE(Ranges.contains(AddressRange(0x1000, 0x1000 + 1)));
   EXPECT_TRUE(Ranges.contains(AddressRange(0x1000, 0x2000)));
-  EXPECT_FALSE(Ranges.contains(AddressRange(0x1000, 0x2001)));
+  EXPECT_TRUE(Ranges.contains(AddressRange(0x1000, 0x2001)));
   EXPECT_TRUE(Ranges.contains(AddressRange(0x2000, 0x3000)));
   EXPECT_FALSE(Ranges.contains(AddressRange(0x2000, 0x3001)));
   EXPECT_FALSE(Ranges.contains(AddressRange(0x3000, 0x3001)));
@@ -125,20 +125,110 @@ TEST(AddressRangeTest, TestRanges) {
   EXPECT_EQ(Ranges.size(), 1u);
   EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x2000));
 
-  // Verify that adjacent ranges don't get combined
-  Ranges.insert(AddressRange(0x2000, 0x3000));
+  // Verify that adjacent ranges get combined
+  Ranges.insert(AddressRange(0x2000, 0x2fff));
+  EXPECT_EQ(Ranges.size(), 1u);
+  EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x2fff));
+
+  // Verify that ranges having 1 byte gap do not get combined
+  Ranges.insert(AddressRange(0x3000, 0x4000));
   EXPECT_EQ(Ranges.size(), 2u);
-  EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x2000));
-  EXPECT_EQ(Ranges[1], AddressRange(0x2000, 0x3000));
+  EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x2fff));
+  EXPECT_EQ(Ranges[1], AddressRange(0x3000, 0x4000));
+
   // Verify if we add an address range that intersects two ranges
   // that they get combined
   Ranges.insert(AddressRange(Ranges[0].end() - 1, Ranges[1].start() + 1));
   EXPECT_EQ(Ranges.size(), 1u);
-  EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x3000));
+  EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x4000));
 
   Ranges.insert(AddressRange(0x3000, 0x4000));
   Ranges.insert(AddressRange(0x4000, 0x5000));
   Ranges.insert(AddressRange(0x2000, 0x4500));
   EXPECT_EQ(Ranges.size(), 1u);
   EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x5000));
+}
+
+TEST(AddressRangeTest, TestRangesMap) {
+  AddressRangesMap<int> Ranges;
+
+  EXPECT_EQ(Ranges.size(), 0u);
+  EXPECT_TRUE(Ranges.empty());
+
+  // Add single range.
+  Ranges.insert(AddressRange(0x1000, 0x2000), 0xfe);
+  EXPECT_EQ(Ranges.size(), 1u);
+  EXPECT_FALSE(Ranges.empty());
+  EXPECT_TRUE(Ranges.contains(0x1500));
+  EXPECT_TRUE(Ranges.contains(AddressRange(0x1000, 0x2000)));
+
+  // Clear ranges.
+  Ranges.clear();
+  EXPECT_EQ(Ranges.size(), 0u);
+  EXPECT_TRUE(Ranges.empty());
+
+  // Add range and check value.
+  Ranges.insert(AddressRange(0x1000, 0x2000), 0xfe);
+  EXPECT_EQ(Ranges.size(), 1u);
+  EXPECT_EQ(Ranges.getRangeValueThatContains(0x1000)->second, 0xfe);
+
+  // Add adjacent range and check value.
+  Ranges.insert(AddressRange(0x2000, 0x3000), 0xfc);
+  EXPECT_EQ(Ranges.size(), 1u);
+  EXPECT_EQ(Ranges.getRangeValueThatContains(0x1000)->second, 0xfc);
+  EXPECT_EQ(Ranges.getRangeValueThatContains(0x2000)->second, 0xfc);
+  EXPECT_EQ(Ranges.getRangeValueThatContains(0x2900)->second, 0xfc);
+  EXPECT_FALSE(Ranges.getRangeValueThatContains(0x3000));
+
+  // Add intersecting range and check value.
+  Ranges.insert(AddressRange(0x2000, 0x3000), 0xff);
+  EXPECT_EQ(Ranges.size(), 1u);
+  EXPECT_EQ(Ranges.getRangeValueThatContains(0x1000)->second, 0xff);
+
+  // Add second range and check values.
+  Ranges.insert(AddressRange(0x4000, 0x5000), 0x0);
+  EXPECT_EQ(Ranges.size(), 2u);
+  EXPECT_EQ(Ranges[0].second, 0xff);
+  EXPECT_EQ(Ranges[1].second, 0x0);
+  EXPECT_EQ(Ranges.getRangeValueThatContains(0x1000)->second, 0xff);
+  EXPECT_EQ(Ranges.getRangeValueThatContains(0x4000)->second, 0x0);
+
+  // Add intersecting range and check value.
+  Ranges.insert(AddressRange(0x0, 0x6000), 0x1);
+  EXPECT_EQ(Ranges.size(), 1u);
+  EXPECT_EQ(Ranges.getRangeValueThatContains(0x1000)->second, 0x1);
+
+  // Check that values are correctly preserved for combined ranges.
+  Ranges.clear();
+  Ranges.insert(AddressRange(0x0, 0xff), 0x1);
+  Ranges.insert(AddressRange(0x100, 0x1ff), 0x2);
+  Ranges.insert(AddressRange(0x200, 0x2ff), 0x3);
+  Ranges.insert(AddressRange(0x300, 0x3ff), 0x4);
+  Ranges.insert(AddressRange(0x400, 0x4ff), 0x5);
+  Ranges.insert(AddressRange(0x500, 0x5ff), 0x6);
+  Ranges.insert(AddressRange(0x600, 0x6ff), 0x7);
+
+  Ranges.insert(AddressRange(0x150, 0x350), 0xff);
+  EXPECT_EQ(Ranges.size(), 5u);
+  EXPECT_EQ(Ranges[0].first, AddressRange(0x0, 0xff));
+  EXPECT_EQ(Ranges[0].second, 0x1);
+  EXPECT_EQ(Ranges[1].first, AddressRange(0x100, 0x3ff));
+  EXPECT_EQ(Ranges[1].second, 0xff);
+  EXPECT_EQ(Ranges[2].first, AddressRange(0x400, 0x4ff));
+  EXPECT_EQ(Ranges[2].second, 0x5);
+  EXPECT_EQ(Ranges[3].first, AddressRange(0x500, 0x5ff));
+  EXPECT_EQ(Ranges[3].second, 0x6);
+  EXPECT_EQ(Ranges[4].first, AddressRange(0x600, 0x6ff));
+  EXPECT_EQ(Ranges[4].second, 0x7);
+
+  Ranges.insert(AddressRange(0x3ff, 0x400), 0x5);
+  EXPECT_EQ(Ranges.size(), 4u);
+  EXPECT_EQ(Ranges[0].first, AddressRange(0x0, 0xff));
+  EXPECT_EQ(Ranges[0].second, 0x1);
+  EXPECT_EQ(Ranges[1].first, AddressRange(0x100, 0x4ff));
+  EXPECT_EQ(Ranges[1].second, 0x5);
+  EXPECT_EQ(Ranges[2].first, AddressRange(0x500, 0x5ff));
+  EXPECT_EQ(Ranges[2].second, 0x6);
+  EXPECT_EQ(Ranges[3].first, AddressRange(0x600, 0x6ff));
+  EXPECT_EQ(Ranges[3].second, 0x7);
 }

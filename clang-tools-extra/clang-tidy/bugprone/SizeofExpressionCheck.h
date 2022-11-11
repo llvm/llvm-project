@@ -18,7 +18,7 @@ namespace bugprone {
 /// Find suspicious usages of sizeof expression.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-sizeof-expression.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/sizeof-expression.html
 class SizeofExpressionCheck : public ClangTidyCheck {
 public:
   SizeofExpressionCheck(StringRef Name, ClangTidyContext *Context);
@@ -31,6 +31,7 @@ private:
   const bool WarnOnSizeOfIntegerExpression;
   const bool WarnOnSizeOfThis;
   const bool WarnOnSizeOfCompareToConstant;
+  const bool WarnOnSizeOfPointerToAggregate;
 };
 
 } // namespace bugprone

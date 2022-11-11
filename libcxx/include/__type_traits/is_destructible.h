@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_destructible)
+#if __has_builtin(__is_destructible)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_destructible : _BoolConstant<__is_destructible(_Tp)> { };
@@ -32,7 +32,7 @@ template <class _Tp>
 inline constexpr bool is_destructible_v = __is_destructible(_Tp);
 #endif
 
-#else // __has_keyword(__is_destructible)
+#else // __has_builtin(__is_destructible)
 
 //  if it's a reference, return true
 //  if it's a function, return false
@@ -63,7 +63,7 @@ struct __destructible_imp;
 template <class _Tp>
 struct __destructible_imp<_Tp, false>
    : public integral_constant<bool,
-        __is_destructor_wellformed<typename remove_all_extents<_Tp>::type>::value> {};
+        __is_destructor_wellformed<__remove_all_extents_t<_Tp> >::value> {};
 
 template <class _Tp>
 struct __destructible_imp<_Tp, true>
@@ -95,7 +95,7 @@ template <class _Tp>
 inline constexpr bool is_destructible_v = is_destructible<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_destructible)
+#endif // __has_builtin(__is_destructible)
 
 _LIBCPP_END_NAMESPACE_STD
 

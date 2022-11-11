@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 func.func @extract_element_0d(%a: vector<f32>) {
@@ -105,6 +105,35 @@ func.func @create_mask_0d(%zero : index, %one : index) {
   return
 }
 
+func.func @reduce_add(%arg0: vector<f32>) {
+  %0 = vector.reduction <add>, %arg0 : vector<f32> into f32    
+  vector.print %0 : f32
+  // CHECK: 5
+  return
+}
+
+func.func @fma_0d(%four: vector<f32>) {
+  %0 = vector.fma %four, %four, %four : vector<f32>
+  // 4 * 4 + 4 = 20
+  // CHECK: ( 20 )
+  vector.print %0: vector<f32>
+  return
+}
+
+func.func @transpose_0d(%arg: vector<i32>) {
+  %1 = vector.transpose %arg, [] : vector<i32> to vector<i32>
+  // CHECK: ( 42 )
+  vector.print %1: vector<i32>
+  return
+}
+
+func.func @shuffle_0d(%v0: vector<i32>, %v1: vector<i32>) {
+  %1 = vector.shuffle %v0, %v1 [0, 1, 0] : vector<i32>, vector<i32>
+  // CHECK: ( 42, 43, 42 )
+  vector.print %1: vector<3xi32>
+  return
+}
+
 func.func @entry() {
   %0 = arith.constant 42.0 : f32
   %1 = arith.constant dense<0.0> : vector<f32>
@@ -130,6 +159,16 @@ func.func @entry() {
   %zero_idx = arith.constant 0 : index
   %one_idx = arith.constant 1 : index
   call  @create_mask_0d(%zero_idx, %one_idx) : (index, index) -> ()
+
+  %red_array = arith.constant dense<5.0> : vector<f32>
+  call  @reduce_add(%red_array) : (vector<f32>) -> ()
+
+  %5 = arith.constant dense<4.0> : vector<f32>
+  call  @fma_0d(%5) : (vector<f32>) -> ()
+  %6 = arith.constant dense<42> : vector<i32>
+  %7 = arith.constant dense<43> : vector<i32>
+  call @transpose_0d(%6) : (vector<i32>) -> ()
+  call @shuffle_0d(%6, %7) : (vector<i32>, vector<i32>) -> ()
 
   return
 }

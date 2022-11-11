@@ -36,7 +36,7 @@ bool CallGraphUpdater::finalize() {
       CallGraphNode *DeadCGN = (*CG)[DeadFn];
       DeadCGN->removeAllCalledFunctions();
       CG->getExternalCallingNode()->removeAnyCallEdgeTo(DeadCGN);
-      DeadFn->replaceAllUsesWith(UndefValue::get(DeadFn->getType()));
+      DeadFn->replaceAllUsesWith(PoisonValue::get(DeadFn->getType()));
     }
 
     // Then remove the node and function from the module.
@@ -51,7 +51,7 @@ bool CallGraphUpdater::finalize() {
     // no call graph was provided.
     for (Function *DeadFn : DeadFunctions) {
       DeadFn->removeDeadConstantUsers();
-      DeadFn->replaceAllUsesWith(UndefValue::get(DeadFn->getType()));
+      DeadFn->replaceAllUsesWith(PoisonValue::get(DeadFn->getType()));
 
       if (LCG && !ReplacedFunctions.count(DeadFn)) {
         // Taken mostly from the inliner:

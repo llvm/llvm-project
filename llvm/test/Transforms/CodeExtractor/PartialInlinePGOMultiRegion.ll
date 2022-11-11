@@ -101,7 +101,7 @@ for.inc2:                                          ; preds = %if.end2
   br label %for.cond2
 
 for.end:                                          ; preds = %for.cond2
-  callbr void asm sideeffect "1: nop\0A\09.quad b, ${0:l}, $$5\0A\09", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@bar, %l_yes))
+  callbr void asm sideeffect "1: nop\0A\09.quad b, ${0:l}, $$5\0A\09", "!i,~{dirflag},~{fpsr},~{flags}"()
           to label %asm.fallthrough [label %l_yes]
 asm.fallthrough:                                  ; preds = %for.end
   br label %l_yes

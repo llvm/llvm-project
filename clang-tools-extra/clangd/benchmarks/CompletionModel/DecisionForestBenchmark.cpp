@@ -61,7 +61,7 @@ std::vector<Example> generateRandomDataset(int NumExamples) {
   return Examples;
 }
 
-void runDecisionForestPrediciton(const std::vector<Example> Examples) {
+void runDecisionForestPrediction(const std::vector<Example> Examples) {
   for (const Example &E : Examples)
     Evaluate(E);
 }
@@ -72,7 +72,7 @@ static void decisionForestPredict(benchmark::State &State) {
     State.PauseTiming();
     const std::vector<Example> Examples = generateRandomDataset(1000000);
     State.ResumeTiming();
-    runDecisionForestPrediciton(Examples);
+    runDecisionForestPrediction(Examples);
   }
 }
 BENCHMARK(decisionForestPredict);

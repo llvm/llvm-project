@@ -3,7 +3,7 @@
 
 ; widen a v3i32 to v4i32 to do a vector multiple and a subtraction
 
-define void @update(<3 x i32>* %dst, <3 x i32>* %src, i32 %n) nounwind {
+define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; CHECK-LABEL: update:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
@@ -36,41 +36,41 @@ define void @update(<3 x i32>* %dst, <3 x i32>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:  .LBB0_3: # %afterfor
 ; CHECK-NEXT:    retq
 entry:
-	%dst.addr = alloca <3 x i32>*
-	%src.addr = alloca <3 x i32>*
+	%dst.addr = alloca ptr
+	%src.addr = alloca ptr
 	%n.addr = alloca i32
 	%v = alloca <3 x i32>, align 16
 	%i = alloca i32, align 4
-	store <3 x i32>* %dst, <3 x i32>** %dst.addr
-	store <3 x i32>* %src, <3 x i32>** %src.addr
-	store i32 %n, i32* %n.addr
-	store <3 x i32> < i32 1, i32 1, i32 1 >, <3 x i32>* %v
-	store i32 0, i32* %i
+	store ptr %dst, ptr %dst.addr
+	store ptr %src, ptr %src.addr
+	store i32 %n, ptr %n.addr
+	store <3 x i32> < i32 1, i32 1, i32 1 >, ptr %v
+	store i32 0, ptr %i
 	br label %forcond
 
 forcond:
-	%tmp = load i32, i32* %i
-	%tmp1 = load i32, i32* %n.addr
+	%tmp = load i32, ptr %i
+	%tmp1 = load i32, ptr %n.addr
 	%cmp = icmp slt i32 %tmp, %tmp1
 	br i1 %cmp, label %forbody, label %afterfor
 
 forbody:
-	%tmp2 = load i32, i32* %i
-	%tmp3 = load <3 x i32>*, <3 x i32>** %dst.addr
-	%arrayidx = getelementptr <3 x i32>, <3 x i32>* %tmp3, i32 %tmp2
-	%tmp4 = load i32, i32* %i
-	%tmp5 = load <3 x i32>*, <3 x i32>** %src.addr
-	%arrayidx6 = getelementptr <3 x i32>, <3 x i32>* %tmp5, i32 %tmp4
-	%tmp7 = load <3 x i32>, <3 x i32>* %arrayidx6
+	%tmp2 = load i32, ptr %i
+	%tmp3 = load ptr, ptr %dst.addr
+	%arrayidx = getelementptr <3 x i32>, ptr %tmp3, i32 %tmp2
+	%tmp4 = load i32, ptr %i
+	%tmp5 = load ptr, ptr %src.addr
+	%arrayidx6 = getelementptr <3 x i32>, ptr %tmp5, i32 %tmp4
+	%tmp7 = load <3 x i32>, ptr %arrayidx6
 	%mul = mul <3 x i32> %tmp7, < i32 4, i32 4, i32 4 >
 	%sub = sub <3 x i32> %mul, < i32 3, i32 3, i32 3 >
-	store <3 x i32> %sub, <3 x i32>* %arrayidx
+	store <3 x i32> %sub, ptr %arrayidx
 	br label %forinc
 
 forinc:
-	%tmp8 = load i32, i32* %i
+	%tmp8 = load i32, ptr %i
 	%inc = add i32 %tmp8, 1
-	store i32 %inc, i32* %i
+	store i32 %inc, ptr %i
 	br label %forcond
 
 afterfor:

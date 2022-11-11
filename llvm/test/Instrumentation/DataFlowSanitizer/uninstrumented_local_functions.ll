@@ -1,4 +1,4 @@
-; RUN: opt < %s -dfsan -dfsan-abilist=%S/Inputs/abilist.txt -S | FileCheck %s
+; RUN: opt < %s -passes=dfsan -dfsan-abilist=%S/Inputs/abilist.txt -S | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]

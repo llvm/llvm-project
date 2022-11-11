@@ -1,10 +1,8 @@
 from abc import ABCMeta, abstractmethod
-import six
 
 import lldb
 
-@six.add_metaclass(ABCMeta)
-class ScriptedProcess:
+class ScriptedProcess(metaclass=ABCMeta):
 
     """
     The base class for a scripted process.
@@ -20,6 +18,7 @@ class ScriptedProcess:
     stack_memory_dump = None
     loaded_images = None
     threads = None
+    metadata = None
 
     @abstractmethod
     def __init__(self, target, args):
@@ -43,6 +42,7 @@ class ScriptedProcess:
             self.args = args
         self.threads = {}
         self.loaded_images = []
+        self.metadata = {}
 
     @abstractmethod
     def get_memory_region_containing_address(self, addr):
@@ -140,7 +140,6 @@ class ScriptedProcess:
         """
         return 0
 
-
     def launch(self):
         """ Simulate the scripted process launch.
 
@@ -193,8 +192,16 @@ class ScriptedProcess:
         """
         return None
 
-@six.add_metaclass(ABCMeta)
-class ScriptedThread:
+    def get_process_metadata(self):
+        """ Get some metadata for the scripted process.
+
+        Returns:
+            Dict: A dictionary containing metadata for the scripted process.
+                  None is the process as no metadata.
+        """
+        return self.metadata
+
+class ScriptedThread(metaclass=ABCMeta):
 
     """
     The base class for a scripted thread.
@@ -229,6 +236,7 @@ class ScriptedThread:
         self.register_info = None
         self.register_ctx = {}
         self.frames = []
+        self.extended_info = []
 
         if isinstance(scripted_process, ScriptedProcess):
             self.target = scripted_process.target
@@ -336,6 +344,15 @@ class ScriptedThread:
             str: A byte representing all register's value.
         """
         pass
+
+    def get_extended_info(self):
+        """ Get scripted thread extended information.
+
+        Returns:
+            List: A list containing the extended information for the scripted process.
+                  None is the thread as no extended information.
+        """
+        return self.extended_info
 
 ARM64_GPR = [ {'name': 'x0',   'bitsize': 64, 'offset': 0,   'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 0,  'dwarf': 0,  'generic': 'arg0', 'alt-name': 'arg0'},
               {'name': 'x1',   'bitsize': 64, 'offset': 8,   'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 1,  'dwarf': 1,  'generic': 'arg1', 'alt-name': 'arg1'},

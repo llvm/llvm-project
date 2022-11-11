@@ -154,7 +154,7 @@ public:
     return llvm::None;
   }
 
-  virtual void ModulesDidLoad(const ModuleList &module_list) override {}
+  void ModulesDidLoad(const ModuleList &module_list) override {}
 
   // Called by ClangExpressionParser::PrepareForExecution to query for any
   // custom LLVM IR passes that need to be run before an expression is

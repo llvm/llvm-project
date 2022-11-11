@@ -715,7 +715,6 @@ entry:
 define double @conv2dlbTestuiVar(<4 x i32> %a, i32 zeroext %elem) {
 ; CHECK-64-LABEL: conv2dlbTestuiVar:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    extsw 3, 3
 ; CHECK-64-NEXT:    rlwinm 3, 3, 2, 28, 29
 ; CHECK-64-NEXT:    vextuwlx 3, 3, 2
 ; CHECK-64-NEXT:    mtfprwz 0, 3

@@ -61,24 +61,30 @@ class MCOperand;
 class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
 
   class AggBuffer {
-    // Used to buffer the emitted string for initializing global
-    // aggregates.
+    // Used to buffer the emitted string for initializing global aggregates.
     //
-    // Normally an aggregate (array, vector or structure) is emitted
-    // as a u8[]. However, if one element/field of the aggregate
-    // is a non-NULL address, then the aggregate is emitted as u32[]
-    // or u64[].
+    // Normally an aggregate (array, vector, or structure) is emitted as a u8[].
+    // However, if either element/field of the aggregate is a non-NULL address,
+    // and all such addresses are properly aligned, then the aggregate is
+    // emitted as u32[] or u64[]. In the case of unaligned addresses, the
+    // aggregate is emitted as u8[], and the mask() operator is used for all
+    // pointers.
     //
-    // We first layout the aggregate in 'buffer' in bytes, except for
-    // those symbol addresses. For the i-th symbol address in the
-    //aggregate, its corresponding 4-byte or 8-byte elements in 'buffer'
-    // are filled with 0s. symbolPosInBuffer[i-1] records its position
-    // in 'buffer', and Symbols[i-1] records the Value*.
+    // We first layout the aggregate in 'buffer' in bytes, except for those
+    // symbol addresses. For the i-th symbol address in the aggregate, its
+    // corresponding 4-byte or 8-byte elements in 'buffer' are filled with 0s.
+    // symbolPosInBuffer[i-1] records its position in 'buffer', and Symbols[i-1]
+    // records the Value*.
     //
-    // Once we have this AggBuffer setup, we can choose how to print
-    // it out.
+    // Once we have this AggBuffer setup, we can choose how to print it out.
   public:
-    unsigned numSymbols;   // number of symbol addresses
+    // number of symbol addresses
+    unsigned numSymbols() const { return Symbols.size(); }
+
+    bool allSymbolsAligned(unsigned ptrSize) const {
+      return llvm::all_of(symbolPosInBuffer,
+                          [=](unsigned pos) { return pos % ptrSize == 0; });
+    }
 
   private:
     const unsigned size;   // size of the buffer in bytes
@@ -94,15 +100,13 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
     // SymbolsBeforeStripping[i].
     SmallVector<const Value *, 4> SymbolsBeforeStripping;
     unsigned curpos;
-    raw_ostream &O;
     NVPTXAsmPrinter &AP;
     bool EmitGeneric;
 
   public:
-    AggBuffer(unsigned size, raw_ostream &O, NVPTXAsmPrinter &AP)
-        : size(size), buffer(size), O(O), AP(AP) {
+    AggBuffer(unsigned size, NVPTXAsmPrinter &AP)
+        : size(size), buffer(size), AP(AP) {
       curpos = 0;
-      numSymbols = 0;
       EmitGeneric = AP.EmitGeneric;
     }
 
@@ -135,63 +139,13 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
       symbolPosInBuffer.push_back(curpos);
       Symbols.push_back(GVar);
       SymbolsBeforeStripping.push_back(GVarBeforeStripping);
-      numSymbols++;
     }
 
-    void print() {
-      if (numSymbols == 0) {
-        // print out in bytes
-        for (unsigned i = 0; i < size; i++) {
-          if (i)
-            O << ", ";
-          O << (unsigned int) buffer[i];
-        }
-      } else {
-        // print out in 4-bytes or 8-bytes
-        unsigned int pos = 0;
-        unsigned int nSym = 0;
-        unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
-        unsigned int nBytes = 4;
-        if (static_cast<const NVPTXTargetMachine &>(AP.TM).is64Bit())
-          nBytes = 8;
-        for (pos = 0; pos < size; pos += nBytes) {
-          if (pos)
-            O << ", ";
-          if (pos == nextSymbolPos) {
-            const Value *v = Symbols[nSym];
-            const Value *v0 = SymbolsBeforeStripping[nSym];
-            if (const GlobalValue *GVar = dyn_cast<GlobalValue>(v)) {
-              MCSymbol *Name = AP.getSymbol(GVar);
-              PointerType *PTy = dyn_cast<PointerType>(v0->getType());
-              bool IsNonGenericPointer = false; // Is v0 a non-generic pointer?
-              if (PTy && PTy->getAddressSpace() != 0) {
-                IsNonGenericPointer = true;
-              }
-              if (EmitGeneric && !isa<Function>(v) && !IsNonGenericPointer) {
-                O << "generic(";
-                Name->print(O, AP.MAI);
-                O << ")";
-              } else {
-                Name->print(O, AP.MAI);
-              }
-            } else if (const ConstantExpr *CExpr = dyn_cast<ConstantExpr>(v0)) {
-              const MCExpr *Expr =
-                AP.lowerConstantForGV(cast<Constant>(CExpr), false);
-              AP.printMCExpr(*Expr, O);
-            } else
-              llvm_unreachable("symbol type unknown");
-            nSym++;
-            if (nSym >= numSymbols)
-              nextSymbolPos = size + 1;
-            else
-              nextSymbolPos = symbolPosInBuffer[nSym];
-          } else if (nBytes == 4)
-            O << *(unsigned int *)(&buffer[pos]);
-          else
-            O << *(unsigned long long *)(&buffer[pos]);
-        }
-      }
-    }
+    void printBytes(raw_ostream &os);
+    void printWords(raw_ostream &os);
+
+  private:
+    void printSymbol(unsigned nSym, raw_ostream &os);
   };
 
   friend class AggBuffer;

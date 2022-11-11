@@ -20,7 +20,7 @@ namespace fuchsia {
 /// constructor or has no explicit constructor.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-statically-constructed-objects.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/statically-constructed-objects.html
 class StaticallyConstructedObjectsCheck : public ClangTidyCheck {
 public:
   StaticallyConstructedObjectsCheck(StringRef Name, ClangTidyContext *Context)

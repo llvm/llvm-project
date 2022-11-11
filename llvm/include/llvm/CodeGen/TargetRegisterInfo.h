@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_TARGETREGISTERINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -54,10 +55,12 @@ public:
   const uint16_t *SuperRegIndices;
   const LaneBitmask LaneMask;
   /// Classes with a higher priority value are assigned first by register
-  /// allocators using a greedy heuristic. The value is in the range [0,63].
-  /// Values >= 32 should be used with care since they may overlap with other
-  /// fields in the allocator's priority heuristics.
+  /// allocators using a greedy heuristic. The value is in the range [0,31].
   const uint8_t AllocationPriority;
+
+  // Change allocation priority heuristic used by greedy.
+  const bool GlobalPriority;
+
   /// Configurable target specific flags.
   const uint8_t TSFlags;
   /// Whether the class supports two (or more) disjunct subregister indices.
@@ -523,6 +526,16 @@ public:
   /// markSuperRegs() and checkAllSuperRegsMarked() in this case.
   virtual BitVector getReservedRegs(const MachineFunction &MF) const = 0;
 
+  /// Returns either a string explaining why the given register is reserved for
+  /// this function, or an empty optional if no explanation has been written.
+  /// The absence of an explanation does not mean that the register is not
+  /// reserved (meaning, you should check that PhysReg is in fact reserved
+  /// before calling this).
+  virtual llvm::Optional<std::string>
+  explainReservedReg(const MachineFunction &MF, MCRegister PhysReg) const {
+    return {};
+  }
+
   /// Returns false if we can't guarantee that Physreg, specified as an IR asm
   /// clobber constraint, will be preserved across the statement.
   virtual bool isAsmClobberable(const MachineFunction &MF,
@@ -624,6 +637,14 @@ public:
   getSubClassWithSubReg(const TargetRegisterClass *RC, unsigned Idx) const {
     assert(Idx == 0 && "Target has no sub-registers");
     return RC;
+  }
+
+  /// Return a register class that can be used for a subregister copy from/into
+  /// \p SuperRC at \p SubRegIdx.
+  virtual const TargetRegisterClass *
+  getSubRegisterClass(const TargetRegisterClass *SuperRC,
+                      unsigned SubRegIdx) const {
+    return nullptr;
   }
 
   /// Return the subregister index you get from composing

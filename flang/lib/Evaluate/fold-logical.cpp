@@ -12,9 +12,19 @@
 
 namespace Fortran::evaluate {
 
-// for ALL & ANY
 template <typename T>
-static Expr<T> FoldAllAny(FoldingContext &context, FunctionRef<T> &&ref,
+static std::optional<Expr<SomeType>> ZeroExtend(const Constant<T> &c) {
+  std::vector<Scalar<LargestInt>> exts;
+  for (const auto &v : c.values()) {
+    exts.push_back(Scalar<LargestInt>::ConvertUnsigned(v).value);
+  }
+  return AsGenericExpr(
+      Constant<LargestInt>(std::move(exts), ConstantSubscripts(c.shape())));
+}
+
+// for ALL, ANY & PARITY
+template <typename T>
+static Expr<T> FoldAllAnyParity(FoldingContext &context, FunctionRef<T> &&ref,
     Scalar<T> (Scalar<T>::*operation)(const Scalar<T> &) const,
     Scalar<T> identity) {
   static_assert(T::category == TypeCategory::Logical);
@@ -42,10 +52,10 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   std::string name{intrinsic->name};
   using SameInt = Type<TypeCategory::Integer, KIND>;
   if (name == "all") {
-    return FoldAllAny(
+    return FoldAllAnyParity(
         context, std::move(funcRef), &Scalar<T>::AND, Scalar<T>{true});
   } else if (name == "any") {
-    return FoldAllAny(
+    return FoldAllAnyParity(
         context, std::move(funcRef), &Scalar<T>::OR, Scalar<T>{false});
   } else if (name == "associated") {
     bool gotConstant{true};
@@ -61,34 +71,55 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     return gotConstant ? Expr<T>{false} : Expr<T>{std::move(funcRef)};
   } else if (name == "bge" || name == "bgt" || name == "ble" || name == "blt") {
     static_assert(std::is_same_v<Scalar<LargestInt>, BOZLiteralConstant>);
-    // Arguments do not have to be of the same integer type. Convert all
-    // arguments to the biggest integer type before comparing them to
-    // simplify.
-    for (int i{0}; i <= 1; ++i) {
-      if (auto *x{UnwrapExpr<Expr<SomeInteger>>(args[i])}) {
-        *args[i] = AsGenericExpr(
-            Fold(context, ConvertToType<LargestInt>(std::move(*x))));
-      } else if (auto *x{UnwrapExpr<BOZLiteralConstant>(args[i])}) {
-        *args[i] = AsGenericExpr(Constant<LargestInt>{std::move(*x)});
+
+    // The arguments to these intrinsics can be of different types. In that
+    // case, the shorter of the two would need to be zero-extended to match
+    // the size of the other. If at least one of the operands is not a constant,
+    // the zero-extending will be done during lowering. Otherwise, the folding
+    // must be done here.
+    std::optional<Expr<SomeType>> constArgs[2];
+    for (int i{0}; i <= 1; i++) {
+      if (BOZLiteralConstant * x{UnwrapExpr<BOZLiteralConstant>(args[i])}) {
+        constArgs[i] = AsGenericExpr(Constant<LargestInt>{std::move(*x)});
+      } else if (auto *x{UnwrapExpr<Expr<SomeInteger>>(args[i])}) {
+        common::visit(
+            [&](const auto &ix) {
+              using IntT = typename std::decay_t<decltype(ix)>::Result;
+              if (auto *c{UnwrapConstantValue<IntT>(ix)}) {
+                constArgs[i] = ZeroExtend(*c);
+              }
+            },
+            x->u);
       }
     }
-    auto fptr{&Scalar<LargestInt>::BGE};
-    if (name == "bge") { // done in fptr declaration
-    } else if (name == "bgt") {
-      fptr = &Scalar<LargestInt>::BGT;
-    } else if (name == "ble") {
-      fptr = &Scalar<LargestInt>::BLE;
-    } else if (name == "blt") {
-      fptr = &Scalar<LargestInt>::BLT;
+
+    if (constArgs[0] && constArgs[1]) {
+      auto fptr{&Scalar<LargestInt>::BGE};
+      if (name == "bge") { // done in fptr declaration
+      } else if (name == "bgt") {
+        fptr = &Scalar<LargestInt>::BGT;
+      } else if (name == "ble") {
+        fptr = &Scalar<LargestInt>::BLE;
+      } else if (name == "blt") {
+        fptr = &Scalar<LargestInt>::BLT;
+      } else {
+        common::die("missing case to fold intrinsic function %s", name.c_str());
+      }
+
+      for (int i{0}; i <= 1; i++) {
+        *args[i] = std::move(constArgs[i].value());
+      }
+
+      return FoldElementalIntrinsic<T, LargestInt, LargestInt>(context,
+          std::move(funcRef),
+          ScalarFunc<T, LargestInt, LargestInt>(
+              [&fptr](
+                  const Scalar<LargestInt> &i, const Scalar<LargestInt> &j) {
+                return Scalar<T>{std::invoke(fptr, i, j)};
+              }));
     } else {
-      common::die("missing case to fold intrinsic function %s", name.c_str());
+      return Expr<T>{std::move(funcRef)};
     }
-    return FoldElementalIntrinsic<T, LargestInt, LargestInt>(context,
-        std::move(funcRef),
-        ScalarFunc<T, LargestInt, LargestInt>(
-            [&fptr](const Scalar<LargestInt> &i, const Scalar<LargestInt> &j) {
-              return Scalar<T>{std::invoke(fptr, i, j)};
-            }));
   } else if (name == "btest") {
     if (const auto *ix{UnwrapExpr<Expr<SomeInteger>>(args[0])}) {
       return common::visit(
@@ -109,6 +140,8 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
           },
           ix->u);
     }
+  } else if (name == "dot_product") {
+    return FoldDotProduct<T>(context, std::move(funcRef));
   } else if (name == "extends_type_of") {
     // Type extension testing with EXTENDS_TYPE_OF() ignores any type
     // parameters. Returns a constant truth value when the result is known now.
@@ -147,8 +180,8 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
       if (auto *expr{args[0]->UnwrapExpr()}) {
-        if (IsSimplyContiguous(*expr, context)) {
-          return Expr<T>{true};
+        if (auto contiguous{IsContiguous(*expr, context)}) {
+          return Expr<T>{*contiguous};
         }
       }
     }
@@ -172,6 +205,9 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
+  } else if (name == "parity") {
+    return FoldAllAnyParity(
+        context, std::move(funcRef), &Scalar<T>::NEQV, Scalar<T>{false});
   } else if (name == "same_type_as") {
     // Type equality testing with SAME_TYPE_AS() ignores any type parameters.
     // Returns a constant truth value when the result is known now.
@@ -197,9 +233,9 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       name == "__builtin_ieee_support_underflow_control") {
     return Expr<T>{true};
   }
-  // TODO: dot_product, is_iostat_end,
+  // TODO: is_iostat_end,
   // is_iostat_eor, logical, matmul, out_of_range,
-  // parity, transfer
+  // parity
   return Expr<T>{std::move(funcRef)};
 }
 

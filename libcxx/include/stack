@@ -107,6 +107,12 @@ template <class T, class Container>
 #include <type_traits>
 #include <version>
 
+// standard-mandated includes
+
+// [stack.syn]
+#include <compare>
+#include <initializer_list>
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -354,5 +360,10 @@ struct _LIBCPP_TEMPLATE_VIS uses_allocator<stack<_Tp, _Container>, _Alloc>
 };
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <concepts>
+#  include <functional>
+#endif
 
 #endif // _LIBCPP_STACK

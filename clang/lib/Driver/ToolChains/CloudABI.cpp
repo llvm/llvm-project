@@ -117,6 +117,8 @@ void CloudABI::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 void CloudABI::AddCXXStdlibLibArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) const {
   CmdArgs.push_back("-lc++");
+  if (Args.hasArg(options::OPT_fexperimental_library))
+    CmdArgs.push_back("-lc++experimental");
   CmdArgs.push_back("-lc++abi");
   CmdArgs.push_back("-lunwind");
 }

@@ -139,10 +139,12 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
     return ModRefInfo::ModRef;
   }
 
-  if (const CallInst *CI = isFreeCall(Inst, &TLI)) {
-    // calls to free() deallocate the entire structure
-    Loc = MemoryLocation::getAfter(CI->getArgOperand(0));
-    return ModRefInfo::Mod;
+  if (const CallBase *CB = dyn_cast<CallBase>(Inst)) {
+    if (Value *FreedOp = getFreedOperand(CB, &TLI)) {
+      // calls to free() deallocate the entire structure
+      Loc = MemoryLocation::getAfter(FreedOp);
+      return ModRefInfo::Mod;
+    }
   }
 
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
@@ -523,7 +525,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       }
 
       // Stores don't alias loads from read-only memory.
-      if (BatchAA.pointsToConstantMemory(LoadLoc))
+      if (!isModSet(BatchAA.getModRefInfoMask(LoadLoc)))
         continue;
 
       // Stores depend on may/must aliased loads.
@@ -608,7 +610,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     // If necessary, perform additional analysis.
     if (isModAndRefSet(MR))
       MR = BatchAA.callCapturesBefore(Inst, MemLoc, &DT);
-    switch (clearMust(MR)) {
+    switch (MR) {
     case ModRefInfo::NoModRef:
       // If the call has no effect on the queried pointer, just ignore it.
       continue;
@@ -619,7 +621,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // load query, we can safely ignore it (scan past it).
       if (isLoad)
         continue;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       // Otherwise, there is a potential dependence.  Return a clobber.
       return MemDepResult::getClobber(Inst);
@@ -991,7 +993,7 @@ SortNonLocalDepInfoCache(MemoryDependenceResults::NonLocalDepInfo &Cache,
     MemoryDependenceResults::NonLocalDepInfo::iterator Entry =
         std::upper_bound(Cache.begin(), Cache.end() - 1, Val);
     Cache.insert(Entry, Val);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case 1:
     // One new entry, Just insert the new value at the appropriate position.

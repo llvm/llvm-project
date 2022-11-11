@@ -10,8 +10,10 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: ptrtoint_s
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; CHECK: [[PTRTOINT:%[0-9]+]]:sgpr(s64) = G_PTRTOINT [[COPY]](p1)
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:sgpr(s64) = G_PTRTOINT [[COPY]](p1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s64) = G_PTRTOINT %0
 ...
@@ -24,8 +26,10 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: ptrtoint_v
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; CHECK: [[PTRTOINT:%[0-9]+]]:vgpr(s64) = G_PTRTOINT [[COPY]](p1)
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:vgpr(s64) = G_PTRTOINT [[COPY]](p1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_PTRTOINT %0
 ...

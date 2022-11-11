@@ -18,7 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_volatile)
+#if __has_builtin(__is_volatile)
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_volatile : _BoolConstant<__is_volatile(_Tp)> { };
@@ -38,7 +38,7 @@ template <class _Tp>
 inline constexpr bool is_volatile_v = is_volatile<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_volatile)
+#endif // __has_builtin(__is_volatile)
 
 _LIBCPP_END_NAMESPACE_STD
 

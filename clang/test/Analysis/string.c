@@ -1652,3 +1652,18 @@ void test_memset_chk(void) {
   __builtin___memset_chk(&x, 0, sizeof(x), __builtin_object_size(&x, 0));
   clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
 }
+
+#ifndef SUPPRESS_OUT_OF_BOUND
+void strcpy_no_overflow_2(char *y) {
+  char x[3];
+  // FIXME: string literal modeling does not account for embedded NULLs.
+  //        This case should not elicit a warning, but does.
+  //        See discussion at https://reviews.llvm.org/D129269
+  strcpy(x, "12\0"); // expected-warning{{String copy function overflows the destination buffer}}
+}
+#else
+void strcpy_no_overflow_2(char *y) {
+  char x[3];
+  strcpy(x, "12\0");
+}
+#endif

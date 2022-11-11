@@ -1,6 +1,6 @@
 ; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
-; Check that we create two alias groups since the mininmal/maximal accesses
+; Check that we create two alias groups since the minimal/maximal accesses
 ; depend on %b.
 ;
 ; CHECK: Alias Groups (2):

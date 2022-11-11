@@ -65,65 +65,65 @@ entry:
 
 declare void @llvm.x86.saveprevssp()
 
-define void @test_rstorssp(i8* %__p) {
+define void @test_rstorssp(ptr %__p) {
 ; CHECK-LABEL: test_rstorssp:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    rstorssp (%rdi)
 ; CHECK-NEXT:    retq
 entry:
-  tail call void @llvm.x86.rstorssp(i8* %__p)
+  tail call void @llvm.x86.rstorssp(ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.rstorssp(i8*)
+declare void @llvm.x86.rstorssp(ptr)
 
-define void @test_wrssd(i32 %a, i8* %__p) {
+define void @test_wrssd(i32 %a, ptr %__p) {
 ; CHECK-LABEL: test_wrssd:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrssd %edi, (%rsi)
 ; CHECK-NEXT:    retq
 entry:
-  tail call void @llvm.x86.wrssd(i32 %a, i8* %__p)
+  tail call void @llvm.x86.wrssd(i32 %a, ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.wrssd(i32, i8*)
+declare void @llvm.x86.wrssd(i32, ptr)
 
-define void @test_wrssq(i64 %a, i8* %__p) {
+define void @test_wrssq(i64 %a, ptr %__p) {
 ; CHECK-LABEL: test_wrssq:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrssq %rdi, (%rsi)
 ; CHECK-NEXT:    retq
 entry:
-  tail call void @llvm.x86.wrssq(i64 %a, i8* %__p)
+  tail call void @llvm.x86.wrssq(i64 %a, ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.wrssq(i64, i8*)
+declare void @llvm.x86.wrssq(i64, ptr)
 
-define void @test_wrussd(i32 %a, i8* %__p) {
+define void @test_wrussd(i32 %a, ptr %__p) {
 ; CHECK-LABEL: test_wrussd:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrussd %edi, (%rsi)
 ; CHECK-NEXT:    retq
 entry:
-  tail call void @llvm.x86.wrussd(i32 %a, i8* %__p)
+  tail call void @llvm.x86.wrussd(i32 %a, ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.wrussd(i32, i8*)
+declare void @llvm.x86.wrussd(i32, ptr)
 
-define void @test_wrussq(i64 %a, i8* %__p) {
+define void @test_wrussq(i64 %a, ptr %__p) {
 ; CHECK-LABEL: test_wrussq:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrussq %rdi, (%rsi)
 ; CHECK-NEXT:    retq
 entry:
-  tail call void @llvm.x86.wrussq(i64 %a, i8* %__p)
+  tail call void @llvm.x86.wrussq(i64 %a, ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.wrussq(i64, i8*)
+declare void @llvm.x86.wrussq(i64, ptr)
 
 define void @test_setssbsy() {
 ; CHECK-LABEL: test_setssbsy:
@@ -137,14 +137,14 @@ entry:
 
 declare void @llvm.x86.setssbsy()
 
-define void @test_clrssbsy(i8* %__p) {
+define void @test_clrssbsy(ptr %__p) {
 ; CHECK-LABEL: test_clrssbsy:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    clrssbsy (%rdi)
 ; CHECK-NEXT:    retq
 entry:
-  tail call void @llvm.x86.clrssbsy(i8* %__p)
+  tail call void @llvm.x86.clrssbsy(ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.clrssbsy(i8* %__p)
+declare void @llvm.x86.clrssbsy(ptr %__p)

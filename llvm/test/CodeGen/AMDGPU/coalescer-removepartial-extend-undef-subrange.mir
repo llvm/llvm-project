@@ -18,30 +18,39 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: _amdgpu_ps_main
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
-  ; CHECK:   liveins: $sgpr2, $sgpr3, $vgpr3
-  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-  ; CHECK:   undef %1.sub0:vreg_64 = COPY [[COPY]]
-  ; CHECK:   undef %2.sub0:vreg_64 = COPY [[COPY]]
-  ; CHECK:   S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
-  ; CHECK:   S_BRANCH %bb.4
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   S_NOP 0, implicit %2.sub0
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
-  ; CHECK:   [[COPY1:%[0-9]+]]:vreg_64 = COPY %2
-  ; CHECK:   %1.sub0:vreg_64 = COPY [[COPY1]].sub0
-  ; CHECK:   %2:vreg_64 = COPY %1
-  ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit undef $exec
-  ; CHECK:   S_BRANCH %bb.3
-  ; CHECK: bb.3:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   %2:vreg_64 = COPY [[COPY1]]
-  ; CHECK:   S_BRANCH %bb.1
-  ; CHECK: bb.4:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   S_BRANCH %bb.1
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $vgpr3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr2
+  ; CHECK-NEXT:   undef %1.sub0:vreg_64 = COPY [[COPY]]
+  ; CHECK-NEXT:   undef %2.sub0:vreg_64 = COPY [[COPY]]
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit %2.sub0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY %2
+  ; CHECK-NEXT:   %1.sub0:vreg_64 = COPY [[COPY1]].sub0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY %1
+  ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.2, implicit undef $exec
+  ; CHECK-NEXT:   S_BRANCH %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[COPY1]]
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_BRANCH %bb.1
   bb.0:
     liveins: $sgpr2, $sgpr3, $vgpr3
 

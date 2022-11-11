@@ -22,8 +22,7 @@ Node0x1 [shape=record,label=
       "program_state": {
         "store": null,
         "constraints": null,
-        "dynamic_types": null,
-        "constructing_objects": null,
+        "dynamic_types": null,        
         "environment": null,
         "checker_messages": [
           { "checker": "alpha.core.FooChecker", "messages": [

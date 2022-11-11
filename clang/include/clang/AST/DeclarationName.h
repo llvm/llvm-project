@@ -941,7 +941,7 @@ class AssumedTemplateStorage : public UncommonTemplateNameStorage {
   friend class ASTContext;
 
   AssumedTemplateStorage(DeclarationName Name)
-      : UncommonTemplateNameStorage(Assumed, 0), Name(Name) {}
+      : UncommonTemplateNameStorage(Assumed, 0, 0), Name(Name) {}
   DeclarationName Name;
 
 public:

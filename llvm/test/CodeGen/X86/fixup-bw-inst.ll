@@ -24,32 +24,30 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; CHECK: movb
 ; CHECK: ret
 define void @foo1(i32 %count,
-                  %struct.A* noalias nocapture %q,
-                  %struct.A* noalias nocapture %p)
+                  ptr noalias nocapture %q,
+                  ptr noalias nocapture %p)
                     nounwind uwtable noinline ssp {
   %1 = icmp sgt i32 %count, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
 .lr.ph:                                           ; preds = %0
-  %2 = getelementptr inbounds %struct.A, %struct.A* %q, i64 0, i32 0
-  %3 = getelementptr inbounds %struct.A, %struct.A* %q, i64 0, i32 1
+  %2 = getelementptr inbounds %struct.A, ptr %q, i64 0, i32 1
   br label %a4
 
-a4:                                       ; preds = %4, %.lr.ph
+a4:                                       ; preds = %3, %.lr.ph
   %i.02 = phi i32 [ 0, %.lr.ph ], [ %a9, %a4 ]
-  %.01 = phi %struct.A* [ %p, %.lr.ph ], [ %a10, %a4 ]
-  %a5 = load i8, i8* %2, align 1
-  %a7 = getelementptr inbounds %struct.A, %struct.A* %.01, i64 0, i32 0
-  store i8 %a5, i8* %a7, align 1
-  %a8 = getelementptr inbounds %struct.A, %struct.A* %.01, i64 0, i32 1
-  %a6 = load i8, i8* %3, align 1
-  store i8 %a6, i8* %a8, align 1
+  %.01 = phi ptr [ %p, %.lr.ph ], [ %a10, %a4 ]
+  %a5 = load i8, ptr %q, align 1
+  store i8 %a5, ptr %.01, align 1
+  %a8 = getelementptr inbounds %struct.A, ptr %.01, i64 0, i32 1
+  %a6 = load i8, ptr %2, align 1
+  store i8 %a6, ptr %a8, align 1
   %a9 = add nsw i32 %i.02, 1
-  %a10 = getelementptr inbounds %struct.A, %struct.A* %.01, i64 1
+  %a10 = getelementptr inbounds %struct.A, ptr %.01, i64 1
   %exitcond = icmp eq i32 %a9, %count
   br i1 %exitcond, label %._crit_edge, label %a4
 
-._crit_edge:                                      ; preds = %4, %0
+._crit_edge:                                      ; preds = %3, %0
   ret void
 }
 
@@ -71,44 +69,42 @@ a4:                                       ; preds = %4, %.lr.ph
 ; CHECK: movw
 ; CHECK: ret
 define void @foo2(i32 %count,
-                  %struct.B* noalias nocapture %q,
-                  %struct.B* noalias nocapture %p)
+                  ptr noalias nocapture %q,
+                  ptr noalias nocapture %p)
                     nounwind uwtable noinline ssp {
   %1 = icmp sgt i32 %count, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
 .lr.ph:                                           ; preds = %0
-  %2 = getelementptr inbounds %struct.B, %struct.B* %q, i64 0, i32 0
-  %3 = getelementptr inbounds %struct.B, %struct.B* %q, i64 0, i32 1
+  %2 = getelementptr inbounds %struct.B, ptr %q, i64 0, i32 1
   br label %a4
 
-a4:                                       ; preds = %4, %.lr.ph
+a4:                                       ; preds = %3, %.lr.ph
   %i.02 = phi i32 [ 0, %.lr.ph ], [ %a9, %a4 ]
-  %.01 = phi %struct.B* [ %p, %.lr.ph ], [ %a10, %a4 ]
-  %a5 = load i16, i16* %2, align 2
-  %a7 = getelementptr inbounds %struct.B, %struct.B* %.01, i64 0, i32 0
-  store i16 %a5, i16* %a7, align 2
-  %a8 = getelementptr inbounds %struct.B, %struct.B* %.01, i64 0, i32 1
-  %a6 = load i16, i16* %3, align 2
-  store i16 %a6, i16* %a8, align 2
+  %.01 = phi ptr [ %p, %.lr.ph ], [ %a10, %a4 ]
+  %a5 = load i16, ptr %q, align 2
+  store i16 %a5, ptr %.01, align 2
+  %a8 = getelementptr inbounds %struct.B, ptr %.01, i64 0, i32 1
+  %a6 = load i16, ptr %2, align 2
+  store i16 %a6, ptr %a8, align 2
   %a9 = add nsw i32 %i.02, 1
-  %a10 = getelementptr inbounds %struct.B, %struct.B* %.01, i64 1
+  %a10 = getelementptr inbounds %struct.B, ptr %.01, i64 1
   %exitcond = icmp eq i32 %a9, %count
   br i1 %exitcond, label %._crit_edge, label %a4
 
-._crit_edge:                                      ; preds = %4, %0
+._crit_edge:                                      ; preds = %3, %0
   ret void
 }
 
-; This test contains nothing but a simple byte load and store.  Since
-; movb encodes smaller, we do not want to use movzbl unless in a tight loop.
-; So this test checks that movb is used.
+; This test contains nothing but a simple byte load and store.
+; movb encodes smaller, but we use movzbl for the load for better perf.
 ; CHECK-LABEL: foo3:
+; BWON:  movzbl
+; BWOFF: movb
 ; CHECK: movb
-; CHECK: movb
-define void @foo3(i8 *%dst, i8 *%src) {
-  %t0 = load i8, i8 *%src, align 1
-  store i8 %t0, i8 *%dst, align 1
+define void @foo3(ptr%dst, ptr%src) {
+  %t0 = load i8, ptr%src, align 1
+  store i8 %t0, ptr%dst, align 1
   ret void
 }
 
@@ -119,8 +115,8 @@ define void @foo3(i8 *%dst, i8 *%src) {
 ; BWON:  movzwl
 ; BWOFF: movw
 ; CHECK: movw
-define void @foo4(i16 *%dst, i16 *%src) {
-  %t0 = load i16, i16 *%src, align 2
-  store i16 %t0, i16 *%dst, align 2
+define void @foo4(ptr%dst, ptr%src) {
+  %t0 = load i16, ptr%src, align 2
+  store i16 %t0, ptr%dst, align 2
   ret void
 }

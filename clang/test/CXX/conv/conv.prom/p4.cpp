@@ -26,3 +26,10 @@ enum B2 : bool {
   // FIXME: DR1407 will make this ill-formed
   e = +false_ // desired-error {{conversion from 'int' to 'bool'}}
 };
+
+namespace GH56560 {
+enum GH56560_1 : bool;
+bool GH56560_2(GH56560_1 a, GH56560_1 b) {
+    return a == b;
+}
+} // namespace GH56560

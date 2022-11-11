@@ -144,7 +144,7 @@ define <2 x i16> @trunc_v2i64_arg_to_v2i16(<2 x i64> %arg0) #0 {
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: trunc_v2i64_arg_to_v2i16:

@@ -4,11 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class TestWatchpointCount(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
-
-    def setUp(self):
-        TestBase.setUp(self)
 
     @skipIf(oslist=["freebsd", "linux"], archs=["arm", "aarch64"],
             bugnumber="llvm.org/pr26031")
@@ -34,12 +30,12 @@ class TestWatchpointCount(TestBase):
         process.Continue()
 
         stop_reason = thread.GetStopReason()
-        self.assertEqual(stop_reason, lldb.eStopReasonWatchpoint, "watchpoint for x1 not hit")
+        self.assertStopReason(stop_reason, lldb.eStopReasonWatchpoint, "watchpoint for x1 not hit")
         stop_reason_descr = thread.GetStopDescription(256)
         self.assertEqual(stop_reason_descr, "watchpoint 1")
 
         process.Continue()
         stop_reason = thread.GetStopReason()
-        self.assertEqual(stop_reason, lldb.eStopReasonWatchpoint, "watchpoint for x2 not hit")
+        self.assertStopReason(stop_reason, lldb.eStopReasonWatchpoint, "watchpoint for x2 not hit")
         stop_reason_descr = thread.GetStopDescription(256)
         self.assertEqual(stop_reason_descr, "watchpoint 2")

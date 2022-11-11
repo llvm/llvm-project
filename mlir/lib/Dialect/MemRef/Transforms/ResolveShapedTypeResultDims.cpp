@@ -11,14 +11,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+namespace mlir {
+namespace memref {
+#define GEN_PASS_DEF_RESOLVERANKEDSHAPETYPERESULTDIMS
+#define GEN_PASS_DEF_RESOLVESHAPEDTYPERESULTDIMS
+#include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
+} // namespace memref
+} // namespace mlir
 
 using namespace mlir;
 
@@ -30,7 +38,7 @@ struct DimOfShapedTypeOpInterface : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
-    OpResult dimValue = dimOp.source().template dyn_cast<OpResult>();
+    OpResult dimValue = dimOp.getSource().template dyn_cast<OpResult>();
     if (!dimValue)
       return failure();
     auto shapedTypeOp =
@@ -68,9 +76,11 @@ template <typename OpTy>
 struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
 
+  void initialize() { OpRewritePattern<OpTy>::setHasBoundedRewriteRecursion(); }
+
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
-    OpResult dimValue = dimOp.source().template dyn_cast<OpResult>();
+    OpResult dimValue = dimOp.getSource().template dyn_cast<OpResult>();
     if (!dimValue)
       return failure();
     auto rankedShapeTypeOp =
@@ -108,13 +118,14 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
 
 namespace {
 struct ResolveRankedShapeTypeResultDimsPass final
-    : public ResolveRankedShapeTypeResultDimsBase<
+    : public memref::impl::ResolveRankedShapeTypeResultDimsBase<
           ResolveRankedShapeTypeResultDimsPass> {
   void runOnOperation() override;
 };
 
 struct ResolveShapedTypeResultDimsPass final
-    : public ResolveShapedTypeResultDimsBase<ResolveShapedTypeResultDimsPass> {
+    : public memref::impl::ResolveShapedTypeResultDimsBase<
+          ResolveShapedTypeResultDimsPass> {
   void runOnOperation() override;
 };
 

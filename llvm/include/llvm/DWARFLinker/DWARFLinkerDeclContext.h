@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include <atomic>
 
 namespace llvm {
 
@@ -91,6 +92,10 @@ public:
 
   bool setLastSeenDIE(CompileUnit &U, const DWARFDie &Die);
 
+  void setHasCanonicalDIE() { HasCanonicalDIE = true; }
+
+  bool hasCanonicalDIE() const { return HasCanonicalDIE; }
+
   uint32_t getCanonicalDIEOffset() const { return CanonicalDIEOffset; }
   void setCanonicalDIEOffset(uint32_t Offset) { CanonicalDIEOffset = Offset; }
 
@@ -112,7 +117,8 @@ private:
   const DeclContext &Parent;
   DWARFDie LastSeenDIE;
   uint32_t LastSeenCompileUnitID = 0;
-  uint32_t CanonicalDIEOffset = 0;
+  std::atomic<uint32_t> CanonicalDIEOffset = {0};
+  bool HasCanonicalDIE = false;
 };
 
 /// This class gives a tree-like API to the DenseMap that stores the

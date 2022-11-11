@@ -10,6 +10,8 @@
 #define SCUDO_LOCAL_CACHE_H_
 
 #include "internal_defs.h"
+#include "list.h"
+#include "platform.h"
 #include "report.h"
 #include "stats.h"
 
@@ -20,11 +22,17 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   typedef typename SizeClassAllocator::CompactPtrT CompactPtrT;
 
   struct TransferBatch {
-    static const u32 MaxNumCached = SizeClassMap::MaxNumCachedHint;
-    void setFromArray(CompactPtrT *Array, u32 N) {
+    static const u16 MaxNumCached = SizeClassMap::MaxNumCachedHint;
+    void setFromArray(CompactPtrT *Array, u16 N) {
       DCHECK_LE(N, MaxNumCached);
       Count = N;
       memcpy(Batch, Array, sizeof(Batch[0]) * Count);
+    }
+    void appendFromArray(CompactPtrT *Array, u16 N) {
+      DCHECK_LE(N, MaxNumCached - Count);
+      memcpy(Batch + Count, Array, sizeof(Batch[0]) * N);
+      // u16 will be promoted to int by arithmetic type conversion.
+      Count = static_cast<u16>(Count + N);
     }
     void clear() { Count = 0; }
     void add(CompactPtrT P) {
@@ -34,20 +42,43 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     void copyToArray(CompactPtrT *Array) const {
       memcpy(Array, Batch, sizeof(Batch[0]) * Count);
     }
-    u32 getCount() const { return Count; }
-    CompactPtrT get(u32 I) const {
+    u16 getCount() const { return Count; }
+    CompactPtrT get(u16 I) const {
       DCHECK_LE(I, Count);
       return Batch[I];
     }
-    static u32 getMaxCached(uptr Size) {
+    static u16 getMaxCached(uptr Size) {
       return Min(MaxNumCached, SizeClassMap::getMaxCachedHint(Size));
     }
     TransferBatch *Next;
 
   private:
-    u32 Count;
     CompactPtrT Batch[MaxNumCached];
+    u16 Count;
   };
+
+  // A BatchGroup is used to collect blocks. Each group has a group id to
+  // identify the group kind of contained blocks.
+  struct BatchGroup {
+    // `Next` is used by IntrusiveList.
+    BatchGroup *Next;
+    // The identifier of each group
+    uptr GroupId;
+    // Cache value of TransferBatch::getMaxCached()
+    u16 MaxCachedPerBatch;
+    // Number of blocks pushed into this group. This is an increment-only
+    // counter.
+    uptr PushedBlocks;
+    // This is used to track how many blocks are pushed since last time we
+    // checked `PushedBlocks`. It's useful for page releasing to determine the
+    // usage of a BatchGroup.
+    uptr PushedBlocksAtLastCheckpoint;
+    // Blocks are managed by TransferBatch in a list.
+    SinglyLinkedList<TransferBatch> Batches;
+  };
+
+  static_assert(sizeof(BatchGroup) <= sizeof(TransferBatch),
+                "BatchGroup uses the same class size as TransferBatch");
 
   void init(GlobalStats *S, SizeClassAllocator *A) {
     DCHECK(isEmpty());
@@ -120,7 +151,16 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   TransferBatch *createBatch(uptr ClassId, void *B) {
     if (ClassId != BatchClassId)
       B = allocate(BatchClassId);
+    if (UNLIKELY(!B))
+      reportOutOfMemory(SizeClassAllocator::getSizeByClassId(BatchClassId));
     return reinterpret_cast<TransferBatch *>(B);
+  }
+
+  BatchGroup *createGroup() {
+    void *Ptr = allocate(BatchClassId);
+    if (UNLIKELY(!Ptr))
+      reportOutOfMemory(SizeClassAllocator::getSizeByClassId(BatchClassId));
+    return reinterpret_cast<BatchGroup *>(Ptr);
   }
 
   LocalStats &getStats() { return Stats; }
@@ -128,9 +168,9 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
 private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
   static const uptr BatchClassId = SizeClassMap::BatchClassId;
-  struct PerClass {
-    u32 Count;
-    u32 MaxCount;
+  struct alignas(SCUDO_CACHE_LINE_SIZE) PerClass {
+    u16 Count;
+    u16 MaxCount;
     // Note: ClassSize is zero for the transfer batch.
     uptr ClassSize;
     CompactPtrT Chunks[2 * TransferBatch::MaxNumCached];
@@ -150,7 +190,7 @@ private:
     for (uptr I = 0; I < NumClasses; I++) {
       PerClass *P = &PerClassArray[I];
       const uptr Size = SizeClassAllocator::getSizeByClassId(I);
-      P->MaxCount = 2 * TransferBatch::getMaxCached(Size);
+      P->MaxCount = static_cast<u16>(2 * TransferBatch::getMaxCached(Size));
       if (I != BatchClassId) {
         P->ClassSize = Size;
       } else {
@@ -180,16 +220,12 @@ private:
   }
 
   NOINLINE void drain(PerClass *C, uptr ClassId) {
-    const u32 Count = Min(C->MaxCount / 2, C->Count);
-    TransferBatch *B =
-        createBatch(ClassId, Allocator->decompactPtr(ClassId, C->Chunks[0]));
-    if (UNLIKELY(!B))
-      reportOutOfMemory(SizeClassAllocator::getSizeByClassId(BatchClassId));
-    B->setFromArray(&C->Chunks[0], Count);
-    C->Count -= Count;
-    for (uptr I = 0; I < C->Count; I++)
+    const u16 Count = Min(static_cast<u16>(C->MaxCount / 2), C->Count);
+    Allocator->pushBlocks(this, ClassId, &C->Chunks[0], Count);
+    // u16 will be promoted to int by arithmetic type conversion.
+    C->Count = static_cast<u16>(C->Count - Count);
+    for (u16 I = 0; I < C->Count; I++)
       C->Chunks[I] = C->Chunks[I + Count];
-    Allocator->pushBatch(ClassId, B);
   }
 };
 

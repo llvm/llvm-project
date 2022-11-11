@@ -62,7 +62,7 @@ entry:
 ; EFI: subq  [[R1]], [[R64]]
 ; EFI: movq  [[R64]], %rsp
 
-  %r = call i64 @bar(i64 %n, i64 %x, i64 %n, i8* %buf0, i8* %buf1) nounwind
+  %r = call i64 @bar(i64 %n, i64 %x, i64 %n, ptr %buf0, ptr %buf1) nounwind
 
 ; M64: subq  $48, %rsp
 ; M64: movq  %rax, 32(%rsp)
@@ -118,7 +118,7 @@ entry:
 ; EFI: andq  $-128, [[R64]]
 ; EFI: movq  [[R64]], %rsp
 
-  %r = call i64 @bar(i64 %n, i64 %x, i64 %n, i8* undef, i8* %buf1) nounwind
+  %r = call i64 @bar(i64 %n, i64 %x, i64 %n, ptr undef, ptr %buf1) nounwind
 
 ; M64: subq  $48, %rsp
 ; M64: movq  [[R2]], 32(%rsp)
@@ -135,4 +135,4 @@ entry:
   ret i64 %r
 }
 
-declare i64 @bar(i64, i64, i64, i8* nocapture, i8* nocapture) nounwind
+declare i64 @bar(i64, i64, i64, ptr nocapture, ptr nocapture) nounwind

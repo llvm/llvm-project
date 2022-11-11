@@ -5,9 +5,9 @@ target triple = "x86_64-apple-darwin12.5.0"
 
 define i32 @DoLayout() {
 entry:
-  %tmp1 = load i16, i16* undef, align 2
-  %tmp17 = load i16, i16* null, align 2
-  %tmp19 = load i16, i16* undef, align 2
+  %tmp1 = load i16, ptr undef, align 2
+  %tmp17 = load i16, ptr null, align 2
+  %tmp19 = load i16, ptr undef, align 2
   %shl = shl i16 %tmp19, 1
   %add55 = add i16 %tmp17, %tmp1
   %add57 = add i16 %add55, %shl

@@ -212,8 +212,8 @@ bool XCOFFWriter::initStringTable() {
     for (const std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym :
          YamlSym.AuxEntries) {
       if (auto AS = dyn_cast<XCOFFYAML::FileAuxEnt>(AuxSym.get()))
-        if (nameShouldBeInStringTable(AS->FileNameOrString.getValueOr("")))
-          StrTblBuilder.add(AS->FileNameOrString.getValueOr(""));
+        if (nameShouldBeInStringTable(AS->FileNameOrString.value_or("")))
+          StrTblBuilder.add(AS->FileNameOrString.value_or(""));
     }
   }
 
@@ -247,8 +247,7 @@ bool XCOFFWriter::initFileHeader(uint64_t CurrentOffset) {
                  Twine(AuxCount));
       return false;
     }
-    YamlSym.NumberOfAuxEntries =
-        YamlSym.NumberOfAuxEntries.getValueOr(AuxCount);
+    YamlSym.NumberOfAuxEntries = YamlSym.NumberOfAuxEntries.value_or(AuxCount);
     // Add the number of auxiliary symbols to the total number.
     InitFileHdr.NumberOfSymTableEntries += *YamlSym.NumberOfAuxEntries;
   }
@@ -378,59 +377,60 @@ void XCOFFWriter::writeFileHeader() {
 }
 
 void XCOFFWriter::writeAuxFileHeader() {
-  W.write<uint16_t>(InitAuxFileHdr.Magic.getValueOr(yaml::Hex16(1)));
-  W.write<uint16_t>(InitAuxFileHdr.Version.getValueOr(yaml::Hex16(1)));
+  W.write<uint16_t>(InitAuxFileHdr.Magic.value_or(yaml::Hex16(1)));
+  W.write<uint16_t>(InitAuxFileHdr.Version.value_or(yaml::Hex16(1)));
   if (Is64Bit) {
     W.OS.write_zeros(4); // Reserved for debugger.
-    W.write<uint64_t>(InitAuxFileHdr.TextStartAddr.getValueOr(yaml::Hex64(0)));
-    W.write<uint64_t>(InitAuxFileHdr.DataStartAddr.getValueOr(yaml::Hex64(0)));
-    W.write<uint64_t>(InitAuxFileHdr.TOCAnchorAddr.getValueOr(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.TextStartAddr.value_or(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.DataStartAddr.value_or(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.TOCAnchorAddr.value_or(yaml::Hex64(0)));
   } else {
-    W.write<uint32_t>(InitAuxFileHdr.TextSize.getValueOr(yaml::Hex64(0)));
-    W.write<uint32_t>(InitAuxFileHdr.InitDataSize.getValueOr(yaml::Hex64(0)));
-    W.write<uint32_t>(InitAuxFileHdr.BssDataSize.getValueOr(yaml::Hex64(0)));
-    W.write<uint32_t>(InitAuxFileHdr.EntryPointAddr.getValueOr(yaml::Hex64(0)));
-    W.write<uint32_t>(InitAuxFileHdr.TextStartAddr.getValueOr(yaml::Hex64(0)));
-    W.write<uint32_t>(InitAuxFileHdr.DataStartAddr.getValueOr(yaml::Hex64(0)));
-    W.write<uint32_t>(InitAuxFileHdr.TOCAnchorAddr.getValueOr(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.TextSize.value_or(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.InitDataSize.value_or(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.BssDataSize.value_or(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.EntryPointAddr.value_or(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.TextStartAddr.value_or(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.DataStartAddr.value_or(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.TOCAnchorAddr.value_or(yaml::Hex64(0)));
   }
-  W.write<uint16_t>(InitAuxFileHdr.SecNumOfEntryPoint.getValueOr(0));
-  W.write<uint16_t>(InitAuxFileHdr.SecNumOfText.getValueOr(0));
-  W.write<uint16_t>(InitAuxFileHdr.SecNumOfData.getValueOr(0));
-  W.write<uint16_t>(InitAuxFileHdr.SecNumOfTOC.getValueOr(0));
-  W.write<uint16_t>(InitAuxFileHdr.SecNumOfLoader.getValueOr(0));
-  W.write<uint16_t>(InitAuxFileHdr.SecNumOfBSS.getValueOr(0));
-  W.write<uint16_t>(InitAuxFileHdr.MaxAlignOfText.getValueOr(yaml::Hex16(0)));
-  W.write<uint16_t>(InitAuxFileHdr.MaxAlignOfData.getValueOr(yaml::Hex16(0)));
-  W.write<uint16_t>(InitAuxFileHdr.ModuleType.getValueOr(yaml::Hex16(0)));
-  W.write<uint8_t>(InitAuxFileHdr.CpuFlag.getValueOr(yaml::Hex8(0)));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfEntryPoint.value_or(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfText.value_or(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfData.value_or(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfTOC.value_or(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfLoader.value_or(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfBSS.value_or(0));
+  W.write<uint16_t>(InitAuxFileHdr.MaxAlignOfText.value_or(yaml::Hex16(0)));
+  W.write<uint16_t>(InitAuxFileHdr.MaxAlignOfData.value_or(yaml::Hex16(0)));
+  W.write<uint16_t>(InitAuxFileHdr.ModuleType.value_or(yaml::Hex16(0)));
+  W.write<uint8_t>(InitAuxFileHdr.CpuFlag.value_or(yaml::Hex8(0)));
   W.write<uint8_t>(0); // Reserved for CPU type.
   if (Is64Bit) {
-    W.write<uint8_t>(InitAuxFileHdr.TextPageSize.getValueOr(yaml::Hex8(0)));
-    W.write<uint8_t>(InitAuxFileHdr.DataPageSize.getValueOr(yaml::Hex8(0)));
-    W.write<uint8_t>(InitAuxFileHdr.StackPageSize.getValueOr(yaml::Hex8(0)));
+    W.write<uint8_t>(InitAuxFileHdr.TextPageSize.value_or(yaml::Hex8(0)));
+    W.write<uint8_t>(InitAuxFileHdr.DataPageSize.value_or(yaml::Hex8(0)));
+    W.write<uint8_t>(InitAuxFileHdr.StackPageSize.value_or(yaml::Hex8(0)));
     W.write<uint8_t>(
-        InitAuxFileHdr.FlagAndTDataAlignment.getValueOr(yaml::Hex8(0x80)));
-    W.write<uint64_t>(InitAuxFileHdr.TextSize.getValueOr(yaml::Hex64(0)));
-    W.write<uint64_t>(InitAuxFileHdr.InitDataSize.getValueOr(yaml::Hex64(0)));
-    W.write<uint64_t>(InitAuxFileHdr.BssDataSize.getValueOr(yaml::Hex64(0)));
-    W.write<uint64_t>(InitAuxFileHdr.EntryPointAddr.getValueOr(yaml::Hex64(0)));
-    W.write<uint64_t>(InitAuxFileHdr.MaxStackSize.getValueOr(yaml::Hex64(0)));
-    W.write<uint64_t>(InitAuxFileHdr.MaxDataSize.getValueOr(yaml::Hex64(0)));
+        InitAuxFileHdr.FlagAndTDataAlignment.value_or(yaml::Hex8(0x80)));
+    W.write<uint64_t>(InitAuxFileHdr.TextSize.value_or(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.InitDataSize.value_or(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.BssDataSize.value_or(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.EntryPointAddr.value_or(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.MaxStackSize.value_or(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.MaxDataSize.value_or(yaml::Hex64(0)));
   } else {
-    W.write<uint32_t>(InitAuxFileHdr.MaxStackSize.getValueOr(yaml::Hex64(0)));
-    W.write<uint32_t>(InitAuxFileHdr.MaxDataSize.getValueOr(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.MaxStackSize.value_or(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.MaxDataSize.value_or(yaml::Hex64(0)));
     W.OS.write_zeros(4); // Reserved for debugger.
-    W.write<uint8_t>(InitAuxFileHdr.TextPageSize.getValueOr(yaml::Hex8(0)));
-    W.write<uint8_t>(InitAuxFileHdr.DataPageSize.getValueOr(yaml::Hex8(0)));
-    W.write<uint8_t>(InitAuxFileHdr.StackPageSize.getValueOr(yaml::Hex8(0)));
+    W.write<uint8_t>(InitAuxFileHdr.TextPageSize.value_or(yaml::Hex8(0)));
+    W.write<uint8_t>(InitAuxFileHdr.DataPageSize.value_or(yaml::Hex8(0)));
+    W.write<uint8_t>(InitAuxFileHdr.StackPageSize.value_or(yaml::Hex8(0)));
     W.write<uint8_t>(
-        InitAuxFileHdr.FlagAndTDataAlignment.getValueOr(yaml::Hex8(0)));
+        InitAuxFileHdr.FlagAndTDataAlignment.value_or(yaml::Hex8(0)));
   }
-  W.write<uint16_t>(InitAuxFileHdr.SecNumOfTData.getValueOr(0));
-  W.write<uint16_t>(InitAuxFileHdr.SecNumOfTBSS.getValueOr(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfTData.value_or(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfTBSS.value_or(0));
   if (Is64Bit) {
-    W.write<uint16_t>(InitAuxFileHdr.Flag.getValueOr(yaml::Hex16(XCOFF::SHR_SYMTAB)));
+    W.write<uint16_t>(
+        InitAuxFileHdr.Flag.value_or(yaml::Hex16(XCOFF::SHR_SYMTAB)));
     if (InitFileHdr.AuxHeaderSize > XCOFF::AuxFileHeaderSize64)
       W.OS.write_zeros(InitFileHdr.AuxHeaderSize - XCOFF::AuxFileHeaderSize64);
   } else if (InitFileHdr.AuxHeaderSize > XCOFF::AuxFileHeaderSize32) {
@@ -526,52 +526,52 @@ bool XCOFFWriter::writeRelocations() {
 
 void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym) {
   if (Is64Bit) {
-    W.write<uint32_t>(AuxSym.SectionOrLengthLo.getValueOr(0));
-    W.write<uint32_t>(AuxSym.ParameterHashIndex.getValueOr(0));
-    W.write<uint16_t>(AuxSym.TypeChkSectNum.getValueOr(0));
-    W.write<uint8_t>(AuxSym.SymbolAlignmentAndType.getValueOr(0));
-    W.write<uint8_t>(AuxSym.StorageMappingClass.getValueOr(XCOFF::XMC_PR));
-    W.write<uint32_t>(AuxSym.SectionOrLengthHi.getValueOr(0));
+    W.write<uint32_t>(AuxSym.SectionOrLengthLo.value_or(0));
+    W.write<uint32_t>(AuxSym.ParameterHashIndex.value_or(0));
+    W.write<uint16_t>(AuxSym.TypeChkSectNum.value_or(0));
+    W.write<uint8_t>(AuxSym.SymbolAlignmentAndType.value_or(0));
+    W.write<uint8_t>(AuxSym.StorageMappingClass.value_or(XCOFF::XMC_PR));
+    W.write<uint32_t>(AuxSym.SectionOrLengthHi.value_or(0));
     W.write<uint8_t>(0);
     W.write<uint8_t>(XCOFF::AUX_CSECT);
   } else {
-    W.write<uint32_t>(AuxSym.SectionOrLength.getValueOr(0));
-    W.write<uint32_t>(AuxSym.ParameterHashIndex.getValueOr(0));
-    W.write<uint16_t>(AuxSym.TypeChkSectNum.getValueOr(0));
-    W.write<uint8_t>(AuxSym.SymbolAlignmentAndType.getValueOr(0));
-    W.write<uint8_t>(AuxSym.StorageMappingClass.getValueOr(XCOFF::XMC_PR));
-    W.write<uint32_t>(AuxSym.StabInfoIndex.getValueOr(0));
-    W.write<uint16_t>(AuxSym.StabSectNum.getValueOr(0));
+    W.write<uint32_t>(AuxSym.SectionOrLength.value_or(0));
+    W.write<uint32_t>(AuxSym.ParameterHashIndex.value_or(0));
+    W.write<uint16_t>(AuxSym.TypeChkSectNum.value_or(0));
+    W.write<uint8_t>(AuxSym.SymbolAlignmentAndType.value_or(0));
+    W.write<uint8_t>(AuxSym.StorageMappingClass.value_or(XCOFF::XMC_PR));
+    W.write<uint32_t>(AuxSym.StabInfoIndex.value_or(0));
+    W.write<uint16_t>(AuxSym.StabSectNum.value_or(0));
   }
 }
 
 void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::ExcpetionAuxEnt &AuxSym) {
   assert(Is64Bit && "can't write the exception auxiliary symbol for XCOFF32");
-  W.write<uint64_t>(AuxSym.OffsetToExceptionTbl.getValueOr(0));
-  W.write<uint32_t>(AuxSym.SizeOfFunction.getValueOr(0));
-  W.write<uint32_t>(AuxSym.SymIdxOfNextBeyond.getValueOr(0));
+  W.write<uint64_t>(AuxSym.OffsetToExceptionTbl.value_or(0));
+  W.write<uint32_t>(AuxSym.SizeOfFunction.value_or(0));
+  W.write<uint32_t>(AuxSym.SymIdxOfNextBeyond.value_or(0));
   W.write<uint8_t>(0);
   W.write<uint8_t>(XCOFF::AUX_EXCEPT);
 }
 
 void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FunctionAuxEnt &AuxSym) {
   if (Is64Bit) {
-    W.write<uint64_t>(AuxSym.PtrToLineNum.getValueOr(0));
-    W.write<uint32_t>(AuxSym.SizeOfFunction.getValueOr(0));
-    W.write<uint32_t>(AuxSym.SymIdxOfNextBeyond.getValueOr(0));
+    W.write<uint64_t>(AuxSym.PtrToLineNum.value_or(0));
+    W.write<uint32_t>(AuxSym.SizeOfFunction.value_or(0));
+    W.write<uint32_t>(AuxSym.SymIdxOfNextBeyond.value_or(0));
     W.write<uint8_t>(0);
     W.write<uint8_t>(XCOFF::AUX_FCN);
   } else {
-    W.write<uint32_t>(AuxSym.OffsetToExceptionTbl.getValueOr(0));
-    W.write<uint32_t>(AuxSym.SizeOfFunction.getValueOr(0));
-    W.write<uint32_t>(AuxSym.PtrToLineNum.getValueOr(0));
-    W.write<uint32_t>(AuxSym.SymIdxOfNextBeyond.getValueOr(0));
+    W.write<uint32_t>(AuxSym.OffsetToExceptionTbl.value_or(0));
+    W.write<uint32_t>(AuxSym.SizeOfFunction.value_or(0));
+    W.write<uint32_t>(AuxSym.PtrToLineNum.value_or(0));
+    W.write<uint32_t>(AuxSym.SymIdxOfNextBeyond.value_or(0));
     W.OS.write_zeros(2);
   }
 }
 
 void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FileAuxEnt &AuxSym) {
-  StringRef FileName = AuxSym.FileNameOrString.getValueOr("");
+  StringRef FileName = AuxSym.FileNameOrString.value_or("");
   if (nameShouldBeInStringTable(FileName)) {
     W.write<int32_t>(0);
     W.write<uint32_t>(StrTblBuilder.getOffset(FileName));
@@ -579,7 +579,7 @@ void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FileAuxEnt &AuxSym) {
     writeName(FileName, W);
   }
   W.OS.write_zeros(XCOFF::FileNamePadSize);
-  W.write<uint8_t>(AuxSym.FileStringType.getValueOr(XCOFF::XFT_FN));
+  W.write<uint8_t>(AuxSym.FileStringType.value_or(XCOFF::XFT_FN));
   if (Is64Bit) {
     W.OS.write_zeros(2);
     W.write<uint8_t>(XCOFF::AUX_FILE);
@@ -590,36 +590,36 @@ void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FileAuxEnt &AuxSym) {
 
 void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::BlockAuxEnt &AuxSym) {
   if (Is64Bit) {
-    W.write<uint32_t>(AuxSym.LineNum.getValueOr(0));
+    W.write<uint32_t>(AuxSym.LineNum.value_or(0));
     W.OS.write_zeros(13);
     W.write<uint8_t>(XCOFF::AUX_SYM);
   } else {
     W.OS.write_zeros(2);
-    W.write<uint16_t>(AuxSym.LineNumHi.getValueOr(0));
-    W.write<uint16_t>(AuxSym.LineNumLo.getValueOr(0));
+    W.write<uint16_t>(AuxSym.LineNumHi.value_or(0));
+    W.write<uint16_t>(AuxSym.LineNumLo.value_or(0));
     W.OS.write_zeros(12);
   }
 }
 
 void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::SectAuxEntForDWARF &AuxSym) {
   if (Is64Bit) {
-    W.write<uint64_t>(AuxSym.LengthOfSectionPortion.getValueOr(0));
-    W.write<uint64_t>(AuxSym.NumberOfRelocEnt.getValueOr(0));
+    W.write<uint64_t>(AuxSym.LengthOfSectionPortion.value_or(0));
+    W.write<uint64_t>(AuxSym.NumberOfRelocEnt.value_or(0));
     W.write<uint8_t>(0);
     W.write<uint8_t>(XCOFF::AUX_SECT);
   } else {
-    W.write<uint32_t>(AuxSym.LengthOfSectionPortion.getValueOr(0));
+    W.write<uint32_t>(AuxSym.LengthOfSectionPortion.value_or(0));
     W.OS.write_zeros(4);
-    W.write<uint32_t>(AuxSym.NumberOfRelocEnt.getValueOr(0));
+    W.write<uint32_t>(AuxSym.NumberOfRelocEnt.value_or(0));
     W.OS.write_zeros(6);
   }
 }
 
 void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::SectAuxEntForStat &AuxSym) {
   assert(!Is64Bit && "can't write the stat auxiliary symbol for XCOFF64");
-  W.write<uint32_t>(AuxSym.SectionLength.getValueOr(0));
-  W.write<uint16_t>(AuxSym.NumberOfRelocEnt.getValueOr(0));
-  W.write<uint16_t>(AuxSym.NumberOfLineNum.getValueOr(0));
+  W.write<uint32_t>(AuxSym.SectionLength.value_or(0));
+  W.write<uint16_t>(AuxSym.NumberOfRelocEnt.value_or(0));
+  W.write<uint16_t>(AuxSym.NumberOfLineNum.value_or(0));
   W.OS.write_zeros(10);
 }
 
@@ -686,7 +686,7 @@ bool XCOFFWriter::writeSymbols() {
     W.write<uint16_t>(YamlSym.Type);
     W.write<uint8_t>(YamlSym.StorageClass);
 
-    uint8_t NumOfAuxSym = YamlSym.NumberOfAuxEntries.getValueOr(0);
+    uint8_t NumOfAuxSym = YamlSym.NumberOfAuxEntries.value_or(0);
     W.write<uint8_t>(NumOfAuxSym);
 
     if (!NumOfAuxSym && !YamlSym.AuxEntries.size())

@@ -58,17 +58,7 @@ enum OpenMPInfoType : uint32_t {
   OMP_INFOTYPE_ALL = 0xffffffff,
 };
 
-#define GCC_VERSION                                                            \
-  (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-
-#if !defined(__clang__) && defined(__GNUC__) && GCC_VERSION < 70100
-#define USED __attribute__((used))
-#else
-#define USED
-#endif
-
-// Add __attribute__((used)) to work around a bug in gcc 5/6.
-USED inline std::atomic<uint32_t> &getInfoLevelInternal() {
+inline std::atomic<uint32_t> &getInfoLevelInternal() {
   static std::atomic<uint32_t> InfoLevel;
   static std::once_flag Flag{};
   std::call_once(Flag, []() {
@@ -79,10 +69,9 @@ USED inline std::atomic<uint32_t> &getInfoLevelInternal() {
   return InfoLevel;
 }
 
-USED inline uint32_t getInfoLevel() { return getInfoLevelInternal().load(); }
+inline uint32_t getInfoLevel() { return getInfoLevelInternal().load(); }
 
-// Add __attribute__((used)) to work around a bug in gcc 5/6.
-USED inline uint32_t getDebugLevel() {
+inline uint32_t getDebugLevel() {
   static uint32_t DebugLevel = 0;
   static std::once_flag Flag{};
   std::call_once(Flag, []() {

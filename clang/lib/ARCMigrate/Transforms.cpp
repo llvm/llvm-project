@@ -25,7 +25,7 @@ using namespace trans;
 ASTTraverser::~ASTTraverser() { }
 
 bool MigrationPass::CFBridgingFunctionsDefined() {
-  if (!EnableCFBridgeFns.hasValue())
+  if (!EnableCFBridgeFns)
     EnableCFBridgeFns = SemaRef.isKnownName("CFBridgingRetain") &&
                         SemaRef.isKnownName("CFBridgingRelease");
   return *EnableCFBridgeFns;

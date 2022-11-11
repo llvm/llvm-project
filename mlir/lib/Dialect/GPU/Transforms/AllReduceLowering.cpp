@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
@@ -31,7 +31,7 @@ struct GpuAllReduceRewriter {
   GpuAllReduceRewriter(gpu::GPUFuncOp funcOp, gpu::AllReduceOp reduceOp,
                        PatternRewriter &rewriter)
       : funcOp(funcOp), reduceOp(reduceOp), rewriter(rewriter),
-        loc(reduceOp.getLoc()), valueType(reduceOp.value().getType()),
+        loc(reduceOp.getLoc()), valueType(reduceOp.getValue().getType()),
         indexType(IndexType::get(reduceOp.getContext())),
         int32Type(IntegerType::get(reduceOp.getContext(), /*width=*/32)) {}
 
@@ -100,8 +100,8 @@ struct GpuAllReduceRewriter {
     assert(accumFactory && "failed to create accumulator factory");
 
     // Reduce elements within each subgroup to produce the intermediate results.
-    Value subgroupReduce = createSubgroupReduce(activeWidth, laneId,
-                                                reduceOp.value(), accumFactory);
+    Value subgroupReduce = createSubgroupReduce(
+        activeWidth, laneId, reduceOp.getValue(), accumFactory);
 
     // Add workgroup buffer to parent function for intermediate result.
     Value buffer = createWorkgroupBuffer();
@@ -168,10 +168,10 @@ private:
   /// Returns an accumulator factory using either the op attribute or the body
   /// region.
   AccumulatorFactory getFactory() {
-    auto &body = reduceOp.body();
+    auto &body = reduceOp.getBody();
     if (!body.empty())
       return getFactory(body);
-    auto opAttr = reduceOp.op();
+    auto opAttr = reduceOp.getOp();
     if (opAttr)
       return getFactory(*opAttr);
     return AccumulatorFactory();

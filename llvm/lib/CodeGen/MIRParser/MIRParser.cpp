@@ -437,7 +437,7 @@ void MIRParserImpl::setupDebugValueTracking(
   MF.setDebugInstrNumberingCount(MaxInstrNum);
 
   // Load any substitutions.
-  for (auto &Sub : YamlMF.DebugValueSubstitutions) {
+  for (const auto &Sub : YamlMF.DebugValueSubstitutions) {
     MF.makeDebugValueSubstitution({Sub.SrcInst, Sub.SrcOp},
                                   {Sub.DstInst, Sub.DstOp}, Sub.Subreg);
   }
@@ -643,7 +643,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
   // be saved for the caller).
   if (YamlMF.CalleeSavedRegisters) {
     SmallVector<MCPhysReg, 16> CalleeSavedRegisters;
-    for (const auto &RegSource : YamlMF.CalleeSavedRegisters.getValue()) {
+    for (const auto &RegSource : *YamlMF.CalleeSavedRegisters) {
       Register Reg;
       if (parseNamedRegisterReference(PFS, Reg, RegSource.Value, Error))
         return error(Error, RegSource.SourceRange);
@@ -814,7 +814,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
                                  Object.CalleeSavedRestored, ObjectIdx))
       return true;
     if (Object.LocalOffset)
-      MFI.mapLocalFrameObject(ObjectIdx, Object.LocalOffset.getValue());
+      MFI.mapLocalFrameObject(ObjectIdx, *Object.LocalOffset);
     if (parseStackObjectsDebugInfo(PFS, Object, ObjectIdx))
       return true;
   }
@@ -923,7 +923,7 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
       return error(Error, YamlConstant.Value.SourceRange);
     const Align PrefTypeAlign =
         M.getDataLayout().getPrefTypeAlign(Value->getType());
-    const Align Alignment = YamlConstant.Alignment.getValueOr(PrefTypeAlign);
+    const Align Alignment = YamlConstant.Alignment.value_or(PrefTypeAlign);
     unsigned Index = ConstantPool.getConstantPoolIndex(Value, Alignment);
     if (!ConstantPoolSlots.insert(std::make_pair(YamlConstant.ID.Value, Index))
              .second)
@@ -975,7 +975,7 @@ bool MIRParserImpl::parseMachineMetadata(PerFunctionMIParsingState &PFS,
 bool MIRParserImpl::parseMachineMetadataNodes(
     PerFunctionMIParsingState &PFS, MachineFunction &MF,
     const yaml::MachineFunction &YMF) {
-  for (auto &MDS : YMF.MachineMetadataNodes) {
+  for (const auto &MDS : YMF.MachineMetadataNodes) {
     if (parseMachineMetadata(PFS, MDS))
       return true;
   }

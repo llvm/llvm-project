@@ -269,18 +269,17 @@ return:
 define i32 @neg_loop(i1 %cond_0, i1 %cond_1) {
 ; CHECK-LABEL: @neg_loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    br i1 [[COND_1:%.*]], label [[LOOP:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
-; CHECK:       loop.critedge:
-; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    br label [[LOOP]]
+; CHECK-NEXT:    br label [[GUARDED:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[COND_0:%.*]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[LOOP_CRITEDGE:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[DEOPTRET]]
+; CHECK:       guarded:
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    br i1 [[COND_1:%.*]], label [[LOOP:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    [[DEOPTRET2:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[DEOPTRET2]]

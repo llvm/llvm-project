@@ -50,13 +50,18 @@ static constexpr int Key1 = 0;
 static constexpr int Key2 = 1;
 
 namespace {
+using ::testing::_;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
 TEST(MapLatticeTest, InsertWorks) {
   MapLattice<int, BooleanLattice> Lattice;
-  Lattice.insert({Key1, BooleanLattice(false)});
-  Lattice.insert({Key2, BooleanLattice(false)});
+  EXPECT_THAT(Lattice.insert({Key1, BooleanLattice(false)}), Pair(_, true));
+  EXPECT_THAT(Lattice.insert({Key2, BooleanLattice(false)}), Pair(_, true));
+
+  // Insertion fails on collision.
+  EXPECT_THAT(Lattice.insert({Key1, BooleanLattice(false)}), Pair(_, false));
+  EXPECT_THAT(Lattice.insert({Key2, BooleanLattice(false)}), Pair(_, false));
 
   EXPECT_THAT(Lattice, UnorderedElementsAre(Pair(Key1, BooleanLattice(false)),
                                             Pair(Key2, BooleanLattice(false))));

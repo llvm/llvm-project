@@ -3,27 +3,27 @@
 // Test basic renaming of conflicting funcOps.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @foo_1
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @foo_1
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : f32) -> f32 "None" {
-    spv.ReturnValue %arg0 : f32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : f32) -> f32 "None" {
+    spirv.ReturnValue %arg0 : f32
   }
 }
 }
@@ -33,41 +33,41 @@ spv.module Logical GLSL450 {
 // Test basic renaming of conflicting funcOps across 3 modules.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @foo_1
-// CHECK-NEXT:       spv.FAdd
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @foo_1
+// CHECK-NEXT:       spirv.FAdd
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @foo_2
-// CHECK-NEXT:       spv.ISub
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @foo_2
+// CHECK-NEXT:       spirv.ISub
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : f32) -> f32 "None" {
-    %0 = spv.FAdd %arg0, %arg0 : f32
-    spv.ReturnValue %0 : f32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : f32) -> f32 "None" {
+    %0 = spirv.FAdd %arg0, %arg0 : f32
+    spirv.ReturnValue %0 : f32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    %0 = spv.ISub %arg0, %arg0 : i32
-    spv.ReturnValue %0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    %0 = spirv.ISub %arg0, %arg0 : i32
+    spirv.ReturnValue %0 : i32
   }
 }
 }
@@ -77,37 +77,37 @@ spv.module Logical GLSL450 {
 // Test properly updating references to a renamed funcOp.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @foo_1
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @foo_1
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv.FunctionCall @foo_1
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @bar
+// CHECK-NEXT:       spirv.FunctionCall @foo_1
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : f32) -> f32 "None" {
-    spv.ReturnValue %arg0 : f32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : f32) -> f32 "None" {
+    spirv.ReturnValue %arg0 : f32
   }
 
-  spv.func @bar(%arg0 : f32) -> f32 "None" {
-    %0 = spv.FunctionCall @foo(%arg0) : (f32) ->  (f32)
-    spv.ReturnValue %0 : f32
+  spirv.func @bar(%arg0 : f32) -> f32 "None" {
+    %0 = spirv.FunctionCall @foo(%arg0) : (f32) ->  (f32)
+    spirv.ReturnValue %0 : f32
   }
 }
 }
@@ -118,37 +118,37 @@ spv.module Logical GLSL450 {
 // preceeds the callee funcOp definition.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv.FunctionCall @foo_1
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @bar
+// CHECK-NEXT:       spirv.FunctionCall @foo_1
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @foo_1
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @foo_1
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.func @bar(%arg0 : f32) -> f32 "None" {
-    %0 = spv.FunctionCall @foo(%arg0) : (f32) ->  (f32)
-    spv.ReturnValue %0 : f32
+spirv.module Logical GLSL450 {
+  spirv.func @bar(%arg0 : f32) -> f32 "None" {
+    %0 = spirv.FunctionCall @foo(%arg0) : (f32) ->  (f32)
+    spirv.ReturnValue %0 : f32
   }
 
-  spv.func @foo(%arg0 : f32) -> f32 "None" {
-    spv.ReturnValue %arg0 : f32
+  spirv.func @foo(%arg0 : f32) -> f32 "None" {
+    spirv.ReturnValue %arg0 : f32
   }
 }
 }
@@ -159,74 +159,74 @@ spv.module Logical GLSL450 {
 // funcOp.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @foo_1
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @foo_1
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.EntryPoint "GLCompute" @foo_1
-// CHECK-NEXT:     spv.ExecutionMode @foo_1 "ContractionOff"
+// CHECK-NEXT:     spirv.EntryPoint "GLCompute" @foo_1
+// CHECK-NEXT:     spirv.ExecutionMode @foo_1 "ContractionOff"
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : f32) -> f32 "None" {
-    spv.ReturnValue %arg0 : f32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : f32) -> f32 "None" {
+    spirv.ReturnValue %arg0 : f32
   }
 
-  spv.EntryPoint "GLCompute" @foo
-  spv.ExecutionMode @foo "ContractionOff"
+  spirv.EntryPoint "GLCompute" @foo
+  spirv.ExecutionMode @foo "ContractionOff"
 }
 }
 
 // -----
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.EntryPoint "GLCompute" @fo
-// CHECK-NEXT:     spv.ExecutionMode @foo "ContractionOff"
+// CHECK-NEXT:     spirv.EntryPoint "GLCompute" @fo
+// CHECK-NEXT:     spirv.ExecutionMode @foo "ContractionOff"
 
-// CHECK-NEXT:     spv.func @foo_1
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @foo_1
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.EntryPoint "GLCompute" @foo_1
-// CHECK-NEXT:     spv.ExecutionMode @foo_1 "ContractionOff"
+// CHECK-NEXT:     spirv.EntryPoint "GLCompute" @foo_1
+// CHECK-NEXT:     spirv.ExecutionMode @foo_1 "ContractionOff"
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 
-  spv.EntryPoint "GLCompute" @foo
-  spv.ExecutionMode @foo "ContractionOff"
+  spirv.EntryPoint "GLCompute" @foo
+  spirv.ExecutionMode @foo "ContractionOff"
 }
 
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : f32) -> f32 "None" {
-    spv.ReturnValue %arg0 : f32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : f32) -> f32 "None" {
+    spirv.ReturnValue %arg0 : f32
   }
 
-  spv.EntryPoint "GLCompute" @foo
-  spv.ExecutionMode @foo "ContractionOff"
+  spirv.EntryPoint "GLCompute" @foo
+  spirv.ExecutionMode @foo "ContractionOff"
 }
 }
 
@@ -235,23 +235,23 @@ spv.module Logical GLSL450 {
 // Resolve conflicting funcOp and globalVariableOp.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.GlobalVariable @foo_1
+// CHECK-NEXT:     spirv.GlobalVariable @foo_1
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.GlobalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @foo bind(1, 0) : !spirv.ptr<f32, Input>
 }
 }
 
@@ -261,33 +261,33 @@ spv.module Logical GLSL450 {
 // references.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.GlobalVariable @foo_1
-// CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv.mlir.addressof @foo_1
-// CHECK-NEXT:       spv.Load
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.GlobalVariable @foo_1
+// CHECK-NEXT:     spirv.func @bar
+// CHECK-NEXT:       spirv.mlir.addressof @foo_1
+// CHECK-NEXT:       spirv.Load
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.GlobalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @foo bind(1, 0) : !spirv.ptr<f32, Input>
 
-  spv.func @bar() -> f32 "None" {
-    %0 = spv.mlir.addressof @foo : !spv.ptr<f32, Input>
-    %1 = spv.Load "Input" %0 : f32
-    spv.ReturnValue %1 : f32
+  spirv.func @bar() -> f32 "None" {
+    %0 = spirv.mlir.addressof @foo : !spirv.ptr<f32, Input>
+    %1 = spirv.Load "Input" %0 : f32
+    spirv.ReturnValue %1 : f32
   }
 }
 }
@@ -298,33 +298,33 @@ spv.module Logical GLSL450 {
 // references.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.GlobalVariable @foo_1
-// CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv.mlir.addressof @foo_1
-// CHECK-NEXT:       spv.Load
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.GlobalVariable @foo_1
+// CHECK-NEXT:     spirv.func @bar
+// CHECK-NEXT:       spirv.mlir.addressof @foo_1
+// CHECK-NEXT:       spirv.Load
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.GlobalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @foo bind(1, 0) : !spirv.ptr<f32, Input>
 
-  spv.func @bar() -> f32 "None" {
-    %0 = spv.mlir.addressof @foo : !spv.ptr<f32, Input>
-    %1 = spv.Load "Input" %0 : f32
-    spv.ReturnValue %1 : f32
+  spirv.func @bar() -> f32 "None" {
+    %0 = spirv.mlir.addressof @foo : !spirv.ptr<f32, Input>
+    %1 = spirv.Load "Input" %0 : f32
+    spirv.ReturnValue %1 : f32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 }
@@ -334,23 +334,23 @@ spv.module Logical GLSL450 {
 // Resolve conflicting funcOp and specConstantOp.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.SpecConstant @foo_1
+// CHECK-NEXT:     spirv.SpecConstant @foo_1
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.SpecConstant @foo = -5 : i32
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @foo = -5 : i32
 }
 }
 
@@ -360,31 +360,31 @@ spv.module Logical GLSL450 {
 // references.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.SpecConstant @foo_1
-// CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv.mlir.referenceof @foo_1
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.SpecConstant @foo_1
+// CHECK-NEXT:     spirv.func @bar
+// CHECK-NEXT:       spirv.mlir.referenceof @foo_1
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.SpecConstant @foo = -5 : i32
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @foo = -5 : i32
 
-  spv.func @bar() -> i32 "None" {
-    %0 = spv.mlir.referenceof @foo : i32
-    spv.ReturnValue %0 : i32
+  spirv.func @bar() -> i32 "None" {
+    %0 = spirv.mlir.referenceof @foo : i32
+    spirv.ReturnValue %0 : i32
   }
 }
 }
@@ -395,31 +395,31 @@ spv.module Logical GLSL450 {
 // references.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.SpecConstant @foo_1
-// CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv.mlir.referenceof @foo_1
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.SpecConstant @foo_1
+// CHECK-NEXT:     spirv.func @bar
+// CHECK-NEXT:       spirv.mlir.referenceof @foo_1
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.SpecConstant @foo = -5 : i32
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @foo = -5 : i32
 
-  spv.func @bar() -> i32 "None" {
-    %0 = spv.mlir.referenceof @foo : i32
-    spv.ReturnValue %0 : i32
+  spirv.func @bar() -> i32 "None" {
+    %0 = spirv.mlir.referenceof @foo : i32
+    spirv.ReturnValue %0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 }
@@ -429,25 +429,25 @@ spv.module Logical GLSL450 {
 // Resolve conflicting funcOp and specConstantCompositeOp.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.SpecConstant @bar
-// CHECK-NEXT:     spv.SpecConstantComposite @foo_1 (@bar, @bar)
+// CHECK-NEXT:     spirv.SpecConstant @bar
+// CHECK-NEXT:     spirv.SpecConstantComposite @foo_1 (@bar, @bar)
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.SpecConstant @bar = -5 : i32
-  spv.SpecConstantComposite @foo (@bar, @bar) : !spv.array<2 x i32>
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @bar = -5 : i32
+  spirv.SpecConstantComposite @foo (@bar, @bar) : !spirv.array<2 x i32>
 }
 }
 
@@ -457,35 +457,35 @@ spv.module Logical GLSL450 {
 // constant's references.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.SpecConstant @bar
-// CHECK-NEXT:     spv.SpecConstantComposite @foo_1 (@bar, @bar)
-// CHECK-NEXT:     spv.func @baz
-// CHECK-NEXT:       spv.mlir.referenceof @foo_1
-// CHECK-NEXT:       spv.CompositeExtract
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.SpecConstant @bar
+// CHECK-NEXT:     spirv.SpecConstantComposite @foo_1 (@bar, @bar)
+// CHECK-NEXT:     spirv.func @baz
+// CHECK-NEXT:       spirv.mlir.referenceof @foo_1
+// CHECK-NEXT:       spirv.CompositeExtract
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.SpecConstant @bar = -5 : i32
-  spv.SpecConstantComposite @foo (@bar, @bar) : !spv.array<2 x i32>
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @bar = -5 : i32
+  spirv.SpecConstantComposite @foo (@bar, @bar) : !spirv.array<2 x i32>
 
-  spv.func @baz() -> i32 "None" {
-    %0 = spv.mlir.referenceof @foo : !spv.array<2 x i32>
-    %1 = spv.CompositeExtract %0[0 : i32] : !spv.array<2 x i32>
-    spv.ReturnValue %1 : i32
+  spirv.func @baz() -> i32 "None" {
+    %0 = spirv.mlir.referenceof @foo : !spirv.array<2 x i32>
+    %1 = spirv.CompositeExtract %0[0 : i32] : !spirv.array<2 x i32>
+    spirv.ReturnValue %1 : i32
   }
 }
 }
@@ -496,35 +496,35 @@ spv.module Logical GLSL450 {
 // constant's references.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.SpecConstant @bar
-// CHECK-NEXT:     spv.SpecConstantComposite @foo_1 (@bar, @bar)
-// CHECK-NEXT:     spv.func @baz
-// CHECK-NEXT:       spv.mlir.referenceof @foo_1
-// CHECK-NEXT:       spv.CompositeExtract
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.SpecConstant @bar
+// CHECK-NEXT:     spirv.SpecConstantComposite @foo_1 (@bar, @bar)
+// CHECK-NEXT:     spirv.func @baz
+// CHECK-NEXT:       spirv.mlir.referenceof @foo_1
+// CHECK-NEXT:       spirv.CompositeExtract
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.SpecConstant @bar = -5 : i32
-  spv.SpecConstantComposite @foo (@bar, @bar) : !spv.array<2 x i32>
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @bar = -5 : i32
+  spirv.SpecConstantComposite @foo (@bar, @bar) : !spirv.array<2 x i32>
 
-  spv.func @baz() -> i32 "None" {
-    %0 = spv.mlir.referenceof @foo : !spv.array<2 x i32>
-    %1 = spv.CompositeExtract %0[0 : i32] : !spv.array<2 x i32>
-    spv.ReturnValue %1 : i32
+  spirv.func @baz() -> i32 "None" {
+    %0 = spirv.mlir.referenceof @foo : !spirv.array<2 x i32>
+    %1 = spirv.CompositeExtract %0[0 : i32] : !spirv.array<2 x i32>
+    spirv.ReturnValue %1 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 }
 }
@@ -535,43 +535,43 @@ spv.module Logical GLSL450 {
 // references.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.SpecConstant @bar_1
-// CHECK-NEXT:     spv.SpecConstantComposite @foo_2 (@bar_1, @bar_1)
-// CHECK-NEXT:     spv.func @baz
-// CHECK-NEXT:       spv.mlir.referenceof @foo_2
-// CHECK-NEXT:       spv.CompositeExtract
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.SpecConstant @bar_1
+// CHECK-NEXT:     spirv.SpecConstantComposite @foo_2 (@bar_1, @bar_1)
+// CHECK-NEXT:     spirv.func @baz
+// CHECK-NEXT:       spirv.mlir.referenceof @foo_2
+// CHECK-NEXT:       spirv.CompositeExtract
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @foo
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @foo
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 
-// CHECK-NEXT:     spv.func @bar
-// CHECK-NEXT:       spv.ReturnValue
+// CHECK-NEXT:     spirv.func @bar
+// CHECK-NEXT:       spirv.ReturnValue
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.SpecConstant @bar = -5 : i32
-  spv.SpecConstantComposite @foo (@bar, @bar) : !spv.array<2 x i32>
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @bar = -5 : i32
+  spirv.SpecConstantComposite @foo (@bar, @bar) : !spirv.array<2 x i32>
 
-  spv.func @baz() -> i32 "None" {
-    %0 = spv.mlir.referenceof @foo : !spv.array<2 x i32>
-    %1 = spv.CompositeExtract %0[0 : i32] : !spv.array<2 x i32>
-    spv.ReturnValue %1 : i32
+  spirv.func @baz() -> i32 "None" {
+    %0 = spirv.mlir.referenceof @foo : !spirv.array<2 x i32>
+    %1 = spirv.CompositeExtract %0[0 : i32] : !spirv.array<2 x i32>
+    spirv.ReturnValue %1 : i32
   }
 }
 
-spv.module Logical GLSL450 {
-  spv.func @foo(%arg0 : i32) -> i32 "None" {
-    spv.ReturnValue %arg0 : i32
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0 : i32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
   }
 
-  spv.func @bar(%arg0 : f32) -> f32 "None" {
-    spv.ReturnValue %arg0 : f32
+  spirv.func @bar(%arg0 : f32) -> f32 "None" {
+    spirv.ReturnValue %arg0 : f32
   }
 }
 }
@@ -581,38 +581,38 @@ spv.module Logical GLSL450 {
 // Resolve conflicting globalVariableOps.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.GlobalVariable @foo_1 bind(1, 0)
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.GlobalVariable @foo_1 bind(1, 0)
 
-// CHECK-NEXT:     spv.GlobalVariable @foo bind(2, 0)
+// CHECK-NEXT:     spirv.GlobalVariable @foo bind(2, 0)
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.GlobalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @foo bind(1, 0) : !spirv.ptr<f32, Input>
 }
 
-spv.module Logical GLSL450 {
-  spv.GlobalVariable @foo bind(2, 0) : !spv.ptr<f32, Input>
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @foo bind(2, 0) : !spirv.ptr<f32, Input>
 }
 }
 
 // -----
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.GlobalVariable @foo_1 built_in("GlobalInvocationId")
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.GlobalVariable @foo_1 built_in("GlobalInvocationId")
 
-// CHECK-NEXT:     spv.GlobalVariable @foo built_in("LocalInvocationId")
+// CHECK-NEXT:     spirv.GlobalVariable @foo built_in("LocalInvocationId")
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.GlobalVariable @foo built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @foo built_in("GlobalInvocationId") : !spirv.ptr<vector<3xi32>, Input>
 }
 
-spv.module Logical GLSL450 {
-  spv.GlobalVariable @foo built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @foo built_in("LocalInvocationId") : !spirv.ptr<vector<3xi32>, Input>
 }
 }
 
@@ -621,19 +621,19 @@ spv.module Logical GLSL450 {
 // Resolve conflicting globalVariableOp and specConstantOp.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.GlobalVariable @foo_1
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.GlobalVariable @foo_1
 
-// CHECK-NEXT:     spv.SpecConstant @foo
+// CHECK-NEXT:     spirv.SpecConstant @foo
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.GlobalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @foo bind(1, 0) : !spirv.ptr<f32, Input>
 }
 
-spv.module Logical GLSL450 {
-  spv.SpecConstant @foo = -5 : i32
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @foo = -5 : i32
 }
 }
 
@@ -642,19 +642,19 @@ spv.module Logical GLSL450 {
 // Resolve conflicting specConstantOp and globalVariableOp.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.SpecConstant @foo_1
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.SpecConstant @foo_1
 
-// CHECK-NEXT:     spv.GlobalVariable @foo
+// CHECK-NEXT:     spirv.GlobalVariable @foo
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.SpecConstant @foo = -5 : i32
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @foo = -5 : i32
 }
 
-spv.module Logical GLSL450 {
-  spv.GlobalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @foo bind(1, 0) : !spirv.ptr<f32, Input>
 }
 }
 
@@ -663,21 +663,21 @@ spv.module Logical GLSL450 {
 // Resolve conflicting globalVariableOp and specConstantCompositeOp.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.GlobalVariable @foo_1
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.GlobalVariable @foo_1
 
-// CHECK-NEXT:     spv.SpecConstant @bar
-// CHECK-NEXT:     spv.SpecConstantComposite @foo (@bar, @bar)
+// CHECK-NEXT:     spirv.SpecConstant @bar
+// CHECK-NEXT:     spirv.SpecConstantComposite @foo (@bar, @bar)
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.GlobalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @foo bind(1, 0) : !spirv.ptr<f32, Input>
 }
 
-spv.module Logical GLSL450 {
-  spv.SpecConstant @bar = -5 : i32
-  spv.SpecConstantComposite @foo (@bar, @bar) : !spv.array<2 x i32>
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @bar = -5 : i32
+  spirv.SpecConstantComposite @foo (@bar, @bar) : !spirv.array<2 x i32>
 }
 }
 
@@ -686,20 +686,20 @@ spv.module Logical GLSL450 {
 // Resolve conflicting globalVariableOp and specConstantComposite.
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.SpecConstant @bar
-// CHECK-NEXT:     spv.SpecConstantComposite @foo_1 (@bar, @bar)
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.SpecConstant @bar
+// CHECK-NEXT:     spirv.SpecConstantComposite @foo_1 (@bar, @bar)
 
-// CHECK-NEXT:     spv.GlobalVariable @foo
+// CHECK-NEXT:     spirv.GlobalVariable @foo
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.SpecConstant @bar = -5 : i32
-  spv.SpecConstantComposite @foo (@bar, @bar) : !spv.array<2 x i32>
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @bar = -5 : i32
+  spirv.SpecConstantComposite @foo (@bar, @bar) : !spirv.array<2 x i32>
 }
 
-spv.module Logical GLSL450 {
-  spv.GlobalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @foo bind(1, 0) : !spirv.ptr<f32, Input>
 }
 }

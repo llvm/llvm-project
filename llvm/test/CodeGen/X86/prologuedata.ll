@@ -12,6 +12,6 @@ define void @f() prologue i32 1 {
 ; CHECK: g:
 ; CHECK-NEXT: .cfi_startproc
 ; CHECK-NEXT: .quad	i
-define void @g() prologue i32* @i {
+define void @g() prologue ptr @i {
   ret void
 }

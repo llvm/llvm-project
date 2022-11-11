@@ -1,21 +1,26 @@
-﻿# Test non-ascii archive members
+﻿## Test non-ascii archive members
 
-RUN: rm -rf %t && mkdir -p %t/extracted
+# RUN: rm -rf %t && mkdir -p %t/extracted
+# RUN: cd %t
 
-# Note: lit's Python will read this UTF-8 encoded mri-nonascii.txt file,
-# decode it to unicode. The filename in the redirection below will then
-# be encoded in the system's filename encoding (e.g. UTF-16 for
-# Microsoft Windows).
-RUN: echo "contents" > %t/£.txt
+## Note: lit's Python will read this UTF-8 encoded mri-nonascii.txt file,
+## decode it to unicode. The filename in the redirection below will then
+## be encoded in the system's filename encoding (e.g. UTF-16 for
+## Microsoft Windows).
+# RUN: echo "contents" > £.txt
+# RUN: echo "contents" > €.txt
+# RUN: llvm-ar -rc ¥.a €.txt
 
-RUN: echo "CREATE %t/mri.ar" > %t/script.mri
-RUN: echo "ADDMOD %t/£.txt" >> %t/script.mri
-RUN: echo "SAVE" >> %t/script.mri
+# RUN: echo "CREATE mri.ar" > script.mri
+# RUN: echo "ADDMOD £.txt" >> script.mri
+# RUN: echo "ADDLIB ¥.a" >> script.mri
+# RUN: echo "SAVE" >> script.mri
 
-RUN: llvm-ar -M < %t/script.mri
-RUN: cd %t/extracted && llvm-ar x %t/mri.ar
+# RUN: llvm-ar -M < script.mri
+# RUN: cd %t/extracted && llvm-ar x %t/mri.ar
 
-# Same as above.
-RUN: FileCheck --strict-whitespace %s <£.txt
-CHECK:{{^}}
-CHECK-SAME:{{^}}contents{{$}}
+## Same as above.
+# RUN: FileCheck --strict-whitespace %s <£.txt
+# RUN: FileCheck --strict-whitespace %s <€.txt
+# CHECK:{{^}}
+# CHECK-SAME:{{^}}contents{{$}}

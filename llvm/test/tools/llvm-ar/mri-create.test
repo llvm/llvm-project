@@ -1,0 +1,113 @@
+## Test the CREATE MRI command.
+
+# RUN: rm -rf %t && mkdir -p %t/path/ && split-file %s %t
+# RUN: cd %t
+
+# RUN: llvm-ar -M < create.mri
+# RUN: llvm-ar -M < thin.mri
+
+## Test use of CREATE with no archive name.
+# RUN: not llvm-ar -M < none.mri 2>&1 | FileCheck --check-prefix=NONE %s
+# RUN: not llvm-ar -M < thin-none.mri 2>&1 | FileCheck --check-prefix=NONE %s
+# RUN: not llvm-ar -M < none-add.mri 2>&1 | FileCheck --check-prefix=NONE %s
+# RUN: not llvm-ar -M < thin-none-add.mri 2>&1 | FileCheck --check-prefix=NONE %s
+
+# NONE: error: script line 1: missing archive name
+
+## Test use of paths with CREATE.
+# RUN: llvm-ar -M < path.mri
+# RUN: ls path/path.a
+# RUN: llvm-ar -M < thin-path.mri
+# RUN: ls path/thin-path.a
+
+## Test bad paths with CREATE.
+# RUN: not llvm-ar -M < bad.mri 2>&1 | FileCheck --check-prefix=BAD -DMSG=%errc_ENOENT %s
+# RUN: not llvm-ar -M < thin-bad.mri 2>&1 | FileCheck --check-prefix=BAD -DMSG=%errc_ENOENT %s
+# BAD: error: bad/bad.a: [[MSG]]
+
+## Test duplicate use of CREATE.
+# RUN: not llvm-ar -M < create2.mri 2>&1 | FileCheck --check-prefix=MULTIPLE %s -DLINE=2
+# RUN: not llvm-ar -M < thin2.mri 2>&1 | FileCheck --check-prefix=MULTIPLE %s -DLINE=2
+# RUN: not llvm-ar -M < mix1.mri 2>&1 | FileCheck --check-prefix=MULTIPLE %s -DLINE=2
+# RUN: not llvm-ar -M < mix2.mri 2>&1 | FileCheck --check-prefix=MULTIPLE %s -DLINE=2
+# RUN: not llvm-ar -M < save.mri 2>&1 | FileCheck --check-prefix=MULTIPLE %s -DLINE=3
+# RUN: not llvm-ar -M < thin-save.mri 2>&1 | FileCheck --check-prefix=MULTIPLE %s -DLINE=3
+
+# MULTIPLE: error: script line [[LINE]]: editing multiple archives not supported
+
+#--- create.mri
+CREATE create.a
+SAVE
+
+#--- thin.mri
+CREATETHIN thin.a
+SAVE thin.mri
+
+#--- none.mri
+CREATE
+SAVE
+
+#--- thin-none.mri
+CREATETHIN
+SAVE
+
+#--- foo.txt
+FOO
+
+#--- none-add.mri
+CREATE
+ADDMOD foo.txt
+SAVE
+
+#--- thin-none-add.mri
+CREATETHIN
+ADDMOD foo.txt
+SAVE
+
+#--- path.mri
+CREATE path/path.a
+SAVE
+
+#--- thin-path.mri
+CREATETHIN path/thin-path.a
+SAVE
+
+#--- bad.mri
+CREATE bad/bad.a
+SAVE
+
+#--- thin-bad.mri
+CREATETHIN bad/bad.a
+SAVE
+
+#--- create2.mri
+CREATE create1.a
+CREATE create2.a
+SAVE
+
+#--- thin2.mri
+CREATETHIN thin1.a
+CREATETHIN thin2.a
+SAVE
+
+#--- mix1.mri
+CREATE mix1.a
+CREATETHIN mixthin1.a
+SAVE
+
+#--- mix2.mri
+CREATETHIN mixthin2.a
+CREATE mix2.a
+SAVE
+
+#--- save.mri
+CREATE create1.a
+SAVE
+CREATE create2.a
+SAVE
+
+#--- thin-save.mri
+CREATETHIN create1.a
+SAVE
+CREATETHIN create2.a
+SAVE

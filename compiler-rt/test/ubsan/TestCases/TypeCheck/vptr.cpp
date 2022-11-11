@@ -1,4 +1,4 @@
-// RUN: %clangxx -frtti -fsanitize=null,vptr -g %s -O3 -o %t -mllvm -enable-tail-merge=false
+// RUN: %clangxx -frtti -fsanitize=null,vptr -fno-sanitize-memory-param-retval -g %s -O3 -o %t -mllvm -enable-tail-merge=false
 // RUN: %env_ubsan_opts=halt_on_error=1 %run %t rT
 // RUN: %env_ubsan_opts=halt_on_error=1 %run %t mT
 // RUN: %env_ubsan_opts=halt_on_error=1 %run %t fT

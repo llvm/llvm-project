@@ -2,11 +2,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 namespace test0 {
-  struct A { // expected-note {{candidate function (the implicit copy assignment operator) not viable: 'this' argument has type 'const test0::A', but method is not marked const}}
+  struct A { // expected-note {{candidate function (the implicit copy assignment operator) not viable: 'this' argument has type 'const A', but method is not marked const}}
 #if __cplusplus >= 201103L
-  // expected-note@-2 {{candidate function (the implicit move assignment operator) not viable: 'this' argument has type 'const test0::A', but method is not marked const}}
+  // expected-note@-2 {{candidate function (the implicit move assignment operator) not viable: 'this' argument has type 'const A', but method is not marked const}}
 #endif
-    A &operator=(void*); // expected-note {{candidate function not viable: 'this' argument has type 'const test0::A', but method is not marked const}}
+    A &operator=(void*); // expected-note {{candidate function not viable: 'this' argument has type 'const A', but method is not marked const}}
   };
 
   void test(const A &a) {

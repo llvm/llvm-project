@@ -437,7 +437,7 @@ end:
 ; being cautious not to cause a potential perf pessimization for
 ; targets that do not have a rotate instruction.
 
-define i32 @could_be_rotr(i32 %a, i32 %b, i32* %p) {
+define i32 @could_be_rotr(i32 %a, i32 %b, ptr %p) {
 ; CHECK-LABEL: @could_be_rotr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[B:%.*]], 0
@@ -447,7 +447,7 @@ define i32 @could_be_rotr(i32 %a, i32 %b, i32* %p) {
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
-; CHECK-NEXT:    store i32 [[OR]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[OR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[A]], [[ENTRY:%.*]] ], [ [[OR]], [[ROTBB]] ]
@@ -462,7 +462,7 @@ rotbb:
   %shl = shl i32 %a, %sub
   %shr = lshr i32 %a, %b
   %or = or i32 %shl, %shr
-  store i32 %or, i32* %p
+  store i32 %or, ptr %p
   br label %end
 
 end:

@@ -49,4 +49,4 @@ private ::A i; //expected-error{{program scope variable must reside in global or
 
 void foo(private int i);
 
-private int bar(); //expected-error{{return value cannot be qualified with address space}}
+private int bar(); //expected-error{{return type cannot be qualified with address space}}

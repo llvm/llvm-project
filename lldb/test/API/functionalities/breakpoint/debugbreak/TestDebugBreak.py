@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class DebugBreakTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(archs=no_match(["i386", "i686", "x86_64"]))
     @no_debug_info_test
     def test_asm_int_3(self):
@@ -34,7 +32,7 @@ class DebugBreakTestCase(TestBase):
             thread, "Unable to find thread stopped at the __debugbreak()")
         frame = thread.GetFrameAtIndex(0)
 
-        # We should be in funciton 'bar'.
+        # We should be in function 'bar'.
         self.assertTrue(frame.IsValid())
         function_name = frame.GetFunctionName()
         self.assertIn('bar', function_name,
@@ -54,4 +52,4 @@ class DebugBreakTestCase(TestBase):
             process.Continue()
 
         # The inferior should exit after the last iteration.
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)

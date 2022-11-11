@@ -1,6 +1,5 @@
 // RUN: mlir-opt %s -test-linalg-greedy-fusion -split-input-file | FileCheck %s
 
-#map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 #id_2d = affine_map<(d0, d1) -> (d0, d1)>
 #pointwise_2d_trait = {
   indexing_maps = [#id_2d, #id_2d, #id_2d],
@@ -28,14 +27,14 @@ func.func @fuse_indexed_consumer(%A: memref<?x?xf32>,
   scf.for %arg2 = %c0 to %0 step %c10 {
     scf.for %arg3 = %c0 to %1 step %c25 {
       %4 = memref.subview %C[%arg2, %arg3][%c10, %c25][%c1, %c1] :
-          memref<?x?xf32> to memref<?x?xf32, #map>
+          memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
       %5 = memref.subview %D[%arg2, %arg3][%c10, %c25][%c1, %c1] :
-          memref<?x?xf32> to memref<?x?xf32, #map>
+          memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
       linalg.generic {
         indexing_maps = [#id_2d, #id_2d],
         iterator_types = ["parallel", "parallel"]}
-        ins(%4 : memref<?x?xf32, #map>)
-       outs(%5 : memref<?x?xf32, #map>) {
+        ins(%4 : memref<?x?xf32, strided<[?, ?], offset: ?>>)
+       outs(%5 : memref<?x?xf32, strided<[?, ?], offset: ?>>) {
       ^bb0(%arg4: f32, %arg5: f32):
         %idx0 = linalg.index 0 : index
         %idx1 = linalg.index 1 : index
@@ -65,7 +64,6 @@ func.func @fuse_indexed_consumer(%A: memref<?x?xf32>,
 
 // -----
 
-#map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 func.func @fuse_indexed_producer(%A: memref<?x?xindex>,
                             %B: memref<?x?xindex>) {
   %c1 = arith.constant 1 : index
@@ -86,15 +84,15 @@ func.func @fuse_indexed_producer(%A: memref<?x?xindex>,
   %A_Y = memref.dim %A, %c1 : memref<?x?xindex>
   scf.parallel (%arg2, %arg3) = (%c0, %c0) to (%A_X, %A_Y) step (%c10, %c25) {
     %A_view = memref.subview %A[%arg2, %arg3][%c10, %c25][%c1, %c1] :
-        memref<?x?xindex> to memref<?x?xindex, #map>
+        memref<?x?xindex> to memref<?x?xindex, strided<[?, ?], offset: ?>>
     %B_view = memref.subview %B[%arg2, %arg3][%c10, %c25][%c1, %c1] :
-        memref<?x?xindex> to memref<?x?xindex, #map>
+        memref<?x?xindex> to memref<?x?xindex, strided<[?, ?], offset: ?>>
     linalg.generic {
       indexing_maps = [affine_map<(i, j) -> (i, j)>,
                        affine_map<(i, j) -> (i, j)>],
       iterator_types = ["parallel", "parallel"]}
-      ins(%A_view : memref<?x?xindex, #map>)
-      outs(%B_view : memref<?x?xindex, #map>) {
+      ins(%A_view : memref<?x?xindex, strided<[?, ?], offset: ?>>)
+      outs(%B_view : memref<?x?xindex, strided<[?, ?], offset: ?>>) {
     ^bb0(%a: index, %b: index):
       linalg.yield %a : index
     }
@@ -115,7 +113,6 @@ func.func @fuse_indexed_producer(%A: memref<?x?xindex>,
 
 // -----
 
-#map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 func.func @fuse_indexed_producer_tiled_second_dim_only(%A: memref<?x?xindex>,
                                                   %B: memref<?x?xindex>) {
   %c1 = arith.constant 1 : index
@@ -135,15 +132,15 @@ func.func @fuse_indexed_producer_tiled_second_dim_only(%A: memref<?x?xindex>,
   %A_Y = memref.dim %A, %c1 : memref<?x?xindex>
   scf.parallel (%arg3) = (%c0) to (%A_Y) step (%c25) {
     %A_view = memref.subview %A[%c0, %arg3][%A_X, %c25][%c1, %c1] :
-        memref<?x?xindex> to memref<?x?xindex, #map>
+        memref<?x?xindex> to memref<?x?xindex, strided<[?, ?], offset: ?>>
     %B_view = memref.subview %B[%c0, %arg3][%A_X, %c25][%c1, %c1] :
-        memref<?x?xindex> to memref<?x?xindex, #map>
+        memref<?x?xindex> to memref<?x?xindex, strided<[?, ?], offset: ?>>
     linalg.generic {
       indexing_maps = [affine_map<(i, j) -> (i, j)>,
                        affine_map<(i, j) -> (i, j)>],
       iterator_types = ["parallel", "parallel"]}
-      ins(%A_view : memref<?x?xindex, #map>)
-      outs(%B_view : memref<?x?xindex, #map>) {
+      ins(%A_view : memref<?x?xindex, strided<[?, ?], offset: ?>>)
+      outs(%B_view : memref<?x?xindex, strided<[?, ?], offset: ?>>) {
     ^bb0(%a: index, %b: index):
       linalg.yield %a : index
     }

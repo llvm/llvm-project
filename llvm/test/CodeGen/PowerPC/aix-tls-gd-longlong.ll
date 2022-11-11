@@ -87,7 +87,7 @@ define void @storesTGInit(i64 %Val) #0 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  store i64 %Val, i64* @TGInit, align 8
+  store i64 %Val, ptr @TGInit, align 8
   ret void
 }
 
@@ -161,7 +161,7 @@ define void @storesTIUninit(i64 %Val) #0 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  store i64 %Val, i64* @TIUninit, align 8
+  store i64 %Val, ptr @TIUninit, align 8
   ret void
 }
 
@@ -235,7 +235,7 @@ define void @storesTIInit(i64 %Val) #0 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  store i64 %Val, i64* @TIInit, align 8
+  store i64 %Val, ptr @TIInit, align 8
   ret void
 }
 
@@ -309,7 +309,7 @@ define void @storesTWInit(i64 %Val) #0 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  store i64 %Val, i64* @TWInit, align 8
+  store i64 %Val, ptr @TWInit, align 8
   ret void
 }
 
@@ -395,8 +395,8 @@ define i64 @loadsTGInit() #1 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  %0 = load i64, i64* @TGInit, align 8
-  %1 = load i64, i64* @GInit, align 8
+  %0 = load i64, ptr @TGInit, align 8
+  %1 = load i64, ptr @GInit, align 8
   %add = add nsw i64 %1, %0
   ret i64 %add
 }
@@ -483,8 +483,8 @@ define i64 @loadsTIUninit() #1 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  %0 = load i64, i64* @TIUninit, align 8
-  %1 = load i64, i64* @GInit, align 8
+  %0 = load i64, ptr @TIUninit, align 8
+  %1 = load i64, ptr @GInit, align 8
   %add = add nsw i64 %1, %0
   ret i64 %add
 }
@@ -571,8 +571,8 @@ define i64 @loadsTIInit() #1 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  %0 = load i64, i64* @TIInit, align 8
-  %1 = load i64, i64* @GInit, align 8
+  %0 = load i64, ptr @TIInit, align 8
+  %1 = load i64, ptr @GInit, align 8
   %add = add nsw i64 %1, %0
   ret i64 %add
 }
@@ -659,8 +659,8 @@ define i64 @loadsTWInit() #1 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  %0 = load i64, i64* @TWInit, align 8
-  %1 = load i64, i64* @GInit, align 8
+  %0 = load i64, ptr @TWInit, align 8
+  %1 = load i64, ptr @GInit, align 8
   %add = add nsw i64 %1, %0
   ret i64 %add
 }
@@ -754,5 +754,5 @@ entry:
 ; LARGE64-LABEL:  L..C8:
 ; LARGE64-NEXT:  .tc GInit[TE],GInit[RW]
 
-attributes #0 = { nofree norecurse nounwind willreturn writeonly "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-rop-protection,-spe,-vsx" }
-attributes #1 = { norecurse nounwind readonly willreturn "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-rop-protection,-spe,-vsx" }
+attributes #0 = { nofree norecurse nounwind willreturn writeonly "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-spe,-vsx" }
+attributes #1 = { norecurse nounwind readonly willreturn "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-spe,-vsx" }

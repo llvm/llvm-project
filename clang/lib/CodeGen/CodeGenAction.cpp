@@ -146,6 +146,7 @@ namespace clang {
 
   public:
     BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
+                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                     const HeaderSearchOptions &HeaderSearchOpts,
                     const PreprocessorOptions &PPOpts,
                     const CodeGenOptions &CodeGenOpts,
@@ -159,8 +160,8 @@ namespace clang {
           AsmOutStream(std::move(OS)), Context(nullptr),
           LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
           LLVMIRGenerationRefCount(0),
-          Gen(CreateLLVMCodeGen(Diags, InFile, HeaderSearchOpts, PPOpts,
-                                CodeGenOpts, C, CoverageInfo)),
+          Gen(CreateLLVMCodeGen(Diags, InFile, std::move(FS), HeaderSearchOpts,
+                                PPOpts, CodeGenOpts, C, CoverageInfo)),
           LinkModules(std::move(LinkModules)) {
       TimerIsEnabled = CodeGenOpts.TimePasses;
       llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
@@ -171,6 +172,7 @@ namespace clang {
     // to use the clang diagnostic handler for IR input files. It avoids
     // initializing the OS field.
     BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
+                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                     const HeaderSearchOptions &HeaderSearchOpts,
                     const PreprocessorOptions &PPOpts,
                     const CodeGenOptions &CodeGenOpts,
@@ -183,8 +185,8 @@ namespace clang {
           Context(nullptr),
           LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
           LLVMIRGenerationRefCount(0),
-          Gen(CreateLLVMCodeGen(Diags, "", HeaderSearchOpts, PPOpts,
-                                CodeGenOpts, C, CoverageInfo)),
+          Gen(CreateLLVMCodeGen(Diags, "", std::move(FS), HeaderSearchOpts,
+                                PPOpts, CodeGenOpts, C, CoverageInfo)),
           LinkModules(std::move(LinkModules)), CurLinkModule(Module) {
       TimerIsEnabled = CodeGenOpts.TimePasses;
       llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
@@ -433,6 +435,11 @@ namespace clang {
     /// \return True if the diagnostic has been successfully reported, false
     /// otherwise.
     bool StackSizeDiagHandler(const llvm::DiagnosticInfoStackSize &D);
+    /// Specialized handler for ResourceLimit diagnostic.
+    /// \return True if the diagnostic has been successfully reported, false
+    /// otherwise.
+    bool ResourceLimitDiagHandler(const llvm::DiagnosticInfoResourceLimit &D);
+
     /// Specialized handler for unsupported backend feature diagnostic.
     void UnsupportedDiagHandler(const llvm::DiagnosticInfoUnsupported &D);
     /// Specialized handlers for optimization remarks.
@@ -625,6 +632,20 @@ BackendConsumer::StackSizeDiagHandler(const llvm::DiagnosticInfoStackSize &D) {
   Diags.Report(*Loc, diag::warn_fe_frame_larger_than)
       << static_cast<uint32_t>(D.getStackSize())
       << static_cast<uint32_t>(D.getStackLimit())
+      << llvm::demangle(D.getFunction().getName().str());
+  return true;
+}
+
+bool BackendConsumer::ResourceLimitDiagHandler(
+    const llvm::DiagnosticInfoResourceLimit &D) {
+  auto Loc = getFunctionSourceLocation(D.getFunction());
+  if (!Loc)
+    return false;
+  unsigned DiagID = diag::err_fe_backend_resource_limit;
+  ComputeDiagID(D.getSeverity(), backend_resource_limit, DiagID);
+
+  Diags.Report(*Loc, DiagID)
+      << D.getResourceName() << D.getResourceSize() << D.getResourceLimit()
       << llvm::demangle(D.getFunction().getName().str());
   return true;
 }
@@ -872,6 +893,11 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
       return;
     ComputeDiagID(Severity, backend_frame_larger_than, DiagID);
     break;
+  case llvm::DK_ResourceLimit:
+    if (ResourceLimitDiagHandler(cast<DiagnosticInfoResourceLimit>(DI)))
+      return;
+    ComputeDiagID(Severity, backend_resource_limit, DiagID);
+    break;
   case DK_Linker:
     ComputeDiagID(Severity, linking_module, DiagID);
     break;
@@ -1052,10 +1078,10 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
         CI.getPreprocessor());
 
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
-      BA, CI.getDiagnostics(), CI.getHeaderSearchOpts(),
-      CI.getPreprocessorOpts(), CI.getCodeGenOpts(), CI.getTargetOpts(),
-      CI.getLangOpts(), std::string(InFile), std::move(LinkModules),
-      std::move(OS), *VMContext, CoverageInfo));
+      BA, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
+      CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
+      CI.getTargetOpts(), CI.getLangOpts(), std::string(InFile),
+      std::move(LinkModules), std::move(OS), *VMContext, CoverageInfo));
   BEConsumer = Result.get();
 
   // Enable generating macro debug info only when debug info is not disabled and
@@ -1075,6 +1101,8 @@ std::unique_ptr<llvm::Module>
 CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   CompilerInstance &CI = getCompilerInstance();
   SourceManager &SM = CI.getSourceManager();
+
+  VMContext->setOpaquePointers(CI.getCodeGenOpts().OpaquePointers);
 
   // For ThinLTO backend invocations, ensure that the context
   // merges types based on ODR identifiers. We also need to read
@@ -1185,9 +1213,10 @@ void CodeGenAction::ExecuteAction() {
 
   // Set clang diagnostic handler. To do this we need to create a fake
   // BackendConsumer.
-  BackendConsumer Result(BA, CI.getDiagnostics(), CI.getHeaderSearchOpts(),
-                         CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
-                         CI.getTargetOpts(), CI.getLangOpts(), TheModule.get(),
+  BackendConsumer Result(BA, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
+                         CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
+                         CI.getCodeGenOpts(), CI.getTargetOpts(),
+                         CI.getLangOpts(), TheModule.get(),
                          std::move(LinkModules), *VMContext, nullptr);
   // PR44896: Force DiscardValueNames as false. DiscardValueNames cannot be
   // true here because the valued names are needed for reading textual IR.

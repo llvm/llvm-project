@@ -1,13 +1,13 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -disable-block-placement | FileCheck %s
 ; RUN: llc < %s -O0 -mtriple=s390x-linux-gnu -disable-block-placement | FileCheck --check-prefix=CHECK-O0 %s
 
-declare i8* @malloc(i64)
-declare void @free(i8*)
+declare ptr @malloc(i64)
+declare void @free(ptr)
 %swift_error = type {i64, i8}
 
 ; This tests the basic usage of a swifterror parameter. "foo" is the function
 ; that takes a swifterror parameter and "caller" is the caller of "foo".
-define float @foo(%swift_error** swifterror %error_ptr_ref) {
+define float @foo(ptr swifterror %error_ptr_ref) {
 ; CHECK-LABEL: foo:
 ; CHECK: lghi %r2, 16
 ; CHECK: brasl %r14, malloc
@@ -19,16 +19,15 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0: lgr [[T0:%r[0-9]+]], %r2
 ; CHECK-O0: mvi 8(%r2), 1
 entry:
-  %call = call i8* @malloc(i64 16)
-  %call.0 = bitcast i8* %call to %swift_error*
-  store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %call = call ptr @malloc(i64 16)
+  store ptr %call, ptr %error_ptr_ref
+  %tmp = getelementptr inbounds i8, ptr %call, i64 8
+  store i8 1, ptr %tmp
   ret float 1.0
 }
 
 ; "caller" calls "foo" that takes a swifterror parameter.
-define float @caller(i8* %error_ref) {
+define float @caller(ptr %error_ref) {
 ; CHECK-LABEL: caller:
 ; Make a copy of error_ref because r2 is getting clobbered
 ; CHECK: lgr %r[[REG1:[0-9]+]], %r2
@@ -46,25 +45,24 @@ define float @caller(i8* %error_ref) {
 ; CHECK-O0: cghi %r9, 0
 ; CHECK-O0: jlh
 entry:
-  %error_ptr_ref = alloca swifterror %swift_error*
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  %call = call float @foo(%swift_error** swifterror %error_ptr_ref)
-  %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
-  %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  %error_ptr_ref = alloca swifterror ptr
+  store ptr null, ptr %error_ptr_ref
+  %call = call float @foo(ptr swifterror %error_ptr_ref)
+  %error_from_foo = load ptr, ptr %error_ptr_ref
+  %had_error_from_foo = icmp ne ptr %error_from_foo, null
   br i1 %had_error_from_foo, label %handler, label %cont
 cont:
-  %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
-  %t = load i8, i8* %v1
-  store i8 %t, i8* %error_ref
+  %v1 = getelementptr inbounds %swift_error, ptr %error_from_foo, i64 0, i32 1
+  %t = load i8, ptr %v1
+  store i8 %t, ptr %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(ptr %error_from_foo)
   ret float 1.0
 }
 
 ; "caller2" is the caller of "foo", it calls "foo" inside a loop.
-define float @caller2(i8* %error_ref) {
+define float @caller2(ptr %error_ref) {
 ; CHECK-LABEL: caller2:
 ; Make a copy of error_ref because r2 is getting clobbered
 ; CHECK: lgr %r[[REG1:[0-9]+]], %r2
@@ -84,31 +82,30 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-O0: cghi %r9, 0
 ; CHECK-O0: jlh
 entry:
-  %error_ptr_ref = alloca swifterror %swift_error*
+  %error_ptr_ref = alloca swifterror ptr
   br label %bb_loop
 bb_loop:
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  %call = call float @foo(%swift_error** swifterror %error_ptr_ref)
-  %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
-  %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  store ptr null, ptr %error_ptr_ref
+  %call = call float @foo(ptr swifterror %error_ptr_ref)
+  %error_from_foo = load ptr, ptr %error_ptr_ref
+  %had_error_from_foo = icmp ne ptr %error_from_foo, null
   br i1 %had_error_from_foo, label %handler, label %cont
 cont:
   %cmp = fcmp ogt float %call, 1.000000e+00
   br i1 %cmp, label %bb_end, label %bb_loop
 bb_end:
-  %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
-  %t = load i8, i8* %v1
-  store i8 %t, i8* %error_ref
+  %v1 = getelementptr inbounds %swift_error, ptr %error_from_foo, i64 0, i32 1
+  %t = load i8, ptr %v1
+  store i8 %t, ptr %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(ptr %error_from_foo)
   ret float 1.0
 }
 
 ; "foo_if" is a function that takes a swifterror parameter, it sets swifterror
 ; under a certain condition.
-define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
+define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-LABEL: foo_if:
 ; CHECK: cije %r2, 0
 ; CHECK: lghi %r2, 16
@@ -135,11 +132,10 @@ entry:
   br i1 %cond, label %gen_error, label %normal
 
 gen_error:
-  %call = call i8* @malloc(i64 16)
-  %call.0 = bitcast i8* %call to %swift_error*
-  store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %call = call ptr @malloc(i64 16)
+  store ptr %call, ptr %error_ptr_ref
+  %tmp = getelementptr inbounds i8, ptr %call, i64 8
+  store i8 1, ptr %tmp
   ret float 1.0
 
 normal:
@@ -148,7 +144,7 @@ normal:
 
 ; "foo_loop" is a function that takes a swifterror parameter, it sets swifterror
 ; under a certain condition inside a loop.
-define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float %cc2) {
+define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-LABEL: foo_loop:
 ; CHECK: lr %r[[REG1:[0-9]+]], %r2
 ; CHECK: cije %r[[REG1]], 0
@@ -180,11 +176,10 @@ bb_loop:
   br i1 %cond, label %gen_error, label %bb_cont
 
 gen_error:
-  %call = call i8* @malloc(i64 16)
-  %call.0 = bitcast i8* %call to %swift_error*
-  store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %call = call ptr @malloc(i64 16)
+  store ptr %call, ptr %error_ptr_ref
+  %tmp = getelementptr inbounds i8, ptr %call, i64 8
+  store i8 1, ptr %tmp
   br label %bb_cont
 
 bb_cont:
@@ -198,7 +193,7 @@ bb_end:
 
 ; "foo_sret" is a function that takes a swifterror parameter, it also has a sret
 ; parameter.
-define void @foo_sret(%struct.S* sret(%struct.S) %agg.result, i32 %val1, %swift_error** swifterror %error_ptr_ref) {
+define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror %error_ptr_ref) {
 ; CHECK-LABEL: foo_sret:
 ; CHECK-DAG: lgr %r[[REG1:[0-9]+]], %r2
 ; CHECK-DAG: lr %r[[REG2:[0-9]+]], %r3
@@ -224,18 +219,17 @@ define void @foo_sret(%struct.S* sret(%struct.S) %agg.result, i32 %val1, %swift_
 ; CHECK-O0: st %r[[REG2]], 4(%r[[REG1]])
 ; CHECK-O0: br %r14
 entry:
-  %call = call i8* @malloc(i64 16)
-  %call.0 = bitcast i8* %call to %swift_error*
-  store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
-  %v2 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i32 0, i32 1
-  store i32 %val1, i32* %v2
+  %call = call ptr @malloc(i64 16)
+  store ptr %call, ptr %error_ptr_ref
+  %tmp = getelementptr inbounds i8, ptr %call, i64 8
+  store i8 1, ptr %tmp
+  %v2 = getelementptr inbounds %struct.S, ptr %agg.result, i32 0, i32 1
+  store i32 %val1, ptr %v2
   ret void
 }
 
 ; "caller3" calls "foo_sret" that takes a swifterror parameter.
-define float @caller3(i8* %error_ref) {
+define float @caller3(ptr %error_ref) {
 ; CHECK-LABEL: caller3:
 ; Make a copy of error_ref because r2 is getting clobbered
 ; CHECK: lgr %r[[REG1:[0-9]+]], %r2
@@ -263,26 +257,25 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-O0: brasl %r14, free
 entry:
   %s = alloca %struct.S, align 8
-  %error_ptr_ref = alloca swifterror %swift_error*
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  call void @foo_sret(%struct.S* sret(%struct.S) %s, i32 1, %swift_error** swifterror %error_ptr_ref)
-  %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
-  %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  %error_ptr_ref = alloca swifterror ptr
+  store ptr null, ptr %error_ptr_ref
+  call void @foo_sret(ptr sret(%struct.S) %s, i32 1, ptr swifterror %error_ptr_ref)
+  %error_from_foo = load ptr, ptr %error_ptr_ref
+  %had_error_from_foo = icmp ne ptr %error_from_foo, null
   br i1 %had_error_from_foo, label %handler, label %cont
 cont:
-  %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
-  %t = load i8, i8* %v1
-  store i8 %t, i8* %error_ref
+  %v1 = getelementptr inbounds %swift_error, ptr %error_from_foo, i64 0, i32 1
+  %t = load i8, ptr %v1
+  store i8 %t, ptr %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(ptr %error_from_foo)
   ret float 1.0
 }
 
 ; This is a caller with multiple swifterror values, it calls "foo" twice, each
 ; time with a different swifterror value, from "alloca swifterror".
-define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_ref2) {
+define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_ref2) {
 ; CHECK-LABEL: caller_with_multiple_swifterror_values:
 ; CHECK-DAG: lgr %r[[REG1:[0-9]+]], %r2
 ; CHECK-DAG: lgr %r[[REG2:[0-9]+]], %r3
@@ -318,35 +311,33 @@ define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_
 ; CHECK-O0: brasl %r14, foo
 ; CHECK-O0: jlh
 entry:
-  %error_ptr_ref = alloca swifterror %swift_error*
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  %call = call float @foo(%swift_error** swifterror %error_ptr_ref)
-  %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
-  %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  %error_ptr_ref = alloca swifterror ptr
+  store ptr null, ptr %error_ptr_ref
+  %call = call float @foo(ptr swifterror %error_ptr_ref)
+  %error_from_foo = load ptr, ptr %error_ptr_ref
+  %had_error_from_foo = icmp ne ptr %error_from_foo, null
   br i1 %had_error_from_foo, label %handler, label %cont
 cont:
-  %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
-  %t = load i8, i8* %v1
-  store i8 %t, i8* %error_ref
+  %v1 = getelementptr inbounds %swift_error, ptr %error_from_foo, i64 0, i32 1
+  %t = load i8, ptr %v1
+  store i8 %t, ptr %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(ptr %error_from_foo)
 
-  %error_ptr_ref2 = alloca swifterror %swift_error*
-  store %swift_error* null, %swift_error** %error_ptr_ref2
-  %call2 = call float @foo(%swift_error** swifterror %error_ptr_ref2)
-  %error_from_foo2 = load %swift_error*, %swift_error** %error_ptr_ref2
-  %had_error_from_foo2 = icmp ne %swift_error* %error_from_foo2, null
-  %bitcast2 = bitcast %swift_error* %error_from_foo2 to i8*
+  %error_ptr_ref2 = alloca swifterror ptr
+  store ptr null, ptr %error_ptr_ref2
+  %call2 = call float @foo(ptr swifterror %error_ptr_ref2)
+  %error_from_foo2 = load ptr, ptr %error_ptr_ref2
+  %had_error_from_foo2 = icmp ne ptr %error_from_foo2, null
   br i1 %had_error_from_foo2, label %handler2, label %cont2
 cont2:
-  %v2 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo2, i64 0, i32 1
-  %t2 = load i8, i8* %v2
-  store i8 %t2, i8* %error_ref2
+  %v2 = getelementptr inbounds %swift_error, ptr %error_from_foo2, i64 0, i32 1
+  %t2 = load i8, ptr %v2
+  store i8 %t2, ptr %error_ref2
   br label %handler2
 handler2:
-  call void @free(i8* %bitcast2)
+  call void @free(ptr %error_from_foo2)
 
   ret float 1.0
 }

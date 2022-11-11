@@ -7,17 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "IntelPTSingleBufferTrace.h"
-
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
-
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
-
-#include <sstream>
-
 #include <linux/perf_event.h>
+#include <sstream>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -183,11 +179,8 @@ CreateIntelPTPerfEventConfiguration(bool enable_tsc,
   memset(&attr, 0, sizeof(attr));
   attr.size = sizeof(attr);
   attr.exclude_kernel = 1;
-  attr.sample_type = PERF_SAMPLE_TIME;
-  attr.sample_id_all = 1;
   attr.exclude_hv = 1;
   attr.exclude_idle = 1;
-  attr.mmap = 1;
 
   if (Expected<uint64_t> config_value =
           GeneratePerfEventConfigValue(enable_tsc, psb_period))
@@ -204,31 +197,19 @@ CreateIntelPTPerfEventConfiguration(bool enable_tsc,
 }
 #endif
 
-size_t IntelPTSingleBufferTrace::GetTraceBufferSize() const {
+size_t IntelPTSingleBufferTrace::GetIptTraceSize() const {
   return m_perf_event.GetAuxBuffer().size();
 }
 
-Error IntelPTSingleBufferTrace::ChangeCollectionState(
-    TraceCollectionState new_state) {
-  if (new_state == m_collection_state)
-    return Error::success();
-
-  switch (new_state) {
-  case TraceCollectionState::Paused:
-    if (Error err = m_perf_event.DisableWithIoctl())
-      return err;
-    break;
-  case TraceCollectionState::Running:
-    if (Error err = m_perf_event.EnableWithIoctl())
-      return err;
-    break;
-  }
-  m_collection_state = new_state;
-  return Error::success();
+Error IntelPTSingleBufferTrace::Pause() {
+  return m_perf_event.DisableWithIoctl();
 }
 
-Expected<std::vector<uint8_t>>
-IntelPTSingleBufferTrace::GetTraceBuffer(size_t offset, size_t size) {
+Error IntelPTSingleBufferTrace::Resume() {
+  return m_perf_event.EnableWithIoctl();
+}
+
+Expected<std::vector<uint8_t>> IntelPTSingleBufferTrace::GetIptTrace() {
   // Disable the perf event to force a flush out of the CPU's internal buffer.
   // Besides, we can guarantee that the CPU won't override any data as we are
   // reading the buffer.
@@ -243,84 +224,62 @@ IntelPTSingleBufferTrace::GetTraceBuffer(size_t offset, size_t size) {
   //
   // This is achieved by the PERF_EVENT_IOC_DISABLE ioctl request, as
   // mentioned in the man page of perf_event_open.
-  TraceCollectionState previous_state = m_collection_state;
-  if (Error err = ChangeCollectionState(TraceCollectionState::Paused))
-    return std::move(err);
-
-  std::vector<uint8_t> data(size, 0);
-  perf_event_mmap_page &mmap_metadata = m_perf_event.GetMetadataPage();
-  Log *log = GetLog(POSIXLog::Trace);
-  uint64_t head = mmap_metadata.aux_head;
-
-  LLDB_LOG(log, "Aux size -{0} , Head - {1}", mmap_metadata.aux_size, head);
-
-  /**
-   * When configured as ring buffer, the aux buffer keeps wrapping around
-   * the buffer and its not possible to detect how many times the buffer
-   * wrapped. Initially the buffer is filled with zeros,as shown below
-   * so in order to get complete buffer we first copy firstpartsize, followed
-   * by any left over part from beginning to aux_head
-   *
-   * aux_offset [d,d,d,d,d,d,d,d,0,0,0,0,0,0,0,0,0,0,0] aux_size
-   *                 aux_head->||<- firstpartsize  ->|
-   *
-   * */
-
-  MutableArrayRef<uint8_t> buffer(data);
-  ReadCyclicBuffer(buffer, m_perf_event.GetAuxBuffer(),
-                   static_cast<size_t>(head), offset);
-
-  if (Error err = ChangeCollectionState(previous_state))
-    return std::move(err);
-
-  return data;
+  return m_perf_event.GetReadOnlyAuxBuffer();
 }
 
-Expected<IntelPTSingleBufferTraceUP> IntelPTSingleBufferTrace::Start(
+Expected<IntelPTSingleBufferTrace> IntelPTSingleBufferTrace::Start(
     const TraceIntelPTStartRequest &request, Optional<lldb::tid_t> tid,
-    Optional<core_id_t> core_id, TraceCollectionState initial_state) {
+    Optional<cpu_id_t> cpu_id, bool disabled, Optional<int> cgroup_fd) {
 #ifndef PERF_ATTR_SIZE_VER5
   return createStringError(inconvertibleErrorCode(),
                            "Intel PT Linux perf event not supported");
 #else
   Log *log = GetLog(POSIXLog::Trace);
 
-  LLDB_LOG(log, "Will start tracing thread id {0} and cpu id {1}", tid,
-           core_id);
+  LLDB_LOG(log, "Will start tracing thread id {0} and cpu id {1}", tid, cpu_id);
 
-  if (__builtin_popcount(request.trace_buffer_size) != 1 ||
-      request.trace_buffer_size < 4096) {
+  if (__builtin_popcount(request.ipt_trace_size) != 1 ||
+      request.ipt_trace_size < 4096) {
     return createStringError(
         inconvertibleErrorCode(),
-        "The trace buffer size must be a power of 2 greater than or equal to "
+        "The intel pt trace size must be a power of 2 greater than or equal to "
         "4096 (2^12) bytes. It was %" PRIu64 ".",
-        request.trace_buffer_size);
+        request.ipt_trace_size);
   }
   uint64_t page_size = getpagesize();
-  uint64_t buffer_numpages = static_cast<uint64_t>(llvm::PowerOf2Floor(
-      (request.trace_buffer_size + page_size - 1) / page_size));
+  uint64_t aux_buffer_numpages = static_cast<uint64_t>(llvm::PowerOf2Floor(
+      (request.ipt_trace_size + page_size - 1) / page_size));
 
   Expected<perf_event_attr> attr = CreateIntelPTPerfEventConfiguration(
-      request.enable_tsc, request.psb_period.map([](int value) {
+      request.enable_tsc, request.psb_period.transform([](int value) {
         return static_cast<uint64_t>(value);
       }));
   if (!attr)
     return attr.takeError();
-  attr->disabled = initial_state == TraceCollectionState::Paused;
+  attr->disabled = disabled;
 
-  LLDB_LOG(log, "Will create trace buffer of size {0}",
-           request.trace_buffer_size);
+  LLDB_LOG(log, "Will create intel pt trace buffer of size {0}",
+           request.ipt_trace_size);
+  unsigned long flags = 0;
+  if (cgroup_fd) {
+    tid = *cgroup_fd;
+    flags |= PERF_FLAG_PID_CGROUP;
+  }
 
-  if (Expected<PerfEvent> perf_event = PerfEvent::Init(*attr, tid, core_id)) {
-    if (Error mmap_err = perf_event->MmapMetadataAndBuffers(buffer_numpages,
-                                                            buffer_numpages)) {
+  if (Expected<PerfEvent> perf_event =
+          PerfEvent::Init(*attr, tid, cpu_id, -1, flags)) {
+    if (Error mmap_err = perf_event->MmapMetadataAndBuffers(
+            /*num_data_pages=*/0, aux_buffer_numpages,
+            /*data_buffer_write=*/true)) {
       return std::move(mmap_err);
     }
-    IntelPTSingleBufferTraceUP trace_up(
-        new IntelPTSingleBufferTrace(std::move(*perf_event), initial_state));
-    return std::move(trace_up);
+    return IntelPTSingleBufferTrace(std::move(*perf_event));
   } else {
     return perf_event.takeError();
   }
 #endif
+}
+
+const PerfEvent &IntelPTSingleBufferTrace::GetPerfEvent() const {
+  return m_perf_event;
 }

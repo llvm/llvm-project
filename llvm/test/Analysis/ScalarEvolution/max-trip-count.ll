@@ -502,8 +502,8 @@ exit:
 ; Max backedge-taken count is zero.
 define void @bool_stride(i1 %s, i1 %n) mustprogress {
 ; CHECK-LABEL: Determining loop execution counts for: @bool_stride
-; CHECK: Loop %loop: Unpredictable backedge-taken count.
-; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+; CHECK: Loop %loop: backedge-taken count is false
+; CHECK: Loop %loop: max backedge-taken count is false
 entry:
   br label %loop
 

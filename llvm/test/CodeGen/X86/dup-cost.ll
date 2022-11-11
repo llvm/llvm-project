@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 
 ; Cold function, %dup should not be duplicated into predecessors.
-define i32 @cold(i32 %a, i32* %p, i32* %q) !prof !21 {
+define i32 @cold(i32 %a, ptr %p, ptr %q) !prof !21 {
 ; CHECK-LABEL: cold
 ; CHECK:       %entry
 ; CHECK:       %true1
@@ -14,12 +14,12 @@ entry:
   br i1 %cond1, label %true1, label %false1, !prof !30
 
 true1:
-  %v1 = load i32, i32* %p, align 4
+  %v1 = load i32, ptr %p, align 4
   %v2 = add i32 %v1, 2
   br label %dup
 
 false1:
-  %v3 = load i32, i32* %q, align 4
+  %v3 = load i32, ptr %q, align 4
   %v4 = sub i32 %v3, 3
   br label %dup
 
@@ -43,7 +43,7 @@ exit:
 
 ; Same code as previous function, but with hot profile count.
 ; So %dup should be duplicated into predecessors.
-define i32 @hot(i32 %a, i32* %p, i32* %q) !prof !22 {
+define i32 @hot(i32 %a, ptr %p, ptr %q) !prof !22 {
 ; CHECK-LABEL: hot
 ; CHECK:       %entry
 ; CHECK:       %true1
@@ -55,12 +55,12 @@ entry:
   br i1 %cond1, label %true1, label %false1, !prof !30
 
 true1:
-  %v1 = load i32, i32* %p, align 4
+  %v1 = load i32, ptr %p, align 4
   %v2 = add i32 %v1, 2
   br label %dup
 
 false1:
-  %v3 = load i32, i32* %q, align 4
+  %v3 = load i32, ptr %q, align 4
   %v4 = sub i32 %v3, 3
   br label %dup
 

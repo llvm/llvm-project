@@ -13,14 +13,6 @@
 # CHECK-NEXT:   From: DBG_VALUE %17:vgpr_32, 0, 0
 # CHECK-NEXT:     To: S_ENDPGM 0, implicit %69:vgpr_32, implicit %70:vgpr_32
 # CHECK-NEXT:  RegionInstrs: 46
-# CHECK: Unclustered reschedule did not help.
-# CHECK: Attempting to revert scheduling.
-# CHECK: Retrying function scheduling with lowest recorded occupancy 3.
-# CHECK: ********** MI Scheduling **********
-# CHECK: test_same_num_instrs:%bb.2
-# CHECK-NEXT:   From: DBG_VALUE %17:vgpr_32, 0, 0
-# CHECK-NEXT:     To: S_ENDPGM 0, implicit %69:vgpr_32, implicit %70:vgpr_32
-# CHECK-NEXT:  RegionInstrs: 46
 # CHECK: Attempting to revert scheduling.
 
 ---

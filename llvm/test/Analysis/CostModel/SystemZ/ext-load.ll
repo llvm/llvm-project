@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
 ;
 ; Test that an extension of a load does not get an additional cost in cases
 ; where the load performs the extension.

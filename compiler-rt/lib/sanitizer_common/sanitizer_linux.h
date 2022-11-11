@@ -69,6 +69,9 @@ uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp);
 // Linux-only syscalls.
 #if SANITIZER_LINUX
 uptr internal_prctl(int option, uptr arg2, uptr arg3, uptr arg4, uptr arg5);
+#    if defined(__x86_64__)
+uptr internal_arch_prctl(int option, uptr arg2);
+#    endif
 // Used only by sanitizer_stoptheworld. Signal handlers that are actually used
 // (like the process-wide error reporting SEGV handler) must use
 // internal_sigaction instead.

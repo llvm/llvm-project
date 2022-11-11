@@ -123,7 +123,7 @@ public:
 
   /// GetModule may return module for compile unit's object file.
   /// GetExeModule returns module for executable object file that contains
-  /// compile unit where type was actualy defined.
+  /// compile unit where type was actually defined.
   /// GetModule and GetExeModule may return the same value.
   lldb::ModuleSP GetExeModule();
 
@@ -134,6 +134,8 @@ public:
   const SymbolFile *GetSymbolFile() const { return m_symbol_file; }
 
   ConstString GetName();
+
+  ConstString GetBaseName();
 
   llvm::Optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope);
 
@@ -314,7 +316,7 @@ private:
 
 class TypeListImpl {
 public:
-  TypeListImpl() {}
+  TypeListImpl() = default;
 
   void Append(const lldb::TypeImplSP &type) { m_content.push_back(type); }
 
@@ -345,7 +347,7 @@ private:
 
 class TypeMemberImpl {
 public:
-  TypeMemberImpl() {}
+  TypeMemberImpl() = default;
 
   TypeMemberImpl(const lldb::TypeImplSP &type_impl_sp, uint64_t bit_offset,
                  ConstString name, uint32_t bitfield_bit_size = 0,
@@ -437,7 +439,7 @@ private:
 
 class TypeMemberFunctionImpl {
 public:
-  TypeMemberFunctionImpl() {}
+  TypeMemberFunctionImpl() = default;
 
   TypeMemberFunctionImpl(const CompilerType &type, const CompilerDecl &decl,
                          const std::string &name,
@@ -502,7 +504,7 @@ protected:
 
 class TypeEnumMemberListImpl {
 public:
-  TypeEnumMemberListImpl() {}
+  TypeEnumMemberListImpl() = default;
 
   void Append(const lldb::TypeEnumMemberImplSP &type) {
     m_content.push_back(type);

@@ -28,9 +28,8 @@ export class ViewPDLLCommand extends Command {
       return;
 
     // Check to see if a language client is active for this document.
-    const workspaceFolder =
-        vscode.workspace.getWorkspaceFolder(editor.document.uri);
-    const pdllClient = this.context.getLanguageClient(workspaceFolder, "pdll");
+    const pdllClient =
+        this.context.getLanguageClient(editor.document.uri, "pdll");
     if (!pdllClient) {
       return;
     }

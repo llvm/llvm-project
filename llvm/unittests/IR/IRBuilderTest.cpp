@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
@@ -20,6 +21,8 @@
 #include "llvm/IR/Verifier.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+#include <type_traits>
 
 using namespace llvm;
 using ::testing::UnorderedElementsAre;
@@ -135,6 +138,29 @@ TEST_F(IRBuilderTest, Intrinsics) {
       {Builder.getInt32(static_cast<uint32_t>(RoundingMode::TowardZero))});
   II = cast<IntrinsicInst>(Call);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::set_rounding);
+}
+
+TEST_F(IRBuilderTest, IntrinsicMangling) {
+  IRBuilder<> Builder(BB);
+  Type *VoidTy = Builder.getVoidTy();
+  Type *Int64Ty = Builder.getInt64Ty();
+  Value *Int64Val = Builder.getInt64(0);
+  Value *DoubleVal = PoisonValue::get(Builder.getDoubleTy());
+  CallInst *Call;
+
+  // Mangled return type, no arguments.
+  Call = Builder.CreateIntrinsic(Int64Ty, Intrinsic::coro_size, {});
+  EXPECT_EQ(Call->getCalledFunction()->getName(), "llvm.coro.size.i64");
+
+  // Void return type, mangled argument type.
+  Call =
+      Builder.CreateIntrinsic(VoidTy, Intrinsic::set_loop_iterations, Int64Val);
+  EXPECT_EQ(Call->getCalledFunction()->getName(),
+            "llvm.set.loop.iterations.i64");
+
+  // Mangled return type and argument type.
+  Call = Builder.CreateIntrinsic(Int64Ty, Intrinsic::lround, DoubleVal);
+  EXPECT_EQ(Call->getCalledFunction()->getName(), "llvm.lround.i64.f64");
 }
 
 TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
@@ -986,6 +1012,21 @@ TEST_F(IRBuilderTest, CreateGlobalStringPtr) {
   EXPECT_TRUE(String3->getType()->getPointerAddressSpace() == 2);
 }
 
+TEST_F(IRBuilderTest, CreateThreadLocalAddress) {
+  IRBuilder<> Builder(BB);
+
+  GlobalVariable *G = new GlobalVariable(*M, Builder.getInt64Ty(), /*isConstant*/true,
+                                         GlobalValue::ExternalLinkage, nullptr, "", nullptr,
+                                         GlobalValue::GeneralDynamicTLSModel);
+
+  Constant *CEBC = ConstantExpr::getBitCast(G, Builder.getInt8PtrTy());
+  // Tests that IRBuilder::CreateThreadLocalAddress wouldn't crash if its operand
+  // is BitCast ConstExpr. The case should be eliminated after we eliminate the
+  // abuse of constexpr.
+  CallInst *CI = Builder.CreateThreadLocalAddress(CEBC);
+  EXPECT_NE(CI, nullptr);
+}
+
 TEST_F(IRBuilderTest, DebugLoc) {
   auto CalleeTy = FunctionType::get(Type::getVoidTy(Ctx),
                                     /*isVarArg=*/false);
@@ -1117,5 +1158,31 @@ TEST_F(IRBuilderTest, NoFolderNames) {
   auto *Add =
       Builder.CreateAdd(Builder.getInt32(1), Builder.getInt32(2), "add");
   EXPECT_EQ(Add->getName(), "add");
+}
+
+TEST_F(IRBuilderTest, CTAD) {
+  struct TestInserter : public IRBuilderDefaultInserter {
+    TestInserter() = default;
+  };
+  InstSimplifyFolder Folder(M->getDataLayout());
+
+  IRBuilder Builder1(Ctx, Folder, TestInserter());
+  static_assert(std::is_same_v<decltype(Builder1),
+                               IRBuilder<InstSimplifyFolder, TestInserter>>);
+  IRBuilder Builder2(Ctx);
+  static_assert(std::is_same_v<decltype(Builder2), IRBuilder<>>);
+  IRBuilder Builder3(BB, Folder);
+  static_assert(
+      std::is_same_v<decltype(Builder3), IRBuilder<InstSimplifyFolder>>);
+  IRBuilder Builder4(BB);
+  static_assert(std::is_same_v<decltype(Builder4), IRBuilder<>>);
+  // The block BB is empty, so don't test this one.
+  // IRBuilder Builder5(BB->getTerminator());
+  // static_assert(std::is_same_v<decltype(Builder5), IRBuilder<>>);
+  IRBuilder Builder6(BB, BB->end(), Folder);
+  static_assert(
+      std::is_same_v<decltype(Builder6), IRBuilder<InstSimplifyFolder>>);
+  IRBuilder Builder7(BB, BB->end());
+  static_assert(std::is_same_v<decltype(Builder7), IRBuilder<>>);
 }
 }

@@ -37,7 +37,7 @@
 
 ## If a relocatable object file defines non-reserved identifiers (by C and C++)
 ## edata/end/etext, don't redefine them. Note: GNU ld redefines the reserved
-## _edata while we don't for simplicty.
+## _edata while we don't for simplicity.
 # RUN: ld.lld %t/b.o -o %t/b
 # RUN: llvm-objdump -t %t/b | FileCheck %s --check-prefix=CHECK2
 # RUN: ld.lld %t/c.o -o %t/c

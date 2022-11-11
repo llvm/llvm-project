@@ -328,20 +328,20 @@ private:
 /// This class generates the following tree:
 ///
 ///     static_test_env
-///     ├── bad_symlink -> dne
-///     ├── dir1
-///     │   ├── dir2
-///     │   │   ├── afile3
-///     │   │   ├── dir3
-///     │   │   │   └── file5
-///     │   │   ├── file4
-///     │   │   └── symlink_to_dir3 -> dir3
-///     │   ├── file1
-///     │   └── file2
-///     ├── empty_file
-///     ├── non_empty_file
-///     ├── symlink_to_dir -> dir1
-///     └── symlink_to_empty_file -> empty_file
+///     |-- bad_symlink -> dne
+///     |-- dir1
+///     |   |-- dir2
+///     |   |   |-- afile3
+///     |   |   |-- dir3
+///     |   |   |   `-- file5
+///     |   |   |-- file4
+///     |   |   `-- symlink_to_dir3 -> dir3
+///     |   `-- file1
+///     |   `-- file2
+///     |-- empty_file
+///     |-- non_empty_file
+///     |-- symlink_to_dir -> dir1
+///     `-- symlink_to_empty_file -> empty_file
 ///
 class static_test_env {
     scoped_test_env env_;

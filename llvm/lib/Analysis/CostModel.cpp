@@ -25,6 +25,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/IntrinsicInst.h"
 using namespace llvm;
 
 static cl::opt<TargetTransformInfo::TargetCostKind> CostKind(
@@ -39,6 +40,9 @@ static cl::opt<TargetTransformInfo::TargetCostKind> CostKind(
                clEnumValN(TargetTransformInfo::TCK_SizeAndLatency,
                           "size-latency", "Code size and latency")));
 
+static cl::opt<bool> TypeBasedIntrinsicCost("type-based-intrinsic-cost",
+    cl::desc("Calculate intrinsics cost based only on argument types"),
+    cl::init(false));
 
 #define CM_NAME "cost-model"
 #define DEBUG_TYPE CM_NAME
@@ -51,14 +55,6 @@ namespace {
     CostModelAnalysis() : FunctionPass(ID) {
       initializeCostModelAnalysisPass(
         *PassRegistry::getPassRegistry());
-    }
-
-    /// Returns the expected cost of the instruction.
-    /// Returns -1 if the cost is unknown.
-    /// Note, this method does not cache the cost calculation and it
-    /// can be expensive in some cases.
-    InstructionCost getInstructionCost(const Instruction *I) const {
-      return TTI->getInstructionCost(I, TargetTransformInfo::TCK_RecipThroughput);
     }
 
   private:
@@ -103,7 +99,17 @@ void CostModelAnalysis::print(raw_ostream &OS, const Module*) const {
 
   for (BasicBlock &B : *F) {
     for (Instruction &Inst : B) {
-      InstructionCost Cost = TTI->getInstructionCost(&Inst, CostKind);
+      InstructionCost Cost;
+      auto *II = dyn_cast<IntrinsicInst>(&Inst);
+      if (II && TypeBasedIntrinsicCost) {
+        IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II,
+                                    InstructionCost::getInvalid(), true);
+        Cost = TTI->getIntrinsicInstrCost(ICA, CostKind);
+      }
+      else {
+        Cost = TTI->getInstructionCost(&Inst, CostKind);
+      }
+
       if (auto CostVal = Cost.getValue())
         OS << "Cost Model: Found an estimated cost of " << *CostVal;
       else
@@ -122,7 +128,17 @@ PreservedAnalyses CostModelPrinterPass::run(Function &F,
     for (Instruction &Inst : B) {
       // TODO: Use a pass parameter instead of cl::opt CostKind to determine
       // which cost kind to print.
-      InstructionCost Cost = TTI.getInstructionCost(&Inst, CostKind);
+      InstructionCost Cost;
+      auto *II = dyn_cast<IntrinsicInst>(&Inst);
+      if (II && TypeBasedIntrinsicCost) {
+        IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II,
+                                    InstructionCost::getInvalid(), true);
+        Cost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+      }
+      else {
+        Cost = TTI.getInstructionCost(&Inst, CostKind);
+      }
+
       if (auto CostVal = Cost.getValue())
         OS << "Cost Model: Found an estimated cost of " << *CostVal;
       else

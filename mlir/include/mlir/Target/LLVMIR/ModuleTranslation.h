@@ -16,6 +16,7 @@
 
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
@@ -41,6 +42,7 @@ namespace detail {
 class DebugTranslation;
 } // namespace detail
 
+class DINodeAttr;
 class LLVMFuncOp;
 
 /// Implementation class for module translation. Holds a reference to the module
@@ -174,6 +176,9 @@ public:
   /// Translates the given location.
   const llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
 
+  /// Translates the given LLVM debug info metadata.
+  llvm::Metadata *translateDebugInfo(LLVM::DINodeAttr attr);
+
   /// Translates the contents of the given block to LLVM IR using this
   /// translator. The LLVM IR basic block corresponding to the given block is
   /// expected to exist in the mapping of this translator. Uses `builder` to
@@ -264,6 +269,8 @@ public:
     ModuleTranslation &moduleTranslation;
   };
 
+  SymbolTableCollection& symbolTable() { return symbolTableCollection; }
+
 private:
   ModuleTranslation(Operation *module,
                     std::unique_ptr<llvm::Module> llvmModule);
@@ -333,6 +340,9 @@ private:
   /// Stack of user-specified state elements, useful when translating operations
   /// with regions.
   SmallVector<std::unique_ptr<StackFrame>> stack;
+
+  /// A cache for the symbol tables constructed during symbols lookup.
+  SymbolTableCollection symbolTableCollection;
 };
 
 namespace detail {

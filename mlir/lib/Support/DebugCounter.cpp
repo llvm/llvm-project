@@ -27,7 +27,7 @@ struct DebugCounterOptions {
       "mlir-debug-counter",
       llvm::cl::desc(
           "Comma separated list of debug counter skip and count arguments"),
-      llvm::cl::CommaSeparated, llvm::cl::ZeroOrMore};
+      llvm::cl::CommaSeparated};
 
   llvm::cl::opt<bool> printCounterInfo{
       "mlir-print-debug-counter", llvm::cl::init(false), llvm::cl::Optional,
@@ -122,8 +122,7 @@ void DebugCounter::applyCLOptions() {
       continue;
 
     // Debug counter arguments are expected to be in the form: `counter=value`.
-    StringRef counterName, counterValueStr;
-    std::tie(counterName, counterValueStr) = arg.split('=');
+    auto [counterName, counterValueStr] = arg.split('=');
     if (counterValueStr.empty()) {
       llvm::errs() << "error: expected DebugCounter argument to have an `=` "
                       "separating the counter name and value, but the provided "

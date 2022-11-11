@@ -5,12 +5,12 @@
 
 define ghccc void @foo() nounwind {
 entry:
-  %0 = call i8* @llvm.stacksave()
-  call void @llvm.stackrestore(i8* %0)
+  %0 = call ptr @llvm.stacksave()
+  call void @llvm.stackrestore(ptr %0)
   ret void
 }
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
 
 ; CHECK: LLVM ERROR: Variable-sized stack allocations are not supported in GHC calling convention

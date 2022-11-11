@@ -181,6 +181,10 @@ static void emitDirectiveRelocJalr(const MachineInstr &MI,
 }
 
 void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  // FIXME: Enable feature predicate checks once all the test pass.
+  // Mips_MC::verifyInstructionPredicates(MI->getOpcode(),
+  //                                      getSubtargetInfo().getFeatureBits());
+
   MipsTargetStreamer &TS = getTargetStreamer();
   unsigned Opc = MI->getOpcode();
   TS.forbidModuleDirective();
@@ -522,27 +526,27 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O);
     case 'X': // hex const int
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << "0x" << Twine::utohexstr(MO.getImm());
       return false;
     case 'x': // hex const int (low 16 bits)
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << "0x" << Twine::utohexstr(MO.getImm() & 0xffff);
       return false;
     case 'd': // decimal const int
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << MO.getImm();
       return false;
     case 'm': // decimal const int minus 1
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << MO.getImm() - 1;
       return false;
     case 'y': // exact log2
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       if (!isPowerOf2_64(MO.getImm()))
         return true;
@@ -550,7 +554,7 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       return false;
     case 'z':
       // $0 if zero, regular printing otherwise
-      if (MO.getType() == MachineOperand::MO_Immediate && MO.getImm() == 0) {
+      if (MO.isImm() && MO.getImm() == 0) {
         O << "$0";
         return false;
       }

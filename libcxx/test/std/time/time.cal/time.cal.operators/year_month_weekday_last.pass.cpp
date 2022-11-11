@@ -30,14 +30,11 @@
 //   operator/(const month_weekday_last& mwdl, int y) noexcept;
 // Returns: year(y) / mwdl.
 
-
-
 #include <chrono>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
-#include "test_comparisons.h"
 
 int main(int, char**)
 {

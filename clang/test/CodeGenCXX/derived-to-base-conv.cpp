@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -std=c++11 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm %s -o - | FileCheck %s
 
 struct A {
   A(const A&);
@@ -33,11 +33,10 @@ void test0(X x) {
   test0_helper(x);
   // CHECK-LABEL:    define{{.*}} void @_Z5test01X(
   // CHECK:      [[TMP:%.*]] = alloca [[A:%.*]], align
-  // CHECK-NEXT: [[T0:%.*]] = call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[B:%.*]]* @_ZN1XcvR1BEv(
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[B]]* [[T0]] to [[A]]*
-  // CHECK-NEXT: call void @_ZN1AC1ERKS_([[A]]* {{[^,]*}} [[TMP]], [[A]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T1]])
-  // CHECK-NEXT: call void @_Z12test0_helper1A([[A]]* noundef [[TMP]])
-  // CHECK-NEXT: call void @_ZN1AD1Ev([[A]]* {{[^,]*}} [[TMP]])
+  // CHECK-NEXT: [[T0:%.*]] = call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN1XcvR1BEv(
+  // CHECK-NEXT: call void @_ZN1AC1ERKS_(ptr {{[^,]*}} [[TMP]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T0]])
+  // CHECK-NEXT: call void @_Z12test0_helper1A(ptr noundef [[TMP]])
+  // CHECK-NEXT: call void @_ZN1AD1Ev(ptr {{[^,]*}} [[TMP]])
   // CHECK-NEXT: ret void
 }
 
@@ -76,11 +75,10 @@ class Test2b final : public virtual Test2a {};
 void test2(Test2b &x) {
   Test2a &y = x;
   // CHECK-LABEL:    define{{.*}} void @_Z5test2R6Test2b(
-  // CHECK:      [[X:%.*]] = alloca [[B:%.*]]*, align 8
-  // CHECK-NEXT: [[Y:%.*]] = alloca [[A:%.*]]*, align 8
-  // CHECK-NEXT: store [[B]]* {{%.*}}, [[B]]** [[X]], align 8
-  // CHECK-NEXT: [[T0:%.*]] = load [[B]]*, [[B]]** [[X]], align 8
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[B]]* [[T0]] to [[A]]*
-  // CHECK-NEXT: store [[A]]* [[T1]], [[A]]** [[Y]], align 8
+  // CHECK:      [[X:%.*]] = alloca ptr, align 8
+  // CHECK-NEXT: [[Y:%.*]] = alloca ptr, align 8
+  // CHECK-NEXT: store ptr {{%.*}}, ptr [[X]], align 8
+  // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[X]], align 8
+  // CHECK-NEXT: store ptr [[T0]], ptr [[Y]], align 8
   // CHECK-NEXT: ret void
 }

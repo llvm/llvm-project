@@ -17,8 +17,7 @@
 #include "min_allocator.h"
 #include "allocators.h"
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool tests() {
     {
         std::vector<int, test_allocator<int> > l(3, 2, test_allocator<int>(5));
         std::vector<int, test_allocator<int> > l2(l, test_allocator<int>(3));
@@ -81,5 +80,14 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

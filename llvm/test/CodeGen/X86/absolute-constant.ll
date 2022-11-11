@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @foo = external global i8, align 1, !absolute_symbol !0
 
-define void @bar(i8* %x) {
+define void @bar(ptr %x) {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb $foo, (%rdi)
@@ -28,9 +28,9 @@ define void @bar(i8* %x) {
 ; PIC-NEXT:  .LBB0_1: # %if.end
 ; PIC-NEXT:    retq
 entry:
-  %0 = load i8, i8* %x, align 1
+  %0 = load i8, ptr %x, align 1
   %conv = sext i8 %0 to i32
-  %and = and i32 %conv, sext (i8 ptrtoint (i8* @foo to i8) to i32)
+  %and = and i32 %conv, sext (i8 ptrtoint (ptr @foo to i8) to i32)
   %tobool = icmp eq i32 %and, 0
   br i1 %tobool, label %if.end, label %if.then
 

@@ -22,6 +22,9 @@
 #include "llvm/Support/MachineValueType.h"
 
 namespace llvm {
+
+class TargetRegisterClass;
+
 namespace WebAssembly {
 
 /// Used as immediate MachineOperands for block signatures
@@ -108,8 +111,11 @@ std::string signatureToString(const wasm::WasmSignature *Sig);
 // Convert a MVT into its corresponding wasm ValType.
 wasm::ValType toValType(MVT Type);
 
-// Convert a register class to a wasm ValType.
+// Convert a register class ID to a wasm ValType.
 wasm::ValType regClassToValType(unsigned RC);
+
+// Convert a register class to a wasm ValType.
+wasm::ValType regClassToValType(const TargetRegisterClass *RC);
 
 /// Sets a Wasm Symbol Type.
 void wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,

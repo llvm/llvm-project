@@ -1,7 +1,8 @@
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s > %t
-# RUN: %lldb %t -o "image lookup -v -s lookup_ranges" -o exit 2>&1 | FileCheck %s
+# RUN: %lldb %t -o "image lookup -v -s lookup_ranges" -o exit 2>%t.error | FileCheck %s
+# RUN: cat %t.error | FileCheck %s --check-prefix ERROR
 
-# CHECK: DIE has DW_AT_ranges(DW_FORM_sec_offset 0x47) attribute, but range extraction failed (No debug_ranges section),
+# ERROR: DIE has DW_AT_ranges(DW_FORM_sec_offset 0x47) attribute, but range extraction failed (No debug_ranges section),
 # CHECK:  Function: id = {0x0000001c}, name = "ranges", range = [0x0000000000000000-0x0000000000000004)
 # CHECK:    Blocks: id = {0x0000001c}, range = [0x00000000-0x00000004)
 

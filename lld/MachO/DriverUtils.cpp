@@ -150,6 +150,7 @@ std::string macho::createResponseFile(const InputArgList &args) {
       break;
     case OPT_force_load:
     case OPT_weak_library:
+    case OPT_load_hidden:
       os << arg->getSpelling() << " "
          << quote(rewriteInputPath(arg->getValue())) << "\n";
       break;
@@ -210,7 +211,7 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
   DylibFile *&file = loadedDylibs[path];
   if (file) {
     if (explicitlyLinked)
-      file->explicitlyLinked = explicitlyLinked;
+      file->setExplicitlyLinked();
     return file;
   }
 

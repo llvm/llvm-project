@@ -73,9 +73,9 @@ define void @t3() {
 ; X64-NEXT:    pinsrw $0, (%rax), %xmm0
 ; X64-NEXT:    movq %xmm0, (%rcx)
 ; X64-NEXT:    retq
-  load i16, i16* @g0
-  load <4 x i16>, <4 x i16>* @g1
+  load i16, ptr @g0
+  load <4 x i16>, ptr @g1
   insertelement <4 x i16> %2, i16 %1, i32 0
-  store <4 x i16> %3, <4 x i16>* @g1
+  store <4 x i16> %3, ptr @g1
   ret void
 }

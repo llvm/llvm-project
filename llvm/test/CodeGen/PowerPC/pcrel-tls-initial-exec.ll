@@ -13,7 +13,7 @@
 
 @x = external thread_local global i32, align 4
 
-define i32* @InitialExecAddressLoad() {
+define ptr @InitialExecAddressLoad() {
 ; CHECK-S-LABEL: InitialExecAddressLoad:
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    pld r3, x@got@tprel@pcrel(0), 1
@@ -26,7 +26,7 @@ define i32* @InitialExecAddressLoad() {
 ; CHECK-O-NEXT:    0000000000000009:  R_PPC64_TLS	x
 ; CHECK-O-NEXT:    20 00 80 4e                  	blr
 entry:
-  ret i32* @x
+  ret ptr @x
 }
 
 define i32 @InitialExecValueLoad() {
@@ -45,6 +45,6 @@ define i32 @InitialExecValueLoad() {
 ; CHECK-SYM-LABEL: Symbol table '.symtab' contains 6 entries
 ; CHECK-SYM:         0000000000000000     0 TLS     GLOBAL DEFAULT  UND x
 entry:
-  %0 = load i32, i32* @x, align 4
+  %0 = load i32, ptr @x, align 4
   ret i32 %0
 }

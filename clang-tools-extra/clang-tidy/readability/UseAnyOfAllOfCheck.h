@@ -20,7 +20,7 @@ namespace readability {
 /// or std::all_of.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-use-anyofallof.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/use-anyofallof.html
 class UseAnyOfAllOfCheck : public ClangTidyCheck {
 public:
   using ClangTidyCheck::ClangTidyCheck;

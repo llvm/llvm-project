@@ -1,4 +1,4 @@
-// REQUIRES: powerpc-registered-target.
+// REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu \
@@ -12,10 +12,9 @@ extern unsigned long long ull;
 extern unsigned long long *ull_addr;
 
 // CHECK-LABEL: @test_builtin_ppc_store8r(
-// CHECK:         [[TMP0:%.*]] = load i64, i64* @ull, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load i64*, i64** @ull_addr, align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[TMP1]] to i8*
-// CHECK-NEXT:    call void @llvm.ppc.store8r(i64 [[TMP0]], i8* [[TMP2]])
+// CHECK:         [[TMP0:%.*]] = load i64, ptr @ull, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @ull_addr, align 8
+// CHECK-NEXT:    call void @llvm.ppc.store8r(i64 [[TMP0]], ptr [[TMP1]])
 // CHECK-NEXT:    ret void
 
 // CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
@@ -24,9 +23,8 @@ void test_builtin_ppc_store8r() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_load8r(
-// CHECK:         [[TMP0:%.*]] = load i64*, i64** @ull_addr, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[TMP0]] to i8*
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ppc.load8r(i8* [[TMP1]])
+// CHECK:         [[TMP0:%.*]] = load ptr, ptr @ull_addr, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ppc.load8r(ptr [[TMP0]])
 // CHECK-NEXT:    ret i64 [[TMP2]]
 
 // CHECK-32-ERROR: error: this builtin is only available on 64-bit targets

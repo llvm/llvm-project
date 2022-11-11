@@ -10,44 +10,56 @@ Clang Linker Wrapper
 Introduction
 ============
 
-This tool works as a wrapper over a linking job. The tool is used to create
-linked device images for offloading. It scans the linker's input for embedded
-device offloading data stored in sections ``.llvm.offloading.<triple>.<arch>``
-and extracts it as a temporary file. The extracted device files will then be
-passed to a device linking job to create a final device image. The sections will
-also be stripped and the resulting file passed back to the host linker.
+This tool works as a wrapper of the normal host linking job. This tool is used
+to create linked device images for offloading and the necessary runtime calls to
+register them. It works by first scanning the linker's input for embedded device
+offloading data stored at the ``.llvm.offloading`` section. This section
+contains binary data created by the :doc:`ClangOffloadPackager`. The extracted
+device files will then be linked. The linked modules will then be wrapped into a
+new object file containing the code necessary to register it with the offloading
+runtime.
 
 Usage
 =====
 
-This tool can be used with the following options. Arguments to the host linker
-being wrapper around are passed as positional arguments using the ``--`` flag to
-override parsing.
+This tool can be used with the following options. Any arguments not intended
+only for the linker wrapper will be forwarded to the wrapped linker job.
 
 .. code-block:: console
 
-  USAGE: clang-linker-wrapper [options] <options to be passed to linker>...
+  USAGE: clang-linker-wrapper [options] -- <options to passed to the linker>
   
   OPTIONS:
-  
-  Generic Options:
-  
-    --help                    - Display available options (--help-hidden for more)
-    --help-list               - Display list of available options (--help-list-hidden for more)
-    --version                 - Display the version of this program
-  
-  clang-linker-wrapper options:
-  
-    --host-triple=<string>     - Triple to use for the host compilation
-    --linker-path=<string>     - Path of linker binary
-    --opt-level=<string>       - Optimization level for LTO
-    --ptxas-option=<string>    - Argument to pass to the ptxas invocation
-    --save-temps               - Save intermediary results.
-    --strip-sections           - Strip offloading sections from the host object file.
-    --target-embed-bc          - Embed linked bitcode instead of an executable device image
-    --target-feature=<string>  - Target features for triple
-    --bitcode-library=<string> - Path for the target bitcode library
-    -v                         - Verbose output from tools
+    --bitcode-library=<kind>-<triple>-<arch>=<path>
+                           Extra bitcode library to link
+    --cuda-path=<dir>      Set the system CUDA path
+    --device-debug         Use debugging
+    --device-linker=<value> or <triple>=<value>
+                           Arguments to pass to the device linker invocation
+    --dry-run              Print program arguments without running
+    --embed-bitcode        Embed linked bitcode in the module
+    --help-hidden          Display all available options
+    --help                 Display available options (--help-hidden for more)
+    --host-triple=<triple> Triple to use for the host compilation
+    --linker-path=<path>   The linker executable to invoke
+    -L <dir>               Add <dir> to the library search path
+    -l <libname>           Search for library <libname>
+    --opt-level=<O0, O1, O2, or O3>
+                           Optimization level for LTO
+    -o <path>              Path to file to write output
+    --pass-remarks-analysis=<value>
+                           Pass remarks for LTO
+    --pass-remarks-missed=<value>
+                           Pass remarks for LTO
+    --pass-remarks=<value> Pass remarks for LTO
+    --print-wrapped-module Print the wrapped module's IR for testing
+    --ptxas-arg=<value>    Argument to pass to the 'ptxas' invocation
+    --save-temps           Save intermediate results
+    --sysroot<value>       Set the system root
+    --verbose              Verbose output from tools
+    --v                    Display the version number and exit
+    --                     The separator for the wrapped linker arguments
+
 
 Example
 =======
@@ -59,4 +71,4 @@ section and run a device linking job on it.
 
 .. code-block:: console
 
-  clang-linker-wrapper -host-triple x86_64 -linker-path /usr/bin/ld -- <Args>
+  clang-linker-wrapper --host-triple=x86_64 --linker-path=/usr/bin/ld -- <Args>

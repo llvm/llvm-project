@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple i386-pc-cygwin | FileCheck %s -check-prefix USEDIVDI
 ; RUN: llc < %s -mtriple i386-pc-mingw32 | FileCheck %s -check-prefix USEDIVDI
 
-define i32 @main(i32 %argc, i8** nocapture %argv) nounwind readonly {
+define i32 @main(i32 %argc, ptr nocapture %argv) nounwind readonly {
 entry:
   %conv4 = sext i32 %argc to i64
   %div = sdiv i64 84, %conv4

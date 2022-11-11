@@ -8,8 +8,6 @@ class TestNoLocalFile(GDBRemoteTestBase):
     """ Test the case where there is NO local copy of the file
         being debugged.  We shouldn't immediately error out, but
         rather lldb should ask debugserver if it knows about the file. """
-
-    mydir = TestBase.compute_mydir(__file__)
     
     @skipIfXmlSupportMissing
     def test_with_python(self):

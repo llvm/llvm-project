@@ -9,6 +9,7 @@
 ; this case right before the s_endpgm to avoid GPU hangs, which is what this
 ; tests.
 
+; FIXME: Immediate value 0x41200000 should be folded into the v_cmp instruction.
 define amdgpu_ps void @return_void(float %0) #0 {
 ; CHECK-LABEL: return_void:
 ; CHECK:       ; %bb.0: ; %main_body
@@ -28,8 +29,7 @@ define amdgpu_ps void @return_void(float %0) #0 {
 ; CHECK-NEXT:    s_mov_b64 vcc, 0
 ; CHECK-NEXT:    s_branch .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: ; %Flow1
-; CHECK-NEXT:    s_or_saveexec_b64 s[0:1], s[2:3]
-; CHECK-NEXT:    s_xor_b64 exec, exec, s[0:1]
+; CHECK-NEXT:    s_andn2_saveexec_b64 s[0:1], s[2:3]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %end
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1.0
@@ -73,8 +73,7 @@ define amdgpu_ps void @return_void_compr(float %0) #0 {
 ; CHECK-NEXT:    s_mov_b64 vcc, 0
 ; CHECK-NEXT:    s_branch .LBB1_1
 ; CHECK-NEXT:  .LBB1_3: ; %Flow1
-; CHECK-NEXT:    s_or_saveexec_b64 s[0:1], s[2:3]
-; CHECK-NEXT:    s_xor_b64 exec, exec, s[0:1]
+; CHECK-NEXT:    s_andn2_saveexec_b64 s[0:1], s[2:3]
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_5
 ; CHECK-NEXT:  ; %bb.4: ; %end
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0

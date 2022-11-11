@@ -1,6 +1,14 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("LinkerWrapperOpts") {
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "LinkerWrapperOpts.td"
+}
+
 executable("clang-linker-wrapper") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":LinkerWrapperOpts",
     "//clang/lib/Basic",
     "//llvm/lib/Analysis",
     "//llvm/lib/BinaryFormat",
@@ -11,6 +19,7 @@ executable("clang-linker-wrapper") {
     "//llvm/lib/LTO",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",

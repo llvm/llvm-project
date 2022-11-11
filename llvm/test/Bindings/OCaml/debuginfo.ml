@@ -183,7 +183,7 @@ let test_bbinstr fty f f_di file_di dibuilder =
       | Some file_of_f_di', Some file_of_scope' ->
           file_of_f_di' = file_di && file_of_scope' = file_di
       | _ -> false );
-    let foocall = Llvm.build_call2 fty foodecl [| arg0 |] "" builder in
+    let foocall = Llvm.build_call fty foodecl [| arg0 |] "" builder in
     let foocall_loc =
       Llvm_debuginfo.dibuild_create_debug_location context ~line:10 ~column:12
         ~scope

@@ -92,16 +92,16 @@ define i8 @add_and_xor_extra_use(i8 %x, i8 %y) nounwind {
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %r14d
-; CHECK-NEXT:    movl %r14d, %eax
+; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    movl %ebp, %eax
 ; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    movzbl %al, %ebp
-; CHECK-NEXT:    movl %ebp, %edi
+; CHECK-NEXT:    movzbl %al, %r14d
+; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    andb %bl, %bpl
-; CHECK-NEXT:    movzbl %bpl, %edi
+; CHECK-NEXT:    andb %bl, %r14b
+; CHECK-NEXT:    movzbl %r14b, %edi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    orb %r14b, %bl
+; CHECK-NEXT:    orb %bpl, %bl
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
@@ -172,28 +172,28 @@ define i64 @add_and_xor_const_explicit_trunc_wrong_mask(i64 %x) {
   ret i64 %add
 }
 
-define i8* @gep_and_xor(i8* %a, i64 %m) {
+define ptr @gep_and_xor(ptr %a, i64 %m) {
 ; CHECK-LABEL: gep_and_xor:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    retq
-  %old = ptrtoint i8* %a to i64
+  %old = ptrtoint ptr %a to i64
   %old.not = and i64 %old, %m
   %offset = xor i64 %old.not, %m
-  %p = getelementptr i8, i8* %a, i64 %offset
-  ret i8* %p
+  %p = getelementptr i8, ptr %a, i64 %offset
+  ret ptr %p
 }
 
-define i8* @gep_and_xor_const(i8* %a) {
+define ptr @gep_and_xor_const(ptr %a) {
 ; CHECK-LABEL: gep_and_xor_const:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    orq $1, %rax
 ; CHECK-NEXT:    retq
-  %old = ptrtoint i8* %a to i64
+  %old = ptrtoint ptr %a to i64
   %old.not = and i64 %old, 1
   %offset = xor i64 %old.not, 1
-  %p = getelementptr i8, i8* %a, i64 %offset
-  ret i8* %p
+  %p = getelementptr i8, ptr %a, i64 %offset
+  ret ptr %p
 }

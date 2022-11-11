@@ -119,7 +119,7 @@ static inline void printCallStack(const SmallVectorImpl<uint64_t> &CallStack) {
 // only changes the leaf of frame stack. \fn isEqual is a virtual function,
 // which will have perf overhead. In the future, if we redesign a better hash
 // function, then we can just skip this or switch to non-virtual function(like
-// just ignore comparision if hash conflicts probabilities is low)
+// just ignore comparison if hash conflicts probabilities is low)
 template <class T> class Hashable {
 public:
   std::shared_ptr<T> Data;
@@ -598,7 +598,7 @@ public:
       : PerfReaderBase(B, PerfTrace), PIDFilter(PID){};
 
   // Entry of the reader to parse multiple perf traces
-  virtual void parsePerfTraces() override;
+  void parsePerfTraces() override;
   // Generate perf script from perf data
   static PerfInputFile convertPerfDataToTrace(ProfiledBinary *Binary,
                                               PerfInputFile &File,
@@ -678,7 +678,7 @@ public:
                 Optional<uint32_t> PID)
       : PerfScriptReader(Binary, PerfTrace, PID){};
   // Parse the LBR only sample.
-  virtual void parseSample(TraceStream &TraceIt, uint64_t Count) override;
+  void parseSample(TraceStream &TraceIt, uint64_t Count) override;
 };
 
 /*

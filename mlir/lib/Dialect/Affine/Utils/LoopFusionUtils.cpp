@@ -370,7 +370,7 @@ LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
                                              bool siblingFusionUser) {
   // Check if the reduction loop is a single iteration loop.
   Optional<uint64_t> tripCount = getConstantTripCount(forOp);
-  if (!tripCount || tripCount.getValue() != 1)
+  if (!tripCount || *tripCount != 1)
     return failure();
   auto iterOperands = forOp.getIterOperands();
   auto *parentOp = forOp->getParentOp();
@@ -503,13 +503,13 @@ bool mlir::getLoopNestStats(AffineForOp forOpRoot, LoopNestStats *stats) {
     // Record trip count for 'forOp'. Set flag if trip count is not
     // constant.
     Optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
-    if (!maybeConstTripCount.hasValue()) {
+    if (!maybeConstTripCount) {
       // Currently only constant trip count loop nests are supported.
       LLVM_DEBUG(llvm::dbgs() << "Non-constant trip count unsupported\n");
       return WalkResult::interrupt();
     }
 
-    stats->tripCountMap[childForOp] = maybeConstTripCount.getValue();
+    stats->tripCountMap[childForOp] = *maybeConstTripCount;
     return WalkResult::advance();
   });
   return !walkResult.wasInterrupted();

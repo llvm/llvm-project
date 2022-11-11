@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fsanitize=address -emit-llvm -o - %s | FileCheck %s
 
 // Test ignorelist functionality.
 // RUN: echo "src:%s=init" | sed -e 's/\\/\\\\/g' > %t-file.ignorelist
 // RUN: echo "type:PODWithCtorAndDtor=init" > %t-type.ignorelist
 // RUN: echo "type:NS::PODWithCtor=init" >> %t-type.ignorelist
-// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -fsanitize-ignorelist=%t-file.ignorelist -emit-llvm -o - %s | FileCheck %s --check-prefix=IGNORELIST
-// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -fsanitize-ignorelist=%t-type.ignorelist -emit-llvm -o - %s | FileCheck %s --check-prefix=IGNORELIST
+// RUN: %clang_cc1 -fsanitize=address -fsanitize-ignorelist=%t-file.ignorelist -emit-llvm -o - %s | FileCheck %s --check-prefix=IGNORELIST
+// RUN: %clang_cc1 -fsanitize=address -fsanitize-ignorelist=%t-type.ignorelist -emit-llvm -o - %s | FileCheck %s --check-prefix=IGNORELIST
 
 struct PODStruct {
   int x;
@@ -44,12 +44,6 @@ const volatile PODWithCtor array[5][5];
 // CHECK: @{{.*}}s3{{.*}} ={{.*}} global {{.*}}, sanitize_address_dyninit
 // CHECK: @{{.*}}array{{.*}} ={{.*}} global {{.*}}, sanitize_address_dyninit
 
-// CHECK: !llvm.asan.globals = !{![[GLOB_1:[0-9]+]], ![[GLOB_2:[0-9]+]], ![[GLOB_3:[0-9]+]], ![[GLOB_4:[0-9]+]]
-// CHECK: ![[GLOB_1]] = !{%struct.PODStruct* {{.*}}, i1 false, i1 false}
-// CHECK: ![[GLOB_2]] = !{%struct.PODWithDtor* {{.*}}, i1 false, i1 false}
-// CHECK: ![[GLOB_3]] = !{%struct.PODWithCtorAndDtor* {{.*}}, i1 true, i1 false}
-// CHECK: ![[GLOB_4]] = !{{{.*}}class.NS::PODWithCtor{{.*}}, i1 true, i1 false}
-
 // IGNORELIST: @{{.*}}s1{{.*}} ={{.*}} global
 // IGNORELIST-NOT: sanitize_address_dyninit
 // IGNORELIST: @{{.*}}s2{{.*}} ={{.*}} global
@@ -58,9 +52,3 @@ const volatile PODWithCtor array[5][5];
 // IGNORELIST-NOT: sanitize_address_dyninit
 // IGNORELIST: @{{.*}}array{{.*}} ={{.*}} global
 // IGNORELIST-NOT: sanitize_address_dyninit
-
-// IGNORELIST: !llvm.asan.globals = !{![[GLOB_1:[0-9]+]], ![[GLOB_2:[0-9]+]], ![[GLOB_3:[0-9]+]], ![[GLOB_4:[0-9]+]]}
-// IGNORELIST: ![[GLOB_1]] = !{%struct.PODStruct* {{.*}}, i1 false, i1 false}
-// IGNORELIST: ![[GLOB_2]] = !{%struct.PODWithDtor* {{.*}}, i1 false, i1 false}
-// IGNORELIST: ![[GLOB_3]] = !{%struct.PODWithCtorAndDtor* {{.*}}, i1 false, i1 false}
-// IGNORELIST: ![[GLOB_4]] = !{{{.*}}class.NS::PODWithCtor{{.*}}, i1 false, i1 false}

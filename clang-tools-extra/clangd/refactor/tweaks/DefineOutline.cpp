@@ -187,26 +187,30 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
   // Get rid of default arguments, since they should not be specified in
   // out-of-line definition.
   for (const auto *PVD : FD->parameters()) {
-    if (PVD->hasDefaultArg()) {
-      // Deletion range initially spans the initializer, excluding the `=`.
-      auto DelRange = CharSourceRange::getTokenRange(PVD->getDefaultArgRange());
-      // Get all tokens before the default argument.
-      auto Tokens = TokBuf.expandedTokens(PVD->getSourceRange())
-                        .take_while([&SM, &DelRange](const syntax::Token &Tok) {
-                          return SM.isBeforeInTranslationUnit(
-                              Tok.location(), DelRange.getBegin());
-                        });
-      // Find the last `=` before the default arg.
+    if (!PVD->hasDefaultArg())
+      continue;
+    // Deletion range spans the initializer, usually excluding the `=`.
+    auto DelRange = CharSourceRange::getTokenRange(PVD->getDefaultArgRange());
+    // Get all tokens before the default argument.
+    auto Tokens = TokBuf.expandedTokens(PVD->getSourceRange())
+                      .take_while([&SM, &DelRange](const syntax::Token &Tok) {
+                        return SM.isBeforeInTranslationUnit(
+                            Tok.location(), DelRange.getBegin());
+                      });
+    if (TokBuf.expandedTokens(DelRange.getAsRange()).front().kind() !=
+        tok::equal) {
+      // Find the last `=` if it isn't included in the initializer, and update
+      // the DelRange to include it.
       auto Tok =
           llvm::find_if(llvm::reverse(Tokens), [](const syntax::Token &Tok) {
             return Tok.kind() == tok::equal;
           });
       assert(Tok != Tokens.rend());
       DelRange.setBegin(Tok->location());
-      if (auto Err =
-              DeclarationCleanups.add(tooling::Replacement(SM, DelRange, "")))
-        Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
     }
+    if (auto Err =
+            DeclarationCleanups.add(tooling::Replacement(SM, DelRange, "")))
+      Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
   }
 
   auto DelAttr = [&](const Attr *A) {
@@ -404,12 +408,7 @@ public:
 
   Expected<Effect> apply(const Selection &Sel) override {
     const SourceManager &SM = Sel.AST->getSourceManager();
-    auto MainFileName =
-        getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
-    if (!MainFileName)
-      return error("Couldn't get absolute path for main file.");
-
-    auto CCFile = getSourceFile(*MainFileName, Sel);
+    auto CCFile = getSourceFile(Sel.AST->tuPath(), Sel);
 
     if (!CCFile)
       return error("Couldn't find a suitable implementation file.");

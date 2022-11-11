@@ -489,14 +489,14 @@ define <2 x i1> @sub_ne_zero_use(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i1> %r
 }
 
-define i32 @sub_eq_zero_select(i32 %a, i32 %b, i32* %p) {
+define i32 @sub_eq_zero_select(i32 %a, i32 %b, ptr %p) {
 ; CHECK-LABEL: @sub_eq_zero_select(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i32 [[SUB]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SUB]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %sub = sub i32 %a, %b
-  store i32 %sub, i32* %p
+  store i32 %sub, ptr %p
   %cmp = icmp eq i32 %sub, 0
   %sel = select i1 %cmp, i32 %a, i32 %b
   ret i32 %sel

@@ -9,34 +9,34 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define <4 x i32> @test_masked_load(<4 x i32>* %base, <4 x i1> %mask) {
-  %res = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %base, i32 4, <4 x i1> %mask, <4 x i32> zeroinitializer)
+define <4 x i32> @test_masked_load(ptr %base, <4 x i1> %mask) {
+  %res = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %base, i32 4, <4 x i1> %mask, <4 x i32> zeroinitializer)
   ret <4 x i32> %res
 }
 
-declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
+declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32, <4 x i1>, <4 x i32>)
 
 
-define void @test_masked_store(<4 x i32>* %base, <4 x i32> %value, <4 x i1> %mask) {
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %value, <4 x i32>* %base, i32 4, <4 x i1> %mask)
+define void @test_masked_store(ptr %base, <4 x i32> %value, <4 x i1> %mask) {
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %value, ptr %base, i32 4, <4 x i1> %mask)
   ret void
 }
 
-declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)
 
 
-define <4 x i32> @llvm_masked_gather(<4 x i32*> %ptrs, <4 x i1> %mask) {
-  %res = call <4 x i32> @llvm.masked.gather.v4i32(<4 x i32*> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> undef)
+define <4 x i32> @llvm_masked_gather(<4 x ptr> %ptrs, <4 x i1> %mask) {
+  %res = call <4 x i32> @llvm.masked.gather.v4i32(<4 x ptr> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> undef)
   ret <4 x i32> %res
 }
 
-declare <4 x i32> @llvm.masked.gather.v4i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)
+declare <4 x i32> @llvm.masked.gather.v4i32(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
 
 
-define void @llvm_masked_scatter(<4 x i32*> %ptrs, <4 x i32> %value, <4 x i1> %mask) {
-  call void @llvm.masked.scatter.v4i32(<4 x i32> %value, <4 x i32*> %ptrs, i32 4, <4 x i1> %mask)
+define void @llvm_masked_scatter(<4 x ptr> %ptrs, <4 x i32> %value, <4 x i1> %mask) {
+  call void @llvm.masked.scatter.v4i32(<4 x i32> %value, <4 x ptr> %ptrs, i32 4, <4 x i1> %mask)
   ret void
 }
 
-declare void @llvm.masked.scatter.v4i32(<4 x i32>, <4 x i32*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4i32(<4 x i32>, <4 x ptr>, i32, <4 x i1>)
 

@@ -118,7 +118,9 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -155,6 +157,7 @@ namespace AA {
 enum ValueScope : uint8_t {
   Intraprocedural = 1,
   Interprocedural = 2,
+  AnyScope = Intraprocedural | Interprocedural,
 };
 
 struct ValueAndContext : public std::pair<Value *, const Instruction *> {
@@ -206,9 +209,68 @@ Optional<Value *>
 combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
                                      const Optional<Value *> &B, Type *Ty);
 
+/// Helper to represent an access offset and size, with logic to deal with
+/// uncertainty and check for overlapping accesses.
+struct OffsetAndSize {
+  int64_t Offset = Unassigned;
+  int64_t Size = Unassigned;
+
+  OffsetAndSize(int64_t Offset, int64_t Size) : Offset(Offset), Size(Size) {}
+  OffsetAndSize() = default;
+  static OffsetAndSize getUnknown() { return OffsetAndSize{Unknown, Unknown}; }
+
+  /// Return true if offset or size are unknown.
+  bool offsetOrSizeAreUnknown() const {
+    return Offset == OffsetAndSize::Unknown || Size == OffsetAndSize::Unknown;
+  }
+
+  /// Return true if offset and size are unknown, thus this is the default
+  /// unknown object.
+  bool offsetAndSizeAreUnknown() const {
+    return Offset == OffsetAndSize::Unknown && Size == OffsetAndSize::Unknown;
+  }
+
+  /// Return true if the offset and size are unassigned.
+  bool isUnassigned() const {
+    assert((Offset == OffsetAndSize::Unassigned) ==
+               (Size == OffsetAndSize::Unassigned) &&
+           "Inconsistent state!");
+    return Offset == OffsetAndSize::Unassigned;
+  }
+
+  /// Return true if this offset and size pair might describe an address that
+  /// overlaps with \p OAS.
+  bool mayOverlap(const OffsetAndSize &OAS) const {
+    // Any unknown value and we are giving up -> overlap.
+    if (offsetOrSizeAreUnknown() || OAS.offsetOrSizeAreUnknown())
+      return true;
+
+    // Check if one offset point is in the other interval [offset,
+    // offset+size].
+    return OAS.Offset + OAS.Size > Offset && OAS.Offset < Offset + Size;
+  }
+
+  /// Constants used to represent special offsets or sizes.
+  /// - This assumes that Offset and Size are non-negative.
+  /// - The constants should not clash with DenseMapInfo, such as EmptyKey
+  ///   (INT64_MAX) and TombstoneKey (INT64_MIN).
+  static constexpr int64_t Unassigned = -1;
+  static constexpr int64_t Unknown = -2;
+};
+
+inline bool operator==(const OffsetAndSize &A, const OffsetAndSize &B) {
+  return A.Offset == B.Offset && A.Size == B.Size;
+}
+
+inline bool operator!=(const OffsetAndSize &A, const OffsetAndSize &B) {
+  return !(A == B);
+}
+
 /// Return the initial value of \p Obj with type \p Ty if that is a constant.
 Constant *getInitialValueForObj(Value &Obj, Type &Ty,
-                                const TargetLibraryInfo *TLI);
+                                const TargetLibraryInfo *TLI,
+                                const DataLayout &DL,
+                                OffsetAndSize *OASPtr = nullptr);
 
 /// Collect all potential underlying objects of \p Ptr at position \p CtxI in
 /// \p Objects. Assumed information is used and dependences onto \p QueryingAA
@@ -217,12 +279,11 @@ Constant *getInitialValueForObj(Value &Obj, Type &Ty,
 /// \returns True if \p Objects contains all assumed underlying objects, and
 ///          false if something went wrong and the objects could not be
 ///          determined.
-bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
-                                 SmallVectorImpl<Value *> &Objects,
-                                 const AbstractAttribute &QueryingAA,
-                                 const Instruction *CtxI,
-                                 bool &UsedAssumedInformation,
-                                 AA::ValueScope VS = Interprocedural);
+bool getAssumedUnderlyingObjects(
+    Attributor &A, const Value &Ptr, SmallSetVector<Value *, 8> &Objects,
+    const AbstractAttribute &QueryingAA, const Instruction *CtxI,
+    bool &UsedAssumedInformation, AA::ValueScope VS = AA::Interprocedural,
+    SmallPtrSetImpl<Value *> *SeenObjects = nullptr);
 
 /// Collect all potential values \p LI could read into \p PotentialValues. That
 /// is, the only values read by \p LI are assumed to be known and all are in
@@ -301,6 +362,24 @@ struct DenseMapInfo<AA::ValueAndContext>
 
   static bool isEqual(const AA::ValueAndContext &LHS,
                       const AA::ValueAndContext &RHS) {
+    return Base::isEqual(LHS, RHS);
+  }
+};
+
+template <>
+struct DenseMapInfo<AA::ValueScope> : public DenseMapInfo<unsigned char> {
+  using Base = DenseMapInfo<unsigned char>;
+  static inline AA::ValueScope getEmptyKey() {
+    return AA::ValueScope(Base::getEmptyKey());
+  }
+  static inline AA::ValueScope getTombstoneKey() {
+    return AA::ValueScope(Base::getTombstoneKey());
+  }
+  static unsigned getHashValue(const AA::ValueScope &S) {
+    return Base::getHashValue(S);
+  }
+
+  static bool isEqual(const AA::ValueScope &LHS, const AA::ValueScope &RHS) {
     return Base::isEqual(LHS, RHS);
   }
 };
@@ -1136,7 +1215,7 @@ struct InformationCache {
 
   /// Check whether \p F is part of module slice.
   bool isInModuleSlice(const Function &F) {
-    return ModuleSlice.count(const_cast<Function *>(&F));
+    return ModuleSlice.empty() || ModuleSlice.count(const_cast<Function *>(&F));
   }
 
   /// Return true if the stack (llvm::Alloca) can be accessed by other threads.
@@ -1418,8 +1497,8 @@ struct Attributor {
 
     // We update only AAs associated with functions in the Functions set or
     // call sites of them.
-    if ((AnchorFn && !Functions.count(const_cast<Function *>(AnchorFn))) &&
-        !Functions.count(IRP.getAssociatedFunction())) {
+    if ((AnchorFn && !isRunOn(const_cast<Function *>(AnchorFn))) &&
+        !isRunOn(IRP.getAssociatedFunction())) {
       AA.getState().indicatePessimisticFixpoint();
       return AA;
     }
@@ -1534,8 +1613,9 @@ struct Attributor {
   bool isModulePass() const { return Configuration.IsModulePass; }
 
   /// Return true if we derive attributes for \p Fn
-  bool isRunOn(Function &Fn) const {
-    return Functions.empty() || Functions.count(&Fn);
+  bool isRunOn(Function &Fn) const { return isRunOn(&Fn); }
+  bool isRunOn(Function *Fn) const {
+    return Functions.empty() || Functions.count(Fn);
   }
 
   /// Determine opportunities to derive 'default' attributes in \p F and create
@@ -1643,8 +1723,6 @@ struct Attributor {
 
   /// Record that \p F is deleted after information was manifested.
   void deleteAfterManifest(Function &F) {
-    errs() << "Delete " << F.getName() << " : " << (Configuration.DeleteFns)
-           << "\n";
     if (Configuration.DeleteFns)
       ToBeDeletedFunctions.insert(&F);
   }
@@ -1664,14 +1742,16 @@ struct Attributor {
   /// return None, otherwise return `nullptr`.
   Optional<Value *> getAssumedSimplified(const IRPosition &IRP,
                                          const AbstractAttribute &AA,
-                                         bool &UsedAssumedInformation) {
-    return getAssumedSimplified(IRP, &AA, UsedAssumedInformation);
+                                         bool &UsedAssumedInformation,
+                                         AA::ValueScope S) {
+    return getAssumedSimplified(IRP, &AA, UsedAssumedInformation, S);
   }
   Optional<Value *> getAssumedSimplified(const Value &V,
                                          const AbstractAttribute &AA,
-                                         bool &UsedAssumedInformation) {
+                                         bool &UsedAssumedInformation,
+                                         AA::ValueScope S) {
     return getAssumedSimplified(IRPosition::value(V), AA,
-                                UsedAssumedInformation);
+                                UsedAssumedInformation, S);
   }
 
   /// If \p V is assumed simplified, return it, if it is unclear yet,
@@ -1679,7 +1759,17 @@ struct Attributor {
   /// except that it can be used without recording dependences on any \p AA.
   Optional<Value *> getAssumedSimplified(const IRPosition &V,
                                          const AbstractAttribute *AA,
-                                         bool &UsedAssumedInformation);
+                                         bool &UsedAssumedInformation,
+                                         AA::ValueScope S);
+
+  /// Try to simplify \p IRP and in the scope \p S. If successful, true is
+  /// returned and all potential values \p IRP can take are put into \p Values.
+  /// If false is returned no other information is valid.
+  bool getAssumedSimplifiedValues(const IRPosition &IRP,
+                                  const AbstractAttribute *AA,
+                                  SmallVectorImpl<AA::ValueAndContext> &Values,
+                                  AA::ValueScope S,
+                                  bool &UsedAssumedInformation);
 
   /// Register \p CB as a simplification callback.
   /// `Attributor::getAssumedSimplified` will use these callbacks before
@@ -2807,7 +2897,7 @@ struct IRAttribute : public BaseType {
   IRAttribute(const IRPosition &IRP) : BaseType(IRP) {}
 
   /// See AbstractAttribute::initialize(...).
-  virtual void initialize(Attributor &A) override {
+  void initialize(Attributor &A) override {
     const IRPosition &IRP = this->getIRPosition();
     if (isa<UndefValue>(IRP.getAssociatedValue()) ||
         this->hasAttr(getAttrKind(), /* IgnoreSubsumingPositions */ false,
@@ -4409,6 +4499,10 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
     return *this;
   }
 
+  bool contains(const MemberTy &V) const {
+    return !isValidState() ? true : Set.contains(V);
+  }
+
 protected:
   SetTy &getAssumedSet() {
     assert(isValidState() && "This set shoud not be used when it is invalid!");
@@ -4490,9 +4584,12 @@ private:
 };
 
 using PotentialConstantIntValuesState = PotentialValuesState<APInt>;
+using PotentialLLVMValuesState =
+    PotentialValuesState<std::pair<AA::ValueAndContext, AA::ValueScope>>;
 
 raw_ostream &operator<<(raw_ostream &OS,
                         const PotentialConstantIntValuesState &R);
+raw_ostream &operator<<(raw_ostream &OS, const PotentialLLVMValuesState &R);
 
 /// An abstract interface for potential values analysis.
 ///
@@ -4508,7 +4605,7 @@ raw_ostream &operator<<(raw_ostream &OS,
 ///   2. We tried to initialize on a Value that we cannot handle (e.g. an
 ///      operator we do not currently handle).
 ///
-/// TODO: Support values other than constant integers.
+/// For non constant integers see AAPotentialValues.
 struct AAPotentialConstantValues
     : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute> {
   using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute>;
@@ -4560,6 +4657,48 @@ struct AAPotentialConstantValues
 
   /// Unique ID (due to the unique address)
   static const char ID;
+};
+
+struct AAPotentialValues
+    : public StateWrapper<PotentialLLVMValuesState, AbstractAttribute> {
+  using Base = StateWrapper<PotentialLLVMValuesState, AbstractAttribute>;
+  AAPotentialValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// See AbstractAttribute::getState(...).
+  PotentialLLVMValuesState &getState() override { return *this; }
+  const PotentialLLVMValuesState &getState() const override { return *this; }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAPotentialValues &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
+
+  /// Extract the single value in \p Values if any.
+  static Value *getSingleValue(Attributor &A, const AbstractAttribute &AA,
+                               const IRPosition &IRP,
+                               SmallVectorImpl<AA::ValueAndContext> &Values);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAPotentialValues"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAPotentialValues
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+
+private:
+  virtual bool
+  getAssumedSimplifiedValues(Attributor &A,
+                             SmallVectorImpl<AA::ValueAndContext> &Values,
+                             AA::ValueScope) const = 0;
+
+  friend struct Attributor;
 };
 
 /// An abstract interface for all noundef attributes.
@@ -4801,8 +4940,7 @@ struct AAFunctionReachability
   /// Can  \p Inst reach \p Fn.
   /// See also AA::isPotentiallyReachable.
   virtual bool instructionCanReach(Attributor &A, const Instruction &Inst,
-                                   const Function &Fn,
-                                   bool UseBackwards = true) const = 0;
+                                   const Function &Fn) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAFunctionReachability &createForPosition(const IRPosition &IRP,
@@ -4834,19 +4972,36 @@ struct AAPointerInfo : public AbstractAttribute {
   AAPointerInfo(const IRPosition &IRP) : AbstractAttribute(IRP) {}
 
   enum AccessKind {
-    AK_READ = 1 << 0,
-    AK_WRITE = 1 << 1,
-    AK_READ_WRITE = AK_READ | AK_WRITE,
+    // First two bits to distinguish may and must accesses
+    AK_MUST = 1 << 0,
+    AK_MAY = 1 << 1,
+
+    // Then two bits for read and write. These are not exclusive.
+    AK_R = 1 << 2,
+    AK_W = 1 << 3,
+    AK_RW = AK_R | AK_W,
+
+    // Helper for easy access.
+    AK_MAY_READ = AK_MAY | AK_R,
+    AK_MAY_WRITE = AK_MAY | AK_W,
+    AK_MAY_READ_WRITE = AK_MAY | AK_R | AK_W,
+    AK_MUST_READ = AK_MUST | AK_R,
+    AK_MUST_WRITE = AK_MUST | AK_W,
+    AK_MUST_READ_WRITE = AK_MUST | AK_R | AK_W,
   };
 
   /// An access description.
   struct Access {
     Access(Instruction *I, Optional<Value *> Content, AccessKind Kind, Type *Ty)
-        : LocalI(I), RemoteI(I), Content(Content), Kind(Kind), Ty(Ty) {}
+        : LocalI(I), RemoteI(I), Content(Content), Kind(Kind), Ty(Ty) {
+      verify();
+    }
     Access(Instruction *LocalI, Instruction *RemoteI, Optional<Value *> Content,
            AccessKind Kind, Type *Ty)
         : LocalI(LocalI), RemoteI(RemoteI), Content(Content), Kind(Kind),
-          Ty(Ty) {}
+          Ty(Ty) {
+      verify();
+    }
     Access(const Access &Other) = default;
     Access(const Access &&Other)
         : LocalI(Other.LocalI), RemoteI(Other.RemoteI), Content(Other.Content),
@@ -4867,14 +5022,22 @@ struct AAPointerInfo : public AbstractAttribute {
       return *this;
     }
 
+    void verify() {
+      assert(isMustAccess() + isMayAccess() == 1 &&
+             "Expect must or may access, not both.");
+    }
+
     /// Return the access kind.
     AccessKind getKind() const { return Kind; }
 
     /// Return true if this is a read access.
-    bool isRead() const { return Kind & AK_READ; }
+    bool isRead() const { return Kind & AK_R; }
 
     /// Return true if this is a write access.
-    bool isWrite() const { return Kind & AK_WRITE; }
+    bool isWrite() const { return Kind & AK_W; }
+
+    bool isMustAccess() const { return Kind & AK_MUST; }
+    bool isMayAccess() const { return Kind & AK_MAY; }
 
     /// Return the instruction that causes the access with respect to the local
     /// scope of the associated attribute.
@@ -4884,11 +5047,11 @@ struct AAPointerInfo : public AbstractAttribute {
     Instruction *getRemoteInst() const { return RemoteI; }
 
     /// Return true if the value written is not known yet.
-    bool isWrittenValueYetUndetermined() const { return !Content.hasValue(); }
+    bool isWrittenValueYetUndetermined() const { return !Content; }
 
     /// Return true if the value written cannot be determined at all.
     bool isWrittenValueUnknown() const {
-      return Content.hasValue() && !*Content;
+      return Content.has_value() && !*Content;
     }
 
     /// Return the type associated with the access, if known.
@@ -4932,56 +5095,25 @@ struct AAPointerInfo : public AbstractAttribute {
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
-  /// Helper to represent an access offset and size, with logic to deal with
-  /// uncertainty and check for overlapping accesses.
-  struct OffsetAndSize : public std::pair<int64_t, int64_t> {
-    using BaseTy = std::pair<int64_t, int64_t>;
-    OffsetAndSize(int64_t Offset, int64_t Size) : BaseTy(Offset, Size) {}
-    OffsetAndSize(const BaseTy &P) : BaseTy(P) {}
-    int64_t getOffset() const { return first; }
-    int64_t getSize() const { return second; }
-    static OffsetAndSize getUnknown() {
-      return OffsetAndSize(Unknown, Unknown);
-    }
-
-    /// Return true if offset or size are unknown.
-    bool offsetOrSizeAreUnknown() const {
-      return getOffset() == OffsetAndSize::Unknown ||
-             getSize() == OffsetAndSize::Unknown;
-    }
-
-    /// Return true if this offset and size pair might describe an address that
-    /// overlaps with \p OAS.
-    bool mayOverlap(const OffsetAndSize &OAS) const {
-      // Any unknown value and we are giving up -> overlap.
-      if (offsetOrSizeAreUnknown() || OAS.offsetOrSizeAreUnknown())
-        return true;
-
-      // Check if one offset point is in the other interval [offset,
-      // offset+size].
-      return OAS.getOffset() + OAS.getSize() > getOffset() &&
-             OAS.getOffset() < getOffset() + getSize();
-    }
-
-    /// Constant used to represent unknown offset or sizes.
-    static constexpr int64_t Unknown = 1 << 31;
-  };
-
   /// Call \p CB on all accesses that might interfere with \p OAS and return
   /// true if all such accesses were known and the callback returned true for
   /// all of them, false otherwise. An access interferes with an offset-size
   /// pair if it might read or write that memory region.
   virtual bool forallInterferingAccesses(
-      OffsetAndSize OAS, function_ref<bool(const Access &, bool)> CB) const = 0;
+      AA::OffsetAndSize OAS,
+      function_ref<bool(const Access &, bool)> CB) const = 0;
 
   /// Call \p CB on all accesses that might interfere with \p I and
   /// return true if all such accesses were known and the callback returned true
   /// for all of them, false otherwise. In contrast to forallInterferingAccesses
   /// this function will perform reasoning to exclude write accesses that cannot
-  /// affect the load even if they on the surface look as if they would.
+  /// affect the load even if they on the surface look as if they would. The
+  /// flag \p HasBeenWrittenTo will be set to true if we know that \p I does not
+  /// read the intial value of the underlying memory.
   virtual bool forallInterferingAccesses(
       Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
-      function_ref<bool(const Access &, bool)> CB) const = 0;
+      function_ref<bool(const Access &, bool)> CB, bool &HasBeenWrittenTo,
+      AA::OffsetAndSize *OASPtr = nullptr) const = 0;
 
   /// This function should return true if the type of the \p AA is AAPointerInfo
   static bool classof(const AbstractAttribute *AA) {

@@ -33,9 +33,9 @@ fir::FIRCodeGenDialect::~FIRCodeGenDialect() {
 #include "flang/Optimizer/CodeGen/CGOps.cpp.inc"
 
 unsigned fir::cg::XEmboxOp::getOutRank() {
-  if (slice().empty())
+  if (getSlice().empty())
     return getRank();
-  auto outRank = fir::SliceOp::getOutputRank(slice());
+  auto outRank = fir::SliceOp::getOutputRank(getSlice());
   assert(outRank >= 1);
   return outRank;
 }
@@ -48,17 +48,17 @@ unsigned fir::cg::XReboxOp::getOutRank() {
 }
 
 unsigned fir::cg::XReboxOp::getRank() {
-  if (auto seqTy = fir::dyn_cast_ptrOrBoxEleTy(box().getType())
+  if (auto seqTy = fir::dyn_cast_ptrOrBoxEleTy(getBox().getType())
                        .dyn_cast<fir::SequenceType>())
     return seqTy.getDimension();
   return 0;
 }
 
 unsigned fir::cg::XArrayCoorOp::getRank() {
-  auto memrefTy = memref().getType();
+  auto memrefTy = getMemref().getType();
   if (memrefTy.isa<fir::BoxType>())
     if (auto seqty =
             fir::dyn_cast_ptrOrBoxEleTy(memrefTy).dyn_cast<fir::SequenceType>())
       return seqty.getDimension();
-  return shape().size();
+  return getShape().size();
 }

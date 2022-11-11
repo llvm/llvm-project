@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx  | FileCheck %s
 
 ; Function Attrs: nounwind readonly uwtable
-define <2 x double> @sqrtd2(double* nocapture readonly %v) local_unnamed_addr #0 {
+define <2 x double> @sqrtd2(ptr nocapture readonly %v) local_unnamed_addr #0 {
 ; CHECK-LABEL: sqrtd2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -12,10 +12,10 @@ define <2 x double> @sqrtd2(double* nocapture readonly %v) local_unnamed_addr #0
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load double, double* %v, align 8
+  %0 = load double, ptr %v, align 8
   %call = tail call double @sqrt(double %0) #2
-  %arrayidx1 = getelementptr inbounds double, double* %v, i64 1
-  %1 = load double, double* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %v, i64 1
+  %1 = load double, ptr %arrayidx1, align 8
   %call2 = tail call double @sqrt(double %1) #2
   %vecinit.i = insertelement <2 x double> undef, double %call, i32 0
   %vecinit1.i = insertelement <2 x double> %vecinit.i, double %call2, i32 1
@@ -26,7 +26,7 @@ entry:
 declare double @sqrt(double) local_unnamed_addr #1
 
 ; Function Attrs: nounwind readonly uwtable
-define <4 x float> @sqrtf4(float* nocapture readonly %v) local_unnamed_addr #0 {
+define <4 x float> @sqrtf4(ptr nocapture readonly %v) local_unnamed_addr #0 {
 ; CHECK-LABEL: sqrtf4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -42,16 +42,16 @@ define <4 x float> @sqrtf4(float* nocapture readonly %v) local_unnamed_addr #0 {
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load float, float* %v, align 4
+  %0 = load float, ptr %v, align 4
   %call = tail call float @sqrtf(float %0) #2
-  %arrayidx1 = getelementptr inbounds float, float* %v, i64 1
-  %1 = load float, float* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %v, i64 1
+  %1 = load float, ptr %arrayidx1, align 4
   %call2 = tail call float @sqrtf(float %1) #2
-  %arrayidx3 = getelementptr inbounds float, float* %v, i64 2
-  %2 = load float, float* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds float, ptr %v, i64 2
+  %2 = load float, ptr %arrayidx3, align 4
   %call4 = tail call float @sqrtf(float %2) #2
-  %arrayidx5 = getelementptr inbounds float, float* %v, i64 3
-  %3 = load float, float* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %v, i64 3
+  %3 = load float, ptr %arrayidx5, align 4
   %call6 = tail call float @sqrtf(float %3) #2
   %vecinit.i = insertelement <4 x float> undef, float %call, i32 0
   %vecinit1.i = insertelement <4 x float> %vecinit.i, float %call2, i32 1

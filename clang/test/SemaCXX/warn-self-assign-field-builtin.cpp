@@ -4,6 +4,8 @@ struct C {
   int a;
   int b;
 
+  C(int a, int b) : a(a), b(b) {}
+
   void f() {
     a = a; // expected-warning {{assigning field to itself}}
     b = b; // expected-warning {{assigning field to itself}}

@@ -21,9 +21,11 @@ void doStuff_uninit(const int *u);
 
 int f10(void) {
   int *ptr;
-
-  ptr = new int; //
-  if(*ptr) {
+                 // FIXME: The message is misleading -- we should state that
+                 // a pointer to an uninitialized value is stored.
+  ptr = new int; // expected-note{{Storing uninitialized value}}
+  if(*ptr) { // expected-warning{{Branch condition evaluates to a garbage value [core.uninitialized.Branch]}}
+             // expected-note@-1 {{Branch condition evaluates to a garbage value}}
     doStuff4(*ptr);
   }
   delete ptr;
@@ -32,10 +34,12 @@ int f10(void) {
 
 int f9(void) {
   int *ptr;
-
-  ptr = new int; //
-
-  doStuff_uninit(ptr); // no warning
+                 // FIXME: The message is misleading -- we should state that
+                 // a pointer to an uninitialized value is stored.
+  ptr = new int; // expected-note{{Storing uninitialized value}}
+                 // expected-note@-1{{Value assigned to 'ptr'}}
+  doStuff_uninit(ptr); // expected-warning{{1st function call argument is a pointer to uninitialized value [core.CallAndMessage]}}
+                       // expected-note@-1{{1st function call argument is a pointer to uninitialized value}}
   delete ptr;
   return 0;
 }

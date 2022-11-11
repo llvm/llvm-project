@@ -20,12 +20,12 @@
 namespace llvm {
 
 /// An arbitrary precision integer that knows its signedness.
-class LLVM_NODISCARD APSInt : public APInt {
-  bool IsUnsigned;
+class [[nodiscard]] APSInt : public APInt {
+  bool IsUnsigned = false;
 
 public:
   /// Default constructor that creates an uninitialized APInt.
-  explicit APSInt() : IsUnsigned(false) {}
+  explicit APSInt() = default;
 
   /// Create an APSInt with the specified width, default to unsigned.
   explicit APSInt(uint32_t BitWidth, bool isUnsigned = true)
@@ -144,6 +144,10 @@ public:
       ashrInPlace(Amt);
     return *this;
   }
+  APSInt relativeShr(unsigned Amt) const {
+    return IsUnsigned ? APSInt(relativeLShr(Amt), true)
+                      : APSInt(relativeAShr(Amt), false);
+  }
 
   inline bool operator<(const APSInt& RHS) const {
     assert(IsUnsigned == RHS.IsUnsigned && "Signedness mismatch!");
@@ -197,6 +201,10 @@ public:
   APSInt& operator<<=(unsigned Amt) {
     static_cast<APInt&>(*this) <<= Amt;
     return *this;
+  }
+  APSInt relativeShl(unsigned Amt) const {
+    return IsUnsigned ? APSInt(relativeLShl(Amt), true)
+                      : APSInt(relativeAShl(Amt), false);
   }
 
   APSInt& operator++() {

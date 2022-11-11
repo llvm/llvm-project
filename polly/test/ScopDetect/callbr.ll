@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @func(i32 %n, double* noalias nonnull %A) {
 entry:
-  callbr void asm sideeffect "", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@func, %for)) #1
+  callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"() #1
           to label %fallthrough [label %for]
 
 fallthrough:

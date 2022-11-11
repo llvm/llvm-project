@@ -11,9 +11,9 @@ define <2 x i64> @const0(i64 %a) {
 ; CHECK: mtvsrdd v2, 0, r3
 }
 
-define <2 x i64> @noconst0(i64* %a, i64* %b) {
-  %1 = load i64, i64* %a, align 8
-  %2 = load i64, i64* %b, align 8
+define <2 x i64> @noconst0(ptr %a, ptr %b) {
+  %1 = load i64, ptr %a, align 8
+  %2 = load i64, ptr %b, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %2, i32 0
   %vecinit1 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit1

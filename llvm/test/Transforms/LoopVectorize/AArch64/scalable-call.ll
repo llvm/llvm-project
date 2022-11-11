@@ -1,8 +1,8 @@
 ; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -instcombine -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
-; RUN:     -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
+; RUN:     -prefer-predicate-over-epilogue=scalar-epilogue -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=CHECK-REMARKS
 ; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -force-target-instruction-cost=1 -instcombine -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
-; RUN:     -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
+; RUN:     -prefer-predicate-over-epilogue=scalar-epilogue -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=CHECK-REMARKS
 
 define void @vec_load(i64 %N, double* nocapture %a, double* nocapture readonly %b) {

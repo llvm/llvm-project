@@ -45,6 +45,7 @@ public:
   }
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
 };
 } // namespace llvm
 

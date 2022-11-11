@@ -12,8 +12,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 class TestCase(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan

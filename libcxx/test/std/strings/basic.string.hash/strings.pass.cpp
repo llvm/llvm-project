@@ -10,7 +10,6 @@
 
 // template <class T>
 // struct hash
-//     : public unary_function<T, size_t>
 // {
 //     size_t operator()(T val) const;
 // };
@@ -28,8 +27,10 @@ void
 test()
 {
     typedef std::hash<T> H;
+#if TEST_STD_VER <= 14
     static_assert((std::is_same<typename H::argument_type, T>::value), "" );
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
+#endif
     ASSERT_NOEXCEPT(H()(T()));
 
     H h;
@@ -43,7 +44,7 @@ test()
 int main(int, char**)
 {
     test<std::string>();
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     test<std::u8string>();
 #endif
     test<std::u16string>();

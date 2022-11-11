@@ -29,7 +29,7 @@ typedef struct {
 
 class SuspendedThreadsListMac final : public SuspendedThreadsList {
  public:
-  SuspendedThreadsListMac() : threads_(1024) {}
+  SuspendedThreadsListMac() = default;
 
   tid_t GetThreadID(uptr index) const override;
   thread_t GetThread(uptr index) const;

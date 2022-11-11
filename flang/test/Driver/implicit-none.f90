@@ -14,14 +14,8 @@
 ! RUN: %flang_fc1 -fsyntax-only -fimplicit-none -fno-implicit-none %s  2>&1 | FileCheck %s --allow-empty --check-prefix=DEFAULT
 ! RUN: not %flang_fc1 -fsyntax-only -fimplicit-none %s  2>&1 | FileCheck %s --check-prefix=WITH_IMPL_NONE
 
-!--------------------------------------
-! EXPECTED OUTPUT FOR NO IMPLICIT NONE
-!--------------------------------------
 ! DEFAULT-NOT:error
 
-!------------------------------------------
-! EXPECTED OUTPUT FOR IMPLICIT NONE ALWAYS
-!------------------------------------------
 ! WITH_IMPL_NONE:No explicit type declared for 'a'
 ! WITH_IMPL_NONE:No explicit type declared for 'b'
 

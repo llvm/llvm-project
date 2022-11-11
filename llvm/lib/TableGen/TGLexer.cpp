@@ -63,6 +63,10 @@ SMLoc TGLexer::getLoc() const {
   return SMLoc::getFromPointer(TokStart);
 }
 
+SMRange TGLexer::getLocRange() const {
+  return {getLoc(), SMLoc::getFromPointer(CurPtr)};
+}
+
 /// ReturnError - Set the error to the specified string at the specified
 /// location.  This is defined to always return tgtok::Error.
 tgtok::TokKind TGLexer::ReturnError(SMLoc Loc, const Twine &Msg) {
@@ -239,7 +243,7 @@ tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
         case '0': case '1':
           if (NextChar == 'b')
             return LexNumber();
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case '2': case '3': case '4': case '5':
         case '6': case '7': case '8': case '9':
         case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -306,7 +310,7 @@ tgtok::TokKind TGLexer::LexString() {
     case '\0':
       if (CurPtr == CurBuf.end())
         return ReturnError(StrStart, "End of file in string literal");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       return ReturnError(CurPtr, "invalid escape in string literal");
     }
@@ -563,7 +567,9 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("add", tgtok::XADD)
     .Case("sub", tgtok::XSUB)
     .Case("mul", tgtok::XMUL)
+    .Case("div", tgtok::XDIV)
     .Case("not", tgtok::XNOT)
+    .Case("logtwo", tgtok::XLOG2)
     .Case("and", tgtok::XAND)
     .Case("or", tgtok::XOR)
     .Case("xor", tgtok::XXOR)
@@ -584,6 +590,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("find", tgtok::XFind)
     .Cases("setdagop", "setop", tgtok::XSetDagOp) // !setop is deprecated.
     .Cases("getdagop", "getop", tgtok::XGetDagOp) // !getop is deprecated.
+    .Case("exists", tgtok::XExists)
     .Default(tgtok::Error);
 
   return Kind != tgtok::Error ? Kind : ReturnError(Start-1, "Unknown operator");

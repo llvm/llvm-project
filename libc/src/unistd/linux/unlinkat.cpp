@@ -19,7 +19,7 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, unlinkat, (int dfd, const char *path, int flags)) {
 #ifdef SYS_unlinkat
-  long ret = __llvm_libc::syscall(SYS_unlinkat, dfd, path, flags);
+  long ret = __llvm_libc::syscall_impl(SYS_unlinkat, dfd, path, flags);
 #else
 #error "unlinkat syscall not available."
 #endif

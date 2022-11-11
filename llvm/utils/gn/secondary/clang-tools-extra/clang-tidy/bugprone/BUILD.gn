@@ -18,6 +18,7 @@ static_library("bugprone") {
   sources = [
     "ArgumentCommentCheck.cpp",
     "AssertSideEffectCheck.cpp",
+    "AssignmentInIfConditionCheck.cpp",
     "BadSignalToKillThreadCheck.cpp",
     "BoolPointerImplicitConversionCheck.cpp",
     "BranchCloneCheck.cpp",
@@ -65,6 +66,7 @@ static_library("bugprone") {
     "SuspiciousMemoryComparisonCheck.cpp",
     "SuspiciousMemsetUsageCheck.cpp",
     "SuspiciousMissingCommaCheck.cpp",
+    "SuspiciousReallocUsageCheck.cpp",
     "SuspiciousSemicolonCheck.cpp",
     "SuspiciousStringCompareCheck.cpp",
     "SwappedArgumentsCheck.cpp",

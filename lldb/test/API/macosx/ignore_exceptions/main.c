@@ -13,7 +13,7 @@ void
 saction_handler(int signo, siginfo_t info, void *baton) {
   printf("Got into handler.\n");   // stop here in the signal handler
   kern_return_t success
-      = mach_vm_protect(mach_task_self(), g_int_ptr,
+      = mach_vm_protect(mach_task_self(), (mach_vm_address_t) g_int_ptr,
                         g_size, 0, VM_PROT_READ|VM_PROT_WRITE);
   g_int_ptr[1] = 20;
 }
@@ -24,7 +24,7 @@ main()
   for (int i = 0; i < 10; i++)
     g_int_ptr[i] = i * 10;
   
-  vm_result = mach_vm_protect(mach_task_self(), g_int_ptr, g_size, 0, VM_PROT_NONE);
+  vm_result = mach_vm_protect(mach_task_self(), (mach_vm_address_t) g_int_ptr, g_size, 0, VM_PROT_NONE);
   struct sigaction my_action;
   sigemptyset(&my_action.sa_mask);
   my_action.sa_handler = (void (*)(int)) saction_handler;

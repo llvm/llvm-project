@@ -24,6 +24,7 @@ class MachineInstr;
 class MachineOperand;
 class MCContext;
 class MCSymbolWasm;
+class TargetRegisterClass;
 class WebAssemblyFunctionInfo;
 class WebAssemblySubtarget;
 
@@ -64,6 +65,9 @@ getOrCreateFuncrefCallTableSymbol(MCContext &Ctx,
 /// Find a catch instruction from an EH pad. Returns null if no catch
 /// instruction found or the catch is in an invalid location.
 MachineInstr *findCatch(MachineBasicBlock *EHPad);
+
+/// Returns the appropriate copy opcode for the given register class.
+unsigned getCopyOpcodeForRegClass(const TargetRegisterClass *RC);
 
 } // end namespace WebAssembly
 

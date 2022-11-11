@@ -2,6 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,PREGFX10,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,PREGFX10,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
 
 ; These tests check that fdiv is expanded correctly and also test that the
@@ -106,7 +107,7 @@ entry:
 ; GCN-NOT: [[RESULT]]
 ; PREGFX10-NOT: s_setreg
 ; GFX10-NOT: s_denorm_mode
-; GCN: buffer_store_dword [[RESULT]]
+; GCN: buffer_store_{{dword|b32}} [[RESULT]]
 define amdgpu_kernel void @fdiv_fast_denormals_f32(float addrspace(1)* %out, float %a, float %b) #2 {
 entry:
   %fdiv = fdiv fast float %a, %b
@@ -121,7 +122,7 @@ entry:
 ; GCN: v_rcp_f32_e32 [[RCP:v[0-9]+]], s{{[0-9]+}}
 ; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], s{{[0-9]+}}, [[RCP]]
 ; GCN-NOT: [[RESULT]]
-; GCN: buffer_store_dword [[RESULT]]
+; GCN: buffer_store_{{dword|b32}} [[RESULT]]
 define amdgpu_kernel void @fdiv_f32_fast_math(float addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %fdiv = fdiv fast float %a, %b
@@ -136,7 +137,7 @@ entry:
 ; GCN: v_rcp_f32_e32 [[RCP:v[0-9]+]], s{{[0-9]+}}
 ; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], s{{[0-9]+}}, [[RCP]]
 ; GCN-NOT: [[RESULT]]
-; GCN: buffer_store_dword [[RESULT]]
+; GCN: buffer_store_{{dword|b32}} [[RESULT]]
 define amdgpu_kernel void @fdiv_ulp25_f32_fast_math(float addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %fdiv = fdiv fast float %a, %b, !fpmath !0
@@ -151,7 +152,7 @@ entry:
 ; GCN: v_rcp_f32_e32 [[RCP:v[0-9]+]], s{{[0-9]+}}
 ; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], s{{[0-9]+}}, [[RCP]]
 ; GCN-NOT: [[RESULT]]
-; GCN: buffer_store_dword [[RESULT]]
+; GCN: buffer_store_{{dword|b32}} [[RESULT]]
 define amdgpu_kernel void @fdiv_f32_arcp_math(float addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %fdiv = fdiv arcp ninf float %a, %b

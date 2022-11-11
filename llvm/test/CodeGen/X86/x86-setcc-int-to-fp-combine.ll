@@ -20,7 +20,7 @@ define <4 x float> @foo(<4 x float> %val, <4 x float> %test) nounwind {
 ; Make sure the operation doesn't try to get folded when the sizes don't match,
 ; as that ends up crashing later when trying to form a bitcast operation for
 ; the folded nodes.
-define void @foo1(<4 x float> %val, <4 x float> %test, <4 x double>* %p) nounwind {
+define void @foo1(<4 x float> %val, <4 x float> %test, ptr %p) nounwind {
 ; CHECK-LABEL: LCPI1_0:
 ; CHECK-NEXT: .long 1                       ## 0x1
 ; CHECK-NEXT: .long 1                       ## 0x1
@@ -39,12 +39,12 @@ define void @foo1(<4 x float> %val, <4 x float> %test, <4 x double>* %p) nounwin
   %cmp = fcmp oeq <4 x float> %val, %test
   %ext = zext <4 x i1> %cmp to <4 x i32>
   %result = sitofp <4 x i32> %ext to <4 x double>
-  store <4 x double> %result, <4 x double>* %p
+  store <4 x double> %result, ptr %p
   ret void
 }
 
 ; Also test the general purpose constant folding of int->fp.
-define void @foo2(<4 x float>* noalias %result) nounwind {
+define void @foo2(ptr noalias %result) nounwind {
 ; CHECK-LABEL: LCPI2_0:
 ; CHECK-NEXT: .long 0x40800000              ## float 4
 ; CHECK-NEXT: .long 0x40a00000              ## float 5
@@ -56,7 +56,7 @@ define void @foo2(<4 x float>* noalias %result) nounwind {
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %val = uitofp <4 x i32> <i32 4, i32 5, i32 6, i32 7> to <4 x float>
-  store <4 x float> %val, <4 x float>* %result
+  store <4 x float> %val, ptr %result
   ret void
 }
 
@@ -81,7 +81,7 @@ define <4 x float> @foo3(<4 x float> %val, <4 x float> %test) nounwind {
 }
 
 ; Test the general purpose constant folding of uint->fp.
-define void @foo4(<4 x float>* noalias %result) nounwind {
+define void @foo4(ptr noalias %result) nounwind {
 ; CHECK-LABEL: LCPI4_0:
 ; CHECK-NEXT: .long 0x3f800000              ## float 1
 ; CHECK-NEXT: .long 0x42fe0000              ## float 127
@@ -93,7 +93,7 @@ define void @foo4(<4 x float>* noalias %result) nounwind {
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %val = uitofp <4 x i8> <i8 1, i8 127, i8 -128, i8 -1> to <4 x float>
-  store <4 x float> %val, <4 x float>* %result
+  store <4 x float> %val, ptr %result
   ret void
 }
 

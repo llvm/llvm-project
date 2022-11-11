@@ -2,9 +2,8 @@
 
 %"class.std::bitset" = type { [8 x i8] }
 
-define zeroext i1 @_Z3fooPjmS_mRSt6bitsetILm32EE(i32* nocapture %a, i64 %asize, i32* nocapture %b, i64 %bsize, %"class.std::bitset"* %bits) nounwind readonly ssp noredzone {
+define zeroext i1 @_Z3fooPjmS_mRSt6bitsetILm32EE(ptr nocapture %a, i64 %asize, ptr nocapture %b, i64 %bsize, ptr %bits) nounwind readonly ssp noredzone {
 entry:
-  %tmp.i.i.i.i = bitcast %"class.std::bitset"* %bits to i64*
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
@@ -14,11 +13,11 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %return, label %for.body
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %conv
-  %tmp5 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %conv
+  %tmp5 = load i32, ptr %arrayidx, align 4
   %conv6 = zext i32 %tmp5 to i64
   %rem.i.i.i.i = and i64 %conv6, 63
-  %tmp3.i = load i64, i64* %tmp.i.i.i.i, align 8
+  %tmp3.i = load i64, ptr %bits, align 8
   %shl.i.i = shl i64 1, %rem.i.i.i.i
   %and.i = and i64 %shl.i.i, %tmp3.i
   %cmp.i = icmp eq i64 %and.i, 0

@@ -84,30 +84,12 @@ to read it as possible.  As such, we recommend that you:
    patches may not apply correctly if the underlying code changes between the
    time the patch was created and the time it is applied.
 
-#. Patches should be made with ``git format-patch``, or similar (see special
-   commands for `Requesting Phabricator review via the web interface
-   <Phabricator.html#phabricator-request-review-web>`_ ). If you use a
-   different tool, make sure it uses the ``diff -u`` format and that it
-   doesn't contain clutter which makes it hard to read.
+#. Patches should be unified diffs with "infinite context" (i.e. using something
+   like `git diff -U999999 main`).
 
-Once your patch is ready, submit it by emailing it to the appropriate project's
-commit mailing list (or commit it directly if applicable). Alternatively, some
-patches get sent to the project's development list or component of the LLVM bug
-tracker, but the commit list is the primary place for reviews and should
-generally be preferred.
-
-When sending a patch to a mailing list, it is a good idea to send it as an
-*attachment* to the message, not embedded into the text of the message.  This
-ensures that your mailer will not mangle the patch when it sends it (e.g. by
-making whitespace changes or by wrapping lines).
-
-*For Thunderbird users:* Before submitting a patch, please open *Preferences >
-Advanced > General > Config Editor*, find the key
-``mail.content_disposition_type``, and set its value to ``1``. Without this
-setting, Thunderbird sends your attachment using ``Content-Disposition: inline``
-rather than ``Content-Disposition: attachment``. Apple Mail gamely displays such
-a file inline, making it difficult to work with for reviewers using that
-program.
+#. Once you have created your patch, create a
+   `Phabricator review <Phabricator.html#phabricator-request-review-web>`_ for
+   it (or commit it directly if applicable).
 
 When submitting patches, please do not add confidentiality or non-disclosure
 notices to the patches themselves.  These notices conflict with the LLVM
@@ -121,6 +103,51 @@ Code Reviews
 LLVM has a code-review policy. Code review is one way to increase the quality of
 software. Please see :doc:`CodeReview` for more information on LLVM's code-review
 process.
+
+.. _breaking:
+
+Making Potentially Breaking Changes
+-----------------------------------
+
+Please help notify users and vendors of potential disruptions when upgrading to
+a newer version of a tool. For example, deprecating a feature that is expected
+to be removed in the future, removing an already-deprecated feature, upgrading a
+diagnostic from a warning to an error, switching important default behavior, or
+any other potentially disruptive situation thought to be worth raising
+awareness of. For such changes, the following should be done:
+
+* When performing the code review for the change, please add any applicable
+  "vendors" group to the review for their awareness. The purpose of these
+  groups is to give vendors early notice that potentially disruptive changes
+  are being considered but have not yet been accepted. Vendors can give early
+  testing feedback on the changes to alert us to unacceptable breakages. The
+  current list of vendor groups is:
+
+  * `Clang vendors <https://reviews.llvm.org/project/members/113/>`_
+  * `libc++ vendors <https://reviews.llvm.org/project/members/109/>`_
+
+  People interested in joining the vendors group can do so by clicking the
+  "Join Project" link on the vendor's "Members" page in Phabricator.
+
+* When committing the change to the repository, add appropriate information
+  about the potentially breaking changes to the ``Potentially Breaking Changes``
+  section of the project's release notes. The release note should have
+  information about what the change is, what is potentially disruptive about
+  it, as well as any code examples, links, and motivation that is appropriate
+  to share with users. This helps users to learn about potential issues with
+  upgrading to that release.
+
+* After the change has been committed to the repository, the potentially
+  disruptive changes described in the release notes should be posted to the
+  `Announcements <https://discourse.llvm.org/c/announce/>`_ channel on
+  Discourse. The post should be tagged with the ``potentially-breaking`` label
+  and a label specific to the project (such as ``clang``, ``llvm``, etc). This
+  is another mechanism by which we can give pre-release notice to users about
+  potentially disruptive changes. It is a lower-traffic alternative to the
+  joining "vendors" group. To automatically be notified of new announcements
+  with the ``potentially-breaking`` label, go to your user preferences page in
+  Discourse, and add the label to one of the watch categories under
+  ``Notifications->Tags``.
 
 .. _code owners:
 
@@ -199,7 +226,12 @@ exhaustive):
   programming paradigms.
 * Modifying a C stable API.
 * Notifying users about a potentially disruptive change expected to be made in
-  a future release, such as removal of a deprecated feature.
+  a future release, such as removal of a deprecated feature. In this case, the
+  release note should be added to a ``Potentially Breaking Changes`` section of
+  the notes with sufficient information and examples to demonstrate the
+  potential disruption. Additionally, any new entries to this section should be
+  announced in the `Announcements <https://discourse.llvm.org/c/announce/>`_
+  channel on Discourse. See :ref:`breaking` for more details.
 
 Code reviewers are encouraged to request a release note if they think one is
 warranted when performing a code review.
@@ -282,6 +314,10 @@ Below are some guidelines about the format of the message itself:
   author property if it is incorrect. See `Attribution of Changes`_ for more
   information including the method we used for attribution before the project
   migrated to git.
+
+  In the rare situation where there are multiple authors, please use the `git
+  tag 'Co-authored-by:' to list the additional authors
+  <https://github.blog/2018-01-29-commit-together-with-co-authors/>`_.
 
 * The title should be concise. Because all commits are emailed to the list with
   the first line as the subject, long titles are frowned upon.  Short titles
@@ -416,9 +452,11 @@ someone with commit access commits on your behalf. When doing so, please
 provide the name and email address you would like to use in the Author
 property of the commit.
 
-Your first commit to a repository may require the autogenerated email to be
-approved by a moderator of the mailing list.
-This is normal and will be done when the mailing list owner has time.
+For external tracking purposes, committed changes are automatically reflected
+on a commits mailing list soon after the commit lands (e.g. llvm-commits_).
+Note that these mailing lists are moderated, and it is not unusual for a large
+commit to require a moderator to approve the email, so do not be concerned if a
+commit does not immediately appear in the archives.
 
 If you have recently been granted commit access, these policies apply:
 

@@ -5,9 +5,6 @@
 ! source file takes precedence over other search paths. Hence adding omp_lib.h in the current directory will make Flang use that
 ! header file instead of the one shipped with Flang.
 
-!----------
-! RUN LINES
-!----------
 ! This should just work
 ! RUN: not rm omp_lib.h
 ! RUN: %flang -fsyntax-only -fopenmp %s  2>&1
@@ -17,14 +14,8 @@
 ! RUN: not %flang -fsyntax-only -fopenmp %s  2>&1 | FileCheck %s
 ! RUN: rm omp_lib.h
 
-!--------------------------
-! EXPECTED OUTPUT
-!--------------------------
 ! CHECK: error: Must have INTEGER type, but is REAL(4)
 
-!-------
-! INPUT
-!-------
 include "omp_lib.h"
 
 integer :: x, y

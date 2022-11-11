@@ -190,6 +190,10 @@ public:
 /// Dump information about the given module file, to be used for
 /// basic debugging and discovery.
 class DumpModuleInfoAction : public ASTFrontendAction {
+public:
+  // Allow other tools (ex lldb) to direct output for their use.
+  llvm::raw_ostream *OutputStream = nullptr;
+
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;

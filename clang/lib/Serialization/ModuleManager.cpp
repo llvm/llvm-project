@@ -249,7 +249,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   return NewlyLoaded;
 }
 
-void ModuleManager::removeModules(ModuleIterator First, ModuleMap *modMap) {
+void ModuleManager::removeModules(ModuleIterator First) {
   auto Last = end();
   if (First == Last)
     return;
@@ -280,19 +280,10 @@ void ModuleManager::removeModules(ModuleIterator First, ModuleMap *modMap) {
     }
   }
 
-  // Delete the modules and erase them from the various structures.
-  for (ModuleIterator victim = First; victim != Last; ++victim) {
+  // Delete the modules.
+  for (ModuleIterator victim = First; victim != Last; ++victim)
     Modules.erase(victim->File);
 
-    if (modMap) {
-      StringRef ModuleName = victim->ModuleName;
-      if (Module *mod = modMap->findModule(ModuleName)) {
-        mod->setASTFile(None);
-      }
-    }
-  }
-
-  // Delete the modules.
   Chain.erase(Chain.begin() + (First - begin()), Chain.end());
 }
 

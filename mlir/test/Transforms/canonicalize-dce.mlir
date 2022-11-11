@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='func.func(canonicalize)' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='builtin.module(func.func(canonicalize))' | FileCheck %s
 
 // Test case: Simple case of deleting a dead pure op.
 
@@ -171,5 +171,19 @@ func.func @f() {
     %1 = "math.exp"(%0) : (f32) -> f32
     "test.terminator"() : ()->()
   }
+  return
+}
+
+// -----
+
+
+// Test case: Delete ops that only have side-effects on an allocated result.
+
+// CHECK:      func @f()
+// CHECK-NOT:    test_effects_result
+// CHECK-NEXT:   return
+
+func.func @f() {
+  %0 = "test.test_effects_result"() : () -> i32
   return
 }

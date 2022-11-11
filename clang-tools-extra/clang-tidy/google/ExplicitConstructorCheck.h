@@ -20,7 +20,7 @@ namespace google {
 /// See https://google.github.io/styleguide/cppguide.html#Explicit_Constructors
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google-explicit-constructor.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/google/explicit-constructor.html
 class ExplicitConstructorCheck : public ClangTidyCheck {
 public:
   ExplicitConstructorCheck(StringRef Name, ClangTidyContext *Context)

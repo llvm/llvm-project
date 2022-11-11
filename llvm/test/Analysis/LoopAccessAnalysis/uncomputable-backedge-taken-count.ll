@@ -1,4 +1,4 @@
-; RUN: opt -passes='print-access-info' -aa-pipeline='basic-aa' -disable-output < %s  2>&1 | FileCheck %s
+; RUN: opt -passes='print<access-info>' -aa-pipeline='basic-aa' -disable-output < %s  2>&1 | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"

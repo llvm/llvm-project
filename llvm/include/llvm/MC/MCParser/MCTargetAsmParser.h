@@ -459,13 +459,12 @@ public:
   virtual void convertToMapAndConstraints(unsigned Kind,
                                           const OperandVector &Operands) = 0;
 
-  /// Returns whether two registers are equal and is used by the tied-operands
-  /// checks in the AsmMatcher. This method can be overridden allow e.g. a
-  /// sub- or super-register as the tied operand.
-  virtual bool regsEqual(const MCParsedAsmOperand &Op1,
-                         const MCParsedAsmOperand &Op2) const {
-    assert(Op1.isReg() && Op2.isReg() && "Operands not all regs");
-    return Op1.getReg() == Op2.getReg();
+  /// Returns whether two operands are registers and are equal. This is used
+  /// by the tied-operands checks in the AsmMatcher. This method can be
+  /// overridden to allow e.g. a sub- or super-register as the tied operand.
+  virtual bool areEqualRegs(const MCParsedAsmOperand &Op1,
+                            const MCParsedAsmOperand &Op2) const {
+    return Op1.isReg() && Op2.isReg() && Op1.getReg() == Op2.getReg();
   }
 
   // Return whether this parser uses assignment statements with equals tokens
@@ -482,7 +481,7 @@ public:
   }
 
   // For actions that have to be performed before a label is emitted
-  virtual void doBeforeLabelEmit(MCSymbol *Symbol) {}
+  virtual void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {}
   
   virtual void onLabelParsed(MCSymbol *Symbol) {}
 

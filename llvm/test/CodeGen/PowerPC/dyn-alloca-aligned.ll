@@ -4,21 +4,20 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 %struct.s = type { i32, i32 }
 
-declare void @bar(i32*, i32*) #0
+declare void @bar(ptr, ptr) #0
 
-define void @goo(%struct.s* byval(%struct.s) nocapture readonly %a, i32 signext %n) #0 {
+define void @goo(ptr byval(%struct.s) nocapture readonly %a, i32 signext %n) #0 {
 entry:
   %0 = zext i32 %n to i64
   %vla = alloca i32, i64 %0, align 128
   %vla1 = alloca i32, i64 %0, align 128
-  %a2 = getelementptr inbounds %struct.s, %struct.s* %a, i64 0, i32 0
-  %1 = load i32, i32* %a2, align 4
-  store i32 %1, i32* %vla1, align 128
-  %b = getelementptr inbounds %struct.s, %struct.s* %a, i64 0, i32 1
-  %2 = load i32, i32* %b, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %vla1, i64 1
-  store i32 %2, i32* %arrayidx3, align 4
-  call void @bar(i32* %vla1, i32* %vla) #0
+  %1 = load i32, ptr %a, align 4
+  store i32 %1, ptr %vla1, align 128
+  %b = getelementptr inbounds %struct.s, ptr %a, i64 0, i32 1
+  %2 = load i32, ptr %b, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %vla1, i64 1
+  store i32 %2, ptr %arrayidx3, align 4
+  call void @bar(ptr %vla1, ptr %vla) #0
   ret void
 
 ; CHECK-LABEL: @goo

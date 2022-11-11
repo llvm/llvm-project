@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 ; Indvars should be able to promote the hiPart induction variable in the
 ; inner loop to i64.

@@ -31,7 +31,6 @@ struct LoongArchRegisterInfo : public LoongArchGenRegisterInfo {
   const uint32_t *getNoPreservedMask() const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
-  bool isConstantPhysReg(MCRegister PhysReg) const override;
 
   const TargetRegisterClass *
   getPointerRegClass(const MachineFunction &MF,
@@ -44,7 +43,15 @@ struct LoongArchRegisterInfo : public LoongArchGenRegisterInfo {
                            RegScavenger *RS = nullptr) const override;
 
   Register getFrameRegister(const MachineFunction &MF) const override;
+
+  bool requiresRegisterScavenging(const MachineFunction &MF) const override {
+    return true;
+  }
+
+  bool requiresFrameIndexScavenging(const MachineFunction &MF) const override {
+    return true;
+  }
 };
-} // namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_LOONGARCHREGISTERINFO_H

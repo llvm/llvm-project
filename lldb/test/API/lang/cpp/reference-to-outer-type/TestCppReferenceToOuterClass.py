@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailure("The fix for this was reverted due to llvm.org/PR52257")
     def test(self):
         self.build()

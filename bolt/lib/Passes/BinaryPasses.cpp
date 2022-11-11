@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/BinaryPasses.h"
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/ReorderAlgorithm.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "llvm/Support/CommandLine.h"
-
+#include <atomic>
+#include <mutex>
 #include <numeric>
 #include <vector>
 
@@ -176,9 +178,8 @@ cl::opt<bolt::ReorderBasicBlocks::LayoutType> ReorderBlocks(
     cl::ZeroOrMore, cl::cat(BoltOptCategory),
     cl::callback([](const bolt::ReorderBasicBlocks::LayoutType &option) {
       if (option == bolt::ReorderBasicBlocks::LT_OPTIMIZE_CACHE_PLUS) {
-        WithColor::warning()
-            << "'-reorder-blocks=cache+' is deprecated, "
-            << "please use '-reorder-blocks=ext-tsp' instead\n";
+        errs() << "BOLT-WARNING: '-reorder-blocks=cache+' is deprecated, please"
+               << " use '-reorder-blocks=ext-tsp' instead\n";
         ReorderBlocks = bolt::ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP;
       }
     }));
@@ -334,14 +335,14 @@ void NormalizeCFG::runOnFunctions(BinaryContext &BC) {
 }
 
 void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
-  if (Function.layout_size() > 0) {
+  if (!Function.getLayout().block_empty()) {
     unsigned Count;
     uint64_t Bytes;
     Function.markUnreachableBlocks();
     LLVM_DEBUG({
-      for (BinaryBasicBlock *BB : Function.layout()) {
-        if (!BB->isValid()) {
-          dbgs() << "BOLT-INFO: UCE found unreachable block " << BB->getName()
+      for (BinaryBasicBlock &BB : Function) {
+        if (!BB.isValid()) {
+          dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
                  << " in function " << Function << "\n";
           Function.dump();
         }
@@ -388,12 +389,25 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
   if (opts::ReorderBlocks == ReorderBasicBlocks::LT_NONE)
     return;
 
-  std::atomic<uint64_t> ModifiedFuncCount{0};
+  std::atomic_uint64_t ModifiedFuncCount(0);
+  std::mutex FunctionEditDistanceMutex;
+  DenseMap<const BinaryFunction *, uint64_t> FunctionEditDistance;
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    modifyFunctionLayout(BF, opts::ReorderBlocks, opts::MinBranchClusters);
-    if (BF.hasLayoutChanged())
-      ++ModifiedFuncCount;
+    SmallVector<const BinaryBasicBlock *, 0> OldBlockOrder;
+    if (opts::PrintFuncStat > 0)
+      llvm::copy(BF.getLayout().blocks(), std::back_inserter(OldBlockOrder));
+
+    const bool LayoutChanged =
+        modifyFunctionLayout(BF, opts::ReorderBlocks, opts::MinBranchClusters);
+    if (LayoutChanged) {
+      ModifiedFuncCount.fetch_add(1, std::memory_order_relaxed);
+      if (opts::PrintFuncStat > 0) {
+        const uint64_t Distance = BF.getLayout().getEditDistance(OldBlockOrder);
+        std::lock_guard<std::mutex> Lock(FunctionEditDistanceMutex);
+        FunctionEditDistance[&BF] = Distance;
+      }
+    }
   };
 
   ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
@@ -403,10 +417,15 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_BB_LINEAR, WorkFun, SkipFunc,
       "ReorderBasicBlocks");
+  const size_t NumAllProfiledFunctions =
+      BC.NumProfiledFuncs + BC.NumStaleProfileFuncs;
 
   outs() << "BOLT-INFO: basic block reordering modified layout of "
-         << format("%zu (%.2lf%%) functions\n", ModifiedFuncCount.load(),
-                   100.0 * ModifiedFuncCount.load() /
+         << format("%zu functions (%.2lf%% of profiled, %.2lf%% of total)\n",
+                   ModifiedFuncCount.load(std::memory_order_relaxed),
+                   100.0 * ModifiedFuncCount.load(std::memory_order_relaxed) /
+                       NumAllProfiledFunctions,
+                   100.0 * ModifiedFuncCount.load(std::memory_order_relaxed) /
                        BC.getBinaryFunctions().size());
 
   if (opts::PrintFuncStat > 0) {
@@ -421,7 +440,7 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
     OS << "\nBOLT-INFO: Printing Function Statistics:\n\n";
     OS << "           There are " << BFs.size() << " functions in total. \n";
     OS << "           Number of functions being modified: "
-       << ModifiedFuncCount.load() << "\n";
+       << ModifiedFuncCount.load(std::memory_order_relaxed) << "\n";
     OS << "           User asks for detailed information on top "
        << opts::PrintFuncStat << " functions. (Ranked by function score)"
        << "\n\n";
@@ -439,23 +458,23 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
       OS << "             There are " << Function.getInstructionCount()
          << " number of instructions in this function.\n";
       OS << "             The edit distance for this function is: "
-         << Function.getEditDistance() << "\n\n";
+         << FunctionEditDistance.lookup(&Function) << "\n\n";
     }
   }
 }
 
-void ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
+bool ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
                                               LayoutType Type,
                                               bool MinBranchClusters) const {
   if (BF.size() == 0 || Type == LT_NONE)
-    return;
+    return false;
 
   BinaryFunction::BasicBlockOrderType NewLayout;
   std::unique_ptr<ReorderAlgorithm> Algo;
 
   // Cannot do optimal layout without profile.
   if (Type != LT_REVERSE && !BF.hasValidProfile())
-    return;
+    return false;
 
   if (Type == LT_REVERSE) {
     Algo.reset(new ReverseReorderAlgorithm());
@@ -500,7 +519,7 @@ void ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
 
   Algo->reorderBasicBlocks(BF, NewLayout);
 
-  BF.updateBasicBlockLayout(NewLayout);
+  return BF.getLayout().update(NewLayout);
 }
 
 void FixupBranches::runOnFunctions(BinaryContext &BC) {
@@ -576,41 +595,39 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
 
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &BF = It.second;
-    int64_t CurrentGnuArgsSize = 0;
 
-    // Have we crossed hot/cold border for split functions?
-    bool SeenCold = false;
+    for (FunctionFragment &FF : BF.getLayout().fragments()) {
+      int64_t CurrentGnuArgsSize = 0;
 
-    for (BinaryBasicBlock *BB : BF.layout()) {
-      if (BB->isCold() && !SeenCold) {
-        SeenCold = true;
-        CurrentGnuArgsSize = 0;
-      }
-
-      // First convert GnuArgsSize annotations into CFIs. This may change instr
-      // pointers, so do it before recording ptrs for preserved annotations
-      if (BF.usesGnuArgsSize()) {
-        for (auto II = BB->begin(); II != BB->end(); ++II) {
-          if (!BC.MIB->isInvoke(*II))
-            continue;
-          const int64_t NewGnuArgsSize = BC.MIB->getGnuArgsSize(*II);
-          assert(NewGnuArgsSize >= 0 && "expected non-negative GNU_args_size");
-          if (NewGnuArgsSize != CurrentGnuArgsSize) {
-            auto InsertII = BF.addCFIInstruction(
-                BB, II,
-                MCCFIInstruction::createGnuArgsSize(nullptr, NewGnuArgsSize));
-            CurrentGnuArgsSize = NewGnuArgsSize;
-            II = std::next(InsertII);
+      for (BinaryBasicBlock *const BB : FF) {
+        // First convert GnuArgsSize annotations into CFIs. This may change
+        // instr pointers, so do it before recording ptrs for preserved
+        // annotations
+        if (BF.usesGnuArgsSize()) {
+          for (auto II = BB->begin(); II != BB->end(); ++II) {
+            if (!BC.MIB->isInvoke(*II))
+              continue;
+            const int64_t NewGnuArgsSize = BC.MIB->getGnuArgsSize(*II);
+            assert(NewGnuArgsSize >= 0 &&
+                   "expected non-negative GNU_args_size");
+            if (NewGnuArgsSize != CurrentGnuArgsSize) {
+              auto InsertII = BF.addCFIInstruction(
+                  BB, II,
+                  MCCFIInstruction::createGnuArgsSize(nullptr, NewGnuArgsSize));
+              CurrentGnuArgsSize = NewGnuArgsSize;
+              II = std::next(InsertII);
+            }
           }
         }
-      }
 
-      // Now record preserved annotations separately and then strip annotations.
-      for (auto II = BB->begin(); II != BB->end(); ++II) {
-        if (BF.requiresAddressTranslation() && BC.MIB->getOffset(*II))
-          PreservedOffsetAnnotations.emplace_back(&(*II),
-                                                  *BC.MIB->getOffset(*II));
-        BC.MIB->stripAnnotations(*II);
+        // Now record preserved annotations separately and then strip
+        // annotations.
+        for (auto II = BB->begin(); II != BB->end(); ++II) {
+          if (BF.requiresAddressTranslation() && BC.MIB->getOffset(*II))
+            PreservedOffsetAnnotations.emplace_back(&(*II),
+                                                    *BC.MIB->getOffset(*II));
+          BC.MIB->stripAnnotations(*II);
+        }
       }
     }
   }
@@ -677,7 +694,7 @@ uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
                    MIB->getTargetSymbol(*UncondBranch) == BB.getLabel()) {
           MIB->replaceBranchTarget(*UncondBranch, Succ->getLabel(), Ctx);
         } else if (!UncondBranch) {
-          assert(Function.getBasicBlockAfter(Pred, false) != Succ &&
+          assert(Function.getLayout().getBasicBlockAfter(Pred, false) != Succ &&
                  "Don't add an explicit jump to a fallthrough block.");
           Pred->addBranchInstruction(Succ);
         }
@@ -781,7 +798,7 @@ bool SimplifyConditionalTailCalls::shouldRewriteBranch(
 
 uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
   // Need updated indices to correctly detect branch' direction.
-  BF.updateLayoutIndices();
+  BF.getLayout().updateLayoutIndices();
   BF.markUnreachableBlocks();
 
   MCPlusBuilder *MIB = BF.getBinaryContext().MIB.get();
@@ -798,7 +815,7 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
     return (BB->pred_size() != 0 || BB->isLandingPad() || BB->isEntryPoint());
   };
 
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     // Locate BB with a single direct tail-call instruction.
     if (BB->getNumNonPseudos() != 1)
       continue;
@@ -877,7 +894,7 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
 
       // Annotate it, so "isCall" returns true for this jcc
       MIB->setConditionalTailCall(*CondBranch);
-      // Add info abount the conditional tail call frequency, otherwise this
+      // Add info about the conditional tail call frequency, otherwise this
       // info will be lost when we delete the associated BranchInfo entry
       auto &CTCAnnotation =
           MIB->getOrCreateAnnotationAs<uint64_t>(*CondBranch, "CTCTakenCount");
@@ -915,9 +932,10 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
 
     // Find the next valid block.  Invalid blocks will be deleted
     // so they shouldn't be considered fallthrough targets.
-    const BinaryBasicBlock *NextBlock = BF.getBasicBlockAfter(PredBB, false);
+    const BinaryBasicBlock *NextBlock =
+        BF.getLayout().getBasicBlockAfter(PredBB, false);
     while (NextBlock && !isValid(NextBlock))
-      NextBlock = BF.getBasicBlockAfter(NextBlock, false);
+      NextBlock = BF.getLayout().getBasicBlockAfter(NextBlock, false);
 
     // Get the unconditional successor to this block.
     const BinaryBasicBlock *PredSucc = PredBB->getSuccessor();
@@ -1106,7 +1124,7 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
   uint64_t NumLocalLoadsFound = 0;
   uint64_t NumDynamicLocalLoadsFound = 0;
 
-  for (BinaryBasicBlock *BB : BF.layout()) {
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     for (MCInst &Inst : *BB) {
       unsigned Opcode = Inst.getOpcode();
       const MCInstrDesc &Desc = BC.MII->get(Opcode);
@@ -1369,6 +1387,7 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     }
   }
   BC.NumProfiledFuncs = ProfiledFunctions.size();
+  BC.NumStaleProfileFuncs = NumStaleProfileFunctions;
 
   const size_t NumAllProfiledFunctions =
       ProfiledFunctions.size() + NumStaleProfileFunctions;
@@ -1420,10 +1439,10 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   if (ProfiledFunctions.size() > 10) {
     if (opts::Verbosity >= 1) {
       outs() << "BOLT-INFO: top called functions are:\n";
-      std::sort(ProfiledFunctions.begin(), ProfiledFunctions.end(),
-                [](const BinaryFunction *A, const BinaryFunction *B) {
-                  return B->getExecutionCount() < A->getExecutionCount();
-                });
+      llvm::sort(ProfiledFunctions,
+                 [](const BinaryFunction *A, const BinaryFunction *B) {
+                   return B->getExecutionCount() < A->getExecutionCount();
+                 });
       auto SFI = ProfiledFunctions.begin();
       auto SFIend = ProfiledFunctions.end();
       for (unsigned I = 0u; I < opts::TopCalledLimit && SFI != SFIend;
@@ -1433,14 +1452,13 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   }
 
   if (!opts::PrintSortedBy.empty() &&
-      std::find(opts::PrintSortedBy.begin(), opts::PrintSortedBy.end(),
-                DynoStats::FIRST_DYNO_STAT) == opts::PrintSortedBy.end()) {
+      !llvm::is_contained(opts::PrintSortedBy, DynoStats::FIRST_DYNO_STAT)) {
 
-    std::vector<const BinaryFunction *> Functions;
+    std::vector<BinaryFunction *> Functions;
     std::map<const BinaryFunction *, DynoStats> Stats;
 
-    for (const auto &BFI : BC.getBinaryFunctions()) {
-      const BinaryFunction &BF = BFI.second;
+    for (auto &BFI : BC.getBinaryFunctions()) {
+      BinaryFunction &BF = BFI.second;
       if (shouldOptimize(BF) && BF.hasValidProfile()) {
         Functions.push_back(&BF);
         Stats.emplace(&BF, getDynoStats(BF));
@@ -1448,24 +1466,22 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     }
 
     const bool SortAll =
-        std::find(opts::PrintSortedBy.begin(), opts::PrintSortedBy.end(),
-                  DynoStats::LAST_DYNO_STAT) != opts::PrintSortedBy.end();
+        llvm::is_contained(opts::PrintSortedBy, DynoStats::LAST_DYNO_STAT);
 
     const bool Ascending =
         opts::DynoStatsSortOrderOpt == opts::DynoStatsSortOrder::Ascending;
 
     if (SortAll) {
-      std::stable_sort(Functions.begin(), Functions.end(),
-                       [Ascending, &Stats](const BinaryFunction *A,
-                                           const BinaryFunction *B) {
-                         return Ascending ? Stats.at(A) < Stats.at(B)
-                                          : Stats.at(B) < Stats.at(A);
-                       });
+      llvm::stable_sort(Functions,
+                        [Ascending, &Stats](const BinaryFunction *A,
+                                            const BinaryFunction *B) {
+                          return Ascending ? Stats.at(A) < Stats.at(B)
+                                           : Stats.at(B) < Stats.at(A);
+                        });
     } else {
-      std::stable_sort(
-          Functions.begin(), Functions.end(),
-          [Ascending, &Stats](const BinaryFunction *A,
-                              const BinaryFunction *B) {
+      llvm::stable_sort(
+          Functions, [Ascending, &Stats](const BinaryFunction *A,
+                                         const BinaryFunction *B) {
             const DynoStats &StatsA = Stats.at(A);
             const DynoStats &StatsB = Stats.at(B);
             return Ascending ? StatsA.lessThan(StatsB, opts::PrintSortedBy)
@@ -1542,16 +1558,16 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
 
   // Collect and print information about suboptimal code layout on input.
   if (opts::ReportBadLayout) {
-    std::vector<const BinaryFunction *> SuboptimalFuncs;
+    std::vector<BinaryFunction *> SuboptimalFuncs;
     for (auto &BFI : BC.getBinaryFunctions()) {
-      const BinaryFunction &BF = BFI.second;
+      BinaryFunction &BF = BFI.second;
       if (!BF.hasValidProfile())
         continue;
 
       const uint64_t HotThreshold =
           std::max<uint64_t>(BF.getKnownExecutionCount(), 1);
       bool HotSeen = false;
-      for (const BinaryBasicBlock *BB : BF.rlayout()) {
+      for (const BinaryBasicBlock *BB : BF.getLayout().rblocks()) {
         if (!HotSeen && BB->getKnownExecutionCount() > HotThreshold) {
           HotSeen = true;
           continue;
@@ -1564,11 +1580,11 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     }
 
     if (!SuboptimalFuncs.empty()) {
-      std::sort(SuboptimalFuncs.begin(), SuboptimalFuncs.end(),
-                [](const BinaryFunction *A, const BinaryFunction *B) {
-                  return A->getKnownExecutionCount() / A->getSize() >
-                         B->getKnownExecutionCount() / B->getSize();
-                });
+      llvm::sort(SuboptimalFuncs,
+                 [](const BinaryFunction *A, const BinaryFunction *B) {
+                   return A->getKnownExecutionCount() / A->getSize() >
+                          B->getKnownExecutionCount() / B->getSize();
+                 });
 
       outs() << "BOLT-INFO: " << SuboptimalFuncs.size()
              << " functions have "
@@ -1598,6 +1614,9 @@ void InstructionLowering::runOnFunctions(BinaryContext &BC) {
 }
 
 void StripRepRet::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isX86())
+    return;
+
   uint64_t NumPrefixesRemoved = 0;
   uint64_t NumBytesSaved = 0;
   for (auto &BFI : BC.getBinaryFunctions()) {
@@ -1760,8 +1779,8 @@ void SpecializeMemcpy1::runOnFunctions(BinaryContext &BC) {
           assert(NextBB && "unexpected call to memcpy() with no return");
         }
 
-        BinaryBasicBlock *MemcpyBB =
-            Function.addBasicBlock(CurBB->getInputOffset());
+        BinaryBasicBlock *MemcpyBB = Function.addBasicBlock();
+        MemcpyBB->setOffset(CurBB->getInputOffset());
         InstructionListType CmpJCC =
             BC.MIB->createCmpJE(BC.MIB->getIntArgRegister(2), 1,
                                 OneByteMemcpyBB->getLabel(), BC.Ctx.get());

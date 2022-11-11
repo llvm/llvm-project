@@ -26,7 +26,7 @@ namespace modernize {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-shared.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/make-shared.html
 class MakeSharedCheck : public MakeSmartPtrCheck {
 public:
   MakeSharedCheck(StringRef Name, ClangTidyContext *Context);

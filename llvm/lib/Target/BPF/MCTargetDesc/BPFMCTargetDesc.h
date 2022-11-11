@@ -54,6 +54,7 @@ std::unique_ptr<MCObjectTargetWriter> createBPFELFObjectWriter(uint8_t OSABI);
 // Defines symbolic names for the BPF instructions.
 //
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "BPFGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

@@ -111,7 +111,7 @@ Invalid1 i1;
 // expected-note@first.h:* {{declaration of 'x' does not match}}
 Invalid2 i2;
 // expected-error@first.h:* {{'Types::TypeOf::Invalid2' has different definitions in different modules; first difference is definition in module 'FirstModule' found field 'x' with type 'typeof(int)' (aka 'int')}}
-// expected-note@second.h:* {{but in 'SecondModule' found field 'x' with type 'typeof(Types::TypeOf::I)' (aka 'int')}}
+// expected-note@second.h:* {{but in 'SecondModule' found field 'x' with type 'typeof(I)' (aka 'int')}}
 Invalid3 i3;
 // expected-error@second.h:* {{'Types::TypeOf::Invalid3::x' from module 'SecondModule' is not present in definition of 'Types::TypeOf::Invalid3' in module 'FirstModule'}}
 // expected-note@first.h:* {{declaration of 'x' does not match}}

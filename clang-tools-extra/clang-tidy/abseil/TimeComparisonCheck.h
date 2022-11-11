@@ -19,7 +19,7 @@ namespace abseil {
 /// domain.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil-time-comparison.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/time-comparison.html
 class TimeComparisonCheck : public ClangTidyCheck {
 public:
   TimeComparisonCheck(StringRef Name, ClangTidyContext *Context)

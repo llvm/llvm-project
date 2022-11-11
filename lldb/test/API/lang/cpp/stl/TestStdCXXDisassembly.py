@@ -2,10 +2,6 @@
 Test the lldb disassemble command on lib stdc++.
 """
 
-from __future__ import print_function
-
-
-import unittest2
 import os
 import lldb
 from lldbsuite.test.lldbtest import *
@@ -13,8 +9,6 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 
 class StdCXXDisassembleTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
     def test_stdcxx_disasm(self):

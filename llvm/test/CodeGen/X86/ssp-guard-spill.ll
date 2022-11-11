@@ -22,33 +22,32 @@ entry:
   %n.addr = alloca i32, align 4
   %a = alloca [10 x i32], align 16
   %i = alloca i32, align 4
-  store i32 %n, i32* %n.addr, align 4
-  store i32 0, i32* %i, align 4
+  store i32 %n, ptr %n.addr, align 4
+  store i32 0, ptr %i, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %tmp = load i32, i32* %i, align 4
-  %tmp1 = load i32, i32* %n.addr, align 4
+  %tmp = load i32, ptr %i, align 4
+  %tmp1 = load i32, ptr %n.addr, align 4
   %cmp = icmp slt i32 %tmp, %tmp1
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %tmp2 = load i32, i32* %i, align 4
+  %tmp2 = load i32, ptr %i, align 4
   %idxprom = sext i32 %tmp2 to i64
-  %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* %a, i64 0, i64 %idxprom
-  store i32 0, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [10 x i32], ptr %a, i64 0, i64 %idxprom
+  store i32 0, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
-  %tmp3 = load i32, i32* %i, align 4
+  %tmp3 = load i32, ptr %i, align 4
   %inc = add nsw i32 %tmp3, 1
-  store i32 %inc, i32* %i, align 4
+  store i32 %inc, ptr %i, align 4
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %arraydecay = getelementptr inbounds [10 x i32], [10 x i32]* %a, i32 0, i32 0
-  %call = call zeroext i1 @_Z3BarPi(i32* %arraydecay)
+  %call = call zeroext i1 @_Z3BarPi(ptr %a)
   ret i1 %call
 }
 
-declare zeroext i1 @_Z3BarPi(i32*)
+declare zeroext i1 @_Z3BarPi(ptr)

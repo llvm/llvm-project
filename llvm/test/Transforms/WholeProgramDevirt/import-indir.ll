@@ -68,40 +68,33 @@ target datalayout = "e-p:32:32"
 
 declare void @llvm.assume(i1)
 declare void @llvm.trap()
-declare {i8*, i1} @llvm.type.checked.load(i8*, i32, metadata)
-declare i1 @llvm.type.test(i8*, metadata)
+declare {ptr, i1} @llvm.type.checked.load(ptr, i32, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 
 ; CHECK: define i1 @f1
-define i1 @f1(i8* %obj) {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid1")
+define i1 @f1(ptr %obj) {
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid1")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr [1 x i8*], [1 x i8*]* %vtable, i32 0, i32 0
-  %fptr = load i8*, i8** %fptrptr
-  %fptr_casted = bitcast i8* %fptr to i1 (i8*, i32)*
+  %fptr = load ptr, ptr %vtable
   ; CHECK: call i1 %
-  %result = call i1 %fptr_casted(i8* %obj, i32 5)
+  %result = call i1 %fptr(ptr %obj, i32 5)
   ret i1 %result
 }
 
 ; CHECK: define i1 @f2
-define i1 @f2(i8* %obj) {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %pair = call {i8*, i1} @llvm.type.checked.load(i8* %vtablei8, i32 4, metadata !"typeid1")
-  %fptr = extractvalue {i8*, i1} %pair, 0
-  %p = extractvalue {i8*, i1} %pair, 1
+define i1 @f2(ptr %obj) {
+  %vtable = load ptr, ptr %obj
+  %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 4, metadata !"typeid1")
+  %fptr = extractvalue {ptr, i1} %pair, 0
+  %p = extractvalue {ptr, i1} %pair, 1
   ; CHECK: [[P:%.*]] = call i1 @llvm.type.test
   ; CHECK: br i1 [[P]]
   br i1 %p, label %cont, label %trap
 
 cont:
-  %fptr_casted = bitcast i8* %fptr to i1 (i8*, i32)*
   ; CHECK: call i1 %
-  %result = call i1 %fptr_casted(i8* %obj, i32 undef)
+  %result = call i1 %fptr(ptr %obj, i32 undef)
   ret i1 %result
 
 trap:

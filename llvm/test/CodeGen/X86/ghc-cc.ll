@@ -32,10 +32,10 @@ entry:
   ; CHECK-NEXT: movl hp, %edi
   ; CHECK-NEXT: movl sp, %ebp
   ; CHECK-NEXT: movl base, %ebx
-  %0 = load i32, i32* @r1
-  %1 = load i32, i32* @hp
-  %2 = load i32, i32* @sp
-  %3 = load i32, i32* @base
+  %0 = load i32, ptr @r1
+  %1 = load i32, ptr @hp
+  %2 = load i32, ptr @sp
+  %3 = load i32, ptr @base
   ; CHECK: jmp bar
   tail call ghccc void @bar( i32 %3, i32 %2, i32 %1, i32 %0 ) nounwind
   ret void

@@ -117,7 +117,7 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
     sdk_path.Printf("%s/Developer/Platforms/MacOSX.platform/Developer/"
                     "SDKs/MacOSX%u.%u.sdk",
                     fspec.GetPath().c_str(), version.getMajor(),
-                    version.getMinor().getValue());
+                    *version.getMinor());
     if (FileSystem::Instance().Exists(fspec))
       return ConstString(sdk_path.GetString());
   }

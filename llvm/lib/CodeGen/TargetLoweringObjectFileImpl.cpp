@@ -58,6 +58,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -127,7 +128,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
     if (Ctx.getAsmInfo()->getExceptionHandlingType() == ExceptionHandling::ARM)
       break;
     // Fallthrough if not using EHABI
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Triple::ppc:
   case Triple::ppcle:
   case Triple::x86:
@@ -289,6 +290,14 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
       TTypeEncoding = dwarf::DW_EH_PE_absptr;
     }
     break;
+  case Triple::loongarch32:
+  case Triple::loongarch64:
+    LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+    PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+                          dwarf::DW_EH_PE_sdata4;
+    TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+                    dwarf::DW_EH_PE_sdata4;
+    break;
   default:
     break;
   }
@@ -355,6 +364,31 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
       Streamer.emitInt64(Hash->getZExtValue());
       Streamer.emitULEB128IntValue(Name->getString().size());
       Streamer.emitBytes(Name->getString());
+    }
+  }
+
+  if (NamedMDNode *LLVMStats = M.getNamedMetadata("llvm.stats")) {
+    // Emit the metadata for llvm statistics into .llvm_stats section, which is
+    // formatted as a list of key/value pair, the value is base64 encoded.
+    auto *S = C.getObjectFileInfo()->getLLVMStatsSection();
+    Streamer.switchSection(S);
+    for (const auto *Operand : LLVMStats->operands()) {
+      const auto *MD = cast<MDNode>(Operand);
+      assert(MD->getNumOperands() % 2 == 0 &&
+             ("Operand num should be even for a list of key/value pair"));
+      for (size_t I = 0; I < MD->getNumOperands(); I += 2) {
+        // Encode the key string size.
+        auto *Key = cast<MDString>(MD->getOperand(I));
+        Streamer.emitULEB128IntValue(Key->getString().size());
+        Streamer.emitBytes(Key->getString());
+        // Encode the value into a Base64 string.
+        std::string Value = encodeBase64(
+            Twine(mdconst::dyn_extract<ConstantInt>(MD->getOperand(I + 1))
+                      ->getZExtValue())
+                .str());
+        Streamer.emitULEB128IntValue(Value.size());
+        Streamer.emitBytes(Value);
+      }
     }
   }
 
@@ -449,9 +483,6 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
       Name == ".llvmbc" || Name == ".llvmcmd")
     return SectionKind::getMetadata();
 
-  if (Name == ".llvm.offloading")
-    return SectionKind::getExclude();
-
   if (Name.empty() || Name[0] != '.') return K;
 
   // Default implementation based on some magic section names.
@@ -500,6 +531,9 @@ static unsigned getELFSectionType(StringRef Name, SectionKind K) {
 
   if (hasPrefix(Name, ".preinit_array"))
     return ELF::SHT_PREINIT_ARRAY;
+
+  if (hasPrefix(Name, ".llvm.offloading"))
+    return ELF::SHT_LLVM_OFFLOADING;
 
   if (K.isBSS() || K.isThreadBSS())
     return ELF::SHT_NOBITS;
@@ -1889,11 +1923,24 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
     // string that sorts between .CRT$XCA and .CRT$XCU. In the general case, we
     // make a name like ".CRT$XCT12345", since that runs before .CRT$XCU. Really
     // low priorities need to sort before 'L', since the CRT uses that
-    // internally, so we use ".CRT$XCA00001" for them.
+    // internally, so we use ".CRT$XCA00001" for them. We have a contract with
+    // the frontend that "init_seg(compiler)" corresponds to priority 200 and
+    // "init_seg(lib)" corresponds to priority 400, and those respectively use
+    // 'C' and 'L' without the priority suffix. Priorities between 200 and 400
+    // use 'C' with the priority as a suffix.
     SmallString<24> Name;
+    char LastLetter = 'T';
+    bool AddPrioritySuffix = Priority != 200 && Priority != 400;
+    if (Priority < 200)
+      LastLetter = 'A';
+    else if (Priority < 400)
+      LastLetter = 'C';
+    else if (Priority == 400)
+      LastLetter = 'L';
     raw_svector_ostream OS(Name);
-    OS << ".CRT$X" << (IsCtor ? "C" : "T") <<
-        (Priority < 200 ? 'A' : 'T') << format("%05u", Priority);
+    OS << ".CRT$X" << (IsCtor ? "C" : "T") << LastLetter;
+    if (AddPrioritySuffix)
+      OS << format("%05u", Priority);
     MCSectionCOFF *Sec = Ctx.getCOFFSection(
         Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
         SectionKind::getReadOnly());
@@ -2469,6 +2516,13 @@ void TargetLoweringObjectFileXCOFF::Initialize(MCContext &Ctx,
   PersonalityEncoding = 0;
   LSDAEncoding = 0;
   CallSiteEncoding = dwarf::DW_EH_PE_udata4;
+
+  // AIX debug for thread local location is not ready. And for integrated as
+  // mode, the relocatable address for the thread local variable will cause
+  // linker error. So disable the location attribute generation for thread local
+  // variables for now.
+  // FIXME: when TLS debug on AIX is ready, remove this setting.
+  SupportDebugThreadLocalLocation = false;
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getStaticCtorSection(

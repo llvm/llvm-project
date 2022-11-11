@@ -8,30 +8,26 @@
 ///
 /// \file
 ///
-/// Utilities to handle the creation of the native exegesis target.
+/// Utilities to handle the creation of the enabled exegesis target(s).
 ///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TOOLS_LLVM_EXEGESIS_TARGET_SELECT_H
 #define LLVM_TOOLS_LLVM_EXEGESIS_TARGET_SELECT_H
 
+#include "llvm/Config/llvm-config.h"
+
 namespace llvm {
 namespace exegesis {
 
-#ifdef LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET
-void LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET();
-#endif
+// Forward declare all of the initialize methods for targets compiled in
+#define LLVM_EXEGESIS(TargetName) void Initialize##TargetName##ExegesisTarget();
+#include "llvm/Config/TargetExegesis.def"
 
-// Initializes the native exegesis target, or returns false if there is no
-// native target (either because llvm-exegesis does not support the target or
-// because it's not linked in).
-inline bool InitializeNativeExegesisTarget() {
-#ifdef LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET
-  LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET();
-  return true;
-#else
-  return false;
-#endif
+// Initializes all exegesis targets compiled in.
+inline void InitializeAllExegesisTargets() {
+#define LLVM_EXEGESIS(TargetName) Initialize##TargetName##ExegesisTarget();
+#include "llvm/Config/TargetExegesis.def"
 }
 
 } // namespace exegesis

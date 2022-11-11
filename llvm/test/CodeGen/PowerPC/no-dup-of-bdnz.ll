@@ -1,4 +1,4 @@
-; RUN: opt -early-cse-memssa -earlycse-debug-hash -loop-rotate -licm -loop-rotate -S %s -o - | FileCheck %s
+; RUN: opt -passes='early-cse<memssa>,loop-mssa(loop-rotate,licm,loop-rotate)' -earlycse-debug-hash -S %s -o - | FileCheck %s
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 source_filename = "bugpoint-output-8903f29.bc"
 target datalayout = "e-m:e-i64:64-n32:64"
@@ -20,7 +20,7 @@ entry:
 BB_1:                                    ; preds = %BB_12, %BB_4
   %bcount.1.us = phi i64 [ %.810.us, %BB_4 ], [ 0, %BB_12 ]
   %0 = add i64 %arg.ssa, %bcount.1.us
-  %.568.us = load i32, i32* undef, align 4
+  %.568.us = load i32, ptr undef, align 4
   %.15.i.us = icmp slt i32 0, %.568.us
   br i1 %.15.i.us, label %BB_3, label %BB_2
 

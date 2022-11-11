@@ -5,6 +5,8 @@ add_mlir_dialect_library(MLIRAMDGPUDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/AMDGPU
 
   DEPENDS
+  MLIRAMDGPUEnumsGen
+  MLIRAMDGPUAttributesIncGen
   MLIRAMDGPUIncGen
 
   LINK_LIBS PUBLIC

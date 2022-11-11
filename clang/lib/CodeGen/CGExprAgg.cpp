@@ -850,7 +850,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
       return;
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
 
   case CK_NoOp:

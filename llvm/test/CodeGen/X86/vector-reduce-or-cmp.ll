@@ -1028,7 +1028,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 }
 
 %struct.Box = type { i32, i32, i32, i32 }
-define zeroext i1 @PR44781(%struct.Box* %0) {
+define zeroext i1 @PR44781(ptr %0) {
 ; SSE2-LABEL: PR44781:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -1075,12 +1075,11 @@ define zeroext i1 @PR44781(%struct.Box* %0) {
 ; AVX512BWVL-NEXT:    vptest %xmm1, %xmm0
 ; AVX512BWVL-NEXT:    sete %al
 ; AVX512BWVL-NEXT:    retq
-  %2 = bitcast %struct.Box* %0 to <4 x i32>*
-  %3 = load <4 x i32>, <4 x i32>* %2, align 4
-  %4 = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %3)
-  %5 = and i32 %4, 15
-  %6 = icmp eq i32 %5, 0
-  ret i1 %6
+  %2 = load <4 x i32>, ptr %0, align 4
+  %3 = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %2)
+  %4 = and i32 %3, 15
+  %5 = icmp eq i32 %4, 0
+  ret i1 %5
 }
 
 define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {

@@ -179,15 +179,17 @@ def main():
 
   if len(commits) > 1:
     old_tree = commits[1]
-    new_tree = run_clang_format_and_save_to_tree(changed_lines,
-                                                 revision=commits[1],
-                                                 binary=opts.binary,
-                                                 style=opts.style)
+    revision = old_tree
+  elif opts.staged:
+    old_tree = create_tree_from_index(changed_lines)
+    revision = ''
   else:
     old_tree = create_tree_from_workdir(changed_lines)
-    new_tree = run_clang_format_and_save_to_tree(changed_lines,
-                                                 binary=opts.binary,
-                                                 style=opts.style)
+    revision = None
+  new_tree = run_clang_format_and_save_to_tree(changed_lines,
+                                               revision,
+                                               binary=opts.binary,
+                                               style=opts.style)
   if opts.verbose >= 1:
     print('old tree: %s' % old_tree)
     print('new tree: %s' % new_tree)
@@ -198,16 +200,16 @@ def main():
     return 0
 
   if opts.diff:
-    print_diff(old_tree, new_tree)
-  elif opts.diffstat:
-    print_diffstat(old_tree, new_tree)
-  else:
-    changed_files = apply_changes(old_tree, new_tree, force=opts.force,
-                                  patch_mode=opts.patch)
-    if (opts.verbose >= 0 and not opts.patch) or opts.verbose >= 1:
-      print('changed files:')
-      for filename in changed_files:
-        print('    %s' % filename)
+    return print_diff(old_tree, new_tree)
+  if opts.diffstat:
+    return print_diffstat(old_tree, new_tree)
+
+  changed_files = apply_changes(old_tree, new_tree, force=opts.force,
+                                patch_mode=opts.patch)
+  if (opts.verbose >= 0 and not opts.patch) or opts.verbose >= 1:
+    print('changed files:')
+    for filename in changed_files:
+      print('    %s' % filename)
 
   return 1
 
@@ -394,11 +396,29 @@ def create_tree_from_workdir(filenames):
   return create_tree(filenames, '--stdin')
 
 
+def create_tree_from_index(filenames):
+  # Copy the environment, because the files have to be read from the original
+  # index.
+  env = os.environ.copy()
+  def index_contents_generator():
+    for filename in filenames:
+      git_ls_files_cmd = ['git', 'ls-files', '--stage', '-z', '--', filename]
+      git_ls_files = subprocess.Popen(git_ls_files_cmd, env=env,
+                                      stdin=subprocess.PIPE,
+                                      stdout=subprocess.PIPE)
+      stdout = git_ls_files.communicate()[0]
+      yield convert_string(stdout.split(b'\0')[0])
+  return create_tree(index_contents_generator(), '--index-info')
+
+
 def run_clang_format_and_save_to_tree(changed_lines, revision=None,
                                       binary='clang-format', style=None):
   """Run clang-format on each file and save the result to a git tree.
 
   Returns the object ID (SHA-1) of the created tree."""
+  # Copy the environment when formatting the files in the index, because the
+  # files have to be read from the original index.
+  env = os.environ.copy() if revision == '' else None
   def iteritems(container):
       try:
           return container.iteritems() # Python 2
@@ -406,11 +426,15 @@ def run_clang_format_and_save_to_tree(changed_lines, revision=None,
           return container.items() # Python 3
   def index_info_generator():
     for filename, line_ranges in iteritems(changed_lines):
-      if revision:
-        git_metadata_cmd = ['git', 'ls-tree',
-                            '%s:%s' % (revision, os.path.dirname(filename)),
-                            os.path.basename(filename)]
-        git_metadata = subprocess.Popen(git_metadata_cmd, stdin=subprocess.PIPE,
+      if revision is not None:
+        if len(revision) > 0:
+          git_metadata_cmd = ['git', 'ls-tree',
+                              '%s:%s' % (revision, os.path.dirname(filename)),
+                              os.path.basename(filename)]
+        else:
+          git_metadata_cmd = ['git', 'ls-files', '--stage', '--', filename]
+        git_metadata = subprocess.Popen(git_metadata_cmd, env=env,
+                                        stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE)
         stdout = git_metadata.communicate()[0]
         mode = oct(int(stdout.split()[0], 8))
@@ -422,7 +446,8 @@ def run_clang_format_and_save_to_tree(changed_lines, revision=None,
       blob_id = clang_format_to_blob(filename, line_ranges,
                                      revision=revision,
                                      binary=binary,
-                                     style=style)
+                                     style=style,
+                                     env=env)
       yield '%s %s\t%s' % (mode, blob_id, filename)
   return create_tree(index_info_generator(), '--index-info')
 
@@ -448,11 +473,12 @@ def create_tree(input_lines, mode):
 
 
 def clang_format_to_blob(filename, line_ranges, revision=None,
-                         binary='clang-format', style=None):
+                         binary='clang-format', style=None, env=None):
   """Run clang-format on the given file and save the result to a git blob.
 
   Runs on the file in `revision` if not None, or on the file in the working
-  directory if `revision` is None.
+  directory if `revision` is None. Revision can be set to an empty string to run
+  clang-format on the file in the index.
 
   Returns the object ID (SHA-1) of the created blob."""
   clang_format_cmd = [binary]
@@ -461,10 +487,10 @@ def clang_format_to_blob(filename, line_ranges, revision=None,
   clang_format_cmd.extend([
       '-lines=%s:%s' % (start_line, start_line+line_count-1)
       for start_line, line_count in line_ranges])
-  if revision:
+  if revision is not None:
     clang_format_cmd.extend(['-assume-filename='+filename])
     git_show_cmd = ['git', 'cat-file', 'blob', '%s:%s' % (revision, filename)]
-    git_show = subprocess.Popen(git_show_cmd, stdin=subprocess.PIPE,
+    git_show = subprocess.Popen(git_show_cmd, env=env, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE)
     git_show.stdin.close()
     clang_format_stdin = git_show.stdout
@@ -536,8 +562,8 @@ def print_diff(old_tree, new_tree):
   # We also only print modified files since `new_tree` only contains the files
   # that were modified, so unmodified files would show as deleted without the
   # filter.
-  subprocess.check_call(['git', 'diff', '--diff-filter=M', old_tree, new_tree,
-                         '--'])
+  return subprocess.run(['git', 'diff', '--diff-filter=M',
+                         '--exit-code', old_tree, new_tree]).returncode
 
 def print_diffstat(old_tree, new_tree):
   """Print the diffstat between the two trees to stdout."""
@@ -548,8 +574,8 @@ def print_diffstat(old_tree, new_tree):
   # We also only print modified files since `new_tree` only contains the files
   # that were modified, so unmodified files would show as deleted without the
   # filter.
-  subprocess.check_call(['git', 'diff', '--diff-filter=M', '--stat', old_tree, new_tree,
-                         '--'])
+  return subprocess.run(['git', 'diff', '--diff-filter=M', '--exit-code',
+                         '--stat', old_tree, new_tree]).returncode
 
 def apply_changes(old_tree, new_tree, force=False, patch_mode=False):
   """Apply the changes in `new_tree` to the working directory.
@@ -575,7 +601,7 @@ def apply_changes(old_tree, new_tree, force=False, patch_mode=False):
     # better message, "Apply ... to index and worktree".  This is not quite
     # right, since it won't be applied to the user's index, but oh well.
     with temporary_index_file(old_tree):
-      subprocess.check_call(['git', 'checkout', '--patch', new_tree])
+      subprocess.run(['git', 'checkout', '--patch', new_tree], check=True)
     index_tree = old_tree
   else:
     with temporary_index_file(new_tree):

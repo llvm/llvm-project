@@ -19,10 +19,11 @@
 #include "llvm/ADT/FoldingSet.h"
 using namespace clang;
 
-ASTConstraintSatisfaction::ASTConstraintSatisfaction(const ASTContext &C,
-    const ConstraintSatisfaction &Satisfaction):
-    NumRecords{Satisfaction.Details.size()},
-    IsSatisfied{Satisfaction.IsSatisfied} {
+ASTConstraintSatisfaction::ASTConstraintSatisfaction(
+    const ASTContext &C, const ConstraintSatisfaction &Satisfaction)
+    : NumRecords{Satisfaction.Details.size()},
+      IsSatisfied{Satisfaction.IsSatisfied}, ContainsErrors{
+                                                 Satisfaction.ContainsErrors} {
   for (unsigned I = 0; I < NumRecords; ++I) {
     auto &Detail = Satisfaction.Details[I];
     if (Detail.second.is<Expr *>())
@@ -45,7 +46,6 @@ ASTConstraintSatisfaction::ASTConstraintSatisfaction(const ASTContext &C,
     }
   }
 }
-
 
 ASTConstraintSatisfaction *
 ASTConstraintSatisfaction::Create(const ASTContext &C,

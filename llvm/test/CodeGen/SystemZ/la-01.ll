@@ -15,70 +15,70 @@ define dso_local void @df() {
   ret void
 }
 
-declare dso_local void @foo(i32 *)
+declare dso_local void @foo(ptr)
 
 ; Test a load of a fully-aligned external variable.
-define dso_local i32 *@f1() {
+define dso_local ptr@f1() {
 ; CHECK-LABEL: f1:
 ; CHECK: larl %r2, e4
 ; CHECK-NEXT: br %r14
-  ret i32 *@e4
+  ret ptr@e4
 }
 
 ; Test a load of a fully-aligned local variable.
-define dso_local i32 *@f2() {
+define dso_local ptr@f2() {
 ; CHECK-LABEL: f2:
 ; CHECK: larl %r2, d4
 ; CHECK-NEXT: br %r14
-  ret i32 *@d4
+  ret ptr@d4
 }
 
 ; Test a load of a 2-byte-aligned external variable.
-define dso_local i32 *@f3() {
+define dso_local ptr@f3() {
 ; CHECK-LABEL: f3:
 ; CHECK: larl %r2, e2
 ; CHECK-NEXT: br %r14
-  ret i32 *@e2
+  ret ptr@e2
 }
 
 ; Test a load of a 2-byte-aligned local variable.
-define dso_local i32 *@f4() {
+define dso_local ptr@f4() {
 ; CHECK-LABEL: f4:
 ; CHECK: larl %r2, d2
 ; CHECK-NEXT: br %r14
-  ret i32 *@d2
+  ret ptr@d2
 }
 
 ; Test a load of an unaligned external variable, which must go via the GOT.
-define dso_local i32 *@f5() {
+define dso_local ptr@f5() {
 ; CHECK-LABEL: f5:
 ; CHECK: lgrl %r2, e1@GOT
 ; CHECK-NEXT: br %r14
-  ret i32 *@e1
+  ret ptr@e1
 }
 
 ; Test a load of an unaligned local variable, which must go via the GOT.
-define dso_local i32 *@f6() {
+define dso_local ptr@f6() {
 ; CHECK-LABEL: f6:
 ; CHECK: lgrl %r2, d1@GOT
 ; CHECK-NEXT: br %r14
-  ret i32 *@d1
+  ret ptr@d1
 }
 
 ; Test a load of an external function.
-define dso_local void() *@f7() {
+define dso_local ptr@f7() {
 ; CHECK-LABEL: f7:
 ; CHECK: larl %r2, ef
 ; CHECK-NEXT: br %r14
-  ret void() *@ef
+  ret ptr@ef
 }
 
 ; Test a load of a local function.
-define dso_local void() *@f8() {
+define dso_local ptr@f8() {
 ; CHECK-LABEL: f8:
 ; CHECK: larl %r2, df
 ; CHECK-NEXT: br %r14
-  ret void() *@df
+  ret ptr@df
 }
 
 ; Test that LARL can be rematerialized.
@@ -89,7 +89,7 @@ define dso_local i32 @f9() {
 ; CHECK: larl %r2, d2
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK: br %r14
-  call void @foo(i32 *@d2)
-  call void @foo(i32 *@d2)
+  call void @foo(ptr@d2)
+  call void @foo(ptr@d2)
   ret i32 0
 }

@@ -67,6 +67,12 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_114;
   if (raw_version < 11060)
     return CudaVersion::CUDA_115;
+  if (raw_version < 11070)
+    return CudaVersion::CUDA_116;
+  if (raw_version < 11080)
+    return CudaVersion::CUDA_117;
+  if (raw_version < 11090)
+    return CudaVersion::CUDA_118;
   return CudaVersion::NEW;
 }
 
@@ -536,8 +542,9 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     const char *Arch = (II.getType() == types::TY_PP_Asm)
                            ? CudaArchToVirtualArchString(gpu_arch)
                            : gpu_arch_str;
-    CmdArgs.push_back(Args.MakeArgString(llvm::Twine("--image=profile=") +
-                                         Arch + ",file=" + II.getFilename()));
+    CmdArgs.push_back(
+        Args.MakeArgString(llvm::Twine("--image=profile=") + Arch +
+                           ",file=" + getToolChain().getInputFilename(II)));
   }
 
   for (const auto& A : Args.getAllArgValues(options::OPT_Xcuda_fatbinary))
@@ -551,111 +558,29 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       Exec, CmdArgs, Inputs, Output));
 }
 
-void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
-                                       const InputInfo &Output,
-                                       const InputInfoList &Inputs,
-                                       const ArgList &Args,
-                                       const char *LinkingOutput) const {
-  const auto &TC =
-      static_cast<const toolchains::CudaToolChain &>(getToolChain());
-  assert(TC.getTriple().isNVPTX() && "Wrong platform");
-
-  ArgStringList CmdArgs;
-
-  // OpenMP uses nvlink to link cubin files. The result will be embedded in the
-  // host binary by the host linker.
-  assert(!JA.isHostOffloading(Action::OFK_OpenMP) &&
-         "CUDA toolchain not expected for an OpenMP host device.");
-
-  if (Output.isFilename()) {
-    CmdArgs.push_back("-o");
-    CmdArgs.push_back(Output.getFilename());
-  } else
-    assert(Output.isNothing() && "Invalid output.");
-  if (mustEmitDebugInfo(Args) == EmitSameDebugInfoAsHost)
-    CmdArgs.push_back("-g");
-
-  if (Args.hasArg(options::OPT_v))
-    CmdArgs.push_back("-v");
-
-  StringRef GPUArch =
-      Args.getLastArgValue(options::OPT_march_EQ);
-  assert(!GPUArch.empty() && "At least one GPU Arch required for ptxas.");
-
-  CmdArgs.push_back("-arch");
-  CmdArgs.push_back(Args.MakeArgString(GPUArch));
-
-  // Add paths specified in LIBRARY_PATH environment variable as -L options.
-  addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
-
-  // Add paths for the default clang library path.
-  SmallString<256> DefaultLibPath =
-      llvm::sys::path::parent_path(TC.getDriver().Dir);
-  llvm::sys::path::append(DefaultLibPath, "lib" CLANG_LIBDIR_SUFFIX);
-  CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
-
-  for (const auto &II : Inputs) {
-    if (II.getType() == types::TY_LLVM_IR ||
-        II.getType() == types::TY_LTO_IR ||
-        II.getType() == types::TY_LTO_BC ||
-        II.getType() == types::TY_LLVM_BC) {
-      C.getDriver().Diag(diag::err_drv_no_linker_llvm_support)
-          << getToolChain().getTripleString();
-      continue;
-    }
-
-    // Currently, we only pass the input files to the linker, we do not pass
-    // any libraries that may be valid only for the host.
-    if (!II.isFilename())
-      continue;
-
-    const char *CubinF =
-        C.getArgs().MakeArgString(getToolChain().getInputFilename(II));
-
-    CmdArgs.push_back(CubinF);
-  }
-
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "nvptx",
-                             GPUArch, /*isBitCodeSDL=*/false,
-                             /*postClangLink=*/false);
-
-  // Find nvlink and pass it as "--nvlink-path=" argument of
-  // clang-nvlink-wrapper.
-  CmdArgs.push_back(Args.MakeArgString(
-      Twine("--nvlink-path=" + getToolChain().GetProgramPath("nvlink"))));
-
-  const char *Exec =
-      Args.MakeArgString(getToolChain().GetProgramPath("clang-nvlink-wrapper"));
-  C.addCommand(std::make_unique<Command>(
-      JA, *this,
-      ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
-                          "--options-file"},
-      Exec, CmdArgs, Inputs, Output));
-}
-
 void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const llvm::opt::ArgList &Args,
-                                   std::vector<StringRef> &Features,
-                                   Optional<clang::CudaVersion> Version) {
+                                   std::vector<StringRef> &Features) {
   if (Args.hasArg(options::OPT_cuda_feature_EQ)) {
     StringRef PtxFeature =
         Args.getLastArgValue(options::OPT_cuda_feature_EQ, "+ptx42");
     Features.push_back(Args.MakeArgString(PtxFeature));
     return;
-  } else if (!Version) {
-    CudaInstallationDetector CudaInstallation(D, Triple, Args);
-    Version = CudaInstallation.version();
   }
+  CudaInstallationDetector CudaInstallation(D, Triple, Args);
 
   // New CUDA versions often introduce new instructions that are only supported
   // by new PTX version, so we need to raise PTX level to enable them in NVPTX
   // back-end.
   const char *PtxFeature = nullptr;
-  switch (*Version) {
+  switch (CudaInstallation.version()) {
 #define CASE_CUDA_VERSION(CUDA_VER, PTX_VER)                                   \
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(118, 78);
+    CASE_CUDA_VERSION(117, 77);
+    CASE_CUDA_VERSION(116, 76);
     CASE_CUDA_VERSION(115, 75);
     CASE_CUDA_VERSION(114, 74);
     CASE_CUDA_VERSION(113, 73);
@@ -680,10 +605,9 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 /// together object files from the assembler into a single blob.
 
 CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
-                             const ToolChain &HostTC, const ArgList &Args,
-                             const Action::OffloadKind OK)
+                             const ToolChain &HostTC, const ArgList &Args)
     : ToolChain(D, Triple, Args), HostTC(HostTC),
-      CudaInstallation(D, HostTC.getTriple(), Args), OK(OK) {
+      CudaInstallation(D, HostTC.getTriple(), Args) {
   if (CudaInstallation.isValid()) {
     CudaInstallation.WarnIfUnsupportedVersion();
     getProgramPaths().push_back(std::string(CudaInstallation.getBinPath()));
@@ -695,9 +619,8 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
 
 std::string CudaToolChain::getInputFilename(const InputInfo &Input) const {
   // Only object files are changed, for example assembly files keep their .s
-  // extensions. CUDA also continues to use .o as they don't use nvlink but
-  // fatbinary.
-  if (!(OK == Action::OFK_OpenMP && Input.getType() == types::TY_Object))
+  // extensions. If the user requested device-only compilation don't change it.
+  if (Input.getType() != types::TY_Object || getDriver().offloadDeviceOnly())
     return ToolChain::getInputFilename(Input);
 
   // Replace extension for object files with cubin because nvlink relies on
@@ -746,11 +669,6 @@ void CudaToolChain::addClangTargetOptions(
 
   clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
 
-  std::vector<StringRef> Features;
-  NVPTX::getNVPTXTargetFeatures(getDriver(), getTriple(), DriverArgs, Features,
-                                CudaInstallationVersion);
-  for (StringRef PtxFeature : Features)
-    CC1Args.append({"-target-feature", DriverArgs.MakeArgString(PtxFeature)});
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
                          options::OPT_fno_cuda_short_ptr, false))
     CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
@@ -774,9 +692,6 @@ void CudaToolChain::addClangTargetOptions(
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),
                        getTriple());
-    AddStaticDeviceLibsPostLinking(getDriver(), DriverArgs, CC1Args, "nvptx",
-                                   GpuArch, /*isBitCodeSDL=*/true,
-                                   /*postClangLink=*/true);
   }
 }
 
@@ -876,8 +791,6 @@ Tool *CudaToolChain::buildAssembler() const {
 }
 
 Tool *CudaToolChain::buildLinker() const {
-  if (OK == Action::OFK_OpenMP)
-    return new tools::NVPTX::OpenMPLinker(*this);
   return new tools::NVPTX::Linker(*this);
 }
 

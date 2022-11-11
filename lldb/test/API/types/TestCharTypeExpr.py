@@ -9,8 +9,6 @@ from lldbsuite.test.decorators import *
 
 class CharTypeExprTestCase(AbstractBase.GenericTester):
 
-    mydir = AbstractBase.GenericTester.compute_mydir(__file__)
-
     def test_char_type(self):
         """Test that char-type variable expressions are evaluated correctly."""
         self.build_and_run_expr('char.cpp', ['char'], qd=True)

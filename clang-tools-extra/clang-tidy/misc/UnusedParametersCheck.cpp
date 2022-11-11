@@ -135,6 +135,9 @@ void UnusedParametersCheck::warnOnUnusedParameter(
     const MatchFinder::MatchResult &Result, const FunctionDecl *Function,
     unsigned ParamIndex) {
   const auto *Param = Function->getParamDecl(ParamIndex);
+  // Don't bother to diagnose invalid parameters as being unused.
+  if (Param->isInvalidDecl())
+    return;
   auto MyDiag = diag(Param->getLocation(), "parameter %0 is unused") << Param;
 
   if (!Indexer) {

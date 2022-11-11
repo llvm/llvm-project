@@ -13,18 +13,21 @@
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTAFFINETOSTANDARD
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -43,7 +46,7 @@ using namespace mlir::vector;
 static Value buildMinMaxReductionSeq(Location loc,
                                      arith::CmpIPredicate predicate,
                                      ValueRange values, OpBuilder &builder) {
-  assert(!llvm::empty(values) && "empty min/max chain");
+  assert(!values.empty() && "empty min/max chain");
 
   auto valueIt = values.begin();
   Value value = *valueIt++;
@@ -100,7 +103,7 @@ public:
   LogicalResult matchAndRewrite(AffineMinOp op,
                                 PatternRewriter &rewriter) const override {
     Value reduced =
-        lowerAffineMapMin(rewriter, op.getLoc(), op.map(), op.operands());
+        lowerAffineMapMin(rewriter, op.getLoc(), op.getMap(), op.operands());
     if (!reduced)
       return failure();
 
@@ -116,7 +119,7 @@ public:
   LogicalResult matchAndRewrite(AffineMaxOp op,
                                 PatternRewriter &rewriter) const override {
     Value reduced =
-        lowerAffineMapMax(rewriter, op.getLoc(), op.map(), op.operands());
+        lowerAffineMapMax(rewriter, op.getLoc(), op.getMap(), op.operands());
     if (!reduced)
       return failure();
 
@@ -156,7 +159,7 @@ public:
     auto scfForOp = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound,
                                                 step, op.getIterOperands());
     rewriter.eraseBlock(scfForOp.getBody());
-    rewriter.inlineRegionBefore(op.region(), scfForOp.getRegion(),
+    rewriter.inlineRegionBefore(op.getRegion(), scfForOp.getRegion(),
                                 scfForOp.getRegion().end());
     rewriter.replaceOp(op, scfForOp.getResults());
     return success();
@@ -193,21 +196,20 @@ public:
         return rewriter.notifyMatchFailure(op, "couldn't convert upper bounds");
       upperBoundTuple.push_back(upper);
     }
-    steps.reserve(op.steps().size());
-    for (Attribute step : op.steps())
-      steps.push_back(rewriter.create<arith::ConstantIndexOp>(
-          loc, step.cast<IntegerAttr>().getInt()));
+    steps.reserve(op.getSteps().size());
+    for (int64_t step : op.getSteps())
+      steps.push_back(rewriter.create<arith::ConstantIndexOp>(loc, step));
 
     // Get the terminator op.
     Operation *affineParOpTerminator = op.getBody()->getTerminator();
     scf::ParallelOp parOp;
-    if (op.results().empty()) {
+    if (op.getResults().empty()) {
       // Case with no reduction operations/return values.
       parOp = rewriter.create<scf::ParallelOp>(loc, lowerBoundTuple,
                                                upperBoundTuple, steps,
                                                /*bodyBuilderFn=*/nullptr);
       rewriter.eraseBlock(parOp.getBody());
-      rewriter.inlineRegionBefore(op.region(), parOp.getRegion(),
+      rewriter.inlineRegionBefore(op.getRegion(), parOp.getRegion(),
                                   parOp.getRegion().end());
       rewriter.replaceOp(op, parOp.getResults());
       return success();
@@ -215,7 +217,7 @@ public:
     // Case with affine.parallel with reduction operations/return values.
     // scf.parallel handles the reduction operation differently unlike
     // affine.parallel.
-    ArrayRef<Attribute> reductions = op.reductions().getValue();
+    ArrayRef<Attribute> reductions = op.getReductions().getValue();
     for (auto pair : llvm::zip(reductions, op.getResultTypes())) {
       // For each of the reduction operations get the identity values for
       // initialization of the result values.
@@ -224,9 +226,8 @@ public:
       Optional<arith::AtomicRMWKind> reductionOp =
           arith::symbolizeAtomicRMWKind(
               static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
-      assert(reductionOp.hasValue() &&
-             "Reduction operation cannot be of None Type");
-      arith::AtomicRMWKind reductionOpValue = reductionOp.getValue();
+      assert(reductionOp && "Reduction operation cannot be of None Type");
+      arith::AtomicRMWKind reductionOpValue = *reductionOp;
       identityVals.push_back(
           arith::getIdentityValue(reductionOpValue, resultType, rewriter, loc));
     }
@@ -236,7 +237,7 @@ public:
 
     //  Copy the body of the affine.parallel op.
     rewriter.eraseBlock(parOp.getBody());
-    rewriter.inlineRegionBefore(op.region(), parOp.getRegion(),
+    rewriter.inlineRegionBefore(op.getRegion(), parOp.getRegion(),
                                 parOp.getRegion().end());
     assert(reductions.size() == affineParOpTerminator->getNumOperands() &&
            "Unequal number of reductions and operands.");
@@ -245,9 +246,8 @@ public:
       Optional<arith::AtomicRMWKind> reductionOp =
           arith::symbolizeAtomicRMWKind(
               reductions[i].cast<IntegerAttr>().getInt());
-      assert(reductionOp.hasValue() &&
-             "Reduction Operation cannot be of None Type");
-      arith::AtomicRMWKind reductionOpValue = reductionOp.getValue();
+      assert(reductionOp && "Reduction Operation cannot be of None Type");
+      arith::AtomicRMWKind reductionOpValue = *reductionOp;
       rewriter.setInsertionPoint(&parOp.getBody()->back());
       auto reduceOp = rewriter.create<scf::ReduceOp>(
           loc, affineParOpTerminator->getOperand(i));
@@ -302,13 +302,14 @@ public:
                 : rewriter.create<arith::ConstantIntOp>(loc, /*value=*/1,
                                                         /*width=*/1);
 
-    bool hasElseRegion = !op.elseRegion().empty();
+    bool hasElseRegion = !op.getElseRegion().empty();
     auto ifOp = rewriter.create<scf::IfOp>(loc, op.getResultTypes(), cond,
                                            hasElseRegion);
-    rewriter.inlineRegionBefore(op.thenRegion(), &ifOp.getThenRegion().back());
+    rewriter.inlineRegionBefore(op.getThenRegion(),
+                                &ifOp.getThenRegion().back());
     rewriter.eraseBlock(&ifOp.getThenRegion().back());
     if (hasElseRegion) {
-      rewriter.inlineRegionBefore(op.elseRegion(),
+      rewriter.inlineRegionBefore(op.getElseRegion(),
                                   &ifOp.getElseRegion().back());
       rewriter.eraseBlock(&ifOp.getElseRegion().back());
     }
@@ -378,8 +379,8 @@ public:
 
     // Build memref.prefetch memref[expandedMap.results].
     rewriter.replaceOpWithNewOp<memref::PrefetchOp>(
-        op, op.memref(), *resultOperands, op.isWrite(), op.localityHint(),
-        op.isDataCache());
+        op, op.getMemref(), *resultOperands, op.getIsWrite(),
+        op.getLocalityHint(), op.getIsDataCache());
     return success();
   }
 };
@@ -546,13 +547,14 @@ void mlir::populateAffineToVectorConversionPatterns(
 }
 
 namespace {
-class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
+class LowerAffinePass
+    : public impl::ConvertAffineToStandardBase<LowerAffinePass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateAffineToStdConversionPatterns(patterns);
     populateAffineToVectorConversionPatterns(patterns);
     ConversionTarget target(getContext());
-    target.addLegalDialect<arith::ArithmeticDialect, memref::MemRefDialect,
+    target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
                            scf::SCFDialect, VectorDialect>();
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

@@ -2,9 +2,6 @@
 Test SBProcess APIs, including ReadMemory(), WriteMemory(), and others.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +9,6 @@ from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
 
 
 class ProcessAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().

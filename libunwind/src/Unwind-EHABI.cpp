@@ -235,7 +235,7 @@ decode_eht_entry(const uint32_t* data, size_t* off, size_t* len) {
   } else {
     // 6.3: ARM Compact Model
     //
-    // EHT entries here correspond to the __aeabi_unwind_cpp_pr[012] PRs indeded
+    // EHT entries here correspond to the __aeabi_unwind_cpp_pr[012] PRs indeed
     // by format:
     Descriptor::Format format =
         static_cast<Descriptor::Format>((*data & 0x0f000000) >> 24);
@@ -432,8 +432,7 @@ _Unwind_VRS_Interpret(_Unwind_Context *context, const uint32_t *data,
       uint32_t sp;
       uint32_t pac;
       _Unwind_VRS_Get(context, _UVRSC_CORE, UNW_ARM_SP, _UVRSD_UINT32, &sp);
-      _Unwind_VRS_Get(context, _UVRSC_PSEUDO, UNW_ARM_RA_AUTH_CODE,
-                      _UVRSD_UINT32, &pac);
+      _Unwind_VRS_Get(context, _UVRSC_PSEUDO, 0, _UVRSD_UINT32, &pac);
       __asm__ __volatile__("autg %0, %1, %2" : : "r"(pac), "r"(lr), "r"(sp) :);
     }
 #else
@@ -846,7 +845,7 @@ _LIBUNWIND_EXPORT void _Unwind_Complete(_Unwind_Exception* exception_object) {
 /// may force a jump to a landing pad in that function, the landing
 /// pad code may then call _Unwind_Resume() to continue with the
 /// unwinding.  Note: the call to _Unwind_Resume() is from compiler
-/// geneated user code.  All other _Unwind_* routines are called
+/// generated user code.  All other _Unwind_* routines are called
 /// by the C++ runtime __cxa_* routines.
 ///
 /// Note: re-throwing an exception (as opposed to continuing the unwind)
@@ -1138,8 +1137,7 @@ _Unwind_VRS_Pop(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
       }
       uint32_t pac = *sp++;
       _Unwind_VRS_Set(context, _UVRSC_CORE, UNW_ARM_SP, _UVRSD_UINT32, &sp);
-      return _Unwind_VRS_Set(context, _UVRSC_CORE, UNW_ARM_RA_AUTH_CODE,
-                             _UVRSD_UINT32, &pac);
+      return _Unwind_VRS_Set(context, _UVRSC_PSEUDO, 0, _UVRSD_UINT32, &pac);
     }
   }
   _LIBUNWIND_ABORT("unsupported register class");

@@ -19,7 +19,7 @@ namespace cppcoreguidelines {
 /// subject to unpredictable changes.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-avoid-non-const-global-variables.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables.html
 class AvoidNonConstGlobalVariablesCheck : public ClangTidyCheck {
 public:
   AvoidNonConstGlobalVariablesCheck(StringRef Name, ClangTidyContext *Context)

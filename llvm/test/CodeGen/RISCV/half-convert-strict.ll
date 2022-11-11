@@ -112,31 +112,28 @@ declare i32 @llvm.experimental.constrained.fptoui.i32.f16(half, metadata)
 define i32 @fcvt_wu_h_multiple_use(half %x, i32* %y) {
 ; CHECKIZFH-LABEL: fcvt_wu_h_multiple_use:
 ; CHECKIZFH:       # %bb.0:
-; CHECKIZFH-NEXT:    fcvt.wu.h a1, fa0, rtz
-; CHECKIZFH-NEXT:    li a0, 1
-; CHECKIZFH-NEXT:    beqz a1, .LBB4_2
+; CHECKIZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; CHECKIZFH-NEXT:    bnez a0, .LBB4_2
 ; CHECKIZFH-NEXT:  # %bb.1:
-; CHECKIZFH-NEXT:    mv a0, a1
+; CHECKIZFH-NEXT:    li a0, 1
 ; CHECKIZFH-NEXT:  .LBB4_2:
 ; CHECKIZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_wu_h_multiple_use:
 ; RV32IDZFH:       # %bb.0:
-; RV32IDZFH-NEXT:    fcvt.wu.h a1, fa0, rtz
-; RV32IDZFH-NEXT:    li a0, 1
-; RV32IDZFH-NEXT:    beqz a1, .LBB4_2
+; RV32IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV32IDZFH-NEXT:    bnez a0, .LBB4_2
 ; RV32IDZFH-NEXT:  # %bb.1:
-; RV32IDZFH-NEXT:    mv a0, a1
+; RV32IDZFH-NEXT:    li a0, 1
 ; RV32IDZFH-NEXT:  .LBB4_2:
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_wu_h_multiple_use:
 ; RV64IDZFH:       # %bb.0:
-; RV64IDZFH-NEXT:    fcvt.wu.h a1, fa0, rtz
-; RV64IDZFH-NEXT:    li a0, 1
-; RV64IDZFH-NEXT:    beqz a1, .LBB4_2
+; RV64IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV64IDZFH-NEXT:    bnez a0, .LBB4_2
 ; RV64IDZFH-NEXT:  # %bb.1:
-; RV64IDZFH-NEXT:    mv a0, a1
+; RV64IDZFH-NEXT:    li a0, 1
 ; RV64IDZFH-NEXT:  .LBB4_2:
 ; RV64IDZFH-NEXT:    ret
   %a = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %x, metadata !"fpexcept.strict") strictfp

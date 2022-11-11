@@ -908,6 +908,9 @@ static std::string flattenCommandLine(ArrayRef<std::string> Args,
     }
     if (Arg.startswith("-object-file-name") || Arg == MainFilename)
       continue;
+    // Skip fmessage-length for reproduciability.
+    if (Arg.startswith("-fmessage-length"))
+      continue;
     if (PrintedOneArg)
       OS << " ";
     llvm::sys::printArg(OS, Arg, /*Quote=*/true);
@@ -1498,8 +1501,16 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
     FPO |= FrameProcedureOptions::MarkedInline;
   if (GV.hasFnAttribute(Attribute::Naked))
     FPO |= FrameProcedureOptions::Naked;
-  if (MFI.hasStackProtectorIndex())
+  if (MFI.hasStackProtectorIndex()) {
     FPO |= FrameProcedureOptions::SecurityChecks;
+    if (GV.hasFnAttribute(Attribute::StackProtectStrong) ||
+        GV.hasFnAttribute(Attribute::StackProtectReq)) {
+      FPO |= FrameProcedureOptions::StrictSecurityChecks;
+    }
+  } else if (!GV.hasStackProtectorFnAttr()) {
+    // __declspec(safebuffers) disables stack guards.
+    FPO |= FrameProcedureOptions::SafeBuffers;
+  }
   FPO |= FrameProcedureOptions(uint32_t(CurFn->EncodedLocalFramePtrReg) << 14U);
   FPO |= FrameProcedureOptions(uint32_t(CurFn->EncodedParamFramePtrReg) << 16U);
   if (Asm->TM.getOptLevel() != CodeGenOpt::None &&
@@ -1620,7 +1631,7 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
   case dwarf::DW_TAG_pointer_type:
     if (cast<DIDerivedType>(Ty)->getName() == "__vtbl_ptr_type")
       return lowerTypeVFTableShape(cast<DIDerivedType>(Ty));
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case dwarf::DW_TAG_reference_type:
   case dwarf::DW_TAG_rvalue_reference_type:
     return lowerTypePointer(cast<DIDerivedType>(Ty));
@@ -3350,11 +3361,13 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
   if (const auto *MemberDecl = dyn_cast_or_null<DIDerivedType>(
           DIGV->getRawStaticDataMemberDeclaration()))
     Scope = MemberDecl->getScope();
-  // For Fortran, the scoping portion is elided in its name so that we can
-  // reference the variable in the command line of the VS debugger.
+  // For static local variables and Fortran, the scoping portion is elided
+  // in its name so that we can reference the variable in the command line
+  // of the VS debugger.
   std::string QualifiedName =
-      (moduleIsInFortran()) ? std::string(DIGV->getName())
-                            : getFullyQualifiedName(Scope, DIGV->getName());
+      (moduleIsInFortran() || (Scope && isa<DILocalScope>(Scope)))
+          ? std::string(DIGV->getName())
+          : getFullyQualifiedName(Scope, DIGV->getName());
 
   if (const GlobalVariable *GV =
           CVGV.GVInfo.dyn_cast<const GlobalVariable *>()) {

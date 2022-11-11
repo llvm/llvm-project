@@ -177,7 +177,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
     LowerCompactBranch(TmpInst);
   }
 
-  unsigned long N = Fixups.size();
+  size_t N = Fixups.size();
   uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
 
   // Check for unimplemented opcodes.

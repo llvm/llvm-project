@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i686-mingw32 -ast-dump %s | FileCheck %s
-// RUN: %clang_cc1 -triple i686-mingw32 -std=c++1z -ast-dump %s | FileCheck %s -check-prefix=CHECK-1Z
+// RUN: %clang_cc1 -triple i686-mingw32 %std_cxx11-14 -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple i686-mingw32 %std_cxx17- -ast-dump %s | FileCheck %s -check-prefix=CHECK-1Z
 
 template<class T>
 class P {
@@ -47,9 +47,9 @@ struct D {
 void construct() {
   using namespace foo;
   A a = A(12);
-  // CHECK: CXXConstructExpr {{0x[0-9a-fA-F]+}} <col:9, col:13> 'foo::A' 'void (int){{( __attribute__\(\(thiscall\)\))?}}'
+  // CHECK: CXXConstructExpr {{0x[0-9a-fA-F]+}} <col:9, col:13> 'A':'foo::A' 'void (int){{( __attribute__\(\(thiscall\)\))?}}'
   D d = D(12);
-  // CHECK: CXXConstructExpr {{0x[0-9a-fA-F]+}} <col:9, col:13> 'D' 'void (int){{( __attribute__\(\(thiscall\)\))?}}'
+  // CHECK: CXXConstructExpr {{0x[0-9a-fA-F]+}} <col:9, col:13> 'D':'D' 'void (int){{( __attribute__\(\(thiscall\)\))?}}'
 }
 
 namespace PR38987 {
@@ -174,7 +174,7 @@ namespace in_class_init {
 
   // CHECK-1Z: CXXRecordDecl {{.*}} struct B definition
   struct B {
-    // CHECK-1Z: FieldDecl {{.*}} a 'in_class_init::A'
+    // CHECK-1Z: FieldDecl {{.*}} a 'A':'in_class_init::A'
     // CHECK-1Z-NEXT: InitListExpr {{.*}} <col:11, col:12
     A a = {};
   };
@@ -192,7 +192,7 @@ namespace delegating_constructor_init {
   // CHECK-1Z: CXXRecordDecl {{.*}} struct C definition
   struct C : B {
     // CHECK-1Z: CXXConstructorDecl {{.*}} C
-    // CHECK-1Z-NEXT: CXXCtorInitializer 'delegating_constructor_init::B'
+    // CHECK-1Z-NEXT: CXXCtorInitializer 'B':'delegating_constructor_init::B'
     // CHECK-1Z-NEXT: CXXConstructExpr {{.*}} <col:11, col:15
     // CHECK-1Z-NEXT: InitListExpr {{.*}} <col:13, col:14
     C() : B({}) {};

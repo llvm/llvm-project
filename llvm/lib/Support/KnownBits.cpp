@@ -340,7 +340,7 @@ Optional<bool> KnownBits::eq(const KnownBits &LHS, const KnownBits &RHS) {
 
 Optional<bool> KnownBits::ne(const KnownBits &LHS, const KnownBits &RHS) {
   if (Optional<bool> KnownEQ = eq(LHS, RHS))
-    return Optional<bool>(!KnownEQ.getValue());
+    return Optional<bool>(!*KnownEQ);
   return None;
 }
 
@@ -356,7 +356,7 @@ Optional<bool> KnownBits::ugt(const KnownBits &LHS, const KnownBits &RHS) {
 
 Optional<bool> KnownBits::uge(const KnownBits &LHS, const KnownBits &RHS) {
   if (Optional<bool> IsUGT = ugt(RHS, LHS))
-    return Optional<bool>(!IsUGT.getValue());
+    return Optional<bool>(!*IsUGT);
   return None;
 }
 
@@ -380,7 +380,7 @@ Optional<bool> KnownBits::sgt(const KnownBits &LHS, const KnownBits &RHS) {
 
 Optional<bool> KnownBits::sge(const KnownBits &LHS, const KnownBits &RHS) {
   if (Optional<bool> KnownSGT = sgt(RHS, LHS))
-    return Optional<bool>(!KnownSGT.getValue());
+    return Optional<bool>(!*KnownSGT);
   return None;
 }
 

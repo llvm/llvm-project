@@ -45,7 +45,7 @@ void NativeTypeUDT::dump(raw_ostream &OS, int Indent,
   dumpSymbolIdField(OS, "lexicalParentId", 0, Indent, Session,
                     PdbSymbolIdField::LexicalParent, ShowIdFields,
                     RecurseIdFields);
-  if (Modifiers.hasValue())
+  if (Modifiers)
     dumpSymbolIdField(OS, "unmodifiedTypeId", getUnmodifiedTypeId(), Indent,
                       Session, PdbSymbolIdField::UnmodifiedType, ShowIdFields,
                       RecurseIdFields);

@@ -2,9 +2,9 @@
 
 // Normalize steps to 1 and lower bounds to 0.
 
-// CHECK-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 * 3)>
-// CHECK-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 * 2 + 1)>
-// CHECK-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK-DAG: [[$MAP0:#map[0-9]*]] = affine_map<(d0) -> (d0 * 3)>
+// CHECK-DAG: [[$MAP1:#map[0-9]*]] = affine_map<(d0) -> (d0 * 2 + 1)>
+// CHECK-DAG: [[$MAP2:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 + d1)>
 
 // CHECK-LABEL: func @normalize_parallel()
 func.func @normalize_parallel() {
@@ -55,8 +55,8 @@ func.func @single_iteration_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
 
 // -----
 
-// CHECK-DAG: [[$IV0:#map[0-9]+]] = affine_map<(d0) -> (d0 * 2 + 2)>
-// CHECK-DAG: [[$IV1:#map[0-9]+]] = affine_map<(d0) -> (d0 * 3)>
+// CHECK-DAG: [[$IV0:#map[0-9]*]] = affine_map<(d0) -> (d0 * 2 + 2)>
+// CHECK-DAG: [[$IV1:#map[0-9]*]] = affine_map<(d0) -> (d0 * 3)>
 
 // CHECK-LABEL: func @simple_loop_nest()
 // CHECK-NEXT:   affine.for %[[I:.*]] = 0 to 15 {
@@ -79,10 +79,10 @@ func.func @simple_loop_nest(){
 
 // -----
 
-// CHECK-DAG: [[$IV00:#map[0-9]+]] = affine_map<(d0) -> (d0 * 32 + 2)>
-// CHECK-DAG: [[$IV11:#map[0-9]+]] = affine_map<(d0) -> (d0 * 2)>
-// CHECK-DAG: [[$UB00:#map[0-9]+]] = affine_map<()[s0] -> ((s0 - 2) ceildiv 32)>
-// CHECK-DAG: [[$UB11:#map[0-9]+]] = affine_map<()[s0] -> (s0 ceildiv 2)>
+// CHECK-DAG: [[$IV00:#map[0-9]*]] = affine_map<(d0) -> (d0 * 32 + 2)>
+// CHECK-DAG: [[$IV11:#map[0-9]*]] = affine_map<(d0) -> (d0 * 2)>
+// CHECK-DAG: [[$UB00:#map[0-9]*]] = affine_map<()[s0] -> ((s0 - 2) ceildiv 32)>
+// CHECK-DAG: [[$UB11:#map[0-9]*]] = affine_map<()[s0] -> (s0 ceildiv 2)>
 
 // CHECK-LABEL: func @loop_with_unknown_upper_bound
 // CHECK-SAME: (%[[ARG0:.*]]: memref<?x?xf32>, %[[ARG1:.*]]: index)
@@ -110,10 +110,10 @@ func.func @loop_with_unknown_upper_bound(%arg0: memref<?x?xf32>, %arg1: index) {
 
 // -----
 
-// CHECK-DAG: [[$OUTERIV:#map[0-9]+]] = affine_map<(d0) -> (d0 * 32 + 2)>
-// CHECK-DAG: [[$INNERIV:#map[0-9]+]] = affine_map<(d0) -> (d0 + 2)>
-// CHECK-DAG: [[$OUTERUB:#map[0-9]+]] = affine_map<()[s0] -> ((s0 - 2) ceildiv 32)>
-// CHECK-DAG: [[$INNERUB:#map[0-9]+]] = affine_map<()[s0] -> (s0 - 2, 510)>
+// CHECK-DAG: [[$OUTERIV:#map[0-9]*]] = affine_map<(d0) -> (d0 * 32 + 2)>
+// CHECK-DAG: [[$INNERIV:#map[0-9]*]] = affine_map<(d0) -> (d0 + 2)>
+// CHECK-DAG: [[$OUTERUB:#map[0-9]*]] = affine_map<()[s0] -> ((s0 - 2) ceildiv 32)>
+// CHECK-DAG: [[$INNERUB:#map[0-9]*]] = affine_map<()[s0] -> (s0 - 2, 510)>
 
 // CHECK-LABEL: func @loop_with_multiple_upper_bounds
 // CHECK-SAME: (%[[ARG0:.*]]: memref<?x?xf32>, %[[ARG1:.*]]: index)
@@ -141,10 +141,10 @@ func.func @loop_with_multiple_upper_bounds(%arg0: memref<?x?xf32>, %arg1 : index
 
 // -----
 
-// CHECK-DAG: [[$INTERUB:#map[0-9]+]] = affine_map<()[s0] -> (s0 ceildiv 32)>
-// CHECK-DAG: [[$INTERIV:#map[0-9]+]] = affine_map<(d0) -> (d0 * 32)>
-// CHECK-DAG: [[$INTRAUB:#map[0-9]+]] = affine_map<(d0)[s0] -> (32, -d0 + s0)>
-// CHECK-DAG: [[$INTRAIV:#map[0-9]+]] = affine_map<(d0, d1) -> (d1 + d0)>
+// CHECK-DAG: [[$INTERUB:#map[0-9]*]] = affine_map<()[s0] -> (s0 ceildiv 32)>
+// CHECK-DAG: [[$INTERIV:#map[0-9]*]] = affine_map<(d0) -> (d0 * 32)>
+// CHECK-DAG: [[$INTRAUB:#map[0-9]*]] = affine_map<(d0)[s0] -> (32, -d0 + s0)>
+// CHECK-DAG: [[$INTRAIV:#map[0-9]*]] = affine_map<(d0, d1) -> (d1 + d0)>
 
 // CHECK-LABEL: func @tiled_matmul
 // CHECK-SAME: (%[[ARG0:.*]]: memref<1024x1024xf32>, %[[ARG1:.*]]: memref<1024x1024xf32>, %[[ARG2:.*]]: memref<1024x1024xf32>)
@@ -168,9 +168,9 @@ func.func @loop_with_multiple_upper_bounds(%arg0: memref<?x?xf32>, %arg1 : index
 // CHECK-NEXT:                %{{.*}} = affine.load %[[ARG0]][%[[IIIV]], %[[KKIV]]] : memref<1024x1024xf32>
 // CHECK-NEXT:                %{{.*}} = affine.load %[[ARG1]][%[[KKIV]], %[[JJIV]]] : memref<1024x1024xf32>
 // CHECK-NEXT:                %{{.*}} = affine.load %[[ARG2]][%[[IIIV]], %[[JJIV]]] : memref<1024x1024xf32>
-// CHECK-NEXT:                %{{.*}} = arith.mulf %9, %10 : f32
-// CHECK-NEXT:                %{{.*}} = arith.addf %11, %12 : f32
-// CHECK-NEXT:                affine.store %{{.*}}, %[[ARG2]][%6, %7] : memref<1024x1024xf32>
+// CHECK-NEXT:                %{{.*}} = arith.mulf 
+// CHECK-NEXT:                %{{.*}} = arith.addf 
+// CHECK-NEXT:                affine.store %{{.*}}, %[[ARG2]]{{.*}} : memref<1024x1024xf32>
 // CHECK-NEXT:              }
 // CHECK-NEXT:            }
 // CHECK-NEXT:          }

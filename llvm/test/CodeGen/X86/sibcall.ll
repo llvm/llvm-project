@@ -57,7 +57,7 @@ define dso_local void @t3() nounwind ssp {
 
 declare dso_local i32 @foo3()
 
-define dso_local void @t4(void (i32)* nocapture %x) nounwind ssp {
+define dso_local void @t4(ptr nocapture %x) nounwind ssp {
 ; X86-LABEL: t4:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
@@ -81,7 +81,7 @@ define dso_local void @t4(void (i32)* nocapture %x) nounwind ssp {
   ret void
 }
 
-define dso_local void @t5(void ()* nocapture %x) nounwind ssp {
+define dso_local void @t5(ptr nocapture %x) nounwind ssp {
 ; X86-LABEL: t5:
 ; X86:       # %bb.0:
 ; X86-NEXT:    jmpl *{{[0-9]+}}(%esp) # TAILCALL
@@ -100,7 +100,7 @@ define dso_local void @t5(void ()* nocapture %x) nounwind ssp {
 ; Basically the same test as t5, except pass the function pointer on the stack
 ; for x86_64.
 
-define dso_local void @t5_x64(i32, i32, i32, i32, i32, i32, void ()* nocapture %x) nounwind ssp {
+define dso_local void @t5_x64(i32, i32, i32, i32, i32, i32, ptr nocapture %x) nounwind ssp {
 ; X86-LABEL: t5_x64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    jmpl *{{[0-9]+}}(%esp) # TAILCALL
@@ -206,7 +206,7 @@ entry:
 
 declare dso_local signext i16 @bar3()
 
-define signext i16 @t9(i32 (i32)* nocapture %x) nounwind ssp {
+define signext i16 @t9(ptr nocapture %x) nounwind ssp {
 ; X86-LABEL: t9:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp
@@ -227,9 +227,8 @@ define signext i16 @t9(i32 (i32)* nocapture %x) nounwind ssp {
 ; X32-NEXT:    xorl %edi, %edi
 ; X32-NEXT:    jmpq *%rax # TAILCALL
 entry:
-  %0 = bitcast i32 (i32)* %x to i16 (i32)*
-  %1 = tail call signext i16 %0(i32 0) nounwind
-  ret i16 %1
+  %0 = tail call signext i16 %x(i32 0) nounwind
+  ret i16 %0
 }
 
 define dso_local void @t10() nounwind ssp {
@@ -303,7 +302,7 @@ declare dso_local i32 @foo5(i32, i32, i32, i32, i32)
 
 %struct.t = type { i32, i32, i32, i32, i32 }
 
-define dso_local i32 @t12(i32 %x, i32 %y, %struct.t* byval(%struct.t) align 4 %z) nounwind ssp {
+define dso_local i32 @t12(i32 %x, i32 %y, ptr byval(%struct.t) align 4 %z) nounwind ssp {
 ; X86-LABEL: t12:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
@@ -338,20 +337,20 @@ entry:
   br i1 %0, label %bb2, label %bb
 
 bb:
-  %1 = tail call i32 @foo6(i32 %x, i32 %y, %struct.t* byval(%struct.t) align 4 %z) nounwind
+  %1 = tail call i32 @foo6(i32 %x, i32 %y, ptr byval(%struct.t) align 4 %z) nounwind
   ret i32 %1
 
 bb2:
   ret i32 0
 }
 
-declare dso_local i32 @foo6(i32, i32, %struct.t* byval(%struct.t) align 4)
+declare dso_local i32 @foo6(i32, i32, ptr byval(%struct.t) align 4)
 
 ; rdar://r7717598
 %struct.ns = type { i32, i32 }
 %struct.cp = type { float, float, float, float, float }
 
-define %struct.ns* @t13(%struct.cp* %yy) nounwind ssp {
+define ptr @t13(ptr %yy) nounwind ssp {
 ; X86-LABEL: t13:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $28, %esp
@@ -400,20 +399,20 @@ define %struct.ns* @t13(%struct.cp* %yy) nounwind ssp {
 ; X32-NEXT:    popq %rcx
 ; X32-NEXT:    retq
 entry:
-  %0 = tail call fastcc %struct.ns* @foo7(%struct.cp* byval(%struct.cp) align 4 %yy, i8 signext 0) nounwind
-  ret %struct.ns* %0
+  %0 = tail call fastcc ptr @foo7(ptr byval(%struct.cp) align 4 %yy, i8 signext 0) nounwind
+  ret ptr %0
 }
 
 ; rdar://6195379
 ; llvm can't do sibcall for this in 32-bit mode (yet).
-declare dso_local fastcc %struct.ns* @foo7(%struct.cp* byval(%struct.cp) align 4, i8 signext) nounwind ssp
+declare dso_local fastcc ptr @foo7(ptr byval(%struct.cp) align 4, i8 signext) nounwind ssp
 
 %struct.__block_descriptor = type { i64, i64 }
-%struct.__block_descriptor_withcopydispose = type { i64, i64, i8*, i8* }
-%struct.__block_literal_1 = type { i8*, i32, i32, i8*, %struct.__block_descriptor* }
-%struct.__block_literal_2 = type { i8*, i32, i32, i8*, %struct.__block_descriptor_withcopydispose*, void ()* }
+%struct.__block_descriptor_withcopydispose = type { i64, i64, ptr, ptr }
+%struct.__block_literal_1 = type { ptr, i32, i32, ptr, ptr }
+%struct.__block_literal_2 = type { ptr, i32, i32, ptr, ptr, ptr }
 
-define dso_local void @t14(%struct.__block_literal_2* nocapture %.block_descriptor) nounwind ssp {
+define dso_local void @t14(ptr nocapture %.block_descriptor) nounwind ssp {
 ; X86-LABEL: t14:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp
@@ -435,21 +434,18 @@ define dso_local void @t14(%struct.__block_literal_2* nocapture %.block_descript
 ; X32-NEXT:    movl 12(%edi), %eax
 ; X32-NEXT:    jmpq *%rax # TAILCALL
 entry:
-  %0 = getelementptr inbounds %struct.__block_literal_2, %struct.__block_literal_2* %.block_descriptor, i64 0, i32 5 ; <void ()**> [#uses=1]
-  %1 = load void ()*, void ()** %0, align 8                 ; <void ()*> [#uses=2]
-  %2 = bitcast void ()* %1 to %struct.__block_literal_1* ; <%struct.__block_literal_1*> [#uses=1]
-  %3 = getelementptr inbounds %struct.__block_literal_1, %struct.__block_literal_1* %2, i64 0, i32 3 ; <i8**> [#uses=1]
-  %4 = load i8*, i8** %3, align 8                      ; <i8*> [#uses=1]
-  %5 = bitcast i8* %4 to void (i8*)*              ; <void (i8*)*> [#uses=1]
-  %6 = bitcast void ()* %1 to i8*                 ; <i8*> [#uses=1]
-  tail call void %5(i8* %6) nounwind
+  %0 = getelementptr inbounds %struct.__block_literal_2, ptr %.block_descriptor, i64 0, i32 5 ; <ptr> [#uses=1]
+  %1 = load ptr, ptr %0, align 8                 ; <ptr> [#uses=2]
+  %2 = getelementptr inbounds %struct.__block_literal_1, ptr %1, i64 0, i32 3 ; <ptr> [#uses=1]
+  %3 = load ptr, ptr %2, align 8                      ; <ptr> [#uses=1]
+  tail call void %3(ptr %1) nounwind
   ret void
 }
 
 ; rdar://7726868
 %struct.foo = type { [4 x i32] }
 
-define dso_local void @t15(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
+define dso_local void @t15(ptr noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t15:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -479,11 +475,11 @@ define dso_local void @t15(%struct.foo* noalias sret(%struct.foo) %agg.result) n
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @f(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind
+  tail call fastcc void @f(ptr noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }
 
-declare dso_local void @f(%struct.foo* noalias sret(%struct.foo)) nounwind
+declare dso_local void @f(ptr noalias sret(%struct.foo)) nounwind
 
 define dso_local void @t16() nounwind ssp {
 ; X86-LABEL: t16:
@@ -624,7 +620,7 @@ entry:
 declare dso_local fastcc double @foo20(double) nounwind
 
 ; bug 28417
-define fastcc void @t21_sret_to_sret(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
+define fastcc void @t21_sret_to_sret(ptr noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t21_sret_to_sret:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -653,11 +649,11 @@ define fastcc void @t21_sret_to_sret(%struct.foo* noalias sret(%struct.foo) %agg
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind
+  tail call fastcc void @t21_f_sret(ptr noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_more_args(%struct.foo* noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind  {
+define fastcc void @t21_sret_to_sret_more_args(ptr noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_more_args:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -688,11 +684,11 @@ define fastcc void @t21_sret_to_sret_more_args(%struct.foo* noalias sret(%struct
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @f_sret(%struct.foo* noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind
+  tail call fastcc void @f_sret(ptr noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_second_arg_sret(%struct.foo* noalias %agg.result, %struct.foo* noalias sret(%struct.foo) %ret) nounwind  {
+define fastcc void @t21_sret_to_sret_second_arg_sret(ptr noalias %agg.result, ptr noalias sret(%struct.foo) %ret) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_second_arg_sret:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -724,11 +720,11 @@ define fastcc void @t21_sret_to_sret_second_arg_sret(%struct.foo* noalias %agg.r
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %ret) nounwind
+  tail call fastcc void @t21_f_sret(ptr noalias sret(%struct.foo) %ret) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_more_args2(%struct.foo* noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind  {
+define fastcc void @t21_sret_to_sret_more_args2(ptr noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_more_args2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -766,12 +762,12 @@ define fastcc void @t21_sret_to_sret_more_args2(%struct.foo* noalias sret(%struc
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @f_sret(%struct.foo* noalias sret(%struct.foo) %agg.result, i32 %b, i32 %a) nounwind
+  tail call fastcc void @f_sret(ptr noalias sret(%struct.foo) %agg.result, i32 %b, i32 %a) nounwind
   ret void
 }
 
 
-define fastcc void @t21_sret_to_sret_args_mismatch(%struct.foo* noalias sret(%struct.foo) %agg.result, %struct.foo* noalias %ret) nounwind  {
+define fastcc void @t21_sret_to_sret_args_mismatch(ptr noalias sret(%struct.foo) %agg.result, ptr noalias %ret) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_args_mismatch:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -803,11 +799,11 @@ define fastcc void @t21_sret_to_sret_args_mismatch(%struct.foo* noalias sret(%st
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %ret) nounwind
+  tail call fastcc void @t21_f_sret(ptr noalias sret(%struct.foo) %ret) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_args_mismatch2(%struct.foo* noalias sret(%struct.foo) %agg.result, %struct.foo* noalias %ret) nounwind  {
+define fastcc void @t21_sret_to_sret_args_mismatch2(ptr noalias sret(%struct.foo) %agg.result, ptr noalias %ret) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_args_mismatch2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -839,11 +835,11 @@ define fastcc void @t21_sret_to_sret_args_mismatch2(%struct.foo* noalias sret(%s
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %ret) nounwind
+  tail call fastcc void @t21_f_sret(ptr noalias sret(%struct.foo) %ret) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_arg_mismatch(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
+define fastcc void @t21_sret_to_sret_arg_mismatch(ptr noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_arg_mismatch:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -878,12 +874,12 @@ define fastcc void @t21_sret_to_sret_arg_mismatch(%struct.foo* noalias sret(%str
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  %a = call fastcc %struct.foo* @ret_struct()
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo) %a) nounwind
+  %a = call fastcc ptr @ret_struct()
+  tail call fastcc void @t21_f_sret(ptr noalias sret(%struct.foo) %a) nounwind
   ret void
 }
 
-define fastcc void @t21_sret_to_sret_structs_mismatch(%struct.foo* noalias sret(%struct.foo) %agg.result, %struct.foo* noalias %a) nounwind  {
+define fastcc void @t21_sret_to_sret_structs_mismatch(ptr noalias sret(%struct.foo) %agg.result, ptr noalias %a) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_structs_mismatch:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
@@ -934,15 +930,15 @@ define fastcc void @t21_sret_to_sret_structs_mismatch(%struct.foo* noalias sret(
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    popq %r14
 ; X32-NEXT:    retq
-  %b = call fastcc %struct.foo* @ret_struct()
-  tail call fastcc void @t21_f_sret2(%struct.foo* noalias sret(%struct.foo) %a, %struct.foo* noalias %b) nounwind
+  %b = call fastcc ptr @ret_struct()
+  tail call fastcc void @t21_f_sret2(ptr noalias sret(%struct.foo) %a, ptr noalias %b) nounwind
   ret void
 }
 
-declare ccc %struct.foo* @ret_struct() nounwind
+declare ccc ptr @ret_struct() nounwind
 
 
-define fastcc void @t21_sret_to_non_sret(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
+define fastcc void @t21_sret_to_non_sret(ptr noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t21_sret_to_non_sret:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -971,11 +967,11 @@ define fastcc void @t21_sret_to_non_sret(%struct.foo* noalias sret(%struct.foo) 
 ; X32-NEXT:    movl %ebx, %eax
 ; X32-NEXT:    popq %rbx
 ; X32-NEXT:    retq
-  tail call fastcc void @t21_f_non_sret(%struct.foo* %agg.result) nounwind
+  tail call fastcc void @t21_f_non_sret(ptr %agg.result) nounwind
   ret void
 }
 
-define ccc void @t22_non_sret_to_sret(%struct.foo* %agg.result) nounwind  {
+define ccc void @t22_non_sret_to_sret(ptr %agg.result) nounwind  {
 ; i686 not tailcallable, as sret is callee-pop here.
 ; X86-LABEL: t22_non_sret_to_sret:
 ; X86:       # %bb.0:
@@ -993,14 +989,14 @@ define ccc void @t22_non_sret_to_sret(%struct.foo* %agg.result) nounwind  {
 ; X32-LABEL: t22_non_sret_to_sret:
 ; X32:       # %bb.0:
 ; X32-NEXT:    jmp	t22_f_sret@PLT                  # TAILCALL
-  tail call ccc void @t22_f_sret(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind
+  tail call ccc void @t22_f_sret(ptr noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }
 
-declare dso_local fastcc void @t21_f_sret(%struct.foo* noalias sret(%struct.foo)) nounwind
-declare dso_local fastcc void @t21_f_sret2(%struct.foo* noalias sret(%struct.foo), %struct.foo* noalias) nounwind
-declare dso_local fastcc void @t21_f_non_sret(%struct.foo*) nounwind
+declare dso_local fastcc void @t21_f_sret(ptr noalias sret(%struct.foo)) nounwind
+declare dso_local fastcc void @t21_f_sret2(ptr noalias sret(%struct.foo), ptr noalias) nounwind
+declare dso_local fastcc void @t21_f_non_sret(ptr) nounwind
 
-declare ccc void @t22_f_sret(%struct.foo* noalias sret(%struct.foo)) nounwind
+declare ccc void @t22_f_sret(ptr noalias sret(%struct.foo)) nounwind
 
-declare ccc void @f_sret(%struct.foo* noalias sret(%struct.foo), i32, i32) nounwind
+declare ccc void @f_sret(ptr noalias sret(%struct.foo), i32, i32) nounwind

@@ -50,6 +50,8 @@ struct MachineIRBuilderState {
   MachineRegisterInfo *MRI = nullptr;
   /// Debug location to be set to any instruction we create.
   DebugLoc DL;
+  /// PC sections metadata to be set to any instruction we create.
+  MDNode *PCSections = nullptr;
 
   /// \name Fields describing the insertion point.
   /// @{
@@ -341,6 +343,7 @@ public:
     assert(MI.getParent() && "Instruction is not part of a basic block");
     setMBB(*MI.getParent());
     State.II = MI.getIterator();
+    setPCSections(MI.getPCSections());
   }
   /// @}
 
@@ -363,6 +366,12 @@ public:
 
   /// Get the current instruction's debug location.
   const DebugLoc &getDebugLoc() { return State.DL; }
+
+  /// Set the PC sections metadata to \p MD for all the next build instructions.
+  void setPCSections(MDNode *MD) { State.PCSections = MD; }
+
+  /// Get the current instruction's PC sections metadata.
+  MDNode *getPCSections() { return State.PCSections; }
 
   /// Build and insert <empty> = \p Opcode <empty>.
   /// The insertion point is the one set by the last call of either
@@ -682,6 +691,13 @@ public:
   // = G_ZEXT \p Op depending on how the target wants to extend boolean values.
   MachineInstrBuilder buildBoolExt(const DstOp &Res, const SrcOp &Op,
                                    bool IsFP);
+
+  // Build and insert \p Res = G_SEXT_INREG \p Op, 1 or \p Res = G_AND \p Op, 1,
+  // or COPY depending on how the target wants to extend boolean values, using
+  // the original register size.
+  MachineInstrBuilder buildBoolExtInReg(const DstOp &Res, const SrcOp &Op,
+                                        bool IsVector,
+                                        bool IsFP);
 
   /// Build and insert \p Res = G_ZEXT \p Op
   ///
@@ -1398,6 +1414,40 @@ public:
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_FSUB Addr, Val, MMO`.
   MachineInstrBuilder buildAtomicRMWFSub(
+        const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
+        MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_FMAX Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the floating point maximum of
+  /// \p Val and the original value. Puts the original value from \p Addr in \p
+  /// OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWFMax(
+        const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
+        MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_FMIN Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the floating point minimum of
+  /// \p Val and the original value. Puts the original value from \p Addr in \p
+  /// OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWFMin(
         const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
         MachineMemOperand &MMO);
 

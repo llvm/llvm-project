@@ -360,7 +360,7 @@ define <8 x i32> @mul_const9(<8 x i32> %x) {
   ret <8 x i32> %y
 }
 
-; %x * 0x01010101
+; ptr 0x01010101
 define <4 x i32> @mul_const10(<4 x i32> %x) {
 ; X32-LABEL: mul_const10:
 ; X32:       # %bb.0:
@@ -377,7 +377,7 @@ define <4 x i32> @mul_const10(<4 x i32> %x) {
   ret <4 x i32> %m
 }
 
-; %x * 0x80808080
+; ptr 0x80808080
 define <4 x i32> @mul_const11(<4 x i32> %x) {
 ; X32-LABEL: mul_const11:
 ; X32:       # %bb.0:

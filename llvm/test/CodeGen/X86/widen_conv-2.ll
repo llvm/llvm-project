@@ -4,7 +4,7 @@
 
 ; sign extension v2i16 to v2i32
 
-define void @convert_v2i16_v2i32(<2 x i32>* %dst.addr, <2 x i16> %src) nounwind {
+define void @convert_v2i16_v2i32(ptr %dst.addr, <2 x i16> %src) nounwind {
 ; X86-LABEL: convert_v2i16_v2i32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -19,6 +19,6 @@ define void @convert_v2i16_v2i32(<2 x i32>* %dst.addr, <2 x i16> %src) nounwind 
 ; X64-NEXT:    retq
 entry:
 	%signext = sext <2 x i16> %src to <2 x i32>		; <<12 x i8>> [#uses=1]
-	store <2 x i32> %signext, <2 x i32>* %dst.addr
+	store <2 x i32> %signext, ptr %dst.addr
 	ret void
 }

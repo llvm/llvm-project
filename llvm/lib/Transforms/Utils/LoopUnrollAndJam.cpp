@@ -356,7 +356,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
           if (const DILocation *DIL = I.getDebugLoc()) {
             auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(Count);
             if (NewDIL)
-              I.setDebugLoc(NewDIL.getValue());
+              I.setDebugLoc(*NewDIL);
             else
               LLVM_DEBUG(dbgs()
                          << "Failed to create new discriminator: "

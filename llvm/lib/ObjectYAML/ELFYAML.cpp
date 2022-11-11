@@ -424,6 +424,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_ARM_EABI_VER3, EF_ARM_EABIMASK);
     BCaseMask(EF_ARM_EABI_VER4, EF_ARM_EABIMASK);
     BCaseMask(EF_ARM_EABI_VER5, EF_ARM_EABIMASK);
+    BCaseMask(EF_ARM_BE8, EF_ARM_BE8);
     break;
   case ELF::EM_MIPS:
     BCase(EF_MIPS_NOREORDER);
@@ -518,6 +519,13 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AVR_ARCH_XMEGA7, EF_AVR_ARCH_MASK);
     BCase(EF_AVR_LINKRELAX_PREPARED);
     break;
+  case ELF::EM_LOONGARCH:
+    BCaseMask(EF_LOONGARCH_ABI_SOFT_FLOAT, EF_LOONGARCH_ABI_MODIFIER_MASK);
+    BCaseMask(EF_LOONGARCH_ABI_SINGLE_FLOAT, EF_LOONGARCH_ABI_MODIFIER_MASK);
+    BCaseMask(EF_LOONGARCH_ABI_DOUBLE_FLOAT, EF_LOONGARCH_ABI_MODIFIER_MASK);
+    BCaseMask(EF_LOONGARCH_OBJABI_V0, EF_LOONGARCH_OBJABI_MASK);
+    BCaseMask(EF_LOONGARCH_OBJABI_V1, EF_LOONGARCH_OBJABI_MASK);
+    break;
   case ELF::EM_RISCV:
     BCase(EF_RISCV_RVC);
     BCaseMask(EF_RISCV_FLOAT_ABI_SOFT, EF_RISCV_FLOAT_ABI);
@@ -586,7 +594,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     switch (Object->Header.ABIVersion) {
     default:
       // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
       BCase(EF_AMDGPU_FEATURE_XNACK_V3);
       BCase(EF_AMDGPU_FEATURE_SRAMECC_V3);
@@ -654,7 +662,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_LLVM_SYMPART);
   ECase(SHT_LLVM_PART_EHDR);
   ECase(SHT_LLVM_PART_PHDR);
+  ECase(SHT_LLVM_BB_ADDR_MAP_V0);
   ECase(SHT_LLVM_BB_ADDR_MAP);
+  ECase(SHT_LLVM_OFFLOADING);
   ECase(SHT_GNU_ATTRIBUTES);
   ECase(SHT_GNU_HASH);
   ECase(SHT_GNU_verdef);
@@ -1335,7 +1345,7 @@ static void sectionMapping(IO &IO, ELFYAML::RawContentSection &Section) {
 
   // We also support reading a content as array of bytes using the ContentArray
   // key. obj2yaml never prints this field.
-  assert(!IO.outputting() || !Section.ContentBuf.hasValue());
+  assert(!IO.outputting() || !Section.ContentBuf);
   IO.mapOptional("ContentArray", Section.ContentBuf);
   if (Section.ContentBuf) {
     if (Section.Content)
@@ -1364,8 +1374,7 @@ static void sectionMapping(IO &IO, ELFYAML::HashSection &Section) {
 
   // obj2yaml does not dump these fields. They can be used to override nchain
   // and nbucket values for creating broken sections.
-  assert(!IO.outputting() ||
-         (!Section.NBucket.hasValue() && !Section.NChain.hasValue()));
+  assert(!IO.outputting() || (!Section.NBucket && !Section.NChain));
   IO.mapOptional("NChain", Section.NChain);
   IO.mapOptional("NBucket", Section.NBucket);
 }
@@ -1640,6 +1649,7 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       Section.reset(new ELFYAML::CallGraphProfileSection());
     sectionMapping(IO, *cast<ELFYAML::CallGraphProfileSection>(Section.get()));
     break;
+  case ELF::SHT_LLVM_BB_ADDR_MAP_V0:
   case ELF::SHT_LLVM_BB_ADDR_MAP:
     if (!IO.outputting())
       Section.reset(new ELFYAML::BBAddrMapSection());
@@ -1769,6 +1779,8 @@ void MappingTraits<ELFYAML::StackSizeEntry>::mapping(
 void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
     IO &IO, ELFYAML::BBAddrMapEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapRequired("Version", E.Version);
+  IO.mapOptional("Feature", E.Feature, Hex8(0));
   IO.mapOptional("Address", E.Address, Hex64(0));
   IO.mapOptional("NumBlocks", E.NumBlocks);
   IO.mapOptional("BBEntries", E.BBEntries);

@@ -157,7 +157,7 @@ private:
         printBlockContent(B);
         BlocksAlreadyVisited.insert(&B);
 
-        if (!llvm::empty(B.edges())) {
+        if (!B.edges().empty()) {
           outs() << "        Edges:\n";
           for (auto &E : B.edges()) {
             outs() << "          "

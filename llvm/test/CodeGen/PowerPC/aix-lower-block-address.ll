@@ -32,7 +32,7 @@ entry:
   br label %__here
 
 __here:
-  store i64 ptrtoint (i8* blockaddress(@foo, %__here) to i64), i64* %tmp
+  store i64 ptrtoint (ptr blockaddress(@foo, %__here) to i64), ptr %tmp
   ret void
 }
 

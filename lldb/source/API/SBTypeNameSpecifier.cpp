@@ -20,8 +20,15 @@ using namespace lldb_private;
 SBTypeNameSpecifier::SBTypeNameSpecifier() { LLDB_INSTRUMENT_VA(this); }
 
 SBTypeNameSpecifier::SBTypeNameSpecifier(const char *name, bool is_regex)
-    : m_opaque_sp(new TypeNameSpecifierImpl(name, is_regex)) {
+    : SBTypeNameSpecifier(name, is_regex ? eFormatterMatchRegex
+                                         : eFormatterMatchExact) {
   LLDB_INSTRUMENT_VA(this, name, is_regex);
+}
+
+SBTypeNameSpecifier::SBTypeNameSpecifier(const char *name,
+                                         FormatterMatchType match_type)
+    : m_opaque_sp(new TypeNameSpecifierImpl(name, match_type)) {
+  LLDB_INSTRUMENT_VA(this, name, match_type);
 
   if (name == nullptr || (*name) == 0)
     m_opaque_sp.reset();
@@ -72,23 +79,34 @@ SBType SBTypeNameSpecifier::GetType() {
   return SBType();
 }
 
+FormatterMatchType SBTypeNameSpecifier::GetMatchType() {
+  LLDB_INSTRUMENT_VA(this);
+  if (!IsValid())
+    return eFormatterMatchExact;
+  return m_opaque_sp->GetMatchType();
+}
+
 bool SBTypeNameSpecifier::IsRegex() {
   LLDB_INSTRUMENT_VA(this);
 
   if (!IsValid())
     return false;
 
-  return m_opaque_sp->IsRegex();
+  return m_opaque_sp->GetMatchType() == eFormatterMatchRegex;
 }
 
 bool SBTypeNameSpecifier::GetDescription(
     lldb::SBStream &description, lldb::DescriptionLevel description_level) {
   LLDB_INSTRUMENT_VA(this, description, description_level);
 
+  lldb::FormatterMatchType match_type = GetMatchType();
+  const char *match_type_str =
+      (match_type == eFormatterMatchExact   ? "plain"
+       : match_type == eFormatterMatchRegex ? "regex"
+                                            : "callback");
   if (!IsValid())
     return false;
-  description.Printf("SBTypeNameSpecifier(%s,%s)", GetName(),
-                     IsRegex() ? "regex" : "plain");
+  description.Printf("SBTypeNameSpecifier(%s,%s)", GetName(), match_type_str);
   return true;
 }
 
@@ -116,7 +134,7 @@ bool SBTypeNameSpecifier::IsEqualTo(lldb::SBTypeNameSpecifier &rhs) {
   if (!IsValid())
     return !rhs.IsValid();
 
-  if (IsRegex() != rhs.IsRegex())
+  if (GetMatchType() != rhs.GetMatchType())
     return false;
   if (GetName() == nullptr || rhs.GetName() == nullptr)
     return false;

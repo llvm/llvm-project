@@ -20,11 +20,11 @@ define i32 @foo() local_unnamed_addr #0 {
 ; CHECK-NEXT:    retq
   %a = alloca i32, i64 1000, align 16
   %b = alloca i32, i64 500, align 16
-  %a0 = getelementptr inbounds i32, i32* %a, i64 500
-  %b0 = getelementptr inbounds i32, i32* %b, i64 200
-  store volatile i32 1, i32* %a0
-  store volatile i32 2, i32* %b0
-  %c = load volatile i32, i32* %a
+  %a0 = getelementptr inbounds i32, ptr %a, i64 500
+  %b0 = getelementptr inbounds i32, ptr %b, i64 200
+  store volatile i32 1, ptr %a0
+  store volatile i32 2, ptr %b0
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 

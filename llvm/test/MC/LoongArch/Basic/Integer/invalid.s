@@ -1,7 +1,9 @@
 ## Test invalid instructions on both loongarch32 and loongarch64 target.
 
-# RUN: not llvm-mc --triple=loongarch32 --mattr=-f %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK64
-# RUN: not llvm-mc --triple=loongarch64 --mattr=-f %s 2>&1 --defsym=LA64=1 | FileCheck %s
+# RUN: not llvm-mc --triple=loongarch32 --mattr=-f %s 2>&1 \
+# RUN:         | FileCheck %s --check-prefixes=CHECK,CHECK64
+# RUN: not llvm-mc --triple=loongarch64 --mattr=-f %s 2>&1 --defsym=LA64=1 \
+# RUN:         | FileCheck %s
 
 ## Out of range immediates
 ## uimm2
@@ -37,36 +39,40 @@ preld 32, $a0, 0
 ## uimm12
 andi $a0, $a0, -1
 # CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [0, 4095]
-ori $a0, $a0, 4096
-# CHECK: :[[#@LINE-1]]:15: error: immediate must be an integer in the range [0, 4095]
 xori $a0, $a0, 4096
 # CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [0, 4095]
 
+## uimm12_ori
+ori $a0, $a0, 4096
+# CHECK: :[[#@LINE-1]]:15: error: operand must be a symbol with modifier (e.g. %abs_lo12) or an integer in the range [0, 4095]
+
 ## simm12
-addi.w $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:18: error: immediate must be an integer in the range [-2048, 2047]
 slti $a0, $a0, -2049
 # CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
 sltui $a0, $a0, 2048
 # CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
 preld 0, $a0, 2048
 # CHECK: :[[#@LINE-1]]:15: error: immediate must be an integer in the range [-2048, 2047]
+
+## simm12_addlike
+addi.w $a0, $a0, -2049
+# CHECK: :[[#@LINE-1]]:18: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.b $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.h $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.w $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.bu $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:17: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.hu $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:17: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 st.b $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 st.h $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 st.w $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 ## simm14_lsl2
 ll.w $a0, $a0, -32772
@@ -80,49 +86,53 @@ sc.w $a0, $a0, 32768
 
 ## simm16_lsl2
 beq $a0, $a0, -0x20004
-# CHECK: :[[#@LINE-1]]:15: error: immediate must be a multiple of 4 in the range [-131072, 131068]
+# CHECK: :[[#@LINE-1]]:15: error: operand must be a symbol with modifier (e.g. %b16) or an integer in the range [-131072, 131068]
 bne $a0, $a0, -0x20004
-# CHECK: :[[#@LINE-1]]:15: error: immediate must be a multiple of 4 in the range [-131072, 131068]
+# CHECK: :[[#@LINE-1]]:15: error: operand must be a symbol with modifier (e.g. %b16) or an integer in the range [-131072, 131068]
 blt $a0, $a0, -0x1FFFF
-# CHECK: :[[#@LINE-1]]:15: error: immediate must be a multiple of 4 in the range [-131072, 131068]
+# CHECK: :[[#@LINE-1]]:15: error: operand must be a symbol with modifier (e.g. %b16) or an integer in the range [-131072, 131068]
 bge $a0, $a0, -0x1FFFF
-# CHECK: :[[#@LINE-1]]:15: error: immediate must be a multiple of 4 in the range [-131072, 131068]
+# CHECK: :[[#@LINE-1]]:15: error: operand must be a symbol with modifier (e.g. %b16) or an integer in the range [-131072, 131068]
 bltu $a0, $a0, 0x1FFFF
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be a multiple of 4 in the range [-131072, 131068]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %b16) or an integer in the range [-131072, 131068]
 bgeu $a0, $a0, 0x1FFFF
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be a multiple of 4 in the range [-131072, 131068]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %b16) or an integer in the range [-131072, 131068]
 jirl $a0, $a0, 0x20000
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be a multiple of 4 in the range [-131072, 131068]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %b16) or an integer in the range [-131072, 131068]
 
 ## simm20
-lu12i.w $a0, -0x80001
-# CHECK: :[[#@LINE-1]]:14: error: immediate must be an integer in the range [-524288, 524287]
 pcaddi $a0, -0x80001
 # CHECK: :[[#@LINE-1]]:13: error: immediate must be an integer in the range [-524288, 524287]
 pcaddu12i $a0, 0x80000
 # CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-524288, 524287]
+
+## simm20_lu12iw
+lu12i.w $a0, -0x80001
+# CHECK: :[[#@LINE-1]]:14: error: operand must be a symbol with modifier (e.g. %abs_hi20) or an integer in the range [-524288, 524287]
+
+## simm20_pcalau12i
 pcalau12i $a0, 0x80000
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-524288, 524287]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_hi20) or an integer in the range [-524288, 524287]
 
 ## simm21_lsl2
 beqz $a0, -0x400001
-# CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 4 in the range [-4194304, 4194300]
+# CHECK: :[[#@LINE-1]]:11: error: operand must be a symbol with modifier (e.g. %b21) or an integer in the range [-4194304, 4194300]
 bnez $a0, -0x3FFFFF
-# CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 4 in the range [-4194304, 4194300]
+# CHECK: :[[#@LINE-1]]:11: error: operand must be a symbol with modifier (e.g. %b21) or an integer in the range [-4194304, 4194300]
 beqz $a0, 0x3FFFFF
-# CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 4 in the range [-4194304, 4194300]
+# CHECK: :[[#@LINE-1]]:11: error: operand must be a symbol with modifier (e.g. %b21) or an integer in the range [-4194304, 4194300]
 bnez $a0, 0x400000
-# CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 4 in the range [-4194304, 4194300]
+# CHECK: :[[#@LINE-1]]:11: error: operand must be a symbol with modifier (e.g. %b21) or an integer in the range [-4194304, 4194300]
 
 ## simm26_lsl2
 b -0x8000001
-# CHECK: :[[#@LINE-1]]:3: error: immediate must be a multiple of 4 in the range [-134217728, 134217724]
+# CHECK: :[[#@LINE-1]]:3: error: operand must be a bare symbol name or an immediate must be a multiple of 4 in the range [-134217728, 134217724]
 b 0x1
-# CHECK: :[[#@LINE-1]]:3: error: immediate must be a multiple of 4 in the range [-134217728, 134217724]
+# CHECK: :[[#@LINE-1]]:3: error: operand must be a bare symbol name or an immediate must be a multiple of 4 in the range [-134217728, 134217724]
 bl 0x7FFFFFF
-# CHECK: :[[#@LINE-1]]:4: error: immediate must be a multiple of 4 in the range [-134217728, 134217724]
+# CHECK: :[[#@LINE-1]]:4: error: operand must be a bare symbol name or an immediate must be a multiple of 4 in the range [-134217728, 134217724]
 bl 0x8000000
-# CHECK: :[[#@LINE-1]]:4: error: immediate must be a multiple of 4 in the range [-134217728, 134217724]
+# CHECK: :[[#@LINE-1]]:4: error: operand must be a bare symbol name or an immediate must be a multiple of 4 in the range [-134217728, 134217724]
 
 ## Invalid mnemonics
 nori $a0, $a0, 0

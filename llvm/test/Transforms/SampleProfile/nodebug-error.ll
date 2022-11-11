@@ -6,29 +6,29 @@
 ; RUN:   -sample-profile-merge-inlinee=true -S 2>&1| FileCheck %s
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
-declare void @__cxa_call_unexpected(i8*)
+declare void @__cxa_call_unexpected(ptr)
 declare i32 @__gxx_personality_v0(...)
 declare i32 @_Z3subii(i32 %x, i32 %y)
 
-define i32 @main() "use-sample-profile" nounwind uwtable ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !6 {
+define i32 @main() "use-sample-profile" nounwind uwtable ssp personality ptr @__gxx_personality_v0 !dbg !6 {
 entry:
   %retval = alloca i32, align 4
   %s = alloca i32, align 4
   %i = alloca i32, align 4
-  %tmp = load i32, i32* %i, align 4, !dbg !8
-  %tmp1 = load i32, i32* %s, align 4, !dbg !8
+  %tmp = load i32, ptr %i, align 4, !dbg !8
+  %tmp1 = load i32, ptr %s, align 4, !dbg !8
   %call = invoke i32 @foo(i32 %tmp, i32 %tmp1)
           to label %cont unwind label %lpad, !dbg !8
 ; CHECK-NOT: warning: No debug information found in function foo
 ; CHECK: invoke i32 @foo
 cont:
-  store i32 %call, i32* %s, align 4, !dbg !8
+  store i32 %call, ptr %s, align 4, !dbg !8
   ret i32 0, !dbg !11
 lpad:
-  %lptmp0 = landingpad { i8*, i32 }
-          filter [0 x i8*] zeroinitializer
-  %lptmp1 = extractvalue { i8*, i32 } %lptmp0, 0
-  tail call void @__cxa_call_unexpected(i8* %lptmp1) noreturn nounwind
+  %lptmp0 = landingpad { ptr, i32 }
+          filter [0 x ptr] zeroinitializer
+  %lptmp1 = extractvalue { ptr, i32 } %lptmp0, 0
+  tail call void @__cxa_call_unexpected(ptr %lptmp1) noreturn nounwind
   unreachable
 }
 
@@ -40,7 +40,7 @@ entry:
 
 attributes #0 = { "use-sample-profile" }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

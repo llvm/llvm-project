@@ -8,18 +8,16 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 define void @_ZL18findInsertLocationPN4llvm17MachineBasicBlockENS_9SlotIndexERNS_13LiveIntervalsE() {
 ; CHECK-LABEL: @_ZL18findInsertLocationPN4llvm17MachineBasicBlockENS_9SlotIndexERNS_13LiveIntervalsE(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata %foo* poison, metadata [[META3:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr poison, metadata [[META3:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg [[DBG8:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %retval = alloca %foo, align 8
-  call void @llvm.dbg.declare(metadata %foo* %retval, metadata !1, metadata !7), !dbg !8
+  call void @llvm.dbg.declare(metadata ptr %retval, metadata !1, metadata !7), !dbg !8
 ; Checks that SROA still inserts a bit_piece expression, even if it produces only one piece
 ; (as long as that piece is smaller than the whole thing)
-  %0 = bitcast %foo* %retval to i8*
-  %1 = getelementptr inbounds i8, i8* %0, i64 8
-  %2 = bitcast i8* %1 to %foo**
-  store %foo* poison, %foo** %2, align 8
+  %0 = getelementptr inbounds i8, ptr %retval, i64 8
+  store ptr poison, ptr %0, align 8
   ret void
 }
 

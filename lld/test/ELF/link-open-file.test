@@ -12,7 +12,7 @@
 
 # RUN:     %python %s %t.o 7
 # RUN: not %python %s %t.o 3 2>&1 | FileCheck %s
-# CHECK: error: failed to write to the output file
+# CHECK: error: failed to write output '{{.*}}': {{.*}}
 
 import contextlib
 import ctypes

@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=fiji -verify-machineinstrs | FileCheck -check-prefix=VI %s
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefix=GFX10 %s
+; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefix=GFX10 %s
 
 ; ===================================================================================
 ; V_ADD3_U32
@@ -222,7 +223,7 @@ define amdgpu_ps float @add3_uniform_vgpr(float inreg %a, float inreg %b, float 
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x40400000
 ; VI-NEXT:    v_add_f32_e32 v2, s4, v2
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
-; VI-NEXT:    v_add_u32_e32 v0, vcc, v2, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: add3_uniform_vgpr:

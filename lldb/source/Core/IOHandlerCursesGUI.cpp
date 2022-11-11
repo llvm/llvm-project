@@ -588,9 +588,10 @@ public:
   }
 
   Window(const char *name, const Rect &bounds)
-      : Surface(Surface::Type::Window), m_name(name), m_parent(nullptr),
-        m_subwindows(), m_delegate_sp(), m_curr_active_window_idx(UINT32_MAX),
-        m_prev_active_window_idx(UINT32_MAX), m_delete(true),
+      : Surface(Surface::Type::Window), m_name(name), m_panel(nullptr),
+        m_parent(nullptr), m_subwindows(), m_delegate_sp(),
+        m_curr_active_window_idx(UINT32_MAX),
+        m_prev_active_window_idx(UINT32_MAX), m_delete(false),
         m_needs_update(true), m_can_activate(true), m_is_subwin(false) {
     Reset(::newwin(bounds.size.height, bounds.size.width, bounds.origin.y,
                    bounds.origin.y));
@@ -3111,11 +3112,11 @@ public:
   static constexpr const char *kLoadDependentFilesExecOnly = "Executable only";
 
   std::vector<std::string> GetLoadDependentFilesChoices() {
-    std::vector<std::string> load_depentents_options;
-    load_depentents_options.push_back(kLoadDependentFilesExecOnly);
-    load_depentents_options.push_back(kLoadDependentFilesYes);
-    load_depentents_options.push_back(kLoadDependentFilesNo);
-    return load_depentents_options;
+    std::vector<std::string> load_dependents_options;
+    load_dependents_options.push_back(kLoadDependentFilesExecOnly);
+    load_dependents_options.push_back(kLoadDependentFilesYes);
+    load_dependents_options.push_back(kLoadDependentFilesNo);
+    return load_dependents_options;
   }
 
   LoadDependentFiles GetLoadDependentFiles() {
@@ -3170,7 +3171,7 @@ public:
     FileSpec core_file_spec = m_core_file_field->GetResolvedFileSpec();
 
     FileSpec core_file_directory_spec;
-    core_file_directory_spec.GetDirectory() = core_file_spec.GetDirectory();
+    core_file_directory_spec.SetDirectory(core_file_spec.GetDirectory());
     target_sp->AppendExecutableSearchPaths(core_file_directory_spec);
 
     ProcessSP process_sp(target_sp->CreateProcess(
@@ -3499,19 +3500,19 @@ public:
 
     FileAction action;
     if (m_standard_input_field->IsSpecified()) {
-      action.Open(STDIN_FILENO, m_standard_input_field->GetFileSpec(), true,
-                  false);
-      launch_info.AppendFileAction(action);
+      if (action.Open(STDIN_FILENO, m_standard_input_field->GetFileSpec(), true,
+                      false))
+        launch_info.AppendFileAction(action);
     }
     if (m_standard_output_field->IsSpecified()) {
-      action.Open(STDOUT_FILENO, m_standard_output_field->GetFileSpec(), false,
-                  true);
-      launch_info.AppendFileAction(action);
+      if (action.Open(STDOUT_FILENO, m_standard_output_field->GetFileSpec(),
+                      false, true))
+        launch_info.AppendFileAction(action);
     }
     if (m_standard_error_field->IsSpecified()) {
-      action.Open(STDERR_FILENO, m_standard_error_field->GetFileSpec(), false,
-                  true);
-      launch_info.AppendFileAction(action);
+      if (action.Open(STDERR_FILENO, m_standard_error_field->GetFileSpec(),
+                      false, true))
+        launch_info.AppendFileAction(action);
     }
   }
 
@@ -5702,8 +5703,8 @@ protected:
   uint32_t m_selected_row_idx = 0;
   uint32_t m_first_visible_row = 0;
   uint32_t m_num_rows = 0;
-  int m_min_x;
-  int m_min_y;
+  int m_min_x = 0;
+  int m_min_y = 0;
   int m_max_x = 0;
   int m_max_y = 0;
 
@@ -5907,7 +5908,7 @@ public:
       if (m_frame_block != frame_block) {
         m_frame_block = frame_block;
 
-        VariableList *locals = frame->GetVariableList(true);
+        VariableList *locals = frame->GetVariableList(true, nullptr);
         if (locals) {
           const DynamicValueType use_dynamic = eDynamicDontRunTarget;
           for (const VariableSP &local_sp : *locals) {
@@ -6820,7 +6821,7 @@ public:
     bool set_selected_line_to_pc = false;
 
     if (update_location) {
-      const bool process_alive = process ? process->IsAlive() : false;
+      const bool process_alive = process->IsAlive();
       bool thread_changed = false;
       if (process_alive) {
         thread = exe_ctx.GetThreadPtr();
@@ -7208,8 +7209,10 @@ public:
                   window.Printf("%*s", desc_x - window.GetCursorX(), "");
                 window.MoveCursor(window_width - stop_description_len - 15,
                                   line_y);
-                window.PrintfTruncated(1, "<<< Thread %u: %s ",
-                                       thread->GetIndexID(), stop_description);
+                if (thread)
+                  window.PrintfTruncated(1, "<<< Thread %u: %s ",
+                                         thread->GetIndexID(),
+                                         stop_description);
               }
             } else {
               window.Printf("%*s", window_width - window.GetCursorX() - 1, "");

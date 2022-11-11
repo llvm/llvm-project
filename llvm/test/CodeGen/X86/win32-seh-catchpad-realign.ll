@@ -7,18 +7,17 @@ target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686--windows-msvc"
 
 ; Function Attrs: nounwind
-define void @realigned_try() personality i8* bitcast (i32 (...)* @_except_handler3 to i8*) {
+define void @realigned_try() personality ptr @_except_handler3 {
 entry:
   %x = alloca [4 x i32], align 16
-  %arrayidx = getelementptr inbounds [4 x i32], [4 x i32]* %x, i32 0, i32 0
-  invoke void @useit(i32* %arrayidx)
+  invoke void @useit(ptr %x)
           to label %__try.cont unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
   %cs1 = catchswitch within none [label %__except.ret] unwind to caller
 
 __except.ret:                                     ; preds = %catch.dispatch
-  %pad = catchpad within %cs1 [i8* bitcast (i32 ()* @"\01?filt$0@0@realigned_try@@" to i8*)]
+  %pad = catchpad within %cs1 [ptr @"\01?filt$0@0@realigned_try@@"]
   catchret from %pad to label %__try.cont
 
 __try.cont:                                       ; preds = %entry, %__except.ret
@@ -33,7 +32,7 @@ entry:
   ret i32 1
 }
 
-declare void @useit(i32*)
+declare void @useit(ptr)
 
 declare i32 @_except_handler3(...)
 

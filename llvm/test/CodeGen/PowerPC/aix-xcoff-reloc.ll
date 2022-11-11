@@ -17,14 +17,14 @@
 @globalA = global i32 1, align 4
 @globalB = global i32 2, align 4
 @arr = global <{ i32, [9 x i32] }> <{ i32 3, [9 x i32] zeroinitializer }>, align 4
-@p = global i32* bitcast (i8* getelementptr (i8, i8* bitcast (<{ i32, [9 x i32] }>* @arr to i8*), i64 16) to i32*), align 4
+@p = global ptr getelementptr (i8, ptr @arr, i64 16), align 4
 
 define i32 @foo() {
 entry:
   %call = call i32 @bar(i32 1)
-  %0 = load i32, i32* @globalA, align 4
+  %0 = load i32, ptr @globalA, align 4
   %add = add nsw i32 %call, %0
-  %1 = load i32, i32* @globalB, align 4
+  %1 = load i32, ptr @globalB, align 4
   %add1 = add nsw i32 %add, %1
   ret i32 %add1
 }
@@ -159,7 +159,7 @@ declare i32 @bar(i32)
 ; SYM:      Symbols [
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 0
-; SYM-NEXT:     Name: .file
+; SYM-NEXT:     Name: <stdin>
 ; SYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYM-NEXT:     Section: N_DEBUG
 ; SYM-NEXT:     Source Language ID: TB_C (0x0)
@@ -222,7 +222,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:       SectionLen: 64
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
-; SYM-NEXT:       SymbolAlignmentLog2: 4
+; SYM-NEXT:       SymbolAlignmentLog2: 5
 ; SYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; SYM-NEXT:       StorageMappingClass: XMC_PR (0x0)
 ; SYM32-NEXT:     StabInfoIndex: 0x0

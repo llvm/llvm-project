@@ -12,7 +12,7 @@ target triple = "x86_64-apple-macosx10.7"
 ; The paddd instruction can only influence the other operations through the loop
 ; back-edge. Check that everything is still moved into the integer domain.
 
-define void @f(<4 x i32>* nocapture %p, i32 %n) nounwind uwtable ssp {
+define void @f(ptr nocapture %p, i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: f:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    addq $16, %rdi
@@ -39,14 +39,14 @@ entry:
 ; The instructions in the loop must all be integer domain as well.
 ; Finally, the controlling integer-only instruction.
 while.body:
-  %p.addr.04 = phi <4 x i32>* [ %incdec.ptr, %while.body ], [ %p, %entry ]
+  %p.addr.04 = phi ptr [ %incdec.ptr, %while.body ], [ %p, %entry ]
   %n.addr.03 = phi i32 [ %dec, %while.body ], [ %n, %entry ]
   %x.02 = phi <4 x i32> [ %add, %while.body ], [ zeroinitializer, %entry ]
   %dec = add nsw i32 %n.addr.03, -1
   %and = and <4 x i32> %x.02, <i32 127, i32 127, i32 127, i32 127>
-  %incdec.ptr = getelementptr inbounds <4 x i32>, <4 x i32>* %p.addr.04, i64 1
-  store <4 x i32> %and, <4 x i32>* %p.addr.04, align 16
-  %0 = load <4 x i32>, <4 x i32>* %incdec.ptr, align 16
+  %incdec.ptr = getelementptr inbounds <4 x i32>, ptr %p.addr.04, i64 1
+  store <4 x i32> %and, ptr %p.addr.04, align 16
+  %0 = load <4 x i32>, ptr %incdec.ptr, align 16
   %add = shl <4 x i32> %0, <i32 1, i32 1, i32 1, i32 1>
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %while.end, label %while.body

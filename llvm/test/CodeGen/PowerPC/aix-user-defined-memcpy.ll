@@ -18,18 +18,18 @@
 ; "memcpy" ExternalSymbol's, we pick up the user-defined version, even if this
 ; may lead to some undefined behavior.
 
-define dso_local signext i32 @memcpy(i8* %destination, i32 signext %num) {
+define dso_local signext i32 @memcpy(ptr %destination, i32 signext %num) {
 entry:
   ret i32 3
 }
 
-define void @call_memcpy(i8* %p, i8* %q, i32 %n) {
+define void @call_memcpy(ptr %p, ptr %q, i32 %n) {
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %p, i8* %q, i32 %n, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %p, ptr %q, i32 %n, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1)
 
 ; This test check
 ; 1. The symbol table for .o file to verify .memcpy is a defined external label.

@@ -15,6 +15,7 @@
 #include "CodeGenIntrinsics.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -573,7 +574,7 @@ std::unique_ptr<SearchIndex> SearchableTableEmitter::parseSearchIndex(
 void SearchableTableEmitter::collectEnumEntries(
     GenericEnum &Enum, StringRef NameField, StringRef ValueField,
     const std::vector<Record *> &Items) {
-  for (auto EntryRec : Items) {
+  for (auto *EntryRec : Items) {
     StringRef Name;
     if (NameField.empty())
       Name = EntryRec->getName();
@@ -606,7 +607,7 @@ void SearchableTableEmitter::collectTableEntries(
     PrintFatalError(Table.Locs,
                     Twine("Table '") + Table.Name + "' has no entries");
 
-  for (auto EntryRec : Items) {
+  for (auto *EntryRec : Items) {
     for (auto &Field : Table.Fields) {
       auto TI = dyn_cast<TypedInit>(EntryRec->getValueInit(Field.Name));
       if (!TI || !TI->isComplete()) {
@@ -650,8 +651,9 @@ void SearchableTableEmitter::collectTableEntries(
   SearchIndex Idx;
   std::copy(Table.Fields.begin(), Table.Fields.end(),
             std::back_inserter(Idx.Fields));
-  std::sort(Table.Entries.begin(), Table.Entries.end(),
-            [&](Record *LHS, Record *RHS) { return compareBy(LHS, RHS, Idx); });
+  llvm::sort(Table.Entries, [&](Record *LHS, Record *RHS) {
+    return compareBy(LHS, RHS, Idx);
+  });
 }
 
 void SearchableTableEmitter::run(raw_ostream &OS) {
@@ -660,7 +662,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
   DenseMap<Record *, GenericTable *> TableMap;
 
   // Collect all definitions first.
-  for (auto EnumRec : Records.getAllDerivedDefinitions("GenericEnum")) {
+  for (auto *EnumRec : Records.getAllDerivedDefinitions("GenericEnum")) {
     StringRef NameField;
     if (!EnumRec->isValueUnset("NameField"))
       NameField = EnumRec->getValueAsString("NameField");
@@ -686,7 +688,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
     Enums.emplace_back(std::move(Enum));
   }
 
-  for (auto TableRec : Records.getAllDerivedDefinitions("GenericTable")) {
+  for (auto *TableRec : Records.getAllDerivedDefinitions("GenericTable")) {
     auto Table = std::make_unique<GenericTable>();
     Table->Name = std::string(TableRec->getName());
     Table->Locs = TableRec->getLoc();

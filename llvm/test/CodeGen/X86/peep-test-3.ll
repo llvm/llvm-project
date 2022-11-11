@@ -4,7 +4,7 @@
 
 ; LLVM should omit the testl and use the flags result from the orl.
 
-define void @or(float* %A, i32 %IA, i32 %N) nounwind {
+define void @or(ptr %A, i32 %IA, i32 %N) nounwind {
 ; CHECK-LABEL: or:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -19,7 +19,7 @@ define void @or(float* %A, i32 %IA, i32 %N) nounwind {
 ; CHECK-NEXT:  .LBB0_2: # %return
 ; CHECK-NEXT:    retl
 entry:
-  %0 = ptrtoint float* %A to i32                  ; <i32> [#uses=1]
+  %0 = ptrtoint ptr %A to i32                  ; <i32> [#uses=1]
   %1 = and i32 %0, 3                              ; <i32> [#uses=1]
   %2 = xor i32 %IA, 1                             ; <i32> [#uses=1]
   %3 = or i32 %2, %1                              ; <i32> [#uses=1]
@@ -27,14 +27,14 @@ entry:
   br i1 %4, label %return, label %bb
 
 bb:                                               ; preds = %entry
-  store float 0.000000e+00, float* %A, align 4
+  store float 0.000000e+00, ptr %A, align 4
   ret void
 
 return:                                           ; preds = %entry
   ret void
 }
 
-define void @xor(float* %A, i32 %IA, i32 %N) nounwind {
+define void @xor(ptr %A, i32 %IA, i32 %N) nounwind {
 ; CHECK-LABEL: xor:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -48,7 +48,7 @@ define void @xor(float* %A, i32 %IA, i32 %N) nounwind {
 ; CHECK-NEXT:  .LBB1_2: # %return
 ; CHECK-NEXT:    retl
 entry:
-  %0 = ptrtoint float* %A to i32                  ; <i32> [#uses=1]
+  %0 = ptrtoint ptr %A to i32                  ; <i32> [#uses=1]
   %1 = and i32 %0, 3                              ; <i32> [#uses=1]
   %2 = xor i32 %IA, 1                             ; <i32> [#uses=1]
   %3 = xor i32 %2, %1                              ; <i32> [#uses=1]
@@ -56,14 +56,14 @@ entry:
   br i1 %4, label %return, label %bb
 
 bb:                                               ; preds = %entry
-  store float 0.000000e+00, float* %A, align 4
+  store float 0.000000e+00, ptr %A, align 4
   ret void
 
 return:                                           ; preds = %entry
   ret void
 }
 
-define void @and(float* %A, i32 %IA, i32 %N, i8* %p) nounwind {
+define void @and(ptr %A, i32 %IA, i32 %N, ptr %p) nounwind {
 ; CHECK-LABEL: and:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -78,18 +78,18 @@ define void @and(float* %A, i32 %IA, i32 %N, i8* %p) nounwind {
 ; CHECK-NEXT:  .LBB2_2: # %return
 ; CHECK-NEXT:    retl
 entry:
-  store i8 0, i8* %p
-  %0 = ptrtoint float* %A to i32                  ; <i32> [#uses=1]
+  store i8 0, ptr %p
+  %0 = ptrtoint ptr %A to i32                  ; <i32> [#uses=1]
   %1 = and i32 %0, 3                              ; <i32> [#uses=1]
   %2 = xor i32 %IA, 1                             ; <i32> [#uses=1]
   %3 = and i32 %2, %1                              ; <i32> [#uses=1]
   %t = trunc i32 %3 to i8
-  store i8 %t, i8* %p
+  store i8 %t, ptr %p
   %4 = icmp eq i32 %3, 0                          ; <i1> [#uses=1]
   br i1 %4, label %return, label %bb
 
 bb:                                               ; preds = %entry
-  store float 0.000000e+00, float* null, align 4
+  store float 0.000000e+00, ptr null, align 4
   ret void
 
 return:                                           ; preds = %entry
@@ -98,7 +98,7 @@ return:                                           ; preds = %entry
 
 ; Just like @and, but without the trunc+store. This should use a testb
 ; instead of an andl.
-define void @test(float* %A, i32 %IA, i32 %N, i8* %p) nounwind {
+define void @test(ptr %A, i32 %IA, i32 %N, ptr %p) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -113,8 +113,8 @@ define void @test(float* %A, i32 %IA, i32 %N, i8* %p) nounwind {
 ; CHECK-NEXT:  .LBB3_2: # %return
 ; CHECK-NEXT:    retl
 entry:
-  store i8 0, i8* %p
-  %0 = ptrtoint float* %A to i32                  ; <i32> [#uses=1]
+  store i8 0, ptr %p
+  %0 = ptrtoint ptr %A to i32                  ; <i32> [#uses=1]
   %1 = and i32 %0, 3                              ; <i32> [#uses=1]
   %2 = xor i32 %IA, 1                             ; <i32> [#uses=1]
   %3 = and i32 %2, %1                              ; <i32> [#uses=1]
@@ -122,7 +122,7 @@ entry:
   br i1 %4, label %return, label %bb
 
 bb:                                               ; preds = %entry
-  store float 0.000000e+00, float* null, align 4
+  store float 0.000000e+00, ptr null, align 4
   ret void
 
 return:                                           ; preds = %entry

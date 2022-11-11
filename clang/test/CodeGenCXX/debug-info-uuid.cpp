@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fms-extensions -triple=x86_64-pc-win32 -debug-info-kind=limited %s -o - -std=c++11 | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fms-extensions -triple=x86_64-unknown-unknown -debug-info-kind=limited %s -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=CHECK-ITANIUM
+// RUN: %clang_cc1 -emit-llvm -fms-extensions -triple=x86_64-pc-win32 -debug-info-kind=limited %s -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -fms-extensions -triple=x86_64-unknown-unknown -debug-info-kind=limited %s -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=CHECK-ITANIUM
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "tmpl_guid2<GUID{12345678-1234-1234-1234-1234567890ab}>"
 // CHECK-SAME:             templateParams: [[TGI2ARGS:![0-9]*]]
 // CHECK: [[TGI2ARGS]] = !{[[TGI2ARG1:![0-9]*]]}
 // CHECK: [[TGI2ARG1]] = !DITemplateValueParameter(
 // CHECK-SAME:                                     type: [[CONST_GUID_REF:![0-9]*]]
-// CHECK-SAME:                                     value: %struct._GUID* @_GUID_12345678_1234_1234_1234_1234567890ab
+// CHECK-SAME:                                     value: ptr @_GUID_12345678_1234_1234_1234_1234567890ab
 // CHECK: [[CONST_GUID_REF]] = !DIDerivedType(tag: DW_TAG_reference_type,
 // CHECK-SAME:                                baseType: [[CONST_GUID:![0-9]*]]
 // CHECK: [[CONST_GUID]] = !DIDerivedType(tag: DW_TAG_const_type
@@ -18,7 +18,7 @@
 // CHECK: [[TGIARGS]] = !{[[TGIARG1:![0-9]*]]}
 // CHECK: [[TGIARG1]] = !DITemplateValueParameter(
 // CHECK-SAME:                                    type: [[CONST_GUID_PTR:![0-9]*]]
-// CHECK-SAME:                                    value: %struct._GUID* @_GUID_12345678_1234_1234_1234_1234567890ab
+// CHECK-SAME:                                    value: ptr @_GUID_12345678_1234_1234_1234_1234567890ab
 // CHECK: [[CONST_GUID_PTR]] = !DIDerivedType(tag: DW_TAG_pointer_type
 // CHECK-SAME:                                baseType: [[CONST_GUID:![0-9]*]]
 // CHECK-SAME:                                size: 64

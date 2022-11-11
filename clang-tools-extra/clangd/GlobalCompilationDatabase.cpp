@@ -407,7 +407,7 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
   std::string Storage;
   std::vector<llvm::StringRef> SearchDirs;
   if (Opts.CompileCommandsDir) // FIXME: unify this case with config.
-    SearchDirs = {Opts.CompileCommandsDir.getValue()};
+    SearchDirs = {*Opts.CompileCommandsDir};
   else {
     WithContext WithProvidedContext(Opts.ContextProvider(Request.FileName));
     const auto &Spec = Config::current().CompileFlags.CDBSearch;
@@ -415,7 +415,7 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
     case Config::CDBSearchSpec::NoCDBSearch:
       return llvm::None;
     case Config::CDBSearchSpec::FixedDir:
-      Storage = Spec.FixedCDBPath.getValue();
+      Storage = *Spec.FixedCDBPath;
       SearchDirs = {Storage};
       break;
     case Config::CDBSearchSpec::Ancestors:
@@ -530,7 +530,7 @@ public:
   bool blockUntilIdle(Deadline Timeout) {
     std::unique_lock<std::mutex> Lock(Mu);
     return wait(Lock, CV, Timeout,
-                [&] { return Queue.empty() && !ActiveTask.hasValue(); });
+                [&] { return Queue.empty() && !ActiveTask; });
   }
 
   ~BroadcastThread() {
@@ -672,8 +672,7 @@ public:
     std::vector<SearchPath> SearchPaths(AllFiles.size());
     for (unsigned I = 0; I < AllFiles.size(); ++I) {
       if (Parent.Opts.CompileCommandsDir) { // FIXME: unify with config
-        SearchPaths[I].setPointer(
-            &Dirs[Parent.Opts.CompileCommandsDir.getValue()]);
+        SearchPaths[I].setPointer(&Dirs[*Parent.Opts.CompileCommandsDir]);
         continue;
       }
       if (ExitEarly()) // loading config may be slow
@@ -689,7 +688,7 @@ public:
         SearchPaths[I].setPointer(addParents(AllFiles[I]));
         break;
       case Config::CDBSearchSpec::FixedDir:
-        SearchPaths[I].setPointer(&Dirs[Spec.FixedCDBPath.getValue()]);
+        SearchPaths[I].setPointer(&Dirs[*Spec.FixedCDBPath]);
         break;
       }
     }
@@ -741,8 +740,8 @@ DirectoryBasedGlobalCompilationDatabase::getProjectInfo(PathRef File) const {
 
 OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
                        std::vector<std::string> FallbackFlags,
-                       tooling::ArgumentsAdjuster Adjuster)
-    : DelegatingCDB(Base), ArgsAdjuster(std::move(Adjuster)),
+                       CommandMangler Mangler)
+    : DelegatingCDB(Base), Mangler(std::move(Mangler)),
       FallbackFlags(std::move(FallbackFlags)) {}
 
 llvm::Optional<tooling::CompileCommand>
@@ -758,8 +757,8 @@ OverlayCDB::getCompileCommand(PathRef File) const {
     Cmd = DelegatingCDB::getCompileCommand(File);
   if (!Cmd)
     return llvm::None;
-  if (ArgsAdjuster)
-    Cmd->CommandLine = ArgsAdjuster(Cmd->CommandLine, File);
+  if (Mangler)
+    Mangler(*Cmd, File);
   return Cmd;
 }
 
@@ -768,8 +767,8 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
   std::lock_guard<std::mutex> Lock(Mutex);
   Cmd.CommandLine.insert(Cmd.CommandLine.end(), FallbackFlags.begin(),
                          FallbackFlags.end());
-  if (ArgsAdjuster)
-    Cmd.CommandLine = ArgsAdjuster(Cmd.CommandLine, File);
+  if (Mangler)
+    Mangler(Cmd, File);
   return Cmd;
 }
 

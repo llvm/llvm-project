@@ -10,11 +10,13 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; CHECK-LABEL: name: exp_compr_v2f16_s
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr), 0, 0, [[COPY2]](s32), [[COPY3]](s32), 0, 0
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr), 0, 0, [[COPY2]](s32), [[COPY3]](s32), 0, 0
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr.v2f16), 0, 0, %0, %1, 0, 0
@@ -27,9 +29,11 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; CHECK-LABEL: name: exp_compr_v2f16_v
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr), 0, 0, [[COPY]](s32), [[COPY1]](s32), 0, 0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; CHECK-NEXT: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr), 0, 0, [[COPY]](s32), [[COPY1]](s32), 0, 0
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr.v2f16), 0, 0, %0, %1, 0, 0

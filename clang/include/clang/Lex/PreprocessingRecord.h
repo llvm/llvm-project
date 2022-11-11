@@ -49,7 +49,6 @@ void operator delete(void *ptr, clang::PreprocessingRecord &PR,
 
 namespace clang {
 
-class FileEntry;
 class IdentifierInfo;
 class MacroInfo;
 class SourceManager;

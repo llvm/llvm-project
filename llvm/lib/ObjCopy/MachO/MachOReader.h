@@ -44,6 +44,7 @@ class MachOReader : public Reader {
   void readDataInCodeData(Object &O) const;
   void readLinkerOptimizationHint(Object &O) const;
   void readFunctionStartsData(Object &O) const;
+  void readDylibCodeSignDRs(Object &O) const;
   void readExportsTrie(Object &O) const;
   void readChainedFixups(Object &O) const;
   void readIndirectSymbolTable(Object &O) const;

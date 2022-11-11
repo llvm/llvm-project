@@ -4,8 +4,8 @@ struct A1 {
   int x;
   int &y; // expected-note 9{{because class 'A1' has a reference member}}
 
-  bool operator==(const A1&) const = default; // expected-warning {{implicitly deleted}} expected-note 2{{deleted here}}
-  bool operator<=>(const A1&) const = default; // expected-warning {{implicitly deleted}} expected-note 5{{deleted here}}
+  bool operator==(const A1&) const = default; // expected-warning {{implicitly deleted}} expected-note 2{{deleted here}} expected-note{{replace 'default'}}
+  bool operator<=>(const A1&) const = default; // expected-warning {{implicitly deleted}} expected-note 5{{deleted here}} expected-note{{replace 'default'}}
 };
 struct A2 {
   int x;
@@ -42,8 +42,8 @@ void f(A2 a) {
 struct A3 {
   int &x; // expected-note {{because class 'A3' has a reference member}}
 
-  bool operator==(const A3 &) const = default; // expected-warning {{implicitly deleted}}
-  bool operator<(const A3 &) const = default;  // expected-warning {{implicitly deleted}}
+  bool operator==(const A3 &) const = default; // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
+  bool operator<(const A3 &) const = default;  // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
   // expected-note@-1 {{because there is no viable three-way comparison function for 'A3'}}
 };
 
@@ -53,8 +53,8 @@ struct B1 {
     int &y; // expected-note 2{{because class 'B1' has a reference member}}
   };
 
-  bool operator==(const B1&) const = default; // expected-warning {{implicitly deleted}}
-  bool operator<=>(const B1&) const = default; // expected-warning {{implicitly deleted}}
+  bool operator==(const B1&) const = default; // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
+  bool operator<=>(const B1&) const = default; // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
 };
 
 struct B2 {
@@ -76,8 +76,8 @@ struct B2 {
 union C1 {
   int a;
 
-  bool operator==(const C1&) const = default; // expected-warning {{implicitly deleted}} expected-note {{because 'C1' is a union }}
-  bool operator<=>(const C1&) const = default; // expected-warning {{implicitly deleted}} expected-note {{because 'C1' is a union }}
+  bool operator==(const C1&) const = default; // expected-warning {{implicitly deleted}} expected-note {{because 'C1' is a union }} expected-note{{replace 'default'}}
+  bool operator<=>(const C1&) const = default; // expected-warning {{implicitly deleted}} expected-note {{because 'C1' is a union }} expected-note{{replace 'default'}}
 };
 
 union C2 {
@@ -98,8 +98,8 @@ struct D1 {
     int a;
   };
 
-  bool operator==(const D1&) const = default; // expected-warning {{implicitly deleted}} expected-note {{because 'D1' is a union-like class}}
-  bool operator<=>(const D1&) const = default; // expected-warning {{implicitly deleted}} expected-note {{because 'D1' is a union-like class}}
+  bool operator==(const D1&) const = default; // expected-warning {{implicitly deleted}} expected-note {{because 'D1' is a union-like class}} expected-note{{replace 'default'}}
+  bool operator<=>(const D1&) const = default; // expected-warning {{implicitly deleted}} expected-note {{because 'D1' is a union-like class}} expected-note{{replace 'default'}}
 };
 struct D2 {
   union {

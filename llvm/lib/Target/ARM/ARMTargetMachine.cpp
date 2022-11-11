@@ -196,7 +196,7 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
+  if (!RM)
     // Default relocation model on Darwin is PIC.
     return TT.isOSBinFormatMachO() ? Reloc::PIC_ : Reloc::Static;
 

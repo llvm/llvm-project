@@ -13,7 +13,7 @@ namespace test0 {
 
   void test() {
     A a;
-    foo(a); // expected-error {{call to deleted constructor of 'test0::A'}}
+    foo(a); // expected-error {{call to deleted constructor of 'A'}}
   }
 }
 

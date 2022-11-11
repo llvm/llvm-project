@@ -4,7 +4,6 @@ Tests that C++ member and static variables have correct layout and scope.
 
 
 
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     # We fail to lookup static members on Windows.
     @expectedFailureAll(oslist=["windows"])

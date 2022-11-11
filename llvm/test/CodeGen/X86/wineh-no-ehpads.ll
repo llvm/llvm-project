@@ -5,7 +5,7 @@ target triple = "x86_64-pc-windows-msvc"
 declare void @g()
 declare i32 @__CxxFrameHandler3(...)
 
-define void @personality_no_ehpad() personality i32 (...)* @__CxxFrameHandler3 {
+define void @personality_no_ehpad() personality ptr @__CxxFrameHandler3 {
   call void @g()
   ret void
 }

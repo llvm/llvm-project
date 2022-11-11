@@ -67,7 +67,6 @@ Each message type supports specific operations:
     MSG_GET_DOORBELL       10         \-                             \-           \-
     MSG_SYSMSG             15         SYSMSG_OP_ECC_ERR_INTERRUPT    1            \-
     \                                 SYSMSG_OP_REG_RD               2            \-
-    \                                 SYSMSG_OP_HOST_TRAP_ACK        3            \-
     \                                 SYSMSG_OP_TTRACE_PC            4            \-
     ====================== ========== ============================== ============ ==========
 

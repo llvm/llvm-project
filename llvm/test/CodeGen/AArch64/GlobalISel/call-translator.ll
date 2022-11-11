@@ -361,3 +361,83 @@ define void @call_returns_array_size0_struct() {
   %call = call [1 x %size0type] @func.returns.array.size0.struct()
   ret void
 }
+
+; Test extends on return values.
+
+; This should notice that the return value from has_zext_return is zero
+; extended.
+declare zeroext i16 @has_zext_return()
+define i32 @test_zext_return_from_callee() {
+  ; CHECK-LABEL: name: test_zext_return_from_callee
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   BL @has_zext_return, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  %val = call i16 @has_zext_return()
+  %ext = zext i16 %val to i32
+  ret i32 %ext
+}
+
+; Same as above, but with zeroext explicitly on the call. Should produce the
+; same codegen.
+define i32 @test_zext_return_from_callee2() {
+  ; CHECK-LABEL: name: test_zext_return_from_callee2
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   BL @has_zext_return, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  %val = call zeroext i16 @has_zext_return()
+  %ext = zext i16 %val to i32
+  ret i32 %ext
+}
+
+; This should notice that the return value from has_sext_return is sign
+; extended.
+declare signext i16 @has_sext_return()
+define i32 @test_sext_return_from_callee() {
+  ; CHECK-LABEL: name: test_sext_return_from_callee
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   BL @has_sext_return, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT]](s32)
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
+  ; CHECK-NEXT:   $w0 = COPY [[SEXT]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  %val = call i16 @has_sext_return()
+  %ext = sext i16 %val to i32
+  ret i32 %ext
+}
+
+; Same as above, but with signext explicitly on the call. Should produce the
+; same codegen.
+define i32 @test_sext_return_from_callee2() {
+  ; CHECK-LABEL: name: test_sext_return_from_callee2
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   BL @has_sext_return, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT]](s32)
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
+  ; CHECK-NEXT:   $w0 = COPY [[SEXT]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  %val = call signext i16 @has_sext_return()
+  %ext = sext i16 %val to i32
+  ret i32 %ext
+}

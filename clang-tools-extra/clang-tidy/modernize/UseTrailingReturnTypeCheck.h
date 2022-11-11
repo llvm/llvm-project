@@ -25,7 +25,7 @@ struct ClassifiedToken {
 /// Rewrites function signatures to use a trailing return type.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-trailing-type-return.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-trailing-type-return.html
 class UseTrailingReturnTypeCheck : public ClangTidyCheck {
 public:
   UseTrailingReturnTypeCheck(StringRef Name, ClangTidyContext *Context)

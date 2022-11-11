@@ -25,7 +25,7 @@ namespace dr990 { // dr990: 3.5
     A a;
   };
   B b1 { };
-  B b2 { 1 }; // expected-error {{no viable conversion from 'int' to 'dr990::A'}}
+  B b2 { 1 }; // expected-error {{no viable conversion from 'int' to 'A'}}
   B b3 { { 1 } };
 
   struct C {

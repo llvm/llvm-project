@@ -6,7 +6,7 @@ int *test_foo(void) {
 
 char *test_bar(void) {
   return bar(); // expected-error{{call to undeclared function 'bar'; ISO C99 and later do not support implicit function declarations}} \
-                // expected-warning{{incompatible integer to pointer conversion}}
+                // expected-error{{incompatible integer to pointer conversion}}
 }
 
 #undef WANT_FOO // expected-note{{macro was #undef'd here}}

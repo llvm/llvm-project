@@ -53,6 +53,7 @@ add_lldb_tool(lldb-server
       lldbPluginInstructionARM
       lldbPluginInstructionMIPS
       lldbPluginInstructionMIPS64
+      lldbPluginInstructionRISCV
       ${LLDB_SYSTEM_LIBS}
 
     LINK_COMPONENTS

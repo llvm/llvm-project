@@ -1,5 +1,5 @@
 ; RUN: opt < %s -aarch64-stack-tagging -S -o - | FileCheck %s --check-prefixes=CHECK,SSI
-; RUN: opt < %s -aarch64-stack-tagging -stack-tagging-use-stack-safety=0 -S -o - | FileCheck %s --check-prefixes=CHECK,NOSSI
+; RUN: opt < %s -aarch64-stack-tagging -stack-tagging-use-stack-safety=0 -S -o - | FileCheck %s --check-prefixes=CHECK
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
@@ -56,10 +56,7 @@ entry:
 ; CHECK:  alloca { [11 x i32], [4 x i8] }, align 16
 ; CHECK:  call { [11 x i32], [4 x i8] }* @llvm.aarch64.tagp.{{.*}}({ [11 x i32], [4 x i8] }* {{.*}}, i64 2)
 ; CHECK:  call void @llvm.aarch64.settag(i8* {{.*}}, i64 48)
-; SSI:    alloca i32, align 4
-; NOSSI:  alloca { i32, [12 x i8] }, align 16
-; NOSSI: @llvm.aarch64.tagp.
-; NOSSI: call void @llvm.aarch64.settag(i8* {{.*}}, i64 16)
+; CHECK:  alloca i32, align 4
 ; SSI-NOT: @llvm.aarch64.tagp
 ; SSI-NOT: @llvm.aarch64.settag
 
@@ -70,7 +67,6 @@ entry:
 ; CHECK:  call void @llvm.aarch64.settag(i8* {{.*}}, i64 16)
 ; CHECK:  call void @llvm.aarch64.settag(i8* {{.*}}, i64 16)
 ; CHECK:  call void @llvm.aarch64.settag(i8* {{.*}}, i64 48)
-; NOSSI:  call void @llvm.aarch64.settag(i8* {{.*}}, i64 16)
 ; CHECK-NEXT:  ret void
 
 

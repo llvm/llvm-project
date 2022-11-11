@@ -31,7 +31,6 @@ struct CommandOption {
   std::string ArgType;
   bool OptionalArg = false;
   std::string Validator;
-  std::string ArgEnum;
   std::vector<StringRef> Completions;
   std::string Description;
 
@@ -64,9 +63,6 @@ struct CommandOption {
 
     if (Option->getValue("Validator"))
       Validator = std::string(Option->getValueAsString("Validator"));
-
-    if (Option->getValue("ArgEnum"))
-      ArgEnum = std::string(Option->getValueAsString("ArgEnum"));
 
     if (Option->getValue("Completions"))
       Completions = Option->getValueAsListOfStrings("Completions");
@@ -114,8 +110,8 @@ static void emitOption(const CommandOption &O, raw_ostream &OS) {
     OS << "nullptr";
   OS << ", ";
 
-  if (!O.ArgEnum.empty())
-    OS << O.ArgEnum;
+  if (!O.ArgType.empty())
+    OS << "g_argument_table[eArgType" << O.ArgType << "].enum_values";
   else
     OS << "{}";
   OS << ", ";

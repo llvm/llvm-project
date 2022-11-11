@@ -6,7 +6,7 @@
 @x = thread_local global i32 0
 
 ; Call __tls_get_offset to retrieve the symbol's TLS offset.
-define i32 *@foo() {
+define ptr@foo() {
 ; CHECK-CP: .LCP{{.*}}:
 ; CHECK-CP: .quad x@TLSGD
 ;
@@ -19,5 +19,5 @@ define i32 *@foo() {
 ; CHECK-MAIN: ear [[TP]], %a1
 ; CHECK-MAIN: agr %r2, [[TP]]
 ; CHECK-MAIN: br %r14
-  ret i32 *@x
+  ret ptr@x
 }

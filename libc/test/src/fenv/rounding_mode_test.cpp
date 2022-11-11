@@ -14,6 +14,13 @@
 #include <fenv.h>
 
 TEST(LlvmLibcRoundingModeTest, SetAndGet) {
+  struct ResetDefaultRoundingMode {
+    int original;
+    ~ResetDefaultRoundingMode() {
+      __llvm_libc::fesetround(original);
+    }
+  } reset{__llvm_libc::fegetround()};
+
   int s = __llvm_libc::fesetround(FE_TONEAREST);
   EXPECT_EQ(s, 0);
   int rm = __llvm_libc::fegetround();

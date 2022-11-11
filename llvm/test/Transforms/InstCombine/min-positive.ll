@@ -8,7 +8,7 @@ define i1 @smin(i32 %other) {
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp sgt i32 [[OTHER:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[TEST]]
 ;
-  %positive = load i32, i32* @g, !range !{i32 1, i32 2048}
+  %positive = load i32, ptr @g, !range !{i32 1, i32 2048}
   %cmp = icmp slt i32 %positive, %other
   %sel = select i1 %cmp, i32 %positive, i32 %other
   %test = icmp sgt i32 %sel, 0
@@ -20,7 +20,7 @@ define i1 @smin_int(i32 %other) {
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp sgt i32 [[OTHER:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[TEST]]
 ;
-  %positive = load i32, i32* @g, !range !{i32 1, i32 2048}
+  %positive = load i32, ptr @g, !range !{i32 1, i32 2048}
   %smin = call i32 @llvm.smin.i32(i32 %positive, i32 %other)
   %test = icmp sgt i32 %smin, 0
   ret i1 %test
@@ -47,7 +47,7 @@ define i1 @smin_commute(i32 %other) {
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp sgt i32 [[OTHER:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[TEST]]
 ;
-  %positive = load i32, i32* @g, !range !{i32 1, i32 2048}
+  %positive = load i32, ptr @g, !range !{i32 1, i32 2048}
   %cmp = icmp slt i32 %other, %positive
   %sel = select i1 %cmp, i32 %other, i32 %positive
   %test = icmp sgt i32 %sel, 0
@@ -83,12 +83,12 @@ define <2 x i1> @smin_commute_vec_undef_elts(<2 x i32> %x, <2 x i32> %other) {
 
 define i1 @maybe_not_positive(i32 %other) {
 ; CHECK-LABEL: @maybe_not_positive(
-; CHECK-NEXT:    [[POSITIVE:%.*]] = load i32, i32* @g, align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[POSITIVE:%.*]] = load i32, ptr @g, align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[POSITIVE]], i32 [[OTHER:%.*]])
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp sgt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[TEST]]
 ;
-  %positive = load i32, i32* @g, !range !{i32 0, i32 2048}
+  %positive = load i32, ptr @g, !range !{i32 0, i32 2048}
   %cmp = icmp slt i32 %positive, %other
   %sel = select i1 %cmp, i32 %positive, i32 %other
   %test = icmp sgt i32 %sel, 0

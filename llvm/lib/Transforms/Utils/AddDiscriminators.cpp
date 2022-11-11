@@ -222,7 +222,7 @@ static bool addDiscriminators(Function &F) {
                           << DIL->getColumn() << ":" << Discriminator << " "
                           << I << "\n");
       } else {
-        I.setDebugLoc(NewDIL.getValue());
+        I.setDebugLoc(*NewDIL);
         LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
                    << DIL->getColumn() << ":" << Discriminator << " " << I
                    << "\n");
@@ -260,7 +260,7 @@ static bool addDiscriminators(Function &F) {
                      << CurrentDIL->getLine() << ":" << CurrentDIL->getColumn()
                      << ":" << Discriminator << " " << I << "\n");
         } else {
-          I.setDebugLoc(NewDIL.getValue());
+          I.setDebugLoc(*NewDIL);
           Changed = true;
         }
       }

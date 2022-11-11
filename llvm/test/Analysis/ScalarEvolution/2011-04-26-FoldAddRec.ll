@@ -1,4 +1,3 @@
-; RUN: opt < %s -disable-output -iv-users
 ; RUN: opt < %s -passes='print<iv-users>'
 ; PR9633: Tests that SCEV handles the mul.i2 recurrence being folded to
 ; constant zero.

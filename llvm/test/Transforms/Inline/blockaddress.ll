@@ -59,7 +59,7 @@ define internal i32 @foo(i32) {
   %3 = alloca i32, align 4
   store i32 %0, i32* %3, align 4
   %4 = load i32, i32* %3, align 4
-  callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,i,i,~{dirflag},~{fpsr},~{flags}"(i32 %4, i8* blockaddress(@foo, %7), i8* blockaddress(@foo, %6)) #1
+  callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,!i,!i,~{dirflag},~{fpsr},~{flags}"(i32 %4) #1
           to label %5 [label %7, label %6]
 
 ; <label>:5:                                      ; preds = %1
@@ -100,7 +100,7 @@ define internal i32 @baz(i32) {
   %3 = alloca i32, align 4
   store i32 %0, i32* %3, align 4
   %4 = load i32, i32* %3, align 4
-  callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,i,i,~{dirflag},~{fpsr},~{flags}"(i32 %4, i8* blockaddress(@baz, %7), i8* blockaddress(@baz, %6)) #1
+  callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,!i,!i,~{dirflag},~{fpsr},~{flags}"(i32 %4) #1
           to label %5 [label %7, label %6]
 
 ; <label>:5:                                      ; preds = %1

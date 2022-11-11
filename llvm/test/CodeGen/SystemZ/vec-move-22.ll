@@ -5,11 +5,11 @@
 
 ; CHECK-NOT: vlrep
 
-define void @fun(i64 %arg, i64** %Addr, <2 x i64*>* %Dst) {
-  %tmp10 = load i64*, i64** %Addr
-  store i64 %arg, i64* %tmp10
-  %tmp12 = insertelement <2 x i64*> undef, i64* %tmp10, i32 0
-  %tmp13 = insertelement <2 x i64*> %tmp12, i64* %tmp10, i32 1
-  store <2 x i64*> %tmp13, <2 x i64*>* %Dst
+define void @fun(i64 %arg, ptr %Addr, ptr %Dst) {
+  %tmp10 = load ptr, ptr %Addr
+  store i64 %arg, ptr %tmp10
+  %tmp12 = insertelement <2 x ptr> undef, ptr %tmp10, i32 0
+  %tmp13 = insertelement <2 x ptr> %tmp12, ptr %tmp10, i32 1
+  store <2 x ptr> %tmp13, ptr %Dst
   ret void
 }

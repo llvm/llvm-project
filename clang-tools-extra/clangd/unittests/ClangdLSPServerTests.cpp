@@ -46,7 +46,7 @@ protected:
   }
 
   LSPClient &start() {
-    EXPECT_FALSE(Server.hasValue()) << "Already initialized";
+    EXPECT_FALSE(Server) << "Already initialized";
     Server.emplace(Client.transport(), FS, Opts);
     ServerThread.emplace([&] { EXPECT_TRUE(Server->run()); });
     Client.call("initialize", llvm::json::Object{});

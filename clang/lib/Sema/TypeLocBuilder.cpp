@@ -41,6 +41,29 @@ void TypeLocBuilder::pushFullCopy(TypeLoc L) {
   }
 }
 
+void TypeLocBuilder::pushTrivial(ASTContext &Context, QualType T,
+                                 SourceLocation Loc) {
+  auto L = TypeLoc(T, nullptr);
+  reserve(L.getFullDataSize());
+
+  SmallVector<TypeLoc, 4> TypeLocs;
+  for (auto CurTL = L; CurTL; CurTL = CurTL.getNextTypeLoc())
+    TypeLocs.push_back(CurTL);
+
+  for (const auto &CurTL : llvm::reverse(TypeLocs)) {
+    switch (CurTL.getTypeLocClass()) {
+#define ABSTRACT_TYPELOC(CLASS, PARENT)
+#define TYPELOC(CLASS, PARENT)                                                 \
+  case TypeLoc::CLASS: {                                                       \
+    auto NewTL = push<class CLASS##TypeLoc>(CurTL.getType());                  \
+    NewTL.initializeLocal(Context, Loc);                                       \
+    break;                                                                     \
+  }
+#include "clang/AST/TypeLocNodes.def"
+    }
+  }
+}
+
 void TypeLocBuilder::grow(size_t NewCapacity) {
   assert(NewCapacity > Capacity);
 
@@ -85,7 +108,7 @@ TypeLoc TypeLocBuilder::pushImpl(QualType T, size_t LocalSize, unsigned LocalAli
   // FIXME: 4 and 8 are sufficient at the moment, but it's pretty ugly to
   // hardcode them.
   if (LocalAlignment == 4) {
-    if (NumBytesAtAlign8 == 0) {
+    if (!AtAlign8) {
       NumBytesAtAlign4 += LocalSize;
     } else {
       unsigned Padding = NumBytesAtAlign4 % 8;
@@ -114,7 +137,7 @@ TypeLoc TypeLocBuilder::pushImpl(QualType T, size_t LocalSize, unsigned LocalAli
       NumBytesAtAlign4 += LocalSize;
     }
   } else if (LocalAlignment == 8) {
-    if (NumBytesAtAlign8 == 0) {
+    if (!AtAlign8) {
       // We have not seen any 8-byte aligned element yet. We insert a padding
       // only if the new Index is not 8-byte-aligned.
       if ((Index - LocalSize) % 8 != 0) {
@@ -149,7 +172,7 @@ TypeLoc TypeLocBuilder::pushImpl(QualType T, size_t LocalSize, unsigned LocalAli
 
     // Forget about any padding.
     NumBytesAtAlign4 = 0;
-    NumBytesAtAlign8 += LocalSize;
+    AtAlign8 = true;
   } else {
     assert(LocalSize == 0);
   }

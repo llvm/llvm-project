@@ -46,12 +46,6 @@ public:
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
-
-private:
-  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
-  void
-  verifyInstructionPredicates(const MCInst &MI,
-                              const FeatureBitset &AvailableFeatures) const;
 };
 
 } // end anonymous namespace
@@ -110,9 +104,6 @@ static void emitUntypedInstrOperands(const MCInst &MI, EndianWriter &OSE) {
 void SPIRVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-  auto Features = computeAvailableFeatures(STI.getFeatureBits());
-  verifyInstructionPredicates(MI, Features);
-
   EndianWriter OSE(OS, support::little);
 
   // Encode the first 32 SPIR-V bytes with the number of args and the opcode.
@@ -128,5 +119,4 @@ void SPIRVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     emitUntypedInstrOperands(MI, OSE);
 }
 
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "SPIRVGenMCCodeEmitter.inc"

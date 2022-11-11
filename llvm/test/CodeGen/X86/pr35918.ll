@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=skylake | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=skx | FileCheck %s --check-prefix=X64
 
-define void @fetch_r16g16_snorm_unorm8(<4 x i8>*, i8*, i32, i32, { [2048 x i32], [128 x i64] }*) nounwind {
+define void @fetch_r16g16_snorm_unorm8(ptr, ptr, i32, i32, ptr) nounwind {
 ; X86-LABEL: fetch_r16g16_snorm_unorm8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -31,21 +31,19 @@ define void @fetch_r16g16_snorm_unorm8(<4 x i8>*, i8*, i32, i32, { [2048 x i32],
 ; X64-NEXT:    movl %eax, (%rdi)
 ; X64-NEXT:    retq
 entry:
-  %5 = bitcast i8* %1 to <2 x i16>*
-  %6 = load <2 x i16>, <2 x i16>* %5, align 2
-  %7 = shufflevector <2 x i16> %6, <2 x i16> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  %8 = icmp sgt <4 x i16> %7, zeroinitializer
-  %9 = select <4 x i1> %8, <4 x i16> %7, <4 x i16> zeroinitializer
-  %10 = lshr <4 x i16> %9, <i16 7, i16 7, i16 7, i16 7>
-  %11 = shufflevector <4 x i16> %10, <4 x i16> undef, <2 x i32> <i32 0, i32 1>
-  %12 = shufflevector <4 x i16> %10, <4 x i16> undef, <2 x i32> <i32 2, i32 3>
+  %5 = load <2 x i16>, ptr %1, align 2
+  %6 = shufflevector <2 x i16> %5, <2 x i16> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %7 = icmp sgt <4 x i16> %6, zeroinitializer
+  %8 = select <4 x i1> %7, <4 x i16> %6, <4 x i16> zeroinitializer
+  %9 = lshr <4 x i16> %8, <i16 7, i16 7, i16 7, i16 7>
+  %10 = shufflevector <4 x i16> %9, <4 x i16> undef, <2 x i32> <i32 0, i32 1>
+  %11 = shufflevector <4 x i16> %9, <4 x i16> undef, <2 x i32> <i32 2, i32 3>
+  %12 = bitcast <2 x i16> %10 to <4 x i8>
   %13 = bitcast <2 x i16> %11 to <4 x i8>
-  %14 = bitcast <2 x i16> %12 to <4 x i8>
-  %15 = shufflevector <4 x i8> %13, <4 x i8> %14, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-  %16 = bitcast <4 x i8> %15 to i32
-  %17 = and i32 %16, 65535
-  %18 = or i32 %17, -16777216
-  %19 = bitcast <4 x i8>* %0 to i32*
-  store i32 %18, i32* %19, align 4
+  %14 = shufflevector <4 x i8> %12, <4 x i8> %13, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %15 = bitcast <4 x i8> %14 to i32
+  %16 = and i32 %15, 65535
+  %17 = or i32 %16, -16777216
+  store i32 %17, ptr %0, align 4
   ret void
 }

@@ -21,7 +21,6 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/Reproducer.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -38,7 +37,6 @@ public:
   CompilerType siginfo_type;
 
   void SetUp() override {
-    llvm::cantFail(Reproducer::Initialize(ReproducerMode::Off, llvm::None));
     platform_freebsd::PlatformFreeBSD::Initialize();
     platform_linux::PlatformLinux::Initialize();
     platform_netbsd::PlatformNetBSD::Initialize();
@@ -48,7 +46,6 @@ public:
     platform_netbsd::PlatformNetBSD::Terminate();
     platform_linux::PlatformLinux::Terminate();
     platform_freebsd::PlatformFreeBSD::Terminate();
-    Reproducer::Terminate();
   }
 
   typedef std::tuple<const char *, uint64_t, uint64_t> field_tuple;

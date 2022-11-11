@@ -214,8 +214,8 @@ define i1 @PR8882(i64 %i) {
 
 define i1 @test24_as1(i64 %i) {
 ; CHECK-LABEL: @test24_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[I:%.*]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[TMP1]], 1000
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[I:%.*]], 65535
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1]], 1000
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %p1 = getelementptr inbounds i32, i32 addrspace(1)* getelementptr inbounds ([1000 x i32], [1000 x i32] addrspace(1)* @X_as1, i64 0, i64 0), i64 %i

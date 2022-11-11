@@ -52,6 +52,7 @@ public:
       } else if (bytes == 0) {
         return Ok;
       } else {
+        // TODO endianness
         std::memcpy(&data_.at(offset), &x.values().at(0), bytes);
         return Ok;
       }
@@ -80,6 +81,7 @@ public:
               (scalarBytes > elementBytes && elements != 0)) {
             return SizeMismatch;
           }
+          // TODO endianness
           std::memcpy(&data_.at(offset), scalar.data(), elementBytes);
           offset += elementBytes;
         }
@@ -103,7 +105,7 @@ public:
 
   // Conversions to constant initializers
   std::optional<Expr<SomeType>> AsConstant(FoldingContext &,
-      const DynamicType &, const ConstantSubscripts &,
+      const DynamicType &, const ConstantSubscripts &, bool padWithZero = false,
       ConstantSubscript offset = 0) const;
   std::optional<Expr<SomeType>> AsConstantPointer(
       ConstantSubscript offset = 0) const;

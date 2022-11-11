@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 from shutil import copy
 
 class SettingsUseSourceCacheTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_set_use_source_cache_false(self):
@@ -19,6 +17,7 @@ class SettingsUseSourceCacheTestCase(TestBase):
         self.set_use_source_cache_and_test(False)
 
     @skipIf(hostoslist=no_match(["windows"]))
+    @skipIf(oslist=['windows'], archs=['aarch64']) # Fails on windows 11
     def test_set_use_source_cache_true(self):
         """Test that after 'set use-source-cache false', files are locked."""
         self.set_use_source_cache_and_test(True)

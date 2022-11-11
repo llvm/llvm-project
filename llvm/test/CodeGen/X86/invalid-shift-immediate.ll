@@ -6,10 +6,10 @@ target triple = "i386-apple-darwin8"
 
 define void @foo(i32 %x) {
 entry:
-	%x_addr = alloca i32		; <i32*> [#uses=2]
+	%x_addr = alloca i32		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
-	store i32 %x, i32* %x_addr
-	%tmp = load i32, i32* %x_addr, align 4		; <i32> [#uses=1]
+	store i32 %x, ptr %x_addr
+	%tmp = load i32, ptr %x_addr, align 4		; <i32> [#uses=1]
 	%tmp1 = ashr i32 %tmp, -2		; <i32> [#uses=1]
 	%tmp2 = and i32 %tmp1, 1		; <i32> [#uses=1]
 	%tmp23 = trunc i32 %tmp2 to i8		; <i8> [#uses=1]

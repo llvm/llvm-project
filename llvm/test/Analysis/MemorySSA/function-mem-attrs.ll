@@ -10,12 +10,12 @@ declare void @noattrsFunction()
 define void @readonlyAttr() {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i32 0
-  store i32 0, i32* @g, align 4
+  store i32 0, ptr @g, align 4
 
   %1 = alloca i32, align 4
 ; CHECK: 2 = MemoryDef(1)
 ; CHECK-NEXT: store i32 0
-  store i32 0, i32* %1, align 4
+  store i32 0, ptr %1, align 4
 
 ; CHECK: MemoryUse(1)
 ; CHECK-NEXT: call void @readonlyFunction()
@@ -33,26 +33,26 @@ define void @readonlyAttr() {
   ret void
 }
 
-declare void @argMemOnly(i32*) argmemonly
+declare void @argMemOnly(ptr) argmemonly
 
 define void @inaccessableOnlyAttr() {
   %1 = alloca i32, align 4
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i32 0
-  store i32 0, i32* %1, align 4
+  store i32 0, ptr %1, align 4
 
 ; CHECK: 2 = MemoryDef(1)
 ; CHECK-NEXT: store i32 0
-  store i32 0, i32* @g, align 4
+  store i32 0, ptr @g, align 4
 
 ; CHECK: MemoryUse(1)
-; CHECK-NEXT: call void @argMemOnly(i32* %1) #
+; CHECK-NEXT: call void @argMemOnly(ptr %1) #
 ; Assume that #N is readonly
-  call void @argMemOnly(i32* %1) readonly
+  call void @argMemOnly(ptr %1) readonly
 
 ; CHECK: 3 = MemoryDef(2)
-; CHECK-NEXT: call void @argMemOnly(i32* %1)
-  call void @argMemOnly(i32* %1)
+; CHECK-NEXT: call void @argMemOnly(ptr %1)
+  call void @argMemOnly(ptr %1)
 
   ret void
 }

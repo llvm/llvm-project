@@ -21,7 +21,6 @@
 #include "clang/Sema/Ownership.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Registry.h"
 #include "llvm/Support/VersionTuple.h"
@@ -433,7 +432,7 @@ private:
     return *getTrailingObjects<ParsedType>();
   }
 
-  /// The property data immediately follows the object is is mutually exclusive
+  /// The property data immediately follows the object is mutually exclusive
   /// with arguments.
   detail::PropertyData &getPropertyDataBuffer() {
     assert(IsProperty);
@@ -713,6 +712,17 @@ public:
     }
   }
 
+  /// If this is an HLSL address space attribute, returns its representation
+  /// in LangAS, otherwise returns default address space.
+  LangAS asHLSLLangAS() const {
+    switch (getParsedKind()) {
+    case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
+      return LangAS::hlsl_groupshared;
+    default:
+      return LangAS::Default;
+    }
+  }
+
   AttributeCommonInfo::Kind getKind() const {
     return AttributeCommonInfo::Kind(Info.AttrKind);
   }
@@ -783,7 +793,7 @@ class AttributePool {
   friend class AttributeFactory;
   friend class ParsedAttributes;
   AttributeFactory &Factory;
-  llvm::TinyPtrVector<ParsedAttr *> Attrs;
+  llvm::SmallVector<ParsedAttr *> Attrs;
 
   void *allocate(size_t size) {
     return Factory.allocate(size);
@@ -908,7 +918,7 @@ public:
 };
 
 class ParsedAttributesView {
-  using VecTy = llvm::TinyPtrVector<ParsedAttr *>;
+  using VecTy = llvm::SmallVector<ParsedAttr *>;
   using SizeType = decltype(std::declval<VecTy>().size());
 
 public:
@@ -1174,21 +1184,21 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 /// it explicit is hard. This constructor causes ambiguity with
 /// DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB, SourceRange R).
 /// We use SFINAE to disable any conversion and remove any ambiguity.
-template <typename ACI,
-          typename std::enable_if_t<
-              std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
+template <
+    typename ACI,
+    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                           const ACI &CI) {
+                                             const ACI &CI) {
   DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI.getAttrName()),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;
 }
 
-template <typename ACI,
-          typename std::enable_if_t<
-              std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
+template <
+    typename ACI,
+    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                           const ACI* CI) {
+                                             const ACI *CI) {
   DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI->getAttrName()),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;

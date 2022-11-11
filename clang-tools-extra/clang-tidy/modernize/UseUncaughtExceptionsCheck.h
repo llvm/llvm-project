@@ -20,7 +20,7 @@ namespace modernize {
 /// macro ID there will be only a warning without fixits.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-uncaught-exceptions.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-uncaught-exceptions.html
 class UseUncaughtExceptionsCheck : public ClangTidyCheck {
 public:
   UseUncaughtExceptionsCheck(StringRef Name, ClangTidyContext *Context)

@@ -23,10 +23,6 @@ class FindTool(object):
 
         if self.name == 'llc' and os.environ.get('LLVM_ENABLE_MACHINE_VERIFIER') == '1':
             command += ' -verify-machineinstrs'
-        elif self.name == 'llvm-go':
-            exe = getattr(config.config, 'go_executable', None)
-            if exe:
-                command += ' go=' + exe
         return command
 
 

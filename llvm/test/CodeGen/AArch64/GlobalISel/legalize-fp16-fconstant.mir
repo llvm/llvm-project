@@ -8,15 +8,52 @@ tracksRegLiveness: true
 body: |
   bb.0:
     ; NO-FP16-LABEL: name: fp16
-    ; NO-FP16: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
-    ; NO-FP16: %cst:_(s16) = G_FPTRUNC [[C]](s32)
-    ; NO-FP16: $h0 = COPY %cst(s16)
-    ; NO-FP16: RET_ReallyLR implicit $h0
+    ; NO-FP16: %cst:_(s16) = G_CONSTANT i16 0
+    ; NO-FP16-NEXT: $h0 = COPY %cst(s16)
+    ; NO-FP16-NEXT: RET_ReallyLR implicit $h0
     ; FP16-LABEL: name: fp16
     ; FP16: %cst:_(s16) = G_FCONSTANT half 0xH0000
-    ; FP16: $h0 = COPY %cst(s16)
-    ; FP16: RET_ReallyLR implicit $h0
+    ; FP16-NEXT: $h0 = COPY %cst(s16)
+    ; FP16-NEXT: RET_ReallyLR implicit $h0
     %cst:_(s16) = G_FCONSTANT half 0.0
     $h0 = COPY %cst
     RET_ReallyLR implicit $h0
+...
+---
+name:            fp16_non_zero
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; NO-FP16-LABEL: name: fp16_non_zero
+    ; NO-FP16: %cst:_(s16) = G_CONSTANT i16 16384
+    ; NO-FP16-NEXT: $h0 = COPY %cst(s16)
+    ; NO-FP16-NEXT: RET_ReallyLR implicit $h0
+    ; FP16-LABEL: name: fp16_non_zero
+    ; FP16: %cst:_(s16) = G_FCONSTANT half 0xH4000
+    ; FP16-NEXT: $h0 = COPY %cst(s16)
+    ; FP16-NEXT: RET_ReallyLR implicit $h0
+    %cst:_(s16) = G_FCONSTANT half 2.0
+    $h0 = COPY %cst
+    RET_ReallyLR implicit $h0
+...
+---
+name:            nan
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    ; NO-FP16-LABEL: name: nan
+    ; NO-FP16: %cst:_(s16) = G_CONSTANT i16 31745
+    ; NO-FP16-NEXT: %ext:_(s32) = G_FPEXT %cst(s16)
+    ; NO-FP16-NEXT: $w0 = COPY %ext(s32)
+    ; NO-FP16-NEXT: RET_ReallyLR implicit $w0
+    ; FP16-LABEL: name: nan
+    ; FP16: %cst:_(s16) = G_FCONSTANT half 0xH7C01
+    ; FP16-NEXT: %ext:_(s32) = G_FPEXT %cst(s16)
+    ; FP16-NEXT: $w0 = COPY %ext(s32)
+    ; FP16-NEXT: RET_ReallyLR implicit $w0
+    %cst:_(s16) = G_FCONSTANT half 0xH7C01
+    %ext:_(s32) = G_FPEXT %cst(s16)
+    $w0 = COPY %ext(s32)
+    RET_ReallyLR implicit $w0
 
+...

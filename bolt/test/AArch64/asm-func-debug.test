@@ -14,7 +14,7 @@ CHECK-NEXT:       DW_AT_low_pc (0x0000000000000000)
 CHECK-NEXT:       DW_AT_ranges
 CHECK-NEXT:          [0x0000000000[[#%x,ADDR:]],
 CHECK-SAME:                              0x0000000000[[#ADDR+4]]))
-CHECK-NEXT:       DW_AT_name ("{{.*}}/asm_foo.s")
+CHECK-NEXT:       DW_AT_name ("{{.*}}asm_foo.s")
 
 # Check .debug_aranges was updated for asm module
 CHECK: .debug_aranges contents:

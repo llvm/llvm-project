@@ -4,23 +4,22 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"
 
-define i32 @main(i32 %argc, i8** %argv) !dbg !8 {
+define i32 @main(i32 %argc, ptr %argv) !dbg !8 {
 entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
-  store i32 0, i32* %retval, align 4
-  store i32 %argc, i32* %argc.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !16, metadata !DIExpression()), !dbg !17
-  store i8** %argv, i8*** %argv.addr, align 8
-  call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !18, metadata !DIExpression()), !dbg !19
-  %0 = load i8**, i8*** %argv.addr, align 8, !dbg !20
-  %1 = load i32, i32* %argc.addr, align 4, !dbg !21
+  %argv.addr = alloca ptr, align 8
+  store i32 0, ptr %retval, align 4
+  store i32 %argc, ptr %argc.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argc.addr, metadata !16, metadata !DIExpression()), !dbg !17
+  store ptr %argv, ptr %argv.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %argv.addr, metadata !18, metadata !DIExpression()), !dbg !19
+  %0 = load ptr, ptr %argv.addr, align 8, !dbg !20
+  %1 = load i32, ptr %argc.addr, align 4, !dbg !21
   %idxprom = sext i32 %1 to i64, !dbg !20
-  %arrayidx = getelementptr inbounds i8*, i8** %0, i64 %idxprom, !dbg !20
-  %2 = load i8*, i8** %arrayidx, align 8, !dbg !20
-  %arrayidx1 = getelementptr inbounds i8, i8* %2, i64 0, !dbg !20
-  %3 = load i8, i8* %arrayidx1, align 1, !dbg !20
+  %arrayidx = getelementptr inbounds ptr, ptr %0, i64 %idxprom, !dbg !20
+  %2 = load ptr, ptr %arrayidx, align 8, !dbg !20
+  %3 = load i8, ptr %2, align 1, !dbg !20
   %conv = sext i8 %3 to i32, !dbg !20
 
   ; CHECK: X86ISD::RET_FLAG {{.*}}, TargetConstant:i32<0>, Register:i32 $eax, {{.*}}, <stdin>:2:3

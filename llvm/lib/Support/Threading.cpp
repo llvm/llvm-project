@@ -28,14 +28,6 @@ using namespace llvm;
 //===          independent code.
 //===----------------------------------------------------------------------===//
 
-bool llvm::llvm_is_multithreaded() {
-#if LLVM_ENABLE_THREADS != 0
-  return true;
-#else
-  return false;
-#endif
-}
-
 #if LLVM_ENABLE_THREADS == 0 ||                                                \
     (!defined(_WIN32) && !defined(HAVE_PTHREAD_H))
 uint64_t llvm::get_threadid() { return 0; }
@@ -89,7 +81,7 @@ unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
   // main thread (8MB) before creation.
 const llvm::Optional<unsigned> llvm::thread::DefaultStackSize = 8 * 1024 * 1024;
 #else
-const llvm::Optional<unsigned> llvm::thread::DefaultStackSize = None;
+const llvm::Optional<unsigned> llvm::thread::DefaultStackSize;
 #endif
 
 

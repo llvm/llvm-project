@@ -14,8 +14,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 class TestTrimmedProgressReporting(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def do_test(self, term_width, pattern_list):
         self.build()
         # Start with a small window

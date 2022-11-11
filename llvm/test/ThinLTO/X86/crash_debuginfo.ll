@@ -1,7 +1,7 @@
 ; RUN: opt -module-summary -o %t-dst.bc %s
 ; RUN: opt -module-summary -o %t-src.bc %p/Inputs/crash_debuginfo.ll
 ; RUN: llvm-lto -thinlto -o %t-index %t-dst.bc %t-src.bc
-; RUN: opt -function-import -inline -summary-file %t-index.thinlto.bc %t-dst.bc -o %t.out
+; RUN: opt -passes=function-import,inline -summary-file %t-index.thinlto.bc %t-dst.bc -o %t.out
 ; RUN: llvm-nm -U %t.out | FileCheck %s --implicit-check-not=_bar
 
 ; Verify that we import bar and inline it. It use to crash importing due to ODR type uniquing

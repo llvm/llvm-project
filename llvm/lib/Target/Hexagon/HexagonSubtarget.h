@@ -311,7 +311,7 @@ public:
   }
 
   bool isHVXElementType(MVT Ty, bool IncludeBool = false) const;
-  bool isHVXVectorType(MVT VecTy, bool IncludeBool = false) const;
+  bool isHVXVectorType(EVT VecTy, bool IncludeBool = false) const;
   bool isTypeForHVX(Type *VecTy, bool IncludeBool = false) const;
 
   Align getTypeAlignment(MVT Ty) const {
@@ -322,6 +322,8 @@ public:
 
   unsigned getL1CacheLineSize() const;
   unsigned getL1PrefetchDistance() const;
+
+  Intrinsic::ID getIntrinsicId(unsigned Opc) const;
 
 private:
   // Helper function responsible for increasing the latency only.

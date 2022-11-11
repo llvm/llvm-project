@@ -14,7 +14,7 @@
 
 uint8x16_t test_vaeseq_u8(uint8x16_t data, uint8x16_t key) {
   // CHECK-LABEL: @test_vaeseq_u8
-  // CHECK-NO-CRYPTO: error: call to undeclared function 'vaeseq_u8'
+  // CHECK-NO-CRYPTO: error: always_inline function 'vaeseq_u8' requires target feature 'aes'
   return vaeseq_u8(data, key);
   // CHECK: call <16 x i8> @llvm.{{arm.neon|aarch64.crypto}}.aese(<16 x i8> %data, <16 x i8> %key)
 }

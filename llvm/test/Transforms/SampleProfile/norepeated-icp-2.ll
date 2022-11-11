@@ -5,24 +5,24 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 @.str = private unnamed_addr constant [5 x i8] c"moo\0A\00", align 1
-@p = dso_local global void ()* null, align 8
+@p = dso_local global ptr null, align 8
 @cond = dso_local global i8 0, align 1
 @str = private unnamed_addr constant [4 x i8] c"moo\00", align 1
 
 ; Function Attrs: uwtable mustprogress
 define dso_local void @_Z3moov() #0 !dbg !7 {
 entry:
-  %puts = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @str, i64 0, i64 0)), !dbg !9
+  %puts = call i32 @puts(ptr nonnull dereferenceable(1) @str), !dbg !9
   ret void, !dbg !10
 }
 
 ; Function Attrs: nofree nounwind
-declare dso_local noundef i32 @printf(i8* nocapture noundef readonly, ...) #1
+declare dso_local noundef i32 @printf(ptr nocapture noundef readonly, ...) #1
 
 ; Function Attrs: uwtable mustprogress
 define dso_local void @_Z3hoov() #0 !dbg !11 {
 entry:
-  %0 = load volatile i8, i8* @cond, align 1, !dbg !12, !range !17
+  %0 = load volatile i8, ptr @cond, align 1, !dbg !12, !range !17
   %tobool.not = icmp eq i8 %0, 0, !dbg !12
   br i1 %tobool.not, label %if.end, label %if.then, !dbg !12
 
@@ -31,42 +31,42 @@ if.then:                                          ; preds = %entry
   br label %if.end, !dbg !18
 
 if.end:                                           ; preds = %if.then, %entry
-  store void ()* @_Z3moov, void ()** @p, align 8, !dbg !19
+  store ptr @_Z3moov, ptr @p, align 8, !dbg !19
   ret void, !dbg !22
 }
 
 declare !dbg !23 dso_local void @_Z10hoo_calleev() #2
 
 ; MAX2-LABEL: @_Z3goov(
-; MAX2: icmp eq void ()* {{.*}} @_Z3hoov
+; MAX2: icmp eq ptr {{.*}} @_Z3hoov
 ; MAX2: call void %t0(), {{.*}} !prof ![[PROF_ID1:[0-9]+]]
-; MAX2-NOT: icmp eq void ()* {{.*}} @_Z3hoov
-; MAX2-NOT: icmp eq void ()* {{.*}} @_Z3moov
+; MAX2-NOT: icmp eq ptr {{.*}} @_Z3hoov
+; MAX2-NOT: icmp eq ptr {{.*}} @_Z3moov
 ; MAX2: call void %t1(), {{.*}} !prof ![[PROF_ID2:[0-9]+]]
-; MAX2-NOT: icmp eq void ()* {{.*}} @_Z3hoov
-; MAX2-NOT: icmp eq void ()* {{.*}} @_Z3moov
+; MAX2-NOT: icmp eq ptr {{.*}} @_Z3hoov
+; MAX2-NOT: icmp eq ptr {{.*}} @_Z3moov
 ; MAX2: call void %t2(), {{.*}} !prof ![[PROF_ID2:[0-9]+]]
 ; MAX2: ret void
 ; MAX4-LABEL: @_Z3goov(
-; MAX4: icmp eq void ()* {{.*}} @_Z3hoov
-; MAX4: icmp eq void ()* {{.*}} @_Z3moov
+; MAX4: icmp eq ptr {{.*}} @_Z3hoov
+; MAX4: icmp eq ptr {{.*}} @_Z3moov
 ; MAX4: call void %t0(), {{.*}} !prof ![[PROF_ID3:[0-9]+]]
-; MAX4: icmp eq void ()* {{.*}} @_Z3hoov
-; MAX4: icmp eq void ()* {{.*}} @_Z3moov
+; MAX4: icmp eq ptr {{.*}} @_Z3hoov
+; MAX4: icmp eq ptr {{.*}} @_Z3moov
 ; MAX4: call void %t1(), {{.*}} !prof ![[PROF_ID4:[0-9]+]]
-; MAX4-NOT: icmp eq void ()* {{.*}} @_Z3hoov
-; MAX4-NOT: icmp eq void ()* {{.*}} @_Z3moov
+; MAX4-NOT: icmp eq ptr {{.*}} @_Z3hoov
+; MAX4-NOT: icmp eq ptr {{.*}} @_Z3moov
 ; MAX4: call void %t2(), {{.*}} !prof ![[PROF_ID5:[0-9]+]]
 ; MAX4: ret void
 
 ; Function Attrs: uwtable mustprogress
 define dso_local void @_Z3goov() #0 !dbg !24 {
 entry:
-  %t0 = load void ()*, void ()** @p, align 8, !dbg !25
+  %t0 = load ptr, ptr @p, align 8, !dbg !25
   call void %t0(), !dbg !26, !prof !30
-  %t1 = load void ()*, void ()** @p, align 8, !dbg !25
+  %t1 = load ptr, ptr @p, align 8, !dbg !25
   call void %t1(), !dbg !28, !prof !31
-  %t2 = load void ()*, void ()** @p, align 8, !dbg !25
+  %t2 = load ptr, ptr @p, align 8, !dbg !25
   call void %t2(), !dbg !29, !prof !32
   ret void, !dbg !27
 }
@@ -78,7 +78,7 @@ entry:
 ; MAX4: ![[PROF_ID5]] = !{!"VP", i32 0, i64 13000, i64 4128940972712279918, i64 -1, i64 3137940972712279918, i64 -1, i64 2132940972712279918, i64 -1, i64 1850239051784516332, i64 -1}
 
 ; Function Attrs: nofree nounwind
-declare noundef i32 @puts(i8* nocapture noundef readonly) #3
+declare noundef i32 @puts(ptr nocapture noundef readonly) #3
 
 attributes #0 = { uwtable mustprogress "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-sample-profile" "use-soft-float"="false" }
 attributes #1 = { nofree nounwind "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }

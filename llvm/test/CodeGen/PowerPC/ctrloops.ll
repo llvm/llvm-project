@@ -10,9 +10,9 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i.01 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %0 = load volatile i32, i32* @a, align 4
+  %0 = load volatile i32, ptr @a, align 4
   %add = add nsw i32 %0, %c
-  store volatile i32 %add, i32* @a, align 4
+  store volatile i32 %add, ptr @a, align 4
   %inc = add nsw i32 %i.01, 1
   %exitcond = icmp eq i32 %inc, 2048
   br i1 %exitcond, label %for.end, label %for.body
@@ -34,9 +34,9 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %0 = load volatile i32, i32* @a, align 4
+  %0 = load volatile i32, ptr @a, align 4
   %add = add nsw i32 %0, %c
-  store volatile i32 %add, i32* @a, align 4
+  store volatile i32 %add, ptr @a, align 4
   %inc = add nsw i32 %i.02, 1
   %exitcond = icmp eq i32 %inc, %d
   br i1 %exitcond, label %for.end, label %for.body
@@ -58,9 +58,9 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.02 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %mul = mul nsw i32 %i.02, %c
-  %0 = load volatile i32, i32* @a, align 4
+  %0 = load volatile i32, ptr @a, align 4
   %add = add nsw i32 %0, %mul
-  store volatile i32 %add, i32* @a, align 4
+  store volatile i32 %add, ptr @a, align 4
   %inc = add nsw i32 %i.02, 1
   %exitcond = icmp eq i32 %inc, %d
   br i1 %exitcond, label %for.end, label %for.body
@@ -82,7 +82,7 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %phi = phi i32 [ %dec, %for.body ], [ %inp, %entry ]
-  %load = ptrtoint i8* @tls_var to i32
+  %load = ptrtoint ptr @tls_var to i32
   %val = add i32 %load, %phi
   %dec = add i32 %phi, -1
   %cmp = icmp sgt i32 %phi, 1

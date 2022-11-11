@@ -119,8 +119,6 @@ test:
 
 
 # CHECK:              end_function
-# CHECK-NEXT: .Ltmp0:
-# CHECK-NEXT:         .size   test, .Ltmp0-test
 
 # CHECK:              .section        .rodata..L.str,"",@
 # CHECK-NEXT:         .hidden .L.str

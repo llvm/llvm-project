@@ -1,4 +1,4 @@
-; RUN: opt -loops -gvn -S < %s | FileCheck %s
+; RUN: opt -passes='require<loops>,gvn' -S < %s | FileCheck %s
 
 ; This used to fail with ASAN enabled and if for some reason LoopInfo remained
 ; available during GVN.  In this case BasicAA will use LI but

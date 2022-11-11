@@ -145,3 +145,47 @@ unreach1:
 unreach2:
   unreachable
 }
+
+
+define void @pr53208_single_reachable_dest(i8 %sw, i32* %p0) {
+; CHECK-LABEL: @pr53208_single_reachable_dest(
+; CHECK-NEXT:  group2:
+; CHECK-NEXT:    call void @bar(i32* [[P0:%.*]])
+; CHECK-NEXT:    ret void
+;
+  switch i8 %sw, label %group3 [
+  i8 0, label %group1
+  i8 1, label %group1
+  i8 2, label %group1
+  i8 3, label %group1
+  i8 11, label %group1
+  i8 12, label %group1
+  i8 13, label %group1
+  i8 7, label %group1
+  i8 17, label %group1
+  i8 14, label %group1
+  i8 15, label %group1
+  i8 4, label %group2
+  i8 5, label %group2
+  i8 6, label %group2
+  i8 8, label %group2
+  i8 9, label %group2
+  i8 10, label %group2
+  ]
+
+group1:
+  br label %exit
+
+group2:
+  br label %exit
+
+group3:
+  br label %exit
+
+exit:
+  %phi = phi i32* [ null, %group3 ], [ %p0, %group2 ], [ null, %group1 ]
+  call void @bar(i32* %phi)
+  ret void
+}
+
+declare void @bar(i32* nonnull dereferenceable(4))

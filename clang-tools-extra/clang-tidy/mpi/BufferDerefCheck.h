@@ -24,7 +24,7 @@ namespace mpi {
 /// emitted.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/mpi-buffer-deref.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/mpi/buffer-deref.html
 class BufferDerefCheck : public ClangTidyCheck {
 public:
   BufferDerefCheck(StringRef Name, ClangTidyContext *Context)

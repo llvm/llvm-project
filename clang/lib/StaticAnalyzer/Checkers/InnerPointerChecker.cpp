@@ -55,9 +55,9 @@ public:
       ID.AddPointer(getTag());
     }
 
-    virtual PathDiagnosticPieceRef
-    VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
-              PathSensitiveBugReport &BR) override;
+    PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                     BugReporterContext &BRC,
+                                     PathSensitiveBugReport &BR) override;
 
     // FIXME: Scan the map once in the visitor's constructor and do a direct
     // lookup by region.

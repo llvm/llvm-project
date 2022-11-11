@@ -16,7 +16,7 @@
 
 # RUN:  llvm-bolt %t.exe -o %t.bolted --data %t.fdata \
 # RUN:    --reorder-blocks=ext-tsp --reorder-functions=hfsort \
-# RUN:    --split-functions=2 --split-all-cold --split-eh --dyno-stats \
+# RUN:    --split-functions --split-all-cold --split-eh --dyno-stats \
 # RUN:    --print-finalized 2>&1 | FileCheck %s
 
 # CHECK-NOT: value of -2105 is too large for field of 1 byte.

@@ -282,7 +282,7 @@ namespace pr12658 {
   void foo(const C& c ) {}
 
   void bar( void ) {
-    foo(C(99)); // expected-error {{allocating an object of abstract class type 'pr12658::C'}}
+    foo(C(99)); // expected-error {{allocating an object of abstract class type 'C'}}
   }
 }
 
@@ -302,14 +302,14 @@ namespace pr16659 {
   private:
     X &operator=(const X&);
   };
-  struct Y : virtual X { // expected-note {{::X' has an inaccessible copy assignment}}
+  struct Y : virtual X { // expected-note {{class 'X' has an inaccessible copy assignment}}
     virtual ~Y() = 0;
   };
-  struct Z : Y {}; // expected-note {{::Y' has a deleted copy assignment}}
+  struct Z : Y {}; // expected-note {{class 'Y' has a deleted copy assignment}}
   void f(Z &a, const Z &b) { a = b; } // expected-error {{copy assignment operator is implicitly deleted}}
 
   struct RedundantInit : virtual A {
-    RedundantInit() : A(0) {} // expected-warning {{initializer for virtual base class 'pr16659::A' of abstract class 'RedundantInit' will never be used}}
+    RedundantInit() : A(0) {} // expected-warning {{initializer for virtual base class 'A' of abstract class 'RedundantInit' will never be used}}
   };
 }
 

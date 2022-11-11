@@ -28,60 +28,58 @@ TEST(LlvmLibcAsctime, Nullptr) {
 // Weekdays are in the range 0 to 6. Test passing invalid value in wday.
 TEST(LlvmLibcAsctime, InvalidWday) {
   struct tm tm_data;
-  char *result;
 
   // Test with wday = -1.
-  result = call_asctime(&tm_data,
-                        1970, // year
-                        1,    // month
-                        1,    // day
-                        0,    // hr
-                        0,    // min
-                        0,    // sec
-                        -1,   // wday
-                        0);   // yday
+  call_asctime(&tm_data,
+               1970, // year
+               1,    // month
+               1,    // day
+               0,    // hr
+               0,    // min
+               0,    // sec
+               -1,   // wday
+               0);   // yday
   ASSERT_EQ(EINVAL, llvmlibc_errno);
 
   // Test with wday = 7.
-  result = call_asctime(&tm_data,
-                        1970, // year
-                        1,    // month
-                        1,    // day
-                        0,    // hr
-                        0,    // min
-                        0,    // sec
-                        7,    // wday
-                        0);   // yday
+  call_asctime(&tm_data,
+               1970, // year
+               1,    // month
+               1,    // day
+               0,    // hr
+               0,    // min
+               0,    // sec
+               7,    // wday
+               0);   // yday
   ASSERT_EQ(EINVAL, llvmlibc_errno);
 }
 
 // Months are from January to December. Test passing invalid value in month.
 TEST(LlvmLibcAsctime, InvalidMonth) {
   struct tm tm_data;
-  char *result;
 
   // Test with month = 0.
-  result = call_asctime(&tm_data,
-                        1970, // year
-                        0,    // month
-                        1,    // day
-                        0,    // hr
-                        0,    // min
-                        0,    // sec
-                        4,    // wday
-                        0);   // yday
+  call_asctime(&tm_data,
+               1970, // year
+               0,    // month
+               1,    // day
+               0,    // hr
+               0,    // min
+               0,    // sec
+               4,    // wday
+               0);   // yday
   ASSERT_EQ(EINVAL, llvmlibc_errno);
 
   // Test with month = 13.
-  result = call_asctime(&tm_data,
-                        1970, // year
-                        13,   // month
-                        1,    // day
-                        0,    // hr
-                        0,    // min
-                        0,    // sec
-                        4,    // wday
-                        0);   // yday
+  call_asctime(&tm_data,
+               1970, // year
+               13,   // month
+               1,    // day
+               0,    // hr
+               0,    // min
+               0,    // sec
+               4,    // wday
+               0);   // yday
   ASSERT_EQ(EINVAL, llvmlibc_errno);
 }
 

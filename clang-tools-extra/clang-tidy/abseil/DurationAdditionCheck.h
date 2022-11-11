@@ -19,7 +19,7 @@ namespace abseil {
 /// ``absl::Time`` domain.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil-duration-addition.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-addition.html
 class DurationAdditionCheck : public ClangTidyCheck {
 public:
   DurationAdditionCheck(StringRef Name, ClangTidyContext *Context)

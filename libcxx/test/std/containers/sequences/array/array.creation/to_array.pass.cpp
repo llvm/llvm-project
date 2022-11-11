@@ -82,6 +82,7 @@ constexpr bool tests()
       assert(arr[i].get() == i && source[i].get() == 0);
   }
 
+#ifndef _MSVC_STL_VERSION
   // Test C99 compound literal.
   {
     auto arr = std::to_array((int[]){3, 4});
@@ -89,6 +90,7 @@ constexpr bool tests()
     assert(arr[0] == 3);
     assert(arr[1] == 4);
   }
+#endif // ! _MSVC_STL_VERSION
 
   //  Test explicit type.
   {

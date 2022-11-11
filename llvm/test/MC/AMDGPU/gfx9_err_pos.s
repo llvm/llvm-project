@@ -179,6 +179,19 @@ v_add_i16 v5, 0.5, v2
 // CHECK-NEXT:{{^}}              ^
 
 //==============================================================================
+// too few operands for instruction
+
+buffer_load_dword off, s[8:11], s3
+// CHECK: error: too few operands for instruction
+// CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3
+// CHECK-NEXT:{{^}}^
+
+buffer_load_dword off, s[8:11], s3 offset:1
+// CHECK: error: too few operands for instruction
+// CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3 offset:1
+// CHECK-NEXT:{{^}}^
+
+//==============================================================================
 // r128 modifier is not supported on this GPU
 
 image_atomic_add v10, v6, s[8:15] dmask:0x1 r128
@@ -206,6 +219,14 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 s0 format:[BUF_NUM_FORM
 // CHECK: error: duplicate format
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 s0 format:[BUF_NUM_FORMAT_FLOAT]
 // CHECK-NEXT:{{^}}                                                            ^
+
+//==============================================================================
+// not a valid operand
+
+v_cndmask_b32_sdwa v5, sext(v1), v2, vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
+// CHECK: error: not a valid operand.
+// CHECK-NEXT:{{^}}v_cndmask_b32_sdwa v5, sext(v1), v2, vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
+// CHECK-NEXT:{{^}}                       ^
 
 //==============================================================================
 // out of range dfmt

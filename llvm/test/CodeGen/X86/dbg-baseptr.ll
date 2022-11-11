@@ -5,7 +5,7 @@
 target triple = "x86_64--"
 
 @glob = external global i64
-@ptr = external global i32*
+@ptr = external global ptr
 %struct.s = type { i32, i32, i32, i32, i32 }
 
 ; Simple case: no FP, use offset from RSP.
@@ -14,8 +14,8 @@ target triple = "x86_64--"
 ; CHECK-NOT: pushq
 ; CHECK: movl $42, %eax
 ; CHECK: retq
-define i32 @f0(%struct.s* byval(%struct.s) align 8 %input) !dbg !8 {
-  call void @llvm.dbg.declare(metadata %struct.s* %input, metadata !4, metadata !17), !dbg !18
+define i32 @f0(ptr byval(%struct.s) align 8 %input) !dbg !8 {
+  call void @llvm.dbg.declare(metadata ptr %input, metadata !4, metadata !17), !dbg !18
   ret i32 42, !dbg !18
 }
 
@@ -36,12 +36,12 @@ define i32 @f0(%struct.s* byval(%struct.s) align 8 %input) !dbg !8 {
 ; CHECK: movl $42, %eax
 ; CHECK: popq %rbp
 ; CHECK: retq
-define i32 @f1(%struct.s* byval(%struct.s) align 8 %input) !dbg !19 {
-  %val = load i64, i64* @glob
+define i32 @f1(ptr byval(%struct.s) align 8 %input) !dbg !19 {
+  %val = load i64, ptr @glob
   ; this alloca should force FP usage.
   %stackspace = alloca i32, i64 %val, align 1
-  store i32* %stackspace, i32** @ptr
-  call void @llvm.dbg.declare(metadata %struct.s* %input, metadata !20, metadata !17), !dbg !21
+  store ptr %stackspace, ptr @ptr
+  call void @llvm.dbg.declare(metadata ptr %input, metadata !20, metadata !17), !dbg !21
   ret i32 42, !dbg !21
 }
 
@@ -61,11 +61,11 @@ define i32 @f1(%struct.s* byval(%struct.s) align 8 %input) !dbg !19 {
 ; CHECK: andq $-64, %rsp
 ; CHECK: subq $64, %rsp
 ; CHECK: movq %rsp, %rbx
-define i32 @f2(%struct.s* byval(%struct.s) align 8 %input) !dbg !22 {
-  %val = load i64, i64* @glob
+define i32 @f2(ptr byval(%struct.s) align 8 %input) !dbg !22 {
+  %val = load i64, ptr @glob
   %stackspace = alloca i32, i64 %val, align 64
-  store i32* %stackspace, i32** @ptr
-  call void @llvm.dbg.declare(metadata %struct.s* %input, metadata !23, metadata !17), !dbg !24
+  store ptr %stackspace, ptr @ptr
+  call void @llvm.dbg.declare(metadata ptr %input, metadata !23, metadata !17), !dbg !24
   ret i32 42, !dbg !24
 }
 

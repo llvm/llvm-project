@@ -19,7 +19,7 @@ namespace cppcoreguidelines {
 /// with looping constructs. Only forward jumps in nested loops are accepted.
 //
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-avoid-goto.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-goto.html
 class AvoidGotoCheck : public ClangTidyCheck {
 public:
   AvoidGotoCheck(StringRef Name, ClangTidyContext *Context)

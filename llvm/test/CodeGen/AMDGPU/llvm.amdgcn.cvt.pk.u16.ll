@@ -4,10 +4,10 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}s_cvt_pk_u16_u32:
-; GCN-DAG: s_load_dwordx2 s[[[SX:[0-9]+]]:[[SY:[0-9]+]]], s[0:1], 0x{{b|2c}}
-; GCN: v_mov_b32_e32 [[VY:v[0-9]+]], s[[SY]]
-; SI: v_cvt_pk_u16_u32_e32 v{{[0-9]+}}, s[[SX]], [[VY]]
-; VI: v_cvt_pk_u16_u32 v{{[0-9]+}}, s[[SX]], [[VY]]
+; GCN-DAG: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s[0:1], 0x{{9|24}}
+; GCN: v_mov_b32_e32 [[VY:v[0-9]+]], s[[#LOAD + 3]]
+; SI: v_cvt_pk_u16_u32_e32 v{{[0-9]+}}, s[[#LOAD + 2]], [[VY]]
+; VI: v_cvt_pk_u16_u32 v{{[0-9]+}}, s[[#LOAD + 2]], [[VY]]
 define amdgpu_kernel void @s_cvt_pk_u16_u32(i32 addrspace(1)* %out, i32 %x, i32 %y) #0 {
   %result = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 %x, i32 %y)
   %r = bitcast <2 x i16> %result to i32

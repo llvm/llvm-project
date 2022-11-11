@@ -1,13 +1,12 @@
 ; RUN: not llvm-as < %s > /dev/null 2>&1
 
-	%list = type { i32, %list* }
+	%list = type { i32, ptr }
 
-; This usage is invalid now; instead, objects must be bitcast to i8* for input
+; This usage is invalid now; instead, objects must be bitcast to ptr for input
 ; to the gc intrinsics.
-declare %list* @llvm.gcread(%list*, %list**)
+declare ptr @llvm.gcread(ptr, ptr)
 
-define %list* @tl(%list* %l) gc "example" {
-	%hd.ptr = getelementptr %list, %list* %l, i32 0, i32 0
-	%hd = call %list* @llvm.gcread(%list* %l, %list** %hd.ptr)
+define ptr @tl(ptr %l) gc "example" {
+	%hd = call ptr @llvm.gcread(ptr %l, ptr %l)
 	ret i32 %tmp
 }

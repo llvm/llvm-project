@@ -29,9 +29,7 @@ define internal i16 @f3(i16 %p1) {
 ; CHECK-LABEL: define {{[^@]+}}@f3
 ; CHECK-SAME: (i16 [[P1:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[LAND_END:%.*]]
-; CHECK:       land.end:
-; CHECK-NEXT:    ret i16 undef
+; CHECK-NEXT:    unreachable
 ;
 entry:
   switch i16 %p1, label %land.end [

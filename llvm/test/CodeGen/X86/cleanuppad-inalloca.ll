@@ -15,22 +15,22 @@ target triple = "i686--windows-msvc"
 
 %struct.A = type { i32 }
 
-define void @passes_two() #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define void @passes_two() #0 personality ptr @__CxxFrameHandler3 {
 entry:
   %argmem = alloca inalloca <{ %struct.A, %struct.A }>, align 4
-  %0 = getelementptr inbounds <{ %struct.A, %struct.A }>, <{ %struct.A, %struct.A }>* %argmem, i32 0, i32 1
-  %call = call x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"(%struct.A* %0)
-  %1 = getelementptr inbounds <{ %struct.A, %struct.A }>, <{ %struct.A, %struct.A }>* %argmem, i32 0, i32 0
-  %call1 = invoke x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"(%struct.A* %1)
+  %0 = getelementptr inbounds <{ %struct.A, %struct.A }>, ptr %argmem, i32 0, i32 1
+  %call = call x86_thiscallcc ptr @"\01??0A@@QAE@XZ"(ptr %0)
+  %1 = getelementptr inbounds <{ %struct.A, %struct.A }>, ptr %argmem, i32 0, i32 0
+  %call1 = invoke x86_thiscallcc ptr @"\01??0A@@QAE@XZ"(ptr %1)
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
-  call void @takes_two(<{ %struct.A, %struct.A }>* inalloca(<{ %struct.A, %struct.A }>) nonnull %argmem)
+  call void @takes_two(ptr inalloca(<{ %struct.A, %struct.A }>) nonnull %argmem)
   ret void
 
 ehcleanup:                                        ; preds = %entry
   %2 = cleanuppad within none []
-  call x86_thiscallcc void @"\01??1A@@QAE@XZ"(%struct.A* %0) [ "funclet"(token %2) ]
+  call x86_thiscallcc void @"\01??1A@@QAE@XZ"(ptr %0) [ "funclet"(token %2) ]
   cleanupret from %2 unwind to caller
 }
 
@@ -57,12 +57,12 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK: addl $8, %esp
 ; CHECK: retl
 
-declare void @takes_two(<{ %struct.A, %struct.A }>* inalloca(<{ %struct.A, %struct.A }>)) #0
+declare void @takes_two(ptr inalloca(<{ %struct.A, %struct.A }>)) #0
 
-declare x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"(%struct.A* returned) #0
+declare x86_thiscallcc ptr @"\01??0A@@QAE@XZ"(ptr returned) #0
 
 declare i32 @__CxxFrameHandler3(...)
 
-declare x86_thiscallcc void @"\01??1A@@QAE@XZ"(%struct.A*) #0
+declare x86_thiscallcc void @"\01??1A@@QAE@XZ"(ptr) #0
 
 attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

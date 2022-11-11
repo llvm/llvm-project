@@ -240,12 +240,12 @@ define double @multi_use_fabs_fpext(float %x) {
 ; CHECK-LABEL: @multi_use_fabs_fpext(
 ; CHECK-NEXT:    [[FPEXT:%.*]] = fpext float [[X:%.*]] to double
 ; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[FPEXT]])
-; CHECK-NEXT:    store volatile double [[FPEXT]], double* undef, align 8
+; CHECK-NEXT:    store volatile double [[FPEXT]], ptr undef, align 8
 ; CHECK-NEXT:    ret double [[FABS]]
 ;
   %fpext = fpext float %x to double
   %fabs = call double @llvm.fabs.f64(double %fpext)
-  store volatile double %fpext, double* undef
+  store volatile double %fpext, ptr undef
   ret double %fabs
 }
 

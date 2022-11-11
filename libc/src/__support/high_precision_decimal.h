@@ -285,12 +285,15 @@ public:
   // handle leading spaces.
   HighPrecisionDecimal(const char *__restrict numString) {
     bool saw_dot = false;
+    // This counts the digits in the number, even if there isn't space to store
+    // them all.
+    uint32_t total_digits = 0;
     while (isdigit(*numString) || *numString == '.') {
       if (*numString == '.') {
         if (saw_dot) {
           break;
         }
-        this->decimal_point = this->num_digits;
+        this->decimal_point = total_digits;
         saw_dot = true;
       } else {
         if (*numString == '0' && this->num_digits == 0) {
@@ -298,8 +301,10 @@ public:
           ++numString;
           continue;
         }
+        ++total_digits;
         if (this->num_digits < MAX_NUM_DIGITS) {
-          this->digits[this->num_digits] = *numString - '0';
+          this->digits[this->num_digits] =
+              static_cast<uint8_t>(*numString - '0');
           ++this->num_digits;
         } else if (*numString != '0') {
           this->truncated = true;
@@ -308,9 +313,8 @@ public:
       ++numString;
     }
 
-    if (!saw_dot) {
-      this->decimal_point = this->num_digits;
-    }
+    if (!saw_dot)
+      this->decimal_point = total_digits;
 
     if ((*numString | 32) == 'e') {
       ++numString;

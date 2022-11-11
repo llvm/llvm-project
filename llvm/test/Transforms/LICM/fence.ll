@@ -1,4 +1,4 @@
-; RUN: opt -licm -basic-aa < %s -S | FileCheck %s
+; RUN: opt -licm < %s -S | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 
 define void @test1(i64 %n) {
@@ -65,7 +65,7 @@ exit:
   ret void
 }
 
-define void @testneg1(i64 %n, i64* %p) {
+define void @testneg1(i64 %n, ptr %p) {
 ; CHECK-LABEL: @testneg1
 ; CHECK-LABEL: loop:
 ; CHECK: fence
@@ -73,7 +73,7 @@ entry:
   br label %loop
 loop:
   %iv = phi i64 [0, %entry], [%iv.next, %loop]
-  store i64 %iv, i64* %p
+  store i64 %iv, ptr %p
   fence release
   %iv.next = add i64 %iv, 1
   %test = icmp slt i64 %iv, %n
@@ -82,7 +82,7 @@ exit:
   ret void
 }
 
-define void @testneg2(i64* %p) {
+define void @testneg2(ptr %p) {
 ; CHECK-LABEL: @testneg2
 ; CHECK-LABEL: loop:
 ; CHECK: fence
@@ -91,7 +91,7 @@ entry:
 loop:
   %iv = phi i64 [0, %entry], [%iv.next, %loop]
   fence acquire
-  %n = load i64, i64* %p
+  %n = load i64, ptr %p
   %iv.next = add i64 %iv, 1
   %test = icmp slt i64 %iv, %n
   br i1 %test, label %loop, label %exit
@@ -101,7 +101,7 @@ exit:
 
 ; Note: While a false negative for LICM on it's own, O3 does get this
 ; case by combining the fences.
-define void @testfn1(i64 %n, i64* %p) {
+define void @testfn1(i64 %n, ptr %p) {
 ; CHECK-LABEL: @testfn1
 ; CHECK-LABEL: loop:
 ; CHECK: fence

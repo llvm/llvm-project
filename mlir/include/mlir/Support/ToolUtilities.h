@@ -32,10 +32,15 @@ using ChunkBufferHandler = function_ref<LogicalResult(
 /// all results to `os`.
 ///
 /// This is used to allow a large number of small independent tests to be put
-/// into a single file.
+/// into a single file. `enableSplitting` can be used to toggle if splitting
+/// should be enabled, e.g. to allow for merging split and non-split code paths.
+/// When `insertMarkerInOutput` is true, split markers (`//-----`) are placed
+/// between each of the processed output chunks.
 LogicalResult
 splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
-                      ChunkBufferHandler processChunkBuffer, raw_ostream &os);
+                      ChunkBufferHandler processChunkBuffer, raw_ostream &os,
+                      bool enableSplitting = true,
+                      bool insertMarkerInOutput = false);
 } // namespace mlir
 
 #endif // MLIR_SUPPORT_TOOLUTILITIES_H

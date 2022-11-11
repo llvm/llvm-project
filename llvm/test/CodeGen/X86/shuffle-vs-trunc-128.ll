@@ -19,7 +19,7 @@
 ; Pairs of shufflevector:trunc functions with functional equivalence.
 ; Ideally, the shuffles should be lowered to code with the same quality as the truncates.
 
-define void @shuffle_v16i8_to_v8i8(<16 x i8>* %L, <8 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v8i8(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -68,13 +68,13 @@ define void @shuffle_v16i8_to_v8i8(<16 x i8>* %L, <8 x i8>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BWVL-NEXT:    vpmovwb %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-  store <8 x i8> %strided.vec, <8 x i8>* %S
+  store <8 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @trunc_v8i16_to_v8i8(<16 x i8>* %L, <8 x i8>* %S) nounwind {
+define void @trunc_v8i16_to_v8i8(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: trunc_v8i16_to_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -123,14 +123,14 @@ define void @trunc_v8i16_to_v8i8(<16 x i8>* %L, <8 x i8>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BWVL-NEXT:    vpmovwb %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %bc = bitcast <16 x i8> %vec to <8 x i16>
   %strided.vec = trunc <8 x i16> %bc to <8 x i8>
-  store <8 x i8> %strided.vec, <8 x i8>* %S
+  store <8 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v8i16_to_v4i16(<8 x i16>* %L, <4 x i16>* %S) nounwind {
+define void @shuffle_v8i16_to_v4i16(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v8i16_to_v4i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,2,2,3,4,5,6,7]
@@ -178,13 +178,13 @@ define void @shuffle_v8i16_to_v4i16(<8 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BWVL-NEXT:    vpmovdw %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <8 x i16>, <8 x i16>* %L
+  %vec = load <8 x i16>, ptr %L
   %strided.vec = shufflevector <8 x i16> %vec, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-  store <4 x i16> %strided.vec, <4 x i16>* %S
+  store <4 x i16> %strided.vec, ptr %S
   ret void
 }
 
-define void @trunc_v4i32_to_v4i16(<8 x i16>* %L, <4 x i16>* %S) nounwind {
+define void @trunc_v4i32_to_v4i16(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: trunc_v4i32_to_v4i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,2,2,3,4,5,6,7]
@@ -232,14 +232,14 @@ define void @trunc_v4i32_to_v4i16(<8 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BWVL-NEXT:    vpmovdw %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <8 x i16>, <8 x i16>* %L
+  %vec = load <8 x i16>, ptr %L
   %bc = bitcast <8 x i16> %vec to <4 x i32>
   %strided.vec = trunc <4 x i32> %bc to <4 x i16>
-  store <4 x i16> %strided.vec, <4 x i16>* %S
+  store <4 x i16> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v4i32_to_v2i32(<4 x i32>* %L, <2 x i32>* %S) nounwind {
+define void @shuffle_v4i32_to_v2i32(ptr %L, ptr %S) nounwind {
 ; SSE-LABEL: shuffle_v4i32_to_v2i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,2,2,3]
@@ -257,13 +257,13 @@ define void @shuffle_v4i32_to_v2i32(<4 x i32>* %L, <2 x i32>* %S) nounwind {
 ; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,2,2,3]
 ; AVX512-NEXT:    vmovlps %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <4 x i32>, <4 x i32>* %L
+  %vec = load <4 x i32>, ptr %L
   %strided.vec = shufflevector <4 x i32> %vec, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
-  store <2 x i32> %strided.vec, <2 x i32>* %S
+  store <2 x i32> %strided.vec, ptr %S
   ret void
 }
 
-define void @trunc_v2i64_to_v2i32(<4 x i32>* %L, <2 x i32>* %S) nounwind {
+define void @trunc_v2i64_to_v2i32(ptr %L, ptr %S) nounwind {
 ; SSE-LABEL: trunc_v2i64_to_v2i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,2,2,3]
@@ -299,14 +299,14 @@ define void @trunc_v2i64_to_v2i32(<4 x i32>* %L, <2 x i32>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BWVL-NEXT:    vpmovqd %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <4 x i32>, <4 x i32>* %L
+  %vec = load <4 x i32>, ptr %L
   %bc = bitcast <4 x i32> %vec to <2 x i64>
   %strided.vec = trunc <2 x i64> %bc to <2 x i32>
-  store <2 x i32> %strided.vec, <2 x i32>* %S
+  store <2 x i32> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v4i8(<16 x i8>* %L, <4 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v4i8(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -355,13 +355,13 @@ define void @shuffle_v16i8_to_v4i8(<16 x i8>* %L, <4 x i8>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BWVL-NEXT:    vpmovdb %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-  store <4 x i8> %strided.vec, <4 x i8>* %S
+  store <4 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @trunc_v4i32_to_v4i8(<16 x i8>* %L, <4 x i8>* %S) nounwind {
+define void @trunc_v4i32_to_v4i8(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: trunc_v4i32_to_v4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -410,14 +410,14 @@ define void @trunc_v4i32_to_v4i8(<16 x i8>* %L, <4 x i8>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BWVL-NEXT:    vpmovdb %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %bc = bitcast <16 x i8> %vec to <4 x i32>
   %strided.vec = trunc <4 x i32> %bc to <4 x i8>
-  store <4 x i8> %strided.vec, <4 x i8>* %S
+  store <4 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v8i16_to_v2i16(<8 x i16>* %L, <2 x i16>* %S) nounwind {
+define void @shuffle_v8i16_to_v2i16(ptr %L, ptr %S) nounwind {
 ; SSE-LABEL: shuffle_v8i16_to_v2i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,2,2,3]
@@ -471,13 +471,13 @@ define void @shuffle_v8i16_to_v2i16(<8 x i16>* %L, <2 x i16>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BWVL-NEXT:    vpmovqw %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <8 x i16>, <8 x i16>* %L
+  %vec = load <8 x i16>, ptr %L
   %strided.vec = shufflevector <8 x i16> %vec, <8 x i16> undef, <2 x i32> <i32 0, i32 4>
-  store <2 x i16> %strided.vec, <2 x i16>* %S
+  store <2 x i16> %strided.vec, ptr %S
   ret void
 }
 
-define void @trunc_v2i64_to_v2i16(<8 x i16>* %L, <2 x i16>* %S) nounwind {
+define void @trunc_v2i64_to_v2i16(ptr %L, ptr %S) nounwind {
 ; SSE-LABEL: trunc_v2i64_to_v2i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,2,2,3]
@@ -531,14 +531,14 @@ define void @trunc_v2i64_to_v2i16(<8 x i16>* %L, <2 x i16>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BWVL-NEXT:    vpmovqw %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <8 x i16>, <8 x i16>* %L
+  %vec = load <8 x i16>, ptr %L
   %bc = bitcast <8 x i16> %vec to <2 x i64>
   %strided.vec = trunc <2 x i64> %bc to <2 x i16>
-  store <2 x i16> %strided.vec, <2 x i16>* %S
+  store <2 x i16> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v2i8(<16 x i8>* %L, <2 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v2i8(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v2i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -589,13 +589,13 @@ define void @shuffle_v16i8_to_v2i8(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BWVL-NEXT:    vpmovqb %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <2 x i32> <i32 0, i32 8>
-  store <2 x i8> %strided.vec, <2 x i8>* %S
+  store <2 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @trunc_v2i64_to_v2i8(<16 x i8>* %L, <2 x i8>* %S) nounwind {
+define void @trunc_v2i64_to_v2i8(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: trunc_v2i64_to_v2i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -646,9 +646,9 @@ define void @trunc_v2i64_to_v2i8(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BWVL-NEXT:    vpmovqb %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %bc = bitcast <16 x i8> %vec to <2 x i64>
   %strided.vec = trunc <2 x i64> %bc to <2 x i8>
-  store <2 x i8> %strided.vec, <2 x i8>* %S
+  store <2 x i8> %strided.vec, ptr %S
   ret void
 }

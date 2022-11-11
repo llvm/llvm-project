@@ -9,7 +9,7 @@ declare <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half>, <vscale 
 define <vscale x 1 x half> @vfcopysign_vv_nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %vs)
@@ -19,7 +19,7 @@ define <vscale x 1 x half> @vfcopysign_vv_nxv1f16(<vscale x 1 x half> %vm, <vsca
 define <vscale x 1 x half> @vfcopysign_vf_nxv1f16(<vscale x 1 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
@@ -31,7 +31,7 @@ define <vscale x 1 x half> @vfcopysign_vf_nxv1f16(<vscale x 1 x half> %vm, half 
 define <vscale x 1 x half> @vfcopynsign_vv_nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 1 x half> %vs
@@ -42,7 +42,7 @@ define <vscale x 1 x half> @vfcopynsign_vv_nxv1f16(<vscale x 1 x half> %vm, <vsc
 define <vscale x 1 x half> @vfcopynsign_vf_nxv1f16(<vscale x 1 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
@@ -55,7 +55,7 @@ define <vscale x 1 x half> @vfcopynsign_vf_nxv1f16(<vscale x 1 x half> %vm, half
 define <vscale x 1 x half> @vfcopysign_exttrunc_vv_nxv1f16_nxv1f32(<vscale x 1 x half> %vm, <vscale x 1 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv1f16_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -67,9 +67,9 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vv_nxv1f16_nxv1f32(<vscale x 1 x
 define <vscale x 1 x half> @vfcopysign_exttrunc_vf_nxv1f16_nxv1f32(<vscale x 1 x half> %vm, float %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv1f16_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -83,7 +83,7 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vf_nxv1f16_nxv1f32(<vscale x 1 x
 define <vscale x 1 x half> @vfcopynsign_exttrunc_vv_nxv1f16_nxv1f32(<vscale x 1 x half> %vm, <vscale x 1 x float> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv1f16_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -96,9 +96,9 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vv_nxv1f16_nxv1f32(<vscale x 1 
 define <vscale x 1 x half> @vfcopynsign_exttrunc_vf_nxv1f16_nxv1f32(<vscale x 1 x half> %vm, float %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv1f16_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -113,9 +113,9 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vf_nxv1f16_nxv1f32(<vscale x 1 
 define <vscale x 1 x half> @vfcopysign_exttrunc_vv_nxv1f16_nxv1f64(<vscale x 1 x half> %vm, <vscale x 1 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv1f16_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v10
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -127,11 +127,11 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vv_nxv1f16_nxv1f64(<vscale x 1 x
 define <vscale x 1 x half> @vfcopysign_exttrunc_vf_nxv1f16_nxv1f64(<vscale x 1 x half> %vm, double %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv1f16_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v10
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -145,9 +145,9 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vf_nxv1f16_nxv1f64(<vscale x 1 x
 define <vscale x 1 x half> @vfcopynsign_exttrunc_vv_nxv1f16_nxv1f64(<vscale x 1 x half> %vm, <vscale x 1 x double> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv1f16_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v10
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -160,11 +160,11 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vv_nxv1f16_nxv1f64(<vscale x 1 
 define <vscale x 1 x half> @vfcopynsign_exttrunc_vf_nxv1f16_nxv1f64(<vscale x 1 x half> %vm, double %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv1f16_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v10
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -181,7 +181,7 @@ declare <vscale x 2 x half> @llvm.copysign.nxv2f16(<vscale x 2 x half>, <vscale 
 define <vscale x 2 x half> @vfcopysign_vv_nxv2f16(<vscale x 2 x half> %vm, <vscale x 2 x half> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %r = call <vscale x 2 x half> @llvm.copysign.nxv2f16(<vscale x 2 x half> %vm, <vscale x 2 x half> %vs)
@@ -191,7 +191,7 @@ define <vscale x 2 x half> @vfcopysign_vv_nxv2f16(<vscale x 2 x half> %vm, <vsca
 define <vscale x 2 x half> @vfcopysign_vf_nxv2f16(<vscale x 2 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x half> poison, half %s, i32 0
@@ -203,7 +203,7 @@ define <vscale x 2 x half> @vfcopysign_vf_nxv2f16(<vscale x 2 x half> %vm, half 
 define <vscale x 2 x half> @vfcopynsign_vv_nxv2f16(<vscale x 2 x half> %vm, <vscale x 2 x half> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 2 x half> %vs
@@ -214,7 +214,7 @@ define <vscale x 2 x half> @vfcopynsign_vv_nxv2f16(<vscale x 2 x half> %vm, <vsc
 define <vscale x 2 x half> @vfcopynsign_vf_nxv2f16(<vscale x 2 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x half> poison, half %s, i32 0
@@ -229,7 +229,7 @@ declare <vscale x 4 x half> @llvm.copysign.nxv4f16(<vscale x 4 x half>, <vscale 
 define <vscale x 4 x half> @vfcopysign_vv_nxv4f16(<vscale x 4 x half> %vm, <vscale x 4 x half> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %r = call <vscale x 4 x half> @llvm.copysign.nxv4f16(<vscale x 4 x half> %vm, <vscale x 4 x half> %vs)
@@ -239,7 +239,7 @@ define <vscale x 4 x half> @vfcopysign_vv_nxv4f16(<vscale x 4 x half> %vm, <vsca
 define <vscale x 4 x half> @vfcopysign_vf_nxv4f16(<vscale x 4 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x half> poison, half %s, i32 0
@@ -251,7 +251,7 @@ define <vscale x 4 x half> @vfcopysign_vf_nxv4f16(<vscale x 4 x half> %vm, half 
 define <vscale x 4 x half> @vfcopynsign_vv_nxv4f16(<vscale x 4 x half> %vm, <vscale x 4 x half> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 4 x half> %vs
@@ -262,7 +262,7 @@ define <vscale x 4 x half> @vfcopynsign_vv_nxv4f16(<vscale x 4 x half> %vm, <vsc
 define <vscale x 4 x half> @vfcopynsign_vf_nxv4f16(<vscale x 4 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x half> poison, half %s, i32 0
@@ -277,7 +277,7 @@ declare <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half>, <vscale 
 define <vscale x 8 x half> @vfcopysign_vv_nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %vs)
@@ -287,7 +287,7 @@ define <vscale x 8 x half> @vfcopysign_vv_nxv8f16(<vscale x 8 x half> %vm, <vsca
 define <vscale x 8 x half> @vfcopysign_vf_nxv8f16(<vscale x 8 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
@@ -299,7 +299,7 @@ define <vscale x 8 x half> @vfcopysign_vf_nxv8f16(<vscale x 8 x half> %vm, half 
 define <vscale x 8 x half> @vfcopynsign_vv_nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 8 x half> %vs
@@ -310,7 +310,7 @@ define <vscale x 8 x half> @vfcopynsign_vv_nxv8f16(<vscale x 8 x half> %vm, <vsc
 define <vscale x 8 x half> @vfcopynsign_vf_nxv8f16(<vscale x 8 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
@@ -323,7 +323,7 @@ define <vscale x 8 x half> @vfcopynsign_vf_nxv8f16(<vscale x 8 x half> %vm, half
 define <vscale x 8 x half> @vfcopysign_exttrunc_vv_nxv8f16_nxv8f32(<vscale x 8 x half> %vm, <vscale x 8 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv8f16_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -335,9 +335,9 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vv_nxv8f16_nxv8f32(<vscale x 8 x
 define <vscale x 8 x half> @vfcopysign_exttrunc_vf_nxv8f16_nxv8f32(<vscale x 8 x half> %vm, float %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv8f16_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v12, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -351,7 +351,7 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vf_nxv8f16_nxv8f32(<vscale x 8 x
 define <vscale x 8 x half> @vfcopynsign_exttrunc_vv_nxv8f16_nxv8f32(<vscale x 8 x half> %vm, <vscale x 8 x float> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv8f16_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -364,9 +364,9 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vv_nxv8f16_nxv8f32(<vscale x 8 
 define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f32(<vscale x 8 x half> %vm, float %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv8f16_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v12, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -381,9 +381,9 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f32(<vscale x 8 
 define <vscale x 8 x half> @vfcopysign_exttrunc_vv_nxv8f16_nxv8f64(<vscale x 8 x half> %vm, <vscale x 8 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv8f16_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v12, v16
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -395,11 +395,11 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vv_nxv8f16_nxv8f64(<vscale x 8 x
 define <vscale x 8 x half> @vfcopysign_exttrunc_vf_nxv8f16_nxv8f64(<vscale x 8 x half> %vm, double %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv8f16_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v12, v16
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -413,9 +413,9 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vf_nxv8f16_nxv8f64(<vscale x 8 x
 define <vscale x 8 x half> @vfcopynsign_exttrunc_vv_nxv8f16_nxv8f64(<vscale x 8 x half> %vm, <vscale x 8 x double> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv8f16_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v12, v16
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -428,11 +428,11 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vv_nxv8f16_nxv8f64(<vscale x 8 
 define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f64(<vscale x 8 x half> %vm, double %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv8f16_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v12, v16
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -449,7 +449,7 @@ declare <vscale x 16 x half> @llvm.copysign.nxv16f16(<vscale x 16 x half>, <vsca
 define <vscale x 16 x half> @vfcopysign_vv_nxv16f16(<vscale x 16 x half> %vm, <vscale x 16 x half> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %r = call <vscale x 16 x half> @llvm.copysign.nxv16f16(<vscale x 16 x half> %vm, <vscale x 16 x half> %vs)
@@ -459,7 +459,7 @@ define <vscale x 16 x half> @vfcopysign_vv_nxv16f16(<vscale x 16 x half> %vm, <v
 define <vscale x 16 x half> @vfcopysign_vf_nxv16f16(<vscale x 16 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x half> poison, half %s, i32 0
@@ -471,7 +471,7 @@ define <vscale x 16 x half> @vfcopysign_vf_nxv16f16(<vscale x 16 x half> %vm, ha
 define <vscale x 16 x half> @vfcopynsign_vv_nxv16f16(<vscale x 16 x half> %vm, <vscale x 16 x half> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 16 x half> %vs
@@ -482,7 +482,7 @@ define <vscale x 16 x half> @vfcopynsign_vv_nxv16f16(<vscale x 16 x half> %vm, <
 define <vscale x 16 x half> @vfcopynsign_vf_nxv16f16(<vscale x 16 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x half> poison, half %s, i32 0
@@ -497,7 +497,7 @@ declare <vscale x 32 x half> @llvm.copysign.nxv32f16(<vscale x 32 x half>, <vsca
 define <vscale x 32 x half> @vfcopysign_vv_nxv32f16(<vscale x 32 x half> %vm, <vscale x 32 x half> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %r = call <vscale x 32 x half> @llvm.copysign.nxv32f16(<vscale x 32 x half> %vm, <vscale x 32 x half> %vs)
@@ -507,7 +507,7 @@ define <vscale x 32 x half> @vfcopysign_vv_nxv32f16(<vscale x 32 x half> %vm, <v
 define <vscale x 32 x half> @vfcopysign_vf_nxv32f16(<vscale x 32 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x half> poison, half %s, i32 0
@@ -519,7 +519,7 @@ define <vscale x 32 x half> @vfcopysign_vf_nxv32f16(<vscale x 32 x half> %vm, ha
 define <vscale x 32 x half> @vfcopynsign_vv_nxv32f16(<vscale x 32 x half> %vm, <vscale x 32 x half> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 32 x half> %vs
@@ -530,7 +530,7 @@ define <vscale x 32 x half> @vfcopynsign_vv_nxv32f16(<vscale x 32 x half> %vm, <
 define <vscale x 32 x half> @vfcopynsign_vf_nxv32f16(<vscale x 32 x half> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x half> poison, half %s, i32 0
@@ -545,7 +545,7 @@ declare <vscale x 1 x float> @llvm.copysign.nxv1f32(<vscale x 1 x float>, <vscal
 define <vscale x 1 x float> @vfcopysign_vv_nxv1f32(<vscale x 1 x float> %vm, <vscale x 1 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %r = call <vscale x 1 x float> @llvm.copysign.nxv1f32(<vscale x 1 x float> %vm, <vscale x 1 x float> %vs)
@@ -555,7 +555,7 @@ define <vscale x 1 x float> @vfcopysign_vv_nxv1f32(<vscale x 1 x float> %vm, <vs
 define <vscale x 1 x float> @vfcopysign_vf_nxv1f32(<vscale x 1 x float> %vm, float %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
@@ -567,7 +567,7 @@ define <vscale x 1 x float> @vfcopysign_vf_nxv1f32(<vscale x 1 x float> %vm, flo
 define <vscale x 1 x float> @vfcopynsign_vv_nxv1f32(<vscale x 1 x float> %vm, <vscale x 1 x float> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 1 x float> %vs
@@ -578,7 +578,7 @@ define <vscale x 1 x float> @vfcopynsign_vv_nxv1f32(<vscale x 1 x float> %vm, <v
 define <vscale x 1 x float> @vfcopynsign_vf_nxv1f32(<vscale x 1 x float> %vm, float %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
@@ -591,9 +591,9 @@ define <vscale x 1 x float> @vfcopynsign_vf_nxv1f32(<vscale x 1 x float> %vm, fl
 define <vscale x 1 x float> @vfcopysign_exttrunc_vv_nxv1f32_nxv1f16(<vscale x 1 x float> %vm, <vscale x 1 x half> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv1f32_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 1 x half> %vs to <vscale x 1 x float>
@@ -604,10 +604,10 @@ define <vscale x 1 x float> @vfcopysign_exttrunc_vv_nxv1f32_nxv1f16(<vscale x 1 
 define <vscale x 1 x float> @vfcopysign_exttrunc_vf_nxv1f32_nxv1f16(<vscale x 1 x float> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv1f32_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
@@ -620,9 +620,9 @@ define <vscale x 1 x float> @vfcopysign_exttrunc_vf_nxv1f32_nxv1f16(<vscale x 1 
 define <vscale x 1 x float> @vfcopynsign_exttrunc_vv_nxv1f32_nxv1f16(<vscale x 1 x float> %vm, <vscale x 1 x half> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv1f32_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 1 x half> %vs
@@ -634,10 +634,10 @@ define <vscale x 1 x float> @vfcopynsign_exttrunc_vv_nxv1f32_nxv1f16(<vscale x 1
 define <vscale x 1 x float> @vfcopynsign_exttrunc_vf_nxv1f32_nxv1f16(<vscale x 1 x float> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv1f32_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
@@ -651,7 +651,7 @@ define <vscale x 1 x float> @vfcopynsign_exttrunc_vf_nxv1f32_nxv1f16(<vscale x 1
 define <vscale x 1 x float> @vfcopysign_exttrunc_vv_nxv1f32_nxv1f64(<vscale x 1 x float> %vm, <vscale x 1 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv1f32_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -663,9 +663,9 @@ define <vscale x 1 x float> @vfcopysign_exttrunc_vv_nxv1f32_nxv1f64(<vscale x 1 
 define <vscale x 1 x float> @vfcopysign_exttrunc_vf_nxv1f32_nxv1f64(<vscale x 1 x float> %vm, double %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv1f32_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -679,7 +679,7 @@ define <vscale x 1 x float> @vfcopysign_exttrunc_vf_nxv1f32_nxv1f64(<vscale x 1 
 define <vscale x 1 x float> @vfcopynsign_exttrunc_vv_nxv1f32_nxv1f64(<vscale x 1 x float> %vm, <vscale x 1 x double> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv1f32_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -692,9 +692,9 @@ define <vscale x 1 x float> @vfcopynsign_exttrunc_vv_nxv1f32_nxv1f64(<vscale x 1
 define <vscale x 1 x float> @vfcopynsign_exttrunc_vf_nxv1f32_nxv1f64(<vscale x 1 x float> %vm, double %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv1f32_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
@@ -711,7 +711,7 @@ declare <vscale x 2 x float> @llvm.copysign.nxv2f32(<vscale x 2 x float>, <vscal
 define <vscale x 2 x float> @vfcopysign_vv_nxv2f32(<vscale x 2 x float> %vm, <vscale x 2 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %r = call <vscale x 2 x float> @llvm.copysign.nxv2f32(<vscale x 2 x float> %vm, <vscale x 2 x float> %vs)
@@ -721,7 +721,7 @@ define <vscale x 2 x float> @vfcopysign_vv_nxv2f32(<vscale x 2 x float> %vm, <vs
 define <vscale x 2 x float> @vfcopysign_vf_nxv2f32(<vscale x 2 x float> %vm, float %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x float> poison, float %s, i32 0
@@ -733,7 +733,7 @@ define <vscale x 2 x float> @vfcopysign_vf_nxv2f32(<vscale x 2 x float> %vm, flo
 define <vscale x 2 x float> @vfcopynsign_vv_nxv2f32(<vscale x 2 x float> %vm, <vscale x 2 x float> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 2 x float> %vs
@@ -744,7 +744,7 @@ define <vscale x 2 x float> @vfcopynsign_vv_nxv2f32(<vscale x 2 x float> %vm, <v
 define <vscale x 2 x float> @vfcopynsign_vf_nxv2f32(<vscale x 2 x float> %vm, float %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x float> poison, float %s, i32 0
@@ -759,7 +759,7 @@ declare <vscale x 4 x float> @llvm.copysign.nxv4f32(<vscale x 4 x float>, <vscal
 define <vscale x 4 x float> @vfcopysign_vv_nxv4f32(<vscale x 4 x float> %vm, <vscale x 4 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %r = call <vscale x 4 x float> @llvm.copysign.nxv4f32(<vscale x 4 x float> %vm, <vscale x 4 x float> %vs)
@@ -769,7 +769,7 @@ define <vscale x 4 x float> @vfcopysign_vv_nxv4f32(<vscale x 4 x float> %vm, <vs
 define <vscale x 4 x float> @vfcopysign_vf_nxv4f32(<vscale x 4 x float> %vm, float %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x float> poison, float %s, i32 0
@@ -781,7 +781,7 @@ define <vscale x 4 x float> @vfcopysign_vf_nxv4f32(<vscale x 4 x float> %vm, flo
 define <vscale x 4 x float> @vfcopynsign_vv_nxv4f32(<vscale x 4 x float> %vm, <vscale x 4 x float> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 4 x float> %vs
@@ -792,7 +792,7 @@ define <vscale x 4 x float> @vfcopynsign_vv_nxv4f32(<vscale x 4 x float> %vm, <v
 define <vscale x 4 x float> @vfcopynsign_vf_nxv4f32(<vscale x 4 x float> %vm, float %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x float> poison, float %s, i32 0
@@ -807,7 +807,7 @@ declare <vscale x 8 x float> @llvm.copysign.nxv8f32(<vscale x 8 x float>, <vscal
 define <vscale x 8 x float> @vfcopysign_vv_nxv8f32(<vscale x 8 x float> %vm, <vscale x 8 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %r = call <vscale x 8 x float> @llvm.copysign.nxv8f32(<vscale x 8 x float> %vm, <vscale x 8 x float> %vs)
@@ -817,7 +817,7 @@ define <vscale x 8 x float> @vfcopysign_vv_nxv8f32(<vscale x 8 x float> %vm, <vs
 define <vscale x 8 x float> @vfcopysign_vf_nxv8f32(<vscale x 8 x float> %vm, float %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
@@ -829,7 +829,7 @@ define <vscale x 8 x float> @vfcopysign_vf_nxv8f32(<vscale x 8 x float> %vm, flo
 define <vscale x 8 x float> @vfcopynsign_vv_nxv8f32(<vscale x 8 x float> %vm, <vscale x 8 x float> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 8 x float> %vs
@@ -840,7 +840,7 @@ define <vscale x 8 x float> @vfcopynsign_vv_nxv8f32(<vscale x 8 x float> %vm, <v
 define <vscale x 8 x float> @vfcopynsign_vf_nxv8f32(<vscale x 8 x float> %vm, float %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
@@ -853,9 +853,9 @@ define <vscale x 8 x float> @vfcopynsign_vf_nxv8f32(<vscale x 8 x float> %vm, fl
 define <vscale x 8 x float> @vfcopysign_exttrunc_vv_nxv8f32_nxv8f16(<vscale x 8 x float> %vm, <vscale x 8 x half> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv8f32_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v12
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 8 x half> %vs to <vscale x 8 x float>
@@ -866,10 +866,10 @@ define <vscale x 8 x float> @vfcopysign_exttrunc_vv_nxv8f32_nxv8f16(<vscale x 8 
 define <vscale x 8 x float> @vfcopysign_exttrunc_vf_nxv8f32_nxv8f16(<vscale x 8 x float> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv8f32_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v12, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v12
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
@@ -882,9 +882,9 @@ define <vscale x 8 x float> @vfcopysign_exttrunc_vf_nxv8f32_nxv8f16(<vscale x 8 
 define <vscale x 8 x float> @vfcopynsign_exttrunc_vv_nxv8f32_nxv8f16(<vscale x 8 x float> %vm, <vscale x 8 x half> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv8f32_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v12
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 8 x half> %vs
@@ -896,10 +896,10 @@ define <vscale x 8 x float> @vfcopynsign_exttrunc_vv_nxv8f32_nxv8f16(<vscale x 8
 define <vscale x 8 x float> @vfcopynsign_exttrunc_vf_nxv8f32_nxv8f16(<vscale x 8 x float> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv8f32_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v12, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v12
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
@@ -913,7 +913,7 @@ define <vscale x 8 x float> @vfcopynsign_exttrunc_vf_nxv8f32_nxv8f16(<vscale x 8
 define <vscale x 8 x float> @vfcopysign_exttrunc_vv_nxv8f32_nxv8f64(<vscale x 8 x float> %vm, <vscale x 8 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv8f32_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v12, v16
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v12
 ; CHECK-NEXT:    ret
@@ -925,9 +925,9 @@ define <vscale x 8 x float> @vfcopysign_exttrunc_vv_nxv8f32_nxv8f64(<vscale x 8 
 define <vscale x 8 x float> @vfcopysign_exttrunc_vf_nxv8f32_nxv8f64(<vscale x 8 x float> %vm, double %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv8f32_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v12, v16
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v12
 ; CHECK-NEXT:    ret
@@ -941,7 +941,7 @@ define <vscale x 8 x float> @vfcopysign_exttrunc_vf_nxv8f32_nxv8f64(<vscale x 8 
 define <vscale x 8 x float> @vfcopynsign_exttrunc_vv_nxv8f32_nxv8f64(<vscale x 8 x float> %vm, <vscale x 8 x double> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv8f32_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v12, v16
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v12
 ; CHECK-NEXT:    ret
@@ -954,9 +954,9 @@ define <vscale x 8 x float> @vfcopynsign_exttrunc_vv_nxv8f32_nxv8f64(<vscale x 8
 define <vscale x 8 x float> @vfcopynsign_exttrunc_vf_nxv8f32_nxv8f64(<vscale x 8 x float> %vm, double %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv8f32_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v12, v16
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v12
 ; CHECK-NEXT:    ret
@@ -973,7 +973,7 @@ declare <vscale x 16 x float> @llvm.copysign.nxv16f32(<vscale x 16 x float>, <vs
 define <vscale x 16 x float> @vfcopysign_vv_nxv16f32(<vscale x 16 x float> %vm, <vscale x 16 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %r = call <vscale x 16 x float> @llvm.copysign.nxv16f32(<vscale x 16 x float> %vm, <vscale x 16 x float> %vs)
@@ -983,7 +983,7 @@ define <vscale x 16 x float> @vfcopysign_vv_nxv16f32(<vscale x 16 x float> %vm, 
 define <vscale x 16 x float> @vfcopysign_vf_nxv16f32(<vscale x 16 x float> %vm, float %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x float> poison, float %s, i32 0
@@ -995,7 +995,7 @@ define <vscale x 16 x float> @vfcopysign_vf_nxv16f32(<vscale x 16 x float> %vm, 
 define <vscale x 16 x float> @vfcopynsign_vv_nxv16f32(<vscale x 16 x float> %vm, <vscale x 16 x float> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 16 x float> %vs
@@ -1006,7 +1006,7 @@ define <vscale x 16 x float> @vfcopynsign_vv_nxv16f32(<vscale x 16 x float> %vm,
 define <vscale x 16 x float> @vfcopynsign_vf_nxv16f32(<vscale x 16 x float> %vm, float %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x float> poison, float %s, i32 0
@@ -1021,7 +1021,7 @@ declare <vscale x 1 x double> @llvm.copysign.nxv1f64(<vscale x 1 x double>, <vsc
 define <vscale x 1 x double> @vfcopysign_vv_nxv1f64(<vscale x 1 x double> %vm, <vscale x 1 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %r = call <vscale x 1 x double> @llvm.copysign.nxv1f64(<vscale x 1 x double> %vm, <vscale x 1 x double> %vs)
@@ -1031,7 +1031,7 @@ define <vscale x 1 x double> @vfcopysign_vv_nxv1f64(<vscale x 1 x double> %vm, <
 define <vscale x 1 x double> @vfcopysign_vf_nxv1f64(<vscale x 1 x double> %vm, double %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x double> poison, double %s, i32 0
@@ -1043,7 +1043,7 @@ define <vscale x 1 x double> @vfcopysign_vf_nxv1f64(<vscale x 1 x double> %vm, d
 define <vscale x 1 x double> @vfcopynsign_vv_nxv1f64(<vscale x 1 x double> %vm, <vscale x 1 x double> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 1 x double> %vs
@@ -1054,7 +1054,7 @@ define <vscale x 1 x double> @vfcopynsign_vv_nxv1f64(<vscale x 1 x double> %vm, 
 define <vscale x 1 x double> @vfcopynsign_vf_nxv1f64(<vscale x 1 x double> %vm, double %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x double> poison, double %s, i32 0
@@ -1067,11 +1067,11 @@ define <vscale x 1 x double> @vfcopynsign_vf_nxv1f64(<vscale x 1 x double> %vm, 
 define <vscale x 1 x double> @vfcopysign_exttrunc_vv_nxv1f64_nxv1f16(<vscale x 1 x double> %vm, <vscale x 1 x half> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv1f64_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 1 x half> %vs to <vscale x 1 x double>
@@ -1082,12 +1082,12 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vv_nxv1f64_nxv1f16(<vscale x 1
 define <vscale x 1 x double> @vfcopysign_exttrunc_vf_nxv1f64_nxv1f16(<vscale x 1 x double> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv1f64_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
@@ -1100,11 +1100,11 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vf_nxv1f64_nxv1f16(<vscale x 1
 define <vscale x 1 x double> @vfcopynsign_exttrunc_vv_nxv1f64_nxv1f16(<vscale x 1 x double> %vm, <vscale x 1 x half> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv1f64_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 1 x half> %vs
@@ -1116,12 +1116,12 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vv_nxv1f64_nxv1f16(<vscale x 
 define <vscale x 1 x double> @vfcopynsign_exttrunc_vf_nxv1f64_nxv1f16(<vscale x 1 x double> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv1f64_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
@@ -1135,9 +1135,9 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vf_nxv1f64_nxv1f16(<vscale x 
 define <vscale x 1 x double> @vfcopysign_exttrunc_vv_nxv1f64_nxv1f32(<vscale x 1 x double> %vm, <vscale x 1 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv1f64_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 1 x float> %vs to <vscale x 1 x double>
@@ -1148,10 +1148,10 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vv_nxv1f64_nxv1f32(<vscale x 1
 define <vscale x 1 x double> @vfcopysign_exttrunc_vf_nxv1f64_nxv1f32(<vscale x 1 x double> %vm, float %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv1f64_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
@@ -1164,9 +1164,9 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vf_nxv1f64_nxv1f32(<vscale x 1
 define <vscale x 1 x double> @vfcopynsign_exttrunc_vv_nxv1f64_nxv1f32(<vscale x 1 x double> %vm, <vscale x 1 x float> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv1f64_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 1 x float> %vs
@@ -1178,10 +1178,10 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vv_nxv1f64_nxv1f32(<vscale x 
 define <vscale x 1 x double> @vfcopynsign_exttrunc_vf_nxv1f64_nxv1f32(<vscale x 1 x double> %vm, float %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv1f64_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v9
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
@@ -1197,7 +1197,7 @@ declare <vscale x 2 x double> @llvm.copysign.nxv2f64(<vscale x 2 x double>, <vsc
 define <vscale x 2 x double> @vfcopysign_vv_nxv2f64(<vscale x 2 x double> %vm, <vscale x 2 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %r = call <vscale x 2 x double> @llvm.copysign.nxv2f64(<vscale x 2 x double> %vm, <vscale x 2 x double> %vs)
@@ -1207,7 +1207,7 @@ define <vscale x 2 x double> @vfcopysign_vv_nxv2f64(<vscale x 2 x double> %vm, <
 define <vscale x 2 x double> @vfcopysign_vf_nxv2f64(<vscale x 2 x double> %vm, double %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x double> poison, double %s, i32 0
@@ -1219,7 +1219,7 @@ define <vscale x 2 x double> @vfcopysign_vf_nxv2f64(<vscale x 2 x double> %vm, d
 define <vscale x 2 x double> @vfcopynsign_vv_nxv2f64(<vscale x 2 x double> %vm, <vscale x 2 x double> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 2 x double> %vs
@@ -1230,7 +1230,7 @@ define <vscale x 2 x double> @vfcopynsign_vv_nxv2f64(<vscale x 2 x double> %vm, 
 define <vscale x 2 x double> @vfcopynsign_vf_nxv2f64(<vscale x 2 x double> %vm, double %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x double> poison, double %s, i32 0
@@ -1245,7 +1245,7 @@ declare <vscale x 4 x double> @llvm.copysign.nxv4f64(<vscale x 4 x double>, <vsc
 define <vscale x 4 x double> @vfcopysign_vv_nxv4f64(<vscale x 4 x double> %vm, <vscale x 4 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %r = call <vscale x 4 x double> @llvm.copysign.nxv4f64(<vscale x 4 x double> %vm, <vscale x 4 x double> %vs)
@@ -1255,7 +1255,7 @@ define <vscale x 4 x double> @vfcopysign_vv_nxv4f64(<vscale x 4 x double> %vm, <
 define <vscale x 4 x double> @vfcopysign_vf_nxv4f64(<vscale x 4 x double> %vm, double %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x double> poison, double %s, i32 0
@@ -1267,7 +1267,7 @@ define <vscale x 4 x double> @vfcopysign_vf_nxv4f64(<vscale x 4 x double> %vm, d
 define <vscale x 4 x double> @vfcopynsign_vv_nxv4f64(<vscale x 4 x double> %vm, <vscale x 4 x double> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 4 x double> %vs
@@ -1278,7 +1278,7 @@ define <vscale x 4 x double> @vfcopynsign_vv_nxv4f64(<vscale x 4 x double> %vm, 
 define <vscale x 4 x double> @vfcopynsign_vf_nxv4f64(<vscale x 4 x double> %vm, double %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x double> poison, double %s, i32 0
@@ -1293,7 +1293,7 @@ declare <vscale x 8 x double> @llvm.copysign.nxv8f64(<vscale x 8 x double>, <vsc
 define <vscale x 8 x double> @vfcopysign_vv_nxv8f64(<vscale x 8 x double> %vm, <vscale x 8 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %r = call <vscale x 8 x double> @llvm.copysign.nxv8f64(<vscale x 8 x double> %vm, <vscale x 8 x double> %vs)
@@ -1303,7 +1303,7 @@ define <vscale x 8 x double> @vfcopysign_vv_nxv8f64(<vscale x 8 x double> %vm, <
 define <vscale x 8 x double> @vfcopysign_vf_nxv8f64(<vscale x 8 x double> %vm, double %s) {
 ; CHECK-LABEL: vfcopysign_vf_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x double> poison, double %s, i32 0
@@ -1315,7 +1315,7 @@ define <vscale x 8 x double> @vfcopysign_vf_nxv8f64(<vscale x 8 x double> %vm, d
 define <vscale x 8 x double> @vfcopynsign_vv_nxv8f64(<vscale x 8 x double> %vm, <vscale x 8 x double> %vs) {
 ; CHECK-LABEL: vfcopynsign_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 8 x double> %vs
@@ -1326,7 +1326,7 @@ define <vscale x 8 x double> @vfcopynsign_vv_nxv8f64(<vscale x 8 x double> %vm, 
 define <vscale x 8 x double> @vfcopynsign_vf_nxv8f64(<vscale x 8 x double> %vm, double %s) {
 ; CHECK-LABEL: vfcopynsign_vf_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x double> poison, double %s, i32 0
@@ -1339,11 +1339,11 @@ define <vscale x 8 x double> @vfcopynsign_vf_nxv8f64(<vscale x 8 x double> %vm, 
 define <vscale x 8 x double> @vfcopysign_exttrunc_vv_nxv8f64_nxv8f16(<vscale x 8 x double> %vm, <vscale x 8 x half> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv8f64_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v20, v16
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v20
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v24
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 8 x half> %vs to <vscale x 8 x double>
@@ -1354,12 +1354,12 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vv_nxv8f64_nxv8f16(<vscale x 8
 define <vscale x 8 x double> @vfcopysign_exttrunc_vf_nxv8f64_nxv8f16(<vscale x 8 x double> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv8f64_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v20, v16
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v20
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v24
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
@@ -1372,11 +1372,11 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vf_nxv8f64_nxv8f16(<vscale x 8
 define <vscale x 8 x double> @vfcopynsign_exttrunc_vv_nxv8f64_nxv8f16(<vscale x 8 x double> %vm, <vscale x 8 x half> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv8f64_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v20, v16
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v20
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v24
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 8 x half> %vs
@@ -1388,12 +1388,12 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vv_nxv8f64_nxv8f16(<vscale x 
 define <vscale x 8 x double> @vfcopynsign_exttrunc_vf_nxv8f64_nxv8f16(<vscale x 8 x double> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv8f64_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v20, v16
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v20
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v24
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
@@ -1407,9 +1407,9 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vf_nxv8f64_nxv8f16(<vscale x 
 define <vscale x 8 x double> @vfcopysign_exttrunc_vv_nxv8f64_nxv8f32(<vscale x 8 x double> %vm, <vscale x 8 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vv_nxv8f64_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v16
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v24
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 8 x float> %vs to <vscale x 8 x double>
@@ -1420,10 +1420,10 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vv_nxv8f64_nxv8f32(<vscale x 8
 define <vscale x 8 x double> @vfcopysign_exttrunc_vf_nxv8f64_nxv8f32(<vscale x 8 x double> %vm, float %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv8f64_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v16
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v24
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
@@ -1436,9 +1436,9 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vf_nxv8f64_nxv8f32(<vscale x 8
 define <vscale x 8 x double> @vfcopynsign_exttrunc_vv_nxv8f64_nxv8f32(<vscale x 8 x double> %vm, <vscale x 8 x float> %vs) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vv_nxv8f64_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v16
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v24
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 8 x float> %vs
@@ -1450,10 +1450,10 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vv_nxv8f64_nxv8f32(<vscale x 
 define <vscale x 8 x double> @vfcopynsign_exttrunc_vf_nxv8f64_nxv8f32(<vscale x 8 x double> %vm, float %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv8f64_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v16
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v24
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %s, i32 0

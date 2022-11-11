@@ -65,7 +65,8 @@ namespace mlir {
 /// just as efficient as having your own switch instruction over the instruction
 /// opcode.
 
-template <typename SubClass, typename RetTy = void> class AffineExprVisitor {
+template <typename SubClass, typename RetTy = void>
+class AffineExprVisitor {
   //===--------------------------------------------------------------------===//
   // Interface code - This is the public interface of the AffineExprVisitor
   // that you use to visit affine expressions...

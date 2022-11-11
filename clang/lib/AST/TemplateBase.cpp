@@ -321,26 +321,15 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
 
   case Declaration:
     getParamTypeForDecl().Profile(ID);
-    ID.AddPointer(getAsDecl()? getAsDecl()->getCanonicalDecl() : nullptr);
+    ID.AddPointer(getAsDecl());
     break;
 
+  case TemplateExpansion:
+    ID.AddInteger(TemplateArg.NumExpansions);
+    LLVM_FALLTHROUGH;
   case Template:
-  case TemplateExpansion: {
-    TemplateName Template = getAsTemplateOrTemplatePattern();
-    if (TemplateTemplateParmDecl *TTP
-          = dyn_cast_or_null<TemplateTemplateParmDecl>(
-                                                Template.getAsTemplateDecl())) {
-      ID.AddBoolean(true);
-      ID.AddInteger(TTP->getDepth());
-      ID.AddInteger(TTP->getPosition());
-      ID.AddBoolean(TTP->isParameterPack());
-    } else {
-      ID.AddBoolean(false);
-      ID.AddPointer(Context.getCanonicalTemplateName(Template)
-                                                          .getAsVoidPointer());
-    }
+    getAsTemplateOrTemplatePattern().Profile(ID);
     break;
-  }
 
   case Integral:
     getAsIntegral().Profile(ID);
@@ -374,7 +363,8 @@ bool TemplateArgument::structurallyEquals(const TemplateArgument &Other) const {
            TemplateArg.NumExpansions == Other.TemplateArg.NumExpansions;
 
   case Declaration:
-    return getAsDecl() == Other.getAsDecl();
+    return getAsDecl() == Other.getAsDecl() &&
+           getParamTypeForDecl() == Other.getParamTypeForDecl();
 
   case Integral:
     return getIntegralType() == Other.getIntegralType() &&
@@ -432,10 +422,10 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
   }
 
   case Declaration: {
-    // FIXME: Include the type if it's not obvious from the context.
     NamedDecl *ND = getAsDecl();
     if (getParamTypeForDecl()->isRecordType()) {
       if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
+        TPO->getType().getUnqualifiedType().print(Out, Policy);
         TPO->printAsInit(Out, Policy);
         break;
       }

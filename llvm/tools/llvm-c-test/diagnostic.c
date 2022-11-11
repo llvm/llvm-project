@@ -70,13 +70,8 @@ int llvm_test_diagnostic_handler(void) {
 
   LLVMModuleRef M;
   int Ret = LLVMGetBitcodeModule2(MB, &M);
-  if (Ret) {
-    // We do not return if the bitcode was invalid, as we want to test whether
-    // the diagnostic handler was executed.
-    fprintf(stderr, "Error parsing bitcode: %s\n", msg);
-  }
-
-  LLVMDisposeMemoryBuffer(MB);
+  if (Ret)
+    LLVMDisposeMemoryBuffer(MB);
 
   if (handlerCalled) {
     fprintf(stderr, "Diagnostic handler was called while loading module\n");

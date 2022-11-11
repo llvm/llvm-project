@@ -39,7 +39,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SwapByteOrder.h"
@@ -177,10 +176,9 @@ class InstrProfErrorCategoryType : public std::error_category {
 
 } // end anonymous namespace
 
-static ManagedStatic<InstrProfErrorCategoryType> ErrorCategory;
-
 const std::error_category &llvm::instrprof_category() {
-  return *ErrorCategory;
+  static InstrProfErrorCategoryType ErrorCategory;
+  return ErrorCategory;
 }
 
 namespace {
@@ -466,12 +464,13 @@ Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
     return WriteStringToResult(0, UncompressedNameStrings);
   }
 
-  SmallString<128> CompressedNameStrings;
-  zlib::compress(StringRef(UncompressedNameStrings), CompressedNameStrings,
-                 zlib::BestSizeCompression);
+  SmallVector<uint8_t, 128> CompressedNameStrings;
+  compression::zlib::compress(arrayRefFromStringRef(UncompressedNameStrings),
+                              CompressedNameStrings,
+                              compression::zlib::BestSizeCompression);
 
   return WriteStringToResult(CompressedNameStrings.size(),
-                             CompressedNameStrings);
+                             toStringRef(CompressedNameStrings));
 }
 
 StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar) {
@@ -488,7 +487,7 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
     NameStrs.push_back(std::string(getPGOFuncNameVarInitializer(NameVar)));
   }
   return collectPGOFuncNameStrings(
-      NameStrs, zlib::isAvailable() && doCompression, Result);
+      NameStrs, compression::zlib::isAvailable() && doCompression, Result);
 }
 
 Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
@@ -501,23 +500,20 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
     uint64_t CompressedSize = decodeULEB128(P, &N);
     P += N;
     bool isCompressed = (CompressedSize != 0);
-    SmallString<128> UncompressedNameStrings;
+    SmallVector<uint8_t, 128> UncompressedNameStrings;
     StringRef NameStrings;
     if (isCompressed) {
-      if (!llvm::zlib::isAvailable())
+      if (!llvm::compression::zlib::isAvailable())
         return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
 
-      StringRef CompressedNameStrings(reinterpret_cast<const char *>(P),
-                                      CompressedSize);
-      if (Error E =
-              zlib::uncompress(CompressedNameStrings, UncompressedNameStrings,
-                               UncompressedSize)) {
+      if (Error E = compression::zlib::decompress(
+              makeArrayRef(P, CompressedSize), UncompressedNameStrings,
+              UncompressedSize)) {
         consumeError(std::move(E));
         return make_error<InstrProfError>(instrprof_error::uncompress_failed);
       }
       P += CompressedSize;
-      NameStrings = StringRef(UncompressedNameStrings.data(),
-                              UncompressedNameStrings.size());
+      NameStrings = toStringRef(UncompressedNameStrings);
     } else {
       NameStrings =
           StringRef(reinterpret_cast<const char *>(P), UncompressedSize);
@@ -718,10 +714,33 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     return;
   }
 
+  // Special handling of the first count as the PseudoCount.
+  CountPseudoKind OtherKind = Other.getCountPseudoKind();
+  CountPseudoKind ThisKind = getCountPseudoKind();
+  if (OtherKind != NotPseudo || ThisKind != NotPseudo) {
+    // We don't allow the merge of a profile with pseudo counts and
+    // a normal profile (i.e. without pesudo counts).
+    // Profile supplimenation should be done after the profile merge.
+    if (OtherKind == NotPseudo || ThisKind == NotPseudo) {
+      Warn(instrprof_error::count_mismatch);
+      return;
+    }
+    if (OtherKind == PseudoHot || ThisKind == PseudoHot)
+      setPseudoCount(PseudoHot);
+    else
+      setPseudoCount(PseudoWarm);
+    return;
+  }
+
   for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
     bool Overflowed;
-    Counts[I] =
+    uint64_t Value =
         SaturatingMultiplyAdd(Other.Counts[I], Weight, Counts[I], &Overflowed);
+    if (Value > getInstrMaxCountValue()) {
+      Value = getInstrMaxCountValue();
+      Overflowed = true;
+    }
+    Counts[I] = Value;
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
   }
@@ -743,6 +762,10 @@ void InstrProfRecord::scale(uint64_t N, uint64_t D,
   for (auto &Count : this->Counts) {
     bool Overflowed;
     Count = SaturatingMultiply(Count, N, &Overflowed) / D;
+    if (Count > getInstrMaxCountValue()) {
+      Count = getInstrMaxCountValue();
+      Overflowed = true;
+    }
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
   }
@@ -1187,6 +1210,7 @@ void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput) {
   GlobalVariable *ProfileNameVar = new GlobalVariable(
       M, ProfileNameConst->getType(), true, GlobalValue::WeakAnyLinkage,
       ProfileNameConst, INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_NAME_VAR));
+  ProfileNameVar->setVisibility(GlobalValue::HiddenVisibility);
   Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {
     ProfileNameVar->setLinkage(GlobalValue::ExternalLinkage);
@@ -1327,7 +1351,7 @@ uint64_t Header::formatVersion() const {
 
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   using namespace support;
-  static_assert(std::is_standard_layout<Header>::value,
+  static_assert(std::is_standard_layout_v<Header>,
                 "The header should be standard layout type since we use offset "
                 "of fields to read.");
   Header H;
@@ -1353,7 +1377,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
         "if not add a case statement to fall through to the latest version.");
   case 8ull:
     H.MemProfOffset = read(Buffer, offsetOf(&Header::MemProfOffset));
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default: // Version7 (when the backwards compatible header was introduced).
     H.HashType = read(Buffer, offsetOf(&Header::HashType));
     H.HashOffset = read(Buffer, offsetOf(&Header::HashOffset));

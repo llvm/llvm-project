@@ -254,7 +254,7 @@ define i32 @test_x86_sse_cvttss2si(<4 x float> %a0) {
 declare i32 @llvm.x86.sse.cvttss2si(<4 x float>) nounwind readnone
 
 
-define void @test_x86_sse_ldmxcsr(i8* %a0) {
+define void @test_x86_sse_ldmxcsr(ptr %a0) {
 ; X86-SSE-LABEL: test_x86_sse_ldmxcsr:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -276,10 +276,10 @@ define void @test_x86_sse_ldmxcsr(i8* %a0) {
 ; X64-AVX:       ## %bb.0:
 ; X64-AVX-NEXT:    vldmxcsr (%rdi) ## encoding: [0xc5,0xf8,0xae,0x17]
 ; X64-AVX-NEXT:    retq ## encoding: [0xc3]
-  call void @llvm.x86.sse.ldmxcsr(i8* %a0)
+  call void @llvm.x86.sse.ldmxcsr(ptr %a0)
   ret void
 }
-declare void @llvm.x86.sse.ldmxcsr(i8*) nounwind
+declare void @llvm.x86.sse.ldmxcsr(ptr) nounwind
 
 
 
@@ -448,7 +448,7 @@ define <4 x float> @test_x86_sse_rsqrt_ss(<4 x float> %a0) {
 declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
 
 
-define void @test_x86_sse_stmxcsr(i8* %a0) {
+define void @test_x86_sse_stmxcsr(ptr %a0) {
 ; X86-SSE-LABEL: test_x86_sse_stmxcsr:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -470,10 +470,10 @@ define void @test_x86_sse_stmxcsr(i8* %a0) {
 ; X64-AVX:       ## %bb.0:
 ; X64-AVX-NEXT:    vstmxcsr (%rdi) ## encoding: [0xc5,0xf8,0xae,0x1f]
 ; X64-AVX-NEXT:    retq ## encoding: [0xc3]
-  call void @llvm.x86.sse.stmxcsr(i8* %a0)
+  call void @llvm.x86.sse.stmxcsr(ptr %a0)
   ret void
 }
-declare void @llvm.x86.sse.stmxcsr(i8*) nounwind
+declare void @llvm.x86.sse.stmxcsr(ptr) nounwind
 
 
 define i32 @test_x86_sse_ucomieq_ss(<4 x float> %a0, <4 x float> %a1) {

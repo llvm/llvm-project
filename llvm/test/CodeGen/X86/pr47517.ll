@@ -2,18 +2,17 @@
 ; RUN: llc -mtriple x86_64 < %s | FileCheck %s
 
 ; To ensure unused floating point constant is correctly removed
-define float @test(float %src, float* %p) {
+define float @test(float %src, ptr %p) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq $0, (%rdi)
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %a0 = getelementptr inbounds float, float* %p, i32 0
-  %a1 = getelementptr inbounds float, float* %p, i32 1
-  store float 0.000000e+00, float* %a0
-  store float 0.000000e+00, float* %a1
-  %zero = load float, float* %a0
+  %a1 = getelementptr inbounds float, ptr %p, i32 1
+  store float 0.000000e+00, ptr %p
+  store float 0.000000e+00, ptr %a1
+  %zero = load float, ptr %p
   %fmul1 = fmul fast float %zero, %src
   %fadd1 = fadd fast float %fmul1, %zero
   %fmul2 = fmul fast float %fadd1, 2.000000e+00

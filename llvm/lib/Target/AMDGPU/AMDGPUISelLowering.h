@@ -173,6 +173,9 @@ public:
 
   bool isNarrowingProfitable(EVT VT1, EVT VT2) const override;
 
+  bool isDesirableToCommuteWithShift(const SDNode *N,
+                                     CombineLevel Level) const override;
+
   EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                           ISD::NodeType ExtendKind) const override;
 
@@ -193,8 +196,8 @@ public:
                                     unsigned NumElem,
                                     unsigned AS) const override;
   bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override;
-  bool isCheapToSpeculateCttz() const override;
-  bool isCheapToSpeculateCtlz() const override;
+  bool isCheapToSpeculateCttz(Type *Ty) const override;
+  bool isCheapToSpeculateCtlz(Type *Ty) const override;
 
   bool isSDNodeAlwaysUniform(const SDNode *N) const override;
   static CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg);

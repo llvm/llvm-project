@@ -5,9 +5,8 @@
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
 
 ; GCN-LABEL: {{^}}s_sub_i32:
-; GCN: s_load_dwordx2 s[[[A:[0-9]+]]:[[B:[0-9]+]]]
-; GCN: s_load_dwordx2
-; GCN: s_sub_i32 s{{[0-9]+}}, s[[A]], s[[B]]
+; GCN: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}]
+; GCN: s_sub_i32 s{{[0-9]+}}, s[[#LOAD + 2]], s[[#LOAD + 3]]
 define amdgpu_kernel void @s_sub_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) {
   %result = sub i32 %a, %b
   store i32 %result, i32 addrspace(1)* %out
@@ -47,7 +46,7 @@ define amdgpu_kernel void @test_sub_imm_i32(i32 addrspace(1)* %out, i32 addrspac
 
 ; GCN-LABEL: {{^}}test_sub_v2i32:
 ; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
-; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
+; SI: v_subrev_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 
 ; GFX9: v_sub_u32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 ; GFX9: v_sub_u32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
@@ -61,7 +60,7 @@ define amdgpu_kernel void @test_sub_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32
 }
 
 ; GCN-LABEL: {{^}}test_sub_v4i32:
-; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
+; SI: v_subrev_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 ; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 ; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
 ; SI: v_sub_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}

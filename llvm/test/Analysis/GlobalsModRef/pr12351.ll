@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -globals-aa -gvn -S -disable-verify | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa,globals-aa -gvn -S -disable-verify | FileCheck %s
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
 define void @foo(i8* %x, i8* %y) {

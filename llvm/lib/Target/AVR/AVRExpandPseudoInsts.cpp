@@ -648,45 +648,28 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
-  Register TmpReg = 0; // 0 for no temporary register
   Register SrcReg = MI.getOperand(1).getReg();
   bool SrcIsKill = MI.getOperand(1).isKill();
   unsigned OpLo = AVR::LDRdPtr;
   unsigned OpHi = AVR::LDDRdPtrQ;
   TRI->splitReg(DstReg, DstLoReg, DstHiReg);
 
-  // Use a temporary register if src and dst registers are the same.
-  if (DstReg == SrcReg)
-    TmpReg = scavengeGPR8(MI);
-
-  Register CurDstLoReg = (DstReg == SrcReg) ? TmpReg : DstLoReg;
-  Register CurDstHiReg = (DstReg == SrcReg) ? TmpReg : DstHiReg;
+  // DstReg has an earlyclobber so the register allocator will allocate them in
+  // separate registers.
+  assert(DstReg != SrcReg && "Dst and Src registers are the same!");
 
   // Load low byte.
-  auto MIBLO = buildMI(MBB, MBBI, OpLo)
-                   .addReg(CurDstLoReg, RegState::Define)
-                   .addReg(SrcReg);
-
-  // Push low byte onto stack if necessary.
-  if (TmpReg)
-    buildMI(MBB, MBBI, AVR::PUSHRr).addReg(TmpReg);
+  buildMI(MBB, MBBI, OpLo)
+      .addReg(DstLoReg, RegState::Define)
+      .addReg(SrcReg)
+      .setMemRefs(MI.memoperands());
 
   // Load high byte.
-  auto MIBHI = buildMI(MBB, MBBI, OpHi)
-                   .addReg(CurDstHiReg, RegState::Define)
-                   .addReg(SrcReg, getKillRegState(SrcIsKill))
-                   .addImm(1);
-
-  if (TmpReg) {
-    // Move the high byte into the final destination.
-    buildMI(MBB, MBBI, AVR::MOVRdRr, DstHiReg).addReg(TmpReg);
-
-    // Move the low byte from the scratch space into the final destination.
-    buildMI(MBB, MBBI, AVR::POPRd, DstLoReg);
-  }
-
-  MIBLO.setMemRefs(MI.memoperands());
-  MIBHI.setMemRefs(MI.memoperands());
+  buildMI(MBB, MBBI, OpHi)
+      .addReg(DstHiReg, RegState::Define)
+      .addReg(SrcReg, getKillRegState(SrcIsKill))
+      .addImm(1)
+      .setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -763,7 +746,6 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
-  Register TmpReg = 0; // 0 for no temporary register
   Register SrcReg = MI.getOperand(1).getReg();
   unsigned Imm = MI.getOperand(2).getImm();
   bool SrcIsKill = MI.getOperand(1).isKill();
@@ -775,39 +757,23 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   // highest Imm value allowed for the instruction, 62 is the limit here.
   assert(Imm <= 62 && "Offset is out of range");
 
-  // Use a temporary register if src and dst registers are the same.
-  if (DstReg == SrcReg)
-    TmpReg = scavengeGPR8(MI);
-
-  Register CurDstLoReg = (DstReg == SrcReg) ? TmpReg : DstLoReg;
-  Register CurDstHiReg = (DstReg == SrcReg) ? TmpReg : DstHiReg;
+  // DstReg has an earlyclobber so the register allocator will allocate them in
+  // separate registers.
+  assert(DstReg != SrcReg && "Dst and Src registers are the same!");
 
   // Load low byte.
-  auto MIBLO = buildMI(MBB, MBBI, OpLo)
-                   .addReg(CurDstLoReg, RegState::Define)
-                   .addReg(SrcReg)
-                   .addImm(Imm);
-
-  // Push low byte onto stack if necessary.
-  if (TmpReg)
-    buildMI(MBB, MBBI, AVR::PUSHRr).addReg(TmpReg);
+  buildMI(MBB, MBBI, OpLo)
+      .addReg(DstLoReg, RegState::Define)
+      .addReg(SrcReg)
+      .addImm(Imm)
+      .setMemRefs(MI.memoperands());
 
   // Load high byte.
-  auto MIBHI = buildMI(MBB, MBBI, OpHi)
-                   .addReg(CurDstHiReg, RegState::Define)
-                   .addReg(SrcReg, getKillRegState(SrcIsKill))
-                   .addImm(Imm + 1);
-
-  if (TmpReg) {
-    // Move the high byte into the final destination.
-    buildMI(MBB, MBBI, AVR::MOVRdRr, DstHiReg).addReg(TmpReg);
-
-    // Move the low byte from the scratch space into the final destination.
-    buildMI(MBB, MBBI, AVR::POPRd, DstLoReg);
-  }
-
-  MIBLO.setMemRefs(MI.memoperands());
-  MIBHI.setMemRefs(MI.memoperands());
+  buildMI(MBB, MBBI, OpHi)
+      .addReg(DstHiReg, RegState::Define)
+      .addReg(SrcReg, getKillRegState(SrcIsKill))
+      .addImm(Imm + 1)
+      .setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -1382,8 +1348,8 @@ bool AVRExpandPseudo::expand<AVR::ROLBRd>(Block &MBB, BlockIt MBBI) {
                  .addReg(DstReg, getKillRegState(DstIsKill))
                  .addReg(ZERO_REGISTER);
 
-  // SREG is always implicitly killed
-  MIB->getOperand(2).setIsKill();
+  MIB->getOperand(3).setIsDead(); // SREG is always dead
+  MIB->getOperand(4).setIsKill(); // SREG is always implicitly killed
 
   MI.eraseFromParent();
   return true;

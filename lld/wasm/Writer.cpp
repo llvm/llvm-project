@@ -226,9 +226,9 @@ static void setGlobalPtr(DefinedGlobal *g, uint64_t memoryPtr) {
 // to each of the input data sections as well as the explicit stack region.
 // The default memory layout is as follows, from low to high.
 //
-//  - initialized data (starting at Config->globalBase)
+//  - initialized data (starting at config->globalBase)
 //  - BSS data (not currently implemented in llvm)
-//  - explicit stack (Config->ZStackSize)
+//  - explicit stack (config->ZStackSize)
 //  - heap start / unallocated
 //
 // The --stack-first option means that stack is placed before any static data.
@@ -242,22 +242,40 @@ void Writer::layoutMemory() {
     if (config->relocatable || config->isPic)
       return;
     memoryPtr = alignTo(memoryPtr, stackAlignment);
+    if (WasmSym::stackLow)
+      WasmSym::stackLow->setVA(memoryPtr);
     if (config->zStackSize != alignTo(config->zStackSize, stackAlignment))
       error("stack size must be " + Twine(stackAlignment) + "-byte aligned");
     log("mem: stack size  = " + Twine(config->zStackSize));
     log("mem: stack base  = " + Twine(memoryPtr));
     memoryPtr += config->zStackSize;
     setGlobalPtr(cast<DefinedGlobal>(WasmSym::stackPointer), memoryPtr);
+    if (WasmSym::stackHigh)
+      WasmSym::stackHigh->setVA(memoryPtr);
     log("mem: stack top   = " + Twine(memoryPtr));
   };
 
   if (config->stackFirst) {
     placeStack();
+    if (config->globalBase) {
+      if (config->globalBase < memoryPtr) {
+        error("--global-base cannot be less than stack size when --stack-first is used");
+        return;
+      }
+      memoryPtr = config->globalBase;
+    }
   } else {
+    if (!config->globalBase && !config->relocatable && !config->isPic) {
+      // The default offset for static/global data, for when --global-base is
+      // not specified on the command line.  The precise value of 1024 is
+      // somewhat arbitrary, and pre-dates wasm-ld (Its the value that
+      // emscripten used prior to wasm-ld).
+      config->globalBase = 1024;
+    }
     memoryPtr = config->globalBase;
-    log("mem: global base = " + Twine(config->globalBase));
   }
 
+  log("mem: global base = " + Twine(memoryPtr));
   if (WasmSym::globalBase)
     WasmSym::globalBase->setVA(memoryPtr);
 
@@ -328,8 +346,7 @@ void Writer::layoutMemory() {
     WasmSym::heapBase->setVA(memoryPtr);
   }
 
-  uint64_t maxMemorySetting = 1ULL
-                              << (config->is64.getValueOr(false) ? 48 : 32);
+  uint64_t maxMemorySetting = 1ULL << (config->is64.value_or(false) ? 48 : 32);
 
   if (config->initialMemory != 0) {
     if (config->initialMemory != alignTo(config->initialMemory, WasmPageSize))
@@ -341,9 +358,19 @@ void Writer::layoutMemory() {
             Twine(maxMemorySetting));
     memoryPtr = config->initialMemory;
   }
-  out.memorySec->numMemoryPages =
-      alignTo(memoryPtr, WasmPageSize) / WasmPageSize;
+
+  memoryPtr = alignTo(memoryPtr, WasmPageSize);
+
+  out.memorySec->numMemoryPages = memoryPtr / WasmPageSize;
   log("mem: total pages = " + Twine(out.memorySec->numMemoryPages));
+
+  if (WasmSym::heapEnd) {
+    // Set `__heap_end` to follow the end of the statically allocated linear
+    // memory. The fact that this comes last means that a malloc/brk
+    // implementation can grow the heap at runtime.
+    log("mem: heap end    = " + Twine(memoryPtr));
+    WasmSym::heapEnd->setVA(memoryPtr);
+  }
 
   if (config->maxMemory != 0) {
     if (config->maxMemory != alignTo(config->maxMemory, WasmPageSize))
@@ -364,7 +391,7 @@ void Writer::layoutMemory() {
       if (config->isPic)
         max = maxMemorySetting;
       else
-        max = alignTo(memoryPtr, WasmPageSize);
+        max = memoryPtr;
     }
     out.memorySec->maxMemoryPages = max / WasmPageSize;
     log("mem: max pages   = " + Twine(out.memorySec->maxMemoryPages));
@@ -446,11 +473,16 @@ void Writer::populateTargetFeatures() {
     allowed.insert("mutable-globals");
   }
 
+  if (config->extraFeatures.has_value()) {
+    auto &extraFeatures = config->extraFeatures.value();
+    allowed.insert(extraFeatures.begin(), extraFeatures.end());
+  }
+
   // Only infer used features if user did not specify features
-  bool inferFeatures = !config->features.hasValue();
+  bool inferFeatures = !config->features.has_value();
 
   if (!inferFeatures) {
-    auto &explicitFeatures = config->features.getValue();
+    auto &explicitFeatures = config->features.value();
     allowed.insert(explicitFeatures.begin(), explicitFeatures.end());
     if (!config->checkFeatures)
       goto done;
@@ -543,9 +575,9 @@ void Writer::populateTargetFeatures() {
 done:
   // Normally we don't include bss segments in the binary.  In particular if
   // memory is not being imported then we can assume its zero initialized.
-  // In the case the memory is imported, we and we can use the memory.fill
-  // instrction than we can also avoid inluding the segments.
-  if (config->importMemory && !allowed.count("bulk-memory"))
+  // In the case the memory is imported, and we can use the memory.fill
+  // instruction, then we can also avoid including the segments.
+  if (config->memoryImport.has_value() && !allowed.count("bulk-memory"))
     config->emitBssSegments = true;
 
   if (allowed.count("extended-const"))
@@ -614,7 +646,7 @@ static bool shouldImport(Symbol *sym) {
   if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
     return true;
 
-  return sym->importName.hasValue();
+  return sym->importName.has_value();
 }
 
 void Writer::calculateImports() {
@@ -625,7 +657,7 @@ void Writer::calculateImports() {
       shouldImport(WasmSym::indirectFunctionTable))
     out.importSec->addImport(WasmSym::indirectFunctionTable);
 
-  for (Symbol *sym : symtab->getSymbols()) {
+  for (Symbol *sym : symtab->symbols()) {
     if (!shouldImport(sym))
       continue;
     if (sym == WasmSym::indirectFunctionTable)
@@ -639,14 +671,15 @@ void Writer::calculateExports() {
   if (config->relocatable)
     return;
 
-  if (!config->relocatable && !config->importMemory)
+  if (!config->relocatable && config->memoryExport.has_value()) {
     out.exportSec->exports.push_back(
-        WasmExport{"memory", WASM_EXTERNAL_MEMORY, 0});
+        WasmExport{*config->memoryExport, WASM_EXTERNAL_MEMORY, 0});
+  }
 
   unsigned globalIndex =
       out.importSec->getNumImportedGlobals() + out.globalSec->numGlobals();
 
-  for (Symbol *sym : symtab->getSymbols()) {
+  for (Symbol *sym : symtab->symbols()) {
     if (!sym->isExported())
       continue;
     if (!sym->isLive())
@@ -690,7 +723,7 @@ void Writer::populateSymtab() {
   if (!config->relocatable && !config->emitRelocs)
     return;
 
-  for (Symbol *sym : symtab->getSymbols())
+  for (Symbol *sym : symtab->symbols())
     if (sym->isUsedInRegularObj && sym->isLive())
       out.linkingSec->addToSymtab(sym);
 
@@ -744,7 +777,7 @@ void Writer::createCommandExportWrappers() {
 
   std::vector<DefinedFunction *> toWrap;
 
-  for (Symbol *sym : symtab->getSymbols())
+  for (Symbol *sym : symtab->symbols())
     if (sym->isExported())
       if (auto *f = dyn_cast<DefinedFunction>(sym))
         toWrap.push_back(f);
@@ -755,7 +788,7 @@ void Writer::createCommandExportWrappers() {
     const std::string &funcName = commandExportWrapperNames.back();
 
     auto func = make<SyntheticFunction>(*f->getSignature(), funcName);
-    if (f->function->getExportName().hasValue())
+    if (f->function->getExportName())
       func->setExportName(f->function->getExportName()->str());
     else
       func->setExportName(f->getName().str());
@@ -975,7 +1008,7 @@ static void createFunction(DefinedFunction *func, StringRef bodyContent) {
 bool Writer::needsPassiveInitialization(const OutputSegment *segment) {
   // If bulk memory features is supported then we can perform bss initialization
   // (via memory.fill) during `__wasm_init_memory`.
-  if (config->importMemory && !segment->requiredInBinary())
+  if (config->memoryImport.has_value() && !segment->requiredInBinary())
     return true;
   return segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE;
 }
@@ -1019,17 +1052,6 @@ void Writer::createSyntheticInitFunctions() {
     WasmSym::tlsBase->markLive();
   }
 
-  if (config->isPic ||
-      config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
-    // For PIC code, or when dynamically importing addresses, we create
-    // synthetic functions that apply relocations.  These get called from
-    // __wasm_call_ctors before the user-level constructors.
-    WasmSym::applyDataRelocs = symtab->addSyntheticFunction(
-        "__wasm_apply_data_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
-    WasmSym::applyDataRelocs->markLive();
-  }
-
   if (config->isPic && out.globalSec->needsRelocations()) {
     WasmSym::applyGlobalRelocs = symtab->addSyntheticFunction(
         "__wasm_apply_global_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
@@ -1057,18 +1079,18 @@ void Writer::createInitMemoryFunction() {
     assert(WasmSym::initMemoryFlag);
     flagAddress = WasmSym::initMemoryFlag->getVA();
   }
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
   std::string bodyContent;
   {
     raw_string_ostream os(bodyContent);
     // Initialize memory in a thread-safe manner. The thread that successfully
-    // increments the flag from 0 to 1 is is responsible for performing the
-    // memory initialization. Other threads go sleep on the flag until the
-    // first thread finishing initializing memory, increments the flag to 2,
-    // and wakes all the other threads. Once the flag has been set to 2,
-    // subsequently started threads will skip the sleep. All threads
-    // unconditionally drop their passive data segments once memory has been
-    // initialized. The generated code is as follows:
+    // increments the flag from 0 to 1 is responsible for performing the memory
+    // initialization. Other threads go sleep on the flag until the first thread
+    // finishing initializing memory, increments the flag to 2, and wakes all
+    // the other threads. Once the flag has been set to 2, subsequently started
+    // threads will skip the sleep. All threads unconditionally drop their
+    // passive data segments once memory has been initialized. The generated
+    // code is as follows:
     //
     // (func $__wasm_init_memory
     //  (block $drop
@@ -1170,7 +1192,7 @@ void Writer::createInitMemoryFunction() {
       if (needsPassiveInitialization(s)) {
         // For passive BSS segments we can simple issue a memory.fill(0).
         // For non-BSS segments we do a memory.init.  Both these
-        // instructions take as thier first argument the destination
+        // instructions take as their first argument the destination
         // address.
         writePtrConst(os, s->startVA, is64, "destination address");
         if (config->isPic) {
@@ -1256,7 +1278,7 @@ void Writer::createInitMemoryFunction() {
     for (const OutputSegment *s : segments) {
       if (needsPassiveInitialization(s) && !s->isBss) {
         // The TLS region should not be dropped since its is needed
-        // during the intiailizing of each thread (__wasm_init_tls).
+        // during the initialization of each thread (__wasm_init_tls).
         if (config->sharedMemory && s->isTLS())
           continue;
         // data.drop instruction
@@ -1299,8 +1321,8 @@ void Writer::createStartFunction() {
 
 // For -shared (PIC) output, we create create a synthetic function which will
 // apply any relocations to the data segments on startup.  This function is
-// called `__wasm_apply_data_relocs` and is added at the beginning of
-// `__wasm_call_ctors` before any of the constructors run.
+// called `__wasm_apply_data_relocs` and is expected to be called before
+// any user code (i.e. before `__wasm_call_ctors`).
 void Writer::createApplyDataRelocationsFunction() {
   LLVM_DEBUG(dbgs() << "createApplyDataRelocationsFunction\n");
   // First write the body's contents to a string.
@@ -1353,11 +1375,9 @@ void Writer::createApplyGlobalTLSRelocationsFunction() {
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
 // in input object.
 void Writer::createCallCtorsFunction() {
-  // If __wasm_call_ctors isn't referenced, there aren't any ctors, and we
-  // aren't calling `__wasm_apply_data_relocs` for Emscripten-style PIC, don't
+  // If __wasm_call_ctors isn't referenced, there aren't any ctors, don't
   // define the `__wasm_call_ctors` function.
-  if (!WasmSym::callCtors->isLive() && !WasmSym::applyDataRelocs &&
-      initFunctions.empty())
+  if (!WasmSym::callCtors->isLive() && initFunctions.empty())
     return;
 
   // First write the body's contents to a string.
@@ -1365,12 +1385,6 @@ void Writer::createCallCtorsFunction() {
   {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
-
-    if (WasmSym::applyDataRelocs) {
-      writeU8(os, WASM_OPCODE_CALL, "CALL");
-      writeUleb128(os, WasmSym::applyDataRelocs->getFunctionIndex(),
-                   "function index");
-    }
 
     // Call constructors
     for (const WasmInitEntry &f : initFunctions) {
@@ -1524,9 +1538,6 @@ void Writer::createSyntheticSectionsPostLayout() {
 }
 
 void Writer::run() {
-  if (config->relocatable || config->isPic)
-    config->globalBase = 0;
-
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
   if (!config->isPic) {
@@ -1681,7 +1692,8 @@ void Writer::run() {
     return;
 
   if (Error e = buffer->commit())
-    fatal("failed to write the output file: " + toString(std::move(e)));
+    fatal("failed to write output '" + buffer->getPath() +
+          "': " + toString(std::move(e)));
 }
 
 // Open a result file.

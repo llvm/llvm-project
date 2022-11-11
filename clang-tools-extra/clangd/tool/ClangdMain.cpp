@@ -307,7 +307,9 @@ RetiredFlag<bool> AsyncPreamble("async-preamble");
 RetiredFlag<bool> CollectMainFileRefs("collect-main-file-refs");
 RetiredFlag<bool> CrossFileRename("cross-file-rename");
 RetiredFlag<std::string> ClangTidyChecks("clang-tidy-checks");
-RetiredFlag<std::string> InlayHints("inlay-hints");
+RetiredFlag<bool> InlayHints("inlay-hints");
+RetiredFlag<bool> FoldingRanges("folding-ranges");
+
 
 opt<int> LimitResults{
     "limit-results",
@@ -325,20 +327,20 @@ opt<int> ReferencesLimit{
     init(1000),
 };
 
+opt<int> RenameFileLimit{
+    "rename-file-limit",
+    cat(Features),
+    desc("Limit the number of files to be affected by symbol renaming. "
+         "0 means no limit (default=50)"),
+    init(50),
+};
+
 list<std::string> TweakList{
     "tweaks",
     cat(Features),
     desc("Specify a list of Tweaks to enable (only for clangd developers)."),
     Hidden,
     CommaSeparated,
-};
-
-opt<bool> FoldingRanges{
-    "folding-ranges",
-    cat(Features),
-    desc("Enable preview of FoldingRanges feature"),
-    init(false),
-    Hidden,
 };
 
 opt<unsigned> WorkerThreadsCount{
@@ -366,6 +368,7 @@ opt<bool> Test{
     cat(Misc),
     desc("Abbreviation for -input-style=delimited -pretty -sync "
          "-enable-test-scheme -enable-config=0 -log=verbose -crash-pragmas. "
+         "Also sets config options: Index.StandardLibrary=false. "
          "Intended to simplify lit tests"),
     init(false),
     Hidden,
@@ -703,6 +706,9 @@ public:
         C.Index.Background = *BGPolicy;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
+
+      if (Test)
+        C.Index.StandardLibrary = false;
       return true;
     };
   }
@@ -893,6 +899,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.BackgroundIndex = EnableBackgroundIndex;
   Opts.BackgroundIndexPriority = BackgroundIndexPriority;
   Opts.ReferencesLimit = ReferencesLimit;
+  Opts.Rename.LimitFiles = RenameFileLimit;
   auto PAI = createProjectAwareIndex(loadExternalIndex, Sync);
   if (StaticIdx) {
     IdxStack.emplace_back(std::move(StaticIdx));
@@ -903,7 +910,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.StaticIndex = PAI.get();
   }
   Opts.AsyncThreadsCount = WorkerThreadsCount;
-  Opts.FoldingRanges = FoldingRanges;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
 
   Opts.CodeComplete.IncludeIneligibleResults = IncludeIneligibleResults;

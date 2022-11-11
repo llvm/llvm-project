@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=i386-linux-gnu   -mattr=+sse2 -global-isel -code-model=large     -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK32
 ; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sse2 -global-isel -relocation-model=pic -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK64_SMALL
 
-define void @test_float(float* %a , float %b) {
+define void @test_float(ptr %a , float %b) {
 ; CHECK64_SMALL-LABEL: test_float:
 ; CHECK64_SMALL:       # %bb.0: # %entry
 ; CHECK64_SMALL-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -34,7 +34,7 @@ define void @test_float(float* %a , float %b) {
 ; CHECK32-NEXT:    retl
 entry:
   %aa = fadd float 5.500000e+00, %b
-  store float %aa, float* %a
+  store float %aa, ptr %a
   ret void
 }
 

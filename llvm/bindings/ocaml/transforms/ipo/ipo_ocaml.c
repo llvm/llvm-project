@@ -20,12 +20,6 @@
 #include "caml/misc.h"
 
 /* [`Module] Llvm.PassManager.t -> unit */
-value llvm_add_argument_promotion(LLVMPassManagerRef PM) {
-  LLVMAddArgumentPromotionPass(PM);
-  return Val_unit;
-}
-
-/* [`Module] Llvm.PassManager.t -> unit */
 value llvm_add_constant_merge(LLVMPassManagerRef PM) {
   LLVMAddConstantMergePass(PM);
   return Val_unit;
@@ -70,12 +64,6 @@ value llvm_add_global_dce(LLVMPassManagerRef PM) {
 /* [`Module] Llvm.PassManager.t -> unit */
 value llvm_add_global_optimizer(LLVMPassManagerRef PM) {
   LLVMAddGlobalOptimizerPass(PM);
-  return Val_unit;
-}
-
-/* [`Module] Llvm.PassManager.t -> unit */
-value llvm_add_prune_eh(LLVMPassManagerRef PM) {
-  LLVMAddPruneEHPass(PM);
   return Val_unit;
 }
 

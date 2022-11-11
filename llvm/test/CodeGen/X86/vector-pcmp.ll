@@ -1136,7 +1136,7 @@ define <32 x i8> @is_positive_mask_v32i8(<32 x i8> %x, <32 x i8> %y) {
   ret <32 x i8> %and
 }
 
-define <2 x i64> @ispositive_mask_load_v2i64(<2 x i64> %x, <2 x i64>* %p) {
+define <2 x i64> @ispositive_mask_load_v2i64(<2 x i64> %x, ptr %p) {
 ; SSE2-LABEL: ispositive_mask_load_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
@@ -1173,12 +1173,12 @@ define <2 x i64> @ispositive_mask_load_v2i64(<2 x i64> %x, <2 x i64>* %p) {
 ; AVX512-NEXT:    retq
   %cmp = icmp sgt <2 x i64> %x, <i64 -1, i64 -1>
   %mask = sext <2 x i1> %cmp to <2 x i64>
-  %y = load <2 x i64>, <2 x i64>* %p
+  %y = load <2 x i64>, ptr %p
   %and = and <2 x i64> %mask, %y
   ret <2 x i64> %and
 }
 
-define <4 x i32> @is_positive_mask_load_v4i32(<4 x i32> %x, <4 x i32>* %p) {
+define <4 x i32> @is_positive_mask_load_v4i32(<4 x i32> %x, ptr %p) {
 ; SSE-LABEL: is_positive_mask_load_v4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psrad $31, %xmm0
@@ -1192,12 +1192,12 @@ define <4 x i32> @is_positive_mask_load_v4i32(<4 x i32> %x, <4 x i32>* %p) {
 ; AVX-NEXT:    retq
   %cmp = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mask = sext <4 x i1> %cmp to <4 x i32>
-  %y = load <4 x i32>, <4 x i32>* %p
+  %y = load <4 x i32>, ptr %p
   %and = and <4 x i32> %y, %mask
   ret <4 x i32> %and
 }
 
-define <8 x i16> @is_positive_mask_load_v8i16(<8 x i16> %x, <8 x i16>* %p) {
+define <8 x i16> @is_positive_mask_load_v8i16(<8 x i16> %x, ptr %p) {
 ; SSE-LABEL: is_positive_mask_load_v8i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psraw $15, %xmm0
@@ -1211,12 +1211,12 @@ define <8 x i16> @is_positive_mask_load_v8i16(<8 x i16> %x, <8 x i16>* %p) {
 ; AVX-NEXT:    retq
   %cmp = icmp sgt <8 x i16> %x, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %mask = sext <8 x i1> %cmp to <8 x i16>
-  %y = load <8 x i16>, <8 x i16>* %p
+  %y = load <8 x i16>, ptr %p
   %and = and <8 x i16> %mask, %y
   ret <8 x i16> %and
 }
 
-define <16 x i8> @is_positive_mask_load_v16i8(<16 x i8> %x, <16 x i8>* %p) {
+define <16 x i8> @is_positive_mask_load_v16i8(<16 x i8> %x, ptr %p) {
 ; SSE-LABEL: is_positive_mask_load_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
@@ -1232,12 +1232,12 @@ define <16 x i8> @is_positive_mask_load_v16i8(<16 x i8> %x, <16 x i8>* %p) {
 ; AVX-NEXT:    retq
   %cmp = icmp sgt <16 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %mask = sext <16 x i1> %cmp to <16 x i8>
-  %y = load <16 x i8>, <16 x i8>* %p
+  %y = load <16 x i8>, ptr %p
   %and = and <16 x i8> %y, %mask
   ret <16 x i8> %and
 }
 
-define <4 x i64> @is_positive_mask_load_v4i64(<4 x i64> %x, <4 x i64>* %p) {
+define <4 x i64> @is_positive_mask_load_v4i64(<4 x i64> %x, ptr %p) {
 ; SSE2-LABEL: is_positive_mask_load_v4i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
@@ -1282,12 +1282,12 @@ define <4 x i64> @is_positive_mask_load_v4i64(<4 x i64> %x, <4 x i64>* %p) {
 ; AVX512-NEXT:    retq
   %cmp = icmp sgt <4 x i64> %x, <i64 -1, i64 -1, i64 -1, i64 -1>
   %mask = sext <4 x i1> %cmp to <4 x i64>
-  %y = load <4 x i64>, <4 x i64>* %p
+  %y = load <4 x i64>, ptr %p
   %and = and <4 x i64> %mask, %y
   ret <4 x i64> %and
 }
 
-define <8 x i32> @is_positive_mask_load_v8i32(<8 x i32> %x, <8 x i32>* %p) {
+define <8 x i32> @is_positive_mask_load_v8i32(<8 x i32> %x, ptr %p) {
 ; SSE-LABEL: is_positive_mask_load_v8i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psrad $31, %xmm0
@@ -1319,12 +1319,12 @@ define <8 x i32> @is_positive_mask_load_v8i32(<8 x i32> %x, <8 x i32>* %p) {
 ; AVX512-NEXT:    retq
   %cmp = icmp sgt <8 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %mask = sext <8 x i1> %cmp to <8 x i32>
-  %y = load <8 x i32>, <8 x i32>* %p
+  %y = load <8 x i32>, ptr %p
   %and = and <8 x i32> %y, %mask
   ret <8 x i32> %and
 }
 
-define <16 x i16> @is_positive_mask_load_v16i16(<16 x i16> %x, <16 x i16>* %p) {
+define <16 x i16> @is_positive_mask_load_v16i16(<16 x i16> %x, ptr %p) {
 ; SSE-LABEL: is_positive_mask_load_v16i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psraw $15, %xmm0
@@ -1356,12 +1356,12 @@ define <16 x i16> @is_positive_mask_load_v16i16(<16 x i16> %x, <16 x i16>* %p) {
 ; AVX512-NEXT:    retq
   %cmp = icmp sgt <16 x i16> %x, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %mask = sext <16 x i1> %cmp to <16 x i16>
-  %y = load <16 x i16>, <16 x i16>* %p
+  %y = load <16 x i16>, ptr %p
   %and = and <16 x i16> %mask, %y
   ret <16 x i16> %and
 }
 
-define <32 x i8> @is_positive_mask_load_v32i8(<32 x i8> %x, <32 x i8>* %p) {
+define <32 x i8> @is_positive_mask_load_v32i8(<32 x i8> %x, ptr %p) {
 ; SSE-LABEL: is_positive_mask_load_v32i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
@@ -1396,7 +1396,7 @@ define <32 x i8> @is_positive_mask_load_v32i8(<32 x i8> %x, <32 x i8>* %p) {
 ; AVX512-NEXT:    retq
   %cmp = icmp sgt <32 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %mask = sext <32 x i1> %cmp to <32 x i8>
-  %y = load <32 x i8>, <32 x i8>* %p
+  %y = load <32 x i8>, ptr %p
   %and = and <32 x i8> %y, %mask
   ret <32 x i8> %and
 }

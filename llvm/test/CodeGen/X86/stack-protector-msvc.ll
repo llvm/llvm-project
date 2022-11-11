@@ -5,18 +5,16 @@
 ; RUN: llc -mtriple=i686-pc-windows-msvc -O0 < %s -o - | FileCheck -check-prefix=MSVC-X86-O0 %s
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc -O0 < %s -o - | FileCheck -check-prefix=MSVC-X64-O0 %s
 
-@"\01LC" = internal constant [11 x i8] c"buf == %s\0A\00"    ; <[11 x i8]*> [#uses=1]
+@"\01LC" = internal constant [11 x i8] c"buf == %s\0A\00"    ; <ptr> [#uses=1]
 
-define void @test(i8* %a) nounwind ssp {
+define void @test(ptr %a) nounwind ssp {
 entry:
- %a_addr = alloca i8*    ; <i8**> [#uses=2]
- %buf = alloca [8 x i8]    ; <[8 x i8]*> [#uses=2]
- store i8* %a, i8** %a_addr
- %buf1 = bitcast [8 x i8]* %buf to i8*   ; <i8*> [#uses=1]
- %0 = load i8*, i8** %a_addr, align 4    ; <i8*> [#uses=1]
- %1 = call i8* @strcpy(i8* %buf1, i8* %0) nounwind   ; <i8*> [#uses=0]
-  %buf2 = bitcast [8 x i8]* %buf to i8*    ; <i8*> [#uses=1]
- %2 = call i32 (i8*, ...) @printf(i8* getelementptr ([11 x i8], [11 x i8]* @"\01LC", i32 0, i32 0), i8* %buf2) nounwind    ; <i32> [#uses=0]
+ %a_addr = alloca ptr    ; <ptr> [#uses=2]
+ %buf = alloca [8 x i8]    ; <ptr> [#uses=2]
+ store ptr %a, ptr %a_addr
+ %0 = load ptr, ptr %a_addr, align 4    ; <ptr> [#uses=1]
+ %1 = call ptr @strcpy(ptr %buf, ptr %0) nounwind   ; <ptr> [#uses=0]
+ %2 = call i32 (ptr, ...) @printf(ptr @"\01LC", ptr %buf) nounwind    ; <i32> [#uses=0]
  br label %return
 
 return:    ; preds = %entry
@@ -64,11 +62,11 @@ return:    ; preds = %entry
 ; MSVC-X64-O0: retq
 
 
-declare void @escape(i32*)
+declare void @escape(ptr)
 
 define void @test_vla(i32 %n) nounwind ssp {
   %vla = alloca i32, i32 %n
-  call void @escape(i32* %vla)
+  call void @escape(ptr %vla)
   ret void
 }
 
@@ -110,8 +108,8 @@ define void @test_vla(i32 %n) nounwind ssp {
 define void @test_vla_realign(i32 %n) nounwind ssp {
   %realign = alloca i32, align 32
   %vla = alloca i32, i32 %n
-  call void @escape(i32* %realign)
-  call void @escape(i32* %vla)
+  call void @escape(ptr %realign)
+  call void @escape(ptr %vla)
   ret void
 }
 
@@ -154,7 +152,7 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X64: retq
 
 
-declare i8* @strcpy(i8*, i8*) nounwind
+declare ptr @strcpy(ptr, ptr) nounwind
 
-declare i32 @printf(i8*, ...) nounwind
+declare i32 @printf(ptr, ...) nounwind
 

@@ -147,14 +147,14 @@ define <2 x i12> @lshr_add_nuw(<2 x i12> %x) {
 
 ; extra use is ok and in this case the result can be simplified to a constant
 
-define i32 @ashr_add_nuw(i32 %x, i32* %p) {
+define i32 @ashr_add_nuw(i32 %x, ptr %p) {
 ; CHECK-LABEL: @ashr_add_nuw(
 ; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[X:%.*]], 5
-; CHECK-NEXT:    store i32 [[A]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[A]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 -1
 ;
   %a = add nuw i32 %x, 5
-  store i32 %a, i32* %p
+  store i32 %a, ptr %p
   %r = ashr i32 -6, %a
   ret i32 %r
 }
@@ -366,15 +366,15 @@ define i32 @shl_nsw_add_negative(i32 %x) {
 ; vectors and extra uses are allowed
 ; nuw propagates to the new shift
 
-define <2 x i8> @shl_nuw_add_negative_splat_uses(<2 x i8> %x, <2 x i8>* %p) {
+define <2 x i8> @shl_nuw_add_negative_splat_uses(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @shl_nuw_add_negative_splat_uses(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -2, i8 -2>
-; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i8> <i8 3, i8 3>, [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -2, i8 -2>
-  store <2 x i8> %a, <2 x i8>* %p
+  store <2 x i8> %a, ptr %p
   %r = shl nuw <2 x i8> <i8 12, i8 12>, %a
   ret <2 x i8> %r
 }

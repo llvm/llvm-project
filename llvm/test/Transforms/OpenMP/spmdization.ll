@@ -702,9 +702,9 @@ define internal void @__omp_outlined__2(i32* noalias %.global_tid., i32* noalias
 ; AMDGPU-LABEL: define {{[^@]+}}@__omp_outlined__2
 ; AMDGPU-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; AMDGPU-NEXT:  entry:
+; AMDGPU-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
-; AMDGPU-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
-; AMDGPU-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast i8 addrspace(5)* [[TMP0]] to i8*
+; AMDGPU-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast i8 addrspace(5)* [[X_H2S]] to i8*
 ; AMDGPU-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* [[MALLOC_CAST]] to i32*
 ; AMDGPU-NEXT:    call void @use(i32* nocapture [[X_ON_STACK]]) #[[ATTR7]]
 ; AMDGPU-NEXT:    br label [[FOR_COND:%.*]]
@@ -716,18 +716,18 @@ define internal void @__omp_outlined__2(i32* noalias %.global_tid., i32* noalias
 ; AMDGPU-NEXT:    call void @spmd_amenable() #[[ATTR7]]
 ; AMDGPU-NEXT:    ret void
 ; AMDGPU:       for.body:
-; AMDGPU-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4, !tbaa [[TBAA18]]
-; AMDGPU-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-; AMDGPU-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** [[TMP2]], i64 0)
+; AMDGPU-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4, !tbaa [[TBAA18]]
+; AMDGPU-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; AMDGPU-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** [[TMP1]], i64 0)
 ; AMDGPU-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP25:![0-9]+]]
 ;
 ; NVPTX-LABEL: define {{[^@]+}}@__omp_outlined__2
 ; NVPTX-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; NVPTX-NEXT:  entry:
+; NVPTX-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
-; NVPTX-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 4
-; NVPTX-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* [[TMP0]] to i32*
+; NVPTX-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* [[X_H2S]] to i32*
 ; NVPTX-NEXT:    call void @use(i32* nocapture [[X_ON_STACK]]) #[[ATTR7]]
 ; NVPTX-NEXT:    br label [[FOR_COND:%.*]]
 ; NVPTX:       for.cond:
@@ -738,18 +738,18 @@ define internal void @__omp_outlined__2(i32* noalias %.global_tid., i32* noalias
 ; NVPTX-NEXT:    call void @spmd_amenable() #[[ATTR7]]
 ; NVPTX-NEXT:    ret void
 ; NVPTX:       for.body:
-; NVPTX-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4, !tbaa [[TBAA18]]
-; NVPTX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-; NVPTX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** [[TMP2]], i64 0)
+; NVPTX-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4, !tbaa [[TBAA18]]
+; NVPTX-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; NVPTX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** [[TMP1]], i64 0)
 ; NVPTX-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP25:![0-9]+]]
 ;
 ; AMDGPU-DISABLED-LABEL: define {{[^@]+}}@__omp_outlined__2
 ; AMDGPU-DISABLED-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; AMDGPU-DISABLED-NEXT:  entry:
+; AMDGPU-DISABLED-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
 ; AMDGPU-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
-; AMDGPU-DISABLED-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
-; AMDGPU-DISABLED-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast i8 addrspace(5)* [[TMP0]] to i8*
+; AMDGPU-DISABLED-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast i8 addrspace(5)* [[X_H2S]] to i8*
 ; AMDGPU-DISABLED-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* [[MALLOC_CAST]] to i32*
 ; AMDGPU-DISABLED-NEXT:    call void @use(i32* nocapture [[X_ON_STACK]]) #[[ATTR7]]
 ; AMDGPU-DISABLED-NEXT:    br label [[FOR_COND:%.*]]
@@ -761,18 +761,18 @@ define internal void @__omp_outlined__2(i32* noalias %.global_tid., i32* noalias
 ; AMDGPU-DISABLED-NEXT:    call void @spmd_amenable() #[[ATTR7]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ; AMDGPU-DISABLED:       for.body:
-; AMDGPU-DISABLED-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4, !tbaa [[TBAA18]]
-; AMDGPU-DISABLED-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-; AMDGPU-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* @__omp_outlined__3_wrapper.ID, i8** [[TMP2]], i64 0)
+; AMDGPU-DISABLED-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4, !tbaa [[TBAA18]]
+; AMDGPU-DISABLED-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; AMDGPU-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* @__omp_outlined__3_wrapper.ID, i8** [[TMP1]], i64 0)
 ; AMDGPU-DISABLED-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-DISABLED-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP25:![0-9]+]]
 ;
 ; NVPTX-DISABLED-LABEL: define {{[^@]+}}@__omp_outlined__2
 ; NVPTX-DISABLED-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; NVPTX-DISABLED-NEXT:  entry:
+; NVPTX-DISABLED-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4
 ; NVPTX-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
-; NVPTX-DISABLED-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 4
-; NVPTX-DISABLED-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* [[TMP0]] to i32*
+; NVPTX-DISABLED-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* [[X_H2S]] to i32*
 ; NVPTX-DISABLED-NEXT:    call void @use(i32* nocapture [[X_ON_STACK]]) #[[ATTR7]]
 ; NVPTX-DISABLED-NEXT:    br label [[FOR_COND:%.*]]
 ; NVPTX-DISABLED:       for.cond:
@@ -783,9 +783,9 @@ define internal void @__omp_outlined__2(i32* noalias %.global_tid., i32* noalias
 ; NVPTX-DISABLED-NEXT:    call void @spmd_amenable() #[[ATTR7]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ; NVPTX-DISABLED:       for.body:
-; NVPTX-DISABLED-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4, !tbaa [[TBAA18]]
-; NVPTX-DISABLED-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-; NVPTX-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* @__omp_outlined__3_wrapper.ID, i8** [[TMP2]], i64 0)
+; NVPTX-DISABLED-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4, !tbaa [[TBAA18]]
+; NVPTX-DISABLED-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; NVPTX-DISABLED-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* @__omp_outlined__3_wrapper.ID, i8** [[TMP1]], i64 0)
 ; NVPTX-DISABLED-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-DISABLED-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP25:![0-9]+]]
 ;
@@ -1603,7 +1603,7 @@ define internal void @__omp_outlined__7(i32* noalias %.global_tid., i32* noalias
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA18]]
 ; AMDGPU-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
 ; AMDGPU-NEXT:    store i32 [[INC]], i32* [[X]], align 4, !tbaa [[TBAA18]]
-; AMDGPU-NEXT:    call void @unknown() #[[ATTR8]]
+; AMDGPU-NEXT:    call void @unknowni32p(i32* [[X]]) #[[ATTR8]]
 ; AMDGPU-NEXT:    ret void
 ;
 ; NVPTX-LABEL: define {{[^@]+}}@__omp_outlined__7
@@ -1612,7 +1612,7 @@ define internal void @__omp_outlined__7(i32* noalias %.global_tid., i32* noalias
 ; NVPTX-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA18]]
 ; NVPTX-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
 ; NVPTX-NEXT:    store i32 [[INC]], i32* [[X]], align 4, !tbaa [[TBAA18]]
-; NVPTX-NEXT:    call void @unknown() #[[ATTR8]]
+; NVPTX-NEXT:    call void @unknowni32p(i32* [[X]]) #[[ATTR8]]
 ; NVPTX-NEXT:    ret void
 ;
 ; AMDGPU-DISABLED-LABEL: define {{[^@]+}}@__omp_outlined__7
@@ -1621,7 +1621,7 @@ define internal void @__omp_outlined__7(i32* noalias %.global_tid., i32* noalias
 ; AMDGPU-DISABLED-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA18]]
 ; AMDGPU-DISABLED-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
 ; AMDGPU-DISABLED-NEXT:    store i32 [[INC]], i32* [[X]], align 4, !tbaa [[TBAA18]]
-; AMDGPU-DISABLED-NEXT:    call void @unknown() #[[ATTR8]]
+; AMDGPU-DISABLED-NEXT:    call void @unknowni32p(i32* [[X]]) #[[ATTR8]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ; NVPTX-DISABLED-LABEL: define {{[^@]+}}@__omp_outlined__7
@@ -1630,14 +1630,14 @@ define internal void @__omp_outlined__7(i32* noalias %.global_tid., i32* noalias
 ; NVPTX-DISABLED-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA18]]
 ; NVPTX-DISABLED-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
 ; NVPTX-DISABLED-NEXT:    store i32 [[INC]], i32* [[X]], align 4, !tbaa [[TBAA18]]
-; NVPTX-DISABLED-NEXT:    call void @unknown() #[[ATTR8]]
+; NVPTX-DISABLED-NEXT:    call void @unknowni32p(i32* [[X]]) #[[ATTR8]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 entry:
   %0 = load i32, i32* %x, align 4, !tbaa !18
   %inc = add nsw i32 %0, 1
   store i32 %inc, i32* %x, align 4, !tbaa !18
-  call void @unknown() #11
+  call void @unknowni32p(i32* %x) #11
   ret void
 }
 
@@ -2252,11 +2252,15 @@ declare void @use(i32* nocapture) #5
 
 ; Function Attrs: convergent
 declare void @unknown() #2
+declare void @unknowni32p(i32*) #2
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1)
+; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
+define weak i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1) {
+  ret i32 0
+}
 
 declare void @__kmpc_get_shared_variables(i8***)
 
@@ -2394,7 +2398,7 @@ attributes #11 = { convergent }
 !12 = !{i32 1, !"wchar_size", i32 4}
 !13 = !{i32 7, !"openmp", i32 50}
 !14 = !{i32 7, !"openmp-device", i32 50}
-!15 = !{i32 7, !"PIC Level", i32 2}
+!15 = !{i32 8, !"PIC Level", i32 2}
 !16 = !{i32 7, !"frame-pointer", i32 2}
 !17 = !{!"clang version 14.0.0"}
 !18 = !{!19, !19, i64 0}
@@ -2422,7 +2426,7 @@ attributes #11 = { convergent }
 ; AMDGPU: attributes #[[ATTR6:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; AMDGPU: attributes #[[ATTR7]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; AMDGPU: attributes #[[ATTR8]] = { convergent }
-; AMDGPU: attributes #[[ATTR9:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
+; AMDGPU: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; AMDGPU: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
 ; AMDGPU: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
 ;.
@@ -2435,7 +2439,7 @@ attributes #11 = { convergent }
 ; NVPTX: attributes #[[ATTR6:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; NVPTX: attributes #[[ATTR7]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; NVPTX: attributes #[[ATTR8]] = { convergent }
-; NVPTX: attributes #[[ATTR9:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
+; NVPTX: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; NVPTX: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
 ; NVPTX: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
 ;.
@@ -2448,7 +2452,7 @@ attributes #11 = { convergent }
 ; AMDGPU-DISABLED: attributes #[[ATTR6:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; AMDGPU-DISABLED: attributes #[[ATTR7]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; AMDGPU-DISABLED: attributes #[[ATTR8]] = { convergent }
-; AMDGPU-DISABLED: attributes #[[ATTR9:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
+; AMDGPU-DISABLED: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; AMDGPU-DISABLED: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
 ; AMDGPU-DISABLED: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
 ;.
@@ -2461,7 +2465,7 @@ attributes #11 = { convergent }
 ; NVPTX-DISABLED: attributes #[[ATTR6:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; NVPTX-DISABLED: attributes #[[ATTR7]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; NVPTX-DISABLED: attributes #[[ATTR8]] = { convergent }
-; NVPTX-DISABLED: attributes #[[ATTR9:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
+; NVPTX-DISABLED: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; NVPTX-DISABLED: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
 ; NVPTX-DISABLED: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
 ;.
@@ -2480,7 +2484,7 @@ attributes #11 = { convergent }
 ; AMDGPU: [[META12:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; AMDGPU: [[META13:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; AMDGPU: [[META14:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; AMDGPU: [[META15:![0-9]+]] = !{i32 7, !"PIC Level", i32 2}
+; AMDGPU: [[META15:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
 ; AMDGPU: [[META16:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
 ; AMDGPU: [[META17:![0-9]+]] = !{!"clang version 14.0.0"}
 ; AMDGPU: [[TBAA18]] = !{!19, !19, i64 0}
@@ -2514,7 +2518,7 @@ attributes #11 = { convergent }
 ; NVPTX: [[META12:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; NVPTX: [[META13:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; NVPTX: [[META14:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; NVPTX: [[META15:![0-9]+]] = !{i32 7, !"PIC Level", i32 2}
+; NVPTX: [[META15:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
 ; NVPTX: [[META16:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
 ; NVPTX: [[META17:![0-9]+]] = !{!"clang version 14.0.0"}
 ; NVPTX: [[TBAA18]] = !{!19, !19, i64 0}
@@ -2548,7 +2552,7 @@ attributes #11 = { convergent }
 ; AMDGPU-DISABLED: [[META12:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; AMDGPU-DISABLED: [[META13:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; AMDGPU-DISABLED: [[META14:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; AMDGPU-DISABLED: [[META15:![0-9]+]] = !{i32 7, !"PIC Level", i32 2}
+; AMDGPU-DISABLED: [[META15:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
 ; AMDGPU-DISABLED: [[META16:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
 ; AMDGPU-DISABLED: [[META17:![0-9]+]] = !{!"clang version 14.0.0"}
 ; AMDGPU-DISABLED: [[TBAA18]] = !{!19, !19, i64 0}
@@ -2582,7 +2586,7 @@ attributes #11 = { convergent }
 ; NVPTX-DISABLED: [[META12:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; NVPTX-DISABLED: [[META13:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; NVPTX-DISABLED: [[META14:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; NVPTX-DISABLED: [[META15:![0-9]+]] = !{i32 7, !"PIC Level", i32 2}
+; NVPTX-DISABLED: [[META15:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
 ; NVPTX-DISABLED: [[META16:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
 ; NVPTX-DISABLED: [[META17:![0-9]+]] = !{!"clang version 14.0.0"}
 ; NVPTX-DISABLED: [[TBAA18]] = !{!19, !19, i64 0}

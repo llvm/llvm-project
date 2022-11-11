@@ -801,6 +801,23 @@ void X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   switch (TSFlags & X86II::FormMask) {
   default:
     llvm_unreachable("Unexpected form in emitVEXOpcodePrefix!");
+  case X86II::MRMDestMem4VOp3CC: {
+    //  MemAddr, src1(ModR/M), src2(VEX_4V)
+    unsigned BaseRegEnc = getX86RegEncoding(MI, MemOperand + X86::AddrBaseReg);
+    VEX_B = ~(BaseRegEnc >> 3) & 1;
+    unsigned IndexRegEnc =
+        getX86RegEncoding(MI, MemOperand + X86::AddrIndexReg);
+    VEX_X = ~(IndexRegEnc >> 3) & 1;
+
+    CurOp += X86::AddrNumOperands;
+
+    unsigned RegEnc = getX86RegEncoding(MI, ++CurOp);
+    VEX_R = ~(RegEnc >> 3) & 1;
+
+    unsigned VRegEnc = getX86RegEncoding(MI, CurOp++);
+    VEX_4V = ~VRegEnc & 0xf;
+    break;
+  }
   case X86II::MRM_C0:
   case X86II::RawFrm:
   case X86II::PrefixByte:
@@ -1373,7 +1390,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     OpcodeOffset = MI.getOperand(NumOps - 1).getImm();
     assert(OpcodeOffset < 16 && "Unexpected opcode offset!");
     --NumOps; // Drop the operand from the end.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86II::RawFrm:
     emitByte(BaseOpcode + OpcodeOffset, OS);
 
@@ -1427,6 +1444,15 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     emitRegModRMByte(MI.getOperand(CurOp),
                      getX86RegNum(MI.getOperand(SrcRegNum)), OS);
     CurOp = SrcRegNum + 1;
+    break;
+  }
+  case X86II::MRMDestMem4VOp3CC: {
+    unsigned CC = MI.getOperand(8).getImm();
+    emitByte(BaseOpcode + CC, OS);
+    unsigned SrcRegNum = CurOp + X86::AddrNumOperands;
+    emitMemModRMByte(MI, CurOp + 1, getX86RegNum(MI.getOperand(0)), TSFlags,
+                    HasREX, StartByte, OS, Fixups, STI, false);
+    CurOp = SrcRegNum + 3; // skip reg, VEX_V4 and CC
     break;
   }
   case X86II::MRMDestMemFSIB:

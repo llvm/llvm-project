@@ -5,22 +5,21 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %Foo = type { [125 x i8] }
 
-declare i32 @llvm.eh.sjlj.setjmp(i8*) nounwind
+declare i32 @llvm.eh.sjlj.setjmp(ptr) nounwind
 
-declare void @whatever(i64, %Foo*, i8**, i8*, i8*, i32)  #0
+declare void @whatever(i64, ptr, ptr, ptr, ptr, i32)  #0
 
 attributes #0 = { nounwind uwtable "frame-pointer"="all" }
 
-define i32 @test1(i64 %n, %Foo* byval(%Foo) nocapture readnone align 8 %f) #0 {
+define i32 @test1(i64 %n, ptr byval(%Foo) nocapture readnone align 8 %f) #0 {
 entry:
-  %buf = alloca [5 x i8*], align 16
-  %p = alloca i8*, align 8
+  %buf = alloca [5 x ptr], align 16
+  %p = alloca ptr, align 8
   %q = alloca i8, align 64
-  %r = bitcast [5 x i8*]* %buf to i8*
   %s = alloca i8, i64 %n, align 1
-  store i8* %s, i8** %p, align 8
-  %t = call i32 @llvm.eh.sjlj.setjmp(i8* %s)
-  call void @whatever(i64 %n, %Foo* %f, i8** %p, i8* %q, i8* %s, i32 %t) #1
+  store ptr %s, ptr %p, align 8
+  %t = call i32 @llvm.eh.sjlj.setjmp(ptr %s)
+  call void @whatever(i64 %n, ptr %f, ptr %p, ptr %q, ptr %s, i32 %t) #1
   ret i32 0
 ; X86: movl    %esp, %esi
 ; X86: movl    %esp, -16(%ebp)

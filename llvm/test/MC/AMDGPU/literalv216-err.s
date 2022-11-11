@@ -30,11 +30,11 @@ v_pk_add_f16 v1, 0x1000ffff, v2
 
 v_pk_mad_i16 v5, 0x3c00, 0x4000, 0x4400
 // GFX9: error: literal operands are not supported
-// GFX10: error: only one literal operand is allowed
+// GFX10: error: only one unique literal operand is allowed
 
 v_pk_mad_i16 v5, 0x3c00, 0x4000, 2
 // GFX9: error: literal operands are not supported
-// GFX10: error: only one literal operand is allowed
+// GFX10: error: only one unique literal operand is allowed
 
 v_pk_mad_i16 v5, 0x3c00, 3, 2
 // GFX9: error: literal operands are not supported

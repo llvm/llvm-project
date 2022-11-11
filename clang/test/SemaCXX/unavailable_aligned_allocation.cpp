@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify -DMACOS %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fexceptions -std=c++1z -verify -DNO_ERRORS %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fexceptions -faligned-allocation -faligned-alloc-unavailable -std=c++14 -verify -DMACOS %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.12.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify -DMACOS %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.12.0 -fexceptions -std=c++1z -verify -DNO_ERRORS %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.12.0 -fexceptions -faligned-allocation -faligned-alloc-unavailable -std=c++14 -verify -DMACOS %s
 // RUN: %clang_cc1 -triple arm64-apple-ios10.0.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify -DIOS %s
 // RUN: %clang_cc1 -triple arm64-apple-ios10.0.0 -fexceptions -std=c++1z -verify -DNO_ERRORS %s
 // RUN: %clang_cc1 -triple arm64-apple-tvos10.0.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify -DTVOS %s
@@ -120,8 +120,8 @@ void testOveralignedCheckOS() {
 // expected-error@-13 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on watchOS 4 or newer}}}
 // expected-error@-14 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on watchOS 4 or newer}}}
 #elif defined(MACOS)
-// expected-error@-16 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on macOS 10.14 or newer}}}
-// expected-error@-17 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on macOS 10.14 or newer}}}
+// expected-error@-16 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on macOS 10.13 or newer}}}
+// expected-error@-17 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on macOS 10.13 or newer}}}
 #elif defined(ZOS)
 // expected-error@-19 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is not available on z/OS}}}
 // expected-error@-20 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is not available on z/OS}}}
@@ -152,7 +152,7 @@ OveralignedS2::~OveralignedS2() {}
 // expected-error@-12 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on watchOS 4 or newer}}}
 // expected-note@-13 {{if you supply your own aligned allocation functions}}
 #elif defined(MACOS)
-// expected-error@-15 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on macOS 10.14 or newer}}}
+// expected-error@-15 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on macOS 10.13 or newer}}}
 // expected-note@-16 {{if you supply your own aligned allocation functions}}
 #elif defined(ZOS)
 // expected-error@-18 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is not available on z/OS}}}

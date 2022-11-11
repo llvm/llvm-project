@@ -22,7 +22,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool tests()
 {
     using IterRefT = std::iterator_traits<std::vector<bool>::iterator>::reference;
     ASSERT_SAME_TYPE(IterRefT, std::vector<bool>::reference);
@@ -66,6 +66,8 @@ int main(int, char**)
         typedef std::vector<T> C;
         C::iterator i;
         C::const_iterator j;
+        (void) i;
+        (void) j;
     }
 #if TEST_STD_VER >= 11
     {
@@ -101,6 +103,8 @@ int main(int, char**)
         typedef std::vector<T, min_allocator<T>> C;
         C::iterator i;
         C::const_iterator j;
+        (void) i;
+        (void) j;
     }
 #endif
 #if TEST_STD_VER > 11
@@ -130,5 +134,14 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

@@ -388,8 +388,8 @@ namespace IncompleteConversion {
     completeFunction(*P); // expected-error {{no matching function for call to 'completeFunction'}}
   }
   
-  void incompletePointerFunction(Incomplete *); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'IncompleteConversion::Incomplete' to 'IncompleteConversion::Incomplete *' for 1st argument; take the address of the argument with &}}
-  void incompleteReferenceFunction(Incomplete &); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'IncompleteConversion::Incomplete *' to 'IncompleteConversion::Incomplete &' for 1st argument; dereference the argument with *}}
+  void incompletePointerFunction(Incomplete *); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'Incomplete' to 'Incomplete *' for 1st argument; take the address of the argument with &}}
+  void incompleteReferenceFunction(Incomplete &); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'Incomplete *' to 'Incomplete &' for 1st argument; dereference the argument with *}}
   
   void testPointerReferenceConversion(Incomplete &reference, Incomplete *pointer) {
     incompletePointerFunction(reference); // expected-error {{no matching function for call to 'incompletePointerFunction'}}
@@ -467,7 +467,7 @@ namespace PR6078 {
   };
 
   void f() {
-    S()(0); // expected-error{{conversion from 'int' to 'PR6078::A' is ambiguous}}
+    S()(0); // expected-error{{conversion from 'int' to 'A' is ambiguous}}
   }
 }
 

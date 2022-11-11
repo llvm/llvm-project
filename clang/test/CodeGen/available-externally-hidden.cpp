@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O2 -fvisibility hidden -std=c++11 -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
+// RUN: %clang_cc1 -O2 -fvisibility=hidden -std=c++11 -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
 
 // Ensure that available_externally functions eliminated at -O2 are now
 // declarations, and are not emitted as hidden with -fvisibility=hidden,

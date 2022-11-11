@@ -97,7 +97,8 @@ TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style)
                           << "\n");
 }
 
-std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
+std::pair<tooling::Replacements, unsigned>
+TokenAnalyzer::process(bool SkipAnnotation) {
   tooling::Replacements Result;
   llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
   IdentifierTable IdentTable(getFormattingLangOpts(Style));
@@ -121,7 +122,8 @@ std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
     TokenAnnotator Annotator(Style, Lex.getKeywords());
     for (const UnwrappedLine &Line : Lines) {
       AnnotatedLines.push_back(new AnnotatedLine(Line));
-      Annotator.annotate(*AnnotatedLines.back());
+      if (!SkipAnnotation)
+        Annotator.annotate(*AnnotatedLines.back());
     }
 
     std::pair<tooling::Replacements, unsigned> RunResult =

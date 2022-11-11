@@ -32,7 +32,7 @@ entry:
   br i1 %true, label %go, label %if.else
 
 go:
-  %b = load i16, i16* @b, align 4
+  %b = load i16, ptr @b, align 4
   %sext = shl i16 %b, 8
   %conv = ashr i16 %sext, 8
   %neg4 = xor i64 %const, -1

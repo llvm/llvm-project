@@ -94,7 +94,15 @@ ParseMemoryRegionInfoFromProcMapsLine(llvm::StringRef maps_line,
     return ProcMapError("unexpected /proc/{pid}/%s exec permission char",
                         maps_kind);
 
-  line_extractor.GetChar();              // Read the private bit
+  // Handle sharing status (private/shared).
+  const char sharing_char = line_extractor.GetChar();
+  if (sharing_char == 's')
+    region.SetShared(MemoryRegionInfo::OptionalBool::eYes);
+  else if (sharing_char == 'p')
+    region.SetShared(MemoryRegionInfo::OptionalBool::eNo);
+  else
+    region.SetShared(MemoryRegionInfo::OptionalBool::eDontKnow);
+
   line_extractor.SkipSpaces();           // Skip the separator
   line_extractor.GetHexMaxU64(false, 0); // Read the offset
   line_extractor.GetHexMaxU64(false, 0); // Read the major device number

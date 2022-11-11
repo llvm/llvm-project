@@ -8,14 +8,14 @@ target triple = "x86_64-unknown-linux-gnu"
 @a1 = unnamed_addr constant [2 x i32] [i32 1, i32 2]
 @e = internal  unnamed_addr constant [2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]], align 16
 @e1 = unnamed_addr constant [2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]], align 16
-@p = unnamed_addr constant i8* bitcast ([2 x i32]* @a to i8*)
-@t = unnamed_addr constant i8* bitcast ([2 x [2 x i32]]* @e to i8*)
-@p1 = unnamed_addr constant i8* bitcast ([2 x i32]* @a1 to i8*)
-@t1 = unnamed_addr constant i8* bitcast ([2 x [2 x i32]]* @e1 to i8*)
-@p2 = internal global i8* bitcast([2 x i32]* @a1 to i8*)
-@t2 = internal global i8* bitcast([2 x [2 x i32]]* @e1 to i8*)
-@p3 = internal global i8* bitcast([2 x i32]* @a to i8*)
-@t3 = internal global i8* bitcast([2 x [2 x i32]]* @e to i8*)
+@p = unnamed_addr constant ptr @a
+@t = unnamed_addr constant ptr @e
+@p1 = unnamed_addr constant ptr @a1
+@t1 = unnamed_addr constant ptr @e1
+@p2 = internal global ptr @a1
+@t2 = internal global ptr @e1
+@p3 = internal global ptr @a
+@t3 = internal global ptr @e
 
 ; STATIC: .section .rodata.cst8,"aM",@progbits,8
 ; STATIC: a:

@@ -1668,14 +1668,13 @@ template <typename T, typename Context>
 void IO::processKeyWithDefault(const char *Key, Optional<T> &Val,
                                const Optional<T> &DefaultValue, bool Required,
                                Context &Ctx) {
-  assert(DefaultValue.hasValue() == false &&
-         "Optional<T> shouldn't have a value!");
+  assert(!DefaultValue && "Optional<T> shouldn't have a value!");
   void *SaveInfo;
   bool UseDefault = true;
-  const bool sameAsDefault = outputting() && !Val.hasValue();
-  if (!outputting() && !Val.hasValue())
+  const bool sameAsDefault = outputting() && !Val;
+  if (!outputting() && !Val)
     Val = T();
-  if (Val.hasValue() &&
+  if (Val &&
       this->preflightKey(Key, Required, sameAsDefault, UseDefault, SaveInfo)) {
 
     // When reading an Optional<X> key from a YAML description, we allow the
@@ -1692,7 +1691,7 @@ void IO::processKeyWithDefault(const char *Key, Optional<T> &Val,
     if (IsNone)
       Val = DefaultValue;
     else
-      yamlize(*this, Val.getValue(), Required, Ctx);
+      yamlize(*this, *Val, Required, Ctx);
     this->postflightKey(SaveInfo);
   } else {
     if (UseDefault)
@@ -2020,9 +2019,8 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
   namespace llvm {                                                             \
   namespace yaml {                                                             \
   static_assert(                                                               \
-      !std::is_fundamental<TYPE>::value &&                                     \
-      !std::is_same<TYPE, std::string>::value &&                               \
-      !std::is_same<TYPE, llvm::StringRef>::value,                             \
+      !std::is_fundamental_v<TYPE> && !std::is_same_v<TYPE, std::string> &&    \
+          !std::is_same_v<TYPE, llvm::StringRef>,                              \
       "only use LLVM_YAML_IS_SEQUENCE_VECTOR for types you control");          \
   template <> struct SequenceElementTraits<TYPE> {                             \
     static const bool flow = FLOW;                                             \

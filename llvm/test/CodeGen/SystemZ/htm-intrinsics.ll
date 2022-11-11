@@ -2,12 +2,12 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=zEC12 | FileCheck %s
 
-declare i32 @llvm.s390.tbegin(i8 *, i32)
-declare i32 @llvm.s390.tbegin.nofloat(i8 *, i32)
-declare void @llvm.s390.tbeginc(i8 *, i32)
+declare i32 @llvm.s390.tbegin(ptr, i32)
+declare i32 @llvm.s390.tbegin.nofloat(ptr, i32)
+declare void @llvm.s390.tbeginc(ptr, i32)
 declare i32 @llvm.s390.tend()
 declare void @llvm.s390.tabort(i64)
-declare void @llvm.s390.ntstg(i64, i64 *)
+declare void @llvm.s390.ntstg(i64, ptr)
 declare i32 @llvm.s390.etnd()
 declare void @llvm.s390.ppa.txassist(i32)
 
@@ -33,7 +33,7 @@ define void @test_tbegin() {
 ; CHECK: ld %f14,
 ; CHECK: ld %f15,
 ; CHECK: br %r14
-  call i32 @llvm.s390.tbegin(i8 *null, i32 65292)
+  call i32 @llvm.s390.tbegin(ptr null, i32 65292)
   ret void
 }
 
@@ -44,7 +44,7 @@ define void @test_tbegin_nofloat1() {
 ; CHECK-NOT: std
 ; CHECK: tbegin 0, 65292
 ; CHECK: br %r14
-  call i32 @llvm.s390.tbegin.nofloat(i8 *null, i32 65292)
+  call i32 @llvm.s390.tbegin.nofloat(ptr null, i32 65292)
   ret void
 }
 
@@ -57,12 +57,12 @@ define i32 @test_tbegin_nofloat2() {
 ; CHECK: ipm %r2
 ; CHECK: srl %r2, 28
 ; CHECK: br %r14
-  %res = call i32 @llvm.s390.tbegin.nofloat(i8 *null, i32 65292)
+  %res = call i32 @llvm.s390.tbegin.nofloat(ptr null, i32 65292)
   ret i32 %res
 }
 
 ; TBEGIN (nofloat) with implicit CC check.
-define void @test_tbegin_nofloat3(i32 *%ptr) {
+define void @test_tbegin_nofloat3(ptr %ptr) {
 ; CHECK-LABEL: test_tbegin_nofloat3:
 ; CHECK-NOT: stmg
 ; CHECK-NOT: std
@@ -70,12 +70,12 @@ define void @test_tbegin_nofloat3(i32 *%ptr) {
 ; CHECK: bnhr %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
-  %res = call i32 @llvm.s390.tbegin.nofloat(i8 *null, i32 65292)
+  %res = call i32 @llvm.s390.tbegin.nofloat(ptr null, i32 65292)
   %cmp = icmp eq i32 %res, 2
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* %ptr, align 4
+  store i32 0, ptr %ptr, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -83,7 +83,7 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; TBEGIN (nofloat) with dual CC use.
-define i32 @test_tbegin_nofloat4(i32 %pad, i32 *%ptr) {
+define i32 @test_tbegin_nofloat4(i32 %pad, ptr %ptr) {
 ; CHECK-LABEL: test_tbegin_nofloat4:
 ; CHECK-NOT: stmg
 ; CHECK-NOT: std
@@ -93,12 +93,12 @@ define i32 @test_tbegin_nofloat4(i32 %pad, i32 *%ptr) {
 ; CHECK: ciblh %r2, 2, 0(%r14)
 ; CHECK: mvhi 0(%r3), 0
 ; CHECK: br %r14
-  %res = call i32 @llvm.s390.tbegin.nofloat(i8 *null, i32 65292)
+  %res = call i32 @llvm.s390.tbegin.nofloat(ptr null, i32 65292)
   %cmp = icmp eq i32 %res, 2
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* %ptr, align 4
+  store i32 0, ptr %ptr, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -106,13 +106,13 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; TBEGIN (nofloat) with register.
-define void @test_tbegin_nofloat5(i8 *%ptr) {
+define void @test_tbegin_nofloat5(ptr %ptr) {
 ; CHECK-LABEL: test_tbegin_nofloat5:
 ; CHECK-NOT: stmg
 ; CHECK-NOT: std
 ; CHECK: tbegin 0(%r2), 65292
 ; CHECK: br %r14
-  call i32 @llvm.s390.tbegin.nofloat(i8 *%ptr, i32 65292)
+  call i32 @llvm.s390.tbegin.nofloat(ptr %ptr, i32 65292)
   ret void
 }
 
@@ -123,7 +123,7 @@ define void @test_tbegin_nofloat6() {
 ; CHECK-NOT: std
 ; CHECK: tbegin 0, 3840
 ; CHECK: br %r14
-  call i32 @llvm.s390.tbegin.nofloat(i8 *null, i32 3840)
+  call i32 @llvm.s390.tbegin.nofloat(ptr null, i32 3840)
   ret void
 }
 
@@ -134,7 +134,7 @@ define void @test_tbegin_nofloat7() {
 ; CHECK-NOT: std
 ; CHECK: tbegin 0, 61696
 ; CHECK: br %r14
-  call i32 @llvm.s390.tbegin.nofloat(i8 *null, i32 61696)
+  call i32 @llvm.s390.tbegin.nofloat(ptr null, i32 61696)
   ret void
 }
 
@@ -145,7 +145,7 @@ define void @test_tbegin_nofloat8() {
 ; CHECK-NOT: std
 ; CHECK: tbegin 0, 65280
 ; CHECK: br %r14
-  call i32 @llvm.s390.tbegin.nofloat(i8 *null, i32 65024)
+  call i32 @llvm.s390.tbegin.nofloat(ptr null, i32 65024)
   ret void
 }
 
@@ -156,7 +156,7 @@ define void @test_tbegin_nofloat9() {
 ; CHECK-NOT: std
 ; CHECK: tbegin 0, 64256
 ; CHECK: br %r14
-  call i32 @llvm.s390.tbegin.nofloat(i8 *null, i32 64256)
+  call i32 @llvm.s390.tbegin.nofloat(ptr null, i32 64256)
   ret void
 }
 
@@ -168,7 +168,7 @@ define void @test_tbegin_nofloat10(i64 %n) {
 ; CHECK: tbegin 0, 65280
 ; CHECK: br %r14
   %buf = alloca i8, i64 %n
-  call i32 @llvm.s390.tbegin.nofloat(i8 *null, i32 64256)
+  call i32 @llvm.s390.tbegin.nofloat(ptr null, i32 64256)
   ret void
 }
 
@@ -179,7 +179,7 @@ define void @test_tbeginc() {
 ; CHECK-NOT: std
 ; CHECK: tbeginc 0, 65288
 ; CHECK: br %r14
-  call void @llvm.s390.tbeginc(i8 *null, i32 65288)
+  call void @llvm.s390.tbeginc(ptr null, i32 65288)
   ret void
 }
 
@@ -195,7 +195,7 @@ define i32 @test_tend1() {
 }
 
 ; TEND with implicit CC check.
-define void @test_tend3(i32 *%ptr) {
+define void @test_tend3(ptr %ptr) {
 ; CHECK-LABEL: test_tend3:
 ; CHECK: tend
 ; CHECK: ber %r14
@@ -206,7 +206,7 @@ define void @test_tend3(i32 *%ptr) {
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* %ptr, align 4
+  store i32 0, ptr %ptr, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -214,7 +214,7 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; TEND with dual CC use.
-define i32 @test_tend2(i32 %pad, i32 *%ptr) {
+define i32 @test_tend2(i32 %pad, ptr %ptr) {
 ; CHECK-LABEL: test_tend2:
 ; CHECK: tend
 ; CHECK: ipm %r2
@@ -227,7 +227,7 @@ define i32 @test_tend2(i32 %pad, i32 *%ptr) {
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* %ptr, align 4
+  store i32 0, ptr %ptr, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -272,63 +272,63 @@ define void @test_tabort4(i64 %val) {
 }
 
 ; NTSTG with base pointer only.
-define void @test_ntstg1(i64 *%ptr, i64 %val) {
+define void @test_ntstg1(ptr %ptr, i64 %val) {
 ; CHECK-LABEL: test_ntstg1:
 ; CHECK: ntstg %r3, 0(%r2)
 ; CHECK: br %r14
-  call void @llvm.s390.ntstg(i64 %val, i64 *%ptr)
+  call void @llvm.s390.ntstg(i64 %val, ptr %ptr)
   ret void
 }
 
 ; NTSTG with base and index.
 ; Check that VSTL doesn't allow an index.
-define void @test_ntstg2(i64 *%base, i64 %index, i64 %val) {
+define void @test_ntstg2(ptr %base, i64 %index, i64 %val) {
 ; CHECK-LABEL: test_ntstg2:
 ; CHECK: sllg [[REG:%r[1-5]]], %r3, 3
 ; CHECK: ntstg %r4, 0([[REG]],%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%base, i64 %index
-  call void @llvm.s390.ntstg(i64 %val, i64 *%ptr)
+  %ptr = getelementptr i64, ptr %base, i64 %index
+  call void @llvm.s390.ntstg(i64 %val, ptr %ptr)
   ret void
 }
 
 ; NTSTG with the highest in-range displacement.
-define void @test_ntstg3(i64 *%base, i64 %val) {
+define void @test_ntstg3(ptr %base, i64 %val) {
 ; CHECK-LABEL: test_ntstg3:
 ; CHECK: ntstg %r3, 524280(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%base, i64 65535
-  call void @llvm.s390.ntstg(i64 %val, i64 *%ptr)
+  %ptr = getelementptr i64, ptr %base, i64 65535
+  call void @llvm.s390.ntstg(i64 %val, ptr %ptr)
   ret void
 }
 
 ; NTSTG with an out-of-range positive displacement.
-define void @test_ntstg4(i64 *%base, i64 %val) {
+define void @test_ntstg4(ptr %base, i64 %val) {
 ; CHECK-LABEL: test_ntstg4:
 ; CHECK: ntstg %r3, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%base, i64 65536
-  call void @llvm.s390.ntstg(i64 %val, i64 *%ptr)
+  %ptr = getelementptr i64, ptr %base, i64 65536
+  call void @llvm.s390.ntstg(i64 %val, ptr %ptr)
   ret void
 }
 
 ; NTSTG with the lowest in-range displacement.
-define void @test_ntstg5(i64 *%base, i64 %val) {
+define void @test_ntstg5(ptr %base, i64 %val) {
 ; CHECK-LABEL: test_ntstg5:
 ; CHECK: ntstg %r3, -524288(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%base, i64 -65536
-  call void @llvm.s390.ntstg(i64 %val, i64 *%ptr)
+  %ptr = getelementptr i64, ptr %base, i64 -65536
+  call void @llvm.s390.ntstg(i64 %val, ptr %ptr)
   ret void
 }
 
 ; NTSTG with an out-of-range negative displacement.
-define void @test_ntstg6(i64 *%base, i64 %val) {
+define void @test_ntstg6(ptr %base, i64 %val) {
 ; CHECK-LABEL: test_ntstg6:
 ; CHECK: ntstg %r3, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%base, i64 -65537
-  call void @llvm.s390.ntstg(i64 %val, i64 *%ptr)
+  %ptr = getelementptr i64, ptr %base, i64 -65537
+  call void @llvm.s390.ntstg(i64 %val, ptr %ptr)
   ret void
 }
 

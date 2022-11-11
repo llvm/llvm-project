@@ -237,26 +237,26 @@ define <4 x i32> @var_funnnel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %amt) 
 ;
 ; SSE41-LABEL: var_funnnel_v4i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm8 = [31,31,31,31]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [31,31,31,31]
 ; SSE41-NEXT:    movdqa %xmm2, %xmm4
-; SSE41-NEXT:    pandn %xmm8, %xmm4
+; SSE41-NEXT:    pandn %xmm3, %xmm4
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm5 = xmm4[2,3,3,3,4,5,6,7]
 ; SSE41-NEXT:    psrld $1, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm6
 ; SSE41-NEXT:    psrld %xmm5, %xmm6
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm7 = xmm5[2,3,3,3,4,5,6,7]
-; SSE41-NEXT:    movdqa %xmm1, %xmm3
-; SSE41-NEXT:    psrld %xmm7, %xmm3
-; SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm6[0,1,2,3],xmm3[4,5,6,7]
+; SSE41-NEXT:    movdqa %xmm1, %xmm8
+; SSE41-NEXT:    psrld %xmm7, %xmm8
+; SSE41-NEXT:    pblendw {{.*#+}} xmm8 = xmm6[0,1,2,3],xmm8[4,5,6,7]
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,1,1,1,4,5,6,7]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm6
 ; SSE41-NEXT:    psrld %xmm4, %xmm6
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm4 = xmm5[0,1,1,1,4,5,6,7]
 ; SSE41-NEXT:    psrld %xmm4, %xmm1
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm6 = xmm6[0,1,2,3],xmm1[4,5,6,7]
-; SSE41-NEXT:    pblendw {{.*#+}} xmm6 = xmm6[0,1],xmm3[2,3],xmm6[4,5],xmm3[6,7]
-; SSE41-NEXT:    pand %xmm8, %xmm2
+; SSE41-NEXT:    pblendw {{.*#+}} xmm6 = xmm6[0,1],xmm8[2,3],xmm6[4,5],xmm8[6,7]
+; SSE41-NEXT:    pand %xmm3, %xmm2
 ; SSE41-NEXT:    pslld $23, %xmm2
 ; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE41-NEXT:    cvttps2dq %xmm2, %xmm1
@@ -1396,7 +1396,7 @@ define <16 x i8> @splatvar_funnnel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %
 ; CGP should allow a cross-block splat shift amount to be seen in SDAG.
 ; PR37426 - https://bugs.llvm.org/show_bug.cgi?id=37426
 
-define void @sink_splatvar(i32* %p, i32 %shift_amt) {
+define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; SSE-LABEL: sink_splatvar:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movd %esi, %xmm0
@@ -1622,11 +1622,10 @@ entry:
 
 loop:
   %index = phi i64 [ 0, %entry ], [ %inc, %loop ]
-  %addr = getelementptr inbounds i32, i32* %p, i64 %index
-  %addr_vec = bitcast i32* %addr to <4 x i32>*
-  %x = load <4 x i32>, <4 x i32>* %addr_vec, align 4
+  %addr = getelementptr inbounds i32, ptr %p, i64 %index
+  %x = load <4 x i32>, ptr %addr, align 4
   %fsh = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %splat)
-  store <4 x i32> %fsh, <4 x i32>* %addr_vec, align 4
+  store <4 x i32> %fsh, ptr %addr, align 4
   %inc = add i64 %index, 4
   %iv = icmp eq i64 %inc, 256
   br i1 %iv, label %end, label %loop

@@ -35,7 +35,7 @@ entry:
   br i1 undef, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %call = tail call signext i32 bitcast (i32 (...)* @fn_call to i32 ()*)()
+  %call = tail call signext i32 @fn_call()
   %cmp1 = icmp ne i32 %call, 0
   br label %if.end
 

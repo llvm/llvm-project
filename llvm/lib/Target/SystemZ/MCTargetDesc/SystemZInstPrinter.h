@@ -33,16 +33,14 @@ public:
   static const char *getRegisterName(unsigned RegNo);
 
   // Print an address with the given base, displacement and index.
-  static void printAddress(const MCAsmInfo *MAI, unsigned Base,
-                           const MCOperand &DispMO, unsigned Index,
-                           raw_ostream &O);
+  void printAddress(const MCAsmInfo *MAI, unsigned Base,
+                    const MCOperand &DispMO, unsigned Index, raw_ostream &O);
 
   // Print the given operand.
-  static void printOperand(const MCOperand &MO, const MCAsmInfo *MAI,
-                           raw_ostream &O);
+  void printOperand(const MCOperand &MO, const MCAsmInfo *MAI, raw_ostream &O);
 
-  static void printFormattedRegName(const MCAsmInfo *MAI, unsigned RegNo,
-                                    raw_ostream &O);
+  void printFormattedRegName(const MCAsmInfo *MAI, unsigned RegNo,
+                             raw_ostream &O) const;
 
   // Override MCInstPrinter.
   inline void printRegName(raw_ostream &O, unsigned RegNo) const override {
@@ -53,6 +51,11 @@ public:
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
 
 private:
+  template <unsigned N>
+  void printUImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  template <unsigned N>
+  void printSImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+
   // Print various types of operand.
   void printOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printOperand(const MCInst *MI, uint64_t /*Address*/, unsigned OpNum,

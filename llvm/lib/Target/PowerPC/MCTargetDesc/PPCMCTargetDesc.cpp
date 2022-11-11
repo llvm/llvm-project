@@ -48,6 +48,7 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "PPCGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
@@ -288,7 +289,7 @@ private:
     case 16:
     case 32:
     case 64:
-      return (int)Log2(Offset) << (int)ELF::STO_PPC64_LOCAL_BIT;
+      return Log2_32(Offset) << ELF::STO_PPC64_LOCAL_BIT;
     }
   }
 };

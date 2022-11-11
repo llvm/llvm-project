@@ -71,7 +71,8 @@ public:
   bool shouldPrint(const BinaryFunction &BF) const override { return false; }
 
   void runOnFunctions(BinaryContext &BC) override {
-    const DynoStats NewDynoStats = getDynoStats(BC.getBinaryFunctions());
+    const DynoStats NewDynoStats =
+        getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
     const bool Changed = (NewDynoStats != PrevDynoStats);
     outs() << "BOLT-INFO: program-wide dynostats " << Title
            << (Changed ? "" : " (no change)") << ":\n\n"
@@ -151,7 +152,9 @@ public:
   };
 
 private:
-  void modifyFunctionLayout(BinaryFunction &Function, LayoutType Type,
+  /// Run the specified layout algorithm on the given function. Returns `true`
+  /// if the order of blocks was changed.
+  bool modifyFunctionLayout(BinaryFunction &Function, LayoutType Type,
                             bool MinBranchClusters) const;
 
 public:

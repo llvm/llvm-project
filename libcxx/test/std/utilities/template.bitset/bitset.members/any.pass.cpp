@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test bool any() const;
+// bool any() const; // constexpr since C++23
 
 #include <bitset>
 #include <cassert>
@@ -15,7 +15,7 @@
 #include "test_macros.h"
 
 template <std::size_t N>
-void test_any() {
+TEST_CONSTEXPR_CXX23 void test_any() {
     std::bitset<N> v;
     v.reset();
     assert(v.any() == false);
@@ -30,16 +30,25 @@ void test_any() {
     }
 }
 
-int main(int, char**) {
-    test_any<0>();
-    test_any<1>();
-    test_any<31>();
-    test_any<32>();
-    test_any<33>();
-    test_any<63>();
-    test_any<64>();
-    test_any<65>();
-    test_any<1000>();
+TEST_CONSTEXPR_CXX23 bool test() {
+  test_any<0>();
+  test_any<1>();
+  test_any<31>();
+  test_any<32>();
+  test_any<33>();
+  test_any<63>();
+  test_any<64>();
+  test_any<65>();
+  test_any<1000>();
 
-    return 0;
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 20
+  static_assert(test());
+#endif
+
+  return 0;
 }

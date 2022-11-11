@@ -13,10 +13,12 @@ typedef void (*sighandler_t)(int);
 
 void _sig_ign(int);
 void _sig_dfl(int);
+void _sig_err(int);
 
 #define SIGINT 1
 #define SIG_IGN _sig_ign
 #define SIG_DFL _sig_dfl
+#define SIG_ERR _sig_err
 
 sighandler_t signal(int, sighandler_t);
 

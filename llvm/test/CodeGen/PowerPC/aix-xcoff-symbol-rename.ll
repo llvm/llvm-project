@@ -23,7 +23,7 @@
 
 define internal i32 @f$o() {
 entry:
-  %call = call i32 bitcast (i32 (...)* @"f\40o" to i32 ()*)()
+  %call = call i32 @"f\40o"()
   ret i32 %call
 }
 
@@ -31,15 +31,15 @@ entry:
 define i32 @"f\26o"() {
 entry:
   %tmp = call i32 @f$o()
-  %tmp1 = load i32, i32* @"f\3do"
+  %tmp1 = load i32, ptr @"f\3do"
   %tmp2 = add i32 %tmp, %tmp1
   ret i32 %tmp2
 }
 
 ; This is f&_o
-define i32 (...)* @"f\26_o"() {
+define ptr @"f\26_o"() {
 entry:
-  ret i32 (...)* @"f\40o"
+  ret ptr @"f\40o"
 }
 
 ; This is f@o
@@ -54,7 +54,7 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .vbyte  4, ._Renamed..24f_o     # @"f$o"
 ; ASM-NEXT:    .vbyte  4, TOC[TC0]
 ; ASM-NEXT:    .vbyte  4, 0
-; ASM-NEXT:    .csect .text[PR],2
+; ASM-NEXT:    .csect .text[PR],5
 ; ASM-NEXT:  ._Renamed..24f_o:
 ; ASM:         bl ._Renamed..40f_o[PR]
 ; ASM-NEXT:    nop
@@ -67,7 +67,7 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .vbyte  4, ._Renamed..26f_o     # @"f&o"
 ; ASM-NEXT:    .vbyte  4, TOC[TC0]
 ; ASM-NEXT:    .vbyte  4, 0
-; ASM-NEXT:    .csect .text[PR],2
+; ASM-NEXT:    .csect .text[PR],5
 ; ASM-NEXT:  ._Renamed..26f_o:
 ; ASM:         bl ._Renamed..24f_o
 ; ASM:         .globl  _Renamed..265ff__o[DS] # -- Begin function f&_o
@@ -79,7 +79,7 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .vbyte  4, ._Renamed..265ff__o  # @"f&_o"
 ; ASM-NEXT:    .vbyte  4, TOC[TC0]
 ; ASM-NEXT:    .vbyte  4, 0
-; ASM-NEXT:    .csect .text[PR],2
+; ASM-NEXT:    .csect .text[PR],5
 ; ASM-NEXT:  ._Renamed..265ff__o:
 ; ASM:         .csect .data[RW],2
 ; ASM-NEXT:    .globl  _Renamed..60f_o

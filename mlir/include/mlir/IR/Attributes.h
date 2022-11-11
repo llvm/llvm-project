@@ -13,6 +13,7 @@
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
+class AsmState;
 class StringAttr;
 
 /// Attributes are known-constant values of operations.
@@ -33,7 +34,7 @@ public:
   using ValueType = void;
   using AbstractTy = AbstractAttribute;
 
-  constexpr Attribute() {}
+  constexpr Attribute() = default;
   /* implicit */ Attribute(const ImplType *impl)
       : impl(const_cast<ImplType *>(impl)) {}
 
@@ -46,14 +47,18 @@ public:
 
   bool operator!() const { return impl == nullptr; }
 
-  template <typename U> bool isa() const;
-  template <typename First, typename Second, typename... Rest>
+  /// Casting utility functions. These are deprecated and will be removed,
+  /// please prefer using the `llvm` namespace variants instead.
+  template <typename... Tys>
   bool isa() const;
-  template <typename First, typename... Rest>
+  template <typename... Tys>
   bool isa_and_nonnull() const;
-  template <typename U> U dyn_cast() const;
-  template <typename U> U dyn_cast_or_null() const;
-  template <typename U> U cast() const;
+  template <typename U>
+  U dyn_cast() const;
+  template <typename U>
+  U dyn_cast_or_null() const;
+  template <typename U>
+  U cast() const;
 
   // Support dyn_cast'ing Attribute to itself.
   static bool classof(Attribute) { return true; }
@@ -61,9 +66,6 @@ public:
   /// Return a unique identifier for the concrete attribute type. This is used
   /// to support dynamic type casting.
   TypeID getTypeID() { return impl->getAbstractAttribute().getTypeID(); }
-
-  /// Return the type of this attribute.
-  Type getType() const { return impl->getType(); }
 
   /// Return the context this attribute belongs to.
   MLIRContext *getContext() const;
@@ -73,8 +75,10 @@ public:
     return impl->getAbstractAttribute().getDialect();
   }
 
-  /// Print the attribute.
-  void print(raw_ostream &os) const;
+  /// Print the attribute. If `elideType` is set, the attribute is printed
+  /// without a trailing colon type if it has one.
+  void print(raw_ostream &os, bool elideType = false) const;
+  void print(raw_ostream &os, AsmState &state, bool elideType = false) const;
   void dump() const;
 
   /// Get an opaque pointer to the attribute.
@@ -97,6 +101,9 @@ public:
     return impl->getAbstractAttribute();
   }
 
+  /// Return the internal Attribute implementation.
+  ImplType *getImpl() const { return impl; }
+
 protected:
   ImplType *impl{nullptr};
 };
@@ -106,30 +113,29 @@ inline raw_ostream &operator<<(raw_ostream &os, Attribute attr) {
   return os;
 }
 
-template <typename U> bool Attribute::isa() const {
-  assert(impl && "isa<> used on a null attribute.");
-  return U::classof(*this);
-}
-
-template <typename First, typename Second, typename... Rest>
+template <typename... Tys>
 bool Attribute::isa() const {
-  return isa<First>() || isa<Second, Rest...>();
+  return llvm::isa<Tys...>(*this);
 }
 
-template <typename First, typename... Rest>
+template <typename... Tys>
 bool Attribute::isa_and_nonnull() const {
-  return impl && isa<First, Rest...>();
+  return llvm::isa_and_present<Tys...>(*this);
 }
 
-template <typename U> U Attribute::dyn_cast() const {
-  return isa<U>() ? U(impl) : U(nullptr);
+template <typename U>
+U Attribute::dyn_cast() const {
+  return llvm::dyn_cast<U>(*this);
 }
-template <typename U> U Attribute::dyn_cast_or_null() const {
-  return (impl && isa<U>()) ? U(impl) : U(nullptr);
+
+template <typename U>
+U Attribute::dyn_cast_or_null() const {
+  return llvm::dyn_cast_if_present<U>(*this);
 }
-template <typename U> U Attribute::cast() const {
-  assert(isa<U>());
-  return U(impl);
+
+template <typename U>
+U Attribute::cast() const {
+  return llvm::cast<U>(*this);
 }
 
 inline ::llvm::hash_code hash_value(Attribute arg) {
@@ -231,12 +237,25 @@ private:
   friend InterfaceBase;
 };
 
+//===----------------------------------------------------------------------===//
+// Core AttributeTrait
+//===----------------------------------------------------------------------===//
+
+/// This trait is used to determine if an attribute is mutable or not. It is
+/// attached on an attribute if the corresponding ImplType defines a `mutate`
+/// function with proper signature.
+namespace AttributeTrait {
+template <typename ConcreteType>
+using IsMutable = detail::StorageUserTrait::IsMutable<ConcreteType>;
+} // namespace AttributeTrait
+
 } // namespace mlir.
 
 namespace llvm {
 
 // Attribute hash just like pointers.
-template <> struct DenseMapInfo<mlir::Attribute> {
+template <>
+struct DenseMapInfo<mlir::Attribute> {
   static mlir::Attribute getEmptyKey() {
     auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::Attribute(static_cast<mlir::Attribute::ImplType *>(pointer));
@@ -254,7 +273,8 @@ template <> struct DenseMapInfo<mlir::Attribute> {
 };
 template <typename T>
 struct DenseMapInfo<
-    T, std::enable_if_t<std::is_base_of<mlir::Attribute, T>::value>>
+    T, std::enable_if_t<std::is_base_of<mlir::Attribute, T>::value &&
+                        !mlir::detail::IsInterface<T>::value>>
     : public DenseMapInfo<mlir::Attribute> {
   static T getEmptyKey() {
     const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
@@ -267,7 +287,8 @@ struct DenseMapInfo<
 };
 
 /// Allow LLVM to steal the low bits of Attributes.
-template <> struct PointerLikeTypeTraits<mlir::Attribute> {
+template <>
+struct PointerLikeTypeTraits<mlir::Attribute> {
   static inline void *getAsVoidPointer(mlir::Attribute attr) {
     return const_cast<void *>(attr.getAsOpaquePointer());
   }
@@ -278,7 +299,8 @@ template <> struct PointerLikeTypeTraits<mlir::Attribute> {
       mlir::AttributeStorage *>::NumLowBitsAvailable;
 };
 
-template <> struct DenseMapInfo<mlir::NamedAttribute> {
+template <>
+struct DenseMapInfo<mlir::NamedAttribute> {
   static mlir::NamedAttribute getEmptyKey() {
     auto emptyAttr = llvm::DenseMapInfo<mlir::Attribute>::getEmptyKey();
     return mlir::NamedAttribute(emptyAttr, emptyAttr);
@@ -293,6 +315,31 @@ template <> struct DenseMapInfo<mlir::NamedAttribute> {
   static bool isEqual(mlir::NamedAttribute lhs, mlir::NamedAttribute rhs) {
     return lhs == rhs;
   }
+};
+
+/// Add support for llvm style casts. We provide a cast between To and From if
+/// From is mlir::Attribute or derives from it.
+template <typename To, typename From>
+struct CastInfo<To, From,
+                std::enable_if_t<std::is_same_v<mlir::Attribute,
+                                                std::remove_const_t<From>> ||
+                                 std::is_base_of_v<mlir::Attribute, From>>>
+    : NullableValueCastFailed<To>,
+      DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+  /// Arguments are taken as mlir::Attribute here and not as `From`, because
+  /// when casting from an intermediate type of the hierarchy to one of its
+  /// children, the val.getTypeID() inside T::classof will use the static
+  /// getTypeID of the parent instead of the non-static Type::getTypeID that
+  /// returns the dynamic ID. This means that T::classof would end up comparing
+  /// the static TypeID of the children to the static TypeID of its parent,
+  /// making it impossible to downcast from the parent to the child.
+  static inline bool isPossible(mlir::Attribute ty) {
+    /// Return a constant true instead of a dynamic true when casting to self or
+    /// up the hierarchy.
+    return std::is_same_v<To, std::remove_const_t<From>> ||
+           std::is_base_of_v<To, From> || To::classof(ty);
+  }
+  static inline To doCast(mlir::Attribute attr) { return To(attr.getImpl()); }
 };
 
 } // namespace llvm

@@ -2,14 +2,14 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 ; rdar://6707985
 
-	%XXOO = type { %"struct.XXC::XXCC", i8*, %"struct.XXC::XXOO::$_71" }
+	%XXOO = type { %"struct.XXC::XXCC", ptr, %"struct.XXC::XXOO::$_71" }
 	%XXValue = type opaque
-	%"struct.XXC::ArrayStorage" = type { i32, i32, i32, i8*, i8*, [1 x %XXValue*] }
-	%"struct.XXC::XXArray" = type { %XXOO, i32, %"struct.XXC::ArrayStorage"* }
-	%"struct.XXC::XXCC" = type { i32 (...)**, i8* }
-	%"struct.XXC::XXOO::$_71" = type { [2 x %XXValue*] }
+	%"struct.XXC::ArrayStorage" = type { i32, i32, i32, ptr, ptr, [1 x ptr] }
+	%"struct.XXC::XXArray" = type { %XXOO, i32, ptr }
+	%"struct.XXC::XXCC" = type { ptr, ptr }
+	%"struct.XXC::XXOO::$_71" = type { [2 x ptr] }
 
-define internal fastcc %XXValue* @t(i64* %out, %"struct.XXC::ArrayStorage"* %tmp9) nounwind {
+define internal fastcc ptr @t(ptr %out, ptr %tmp9) nounwind {
 ; CHECK-LABEL: t:
 ; CHECK:       ## %bb.0: ## %prologue
 ; CHECK-NEXT:    movq 22222222, %rax
@@ -18,16 +18,16 @@ define internal fastcc %XXValue* @t(i64* %out, %"struct.XXC::ArrayStorage"* %tmp
 ; CHECK-NEXT:    movq 32(%rsi,%rax,8), %rax
 ; CHECK-NEXT:    retq
 prologue:
-	%array = load %XXValue*, %XXValue** inttoptr (i64 11111111 to %XXValue**)		; <%XXValue*> [#uses=0]
-	%index = load %XXValue*, %XXValue** inttoptr (i64 22222222 to %XXValue**)		; <%XXValue*> [#uses=1]
-	%tmp = ptrtoint %XXValue* %index to i64		; <i64> [#uses=2]
-	store i64 %tmp, i64* %out
+	%array = load ptr, ptr inttoptr (i64 11111111 to ptr)		; <ptr> [#uses=0]
+	%index = load ptr, ptr inttoptr (i64 22222222 to ptr)		; <ptr> [#uses=1]
+	%tmp = ptrtoint ptr %index to i64		; <i64> [#uses=2]
+	store i64 %tmp, ptr %out
 	%tmp6 = trunc i64 %tmp to i32		; <i32> [#uses=1]
 	br label %bb5
 
 bb5:		; preds = %prologue
 	%tmp10 = zext i32 %tmp6 to i64		; <i64> [#uses=1]
-	%tmp11 = getelementptr %"struct.XXC::ArrayStorage", %"struct.XXC::ArrayStorage"* %tmp9, i64 0, i32 5, i64 %tmp10		; <%XXValue**> [#uses=1]
-	%tmp12 = load %XXValue*, %XXValue** %tmp11, align 8		; <%XXValue*> [#uses=1]
-	ret %XXValue* %tmp12
+	%tmp11 = getelementptr %"struct.XXC::ArrayStorage", ptr %tmp9, i64 0, i32 5, i64 %tmp10		; <ptr> [#uses=1]
+	%tmp12 = load ptr, ptr %tmp11, align 8		; <ptr> [#uses=1]
+	ret ptr %tmp12
 }

@@ -29,7 +29,7 @@ def CortexA55Model : SchedMachineModel {
   let PostRAScheduler = 1;    // Enable PostRA scheduler pass.
   let CompleteModel = 0;      // Covers instructions applicable to Cortex-A55.
 
-  list<Predicate> UnsupportedFeatures = [HasSVE];
+  list<Predicate> UnsupportedFeatures = [HasSVE, HasMTE];
 
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;

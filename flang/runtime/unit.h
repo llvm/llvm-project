@@ -39,6 +39,7 @@ public:
   explicit ExternalFileUnit(int unitNumber) : unitNumber_{unitNumber} {
     isUTF8 = executionEnvironment.defaultUTF8;
     asyncIdAvailable_.set();
+    asyncIdAvailable_.reset(0);
   }
   ~ExternalFileUnit() {}
 
@@ -47,10 +48,9 @@ public:
   bool createdForInternalChildIo() const { return createdForInternalChildIo_; }
 
   static ExternalFileUnit *LookUp(int unit);
-  static ExternalFileUnit &LookUpOrCrash(int unit, const Terminator &);
-  static ExternalFileUnit &LookUpOrCreate(
+  static ExternalFileUnit *LookUpOrCreate(
       int unit, const Terminator &, bool &wasExtant);
-  static ExternalFileUnit &LookUpOrCreateAnonymous(int unit, Direction,
+  static ExternalFileUnit *LookUpOrCreateAnonymous(int unit, Direction,
       std::optional<bool> isUnformatted, const Terminator &);
   static ExternalFileUnit *LookUp(const char *path, std::size_t pathLen);
   static ExternalFileUnit &CreateNew(int unit, const Terminator &);
@@ -70,8 +70,18 @@ public:
   Iostat SetDirection(Direction);
 
   template <typename A, typename... X>
-  IoStatementState &BeginIoStatement(X &&...xs) {
-    lock_.Take(); // dropped in EndIoStatement()
+  IoStatementState &BeginIoStatement(const Terminator &terminator, X &&...xs) {
+    bool alreadyBusy{false};
+    {
+      CriticalSection critical{lock_};
+      alreadyBusy = isBusy_;
+      isBusy_ = true; // cleared in EndIoStatement()
+    }
+    if (alreadyBusy) {
+      terminator.Crash("Could not acquire exclusive lock on unit %d, perhaps "
+                       "due to an attempt to perform recursive I/O",
+          unitNumber_);
+    }
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
     if constexpr (!std::is_same_v<A, OpenStatementState>) {
       state.mutableModes() = ConnectionState::modes;
@@ -94,10 +104,11 @@ public:
   void Endfile(IoErrorHandler &);
   void Rewind(IoErrorHandler &);
   void EndIoStatement();
-  void SetPosition(std::int64_t, IoErrorHandler &); // zero-based
+  bool SetStreamPos(std::int64_t, IoErrorHandler &); // one-based, for POS=
+  bool SetDirectRec(std::int64_t, IoErrorHandler &); // one-based, for REC=
   std::int64_t InquirePos() const {
     // 12.6.2.11 defines POS=1 as the beginning of file
-    return frameOffsetInFile_ + 1;
+    return frameOffsetInFile_ + recordOffsetInFrame_ + positionInRecord + 1;
   }
 
   ChildIo *GetChildIo() { return child_.get(); }
@@ -108,8 +119,10 @@ public:
   bool Wait(int);
 
 private:
+  static UnitMap &CreateUnitMap();
   static UnitMap &GetUnitMap();
   const char *FrameNextInput(IoErrorHandler &, std::size_t);
+  void SetPosition(std::int64_t, IoErrorHandler &); // zero-based
   void BeginSequentialVariableUnformattedInputRecord(IoErrorHandler &);
   void BeginVariableFormattedInputRecord(IoErrorHandler &);
   void BackspaceFixedRecord(IoErrorHandler &);
@@ -121,8 +134,11 @@ private:
   void CommitWrites();
   bool CheckDirectAccess(IoErrorHandler &);
   void HitEndOnRead(IoErrorHandler &);
+  std::int32_t ReadHeaderOrFooter(std::int64_t frameOffset);
 
   Lock lock_;
+  // TODO: replace with a thread ID
+  bool isBusy_{false}; // under lock_
 
   int unitNumber_{-1};
   Direction direction_{Direction::Output};

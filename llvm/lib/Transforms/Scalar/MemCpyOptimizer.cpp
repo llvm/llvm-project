@@ -331,16 +331,27 @@ void MemCpyOptPass::eraseInstruction(Instruction *I) {
 }
 
 // Check for mod or ref of Loc between Start and End, excluding both boundaries.
-// Start and End must be in the same block
+// Start and End must be in the same block.
+// If SkippedLifetimeStart is provided, skip over one clobbering lifetime.start
+// intrinsic and store it inside SkippedLifetimeStart.
 static bool accessedBetween(AliasAnalysis &AA, MemoryLocation Loc,
                             const MemoryUseOrDef *Start,
-                            const MemoryUseOrDef *End) {
+                            const MemoryUseOrDef *End,
+                            Instruction **SkippedLifetimeStart = nullptr) {
   assert(Start->getBlock() == End->getBlock() && "Only local supported");
   for (const MemoryAccess &MA :
        make_range(++Start->getIterator(), End->getIterator())) {
-    if (isModOrRefSet(AA.getModRefInfo(cast<MemoryUseOrDef>(MA).getMemoryInst(),
-                                       Loc)))
+    Instruction *I = cast<MemoryUseOrDef>(MA).getMemoryInst();
+    if (isModOrRefSet(AA.getModRefInfo(I, Loc))) {
+      auto *II = dyn_cast<IntrinsicInst>(I);
+      if (II && II->getIntrinsicID() == Intrinsic::lifetime_start &&
+          SkippedLifetimeStart && !*SkippedLifetimeStart) {
+        *SkippedLifetimeStart = I;
+        continue;
+      }
+
       return true;
+    }
   }
   return false;
 }
@@ -546,9 +557,17 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
   // Keep track of the arguments of all instruction we plan to lift
   // so we can make sure to lift them as well if appropriate.
   DenseSet<Instruction*> Args;
-  if (auto *Ptr = dyn_cast<Instruction>(SI->getPointerOperand()))
-    if (Ptr->getParent() == SI->getParent())
-      Args.insert(Ptr);
+  auto AddArg = [&](Value *Arg) {
+    auto *I = dyn_cast<Instruction>(Arg);
+    if (I && I->getParent() == SI->getParent()) {
+      // Cannot hoist user of P above P
+      if (I == P) return false;
+      Args.insert(I);
+    }
+    return true;
+  };
+  if (!AddArg(SI->getPointerOperand()))
+    return false;
 
   // Instruction to lift before P.
   SmallVector<Instruction *, 8> ToLift{SI};
@@ -612,14 +631,9 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
     }
 
     ToLift.push_back(C);
-    for (unsigned k = 0, e = C->getNumOperands(); k != e; ++k)
-      if (auto *A = dyn_cast<Instruction>(C->getOperand(k))) {
-        if (A->getParent() == SI->getParent()) {
-          // Cannot hoist user of P above P
-          if(A == P) return false;
-          Args.insert(A);
-        }
-      }
+    for (Value *Op : C->operands())
+      if (!AddArg(Op))
+        return false;
   }
 
   // Find MSSA insertion point. Normally P will always have a corresponding
@@ -773,7 +787,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
           LI, SI, SI->getPointerOperand()->stripPointerCasts(),
           LI->getPointerOperand()->stripPointerCasts(),
           DL.getTypeStoreSize(SI->getOperand(0)->getType()),
-          commonAlignment(SI->getAlign(), LI->getAlign()), GetCall);
+          std::min(SI->getAlign(), LI->getAlign()), GetCall);
       if (changed) {
         eraseInstruction(SI);
         eraseInstruction(LI);
@@ -910,8 +924,9 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   // Check that nothing touches the dest of the copy between
   // the call and the store/memcpy.
+  Instruction *SkippedLifetimeStart = nullptr;
   if (accessedBetween(*AA, DestLoc, MSSA->getMemoryAccess(C),
-                      MSSA->getMemoryAccess(cpyStore))) {
+                      MSSA->getMemoryAccess(cpyStore), &SkippedLifetimeStart)) {
     LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer modified after call\n");
     return false;
   }
@@ -920,11 +935,10 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // trap.  Otherwise the transform is invalid since it might cause a trap
   // to occur earlier than it otherwise would.
   if (!isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpySize),
-                                          DL, C, DT)) {
+                                          DL, C, AC, DT)) {
     LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer not dereferenceable\n");
     return false;
   }
-
 
   // Make sure that nothing can observe cpyDest being written early. There are
   // a number of cases to consider:
@@ -941,7 +955,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   //     renders accesses from other threads undefined.
   //     TODO: This is currently not checked.
   if (mayBeVisibleThroughUnwinding(cpyDest, C, cpyStore)) {
-    LLVM_DEBUG(dbgs() << "Call Slot: Dest may be visible through unwinding");
+    LLVM_DEBUG(dbgs() << "Call Slot: Dest may be visible through unwinding\n");
     return false;
   }
 
@@ -950,8 +964,10 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   bool isDestSufficientlyAligned = srcAlign <= cpyAlign;
   // If dest is not aligned enough and we can't increase its alignment then
   // bail out.
-  if (!isDestSufficientlyAligned && !isa<AllocaInst>(cpyDest))
+  if (!isDestSufficientlyAligned && !isa<AllocaInst>(cpyDest)) {
+    LLVM_DEBUG(dbgs() << "Call Slot: Dest not sufficiently aligned\n");
     return false;
+  }
 
   // Check that src is not accessed except via the call and the memcpy.  This
   // guarantees that it holds only undefined values when passed in (so the final
@@ -1088,6 +1104,12 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   if (!isDestSufficientlyAligned) {
     assert(isa<AllocaInst>(cpyDest) && "Can only increase alloca alignment!");
     cast<AllocaInst>(cpyDest)->setAlignment(srcAlign);
+  }
+
+  if (SkippedLifetimeStart) {
+    SkippedLifetimeStart->moveBefore(C);
+    MSSAU->moveBefore(MSSA->getMemoryAccess(SkippedLifetimeStart),
+                      MSSA->getMemoryAccess(C));
   }
 
   // Update AA metadata

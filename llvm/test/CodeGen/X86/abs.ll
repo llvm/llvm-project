@@ -35,7 +35,7 @@ define i8 @test_i8(i8 %a) nounwind {
 ;
 ; X86-LABEL: test_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    sarb $7, %cl
 ; X86-NEXT:    xorb %cl, %al
@@ -530,13 +530,13 @@ define <16 x i8> @test_v16i8(<16 x i8> %a) nounwind {
 ; X86-NEXT:    xorb %al, %bh
 ; X86-NEXT:    subb %al, %bh
 ; X86-NEXT:    movb %bh, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    sarb $7, %al
 ; X86-NEXT:    xorb %al, %cl
 ; X86-NEXT:    subb %al, %cl
 ; X86-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    sarb $7, %al
 ; X86-NEXT:    xorb %al, %cl
@@ -572,7 +572,7 @@ define <16 x i8> @test_v16i8(<16 x i8> %a) nounwind {
 ; X86-NEXT:    sarb $7, %al
 ; X86-NEXT:    xorb %al, %cl
 ; X86-NEXT:    subb %al, %cl
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb %al, %ah
 ; X86-NEXT:    sarb $7, %ah
 ; X86-NEXT:    xorb %ah, %al
@@ -585,23 +585,23 @@ define <16 x i8> @test_v16i8(<16 x i8> %a) nounwind {
 ; X86-NEXT:    movb %dh, 11(%esi)
 ; X86-NEXT:    movb %bl, 10(%esi)
 ; X86-NEXT:    movb %bh, 9(%esi)
-; X86-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X86-NEXT:    movb %al, 8(%esi)
-; X86-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X86-NEXT:    movb %al, 7(%esi)
-; X86-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X86-NEXT:    movb %al, 6(%esi)
-; X86-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X86-NEXT:    movb %al, 5(%esi)
-; X86-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X86-NEXT:    movb %al, 4(%esi)
-; X86-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X86-NEXT:    movb %al, 3(%esi)
-; X86-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X86-NEXT:    movb %al, 2(%esi)
-; X86-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X86-NEXT:    movb %al, 1(%esi)
-; X86-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X86-NEXT:    movb %al, (%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $12, %esp
@@ -610,4 +610,103 @@ define <16 x i8> @test_v16i8(<16 x i8> %a) nounwind {
 ; X86-NEXT:    retl $4
   %r = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a, i1 false)
   ret <16 x i8> %r
+}
+
+define i16 @test_sextinreg_i16(i16 %a) nounwind {
+; X64-LABEL: test_sextinreg_i16:
+; X64:       # %bb.0:
+; X64-NEXT:    movsbl %dil, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negw %ax
+; X64-NEXT:    cmovsw %cx, %ax
+; X64-NEXT:    retq
+;
+; X86-LABEL: test_sextinreg_i16:
+; X86:       # %bb.0:
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negw %ax
+; X86-NEXT:    cmovsw %cx, %ax
+; X86-NEXT:    retl
+  %shl = shl i16 %a, 8
+  %ashr = ashr exact i16 %shl, 8
+  %res = call i16 @llvm.abs.i16(i16 %ashr, i1 true)
+  ret i16 %res
+}
+
+define i32 @test_sextinreg_i32(i32 %a) nounwind {
+; X64-LABEL: test_sextinreg_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    movswl %di, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %ecx, %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: test_sextinreg_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    retl
+  %shl = shl i32 %a, 16
+  %ashr = ashr exact i32 %shl, 16
+  %res = call i32 @llvm.abs.i32(i32 %ashr, i1 true)
+  ret i32 %res
+}
+
+define i64 @test_sextinreg_i64(i64 %a) nounwind {
+; X64-LABEL: test_sextinreg_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %edi, %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: test_sextinreg_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    retl
+  %shl = shl i64 %a, 32
+  %ashr = ashr exact i64 %shl, 32
+  %res = call i64 @llvm.abs.i64(i64 %ashr, i1 true)
+  ret i64 %res
+}
+
+define i128 @test_sextinreg_i128(i128 %a) nounwind {
+; X64-LABEL: test_sextinreg_i128:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    negq %rax
+; X64-NEXT:    cmovsq %rdi, %rax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    retq
+;
+; X86-LABEL: test_sextinreg_i128:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    xorl %edx, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    xorl %edx, %esi
+; X86-NEXT:    subl %edx, %esi
+; X86-NEXT:    sbbl %edx, %ecx
+; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    movl %ecx, 4(%eax)
+; X86-NEXT:    movl $0, 12(%eax)
+; X86-NEXT:    movl $0, 8(%eax)
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl $4
+  %shl = shl i128 %a, 64
+  %ashr = ashr exact i128 %shl, 64
+  %res = call i128 @llvm.abs.i128(i128 %ashr, i1 true)
+  ret i128 %res
 }

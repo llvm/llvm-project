@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-memref-to-llvm -convert-func-to-llvm='emit-c-wrappers=1' -reconcile-unrealized-casts %s | FileCheck %s
+// RUN: mlir-opt -convert-memref-to-llvm -llvm-request-c-wrappers -convert-func-to-llvm -reconcile-unrealized-casts %s | FileCheck %s
 // RUN: mlir-opt -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts %s | FileCheck %s --check-prefix=EMIT_C_ATTRIBUTE
 
 // This tests the default memref calling convention and the emission of C
@@ -191,7 +191,7 @@ func.func @return_two_var_memref_caller(%arg0: memref<4x3xf32>) {
   %0:2 = call @return_two_var_memref(%arg0) : (memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>)
 
   // CHECK: %[[ALLOCA_1:.*]] = llvm.alloca %{{.*}} x i8
-  // CHECK: %[[SOURCE_1:.*]] = llvm.extractvalue %[[RES_1:.*]][1] : ![[DESC_TYPE:.*]]
+  // CHECK: %[[SOURCE_1:.*]] = llvm.extractvalue %[[RES_1:.*]][1] : ![[DESC_TYPE:.*>]]
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA_1]], %[[SOURCE_1]], %{{.*}}, %[[FALSE:.*]])
   // CHECK: llvm.call @free(%[[SOURCE_1]])
   // CHECK: %[[DESC_1:.*]] = llvm.mlir.undef : ![[DESC_TYPE]]
@@ -245,4 +245,3 @@ func.func @return_two_var_memref(%arg0: memref<4x3xf32>) -> (memref<*xf32>, memr
 // CHECK-LABEL: @_mlir_ciface_return_two_var_memref
 // CHECK-SAME: (%{{.*}}: !llvm.ptr<struct<(struct<(i64, ptr<i8>)>, struct<(i64, ptr<i8>)>)>>,
 // CHECK-SAME: %{{.*}}: !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>>)
-

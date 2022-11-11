@@ -29,11 +29,13 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_same_copy
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
@@ -53,11 +55,13 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: multi_redef_m0_same_copy
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
@@ -78,13 +82,15 @@ body:             |
     liveins: $vgpr0, $sgpr0, $sgpr1
 
     ; GCN-LABEL: name: redef_m0_different_copy
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: $m0 = COPY [[COPY2]]
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0, $sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: $m0 = COPY [[COPY2]]
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     %2:sgpr_32 = COPY $sgpr1
@@ -105,13 +111,15 @@ body:             |
     liveins: $vgpr0, $sgpr0, $sgpr1
 
     ; GCN-LABEL: name: redef_m0_mixed_copy0
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: $m0 = COPY [[COPY2]]
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0, $sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: $m0 = COPY [[COPY2]]
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     %2:sgpr_32 = COPY $sgpr1
@@ -134,14 +142,16 @@ body:             |
     liveins: $vgpr0, $sgpr0, $sgpr1
 
     ; GCN-LABEL: name: redef_m0_mixed_copy1
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: $m0 = COPY [[COPY2]]
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0, $sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: $m0 = COPY [[COPY2]]
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     %2:sgpr_32 = COPY $sgpr1
@@ -163,11 +173,13 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_same_mov_imm
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: $m0 = S_MOV_B32 -1
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: $m0 = S_MOV_B32 -1
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = S_MOV_B32 -1
@@ -187,12 +199,14 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_different_inst0
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: $m0 = IMPLICIT_DEF
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: $m0 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
@@ -212,12 +226,14 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_different_inst1
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: S_NOP 0, implicit-def $m0
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: S_NOP 0, implicit-def $m0
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
@@ -237,14 +253,16 @@ body:             |
     liveins: $vgpr0, $sgpr0, $sgpr1
 
     ; GCN-LABEL: name: redef_m0_mixed_read_m0
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: $m0 = COPY [[COPY2]]
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: [[DS_READ_B32_2:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 128, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0, $sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: $m0 = COPY [[COPY2]]
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: [[DS_READ_B32_2:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 128, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     %2:sgpr_32 = COPY $sgpr1
@@ -266,13 +284,15 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_same_copy_call
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: dead $sgpr30_sgpr31 = SI_CALL undef $sgpr6_sgpr7, @func, csr_amdgpu
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: dead $sgpr30_sgpr31 = SI_CALL undef $sgpr6_sgpr7, @func, csr_amdgpu
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
@@ -291,14 +311,17 @@ machineFunctionInfo:
 body:             |
   ; GCN-LABEL: name: redef_m0_same_copy_multi_block
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; GCN:   $m0 = COPY [[COPY1]]
-  ; GCN:   [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-  ; GCN: bb.1:
-  ; GCN:   $m0 = COPY [[COPY1]]
-  ; GCN:   [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr0
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; GCN-NEXT:   $m0 = COPY [[COPY1]]
+  ; GCN-NEXT:   [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   $m0 = COPY [[COPY1]]
+  ; GCN-NEXT:   [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
   bb.0:
     liveins: $vgpr0, $sgpr0
 
@@ -323,12 +346,14 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_copy_self
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: $m0 = COPY $m0
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: $m0 = COPY [[COPY1]]
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: $m0 = COPY $m0
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
@@ -348,13 +373,15 @@ body:             |
     liveins: $vgpr0, $sgpr0
 
     ; GCN-LABEL: name: redef_m0_copy_physreg
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GCN: $m0 = COPY $sgpr0
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    ; GCN: $sgpr0 = S_MOV_B32 0
-    ; GCN: $m0 = COPY $sgpr0
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: liveins: $vgpr0, $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: $m0 = COPY $sgpr0
+    ; GCN-NEXT: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
+    ; GCN-NEXT: $m0 = COPY $sgpr0
+    ; GCN-NEXT: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY $sgpr0

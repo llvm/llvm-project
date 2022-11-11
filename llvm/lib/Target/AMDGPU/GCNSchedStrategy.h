@@ -22,14 +22,25 @@ namespace llvm {
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
 class GCNSubtarget;
+class GCNSchedStage;
+
+enum class GCNSchedStageID : unsigned {
+  OccInitialSchedule = 0,
+  UnclusteredHighRPReschedule = 1,
+  ClusteredLowOccupancyReschedule = 2,
+  PreRARematerialize = 3,
+  ILPInitialSchedule = 4
+};
+
+#ifndef NDEBUG
+raw_ostream &operator<<(raw_ostream &OS, const GCNSchedStageID &StageID);
+#endif
 
 /// This is a minimal scheduler strategy.  The main difference between this
 /// and the GenericScheduler is that GCNSchedStrategy uses different
-/// heuristics to determine excess/critical pressure sets.  Its goal is to
-/// maximize kernel occupancy (i.e. maximum number of waves per simd).
-class GCNMaxOccupancySchedStrategy final : public GenericScheduler {
-  friend class GCNScheduleDAGMILive;
-
+/// heuristics to determine excess/critical pressure sets.
+class GCNSchedStrategy : public GenericScheduler {
+protected:
   SUnit *pickNodeBidirectional(bool &IsTopNode);
 
   void pickNodeFromQueue(SchedBoundary &Zone, const CandPolicy &ZonePolicy,
@@ -42,45 +53,86 @@ class GCNMaxOccupancySchedStrategy final : public GenericScheduler {
                      unsigned SGPRPressure, unsigned VGPRPressure);
 
   std::vector<unsigned> Pressure;
+
   std::vector<unsigned> MaxPressure;
 
   unsigned SGPRExcessLimit;
+
   unsigned VGPRExcessLimit;
-  unsigned SGPRCriticalLimit;
-  unsigned VGPRCriticalLimit;
 
   unsigned TargetOccupancy;
 
-  // schedule() have seen a clustered memory operation. Set it to false
-  // before a region scheduling to know if the region had such clusters.
-  bool HasClusteredNodes;
-
-  // schedule() have seen an excess register pressure and had to track
-  // register pressure for actual scheduling heuristics.
-  bool HasExcessPressure;
-
   MachineFunction *MF;
 
+  // Scheduling stages for this strategy.
+  SmallVector<GCNSchedStageID, 4> SchedStages;
+
+  // Pointer to the current SchedStageID.
+  SmallVectorImpl<GCNSchedStageID>::iterator CurrentStage = nullptr;
+
 public:
-  GCNMaxOccupancySchedStrategy(const MachineSchedContext *C);
+  // schedule() have seen register pressure over the critical limits and had to
+  // track register pressure for actual scheduling heuristics.
+  bool HasHighPressure;
+
+  // An error margin is necessary because of poor performance of the generic RP
+  // tracker and can be adjusted up for tuning heuristics to try and more
+  // aggressively reduce register pressure.
+  const unsigned DefaultErrorMargin = 3;
+
+  const unsigned HighRPErrorMargin = 10;
+
+  unsigned ErrorMargin = DefaultErrorMargin;
+
+  unsigned SGPRCriticalLimit;
+
+  unsigned VGPRCriticalLimit;
+
+  GCNSchedStrategy(const MachineSchedContext *C);
 
   SUnit *pickNode(bool &IsTopNode) override;
 
   void initialize(ScheduleDAGMI *DAG) override;
 
+  unsigned getTargetOccupancy() { return TargetOccupancy; }
+
   void setTargetOccupancy(unsigned Occ) { TargetOccupancy = Occ; }
+
+  GCNSchedStageID getCurrentStage();
+
+  // Advances stage. Returns true if there are remaining stages.
+  bool advanceStage();
+
+  bool hasNextStage() const;
+
+  GCNSchedStageID getNextStage() const;
+};
+
+/// The goal of this scheduling strategy is to maximize kernel occupancy (i.e.
+/// maximum number of waves per simd).
+class GCNMaxOccupancySchedStrategy final : public GCNSchedStrategy {
+public:
+  GCNMaxOccupancySchedStrategy(const MachineSchedContext *C);
+};
+
+/// The goal of this scheduling strategy is to maximize ILP for a single wave
+/// (i.e. latency hiding).
+class GCNMaxILPSchedStrategy final : public GCNSchedStrategy {
+protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                    SchedBoundary *Zone) const override;
+
+public:
+  GCNMaxILPSchedStrategy(const MachineSchedContext *C);
 };
 
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
-
-  enum : unsigned {
-    Collect,
-    InitialSchedule,
-    UnclusteredReschedule,
-    ClusteredLowOccupancyReschedule,
-    PreRARematerialize,
-    LastStage = PreRARematerialize
-  };
+  friend class GCNSchedStage;
+  friend class OccInitialScheduleStage;
+  friend class UnclusteredHighRPStage;
+  friend class ClusteredLowOccStage;
+  friend class PreRARematStage;
+  friend class ILPInitialScheduleStage;
 
   const GCNSubtarget &ST;
 
@@ -92,12 +144,6 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Minimal real occupancy recorder for the function.
   unsigned MinOccupancy;
 
-  // Scheduling stage number.
-  unsigned Stage;
-
-  // Current region index.
-  size_t RegionIdx;
-
   // Vector of regions recorder for later rescheduling
   SmallVector<std::pair<MachineBasicBlock::iterator,
                         MachineBasicBlock::iterator>, 32> Regions;
@@ -106,14 +152,18 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // or we generally desire to reschedule it.
   BitVector RescheduleRegions;
 
-  // Record regions which use clustered loads/stores.
-  BitVector RegionsWithClusters;
-
   // Record regions with high register pressure.
   BitVector RegionsWithHighRP;
 
+  // Record regions with excess register pressure over the physical register
+  // limit. Register pressure in these regions usually will result in spilling.
+  BitVector RegionsWithExcessRP;
+
   // Regions that has the same occupancy as the latest MinOccupancy
   BitVector RegionsWithMinOcc;
+
+  // Regions that have IGLP instructions (SCHED_GROUP_BARRIER or IGLP_OPT).
+  BitVector RegionsWithIGLPInstrs;
 
   // Region live-in cache.
   SmallVector<GCNRPTracker::LiveRegSet, 32> LiveIns;
@@ -121,6 +171,151 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Region pressure cache.
   SmallVector<GCNRegPressure, 32> Pressure;
 
+  // Temporary basic block live-in cache.
+  DenseMap<const MachineBasicBlock *, GCNRPTracker::LiveRegSet> MBBLiveIns;
+
+  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> BBLiveInMap;
+
+  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> getBBLiveInMap() const;
+
+  // Return current region pressure.
+  GCNRegPressure getRealRegPressure(unsigned RegionIdx) const;
+
+  // Compute and cache live-ins and pressure for all regions in block.
+  void computeBlockPressure(unsigned RegionIdx, const MachineBasicBlock *MBB);
+
+  // Update region boundaries when removing MI or inserting NewMI before MI.
+  void updateRegionBoundaries(
+      SmallVectorImpl<std::pair<MachineBasicBlock::iterator,
+                                MachineBasicBlock::iterator>> &RegionBoundaries,
+      MachineBasicBlock::iterator MI, MachineInstr *NewMI,
+      bool Removing = false);
+
+  void runSchedStages();
+
+  std::unique_ptr<GCNSchedStage> createSchedStage(GCNSchedStageID SchedStageID);
+
+public:
+  GCNScheduleDAGMILive(MachineSchedContext *C,
+                       std::unique_ptr<MachineSchedStrategy> S);
+
+  void schedule() override;
+
+  void finalizeSchedule() override;
+};
+
+// GCNSchedStrategy applies multiple scheduling stages to a function.
+class GCNSchedStage {
+protected:
+  GCNScheduleDAGMILive &DAG;
+
+  GCNSchedStrategy &S;
+
+  MachineFunction &MF;
+
+  SIMachineFunctionInfo &MFI;
+
+  const GCNSubtarget &ST;
+
+  const GCNSchedStageID StageID;
+
+  // The current block being scheduled.
+  MachineBasicBlock *CurrentMBB = nullptr;
+
+  // Current region index.
+  unsigned RegionIdx = 0;
+
+  // Record the original order of instructions before scheduling.
+  std::vector<MachineInstr *> Unsched;
+
+  // RP before scheduling the current region.
+  GCNRegPressure PressureBefore;
+
+  // RP after scheduling the current region.
+  GCNRegPressure PressureAfter;
+
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
+
+  GCNSchedStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG);
+
+public:
+  // Initialize state for a scheduling stage. Returns false if the current stage
+  // should be skipped.
+  virtual bool initGCNSchedStage();
+
+  // Finalize state after finishing a scheduling pass on the function.
+  virtual void finalizeGCNSchedStage();
+
+  // Setup for scheduling a region. Returns false if the current region should
+  // be skipped.
+  virtual bool initGCNRegion();
+
+  // Track whether a new region is also a new MBB.
+  void setupNewBlock();
+
+  // Finalize state after scheudling a region.
+  void finalizeGCNRegion();
+
+  // Check result of scheduling.
+  void checkScheduling();
+
+  // Returns true if scheduling should be reverted.
+  virtual bool shouldRevertScheduling(unsigned WavesAfter);
+
+  // Returns true if the new schedule may result in more spilling.
+  bool mayCauseSpilling(unsigned WavesAfter);
+
+  // Attempt to revert scheduling for this region.
+  void revertScheduling();
+
+  void advanceRegion() { RegionIdx++; }
+
+  virtual ~GCNSchedStage() = default;
+};
+
+class OccInitialScheduleStage : public GCNSchedStage {
+public:
+  bool shouldRevertScheduling(unsigned WavesAfter) override;
+
+  OccInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+};
+
+class UnclusteredHighRPStage : public GCNSchedStage {
+private:
+  // Save the initial occupancy before starting this stage.
+  unsigned InitialOccupancy;
+
+public:
+  bool initGCNSchedStage() override;
+
+  void finalizeGCNSchedStage() override;
+
+  bool initGCNRegion() override;
+
+  bool shouldRevertScheduling(unsigned WavesAfter) override;
+
+  UnclusteredHighRPStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+};
+
+// Retry function scheduling if we found resulting occupancy and it is
+// lower than used for other scheduling passes. This will give more freedom
+// to schedule low register pressure blocks.
+class ClusteredLowOccStage : public GCNSchedStage {
+public:
+  bool initGCNSchedStage() override;
+
+  bool initGCNRegion() override;
+
+  bool shouldRevertScheduling(unsigned WavesAfter) override;
+
+  ClusteredLowOccStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+};
+
+class PreRARematStage : public GCNSchedStage {
+private:
   // Each region at MinOccupancy will have their own list of trivially
   // rematerializable instructions we can remat to reduce RP. The list maps an
   // instruction to the position we should remat before, usually the MI using
@@ -132,17 +327,11 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // that has the defined reg as a live-in.
   DenseMap<MachineInstr *, SmallVector<unsigned, 4>> RematDefToLiveInRegions;
 
-  // Temporary basic block live-in cache.
-  DenseMap<const MachineBasicBlock*, GCNRPTracker::LiveRegSet> MBBLiveIns;
-
-  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> BBLiveInMap;
-  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> getBBLiveInMap() const;
-
   // Collect all trivially rematerializable VGPR instructions with a single def
   // and single use outside the defining block into RematerializableInsts.
   void collectRematerializableInstructions();
 
-  bool isTriviallyReMaterializable(const MachineInstr &MI, AAResults *AA);
+  bool isTriviallyReMaterializable(const MachineInstr &MI);
 
   // TODO: Should also attempt to reduce RP of SGPRs and AGPRs
   // Attempt to reduce RP of VGPR by sinking trivially rematerializable
@@ -150,26 +339,39 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   bool sinkTriviallyRematInsts(const GCNSubtarget &ST,
                                const TargetInstrInfo *TII);
 
-  // Return current region pressure.
-  GCNRegPressure getRealRegPressure() const;
+public:
+  bool initGCNSchedStage() override;
 
-  // Compute and cache live-ins and pressure for all regions in block.
-  void computeBlockPressure(const MachineBasicBlock *MBB);
+  bool initGCNRegion() override;
 
-  // Update region boundaries when removing MI or inserting NewMI before MI.
-  void updateRegionBoundaries(
-      SmallVectorImpl<std::pair<MachineBasicBlock::iterator,
-                                MachineBasicBlock::iterator>> &RegionBoundaries,
-      MachineBasicBlock::iterator MI, MachineInstr *NewMI,
-      bool Removing = false);
+  bool shouldRevertScheduling(unsigned WavesAfter) override;
+
+  PreRARematStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+};
+
+class ILPInitialScheduleStage : public GCNSchedStage {
+public:
+  bool shouldRevertScheduling(unsigned WavesAfter) override;
+
+  ILPInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+};
+
+class GCNPostScheduleDAGMILive final : public ScheduleDAGMI {
+private:
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
+
+  bool HasIGLPInstrs = false;
 
 public:
-  GCNScheduleDAGMILive(MachineSchedContext *C,
-                       std::unique_ptr<MachineSchedStrategy> S);
-
   void schedule() override;
 
   void finalizeSchedule() override;
+
+  GCNPostScheduleDAGMILive(MachineSchedContext *C,
+                           std::unique_ptr<MachineSchedStrategy> S,
+                           bool RemoveKillFlags);
 };
 
 } // End namespace llvm

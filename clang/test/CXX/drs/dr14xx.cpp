@@ -36,6 +36,27 @@ namespace dr1423 { // dr1423: 11
 #endif
 }
 
+namespace dr1432 { // dr1432: 16
+#if __cplusplus >= 201103L
+  template<typename T> T declval();
+
+  template <class... T>
+  struct common_type;
+
+  template <class T, class U>
+  struct common_type<T, U> {
+   typedef decltype(true ? declval<T>() : declval<U>()) type;
+  };
+
+  template <class T, class U, class... V>
+  struct common_type<T, U, V...> {
+   typedef typename common_type<typename common_type<T, U>::type, V...>::type type;
+  };
+
+  template struct common_type<int, double>;
+#endif
+}
+
 namespace dr1443 { // dr1443: yes
 struct A {
   int i;
@@ -501,4 +522,16 @@ namespace dr1495 { // dr1495: 4
   template<typename ...Ts> int c<0, Ts...>; // expected-error {{not more specialized}}
 #endif
 }
+
+namespace dr1496 { // dr1496: no
+#if __cplusplus >= 201103L
+struct A {
+    A() = delete;
+};
+// FIXME: 'A' should not be trivial because the class lacks at least one
+// default constructor which is not deleted.
+static_assert(__is_trivial(A), "");
+#endif
+}
+
 #endif

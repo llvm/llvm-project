@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class ProcessSaveCoreTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfRemote
     @skipUnlessWindows
     def test_cannot_save_core_unless_process_stopped(self):

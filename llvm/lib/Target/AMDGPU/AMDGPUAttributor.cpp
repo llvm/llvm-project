@@ -72,6 +72,8 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
   case Intrinsic::amdgcn_workgroup_id_z:
   case Intrinsic::r600_read_tgid_z:
     return WORKGROUP_ID_Z;
+  case Intrinsic::amdgcn_lds_kernel_id:
+    return LDS_KERNEL_ID;
   case Intrinsic::amdgcn_dispatch_ptr:
     return DISPATCH_PTR;
   case Intrinsic::amdgcn_dispatch_id:
@@ -457,6 +459,10 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       removeAssumedBits(QUEUE_PTR);
     }
 
+    if (isAssumed(LDS_KERNEL_ID) && funcRetrievesLDSKernelId(A)) {
+      removeAssumedBits(LDS_KERNEL_ID);
+    }
+
     return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED
                                        : ChangeStatus::UNCHANGED;
   }
@@ -541,32 +547,32 @@ private:
 
   bool funcRetrievesMultigridSyncArg(Attributor &A) {
     auto Pos = llvm::AMDGPU::getMultigridSyncArgImplicitArgPosition();
-    AAPointerInfo::OffsetAndSize OAS(Pos, 8);
+    AA::OffsetAndSize OAS(Pos, 8);
     return funcRetrievesImplicitKernelArg(A, OAS);
   }
 
   bool funcRetrievesHostcallPtr(Attributor &A) {
     auto Pos = llvm::AMDGPU::getHostcallImplicitArgPosition();
-    AAPointerInfo::OffsetAndSize OAS(Pos, 8);
+    AA::OffsetAndSize OAS(Pos, 8);
     return funcRetrievesImplicitKernelArg(A, OAS);
   }
 
   bool funcRetrievesHeapPtr(Attributor &A) {
     if (AMDGPU::getAmdhsaCodeObjectVersion() != 5)
       return false;
-    AAPointerInfo::OffsetAndSize OAS(AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8);
+    AA::OffsetAndSize OAS(AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8);
     return funcRetrievesImplicitKernelArg(A, OAS);
   }
 
   bool funcRetrievesQueuePtr(Attributor &A) {
     if (AMDGPU::getAmdhsaCodeObjectVersion() != 5)
       return false;
-    AAPointerInfo::OffsetAndSize OAS(AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8);
+    AA::OffsetAndSize OAS(AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8);
     return funcRetrievesImplicitKernelArg(A, OAS);
   }
 
   bool funcRetrievesImplicitKernelArg(Attributor &A,
-                                      AAPointerInfo::OffsetAndSize OAS) {
+                                      AA::OffsetAndSize OAS) {
     // Check if this is a call to the implicitarg_ptr builtin and it
     // is used to retrieve the hostcall pointer. The implicit arg for
     // hostcall is not used only if every use of the implicitarg_ptr
@@ -589,6 +595,16 @@ private:
 
     bool UsedAssumedInformation = false;
     return !A.checkForAllCallLikeInstructions(DoesNotLeadToKernelArgLoc, *this,
+                                              UsedAssumedInformation);
+  }
+
+  bool funcRetrievesLDSKernelId(Attributor &A) {
+    auto DoesNotRetrieve = [&](Instruction &I) {
+      auto &Call = cast<CallBase>(I);
+      return Call.getIntrinsicID() != Intrinsic::amdgcn_lds_kernel_id;
+    };
+    bool UsedAssumedInformation = false;
+    return !A.checkForAllCallLikeInstructions(DoesNotRetrieve, *this,
                                               UsedAssumedInformation);
   }
 };
@@ -743,7 +759,8 @@ public:
     AMDGPUInformationCache InfoCache(M, AG, Allocator, nullptr, *TM);
     DenseSet<const char *> Allowed(
         {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
-         &AAAMDFlatWorkGroupSize::ID, &AACallEdges::ID, &AAPointerInfo::ID});
+         &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID, &AACallEdges::ID,
+         &AAPointerInfo::ID});
 
     AttributorConfig AC(CGUpdater);
     AC.Allowed = &Allowed;

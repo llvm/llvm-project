@@ -60,9 +60,9 @@ define i32 @foo(i32 %n) local_unnamed_addr #0 {
 ; CHECK-X86-32-NEXT:    .cfi_def_cfa %esp, 4
 ; CHECK-X86-32-NEXT:    retl
   %a = alloca i32, i32 %n, align 16
-  %b = getelementptr inbounds i32, i32* %a, i64 1198
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 1198
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 

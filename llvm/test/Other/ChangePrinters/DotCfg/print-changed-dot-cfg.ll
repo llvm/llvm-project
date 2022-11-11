@@ -30,19 +30,19 @@
 ;
 ; Check that the reporting of IRs respects -filter-passes
 ; RUN: rm -rf %t && mkdir -p %t
-; RUN: opt -disable-verify -S -print-changed=dot-cfg -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass" -dot-cfg-dir=%t < %s -o /dev/null
+; RUN: opt -disable-verify -S -print-changed=dot-cfg -passes="instsimplify,no-op-function" -filter-passes="no-op-function" -dot-cfg-dir=%t < %s -o /dev/null
 ; RUN: ls %t/*.pdf %t/passes.html | count 2
 ; RUN: FileCheck %s -input-file=%t/passes.html --check-prefix=CHECK-DOT-CFG-FILTER-PASSES
 ;
 ; Check that the reporting of IRs respects -filter-passes with multiple passes
 ; RUN: rm -rf %t && mkdir -p %t
-; RUN: opt -disable-verify -S -print-changed=dot-cfg -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -dot-cfg-dir=%t < %s -o /dev/null
+; RUN: opt -disable-verify -S -print-changed=dot-cfg -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -dot-cfg-dir=%t < %s -o /dev/null
 ; RUN: ls %t/*.pdf %t/passes.html | count 4
 ; RUN: FileCheck %s -input-file=%t/passes.html --check-prefix=CHECK-DOT-CFG-FILTER-MULT-PASSES
 ;
 ; Check that the reporting of IRs respects both -filter-passes and -filter-print-funcs
 ; RUN: rm -rf %t && mkdir -p %t
-; RUN: opt -disable-verify -S -print-changed=dot-cfg -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -filter-print-funcs=f -dot-cfg-dir=%t < %s -o /dev/null
+; RUN: opt -disable-verify -S -print-changed=dot-cfg -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f -dot-cfg-dir=%t < %s -o /dev/null
 ; RUN: ls %t/*.pdf %t/passes.html | count 3
 ; RUN: FileCheck %s -input-file=%t/passes.html --check-prefix=CHECK-DOT-CFG-FILTER-FUNC-PASSES
 ;
@@ -86,18 +86,18 @@
 ;
 ; Check that the reporting of IRs respects -filter-passes
 ; RUN: rm -rf %t && mkdir -p %t
-; RUN: opt -S -print-changed=dot-cfg-quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass" -dot-cfg-dir=%t < %s -o /dev/null
+; RUN: opt -S -print-changed=dot-cfg-quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function" -dot-cfg-dir=%t < %s -o /dev/null
 ; RUN: FileCheck %s -input-file=%t/passes.html --check-prefix=CHECK-DOT-CFG-QUIET-FILTER-PASSES-NONE --allow-empty
 ;
 ; Check that the reporting of IRs respects -filter-passes with multiple passes
 ; RUN: rm -rf %t && mkdir -p %t
-; RUN: opt -S -print-changed=dot-cfg-quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -dot-cfg-dir=%t < %s -o /dev/null
+; RUN: opt -S -print-changed=dot-cfg-quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -dot-cfg-dir=%t < %s -o /dev/null
 ; RUN: ls %t/*.pdf %t/passes.html | count 3
 ; RUN: FileCheck %s -input-file=%t/passes.html --check-prefix=CHECK-DOT-CFG-QUIET-FILTER-MULT-PASSES
 ;
 ; Check that the reporting of IRs respects both -filter-passes and -filter-print-funcs
 ; RUN: rm -rf %t && mkdir -p %t
-; RUN: opt -S -print-changed=dot-cfg-quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -filter-print-funcs=f -dot-cfg-dir=%t < %s -o /dev/null
+; RUN: opt -S -print-changed=dot-cfg-quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f -dot-cfg-dir=%t < %s -o /dev/null
 ; RUN: ls %t/*.pdf %t/passes.html | count 2
 ; RUN: FileCheck %s -input-file=%t/passes.html --check-prefix=CHECK-DOT-CFG-QUIET-FILTER-FUNC-PASSES
 ;

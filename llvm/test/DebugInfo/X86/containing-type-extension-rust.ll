@@ -4,7 +4,7 @@
 ; Check that any type can have a vtable holder.
 ; CHECK: [[SP:.*]]: DW_TAG_structure_type
 ; CHECK-NOT: TAG
-; CHECK: DW_AT_containing_type [DW_FORM_ref4]
+; CHECK: DW_AT_containing_type [DW_FORM_ref4] ({{.*}} "f64")
 ; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "vtable")
 
 ; This was compiled using

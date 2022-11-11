@@ -61,7 +61,7 @@ static bool shouldReduceOperand(Use &Op) {
 static int classifyReductivePower(Value *V) {
   if (auto *C = dyn_cast<ConstantData>(V)) {
     if (isa<UndefValue>(V))
-      return 4;
+      return -2;
     if (C->isNullValue())
       return 7;
     if (C->isOneValue())
@@ -212,12 +212,16 @@ static void extractOperandsFromModule(Oracle &O, Module &Program) {
       }
     });
 
-    for (std::pair<Use *, Value *> P : Replacements)
-      P.first->set(P.second);
+    for (std::pair<Use *, Value *> P : Replacements) {
+      if (PHINode *Phi = dyn_cast<PHINode>(P.first->getUser()))
+        Phi->setIncomingValueForBlock(Phi->getIncomingBlock(*P.first), P.second);
+      else
+        P.first->set(P.second);
+    }
   }
 }
 
 void llvm::reduceOperandsSkipDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing operands by skipping over instructions ...\n";
-  runDeltaPass(Test, extractOperandsFromModule);
+  runDeltaPass(Test, extractOperandsFromModule,
+               "Reducing operands by skipping over instructions");
 }

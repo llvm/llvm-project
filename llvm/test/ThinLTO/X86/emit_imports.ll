@@ -32,6 +32,20 @@
 ; RUN:     -r=%t2.bc,g,px \
 ; RUN:     -r=%t2b.bc,h,px
 
+; Ensure imports weren't generated since -thinlto-emit-imports wasn't specified
+; RUN: not ls %t1.bc.imports
+; RUN: not ls %t2.bc.imports
+; RUN: not ls %t3.bc.imports
+
+; RUN: llvm-lto2 run %t1.bc %t2.bc %t2b.bc %t3.bc -o %t.o -save-temps \
+; RUN:     -thinlto-distributed-indexes \
+; RUN:     -thinlto-emit-imports \
+; RUN:     -r=%t1.bc,g, \
+; RUN:     -r=%t1.bc,h, \
+; RUN:     -r=%t1.bc,f,px \
+; RUN:     -r=%t2.bc,g,px \
+; RUN:     -r=%t2b.bc,h,px
+
 ; RUN: cat %t1.bc.imports | count 2
 ; RUN: cat %t1.bc.imports | FileCheck %s --check-prefix=IMPORTS1
 

@@ -68,7 +68,7 @@ bool InstructionPrecedenceTracking::isPreceededBySpecialInstruction(
 
 void InstructionPrecedenceTracking::fill(const BasicBlock *BB) {
   FirstSpecialInsts.erase(BB);
-  for (auto &I : *BB) {
+  for (const auto &I : *BB) {
     NumInstScanned++;
     if (isSpecialInstruction(&I)) {
       FirstSpecialInsts[BB] = &I;
@@ -101,7 +101,7 @@ void InstructionPrecedenceTracking::validate(const BasicBlock *BB) const {
 
 void InstructionPrecedenceTracking::validateAll() const {
   // Check that for every known block the cached value is correct.
-  for (auto &It : FirstSpecialInsts)
+  for (const auto &It : FirstSpecialInsts)
     validate(It.first);
 }
 #endif

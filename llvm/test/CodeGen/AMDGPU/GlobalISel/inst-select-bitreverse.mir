@@ -10,9 +10,11 @@ body: |
   bb.0:
     liveins: $sgpr0
     ; CHECK-LABEL: name: bitreverse_i32_ss
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: [[S_BREV_B32_:%[0-9]+]]:sreg_32 = S_BREV_B32 [[COPY]]
-    ; CHECK: S_ENDPGM 0, implicit [[S_BREV_B32_]]
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: [[S_BREV_B32_:%[0-9]+]]:sreg_32 = S_BREV_B32 [[COPY]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_BREV_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_BITREVERSE %0
     S_ENDPGM 0, implicit %1
@@ -27,9 +29,11 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: bitreverse_i32_vv
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[V_BFREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY]], implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit [[V_BFREV_B32_e64_]]
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[V_BFREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY]], implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BFREV_B32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_BITREVERSE %0
     S_ENDPGM 0, implicit %1
@@ -44,9 +48,11 @@ body: |
   bb.0:
     liveins: $sgpr0
     ; CHECK-LABEL: name: bitreverse_i32_vs
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: [[V_BFREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY]], implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit [[V_BFREV_B32_e64_]]
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: [[V_BFREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY]], implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BFREV_B32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_BITREVERSE %0
     S_ENDPGM 0, implicit %1
@@ -61,9 +67,11 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: bitreverse_i64_ss
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK: [[S_BREV_B64_:%[0-9]+]]:sreg_64 = S_BREV_B64 [[COPY]]
-    ; CHECK: S_ENDPGM 0, implicit [[S_BREV_B64_]]
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[S_BREV_B64_:%[0-9]+]]:sreg_64 = S_BREV_B64 [[COPY]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_BREV_B64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_BITREVERSE %0
     S_ENDPGM 0, implicit %1
@@ -78,13 +86,15 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: bitreverse_i64_vv
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
-    ; CHECK: [[V_BFREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY2]], implicit $exec
-    ; CHECK: [[V_BFREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY1]], implicit $exec
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_BFREV_B32_e64_]], %subreg.sub0, [[V_BFREV_B32_e64_1]], %subreg.sub1
-    ; CHECK: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
+    ; CHECK-NEXT: [[V_BFREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY2]], implicit $exec
+    ; CHECK-NEXT: [[V_BFREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY1]], implicit $exec
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_BFREV_B32_e64_]], %subreg.sub0, [[V_BFREV_B32_e64_1]], %subreg.sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %2:vgpr(s32), %3:vgpr(s32) = G_UNMERGE_VALUES %0(s64)
     %4:vgpr(s32) = G_BITREVERSE %3
@@ -102,13 +112,15 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: bitreverse_i64_vs
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
-    ; CHECK: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
-    ; CHECK: [[V_BFREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY2]], implicit $exec
-    ; CHECK: [[V_BFREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY1]], implicit $exec
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_BFREV_B32_e64_]], %subreg.sub0, [[V_BFREV_B32_e64_1]], %subreg.sub1
-    ; CHECK: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
+    ; CHECK-NEXT: [[V_BFREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY2]], implicit $exec
+    ; CHECK-NEXT: [[V_BFREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY1]], implicit $exec
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_BFREV_B32_e64_]], %subreg.sub0, [[V_BFREV_B32_e64_1]], %subreg.sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %2:sgpr(s32), %3:sgpr(s32) = G_UNMERGE_VALUES %0(s64)
     %4:vgpr(s32) = G_BITREVERSE %3

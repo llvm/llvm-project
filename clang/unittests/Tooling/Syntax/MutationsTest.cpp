@@ -30,7 +30,7 @@ protected:
 
     Transform(Source, Root);
 
-    auto Replacements = syntax::computeReplacements(*Arena, *Root);
+    auto Replacements = syntax::computeReplacements(*TM, *Root);
     auto Output = tooling::applyAllReplacements(Source.code(), Replacements);
     if (!Output) {
       ADD_FAILURE() << "could not apply replacements: "
@@ -47,7 +47,7 @@ protected:
                                           TranslationUnit *Root) {
     auto *S = cast<syntax::Statement>(nodeByRange(Input.range(), Root));
     ASSERT_TRUE(S->canModify()) << "cannot remove a statement";
-    syntax::removeStatement(*Arena, S);
+    syntax::removeStatement(*Arena, *TM, S);
     EXPECT_TRUE(S->isDetached());
     EXPECT_FALSE(S->isOriginal())
         << "node removed from tree cannot be marked as original";

@@ -15,7 +15,7 @@ declare zeroext i32 @ret_ui()
 
 define void @pass_arg_si() nounwind {
 entry:
-  %0 = load i32, i32* @si, align 4
+  %0 = load i32, ptr @si, align 4
   tail call void @arg_si(i32 signext %0) nounwind
   ret void
 }
@@ -25,7 +25,7 @@ entry:
 
 define void @pass_arg_ui() nounwind {
 entry:
-  %0 = load i32, i32* @ui, align 4
+  %0 = load i32, ptr @ui, align 4
   tail call void @arg_ui(i32 zeroext %0) nounwind
   ret void
 }
@@ -53,7 +53,7 @@ entry:
 
 define signext i32 @pass_ret_si() nounwind readonly {
 entry:
-  %0 = load i32, i32* @si, align 4
+  %0 = load i32, ptr @si, align 4
   ret i32 %0
 }
 ; CHECK: @pass_ret_si
@@ -62,7 +62,7 @@ entry:
 
 define zeroext i32 @pass_ret_ui() nounwind readonly {
 entry:
-  %0 = load i32, i32* @ui, align 4
+  %0 = load i32, ptr @ui, align 4
   ret i32 %0
 }
 ; CHECK: @pass_ret_ui

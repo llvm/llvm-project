@@ -12,15 +12,15 @@
 ; Function Attrs: nofree norecurse nounwind willreturn writeonly
 define void @storesTIUninit(i32 %Val) #0 {
 entry:
-  store i32 %Val, i32* @TIUninit, align 4
+  store i32 %Val, ptr @TIUninit, align 4
   ret void
 }
 
 ; Function Attrs: norecurse nounwind readonly willreturn
 define i32 @loadsTGInit() #1 {
 entry:
-  %0 = load i32, i32* @TGInit, align 4
-  %1 = load i32, i32* @GInit, align 4
+  %0 = load i32, ptr @TGInit, align 4
+  %1 = load i32, ptr @GInit, align 4
   %add = add nsw i32 %1, %0
   ret i32 %add
 }
@@ -171,7 +171,7 @@ entry:
 ; SYM-NEXT: Symbols [
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 0
-; SYM-NEXT:     Name: .file
+; SYM-NEXT:     Name: <stdin>
 ; SYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYM-NEXT:     Section: N_DEBUG
 ; SYM-NEXT:     Source Language ID: TB_C (0x0)
@@ -212,7 +212,7 @@ entry:
 ; SYM-NEXT:       SectionLen: 104
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
-; SYM-NEXT:       SymbolAlignmentLog2: 4
+; SYM-NEXT:       SymbolAlignmentLog2: 5
 ; SYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; SYM-NEXT:       StorageMappingClass: XMC_PR (0x0)
 ; SYM-NEXT:       StabInfoIndex: 0x0
@@ -640,5 +640,5 @@ entry:
 ; DIS:      00000004 (idx: 37) TIUninit[UL]:
 ; DIS-NEXT: ...
 
-attributes #0 = { nofree norecurse nounwind willreturn writeonly "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-rop-protection,-spe,-vsx" }
-attributes #1 = { norecurse nounwind readonly willreturn "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-rop-protection,-spe,-vsx" }
+attributes #0 = { nofree norecurse nounwind willreturn writeonly "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-spe,-vsx" }
+attributes #1 = { norecurse nounwind readonly willreturn "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-spe,-vsx" }

@@ -1,4 +1,4 @@
-; REQUIRES: powerpc-registered-target
+; REQUIRES: system-aix
 ; RUN: llvm-as < %s > %t1
 ; RUN: llvm-lto %t1 | FileCheck %s
 

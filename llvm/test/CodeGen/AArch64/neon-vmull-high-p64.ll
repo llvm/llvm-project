@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=+neon | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=+neon,+aes | FileCheck %s
 
 ; This test checks that pmull2 instruction is used for vmull_high_p64 intrinsic.
 ; There are two extraction operations located in different basic blocks:

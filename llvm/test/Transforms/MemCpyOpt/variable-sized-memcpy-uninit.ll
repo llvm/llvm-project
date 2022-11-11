@@ -10,7 +10,7 @@ define void @test(i64 %size) {
 ;
   %src = alloca i8, i64 %size
   %dst = alloca i8, i64 %size
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %dst, i8* align 8 %src, i64 %size, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %src, i64 %size, i1 false)
 
   ret void
 }
@@ -23,9 +23,9 @@ define void @test2(i64 %size1, i64 %size2, i64 %cpy_size) {
 ;
   %src = alloca i8, i64 %size1
   %dst = alloca i8, i64 %size2
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %dst, i8* align 8 %src, i64 %cpy_size, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %src, i64 %cpy_size, i1 false)
 
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)

@@ -19,9 +19,11 @@ using namespace clang::interp;
 using APSInt = llvm::APSInt;
 using Error = llvm::Error;
 
-Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
+Expected<Function *>
+ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Do not try to compile undefined functions.
-  if (!F->isDefined(F) || (!F->hasBody() && F->willHaveBody()))
+  if (!FuncDecl->isDefined(FuncDecl) ||
+      (!FuncDecl->hasBody() && FuncDecl->willHaveBody()))
     return nullptr;
 
   // Set up argument indices.
@@ -31,22 +33,30 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
 
   // If the return is not a primitive, a pointer to the storage where the value
   // is initialized in is passed as the first argument.
-  QualType Ty = F->getReturnType();
+  // See 'RVO' elsewhere in the code.
+  QualType Ty = FuncDecl->getReturnType();
+  bool HasRVO = false;
   if (!Ty->isVoidType() && !Ctx.classify(Ty)) {
+    HasRVO = true;
+    ParamTypes.push_back(PT_Ptr);
+    ParamOffset += align(primSize(PT_Ptr));
+  }
+
+  // If the function decl is a member decl, the next parameter is
+  // the 'this' pointer. This parameter is pop()ed from the
+  // InterpStack when calling the function.
+  bool HasThisPointer = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
+      MD && MD->isInstance()) {
+    HasThisPointer = true;
     ParamTypes.push_back(PT_Ptr);
     ParamOffset += align(primSize(PT_Ptr));
   }
 
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
-  for (const ParmVarDecl *PD : F->parameters()) {
-    PrimType Ty;
-    if (llvm::Optional<PrimType> T = Ctx.classify(PD->getType())) {
-      Ty = *T;
-    } else {
-      Ty = PT_Ptr;
-    }
-
+  for (const ParmVarDecl *PD : FuncDecl->parameters()) {
+    PrimType Ty = Ctx.classify(PD->getType()).value_or(PT_Ptr);
     Descriptor *Desc = P.createDescriptor(PD, Ty);
     ParamDescriptors.insert({ParamOffset, {Ty, Desc}});
     Params.insert({PD, ParamOffset});
@@ -55,15 +65,18 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
   }
 
   // Create a handle over the emitted code.
-  Function *Func = P.createFunction(F, ParamOffset, std::move(ParamTypes),
-                                    std::move(ParamDescriptors));
+  Function *Func =
+      P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
+                       std::move(ParamDescriptors), HasThisPointer, HasRVO);
   // Compile the function body.
-  if (!F->isConstexpr() || !visitFunc(F)) {
+  if (!FuncDecl->isConstexpr() || !visitFunc(FuncDecl)) {
     // Return a dummy function if compilation failed.
     if (BailLocation)
       return llvm::make_error<ByteCodeGenError>(*BailLocation);
-    else
+    else {
+      Func->setIsFullyCompiled(true);
       return Func;
+    }
   } else {
     // Create scopes from descriptors.
     llvm::SmallVector<Scope, 2> Scopes;
@@ -74,6 +87,7 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
     // Set the function's code.
     Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
                   std::move(Scopes));
+    Func->setIsFullyCompiled(true);
     return Func;
   }
 }
@@ -126,30 +140,28 @@ bool ByteCodeEmitter::bail(const SourceLocation &Loc) {
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
 /// Pointers will be automatically marshalled as 32-bit IDs.
 template <typename T>
-static std::enable_if_t<!std::is_pointer<T>::value, void>
-emit(Program &P, std::vector<char> &Code, const T &Val, bool &Success) {
-  size_t Size = sizeof(Val);
+static void emit(Program &P, std::vector<char> &Code, const T &Val,
+                 bool &Success) {
+  size_t Size;
+
+  if constexpr (std::is_pointer_v<T>)
+    Size = sizeof(uint32_t);
+  else
+    Size = sizeof(T);
+
   if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
     Success = false;
     return;
   }
 
-  const char *Data = reinterpret_cast<const char *>(&Val);
-  Code.insert(Code.end(), Data, Data + Size);
-}
-
-template <typename T>
-static std::enable_if_t<std::is_pointer<T>::value, void>
-emit(Program &P, std::vector<char> &Code, const T &Val, bool &Success) {
-  size_t Size = sizeof(uint32_t);
-  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
-    Success = false;
-    return;
+  if constexpr (!std::is_pointer_v<T>) {
+    const char *Data = reinterpret_cast<const char *>(&Val);
+    Code.insert(Code.end(), Data, Data + Size);
+  } else {
+    uint32_t ID = P.getOrCreateNativePointer(Val);
+    const char *Data = reinterpret_cast<const char *>(&ID);
+    Code.insert(Code.end(), Data, Data + Size);
   }
-
-  uint32_t ID = P.getOrCreateNativePointer(Val);
-  const char *Data = reinterpret_cast<const char *>(&ID);
-  Code.insert(Code.end(), Data, Data + Size);
 }
 
 template <typename... Tys>

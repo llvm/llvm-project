@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -gvn -S | FileCheck %s
 
 @last = external global [65 x i32*]
 

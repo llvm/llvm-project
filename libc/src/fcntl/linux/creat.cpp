@@ -19,11 +19,11 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, creat, (const char *path, int mode_flags)) {
 #ifdef SYS_open
-  int fd = __llvm_libc::syscall(SYS_open, path, O_CREAT | O_WRONLY | O_TRUNC,
-                                mode_flags);
+  int fd = __llvm_libc::syscall_impl(SYS_open, path,
+                                     O_CREAT | O_WRONLY | O_TRUNC, mode_flags);
 #else
-  int fd = __llvm_libc::syscall(SYS_openat, AT_FDCWD, path,
-                                O_CREAT | O_WRONLY | O_TRUNC, mode_flags);
+  int fd = __llvm_libc::syscall_impl(SYS_openat, AT_FDCWD, path,
+                                     O_CREAT | O_WRONLY | O_TRUNC, mode_flags);
 #endif
 
   if (fd > 0)

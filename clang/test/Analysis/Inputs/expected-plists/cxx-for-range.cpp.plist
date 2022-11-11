@@ -935,7 +935,7 @@
    <key>type</key><string>Dereference of null pointer</string>
    <key>check_name</key><string>core.NullDereference</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>f53792d63dffe6176babc00ee455a3e0</string>
+   <key>issue_hash_content_of_line_in_context</key><string>988b3441112848444b50d572900b0c5f</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>get</string>
   <key>issue_hash_function_offset</key><string>2</string>

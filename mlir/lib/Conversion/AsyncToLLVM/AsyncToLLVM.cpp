@@ -8,11 +8,10 @@
 
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
@@ -23,6 +22,11 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTASYNCTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "convert-async-to-llvm"
 
@@ -66,7 +70,7 @@ namespace {
 /// Async Runtime API function types.
 ///
 /// Because we can't create API function signature for type parametrized
-/// async.value type, we use opaque pointers (!llvm.ptr<i8>) instead. After
+/// async.getValue type, we use opaque pointers (!llvm.ptr<i8>) instead. After
 /// lowering all async data types become opaque pointers at runtime.
 struct AsyncAPI {
   // All async types are lowered to opaque i8* LLVM pointers at runtime.
@@ -278,6 +282,17 @@ public:
   AsyncRuntimeTypeConverter() {
     addConversion([](Type type) { return type; });
     addConversion(convertAsyncTypes);
+
+    // Use UnrealizedConversionCast as the bridge so that we don't need to pull
+    // in patterns for other dialects.
+    auto addUnrealizedCast = [](OpBuilder &builder, Type type,
+                                ValueRange inputs, Location loc) {
+      auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+      return Optional<Value>(cast.getResult(0));
+    };
+
+    addSourceMaterialization(addUnrealizedCast);
+    addTargetMaterialization(addUnrealizedCast);
   }
 
   static Optional<Type> convertAsyncTypes(Type type) {
@@ -311,8 +326,8 @@ public:
     auto loc = op->getLoc();
 
     // Constants for initializing coroutine frame.
-    auto constZero = rewriter.create<LLVM::ConstantOp>(
-        loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(0));
+    auto constZero =
+        rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI32Type(), 0);
     auto nullPtr = rewriter.create<LLVM::NullOp>(loc, i8Ptr);
 
     // Get coroutine id: @llvm.coro.id.
@@ -350,8 +365,8 @@ public:
     // requires the size parameter be an integral multiple of the alignment
     // parameter.
     auto makeConstant = [&](uint64_t c) {
-      return rewriter.create<LLVM::ConstantOp>(
-          op->getLoc(), rewriter.getI64Type(), rewriter.getI64IntegerAttr(c));
+      return rewriter.create<LLVM::ConstantOp>(op->getLoc(),
+                                               rewriter.getI64Type(), c);
     };
     coroSize = rewriter.create<LLVM::AddOp>(op->getLoc(), coroSize, coroAlign);
     coroSize =
@@ -365,13 +380,12 @@ public:
     auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(
         op->getParentOfType<ModuleOp>(), rewriter.getI64Type());
     auto coroAlloc = rewriter.create<LLVM::CallOp>(
-        loc, i8Ptr, SymbolRefAttr::get(allocFuncOp),
-        ValueRange{coroAlign, coroSize});
+        loc, allocFuncOp, ValueRange{coroAlign, coroSize});
 
     // Begin a coroutine: @llvm.coro.begin.
-    auto coroId = CoroBeginOpAdaptor(adaptor.getOperands()).id();
+    auto coroId = CoroBeginOpAdaptor(adaptor.getOperands()).getId();
     rewriter.replaceOpWithNewOp<LLVM::CoroBeginOp>(
-        op, i8Ptr, ValueRange({coroId, coroAlloc.getResult(0)}));
+        op, i8Ptr, ValueRange({coroId, coroAlloc.getResult()}));
 
     return success();
   }
@@ -400,8 +414,7 @@ public:
     // Free the memory.
     auto freeFuncOp =
         LLVM::lookupOrCreateFreeFn(op->getParentOfType<ModuleOp>());
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, TypeRange(),
-                                              SymbolRefAttr::get(freeFuncOp),
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFuncOp,
                                               ValueRange(coroMem.getResult()));
 
     return success();
@@ -426,7 +439,7 @@ public:
         op->getLoc(), rewriter.getI1Type(), rewriter.getBoolAttr(false));
 
     // Mark the end of a coroutine: @llvm.coro.end.
-    auto coroHdl = adaptor.handle();
+    auto coroHdl = adaptor.getHandle();
     rewriter.create<LLVM::CoroEndOp>(op->getLoc(), rewriter.getI1Type(),
                                      ValueRange({coroHdl, constFalse}));
     rewriter.eraseOp(op);
@@ -503,7 +516,7 @@ public:
         loc, rewriter.getI1Type(), rewriter.getBoolAttr(false));
 
     // Suspend a coroutine: @llvm.coro.suspend
-    auto coroState = adaptor.state();
+    auto coroState = adaptor.getState();
     auto coroSuspend = rewriter.create<LLVM::CoroSuspendOp>(
         loc, i8, ValueRange({coroState, constFalse}));
 
@@ -513,11 +526,11 @@ public:
     // or suspend block of the coroutine (see @llvm.coro.suspend return code
     // documentation).
     llvm::SmallVector<int32_t, 2> caseValues = {0, 1};
-    llvm::SmallVector<Block *, 2> caseDest = {op.resumeDest(),
-                                              op.cleanupDest()};
+    llvm::SmallVector<Block *, 2> caseDest = {op.getResumeDest(),
+                                              op.getCleanupDest()};
     rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(
         op, rewriter.create<LLVM::SExtOp>(loc, i32, coroSuspend.getResult()),
-        /*defaultDestination=*/op.suspendDest(),
+        /*defaultDestination=*/op.getSuspendDest(),
         /*defaultOperands=*/ValueRange(),
         /*caseValues=*/caseValues,
         /*caseDestinations=*/caseDest,
@@ -567,10 +580,8 @@ public:
         // %Size = getelementptr %T* null, int 1
         // %SizeI = ptrtoint %T* %Size to i64
         auto nullPtr = rewriter.create<LLVM::NullOp>(loc, storagePtrType);
-        auto one = rewriter.create<LLVM::ConstantOp>(
-            loc, i64, rewriter.getI64IntegerAttr(1));
         auto gep = rewriter.create<LLVM::GEPOp>(loc, storagePtrType, nullPtr,
-                                                one.getResult());
+                                                ArrayRef<LLVM::GEPArg>{1});
         return rewriter.create<LLVM::PtrToIntOp>(loc, i64, gep);
       };
 
@@ -623,7 +634,7 @@ public:
   matchAndRewrite(RuntimeSetAvailableOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     StringRef apiFuncName =
-        TypeSwitch<Type, StringRef>(op.operand().getType())
+        TypeSwitch<Type, StringRef>(op.getOperand().getType())
             .Case<TokenType>([](Type) { return kEmplaceToken; })
             .Case<ValueType>([](Type) { return kEmplaceValue; });
 
@@ -649,7 +660,7 @@ public:
   matchAndRewrite(RuntimeSetErrorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     StringRef apiFuncName =
-        TypeSwitch<Type, StringRef>(op.operand().getType())
+        TypeSwitch<Type, StringRef>(op.getOperand().getType())
             .Case<TokenType>([](Type) { return kSetTokenError; })
             .Case<ValueType>([](Type) { return kSetValueError; });
 
@@ -674,7 +685,7 @@ public:
   matchAndRewrite(RuntimeIsErrorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     StringRef apiFuncName =
-        TypeSwitch<Type, StringRef>(op.operand().getType())
+        TypeSwitch<Type, StringRef>(op.getOperand().getType())
             .Case<TokenType>([](Type) { return kIsTokenError; })
             .Case<GroupType>([](Type) { return kIsGroupError; })
             .Case<ValueType>([](Type) { return kIsValueError; });
@@ -699,7 +710,7 @@ public:
   matchAndRewrite(RuntimeAwaitOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     StringRef apiFuncName =
-        TypeSwitch<Type, StringRef>(op.operand().getType())
+        TypeSwitch<Type, StringRef>(op.getOperand().getType())
             .Case<TokenType>([](Type) { return kAwaitToken; })
             .Case<ValueType>([](Type) { return kAwaitValue; })
             .Case<GroupType>([](Type) { return kAwaitGroup; });
@@ -727,13 +738,13 @@ public:
   matchAndRewrite(RuntimeAwaitAndResumeOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     StringRef apiFuncName =
-        TypeSwitch<Type, StringRef>(op.operand().getType())
+        TypeSwitch<Type, StringRef>(op.getOperand().getType())
             .Case<TokenType>([](Type) { return kAwaitTokenAndExecute; })
             .Case<ValueType>([](Type) { return kAwaitValueAndExecute; })
             .Case<GroupType>([](Type) { return kAwaitAllAndExecute; });
 
-    Value operand = adaptor.operand();
-    Value handle = adaptor.handle();
+    Value operand = adaptor.getOperand();
+    Value handle = adaptor.getHandle();
 
     // A pointer to coroutine resume intrinsic wrapper.
     addResumeFunction(op->getParentOfType<ModuleOp>());
@@ -770,7 +781,7 @@ public:
         op->getLoc(), LLVM::LLVMPointerType::get(resumeFnTy), kResume);
 
     // Call async runtime API to execute a coroutine in the managed thread.
-    auto coroHdl = adaptor.handle();
+    auto coroHdl = adaptor.getHandle();
     rewriter.replaceOpWithNewOp<func::CallOp>(
         op, TypeRange(), kExecute, ValueRange({coroHdl, resumePtr.getRes()}));
 
@@ -795,12 +806,12 @@ public:
 
     // Get a pointer to the async value storage from the runtime.
     auto i8Ptr = AsyncAPI::opaquePointerType(rewriter.getContext());
-    auto storage = adaptor.storage();
+    auto storage = adaptor.getStorage();
     auto storagePtr = rewriter.create<func::CallOp>(loc, kGetValueStorage,
                                                     TypeRange(i8Ptr), storage);
 
     // Cast from i8* to the LLVM pointer type.
-    auto valueType = op.value().getType();
+    auto valueType = op.getValue().getType();
     auto llvmValueType = getTypeConverter()->convertType(valueType);
     if (!llvmValueType)
       return rewriter.notifyMatchFailure(
@@ -811,7 +822,7 @@ public:
         storagePtr.getResult(0));
 
     // Store the yielded value into the async value storage.
-    auto value = adaptor.value();
+    auto value = adaptor.getValue();
     rewriter.create<LLVM::StoreOp>(loc, value, castedStoragePtr.getResult());
 
     // Erase the original runtime store operation.
@@ -838,12 +849,12 @@ public:
 
     // Get a pointer to the async value storage from the runtime.
     auto i8Ptr = AsyncAPI::opaquePointerType(rewriter.getContext());
-    auto storage = adaptor.storage();
+    auto storage = adaptor.getStorage();
     auto storagePtr = rewriter.create<func::CallOp>(loc, kGetValueStorage,
                                                     TypeRange(i8Ptr), storage);
 
     // Cast from i8* to the LLVM pointer type.
-    auto valueType = op.result().getType();
+    auto valueType = op.getResult().getType();
     auto llvmValueType = getTypeConverter()->convertType(valueType);
     if (!llvmValueType)
       return rewriter.notifyMatchFailure(
@@ -875,7 +886,7 @@ public:
   matchAndRewrite(RuntimeAddToGroupOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Currently we can only add tokens to the group.
-    if (!op.operand().getType().isa<TokenType>())
+    if (!op.getOperand().getType().isa<TokenType>())
       return rewriter.notifyMatchFailure(op, "only token type is supported");
 
     // Replace with a runtime API function call.
@@ -930,9 +941,9 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto count = rewriter.create<arith::ConstantOp>(
         op->getLoc(), rewriter.getI64Type(),
-        rewriter.getI64IntegerAttr(op.count()));
+        rewriter.getI64IntegerAttr(op.getCount()));
 
-    auto operand = adaptor.operand();
+    auto operand = adaptor.getOperand();
     rewriter.replaceOpWithNewOp<func::CallOp>(op, TypeRange(), apiFunctionName,
                                               ValueRange({operand, count}));
 
@@ -979,7 +990,7 @@ public:
 
 namespace {
 struct ConvertAsyncToLLVMPass
-    : public ConvertAsyncToLLVMBase<ConvertAsyncToLLVMPass> {
+    : public impl::ConvertAsyncToLLVMBase<ConvertAsyncToLLVMPass> {
   void runOnOperation() override;
 };
 } // namespace

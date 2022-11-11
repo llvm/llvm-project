@@ -8,13 +8,13 @@
 declare <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float>)
 declare <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double>)
 
-define <8 x float> @float_to_int_to_float_mem_v8f32(<8 x float>* %p) #0 {
+define <8 x float> @float_to_int_to_float_mem_v8f32(ptr %p) #0 {
 ; AVX-LABEL: float_to_int_to_float_mem_v8f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttps2dq (%rdi), %ymm0
 ; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX-NEXT:    retq
-  %x = load <8 x float>, <8 x float>* %p, align 16
+  %x = load <8 x float>, ptr %p, align 16
   %fptosi = tail call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> %x)
   %sitofp = sitofp <8 x i32> %fptosi to <8 x float>
   ret <8 x float> %sitofp
@@ -31,13 +31,13 @@ define <8 x float> @float_to_int_to_float_reg_v8f32(<8 x float> %x) #0 {
   ret <8 x float> %sitofp
 }
 
-define <4 x double> @float_to_int_to_float_mem_v4f64(<4 x double>* %p) #0 {
+define <4 x double> @float_to_int_to_float_mem_v4f64(ptr %p) #0 {
 ; AVX-LABEL: float_to_int_to_float_mem_v4f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttpd2dqy (%rdi), %xmm0
 ; AVX-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX-NEXT:    retq
-  %x = load <4 x double>, <4 x double>* %p, align 16
+  %x = load <4 x double>, ptr %p, align 16
   %fptosi = tail call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> %x)
   %sitofp = sitofp <4 x i32> %fptosi to <4 x double>
   ret <4 x double> %sitofp

@@ -9,8 +9,8 @@
 #include "InconsistentDeclarationParameterNameCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "llvm/ADT/STLExtras.h"
 
-#include <algorithm>
 #include <functional>
 
 using namespace clang::ast_matchers;
@@ -158,12 +158,12 @@ findInconsistentDeclarations(const FunctionDecl *OriginalDeclaration,
 
   // Sort in order of appearance in translation unit to generate clear
   // diagnostics.
-  std::sort(InconsistentDeclarations.begin(), InconsistentDeclarations.end(),
-            [&SM](const InconsistentDeclarationInfo &Info1,
-                  const InconsistentDeclarationInfo &Info2) {
-              return SM.isBeforeInTranslationUnit(Info1.DeclarationLocation,
-                                                  Info2.DeclarationLocation);
-            });
+  llvm::sort(InconsistentDeclarations,
+             [&SM](const InconsistentDeclarationInfo &Info1,
+                   const InconsistentDeclarationInfo &Info2) {
+               return SM.isBeforeInTranslationUnit(Info1.DeclarationLocation,
+                                                   Info2.DeclarationLocation);
+             });
   return InconsistentDeclarations;
 }
 

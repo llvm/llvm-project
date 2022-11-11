@@ -161,8 +161,8 @@ define i64 @constantexpr() {
 ; CHECK-NEXT:    ret i64 0
 ;
   %A = alloca i64
-  %L = load i64, i64* %A
-  %V = add i64 ptrtoint (i32* @X to i64), 0
+  %L = load i64, ptr %A
+  %V = add i64 ptrtoint (ptr @X to i64), 0
   %B2 = shl i64 %V, 0
   %B4 = ashr i64 %B2, %L
   %B = and i64 undef, %B4

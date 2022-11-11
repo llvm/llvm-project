@@ -9,7 +9,7 @@
 ; (Specifically, there were reviewer questions about the lowering for halfs
 ;  and their calling convention which remain unresolved.)
 
-define void @store_fp128(fp128* %fptr, fp128 %v) {
+define void @store_fp128(ptr %fptr, fp128 %v) {
 ; X64-NOSSE-LABEL: store_fp128:
 ; X64-NOSSE:       # %bb.0:
 ; X64-NOSSE-NEXT:    pushq %rax
@@ -30,6 +30,6 @@ define void @store_fp128(fp128* %fptr, fp128 %v) {
 ; X64-SSE-NEXT:    addq $24, %rsp
 ; X64-SSE-NEXT:    .cfi_def_cfa_offset 8
 ; X64-SSE-NEXT:    retq
-  store atomic fp128 %v, fp128* %fptr unordered, align 16
+  store atomic fp128 %v, ptr %fptr unordered, align 16
   ret void
 }

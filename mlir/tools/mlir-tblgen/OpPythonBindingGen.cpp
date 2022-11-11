@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/StringSet.h"
@@ -543,21 +542,6 @@ constexpr const char *initAttributeTemplate = R"Py(attributes["{0}"] = {1})Py";
 constexpr const char *initOptionalAttributeTemplate =
     R"Py(if {1} is not None: attributes["{0}"] = {1})Py";
 
-/// Template for setting an attribute with a default value in the operation
-/// builder.
-///   {0} is the attribute name;
-///   {1} is the builder argument name;
-///   {2} is the default value.
-constexpr const char *initDefaultValuedAttributeTemplate =
-    R"Py(attributes["{0}"] = {1} if {1} is not None else {2})Py";
-
-/// Template for asserting that an attribute value was provided when calling a
-/// builder.
-///   {0} is the attribute name;
-///   {1} is the builder argument name.
-constexpr const char *assertAttributeValueSpecified =
-    R"Py(assert {1} is not None, "attribute {0} must be specified")Py";
-
 constexpr const char *initUnitAttributeTemplate =
     R"Py(if bool({1}): attributes["{0}"] = _ods_ir.UnitAttr.get(
       _ods_get_default_loc_context(loc)))Py";
@@ -663,21 +647,6 @@ static void populateBuilderArgsSuccessors(
   }
 }
 
-/// Generates Python code for the default value of the given attribute.
-static FailureOr<std::string> getAttributeDefaultValue(Attribute attr) {
-  assert(attr.hasDefaultValue() && "expected attribute with default value");
-  StringRef storageType = attr.getStorageType().trim();
-  StringRef defaultValCpp = attr.getDefaultValue().trim();
-
-  // A list of commonly used attribute types and default values for which
-  // we can generate Python code. Extend as needed.
-  if (storageType.equals("::mlir::ArrayAttr") && defaultValCpp.equals("{}"))
-    return std::string("_ods_ir.ArrayAttr.get([])");
-
-  // No match: Cannot generate Python code.
-  return failure();
-}
-
 /// Populates `builderLines` with additional lines that are required in the
 /// builder to set up operation attributes. `argNames` is expected to contain
 /// the names of builder arguments that correspond to op arguments, i.e. to the
@@ -700,29 +669,11 @@ populateBuilderLinesAttr(const Operator &op,
       continue;
     }
 
-    // Attributes with default value are handled specially.
-    if (attribute->attr.hasDefaultValue()) {
-      // In case we cannot generate Python code for the default value, the
-      // attribute must be specified by the user.
-      FailureOr<std::string> defaultValPy =
-          getAttributeDefaultValue(attribute->attr);
-      if (succeeded(defaultValPy)) {
-        builderLines.push_back(llvm::formatv(initDefaultValuedAttributeTemplate,
-                                             attribute->name, argNames[i],
-                                             *defaultValPy));
-      } else {
-        builderLines.push_back(llvm::formatv(assertAttributeValueSpecified,
-                                             attribute->name, argNames[i]));
-        builderLines.push_back(
-            llvm::formatv(initAttributeTemplate, attribute->name, argNames[i]));
-      }
-      continue;
-    }
-
-    builderLines.push_back(llvm::formatv(attribute->attr.isOptional()
-                                             ? initOptionalAttributeTemplate
-                                             : initAttributeTemplate,
-                                         attribute->name, argNames[i]));
+    builderLines.push_back(llvm::formatv(
+        (attribute->attr.isOptional() || attribute->attr.hasDefaultValue())
+            ? initOptionalAttributeTemplate
+            : initAttributeTemplate,
+        attribute->name, argNames[i]));
   }
 }
 

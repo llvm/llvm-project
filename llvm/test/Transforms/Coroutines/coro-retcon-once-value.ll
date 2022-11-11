@@ -53,8 +53,8 @@ define void @test(i32* %array) {
 ; CHECK-NEXT:    store i32* [[ARRAY:%.*]], i32** [[TMP0]], align 8
 ; CHECK-NEXT:    [[LOAD_I:%.*]] = load i32, i32* [[ARRAY]], align 4
 ; CHECK-NEXT:    [[LOAD_POS_I:%.*]] = icmp sgt i32 [[LOAD_I]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[LOAD_I]], i32 0) #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    call void @print(i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smax.i32(i32 [[LOAD_I]], i32 0)
+; CHECK-NEXT:    tail call void @print(i32 [[TMP1]])
 ; CHECK-NEXT:    [[CONT_CAST:%.*]] = select i1 [[LOAD_POS_I]], void (i8*, i1)* @f.resume.0, void (i8*, i1)* @f.resume.1
 ; CHECK-NEXT:    call void [[CONT_CAST]](i8* nonnull [[DOTSUB]], i1 zeroext false)
 ; CHECK-NEXT:    ret void

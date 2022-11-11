@@ -44,7 +44,7 @@ int main() {
 
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK:   Write of size 8 at {{.*}} by thread T1:
-// CHECK:     #0 memset
+// CHECK:     #0 {{.*}}memset
 // CHECK:     #{{[12]}} Thread
 // CHECK-NOT: bad PC passed to __tsan_symbolize_external
 // CHECK-NOT: __sanitizer_report_error_summary

@@ -21,7 +21,7 @@ namespace readability {
 /// Corresponding cpplint.py check: 'readability/todo'
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google-readability-todo.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/google/readability-todo.html
 class TodoCommentCheck : public ClangTidyCheck {
 public:
   TodoCommentCheck(StringRef Name, ClangTidyContext *Context);

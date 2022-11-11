@@ -19,7 +19,7 @@ namespace readability {
 /// them to use the appropriate boolean expression directly.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-simplify-boolean-expr.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/simplify-boolean-expr.html
 class SimplifyBooleanExprCheck : public ClangTidyCheck {
 public:
   SimplifyBooleanExprCheck(StringRef Name, ClangTidyContext *Context);

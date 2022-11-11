@@ -12,7 +12,7 @@
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
 # RUN: llvm-readelf -S -d %t | FileCheck %s --check-prefix=SEC
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=REL
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 --defsym AUX=1 %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t2.o
@@ -21,7 +21,7 @@
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
 # RUN: llvm-readelf -S -d %t | FileCheck %s --check-prefix=SEC
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=REL
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le --defsym AUX=1 %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t2.o
@@ -30,7 +30,7 @@
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL-NOP10
 # RUN: llvm-readelf -S -d %t | FileCheck %s --check-prefix=SEC-NOP10
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=REL-NOP10
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s --check-prefix=CHECK-NOP10
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=CHECK-NOP10
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 --defsym AUX=1 %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t2.o
@@ -39,7 +39,7 @@
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL-NOP10
 # RUN: llvm-readelf -S -d %t | FileCheck %s --check-prefix=SEC-NOP10
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=REL-NOP10
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s --check-prefix=CHECK-NOP10
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=CHECK-NOP10
 
 ## The test is created to check that when a function without TOC access an
 ## external function, a r12 setup stub is inserted.

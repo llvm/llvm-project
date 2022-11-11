@@ -10,11 +10,11 @@
 
 ; There should be no pcmpeqd instructions, everybody should the constant pool.
 
-	%struct.__ImageExecInfo = type <{ <4 x i32>, <4 x float>, <2 x i64>, i8*, i8*, i8*, i32, i32, i32, i32, i32 }>
+	%struct.__ImageExecInfo = type <{ <4 x i32>, <4 x float>, <2 x i64>, ptr, ptr, ptr, i32, i32, i32, i32, i32 }>
 	%struct._cl_image_format_t = type <{ i32, i32, i32 }>
-	%struct._image2d_t = type <{ i8*, %struct._cl_image_format_t, i32, i32, i32, i32, i32, i32 }>
+	%struct._image2d_t = type <{ ptr, %struct._cl_image_format_t, i32, i32, i32, i32, i32, i32 }>
 
-define void @program_1(%struct._image2d_t* %dest, %struct._image2d_t* %t0, <4 x float> %p0, <4 x float> %p1, <4 x float> %p4, <4 x float> %p5, <4 x float> %p6) nounwind {
+define void @program_1(ptr %dest, ptr %t0, <4 x float> %p0, <4 x float> %p1, <4 x float> %p4, <4 x float> %p5, <4 x float> %p6) nounwind {
 ; X32-LABEL: program_1:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    pushl %esi
@@ -184,7 +184,7 @@ define void @program_1(%struct._image2d_t* %dest, %struct._image2d_t* %t0, <4 x 
 ; X64-NEXT:    callq *%rbx
 ; X64-NEXT:    ud2
 entry:
-	%tmp3.i = load i32, i32* null		; <i32> [#uses=1]
+	%tmp3.i = load i32, ptr null		; <i32> [#uses=1]
 	%cmp = icmp slt i32 0, %tmp3.i		; <i1> [#uses=1]
 	br i1 %cmp, label %forcond, label %ifthen
 
@@ -192,7 +192,7 @@ ifthen:		; preds = %entry
 	ret void
 
 forcond:		; preds = %entry
-	%tmp3.i536 = load i32, i32* null		; <i32> [#uses=1]
+	%tmp3.i536 = load i32, ptr null		; <i32> [#uses=1]
 	%cmp12 = icmp slt i32 0, %tmp3.i536		; <i1> [#uses=1]
 	br i1 %cmp12, label %forbody, label %afterfor
 
@@ -222,7 +222,7 @@ forbody:		; preds = %forcond
 	%bitcast.i3 = bitcast <4 x float> %mul310 to <4 x i32>		; <<4 x i32>> [#uses=1]
 	%andps.i5 = and <4 x i32> %bitcast.i3, zeroinitializer		; <<4 x i32>> [#uses=1]
 
-	call void null(<4 x float> %mul313, <4 x float> %cmpunord.i11, <4 x float> %tmp83, <4 x float> zeroinitializer, %struct.__ImageExecInfo* null, <4 x i32> zeroinitializer) nounwind
+	call void null(<4 x float> %mul313, <4 x float> %cmpunord.i11, <4 x float> %tmp83, <4 x float> zeroinitializer, ptr null, <4 x i32> zeroinitializer) nounwind
 
 	%tmp84 = call <4 x float> @llvm.x86.sse.min.ps(<4 x float> %mul313, <4 x float> zeroinitializer) nounwind		; <<4 x float>> [#uses=1]
 
@@ -246,7 +246,7 @@ forbody:		; preds = %forcond
 	%andnps.i = and <4 x i32> %bitcast11.i, %not.i		; <<4 x i32>> [#uses=1]
 	%orps.i = or <4 x i32> %andnps.i, %andps.i		; <<4 x i32>> [#uses=1]
 	%bitcast17.i = bitcast <4 x i32> %orps.i to <4 x float>		; <<4 x float>> [#uses=1]
-	call void null(<4 x float> %bitcast17.i19, <4 x float> %bitcast17.i10, <4 x float> %bitcast17.i, <4 x float> zeroinitializer, %struct.__ImageExecInfo* null, <4 x i32> zeroinitializer) nounwind
+	call void null(<4 x float> %bitcast17.i19, <4 x float> %bitcast17.i10, <4 x float> %bitcast17.i, <4 x float> zeroinitializer, ptr null, <4 x i32> zeroinitializer) nounwind
 	unreachable
 
 afterfor:		; preds = %forcond

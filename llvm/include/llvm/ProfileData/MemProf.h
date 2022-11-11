@@ -221,8 +221,7 @@ struct Frame {
   void printYAML(raw_ostream &OS) const {
     OS << "      -\n"
        << "        Function: " << Function << "\n"
-       << "        SymbolName: "
-       << (SymbolName.hasValue() ? SymbolName.getValue() : "<None>") << "\n"
+       << "        SymbolName: " << SymbolName.value_or("<None>") << "\n"
        << "        LineOffset: " << LineOffset << "\n"
        << "        Column: " << Column << "\n"
        << "        Inline: " << IsInlineFrame << "\n";

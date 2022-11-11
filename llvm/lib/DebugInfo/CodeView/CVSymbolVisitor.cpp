@@ -90,8 +90,8 @@ Error CVSymbolVisitor::visitSymbolStreamFiltered(const CVSymbolArray &Symbols,
   if (!Filter.SymbolOffset)
     return visitSymbolStream(Symbols);
   uint32_t SymbolOffset = *Filter.SymbolOffset;
-  uint32_t ParentRecurseDepth = Filter.ParentRecursiveDepth.getValueOr(0);
-  uint32_t ChildrenRecurseDepth = Filter.ChildRecursiveDepth.getValueOr(0);
+  uint32_t ParentRecurseDepth = Filter.ParentRecursiveDepth.value_or(0);
+  uint32_t ChildrenRecurseDepth = Filter.ChildRecursiveDepth.value_or(0);
   if (!Symbols.isOffsetValid(SymbolOffset))
     return createStringError(inconvertibleErrorCode(), "Invalid symbol offset");
   CVSymbol Sym = *Symbols.at(SymbolOffset);

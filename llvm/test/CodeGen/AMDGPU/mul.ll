@@ -1,7 +1,8 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,SI,FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,VI,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=FUNC,GFX9_10 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=FUNC,GFX9_10 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=FUNC,GFX9PLUS %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=FUNC,GFX9PLUS %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=FUNC,GFX9PLUS %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=EG,FUNC %s
 
 ; mul24 and mad24 are affected
@@ -144,11 +145,11 @@ define amdgpu_kernel void @v_mul_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 ; crash with a 'failed to select' error.
 
 ; FUNC-LABEL: {{^}}s_mul_i64:
-; GFX9_10-DAG: s_mul_i32
-; GFX9_10-DAG: s_mul_hi_u32
-; GFX9_10-DAG: s_mul_i32
-; GFX9_10-DAG: s_mul_i32
-; GFX9_10: s_endpgm
+; GFX9PLUS-DAG: s_mul_i32
+; GFX9PLUS-DAG: s_mul_hi_u32
+; GFX9PLUS-DAG: s_mul_i32
+; GFX9PLUS-DAG: s_mul_i32
+; GFX9PLUS: s_endpgm
 define amdgpu_kernel void @s_mul_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
   %mul = mul i64 %a, %b
   store i64 %mul, i64 addrspace(1)* %out, align 8

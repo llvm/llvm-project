@@ -107,20 +107,20 @@ verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
     auto printEdgeName = [&](InFlightDiagnostic &diag) -> InFlightDiagnostic & {
       diag << "from ";
       if (sourceNo)
-        diag << "Region #" << sourceNo.getValue();
+        diag << "Region #" << sourceNo.value();
       else
         diag << "parent operands";
 
       diag << " to ";
       if (succRegionNo)
-        diag << "Region #" << succRegionNo.getValue();
+        diag << "Region #" << succRegionNo.value();
       else
         diag << "parent results";
       return diag;
     };
 
     Optional<TypeRange> sourceTypes = getInputsTypesForRegion(succRegionNo);
-    if (!sourceTypes.hasValue())
+    if (!sourceTypes.has_value())
       continue;
 
     TypeRange succInputsTypes = succ.getSuccessorInputs().getTypes();
@@ -158,10 +158,6 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   // Verify types along control flow edges originating from the parent.
   if (failed(verifyTypesAlongAllEdges(op, llvm::None, inputTypesFromParent)))
     return failure();
-
-  // RegionBranchOpInterface should not be implemented by Ops that do not have
-  // attached regions.
-  assert(op->getNumRegions() != 0);
 
   auto areTypesCompatible = [&](TypeRange lhs, TypeRange rhs) {
     if (lhs.size() != rhs.size())

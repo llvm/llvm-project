@@ -84,9 +84,9 @@ define void @struct_ssp() sspstrong {
 define void @address_ssp() sspstrong {
 entry:
   %x = alloca i32, align 4
-  %y = alloca i32*, align 8
-  store i32 32, i32* %x, align 4
-  store i32* %x, i32** %y, align 8
+  %y = alloca ptr, align 8
+  store i32 32, ptr %x, align 4
+  store ptr %x, ptr %y, align 8
   ret void
 }
 
@@ -95,9 +95,9 @@ entry:
   %x = alloca %struct.X, align 4
   %y = alloca [64 x i32], align 16
   %a = alloca i32, align 4
-  %b = alloca i32*, align 8
+  %b = alloca ptr, align 8
   %0 = alloca i8, i64 2, align 16
-  store i32 32, i32* %a, align 4
-  store i32* %a, i32** %b, align 8
+  store i32 32, ptr %a, align 4
+  store ptr %a, ptr %b, align 8
   ret void
 }

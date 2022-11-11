@@ -154,7 +154,7 @@ define <2 x double> @ceil_v2f64(<2 x double> %p) {
 }
 declare <2 x double> @llvm.ceil.v2f64(<2 x double> %p)
 
-define <2 x double> @ceil_v2f64_load(<2 x double>* %ptr) {
+define <2 x double> @ceil_v2f64_load(ptr %ptr) {
 ; SSE41-LABEL: ceil_v2f64_load:
 ; SSE41:       ## %bb.0:
 ; SSE41-NEXT:    movupd (%rdi), %xmm0
@@ -170,7 +170,7 @@ define <2 x double> @ceil_v2f64_load(<2 x double>* %ptr) {
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vroundpd $10, (%rdi), %xmm0
 ; AVX512-NEXT:    retq
-  %p = load <2 x double>, <2 x double>* %ptr, align 1
+  %p = load <2 x double>, ptr %ptr, align 1
   %t = call <2 x double> @llvm.ceil.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
@@ -195,7 +195,7 @@ define <4 x float> @ceil_v4f32(<4 x float> %p) {
 }
 declare <4 x float> @llvm.ceil.v4f32(<4 x float> %p)
 
-define <4 x float> @ceil_v4f32_load(<4 x float>* %ptr) {
+define <4 x float> @ceil_v4f32_load(ptr %ptr) {
 ; SSE41-LABEL: ceil_v4f32_load:
 ; SSE41:       ## %bb.0:
 ; SSE41-NEXT:    movups (%rdi), %xmm0
@@ -211,7 +211,7 @@ define <4 x float> @ceil_v4f32_load(<4 x float>* %ptr) {
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vroundps $10, (%rdi), %xmm0
 ; AVX512-NEXT:    retq
-  %p = load <4 x float>, <4 x float>* %ptr, align 1
+  %p = load <4 x float>, ptr %ptr, align 1
   %t = call <4 x float> @llvm.ceil.v4f32(<4 x float> %p)
   ret <4 x float> %t
 }

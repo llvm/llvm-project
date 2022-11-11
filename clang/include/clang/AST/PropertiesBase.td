@@ -138,6 +138,7 @@ def TemplateArgument : PropertyType;
 def TemplateArgumentKind : EnumPropertyType<"TemplateArgument::ArgKind">;
 def TemplateName : DefaultValuePropertyType;
 def TemplateNameKind : EnumPropertyType<"TemplateName::NameKind">;
+def TypeOfKind : EnumPropertyType<"TypeOfKind">;
 def UInt32 : CountPropertyType<"uint32_t">;
 def UInt64 : CountPropertyType<"uint64_t">;
 def UnaryTypeTransformKind : EnumPropertyType<"UnaryTransformType::UTTKind">;
@@ -520,15 +521,15 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
     if (hasBase) {
       if (isTypeInfo) {
         base = APValue::LValueBase::getTypeInfo(
-            TypeInfoLValue(typeInfo.getValue().getTypePtr()), type.getValue());
+            TypeInfoLValue(typeInfo.value().getTypePtr()), type.value());
         elemTy = base.getTypeInfoType();
       } else if (isExpr) {
-        base = APValue::LValueBase(cast<Expr>(stmt.getValue()),
-                                   callIndex.getValue(), version.getValue());
+        base = APValue::LValueBase(cast<Expr>(stmt.value()),
+                                   callIndex.value(), version.value());
         elemTy = base.get<const Expr *>()->getType();
       } else {
-        base = APValue::LValueBase(cast<ValueDecl>(decl.getValue()),
-                                   callIndex.getValue(), version.getValue());
+        base = APValue::LValueBase(cast<ValueDecl>(decl.value()),
+                                   callIndex.value(), version.value());
         elemTy = base.get<const ValueDecl *>()->getType();
       }
     }
@@ -700,28 +701,40 @@ let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParm"> in {
   def : ReadHelper<[{
     auto parm = node.getAsSubstTemplateTemplateParm();
   }]>;
-  def : Property<"parameter", TemplateTemplateParmDeclRef> {
-    let Read = [{ parm->getParameter() }];
-  }
   def : Property<"replacement", TemplateName> {
     let Read = [{ parm->getReplacement() }];
   }
+  def : Property<"associatedDecl", DeclRef> {
+    let Read = [{ parm->getAssociatedDecl() }];
+  }
+  def : Property<"index", UInt32> {
+    let Read = [{ parm->getIndex() }];
+  }
+  def : Property<"packIndex", Optional<UInt32>> {
+    let Read = [{ parm->getPackIndex() }];
+  }
   def : Creator<[{
-    return ctx.getSubstTemplateTemplateParm(parameter, replacement);
+    return ctx.getSubstTemplateTemplateParm(replacement, associatedDecl, index, packIndex);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParmPack"> in {
   def : ReadHelper<[{
     auto parm = node.getAsSubstTemplateTemplateParmPack();
   }]>;
-  def : Property<"parameterPack", TemplateTemplateParmDeclRef> {
-    let Read = [{ parm->getParameterPack() }];
-  }
   def : Property<"argumentPack", TemplateArgument> {
     let Read = [{ parm->getArgumentPack() }];
   }
+  def : Property<"associatedDecl", DeclRef> {
+    let Read = [{ parm->getAssociatedDecl() }];
+  }
+  def : Property<"index", UInt32> {
+    let Read = [{ parm->getIndex() }];
+  }
+  def : Property<"final", Bool> {
+    let Read = [{ parm->getFinal() }];
+  }
   def : Creator<[{
-    return ctx.getSubstTemplateTemplateParmPack(parameterPack, argumentPack);
+    return ctx.getSubstTemplateTemplateParmPack(argumentPack, associatedDecl, index, final);
   }]>;
 }
 
@@ -786,13 +799,13 @@ let Class = PropertyTypeCase<TemplateArgument, "TemplateExpansion"> in {
   def : Property<"numExpansions", Optional<UInt32>> {
     let Read = [{
       // Translate unsigned -> uint32_t just in case.
-      node.getNumTemplateExpansions().map(
+      node.getNumTemplateExpansions().transform(
         [](unsigned i) { return uint32_t(i); })
     }];
   }
   def : Creator<[{
     auto numExpansionsUnsigned =
-      numExpansions.map([](uint32_t i) { return unsigned(i); });
+      numExpansions.transform([](uint32_t i) { return unsigned(i); });
     return TemplateArgument(name, numExpansionsUnsigned);
   }]>;
 }

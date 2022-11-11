@@ -5,7 +5,7 @@
 ; multiple successors. In this case, the block dup1 gets duplicated into dup2
 ; and if.then64, and then the block dup2 only gets duplicated into land.lhs.true.
 
-define void @partial_tail_dup(i1 %a1, i1 %a2, i32* %a4, i32* %a5, i8* %a6, i32 %a7) #0 align 2  !prof !1 {
+define void @partial_tail_dup(i1 %a1, i1 %a2, ptr %a4, ptr %a5, ptr %a6, i32 %a7) #0 align 2  !prof !1 {
 ; CHECK-LABEL: partial_tail_dup:
 ; CHECK:        # %bb.0: # %entry
 ; CHECK-NEXT:   .p2align 4, 0x90
@@ -51,26 +51,26 @@ for.cond:
   br i1 %a1, label %land.lhs.true, label %if.end56
 
 land.lhs.true:                                   
-  store i32 10, i32* %a4, align 8
+  store i32 10, ptr %a4, align 8
   br label %dup2
 
 if.end56:                                        
   br i1 %a2, label %if.then64, label %if.end70, !prof !2
 
 if.then64:                                       
-  store i8 1, i8* %a6, align 1
+  store i8 1, ptr %a6, align 1
   br label %dup1
 
 if.end70:                                        
-  store i32 12, i32* %a4, align 8
+  store i32 12, ptr %a4, align 8
   br i1 %a2, label %dup2, label %for.end
 
 dup2:                                            
-  store i32 2, i32* %a5, align 4
+  store i32 2, ptr %a5, align 4
   br label %dup1
 
 dup1:                                            
-  %val = load i32, i32* %a4, align 8
+  %val = load i32, ptr %a4, align 8
   %switch = icmp ult i32 %a7, 1
   br i1 %switch, label %for.cond, label %for.end, !prof !3
 

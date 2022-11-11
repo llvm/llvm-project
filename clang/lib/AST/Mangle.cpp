@@ -72,7 +72,7 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
   // can call it with the correct function signature.
   if (Triple.isWasm())
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND))
-      if (FD->isMain() && FD->hasPrototype() && FD->param_size() == 2)
+      if (FD->isMain() && FD->getNumParams() == 2)
         return CCM_WasmMainArgcArgv;
 
   if (!Triple.isOSWindows() || !Triple.isX86())

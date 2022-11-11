@@ -743,6 +743,62 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
               ValueIs(SameRange(findSpelled("ID2 ( a4 , a5 a6 a7 )"))));
   // Should fail, spans multiple invocations.
   EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("a1 a2 a3 a4")), llvm::None);
+
+  // https://github.com/clangd/clangd/issues/1289
+  recordTokens(R"cpp(
+    #define FOO(X) foo(X)
+    #define INDIRECT FOO(y)
+    INDIRECT // expands to foo(y)
+  )cpp");
+  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("y")), llvm::None);
+
+  recordTokens(R"cpp(
+    #define FOO(X) a X b
+    FOO(y)
+  )cpp");
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("y")),
+              ValueIs(SameRange(findSpelled("y"))));
+
+  recordTokens(R"cpp(
+    #define ID(X) X
+    #define BAR ID(1)
+    BAR
+  )cpp");
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("1")),
+              ValueIs(SameRange(findSpelled(") BAR").drop_front())));
+
+  // Critical cases for mapping of Prev/Next in spelledForExpandedSlow.
+  recordTokens(R"cpp(
+    #define ID(X) X
+    ID(prev ID(good))
+    #define LARGE ID(prev ID(bad))
+    LARGE
+  )cpp");
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
+              ValueIs(SameRange(findSpelled("good"))));
+  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("bad")), llvm::None);
+
+  recordTokens(R"cpp(
+    #define PREV prev
+    #define ID(X) X
+    PREV ID(good)
+    #define LARGE PREV ID(bad)
+    LARGE
+  )cpp");
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
+            ValueIs(SameRange(findSpelled("good"))));
+  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("bad")), llvm::None);
+
+  recordTokens(R"cpp(
+    #define ID(X) X
+    #define ID2(X, Y) X Y
+    ID2(prev, ID(good))
+    #define LARGE ID2(prev, bad)
+    LARGE
+  )cpp");
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
+            ValueIs(SameRange(findSpelled("good"))));
+  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("bad")), llvm::None);
 }
 
 TEST_F(TokenBufferTest, ExpandedTokensForRange) {

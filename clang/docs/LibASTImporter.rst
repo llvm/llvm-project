@@ -468,7 +468,7 @@ Note, there may be several different ASTImporter objects which import into the s
         cxxRecordDecl(hasName("Y"), isDefinition()), ToUnit);
     ToYDef->dump();
     // An error is set for "ToYDef" in the shared state.
-    Optional<ImportError> OptErr =
+    Optional<ASTImportError> OptErr =
         ImporterState->getImportDeclErrorIfAny(ToYDef);
     assert(OptErr);
 

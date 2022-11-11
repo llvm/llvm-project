@@ -7,11 +7,11 @@
 @__tls_guard = internal thread_local unnamed_addr global i1 false
 @sum1 = internal thread_local global i32 0, align 4
 
-declare void @_ZN1SC1Ev(%struct.S*)
-declare void @_ZN1SD1Ev(%struct.S*)
-declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
+declare void @_ZN1SC1Ev(ptr)
+declare void @_ZN1SD1Ev(ptr)
+declare i32 @_tlv_atexit(ptr, ptr, ptr)
 
-define cxx_fast_tlscc nonnull %struct.S* @_ZTW2sg() nounwind {
+define cxx_fast_tlscc nonnull ptr @_ZTW2sg() nounwind {
 ; CHECK-LABEL: _ZTW2sg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
@@ -45,35 +45,35 @@ define cxx_fast_tlscc nonnull %struct.S* @_ZTW2sg() nounwind {
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
-  %.b.i = load i1, i1* @__tls_guard, align 1
+  %.b.i = load i1, ptr @__tls_guard, align 1
   br i1 %.b.i, label %__tls_init.exit, label %init.i
 
 init.i:
-  store i1 true, i1* @__tls_guard, align 1
-  tail call void @_ZN1SC1Ev(%struct.S* nonnull @sg) #2
-  %1 = tail call i32 @_tlv_atexit(void (i8*)* nonnull bitcast (void (%struct.S*)* @_ZN1SD1Ev to void (i8*)*), i8* nonnull getelementptr inbounds (%struct.S, %struct.S* @sg, i64 0, i32 0), i8* nonnull @__dso_handle) #2
+  store i1 true, ptr @__tls_guard, align 1
+  tail call void @_ZN1SC1Ev(ptr nonnull @sg) #2
+  %1 = tail call i32 @_tlv_atexit(ptr nonnull @_ZN1SD1Ev, ptr nonnull @sg, ptr nonnull @__dso_handle) #2
   br label %__tls_init.exit
 
 __tls_init.exit:
-  ret %struct.S* @sg
+  ret ptr @sg
 }
 
-define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind {
+define cxx_fast_tlscc nonnull ptr @_ZTW4sum1() nounwind {
 ; CHECK-LABEL: _ZTW4sum1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 13, sum1@tprel@ha
 ; CHECK-NEXT:    addi 3, 3, sum1@tprel@l
 ; CHECK-NEXT:    blr
-  ret i32* @sum1
+  ret ptr @sum1
 }
 
-define cxx_fast_tlscc i32* @_ZTW4sum2() #0 {
+define cxx_fast_tlscc ptr @_ZTW4sum2() #0 {
 ; CHECK-LABEL: _ZTW4sum2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 13, sum1@tprel@ha
 ; CHECK-NEXT:    addi 3, 3, sum1@tprel@l
 ; CHECK-NEXT:    blr
-  ret i32* @sum1
+  ret ptr @sum1
 }
 
 attributes #0 = { nounwind "frame-pointer"="all" }

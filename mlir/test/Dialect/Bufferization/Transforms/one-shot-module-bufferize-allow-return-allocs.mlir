@@ -48,12 +48,11 @@ func.func @return_slice(%t: tensor<?xf32>, %sz: index) -> (tensor<?xf32>) {
 
 // CHECK-LABEL: func @main(
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32
+//       CHECK:   %[[call:.*]] = call @return_slice(%[[t]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc
-//   CHECK-DAG:   memref.copy %[[t]], %[[alloc]]
-//   CHECK-DAG:   %[[casted:.*]] = memref.cast %[[alloc]]
-//       CHECK:   %[[call:.*]] = call @return_slice(%[[casted]]
+//       CHECK:   memref.copy %[[call]], %[[alloc]]
 //       CHECK:   linalg.fill ins({{.*}}) outs(%[[t]]
-//       CHECK:   memref.load %[[call]]
+//       CHECK:   memref.load %[[alloc]]
 //       CHECK:   memref.load %[[t]]
 func.func @main(%t: tensor<?xf32>, %sz: index, %idx: index) -> (f32, f32) {
   %cst = arith.constant 1.0 : f32

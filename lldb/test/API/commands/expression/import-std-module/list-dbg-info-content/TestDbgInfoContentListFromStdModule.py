@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class TestDbgInfoContentList(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
@@ -24,8 +22,8 @@ class TestDbgInfoContentList(TestBase):
         self.runCmd("settings set target.import-std-module true")
 
         list_type = "std::list<Foo>"
-        size_type = list_type + "::size_type"
-        value_type = list_type + "::value_type"
+        size_type = "size_type"
+        value_type = "value_type"
 
         self.expect_expr("a",
                          result_type=list_type,

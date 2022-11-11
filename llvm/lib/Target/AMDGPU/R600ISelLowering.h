@@ -54,8 +54,8 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *IsFast = nullptr) const override;
 
-  virtual bool canCombineTruncStore(EVT ValVT, EVT MemVT,
-                                    bool LegalOperations) const override {
+  bool canCombineTruncStore(EVT ValVT, EVT MemVT,
+                            bool LegalOperations) const override {
     // R600 has "custom" lowering for truncating stores despite not supporting
     // those instructions. If we allow that custom lowering in the DAG combiner
     // then all truncates are merged into truncating stores, giving worse code
@@ -74,8 +74,8 @@ private:
 
   void lowerImplicitParameter(MachineInstr *MI, MachineBasicBlock &BB,
       MachineRegisterInfo & MRI, unsigned dword_offset) const;
-  SDValue OptimizeSwizzle(SDValue BuildVector, SDValue Swz[], SelectionDAG &DAG,
-                          const SDLoc &DL) const;
+  SDValue OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
+                          SelectionDAG &DAG, const SDLoc &DL) const;
   SDValue vectorToVerticalVector(SelectionDAG &DAG, SDValue Vector) const;
 
   SDValue lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const;

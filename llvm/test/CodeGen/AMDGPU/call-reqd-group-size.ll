@@ -123,7 +123,7 @@ define amdgpu_kernel void @known_xyz_0(i32 addrspace(1)* %out) !reqd_work_group_
 }
 ; CHECK: .amdhsa_system_vgpr_workitem_id 0
 
-attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" }
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" }
 
 !0 = !{i32 1, i32 64, i32 64}
 !1 = !{i32 64, i32 1, i32 64}

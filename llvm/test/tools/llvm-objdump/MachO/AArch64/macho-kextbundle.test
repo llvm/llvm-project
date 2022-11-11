@@ -1,4 +1,4 @@
-RUN: llvm-objdump -d -m --no-show-raw-insn %p/Inputs/kextbundle.macho-aarch64 | FileCheck %s
+RUN: llvm-objdump --no-print-imm-hex -d -m --no-show-raw-insn %p/Inputs/kextbundle.macho-aarch64 | FileCheck %s
 
 CHECK: (__TEXT_EXEC,__text) section
 CHECK: _foo:

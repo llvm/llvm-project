@@ -1,5 +1,6 @@
 # REQUIRES: x86
 
+# RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/verdef-defaultver.s -o %t1
 # RUN: echo "V1 { global: a; b; local: *; };" > %t.script
 # RUN: echo "V2 { global: b; c; } V1;" >> %t.script
@@ -107,9 +108,9 @@
 # DSO-NEXT:  ]
 
 ## Check that we can link against DSO produced.
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t2
-# RUN: ld.lld --hash-style=sysv %t2 %t.so -o %t3
-# RUN: llvm-readobj -V --dyn-syms %t3 | FileCheck --check-prefix=EXE %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+# RUN: ld.lld --hash-style=sysv a.o %t.so -o a
+# RUN: llvm-readobj -V --dyn-syms a | FileCheck --check-prefix=EXE %s
 
 # EXE:      DynamicSymbols [
 # EXE-NEXT:    Symbol {
@@ -193,8 +194,23 @@
 # EXE-NEXT:    }
 # EXE-NEXT:  ]
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
+# RUN: ld.lld -shared --version-script=%t.script --fatal-warnings %t.so b.o -o b.so
+# RUN: llvm-readelf --dyn-syms b.so | FileCheck %s --check-prefix=PREEMPT
+# RUN: ld.lld -shared --version-script=%t.script --fatal-warnings b.o %t.so -o b.so
+# RUN: llvm-readelf --dyn-syms b.so | FileCheck %s --check-prefix=PREEMPT
+
+# PREEMPT-DAG: a@@V1
+# PREEMPT-DAG: c@@V2
+
+#--- a.s
 .globl _start
 _start:
   .long a - .
   .long b - .
   .long c - .
+
+#--- b.s
+.globl a, c
+a:
+c:

@@ -9,9 +9,8 @@ define void @t() nounwind ssp {
 ; CHECK-NEXT:    ud2
 entry:
   %buf = alloca [512 x i8], align 1
-  %ptr = getelementptr inbounds [512 x i8], [512 x i8]* %buf, i32 0, i32 0
-  call void @llvm.memset.p0i8.i32(i8* %ptr, i8 undef, i32 512, i1 false)
+  call void @llvm.memset.p0.i32(ptr %buf, i8 undef, i32 512, i1 false)
   unreachable
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
+declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) nounwind

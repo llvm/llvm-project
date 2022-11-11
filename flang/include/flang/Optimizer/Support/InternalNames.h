@@ -14,6 +14,9 @@
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 
+static constexpr llvm::StringRef typeDescriptorSeparator = ".dt.";
+static constexpr llvm::StringRef bindingTableSeparator = ".v.";
+
 namespace fir {
 
 /// Internal name mangling of identifiers
@@ -141,6 +144,12 @@ struct NameUniquer {
   /// type descriptor object. Returns an empty string if \p mangledTypeName is
   /// not a valid mangled derived type name.
   static std::string getTypeDescriptorName(llvm::StringRef mangledTypeName);
+
+  /// Given a mangled derived type name, get the name of the related binding
+  /// table object. Returns an empty string if \p mangledTypeName is not a valid
+  /// mangled derived type name.
+  static std::string
+  getTypeDescriptorBindingTableName(llvm::StringRef mangledTypeName);
 
 private:
   static std::string intAsString(std::int64_t i);

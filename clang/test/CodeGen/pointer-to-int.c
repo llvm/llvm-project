@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o -
+// RUN: %clang_cc1 -emit-llvm -Wno-int-conversion %s -o -
 
 int test(void* i)
 {

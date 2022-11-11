@@ -18,12 +18,12 @@ contains
 end program test
 
 ! CHECK-LABEL: define void @_QFPsub(
-! CHECK-SAME: ptr %[[arg:.*]])
+! CHECK-SAME:    ptr %[[arg:.*]])
 ! CHECK: %[[extent:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 7, i64 0, i32 1
 ! CHECK: %[[extval:.*]] = load i64, ptr %[[extent]]
 ! CHECK: %[[elesize:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 1
 ! CHECK: %[[esval:.*]] = load i64, ptr %[[elesize]]
-! CHECK: %[[mul:.*]] = mul i64 1, %[[esval]]
+! CHECK: %[[mul:.*]] = mul i64 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64), %[[esval]]
 ! CHECK: %[[mul2:.*]] = mul i64 %[[mul]], %[[extval]]
 ! CHECK: %[[buff:.*]] = call ptr @malloc(i64 %[[mul2]])
 ! CHECK: %[[to:.*]] = getelementptr i8, ptr %[[buff]], i64 %

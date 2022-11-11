@@ -47,7 +47,7 @@
 // NOENTRY: ]
 
 // Should not add entries for "_init" and "_fini" to the symbol table
-// if the symbols are defined in non-fetched achive members.
+// if the symbols are defined in non-fetched archive members.
 // RUN: rm -f %t.a
 // RUN: llvm-ar rcs %t.a %t
 // RUN: ld.lld -shared -m elf_x86_64 -e _unknown %t.a -o %t.so

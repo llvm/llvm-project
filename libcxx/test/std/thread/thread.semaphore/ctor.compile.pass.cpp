@@ -27,5 +27,5 @@ static_assert(!std::is_convertible<int, std::counting_semaphore<>>::value, "");
 #if TEST_STD_VER > 17
 // Test constexpr-constructibility. (But not destructibility.)
 constinit std::binary_semaphore bs(1);
-constinit std::counting_semaphore cs(1);
+constinit std::counting_semaphore<> cs(1);
 #endif

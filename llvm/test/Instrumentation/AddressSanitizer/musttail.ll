@@ -1,6 +1,6 @@
 ; To test that asan does not break the musttail call contract.
 ;
-; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
+; RUN: opt < %s -passes=asan -S | FileCheck %s
 
 define internal i32 @foo(i32* %p) sanitize_address {
   %rv = load i32, i32* %p

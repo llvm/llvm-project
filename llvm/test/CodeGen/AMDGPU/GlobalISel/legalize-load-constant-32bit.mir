@@ -8,7 +8,9 @@ body: |
     liveins: $vgpr0
 
     ; CI-LABEL: name: test_load_constant32bit_s32_align1
-    ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $vgpr0
+    ; CI: liveins: $vgpr0
+    ; CI-NEXT: {{  $}}
+    ; CI-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $vgpr0
     ; CI-NEXT: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
     ; CI-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
     ; CI-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[MV]](p4) :: (load (s8), addrspace 6)
@@ -41,7 +43,9 @@ body: |
     liveins: $vgpr0
 
     ; CI-LABEL: name: test_load_constant32bit_s32_align4
-    ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $vgpr0
+    ; CI: liveins: $vgpr0
+    ; CI-NEXT: {{  $}}
+    ; CI-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $vgpr0
     ; CI-NEXT: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
     ; CI-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
     ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load (s32), addrspace 6)

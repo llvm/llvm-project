@@ -31,7 +31,7 @@ bool llvm::lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI) {
   Value *Res = Builder.CreateSelect(Equal, Val, Orig);
   Builder.CreateStore(Res, Ptr);
 
-  Res = Builder.CreateInsertValue(UndefValue::get(CXI->getType()), Orig, 0);
+  Res = Builder.CreateInsertValue(PoisonValue::get(CXI->getType()), Orig, 0);
   Res = Builder.CreateInsertValue(Res, Equal, 1);
 
   CXI->replaceAllUsesWith(Res);
@@ -74,6 +74,10 @@ Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
     return Builder.CreateFAdd(Loaded, Inc, "new");
   case AtomicRMWInst::FSub:
     return Builder.CreateFSub(Loaded, Inc, "new");
+  case AtomicRMWInst::FMax:
+    return Builder.CreateMaxNum(Loaded, Inc);
+  case AtomicRMWInst::FMin:
+    return Builder.CreateMinNum(Loaded, Inc);
   default:
     llvm_unreachable("Unknown atomic op");
   }

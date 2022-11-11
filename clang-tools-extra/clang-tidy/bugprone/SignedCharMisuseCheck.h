@@ -22,7 +22,7 @@ namespace bugprone {
 /// implicit conversion happens.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-signed-char-misuse.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/signed-char-misuse.html
 class SignedCharMisuseCheck : public ClangTidyCheck {
 public:
   SignedCharMisuseCheck(StringRef Name, ClangTidyContext *Context);

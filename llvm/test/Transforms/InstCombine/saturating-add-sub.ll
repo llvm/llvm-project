@@ -1052,15 +1052,15 @@ define i8 @test_scalar_usub_add(i8 %a, i8 %b) {
   ret i8 %res
 }
 
-define i8 @test_scalar_usub_add_extra_use(i8 %a, i8 %b, i8* %p) {
+define i8 @test_scalar_usub_add_extra_use(i8 %a, i8 %b, ptr %p) {
 ; CHECK-LABEL: @test_scalar_usub_add_extra_use(
 ; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
-; CHECK-NEXT:    store i8 [[SAT]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 [[SAT]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], [[B]]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 %b)
-  store i8 %sat, i8* %p
+  store i8 %sat, ptr %p
   %res = add i8 %sat, %b
   ret i8 %res
 }
@@ -1106,15 +1106,15 @@ define i8 @test_scalar_usub_sub(i8 %a, i8 %b) {
   ret i8 %res
 }
 
-define i8 @test_scalar_usub_sub_extra_use(i8 %a, i8 %b, i8* %p) {
+define i8 @test_scalar_usub_sub_extra_use(i8 %a, i8 %b, ptr %p) {
 ; CHECK-LABEL: @test_scalar_usub_sub_extra_use(
 ; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
-; CHECK-NEXT:    store i8 [[SAT]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 [[SAT]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[A]], [[SAT]]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 %b)
-  store i8 %sat, i8* %p
+  store i8 %sat, ptr %p
   %res = sub i8 %a, %sat
   ret i8 %res
 }
@@ -1162,15 +1162,15 @@ define i8 @test_scalar_uadd_sub(i8 %a, i8 %b) {
   ret i8 %res
 }
 
-define i8 @test_scalar_uadd_sub_extra_use(i8 %a, i8 %b, i8* %p) {
+define i8 @test_scalar_uadd_sub_extra_use(i8 %a, i8 %b, ptr %p) {
 ; CHECK-LABEL: @test_scalar_uadd_sub_extra_use(
 ; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
-; CHECK-NEXT:    store i8 [[SAT]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 [[SAT]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[SAT]], [[B]]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 %b)
-  store i8 %sat, i8* %p
+  store i8 %sat, ptr %p
   %res = sub i8 %sat, %b
   ret i8 %res
 }

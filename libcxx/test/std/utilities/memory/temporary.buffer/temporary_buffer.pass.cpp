@@ -8,6 +8,8 @@
 
 // <memory>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // template <class T>
 //   pair<T*, ptrdiff_t>
 //   get_temporary_buffer(ptrdiff_t n);
@@ -18,6 +20,7 @@
 
 #include <memory>
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 

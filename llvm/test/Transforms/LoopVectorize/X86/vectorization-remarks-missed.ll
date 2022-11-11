@@ -1,7 +1,3 @@
-; RUN: opt < %s -loop-vectorize -transform-warning -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' -enable-new-pm=0 2>&1 | FileCheck %s
-; RUN: opt < %s -loop-vectorize -transform-warning -o /dev/null -pass-remarks-output=%t.yaml -enable-new-pm=0
-; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
-
 ; RUN: opt < %s -passes=loop-vectorize,transform-warning -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize'  2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=loop-vectorize,transform-warning -o /dev/null -pass-remarks-output=%t.yaml
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s

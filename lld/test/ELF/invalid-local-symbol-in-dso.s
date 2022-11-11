@@ -1,9 +1,8 @@
 # REQUIRES: x86
 
 # We used to crash on this
-# RUN: ld.lld %p/Inputs/local-symbol-in-dso.so -o %t 2>&1 | \
-# RUN:   FileCheck -check-prefix=WARN %s
-# WARN: found local symbol 'foo' in global part of symbol table in file {{.*}}local-symbol-in-dso.so
+# RUN: not ld.lld %p/Inputs/local-symbol-in-dso.so -o /dev/null 2>&1 | FileCheck %s
+# CHECK: error: {{.*}}local-symbol-in-dso.so: invalid local symbol 'foo' in global part of symbol table
 
 # RUN: llvm-mc %s -o %t.o -filetype=obj -triple x86_64-pc-linux
 # RUN: not ld.lld %t.o %p/Inputs/local-symbol-in-dso.so -o /dev/null

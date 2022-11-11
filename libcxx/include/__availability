@@ -156,22 +156,21 @@
 #   define _LIBCPP_AVAILABILITY_FORMAT
 // #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format
 
-    // This controls whether the std::__libcpp_assertion_handler default
-    // assertion handler is provided by the library.
+    // This controls whether the default verbose termination function is
+    // provided by the library.
     //
-    // Note that when users provide their own custom assertion handler,
-    // it doesn't matter whether the dylib provides a default handler,
-    // and the availability markup can actually give a false positive
-    // diagnostic (it will think that no handler is provided, when in
-    // reality the user has provided their own).
+    // Note that when users provide their own custom function, it doesn't
+    // matter whether the dylib provides a default function, and the
+    // availability markup can actually give a false positive diagnostic
+    // (it will think that no function is provided, when in reality the
+    // user has provided their own).
     //
-    // Users can pass -D_LIBCPP_AVAILABILITY_CUSTOM_ASSERTION_HANDLER_PROVIDED
-    // to the compiler to tell the library to ignore the fact that the
-    // default handler isn't available on their deployment target. Note that
-    // defining this macro but failing to define a custom assertion handler
-    // will lead to a load-time error on back-deployment targets, so it
-    // should be avoided.
-#   define _LIBCPP_AVAILABILITY_DEFAULT_ASSERTION_HANDLER
+    // Users can pass -D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED
+    // to the compiler to tell the library not to define its own verbose abort.
+    // Note that defining this macro but failing to define a custom function
+    // will lead to a load-time error on back-deployment targets, so it should
+    // be avoided.
+// #   define _LIBCPP_HAS_NO_VERBOSE_ABORT_IN_LIBRARY
 
 #elif defined(__APPLE__)
 
@@ -272,8 +271,8 @@
         __attribute__((unavailable))
 #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format
 
-#   define _LIBCPP_AVAILABILITY_DEFAULT_ASSERTION_HANDLER                       \
-        __attribute__((unavailable))
+#   define _LIBCPP_HAS_NO_VERBOSE_ABORT_IN_LIBRARY
+
 #else
 
 // ...New vendors can add availability markup here...
@@ -295,16 +294,6 @@
 #   define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST        _LIBCPP_AVAILABILITY_BAD_ANY_CAST
 #   define _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
 #   define _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS  _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
-#endif
-
-// Define the special assertion handler availability attribute, which can be silenced by
-// users if they provide their own custom assertion handler. The rest of the code should
-// not use the *_DEFAULT_* macro directly, since that would make it ignore the fact that
-// the user provided a custom handler.
-#if defined(_LIBCPP_AVAILABILITY_CUSTOM_ASSERTION_HANDLER_PROVIDED)
-#   define _LIBCPP_AVAILABILITY_ASSERTION_HANDLER /* nothing */
-#else
-#   define _LIBCPP_AVAILABILITY_ASSERTION_HANDLER _LIBCPP_AVAILABILITY_DEFAULT_ASSERTION_HANDLER
 #endif
 
 #endif // _LIBCPP___AVAILABILITY

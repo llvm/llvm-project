@@ -76,6 +76,51 @@ typedef int int32_t;
   "pop %%rbx\n"                                                                \
   "pop %%rax\n"
 
+// Functions that are required by freestanding environment. Compiler may
+// generate calls to these implicitly.
+extern "C" {
+void *memcpy(void *Dest, const void *Src, size_t Len) {
+  uint8_t *d = static_cast<uint8_t *>(Dest);
+  const uint8_t *s = static_cast<const uint8_t *>(Src);
+  while (Len--)
+    *d++ = *s++;
+  return Dest;
+}
+
+void *memmove(void *Dest, const void *Src, size_t Len) {
+  uint8_t *d = static_cast<uint8_t *>(Dest);
+  const uint8_t *s = static_cast<const uint8_t *>(Src);
+  if (d < s) {
+    while (Len--)
+      *d++ = *s++;
+  } else {
+    s += Len - 1;
+    d += Len - 1;
+    while (Len--)
+      *d-- = *s--;
+  }
+
+  return Dest;
+}
+
+void *memset(void *Buf, int C, size_t Size) {
+  char *S = (char *)Buf;
+  for (size_t I = 0; I < Size; ++I)
+    *S++ = C;
+  return Buf;
+}
+
+int memcmp(const void *s1, const void *s2, size_t n) {
+  const uint8_t *c1 = static_cast<const uint8_t *>(s1);
+  const uint8_t *c2 = static_cast<const uint8_t *>(s2);
+  for (; n--; c1++, c2++) {
+    if (*c1 != *c2)
+      return *c1 < *c2 ? -1 : 1;
+  }
+  return 0;
+}
+} // extern "C"
+
 // Anonymous namespace covering everything but our library entry point
 namespace {
 
@@ -187,7 +232,7 @@ uint64_t __exit(uint64_t code) {
 }
 
 // Helper functions for writing strings to the .fdata file. We intentionally
-// avoid using libc names (lowercase memset) to make it clear it is our impl.
+// avoid using libc names to make it clear it is our impl.
 
 /// Write number Num using Base to the buffer in OutBuf, returns a pointer to
 /// the end of the string.
@@ -231,24 +276,27 @@ int strnCmp(const char *Str1, const char *Str2, size_t Num) {
   return *(unsigned char *)Str1 - *(unsigned char *)Str2;
 }
 
-void memSet(char *Buf, char C, uint32_t Size) {
-  for (int I = 0; I < Size; ++I)
-    *Buf++ = C;
-}
-
-void *memCpy(void *Dest, const void *Src, size_t Len) {
-  char *d = static_cast<char *>(Dest);
-  const char *s = static_cast<const char *>(Src);
-  while (Len--)
-    *d++ = *s++;
-  return Dest;
-}
-
 uint32_t strLen(const char *Str) {
   uint32_t Size = 0;
   while (*Str++)
     ++Size;
   return Size;
+}
+
+void *strStr(const char *const Haystack, const char *const Needle) {
+  int j = 0;
+
+  for (int i = 0; i < strLen(Haystack); i++) {
+    if (Haystack[i] == Needle[0]) {
+      for (j = 1; j < strLen(Needle); j++) {
+        if (Haystack[i + j] != Needle[j])
+          break;
+      }
+      if (j == strLen(Needle))
+        return (void *)&Haystack[i];
+    }
+  }
+  return nullptr;
 }
 
 void reportNumber(const char *Msg, uint64_t Num, uint32_t Base) {
@@ -276,6 +324,25 @@ unsigned long hexToLong(const char *Str, char Terminator = '\0') {
       return 0;
   }
   return Res;
+}
+
+/// Starting from character at \p buf, find the longest consecutive sequence
+/// of digits (0-9) and convert it to uint32_t. The converted value
+/// is put into \p ret. \p end marks the end of the buffer to avoid buffer
+/// overflow. The function \returns whether a valid uint32_t value is found.
+/// \p buf will be updated to the next character right after the digits.
+static bool scanUInt32(const char *&Buf, const char *End, uint32_t &Ret) {
+  uint64_t Result = 0;
+  const char *OldBuf = Buf;
+  while (Buf < End && ((*Buf) >= '0' && (*Buf) <= '9')) {
+    Result = Result * 10 + (*Buf) - '0';
+    ++Buf;
+  }
+  if (OldBuf != Buf && Result <= 0xFFFFFFFFu) {
+    Ret = static_cast<uint32_t>(Result);
+    return true;
+  }
+  return false;
 }
 
 #if !defined(__APPLE__)
@@ -353,6 +420,28 @@ int __madvise(void *addr, size_t length, int advice) {
                        : "D"(addr), "S"(length), "d"(advice)
                        : "cc", "rcx", "r11", "memory");
   return ret;
+}
+
+#define _UTSNAME_LENGTH 65
+
+struct UtsNameTy {
+  char sysname[_UTSNAME_LENGTH];  /* Operating system name (e.g., "Linux") */
+  char nodename[_UTSNAME_LENGTH]; /* Name within "some implementation-defined
+                      network" */
+  char release[_UTSNAME_LENGTH]; /* Operating system release (e.g., "2.6.28") */
+  char version[_UTSNAME_LENGTH]; /* Operating system version */
+  char machine[_UTSNAME_LENGTH]; /* Hardware identifier */
+  char domainname[_UTSNAME_LENGTH]; /* NIS or YP domain name */
+};
+
+int __uname(struct UtsNameTy *Buf) {
+  int Ret;
+  __asm__ __volatile__("movq $63, %%rax\n"
+                       "syscall\n"
+                       : "=a"(Ret)
+                       : "D"(Buf)
+                       : "cc", "rcx", "r11", "memory");
+  return Ret;
 }
 
 struct timespec {
@@ -450,6 +539,23 @@ int __fsync(int fd) {
   return ret;
 }
 
+//              %rdi      %rsi         %rdx        %r10         %r8
+// sys_prctl  int option  unsigned    unsigned    unsigned    unsigned
+//                        long arg2   long arg3   long arg4   long arg5
+int __prctl(int Option, unsigned long Arg2, unsigned long Arg3,
+            unsigned long Arg4, unsigned long Arg5) {
+  int Ret;
+  register long rdx asm("rdx") = Arg3;
+  register long r8 asm("r8") = Arg5;
+  register long r10 asm("r10") = Arg4;
+  __asm__ __volatile__("movq $157, %%rax\n"
+                       "syscall\n"
+                       : "=a"(Ret)
+                       : "D"(Option), "S"(Arg2), "d"(rdx), "r"(r10), "r"(r8)
+                       :);
+  return Ret;
+}
+
 #endif
 
 void reportError(const char *Msg, uint64_t Size) {
@@ -468,17 +574,12 @@ void assert(bool Assertion, const char *Msg) {
   reportError(Buf, Ptr - Buf);
 }
 
-/// 1B mutex accessed by lock xchg
 class Mutex {
   volatile bool InUse{false};
 
 public:
-  bool acquire() {
-    bool Result = true;
-    asm volatile("lock; xchg %0, %1" : "+m"(InUse), "=r"(Result) : : "cc");
-    return !Result;
-  }
-  void release() { InUse = false; }
+  bool acquire() { return !__atomic_test_and_set(&InUse, __ATOMIC_ACQUIRE); }
+  void release() { __atomic_clear(&InUse, __ATOMIC_RELEASE); }
 };
 
 /// RAII wrapper for Mutex

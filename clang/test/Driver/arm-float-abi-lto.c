@@ -1,5 +1,3 @@
-// FIXME: Produces a segmentation fault on AIX after the introduction of opaque pointers (D125847). 
-// UNSUPPORTED: system-aix
 // REQUIRES: arm-registered-target
 
 // RUN: %clang --target=arm-none-eabi -mcpu=cortex-m33 -mfloat-abi=hard -O1 %s -S -o - -emit-llvm -DCALL_LIB -DDEFINE_LIB | FileCheck %s

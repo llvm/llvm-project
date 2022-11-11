@@ -61,6 +61,7 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
                            llvm::cl::Required);
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
+  registerTranslationCLOptions();
   llvm::cl::ParseCommandLineOptions(argc, argv, toolName);
 
   std::string errorMessage;
@@ -98,13 +99,9 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
     return sourceMgrHandler.verify();
   };
 
-  if (splitInputFile) {
-    if (failed(splitAndProcessBuffer(std::move(input), processBuffer,
-                                     output->os())))
-      return failure();
-  } else if (failed(processBuffer(std::move(input), output->os()))) {
+  if (failed(splitAndProcessBuffer(std::move(input), processBuffer,
+                                   output->os(), splitInputFile)))
     return failure();
-  }
 
   output->keep();
   return success();

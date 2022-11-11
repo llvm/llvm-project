@@ -8,14 +8,14 @@
 define dso_local i32 @foo() #0 {
 entry:
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 1, i32 0, i64 -1)
-  %0 = load i32, i32* @yydebug, align 4
+  %0 = load i32, ptr @yydebug, align 4
   %cmp = icmp ne i32 %0, 0
   br i1 %cmp, label %b1, label %exit
 ; CHECK: br i1 %cmp, label %b1, label %exit, !prof ![[ENTRY_PROF:[0-9]+]]
 
 b1:
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 2, i32 0, i64 -1)
-  %1 = load i32, i32* @yydebug, align 4
+  %1 = load i32, ptr @yydebug, align 4
   switch i32 %1, label %b3 [
     i32 124, label %indirectgoto
     i32 92, label %b2
@@ -28,18 +28,18 @@ b2:
 
 b3:
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 4, i32 0, i64 -1)
-  %2 = load i32, i32* @yydebug, align 4
+  %2 = load i32, ptr @yydebug, align 4
   ret i32 %2
 
 indirectgoto:
   %indirect.goto.dest = alloca i8, align 4
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 5, i32 0, i64 -1)
-  indirectbr i8* %indirect.goto.dest, [label %b1, label %b3, label %b2]
-; CHECK: indirectbr i8* %indirect.goto.dest, [label %b1, label %b3, label %b2], !prof ![[GOTO_PROF:[0-9]+]]
+  indirectbr ptr %indirect.goto.dest, [label %b1, label %b3, label %b2]
+; CHECK: indirectbr ptr %indirect.goto.dest, [label %b1, label %b3, label %b2], !prof ![[GOTO_PROF:[0-9]+]]
 
 exit:
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 6, i32 0, i64 -1)
-  %3 = load i32, i32* @yydebug, align 4
+  %3 = load i32, ptr @yydebug, align 4
   ret i32 %3
 
 }

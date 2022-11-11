@@ -3,14 +3,10 @@
 ; RUN:   | FileCheck %s --check-prefix=RV32I
 ; RUN: llc -mtriple=riscv32 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV32ZBB
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbt -verify-machineinstrs < %s \
-; RUN:   | FileCheck %s --check-prefix=RV32IBT
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64I
 ; RUN: llc -mtriple=riscv64 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64ZBB
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zbt -verify-machineinstrs < %s \
-; RUN:   | FileCheck %s --check-prefix=RV64IBT
 
 declare i32 @llvm.abs.i32(i32, i1 immarg)
 declare i64 @llvm.abs.i64(i64, i1 immarg)
@@ -29,13 +25,6 @@ define i32 @neg_abs32(i32 %x) {
 ; RV32ZBB-NEXT:    min a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32IBT-LABEL: neg_abs32:
-; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    srai a1, a0, 31
-; RV32IBT-NEXT:    xor a0, a0, a1
-; RV32IBT-NEXT:    sub a0, a1, a0
-; RV32IBT-NEXT:    ret
-;
 ; RV64I-LABEL: neg_abs32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sraiw a1, a0, 31
@@ -49,13 +38,6 @@ define i32 @neg_abs32(i32 %x) {
 ; RV64ZBB-NEXT:    xor a0, a0, a1
 ; RV64ZBB-NEXT:    subw a0, a1, a0
 ; RV64ZBB-NEXT:    ret
-;
-; RV64IBT-LABEL: neg_abs32:
-; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    sraiw a1, a0, 31
-; RV64IBT-NEXT:    xor a0, a0, a1
-; RV64IBT-NEXT:    subw a0, a1, a0
-; RV64IBT-NEXT:    ret
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
   %neg = sub nsw i32 0, %abs
   ret i32 %neg
@@ -75,13 +57,6 @@ define i32 @select_neg_abs32(i32 %x) {
 ; RV32ZBB-NEXT:    min a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32IBT-LABEL: select_neg_abs32:
-; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    srai a1, a0, 31
-; RV32IBT-NEXT:    xor a0, a0, a1
-; RV32IBT-NEXT:    sub a0, a1, a0
-; RV32IBT-NEXT:    ret
-;
 ; RV64I-LABEL: select_neg_abs32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sraiw a1, a0, 31
@@ -95,13 +70,6 @@ define i32 @select_neg_abs32(i32 %x) {
 ; RV64ZBB-NEXT:    xor a0, a0, a1
 ; RV64ZBB-NEXT:    subw a0, a1, a0
 ; RV64ZBB-NEXT:    ret
-;
-; RV64IBT-LABEL: select_neg_abs32:
-; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    sraiw a1, a0, 31
-; RV64IBT-NEXT:    xor a0, a0, a1
-; RV64IBT-NEXT:    subw a0, a1, a0
-; RV64IBT-NEXT:    ret
   %1 = icmp slt i32 %x, 0
   %2 = sub nsw i32 0, %x
   %3 = select i1 %1, i32 %x, i32 %2
@@ -131,17 +99,6 @@ define i64 @neg_abs64(i64 %x) {
 ; RV32ZBB-NEXT:    sub a0, a2, a0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32IBT-LABEL: neg_abs64:
-; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    srai a2, a1, 31
-; RV32IBT-NEXT:    xor a0, a0, a2
-; RV32IBT-NEXT:    sltu a3, a2, a0
-; RV32IBT-NEXT:    xor a1, a1, a2
-; RV32IBT-NEXT:    sub a1, a2, a1
-; RV32IBT-NEXT:    sub a1, a1, a3
-; RV32IBT-NEXT:    sub a0, a2, a0
-; RV32IBT-NEXT:    ret
-;
 ; RV64I-LABEL: neg_abs64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srai a1, a0, 63
@@ -154,13 +111,6 @@ define i64 @neg_abs64(i64 %x) {
 ; RV64ZBB-NEXT:    neg a1, a0
 ; RV64ZBB-NEXT:    min a0, a0, a1
 ; RV64ZBB-NEXT:    ret
-;
-; RV64IBT-LABEL: neg_abs64:
-; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    srai a1, a0, 63
-; RV64IBT-NEXT:    xor a0, a0, a1
-; RV64IBT-NEXT:    sub a0, a1, a0
-; RV64IBT-NEXT:    ret
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
   %neg = sub nsw i64 0, %abs
   ret i64 %neg
@@ -189,17 +139,6 @@ define i64 @select_neg_abs64(i64 %x) {
 ; RV32ZBB-NEXT:    sub a0, a2, a0
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32IBT-LABEL: select_neg_abs64:
-; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    srai a2, a1, 31
-; RV32IBT-NEXT:    xor a0, a0, a2
-; RV32IBT-NEXT:    sltu a3, a2, a0
-; RV32IBT-NEXT:    xor a1, a1, a2
-; RV32IBT-NEXT:    sub a1, a2, a1
-; RV32IBT-NEXT:    sub a1, a1, a3
-; RV32IBT-NEXT:    sub a0, a2, a0
-; RV32IBT-NEXT:    ret
-;
 ; RV64I-LABEL: select_neg_abs64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srai a1, a0, 63
@@ -212,13 +151,6 @@ define i64 @select_neg_abs64(i64 %x) {
 ; RV64ZBB-NEXT:    neg a1, a0
 ; RV64ZBB-NEXT:    min a0, a0, a1
 ; RV64ZBB-NEXT:    ret
-;
-; RV64IBT-LABEL: select_neg_abs64:
-; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    srai a1, a0, 63
-; RV64IBT-NEXT:    xor a0, a0, a1
-; RV64IBT-NEXT:    sub a0, a1, a0
-; RV64IBT-NEXT:    ret
   %1 = icmp slt i64 %x, 0
   %2 = sub nsw i64 0, %x
   %3 = select i1 %1, i64 %x, i64 %2
@@ -243,15 +175,6 @@ define i32 @neg_abs32_multiuse(i32 %x, i32* %y) {
 ; RV32ZBB-NEXT:    sw a2, 0(a1)
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32IBT-LABEL: neg_abs32_multiuse:
-; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    srai a2, a0, 31
-; RV32IBT-NEXT:    xor a0, a0, a2
-; RV32IBT-NEXT:    sub a2, a0, a2
-; RV32IBT-NEXT:    neg a0, a2
-; RV32IBT-NEXT:    sw a2, 0(a1)
-; RV32IBT-NEXT:    ret
-;
 ; RV64I-LABEL: neg_abs32_multiuse:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sraiw a2, a0, 31
@@ -269,15 +192,6 @@ define i32 @neg_abs32_multiuse(i32 %x, i32* %y) {
 ; RV64ZBB-NEXT:    negw a0, a2
 ; RV64ZBB-NEXT:    sw a2, 0(a1)
 ; RV64ZBB-NEXT:    ret
-;
-; RV64IBT-LABEL: neg_abs32_multiuse:
-; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    sraiw a2, a0, 31
-; RV64IBT-NEXT:    xor a0, a0, a2
-; RV64IBT-NEXT:    subw a2, a0, a2
-; RV64IBT-NEXT:    negw a0, a2
-; RV64IBT-NEXT:    sw a2, 0(a1)
-; RV64IBT-NEXT:    ret
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
   store i32 %abs, i32* %y
   %neg = sub nsw i32 0, %abs
@@ -321,23 +235,6 @@ define i64 @neg_abs64_multiuse(i64 %x, i64* %y) {
 ; RV32ZBB-NEXT:    mv a1, a3
 ; RV32ZBB-NEXT:    ret
 ;
-; RV32IBT-LABEL: neg_abs64_multiuse:
-; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    snez a3, a0
-; RV32IBT-NEXT:    add a3, a1, a3
-; RV32IBT-NEXT:    neg a3, a3
-; RV32IBT-NEXT:    slti a4, a1, 0
-; RV32IBT-NEXT:    cmov a3, a4, a3, a1
-; RV32IBT-NEXT:    neg a1, a0
-; RV32IBT-NEXT:    cmov a0, a4, a1, a0
-; RV32IBT-NEXT:    sw a0, 0(a2)
-; RV32IBT-NEXT:    snez a1, a0
-; RV32IBT-NEXT:    add a1, a3, a1
-; RV32IBT-NEXT:    neg a1, a1
-; RV32IBT-NEXT:    neg a0, a0
-; RV32IBT-NEXT:    sw a3, 4(a2)
-; RV32IBT-NEXT:    ret
-;
 ; RV64I-LABEL: neg_abs64_multiuse:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srai a2, a0, 63
@@ -354,15 +251,6 @@ define i64 @neg_abs64_multiuse(i64 %x, i64* %y) {
 ; RV64ZBB-NEXT:    neg a0, a2
 ; RV64ZBB-NEXT:    sd a2, 0(a1)
 ; RV64ZBB-NEXT:    ret
-;
-; RV64IBT-LABEL: neg_abs64_multiuse:
-; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    srai a2, a0, 63
-; RV64IBT-NEXT:    xor a0, a0, a2
-; RV64IBT-NEXT:    sub a2, a0, a2
-; RV64IBT-NEXT:    neg a0, a2
-; RV64IBT-NEXT:    sd a2, 0(a1)
-; RV64IBT-NEXT:    ret
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
   store i64 %abs, i64* %y
   %neg = sub nsw i64 0, %abs

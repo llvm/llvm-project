@@ -4,7 +4,7 @@
 %0 = type opaque
 %1 = type opaque
 
-define void @t(%0* %self, i8* nocapture %_cmd, %1* %scroller, i32 %hitPart, float %multiplier) nounwind optsize ssp {
+define void @t(ptr %self, ptr nocapture %_cmd, ptr %scroller, i32 %hitPart, float %multiplier) nounwind optsize ssp {
 entry:
   switch i32 %hitPart, label %if.else [
     i32 7, label %if.then
@@ -12,10 +12,10 @@ entry:
   ]
 
 if.then:                                          ; preds = %entry, %entry
-  %tmp69 = load float, float* null, align 4              ; <float> [#uses=1]
-  %cmp19 = icmp eq %1* null, %scroller            ; <i1> [#uses=2]
+  %tmp69 = load float, ptr null, align 4              ; <float> [#uses=1]
+  %cmp19 = icmp eq ptr null, %scroller            ; <i1> [#uses=2]
   %cond = select i1 %cmp19, float %tmp69, float 0.000000e+00 ; <float> [#uses=1]
-  %call36 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*)*)(i8* undef, i8* undef) nounwind optsize ; <i64> [#uses=2]
+  %call36 = call i64 @objc_msgSend(ptr undef, ptr undef) nounwind optsize ; <i64> [#uses=2]
   br i1 %cmp19, label %cond.true32, label %cond.false39
 
 cond.true32:                                      ; preds = %if.then
@@ -32,11 +32,11 @@ cond.end47:                                       ; preds = %cond.false39, %cond
   %cond48 = bitcast i32 %cond48.in to float       ; <float> [#uses=1]
   %div = fdiv float %cond, undef                  ; <float> [#uses=1]
   %div58 = fdiv float %div, %cond48               ; <float> [#uses=1]
-  call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, float)*)(i8* undef, i8* undef, float %div58) nounwind optsize
+  call void @objc_msgSend(ptr undef, ptr undef, float %div58) nounwind optsize
   ret void
 
 if.else:                                          ; preds = %entry
   ret void
 }
 
-declare i8* @objc_msgSend(i8*, i8*, ...)
+declare ptr @objc_msgSend(ptr, ptr, ...)

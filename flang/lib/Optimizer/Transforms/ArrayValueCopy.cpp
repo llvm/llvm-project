@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "flang/Optimizer/Builder/Array.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -18,9 +17,14 @@
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Debug.h"
+
+namespace fir {
+#define GEN_PASS_DEF_ARRAYVALUECOPY
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-array-value-copy"
 
@@ -706,7 +710,7 @@ void ArrayCopyAnalysis::construct(mlir::Operation *topLevelOp) {
       if (callConflict || conflict || refConflict) {
         LLVM_DEBUG(llvm::dbgs()
                    << "CONFLICT: copies required for " << st << '\n'
-                   << "   adding conflicts on: " << op << " and "
+                   << "   adding conflicts on: " << *op << " and "
                    << st.getOriginal() << '\n');
         conflicts.insert(op);
         conflicts.insert(st.getOriginal().getDefiningOp());
@@ -809,7 +813,8 @@ static bool getAdjustedExtents(mlir::Location loc,
         auto triples = sliceOp.getTriples();
         const std::size_t tripleSize = triples.size();
         auto module = arrLoad->getParentOfType<mlir::ModuleOp>();
-        FirOpBuilder builder(rewriter, getKindMapping(module));
+        fir::KindMapping kindMap = getKindMapping(module);
+        FirOpBuilder builder(rewriter, kindMap);
         size = builder.genExtentFromTriplet(loc, triples[tripleSize - 3],
                                             triples[tripleSize - 2],
                                             triples[tripleSize - 1], idxTy);
@@ -895,7 +900,8 @@ static mlir::Value genCoorOp(mlir::PatternRewriter &rewriter,
   assert(seqTy && seqTy.isa<SequenceType>());
   const auto dimension = seqTy.cast<SequenceType>().getDimension();
   auto module = load->getParentOfType<mlir::ModuleOp>();
-  FirOpBuilder builder(rewriter, getKindMapping(module));
+  fir::KindMapping kindMap = getKindMapping(module);
+  FirOpBuilder builder(rewriter, kindMap);
   auto typeparams = getTypeParamsIfRawData(loc, builder, load, alloc.getType());
   mlir::Value result = rewriter.create<ArrayCoorOp>(
       loc, eleTy, alloc, shape, slice,
@@ -959,7 +965,8 @@ void genArrayCopy(mlir::Location loc, mlir::PatternRewriter &rewriter,
   // Reverse the indices so they are in column-major order.
   std::reverse(indices.begin(), indices.end());
   auto module = arrLoad->getParentOfType<mlir::ModuleOp>();
-  FirOpBuilder builder(rewriter, getKindMapping(module));
+  fir::KindMapping kindMap = getKindMapping(module);
+  FirOpBuilder builder(rewriter, kindMap);
   auto fromAddr = rewriter.create<ArrayCoorOp>(
       loc, getEleTy(src.getType()), src, shapeOp,
       CopyIn && copyUsingSlice ? sliceOp : mlir::Value{},
@@ -969,7 +976,7 @@ void genArrayCopy(mlir::Location loc, mlir::PatternRewriter &rewriter,
       loc, getEleTy(dst.getType()), dst, shapeOp,
       !CopyIn && copyUsingSlice ? sliceOp : mlir::Value{},
       factory::originateIndices(loc, rewriter, dst.getType(), shapeOp, indices),
-      getTypeParamsIfRawData(loc, builder, arrLoad, src.getType()));
+      getTypeParamsIfRawData(loc, builder, arrLoad, dst.getType()));
   auto eleTy = unwrapSequenceType(unwrapPassByRefType(dst.getType()));
   // Copy from (to) object to (from) temp copy of same object.
   if (auto charTy = eleTy.dyn_cast<CharacterType>()) {
@@ -997,7 +1004,8 @@ genArrayLoadTypeParameters(mlir::Location loc, mlir::PatternRewriter &rewriter,
       if (auto charTy = eleTy.dyn_cast<CharacterType>()) {
         assert(load.getMemref().getType().isa<BoxType>());
         auto module = load->getParentOfType<mlir::ModuleOp>();
-        FirOpBuilder builder(rewriter, getKindMapping(module));
+        fir::KindMapping kindMap = getKindMapping(module);
+        FirOpBuilder builder(rewriter, kindMap);
         return {getCharacterLen(loc, builder, load, charTy)};
       }
       TODO(loc, "unhandled dynamic type parameters");
@@ -1049,12 +1057,14 @@ allocateArrayTemp(mlir::Location loc, mlir::PatternRewriter &rewriter,
         loc, fir::BoxType::get(baseType), allocmem, shape,
         /*slice=*/mlir::Value{}, typeParams);
     auto module = load->getParentOfType<mlir::ModuleOp>();
-    FirOpBuilder builder(rewriter, getKindMapping(module));
+    fir::KindMapping kindMap = getKindMapping(module);
+    FirOpBuilder builder(rewriter, kindMap);
     runtime::genDerivedTypeInitialize(builder, loc, box);
     // Any allocatable component that may have been allocated must be
     // deallocated during the clean-up.
     auto cleanup = [=](mlir::PatternRewriter &r) {
-      FirOpBuilder builder(r, getKindMapping(module));
+      fir::KindMapping kindMap = getKindMapping(module);
+      FirOpBuilder builder(r, kindMap);
       runtime::genDerivedTypeDestroy(builder, loc, box);
       r.create<FreeMemOp>(loc, allocmem);
     };
@@ -1320,7 +1330,7 @@ public:
 };
 
 class ArrayValueCopyConverter
-    : public ArrayValueCopyBase<ArrayValueCopyConverter> {
+    : public fir::impl::ArrayValueCopyBase<ArrayValueCopyConverter> {
 public:
   void runOnOperation() override {
     auto func = getOperation();
@@ -1339,9 +1349,9 @@ public:
     patterns1.insert<ArrayAccessConversion>(context, analysis, useMap);
     patterns1.insert<ArrayAmendConversion>(context);
     mlir::ConversionTarget target(*context);
-    target.addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
-                           mlir::arith::ArithmeticDialect,
-                           mlir::func::FuncDialect>();
+    target
+        .addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
+                         mlir::arith::ArithDialect, mlir::func::FuncDialect>();
     target.addIllegalOp<ArrayAccessOp, ArrayAmendOp, ArrayFetchOp,
                         ArrayUpdateOp, ArrayModifyOp>();
     // Rewrite the array fetch and array update ops.

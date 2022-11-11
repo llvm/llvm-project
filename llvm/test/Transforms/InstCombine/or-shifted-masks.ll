@@ -259,17 +259,17 @@ define i37 @shl_mask_weird_type(i37 %x) {
   ret i37 %r
 }
 
-define i32 @shl_mask_extra_use(i32 %x, i32* %p) {
+define i32 @shl_mask_extra_use(i32 %x, ptr %p) {
 ; CHECK-LABEL: @shl_mask_extra_use(
 ; CHECK-NEXT:    [[Z:%.*]] = and i32 [[X:%.*]], 255
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw nsw i32 [[Z]], 8
-; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[S]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = or i32 [[Z]], [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %z = and i32 %x, 255
   %s = shl i32 %z, 8
-  store i32 %s, i32* %p
+  store i32 %s, ptr %p
   %r = or i32 %z, %s
   ret i32 %r
 }

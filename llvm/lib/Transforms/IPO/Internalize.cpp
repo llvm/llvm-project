@@ -28,6 +28,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -40,13 +41,13 @@ STATISTIC(NumAliases, "Number of aliases internalized");
 STATISTIC(NumFunctions, "Number of functions internalized");
 STATISTIC(NumGlobals, "Number of global vars internalized");
 
-// APIFile - A file which contains a list of symbols that should not be marked
-// external.
+// APIFile - A file which contains a list of symbol glob patterns that should
+// not be marked external.
 static cl::opt<std::string>
     APIFile("internalize-public-api-file", cl::value_desc("filename"),
             cl::desc("A file containing list of symbol names to preserve"));
 
-// APIList - A list of symbols that should not be marked internal.
+// APIList - A list of symbol glob patterns that should not be marked internal.
 static cl::list<std::string>
     APIList("internalize-public-api-list", cl::value_desc("list"),
             cl::desc("A list of symbol names to preserve"), cl::CommaSeparated);
@@ -59,29 +60,44 @@ public:
   PreserveAPIList() {
     if (!APIFile.empty())
       LoadFile(APIFile);
-    ExternalNames.insert(APIList.begin(), APIList.end());
+    for (StringRef Pattern : APIList)
+      addGlob(Pattern);
   }
 
   bool operator()(const GlobalValue &GV) {
-    return ExternalNames.count(GV.getName());
+    return llvm::any_of(
+        ExternalNames, [&](GlobPattern &GP) { return GP.match(GV.getName()); });
   }
 
 private:
   // Contains the set of symbols loaded from file
-  StringSet<> ExternalNames;
+  SmallVector<GlobPattern> ExternalNames;
+
+  void addGlob(StringRef Pattern) {
+    auto GlobOrErr = GlobPattern::create(Pattern);
+    if (!GlobOrErr) {
+      errs() << "WARNING: when loading pattern: '"
+             << toString(GlobOrErr.takeError()) << "' ignoring";
+      return;
+    }
+    ExternalNames.emplace_back(std::move(*GlobOrErr));
+  }
 
   void LoadFile(StringRef Filename) {
     // Load the APIFile...
-    ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
         MemoryBuffer::getFile(Filename);
-    if (!Buf) {
+    if (!BufOrErr) {
       errs() << "WARNING: Internalize couldn't load file '" << Filename
              << "'! Continuing as if it's empty.\n";
       return; // Just continue as if the file were empty
     }
-    for (line_iterator I(*Buf->get(), true), E; I != E; ++I)
-      ExternalNames.insert(*I);
+    Buf = std::move(*BufOrErr);
+    for (line_iterator I(*Buf, true), E; I != E; ++I)
+      addGlob(*I);
   }
+
+  std::shared_ptr<MemoryBuffer> Buf;
 };
 } // end anonymous namespace
 

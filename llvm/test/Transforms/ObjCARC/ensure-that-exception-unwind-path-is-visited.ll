@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
 ; rdar://11744105
 ; bugzilla://14584
 
@@ -105,7 +105,7 @@ declare void @NSLog(i8*, ...)
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 ; CHECK: attributes #0 = { ssp uwtable }
-; CHECK: attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; CHECK: attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #2 = { nonlazybind }
 ; CHECK: attributes [[NUW]] = { nounwind }
 ; CHECK: attributes #4 = { noinline ssp uwtable }

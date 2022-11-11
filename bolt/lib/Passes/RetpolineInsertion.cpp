@@ -44,19 +44,17 @@ RetpolineLfence("retpoline-lfence",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-cl::opt<RetpolineInsertion::AvailabilityOptions>
-R11Availability("r11-availability",
-  cl::desc("determine the availablity of r11 before indirect branches"),
-  cl::init(RetpolineInsertion::AvailabilityOptions::NEVER),
-  cl::values(
-    clEnumValN(RetpolineInsertion::AvailabilityOptions::NEVER,
-      "never", "r11 not available"),
-    clEnumValN(RetpolineInsertion::AvailabilityOptions::ALWAYS,
-      "always", "r11 avaialable before calls and jumps"),
-    clEnumValN(RetpolineInsertion::AvailabilityOptions::ABI,
-      "abi", "r11 avaialable before calls but not before jumps")),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+cl::opt<RetpolineInsertion::AvailabilityOptions> R11Availability(
+    "r11-availability",
+    cl::desc("determine the availability of r11 before indirect branches"),
+    cl::init(RetpolineInsertion::AvailabilityOptions::NEVER),
+    cl::values(clEnumValN(RetpolineInsertion::AvailabilityOptions::NEVER,
+                          "never", "r11 not available"),
+               clEnumValN(RetpolineInsertion::AvailabilityOptions::ALWAYS,
+                          "always", "r11 avaialable before calls and jumps"),
+               clEnumValN(RetpolineInsertion::AvailabilityOptions::ABI, "abi",
+                          "r11 avaialable before calls but not before jumps")),
+    cl::ZeroOrMore, cl::cat(BoltCategory));
 
 } // namespace opts
 
@@ -91,8 +89,7 @@ BinaryFunction *createNewRetpoline(BinaryContext &BC,
   for (int I = 0; I < 3; I++) {
     MCSymbol *Symbol =
         Ctx.createNamedTempSymbol(Twine(RetpolineTag + "_BB" + to_string(I)));
-    NewBlocks[I] = NewRetpoline->createBasicBlock(
-        BinaryBasicBlock::INVALID_OFFSET, Symbol);
+    NewBlocks[I] = NewRetpoline->createBasicBlock(Symbol);
     NewBlocks[I].get()->setCFIState(0);
   }
 

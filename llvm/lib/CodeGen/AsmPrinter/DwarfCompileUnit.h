@@ -192,6 +192,7 @@ public:
   /// variables in this scope then create and insert DIEs for these
   /// variables.
   DIE &updateSubprogramScopeDIE(const DISubprogram *SP);
+  DIE &updateSubprogramScopeDIEImpl(const DISubprogram *SP, DIE *SPDie);
 
   void constructScopeDIE(LexicalScope *Scope, DIE &ParentScopeDIE);
 
@@ -204,9 +205,9 @@ public:
   void attachRangesOrLowHighPC(DIE &D,
                                const SmallVectorImpl<InsnRange> &Ranges);
 
-  /// This scope represents inlined body of a function. Construct
+  /// This scope represents an inlined body of a function. Construct a
   /// DIE to represent this concrete inlined copy of the function.
-  DIE *constructInlinedScopeDIE(LexicalScope *Scope);
+  DIE *constructInlinedScopeDIE(LexicalScope *Scope, DIE &ParentScopeDIE);
 
   /// Construct new DW_TAG_lexical_block for this scope and
   /// attach DW_AT_low_pc/DW_AT_high_pc labels.

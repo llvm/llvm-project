@@ -119,7 +119,7 @@ public:
 
   // build() must have been called.
   bool shouldCollect(llvm::StringRef Name, bool Qualified = true) {
-    assert(AST.hasValue());
+    assert(AST);
     const NamedDecl &ND =
         Qualified ? findDecl(*AST, Name) : findUnqualifiedDecl(*AST, Name);
     const SourceManager &SM = AST->getSourceManager();
@@ -1316,6 +1316,11 @@ TEST_F(SymbolCollectorTest, IncludeEnums) {
       Black
     };
     }
+    class Color3 {
+      enum {
+        Blue
+      };
+    };
   )";
   runSymbolCollector(Header, /*Main=*/"");
   EXPECT_THAT(Symbols,
@@ -1324,9 +1329,11 @@ TEST_F(SymbolCollectorTest, IncludeEnums) {
                   AllOf(qName("Color"), forCodeCompletion(true)),
                   AllOf(qName("Green"), forCodeCompletion(true)),
                   AllOf(qName("Color2"), forCodeCompletion(true)),
-                  AllOf(qName("Color2::Yellow"), forCodeCompletion(false)),
+                  AllOf(qName("Color2::Yellow"), forCodeCompletion(true)),
                   AllOf(qName("ns"), forCodeCompletion(true)),
-                  AllOf(qName("ns::Black"), forCodeCompletion(true))));
+                  AllOf(qName("ns::Black"), forCodeCompletion(true)),
+                  AllOf(qName("Color3"), forCodeCompletion(true)),
+                  AllOf(qName("Color3::Blue"), forCodeCompletion(true))));
 }
 
 TEST_F(SymbolCollectorTest, NamelessSymbols) {

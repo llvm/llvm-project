@@ -20,7 +20,7 @@ namespace misc {
 /// Finds unused using declarations.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-unused-using-decls.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/unused-using-decls.html
 class UnusedUsingDeclsCheck : public ClangTidyCheck {
 public:
   UnusedUsingDeclsCheck(StringRef Name, ClangTidyContext *Context)

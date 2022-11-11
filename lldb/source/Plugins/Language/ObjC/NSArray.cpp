@@ -532,9 +532,8 @@ lldb_private::formatters::
     process_sp->ReadMemory(data_location, m_data_64, sizeof(D64),
                            error);
   }
-  if (error.Fail())
-    return false;
-  return false;
+
+  return error.Success();
 }
 
 bool
@@ -675,9 +674,8 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
     process_sp->ReadMemory(data_location, m_data_64, sizeof(D64),
                            error);
   }
-  if (error.Fail())
-    return false;
-  return false;
+
+  return error.Success();
 }
 
 template <typename D32, typename D64, bool Inline>

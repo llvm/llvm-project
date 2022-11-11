@@ -8,8 +8,6 @@ from lldbsuite.test import lldbutil
 
 class ExprSyscallTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr21765, getpid() does not exist on Windows")
@@ -82,5 +80,5 @@ class ExprSyscallTestCase(TestBase):
             if new_state == lldb.eStateExited:
                 break
 
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)

@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 ;
 ; Prior to the fix for PR11375, indvars would replace %firstIV with a
 ; loop-invariant gep computed in the preheader. This was incorrect

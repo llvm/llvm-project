@@ -5,19 +5,19 @@
 
 ; Checks if calls to static target functions are properly imported and promoted
 ; by ICP. Note that the GUID in the profile is from the oroginal name.
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -o %t4.bc -print-imports 2>&1 | FileCheck %s --check-prefix=IMPORTS
+; RUN: opt -passes=function-import -summary-file %t3.thinlto.bc %t.bc -o %t4.bc -print-imports 2>&1 | FileCheck %s --check-prefix=IMPORTS
 ; IMPORTS: Import _ZL3foov.llvm.0
 ; RUN: opt %t4.bc -icp-lto -passes=pgo-icall-prom -S | FileCheck %s --check-prefix=ICALL-PROM
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@fptr = local_unnamed_addr global void ()* null, align 8
+@fptr = local_unnamed_addr global ptr null, align 8
 
 ; Function Attrs: norecurse uwtable
 define i32 @main() local_unnamed_addr #0 !prof !34 {
 entry:
-  %0 = load void ()*, void ()** @fptr, align 8
+  %0 = load ptr, ptr @fptr, align 8
 ; ICALL-PROM:   br i1 %{{[0-9]+}}, label %if.true.direct_targ, label %if.false.orig_indirect
   tail call void %0(), !prof !40
   ret i32 0

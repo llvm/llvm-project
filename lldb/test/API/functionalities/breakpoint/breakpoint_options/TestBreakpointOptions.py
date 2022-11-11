@@ -11,8 +11,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class BreakpointOptionsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test(self):
         """Test breakpoint command for different options."""
         self.build()

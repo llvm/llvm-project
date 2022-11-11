@@ -10,7 +10,7 @@ target triple = "i386-linux-gnu"
 declare void @simple_callee(i32, i32)
 
 define void @simple() !dbg !5 {
-  store i32 44, i32* @sink_across, !dbg !7
+  store i32 44, ptr @sink_across, !dbg !7
   call void @simple_callee(i32 13, i32 55), !dbg !8
   ret void, !dbg !9
 }
@@ -27,7 +27,7 @@ define void @simple() !dbg !5 {
 declare void @simple_reg_callee(i32 inreg, i32 inreg)
 
 define void @simple_reg() !dbg !10 {
-  store i32 44, i32* @sink_across, !dbg !11
+  store i32 44, ptr @sink_across, !dbg !11
   call void @simple_reg_callee(i32 inreg 13, i32 inreg 55), !dbg !12
   ret void, !dbg !13
 }
@@ -45,7 +45,7 @@ define void @simple_reg() !dbg !10 {
 ; value is used by a no-op cast instruction. In these cases, we get side tables
 ; referring to the local value vreg that we need to check.
 
-define i8* @phi_const(i32 %c) !dbg !14 {
+define ptr @phi_const(i32 %c) !dbg !14 {
 entry:
   %tobool = icmp eq i32 %c, 0, !dbg !20
   call void @llvm.dbg.value(metadata i1 %tobool, metadata !16, metadata !DIExpression()), !dbg !20
@@ -58,9 +58,9 @@ if.else:                                          ; preds = %entry
   br label %if.end, !dbg !23
 
 if.end:                                           ; preds = %if.else, %if.then
-  %r.0 = phi i8* [ inttoptr (i32 42 to i8*), %if.then ], [ inttoptr (i32 1 to i8*), %if.else ], !dbg !24
-  call void @llvm.dbg.value(metadata i8* %r.0, metadata !18, metadata !DIExpression()), !dbg !24
-  ret i8* %r.0, !dbg !25
+  %r.0 = phi ptr [ inttoptr (i32 42 to ptr), %if.then ], [ inttoptr (i32 1 to ptr), %if.else ], !dbg !24
+  call void @llvm.dbg.value(metadata ptr %r.0, metadata !18, metadata !DIExpression()), !dbg !24
+  ret ptr %r.0, !dbg !25
 }
 
 ; CHECK-LABEL: phi_const:
@@ -73,26 +73,26 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: movl    $1,
 ; CHECK:                                 # %if.end
 
-define i8* @phi_const_cast(i32 %c) !dbg !26 {
+define ptr @phi_const_cast(i32 %c) !dbg !26 {
 entry:
   %tobool = icmp eq i32 %c, 0, !dbg !32
   call void @llvm.dbg.value(metadata i1 %tobool, metadata !28, metadata !DIExpression()), !dbg !32
   br i1 %tobool, label %if.else, label %if.then, !dbg !33
 
 if.then:                                          ; preds = %entry
-  %v42 = inttoptr i32 42 to i8*, !dbg !34
-  call void @llvm.dbg.value(metadata i8* %v42, metadata !29, metadata !DIExpression()), !dbg !34
+  %v42 = inttoptr i32 42 to ptr, !dbg !34
+  call void @llvm.dbg.value(metadata ptr %v42, metadata !29, metadata !DIExpression()), !dbg !34
   br label %if.end, !dbg !35
 
 if.else:                                          ; preds = %entry
-  %v1 = inttoptr i32 1 to i8*, !dbg !36
-  call void @llvm.dbg.value(metadata i8* %v1, metadata !30, metadata !DIExpression()), !dbg !36
+  %v1 = inttoptr i32 1 to ptr, !dbg !36
+  call void @llvm.dbg.value(metadata ptr %v1, metadata !30, metadata !DIExpression()), !dbg !36
   br label %if.end, !dbg !37
 
 if.end:                                           ; preds = %if.else, %if.then
-  %r.0 = phi i8* [ %v42, %if.then ], [ %v1, %if.else ], !dbg !38
-  call void @llvm.dbg.value(metadata i8* %r.0, metadata !31, metadata !DIExpression()), !dbg !38
-  ret i8* %r.0, !dbg !39
+  %r.0 = phi ptr [ %v42, %if.then ], [ %v1, %if.else ], !dbg !38
+  call void @llvm.dbg.value(metadata ptr %r.0, metadata !31, metadata !DIExpression()), !dbg !38
+  ret ptr %r.0, !dbg !39
 }
 
 ; CHECK-LABEL: phi_const_cast:
@@ -111,16 +111,16 @@ declare void @may_throw() local_unnamed_addr #1
 
 declare i32 @__gxx_personality_v0(...)
 
-define i32 @invoke_phi() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @invoke_phi() personality ptr @__gxx_personality_v0 {
 entry:
-  store i32 42, i32* @sink_across
+  store i32 42, ptr @sink_across
   invoke void @may_throw()
           to label %try.cont unwind label %lpad
 
 lpad:                                             ; preds = %entry
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
-  store i32 42, i32* @sink_across
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  store i32 42, ptr @sink_across
   br label %try.cont
 
 try.cont:                                         ; preds = %entry, %lpad
@@ -145,17 +145,17 @@ try.cont:                                         ; preds = %entry, %lpad
 ; CHECK:         retl
 
 
-define i32 @lpad_phi() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @lpad_phi() personality ptr @__gxx_personality_v0 {
 entry:
-  store i32 42, i32* @sink_across
+  store i32 42, ptr @sink_across
   invoke void @may_throw()
           to label %try.cont unwind label %lpad
 
 lpad:                                             ; preds = %entry
   %p = phi i32 [ 11, %entry ]  ; Trivial, but -O0 keeps it
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
-  store i32 %p, i32* @sink_across
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  store i32 %p, ptr @sink_across
   br label %try.cont
 
 try.cont:                                         ; preds = %entry, %lpad

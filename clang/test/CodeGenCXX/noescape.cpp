@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -std=c++11 -emit-llvm -fblocks -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -fblocks -o - %s | FileCheck %s
 
 struct S {
   int a[4];
@@ -8,26 +8,26 @@ struct S {
   virtual void vm1(int *, int * __attribute__((noescape)));
 };
 
-// CHECK: define{{.*}} void @_ZN1SC2EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture noundef {{%.*}})
-// CHECK: define{{.*}} void @_ZN1SC1EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture noundef {{%.*}}) {{.*}} {
-// CHECK: call void @_ZN1SC2EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture {{.*}})
+// CHECK: define{{.*}} void @_ZN1SC2EPiS0_(ptr {{.*}}, {{.*}}, {{.*}} nocapture noundef {{%.*}})
+// CHECK: define{{.*}} void @_ZN1SC1EPiS0_(ptr {{.*}}, {{.*}}, {{.*}} nocapture noundef {{%.*}}) {{.*}} {
+// CHECK: call void @_ZN1SC2EPiS0_(ptr {{.*}}, {{.*}}, {{.*}} nocapture {{.*}})
 
 S::S(int *, int * __attribute__((noescape))) {}
 
-// CHECK: define {{.*}} %struct.S* @_ZN1SaSEPi(%struct.S* {{.*}}, {{.*}} nocapture noundef {{%.*}})
+// CHECK: define {{.*}} ptr @_ZN1SaSEPi(ptr {{.*}}, {{.*}} nocapture noundef {{%.*}})
 S &S::operator=(int * __attribute__((noescape))) { return *this; }
 
-// CHECK: define{{.*}} void @_ZN1S2m0EPiS0_(%struct.S* {{.*}}, {{.*}} nocapture noundef {{%.*}})
+// CHECK: define{{.*}} void @_ZN1S2m0EPiS0_(ptr {{.*}}, {{.*}} nocapture noundef {{%.*}})
 void S::m0(int *, int * __attribute__((noescape))) {}
 
-// CHECK: define{{.*}} void @_ZN1S3vm1EPiS0_(%struct.S* {{.*}}, {{.*}} nocapture noundef {{%.*}})
+// CHECK: define{{.*}} void @_ZN1S3vm1EPiS0_(ptr {{.*}}, {{.*}} nocapture noundef {{%.*}})
 void S::vm1(int *, int * __attribute__((noescape))) {}
 
 // CHECK-LABEL: define{{.*}} void @_Z5test0P1SPiS1_(
-// CHECK: call void @_ZN1SC1EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture noundef {{.*}})
-// CHECK: call {{.*}} %struct.S* @_ZN1SaSEPi(%struct.S* {{.*}}, {{.*}} nocapture noundef {{.*}})
-// CHECK: call void @_ZN1S2m0EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture noundef {{.*}})
-// CHECK: call void {{.*}}(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture noundef {{.*}})
+// CHECK: call void @_ZN1SC1EPiS0_(ptr {{.*}}, {{.*}}, {{.*}} nocapture noundef {{.*}})
+// CHECK: call {{.*}} ptr @_ZN1SaSEPi(ptr {{.*}}, {{.*}} nocapture noundef {{.*}})
+// CHECK: call void @_ZN1S2m0EPiS0_(ptr {{.*}}, {{.*}}, {{.*}} nocapture noundef {{.*}})
+// CHECK: call void {{.*}}(ptr {{.*}}, {{.*}}, {{.*}} nocapture noundef {{.*}})
 void test0(S *s, int *p0, int *p1) {
   S t(p0, p1);
   t = p1;
@@ -44,7 +44,7 @@ void *operator new(std::size_t, void * __attribute__((noescape)) p) {
   return p;
 }
 
-// CHECK-LABEL: define{{.*}} i8* @_Z5test1Pv(
+// CHECK-LABEL: define{{.*}} ptr @_Z5test1Pv(
 // CHECK: %call = call {{.*}} @_ZnwmPv({{.*}}, {{.*}} nocapture {{.*}})
 void *test1(void *p0) {
   return ::operator new(16, p0);
@@ -59,7 +59,7 @@ void test2(int *p0, int *p1) {
 }
 
 // CHECK-LABEL: define{{.*}} void @_Z5test3PFvU8noescapePiES_(
-// CHECK: call void {{.*}}(i32* nocapture noundef {{.*}})
+// CHECK: call void {{.*}}(ptr nocapture noundef {{.*}})
 typedef void (*NoEscapeFunc)(__attribute__((noescape)) int *);
 
 void test3(NoEscapeFunc f, int *p) {
@@ -82,11 +82,11 @@ void noescapefunc(__attribute__((noescape)) BlockTy);
 // Check that __block variables with reference types are handled correctly.
 
 // CHECK: define{{.*}} void @_ZN9TestByref4testEv(
-// CHECK: %[[X:.*]] = alloca %[[STRUCT_TESTBYREF:.*]]*, align 8
-// CHECK: %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %{{.*}}*, %[[STRUCT_TESTBYREF]]* }>, align 8
-// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %{{.*}}*, %[[STRUCT_TESTBYREF]]* }>, <{ i8*, i32, i32, i8*, %{{.*}}*, %[[STRUCT_TESTBYREF]]* }>* %[[BLOCK]], i32 0, i32 5
-// CHECK: %[[V0:.*]] = load %[[STRUCT_TESTBYREF]]*, %[[STRUCT_TESTBYREF]]** %[[X]], align 8
-// CHECK: store %[[STRUCT_TESTBYREF]]* %[[V0]], %[[STRUCT_TESTBYREF]]** %[[BLOCK_CAPTURED]], align 8
+// CHECK: %[[X:.*]] = alloca ptr, align 8
+// CHECK: %[[BLOCK:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
+// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
+// CHECK: %[[V0:.*]] = load ptr, ptr %[[X]], align 8
+// CHECK: store ptr %[[V0]], ptr %[[BLOCK_CAPTURED]], align 8
 
 void test() {
   __block S &x = getS();

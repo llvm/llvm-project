@@ -1,4 +1,8 @@
 // RUN: llvm-tblgen %s | FileCheck %s
+// RUN: not llvm-tblgen -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
+// RUN: not llvm-tblgen -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
+// RUN: not llvm-tblgen -DERROR3 %s 2>&1 | FileCheck --check-prefix=ERROR3 %s
+// RUN: not llvm-tblgen -DERROR4 %s 2>&1 | FileCheck --check-prefix=ERROR4 %s
 // XFAIL: vg_leak
 
 // CHECK: def shifts
@@ -47,6 +51,36 @@ def v1025   : Int<!add(int1024.Value, 1)>;
 // CHECK: Value = 12
 def v12   : Int<!mul(4, 3)>;
 
+// CHECK: def v13
+// CHECK: Value = 5
+def v13   : Int<!div(10, 2)>;
+
+// CHECK: def v14
+// CHECK: Value = 5
+def v14 : Int<!div(11, 2)>;
+
+// CHECK: def v15
+// CHECK: Value = 1
+def v15 : Int<!div(1, 1)>;
+
+// CHECK: def v16
+// CHECK: Value = 0
+def v16 : Int<!div(0, 10)>;
+
+// CHECK: def v17
+// CHECK: Value = -2
+def v17 : Int<!div(-8, 4)>;
+
+#ifdef ERROR1
+// ERROR1: error: Illegal operation: division by zero
+def v18 : Int<!div(4, 0)>;
+#endif
+
+#ifdef ERROR2
+// ERROR2: error: Illegal operation: INT64_MIN / -1
+def v19 : Int<!div(-9223372036854775808, -1)>;
+#endif
+
 // CHECK: def v1a
 // CHECK: Value = 1
 
@@ -83,6 +117,28 @@ def v924   : Int<!mul(v84.Value, 11)>;
 // CHECK: def v925
 // CHECK: Value = 925
 def v925 : Int<!sub(v924.Value, -1)>;
+
+// CHECK: def v950
+// CHECK: Value = 4
+def v950: Int<!logtwo(16)>;
+
+// CHECK: def v951
+// CHECK: Value = 10
+def v951 : Int<!logtwo(1024)>;
+
+// CHECK: def v952
+// CHECK: Value = 10
+def v952 : Int<!logtwo(1025)>;
+
+#ifdef ERROR3
+// ERROR3: error: Illegal operation: logtwo is undefined on arguments less than or equal to 0
+def v953 : Int<!logtwo(0)>;
+#endif
+
+#ifdef ERROR4
+// ERROR4: error: Illegal operation: logtwo is undefined on arguments less than or equal to 0
+def v954 : Int<!logtwo(-1)>;
+#endif
 
 // CHECK: def vneg
 // CHECK: Value = -2

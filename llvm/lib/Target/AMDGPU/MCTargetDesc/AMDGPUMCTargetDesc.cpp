@@ -36,6 +36,7 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "AMDGPUGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
@@ -102,6 +103,10 @@ static MCTargetStreamer * createAMDGPUObjectTargetStreamer(
                                                    MCStreamer &S,
                                                    const MCSubtargetInfo &STI) {
   return new AMDGPUTargetELFStreamer(S, STI);
+}
+
+static MCTargetStreamer *createAMDGPUNullTargetStreamer(MCStreamer &S) {
+  return new AMDGPUTargetStreamer(S);
 }
 
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
@@ -171,4 +176,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTargetMC() {
                                             createAMDGPUAsmTargetStreamer);
   TargetRegistry::RegisterObjectTargetStreamer(
       getTheGCNTarget(), createAMDGPUObjectTargetStreamer);
+  TargetRegistry::RegisterNullTargetStreamer(getTheGCNTarget(),
+                                             createAMDGPUNullTargetStreamer);
 }

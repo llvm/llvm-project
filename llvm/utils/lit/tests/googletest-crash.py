@@ -7,7 +7,7 @@
 # CHECK: *** TEST 'googletest-crash :: [[PATH]][[FILE]]/0{{.*}} FAILED ***
 # CHECK-NEXT: Script(shard):
 # CHECK-NEXT: --
-# CHECK-NEXT: GTEST_OUTPUT=json:[[JSON:[^[:space:]]*\.json]] GTEST_SHUFFLE=0 GTEST_TOTAL_SHARDS=6 GTEST_SHARD_INDEX=0 {{.*}}[[FILE]]
+# CHECK-NEXT: GTEST_OUTPUT=json:[[JSON:[^[:space:]]*\.json]] GTEST_SHUFFLE=0 GTEST_TOTAL_SHARDS={{[1-6]}} GTEST_SHARD_INDEX=0 {{.*}}[[FILE]]
 # CHECK-NEXT: --
 # CHECK-EMPTY:
 # CHECK-NEXT: [----------] 4 test from FirstTest
@@ -22,5 +22,5 @@
 # CHECK-NEXT: shard JSON output does not exist: [[JSON]]
 # CHECK-NEXT: ***
 # CHECK: Failed Tests (1):
-# CHECK-NEXT:   googletest-crash :: [[PATH]][[FILE]]/0/6
+# CHECK-NEXT:   googletest-crash :: [[PATH]][[FILE]]/0/{{[1-6]}}
 # CHECK: Failed{{ *}}: 1

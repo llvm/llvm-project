@@ -72,7 +72,7 @@ define void @foo() {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %bb
-; X64-NEXT:    movb var_27(%rip), %cl
+; X64-NEXT:    movzbl var_27(%rip), %ecx
 ; X64-NEXT:    movzwl var_22(%rip), %eax
 ; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    addb $30, %cl
@@ -89,7 +89,7 @@ define void @foo() {
 ; 686-NEXT:    .cfi_def_cfa_register %ebp
 ; 686-NEXT:    andl $-8, %esp
 ; 686-NEXT:    subl $8, %esp
-; 686-NEXT:    movb var_27, %cl
+; 686-NEXT:    movzbl var_27, %ecx
 ; 686-NEXT:    movzwl var_22, %eax
 ; 686-NEXT:    movl %eax, (%esp)
 ; 686-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -108,31 +108,31 @@ define void @foo() {
 ; 686-NEXT:    retl
 bb:
   %tmp = alloca i64, align 8
-  %tmp1 = load i16, i16* @var_22, align 2
+  %tmp1 = load i16, ptr @var_22, align 2
   %tmp2 = zext i16 %tmp1 to i32
-  %tmp3 = load i16, i16* @var_27, align 2
+  %tmp3 = load i16, ptr @var_27, align 2
   %tmp4 = zext i16 %tmp3 to i32
   %tmp5 = xor i32 %tmp2, %tmp4
-  %tmp6 = load i16, i16* @var_27, align 2
+  %tmp6 = load i16, ptr @var_27, align 2
   %tmp7 = zext i16 %tmp6 to i32
   %tmp8 = xor i32 %tmp5, %tmp7
   %tmp9 = sext i32 %tmp8 to i64
-  store i64 %tmp9, i64* %tmp, align 8
-  %tmp10 = load i16, i16* @var_22, align 2
+  store i64 %tmp9, ptr %tmp, align 8
+  %tmp10 = load i16, ptr @var_22, align 2
   %tmp11 = zext i16 %tmp10 to i32
-  %tmp12 = load i16, i16* @var_27, align 2
+  %tmp12 = load i16, ptr @var_27, align 2
   %tmp13 = zext i16 %tmp12 to i32
   %tmp14 = xor i32 %tmp11, %tmp13
-  %tmp15 = load i16, i16* @var_27, align 2
+  %tmp15 = load i16, ptr @var_27, align 2
   %tmp16 = zext i16 %tmp15 to i32
   %tmp17 = xor i32 %tmp14, %tmp16
   %tmp18 = sext i32 %tmp17 to i64
-  %tmp19 = load i16, i16* @var_27, align 2
+  %tmp19 = load i16, ptr @var_27, align 2
   %tmp20 = zext i16 %tmp19 to i32
   %tmp21 = sub nsw i32 %tmp20, 16610
   %tmp22 = zext i32 %tmp21 to i64
   %tmp23 = ashr i64 %tmp18, %tmp22
   %tmp24 = trunc i64 %tmp23 to i8
-  store i8 %tmp24, i8* undef, align 1
+  store i8 %tmp24, ptr undef, align 1
   ret void
 }

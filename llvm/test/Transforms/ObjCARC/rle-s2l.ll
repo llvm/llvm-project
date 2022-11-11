@@ -1,4 +1,4 @@
-; RUN: opt -S -basic-aa -objc-arc < %s | FileCheck %s
+; RUN: opt -S -passes=objc-arc < %s | FileCheck %s
 
 declare i8* @llvm.objc.loadWeak(i8**)
 declare i8* @llvm.objc.loadWeakRetained(i8**)
@@ -135,4 +135,4 @@ define void @test7(i8** %p, i8* %n, i8** %q, i8* %m) {
 }
 
 ; CHECK: attributes #0 = { nounwind }
-; CHECK: attributes [[RO]] = { readonly }
+; CHECK: attributes [[RO]] = { memory(read) }

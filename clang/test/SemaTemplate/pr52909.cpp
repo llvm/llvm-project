@@ -15,7 +15,7 @@ concept Beginable = requires (T t) {
   // expected-note@-1 {{because 't.begin' would be invalid: reference to non-static member function must be called}}
 };
 
-static_assert(Beginable<A>); // expected-error {{static_assert failed}}
+static_assert(Beginable<A>); // expected-error {{static assertion failed}}
                              // expected-note@-1 {{does not satisfy 'Beginable'}}
 } // namespace PR52905
 
@@ -48,8 +48,8 @@ struct A {
     static void begin(double);
 };
 
-static_assert(C<A>); // expected-error {{static_assert failed}}
-  // expected-note@-1 {{because 'PR52909b::A' does not satisfy 'C'}}
+static_assert(C<A>); // expected-error {{static assertion failed}}
+  // expected-note@-1 {{because 'A' does not satisfy 'C'}}
 
 } // namespace PR52909b
 
@@ -65,7 +65,7 @@ struct S {
     int *f() const;
 };
 
-static_assert(C<S>); // expected-error {{static_assert failed}}
-  // expected-note@-1 {{because 'PR53075::S' does not satisfy 'C'}}
+static_assert(C<S>); // expected-error {{static assertion failed}}
+  // expected-note@-1 {{because 'S' does not satisfy 'C'}}
 
 } // namespace PR53075

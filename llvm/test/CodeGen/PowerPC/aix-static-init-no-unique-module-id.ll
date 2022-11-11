@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s
 
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @foo, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @foo, ptr null }]
 
 define internal void @foo() {
   ret void

@@ -120,6 +120,11 @@ bool MprotectReadOnly(uptr addr, uptr size);
 
 void MprotectMallocZones(void *addr, int prot);
 
+#if SANITIZER_WINDOWS
+// Zero previously mmap'd memory. Currently used only on Windows.
+bool ZeroMmapFixedRegion(uptr fixed_addr, uptr size) WARN_UNUSED_RESULT;
+#endif
+
 #if SANITIZER_LINUX
 // Unmap memory. Currently only used on Linux.
 void UnmapFromTo(uptr from, uptr to);
@@ -704,6 +709,7 @@ enum ModuleArch {
   kModuleArchARMV7S,
   kModuleArchARMV7K,
   kModuleArchARM64,
+  kModuleArchLoongArch64,
   kModuleArchRISCV64,
   kModuleArchHexagon
 };
@@ -776,6 +782,8 @@ inline const char *ModuleArchToString(ModuleArch arch) {
       return "armv7k";
     case kModuleArchARM64:
       return "arm64";
+    case kModuleArchLoongArch64:
+      return "loongarch64";
     case kModuleArchRISCV64:
       return "riscv64";
     case kModuleArchHexagon:
@@ -1016,7 +1024,6 @@ struct SignalContext {
 };
 
 void InitializePlatformEarly();
-void MaybeReexec();
 
 template <typename Fn>
 class RunOnDestruction {

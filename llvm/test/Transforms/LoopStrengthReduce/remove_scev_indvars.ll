@@ -55,3 +55,60 @@ exit:
   %indvars.iv.unr = phi i64 [%iv.prol.lcssa, %for.exit]
   ret void
 }
+
+define void @testNonIndVarPhi() {
+cont5820:
+  br label %for.cond5821
+
+for.cond5821:                                     ; preds = %cont5825, %cont5820
+  %0 = phi i32 [ 0, %cont5825 ], [ 1, %cont5820 ]
+  br label %cont5825
+
+cont5825:                                         ; preds = %for.cond5821
+  br i1 false, label %for.cond5821, label %for.cond6403
+
+for.cond6403:                                     ; preds = %dead, %cont5825
+  %1 = phi i32 [ %.lcssa221, %dead ], [ 0, %cont5825 ]
+  br label %for.cond6418
+
+for.cond6418:                                     ; preds = %cont6497, %for.cond6403
+  %2 = phi i32 [ %0, %cont6497 ], [ %1, %for.cond6403 ]
+  %3 = phi i64 [ 1, %cont6497 ], [ 0, %for.cond6403 ]
+  %cmp6419 = icmp ule i64 %3, 0
+  br i1 %cmp6419, label %cont6497, label %for.end6730
+
+cont6497:                                         ; preds = %for.cond6418
+  %conv6498 = sext i32 %2 to i64
+  br label %for.cond6418
+
+for.end6730:                                      ; preds = %for.cond6418
+; Check that we don't make changes for phis which are not considered
+; induction variables
+; CHECK: %.lcssa221 = phi i32 [ %2, %for.cond6418 ]
+  %.lcssa221 = phi i32 [ %2, %for.cond6418 ]
+  ret void
+
+dead:                                             ; No predecessors!
+  br label %for.cond6403
+}
+
+
+; Check that this doesn't crash
+define void @kernfs_path_from_node() {
+entry:
+  callbr void asm sideeffect "", "!i"()
+          to label %asm.fallthrough [label %while.body]
+
+asm.fallthrough:                                  ; preds = %entry
+  br label %while.body
+
+while.body:                                       ; preds = %while.body, %asm.fallthrough, %entry
+  %depth.04 = phi i32 [ %inc, %while.body ], [ 0, %asm.fallthrough ], [ 0, %entry ]
+  %inc = add i32 %depth.04, 1
+  br i1 false, label %while.end, label %while.body
+
+while.end:                                        ; preds = %while.body
+  %inc.lcssa = phi i32 [ %depth.04, %while.body ]
+  store i32 %inc.lcssa, i32* null, align 4
+  ret void
+}

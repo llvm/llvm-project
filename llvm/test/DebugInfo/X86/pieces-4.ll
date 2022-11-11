@@ -37,7 +37,7 @@ target triple = "x86_64-pc-windows-msvc19.0.24210"
 ; Function Attrs: nounwind uwtable
 define i32 @bitpiece_spill() local_unnamed_addr #0 !dbg !7 {
 entry:
-  tail call void @llvm.dbg.declare(metadata %struct.IntPair* undef, metadata !12, metadata !17), !dbg !18
+  tail call void @llvm.dbg.declare(metadata ptr undef, metadata !12, metadata !17), !dbg !18
   %call = tail call i32 @g() #3, !dbg !19
   tail call void @llvm.dbg.value(metadata i32 %call, metadata !12, metadata !20), !dbg !18
   tail call void @llvm.dbg.value(metadata i32 0, metadata !12, metadata !21), !dbg !18

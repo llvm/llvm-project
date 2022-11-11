@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -tbaa -loop-unroll-and-jam  -allow-unroll-and-jam -unroll-and-jam-count=4 < %s -S | FileCheck %s
+; RUN: opt -loop-unroll-and-jam  -allow-unroll-and-jam -unroll-and-jam-count=4 < %s -S | FileCheck %s
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 @a = common dso_local local_unnamed_addr global i32 0, align 4

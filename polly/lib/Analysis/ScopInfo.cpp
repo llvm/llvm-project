@@ -67,6 +67,7 @@
 #include "isl/options.h"
 #include "isl/set.h"
 #include <cassert>
+#include <numeric>
 
 using namespace llvm;
 using namespace polly;
@@ -292,7 +293,7 @@ void ScopArrayInfo::updateElementType(Type *NewElementType) {
   if (NewElementSize % OldElementSize == 0 && NewElementSize < OldElementSize) {
     ElementType = NewElementType;
   } else {
-    auto GCD = GreatestCommonDivisor64(NewElementSize, OldElementSize);
+    auto GCD = std::gcd((uint64_t)NewElementSize, (uint64_t)OldElementSize);
     ElementType = IntegerType::get(ElementType->getContext(), GCD);
   }
 }
@@ -2559,7 +2560,7 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
   NumScops++;
   NumLoopsInScop += Stats.NumLoops;
   MaxNumLoopsInScop =
-      std::max(MaxNumLoopsInScop.getValue(), (unsigned)Stats.NumLoops);
+      std::max(MaxNumLoopsInScop.getValue(), (uint64_t)Stats.NumLoops);
 
   if (Stats.MaxDepth == 0)
     NumScopsDepthZero++;

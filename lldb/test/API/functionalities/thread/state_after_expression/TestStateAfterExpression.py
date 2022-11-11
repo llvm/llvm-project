@@ -12,8 +12,6 @@ from lldbsuite.test.decorators import *
 
 class TestStopReasonAfterExpression(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48415")
     @expectedFlakeyNetBSD
@@ -47,7 +45,7 @@ class TestStopReasonAfterExpression(TestBase):
 
         stop_reason = other_thread.GetStopReason()
 
-        self.assertEqual(stop_reason, lldb.eStopReasonBreakpoint,
+        self.assertStopReason(stop_reason, lldb.eStopReasonBreakpoint,
                          "Still records stopped at breakpoint: %s"
                          %(lldbutil.stop_reason_to_str(stop_reason)))
         self.assertEqual(other_thread.GetStopReasonDataAtIndex(0), 1,

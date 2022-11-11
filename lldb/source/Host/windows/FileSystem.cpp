@@ -30,8 +30,8 @@ const char *FileSystem::PATH_CONVERSION_ERROR =
 Status FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
   Status error;
   std::wstring wsrc, wdst;
-  if (!llvm::ConvertUTF8toWide(src.GetCString(), wsrc) ||
-      !llvm::ConvertUTF8toWide(dst.GetCString(), wdst))
+  if (!llvm::ConvertUTF8toWide(src.GetPath(), wsrc) ||
+      !llvm::ConvertUTF8toWide(dst.GetPath(), wdst))
     error.SetErrorString(PATH_CONVERSION_ERROR);
   if (error.Fail())
     return error;
@@ -51,7 +51,7 @@ Status FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
 Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
   Status error;
   std::wstring wsrc;
-  if (!llvm::ConvertUTF8toWide(src.GetCString(), wsrc)) {
+  if (!llvm::ConvertUTF8toWide(src.GetPath(), wsrc)) {
     error.SetErrorString(PATH_CONVERSION_ERROR);
     return error;
   }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 ; Indvars should do the IV arithmetic in the canonical IV type (i64),
 ; and only use one truncation.

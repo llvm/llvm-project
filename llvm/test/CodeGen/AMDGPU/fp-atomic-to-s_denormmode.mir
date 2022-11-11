@@ -1,9 +1,9 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN %s
 
 # GCN-LABEL: name: flat_atomic_fcmpswap_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FCMPSWAP
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fcmpswap_to_s_denorm_mode
@@ -15,7 +15,7 @@ body:            |
 
 # GCN-LABEL: name: flat_atomic_fcmpswap_x2_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FCMPSWAP_X2
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fcmpswap_x2_to_s_denorm_mode
@@ -27,7 +27,7 @@ body:            |
 
 # GCN-LABEL: name: flat_atomic_fmax_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FMAX
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fmax_to_s_denorm_mode
@@ -39,7 +39,7 @@ body:            |
 
 # GCN-LABEL: name: flat_atomic_fmax_x2_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FMAX_X2
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fmax_x2_to_s_denorm_mode
@@ -51,7 +51,7 @@ body:            |
 
 # GCN-LABEL: name: flat_atomic_fmin_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FMIN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fmin_to_s_denorm_mode
@@ -63,7 +63,7 @@ body:            |
 
 # GCN-LABEL: name: flat_atomic_fmin_x2_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FMIN_X2
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fmin_x2_to_s_denorm_mode
@@ -75,7 +75,7 @@ body:            |
 
 # GCN-LABEL: name: flat_atomic_fcmpswap_x2_rtn_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FCMPSWAP_X2_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fcmpswap_x2_rtn_to_s_denorm_mode
@@ -87,7 +87,7 @@ body:            |
 
 # GCN-LABEL: name: flat_atomic_fmax_rtn_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FMAX_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fmax_rtn_to_s_denorm_mode
@@ -99,7 +99,7 @@ body:            |
 
 # GCN-LABEL: name: flat_atomic_fmax_x2_rtn_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FMAX_X2_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fmax_x2_rtn_to_s_denorm_mode
@@ -111,7 +111,7 @@ body:            |
 
 # GCN-LABEL: name: flat_atomic_fmin_rtn_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FMIN_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fmin_rtn_to_s_denorm_mode
@@ -123,7 +123,7 @@ body:            |
 
 # GCN-LABEL: name: flat_atomic_fmin_x2_rtn_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FMIN_X2_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fmin_x2_rtn_to_s_denorm_mode
@@ -135,7 +135,7 @@ body:            |
 
 # GCN-LABEL: name: flat_atomic_fcmpswap_rtn_to_s_denorm_mode
 # GCN:      FLAT_ATOMIC_FCMPSWAP_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            flat_atomic_fcmpswap_rtn_to_s_denorm_mode
@@ -147,7 +147,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fcmpswap_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FCMPSWAP
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fcmpswap_to_s_denorm_mode
@@ -159,7 +159,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fcmpswap_x2_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FCMPSWAP_X2
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fcmpswap_x2_to_s_denorm_mode
@@ -171,7 +171,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmax_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMAX
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmax_to_s_denorm_mode
@@ -183,7 +183,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmax_x2_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMAX_X2
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmax_x2_to_s_denorm_mode
@@ -195,7 +195,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmin_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMIN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmin_to_s_denorm_mode
@@ -207,7 +207,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmin_x2_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMIN_X2
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmin_x2_to_s_denorm_mode
@@ -219,7 +219,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fcmpswap_rtn_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FCMPSWAP_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fcmpswap_rtn_to_s_denorm_mode
@@ -231,7 +231,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fcmpswap_x2_rtn_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FCMPSWAP_X2_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fcmpswap_x2_rtn_to_s_denorm_mode
@@ -243,7 +243,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmax_rtn_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMAX_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmax_rtn_to_s_denorm_mode
@@ -255,7 +255,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmax_x2_rtn_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMAX_X2_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmax_x2_rtn_to_s_denorm_mode
@@ -267,7 +267,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmin_rtn_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMIN_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmin_rtn_to_s_denorm_mode
@@ -279,7 +279,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmin_x2_rtn_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMIN_X2_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmin_x2_rtn_to_s_denorm_mode
@@ -291,7 +291,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fcmpswap_saddr_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FCMPSWAP_SADDR
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fcmpswap_saddr_to_s_denorm_mode
@@ -303,7 +303,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fcmpswap_x2_saddr_rtn_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FCMPSWAP_X2_SADDR_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fcmpswap_x2_saddr_rtn_to_s_denorm_mode
@@ -315,7 +315,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmax_saddr_rtn_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMAX_SADDR_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmax_saddr_rtn_to_s_denorm_mode
@@ -327,7 +327,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmax_x2_saddr_rtn_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMAX_X2_SADDR_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmax_x2_saddr_rtn_to_s_denorm_mode
@@ -339,7 +339,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmin_saddr_rtn_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMIN_SADDR_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmin_saddr_rtn_to_s_denorm_mode
@@ -351,7 +351,7 @@ body:            |
 
 # GCN-LABEL: name: global_atomic_fmin_x2_saddr_rtn_to_s_denorm_mode
 # GCN:      GLOBAL_ATOMIC_FMIN_X2_SADDR_RTN
-# GCN-NEXT: S_NOP 2
+# GFX10-NEXT: S_NOP 2
 # GCN-NEXT: S_DENORM_MODE
 ---
 name:            global_atomic_fmin_x2_saddr_rtn_to_s_denorm_mode

@@ -2,21 +2,21 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu  | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu  -regalloc=basic | FileCheck %s
 
-declare i8* @llvm.frameaddress(i32) nounwind readnone
+declare ptr @llvm.frameaddress(i32) nounwind readnone
 
-define i8* @g2() nounwind readnone {
+define ptr @g2() nounwind readnone {
 ; CHECK-LABEL: g2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 3, 0(1)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = tail call i8* @llvm.frameaddress(i32 1)    ; <i8*> [#uses=1]
-  ret i8* %0
+  %0 = tail call ptr @llvm.frameaddress(i32 1)    ; <ptr> [#uses=1]
+  ret ptr %0
 }
 
-declare i8* @llvm.returnaddress(i32) nounwind readnone
+declare ptr @llvm.returnaddress(i32) nounwind readnone
 
-define i8* @g() nounwind readnone {
+define ptr @g() nounwind readnone {
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
@@ -30,6 +30,6 @@ define i8* @g() nounwind readnone {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = tail call i8* @llvm.returnaddress(i32 1)   ; <i8*> [#uses=1]
-  ret i8* %0
+  %0 = tail call ptr @llvm.returnaddress(i32 1)   ; <ptr> [#uses=1]
+  ret ptr %0
 }

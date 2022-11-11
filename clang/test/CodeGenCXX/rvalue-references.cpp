@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
 
 
 struct Spacer { int x; };
@@ -7,32 +7,30 @@ struct B : Spacer, A { };
 
 B &getB();
 
-// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.A* @_Z4getAv()
-// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.B* @_Z4getBv()
-// CHECK-NEXT: bitcast %struct.B*
-// CHECK-NEXT: getelementptr inbounds i8, i8*
-// CHECK-NEXT: bitcast i8* {{.*}} to %struct.A*
-// CHECK-NEXT: ret %struct.A*
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z4getAv()
+// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z4getBv()
+// CHECK-NEXT: getelementptr inbounds i8, ptr
+// CHECK-NEXT: ret ptr
 A &&getA() { return static_cast<A&&>(getB()); }
 
 int &getIntLValue();
 int &&getIntXValue();
 int getIntPRValue();
 
-// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_Z2f0v()
-// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_Z12getIntLValuev()
-// CHECK-NEXT: ret i32*
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z2f0v()
+// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z12getIntLValuev()
+// CHECK-NEXT: ret ptr
 int &&f0() { return static_cast<int&&>(getIntLValue()); }
 
-// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_Z2f1v()
-// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_Z12getIntXValuev()
-// CHECK-NEXT: ret i32*
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z2f1v()
+// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z12getIntXValuev()
+// CHECK-NEXT: ret ptr
 int &&f1() { return static_cast<int&&>(getIntXValue()); }
 
-// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_Z2f2v
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z2f2v
 // CHECK: call noundef i32 @_Z13getIntPRValuev()
-// CHECK-NEXT: store i32 {{.*}}, i32*
-// CHECK-NEXT: ret i32*
+// CHECK-NEXT: store i32 {{.*}}, ptr
+// CHECK-NEXT: ret ptr
 int &&f2() { return static_cast<int&&>(getIntPRValue()); }
 
 bool ok;
@@ -95,8 +93,8 @@ namespace test1 {
   };
 
   // CHECK-LABEL:    define{{.*}} void @_ZN5test11BC2Ei(
-  // CHECK:      [[T0:%.*]] = call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_ZN5test14moveERi(
-  // CHECK-NEXT: [[T1:%.*]] = load i32, i32* [[T0]]
+  // CHECK:      [[T0:%.*]] = call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN5test14moveERi(
+  // CHECK-NEXT: [[T1:%.*]] = load i32, ptr [[T0]]
   // CHECK-NEXT: call void @_ZN5test11AC1Ei({{.*}}, i32 noundef [[T1]])
   // CHECK-NEXT: ret void
   B::B(int i) : a(move(i)) {}

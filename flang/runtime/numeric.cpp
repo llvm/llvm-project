@@ -16,13 +16,40 @@
 
 namespace Fortran::runtime {
 
-// AINT
-template <typename RESULT, typename ARG> inline RESULT Aint(ARG x) {
-  return std::trunc(x);
+template <typename RES>
+inline RES getIntArgValue(const char *source, int line, void *arg, int kind,
+    std::int64_t defaultValue, int resKind) {
+  RES res;
+  if (!arg) {
+    res = static_cast<RES>(defaultValue);
+  } else if (kind == 1) {
+    res = static_cast<RES>(
+        *static_cast<CppTypeFor<TypeCategory::Integer, 1> *>(arg));
+  } else if (kind == 2) {
+    res = static_cast<RES>(
+        *static_cast<CppTypeFor<TypeCategory::Integer, 2> *>(arg));
+  } else if (kind == 4) {
+    res = static_cast<RES>(
+        *static_cast<CppTypeFor<TypeCategory::Integer, 4> *>(arg));
+  } else if (kind == 8) {
+    res = static_cast<RES>(
+        *static_cast<CppTypeFor<TypeCategory::Integer, 8> *>(arg));
+#ifdef __SIZEOF_INT128__
+  } else if (kind == 16) {
+    if (resKind != 16) {
+      Terminator{source, line}.Crash("Unexpected integer kind in runtime");
+    }
+    res = static_cast<RES>(
+        *static_cast<CppTypeFor<TypeCategory::Integer, 16> *>(arg));
+#endif
+  } else {
+    Terminator{source, line}.Crash("Unexpected integer kind in runtime");
+  }
+  return res;
 }
 
-// ANINT & NINT
-template <typename RESULT, typename ARG> inline RESULT Anint(ARG x) {
+// NINT (16.9.141)
+template <typename RESULT, typename ARG> inline RESULT Nint(ARG x) {
   if (x >= 0) {
     return std::trunc(x + ARG{0.5});
   } else {
@@ -77,16 +104,19 @@ inline T IntMod(T x, T p, const char *sourceFile, int sourceLine) {
   return mod;
 }
 template <bool IS_MODULO, typename T>
-inline T RealMod(T x, T p, const char *sourceFile, int sourceLine) {
+inline T RealMod(T a, T p, const char *sourceFile, int sourceLine) {
   if (p == 0) {
     Terminator{sourceFile, sourceLine}.Crash(
         IS_MODULO ? "MODULO with P==0" : "MOD with P==0");
   }
-  if constexpr (IS_MODULO) {
-    return x - std::floor(x / p) * p;
-  } else {
-    return x - std::trunc(x / p) * p;
+  T quotient{a / p};
+  if (std::isinf(quotient) && std::isfinite(a) && std::isfinite(p)) {
+    // a/p overflowed -- so it must be an integer, and the result
+    // must be a zero of the same sign as one of the operands.
+    return std::copysign(T{}, IS_MODULO ? p : a);
   }
+  T toInt{IS_MODULO ? std::floor(quotient) : std::trunc(quotient)};
+  return a - toInt * p;
 }
 
 // RRSPACING (16.9.164)
@@ -112,6 +142,73 @@ template <typename T> inline T Scale(T x, std::int64_t p) {
   return std::ldexp(x, p); // x*2**p
 }
 
+// SELECTED_INT_KIND (16.9.169)
+template <typename T>
+inline CppTypeFor<TypeCategory::Integer, 4> SelectedIntKind(T x) {
+  if (x <= 2) {
+    return 1;
+  } else if (x <= 4) {
+    return 2;
+  } else if (x <= 9) {
+    return 4;
+  } else if (x <= 18) {
+    return 8;
+#ifdef __SIZEOF_INT128__
+  } else if (x <= 38) {
+    return 16;
+#endif
+  }
+  return -1;
+}
+
+// SELECTED_REAL_KIND (16.9.170)
+template <typename P, typename R, typename D>
+inline CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(P p, R r, D d) {
+  if (d != 2) {
+    return -5;
+  }
+
+  int error{0};
+  int kind{0};
+  if (p <= 3) {
+    kind = 2;
+  } else if (p <= 6) {
+    kind = 4;
+  } else if (p <= 15) {
+    kind = 8;
+#if LDBL_MANT_DIG == 64
+  } else if (p <= 18) {
+    kind = 10;
+  } else if (p <= 33) {
+    kind = 16;
+#elif LDBL_MANT_DIG == 113
+  } else if (p <= 33) {
+    kind = 16;
+#endif
+  } else {
+    error -= 1;
+  }
+
+  if (r <= 4) {
+    kind = kind < 2 ? 2 : kind;
+  } else if (r <= 37) {
+    kind = kind < 3 ? (p == 3 ? 4 : 3) : kind;
+  } else if (r <= 307) {
+    kind = kind < 8 ? 8 : kind;
+#if LDBL_MANT_DIG == 64
+  } else if (r <= 4931) {
+    kind = kind < 10 ? 10 : kind;
+#elif LDBL_MANT_DIG == 113
+  } else if (r <= 4931) {
+    kind = kind < 16 ? 16 : kind;
+#endif
+  } else {
+    error -= 2;
+  }
+
+  return error ? error : kind;
+}
+
 // SET_EXPONENT (16.9.171)
 template <typename T> inline T SetExponent(T x, std::int64_t p) {
   if (std::isnan(x)) {
@@ -119,7 +216,7 @@ template <typename T> inline T SetExponent(T x, std::int64_t p) {
   } else if (std::isinf(x)) {
     return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
   } else if (x == 0) {
-    return 0; // 0 -> 0
+    return x; // return negative zero if x is negative zero
   } else {
     int expo{std::ilogb(x) + 1};
     auto ip{static_cast<int>(p - expo)};
@@ -159,126 +256,6 @@ template <int PREC, typename T> inline T Nearest(T x, bool positive) {
 }
 
 extern "C" {
-
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Aint4_4)(
-    CppTypeFor<TypeCategory::Real, 4> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 4>>(x);
-}
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Aint4_8)(
-    CppTypeFor<TypeCategory::Real, 4> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 8>>(x);
-}
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Aint8_4)(
-    CppTypeFor<TypeCategory::Real, 8> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 4>>(x);
-}
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Aint8_8)(
-    CppTypeFor<TypeCategory::Real, 8> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 8>>(x);
-}
-#if LDBL_MANT_DIG == 64
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Aint4_10)(
-    CppTypeFor<TypeCategory::Real, 4> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 10>>(x);
-}
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Aint8_10)(
-    CppTypeFor<TypeCategory::Real, 8> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 10>>(x);
-}
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Aint10_4)(
-    CppTypeFor<TypeCategory::Real, 10> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 4>>(x);
-}
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Aint10_8)(
-    CppTypeFor<TypeCategory::Real, 10> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 8>>(x);
-}
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Aint10_10)(
-    CppTypeFor<TypeCategory::Real, 10> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 10>>(x);
-}
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Aint4_16)(
-    CppTypeFor<TypeCategory::Real, 4> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 16>>(x);
-}
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Aint8_16)(
-    CppTypeFor<TypeCategory::Real, 8> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 16>>(x);
-}
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Aint16_4)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 4>>(x);
-}
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Aint16_8)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 8>>(x);
-}
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Aint16_16)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Aint<CppTypeFor<TypeCategory::Real, 16>>(x);
-}
-#endif
-
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Anint4_4)(
-    CppTypeFor<TypeCategory::Real, 4> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 4>>(x);
-}
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Anint4_8)(
-    CppTypeFor<TypeCategory::Real, 4> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 8>>(x);
-}
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Anint8_4)(
-    CppTypeFor<TypeCategory::Real, 8> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 4>>(x);
-}
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Anint8_8)(
-    CppTypeFor<TypeCategory::Real, 8> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 8>>(x);
-}
-#if LDBL_MANT_DIG == 64
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Anint4_10)(
-    CppTypeFor<TypeCategory::Real, 4> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 10>>(x);
-}
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Anint8_10)(
-    CppTypeFor<TypeCategory::Real, 8> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 10>>(x);
-}
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Anint10_4)(
-    CppTypeFor<TypeCategory::Real, 10> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 4>>(x);
-}
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Anint10_8)(
-    CppTypeFor<TypeCategory::Real, 10> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 8>>(x);
-}
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Anint10_10)(
-    CppTypeFor<TypeCategory::Real, 10> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 10>>(x);
-}
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Anint4_16)(
-    CppTypeFor<TypeCategory::Real, 4> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 16>>(x);
-}
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Anint8_16)(
-    CppTypeFor<TypeCategory::Real, 8> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 16>>(x);
-}
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Anint16_4)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 4>>(x);
-}
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Anint16_8)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 8>>(x);
-}
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Anint16_16)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Anint<CppTypeFor<TypeCategory::Real, 16>>(x);
-}
-#endif
 
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Ceiling4_1)(
     CppTypeFor<TypeCategory::Real, 4> x) {
@@ -686,92 +663,92 @@ CppTypeFor<TypeCategory::Real, 16> RTNAME(Nearest16)(
 
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Nint4_1)(
     CppTypeFor<TypeCategory::Real, 4> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 1>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 1>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(Nint4_2)(
     CppTypeFor<TypeCategory::Real, 4> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 2>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 2>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(Nint4_4)(
     CppTypeFor<TypeCategory::Real, 4> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 4>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 4>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint4_8)(
     CppTypeFor<TypeCategory::Real, 4> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 8>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint4_16)(
     CppTypeFor<TypeCategory::Real, 4> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 16>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Nint8_1)(
     CppTypeFor<TypeCategory::Real, 8> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 1>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 1>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(Nint8_2)(
     CppTypeFor<TypeCategory::Real, 8> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 2>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 2>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(Nint8_4)(
     CppTypeFor<TypeCategory::Real, 8> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 4>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 4>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint8_8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 8>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint8_16)(
     CppTypeFor<TypeCategory::Real, 8> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 16>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
 #if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Nint10_1)(
     CppTypeFor<TypeCategory::Real, 10> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 1>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 1>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(Nint10_2)(
     CppTypeFor<TypeCategory::Real, 10> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 2>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 2>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(Nint10_4)(
     CppTypeFor<TypeCategory::Real, 10> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 4>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 4>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint10_8)(
     CppTypeFor<TypeCategory::Real, 10> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 8>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint10_16)(
     CppTypeFor<TypeCategory::Real, 10> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 16>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
 #elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Nint16_1)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 1>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 1>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(Nint16_2)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 2>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 2>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(Nint16_4)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 4>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 4>>(x);
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint16_8)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 8>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint16_16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Anint<CppTypeFor<TypeCategory::Integer, 16>>(x);
+  return Nint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
 #endif
@@ -835,6 +812,45 @@ CppTypeFor<TypeCategory::Real, 16> RTNAME(Scale16)(
   return Scale(x, p);
 }
 #endif
+
+// SELECTED_INT_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTNAME(SelectedIntKind)(
+    const char *source, int line, void *x, int xKind) {
+#ifdef __SIZEOF_INT128__
+  CppTypeFor<TypeCategory::Integer, 16> r =
+      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+          source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 16);
+#else
+  std::int64_t r = getIntArgValue<std::int64_t>(
+      source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 8);
+#endif
+  return SelectedIntKind(r);
+}
+
+// SELECTED_REAL_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTNAME(SelectedRealKind)(
+    const char *source, int line, void *precision, int pKind, void *range,
+    int rKind, void *radix, int dKind) {
+#ifdef __SIZEOF_INT128__
+  CppTypeFor<TypeCategory::Integer, 16> p =
+      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+          source, line, precision, pKind, /*defaultValue*/ 0, /*resKind*/ 16);
+  CppTypeFor<TypeCategory::Integer, 16> r =
+      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+          source, line, range, rKind, /*defaultValue*/ 0, /*resKind*/ 16);
+  CppTypeFor<TypeCategory::Integer, 16> d =
+      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+          source, line, radix, dKind, /*defaultValue*/ 2, /*resKind*/ 16);
+#else
+  std::int64_t p = getIntArgValue<std::int64_t>(
+      source, line, precision, pKind, /*defaultValue*/ 0, /*resKind*/ 8);
+  std::int64_t r = getIntArgValue<std::int64_t>(
+      source, line, range, rKind, /*defaultValue*/ 0, /*resKind*/ 8);
+  std::int64_t d = getIntArgValue<std::int64_t>(
+      source, line, radix, dKind, /*defaultValue*/ 2, /*resKind*/ 8);
+#endif
+  return SelectedRealKind(p, r, d);
+}
 
 CppTypeFor<TypeCategory::Real, 4> RTNAME(Spacing4)(
     CppTypeFor<TypeCategory::Real, 4> x) {

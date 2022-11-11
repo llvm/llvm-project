@@ -1,5 +1,5 @@
 ; RUN: llc --filetype=obj %s -o - | dxil-dis -o - | FileCheck %s
-target triple = "dxil-unknown-unknown"
+target triple = "dxil-unknown-shadermodel6.7-library"
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

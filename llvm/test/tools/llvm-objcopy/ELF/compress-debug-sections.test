@@ -4,21 +4,15 @@
 # RUN: cp %t.o %t.copy.o
 
 # RUN: llvm-objcopy --compress-debug-sections=zlib     %t.o %tz.o
-# RUN: llvm-objcopy --compress-debug-sections=zlib-gnu %t.o %tzg.o
 # RUN: cp %tz.o %tz.copy.o
-# RUN: cp %tzg.o %tzg.copy.o
 
 # RUN: llvm-objcopy --decompress-debug-sections %tz.o  %t2.o
-# RUN: llvm-objcopy --decompress-debug-sections %tzg.o %t3.o
 
 # Using redirects to avoid llvm-objdump from printing the filename.
 # RUN: llvm-objdump -s --section=.debug_str - < %t.o  > %t.txt
 # RUN: llvm-objdump -s --section=.debug_str - < %t2.o > %t2.txt
-# RUN: llvm-objdump -s --section=.debug_str - < %t3.o > %t3.txt
 
 # RUN: diff %t.txt %t2.txt
-# RUN: diff %t.txt %t3.txt
 
 # RUN: cmp %t.o %t.copy.o
 # RUN: cmp %tz.o %tz.copy.o
-# RUN: cmp %tzg.o %tzg.copy.o

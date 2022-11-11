@@ -6,7 +6,7 @@
 ; Use movq or movsd to load / store i64 values if sse2 is available.
 ; rdar://6659858
 
-define void @foo(i64* %x, i64* %y) {
+define void @foo(ptr %x, ptr %y) {
 ; X64-LABEL: foo:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rsi), %rax
@@ -28,15 +28,15 @@ define void @foo(i64* %x, i64* %y) {
 ; X32AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32AVX-NEXT:    vmovsd %xmm0, (%eax)
 ; X32AVX-NEXT:    retl
-  %tmp1 = load i64, i64* %y, align 8
-  store i64 %tmp1, i64* %x, align 8
+  %tmp1 = load i64, ptr %y, align 8
+  store i64 %tmp1, ptr %x, align 8
   ret void
 }
 
 ; Verify that a 64-bit chunk extracted from a vector is stored with a movq
 ; regardless of whether the system is 64-bit.
 
-define void @store_i64_from_vector(<8 x i16> %x, <8 x i16> %y, i64* %i) {
+define void @store_i64_from_vector(<8 x i16> %x, <8 x i16> %y, ptr %i) {
 ; X64-LABEL: store_i64_from_vector:
 ; X64:       # %bb.0:
 ; X64-NEXT:    paddw %xmm1, %xmm0
@@ -59,11 +59,11 @@ define void @store_i64_from_vector(<8 x i16> %x, <8 x i16> %y, i64* %i) {
   %z = add <8 x i16> %x, %y                          ; force execution domain
   %bc = bitcast <8 x i16> %z to <2 x i64>
   %vecext = extractelement <2 x i64> %bc, i32 0
-  store i64 %vecext, i64* %i, align 8
+  store i64 %vecext, ptr %i, align 8
   ret void
 }
 
-define void @store_i64_from_vector256(<16 x i16> %x, <16 x i16> %y, i64* %i) {
+define void @store_i64_from_vector256(<16 x i16> %x, <16 x i16> %y, ptr %i) {
 ; X64-LABEL: store_i64_from_vector256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    paddw %xmm3, %xmm1
@@ -99,14 +99,14 @@ define void @store_i64_from_vector256(<16 x i16> %x, <16 x i16> %y, i64* %i) {
   %z = add <16 x i16> %x, %y                          ; force execution domain
   %bc = bitcast <16 x i16> %z to <4 x i64>
   %vecext = extractelement <4 x i64> %bc, i32 2
-  store i64 %vecext, i64* %i, align 8
+  store i64 %vecext, ptr %i, align 8
   ret void
 }
 
 ; PR23476
 ; Handle extraction from a non-simple / pre-legalization type.
 
-define void @PR23476(<5 x i64> %in, i64* %out, i32 %index) nounwind {
+define void @PR23476(<5 x i64> %in, ptr %out, i32 %index) nounwind {
 ; X64-LABEL: PR23476:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rsi, %xmm0
@@ -166,7 +166,7 @@ define void @PR23476(<5 x i64> %in, i64* %out, i32 %index) nounwind {
 ; X32AVX-NEXT:    vzeroupper
 ; X32AVX-NEXT:    retl
   %ext = extractelement <5 x i64> %in, i32 %index
-  store i64 %ext, i64* %out, align 8
+  store i64 %ext, ptr %out, align 8
   ret void
 }
 

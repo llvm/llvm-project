@@ -37,7 +37,7 @@ define <8 x i32> @test_x86_avx2_pblendd_256(<8 x i32> %a0, <8 x i32> %a1) {
 declare <8 x i32> @llvm.x86.avx2.pblendd.256(<8 x i32>, <8 x i32>, i32) nounwind readnone
 
 
-define <4 x i64> @test_x86_avx2_movntdqa(i8* %a0) {
+define <4 x i64> @test_x86_avx2_movntdqa(ptr %a0) {
 ; X86-LABEL: test_x86_avx2_movntdqa:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -48,10 +48,10 @@ define <4 x i64> @test_x86_avx2_movntdqa(i8* %a0) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vmovntdqa (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %res = call <4 x i64> @llvm.x86.avx2.movntdqa(i8* %a0) ; <<4 x i64>> [#uses=1]
+  %res = call <4 x i64> @llvm.x86.avx2.movntdqa(ptr %a0) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
 }
-declare <4 x i64> @llvm.x86.avx2.movntdqa(i8*) nounwind readonly
+declare <4 x i64> @llvm.x86.avx2.movntdqa(ptr) nounwind readonly
 
 
 define <16 x i16> @test_x86_avx2_mpsadbw(<32 x i8> %a0, <32 x i8> %a1) {
@@ -385,7 +385,7 @@ define <4 x i64> @test_x86_avx2_pmovzxwq(<8 x i16> %a0) {
 declare <4 x i64> @llvm.x86.avx2.pmovzxwq(<8 x i16>) nounwind readnone
 
 ; This is checked here because the execution dependency fix pass makes it hard to test in AVX mode since we don't have 256-bit integer instructions
-define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
+define void @test_x86_avx_storeu_dq_256(ptr %a0, <32 x i8> %a1) {
   ; add operation forces the execution domain.
 ; X86-LABEL: test_x86_avx_storeu_dq_256:
 ; X86:       ## %bb.0:
@@ -404,10 +404,10 @@ define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %a2 = add <32 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-  call void @llvm.x86.avx.storeu.dq.256(i8* %a0, <32 x i8> %a2)
+  call void @llvm.x86.avx.storeu.dq.256(ptr %a0, <32 x i8> %a2)
   ret void
 }
-declare void @llvm.x86.avx.storeu.dq.256(i8*, <32 x i8>) nounwind
+declare void @llvm.x86.avx.storeu.dq.256(ptr, <32 x i8>) nounwind
 
 define <32 x i8> @mm256_max_epi8(<32 x i8> %a0, <32 x i8> %a1) {
 ; CHECK-LABEL: mm256_max_epi8:

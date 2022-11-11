@@ -583,7 +583,8 @@ public:
   ///
   bool makeLoopInvariant(Value *V, bool &Changed,
                          Instruction *InsertPt = nullptr,
-                         MemorySSAUpdater *MSSAU = nullptr) const;
+                         MemorySSAUpdater *MSSAU = nullptr,
+                         ScalarEvolution *SE = nullptr) const;
 
   /// If the given instruction is inside of the loop and it can be hoisted, do
   /// so to make it trivially loop-invariant.
@@ -597,7 +598,8 @@ public:
   ///
   bool makeLoopInvariant(Instruction *I, bool &Changed,
                          Instruction *InsertPt = nullptr,
-                         MemorySSAUpdater *MSSAU = nullptr) const;
+                         MemorySSAUpdater *MSSAU = nullptr,
+                         ScalarEvolution *SE = nullptr) const;
 
   /// Check to see if the loop has a canonical induction variable: an integer
   /// recurrence that starts at 0 and increments by one each time through the
@@ -814,12 +816,15 @@ public:
   /// by one each time through the loop.
   bool isCanonical(ScalarEvolution &SE) const;
 
-  /// Return true if the Loop is in LCSSA form.
-  bool isLCSSAForm(const DominatorTree &DT) const;
+  /// Return true if the Loop is in LCSSA form. If \p IgnoreTokens is set to
+  /// true, token values defined inside loop are allowed to violate LCSSA form.
+  bool isLCSSAForm(const DominatorTree &DT, bool IgnoreTokens = true) const;
 
-  /// Return true if this Loop and all inner subloops are in LCSSA form.
-  bool isRecursivelyLCSSAForm(const DominatorTree &DT,
-                              const LoopInfo &LI) const;
+  /// Return true if this Loop and all inner subloops are in LCSSA form. If \p
+  /// IgnoreTokens is set to true, token values defined inside loop are allowed
+  /// to violate LCSSA form.
+  bool isRecursivelyLCSSAForm(const DominatorTree &DT, const LoopInfo &LI,
+                              bool IgnoreTokens = true) const;
 
   /// Return true if the Loop is in the form that the LoopSimplify form
   /// transforms loops to, which is sometimes called normal form.

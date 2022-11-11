@@ -747,13 +747,13 @@ static Optional<bool> getOptionalBoolLoopAttribute(MDNode *LoopID,
 }
 
 bool polly::getBooleanLoopAttribute(MDNode *LoopID, StringRef Name) {
-  return getOptionalBoolLoopAttribute(LoopID, Name).getValueOr(false);
+  return getOptionalBoolLoopAttribute(LoopID, Name).value_or(false);
 }
 
 llvm::Optional<int> polly::getOptionalIntLoopAttribute(MDNode *LoopID,
                                                        StringRef Name) {
   const MDOperand *AttrMD =
-      findNamedMetadataArg(LoopID, Name).getValueOr(nullptr);
+      findNamedMetadataArg(LoopID, Name).value_or(nullptr);
   if (!AttrMD)
     return None;
 

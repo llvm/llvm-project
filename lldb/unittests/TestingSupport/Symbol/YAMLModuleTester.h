@@ -33,7 +33,7 @@ protected:
 
 public:
   /// Parse the debug info sections from the YAML description.
-  YAMLModuleTester(llvm::StringRef yaml_data);
+  YAMLModuleTester(llvm::StringRef yaml_data, size_t cu_index = 0);
   DWARFUnit *GetDwarfUnit() const { return m_dwarf_unit; }
   lldb::ModuleSP GetModule() const { return m_module_sp; }
 };

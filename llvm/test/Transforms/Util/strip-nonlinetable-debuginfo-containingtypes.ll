@@ -1,4 +1,4 @@
-; RUN: opt -S -strip-nonlinetable-debuginfo %s -o %t.ll
+; RUN: opt -S -passes=strip-nonlinetable-debuginfo %s -o %t.ll
 ; RUN: cat %t.ll | FileCheck %s
 ; RUN: cat %t.ll | FileCheck %s --check-prefix=CHECK-NEG
 ;
@@ -16,29 +16,29 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
 %struct.B = type { %struct.A }
-%struct.A = type { i32 (...)** }
+%struct.A = type { ptr }
 
 ; CHECK: @b = global
 ; CHECK-NOT: !dbg
 @b = global %struct.B zeroinitializer, align 8, !dbg !0
 
-declare void @_ZN1BC2Ev(%struct.B*) unnamed_addr
+declare void @_ZN1BC2Ev(ptr) unnamed_addr
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 ; CHECK: define
 
 ; Function Attrs: inlinehint nounwind ssp uwtable
-define linkonce_odr void @_ZN1BC1Ev(%struct.B* %this) unnamed_addr #1 align 2 !dbg !25 {
+define linkonce_odr void @_ZN1BC1Ev(ptr %this) unnamed_addr #1 align 2 !dbg !25 {
 entry:
-  %this.addr = alloca %struct.B*, align 8
-  store %struct.B* %this, %struct.B** %this.addr, align 8
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
   ; CHECK-NOT: @llvm.dbg.declare
-  call void @llvm.dbg.declare(metadata %struct.B** %this.addr, metadata !30, metadata !32), !dbg !33
-  %this1 = load %struct.B*, %struct.B** %this.addr, align 8
-  call void @_ZN1BC2Ev(%struct.B* %this1) #2, !dbg !34
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !30, metadata !32), !dbg !33
+  %this1 = load ptr, ptr %this.addr, align 8
+  call void @_ZN1BC2Ev(ptr %this1) #2, !dbg !34
   ret void, !dbg !34
-  ; CHECK: call void @_ZN1BC2Ev(%struct.B* %this1){{.*}} !dbg !
+  ; CHECK: call void @_ZN1BC2Ev(ptr %this1){{.*}} !dbg !
 }
 
 attributes #0 = { nounwind readnone }

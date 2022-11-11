@@ -29,7 +29,10 @@
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUMemoryUtils.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -43,6 +46,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/OptimizedStructLayout.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <tuple>
 #include <vector>
 
 #define DEBUG_TYPE "amdgpu-lower-module-lds"
@@ -55,21 +59,6 @@ static cl::opt<bool> SuperAlignLDSGlobals(
     cl::init(true), cl::Hidden);
 
 namespace {
-
-SmallPtrSet<GlobalValue *, 32> getUsedList(Module &M) {
-  SmallPtrSet<GlobalValue *, 32> UsedList;
-
-  SmallVector<GlobalValue *, 32> TmpVec;
-  collectUsedGlobalVariables(M, TmpVec, true);
-  UsedList.insert(TmpVec.begin(), TmpVec.end());
-
-  TmpVec.clear();
-  collectUsedGlobalVariables(M, TmpVec, false);
-  UsedList.insert(TmpVec.begin(), TmpVec.end());
-
-  return UsedList;
-}
-
 class AMDGPULowerModuleLDS : public ModulePass {
 
   static void removeFromUsedList(Module &M, StringRef Name,
@@ -112,6 +101,9 @@ class AMDGPULowerModuleLDS : public ModulePass {
   static void
   removeFromUsedLists(Module &M,
                       const std::vector<GlobalVariable *> &LocalVars) {
+    // The verifier rejects used lists containing an inttoptr of a constant
+    // so remove the variables from these lists before replaceAllUsesWith
+
     SmallPtrSet<Constant *, 32> LocalVarsSet;
     for (GlobalVariable *LocalVar : LocalVars)
       if (Constant *C = dyn_cast<Constant>(LocalVar->stripPointerCasts()))
@@ -153,8 +145,78 @@ class AMDGPULowerModuleLDS : public ModulePass {
                        "");
   }
 
-private:
-  SmallPtrSet<GlobalValue *, 32> UsedList;
+  static bool eliminateConstantExprUsesOfLDSFromAllInstructions(Module &M) {
+    // Constants are uniqued within LLVM. A ConstantExpr referring to a LDS
+    // global may have uses from multiple different functions as a result.
+    // This pass specialises LDS variables with respect to the kernel that
+    // allocates them.
+
+    // This is semantically equivalent to:
+    // for (auto &F : M.functions())
+    //   for (auto &BB : F)
+    //     for (auto &I : BB)
+    //       for (Use &Op : I.operands())
+    //         if (constantExprUsesLDS(Op))
+    //           replaceConstantExprInFunction(I, Op);
+
+    bool Changed = false;
+
+    // Find all ConstantExpr that are direct users of an LDS global
+    SmallVector<ConstantExpr *> Stack;
+    for (auto &GV : M.globals())
+      if (AMDGPU::isLDSVariableToLower(GV))
+        for (User *U : GV.users())
+          if (ConstantExpr *C = dyn_cast<ConstantExpr>(U))
+            Stack.push_back(C);
+
+    // Expand to include constexpr users of direct users
+    SetVector<ConstantExpr *> ConstExprUsersOfLDS;
+    while (!Stack.empty()) {
+      ConstantExpr *V = Stack.pop_back_val();
+      if (ConstExprUsersOfLDS.contains(V))
+        continue;
+
+      ConstExprUsersOfLDS.insert(V);
+
+      for (auto *Nested : V->users())
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Nested))
+          Stack.push_back(CE);
+    }
+
+    // Find all instructions that use any of the ConstExpr users of LDS
+    SetVector<Instruction *> InstructionWorklist;
+    for (ConstantExpr *CE : ConstExprUsersOfLDS)
+      for (User *U : CE->users())
+        if (auto *I = dyn_cast<Instruction>(U))
+          InstructionWorklist.insert(I);
+
+    // Replace those ConstExpr operands with instructions
+    while (!InstructionWorklist.empty()) {
+      Instruction *I = InstructionWorklist.pop_back_val();
+      for (Use &U : I->operands()) {
+
+        auto *BI = I;
+        if (auto *Phi = dyn_cast<PHINode>(I)) {
+          BasicBlock *BB = Phi->getIncomingBlock(U);
+          BasicBlock::iterator It = BB->getFirstInsertionPt();
+          assert(It != BB->end() && "Unexpected empty basic block");
+          BI = &(*(It));
+        }
+
+        if (ConstantExpr *C = dyn_cast<ConstantExpr>(U.get())) {
+          if (ConstExprUsersOfLDS.contains(C)) {
+            Changed = true;
+            Instruction *NI = C->getAsInstruction(BI);
+            InstructionWorklist.insert(NI);
+            U.set(NI);
+            C->removeDeadConstantUsers();
+          }
+        }
+      }
+    }
+
+    return Changed;
+  }
 
 public:
   static char ID;
@@ -164,11 +226,61 @@ public:
   }
 
   bool runOnModule(Module &M) override {
+    LLVMContext &Ctx = M.getContext();
     CallGraph CG = CallGraph(M);
-    UsedList = getUsedList(M);
     bool Changed = superAlignLDSGlobals(M);
-    Changed |= processUsedLDS(CG, M);
 
+    Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
+
+    // Move variables used by functions into amdgcn.module.lds
+    std::vector<GlobalVariable *> ModuleScopeVariables =
+        AMDGPU::findLDSVariablesToLower(M, nullptr);
+    if (!ModuleScopeVariables.empty()) {
+      std::string VarName = "llvm.amdgcn.module.lds";
+
+      GlobalVariable *SGV;
+      DenseMap<GlobalVariable *, Constant *> LDSVarsToConstantGEP;
+      std::tie(SGV, LDSVarsToConstantGEP) =
+          createLDSVariableReplacement(M, VarName, ModuleScopeVariables);
+
+      appendToCompilerUsed(
+          M, {static_cast<GlobalValue *>(
+                 ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+                     cast<Constant>(SGV), Type::getInt8PtrTy(Ctx)))});
+
+      removeFromUsedLists(M, ModuleScopeVariables);
+      replaceLDSVariablesWithStruct(M, ModuleScopeVariables, SGV,
+                                    LDSVarsToConstantGEP,
+                                    [](Use &) { return true; });
+
+      // This ensures the variable is allocated when called functions access it.
+      // It also lets other passes, specifically PromoteAlloca, accurately
+      // calculate how much LDS will be used by the kernel after lowering.
+
+      IRBuilder<> Builder(Ctx);
+      for (Function &Func : M.functions()) {
+        if (!Func.isDeclaration() && AMDGPU::isKernelCC(&Func)) {
+          const CallGraphNode *N = CG[&Func];
+          const bool CalleesRequireModuleLDS = N->size() > 0;
+
+          if (CalleesRequireModuleLDS) {
+            // If a function this kernel might call requires module LDS,
+            // annotate the kernel to let later passes know it will allocate
+            // this structure, even if not apparent from the IR.
+            markUsedByKernel(Builder, &Func, SGV);
+          } else {
+            // However if we are certain this kernel cannot call a function that
+            // requires module LDS, annotate the kernel so the backend can elide
+            // the allocation without repeating callgraph walks.
+            Func.addFnAttr("amdgpu-elide-module-lds");
+          }
+        }
+      }
+
+      Changed = true;
+    }
+
+    // Move variables used by kernels into per-kernel instances
     for (Function &F : M.functions()) {
       if (F.isDeclaration())
         continue;
@@ -176,10 +288,45 @@ public:
       // Only lower compute kernels' LDS.
       if (!AMDGPU::isKernel(F.getCallingConv()))
         continue;
-      Changed |= processUsedLDS(CG, M, &F);
+
+      std::vector<GlobalVariable *> KernelUsedVariables =
+          AMDGPU::findLDSVariablesToLower(M, &F);
+
+      if (!KernelUsedVariables.empty()) {
+        // The association between kernel function and LDS struct is done by
+        // symbol name, which only works if the function in question has a name
+        // This is not expected to be a problem in practice as kernels are
+        // called by name making anonymous ones (which are named by the backend)
+        // difficult to use. This does mean that llvm test cases need
+        // to name the kernels.
+        if (!F.hasName()) {
+          report_fatal_error("Anonymous kernels cannot use LDS variables");
+        }
+
+        std::string VarName =
+            (Twine("llvm.amdgcn.kernel.") + F.getName() + ".lds").str();
+        GlobalVariable *SGV;
+        DenseMap<GlobalVariable *, Constant *> LDSVarsToConstantGEP;
+        std::tie(SGV, LDSVarsToConstantGEP) =
+            createLDSVariableReplacement(M, VarName, KernelUsedVariables);
+
+        removeFromUsedLists(M, KernelUsedVariables);
+        replaceLDSVariablesWithStruct(
+            M, KernelUsedVariables, SGV, LDSVarsToConstantGEP, [&F](Use &U) {
+              Instruction *I = dyn_cast<Instruction>(U.getUser());
+              return I && I->getFunction() == &F;
+            });
+        Changed = true;
+      }
     }
 
-    UsedList.clear();
+    for (auto &GV : make_early_inc_range(M.globals()))
+      if (AMDGPU::isLDSVariableToLower(GV)) {
+        GV.removeDeadConstantUsers();
+        if (GV.use_empty())
+          GV.eraseFromParent();
+      }
+
     return Changed;
   }
 
@@ -228,33 +375,46 @@ private:
     return Changed;
   }
 
-  bool processUsedLDS(CallGraph const &CG, Module &M, Function *F = nullptr) {
+  std::tuple<GlobalVariable *, DenseMap<GlobalVariable *, Constant *>>
+  createLDSVariableReplacement(
+      Module &M, std::string VarName,
+      std::vector<GlobalVariable *> const &LDSVarsToTransform) {
+    // Create a struct instance containing LDSVarsToTransform and map from those
+    // variables to ConstantExprGEP
+    // Variables may be introduced to meet alignment requirements. No aliasing
+    // metadata is useful for these as they have no uses. Erased before return.
+
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
-
-    // Find variables to move into new struct instance
-    std::vector<GlobalVariable *> FoundLocalVars =
-        AMDGPU::findVariablesToLower(M, F);
-
-    if (FoundLocalVars.empty()) {
-      // No variables to rewrite, no changes made.
-      return false;
-    }
+    assert(!LDSVarsToTransform.empty());
 
     SmallVector<OptimizedStructLayoutField, 8> LayoutFields;
-    LayoutFields.reserve(FoundLocalVars.size());
-    for (GlobalVariable *GV : FoundLocalVars) {
-      OptimizedStructLayoutField F(GV, DL.getTypeAllocSize(GV->getValueType()),
-                                   AMDGPU::getAlign(DL, GV));
-      LayoutFields.emplace_back(F);
+    LayoutFields.reserve(LDSVarsToTransform.size());
+    {
+      // The order of fields in this struct depends on the order of
+      // varables in the argument which varies when changing how they
+      // are identified, leading to spurious test breakage.
+      std::vector<GlobalVariable *> Sorted(LDSVarsToTransform.begin(),
+                                           LDSVarsToTransform.end());
+      llvm::sort(Sorted.begin(), Sorted.end(),
+                 [](const GlobalVariable *lhs, const GlobalVariable *rhs) {
+                   return lhs->getName() < rhs->getName();
+                 });
+      for (GlobalVariable *GV : Sorted) {
+        OptimizedStructLayoutField F(GV,
+                                     DL.getTypeAllocSize(GV->getValueType()),
+                                     AMDGPU::getAlign(DL, GV));
+        LayoutFields.emplace_back(F);
+      }
     }
 
     performOptimizedStructLayout(LayoutFields);
 
     std::vector<GlobalVariable *> LocalVars;
-    LocalVars.reserve(FoundLocalVars.size()); // will be at least this large
+    BitVector IsPaddingField;
+    LocalVars.reserve(LDSVarsToTransform.size()); // will be at least this large
+    IsPaddingField.reserve(LDSVarsToTransform.size());
     {
-      // This usually won't need to insert any padding, perhaps avoid the alloc
       uint64_t CurrentOffset = 0;
       for (size_t I = 0; I < LayoutFields.size(); I++) {
         GlobalVariable *FGV = static_cast<GlobalVariable *>(
@@ -274,10 +434,12 @@ private:
               M, ATy, false, GlobalValue::InternalLinkage, UndefValue::get(ATy),
               "", nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
               false));
+          IsPaddingField.push_back(true);
           CurrentOffset += Padding;
         }
 
         LocalVars.push_back(FGV);
+        IsPaddingField.push_back(false);
         CurrentOffset += LayoutFields[I].Size;
       }
     }
@@ -288,76 +450,74 @@ private:
         LocalVars.cbegin(), LocalVars.cend(), std::back_inserter(LocalVarTypes),
         [](const GlobalVariable *V) -> Type * { return V->getValueType(); });
 
-    std::string VarName(
-        F ? (Twine("llvm.amdgcn.kernel.") + F->getName() + ".lds").str()
-          : "llvm.amdgcn.module.lds");
     StructType *LDSTy = StructType::create(Ctx, LocalVarTypes, VarName + ".t");
 
-    Align StructAlign =
-        AMDGPU::getAlign(DL, LocalVars[0]);
+    Align StructAlign = AMDGPU::getAlign(DL, LocalVars[0]);
 
     GlobalVariable *SGV = new GlobalVariable(
         M, LDSTy, false, GlobalValue::InternalLinkage, UndefValue::get(LDSTy),
         VarName, nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
         false);
     SGV->setAlignment(StructAlign);
-    if (!F) {
-      appendToCompilerUsed(
-          M, {static_cast<GlobalValue *>(
-                 ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-                     cast<Constant>(SGV), Type::getInt8PtrTy(Ctx)))});
-    }
 
-    // The verifier rejects used lists containing an inttoptr of a constant
-    // so remove the variables from these lists before replaceAllUsesWith
-    removeFromUsedLists(M, LocalVars);
+    DenseMap<GlobalVariable *, Constant *> Map;
+    Type *I32 = Type::getInt32Ty(Ctx);
+    for (size_t I = 0; I < LocalVars.size(); I++) {
+      GlobalVariable *GV = LocalVars[I];
+      Constant *GEPIdx[] = {ConstantInt::get(I32, 0), ConstantInt::get(I32, I)};
+      Constant *GEP = ConstantExpr::getGetElementPtr(LDSTy, SGV, GEPIdx, true);
+      if (IsPaddingField[I]) {
+        assert(GV->use_empty());
+        GV->eraseFromParent();
+      } else {
+        Map[GV] = GEP;
+      }
+    }
+    assert(Map.size() == LDSVarsToTransform.size());
+    return std::make_tuple(SGV, std::move(Map));
+  }
+
+  template <typename PredicateTy>
+  void replaceLDSVariablesWithStruct(
+      Module &M, std::vector<GlobalVariable *> const &LDSVarsToTransform,
+      GlobalVariable *SGV,
+      DenseMap<GlobalVariable *, Constant *> &LDSVarsToConstantGEP,
+      PredicateTy Predicate) {
+    LLVMContext &Ctx = M.getContext();
+    const DataLayout &DL = M.getDataLayout();
 
     // Create alias.scope and their lists. Each field in the new structure
     // does not alias with all other fields.
     SmallVector<MDNode *> AliasScopes;
     SmallVector<Metadata *> NoAliasList;
-    if (LocalVars.size() > 1) {
+    const size_t NumberVars = LDSVarsToTransform.size();
+    if (NumberVars > 1) {
       MDBuilder MDB(Ctx);
-      AliasScopes.reserve(LocalVars.size());
+      AliasScopes.reserve(NumberVars);
       MDNode *Domain = MDB.createAnonymousAliasScopeDomain();
-      for (size_t I = 0; I < LocalVars.size(); I++) {
+      for (size_t I = 0; I < NumberVars; I++) {
         MDNode *Scope = MDB.createAnonymousAliasScope(Domain);
         AliasScopes.push_back(Scope);
       }
       NoAliasList.append(&AliasScopes[1], AliasScopes.end());
     }
 
-    // Replace uses of ith variable with a constantexpr to the ith field of the
-    // instance that will be allocated by AMDGPUMachineFunction
-    Type *I32 = Type::getInt32Ty(Ctx);
-    for (size_t I = 0; I < LocalVars.size(); I++) {
-      GlobalVariable *GV = LocalVars[I];
-      Constant *GEPIdx[] = {ConstantInt::get(I32, 0), ConstantInt::get(I32, I)};
-      Constant *GEP = ConstantExpr::getGetElementPtr(LDSTy, SGV, GEPIdx);
-      if (F) {
-        // Replace all constant uses with instructions if they belong to the
-        // current kernel.
-        for (User *U : make_early_inc_range(GV->users())) {
-          if (ConstantExpr *C = dyn_cast<ConstantExpr>(U))
-            AMDGPU::replaceConstantUsesInFunction(C, F);
-        }
+    // Replace uses of ith variable with a constantexpr to the corresponding
+    // field of the instance that will be allocated by AMDGPUMachineFunction
+    for (size_t I = 0; I < NumberVars; I++) {
+      GlobalVariable *GV = LDSVarsToTransform[I];
+      Constant *GEP = LDSVarsToConstantGEP[GV];
 
-        GV->removeDeadConstantUsers();
-
-        GV->replaceUsesWithIf(GEP, [F](Use &U) {
-          Instruction *I = dyn_cast<Instruction>(U.getUser());
-          return I && I->getFunction() == F;
-        });
-      } else {
-        GV->replaceAllUsesWith(GEP);
-      }
+      GV->replaceUsesWithIf(GEP, Predicate);
       if (GV->use_empty()) {
-        UsedList.erase(GV);
         GV->eraseFromParent();
       }
 
-      uint64_t Off = DL.getStructLayout(LDSTy)->getElementOffset(I);
-      Align A = commonAlignment(StructAlign, Off);
+      APInt APOff(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+      GEP->stripAndAccumulateInBoundsConstantOffsets(DL, APOff);
+      uint64_t Offset = APOff.getZExtValue();
+
+      Align A = commonAlignment(SGV->getAlign().valueOrOne(), Offset);
 
       if (I)
         NoAliasList[I - 1] = AliasScopes[I - 1];
@@ -368,32 +528,6 @@ private:
 
       refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
     }
-
-    // This ensures the variable is allocated when called functions access it.
-    // It also lets other passes, specifically PromoteAlloca, accurately
-    // calculate how much LDS will be used by the kernel after lowering.
-    if (!F) {
-      IRBuilder<> Builder(Ctx);
-      for (Function &Func : M.functions()) {
-        if (!Func.isDeclaration() && AMDGPU::isKernelCC(&Func)) {
-          const CallGraphNode *N = CG[&Func];
-          const bool CalleesRequireModuleLDS = N->size() > 0;
-
-          if (CalleesRequireModuleLDS) {
-            // If a function this kernel might call requires module LDS,
-            // annotate the kernel to let later passes know it will allocate
-            // this structure, even if not apparent from the IR.
-            markUsedByKernel(Builder, &Func, SGV);
-          } else {
-            // However if we are certain this kernel cannot call a function that
-            // requires module LDS, annotate the kernel so the backend can elide
-            // the allocation without repeating callgraph walks.
-            Func.addFnAttr("amdgpu-elide-module-lds");
-          }
-        }
-      }
-    }
-    return true;
   }
 
   void refineUsesAlignmentAndAA(Value *Ptr, Align A, const DataLayout &DL,

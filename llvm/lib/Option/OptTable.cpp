@@ -565,7 +565,7 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
   case Option::SeparateClass: case Option::JoinedOrSeparateClass:
   case Option::RemainingArgsClass: case Option::RemainingArgsJoinedClass:
     Name += ' ';
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Option::JoinedClass: case Option::CommaJoinedClass:
   case Option::JoinedAndSeparateClass:
     if (const char *MetaVarName = Opts.getOptionMetaVar(Id))

@@ -950,15 +950,15 @@ define i32 @add_umin_wrong_wrap(i32 %x) {
 
 ; Negative test
 
-define i32 @add_umin_extra_use(i32 %x, i32* %p) {
+define i32 @add_umin_extra_use(i32 %x, ptr %p) {
 ; CHECK-LABEL: @add_umin_extra_use(
 ; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[X:%.*]], 15
-; CHECK-NEXT:    store i32 [[A]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[A]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[A]], i32 42)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %a = add nuw i32 %x, 15
-  store i32 %a, i32* %p
+  store i32 %a, ptr %p
   %c = icmp ult i32 %a, 42
   %r = select i1 %c, i32 %a, i32 42
   ret i32 %r
@@ -1062,15 +1062,15 @@ define i32 @add_umax_wrong_wrap(i32 %x) {
 
 ; Negative test
 
-define i32 @add_umax_extra_use(i32 %x, i32* %p) {
+define i32 @add_umax_extra_use(i32 %x, ptr %p) {
 ; CHECK-LABEL: @add_umax_extra_use(
 ; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[X:%.*]], 15
-; CHECK-NEXT:    store i32 [[A]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[A]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 42)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %a = add nuw i32 %x, 15
-  store i32 %a, i32* %p
+  store i32 %a, ptr %p
   %c = icmp ugt i32 %a, 42
   %r = select i1 %c, i32 %a, i32 42
   ret i32 %r
@@ -1197,15 +1197,15 @@ define i32 @add_smin_wrong_wrap(i32 %x) {
 
 ; Negative test
 
-define i32 @add_smin_extra_use(i32 %x, i32* %p) {
+define i32 @add_smin_extra_use(i32 %x, ptr %p) {
 ; CHECK-LABEL: @add_smin_extra_use(
 ; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], 15
-; CHECK-NEXT:    store i32 [[A]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[A]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 42)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %a = add nsw i32 %x, 15
-  store i32 %a, i32* %p
+  store i32 %a, ptr %p
   %c = icmp slt i32 %a, 42
   %r = select i1 %c, i32 %a, i32 42
   ret i32 %r
@@ -1305,15 +1305,15 @@ define i32 @add_smax_wrong_wrap(i32 %x) {
 
 ; Negative test
 
-define i32 @add_smax_extra_use(i32 %x, i32* %p) {
+define i32 @add_smax_extra_use(i32 %x, ptr %p) {
 ; CHECK-LABEL: @add_smax_extra_use(
 ; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], 15
-; CHECK-NEXT:    store i32 [[A]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[A]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[A]], i32 42)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %a = add nsw i32 %x, 15
-  store i32 %a, i32* %p
+  store i32 %a, ptr %p
   %c = icmp sgt i32 %a, 42
   %r = select i1 %c, i32 %a, i32 42
   ret i32 %r

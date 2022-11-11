@@ -84,7 +84,7 @@ public:
   // - Negative globs ignored (which would effectively disable the suppression).
   NoLintToken(NoLintType Type, size_t Pos, const Optional<std::string> &Checks)
       : Type(Type), Pos(Pos), ChecksGlob(std::make_unique<CachedGlobList>(
-                                  Checks.getValueOr("*"),
+                                  Checks.value_or("*"),
                                   /*KeepNegativeGlobs=*/false)) {
     if (Checks)
       this->Checks = trimWhitespace(*Checks);

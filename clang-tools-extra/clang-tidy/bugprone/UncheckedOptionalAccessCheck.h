@@ -20,7 +20,7 @@ namespace bugprone {
 /// or `base::Optional<T>` object without assuring that it contains a value.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-unchecked-optional-access.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unchecked-optional-access.html
 class UncheckedOptionalAccessCheck : public ClangTidyCheck {
 public:
   UncheckedOptionalAccessCheck(StringRef Name, ClangTidyContext *Context)

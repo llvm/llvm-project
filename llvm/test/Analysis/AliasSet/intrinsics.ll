@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -print-alias-sets -S -o - < %s 2>&1 | FileCheck %s
+; RUN: opt -print-alias-sets -S -o - < %s 2>&1 | FileCheck %s
 
 ; CHECK: Alias sets for function 'test1':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.

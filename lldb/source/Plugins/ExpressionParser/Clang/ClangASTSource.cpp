@@ -191,11 +191,11 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
     ClangASTImporter::NamespaceMapSP namespace_map =
         m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
-    LLDB_LOGV(log, "      CTD Inspecting namespace map{0} ({1} entries)",
-              namespace_map.get(), namespace_map->size());
-
     if (!namespace_map)
       return nullptr;
+
+    LLDB_LOGV(log, "      CTD Inspecting namespace map{0} ({1} entries)",
+              namespace_map.get(), namespace_map->size());
 
     for (const ClangASTImporter::NamespaceMapItem &item : *namespace_map) {
       LLDB_LOG(log, "      CTD Searching namespace {0} in module {1}",
@@ -405,7 +405,7 @@ void ClangASTSource::FindExternalLexicalDecls(
     if (const NamedDecl *context_named_decl = dyn_cast<NamedDecl>(context_decl))
       LLDB_LOG(log,
                "FindExternalLexicalDecls on (ASTContext*){0} '{1}' in "
-               "'{2}' (%sDecl*){3}",
+               "'{2}' ({3}Decl*){4}",
                m_ast_context, m_clang_ast_context->getDisplayName(),
                context_named_decl->getNameAsString().c_str(),
                context_decl->getDeclKindName(),
@@ -1430,10 +1430,7 @@ static bool ImportOffsetMap(llvm::DenseMap<const D *, O> &destination_map,
   std::vector<PairType> sorted_items;
   sorted_items.reserve(source_map.size());
   sorted_items.assign(source_map.begin(), source_map.end());
-  llvm::sort(sorted_items.begin(), sorted_items.end(),
-             [](const PairType &lhs, const PairType &rhs) {
-               return lhs.second < rhs.second;
-             });
+  llvm::sort(sorted_items, llvm::less_second());
 
   for (const auto &item : sorted_items) {
     DeclFromUser<D> user_decl(const_cast<D *>(item.first));

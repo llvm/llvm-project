@@ -3,9 +3,9 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"
 
-define void @foo(i32* %p) !dbg !4 {
+define void @foo(ptr %p) !dbg !4 {
 bb:
-  %tmp = load i32, i32* %p, align 4, !dbg !7
+  %tmp = load i32, ptr %p, align 4, !dbg !7
   ; CHECK: $eax = MOV32rm killed {{.*}} $rdi, {{.*}} debug-location !7 :: (load (s32) from %ir.p)
   ; CHECK-NEXT: $rax = KILL killed renamable $eax, debug-location !7
   ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -8, $noreg, $rax :: (store (s64) into %stack.0)

@@ -141,6 +141,9 @@ void CSKYAsmPrinter::emitEndOfAsmFile(Module &M) {
 }
 
 void CSKYAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  CSKY_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                       getSubtargetInfo().getFeatureBits());
+
   // Do any auto-generated pseudo lowerings.
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;

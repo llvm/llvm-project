@@ -21,7 +21,7 @@ namespace bugprone {
 /// condition parameter.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-spuriously-wake-up-functions.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/spuriously-wake-up-functions.html
 class SpuriouslyWakeUpFunctionsCheck : public ClangTidyCheck {
 public:
   SpuriouslyWakeUpFunctionsCheck(StringRef Name, ClangTidyContext *Context)

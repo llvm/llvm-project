@@ -13,4 +13,4 @@ entry:
   unreachable
 }
 
-declare i32 @xstat64(i32, i8*, i8*)
+declare i32 @xstat64(i32, ptr, ptr)

@@ -6,7 +6,7 @@
 ; at runtime.
 
 ; Just to prevent the alloca from being optimized away.
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 define {i32, i32} @test_basic(i32 %hp, i32 %p) {
   ; X32-Linux-LABEL:       test_basic:
@@ -16,7 +16,7 @@ define {i32, i32} @test_basic(i32 %hp, i32 %p) {
   ; X64-Linux-NOT:   callq inc_stack_0
 
   %mem = alloca i32, i32 10
-  call void @dummy_use (i32* %mem, i32 10)
+  call void @dummy_use (ptr %mem, i32 10)
   %1 = insertvalue {i32, i32} undef, i32 %hp, 0
   %2 = insertvalue {i32, i32} %1, i32 %p, 1
   ret {i32, i32} %1
@@ -44,7 +44,7 @@ define cc 11 {i32, i32} @test_basic_hipecc(i32 %hp, i32 %p) {
   ; X64-Linux-NEXT:  callq inc_stack_0
 
   %mem = alloca i32, i32 10
-  call void @dummy_use (i32* %mem, i32 10)
+  call void @dummy_use (ptr %mem, i32 10)
   %1 = insertvalue {i32, i32} undef, i32 %hp, 0
   %2 = insertvalue {i32, i32} %1, i32 %p, 1
   ret {i32, i32} %2

@@ -22,8 +22,7 @@ Node0x1 [shape=record,label=
       "program_state": {
         "store": null,
         "environment": null,
-        "dynamic_types": null,
-        "constructing_objects": null,
+        "dynamic_types": null,        
         "checker_messages": null,
         "constraints": [
           { "symbol": "reg_$0<x>", "range": "{ [0, 0] }" }

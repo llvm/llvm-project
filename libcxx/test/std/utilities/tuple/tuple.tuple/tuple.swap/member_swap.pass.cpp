@@ -65,7 +65,7 @@ bool test()
 int main(int, char**)
 {
     test();
-#if TEST_STD_VER >= 20
+#if TEST_STD_VER > 17
     static_assert(test());
 #endif
 

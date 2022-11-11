@@ -13,40 +13,31 @@
 #ifndef MLIR_TOOLS_MLIRTRANSLATE_TRANSLATION_H
 #define MLIR_TOOLS_MLIRTRANSLATE_TRANSLATION_H
 
+#include "mlir/IR/Operation.h"
 #include "llvm/Support/CommandLine.h"
 
-namespace llvm {
-class MemoryBuffer;
-class SourceMgr;
-class StringRef;
-} // namespace llvm
-
 namespace mlir {
-class DialectRegistry;
-struct LogicalResult;
-class MLIRContext;
-class ModuleOp;
 template <typename OpTy>
 class OwningOpRef;
 
 /// Interface of the function that translates the sources managed by `sourceMgr`
 /// to MLIR. The source manager has at least one buffer. The implementation
-/// should create a new MLIR ModuleOp in the given context and return a pointer
-/// to it, or a nullptr in case of any error.
-using TranslateSourceMgrToMLIRFunction = std::function<OwningOpRef<ModuleOp>(
+/// should create a new MLIR Operation in the given context and return a
+/// pointer to it, or a nullptr in case of any error.
+using TranslateSourceMgrToMLIRFunction = std::function<OwningOpRef<Operation *>(
     llvm::SourceMgr &sourceMgr, MLIRContext *)>;
 
 /// Interface of the function that translates the given string to MLIR. The
-/// implementation should create a new MLIR ModuleOp in the given context. If
+/// implementation should create a new MLIR Operation in the given context. If
 /// source-related error reporting is required from within the function, use
 /// TranslateSourceMgrToMLIRFunction instead.
 using TranslateStringRefToMLIRFunction =
-    std::function<OwningOpRef<ModuleOp>(llvm::StringRef, MLIRContext *)>;
+    std::function<OwningOpRef<Operation *>(llvm::StringRef, MLIRContext *)>;
 
 /// Interface of the function that translates MLIR to a different format and
-/// outputs the result to a stream. It is allowed to modify the module.
+/// outputs the result to a stream. It is allowed to modify the operation.
 using TranslateFromMLIRFunction =
-    std::function<LogicalResult(ModuleOp, llvm::raw_ostream &output)>;
+    std::function<LogicalResult(Operation *, llvm::raw_ostream &output)>;
 
 /// Interface of the function that performs file-to-file translation involving
 /// MLIR. The input file is held in the given MemoryBuffer; the output file
@@ -71,20 +62,38 @@ using TranslateFunction = std::function<LogicalResult(
 ///
 /// \{
 struct TranslateToMLIRRegistration {
-  TranslateToMLIRRegistration(llvm::StringRef name,
+  TranslateToMLIRRegistration(llvm::StringRef name, llvm::StringRef description,
                               const TranslateSourceMgrToMLIRFunction &function);
-  TranslateToMLIRRegistration(llvm::StringRef name,
+  TranslateToMLIRRegistration(llvm::StringRef name, llvm::StringRef description,
                               const TranslateStringRefToMLIRFunction &function);
 };
 
 struct TranslateFromMLIRRegistration {
   TranslateFromMLIRRegistration(
-      llvm::StringRef name, const TranslateFromMLIRFunction &function,
+      llvm::StringRef name, llvm::StringRef description,
+      const TranslateFromMLIRFunction &function,
       const std::function<void(DialectRegistry &)> &dialectRegistration =
           [](DialectRegistry &) {});
+
+  template <typename FuncTy, typename OpTy = detail::first_argument<FuncTy>,
+            typename = std::enable_if_t<!std::is_same_v<OpTy, Operation *>>>
+  TranslateFromMLIRRegistration(
+      llvm::StringRef name, llvm::StringRef description, FuncTy function,
+      const std::function<void(DialectRegistry &)> &dialectRegistration =
+          [](DialectRegistry &) {})
+      : TranslateFromMLIRRegistration(
+            name, description,
+            [function](Operation *op, raw_ostream &os) -> LogicalResult {
+              if (auto casted = dyn_cast<OpTy>(op))
+                return function(casted, os);
+              return emitError(op->getLoc())
+                     << "expected a '" << OpTy::getOperationName()
+                     << "' op, got '" << op->getName().getStringRef() << "'";
+            },
+            dialectRegistration){}
 };
 struct TranslateRegistration {
-  TranslateRegistration(llvm::StringRef name,
+  TranslateRegistration(llvm::StringRef name, llvm::StringRef description,
                         const TranslateFunction &function);
 };
 /// \}
@@ -96,6 +105,9 @@ struct TranslationParser : public llvm::cl::parser<const TranslateFunction *> {
   void printOptionInfo(const llvm::cl::Option &o,
                        size_t globalWidth) const override;
 };
+
+/// Register command-line options used by the translation registry.
+void registerTranslationCLOptions();
 
 } // namespace mlir
 

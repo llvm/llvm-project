@@ -21,48 +21,40 @@ define <2 x i16> @test_load_bitcast_select(i1 %cond1, i1 %cond2) {
 entry:
   %true = alloca half, align 2
   %false = alloca half, align 2
-  store half 0xHFFFF, half* %true, align 2
-  store half 0xH0000, half* %false, align 2
-  %false.cast = bitcast half* %false to %st.half*
-  %true.cast = bitcast half* %true to %st.half*
-  %sel1 = select i1 %cond1, %st.half* %true.cast, %st.half* %false.cast
-  %cast1 = bitcast %st.half* %sel1 to i16*
-  %ld1 = load i16, i16* %cast1, align 2
+  store half 0xHFFFF, ptr %true, align 2
+  store half 0xH0000, ptr %false, align 2
+  %sel1 = select i1 %cond1, ptr %true, ptr %false
+  %ld1 = load i16, ptr %sel1, align 2
   %v1 = insertelement <2 x i16> poison, i16 %ld1, i32 0
-  %sel2 = select i1 %cond2, %st.half* %true.cast, %st.half* %false.cast
-  %cast2 = bitcast %st.half* %sel2 to i16*
-  %ld2 = load i16, i16* %cast2, align 2
+  %sel2 = select i1 %cond2, ptr %true, ptr %false
+  %ld2 = load i16, ptr %sel2, align 2
   %v2 = insertelement <2 x i16> %v1, i16 %ld2, i32 1
   ret <2 x i16> %v2
 }
 
-%st.args = type { i32, i32* }
+%st.args = type { i32, ptr }
 
 ; A bitcasted load and a direct load of select.
 define void @test_multiple_loads_select(i1 %cmp){
 ; CHECK-LABEL: @test_multiple_loads_select(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* undef to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* undef to i8*
-; CHECK-NEXT:    [[ADDR_I8_SROA_SPECULATED:%.*]] = select i1 [[CMP:%.*]], i8* [[TMP0]], i8* [[TMP1]]
-; CHECK-NEXT:    call void @foo_i8(i8* [[ADDR_I8_SROA_SPECULATED]])
-; CHECK-NEXT:    [[ADDR_I32_SROA_SPECULATED:%.*]] = select i1 [[CMP]], i32* undef, i32* undef
-; CHECK-NEXT:    call void @foo_i32(i32* [[ADDR_I32_SROA_SPECULATED]])
+; CHECK-NEXT:    [[ADDR_I8_SROA_SPECULATED:%.*]] = select i1 [[CMP:%.*]], ptr undef, ptr undef
+; CHECK-NEXT:    call void @foo_i8(ptr [[ADDR_I8_SROA_SPECULATED]])
+; CHECK-NEXT:    [[ADDR_I32_SROA_SPECULATED:%.*]] = select i1 [[CMP]], ptr undef, ptr undef
+; CHECK-NEXT:    call void @foo_i32(ptr [[ADDR_I32_SROA_SPECULATED]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %args = alloca [2 x %st.args], align 16
-  %arr0 = getelementptr inbounds [2 x %st.args], [2 x %st.args]* %args, i64 0, i64 0
-  %arr1 = getelementptr inbounds [2 x %st.args], [2 x %st.args]* %args, i64 0, i64 1
-  %sel = select i1 %cmp, %st.args* %arr1, %st.args* %arr0
-  %addr = getelementptr inbounds %st.args, %st.args* %sel, i64 0, i32 1
-  %bcast.i8 = bitcast i32** %addr to i8**
-  %addr.i8 = load i8*, i8** %bcast.i8, align 8
-  call void @foo_i8(i8* %addr.i8)
-  %addr.i32 = load i32*, i32** %addr, align 8
-  call void @foo_i32 (i32* %addr.i32)
+  %arr1 = getelementptr inbounds [2 x %st.args], ptr %args, i64 0, i64 1
+  %sel = select i1 %cmp, ptr %arr1, ptr %args
+  %addr = getelementptr inbounds %st.args, ptr %sel, i64 0, i32 1
+  %addr.i8 = load ptr, ptr %addr, align 8
+  call void @foo_i8(ptr %addr.i8)
+  %addr.i32 = load ptr, ptr %addr, align 8
+  call void @foo_i32 (ptr %addr.i32)
   ret void
 }
 
-declare void @foo_i8(i8*)
-declare void @foo_i32(i32*)
+declare void @foo_i8(ptr)
+declare void @foo_i32(ptr)

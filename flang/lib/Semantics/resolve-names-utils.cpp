@@ -55,13 +55,13 @@ bool IsIntrinsicOperator(
   std::string str{name.ToString()};
   for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
     auto names{context.languageFeatures().GetNames(LogicalOperator{i})};
-    if (std::find(names.begin(), names.end(), str) != names.end()) {
+    if (llvm::is_contained(names, str)) {
       return true;
     }
   }
   for (int i{0}; i != common::RelationalOperator_enumSize; ++i) {
     auto names{context.languageFeatures().GetNames(RelationalOperator{i})};
-    if (std::find(names.begin(), names.end(), str) != names.end()) {
+    if (llvm::is_contained(names, str)) {
       return true;
     }
   }
@@ -85,13 +85,13 @@ std::forward_list<std::string> GetAllNames(
       name.ToString().rfind(std::string{operatorPrefix}, 0) == 0) {
     for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
       auto names{GetOperatorNames(context, LogicalOperator{i})};
-      if (std::find(names.begin(), names.end(), str) != names.end()) {
+      if (llvm::is_contained(names, str)) {
         return names;
       }
     }
     for (int i{0}; i != common::RelationalOperator_enumSize; ++i) {
       auto names{GetOperatorNames(context, RelationalOperator{i})};
-      if (std::find(names.begin(), names.end(), str) != names.end()) {
+      if (llvm::is_contained(names, str)) {
         return names;
       }
     }
@@ -464,7 +464,9 @@ bool EquivalenceSets::CheckCanEquivalence(
       }
     }
   }
-  if (msg) {
+  if (msg &&
+      (!context_.IsInModuleFile(source) ||
+          msg->severity() == parser::Severity::Error)) {
     context_.Say(source, std::move(*msg), sym1.name(), sym2.name());
     return false;
   }

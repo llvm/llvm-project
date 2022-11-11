@@ -227,7 +227,7 @@ void SparcMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
     auto ELFSymbol = cast<MCSymbolELF>(Symbol);
     if (!ELFSymbol->isBindingSet())
       ELFSymbol->setBinding(ELF::STB_GLOBAL);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case VK_Sparc_TLS_GD_HI22:
   case VK_Sparc_TLS_GD_LO10:

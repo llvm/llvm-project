@@ -56,7 +56,7 @@ sw.epilog:                                        ; preds = %sw.bb
   %4 = load i32, i32* %x.addr, align 4, !dbg !20
   %add = add nsw i32 %4, 1, !dbg !21
   store i32 %add, i32* %x.addr, align 4, !dbg !22
-  %asm_res = callbr i32 asm "", "=r,r,i"(i32 %x, i8* blockaddress(@f, %indirect.dest))
+  %asm_res = callbr i32 asm "", "=r,r,!i"(i32 %x)
           to label %coro_Cleanup [label %indirect.dest]
 
 indirect.dest:
@@ -189,7 +189,7 @@ attributes #7 = { noduplicate }
 ; CHECK: %[[ALLOCATED_STORAGE:.+]] = invoke i8* @allocate()
 ; CHECK-NEXT: to label %[[NORMAL_DEST:.+]] unwind
 ; CHECK: [[NORMAL_DEST]]
-; CHEKC-NEXT: call void @llvm.dbg.declare(metadata i8* %[[ALLOCATED_STORAGE]]
+; CHECK-NEXT: call void @llvm.dbg.declare(metadata i8* %[[ALLOCATED_STORAGE]]
 ; CHECK: %[[CALLBR_RES:.+]] = callbr i32 asm
 ; CHECK-NEXT: to label %[[DEFAULT_DEST:.+]] [label
 ; CHECK: [[DEFAULT_DEST]]:

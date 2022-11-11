@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1010 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1010 %s
 
 ; GCN-LABEL: {{^}}addMul2D:
 ; GFX1010: v_fmac_f16

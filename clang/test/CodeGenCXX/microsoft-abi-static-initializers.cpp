@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -fno-threadsafe-statics -emit-llvm %s -o - -mconstructor-aliases -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -fno-threadsafe-statics -emit-llvm %s -o - -mconstructor-aliases -triple=i386-pc-win32 | FileCheck %s
 
-// CHECK: @llvm.global_ctors = appending global [5 x { i32, void ()*, i8* }] [
-// CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @"??__Eselectany1@@YAXXZ", i8* getelementptr inbounds (%struct.S, %struct.S* @"?selectany1@@3US@@A", i32 0, i32 0) },
-// CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @"??__Eselectany2@@YAXXZ", i8* getelementptr inbounds (%struct.S, %struct.S* @"?selectany2@@3US@@A", i32 0, i32 0) },
-// CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @"??__E?s@?$ExportedTemplate@H@@2US@@A@@YAXXZ", i8* getelementptr inbounds (%struct.S, %struct.S* @"?s@?$ExportedTemplate@H@@2US@@A", i32 0, i32 0) },
-// CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @"??__E?foo@?$B@H@@2VA@@A@@YAXXZ", i8* bitcast (%class.A* @"?foo@?$B@H@@2VA@@A" to i8*) },
-// CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_microsoft_abi_static_initializers.cpp, i8* null }
+// CHECK: @llvm.global_ctors = appending global [5 x { i32, ptr, ptr }] [
+// CHECK: { i32, ptr, ptr } { i32 65535, ptr @"??__Eselectany1@@YAXXZ", ptr @"?selectany1@@3US@@A" },
+// CHECK: { i32, ptr, ptr } { i32 65535, ptr @"??__Eselectany2@@YAXXZ", ptr @"?selectany2@@3US@@A" },
+// CHECK: { i32, ptr, ptr } { i32 65535, ptr @"??__E?s@?$ExportedTemplate@H@@2US@@A@@YAXXZ", ptr @"?s@?$ExportedTemplate@H@@2US@@A" },
+// CHECK: { i32, ptr, ptr } { i32 65535, ptr @"??__E?foo@?$B@H@@2VA@@A@@YAXXZ", ptr @"?foo@?$B@H@@2VA@@A" },
+// CHECK: { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_microsoft_abi_static_initializers.cpp, ptr null }
 // CHECK: ]
 
 struct S {
@@ -16,8 +16,8 @@ struct S {
 S s;
 
 // CHECK: define internal void @"??__Es@@YAXXZ"()
-// CHECK: call x86_thiscallcc noundef %struct.S* @"??0S@@QAE@XZ"
-// CHECK: call i32 @atexit(void ()* @"??__Fs@@YAXXZ")
+// CHECK: call x86_thiscallcc noundef ptr @"??0S@@QAE@XZ"
+// CHECK: call i32 @atexit(ptr @"??__Fs@@YAXXZ")
 // CHECK: ret void
 
 // CHECK: define internal void @"??__Fs@@YAXXZ"()
@@ -30,11 +30,11 @@ __declspec(selectany) S selectany1;
 __declspec(selectany) S selectany2;
 // CHECK: define linkonce_odr dso_local void @"??__Eselectany1@@YAXXZ"() {{.*}} comdat
 // CHECK-NOT: @"??_Bselectany1
-// CHECK: call x86_thiscallcc noundef %struct.S* @"??0S@@QAE@XZ"
+// CHECK: call x86_thiscallcc noundef ptr @"??0S@@QAE@XZ"
 // CHECK: ret void
 // CHECK: define linkonce_odr dso_local void @"??__Eselectany2@@YAXXZ"() {{.*}} comdat
 // CHECK-NOT: @"??_Bselectany2
-// CHECK: call x86_thiscallcc noundef %struct.S* @"??0S@@QAE@XZ"
+// CHECK: call x86_thiscallcc noundef ptr @"??0S@@QAE@XZ"
 // CHECK: ret void
 
 // The implicitly instantiated static data member should have initializer
@@ -52,8 +52,8 @@ void StaticLocal() {
 }
 
 // CHECK-LABEL: define dso_local void @"?StaticLocal@@YAXXZ"()
-// CHECK: load i32, i32* @"?$S1@?1??StaticLocal@@YAXXZ@4IA"
-// CHECK: store i32 {{.*}}, i32* @"?$S1@?1??StaticLocal@@YAXXZ@4IA"
+// CHECK: load i32, ptr @"?$S1@?1??StaticLocal@@YAXXZ@4IA"
+// CHECK: store i32 {{.*}}, ptr @"?$S1@?1??StaticLocal@@YAXXZ@4IA"
 // CHECK: ret
 
 void MultipleStatics() {
@@ -94,7 +94,7 @@ void MultipleStatics() {
   static S S35;
 }
 // CHECK-LABEL: define dso_local void @"?MultipleStatics@@YAXXZ"()
-// CHECK: load i32, i32* @"?$S1@?1??MultipleStatics@@YAXXZ@4IA"
+// CHECK: load i32, ptr @"?$S1@?1??MultipleStatics@@YAXXZ@4IA"
 // CHECK: and i32 {{.*}}, 1
 // CHECK: and i32 {{.*}}, 2
 // CHECK: and i32 {{.*}}, 4
@@ -102,7 +102,7 @@ void MultipleStatics() {
 // CHECK: and i32 {{.*}}, 16
 //   ...
 // CHECK: and i32 {{.*}}, -2147483648
-// CHECK: load i32, i32* @"?$S1@?1??MultipleStatics@@YAXXZ@4IA.1"
+// CHECK: load i32, ptr @"?$S1@?1??MultipleStatics@@YAXXZ@4IA.1"
 // CHECK: and i32 {{.*}}, 1
 // CHECK: and i32 {{.*}}, 2
 // CHECK: and i32 {{.*}}, 4
@@ -133,7 +133,7 @@ inline S &UnreachableStatic() {
   return s;
 }
 
-// CHECK-LABEL: define linkonce_odr dso_local noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.S* @"?UnreachableStatic@@YAAAUS@@XZ"() {{.*}} comdat
+// CHECK-LABEL: define linkonce_odr dso_local noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"?UnreachableStatic@@YAAAUS@@XZ"() {{.*}} comdat
 // CHECK: and i32 {{.*}}, 2
 // CHECK: or i32 {{.*}}, 2
 // CHECK: ret
@@ -143,19 +143,19 @@ inline S &getS() {
   return TheS;
 }
 
-// CHECK-LABEL: define linkonce_odr dso_local noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.S* @"?getS@@YAAAUS@@XZ"() {{.*}} comdat
-// CHECK: load i32, i32* @"??_B?1??getS@@YAAAUS@@XZ@51"
+// CHECK-LABEL: define linkonce_odr dso_local noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"?getS@@YAAAUS@@XZ"() {{.*}} comdat
+// CHECK: load i32, ptr @"??_B?1??getS@@YAAAUS@@XZ@51"
 // CHECK: and i32 {{.*}}, 1
 // CHECK: icmp eq i32 {{.*}}, 0
 // CHECK: br i1
 //   init:
 // CHECK: or i32 {{.*}}, 1
-// CHECK: store i32 {{.*}}, i32* @"??_B?1??getS@@YAAAUS@@XZ@51"
-// CHECK: call x86_thiscallcc noundef %struct.S* @"??0S@@QAE@XZ"(%struct.S* {{[^,]*}} @"?TheS@?1??getS@@YAAAUS@@XZ@4U2@A")
-// CHECK: call i32 @atexit(void ()* @"??__FTheS@?1??getS@@YAAAUS@@XZ@YAXXZ")
+// CHECK: store i32 {{.*}}, ptr @"??_B?1??getS@@YAAAUS@@XZ@51"
+// CHECK: call x86_thiscallcc noundef ptr @"??0S@@QAE@XZ"(ptr {{[^,]*}} @"?TheS@?1??getS@@YAAAUS@@XZ@4U2@A")
+// CHECK: call i32 @atexit(ptr @"??__FTheS@?1??getS@@YAAAUS@@XZ@YAXXZ")
 // CHECK: br label
 //   init.end:
-// CHECK: ret %struct.S* @"?TheS@?1??getS@@YAAAUS@@XZ@4U2@A"
+// CHECK: ret ptr @"?TheS@?1??getS@@YAAAUS@@XZ@4U2@A"
 
 inline int enum_in_function() {
   // CHECK-LABEL: define linkonce_odr dso_local noundef i32 @"?enum_in_function@@YAHXZ"() {{.*}} comdat
@@ -234,11 +234,11 @@ void force_usage() {
 // CHECK: define linkonce_odr dso_local void @"??__E?foo@?$B@H@@2VA@@A@@YAXXZ"() {{.*}} comdat
 // CHECK-NOT: and
 // CHECK-NOT: ?_Bfoo@
-// CHECK: call x86_thiscallcc noundef %class.A* @"??0A@@QAE@XZ"
-// CHECK: call i32 @atexit(void ()* @"??__F?foo@?$B@H@@2VA@@A@@YAXXZ")
+// CHECK: call x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"
+// CHECK: call i32 @atexit(ptr @"??__F?foo@?$B@H@@2VA@@A@@YAXXZ")
 // CHECK: ret void
 
-// CHECK: define linkonce_odr dso_local x86_thiscallcc noundef %class.A* @"??0A@@QAE@XZ"({{.*}}) {{.*}} comdat
+// CHECK: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"({{.*}}) {{.*}} comdat
 
 // CHECK: define linkonce_odr dso_local x86_thiscallcc void @"??1A@@QAE@XZ"({{.*}}) {{.*}} comdat
 

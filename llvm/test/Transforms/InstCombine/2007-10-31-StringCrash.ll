@@ -4,10 +4,9 @@ target triple = "i686-apple-darwin8"
 
 declare void @__darwin_gcc3_preregister_frame_info()
 
-define void @_start(i32 %argc, i8** %argv, i8** %envp) {
+define void @_start(i32 %argc, ptr %argv, ptr %envp) {
 entry:
-	%tmp1 = bitcast void ()* @__darwin_gcc3_preregister_frame_info to i32*		; <i32*> [#uses=1]
-	%tmp2 = load i32, i32* %tmp1, align 4		; <i32> [#uses=1]
+	%tmp2 = load i32, ptr @__darwin_gcc3_preregister_frame_info, align 4		; <i32> [#uses=1]
 	%tmp3 = icmp ne i32 %tmp2, 0		; <i1> [#uses=1]
 	%tmp34 = zext i1 %tmp3 to i8		; <i8> [#uses=1]
 	%toBool = icmp ne i8 %tmp34, 0		; <i1> [#uses=1]

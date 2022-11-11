@@ -18,7 +18,7 @@ namespace bugprone {
 /// Finds suspicious string constructor and check their parameters.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-constructor.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/string-constructor.html
 class StringConstructorCheck : public ClangTidyCheck {
 public:
   StringConstructorCheck(StringRef Name, ClangTidyContext *Context);

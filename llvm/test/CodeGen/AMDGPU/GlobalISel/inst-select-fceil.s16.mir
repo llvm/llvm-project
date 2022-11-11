@@ -13,11 +13,12 @@ body: |
 
     ; GCN-LABEL: name: fceil_s16_ss
     ; GCN: liveins: $sgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; GCN: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; GCN: [[FCEIL:%[0-9]+]]:sreg_32(s16) = G_FCEIL [[TRUNC]]
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_32(s32) = COPY [[FCEIL]](s16)
-    ; GCN: $sgpr0 = COPY [[COPY1]](s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GCN-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GCN-NEXT: [[FCEIL:%[0-9]+]]:sreg_32(s16) = G_FCEIL [[TRUNC]]
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32(s32) = COPY [[FCEIL]](s16)
+    ; GCN-NEXT: $sgpr0 = COPY [[COPY1]](s32)
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
     %2:sgpr(s16) = G_FCEIL %1
@@ -37,9 +38,10 @@ body: |
 
     ; GCN-LABEL: name: fceil_s16_vv
     ; GCN: liveins: $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: %2:vgpr_32 = nofpexcept V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: $vgpr0 = COPY %2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: %2:vgpr_32 = nofpexcept V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FCEIL %1
@@ -59,9 +61,10 @@ body: |
 
     ; GCN-LABEL: name: fceil_s16_vs
     ; GCN: liveins: $sgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: %2:vgpr_32 = nofpexcept V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: $vgpr0 = COPY %2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: %2:vgpr_32 = nofpexcept V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY %2
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FCEIL %1
@@ -81,9 +84,10 @@ body: |
 
     ; GCN-LABEL: name: fceil_fneg_s16_vv
     ; GCN: liveins: $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: %3:vgpr_32 = nofpexcept V_CEIL_F16_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: $vgpr0 = COPY %3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: %3:vgpr_32 = nofpexcept V_CEIL_F16_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY %3
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FNEG %1

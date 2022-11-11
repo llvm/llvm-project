@@ -54,7 +54,7 @@ void SyntheticCountsUtils<CallGraphType>::propagateFromSCC(
     if (!OptProfCount)
       continue;
     auto Callee = CGT::edge_dest(E.second);
-    AdditionalCounts[Callee] += OptProfCount.getValue();
+    AdditionalCounts[Callee] += *OptProfCount;
   }
 
   // Update the counts for the nodes in the SCC.
@@ -67,7 +67,7 @@ void SyntheticCountsUtils<CallGraphType>::propagateFromSCC(
     if (!OptProfCount)
       continue;
     auto Callee = CGT::edge_dest(E.second);
-    AddCount(Callee, OptProfCount.getValue());
+    AddCount(Callee, *OptProfCount);
   }
 }
 

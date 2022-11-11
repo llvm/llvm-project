@@ -55,8 +55,7 @@ body:             |
     %6:gpr(s32) = G_CONSTANT i32 1
     %3:gpr(s32) = G_SUB %2, %1
     %7:gpr(s32) = G_ICMP intpred(ne), %0(s32), %3
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s32) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s32) = G_SELECT %7, %6, %2
     $w0 = COPY %5(s32)
     RET_ReallyLR implicit $w0
 
@@ -86,8 +85,7 @@ body:             |
     %6:gpr(s32) = G_CONSTANT i32 1
     %3:gpr(s32) = G_SUB %2, %0
     %7:gpr(s32) = G_ICMP intpred(ne), %3(s32), %1
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s32) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s32) = G_SELECT %7, %6, %2
     $w0 = COPY %5(s32)
     RET_ReallyLR implicit $w0
 
@@ -118,8 +116,7 @@ body:             |
     %6:gpr(s32) = G_CONSTANT i32 1
     %3:gpr(s32) = G_SUB %2, %1
     %7:gpr(s32) = G_ICMP intpred(slt), %0(s32), %3
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s32) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s32) = G_SELECT %7, %6, %2
     $w0 = COPY %5(s32)
     RET_ReallyLR implicit $w0
 
@@ -150,8 +147,7 @@ body:             |
     %6:gpr(s32) = G_CONSTANT i32 1
     %3:gpr(s32) = G_SUB %2, %0
     %7:gpr(s32) = G_ICMP intpred(slt), %3(s32), %1
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s32) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s32) = G_SELECT %7, %6, %2
     $w0 = COPY %5(s32)
     RET_ReallyLR implicit $w0
 
@@ -181,8 +177,7 @@ body:             |
     %6:gpr(s64) = G_CONSTANT i64 1
     %3:gpr(s64) = G_SUB %2, %1
     %7:gpr(s32) = G_ICMP intpred(ne), %0(s64), %3
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s64) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s64) = G_SELECT %7, %6, %2
     $x0 = COPY %5(s64)
     RET_ReallyLR implicit $x0
 
@@ -212,8 +207,7 @@ body:             |
     %6:gpr(s64) = G_CONSTANT i64 1
     %3:gpr(s64) = G_SUB %2, %0
     %7:gpr(s32) = G_ICMP intpred(ne), %3(s64), %1
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s64) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s64) = G_SELECT %7, %6, %2
     $x0 = COPY %5(s64)
     RET_ReallyLR implicit $x0
 
@@ -244,8 +238,7 @@ body:             |
     %6:gpr(s64) = G_CONSTANT i64 1
     %3:gpr(s64) = G_SUB %2, %1
     %7:gpr(s32) = G_ICMP intpred(slt), %0(s64), %3
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s64) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s64) = G_SELECT %7, %6, %2
     $x0 = COPY %5(s64)
     RET_ReallyLR implicit $x0
 
@@ -276,8 +269,7 @@ body:             |
     %6:gpr(s64) = G_CONSTANT i64 1
     %3:gpr(s64) = G_SUB %2, %0
     %7:gpr(s32) = G_ICMP intpred(slt), %3(s64), %1
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s64) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s64) = G_SELECT %7, %6, %2
     $x0 = COPY %5(s64)
     RET_ReallyLR implicit $x0
 
@@ -306,8 +298,7 @@ body:             |
     %3:gpr(s32) = G_AND %2, %1
     %8:gpr(s32) = G_CONSTANT i32 0
     %7:gpr(s32) = G_ICMP intpred(eq), %3(s32), %8
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s32) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s32) = G_SELECT %7, %6, %2
     $w0 = COPY %5(s32)
     RET_ReallyLR implicit $w0
 
@@ -336,8 +327,7 @@ body:             |
     %3:gpr(s64) = G_AND %2, %1
     %8:gpr(s64) = G_CONSTANT i64 0
     %7:gpr(s32) = G_ICMP intpred(eq), %3(s64), %8
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s64) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s64) = G_SELECT %7, %6, %2
     $x0 = COPY %5(s64)
     RET_ReallyLR implicit $x0
 
@@ -367,8 +357,7 @@ body:             |
     %3:gpr(s32) = G_AND %2, %1
     %8:gpr(s32) = G_CONSTANT i32 0
     %7:gpr(s32) = G_ICMP intpred(ugt), %3(s32), %8
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s32) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s32) = G_SELECT %7, %6, %2
     $w0 = COPY %5(s32)
     RET_ReallyLR implicit $w0
 
@@ -398,8 +387,7 @@ body:             |
     %3:gpr(s32) = G_AND %2, %1
     %8:gpr(s32) = G_CONSTANT i32 42
     %7:gpr(s32) = G_ICMP intpred(ugt), %3(s32), %8
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s32) = G_SELECT %4(s1), %6, %2
+    %5:gpr(s32) = G_SELECT %7, %6, %2
     $w0 = COPY %5(s32)
     RET_ReallyLR implicit $w0
 
@@ -521,8 +509,7 @@ body:             |
     %shift:gpr(s64) = G_SHL %copy(s64), %cst(s64)
     %and:gpr(s64) = G_AND %zero, %shift
     %cmp:gpr(s32) = G_ICMP intpred(eq), %and(s64), %zero
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    %select:gpr(s64) = G_SELECT %cmp_trunc(s1), %one, %zero
+    %select:gpr(s64) = G_SELECT %cmp, %one, %zero
     $x0 = COPY %select(s64)
     RET_ReallyLR implicit $x0
 
@@ -553,8 +540,7 @@ body:             |
     %shift:gpr(s32) = G_SHL %copy(s32), %cst(s32)
     %and:gpr(s32) = G_AND %zero, %shift
     %cmp:gpr(s32) = G_ICMP intpred(eq), %and(s32), %zero
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    %select:gpr(s32) = G_SELECT %cmp_trunc(s1), %one, %zero
+    %select:gpr(s32) = G_SELECT %cmp, %one, %zero
     $w0 = COPY %select(s32)
     RET_ReallyLR implicit $w0
 

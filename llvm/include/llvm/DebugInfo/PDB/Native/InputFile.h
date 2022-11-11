@@ -181,7 +181,7 @@ Error iterateSymbolGroups(InputFile &Input, const PrintScope &HeaderScope,
 
   FilterOptions Filters = HeaderScope.P.getFilters();
   if (Filters.DumpModi) {
-    uint32_t Modi = Filters.DumpModi.getValue();
+    uint32_t Modi = *Filters.DumpModi;
     SymbolGroup SG(&Input, Modi);
     return iterateOneModule(Input, withLabelWidth(HeaderScope, NumDigits(Modi)),
                             SG, Modi, Callback);

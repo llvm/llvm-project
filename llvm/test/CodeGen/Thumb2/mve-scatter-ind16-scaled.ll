@@ -219,19 +219,19 @@ define arm_aapcs_vfpcc void @scaled_v8i16_i16_2gep2(i16* %base, <8 x i16>* %offp
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r1, .LCPI9_0
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    vstrh.16 q0, [r0, q1, uxtw #1]
+; CHECK-NEXT:    vstrh.16 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI9_0:
-; CHECK-NEXT:    .short 20 @ 0x14
-; CHECK-NEXT:    .short 23 @ 0x17
-; CHECK-NEXT:    .short 26 @ 0x1a
-; CHECK-NEXT:    .short 29 @ 0x1d
-; CHECK-NEXT:    .short 32 @ 0x20
-; CHECK-NEXT:    .short 35 @ 0x23
-; CHECK-NEXT:    .short 38 @ 0x26
-; CHECK-NEXT:    .short 41 @ 0x29
+; CHECK-NEXT:    .short 40 @ 0x28
+; CHECK-NEXT:    .short 46 @ 0x2e
+; CHECK-NEXT:    .short 52 @ 0x34
+; CHECK-NEXT:    .short 58 @ 0x3a
+; CHECK-NEXT:    .short 64 @ 0x40
+; CHECK-NEXT:    .short 70 @ 0x46
+; CHECK-NEXT:    .short 76 @ 0x4c
+; CHECK-NEXT:    .short 82 @ 0x52
 entry:
   %ptrs = getelementptr inbounds i16, i16* %base, <8 x i16> <i16 0, i16 3, i16 6, i16 9, i16 12, i16 15, i16 18, i16 21>
   %ptrs2 = getelementptr inbounds i16, <8 x i16*> %ptrs, i16 20

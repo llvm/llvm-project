@@ -14,7 +14,7 @@ struct X {
   U bar();
 };
 
-export template <typename T> X<T>::iterator;                      // expected-error {{cannot export 'iterator' as it is not at namespace scope}}
+export template <typename T> struct X<T>::iterator;               // expected-error {{cannot export 'iterator' as it is not at namespace scope}}
 export template <typename T> void X<T>::foo();                    // expected-error {{cannot export 'foo' as it is not at namespace scope}}
 export template <typename T> template <typename U> U X<T>::bar(); // expected-error {{cannot export 'bar' as it is not at namespace scope}}
 
@@ -32,6 +32,6 @@ export void Y::foo();                    // expected-error {{cannot export 'foo'
 export template <typename U> U Y::bar(); // expected-error {{cannot export 'bar' as it is not at namespace scope}}
 
 export {
-  template <typename T> X<T>::iterator; // expected-error {{cannot export 'iterator' as it is not at namespace scope}}
-  struct Y::iterator;                   // expected-error {{cannot export 'iterator' as it is not at namespace scope}}
+  template <typename T> struct X<T>::iterator; // expected-error {{cannot export 'iterator' as it is not at namespace scope}}
+  struct Y::iterator;                          // expected-error {{cannot export 'iterator' as it is not at namespace scope}}
 }

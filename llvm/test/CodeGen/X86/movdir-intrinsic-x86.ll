@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+movdiri -mattr=+movdir64b | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mattr=+movdiri -mattr=+movdir64b | FileCheck %s --check-prefix=X32
 
-define void @test_movdiri(i8* %p, i32 %v) {
+define void @test_movdiri(ptr %p, i32 %v) {
 ; X64-LABEL: test_movdiri:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movdiri %esi, (%rdi)
@@ -15,13 +15,13 @@ define void @test_movdiri(i8* %p, i32 %v) {
 ; X32-NEXT:    movdiri %eax, (%ecx)
 ; X32-NEXT:    retl
 entry:
-  call void @llvm.x86.directstore32(i8* %p, i32 %v)
+  call void @llvm.x86.directstore32(ptr %p, i32 %v)
   ret void
 }
 
-declare void @llvm.x86.directstore32(i8*, i32)
+declare void @llvm.x86.directstore32(ptr, i32)
 
-define void @test_movdir64b(i8* %dst, i8* %src) {
+define void @test_movdir64b(ptr %dst, ptr %src) {
 ; X64-LABEL: test_movdir64b:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movdir64b (%rsi), %rdi
@@ -34,8 +34,8 @@ define void @test_movdir64b(i8* %dst, i8* %src) {
 ; X32-NEXT:    movdir64b (%eax), %ecx
 ; X32-NEXT:    retl
 entry:
-  call void @llvm.x86.movdir64b(i8* %dst, i8* %src)
+  call void @llvm.x86.movdir64b(ptr %dst, ptr %src)
   ret void
 }
 
-declare void @llvm.x86.movdir64b(i8*, i8*)
+declare void @llvm.x86.movdir64b(ptr, ptr)

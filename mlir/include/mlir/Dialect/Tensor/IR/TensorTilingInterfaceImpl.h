@@ -54,7 +54,7 @@ Operation *bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
 /// ops on `affine.apply` and Affine dialect already depends on TensorOps. In
 /// order to break the cyclic dependency (TensorOps->AffineOps->TensorOps) the
 /// implementation is moved to a separate library.
-void registerTilingOpInterfaceExternalModels(mlir::DialectRegistry &registry);
+void registerTilingInterfaceExternalModels(mlir::DialectRegistry &registry);
 
 } // namespace tensor
 } // namespace mlir

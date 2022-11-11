@@ -4,15 +4,15 @@
 ;
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o - | FileCheck %s
 
-@foo_private_extern_str = external hidden global i8*
+@foo_private_extern_str = external hidden global ptr
 
 define void @foo1() nounwind ssp {
 entry:
-  %tmp = load i8*, i8** @foo_private_extern_str, align 8
-  call void @foo3(i8* %tmp)
+  %tmp = load ptr, ptr @foo_private_extern_str, align 8
+  call void @foo3(ptr %tmp)
   ret void
 }
 
-declare void @foo3(i8*)
+declare void @foo3(ptr)
 
 ; CHECK-NOT: .private_extern

@@ -326,6 +326,17 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+/// Printer pass for the summarized \c CallGraphAnalysis results.
+class CallGraphSCCsPrinterPass
+    : public PassInfoMixin<CallGraphSCCsPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit CallGraphSCCsPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 /// The \c ModulePass which wraps up a \c CallGraph and the logic to
 /// build it.
 ///

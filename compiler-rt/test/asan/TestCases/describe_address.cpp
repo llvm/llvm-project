@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
   __asan_describe_address(&stack);
   // CHECK: Address {{.*}} is located in stack of thread T{{.*}} at offset {{.*}}
   __asan_describe_address(&global);
-  // CHECK: {{.*}} is located 0 bytes inside of global variable 'global'
+  // CHECK: {{.*}} is located 0 bytes inside of global variable '{{.*}}global{{.*}}'
   delete[] heap;
   return 0;
 }

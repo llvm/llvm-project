@@ -48,7 +48,7 @@ using BlockMoveFn = void (*)(Block *Storage, char *SrcFieldPtr,
 using InterpSize = unsigned;
 
 /// Describes a memory block created by an allocation site.
-struct Descriptor {
+struct Descriptor final {
 private:
   /// Original declaration, used to emit the error message.
   const DeclTy Source;
@@ -113,15 +113,15 @@ public:
   const Expr *asExpr() const { return Source.dyn_cast<const Expr *>(); }
 
   const ValueDecl *asValueDecl() const {
-    return dyn_cast_or_null<ValueDecl>(asDecl());
+    return dyn_cast_if_present<ValueDecl>(asDecl());
   }
 
   const FieldDecl *asFieldDecl() const {
-    return dyn_cast_or_null<FieldDecl>(asDecl());
+    return dyn_cast_if_present<FieldDecl>(asDecl());
   }
 
   const RecordDecl *asRecordDecl() const {
-    return dyn_cast_or_null<RecordDecl>(asDecl());
+    return dyn_cast_if_present<RecordDecl>(asDecl());
   }
 
   /// Returns the size of the object without metadata.
@@ -186,7 +186,7 @@ struct InlineDescriptor {
 /// A pointer to this is embedded at the end of all primitive arrays.
 /// If the map was not yet created and nothing was initialized, the pointer to
 /// this structure is 0. If the object was fully initialized, the pointer is -1.
-struct InitMap {
+struct InitMap final {
 private:
   /// Type packing bits.
   using T = uint64_t;

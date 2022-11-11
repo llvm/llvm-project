@@ -15,7 +15,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; GFX9-LABEL: name: test_f32_add_mul
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
@@ -23,14 +25,18 @@ body:             |
     ; GFX9-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-CONTRACT-LABEL: name: test_f32_add_mul
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]
     ; GFX9-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-DENORM-LABEL: name: test_f32_add_mul
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-DENORM-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
@@ -38,14 +44,18 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-UNSAFE-LABEL: name: test_f32_add_mul
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]
     ; GFX9-UNSAFE-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-LABEL: name: test_f32_add_mul
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
@@ -53,14 +63,18 @@ body:             |
     ; GFX10-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-CONTRACT-LABEL: name: test_f32_add_mul
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]
     ; GFX10-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-DENORM-LABEL: name: test_f32_add_mul
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-DENORM-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
@@ -68,7 +82,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-UNSAFE-LABEL: name: test_f32_add_mul
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]
@@ -90,7 +106,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; GFX9-LABEL: name: test_f32_add_mul_rhs
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
@@ -98,14 +116,18 @@ body:             |
     ; GFX9-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-CONTRACT-LABEL: name: test_f32_add_mul_rhs
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]
     ; GFX9-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-DENORM-LABEL: name: test_f32_add_mul_rhs
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-DENORM-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
@@ -113,14 +135,18 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-UNSAFE-LABEL: name: test_f32_add_mul_rhs
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]
     ; GFX9-UNSAFE-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-LABEL: name: test_f32_add_mul_rhs
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
@@ -128,14 +154,18 @@ body:             |
     ; GFX10-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-CONTRACT-LABEL: name: test_f32_add_mul_rhs
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]
     ; GFX10-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-DENORM-LABEL: name: test_f32_add_mul_rhs
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-DENORM-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
@@ -143,7 +173,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-UNSAFE-LABEL: name: test_f32_add_mul_rhs
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]
@@ -165,7 +197,9 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
     ; GFX9-LABEL: name: test_add_mul_multiple_defs_z
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -176,7 +210,9 @@ body: |
     ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[FMUL]], [[UV1]]
     ; GFX9-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX9-CONTRACT-LABEL: name: test_add_mul_multiple_defs_z
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -186,7 +222,9 @@ body: |
     ; GFX9-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX9-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX9-DENORM-LABEL: name: test_add_mul_multiple_defs_z
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-DENORM-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -197,7 +235,9 @@ body: |
     ; GFX9-DENORM-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[FMUL]], [[UV1]]
     ; GFX9-DENORM-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX9-UNSAFE-LABEL: name: test_add_mul_multiple_defs_z
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -207,7 +247,9 @@ body: |
     ; GFX9-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX9-UNSAFE-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX10-LABEL: name: test_add_mul_multiple_defs_z
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -218,7 +260,9 @@ body: |
     ; GFX10-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[FMUL]], [[UV1]]
     ; GFX10-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX10-CONTRACT-LABEL: name: test_add_mul_multiple_defs_z
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -228,7 +272,9 @@ body: |
     ; GFX10-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX10-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX10-DENORM-LABEL: name: test_add_mul_multiple_defs_z
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-DENORM-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -239,7 +285,9 @@ body: |
     ; GFX10-DENORM-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[FMUL]], [[UV1]]
     ; GFX10-DENORM-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX10-UNSAFE-LABEL: name: test_add_mul_multiple_defs_z
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -268,7 +316,9 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
     ; GFX9-LABEL: name: test_add_mul_rhs_multiple_defs_z
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -279,7 +329,9 @@ body: |
     ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[UV1]], [[FMUL]]
     ; GFX9-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX9-CONTRACT-LABEL: name: test_add_mul_rhs_multiple_defs_z
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -289,7 +341,9 @@ body: |
     ; GFX9-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX9-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX9-DENORM-LABEL: name: test_add_mul_rhs_multiple_defs_z
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-DENORM-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -300,7 +354,9 @@ body: |
     ; GFX9-DENORM-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[UV1]], [[FMUL]]
     ; GFX9-DENORM-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX9-UNSAFE-LABEL: name: test_add_mul_rhs_multiple_defs_z
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -310,7 +366,9 @@ body: |
     ; GFX9-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX9-UNSAFE-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX10-LABEL: name: test_add_mul_rhs_multiple_defs_z
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -321,7 +379,9 @@ body: |
     ; GFX10-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[UV1]], [[FMUL]]
     ; GFX10-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX10-CONTRACT-LABEL: name: test_add_mul_rhs_multiple_defs_z
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -331,7 +391,9 @@ body: |
     ; GFX10-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX10-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX10-DENORM-LABEL: name: test_add_mul_rhs_multiple_defs_z
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-DENORM-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -342,7 +404,9 @@ body: |
     ; GFX10-DENORM-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[UV1]], [[FMUL]]
     ; GFX10-DENORM-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ; GFX10-UNSAFE-LABEL: name: test_add_mul_rhs_multiple_defs_z
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -371,7 +435,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; GFX9-LABEL: name: test_half_add_mul
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -383,7 +449,9 @@ body:             |
     ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-CONTRACT-LABEL: name: test_half_add_mul
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -394,7 +462,9 @@ body:             |
     ; GFX9-CONTRACT-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-DENORM-LABEL: name: test_half_add_mul
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -406,7 +476,9 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-UNSAFE-LABEL: name: test_half_add_mul
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -417,7 +489,9 @@ body:             |
     ; GFX9-UNSAFE-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-LABEL: name: test_half_add_mul
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -429,7 +503,9 @@ body:             |
     ; GFX10-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-CONTRACT-LABEL: name: test_half_add_mul
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -440,7 +516,9 @@ body:             |
     ; GFX10-CONTRACT-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-DENORM-LABEL: name: test_half_add_mul
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -452,7 +530,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-UNSAFE-LABEL: name: test_half_add_mul
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -482,7 +562,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; GFX9-LABEL: name: test_half_add_mul_rhs
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -494,7 +576,9 @@ body:             |
     ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-CONTRACT-LABEL: name: test_half_add_mul_rhs
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -505,7 +589,9 @@ body:             |
     ; GFX9-CONTRACT-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-DENORM-LABEL: name: test_half_add_mul_rhs
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -517,7 +603,9 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX9-UNSAFE-LABEL: name: test_half_add_mul_rhs
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -528,7 +616,9 @@ body:             |
     ; GFX9-UNSAFE-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-LABEL: name: test_half_add_mul_rhs
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -540,7 +630,9 @@ body:             |
     ; GFX10-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-CONTRACT-LABEL: name: test_half_add_mul_rhs
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -551,7 +643,9 @@ body:             |
     ; GFX10-CONTRACT-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-DENORM-LABEL: name: test_half_add_mul_rhs
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -563,7 +657,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
     ; GFX10-UNSAFE-LABEL: name: test_half_add_mul_rhs
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -593,7 +689,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
 
     ; GFX9-LABEL: name: test_double_add_mul
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -609,7 +707,9 @@ body:             |
     ; GFX9-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-CONTRACT-LABEL: name: test_double_add_mul
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX9-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -624,7 +724,9 @@ body:             |
     ; GFX9-CONTRACT-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-DENORM-LABEL: name: test_double_add_mul
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX9-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -640,7 +742,9 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-UNSAFE-LABEL: name: test_double_add_mul
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX9-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -655,7 +759,9 @@ body:             |
     ; GFX9-UNSAFE-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-LABEL: name: test_double_add_mul
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -671,7 +777,9 @@ body:             |
     ; GFX10-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-CONTRACT-LABEL: name: test_double_add_mul
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX10-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -686,7 +794,9 @@ body:             |
     ; GFX10-CONTRACT-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-DENORM-LABEL: name: test_double_add_mul
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX10-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -702,7 +812,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-UNSAFE-LABEL: name: test_double_add_mul
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX10-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -740,7 +852,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
 
     ; GFX9-LABEL: name: test_double_add_mul_rhs
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -756,7 +870,9 @@ body:             |
     ; GFX9-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-CONTRACT-LABEL: name: test_double_add_mul_rhs
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX9-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -771,7 +887,9 @@ body:             |
     ; GFX9-CONTRACT-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-DENORM-LABEL: name: test_double_add_mul_rhs
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX9-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -787,7 +905,9 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-UNSAFE-LABEL: name: test_double_add_mul_rhs
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX9-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -802,7 +922,9 @@ body:             |
     ; GFX9-UNSAFE-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-LABEL: name: test_double_add_mul_rhs
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -818,7 +940,9 @@ body:             |
     ; GFX10-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-CONTRACT-LABEL: name: test_double_add_mul_rhs
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX10-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -833,7 +957,9 @@ body:             |
     ; GFX10-CONTRACT-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-DENORM-LABEL: name: test_double_add_mul_rhs
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX10-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -849,7 +975,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr1 = COPY [[UV1]](s32)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-UNSAFE-LABEL: name: test_double_add_mul_rhs
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; GFX10-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -887,7 +1015,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
 
     ; GFX9-LABEL: name: test_4xfloat_add_mul
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -911,7 +1041,9 @@ body:             |
     ; GFX9-NEXT: $vgpr3 = COPY [[UV3]](s32)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
     ; GFX9-CONTRACT-LABEL: name: test_4xfloat_add_mul
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -935,7 +1067,9 @@ body:             |
     ; GFX9-CONTRACT-NEXT: $vgpr3 = COPY [[UV3]](s32)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
     ; GFX9-DENORM-LABEL: name: test_4xfloat_add_mul
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-DENORM-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -959,7 +1093,9 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr3 = COPY [[UV3]](s32)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
     ; GFX9-UNSAFE-LABEL: name: test_4xfloat_add_mul
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -983,7 +1119,9 @@ body:             |
     ; GFX9-UNSAFE-NEXT: $vgpr3 = COPY [[UV3]](s32)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
     ; GFX10-LABEL: name: test_4xfloat_add_mul
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -1007,7 +1145,9 @@ body:             |
     ; GFX10-NEXT: $vgpr3 = COPY [[UV3]](s32)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
     ; GFX10-CONTRACT-LABEL: name: test_4xfloat_add_mul
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -1031,7 +1171,9 @@ body:             |
     ; GFX10-CONTRACT-NEXT: $vgpr3 = COPY [[UV3]](s32)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
     ; GFX10-DENORM-LABEL: name: test_4xfloat_add_mul
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-DENORM-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -1055,7 +1197,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr3 = COPY [[UV3]](s32)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
     ; GFX10-UNSAFE-LABEL: name: test_4xfloat_add_mul
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -1110,7 +1254,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
 
     ; GFX9-LABEL: name: test_3xfloat_add_mul_rhs
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
@@ -1130,7 +1276,9 @@ body:             |
     ; GFX9-NEXT: $vgpr2 = COPY [[UV2]](s32)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     ; GFX9-CONTRACT-LABEL: name: test_3xfloat_add_mul_rhs
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-CONTRACT-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
@@ -1150,7 +1298,9 @@ body:             |
     ; GFX9-CONTRACT-NEXT: $vgpr2 = COPY [[UV2]](s32)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     ; GFX9-DENORM-LABEL: name: test_3xfloat_add_mul_rhs
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-DENORM-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
@@ -1170,7 +1320,9 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr2 = COPY [[UV2]](s32)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     ; GFX9-UNSAFE-LABEL: name: test_3xfloat_add_mul_rhs
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-UNSAFE-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
@@ -1190,7 +1342,9 @@ body:             |
     ; GFX9-UNSAFE-NEXT: $vgpr2 = COPY [[UV2]](s32)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     ; GFX10-LABEL: name: test_3xfloat_add_mul_rhs
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
@@ -1210,7 +1364,9 @@ body:             |
     ; GFX10-NEXT: $vgpr2 = COPY [[UV2]](s32)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     ; GFX10-CONTRACT-LABEL: name: test_3xfloat_add_mul_rhs
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-CONTRACT-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
@@ -1230,7 +1386,9 @@ body:             |
     ; GFX10-CONTRACT-NEXT: $vgpr2 = COPY [[UV2]](s32)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     ; GFX10-DENORM-LABEL: name: test_3xfloat_add_mul_rhs
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-DENORM-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
@@ -1250,7 +1408,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr2 = COPY [[UV2]](s32)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     ; GFX10-UNSAFE-LABEL: name: test_3xfloat_add_mul_rhs
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-UNSAFE-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
@@ -1297,7 +1457,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
 
     ; GFX9-LABEL: name: test_4xhalf_add_mul
-    ; GFX9: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX9-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
@@ -1313,7 +1475,9 @@ body:             |
     ; GFX9-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-CONTRACT-LABEL: name: test_4xhalf_add_mul
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
     ; GFX9-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
@@ -1329,7 +1493,9 @@ body:             |
     ; GFX9-CONTRACT-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-DENORM-LABEL: name: test_4xhalf_add_mul
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
     ; GFX9-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
@@ -1345,7 +1511,9 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-UNSAFE-LABEL: name: test_4xhalf_add_mul
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
     ; GFX9-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
@@ -1361,7 +1529,9 @@ body:             |
     ; GFX9-UNSAFE-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-LABEL: name: test_4xhalf_add_mul
-    ; GFX10: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX10-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
@@ -1377,7 +1547,9 @@ body:             |
     ; GFX10-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-CONTRACT-LABEL: name: test_4xhalf_add_mul
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
     ; GFX10-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
@@ -1393,7 +1565,9 @@ body:             |
     ; GFX10-CONTRACT-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-DENORM-LABEL: name: test_4xhalf_add_mul
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
     ; GFX10-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
@@ -1409,7 +1583,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-UNSAFE-LABEL: name: test_4xhalf_add_mul
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
     ; GFX10-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
@@ -1448,7 +1624,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
 
     ; GFX9-LABEL: name: test_3xhalf_add_mul_rhs
-    ; GFX9: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX9-NEXT: [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX9-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[DEF]](<2 x s16>)
@@ -1476,7 +1654,9 @@ body:             |
     ; GFX9-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-CONTRACT-LABEL: name: test_3xhalf_add_mul_rhs
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX9-CONTRACT-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[DEF]](<2 x s16>)
@@ -1504,7 +1684,9 @@ body:             |
     ; GFX9-CONTRACT-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-DENORM-LABEL: name: test_3xhalf_add_mul_rhs
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX9-DENORM-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[DEF]](<2 x s16>)
@@ -1532,7 +1714,9 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX9-UNSAFE-LABEL: name: test_3xhalf_add_mul_rhs
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX9-UNSAFE-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[DEF]](<2 x s16>)
@@ -1560,7 +1744,9 @@ body:             |
     ; GFX9-UNSAFE-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-LABEL: name: test_3xhalf_add_mul_rhs
-    ; GFX10: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX10-NEXT: [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX10-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[DEF]](<2 x s16>)
@@ -1588,7 +1774,9 @@ body:             |
     ; GFX10-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-CONTRACT-LABEL: name: test_3xhalf_add_mul_rhs
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX10-CONTRACT-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[DEF]](<2 x s16>)
@@ -1616,7 +1804,9 @@ body:             |
     ; GFX10-CONTRACT-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-DENORM-LABEL: name: test_3xhalf_add_mul_rhs
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX10-DENORM-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[DEF]](<2 x s16>)
@@ -1644,7 +1834,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr1 = COPY [[UV1]](<2 x s16>)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     ; GFX10-UNSAFE-LABEL: name: test_3xhalf_add_mul_rhs
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX10-UNSAFE-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[DEF]](<2 x s16>)
@@ -1701,7 +1893,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
 
     ; GFX9-LABEL: name: test_4xdouble_add_mul
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -1753,7 +1947,9 @@ body:             |
     ; GFX9-NEXT: $vgpr7 = COPY [[UV7]](s32)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
     ; GFX9-CONTRACT-LABEL: name: test_4xdouble_add_mul
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -1805,7 +2001,9 @@ body:             |
     ; GFX9-CONTRACT-NEXT: $vgpr7 = COPY [[UV7]](s32)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
     ; GFX9-DENORM-LABEL: name: test_4xdouble_add_mul
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-DENORM-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -1857,7 +2055,9 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr7 = COPY [[UV7]](s32)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
     ; GFX9-UNSAFE-LABEL: name: test_4xdouble_add_mul
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -1909,7 +2109,9 @@ body:             |
     ; GFX9-UNSAFE-NEXT: $vgpr7 = COPY [[UV7]](s32)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
     ; GFX10-LABEL: name: test_4xdouble_add_mul
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -1961,7 +2163,9 @@ body:             |
     ; GFX10-NEXT: $vgpr7 = COPY [[UV7]](s32)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
     ; GFX10-CONTRACT-LABEL: name: test_4xdouble_add_mul
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -2013,7 +2217,9 @@ body:             |
     ; GFX10-CONTRACT-NEXT: $vgpr7 = COPY [[UV7]](s32)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
     ; GFX10-DENORM-LABEL: name: test_4xdouble_add_mul
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-DENORM-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -2065,7 +2271,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr7 = COPY [[UV7]](s32)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
     ; GFX10-UNSAFE-LABEL: name: test_4xdouble_add_mul
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -2176,7 +2384,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
 
     ; GFX9-LABEL: name: test_3xdouble_add_mul_rhs
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -2217,7 +2427,9 @@ body:             |
     ; GFX9-NEXT: $vgpr5 = COPY [[UV5]](s32)
     ; GFX9-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5
     ; GFX9-CONTRACT-LABEL: name: test_3xdouble_add_mul_rhs
-    ; GFX9-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
+    ; GFX9-CONTRACT-NEXT: {{  $}}
+    ; GFX9-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -2258,7 +2470,9 @@ body:             |
     ; GFX9-CONTRACT-NEXT: $vgpr5 = COPY [[UV5]](s32)
     ; GFX9-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5
     ; GFX9-DENORM-LABEL: name: test_3xdouble_add_mul_rhs
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
+    ; GFX9-DENORM-NEXT: {{  $}}
+    ; GFX9-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-DENORM-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -2299,7 +2513,9 @@ body:             |
     ; GFX9-DENORM-NEXT: $vgpr5 = COPY [[UV5]](s32)
     ; GFX9-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5
     ; GFX9-UNSAFE-LABEL: name: test_3xdouble_add_mul_rhs
-    ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
+    ; GFX9-UNSAFE-NEXT: {{  $}}
+    ; GFX9-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -2340,7 +2556,9 @@ body:             |
     ; GFX9-UNSAFE-NEXT: $vgpr5 = COPY [[UV5]](s32)
     ; GFX9-UNSAFE-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5
     ; GFX10-LABEL: name: test_3xdouble_add_mul_rhs
-    ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -2381,7 +2599,9 @@ body:             |
     ; GFX10-NEXT: $vgpr5 = COPY [[UV5]](s32)
     ; GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5
     ; GFX10-CONTRACT-LABEL: name: test_3xdouble_add_mul_rhs
-    ; GFX10-CONTRACT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-CONTRACT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
+    ; GFX10-CONTRACT-NEXT: {{  $}}
+    ; GFX10-CONTRACT-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-CONTRACT-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-CONTRACT-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -2422,7 +2642,9 @@ body:             |
     ; GFX10-CONTRACT-NEXT: $vgpr5 = COPY [[UV5]](s32)
     ; GFX10-CONTRACT-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5
     ; GFX10-DENORM-LABEL: name: test_3xdouble_add_mul_rhs
-    ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-DENORM: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
+    ; GFX10-DENORM-NEXT: {{  $}}
+    ; GFX10-DENORM-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-DENORM-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-DENORM-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-DENORM-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -2463,7 +2685,9 @@ body:             |
     ; GFX10-DENORM-NEXT: $vgpr5 = COPY [[UV5]](s32)
     ; GFX10-DENORM-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5
     ; GFX10-UNSAFE-LABEL: name: test_3xdouble_add_mul_rhs
-    ; GFX10-UNSAFE: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX10-UNSAFE: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
+    ; GFX10-UNSAFE-NEXT: {{  $}}
+    ; GFX10-UNSAFE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-UNSAFE-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-UNSAFE-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3

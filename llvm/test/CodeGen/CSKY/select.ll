@@ -109,7 +109,7 @@ entry:
 define i32 @selectC_eq_i32(i1 %c, i32 %n, i32 %m) {
 ; CHECK-LABEL: selectC_eq_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -301,7 +301,7 @@ define i64 @selectC_eq_i64(i1 %c, i64 %n, i64 %m) {
 ; CHECK-LABEL: selectC_eq_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld32.w t0, (sp, 0)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    movt32 a2, t0
 ; CHECK-NEXT:    mov16 a0, a1
@@ -487,7 +487,7 @@ entry:
 define i16 @selectC_eq_i16(i1 %c, i16 %n, i16 %m) {
 ; CHECK-LABEL: selectC_eq_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -618,7 +618,7 @@ entry:
 define i8 @selectC_eq_i8(i1 %c, i8 %n, i8 %m) {
 ; CHECK-LABEL: selectC_eq_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -646,7 +646,7 @@ define i1 @selectRR_eq_i1(i1 %x, i1 %y, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRR_eq_i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor16 a0, a1
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a3, a2
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    rts16
@@ -674,7 +674,7 @@ entry:
 define i1 @selectRI_eq_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRI_eq_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a2, a1
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
@@ -701,7 +701,7 @@ entry:
 define i1 @selectRX_eq_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRX_eq_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -728,7 +728,7 @@ entry:
 define i1 @selectC_eq_i1(i1 %c, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectC_eq_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -865,7 +865,7 @@ entry:
 define i32 @selectC_ne_i32(i1 %c, i32 %n, i32 %m) {
 ; CHECK-LABEL: selectC_ne_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -1063,7 +1063,7 @@ define i64 @selectC_ne_i64(i1 %c, i64 %n, i64 %m) {
 ; CHECK-LABEL: selectC_ne_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld32.w t0, (sp, 0)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    movt32 a2, t0
 ; CHECK-NEXT:    mov16 a0, a1
@@ -1255,7 +1255,7 @@ entry:
 define i16 @selectC_ne_i16(i1 %c, i16 %n, i16 %m) {
 ; CHECK-LABEL: selectC_ne_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -1392,7 +1392,7 @@ entry:
 define i8 @selectC_ne_i8(i1 %c, i8 %n, i8 %m) {
 ; CHECK-LABEL: selectC_ne_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -1420,7 +1420,7 @@ define i1 @selectRR_ne_i1(i1 %x, i1 %y, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRR_ne_i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor16 a0, a1
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a2, a3
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
@@ -1448,7 +1448,7 @@ entry:
 define i1 @selectRI_ne_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRI_ne_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -1475,7 +1475,7 @@ entry:
 define i1 @selectRX_ne_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRX_ne_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a2, a1
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
@@ -1502,7 +1502,7 @@ entry:
 define i1 @selectC_ne_i1(i1 %c, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectC_ne_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -1635,7 +1635,7 @@ entry:
 define i32 @selectC_ugt_i32(i1 %c, i32 %n, i32 %m) {
 ; CHECK-LABEL: selectC_ugt_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -1672,11 +1672,11 @@ define i64 @selectRR_ugt_i64(i64 %x, i64 %y, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmphs16 a0, a2
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a2, (sp, 4)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    addi16 a2, sp, 8
 ; CHECK-NEXT:    addi16 a0, sp, 16
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, a0
 ; CHECK-NEXT:    ld16.w a0, (a2, 0)
 ; CHECK-NEXT:    ld16.w a1, (a2, 4)
@@ -1740,7 +1740,7 @@ define i64 @selectRI_ugt_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmpnei16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -1812,7 +1812,7 @@ define i64 @selectRX_ugt_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmpnei16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -1883,7 +1883,7 @@ define i64 @selectC_ugt_i64(i1 %c, i64 %n, i64 %m) {
 ; CHECK-LABEL: selectC_ugt_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld32.w t0, (sp, 0)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    movt32 a2, t0
 ; CHECK-NEXT:    mov16 a0, a1
@@ -2072,7 +2072,7 @@ entry:
 define i16 @selectC_ugt_i16(i1 %c, i16 %n, i16 %m) {
 ; CHECK-LABEL: selectC_ugt_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -2206,7 +2206,7 @@ entry:
 define i8 @selectC_ugt_i8(i1 %c, i8 %n, i8 %m) {
 ; CHECK-LABEL: selectC_ugt_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -2233,9 +2233,9 @@ entry:
 define i1 @selectRR_ugt_i1(i1 %x, i1 %y, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRR_ugt_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a3, a2
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, a3
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
@@ -2271,7 +2271,7 @@ entry:
 define i1 @selectRI_ugt_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRI_ugt_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -2318,7 +2318,7 @@ entry:
 define i1 @selectC_ugt_i1(i1 %c, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectC_ugt_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -2453,7 +2453,7 @@ entry:
 define i32 @selectC_uge_i32(i1 %c, i32 %n, i32 %m) {
 ; CHECK-LABEL: selectC_uge_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -2492,17 +2492,17 @@ define i64 @selectRR_uge_i64(i64 %x, i64 %y, i64 %n, i64 %m) {
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    st16.w a0, (sp, 8)
 ; CHECK-NEXT:    ld16.w a0, (sp, 4)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    ld16.w a1, (sp, 12)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    addi16 a2, sp, 16
 ; CHECK-NEXT:    addi16 a0, sp, 24
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, a0
 ; CHECK-NEXT:    ld16.w a0, (a2, 0)
 ; CHECK-NEXT:    ld16.w a1, (a2, 4)
@@ -2573,7 +2573,7 @@ define i64 @selectRI_uge_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmpnei16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -2645,7 +2645,7 @@ define i64 @selectRX_uge_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmpnei16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -2716,7 +2716,7 @@ define i64 @selectC_uge_i64(i1 %c, i64 %n, i64 %m) {
 ; CHECK-LABEL: selectC_uge_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld32.w t0, (sp, 0)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    movt32 a2, t0
 ; CHECK-NEXT:    mov16 a0, a1
@@ -2907,7 +2907,7 @@ entry:
 define i16 @selectC_uge_i16(i1 %c, i16 %n, i16 %m) {
 ; CHECK-LABEL: selectC_uge_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -3043,7 +3043,7 @@ entry:
 define i8 @selectC_uge_i8(i1 %c, i8 %n, i8 %m) {
 ; CHECK-LABEL: selectC_uge_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -3070,10 +3070,10 @@ entry:
 define i1 @selectRR_uge_i1(i1 %x, i1 %y, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRR_uge_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    movt32 a0, a2
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a0, a3
 ; CHECK-NEXT:    rts16
 ;
@@ -3124,7 +3124,7 @@ entry:
 define i1 @selectRX_uge_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRX_uge_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -3151,7 +3151,7 @@ entry:
 define i1 @selectC_uge_i1(i1 %c, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectC_uge_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -3282,7 +3282,7 @@ entry:
 define i32 @selectC_ult_i32(i1 %c, i32 %n, i32 %m) {
 ; CHECK-LABEL: selectC_ult_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -3319,11 +3319,11 @@ define i64 @selectRR_ult_i64(i64 %x, i64 %y, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmphs16 a2, a0
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a2, (sp, 4)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    addi16 a2, sp, 8
 ; CHECK-NEXT:    addi16 a0, sp, 16
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, a0
 ; CHECK-NEXT:    ld16.w a0, (a2, 0)
 ; CHECK-NEXT:    ld16.w a1, (a2, 4)
@@ -3387,10 +3387,10 @@ define i64 @selectRI_ult_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    ld16.w a2, (sp, 4)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    ld16.w a2, (sp, 0)
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -3454,7 +3454,7 @@ define i64 @selectRX_ult_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmpnei16 a1, 0
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -3524,7 +3524,7 @@ define i64 @selectC_ult_i64(i1 %c, i64 %n, i64 %m) {
 ; CHECK-LABEL: selectC_ult_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld32.w t0, (sp, 0)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    movt32 a2, t0
 ; CHECK-NEXT:    mov16 a0, a1
@@ -3710,7 +3710,7 @@ entry:
 define i16 @selectC_ult_i16(i1 %c, i16 %n, i16 %m) {
 ; CHECK-LABEL: selectC_ult_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -3841,7 +3841,7 @@ entry:
 define i8 @selectC_ult_i8(i1 %c, i8 %n, i8 %m) {
 ; CHECK-LABEL: selectC_ult_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -3868,9 +3868,9 @@ entry:
 define i1 @selectRR_ult_i1(i1 %x, i1 %y, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRR_ult_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a3, a2
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a2, a3
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
@@ -3928,7 +3928,7 @@ entry:
 define i1 @selectRX_ult_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRX_ult_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a2, a1
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
@@ -3955,7 +3955,7 @@ entry:
 define i1 @selectC_ult_i1(i1 %c, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectC_ult_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -4087,7 +4087,7 @@ entry:
 define i32 @selectC_ule_i32(i1 %c, i32 %n, i32 %m) {
 ; CHECK-LABEL: selectC_ule_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -4126,17 +4126,17 @@ define i64 @selectRR_ule_i64(i64 %x, i64 %y, i64 %n, i64 %m) {
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    st16.w a0, (sp, 8)
 ; CHECK-NEXT:    ld16.w a0, (sp, 4)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    ld16.w a1, (sp, 12)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    addi16 a2, sp, 16
 ; CHECK-NEXT:    addi16 a0, sp, 24
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, a0
 ; CHECK-NEXT:    ld16.w a0, (a2, 0)
 ; CHECK-NEXT:    ld16.w a1, (a2, 4)
@@ -4207,10 +4207,10 @@ define i64 @selectRI_ule_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    ld16.w a2, (sp, 4)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    ld16.w a2, (sp, 0)
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -4274,7 +4274,7 @@ define i64 @selectRX_ule_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmpnei16 a1, 0
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -4344,7 +4344,7 @@ define i64 @selectC_ule_i64(i1 %c, i64 %n, i64 %m) {
 ; CHECK-LABEL: selectC_ule_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld32.w t0, (sp, 0)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    movt32 a2, t0
 ; CHECK-NEXT:    mov16 a0, a1
@@ -4532,7 +4532,7 @@ entry:
 define i16 @selectC_ule_i16(i1 %c, i16 %n, i16 %m) {
 ; CHECK-LABEL: selectC_ule_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -4665,7 +4665,7 @@ entry:
 define i8 @selectC_ule_i8(i1 %c, i8 %n, i8 %m) {
 ; CHECK-LABEL: selectC_ule_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -4692,10 +4692,10 @@ entry:
 define i1 @selectRR_ule_i1(i1 %x, i1 %y, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRR_ule_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mov16 a1, a3
 ; CHECK-NEXT:    movt32 a1, a2
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -4727,7 +4727,7 @@ entry:
 define i1 @selectRI_ule_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRI_ule_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a2, a1
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
@@ -4774,7 +4774,7 @@ entry:
 define i1 @selectC_ule_i1(i1 %c, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectC_ule_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -4913,7 +4913,7 @@ entry:
 define i32 @selectC_sgt_i32(i1 %c, i32 %n, i32 %m) {
 ; CHECK-LABEL: selectC_sgt_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -4951,14 +4951,14 @@ define i64 @selectRR_sgt_i64(i64 %x, i64 %y, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmphs16 a0, a2
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a1, (sp, 4)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    addi16 a2, sp, 12
 ; CHECK-NEXT:    addi16 a0, sp, 20
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, a0
 ; CHECK-NEXT:    ld16.w a0, (a2, 0)
 ; CHECK-NEXT:    ld16.w a1, (a2, 4)
@@ -5029,12 +5029,12 @@ define i64 @selectRI_sgt_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    st16.w a1, (sp, 4)
 ; CHECK-NEXT:    ld16.w a1, (sp, 8)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w l0, (sp, 4)
-; CHECK-NEXT:    btsti32 l0, 0
+; CHECK-NEXT:    btsti16 l0, 0
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -5119,12 +5119,12 @@ define i64 @selectRX_sgt_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    st16.w a1, (sp, 4)
 ; CHECK-NEXT:    ld16.w a1, (sp, 8)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w l0, (sp, 4)
-; CHECK-NEXT:    btsti32 l0, 0
+; CHECK-NEXT:    btsti16 l0, 0
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -5202,7 +5202,7 @@ define i64 @selectC_sgt_i64(i1 %c, i64 %n, i64 %m) {
 ; CHECK-LABEL: selectC_sgt_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld32.w t0, (sp, 0)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    movt32 a2, t0
 ; CHECK-NEXT:    mov16 a0, a1
@@ -5355,7 +5355,7 @@ entry:
 define i16 @selectC_sgt_i16(i1 %c, i16 %n, i16 %m) {
 ; CHECK-LABEL: selectC_sgt_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -5503,7 +5503,7 @@ entry:
 define i8 @selectC_sgt_i8(i1 %c, i8 %n, i8 %m) {
 ; CHECK-LABEL: selectC_sgt_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -5530,9 +5530,9 @@ entry:
 define i1 @selectRR_sgt_i1(i1 %x, i1 %y, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRR_sgt_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a3, a2
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a2, a3
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
@@ -5590,7 +5590,7 @@ entry:
 define i1 @selectRX_sgt_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRX_sgt_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a2, a1
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
@@ -5617,7 +5617,7 @@ entry:
 define i1 @selectC_sgt_i1(i1 %c, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectC_sgt_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -5754,7 +5754,7 @@ entry:
 define i32 @selectC_sge_i32(i1 %c, i32 %n, i32 %m) {
 ; CHECK-LABEL: selectC_sge_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -5792,14 +5792,14 @@ define i64 @selectRR_sge_i64(i64 %x, i64 %y, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmplt16 a3, a1
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a1, (sp, 4)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 a1, sp, 12
 ; CHECK-NEXT:    addi16 a2, sp, 20
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    ld16.w a0, (a1, 0)
 ; CHECK-NEXT:    ld16.w a1, (a1, 4)
@@ -5865,12 +5865,12 @@ define i64 @selectRI_sge_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    st16.w a1, (sp, 4)
 ; CHECK-NEXT:    ld16.w a1, (sp, 8)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w l0, (sp, 4)
-; CHECK-NEXT:    btsti32 l0, 0
+; CHECK-NEXT:    btsti16 l0, 0
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -5955,12 +5955,12 @@ define i64 @selectRX_sge_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    st16.w a1, (sp, 4)
 ; CHECK-NEXT:    ld16.w a1, (sp, 8)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w l0, (sp, 4)
-; CHECK-NEXT:    btsti32 l0, 0
+; CHECK-NEXT:    btsti16 l0, 0
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -6038,7 +6038,7 @@ define i64 @selectC_sge_i64(i1 %c, i64 %n, i64 %m) {
 ; CHECK-LABEL: selectC_sge_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld32.w t0, (sp, 0)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    movt32 a2, t0
 ; CHECK-NEXT:    mov16 a0, a1
@@ -6189,7 +6189,7 @@ entry:
 define i16 @selectC_sge_i16(i1 %c, i16 %n, i16 %m) {
 ; CHECK-LABEL: selectC_sge_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -6335,7 +6335,7 @@ entry:
 define i8 @selectC_sge_i8(i1 %c, i8 %n, i8 %m) {
 ; CHECK-LABEL: selectC_sge_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -6362,10 +6362,10 @@ entry:
 define i1 @selectRR_sge_i1(i1 %x, i1 %y, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRR_sge_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mov16 a1, a3
 ; CHECK-NEXT:    movt32 a1, a2
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -6397,7 +6397,7 @@ entry:
 define i1 @selectRI_sge_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRI_sge_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a2, a1
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
@@ -6444,7 +6444,7 @@ entry:
 define i1 @selectC_sge_i1(i1 %c, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectC_sge_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -6581,7 +6581,7 @@ entry:
 define i32 @selectC_slt_i32(i1 %c, i32 %n, i32 %m) {
 ; CHECK-LABEL: selectC_slt_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -6619,14 +6619,14 @@ define i64 @selectRR_slt_i64(i64 %x, i64 %y, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmphs16 a2, a0
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a1, (sp, 4)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    addi16 a2, sp, 12
 ; CHECK-NEXT:    addi16 a0, sp, 20
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, a0
 ; CHECK-NEXT:    ld16.w a0, (a2, 0)
 ; CHECK-NEXT:    ld16.w a1, (a2, 4)
@@ -6696,12 +6696,12 @@ define i64 @selectRI_slt_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmphsi16 a0, 10
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a1, (sp, 4)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w l0, (sp, 8)
-; CHECK-NEXT:    btsti32 l0, 0
+; CHECK-NEXT:    btsti16 l0, 0
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -6782,12 +6782,12 @@ define i64 @selectRX_slt_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    st16.w a1, (sp, 4)
 ; CHECK-NEXT:    ld16.w a1, (sp, 8)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w l0, (sp, 4)
-; CHECK-NEXT:    btsti32 l0, 0
+; CHECK-NEXT:    btsti16 l0, 0
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -6865,7 +6865,7 @@ define i64 @selectC_slt_i64(i1 %c, i64 %n, i64 %m) {
 ; CHECK-LABEL: selectC_slt_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld32.w t0, (sp, 0)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    movt32 a2, t0
 ; CHECK-NEXT:    mov16 a0, a1
@@ -7015,7 +7015,7 @@ entry:
 define i16 @selectC_slt_i16(i1 %c, i16 %n, i16 %m) {
 ; CHECK-LABEL: selectC_slt_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -7161,7 +7161,7 @@ entry:
 define i8 @selectC_slt_i8(i1 %c, i8 %n, i8 %m) {
 ; CHECK-LABEL: selectC_slt_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -7188,9 +7188,9 @@ entry:
 define i1 @selectRR_slt_i1(i1 %x, i1 %y, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRR_slt_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a3, a2
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, a3
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
@@ -7226,7 +7226,7 @@ entry:
 define i1 @selectRI_slt_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRI_slt_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -7273,7 +7273,7 @@ entry:
 define i1 @selectC_slt_i1(i1 %c, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectC_slt_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -7407,7 +7407,7 @@ entry:
 define i32 @selectC_sle_i32(i1 %c, i32 %n, i32 %m) {
 ; CHECK-LABEL: selectC_sle_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -7445,14 +7445,14 @@ define i64 @selectRR_sle_i64(i64 %x, i64 %y, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmplt16 a1, a3
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a1, (sp, 4)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 a1, sp, 12
 ; CHECK-NEXT:    addi16 a2, sp, 20
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    ld16.w a0, (a1, 0)
 ; CHECK-NEXT:    ld16.w a1, (a1, 4)
@@ -7517,12 +7517,12 @@ define i64 @selectRI_sle_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    cmphsi16 a0, 11
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a1, (sp, 4)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w l0, (sp, 8)
-; CHECK-NEXT:    btsti32 l0, 0
+; CHECK-NEXT:    btsti16 l0, 0
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -7603,12 +7603,12 @@ define i64 @selectRX_sle_i64(i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    st16.w a1, (sp, 4)
 ; CHECK-NEXT:    ld16.w a1, (sp, 8)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w l0, (sp, 4)
-; CHECK-NEXT:    btsti32 l0, 0
+; CHECK-NEXT:    btsti16 l0, 0
 ; CHECK-NEXT:    movf32 a1, a0
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a2, t1
 ; CHECK-NEXT:    movt32 a3, t0
 ; CHECK-NEXT:    mov16 a0, a2
@@ -7686,7 +7686,7 @@ define i64 @selectC_sle_i64(i1 %c, i64 %n, i64 %m) {
 ; CHECK-LABEL: selectC_sle_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld32.w t0, (sp, 0)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a3
 ; CHECK-NEXT:    movt32 a2, t0
 ; CHECK-NEXT:    mov16 a0, a1
@@ -7834,7 +7834,7 @@ entry:
 define i16 @selectC_sle_i16(i1 %c, i16 %n, i16 %m) {
 ; CHECK-LABEL: selectC_sle_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -7978,7 +7978,7 @@ entry:
 define i8 @selectC_sle_i8(i1 %c, i8 %n, i8 %m) {
 ; CHECK-LABEL: selectC_sle_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -8005,10 +8005,10 @@ entry:
 define i1 @selectRR_sle_i1(i1 %x, i1 %y, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRR_sle_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    movt32 a0, a2
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movt32 a0, a3
 ; CHECK-NEXT:    rts16
 ;
@@ -8059,7 +8059,7 @@ entry:
 define i1 @selectRX_sle_i1(i1 %x, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectRX_sle_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
@@ -8086,7 +8086,7 @@ entry:
 define i1 @selectC_sle_i1(i1 %c, i1 %n, i1 %m) {
 ; CHECK-LABEL: selectC_sle_i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    movt32 a1, a2
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16

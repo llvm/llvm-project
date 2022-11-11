@@ -45,7 +45,7 @@ define i64 @bextr64_subreg(i64 %x)  uwtable  ssp {
   ret i64 %2
 }
 
-define i64 @bextr64b_load(i64* %x) {
+define i64 @bextr64b_load(ptr %x) {
 ; BEXTR-SLOW-LABEL: bextr64b_load:
 ; BEXTR-SLOW:       # %bb.0:
 ; BEXTR-SLOW-NEXT:    movl (%rdi), %eax
@@ -58,7 +58,7 @@ define i64 @bextr64b_load(i64* %x) {
 ; BEXTR-FAST-NEXT:    movl $3076, %eax # imm = 0xC04
 ; BEXTR-FAST-NEXT:    bextrl %eax, (%rdi), %eax
 ; BEXTR-FAST-NEXT:    retq
-  %1 = load i64, i64* %x, align 8
+  %1 = load i64, ptr %x, align 8
   %2 = lshr i64 %1, 4
   %3 = and i64 %2, 4095
   ret i64 %3
@@ -102,7 +102,7 @@ entry:
   ret i64 %and
 }
 
-define i64 @bextr64d_load(i64* %aptr) {
+define i64 @bextr64d_load(ptr %aptr) {
 ; BMI1-SLOW-LABEL: bextr64d_load:
 ; BMI1-SLOW:       # %bb.0: # %entry
 ; BMI1-SLOW-NEXT:    movq (%rdi), %rax
@@ -124,7 +124,7 @@ define i64 @bextr64d_load(i64* %aptr) {
 ; BEXTR-FAST-NEXT:    bextrq %rax, (%rdi), %rax
 ; BEXTR-FAST-NEXT:    retq
 entry:
-  %a = load i64, i64* %aptr, align 8
+  %a = load i64, ptr %aptr, align 8
   %shr = lshr i64 %a, 2
   %and = and i64 %shr, 8589934591
   ret i64 %and

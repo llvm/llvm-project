@@ -6,6 +6,6 @@ int a(struct c x, long long y) {
   goto *l1_ptr;
 l1:
   goto *x; // expected-error{{incompatible type}}
-  goto *y; // expected-warning{{incompatible integer to pointer conversion}}
+  goto *y; // expected-error{{incompatible integer to pointer conversion}}
 }
 

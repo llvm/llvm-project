@@ -323,21 +323,26 @@ namespace std { class type_info; }
 
 void unevaluated() {
   decltype(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
-                        // expected-warning@-1 {{declaration does not declare anything}}
+}
+
+void unevaluated2() {
   sizeof(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
-                      // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
-                      // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
+}
+
+void unevaluated3() {
   typeid(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
-                      // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
-                      // expected-warning@-2 {{expression result unused}}
+}
+
+void unevaluated4() {
   decltype(co_yield 1); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
-                        // expected-warning@-1 {{declaration does not declare anything}}
+}
+
+void unevaluated5() {
   sizeof(co_yield 2); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
-                      // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
-                      // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
+}
+
+void unevaluated6() {
   typeid(co_yield 3); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
-                      // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
-                      // expected-warning@-2 {{expression result unused}}
 }
 
 // [expr.await]p2: "An await-expression shall not appear in a default argument."
@@ -1130,8 +1135,8 @@ struct TestType {
 
   CoroMemberTag test_asserts(int *) const {
     auto TC = co_yield 0;
-    static_assert(TC.MatchesArgs<const TestType &>, ""); // expected-error {{static_assert failed}}
-    static_assert(TC.MatchesArgs<const TestType &>, ""); // expected-error {{static_assert failed}}
+    static_assert(TC.MatchesArgs<const TestType &>, ""); // expected-error {{static assertion failed}}
+    static_assert(TC.MatchesArgs<const TestType &>, ""); // expected-error {{static assertion failed}}
     static_assert(TC.MatchesArgs<const TestType &, int *>, "");
   }
 
@@ -1222,8 +1227,8 @@ struct DepTestType {
 
   CoroMemberTag test_asserts(int *) const {
     auto TC = co_yield 0;
-    static_assert(TC.template MatchesArgs<const DepTestType &>, ""); // expected-error {{static_assert failed}}
-    static_assert(TC.template MatchesArgs<>, ""); // expected-error {{static_assert failed}}
+    static_assert(TC.template MatchesArgs<const DepTestType &>, ""); // expected-error {{static assertion failed}}
+    static_assert(TC.template MatchesArgs<>, ""); // expected-error {{static assertion failed}}
     static_assert(TC.template MatchesArgs<const DepTestType &, int *>, "");
   }
 
@@ -1286,7 +1291,7 @@ struct DepTestType {
     static_assert(!TCT::MatchesArgs<DepTestType *>, "");
 
     // Ensure diagnostics are actually being generated here
-    static_assert(TCT::MatchesArgs<int>, ""); // expected-error {{static_assert failed}}
+    static_assert(TCT::MatchesArgs<int>, ""); // expected-error {{static assertion failed}}
   }
 
   static CoroMemberTag test_static(volatile void *const, char &&) {

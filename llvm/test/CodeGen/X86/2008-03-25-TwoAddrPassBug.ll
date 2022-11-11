@@ -19,6 +19,6 @@ entry:
 	%tmp678 = shufflevector <4 x float> %tmp662, <4 x float> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >		; <<4 x float>> [#uses=1]
 	%tmp753 = fmul <4 x float> zeroinitializer, %tmp678		; <<4 x float>> [#uses=1]
 	%tmp754 = fsub <4 x float> zeroinitializer, %tmp753		; <<4 x float>> [#uses=1]
-	store <4 x float> %tmp754, <4 x float>* null, align 16
+	store <4 x float> %tmp754, ptr null, align 16
 	unreachable
 }

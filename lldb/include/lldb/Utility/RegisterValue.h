@@ -84,7 +84,7 @@ public:
 
   void SetType(RegisterValue::Type type) { m_type = type; }
 
-  RegisterValue::Type SetType(const RegisterInfo *reg_info);
+  RegisterValue::Type SetType(const RegisterInfo &reg_info);
 
   bool GetData(DataExtractor &data) const;
 
@@ -95,11 +95,11 @@ public:
   // value, or pad the destination with zeroes if the register byte size is
   // shorter that "dst_len" (all while correctly abiding the "dst_byte_order").
   // Returns the number of bytes copied into "dst".
-  uint32_t GetAsMemoryData(const RegisterInfo *reg_info, void *dst,
+  uint32_t GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
                            uint32_t dst_len, lldb::ByteOrder dst_byte_order,
                            Status &error) const;
 
-  uint32_t SetFromMemoryData(const RegisterInfo *reg_info, const void *src,
+  uint32_t SetFromMemoryData(const RegisterInfo &reg_info, const void *src,
                              uint32_t src_len, lldb::ByteOrder src_byte_order,
                              Status &error);
 
@@ -238,7 +238,7 @@ public:
   Status SetValueFromString(const RegisterInfo *reg_info,
                             const char *value_str) = delete;
 
-  Status SetValueFromData(const RegisterInfo *reg_info, DataExtractor &data,
+  Status SetValueFromData(const RegisterInfo &reg_info, DataExtractor &data,
                           lldb::offset_t offset, bool partial_data_ok);
 
   const void *GetBytes() const;
@@ -263,8 +263,8 @@ protected:
     mutable uint8_t
         bytes[kMaxRegisterByteSize]; // This must be big enough to hold any
                                      // register for any supported target.
-    uint16_t length;
-    lldb::ByteOrder byte_order;
+    uint16_t length = 0;
+    lldb::ByteOrder byte_order = lldb::eByteOrderInvalid;
   } buffer;
 };
 

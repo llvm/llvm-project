@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_FUZZING_MATH_COMPARE_H
 #define LLVM_LIBC_FUZZING_MATH_COMPARE_H
 
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 
 template <typename T>
-__llvm_libc::cpp::EnableIfType<__llvm_libc::cpp::IsFloatingPointType<T>::Value,
-                               bool>
+__llvm_libc::cpp::enable_if_t<__llvm_libc::cpp::is_floating_point_v<T>, bool>
 ValuesEqual(T x1, T x2) {
   __llvm_libc::fputil::FPBits<T> bits1(x1);
   __llvm_libc::fputil::FPBits<T> bits2(x2);
@@ -27,7 +26,7 @@ ValuesEqual(T x1, T x2) {
 }
 
 template <typename T>
-__llvm_libc::cpp::EnableIfType<__llvm_libc::cpp::IsIntegral<T>::Value, bool>
+__llvm_libc::cpp::enable_if_t<__llvm_libc::cpp::is_integral_v<T>, bool>
 ValuesEqual(T x1, T x2) {
   return x1 == x1;
 }

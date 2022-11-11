@@ -8,6 +8,9 @@
 
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Program.h"
 #include <unordered_set>
 
 using namespace llvm;
@@ -29,11 +32,68 @@ static cl::opt<bool> PrintAfterAll("print-after-all",
                                    llvm::cl::desc("Print IR after each pass"),
                                    cl::init(false), cl::Hidden);
 
+// Print out the IR after passes, similar to -print-after-all except that it
+// only prints the IR after passes that change the IR. Those passes that do not
+// make changes to the IR are reported as not making any changes. In addition,
+// the initial IR is also reported.  Other hidden options affect the output from
+// this option. -filter-passes will limit the output to the named passes that
+// actually change the IR and other passes are reported as filtered out. The
+// specified passes will either be reported as making no changes (with no IR
+// reported) or the changed IR will be reported. Also, the -filter-print-funcs
+// and -print-module-scope options will do similar filtering based on function
+// name, reporting changed IRs as functions(or modules if -print-module-scope is
+// specified) for a particular function or indicating that the IR has been
+// filtered out. The extra options can be combined, allowing only changed IRs
+// for certain passes on certain functions to be reported in different formats,
+// with the rest being reported as filtered out.  The -print-before-changed
+// option will print the IR as it was before each pass that changed it. The
+// optional value of quiet will only report when the IR changes, suppressing all
+// other messages, including the initial IR. The values "diff" and "diff-quiet"
+// will present the changes in a form similar to a patch, in either verbose or
+// quiet mode, respectively. The lines that are removed and added are prefixed
+// with '-' and '+', respectively. The -filter-print-funcs and -filter-passes
+// can be used to filter the output.  This reporter relies on the linux diff
+// utility to do comparisons and insert the prefixes. For systems that do not
+// have the necessary facilities, the error message will be shown in place of
+// the expected output.
+cl::opt<ChangePrinter> llvm::PrintChanged(
+    "print-changed", cl::desc("Print changed IRs"), cl::Hidden,
+    cl::ValueOptional, cl::init(ChangePrinter::None),
+    cl::values(
+        clEnumValN(ChangePrinter::Quiet, "quiet", "Run in quiet mode"),
+        clEnumValN(ChangePrinter::DiffVerbose, "diff",
+                   "Display patch-like changes"),
+        clEnumValN(ChangePrinter::DiffQuiet, "diff-quiet",
+                   "Display patch-like changes in quiet mode"),
+        clEnumValN(ChangePrinter::ColourDiffVerbose, "cdiff",
+                   "Display patch-like changes with color"),
+        clEnumValN(ChangePrinter::ColourDiffQuiet, "cdiff-quiet",
+                   "Display patch-like changes in quiet mode with color"),
+        clEnumValN(ChangePrinter::DotCfgVerbose, "dot-cfg",
+                   "Create a website with graphical changes"),
+        clEnumValN(ChangePrinter::DotCfgQuiet, "dot-cfg-quiet",
+                   "Create a website with graphical changes in quiet mode"),
+        // Sentinel value for unspecified option.
+        clEnumValN(ChangePrinter::Verbose, "", "")));
+
+// An option for specifying the diff used by print-changed=[diff | diff-quiet]
+static cl::opt<std::string>
+    DiffBinary("print-changed-diff-path", cl::Hidden, cl::init("diff"),
+               cl::desc("system diff used by change reporters"));
+
 static cl::opt<bool>
     PrintModuleScope("print-module-scope",
                      cl::desc("When printing IR for print-[before|after]{-all} "
                               "always print a module IR"),
                      cl::init(false), cl::Hidden);
+
+// See the description for -print-changed for an explanation of the use
+// of this option.
+static cl::list<std::string> FilterPasses(
+    "filter-passes", cl::value_desc("pass names"),
+    cl::desc("Only consider IR changes for passes whose names "
+             "match the specified value. No-op without -print-changed"),
+    cl::CommaSeparated, cl::Hidden);
 
 static cl::list<std::string>
     PrintFuncsList("filter-print-funcs", cl::value_desc("function names"),
@@ -80,9 +140,80 @@ std::vector<std::string> llvm::printAfterPasses() {
 
 bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
 
+bool llvm::isPassInPrintList(StringRef PassName) {
+  static std::unordered_set<std::string> Set(FilterPasses.begin(),
+                                             FilterPasses.end());
+  return Set.empty() || Set.count(std::string(PassName));
+}
+
+bool llvm::isFilterPassesEmpty() { return FilterPasses.empty(); }
+
 bool llvm::isFunctionInPrintList(StringRef FunctionName) {
   static std::unordered_set<std::string> PrintFuncNames(PrintFuncsList.begin(),
                                                         PrintFuncsList.end());
   return PrintFuncNames.empty() ||
          PrintFuncNames.count(std::string(FunctionName));
+}
+
+std::string llvm::doSystemDiff(StringRef Before, StringRef After,
+                               StringRef OldLineFormat, StringRef NewLineFormat,
+                               StringRef UnchangedLineFormat) {
+  StringRef SR[2]{Before, After};
+  // Store the 2 bodies into temporary files and call diff on them
+  // to get the body of the node.
+  const unsigned NumFiles = 3;
+  static std::string FileName[NumFiles];
+  static int FD[NumFiles]{-1, -1, -1};
+  for (unsigned I = 0; I < NumFiles; ++I) {
+    if (FD[I] == -1) {
+      SmallVector<char, 200> SV;
+      std::error_code EC =
+          sys::fs::createTemporaryFile("tmpdiff", "txt", FD[I], SV);
+      if (EC)
+        return "Unable to create temporary file.";
+      FileName[I] = Twine(SV).str();
+    }
+    // The third file is used as the result of the diff.
+    if (I == NumFiles - 1)
+      break;
+
+    std::error_code EC = sys::fs::openFileForWrite(FileName[I], FD[I]);
+    if (EC)
+      return "Unable to open temporary file for writing.";
+
+    raw_fd_ostream OutStream(FD[I], /*shouldClose=*/true);
+    if (FD[I] == -1)
+      return "Error opening file for writing.";
+    OutStream << SR[I];
+  }
+
+  static ErrorOr<std::string> DiffExe = sys::findProgramByName(DiffBinary);
+  if (!DiffExe)
+    return "Unable to find diff executable.";
+
+  SmallString<128> OLF, NLF, ULF;
+  ("--old-line-format=" + OldLineFormat).toVector(OLF);
+  ("--new-line-format=" + NewLineFormat).toVector(NLF);
+  ("--unchanged-line-format=" + UnchangedLineFormat).toVector(ULF);
+
+  StringRef Args[] = {DiffBinary, "-w", "-d",        OLF,
+                      NLF,        ULF,  FileName[0], FileName[1]};
+  Optional<StringRef> Redirects[] = {None, StringRef(FileName[2]), None};
+  int Result = sys::ExecuteAndWait(*DiffExe, Args, None, Redirects);
+  if (Result < 0)
+    return "Error executing system diff.";
+  std::string Diff;
+  auto B = MemoryBuffer::getFile(FileName[2]);
+  if (B && *B)
+    Diff = (*B)->getBuffer().str();
+  else
+    return "Unable to read result.";
+
+  // Clean up.
+  for (const std::string &I : FileName) {
+    std::error_code EC = sys::fs::remove(I);
+    if (EC)
+      return "Unable to remove temporary file.";
+  }
+  return Diff;
 }

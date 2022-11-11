@@ -7,8 +7,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-has-no-incomplete-format
-// TODO FMT Evaluate gcc-11 status
-// UNSUPPORTED: gcc-11
 
 // Basic test to validate ill-formed code is properly detected.
 
@@ -86,5 +84,19 @@ void f() {
 
   std::format(L"{:d}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
+#endif
+}
+
+struct tiny {
+  int bit : 1;
+};
+
+void P2418()
+{
+  auto t = tiny{};
+  std::format("{}", t.bit); // expected-error{{non-const reference cannot bind to bit-field 'bit'}}
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  std::format(L"{}", t.bit); // expected-error{{non-const reference cannot bind to bit-field 'bit'}}
 #endif
 }

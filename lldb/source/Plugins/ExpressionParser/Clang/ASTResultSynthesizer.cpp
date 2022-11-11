@@ -197,6 +197,27 @@ bool ASTResultSynthesizer::SynthesizeObjCMethodResult(
   return ret;
 }
 
+/// Returns true if LLDB can take the address of the given lvalue for the sake
+/// of capturing the expression result. Returns false if LLDB should instead
+/// store the expression result in a result variable.
+static bool CanTakeAddressOfLValue(const Expr *lvalue_expr) {
+  assert(lvalue_expr->getValueKind() == VK_LValue &&
+         "lvalue_expr not a lvalue");
+
+  QualType qt = lvalue_expr->getType();
+  // If the lvalue has const-qualified non-volatile integral or enum type, then
+  // the underlying value might come from a const static data member as
+  // described in C++11 [class.static.data]p3. If that's the case, then the
+  // value might not have an address if the user didn't also define the member
+  // in a namespace scope. Taking the address would cause that LLDB later fails
+  // to link the expression, so those lvalues should be stored in a result
+  // variable.
+  if (qt->isIntegralOrEnumerationType() && qt.isConstQualified() &&
+      !qt.isVolatileQualified())
+    return false;
+  return true;
+}
+
 bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
                                                 DeclContext *DC) {
   Log *log = GetLog(LLDBLog::Expressions);
@@ -265,6 +286,10 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
   //   - During dematerialization, $0 is marked up as a load address with value
   //     equal to the contents of the structure entry.
   //
+  //   - Note: if we cannot take an address of the resulting Lvalue (e.g. it's
+  //     a static const member without an out-of-class definition), then we
+  //     follow the Rvalue route.
+  //
   // For Rvalues
   //
   //   - In AST result synthesis the expression E is transformed into an
@@ -304,7 +329,7 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
 
   clang::VarDecl *result_decl = nullptr;
 
-  if (is_lvalue) {
+  if (is_lvalue && CanTakeAddressOfLValue(last_expr)) {
     IdentifierInfo *result_ptr_id;
 
     if (expr_type->isFunctionType())

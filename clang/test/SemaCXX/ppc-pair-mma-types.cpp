@@ -85,8 +85,8 @@ public:
 
   // template argument
   template <typename T = __vector_quad>
-  void testVQTemplate(T v, T *p) { // expected-note {{candidate template ignored: substitution failure [with T = __vector_quad]: invalid use of PPC MMA type}} \
-                                         expected-note {{candidate template ignored: substitution failure [with T = __vector_quad]: invalid use of PPC MMA type}}
+  void testVQTemplate(T v, T *p) { // expected-note {{candidate template ignored: substitution failure [with T = vq_t]: invalid use of PPC MMA type}} \
+                                      expected-note {{candidate template ignored: substitution failure [with T = __vector_quad]: invalid use of PPC MMA type}}
     *(p + 1) = v;
   }
 
@@ -276,8 +276,8 @@ public:
 
   // template argument
   template <typename T = __vector_pair>
-  void testVPTemplate(T v, T *p) { // expected-note {{candidate template ignored: substitution failure [with T = __vector_pair]: invalid use of PPC MMA type}} \
-                                         expected-note {{candidate template ignored: substitution failure [with T = __vector_pair]: invalid use of PPC MMA type}}
+  void testVPTemplate(T v, T *p) { // expected-note {{candidate template ignored: substitution failure [with T = vp_t]: invalid use of PPC MMA type}} \
+                                      expected-note {{candidate template ignored: substitution failure [with T = __vector_pair]: invalid use of PPC MMA type}}
     *(p + 1) = v;
   }
 

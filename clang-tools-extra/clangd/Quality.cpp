@@ -378,7 +378,7 @@ wordMatching(llvm::StringRef Name, const llvm::StringSet<> *ContextWords) {
 SymbolRelevanceSignals::DerivedSignals
 SymbolRelevanceSignals::calculateDerivedSignals() const {
   DerivedSignals Derived;
-  Derived.NameMatchesContext = wordMatching(Name, ContextWords).hasValue();
+  Derived.NameMatchesContext = wordMatching(Name, ContextWords).has_value();
   Derived.FileProximityDistance = !FileProximityMatch || SymbolURI.empty()
                                       ? FileDistance::Unreachable
                                       : FileProximityMatch->distance(SymbolURI);
@@ -492,7 +492,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   if (S.ContextWords)
     OS << llvm::formatv(
         "\tMatching context word: {0}\n",
-        wordMatching(S.Name, S.ContextWords).getValueOr("<none>"));
+        wordMatching(S.Name, S.ContextWords).value_or("<none>"));
   OS << llvm::formatv("\tForbidden: {0}\n", S.Forbidden);
   OS << llvm::formatv("\tNeedsFixIts: {0}\n", S.NeedsFixIts);
   OS << llvm::formatv("\tIsInstanceMember: {0}\n", S.IsInstanceMember);
@@ -570,7 +570,7 @@ evaluateDecisionForest(const SymbolQualitySignals &Quality,
   DecisionForestScores Scores;
   // Exponentiating DecisionForest prediction makes the score of each tree a
   // multiplciative boost (like NameMatch). This allows us to weigh the
-  // prediciton score and NameMatch appropriately.
+  // prediction score and NameMatch appropriately.
   Scores.ExcludingName = pow(Base, Evaluate(E));
   // Following cases are not part of the generated training dataset:
   //  - Symbols with `NeedsFixIts`.
@@ -591,7 +591,7 @@ evaluateDecisionForest(const SymbolQualitySignals &Quality,
 // Produces an integer that sorts in the same order as F.
 // That is: a < b <==> encodeFloat(a) < encodeFloat(b).
 static uint32_t encodeFloat(float F) {
-  static_assert(std::numeric_limits<float>::is_iec559, "");
+  static_assert(std::numeric_limits<float>::is_iec559);
   constexpr uint32_t TopBit = ~(~uint32_t{0} >> 1);
 
   // Get the bits of the float. Endianness is the same as for integers.

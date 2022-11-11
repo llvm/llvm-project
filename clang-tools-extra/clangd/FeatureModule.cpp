@@ -13,12 +13,12 @@ namespace clang {
 namespace clangd {
 
 void FeatureModule::initialize(const Facilities &F) {
-  assert(!Fac.hasValue() && "Initialized twice");
+  assert(!Fac && "Initialized twice");
   Fac.emplace(F);
 }
 
 FeatureModule::Facilities &FeatureModule::facilities() {
-  assert(Fac.hasValue() && "Not initialized yet");
+  assert(Fac && "Not initialized yet");
   return *Fac;
 }
 

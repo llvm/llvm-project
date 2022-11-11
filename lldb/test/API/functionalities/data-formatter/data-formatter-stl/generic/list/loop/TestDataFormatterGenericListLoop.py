@@ -14,8 +14,6 @@ USE_LIBSTDCPP = "USE_LIBSTDCPP"
 USE_LIBCPP = "USE_LIBCPP"
 
 class GenericListDataFormatterTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def do_test_with_run_command(self, stdlib_type):
@@ -66,7 +64,7 @@ class GenericListDataFormatterTestCase(TestBase):
 
         # Run to completion.
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
+        self.assertState(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
 
     @add_test_categories(["libstdcxx"])
     def test_with_run_command_libstdcpp(self):

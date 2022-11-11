@@ -22,11 +22,11 @@ main:
     // .Ltmp2+8 points here
     .word 5
 
-// CHECK:      0: 20 00 00 90   adrp    x0, 0x4000
+// CHECK:      0: 90000020   adrp    x0, 0x4000
 // CHECK-NEXT:          0000000000000000:  IMAGE_REL_ARM64_PAGEBASE_REL21       .rdata
-// CHECK-NEXT: 4: 40 00 00 90   adrp    x0, 0x8000
+// CHECK-NEXT: 4: 90000040   adrp    x0, 0x8000
 // CHECK-NEXT:          0000000000000004:  IMAGE_REL_ARM64_PAGEBASE_REL21       $L.rdata_1
-// CHECK-NEXT: 8: 20 00 00 90   adrp    x0, 0x4000
+// CHECK-NEXT: 8: 90000020   adrp    x0, 0x4000
 // CHECK-NEXT:          0000000000000008:  IMAGE_REL_ARM64_PAGEBASE_REL21       $L.rdata_2
 
 // SYMBOLS:      Symbol {

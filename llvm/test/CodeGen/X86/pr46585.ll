@@ -16,7 +16,7 @@ define void @spam() local_unnamed_addr {
 ; CHECK-NEXT:  LBB0_2: ## %bb8
 ; CHECK-NEXT:    retq
 bb:
-  %tmp = load i8, i8* @global, align 1
+  %tmp = load i8, ptr @global, align 1
   %tmp1 = and i8 %tmp, 1
   %tmp2 = insertelement <8 x i8> undef, i8 %tmp1, i32 0
   %tmp3 = ashr <8 x i8> %tmp2, <i8 7, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
@@ -30,6 +30,6 @@ bb8:                                              ; preds = %bb9, %bb
   ret void
 
 bb9:                                              ; preds = %bb
-  store i64 1, i64* @global.1, align 8
+  store i64 1, ptr @global.1, align 8
   br label %bb8
 }

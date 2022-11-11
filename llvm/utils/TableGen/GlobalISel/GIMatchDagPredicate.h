@@ -96,7 +96,7 @@ public:
   void printDescription(raw_ostream &OS) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  virtual LLVM_DUMP_METHOD void dump() const override { print(errs()); }
+  LLVM_DUMP_METHOD void dump() const override { print(errs()); }
 #endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 };
 
@@ -119,7 +119,7 @@ public:
   void printDescription(raw_ostream &OS) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  virtual LLVM_DUMP_METHOD void dump() const override { print(errs()); }
+  LLVM_DUMP_METHOD void dump() const override { print(errs()); }
 #endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 };
 
@@ -134,7 +134,7 @@ public:
   void printDescription(raw_ostream &OS) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  virtual LLVM_DUMP_METHOD void dump() const override { print(errs()); }
+  LLVM_DUMP_METHOD void dump() const override { print(errs()); }
 #endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 };
 

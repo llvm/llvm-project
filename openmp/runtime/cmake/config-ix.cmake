@@ -27,7 +27,7 @@ function(libomp_check_version_symbols retval)
     void func2() { printf(\"World\"); }
     __asm__(\".symver func1, func@VER1\");
     __asm__(\".symver func2, func@VER2\");
-    int main() {
+    int main(void) {
       func1();
       func2();
       return 0;
@@ -58,7 +58,6 @@ check_cxx_compiler_flag(-Wstringop-overflow=0 LIBOMP_HAVE_WSTRINGOP_OVERFLOW_FLA
 check_cxx_compiler_flag(-Wno-stringop-truncation LIBOMP_HAVE_WNO_STRINGOP_TRUNCATION_FLAG)
 check_cxx_compiler_flag(-Wno-switch LIBOMP_HAVE_WNO_SWITCH_FLAG)
 check_cxx_compiler_flag(-Wno-uninitialized LIBOMP_HAVE_WNO_UNINITIALIZED_FLAG)
-check_cxx_compiler_flag(-Wno-unused-but-set-variable LIBOMP_HAVE_WNO_UNUSED_BUT_SET_VARIABLE_FLAG)
 check_cxx_compiler_flag(-Wno-return-type-c-linkage LIBOMP_HAVE_WNO_RETURN_TYPE_C_LINKAGE_FLAG)
 check_cxx_compiler_flag(-Wno-cast-qual LIBOMP_HAVE_WNO_CAST_QUAL_FLAG)
 check_cxx_compiler_flag(-Wno-int-to-void-pointer-cast LIBOMP_HAVE_WNO_INT_TO_VOID_POINTER_CAST_FLAG)
@@ -134,6 +133,7 @@ elseif(NOT APPLE)
   libomp_check_linker_flag(-Wl,--warn-shared-textrel LIBOMP_HAVE_WARN_SHARED_TEXTREL_FLAG)
   libomp_check_linker_flag(-Wl,--as-needed LIBOMP_HAVE_AS_NEEDED_FLAG)
   libomp_check_linker_flag("-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  libomp_check_linker_flag("-Wl,--undefined-version" LIBOMP_HAVE_UNDEFINED_VERSION_FLAG)  # FIXME issue #58858
   libomp_check_linker_flag(-static-libgcc LIBOMP_HAVE_STATIC_LIBGCC_FLAG)
   libomp_check_linker_flag(-Wl,-z,noexecstack LIBOMP_HAVE_Z_NOEXECSTACK_FLAG)
 endif()
@@ -321,7 +321,8 @@ else()
       (LIBOMP_ARCH STREQUAL aarch64_a64fx) OR
       (LIBOMP_ARCH STREQUAL ppc64le) OR
       (LIBOMP_ARCH STREQUAL ppc64) OR
-      (LIBOMP_ARCH STREQUAL riscv64))
+      (LIBOMP_ARCH STREQUAL riscv64) OR
+      (LIBOMP_ARCH STREQUAL loongarch64))
      AND # OS supported?
      ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR (NOT WIN32 AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
     set(LIBOMP_HAVE_OMPT_SUPPORT TRUE)

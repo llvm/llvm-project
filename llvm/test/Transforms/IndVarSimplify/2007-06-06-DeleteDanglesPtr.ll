@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -disable-output
+; RUN: opt < %s -passes=indvars -disable-output
 ; PR1487
 
 	%struct.AVClass = type { i8*, i8* (i8*)*, %struct.AVOption* }

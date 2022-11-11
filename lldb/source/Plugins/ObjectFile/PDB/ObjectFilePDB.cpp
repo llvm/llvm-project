@@ -31,7 +31,7 @@ static UUID GetPDBUUID(InfoStream &IS) {
   UUID::CvRecordPdb70 debug_info;
   memcpy(&debug_info.Uuid, IS.getGuid().Guid, sizeof(debug_info.Uuid));
   debug_info.Age = IS.getAge();
-  return UUID::fromCvRecord(debug_info);
+  return UUID(debug_info);
 }
 
 char ObjectFilePDB::ID;
@@ -136,8 +136,6 @@ size_t ObjectFilePDB::GetModuleSpecifications(
     break;
   case PDB_Machine::x86:
     module_arch.SetTriple("i386-pc-windows");
-    specs.Append(module_spec);
-    module_arch.SetTriple("i686-pc-windows");
     specs.Append(module_spec);
     break;
   case PDB_Machine::ArmNT:

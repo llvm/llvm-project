@@ -8,9 +8,9 @@
 ;      /      \        \
 ; loop.0.0  loop.0.1  loop.1.0
 ;
-; CHECK: Running pass: NoOpLoopNestPass on Loop at depth 1 containing: %loop.0<header><exiting>,%loop.0.0,%loop.0.1,%loop.0.1.preheader,%loop.0.loopexit<latch>,%loop.0.0.preheader
-; CHECK: Running pass: NoOpLoopNestPass on Loop at depth 1 containing: %loop.1<header>,%loop.1.bb1,%loop.1.bb2<exiting>,%loop.1.0,%loop.1.0.preheader,%loop.1.loopexit,%loop.1.backedge<latch>
-; CHECK-NOT: Running pass: NoOpLoopNestPass on Loop at depth 2
+; CHECK: Running pass: NoOpLoopNestPass on loop.0
+; CHECK: Running pass: NoOpLoopNestPass on loop.1
+; CHECK-NOT: Running pass: NoOpLoopNestPass on {{loop\..*\..*}}
 
 define void @f() {
 entry:

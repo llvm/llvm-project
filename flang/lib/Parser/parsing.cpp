@@ -96,6 +96,9 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   if (options.needProvenanceRangeToCharBlockMappings) {
     currentCooked_->CompileProvenanceRangeToOffsetMappings(allSources);
   }
+  if (options.showColors) {
+    allSources.setShowColors(/*showColors=*/true);
+  }
   return sourceFile;
 }
 

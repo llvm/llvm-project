@@ -116,14 +116,14 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
 ; X64-NEXT:    shrl $9, %ecx
 ; X64-NEXT:    andb $6, %cl
-; X64-NEXT:    movl $45, %r14d
+; X64-NEXT:    movl $45, %ebx
 ; X64-NEXT:    movl $45, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrl %cl, %eax
 ; X64-NEXT:    andl $3, %eax
-; X64-NEXT:    xorl %ebx, %ebx
+; X64-NEXT:    xorl %r14d, %r14d
 ; X64-NEXT:    cmpl $3, %eax
-; X64-NEXT:    setne %bl
+; X64-NEXT:    setne %r14b
 ; X64-NEXT:    xorl %edi, %edi
 ; X64-NEXT:    callq fesetround
 ; X64-NEXT:    fnstcw {{[0-9]+}}(%rsp)
@@ -134,9 +134,9 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrl %cl, %eax
 ; X64-NEXT:    andl $3, %eax
-; X64-NEXT:    leal 1(%rbx), %ebp
+; X64-NEXT:    leal 1(%r14), %ebp
 ; X64-NEXT:    cmpl $1, %eax
-; X64-NEXT:    cmovel %ebx, %ebp
+; X64-NEXT:    cmovel %r14d, %ebp
 ; X64-NEXT:    movl $3072, %edi # imm = 0xC00
 ; X64-NEXT:    callq fesetround
 ; X64-NEXT:    fnstcw {{[0-9]+}}(%rsp)
@@ -156,10 +156,10 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X64-NEXT:    shrl $9, %ecx
 ; X64-NEXT:    andb $6, %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shrl %cl, %r14d
-; X64-NEXT:    andl $3, %r14d
+; X64-NEXT:    shrl %cl, %ebx
+; X64-NEXT:    andl $3, %ebx
 ; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    cmpl $2, %r14d
+; X64-NEXT:    cmpl $2, %ebx
 ; X64-NEXT:    setne %cl
 ; X64-NEXT:    negl %ecx
 ; X64-NEXT:    xorl %eax, %eax

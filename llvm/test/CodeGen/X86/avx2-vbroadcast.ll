@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=+avx512vl,+avx512dq,+mmx | FileCheck %s --check-prefix=X32 --check-prefix=X32-AVX512VL
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx512vl,+avx512dq,+mmx | FileCheck %s --check-prefix=X64 --check-prefix=X64-AVX512VL
 
-define <16 x i8> @BB16(i8* %ptr) nounwind uwtable readnone ssp {
+define <16 x i8> @BB16(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: BB16:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -16,7 +16,7 @@ define <16 x i8> @BB16(i8* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vpbroadcastb (%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i8, i8* %ptr, align 4
+  %q = load i8, ptr %ptr, align 4
   %q0 = insertelement <16 x i8> undef, i8 %q, i32 0
   %q1 = insertelement <16 x i8> %q0, i8 %q, i32 1
   %q2 = insertelement <16 x i8> %q1, i8 %q, i32 2
@@ -36,7 +36,7 @@ entry:
   ret <16 x i8> %qf
 }
 
-define <32 x i8> @BB32(i8* %ptr) nounwind uwtable readnone ssp {
+define <32 x i8> @BB32(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: BB32:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -48,7 +48,7 @@ define <32 x i8> @BB32(i8* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vpbroadcastb (%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i8, i8* %ptr, align 4
+  %q = load i8, ptr %ptr, align 4
   %q0 = insertelement <32 x i8> undef, i8 %q, i32 0
   %q1 = insertelement <32 x i8> %q0, i8 %q, i32 1
   %q2 = insertelement <32 x i8> %q1, i8 %q, i32 2
@@ -85,7 +85,7 @@ entry:
   ret <32 x i8> %q2f
 }
 
-define <8 x i16> @W16(i16* %ptr) nounwind uwtable readnone ssp {
+define <8 x i16> @W16(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: W16:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -97,7 +97,7 @@ define <8 x i16> @W16(i16* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vpbroadcastw (%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i16, i16* %ptr, align 4
+  %q = load i16, ptr %ptr, align 4
   %q0 = insertelement <8 x i16> undef, i16 %q, i32 0
   %q1 = insertelement <8 x i16> %q0, i16 %q, i32 1
   %q2 = insertelement <8 x i16> %q1, i16 %q, i32 2
@@ -109,7 +109,7 @@ entry:
   ret <8 x i16> %q7
 }
 
-define <16 x i16> @WW16(i16* %ptr) nounwind uwtable readnone ssp {
+define <16 x i16> @WW16(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: WW16:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -121,7 +121,7 @@ define <16 x i16> @WW16(i16* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vpbroadcastw (%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i16, i16* %ptr, align 4
+  %q = load i16, ptr %ptr, align 4
   %q0 = insertelement <16 x i16> undef, i16 %q, i32 0
   %q1 = insertelement <16 x i16> %q0, i16 %q, i32 1
   %q2 = insertelement <16 x i16> %q1, i16 %q, i32 2
@@ -141,7 +141,7 @@ entry:
   ret <16 x i16> %qf
 }
 
-define <4 x i32> @D32(i32* %ptr) nounwind uwtable readnone ssp {
+define <4 x i32> @D32(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: D32:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -153,7 +153,7 @@ define <4 x i32> @D32(i32* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastss (%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i32, i32* %ptr, align 4
+  %q = load i32, ptr %ptr, align 4
   %q0 = insertelement <4 x i32> undef, i32 %q, i32 0
   %q1 = insertelement <4 x i32> %q0, i32 %q, i32 1
   %q2 = insertelement <4 x i32> %q1, i32 %q, i32 2
@@ -161,7 +161,7 @@ entry:
   ret <4 x i32> %q3
 }
 
-define <8 x i32> @DD32(i32* %ptr) nounwind uwtable readnone ssp {
+define <8 x i32> @DD32(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: DD32:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -173,7 +173,7 @@ define <8 x i32> @DD32(i32* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastss (%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i32, i32* %ptr, align 4
+  %q = load i32, ptr %ptr, align 4
   %q0 = insertelement <8 x i32> undef, i32 %q, i32 0
   %q1 = insertelement <8 x i32> %q0, i32 %q, i32 1
   %q2 = insertelement <8 x i32> %q1, i32 %q, i32 2
@@ -185,7 +185,7 @@ entry:
   ret <8 x i32> %q7
 }
 
-define <2 x i64> @Q64(i64* %ptr) nounwind uwtable readnone ssp {
+define <2 x i64> @Q64(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: Q64:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -197,13 +197,13 @@ define <2 x i64> @Q64(i64* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
-  %q = load i64, i64* %ptr, align 4
+  %q = load i64, ptr %ptr, align 4
   %q0 = insertelement <2 x i64> undef, i64 %q, i32 0
   %q1 = insertelement <2 x i64> %q0, i64 %q, i32 1
   ret <2 x i64> %q1
 }
 
-define <4 x i64> @QQ64(i64* %ptr) nounwind uwtable readnone ssp {
+define <4 x i64> @QQ64(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: QQ64:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -215,7 +215,7 @@ define <4 x i64> @QQ64(i64* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i64, i64* %ptr, align 4
+  %q = load i64, ptr %ptr, align 4
   %q0 = insertelement <4 x i64> undef, i64 %q, i32 0
   %q1 = insertelement <4 x i64> %q0, i64 %q, i32 1
   %q2 = insertelement <4 x i64> %q1, i64 %q, i32 2
@@ -223,7 +223,7 @@ entry:
   ret <4 x i64> %q3
 }
 
-define <8 x i16> @broadcast_mem_v4i16_v8i16(<4 x i16>* %ptr) {
+define <8 x i16> @broadcast_mem_v4i16_v8i16(ptr %ptr) {
 ; X32-LABEL: broadcast_mem_v4i16_v8i16:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -234,12 +234,12 @@ define <8 x i16> @broadcast_mem_v4i16_v8i16(<4 x i16>* %ptr) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
-  %load = load <4 x i16>, <4 x i16>* %ptr
+  %load = load <4 x i16>, ptr %ptr
   %shuf = shufflevector <4 x i16> %load, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   ret <8 x i16> %shuf
 }
 
-define <16 x i16> @broadcast_mem_v4i16_v16i16(<4 x i16>* %ptr) {
+define <16 x i16> @broadcast_mem_v4i16_v16i16(ptr %ptr) {
 ; X32-LABEL: broadcast_mem_v4i16_v16i16:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -250,14 +250,14 @@ define <16 x i16> @broadcast_mem_v4i16_v16i16(<4 x i16>* %ptr) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %load = load <4 x i16>, <4 x i16>* %ptr
+  %load = load <4 x i16>, ptr %ptr
   %shuf = shufflevector <4 x i16> %load, <4 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   ret <16 x i16> %shuf
 }
 
 ; FIXME: Pointer adjusted broadcasts
 
-define <16 x i8> @load_splat_16i8_16i8_1111111111111111(<16 x i8>* %ptr) nounwind uwtable readnone ssp {
+define <16 x i8> @load_splat_16i8_16i8_1111111111111111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_16i8_16i8_1111111111111111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -269,12 +269,12 @@ define <16 x i8> @load_splat_16i8_16i8_1111111111111111(<16 x i8>* %ptr) nounwin
 ; X64-NEXT:    vpbroadcastb 1(%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <16 x i8>, <16 x i8>* %ptr
+  %ld = load <16 x i8>, ptr %ptr
   %ret = shufflevector <16 x i8> %ld, <16 x i8> undef, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <16 x i8> %ret
 }
 
-define <32 x i8> @load_splat_32i8_16i8_11111111111111111111111111111111(<16 x i8>* %ptr) nounwind uwtable readnone ssp {
+define <32 x i8> @load_splat_32i8_16i8_11111111111111111111111111111111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_32i8_16i8_11111111111111111111111111111111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -286,12 +286,12 @@ define <32 x i8> @load_splat_32i8_16i8_11111111111111111111111111111111(<16 x i8
 ; X64-NEXT:    vpbroadcastb 1(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <16 x i8>, <16 x i8>* %ptr
+  %ld = load <16 x i8>, ptr %ptr
   %ret = shufflevector <16 x i8> %ld, <16 x i8> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <32 x i8> %ret
 }
 
-define <32 x i8> @load_splat_32i8_32i8_11111111111111111111111111111111(<32 x i8>* %ptr) nounwind uwtable readnone ssp {
+define <32 x i8> @load_splat_32i8_32i8_11111111111111111111111111111111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_32i8_32i8_11111111111111111111111111111111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -303,12 +303,12 @@ define <32 x i8> @load_splat_32i8_32i8_11111111111111111111111111111111(<32 x i8
 ; X64-NEXT:    vpbroadcastb 1(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <32 x i8>, <32 x i8>* %ptr
+  %ld = load <32 x i8>, ptr %ptr
   %ret = shufflevector <32 x i8> %ld, <32 x i8> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <32 x i8> %ret
 }
 
-define <8 x i16> @load_splat_8i16_8i16_11111111(<8 x i16>* %ptr) nounwind uwtable readnone ssp {
+define <8 x i16> @load_splat_8i16_8i16_11111111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_8i16_8i16_11111111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -320,12 +320,12 @@ define <8 x i16> @load_splat_8i16_8i16_11111111(<8 x i16>* %ptr) nounwind uwtabl
 ; X64-NEXT:    vpbroadcastw 2(%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <8 x i16>, <8 x i16>* %ptr
+  %ld = load <8 x i16>, ptr %ptr
   %ret = shufflevector <8 x i16> %ld, <8 x i16> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i16> %ret
 }
 
-define <16 x i16> @load_splat_16i16_8i16_1111111111111111(<8 x i16>* %ptr) nounwind uwtable readnone ssp {
+define <16 x i16> @load_splat_16i16_8i16_1111111111111111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_16i16_8i16_1111111111111111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -337,12 +337,12 @@ define <16 x i16> @load_splat_16i16_8i16_1111111111111111(<8 x i16>* %ptr) nounw
 ; X64-NEXT:    vpbroadcastw 2(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <8 x i16>, <8 x i16>* %ptr
+  %ld = load <8 x i16>, ptr %ptr
   %ret = shufflevector <8 x i16> %ld, <8 x i16> undef, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <16 x i16> %ret
 }
 
-define <16 x i16> @load_splat_16i16_16i16_1111111111111111(<16 x i16>* %ptr) nounwind uwtable readnone ssp {
+define <16 x i16> @load_splat_16i16_16i16_1111111111111111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_16i16_16i16_1111111111111111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -354,12 +354,12 @@ define <16 x i16> @load_splat_16i16_16i16_1111111111111111(<16 x i16>* %ptr) nou
 ; X64-NEXT:    vpbroadcastw 2(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <16 x i16>, <16 x i16>* %ptr
+  %ld = load <16 x i16>, ptr %ptr
   %ret = shufflevector <16 x i16> %ld, <16 x i16> undef, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <16 x i16> %ret
 }
 
-define <4 x i32> @load_splat_4i32_4i32_1111(<4 x i32>* %ptr) nounwind uwtable readnone ssp {
+define <4 x i32> @load_splat_4i32_4i32_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_4i32_4i32_1111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -371,12 +371,12 @@ define <4 x i32> @load_splat_4i32_4i32_1111(<4 x i32>* %ptr) nounwind uwtable re
 ; X64-NEXT:    vbroadcastss 4(%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x i32>, <4 x i32>* %ptr
+  %ld = load <4 x i32>, ptr %ptr
   %ret = shufflevector <4 x i32> %ld, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %ret
 }
 
-define <8 x i32> @load_splat_8i32_4i32_33333333(<4 x i32>* %ptr) nounwind uwtable readnone ssp {
+define <8 x i32> @load_splat_8i32_4i32_33333333(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_8i32_4i32_33333333:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -388,12 +388,12 @@ define <8 x i32> @load_splat_8i32_4i32_33333333(<4 x i32>* %ptr) nounwind uwtabl
 ; X64-NEXT:    vbroadcastss 12(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x i32>, <4 x i32>* %ptr
+  %ld = load <4 x i32>, ptr %ptr
   %ret = shufflevector <4 x i32> %ld, <4 x i32> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <8 x i32> %ret
 }
 
-define <8 x i32> @load_splat_8i32_8i32_55555555(<8 x i32>* %ptr) nounwind uwtable readnone ssp {
+define <8 x i32> @load_splat_8i32_8i32_55555555(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_8i32_8i32_55555555:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -405,12 +405,12 @@ define <8 x i32> @load_splat_8i32_8i32_55555555(<8 x i32>* %ptr) nounwind uwtabl
 ; X64-NEXT:    vbroadcastss 20(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <8 x i32>, <8 x i32>* %ptr
+  %ld = load <8 x i32>, ptr %ptr
   %ret = shufflevector <8 x i32> %ld, <8 x i32> undef, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   ret <8 x i32> %ret
 }
 
-define <4 x float> @load_splat_4f32_4f32_1111(<4 x float>* %ptr) nounwind uwtable readnone ssp {
+define <4 x float> @load_splat_4f32_4f32_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_4f32_4f32_1111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -422,12 +422,12 @@ define <4 x float> @load_splat_4f32_4f32_1111(<4 x float>* %ptr) nounwind uwtabl
 ; X64-NEXT:    vbroadcastss 4(%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x float>, <4 x float>* %ptr
+  %ld = load <4 x float>, ptr %ptr
   %ret = shufflevector <4 x float> %ld, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x float> %ret
 }
 
-define <8 x float> @load_splat_8f32_4f32_33333333(<4 x float>* %ptr) nounwind uwtable readnone ssp {
+define <8 x float> @load_splat_8f32_4f32_33333333(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_8f32_4f32_33333333:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -439,12 +439,12 @@ define <8 x float> @load_splat_8f32_4f32_33333333(<4 x float>* %ptr) nounwind uw
 ; X64-NEXT:    vbroadcastss 12(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x float>, <4 x float>* %ptr
+  %ld = load <4 x float>, ptr %ptr
   %ret = shufflevector <4 x float> %ld, <4 x float> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <8 x float> %ret
 }
 
-define <8 x float> @load_splat_8f32_8f32_55555555(<8 x float>* %ptr) nounwind uwtable readnone ssp {
+define <8 x float> @load_splat_8f32_8f32_55555555(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_8f32_8f32_55555555:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -456,12 +456,12 @@ define <8 x float> @load_splat_8f32_8f32_55555555(<8 x float>* %ptr) nounwind uw
 ; X64-NEXT:    vbroadcastss 20(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <8 x float>, <8 x float>* %ptr
+  %ld = load <8 x float>, ptr %ptr
   %ret = shufflevector <8 x float> %ld, <8 x float> undef, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   ret <8 x float> %ret
 }
 
-define <2 x i64> @load_splat_2i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable readnone ssp {
+define <2 x i64> @load_splat_2i64_2i64_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_2i64_2i64_1111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -473,12 +473,12 @@ define <2 x i64> @load_splat_2i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable re
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
-  %ld = load <2 x i64>, <2 x i64>* %ptr
+  %ld = load <2 x i64>, ptr %ptr
   %ret = shufflevector <2 x i64> %ld, <2 x i64> undef, <2 x i32> <i32 1, i32 1>
   ret <2 x i64> %ret
 }
 
-define <4 x i64> @load_splat_4i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable readnone ssp {
+define <4 x i64> @load_splat_4i64_2i64_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_4i64_2i64_1111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -490,12 +490,12 @@ define <4 x i64> @load_splat_4i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable re
 ; X64-NEXT:    vbroadcastsd 8(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <2 x i64>, <2 x i64>* %ptr
+  %ld = load <2 x i64>, ptr %ptr
   %ret = shufflevector <2 x i64> %ld, <2 x i64> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i64> %ret
 }
 
-define <4 x i64> @load_splat_4i64_4i64_2222(<4 x i64>* %ptr) nounwind uwtable readnone ssp {
+define <4 x i64> @load_splat_4i64_4i64_2222(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_4i64_4i64_2222:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -507,12 +507,12 @@ define <4 x i64> @load_splat_4i64_4i64_2222(<4 x i64>* %ptr) nounwind uwtable re
 ; X64-NEXT:    vbroadcastsd 16(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x i64>, <4 x i64>* %ptr
+  %ld = load <4 x i64>, ptr %ptr
   %ret = shufflevector <4 x i64> %ld, <4 x i64> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   ret <4 x i64> %ret
 }
 
-define <2 x double> @load_splat_2f64_2f64_1111(<2 x double>* %ptr) nounwind uwtable readnone ssp {
+define <2 x double> @load_splat_2f64_2f64_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_2f64_2f64_1111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -524,12 +524,12 @@ define <2 x double> @load_splat_2f64_2f64_1111(<2 x double>* %ptr) nounwind uwta
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
-  %ld = load <2 x double>, <2 x double>* %ptr
+  %ld = load <2 x double>, ptr %ptr
   %ret = shufflevector <2 x double> %ld, <2 x double> undef, <2 x i32> <i32 1, i32 1>
   ret <2 x double> %ret
 }
 
-define <4 x double> @load_splat_4f64_2f64_1111(<2 x double>* %ptr) nounwind uwtable readnone ssp {
+define <4 x double> @load_splat_4f64_2f64_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_4f64_2f64_1111:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -541,12 +541,12 @@ define <4 x double> @load_splat_4f64_2f64_1111(<2 x double>* %ptr) nounwind uwta
 ; X64-NEXT:    vbroadcastsd 8(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <2 x double>, <2 x double>* %ptr
+  %ld = load <2 x double>, ptr %ptr
   %ret = shufflevector <2 x double> %ld, <2 x double> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x double> %ret
 }
 
-define <4 x double> @load_splat_4f64_4f64_2222(<4 x double>* %ptr) nounwind uwtable readnone ssp {
+define <4 x double> @load_splat_4f64_4f64_2222(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: load_splat_4f64_4f64_2222:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -558,14 +558,14 @@ define <4 x double> @load_splat_4f64_4f64_2222(<4 x double>* %ptr) nounwind uwta
 ; X64-NEXT:    vbroadcastsd 16(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x double>, <4 x double>* %ptr
+  %ld = load <4 x double>, ptr %ptr
   %ret = shufflevector <4 x double> %ld, <4 x double> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   ret <4 x double> %ret
 }
 
 ; make sure that we still don't support broadcast double into 128-bit vector
 ; this used to crash
-define <2 x double> @I(double* %ptr) nounwind uwtable readnone ssp {
+define <2 x double> @I(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: I:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -577,7 +577,7 @@ define <2 x double> @I(double* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
-  %q = load double, double* %ptr, align 4
+  %q = load double, ptr %ptr, align 4
   %vecinit.i = insertelement <2 x double> undef, double %q, i32 0
   %vecinit2.i = insertelement <2 x double> %vecinit.i, double %q, i32 1
   ret <2 x double> %vecinit2.i
@@ -637,7 +637,7 @@ entry:
   ret <8 x float> %g
 }
 
-define <4 x float> @_e2(float* %ptr) nounwind uwtable readnone ssp {
+define <4 x float> @_e2(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: _e2:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
@@ -654,7 +654,7 @@ define <4 x float> @_e2(float* %ptr) nounwind uwtable readnone ssp {
   ret <4 x float> %vecinit6.i
 }
 
-define <8 x i8> @_e4(i8* %ptr) nounwind uwtable readnone ssp {
+define <8 x i8> @_e4(ptr %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: _e4:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    vmovaps {{.*#+}} xmm0 = <52,52,52,52,52,52,52,52,u,u,u,u,u,u,u,u>
@@ -1037,7 +1037,7 @@ define <4 x double> @splat_concat4(double %d) {
   ret <4 x double> %5
 }
 
-define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
+define void @broadcast_v16i32(ptr %a, ptr %b) {
 ; X32-AVX2-LABEL: broadcast_v16i32:
 ; X32-AVX2:       ## %bb.0:
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1071,11 +1071,11 @@ define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
 ; X64-AVX512VL-NEXT:    vmovups %zmm0, (%rsi)
 ; X64-AVX512VL-NEXT:    vzeroupper
 ; X64-AVX512VL-NEXT:    retq
-  %1 = load i32, i32* %a, align 4
+  %1 = load i32, ptr %a, align 4
   %2 = insertelement <8 x i32> undef, i32 %1, i32 0
   %3 = shufflevector <8 x i32> %2, <8 x i32> undef, <8 x i32> zeroinitializer
   %4 = shufflevector <8 x i32> undef, <8 x i32> %3, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-  store <16 x i32> %4, <16 x i32>* %b, align 4
+  store <16 x i32> %4, ptr %b, align 4
   ret void
 }
 
@@ -1087,7 +1087,7 @@ define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
 ; load will not create a cycle in the DAG.
 ; Those test cases exerce the latter.
 
-define void @isel_crash_16b(i8* %cV_R.addr) {
+define void @isel_crash_16b(ptr %cV_R.addr) {
 ; X32-LABEL: isel_crash_16b:
 ; X32:       ## %bb.0: ## %eintry
 ; X32-NEXT:    subl $60, %esp
@@ -1113,18 +1113,18 @@ eintry:
   %__a.addr.i = alloca <2 x i64>, align 16
   %__b.addr.i = alloca <2 x i64>, align 16
   %vCr = alloca <2 x i64>, align 16
-  store <2 x i64> zeroinitializer, <2 x i64>* %vCr, align 16
-  %tmp = load <2 x i64>, <2 x i64>* %vCr, align 16
-  %tmp2 = load i8, i8* %cV_R.addr, align 4
+  store <2 x i64> zeroinitializer, ptr %vCr, align 16
+  %tmp = load <2 x i64>, ptr %vCr, align 16
+  %tmp2 = load i8, ptr %cV_R.addr, align 4
   %splat.splatinsert = insertelement <16 x i8> undef, i8 %tmp2, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
   %tmp3 = bitcast <16 x i8> %splat.splat to <2 x i64>
-  store <2 x i64> %tmp, <2 x i64>* %__a.addr.i, align 16
-  store <2 x i64> %tmp3, <2 x i64>* %__b.addr.i, align 16
+  store <2 x i64> %tmp, ptr %__a.addr.i, align 16
+  store <2 x i64> %tmp3, ptr %__b.addr.i, align 16
   ret void
 }
 
-define void @isel_crash_32b(i8* %cV_R.addr) {
+define void @isel_crash_32b(ptr %cV_R.addr) {
 ; X32-LABEL: isel_crash_32b:
 ; X32:       ## %bb.0: ## %eintry
 ; X32-NEXT:    pushl %ebp
@@ -1167,18 +1167,18 @@ eintry:
   %__a.addr.i = alloca <4 x i64>, align 32
   %__b.addr.i = alloca <4 x i64>, align 32
   %vCr = alloca <4 x i64>, align 32
-  store <4 x i64> zeroinitializer, <4 x i64>* %vCr, align 16
-  %tmp = load <4 x i64>, <4 x i64>* %vCr, align 16
-  %tmp2 = load i8, i8* %cV_R.addr, align 4
+  store <4 x i64> zeroinitializer, ptr %vCr, align 16
+  %tmp = load <4 x i64>, ptr %vCr, align 16
+  %tmp2 = load i8, ptr %cV_R.addr, align 4
   %splat.splatinsert = insertelement <32 x i8> undef, i8 %tmp2, i32 0
   %splat.splat = shufflevector <32 x i8> %splat.splatinsert, <32 x i8> undef, <32 x i32> zeroinitializer
   %tmp3 = bitcast <32 x i8> %splat.splat to <4 x i64>
-  store <4 x i64> %tmp, <4 x i64>* %__a.addr.i, align 16
-  store <4 x i64> %tmp3, <4 x i64>* %__b.addr.i, align 16
+  store <4 x i64> %tmp, ptr %__a.addr.i, align 16
+  store <4 x i64> %tmp3, ptr %__b.addr.i, align 16
   ret void
 }
 
-define void @isel_crash_8w(i16* %cV_R.addr) {
+define void @isel_crash_8w(ptr %cV_R.addr) {
 ; X32-LABEL: isel_crash_8w:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    subl $60, %esp
@@ -1204,18 +1204,18 @@ entry:
   %__a.addr.i = alloca <2 x i64>, align 16
   %__b.addr.i = alloca <2 x i64>, align 16
   %vCr = alloca <2 x i64>, align 16
-  store <2 x i64> zeroinitializer, <2 x i64>* %vCr, align 16
-  %tmp = load <2 x i64>, <2 x i64>* %vCr, align 16
-  %tmp2 = load i16, i16* %cV_R.addr, align 4
+  store <2 x i64> zeroinitializer, ptr %vCr, align 16
+  %tmp = load <2 x i64>, ptr %vCr, align 16
+  %tmp2 = load i16, ptr %cV_R.addr, align 4
   %splat.splatinsert = insertelement <8 x i16> undef, i16 %tmp2, i32 0
   %splat.splat = shufflevector <8 x i16> %splat.splatinsert, <8 x i16> undef, <8 x i32> zeroinitializer
   %tmp3 = bitcast <8 x i16> %splat.splat to <2 x i64>
-  store <2 x i64> %tmp, <2 x i64>* %__a.addr.i, align 16
-  store <2 x i64> %tmp3, <2 x i64>* %__b.addr.i, align 16
+  store <2 x i64> %tmp, ptr %__a.addr.i, align 16
+  store <2 x i64> %tmp3, ptr %__b.addr.i, align 16
   ret void
 }
 
-define void @isel_crash_16w(i16* %cV_R.addr) {
+define void @isel_crash_16w(ptr %cV_R.addr) {
 ; X32-LABEL: isel_crash_16w:
 ; X32:       ## %bb.0: ## %eintry
 ; X32-NEXT:    pushl %ebp
@@ -1258,18 +1258,18 @@ eintry:
   %__a.addr.i = alloca <4 x i64>, align 32
   %__b.addr.i = alloca <4 x i64>, align 32
   %vCr = alloca <4 x i64>, align 32
-  store <4 x i64> zeroinitializer, <4 x i64>* %vCr, align 16
-  %tmp = load <4 x i64>, <4 x i64>* %vCr, align 16
-  %tmp2 = load i16, i16* %cV_R.addr, align 4
+  store <4 x i64> zeroinitializer, ptr %vCr, align 16
+  %tmp = load <4 x i64>, ptr %vCr, align 16
+  %tmp2 = load i16, ptr %cV_R.addr, align 4
   %splat.splatinsert = insertelement <16 x i16> undef, i16 %tmp2, i32 0
   %splat.splat = shufflevector <16 x i16> %splat.splatinsert, <16 x i16> undef, <16 x i32> zeroinitializer
   %tmp3 = bitcast <16 x i16> %splat.splat to <4 x i64>
-  store <4 x i64> %tmp, <4 x i64>* %__a.addr.i, align 16
-  store <4 x i64> %tmp3, <4 x i64>* %__b.addr.i, align 16
+  store <4 x i64> %tmp, ptr %__a.addr.i, align 16
+  store <4 x i64> %tmp3, ptr %__b.addr.i, align 16
   ret void
 }
 
-define void @isel_crash_4d(i32* %cV_R.addr) {
+define void @isel_crash_4d(ptr %cV_R.addr) {
 ; X32-LABEL: isel_crash_4d:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    subl $60, %esp
@@ -1295,18 +1295,18 @@ entry:
   %__a.addr.i = alloca <2 x i64>, align 16
   %__b.addr.i = alloca <2 x i64>, align 16
   %vCr = alloca <2 x i64>, align 16
-  store <2 x i64> zeroinitializer, <2 x i64>* %vCr, align 16
-  %tmp = load <2 x i64>, <2 x i64>* %vCr, align 16
-  %tmp2 = load i32, i32* %cV_R.addr, align 4
+  store <2 x i64> zeroinitializer, ptr %vCr, align 16
+  %tmp = load <2 x i64>, ptr %vCr, align 16
+  %tmp2 = load i32, ptr %cV_R.addr, align 4
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %tmp2, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %tmp3 = bitcast <4 x i32> %splat.splat to <2 x i64>
-  store <2 x i64> %tmp, <2 x i64>* %__a.addr.i, align 16
-  store <2 x i64> %tmp3, <2 x i64>* %__b.addr.i, align 16
+  store <2 x i64> %tmp, ptr %__a.addr.i, align 16
+  store <2 x i64> %tmp3, ptr %__b.addr.i, align 16
   ret void
 }
 
-define void @isel_crash_8d(i32* %cV_R.addr) {
+define void @isel_crash_8d(ptr %cV_R.addr) {
 ; X32-LABEL: isel_crash_8d:
 ; X32:       ## %bb.0: ## %eintry
 ; X32-NEXT:    pushl %ebp
@@ -1349,18 +1349,18 @@ eintry:
   %__a.addr.i = alloca <4 x i64>, align 32
   %__b.addr.i = alloca <4 x i64>, align 32
   %vCr = alloca <4 x i64>, align 32
-  store <4 x i64> zeroinitializer, <4 x i64>* %vCr, align 16
-  %tmp = load <4 x i64>, <4 x i64>* %vCr, align 16
-  %tmp2 = load i32, i32* %cV_R.addr, align 4
+  store <4 x i64> zeroinitializer, ptr %vCr, align 16
+  %tmp = load <4 x i64>, ptr %vCr, align 16
+  %tmp2 = load i32, ptr %cV_R.addr, align 4
   %splat.splatinsert = insertelement <8 x i32> undef, i32 %tmp2, i32 0
   %splat.splat = shufflevector <8 x i32> %splat.splatinsert, <8 x i32> undef, <8 x i32> zeroinitializer
   %tmp3 = bitcast <8 x i32> %splat.splat to <4 x i64>
-  store <4 x i64> %tmp, <4 x i64>* %__a.addr.i, align 16
-  store <4 x i64> %tmp3, <4 x i64>* %__b.addr.i, align 16
+  store <4 x i64> %tmp, ptr %__a.addr.i, align 16
+  store <4 x i64> %tmp3, ptr %__b.addr.i, align 16
   ret void
 }
 
-define void @isel_crash_2q(i64* %cV_R.addr) {
+define void @isel_crash_2q(ptr %cV_R.addr) {
 ; X32-LABEL: isel_crash_2q:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    subl $60, %esp
@@ -1386,17 +1386,17 @@ entry:
   %__a.addr.i = alloca <2 x i64>, align 16
   %__b.addr.i = alloca <2 x i64>, align 16
   %vCr = alloca <2 x i64>, align 16
-  store <2 x i64> zeroinitializer, <2 x i64>* %vCr, align 16
-  %tmp = load <2 x i64>, <2 x i64>* %vCr, align 16
-  %tmp2 = load i64, i64* %cV_R.addr, align 4
+  store <2 x i64> zeroinitializer, ptr %vCr, align 16
+  %tmp = load <2 x i64>, ptr %vCr, align 16
+  %tmp2 = load i64, ptr %cV_R.addr, align 4
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %tmp2, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
-  store <2 x i64> %tmp, <2 x i64>* %__a.addr.i, align 16
-  store <2 x i64> %splat.splat, <2 x i64>* %__b.addr.i, align 16
+  store <2 x i64> %tmp, ptr %__a.addr.i, align 16
+  store <2 x i64> %splat.splat, ptr %__b.addr.i, align 16
   ret void
 }
 
-define void @isel_crash_4q(i64* %cV_R.addr) {
+define void @isel_crash_4q(ptr %cV_R.addr) {
 ; X32-LABEL: isel_crash_4q:
 ; X32:       ## %bb.0: ## %eintry
 ; X32-NEXT:    pushl %ebp
@@ -1439,13 +1439,13 @@ eintry:
   %__a.addr.i = alloca <4 x i64>, align 32
   %__b.addr.i = alloca <4 x i64>, align 32
   %vCr = alloca <4 x i64>, align 32
-  store <4 x i64> zeroinitializer, <4 x i64>* %vCr, align 16
-  %tmp = load <4 x i64>, <4 x i64>* %vCr, align 16
-  %tmp2 = load i64, i64* %cV_R.addr, align 4
+  store <4 x i64> zeroinitializer, ptr %vCr, align 16
+  %tmp = load <4 x i64>, ptr %vCr, align 16
+  %tmp2 = load i64, ptr %cV_R.addr, align 4
   %splat.splatinsert = insertelement <4 x i64> undef, i64 %tmp2, i32 0
   %splat.splat = shufflevector <4 x i64> %splat.splatinsert, <4 x i64> undef, <4 x i32> zeroinitializer
-  store <4 x i64> %tmp, <4 x i64>* %__a.addr.i, align 16
-  store <4 x i64> %splat.splat, <4 x i64>* %__b.addr.i, align 16
+  store <4 x i64> %tmp, ptr %__a.addr.i, align 16
+  store <4 x i64> %splat.splat, ptr %__b.addr.i, align 16
   ret void
 }
 

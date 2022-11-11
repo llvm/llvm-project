@@ -9,16 +9,34 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FILE_WRITER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FILE_WRITER_H
 
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/File/file.h"
+
 #include <stddef.h>
+#include <stdio.h>
 
 namespace __llvm_libc {
 namespace printf_core {
 
-// write_to_file treats raw_pointer as a File and calls its write
-// function.
-void write_to_file(void *raw_pointer, const char *__restrict to_write,
-                   size_t len);
+class FileWriter {
+  __llvm_libc::File *file;
+
+public:
+  FileWriter(::FILE *init_file) {
+    file = reinterpret_cast<__llvm_libc::File *>(init_file);
+    file->lock();
+  }
+
+  ~FileWriter() { file->unlock(); }
+
+  int write(const char *__restrict to_write, size_t len);
+
+  // These write functions take a FileWriter as a void* in raw_pointer, and
+  // call the appropriate write function on it.
+  static int write_str(void *raw_pointer, cpp::string_view new_string);
+  static int write_chars(void *raw_pointer, char new_char, size_t len);
+  static int write_char(void *raw_pointer, char new_char);
+};
 
 } // namespace printf_core
 } // namespace __llvm_libc

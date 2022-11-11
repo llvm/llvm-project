@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceInstructions.h"
+#include "Utils.h"
 #include "llvm/IR/Constants.h"
 
 using namespace llvm;
@@ -42,7 +43,7 @@ static void extractInstrFromModule(Oracle &O, Module &Program) {
     for (auto &BB : F)
       for (auto &Inst : BB)
         if (!InstToKeep.count(&Inst)) {
-          Inst.replaceAllUsesWith(UndefValue::get(Inst.getType()));
+          Inst.replaceAllUsesWith(getDefaultValue(Inst.getType()));
           InstToDelete.push_back(&Inst);
         }
 
@@ -51,6 +52,5 @@ static void extractInstrFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceInstructionsDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Instructions...\n";
-  runDeltaPass(Test, extractInstrFromModule);
+  runDeltaPass(Test, extractInstrFromModule, "Reducing Instructions");
 }

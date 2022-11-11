@@ -17,6 +17,8 @@ for the latter.
 Given that declarative rewrite rules depend on op definition specification, this
 manual assumes knowledge of the [ODS](OpDefinitions.md) doc.
 
+[TOC]
+
 ## Benefits
 
 Compared to the hand-written C++ classes, this declarative approach has several

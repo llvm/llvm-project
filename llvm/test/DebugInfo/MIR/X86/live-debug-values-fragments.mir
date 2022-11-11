@@ -17,8 +17,14 @@
 # CHECK-LABEL: bb.3.bb3:
 # CHECK:      DBG_VALUE $ecx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}}, 
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 0, 32)
+# CHECK-SAME:                 $ecx, $r8d
 # CHECK-NEXT: DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}}, 
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 32, 32)
+# CHECK-SAME:                 $ebx, $r10d
 # CHECK-NEXT: XOR32rr
 # CHECK-NEXT: RET64
 #
@@ -26,30 +32,55 @@
 # CHECK-LABEL: bb.0.entry:
 # CHECK:      DBG_VALUE $cx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 0, 16)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}}, 
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 0, 16)
+# CHECK-SAME:                 $cx, $r8w
 
 # CHECK-LABEL: bb.1.bb1:
 # CHECK:      DBG_VALUE $cx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 0, 16)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 0, 16)
+# CHECK-SAME:                 $cx, $r8w
+# CHECK-NEXT: MOV32rr
 # CHECK-NEXT: MOV32rr
 # CHECK-NEXT: DBG_VALUE $ax, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 8, 16)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 8, 16)
+# CHECK-SAME:                 $ax, $r9w
 # CHECK-NEXT: JMP_1
 
 # CHECK-LABEL: bb.2.bb2:
 # CHECK-NOT:  DBG_VALUE
+# CHECK-NOT:  DBG_VALUE_LIST
 # CHECK:      DBG_VALUE $cx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 8, 16)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 8, 16)
+# CHECK-SAME:                 $cx, $r8w
+# CHECK-NEXT: MOV32rr
+# CHECK-NEXT: ADD32ri8
 # CHECK-NEXT: MOV32rr
 # CHECK-NEXT: ADD32ri8
 # CHECK-NEXT: DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 32, 32)
+# CHECK-SAME:                 $ebx, $r10d
 # CHECK-NEXT: JMP_1
 
 # CHECK-LABEL: bb.3.bb3:
 # CHECK:      DBG_VALUE $cx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 8, 16)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 8, 16)
+# CHECK-SAME:                 $cx, $r8w
 # CHECK-NEXT: DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 32, 32)
+# CHECK-SAME:                 $ebx, $r10d
 # CHECK-NEXT: XOR32rr
 # CHECK-NEXT: RET64
 
@@ -57,29 +88,49 @@
 # CHECK-LABEL: bb.0.entry:
 # CHECK:      DBG_VALUE $cx,  $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 0, 16)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 0, 16)
+# CHECK-SAME:                 $cx, $r8w
 # CHECK-NEXT: JMP_1 %bb.1
 #
 # CHECK-LABEL: bb.1.bb1:
 # CHECK:      DBG_VALUE $cx,  $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 0, 16)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 0, 16)
+# CHECK-SAME:                 $cx, $r8w
+# CHECK-NEXT: MOV32rr
 # CHECK-NEXT: MOV32rr
 # CHECK-NEXT: DBG_VALUE $rdi, $noreg, !{{[0-9]+}}, !DIExpression()
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}}, !DIExpression({{[^)]+}}), $rdi, $rdi
 # CHECK-NEXT: JMP_1 %bb.2
 #
 # CHECK-LABEL: bb.2.bb2:
 # CHECK-NOT:  DBG_VALUE $cx
+# CHECK-NOT:  DBG_VALUE_LIST {{.+}}, $cx
 # CHECK:      DBG_VALUE $rdi, $noreg, !{{[0-9]+}}, !DIExpression()
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}}, !DIExpression({{[^)]+}}), $rdi, $rdi
+# CHECK-NEXT: MOV32rr
+# CHECK-NEXT: ADD32ri8
 # CHECK-NEXT: MOV32rr
 # CHECK-NEXT: ADD32ri8
 # CHECK-NEXT: DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 32, 32)
+# CHECK-SAME:                 $ebx, $r10d
 # CHECK-NEXT: JMP_1 %bb.3
 #
 # CHECK-LABEL: bb.3.bb3:
 # CHECK-NOT:  DBG_VALUE $rdi
 # CHECK-NOT:  DBG_VALUE $cx
+# CHECK-NOT:  DBG_VALUE_LIST {{.+}}, $rdi
+# CHECK-NOT:  DBG_VALUE_LIST {{.+}}, $cx
 # CHECK:      DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+# CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression({{[^)]+}}, DW_OP_LLVM_fragment, 32, 32)
+# CHECK-SAME:                 $ebx, $r10d
 # CHECK-NEXT: XOR32rr
 # CHECK-NEXT: RET64
 
@@ -129,19 +180,23 @@
   !2 = !DIFile(filename: "bees.cpp", directory: ".")
   !3 = !DILocalVariable(name: "flannel", scope: !4, file: !2, line: 1, type: !16)
   !4 = distinct !DISubprogram(name: "nope", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !13, type: !14, isDefinition: true)
+  !5 = !DILocalVariable(name: "panel", scope: !4, file: !2, line: 1, type: !16)
   !8 = !DILocation(line: 4, scope: !4)
-  !13 = !{!3}
+  !13 = !{!3, !5}
   !14 = !DISubroutineType(types: !15)
   !15 = !{!16}
   !16 = !DIBasicType(name: "looong", size: 64, align: 64, encoding: DW_ATE_signed)
   !40 = distinct !DISubprogram(name: "toast", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !53, type: !14, isDefinition: true)
   !43 = !DILocalVariable(name: "charm", scope: !40, file: !2, line: 1, type: !16)
+  !44 = !DILocalVariable(name: "calm", scope: !40, file: !2, line: 1, type: !16)
   !48 = !DILocation(line: 4, scope: !40)
-  !53 = !{!43}
+  !53 = !{!43, !44}
   !80 = distinct !DISubprogram(name: "mort", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !93, type: !14, isDefinition: true)
+  !81 = distinct !DISubprogram(name: "floor", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !93, type: !14, isDefinition: true)
   !83 = !DILocalVariable(name: "bodkin", scope: !80, file: !2, line: 1, type: !16)
+  !84 = !DILocalVariable(name: "goblin", scope: !80, file: !2, line: 1, type: !16)
   !88 = !DILocation(line: 4, scope: !80)
-  !93 = !{!83}
+  !93 = !{!83, !84}
 
 ...
 ---
@@ -156,27 +211,33 @@ body:             |
     liveins: $rdi
   
     $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def $eflags
+    $r8d = XOR32rr undef $r8d, undef $r8d, implicit-def $eflags
     JMP_1 %bb.1
   
   bb.1.bb1 (align 4):
     successors: %bb.2
-    liveins: $ecx, $rdi
+    liveins: $ecx, $edx, $rdi, $r8d
   
     $eax = MOV32rr killed $ecx, implicit-def $rax
+    $r9d = MOV32rr killed $r8d, implicit-def $r9
     DBG_VALUE $eax, $noreg, !3, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !8
+    DBG_VALUE_LIST !5, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_fragment, 0, 32), $eax, $r9d, debug-location !8
     JMP_1 %bb.2
   
   bb.2.bb2:
     successors: %bb.3
-    liveins: $eax
+    liveins: $eax, $r9d
   
     $ebx = MOV32rr $eax
     $ebx = ADD32ri8 $ebx, 3, implicit-def dead $eflags, implicit killed $rbx, implicit-def $rbx
+    $r10d = MOV32rr $r9d
+    $r10d = ADD32ri8 $r10d, 3, implicit-def dead $eflags, implicit killed $rbx, implicit-def $rbx
     DBG_VALUE $ebx, $noreg, !3, !DIExpression(DW_OP_LLVM_fragment, 32, 32), debug-location !8
+    DBG_VALUE_LIST !5, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_fragment, 32, 32), $ebx, $r10d, debug-location !8
     JMP_1 %bb.3
 
   bb.3.bb3:
-    liveins: $eax, $ebx
+    liveins: $eax, $ebx, $r9d, $r10d
     $eax = XOR32rr killed $eax, killed $ebx, implicit-def $eflags
     RET64 $eax, debug-location !8
 
@@ -193,28 +254,35 @@ body:             |
     liveins: $rdi
   
     $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def $eflags
+    $r8d = XOR32rr undef $r8d, undef $r8d, implicit-def $eflags
     DBG_VALUE $cx, $noreg, !43, !DIExpression(DW_OP_LLVM_fragment, 0, 16), debug-location !48
+    DBG_VALUE_LIST !44, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_fragment, 0, 16), $cx, $r8w, debug-location !48
     JMP_1 %bb.1
   
   bb.1.bb1:
     successors: %bb.2
-    liveins: $ecx, $rdi
+    liveins: $ecx, $r8d, $rdi
   
     $eax = MOV32rr killed $ecx, implicit-def $rax
+    $r9d = MOV32rr killed $r8d, implicit-def $rax
     DBG_VALUE $ax, $noreg, !43, !DIExpression(DW_OP_LLVM_fragment, 8, 16), debug-location !48
+    DBG_VALUE_LIST !44, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_fragment, 8, 16), $ax, $r9w, debug-location !48
     JMP_1 %bb.2
   
   bb.2.bb2:
     successors: %bb.3
-    liveins: $eax
+    liveins: $eax, $r9d
   
     $ebx = MOV32rr $eax
     $ebx = ADD32ri8 $ebx, 3, implicit-def dead $eflags, implicit killed $rbx, implicit-def $rbx
+    $r10d = MOV32rr $r9d
+    $r10d = ADD32ri8 $r10d, 3, implicit-def dead $eflags, implicit killed $rbx, implicit-def $rbx
     DBG_VALUE $ebx, $noreg, !43, !DIExpression(DW_OP_LLVM_fragment, 32, 32), debug-location !48
+    DBG_VALUE_LIST !44, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_fragment, 32, 32), $ebx, $r10d, debug-location !48
     JMP_1 %bb.3
 
   bb.3.bb3:
-    liveins: $eax, $ebx
+    liveins: $eax, $ebx, $r9d, $r10d
     $eax = XOR32rr killed $eax, killed $ebx, implicit-def $eflags
     RET64 $eax, debug-location !48
 
@@ -231,24 +299,31 @@ body:             |
     liveins: $rdi
   
     $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def $eflags
+    $r8d = XOR32rr undef $r8d, undef $r8d, implicit-def $eflags
     DBG_VALUE $cx, $noreg, !83, !DIExpression(DW_OP_LLVM_fragment, 0, 16), debug-location !88
+    DBG_VALUE_LIST !84, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_fragment, 0, 16), $cx, $r8w, debug-location !88
     JMP_1 %bb.1
   
   bb.1.bb1:
     successors: %bb.2
-    liveins: $ecx, $rdi
+    liveins: $ecx, $r8d, $rdi
   
     $eax = MOV32rr killed $ecx, implicit-def $rax
+    $r9d = MOV32rr killed $r8d, implicit-def $r9
     DBG_VALUE $rdi, $noreg, !83, !DIExpression(), debug-location !88
+    DBG_VALUE_LIST !84, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rdi, $rdi, debug-location !88
     JMP_1 %bb.2
   
   bb.2.bb2:
     successors: %bb.3
-    liveins: $eax
+    liveins: $eax, $r9d
   
     $ebx = MOV32rr $eax
     $ebx = ADD32ri8 $ebx, 3, implicit-def dead $eflags, implicit killed $rbx, implicit-def $rbx
+    $r10d = MOV32rr $r9d
+    $r10d = ADD32ri8 $r10d, 3, implicit-def dead $eflags, implicit killed $r10, implicit-def $r10
     DBG_VALUE $ebx, $noreg, !83, !DIExpression(DW_OP_LLVM_fragment, 32, 32), debug-location !88
+    DBG_VALUE_LIST !84, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_fragment, 32, 32), $ebx, $r10d, debug-location !88
     JMP_1 %bb.3
 
   bb.3.bb3:

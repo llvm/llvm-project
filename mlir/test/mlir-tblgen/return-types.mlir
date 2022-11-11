@@ -39,6 +39,13 @@ func.func @testReturnTypeOpInterfaceMismatch(%arg0 : tensor<10xf32>, %arg1 : ten
 
 // -----
 
+func.func @testReturnTypeOpInterface(%arg0 : tensor<10xf32>) {
+  // expected-error@+1 {{required first operand and result to match}}
+  %bad = "test.op_with_refine_type_if"(%arg0, %arg0) : (tensor<10xf32>, tensor<10xf32>) -> tensor<*xf32>
+  return
+}
+
+// -----
 // CHECK-LABEL: testReifyFunctions
 func.func @testReifyFunctions(%arg0 : tensor<10xf32>, %arg1 : tensor<20xf32>) {
   // expected-remark@+1 {{arith.constant 10}}

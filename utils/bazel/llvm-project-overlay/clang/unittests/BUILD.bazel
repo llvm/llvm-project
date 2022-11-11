@@ -4,8 +4,9 @@
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 cc_test(
     name = "ast_tests",
@@ -29,9 +30,9 @@ cc_test(
         "//llvm:Core",
         "//llvm:Support",
         "//llvm:TestingSupport",
-        "//llvm:gmock",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -47,7 +48,7 @@ cc_library(
         "//clang:frontend",
         "//clang:testing",
         "//clang:tooling",
-        "//llvm:gtest",
+        "//third-party/unittest:gtest",
     ],
 )
 
@@ -67,8 +68,8 @@ cc_test(
         "//clang:tooling",
         "//llvm:Support",
         "//llvm:TestingSupport",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -86,8 +87,8 @@ cc_test(
         "//clang:frontend",
         "//clang:tooling",
         "//llvm:Support",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -110,9 +111,9 @@ cc_test(
         "//clang:parse",
         "//clang:tooling",
         "//llvm:Support",
-        "//llvm:gmock",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -134,10 +135,11 @@ cc_test(
         "//clang:serialization",
         "//clang:tooling",
         "//llvm:Support",
+        "//llvm:TestingADT",
         "//llvm:TestingSupport",
-        "//llvm:gmock",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -155,9 +157,9 @@ cc_test(
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//llvm:config",
-        "//llvm:gmock",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -181,8 +183,8 @@ cc_test(
         "//clang:sema",
         "//llvm:Core",
         "//llvm:Support",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -205,8 +207,9 @@ cc_test(
         "//clang:frontend",
         "//clang:tooling_core",
         "//llvm:Support",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -228,9 +231,9 @@ cc_test(
         "//clang:sema",
         "//clang:serialization",
         "//llvm:Support",
-        "//llvm:gmock",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -253,9 +256,10 @@ cc_test(
         "//clang:sema",
         "//clang:serialization",
         "//llvm:Support",
-        "//llvm:gmock",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -277,7 +281,7 @@ cc_library(
         "//clang:tooling",
         "//clang:tooling_core",
         "//llvm:Support",
-        "//llvm:gtest",
+        "//third-party/unittest:gtest",
     ],
 )
 
@@ -302,8 +306,8 @@ cc_test(
         "//clang:tooling",
         "//clang:tooling_refactoring",
         "//llvm:Support",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -317,8 +321,8 @@ cc_test(
     deps = [
         "//clang:rewrite",
         "//clang:tooling",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -339,9 +343,9 @@ cc_test(
         "//clang:sema",
         "//clang:tooling",
         "//llvm:TestingSupport",
-        "//llvm:gmock",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -360,7 +364,7 @@ cc_library(
         "//clang:static_analyzer_frontend",
         "//clang:testing",
         "//clang:tooling",
-        "//llvm:gtest",
+        "//third-party/unittest:gtest",
     ],
 )
 
@@ -384,8 +388,8 @@ cc_test(
         "//clang:tooling",
         "//llvm:Support",
         "//llvm:config",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -417,9 +421,9 @@ cc_test(
         "//clang:transformer",
         "//llvm:Support",
         "//llvm:TestingSupport",
-        "//llvm:gmock",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -441,7 +445,7 @@ cc_library(
         "//clang:tooling",
         "//clang:tooling_core",
         "//llvm:Support",
-        "//llvm:gtest",
+        "//third-party/unittest:gtest",
     ],
 )
 
@@ -464,9 +468,9 @@ cc_test(
         "//clang:tooling_syntax",
         "//llvm:Support",
         "//llvm:TestingSupport",
-        "//llvm:gmock",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -492,9 +496,9 @@ cc_test(
         "//clang:tooling_syntax",
         "//llvm:Support",
         "//llvm:TestingSupport",
-        "//llvm:gmock",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -518,7 +522,7 @@ cc_test(
     deps = [
         "//clang:libclang",
         "//llvm:Support",
-        "//llvm:gtest",
-        "//llvm:gtest_main",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )

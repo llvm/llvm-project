@@ -1526,9 +1526,8 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
     return;
 
   // Do not emit again if already emitted.
-  if (ProtoFunctions.find(F) != ProtoFunctions.end())
+  if (!ProtoFunctions.insert(F).second)
     return;
-  ProtoFunctions.insert(F);
 
   uint32_t ProtoTypeId;
   const std::unordered_map<uint32_t, StringRef> FuncArgNames;

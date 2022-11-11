@@ -138,6 +138,9 @@ bool BPFAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  BPF_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                      getSubtargetInfo().getFeatureBits());
+
   MCInst TmpInst;
 
   if (!BTF || !BTF->InstLower(MI, TmpInst)) {

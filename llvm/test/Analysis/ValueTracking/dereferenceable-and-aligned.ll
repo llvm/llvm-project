@@ -1,4 +1,4 @@
-; RUN: opt < %s -licm -S | FileCheck %s
+; RUN: opt < %s -passes=licm -S | FileCheck %s
 
 target datalayout = "e-p:32:32-p1:64:64-p4:64:64"
 

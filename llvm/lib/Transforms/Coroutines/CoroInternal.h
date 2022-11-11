@@ -17,8 +17,6 @@
 namespace llvm {
 
 class CallGraph;
-class CallGraphSCC;
-class PassRegistry;
 
 namespace coro {
 
@@ -114,6 +112,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     unsigned IndexAlign;
     unsigned IndexOffset;
     bool HasFinalSuspend;
+    bool HasUnwindCoroEnd;
   };
 
   struct RetconLoweringStorage {

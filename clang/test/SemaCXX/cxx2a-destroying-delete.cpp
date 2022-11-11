@@ -42,9 +42,9 @@ namespace convert_param {
   };
   struct B : private A { using A::operator delete; }; // expected-note 2{{declared private here}}
   struct C : B {};
-  void delete_C(C *c) { delete c; } // expected-error {{cannot cast 'convert_param::C' to its private base class 'convert_param::A'}}
+  void delete_C(C *c) { delete c; } // expected-error {{cannot cast 'C' to its private base class 'A'}}
 
-  // expected-error@-7 {{cannot cast 'convert_param::D' to its private base class 'convert_param::A'}}
+  // expected-error@-7 {{cannot cast 'convert_param::D' to its private base class 'A'}}
   struct D : B { virtual ~D() {} }; // expected-note {{while checking implicit 'delete this' for virtual destructor}}
 }
 
@@ -120,7 +120,7 @@ namespace first_param_conversion {
   struct D : B {};
   struct E : C, D {};
   void g(E *e) {
-    delete e; // expected-error {{ambiguous conversion from derived class 'first_param_conversion::E' to base class 'first_param_conversion::B':}}
+    delete e; // expected-error {{ambiguous conversion from derived class 'E' to base class 'B':}}
   }
 }
 

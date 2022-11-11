@@ -15,6 +15,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+#include <type_traits>
+
 namespace llvm {
 namespace sys {
 class DynamicLibrary;
@@ -70,6 +72,8 @@ struct RegisterInfo {
                                           byte_size);
   }
 };
+static_assert(std::is_trivial<RegisterInfo>::value,
+              "RegisterInfo must be trivial.");
 
 /// Registers are grouped into register sets
 struct RegisterSet {
@@ -105,6 +109,12 @@ struct OptionValidator {
 
 typedef struct type128 { uint64_t x[2]; } type128;
 typedef struct type256 { uint64_t x[4]; } type256;
+
+/// Functor that returns a ValueObjectSP for a variable given its name
+/// and the StackFrame of interest. Used primarily in the Materializer
+/// to refetch a ValueObject when the ExecutionContextScope changes.
+using ValueObjectProviderTy =
+    std::function<lldb::ValueObjectSP(ConstString, StackFrame *)>;
 
 } // namespace lldb_private
 

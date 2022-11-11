@@ -12,12 +12,12 @@
 ;      CHECK: testq %rax, %r
 ; CHECK-NEXT: j
 
-define void @test(i8* %l) nounwind {
+define void @test(ptr %l) nounwind {
 entry:
-  %l.addr = alloca i8*, align 8                   ; <i8**> [#uses=2]
-  store i8* %l, i8** %l.addr
-  %tmp = load i8*, i8** %l.addr                        ; <i8*> [#uses=1]
-  %tmp1 = load i8, i8* %tmp                           ; <i8> [#uses=1]
+  %l.addr = alloca ptr, align 8                   ; <ptr> [#uses=2]
+  store ptr %l, ptr %l.addr
+  %tmp = load ptr, ptr %l.addr                        ; <ptr> [#uses=1]
+  %tmp1 = load i8, ptr %tmp                           ; <i8> [#uses=1]
   %conv = sext i8 %tmp1 to i32                    ; <i32> [#uses=1]
   switch i32 %conv, label %sw.default [
     i32 62, label %sw.bb
@@ -102,7 +102,7 @@ if.end:
 
 ; Ensure that optimizing for jump tables doesn't needlessly deteriorate the
 ; created binary tree search. See PR22262.
-define void @test4(i32 %x, i32* %y) {
+define void @test4(i32 %x, ptr %y) {
 ; CHECK-LABEL: test4:
 
 entry:
@@ -115,25 +115,25 @@ entry:
     i32 60, label %sw.bb5
   ]
 sw.bb:
-  store i32 1, i32* %y
+  store i32 1, ptr %y
   br label %sw.epilog
 sw.bb1:
-  store i32 2, i32* %y
+  store i32 2, ptr %y
   br label %sw.epilog
 sw.bb2:
-  store i32 3, i32* %y
+  store i32 3, ptr %y
   br label %sw.epilog
 sw.bb3:
-  store i32 4, i32* %y
+  store i32 4, ptr %y
   br label %sw.epilog
 sw.bb4:
-  store i32 5, i32* %y
+  store i32 5, ptr %y
   br label %sw.epilog
 sw.bb5:
-  store i32 6, i32* %y
+  store i32 6, ptr %y
   br label %sw.epilog
 sw.default:
-  store i32 7, i32* %y
+  store i32 7, ptr %y
   br label %sw.epilog
 sw.epilog:
   ret void

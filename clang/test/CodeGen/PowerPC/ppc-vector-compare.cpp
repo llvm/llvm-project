@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -target-feature +vsx -triple powerpc64-unknown-unknown -emit-llvm %s \
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:            -o - | FileCheck %s
 
 #include <altivec.h>

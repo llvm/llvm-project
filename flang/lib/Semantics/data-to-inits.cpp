@@ -123,6 +123,7 @@ private:
   DataInitializations &inits_;
   evaluate::ExpressionAnalyzer &exprAnalyzer_;
   ValueListIterator<DSV> values_;
+  const Scope *scope_{nullptr};
 };
 
 template <typename DSV>
@@ -141,7 +142,9 @@ bool DataInitializationCompiler<DSV>::Scan(
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(const parser::Variable &var) {
   if (const auto *expr{GetExpr(exprAnalyzer_.context(), var)}) {
-    exprAnalyzer_.GetFoldingContext().messages().SetLocation(var.GetSource());
+    parser::CharBlock at{var.GetSource()};
+    exprAnalyzer_.GetFoldingContext().messages().SetLocation(at);
+    scope_ = &exprAnalyzer_.context().FindScope(at);
     if (InitDesignator(*expr)) {
       return true;
     }
@@ -153,8 +156,9 @@ template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(
     const parser::Designator &designator) {
   if (auto expr{exprAnalyzer_.Analyze(designator)}) {
-    exprAnalyzer_.GetFoldingContext().messages().SetLocation(
-        parser::FindSourceLocation(designator));
+    parser::CharBlock at{parser::FindSourceLocation(designator)};
+    exprAnalyzer_.GetFoldingContext().messages().SetLocation(at);
+    scope_ = &exprAnalyzer_.context().FindScope(at);
     if (InitDesignator(*expr)) {
       return true;
     }
@@ -361,7 +365,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
       return true;
     } else if (isProcPointer) {
       if (evaluate::IsProcedure(*expr)) {
-        if (CheckPointerAssignment(context, designator, *expr)) {
+        if (CheckPointerAssignment(context, designator, *expr, DEREF(scope_))) {
           if (lastSymbol->has<ProcEntityDetails>()) {
             GetImage().AddPointer(offsetSymbol.offset(), *expr);
             return true;
@@ -382,7 +386,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
       exprAnalyzer_.Say(
           "Procedure '%s' may not be used to initialize '%s', which is not a procedure pointer"_err_en_US,
           expr->AsFortran(), DescribeElement());
-    } else if (CheckInitialTarget(context, designator, *expr)) {
+    } else if (CheckInitialTarget(context, designator, *expr, DEREF(scope_))) {
       GetImage().AddPointer(offsetSymbol.offset(), *expr);
       return true;
     }
@@ -541,8 +545,8 @@ static void PopulateWithComponentDefaults(SymbolDataInitialization &init,
             if (auto dyType{evaluate::DynamicType::From(component)}) {
               if (auto extents{evaluate::GetConstantExtents(
                       foldingContext, component)}) {
-                if (auto extant{init.image.AsConstant(
-                        foldingContext, *dyType, *extents, componentOffset)}) {
+                if (auto extant{init.image.AsConstant(foldingContext, *dyType,
+                        *extents, false /*don't pad*/, componentOffset)}) {
                   initialized = !(*extant == *object->init());
                 }
               }
@@ -673,7 +677,8 @@ static std::size_t ComputeMinElementBytes(
       auto size{static_cast<std::size_t>(
           evaluate::ToInt64(dyType->MeasureSizeInBytes(foldingContext, true))
               .value_or(1))};
-      if (std::size_t alignment{dyType->GetAlignment(foldingContext)}) {
+      if (std::size_t alignment{
+              dyType->GetAlignment(foldingContext.targetCharacteristics())}) {
         size = ((size + alignment - 1) / alignment) * alignment;
       }
       if (&s == &first) {
@@ -753,7 +758,7 @@ static bool CombineEquivalencedInitialization(
     combinedSymbol.set_size(bytes);
     std::size_t minElementBytes{
         ComputeMinElementBytes(associated, foldingContext)};
-    if (!evaluate::IsValidKindOfIntrinsicType(
+    if (!exprAnalyzer.GetFoldingContext().targetCharacteristics().IsTypeEnabled(
             TypeCategory::Integer, minElementBytes) ||
         (bytes % minElementBytes) != 0) {
       minElementBytes = 1;
@@ -820,7 +825,7 @@ static bool ProcessScopes(const Scope &scope,
   case Scope::Kind::MainProgram:
   case Scope::Kind::Subprogram:
   case Scope::Kind::BlockData:
-  case Scope::Kind::Block: {
+  case Scope::Kind::BlockConstruct: {
     std::list<std::list<SymbolRef>> associations{GetStorageAssociations(scope)};
     for (const std::list<SymbolRef> &associated : associations) {
       if (std::find_if(associated.begin(), associated.end(), [](SymbolRef ref) {
@@ -861,7 +866,7 @@ void ConstructInitializer(const Symbol &symbol,
         CHECK(!procDesignator->GetComponent());
         mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
       } else {
-        CHECK(evaluate::IsNullPointer(*expr));
+        CHECK(evaluate::IsNullProcedurePointer(*expr));
         mutableProc.set_init(nullptr);
       }
     } else {

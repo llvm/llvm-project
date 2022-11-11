@@ -124,11 +124,9 @@ PlatformWindows::PlatformWindows(bool is_host) : RemoteAwarePlatform(is_host) {
     if (spec.IsValid())
       m_supported_architectures.push_back(spec);
   };
-  AddArch(ArchSpec("i686-pc-windows"));
   AddArch(HostInfo::GetArchitecture(HostInfo::eArchKindDefault));
   AddArch(HostInfo::GetArchitecture(HostInfo::eArchKind32));
   AddArch(HostInfo::GetArchitecture(HostInfo::eArchKind64));
-  AddArch(ArchSpec("i386-pc-windows"));
 }
 
 Status PlatformWindows::ConnectRemote(Args &args) {

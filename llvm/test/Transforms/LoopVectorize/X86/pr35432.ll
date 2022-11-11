@@ -40,7 +40,7 @@ define i32 @main(i32* %ptr) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], 1
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP2]], i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP5]], [[UMIN1]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP6]], 8
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP6]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i8 [[CONV3]], -1

@@ -12,6 +12,8 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandCompletions.h"
+#include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"

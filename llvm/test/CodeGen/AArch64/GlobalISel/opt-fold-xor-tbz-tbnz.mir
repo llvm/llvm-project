@@ -38,8 +38,7 @@ body:             |
 
     %and:gpr(s64) = G_AND %fold_me, %bit
     %cmp:gpr(s32) = G_ICMP intpred(eq), %and(s64), %zero
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -76,8 +75,7 @@ body:             |
     %fold_me:gpr(s64) = G_XOR %copy, %fold_cst
     %and:gpr(s64) = G_AND %fold_me, %bit
     %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -119,8 +117,7 @@ body:             |
 
     %and:gpr(s64) = G_AND %fold_me, %bit
     %cmp:gpr(s32) = G_ICMP intpred(eq), %and(s64), %zero
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -153,8 +150,7 @@ body:             |
     %5:gpr(s64) = G_ZEXT %4(s32)
     %15:gpr(s64) = G_CONSTANT i64 0
     %13:gpr(s32) = G_ICMP intpred(slt), %5(s64), %15
-    %7:gpr(s1) = G_TRUNC %13(s32)
-    G_BRCOND %7(s1), %bb.1
+    G_BRCOND %13, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -191,8 +187,7 @@ body:             |
     %fold_me:gpr(s64) = G_XOR %fold_cst, %copy
     %and:gpr(s64) = G_AND %fold_me, %bit
     %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -230,8 +225,7 @@ body:             |
 
     %and:gpr(s64) = G_AND %xor2, %bit
     %cmp:gpr(s32) = G_ICMP intpred(eq), %and(s64), %zero
-    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR

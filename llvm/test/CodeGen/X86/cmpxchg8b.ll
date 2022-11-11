@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown- -mcpu=lakemont | FileCheck %s --check-prefix=X86
 
 ; Basic 64-bit cmpxchg
-define void @t1(i64* nocapture %p) nounwind ssp {
+define void @t1(ptr nocapture %p) nounwind ssp {
 ; X86-LABEL: t1:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
@@ -50,7 +50,7 @@ define void @t1(i64* nocapture %p) nounwind ssp {
 ; I486-NEXT:    popl %ebp
 ; I486-NEXT:    retl
 entry:
-  %r = cmpxchg i64* %p, i64 0, i64 1 seq_cst seq_cst
+  %r = cmpxchg ptr %p, i64 0, i64 1 seq_cst seq_cst
   ret void
 }
 

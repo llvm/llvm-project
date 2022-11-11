@@ -19,8 +19,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool tests() {
     {
         std::vector<int> v;
         v.reserve(3);
@@ -71,5 +70,14 @@ int main(int, char**)
         assert(v.capacity() == old_capacity);
         assert(v[4] == 42);
     }
-  return 0;
+
+    return true;
+}
+
+int main(int, char**) {
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

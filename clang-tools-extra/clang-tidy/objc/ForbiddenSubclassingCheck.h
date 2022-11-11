@@ -21,7 +21,7 @@ namespace objc {
 /// documented to not support subclassing.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc-forbidden-subclassing.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/objc/forbidden-subclassing.html
 class ForbiddenSubclassingCheck : public ClangTidyCheck {
 public:
   ForbiddenSubclassingCheck(StringRef Name, ClangTidyContext *Context);

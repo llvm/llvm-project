@@ -70,16 +70,29 @@ static cl::opt<std::string>
                   cl::desc("The name of the predefined style used as a\n"
                            "fallback in case clang-format is invoked with\n"
                            "-style=file, but can not find the .clang-format\n"
-                           "file to use.\n"
+                           "file to use. Defaults to 'LLVM'.\n"
                            "Use -fallback-style=none to skip formatting."),
                   cl::init(clang::format::DefaultFallbackStyle),
                   cl::cat(ClangFormatCategory));
 
 static cl::opt<std::string> AssumeFileName(
     "assume-filename",
-    cl::desc("Override filename used to determine the language.\n"
-             "When reading from stdin, clang-format assumes this\n"
-             "filename to determine the language."),
+    cl::desc("Set filename used to determine the language and to find\n"
+             ".clang-format file.\n"
+             "Only used when reading from stdin.\n"
+             "If this is not passed, the .clang-format file is searched\n"
+             "relative to the current working directory when reading stdin.\n"
+             "Unrecognized filenames are treated as C++.\n"
+             "supported:\n"
+             "  CSharp: .cs\n"
+             "  Java: .java\n"
+             "  JavaScript: .mjs .js .ts\n"
+             "  Json: .json\n"
+             "  Objective-C: .m .mm\n"
+             "  Proto: .proto .protodevel\n"
+             "  TableGen: .td\n"
+             "  TextProto: .textpb .pb.txt .textproto .asciipb\n"
+             "  Verilog: .sv .svh .v .vh"),
     cl::init("<stdin>"), cl::cat(ClangFormatCategory));
 
 static cl::opt<bool> Inplace("i",
@@ -112,9 +125,11 @@ static cl::opt<std::string> QualifierAlignment(
              "determined by the QualifierAlignment style flag"),
     cl::init(""), cl::cat(ClangFormatCategory));
 
-static cl::opt<std::string>
-    Files("files", cl::desc("Provide a list of files to run clang-format"),
-          cl::init(""), cl::cat(ClangFormatCategory));
+static cl::opt<std::string> Files(
+    "files",
+    cl::desc("A file containing a list of files to process, one per line."),
+    cl::value_desc("filename"),
+    cl::init(""), cl::cat(ClangFormatCategory));
 
 static cl::opt<bool>
     Verbose("verbose", cl::desc("If set, shows the list of processed files"),
@@ -233,8 +248,12 @@ static bool fillRanges(MemoryBuffer *Code,
         errs() << "error: invalid <start line>:<end line> pair\n";
         return true;
       }
+      if (FromLine < 1) {
+        errs() << "error: start line should be at least 1\n";
+        return true;
+      }
       if (FromLine > ToLine) {
-        errs() << "error: start line should be less than end line\n";
+        errs() << "error: start line should not exceed end line\n";
         return true;
       }
       SourceLocation Start = Sources.translateLineCol(ID, FromLine, 1);
@@ -358,9 +377,10 @@ static void outputXML(const Replacements &Replaces,
   if (!Status.FormatComplete)
     outs() << " line='" << Status.Line << "'";
   outs() << ">\n";
-  if (Cursor.getNumOccurrences() != 0)
+  if (Cursor.getNumOccurrences() != 0) {
     outs() << "<cursor>" << FormatChanges.getShiftedCodePosition(CursorPosition)
            << "</cursor>\n";
+  }
 
   outputReplacementsXML(Replaces);
   outs() << "</replacements>\n";
@@ -436,11 +456,11 @@ static bool format(StringRef FileName) {
           .Case("left", FormatStyle::QAS_Left)
           .Default(FormatStyle->QualifierAlignment);
 
-  if (FormatStyle->QualifierAlignment == FormatStyle::QAS_Left)
+  if (FormatStyle->QualifierAlignment == FormatStyle::QAS_Left) {
     FormatStyle->QualifierOrder = {"const", "volatile", "type"};
-  else if (FormatStyle->QualifierAlignment == FormatStyle::QAS_Right)
+  } else if (FormatStyle->QualifierAlignment == FormatStyle::QAS_Right) {
     FormatStyle->QualifierOrder = {"type", "const", "volatile"};
-  else if (QualifierAlignmentOrder.contains("type")) {
+  } else if (QualifierAlignmentOrder.contains("type")) {
     FormatStyle->QualifierAlignment = FormatStyle::QAS_Custom;
     SmallVector<StringRef> Qualifiers;
     QualifierAlignmentOrder.split(Qualifiers, " ", /*MaxSplit=*/-1,
@@ -463,9 +483,8 @@ static bool format(StringRef FileName) {
   if (FormatStyle->isJson() && !FormatStyle->DisableFormat) {
     auto Err = Replaces.add(tooling::Replacement(
         tooling::Replacement(AssumedFileName, 0, 0, "x = ")));
-    if (Err) {
+    if (Err)
       llvm::errs() << "Bad Json variable insertion\n";
-    }
   }
 
   auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
@@ -480,11 +499,10 @@ static bool format(StringRef FileName) {
       reformat(*FormatStyle, *ChangedCode, Ranges, AssumedFileName, &Status);
   Replaces = Replaces.merge(FormatChanges);
   if (OutputXML || DryRun) {
-    if (DryRun) {
+    if (DryRun)
       return emitReplacementWarnings(Replaces, AssumedFileName, Code);
-    } else {
+    else
       outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
-    }
   } else {
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
         new llvm::vfs::InMemoryFileSystem);
@@ -579,9 +597,8 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
-  if (DumpConfig) {
+  if (DumpConfig)
     return dumpConfig();
-  }
 
   if (!Files.empty()) {
     std::ifstream ExternalFileOfFiles{std::string(Files)};
@@ -608,9 +625,10 @@ int main(int argc, const char **argv) {
 
   unsigned FileNo = 1;
   for (const auto &FileName : FileNames) {
-    if (Verbose)
+    if (Verbose) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
              << FileName << "\n";
+    }
     Error |= clang::format::format(FileName);
   }
   return Error ? 1 : 0;

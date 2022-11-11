@@ -78,8 +78,8 @@ void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
 void genRandomInit(fir::FirOpBuilder &, mlir::Location, mlir::Value repeatable,
                    mlir::Value imageDistinct);
 void genRandomNumber(fir::FirOpBuilder &, mlir::Location, mlir::Value harvest);
-void genRandomSeed(fir::FirOpBuilder &, mlir::Location, int argIndex,
-                   mlir::Value argBox);
+void genRandomSeed(fir::FirOpBuilder &, mlir::Location, mlir::Value size,
+                   mlir::Value put, mlir::Value get);
 
 /// generate runtime call to transfer intrinsic with no size argument
 void genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,

@@ -107,6 +107,7 @@ private:
   SmallString<0> LibPath;
   SmallString<0> LibDevicePath;
   SmallString<0> IncludePath;
+  SmallString<0> SharePath;
   llvm::StringMap<std::string> LibDeviceMap;
 
   // Libraries that are always linked.

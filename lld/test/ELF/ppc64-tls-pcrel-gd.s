@@ -10,15 +10,15 @@
 
 # RUN: llvm-readelf -r %t-gd.so | FileCheck %s --check-prefix=GD-RELOC
 # RUN: llvm-readelf -s %t-gd.so | FileCheck %s --check-prefix=GD-SYM
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t-gd.so | FileCheck %s --check-prefix=GD
+# RUN: llvm-objdump -d --no-show-raw-insn %t-gd.so | FileCheck %s --check-prefix=GD
 
 # RUN: llvm-readelf -r %t-gdtoie | FileCheck %s --check-prefix=GDTOIE-RELOC
 # RUN: llvm-readelf -s %t-gdtoie | FileCheck %s --check-prefix=GDTOIE-SYM
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t-gdtoie | FileCheck %s --check-prefix=GDTOIE
+# RUN: llvm-objdump -d --no-show-raw-insn %t-gdtoie | FileCheck %s --check-prefix=GDTOIE
 
 # RUN: llvm-readelf -r %t-gdtole | FileCheck %s --check-prefix=GDTOLE-RELOC
 # RUN: llvm-readelf -s %t-gdtole | FileCheck %s --check-prefix=GDTOLE-SYM
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t-gdtole | FileCheck %s --check-prefix=GDTOLE
+# RUN: llvm-objdump -d --no-show-raw-insn %t-gdtole | FileCheck %s --check-prefix=GDTOLE
 
 ## This test checks the General Dynamic PC Relative TLS implementation for lld.
 ## GD - General Dynamic with no relaxation possible

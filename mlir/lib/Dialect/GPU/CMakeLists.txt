@@ -21,6 +21,7 @@ endif()
 
 add_mlir_dialect_library(MLIRGPUOps
   IR/GPUDialect.cpp
+  IR/InferIntRangeInterfaceImpls.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
@@ -32,8 +33,9 @@ add_mlir_dialect_library(MLIRGPUOps
   MLIRGPUOpInterfacesIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRDLTIDialect
+  MLIRInferIntRangeInterface
   MLIRIR
   MLIRMemRefDialect
   MLIRSideEffectInterfaces
@@ -61,12 +63,11 @@ add_mlir_dialect_library(MLIRGPUTransforms
 
   DEPENDS
   MLIRGPUPassIncGen
-  MLIRParallelLoopMapperAttrGen
   MLIRParallelLoopMapperEnumsGen
 
   LINK_LIBS PUBLIC
   MLIRAffineUtils
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRAsyncDialect
   MLIRDataLayoutInterfaces
   MLIRExecutionEngineUtils
@@ -80,6 +81,8 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRSupport
   MLIRTransformUtils
   )
+
+add_subdirectory(TransformOps)
 
 if(MLIR_ENABLE_CUDA_RUNNER)
   if(NOT MLIR_ENABLE_CUDA_CONVERSIONS)

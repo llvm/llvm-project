@@ -7,8 +7,8 @@ define i32 @f2() #0 {
 entry:
   %retval = alloca i32, align 4
   %d = alloca <8 x i16>, align 16
-  %0 = load <8 x i16>, <8 x i16>* %d, align 16
+  %0 = load <8 x i16>, ptr %d, align 16
   call void asm sideeffect "", "r,~{dirflag},~{fpsr},~{flags}"(<8 x i16> %0)
-  %1 = load i32, i32* %retval, align 4
+  %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }

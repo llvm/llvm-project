@@ -147,35 +147,6 @@ cl::opt<bool> SkipRetExitBlock(
     "skip-ret-exit-block", cl::init(true),
     cl::desc("Suppress counter promotion if exit blocks contain ret."));
 
-class InstrProfilingLegacyPass : public ModulePass {
-  InstrProfiling InstrProf;
-
-public:
-  static char ID;
-
-  InstrProfilingLegacyPass() : ModulePass(ID) {}
-  InstrProfilingLegacyPass(const InstrProfOptions &Options, bool IsCS = false)
-      : ModulePass(ID), InstrProf(Options, IsCS) {
-    initializeInstrProfilingLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override {
-    return "Frontend instrumentation-based coverage lowering";
-  }
-
-  bool runOnModule(Module &M) override {
-    auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
-      return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    };
-    return InstrProf.run(M, GetTLI);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-};
-
 ///
 /// A helper class to promote one counter RMW operation in the loop
 /// into register update.
@@ -288,7 +259,7 @@ public:
     // of the loop, the result profile is incomplete.
     // FIXME: add other heuristics to detect long running loops.
     if (SkipRetExitBlock) {
-      for (auto BB : ExitBlocks)
+      for (auto *BB : ExitBlocks)
         if (isa<ReturnInst>(BB->getTerminator()))
           return false;
     }
@@ -313,8 +284,7 @@ public:
         auto PreheaderCount = BFI->getBlockProfileCount(L.getLoopPreheader());
         // If the average loop trip count is not greater than 1.5, we skip
         // promotion.
-        if (PreheaderCount &&
-            (PreheaderCount.getValue() * 3) >= (InstrCount.getValue() * 2))
+        if (PreheaderCount && (*PreheaderCount * 3) >= (*InstrCount * 2))
           continue;
       }
 
@@ -440,21 +410,6 @@ PreservedAnalyses InstrProfiling::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::none();
 }
 
-char InstrProfilingLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(InstrProfilingLegacyPass, "instrprof",
-                      "Frontend instrumentation-based coverage lowering.",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(InstrProfilingLegacyPass, "instrprof",
-                    "Frontend instrumentation-based coverage lowering.", false,
-                    false)
-
-ModulePass *
-llvm::createInstrProfilingLegacyPass(const InstrProfOptions &Options,
-                                     bool IsCS) {
-  return new InstrProfilingLegacyPass(Options, IsCS);
-}
-
 bool InstrProfiling::lowerIntrinsics(Function *F) {
   bool MadeChange = false;
   PromotionCandidates.clear();
@@ -570,15 +525,15 @@ bool InstrProfiling::run(
   TT = Triple(M.getTargetTriple());
 
   bool MadeChange = false;
-
-  // Emit the runtime hook even if no counters are present.
-  if (needsRuntimeHookUnconditionally(TT))
+  bool NeedsRuntimeHook = needsRuntimeHookUnconditionally(TT);
+  if (NeedsRuntimeHook)
     MadeChange = emitRuntimeHook();
 
-  // Improve compile time by avoiding linear scans when there is no work.
+  bool ContainsProfiling = containsProfilingIntrinsics(M);
   GlobalVariable *CoverageNamesVar =
       M.getNamedGlobal(getCoverageUnusedNamesVarName());
-  if (!containsProfilingIntrinsics(M) && !CoverageNamesVar)
+  // Improve compile time by avoiding linear scans when there is no work.
+  if (!ContainsProfiling && !CoverageNamesVar)
     return MadeChange;
 
   // We did not know how many value sites there would be inside
@@ -612,7 +567,14 @@ bool InstrProfiling::run(
 
   emitVNodes();
   emitNameData();
-  emitRuntimeHook();
+
+  // Emit runtime hook for the cases where the target does not unconditionally
+  // require pulling in profile runtime, and coverage is enabled on code that is
+  // not eliminated by the front-end, e.g. unused functions with internal
+  // linkage.
+  if (!NeedsRuntimeHook && ContainsProfiling)
+    emitRuntimeHook();
+
   emitRegistration();
   emitUses();
   emitInitialization();
@@ -959,6 +921,11 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
       if (!NeedComdat)
         C->setSelectionKind(Comdat::NoDeduplicate);
       GV->setComdat(C);
+      // COFF doesn't allow the comdat group leader to have private linkage, so
+      // upgrade private linkage to internal linkage to produce a symbol table
+      // entry.
+      if (TT.isOSBinFormatCOFF() && GV->hasPrivateLinkage())
+        GV->setLinkage(GlobalValue::InternalLinkage);
     }
   };
 
@@ -969,8 +936,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   CounterPtr->setVisibility(Visibility);
   CounterPtr->setSection(
       getInstrProfSectionName(IPSK_cnts, TT.getObjectFormat()));
-  MaybeSetComdat(CounterPtr);
   CounterPtr->setLinkage(Linkage);
+  MaybeSetComdat(CounterPtr);
   PD.RegionCounters = CounterPtr;
   if (DebugInfoCorrelate) {
     if (auto *SP = Fn->getSubprogram()) {
@@ -1090,7 +1057,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
   MaybeSetComdat(Data);
-  Data->setLinkage(Linkage);
 
   PD.DataVar = Data;
 
@@ -1233,7 +1199,7 @@ void InstrProfiling::emitRegistration() {
 bool InstrProfiling::emitRuntimeHook() {
   // We expect the linker to be invoked with -u<hook_var> flag for Linux
   // in which case there is no need to emit the external variable.
-  if (TT.isOSLinux())
+  if (TT.isOSLinux() || TT.isOSAIX())
     return false;
 
   // If the module's provided its own runtime, we don't need to do anything.
@@ -1245,8 +1211,9 @@ bool InstrProfiling::emitRuntimeHook() {
   auto *Var =
       new GlobalVariable(*M, Int32Ty, false, GlobalValue::ExternalLinkage,
                          nullptr, getInstrProfRuntimeHookVarName());
+  Var->setVisibility(GlobalValue::HiddenVisibility);
 
-  if (TT.isOSBinFormatELF()) {
+  if (TT.isOSBinFormatELF() && !TT.isPS()) {
     // Mark the user variable as used so that it isn't stripped out.
     CompilerUsedVars.push_back(Var);
   } else {

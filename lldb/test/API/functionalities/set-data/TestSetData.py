@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class SetDataTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["objc"])
     def test_set_data(self):
         """Test setting the contents of variables and registers using raw data."""

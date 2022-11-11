@@ -581,7 +581,9 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0_multi_use_0:
-; GCN-NOT: v_med3_u32
+; GCN: s_min_u32
+; GCN-NOT: {{s_min_u32|s_max_u32}}
+; GCN: v_med3_u32
 define amdgpu_kernel void @s_test_umed3_i32_pat_0_multi_use_0(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
@@ -594,7 +596,9 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0_multi_use_1:
-; GCN-NOT: v_med3_u32
+; GCN: s_max_u32
+; GCN-NOT: {{s_min_u32|s_max_u32}}
+; GCN: v_med3_u32
 define amdgpu_kernel void @s_test_umed3_i32_pat_0_multi_use_1(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
@@ -607,7 +611,10 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0_multi_use_2:
-; GCN-NOT: v_med3_u32
+; GCN: s_max_u32
+; GCN: s_min_u32
+; GCN-NOT: {{s_min_u32|s_max_u32}}
+; GCN: v_med3_u32
 define amdgpu_kernel void @s_test_umed3_i32_pat_0_multi_use_2(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
   %tmp0 = call i32 @umin(i32 %x, i32 %y)
@@ -620,6 +627,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}s_test_umed3_i32_pat_0_multi_use_result:
+; GCN-NOT: {{s_min_u32|s_max_u32}}
 ; GCN: v_med3_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @s_test_umed3_i32_pat_0_multi_use_result(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) #1 {
 bb:
@@ -629,6 +637,26 @@ bb:
   %tmp3 = call i32 @umax(i32 %tmp0, i32 %tmp2)
   store volatile i32 %tmp3, i32 addrspace(1)* %arg
   store volatile i32 %tmp3, i32 addrspace(1)* %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_test_smed3_reuse_bounds
+; GCN-NOT: {{s_min_u32|s_max_u32}}
+; GCN: v_med3_u32 v{{[0-9]+}}, [[B0:s[0-9]+]], [[B1:v[0-9]+]], v{{[0-9]+}}
+; GCN: v_med3_u32 v{{[0-9]+}}, [[B0]], [[B1]], v{{[0-9]+}}
+define amdgpu_kernel void @s_test_smed3_reuse_bounds(i32 addrspace(1)* %arg, i32 %b0, i32 %b1, i32 %x, i32 %y) #1 {
+bb:
+  %lo = call i32 @umin(i32 %b0, i32 %b1)
+  %hi = call i32 @umax(i32 %b0, i32 %b1)
+
+  %tmp0 = call i32 @umin(i32 %x, i32 %hi)
+  %z0 = call i32 @umax(i32 %tmp0, i32 %lo)
+
+  %tmp1 = call i32 @umin(i32 %y, i32 %hi)
+  %z1 = call i32 @umax(i32 %tmp1, i32 %lo)
+
+  store volatile i32 %z0, i32 addrspace(1)* %arg
+  store volatile i32 %z1, i32 addrspace(1)* %arg
   ret void
 }
 

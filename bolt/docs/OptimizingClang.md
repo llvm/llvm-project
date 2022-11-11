@@ -64,7 +64,7 @@ Notice that we are passing `clang-7` to `perf2bolt` which is the real binary tha
 the generated profile:
 ```bash
 $ llvm-bolt $CPATH/clang-7 -o $CPATH/clang-7.bolt -b clang-7.yaml \
-    -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions=3 \
+    -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions \
     -split-all-cold -dyno-stats -icf=1 -use-gnu-stack
 ```
 The output will look similar to the one below:

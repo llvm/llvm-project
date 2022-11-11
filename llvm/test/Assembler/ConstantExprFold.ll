@@ -8,58 +8,54 @@
 
 @A = global i64 0
 
-@0 = global i64* inttoptr (i64 add (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X + 0 == X
-@1 = global i64* inttoptr (i64 sub (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X - 0 == X
-@2 = global i64* inttoptr (i64 mul (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X * 0 == 0
-@3 = global i64* inttoptr (i64 sdiv (i64 ptrtoint (i64* @A to i64), i64 1) to i64*) ; X / 1 == X
-@4 = global i64* inttoptr (i64 srem (i64 ptrtoint (i64* @A to i64), i64 1) to i64*) ; X % 1 == 0
-@5 = global i64* inttoptr (i64 and (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X & 0 == 0
-@6 = global i64* inttoptr (i64 and (i64 ptrtoint (i64* @A to i64), i64 -1) to i64*) ; X & -1 == X
-@7 = global i64 or (i64 ptrtoint (i64* @A to i64), i64 -1)  ; X | -1 == -1
-@8 = global i64* inttoptr (i64 xor (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X ^ 0 == X
+@add = global i64* inttoptr (i64 add (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X + 0 == X
+@sub = global i64* inttoptr (i64 sub (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X - 0 == X
+@mul = global i64* inttoptr (i64 mul (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X * 0 == 0
+@and1 = global i64* inttoptr (i64 and (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X & 0 == 0
+@and2 = global i64* inttoptr (i64 and (i64 ptrtoint (i64* @A to i64), i64 -1) to i64*) ; X & -1 == X
+@or = global i64 or (i64 ptrtoint (i64* @A to i64), i64 -1)  ; X | -1 == -1
+@xor = global i64* inttoptr (i64 xor (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X ^ 0 == X
 
 %Ty = type { i32, i32 }
 @B = external global %Ty
 
-; @9 and @11 will be folded by the target-dependent constant folder instead.
-@9 = global i1 icmp ult (i64* @A, i64* getelementptr (i64, i64* @A, i64 1))        ; true
-@10 = global i1 icmp slt (i64* @A, i64* getelementptr (i64, i64* @A, i64 0))        ; false
-@11 = global i1 icmp ult (i32* getelementptr (%Ty, %Ty* @B, i64 0, i32 0),
+; @icmp_ult1 and @icmp_ult2 will be folded by the target-dependent constant folder instead.
+@icmp_ult1 = global i1 icmp ult (i64* @A, i64* getelementptr (i64, i64* @A, i64 1))        ; true
+@icmp_slt = global i1 icmp slt (i64* @A, i64* getelementptr (i64, i64* @A, i64 0))        ; false
+@icmp_ult2 = global i1 icmp ult (i32* getelementptr (%Ty, %Ty* @B, i64 0, i32 0),
   i32* getelementptr (%Ty, %Ty* @B, i64 0, i32 1))            ; true
 ;global i1 icmp ne (i64* @A, i64* bitcast (%Ty* @B to i64*))                 ; true
 
 ; PR2206
 @cons = weak global i32 0, align 8              ; <i32*> [#uses=1]
-@12 = global i64 and (i64 ptrtoint (i32* @cons to i64), i64 7)
+@and3 = global i64 and (i64 ptrtoint (i32* @cons to i64), i64 7)
 
-@13 = global <2 x i8*> getelementptr(i8, <2 x i8*> undef, <2 x i64> <i64 1, i64 1>)
-@14 = global <2 x i8*> getelementptr({ i8 }, <2 x { i8 }*> undef, <2 x i64> <i64 1, i64 1>, <2 x i32> <i32 0, i32 0>)
-@15 = global <2 x i8*> getelementptr(i8, <2 x i8*> zeroinitializer, <2 x i64> <i64 0, i64 0>)
-@16 = global <2 x i8*> getelementptr({ i8 }, <2 x { i8 }*> zeroinitializer, <2 x i64> <i64 0, i64 0>, <2 x i32> <i32 0, i32 0>)
+@gep1 = global <2 x i8*> getelementptr(i8, <2 x i8*> undef, <2 x i64> <i64 1, i64 1>)
+@gep2 = global <2 x i8*> getelementptr({ i8 }, <2 x { i8 }*> undef, <2 x i64> <i64 1, i64 1>, <2 x i32> <i32 0, i32 0>)
+@gep3 = global <2 x i8*> getelementptr(i8, <2 x i8*> zeroinitializer, <2 x i64> <i64 0, i64 0>)
+@gep4 = global <2 x i8*> getelementptr({ i8 }, <2 x { i8 }*> zeroinitializer, <2 x i64> <i64 0, i64 0>, <2 x i32> <i32 0, i32 0>)
 
 
 ; Need a function to make update_test_checks.py work.
 ;.
 ; CHECK: @[[A:[a-zA-Z0-9_$"\\.-]+]] = global i64 0
-; CHECK: @[[GLOB0:[0-9]+]] = global i64* @A
-; CHECK: @[[GLOB1:[0-9]+]] = global i64* @A
-; CHECK: @[[GLOB2:[0-9]+]] = global i64* null
-; CHECK: @[[GLOB3:[0-9]+]] = global i64* @A
-; CHECK: @[[GLOB4:[0-9]+]] = global i64* null
-; CHECK: @[[GLOB5:[0-9]+]] = global i64* null
-; CHECK: @[[GLOB6:[0-9]+]] = global i64* @A
-; CHECK: @[[GLOB7:[0-9]+]] = global i64 -1
-; CHECK: @[[GLOB8:[0-9]+]] = global i64* @A
+; CHECK: @[[ADD:[a-zA-Z0-9_$"\\.-]+]] = global i64* @A
+; CHECK: @[[SUB:[a-zA-Z0-9_$"\\.-]+]] = global i64* @A
+; CHECK: @[[MUL:[a-zA-Z0-9_$"\\.-]+]] = global i64* null
+; CHECK: @[[AND1:[a-zA-Z0-9_$"\\.-]+]] = global i64* null
+; CHECK: @[[AND2:[a-zA-Z0-9_$"\\.-]+]] = global i64* @A
+; CHECK: @[[OR:[a-zA-Z0-9_$"\\.-]+]] = global i64 -1
+; CHECK: @[[XOR:[a-zA-Z0-9_$"\\.-]+]] = global i64* @A
 ; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = external global [[TY:%.*]]
-; CHECK: @[[GLOB9:[0-9]+]] = global i1 icmp ugt (i64* getelementptr inbounds (i64, i64* @A, i64 1), i64* @A)
-; CHECK: @[[GLOB10:[0-9]+]] = global i1 false
-; CHECK: @[[GLOB11:[0-9]+]] = global i1 icmp ult (i32* getelementptr inbounds ([[TY:%.*]], %Ty* @B, i64 0, i32 0), i32* getelementptr inbounds ([[TY]], %Ty* @B, i64 0, i32 1))
+; CHECK: @[[ICMP_ULT1:[a-zA-Z0-9_$"\\.-]+]] = global i1 icmp ugt (i64* getelementptr inbounds (i64, i64* @A, i64 1), i64* @A)
+; CHECK: @[[ICMP_SLT:[a-zA-Z0-9_$"\\.-]+]] = global i1 false
+; CHECK: @[[ICMP_ULT2:[a-zA-Z0-9_$"\\.-]+]] = global i1 icmp ult (i32* getelementptr inbounds ([[TY:%.*]], %Ty* @B, i64 0, i32 0), i32* getelementptr inbounds ([[TY]], %Ty* @B, i64 0, i32 1))
 ; CHECK: @[[CONS:[a-zA-Z0-9_$"\\.-]+]] = weak global i32 0, align 8
-; CHECK: @[[GLOB12:[0-9]+]] = global i64 0
-; CHECK: @[[GLOB13:[0-9]+]] = global <2 x i8*> undef
-; CHECK: @[[GLOB14:[0-9]+]] = global <2 x i8*> undef
-; CHECK: @[[GLOB15:[0-9]+]] = global <2 x i8*> zeroinitializer
-; CHECK: @[[GLOB16:[0-9]+]] = global <2 x i8*> zeroinitializer
+; CHECK: @[[AND3:[a-zA-Z0-9_$"\\.-]+]] = global i64 0
+; CHECK: @[[GEP1:[a-zA-Z0-9_$"\\.-]+]] = global <2 x i8*> undef
+; CHECK: @[[GEP2:[a-zA-Z0-9_$"\\.-]+]] = global <2 x i8*> undef
+; CHECK: @[[GEP3:[a-zA-Z0-9_$"\\.-]+]] = global <2 x i8*> zeroinitializer
+; CHECK: @[[GEP4:[a-zA-Z0-9_$"\\.-]+]] = global <2 x i8*> zeroinitializer
 ;.
 define void @dummy() {
 ; CHECK-LABEL: @dummy(

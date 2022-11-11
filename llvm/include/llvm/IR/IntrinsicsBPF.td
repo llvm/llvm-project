@@ -12,29 +12,29 @@
 
 // Specialized loads from packet
 let TargetPrefix = "bpf" in {  // All intrinsics start with "llvm.bpf."
-  def int_bpf_load_byte : GCCBuiltin<"__builtin_bpf_load_byte">,
+  def int_bpf_load_byte : ClangBuiltin<"__builtin_bpf_load_byte">,
               Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem]>;
-  def int_bpf_load_half : GCCBuiltin<"__builtin_bpf_load_half">,
+  def int_bpf_load_half : ClangBuiltin<"__builtin_bpf_load_half">,
               Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem]>;
-  def int_bpf_load_word : GCCBuiltin<"__builtin_bpf_load_word">,
+  def int_bpf_load_word : ClangBuiltin<"__builtin_bpf_load_word">,
               Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem]>;
-  def int_bpf_pseudo : GCCBuiltin<"__builtin_bpf_pseudo">,
+  def int_bpf_pseudo : ClangBuiltin<"__builtin_bpf_pseudo">,
               Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty]>;
-  def int_bpf_preserve_field_info : GCCBuiltin<"__builtin_bpf_preserve_field_info">,
+  def int_bpf_preserve_field_info : ClangBuiltin<"__builtin_bpf_preserve_field_info">,
               Intrinsic<[llvm_i32_ty], [llvm_anyptr_ty, llvm_i64_ty],
               [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  def int_bpf_btf_type_id : GCCBuiltin<"__builtin_bpf_btf_type_id">,
+  def int_bpf_btf_type_id : ClangBuiltin<"__builtin_bpf_btf_type_id">,
               Intrinsic<[llvm_i64_ty], [llvm_i32_ty, llvm_i64_ty],
               [IntrNoMem]>;
-  def int_bpf_preserve_type_info : GCCBuiltin<"__builtin_bpf_preserve_type_info">,
+  def int_bpf_preserve_type_info : ClangBuiltin<"__builtin_bpf_preserve_type_info">,
               Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i64_ty],
               [IntrNoMem]>;
-  def int_bpf_preserve_enum_value : GCCBuiltin<"__builtin_bpf_preserve_enum_value">,
+  def int_bpf_preserve_enum_value : ClangBuiltin<"__builtin_bpf_preserve_enum_value">,
               Intrinsic<[llvm_i64_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_i64_ty],
               [IntrNoMem]>;
-  def int_bpf_passthrough : GCCBuiltin<"__builtin_bpf_passthrough">,
+  def int_bpf_passthrough : ClangBuiltin<"__builtin_bpf_passthrough">,
               Intrinsic<[llvm_any_ty], [llvm_i32_ty, llvm_any_ty], [IntrNoMem]>;
-  def int_bpf_compare : GCCBuiltin<"__builtin_bpf_compare">,
+  def int_bpf_compare : ClangBuiltin<"__builtin_bpf_compare">,
               Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_anyint_ty, llvm_anyint_ty],
               [IntrNoMem]>;
 }

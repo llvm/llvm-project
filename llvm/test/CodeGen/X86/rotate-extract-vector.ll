@@ -147,13 +147,19 @@ define <32 x i16> @illegal_no_extract_mul(<32 x i16> %i) nounwind {
 
 ; Result would undershift
 define <4 x i64> @no_extract_shl(<4 x i64> %i) nounwind {
-; CHECK-LABEL: no_extract_shl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllq $11, %ymm0, %ymm1
-; CHECK-NEXT:    vpsllq $24, %ymm0, %ymm0
-; CHECK-NEXT:    vpsrlq $50, %ymm1, %ymm1
-; CHECK-NEXT:    vpor %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: no_extract_shl:
+; X86:       # %bb.0:
+; X86-NEXT:    vpsllq $24, %ymm0, %ymm1
+; X86-NEXT:    vpsrlq $39, %ymm0, %ymm0
+; X86-NEXT:    vpternlogq $236, {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: no_extract_shl:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsllq $24, %ymm0, %ymm1
+; X64-NEXT:    vpsrlq $39, %ymm0, %ymm0
+; X64-NEXT:    vpternlogq $236, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
+; X64-NEXT:    retq
   %lhs_mul = shl <4 x i64> %i, <i64 11, i64 11, i64 11, i64 11>
   %rhs_mul = shl <4 x i64> %i, <i64 24, i64 24, i64 24, i64 24>
   %lhs_shift = lshr <4 x i64> %lhs_mul, <i64 50, i64 50, i64 50, i64 50>

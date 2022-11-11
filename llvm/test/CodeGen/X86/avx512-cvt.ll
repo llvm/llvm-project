@@ -145,7 +145,7 @@ define <2 x float> @sltof2f32(<2 x i64> %a) {
   ret <2 x float>%b
 }
 
-define <4 x float> @slto4f32_mem(<4 x i64>* %a) {
+define <4 x float> @slto4f32_mem(ptr %a) {
 ; NODQ-LABEL: slto4f32_mem:
 ; NODQ:       # %bb.0:
 ; NODQ-NEXT:    vcvtsi2ssq 8(%rdi), %xmm0, %xmm0
@@ -169,7 +169,7 @@ define <4 x float> @slto4f32_mem(<4 x i64>* %a) {
 ; DQNOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; DQNOVL-NEXT:    vzeroupper
 ; DQNOVL-NEXT:    retq
-  %a1 = load <4 x i64>, <4 x i64>* %a, align 8
+  %a1 = load <4 x i64>, ptr %a, align 8
   %b = sitofp <4 x i64> %a1 to <4 x float>
   ret <4 x float>%b
 }
@@ -767,7 +767,7 @@ define <4 x double> @f32to4f64_mask(<4 x float> %b, <4 x double> %b1, <4 x doubl
   ret <4 x double> %c
 }
 
-define <4 x double> @f32to4f64_mask_load(<4 x float>* %p, <4 x double> %b1, <4 x double> %a1, <4 x double> %passthru) {
+define <4 x double> @f32to4f64_mask_load(ptr %p, <4 x double> %b1, <4 x double> %a1, <4 x double> %passthru) {
 ; NOVL-LABEL: f32to4f64_mask_load:
 ; NOVL:       # %bb.0:
 ; NOVL-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
@@ -785,14 +785,14 @@ define <4 x double> @f32to4f64_mask_load(<4 x float>* %p, <4 x double> %b1, <4 x
 ; VL-NEXT:    vcvtps2pd (%rdi), %ymm2 {%k1}
 ; VL-NEXT:    vmovaps %ymm2, %ymm0
 ; VL-NEXT:    retq
-  %b = load <4 x float>, <4 x float>* %p
+  %b = load <4 x float>, ptr %p
   %a = fpext <4 x float> %b to <4 x double>
   %mask = fcmp ogt <4 x double> %a1, %b1
   %c = select <4 x i1> %mask, <4 x double> %a, <4 x double> %passthru
   ret <4 x double> %c
 }
 
-define <4 x double> @f32to4f64_maskz_load(<4 x float>* %p, <4 x double> %b1, <4 x double> %a1) {
+define <4 x double> @f32to4f64_maskz_load(ptr %p, <4 x double> %b1, <4 x double> %a1) {
 ; NOVL-LABEL: f32to4f64_maskz_load:
 ; NOVL:       # %bb.0:
 ; NOVL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
@@ -808,7 +808,7 @@ define <4 x double> @f32to4f64_maskz_load(<4 x float>* %p, <4 x double> %b1, <4 
 ; VL-NEXT:    vcmpltpd %ymm1, %ymm0, %k1
 ; VL-NEXT:    vcvtps2pd (%rdi), %ymm0 {%k1} {z}
 ; VL-NEXT:    retq
-  %b = load <4 x float>, <4 x float>* %p
+  %b = load <4 x float>, ptr %p
   %a = fpext <4 x float> %b to <4 x double>
   %mask = fcmp ogt <4 x double> %a1, %b1
   %c = select <4 x i1> %mask, <4 x double> %a, <4 x double> zeroinitializer
@@ -826,46 +826,46 @@ define <2 x double> @f32tof64_inreg(<2 x double> %a0, <4 x float> %a1) nounwind 
   ret <2 x double> %res
 }
 
-define double @sltof64_load(i64* nocapture %e) {
+define double @sltof64_load(ptr nocapture %e) {
 ; ALL-LABEL: sltof64_load:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vcvtsi2sdq (%rdi), %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
-  %tmp1 = load i64, i64* %e, align 8
+  %tmp1 = load i64, ptr %e, align 8
   %conv = sitofp i64 %tmp1 to double
   ret double %conv
 }
 
-define double @sitof64_load(i32* %e) {
+define double @sitof64_load(ptr %e) {
 ; ALL-LABEL: sitof64_load:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vcvtsi2sdl (%rdi), %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
-  %tmp1 = load i32, i32* %e, align 4
+  %tmp1 = load i32, ptr %e, align 4
   %conv = sitofp i32 %tmp1 to double
   ret double %conv
 }
 
-define float @sitof32_load(i32* %e) {
+define float @sitof32_load(ptr %e) {
 ; ALL-LABEL: sitof32_load:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vcvtsi2ssl (%rdi), %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
-  %tmp1 = load i32, i32* %e, align 4
+  %tmp1 = load i32, ptr %e, align 4
   %conv = sitofp i32 %tmp1 to float
   ret float %conv
 }
 
-define float @sltof32_load(i64* %e) {
+define float @sltof32_load(ptr %e) {
 ; ALL-LABEL: sltof32_load:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vcvtsi2ssq (%rdi), %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
-  %tmp1 = load i64, i64* %e, align 8
+  %tmp1 = load i64, ptr %e, align 8
   %conv = sitofp i64 %tmp1 to float
   ret float %conv
 }
@@ -880,9 +880,9 @@ define void @f32tof64_loadstore() {
 entry:
   %f = alloca float, align 4
   %d = alloca double, align 8
-  %tmp = load float, float* %f, align 4
+  %tmp = load float, ptr %f, align 4
   %conv = fpext float %tmp to double
-  store double %conv, double* %d, align 8
+  store double %conv, ptr %d, align 8
   ret void
 }
 
@@ -896,9 +896,9 @@ define void @f64tof32_loadstore() nounwind uwtable {
 entry:
   %f = alloca float, align 4
   %d = alloca double, align 8
-  %tmp = load double, double* %d, align 8
+  %tmp = load double, ptr %d, align 8
   %conv = fptrunc double %tmp to float
-  store float %conv, float* %f, align 4
+  store float %conv, ptr %f, align 4
   ret void
 }
 
@@ -2550,7 +2550,7 @@ define <16 x i32> @test_16f32tosb(<16 x float> %a, <16 x i32> %passthru) {
   ret <16 x i32> %select
 }
 
-define <2 x double> @test_sito2f64_mask_load(<2 x i32> *%a, <2 x i64> %c) {
+define <2 x double> @test_sito2f64_mask_load(ptr%a, <2 x i64> %c) {
 ; SSE-LABEL: sitofp_load_2i32_to_2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvtdq2pd (%rdi), %xmm0
@@ -2594,13 +2594,13 @@ define <2 x double> @test_sito2f64_mask_load(<2 x i32> *%a, <2 x i64> %c) {
 ; DQNOVL-NEXT:    vzeroupper
 ; DQNOVL-NEXT:    retq
   %mask = icmp slt <2 x i64> %c, zeroinitializer
-  %ld = load <2 x i32>, <2 x i32> *%a
+  %ld = load <2 x i32>, ptr%a
   %cvt = sitofp <2 x i32> %ld to <2 x double>
   %sel = select <2 x i1> %mask, <2 x double> %cvt, <2 x double> zeroinitializer
   ret <2 x double> %sel
 }
 
-define <2 x double> @test_uito2f64_mask_load(<2 x i32> *%a, <2 x i64> %c) {
+define <2 x double> @test_uito2f64_mask_load(ptr%a, <2 x i64> %c) {
 ; SSE-LABEL: sitofp_load_2i32_to_2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvtdq2pd (%rdi), %xmm0
@@ -2646,7 +2646,7 @@ define <2 x double> @test_uito2f64_mask_load(<2 x i32> *%a, <2 x i64> %c) {
 ; DQNOVL-NEXT:    vzeroupper
 ; DQNOVL-NEXT:    retq
   %mask = icmp slt <2 x i64> %c, zeroinitializer
-  %ld = load <2 x i32>, <2 x i32> *%a
+  %ld = load <2 x i32>, ptr%a
   %cvt = uitofp <2 x i32> %ld to <2 x double>
   %sel = select <2 x i1> %mask, <2 x double> %cvt, <2 x double> zeroinitializer
   ret <2 x double> %sel

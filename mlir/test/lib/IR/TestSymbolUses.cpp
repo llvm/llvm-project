@@ -52,7 +52,7 @@ struct SymbolUsesPass
 
     // Test the functionality of getSymbolUses.
     symbolUses = SymbolTable::getSymbolUses(symbol, &module.getBodyRegion());
-    assert(symbolUses.hasValue() && "expected no unknown operations");
+    assert(symbolUses && "expected no unknown operations");
     for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
       // Check that we can resolve back to our symbol.
       if (SymbolTable::lookupNearestSymbolFrom(

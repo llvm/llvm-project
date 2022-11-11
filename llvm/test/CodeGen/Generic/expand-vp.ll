@@ -39,6 +39,9 @@ declare float @llvm.vp.reduce.fmin.v4f32(float, <4 x float>, <4 x i1>, i32)
 declare float @llvm.vp.reduce.fmax.v4f32(float, <4 x float>, <4 x i1>, i32)
 declare float @llvm.vp.reduce.fadd.v4f32(float, <4 x float>, <4 x i1>, i32)
 declare float @llvm.vp.reduce.fmul.v4f32(float, <4 x float>, <4 x i1>, i32)
+; Comparisons
+declare <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32>, <8 x i32>, metadata, <8 x i1>, i32)
+declare <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float>, <8 x float>, metadata, <8 x i1>, i32)
 
 ; Fixed vector test function.
 define void @test_vp_int_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x i32> %i2, <8 x i32> %f3, <8 x i1> %m, i32 %n) {
@@ -118,6 +121,14 @@ define void @test_vp_reduce_fp_v4(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n
   %r7 = call reassoc float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
   %r8 = call float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
   %r9 = call reassoc float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+  ret void
+}
+
+define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x float> %f1, <8 x i1> %m, i32 %n) {
+  %r0 = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %i0, <8 x i32> %i1, metadata !"eq", <8 x i1> %m, i32 %n)
+  %r1 = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %i0, <8 x i32> %i1, metadata !"slt", <8 x i1> %m, i32 %n)
+  %r2 = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> %f0, <8 x float> %f1, metadata !"oeq", <8 x i1> %m, i32 %n)
+  %r3 = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> %f0, <8 x float> %f1, metadata !"ult", <8 x i1> %m, i32 %n)
   ret void
 }
 
@@ -233,6 +244,15 @@ define void @test_vp_reduce_fp_v4(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n
 ; ALL-CONVERT-NEXT:  %{{.+}} = call reassoc float @llvm.vector.reduce.fmul.v4f32(float %f, <4 x float> [[FMUL]])
 ; ALL-CONVERT-NEXT:  ret void
 
+; Check that comparisons use the correct condition codes
+; ALL-CONVERT: define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x float> %f1, <8 x i1> %m, i32 %n) {
+; ALL-CONVERT-NEXT: %{{.+}} = icmp eq <8 x i32> %i0, %i1
+; ALL-CONVERT-NEXT: %{{.+}} = icmp slt <8 x i32> %i0, %i1
+; ALL-CONVERT-NEXT: %{{.+}} = fcmp oeq <8 x float> %f0, %f1
+; ALL-CONVERT-NEXT: %{{.+}} = fcmp ult <8 x float> %f0, %f1
+; ALL-CONVERT-NEXT: ret void
+
+
 ; All legal - don't transform anything.
 
 ; LEGAL_LEGAL: define void @test_vp_int_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x i32> %i2, <8 x i32> %f3, <8 x i1> %m, i32 %n) {
@@ -291,6 +311,13 @@ define void @test_vp_reduce_fp_v4(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n
 ; LEGAL_LEGAL-NEXT:  %r8 = call float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
 ; LEGAL_LEGAL-NEXT:  %r9 = call reassoc float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
 ; LEGAL_LEGAL-NEXT:  ret void
+
+; LEGAL_LEGAL: define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x float> %f1, <8 x i1> %m, i32 %n) {
+; LEGAL_LEGAL-NEXT: %r0 = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %i0, <8 x i32> %i1, metadata !"eq", <8 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r1 = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %i0, <8 x i32> %i1, metadata !"slt", <8 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r2 = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> %f0, <8 x float> %f1, metadata !"oeq", <8 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r3 = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> %f0, <8 x float> %f1, metadata !"ult", <8 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: ret void
 
 ; Drop %evl where possible else fold %evl into %mask (%evl Discard, %mask Legal)
 ;
@@ -372,6 +399,12 @@ define void @test_vp_reduce_fp_v4(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n
 ; DISCARD_LEGAL-NOT:  %r9 = call reassoc float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; DISCARD_LEGAL:      ret void
 
+; DISCARD_LEGAL: define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x float> %f1, <8 x i1> %m, i32 %n) {
+; DISCARD_LEGAL-NEXT: %r0 = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %i0, <8 x i32> %i1, metadata !"eq", <8 x i1> %m, i32 8)
+; DISCARD_LEGAL-NEXT: %r1 = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %i0, <8 x i32> %i1, metadata !"slt", <8 x i1> %m, i32 8)
+; DISCARD_LEGAL-NEXT: %r2 = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> %f0, <8 x float> %f1, metadata !"oeq", <8 x i1> %m, i32 8)
+; DISCARD_LEGAL-NEXT: %r3 = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> %f0, <8 x float> %f1, metadata !"ult", <8 x i1> %m, i32 8)
+
 ; Convert %evl into %mask everywhere (%evl Convert, %mask Legal)
 ;
 ; For the same reasons as in the (%evl Discard, %mask Legal) case only check that..
@@ -440,4 +473,16 @@ define void @test_vp_reduce_fp_v4(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call reassoc float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call reassoc float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
+; CONVERT_LEGAL: ret void
+
+; CONVERT_LEGAL: define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x float> %f1, <8 x i1> %m, i32 %n) {
+; CONVERT_LEGAL-NEXT:  [[NINS:%.+]] = insertelement <8 x i32> poison, i32 %n, i32 0
+; CONVERT_LEGAL-NEXT:  [[NSPLAT:%.+]] = shufflevector <8 x i32> [[NINS]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CONVERT_LEGAL-NEXT:  [[EVLM:%.+]] = icmp ult <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[NSPLAT]]
+; CONVERT_LEGAL-NEXT:  [[NEWM:%.+]] = and <8 x i1> [[EVLM]], %m
+; CONVERT_LEGAL-NEXT:  %{{.+}} = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %i0, <8 x i32> %i1, metadata !"eq", <8 x i1> [[NEWM]], i32 8)
+; CONVERT_LEGAL-NOT:   %{{.+}} = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %i0, <8 x i32> %i1, metadata !"eq", <8 x i1> %m, i32 %n)
+; CONVERT_LEGAL-NOT:   %{{.+}} = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %i0, <8 x i32> %i1, metadata !"slt", <8 x i1> %m, i32 %n
+; CONVERT_LEGAL-NOT:   %{{.+}} = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> %f0, <8 x float> %f1, metadata !"oeq", <8 x i1> %m, i32 %n)
+; CONVERT_LEGAL-NOT:   %{{.+}} = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> %f0, <8 x float> %f1, metadata !"ult", <8 x i1> %m, i32 %n)
 ; CONVERT_LEGAL: ret void

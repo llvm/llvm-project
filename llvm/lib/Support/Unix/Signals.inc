@@ -239,8 +239,8 @@ static const int InfoSigs[] = {
 };
 
 static const size_t NumSigs =
-    array_lengthof(IntSigs) + array_lengthof(KillSigs) +
-    array_lengthof(InfoSigs) + 1 /* SIGPIPE */;
+    std::size(IntSigs) + std::size(KillSigs) +
+    std::size(InfoSigs) + 1 /* SIGPIPE */;
 
 
 static std::atomic<unsigned> NumRegisteredSignals = ATOMIC_VAR_INIT(0);
@@ -298,7 +298,7 @@ static void RegisterHandlers() { // Not signal-safe.
   enum class SignalKind { IsKill, IsInfo };
   auto registerHandler = [&](int Signal, SignalKind Kind) {
     unsigned Index = NumRegisteredSignals.load();
-    assert(Index < array_lengthof(RegisteredSignalInfo) &&
+    assert(Index < std::size(RegisteredSignalInfo) &&
            "Out of space for signal handlers!");
 
     struct sigaction NewHandler;
@@ -566,13 +566,13 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 #if defined(HAVE_BACKTRACE)
   // Use backtrace() to output a backtrace on Linux systems with glibc.
   if (!depth)
-    depth = backtrace(StackTrace, static_cast<int>(array_lengthof(StackTrace)));
+    depth = backtrace(StackTrace, static_cast<int>(std::size(StackTrace)));
 #endif
 #if defined(HAVE__UNWIND_BACKTRACE)
   // Try _Unwind_Backtrace() if backtrace() failed.
   if (!depth)
     depth = unwindBacktrace(StackTrace,
-                        static_cast<int>(array_lengthof(StackTrace)));
+                        static_cast<int>(std::size(StackTrace)));
 #endif
   if (!depth)
     return;

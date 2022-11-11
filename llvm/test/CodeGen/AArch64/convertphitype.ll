@@ -713,7 +713,6 @@ define float @convphi_volatile(i32 *%s, i32 *%d, i32 %n) {
 ; DEBUG-NEXT:    [[B:%.*]] = bitcast i32 [[PHI]] to float, !dbg !365
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata float [[B]], metadata !357, metadata !DIExpression()), !dbg !365
 ; DEBUG-NEXT:    ret float [[B]], !dbg !366
-;
 entry:
   %cmp15 = icmp sgt i32 %n, 0
   br i1 %cmp15, label %then, label %else
@@ -762,7 +761,6 @@ define void @convphi_volatile2(i32 *%s, i32 *%d, i32 %n, float %f) {
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[PHI]], metadata !372, metadata !DIExpression()), !dbg !378
 ; DEBUG-NEXT:    store volatile i32 [[PHI]], i32* [[D:%.*]], align 4, !dbg !379
 ; DEBUG-NEXT:    ret void, !dbg !380
-;
 entry:
   %cmp15 = icmp sgt i32 %n, 0
   %fb = bitcast float %f to i32
@@ -813,7 +811,6 @@ define float @convphi_atomic(i32 *%s, i32 *%d, i32 %n) {
 ; DEBUG-NEXT:    [[B:%.*]] = bitcast i32 [[PHI]] to float, !dbg !395
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata float [[B]], metadata !387, metadata !DIExpression()), !dbg !395
 ; DEBUG-NEXT:    ret float [[B]], !dbg !396
-;
 entry:
   %cmp15 = icmp sgt i32 %n, 0
   br i1 %cmp15, label %then, label %else
@@ -862,7 +859,6 @@ define void @convphi_atomic2(i32 *%s, i32 *%d, i32 %n, float %f) {
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[PHI]], metadata !402, metadata !DIExpression()), !dbg !408
 ; DEBUG-NEXT:    store atomic i32 [[PHI]], i32* [[D:%.*]] release, align 4, !dbg !409
 ; DEBUG-NEXT:    ret void, !dbg !410
-;
 entry:
   %cmp15 = icmp sgt i32 %n, 0
   %fb = bitcast float %f to i32
@@ -876,4 +872,112 @@ end:
   %phi = phi i32 [ %ls, %then ], [ %fb, %entry ]
   store atomic i32 %phi, i32 *%d release, align 4
   ret void
+}
+
+define float @convphi2_zero(i32 *%s, i32 *%d, i32 %n) {
+; CHECK-LABEL: @convphi2_zero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret float [[PHI_TC]]
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %end
+
+then:
+  %ls = load i32, i32* %s, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ 0, %entry ]
+  %b = bitcast i32 %phi to float
+  ret float %b
+}
+
+define i32 @convphi2f_zero(float *%s, float *%d, i32 %n) {
+; CHECK-LABEL: @convphi2f_zero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load float, float* [[S:%.*]], align 4
+; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast float [[LS]] to i32
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi i32 [ [[LS_BC]], [[THEN]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[PHI_TC]]
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %end
+
+then:
+  %ls = load float, float* %s, align 4
+  br label %end
+
+end:
+  %phi = phi float [ %ls, %then ], [ 0.0, %entry ]
+  %b = bitcast float %phi to i32
+  ret i32 %b
+}
+
+define float @convphi2_ten(i32 *%s, i32 *%d, i32 %n) {
+; CHECK-LABEL: @convphi2_ten(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ 0x36D4000000000000, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret float [[PHI_TC]]
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %end
+
+then:
+  %ls = load i32, i32* %s, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ 10, %entry ]
+  %b = bitcast i32 %phi to float
+  ret float %b
+}
+
+define i32 @convphi2f_ten(float *%s, float *%d, i32 %n) {
+; CHECK-LABEL: @convphi2f_ten(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load float, float* [[S:%.*]], align 4
+; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast float [[LS]] to i32
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi i32 [ [[LS_BC]], [[THEN]] ], [ 1092616192, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[PHI_TC]]
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %end
+
+then:
+  %ls = load float, float* %s, align 4
+  br label %end
+
+end:
+  %phi = phi float [ %ls, %then ], [ 10.0, %entry ]
+  %b = bitcast float %phi to i32
+  ret i32 %b
 }

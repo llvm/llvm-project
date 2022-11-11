@@ -11,17 +11,17 @@ declare void @fn1() #0
 ; CHECK-LABEL: fn2:
 define void @fn2() #0 {
 entry:
-  %0 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @b, align 4
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.end, label %lbl
 
 lbl:                                              ; preds = %if.end, %entry
-  store i32 0, i32* @b, align 4
+  store i32 0, ptr @b, align 4
   br label %if.end
 
 if.end:                                           ; preds = %entry, %lbl
   tail call void @fn1()
-  %1 = load i32, i32* @b, align 4
+  %1 = load i32, ptr @b, align 4
   %tobool1 = icmp eq i32 %1, 0
   br i1 %tobool1, label %if.end3, label %lbl
 

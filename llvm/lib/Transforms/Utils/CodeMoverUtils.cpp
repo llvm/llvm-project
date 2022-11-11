@@ -455,7 +455,7 @@ bool llvm::nonStrictlyPostDominate(const BasicBlock *ThisBlock,
     if (PDT->dominates(CurBlock, OtherBlock))
       return true;
 
-    for (auto *Pred : predecessors(CurBlock)) {
+    for (const auto *Pred : predecessors(CurBlock)) {
       if (Pred == CommonDominator || Visited.count(Pred))
         continue;
       WorkList.push_back(Pred);

@@ -14,6 +14,7 @@
 #ifndef MLIR_INTERFACES_TILINGINTERFACE_H_
 #define MLIR_INTERFACES_TILINGINTERFACE_H_
 
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"

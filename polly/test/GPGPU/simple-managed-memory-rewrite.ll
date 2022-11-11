@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-print-scops -disable-output < %s |  FileCheck %s --check-prefix=SCOP
 
 ; RUN: opt %loadPolly -S  -polly-process-unprofitable -polly-acc-mincompute=0 \
-; RUN: -polly-target=gpu  -polly-codegen-ppcg -polly-acc-codegen-managed-memory \
+; RUN: -polly-codegen-ppcg -polly-acc-codegen-managed-memory \
 ; RUN: -polly-acc-rewrite-managed-memory < %s | FileCheck %s --check-prefix=HOST-IR
 
 ; REQUIRES: pollyacc

@@ -17,7 +17,7 @@ static bool my_streq(const char *lhs, const char *rhs) {
   return *l == '\0' && *r == '\0';
 }
 
-int main(int argc, char **argv, char **envp) {
+TEST_MAIN(int argc, char **argv, char **envp) {
   ASSERT_TRUE(argc == 4);
   ASSERT_TRUE(my_streq(argv[1], "1"));
   ASSERT_TRUE(my_streq(argv[2], "2"));

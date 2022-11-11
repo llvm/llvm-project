@@ -30,7 +30,7 @@ class EntryStage final : public Stage {
   unsigned NumRetired;
 
   // Updates the program counter, and sets 'CurrentInstruction'.
-  void getNextInstruction();
+  Error getNextInstruction();
 
   EntryStage(const EntryStage &Other) = delete;
   EntryStage &operator=(const EntryStage &Other) = delete;
@@ -42,6 +42,7 @@ public:
   bool hasWorkToComplete() const override;
   Error execute(InstRef &IR) override;
   Error cycleStart() override;
+  Error cycleResume() override;
   Error cycleEnd() override;
 };
 

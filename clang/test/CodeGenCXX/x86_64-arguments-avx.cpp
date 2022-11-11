@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm -o - %s -target-feature +avx | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -target-feature +avx | FileCheck %s
 
 namespace test1 {
 typedef double __m256d __attribute__((__vector_size__(32)));
@@ -56,6 +56,6 @@ union U {
   __attribute__((__vector_size__(32))) float f1;
   int f2;
 };
-// CHECK: define{{.*}} i32 @_ZN5test31fENS_1UE({{.*}}* noundef byval({{.*}}) align 32
+// CHECK: define{{.*}} i32 @_ZN5test31fENS_1UE(ptr noundef byval({{.*}}) align 32
 int f(U u) { return u.f2; }
 }

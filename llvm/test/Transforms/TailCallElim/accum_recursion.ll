@@ -166,7 +166,7 @@ declare i32 @test6_helper()
 ; CHECK-LABEL: define i32 @test6_multiple_returns(
 ; CHECK: tailrecurse:
 ; CHECK: %accumulator.tr = phi i32 [ %accumulator.tr, %case99 ], [ 0, %entry ], [ %accumulate, %default ]
-; CHECK: %ret.tr = phi i32 [ undef, %entry ], [ %current.ret.tr, %case99 ], [ %ret.tr, %default ]
+; CHECK: %ret.tr = phi i32 [ poison, %entry ], [ %current.ret.tr, %case99 ], [ %ret.tr, %default ]
 ; CHECK: %ret.known.tr = phi i1 [ false, %entry ], [ true, %case99 ], [ %ret.known.tr, %default ]
 ; CHECK: case0:
 ; CHECK: %accumulator.ret.tr2 = add i32 %accumulator.tr, %helper

@@ -172,7 +172,7 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   Ret.NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
   Ret.ImpliedCheck = R.getValueAsString("ImpliedCheck");
   Ret.ImpliedValue =
-      R.getValueAsOptionalString("ImpliedValue").getValueOr(Ret.DefaultValue);
+      R.getValueAsOptionalString("ImpliedValue").value_or(Ret.DefaultValue);
 
   Ret.ShouldParse = R.getValueAsString("ShouldParse");
   Ret.Normalizer = R.getValueAsString("Normalizer");

@@ -10,7 +10,10 @@
 #ifndef _LIBCPP_SUPPORT_IBM_XLOCALE_H
 #define _LIBCPP_SUPPORT_IBM_XLOCALE_H
 
+#if defined(__MVS__)
 #include <__support/ibm/locale_mgmt_zos.h>
+#endif // defined(__MVS__)
+
 #include <stdarg.h>
 
 #include "cstdlib"

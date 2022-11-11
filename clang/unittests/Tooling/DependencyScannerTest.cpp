@@ -14,19 +14,21 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <string>
 
-namespace clang {
-namespace tooling {
+using namespace clang;
+using namespace tooling;
+using namespace dependencies;
 
 namespace {
 
@@ -204,5 +206,36 @@ TEST(DependencyScanner, ScanDepsReuseFilemanagerHasInclude) {
   EXPECT_EQ(convert_to_slash(Deps[5]), "/root/symlink.h");
 }
 
-} // end namespace tooling
-} // end namespace clang
+TEST(DependencyScanner, ScanDepsWithFS) {
+  std::vector<std::string> CommandLine = {"clang",
+                                          "-target",
+                                          "x86_64-apple-macosx10.7",
+                                          "-c",
+                                          "test.cpp",
+                                          "-o"
+                                          "test.cpp.o"};
+  StringRef CWD = "/root";
+
+  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  VFS->setCurrentWorkingDirectory(CWD);
+  auto Sept = llvm::sys::path::get_separator();
+  std::string HeaderPath =
+      std::string(llvm::formatv("{0}root{0}header.h", Sept));
+  std::string TestPath = std::string(llvm::formatv("{0}root{0}test.cpp", Sept));
+
+  VFS->addFile(HeaderPath, 0, llvm::MemoryBuffer::getMemBuffer("\n"));
+  VFS->addFile(TestPath, 0,
+               llvm::MemoryBuffer::getMemBuffer("#include \"header.h\"\n"));
+
+  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
+                                    ScanningOutputFormat::Make);
+  DependencyScanningTool ScanTool(Service, VFS);
+
+  std::string DepFile;
+  ASSERT_THAT_ERROR(
+      ScanTool.getDependencyFile(CommandLine, CWD).moveInto(DepFile),
+      llvm::Succeeded());
+  using llvm::sys::path::convert_to_slash;
+  EXPECT_EQ(convert_to_slash(DepFile),
+            "test.cpp.o: /root/test.cpp /root/header.h\n");
+}

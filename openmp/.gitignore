@@ -20,6 +20,8 @@
 .sw?
 #OS X specific files.
 .DS_store
+# Python egg files
+*.eggs
 
 #==============================================================================#
 # Explicit files to ignore (only matches one).

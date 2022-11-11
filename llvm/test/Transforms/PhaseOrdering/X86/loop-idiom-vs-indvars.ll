@@ -12,7 +12,7 @@ define i32 @cttz(i32 %n, i32* %p1) {
 ; ALL-LABEL: @cttz(
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[TMP0:%.*]] = shl i32 [[N:%.*]], 1
-; ALL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 false), [[RNG0:!range !.*]]
+; ALL-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 false), !range [[RNG0:![0-9]+]]
 ; ALL-NEXT:    [[TMP2:%.*]] = sub nuw nsw i32 32, [[TMP1]]
 ; ALL-NEXT:    [[TMP3:%.*]] = sub nuw nsw i32 75, [[TMP1]]
 ; ALL-NEXT:    store i32 [[TMP3]], i32* [[P1:%.*]], align 4

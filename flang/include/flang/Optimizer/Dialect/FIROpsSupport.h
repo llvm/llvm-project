@@ -31,18 +31,18 @@ inline bool isaCall(mlir::Operation *op) {
          mlir::isa<mlir::func::CallIndirectOp>(op);
 }
 
-/// return true iff the Operation is a fir::CallOp, fir::DispatchOp,
+/// Return true iff the Operation is a fir::CallOp, fir::DispatchOp,
 /// mlir::CallOp, or mlir::CallIndirectOp and not pure
-/// NB: this is not the same as `!pureCall(op)`
+/// NB: This is not the same as `!pureCall(op)`.
 inline bool impureCall(mlir::Operation *op) {
   // Should we also auto-detect that the called function is pure if its
   // arguments are not references?  For now, rely on a "pure" attribute.
   return op && isaCall(op) && !op->getAttr("pure");
 }
 
-/// return true iff the Operation is a fir::CallOp, fir::DispatchOp,
+/// Return true iff the Operation is a fir::CallOp, fir::DispatchOp,
 /// mlir::CallOp, or mlir::CallIndirectOp and is also pure.
-/// NB: this is not the same as `!impureCall(op)`
+/// NB: This is not the same as `!impureCall(op)`.
 inline bool pureCall(mlir::Operation *op) {
   // Should we also auto-detect that the called function is pure if its
   // arguments are not references?  For now, rely on a "pure" attribute.
@@ -79,7 +79,9 @@ static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {
 }
 
 /// Attribute to keep track of Fortran scoping information for a symbol.
-static constexpr llvm::StringRef getSymbolAttrName() { return "fir.sym_name"; }
+static constexpr llvm::StringRef getSymbolAttrName() {
+  return "fir.bindc_name";
+}
 
 /// Attribute to mark a function that takes a host associations argument.
 static constexpr llvm::StringRef getHostAssocAttrName() {

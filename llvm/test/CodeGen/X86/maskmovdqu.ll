@@ -7,7 +7,7 @@
 ; RUN: llc < %s -mtriple=x86_64--gnux32 -mattr=+avx | FileCheck %s --check-prefix=x86_x32_AVX
 ; rdar://6573467
 
-define void @test(<16 x i8> %a, <16 x i8> %b, i32 %dummy, i8* %c) nounwind {
+define void @test(<16 x i8> %a, <16 x i8> %b, i32 %dummy, ptr %c) nounwind {
 ; i686_SSE2-LABEL: test:
 ; i686_SSE2:       # %bb.0: # %entry
 ; i686_SSE2-NEXT:    pushl %edi
@@ -49,8 +49,8 @@ define void @test(<16 x i8> %a, <16 x i8> %b, i32 %dummy, i8* %c) nounwind {
 ; x86_x32_AVX-NEXT:    addr32 vmaskmovdqu %xmm1, %xmm0
 ; x86_x32_AVX-NEXT:    retq
 entry:
-	tail call void @llvm.x86.sse2.maskmov.dqu( <16 x i8> %a, <16 x i8> %b, i8* %c )
+	tail call void @llvm.x86.sse2.maskmov.dqu( <16 x i8> %a, <16 x i8> %b, ptr %c )
 	ret void
 }
 
-declare void @llvm.x86.sse2.maskmov.dqu(<16 x i8>, <16 x i8>, i8*) nounwind
+declare void @llvm.x86.sse2.maskmov.dqu(<16 x i8>, <16 x i8>, ptr) nounwind

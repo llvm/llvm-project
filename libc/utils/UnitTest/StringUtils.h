@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_SIMPLE_STRING_CONV_H
 #define LLVM_LIBC_UTILS_UNITTEST_SIMPLE_STRING_CONV_H
 
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 
 #include <string>
 
@@ -17,7 +17,7 @@ namespace __llvm_libc {
 
 // Return the first N hex digits of an integer as a string in upper case.
 template <typename T>
-cpp::EnableIfType<cpp::IsIntegral<T>::Value, std::string>
+cpp::enable_if_t<cpp::is_integral_v<T>, std::string>
 int_to_hex(T X, size_t Length = sizeof(T) * 2) {
   std::string s(Length, '0');
 

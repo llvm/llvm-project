@@ -6,7 +6,7 @@ entry:
 	br i1 true, label %bb1, label %bb3
 
 bb1:
-	%tmp1 = load i8, i8* null, align 1
+	%tmp1 = load i8, ptr null, align 1
 	%tmp2 = icmp eq i8 %tmp1, 0
 	br label %bb2
 

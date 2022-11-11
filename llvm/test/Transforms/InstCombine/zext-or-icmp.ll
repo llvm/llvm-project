@@ -217,7 +217,7 @@ define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) {
 ; This would infinite loop because knownbits changed between checking
 ; if a transform was profitable and actually doing the transform.
 
-define i1 @PR51762(i32 *%i, i32 %t0, i16 %t1, i64* %p, i32* %d, i32* %f, i32 %p2, i1 %c1) {
+define i1 @PR51762(ptr %i, i32 %t0, i16 %t1, ptr %p, ptr %d, ptr %f, i32 %p2, i1 %c1) {
 ; CHECK-LABEL: @PR51762(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
@@ -229,7 +229,7 @@ define i1 @PR51762(i32 *%i, i32 %t0, i16 %t1, i64* %p, i32* %d, i32* %f, i32 %p2
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end11:
 ; CHECK-NEXT:    [[S1:%.*]] = sext i16 [[T1:%.*]] to i64
-; CHECK-NEXT:    [[SROA38:%.*]] = load i32, i32* [[I:%.*]], align 8
+; CHECK-NEXT:    [[SROA38:%.*]] = load i32, ptr [[I:%.*]], align 8
 ; CHECK-NEXT:    [[INSERT_EXT51:%.*]] = zext i32 [[I_SROA_8_0]] to i64
 ; CHECK-NEXT:    [[INSERT_SHIFT52:%.*]] = shl nuw i64 [[INSERT_EXT51]], 32
 ; CHECK-NEXT:    [[INSERT_EXT39:%.*]] = zext i32 [[SROA38]] to i64
@@ -239,16 +239,16 @@ define i1 @PR51762(i32 *%i, i32 %t0, i16 %t1, i64* %p, i32* %d, i32* %f, i32 %p2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INSERT_INSERT41]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT57:%.*]] = or i1 [[NE]], [[CMP]]
 ; CHECK-NEXT:    [[LOR_EXT:%.*]] = zext i1 [[SPEC_SELECT57]] to i32
-; CHECK-NEXT:    [[T2:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[D:%.*]], align 4
 ; CHECK-NEXT:    [[CONV15:%.*]] = sext i16 [[T1]] to i32
 ; CHECK-NEXT:    [[CMP16:%.*]] = icmp sge i32 [[T2]], [[CONV15]]
 ; CHECK-NEXT:    [[CONV17:%.*]] = zext i1 [[CMP16]] to i32
-; CHECK-NEXT:    [[T3:%.*]] = load i32, i32* [[F:%.*]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load i32, ptr [[F:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[T3]], [[CONV17]]
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[F]], align 4
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[F]], align 4
 ; CHECK-NEXT:    [[REM18:%.*]] = srem i32 [[LOR_EXT]], [[ADD]]
 ; CHECK-NEXT:    [[CONV19:%.*]] = zext i32 [[REM18]] to i64
-; CHECK-NEXT:    store i32 0, i32* [[D]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[D]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[INSERT_INSERT41]], [[CONV19]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[R]])
 ; CHECK-NEXT:    ret i1 true
@@ -266,7 +266,7 @@ cond.true:
 
 for.end11:
   %s1 = sext i16 %t1 to i64
-  %sroa38 = load i32, i32* %i, align 8
+  %sroa38 = load i32, ptr %i, align 8
   %insert.ext51 = zext i32 %i.sroa.8.0 to i64
   %insert.shift52 = shl nuw i64 %insert.ext51, 32
   %insert.ext39 = zext i32 %sroa38 to i64
@@ -277,18 +277,18 @@ for.end11:
   %spec.select57 = or i1 %ne, %cmp
 
   %lor.ext = zext i1 %spec.select57 to i32
-  %t2 = load i32, i32* %d, align 4
+  %t2 = load i32, ptr %d, align 4
   %conv15 = sext i16 %t1 to i32
   %cmp16 = icmp sge i32 %t2, %conv15
   %conv17 = zext i1 %cmp16 to i32
-  %t3 = load i32, i32* %f, align 4
+  %t3 = load i32, ptr %f, align 4
   %add = add nsw i32 %t3, %conv17
-  store i32 %add, i32* %f, align 4
+  store i32 %add, ptr %f, align 4
   %rem18 = srem i32 %lor.ext, %add
   %conv19 = zext i32 %rem18 to i64
   %div = udiv i64 %insert.insert41, %conv19
   %trunc33 = trunc i64 %div to i32
-  store i32 %trunc33, i32* %d, align 8
+  store i32 %trunc33, ptr %d, align 8
   %r = icmp ult i64 %insert.insert41, %conv19
   call void @llvm.assume(i1 %r)
   ret i1 %r

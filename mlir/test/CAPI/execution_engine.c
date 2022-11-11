@@ -9,13 +9,13 @@
 
 /* RUN: mlir-capi-execution-engine-test 2>&1 | FileCheck %s
  */
-/* REQUIRES: native
+/* REQUIRES: host-supports-jit
  */
 
 #include "mlir-c/Conversion.h"
 #include "mlir-c/ExecutionEngine.h"
 #include "mlir-c/IR.h"
-#include "mlir-c/Registration.h"
+#include "mlir-c/RegisterEverything.h"
 
 #include <assert.h>
 #include <math.h>
@@ -23,13 +23,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void registerAllUpstreamDialects(MlirContext ctx) {
+  MlirDialectRegistry registry = mlirDialectRegistryCreate();
+  mlirRegisterAllDialects(registry);
+  mlirContextAppendDialectRegistry(ctx, registry);
+  mlirDialectRegistryDestroy(registry);
+}
+
 void lowerModuleToLLVM(MlirContext ctx, MlirModule module) {
   MlirPassManager pm = mlirPassManagerCreate(ctx);
   MlirOpPassManager opm = mlirPassManagerGetNestedUnder(
       pm, mlirStringRefCreateFromCString("func.func"));
   mlirPassManagerAddOwnedPass(pm, mlirCreateConversionConvertFuncToLLVM());
-  mlirOpPassManagerAddOwnedPass(opm,
-                                mlirCreateConversionConvertArithmeticToLLVM());
+  mlirOpPassManagerAddOwnedPass(
+      opm, mlirCreateConversionArithToLLVMConversionPass());
   MlirLogicalResult status = mlirPassManagerRun(pm, module);
   if (mlirLogicalResultIsFailure(status)) {
     fprintf(stderr, "Unexpected failure running pass pipeline\n");
@@ -41,7 +48,8 @@ void lowerModuleToLLVM(MlirContext ctx, MlirModule module) {
 // CHECK-LABEL: Running test 'testSimpleExecution'
 void testSimpleExecution() {
   MlirContext ctx = mlirContextCreate();
-  mlirRegisterAllDialects(ctx);
+  registerAllUpstreamDialects(ctx);
+
   MlirModule module = mlirModuleCreateParse(
       ctx, mlirStringRefCreateFromCString(
                // clang-format off
@@ -55,7 +63,8 @@ void testSimpleExecution() {
   lowerModuleToLLVM(ctx, module);
   mlirRegisterAllLLVMTranslations(ctx);
   MlirExecutionEngine jit = mlirExecutionEngineCreate(
-      module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL);
+      module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL,
+      /*enableObjectDump=*/false);
   if (mlirExecutionEngineIsNull(jit)) {
     fprintf(stderr, "Execution engine creation failed");
     exit(2);

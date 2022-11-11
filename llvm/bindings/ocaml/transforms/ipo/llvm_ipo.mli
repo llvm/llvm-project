@@ -11,11 +11,6 @@
     This interface provides an OCaml API for LLVM interprocedural optimizations, the
     classes in the [LLVMIPO] library. *)
 
-(** See the [llvm::createAddArgumentPromotionPass] function. *)
-external add_argument_promotion
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_argument_promotion"
-
 (** See the [llvm::createConstantMergePass] function. *)
 external add_constant_merge
   : [ `Module ] Llvm.PassManager.t -> unit
@@ -55,11 +50,6 @@ external add_global_dce
 external add_global_optimizer
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_global_optimizer"
-
-(** See the [llvm::createPruneEHPass] function. *)
-external add_prune_eh
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_prune_eh"
 
 (** See the [llvm::createIPSCCPPass] function. *)
 external add_ipsccp

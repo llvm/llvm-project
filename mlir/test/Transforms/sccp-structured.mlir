@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="func.func(sccp)" -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(sccp))" -split-input-file | FileCheck %s
 
 /// Check that a constant is properly propagated when only one edge is taken.
 
@@ -141,7 +141,7 @@ func.func @loop_region_branch_terminator_op(%arg1 : i32) {
 
   %c2_i32 = arith.constant 2 : i32
    %0 = scf.while (%arg2 = %c2_i32) : (i32) -> (i32) {
-    %1 = arith.cmpi slt, %arg2, %arg1 : i32
+    %1 = arith.cmpi sgt, %arg1, %arg2 : i32
     scf.condition(%1) %arg2 : i32
   } do {
   ^bb0(%arg2: i32):

@@ -98,7 +98,7 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
   // For example, the load that will get the relocation as follows:
   // .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
   //  lwa 3, 4(3)
-  if (IsPartOfGOTToPCRelPair.hasValue() && !IsPartOfGOTToPCRelPair.getValue())
+  if (IsPartOfGOTToPCRelPair && !*IsPartOfGOTToPCRelPair)
     emitGOTToPCRelReloc(Inst);
 
   // Special handling is only for prefixed instructions.
@@ -113,7 +113,7 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
   // follows:
   //  pld 3, vec@got@pcrel(0), 1
   // .Lpcrel1:
-  if (IsPartOfGOTToPCRelPair.hasValue() && IsPartOfGOTToPCRelPair.getValue())
+  if (IsPartOfGOTToPCRelPair && *IsPartOfGOTToPCRelPair)
     emitGOTToPCRelLabel(Inst);
 }
 

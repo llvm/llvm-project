@@ -1149,7 +1149,7 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
 
   // Check if we can shuffle vector halves around to get the used elements
   // into a single vector.
-  SmallVector<int,128> MaskH(SM.Mask.begin(), SM.Mask.end());
+  SmallVector<int, 128> MaskH(SM.Mask);
   SmallVector<unsigned, 4> SegList = getInputSegmentList(SM.Mask, SegLen);
   unsigned SegCount = SegList.size();
   SmallVector<unsigned, 4> SegMap = getOutputSegmentMap(SM.Mask, SegLen);
@@ -1271,11 +1271,11 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
 
   ShuffleMask SMH(MaskH);
   assert(SMH.Mask.size() == VecLen);
-  SmallVector<int,128> MaskA(SMH.Mask.begin(), SMH.Mask.end());
+  SmallVector<int, 128> MaskA(SMH.Mask);
 
   if (SMH.MaxSrc - SMH.MinSrc >= static_cast<int>(HwLen)) {
     // valign(Lo=Va,Hi=Vb) won't work. Try swapping Va/Vb.
-    SmallVector<int,128> Swapped(SMH.Mask.begin(), SMH.Mask.end());
+    SmallVector<int, 128> Swapped(SMH.Mask);
     ShuffleVectorSDNode::commuteMask(Swapped);
     ShuffleMask SW(Swapped);
     if (SW.MaxSrc - SW.MinSrc < static_cast<int>(HwLen)) {
@@ -1734,7 +1734,13 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
 
   // The following shuffles only work for bytes and halfwords. This requires
   // the strip length to be 1 or 2.
-  if (Strip.second != 1 && Strip.second != 2)
+  // FIXME: Collecting even/odd elements of any power-of-2 length could be
+  // done by taking half of a deal operation. This should be handled in
+  // perfect shuffle generation, but currently that code requires an exact
+  // mask to work. To work with contracting perfect shuffles, it would need
+  // to be able to complete an incomplete mask.
+  // Once that's done, remove the handling of L=4.
+  if (Strip.second != 1 && Strip.second != 2 && /*FIXME*/Strip.second != 4)
     return OpRef::fail();
 
   // The patterns for the shuffles, in terms of the starting offsets of the
@@ -1800,6 +1806,17 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
     assert(Strip.first == 0 || Strip.first == L);
     using namespace Hexagon;
     NodeTemplate Res;
+    // FIXME: remove L=4 case after adding perfect mask completion.
+    if (L == 4) {
+      const SDLoc &dl(Results.InpNode);
+      Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(-L, dl)});
+      OpRef C = OpRef::res(Results.top());
+      MVT JoinTy = MVT::getVectorVT(ResTy.getVectorElementType(),
+                                    2 * ResTy.getVectorNumElements());
+      Results.push(Hexagon::V6_vshuffvdd, JoinTy, {Vb, Va, C});
+      return Strip.first == 0 ? OpRef::lo(OpRef::res(Results.top()))
+                              : OpRef::hi(OpRef::res(Results.top()));
+    }
     Res.Opc = Strip.second == 1 // Number of bytes.
                   ? (Strip.first == 0 ? V6_vpackeb : V6_vpackob)
                   : (Strip.first == 0 ? V6_vpackeh : V6_vpackoh);
@@ -1998,7 +2015,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // a vector pair, but the two vectors in the pair are swapped.
   // The code below that identifies perfect shuffles will reject
   // it, unless the order is reversed.
-  SmallVector<int,128> MaskStorage(SM.Mask.begin(), SM.Mask.end());
+  SmallVector<int, 128> MaskStorage(SM.Mask);
   bool InvertedPair = false;
   if (HavePairs && SM.Mask[0] >= int(HwLen)) {
     for (int i = 0, e = SM.Mask.size(); i != e; ++i) {

@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=WITHOUTATEXIT %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -fregister-global-dtors-with-atexit -debug-info-kind=line-tables-only -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CXAATEXIT --check-prefix=WITHATEXIT %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -fno-use-cxa-atexit -fregister-global-dtors-with-atexit -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ATEXIT --check-prefix=WITHATEXIT %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=WITHOUTATEXIT %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fregister-global-dtors-with-atexit -debug-info-kind=line-tables-only -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CXAATEXIT --check-prefix=WITHATEXIT %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fno-use-cxa-atexit -fregister-global-dtors-with-atexit -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ATEXIT --check-prefix=WITHATEXIT %s
 
 // WITHOUTATEXIT: global_ctors{{.*}}@A{{.*}}@C
-// WITHOUTATEXIT: @llvm.global_dtors = appending global [5 x { i32, void ()*, i8* }]{{.*}}@B{{.*}}@E{{.*}}@F{{.*}}@G{{.*}}@D
-// WITHATEXIT: @llvm.global_ctors = appending global [5 x { i32, void ()*, i8* }]{{.*}}i32 65535, void ()* @A,{{.*}}i32 65535, void ()* @C,{{.*}}i32 123, void ()* @__GLOBAL_init_123,{{.*}}i32 789, void ()* @[[GLOBAL_INIT_789:__GLOBAL_init_789.[0-9]+]],{{.*}}i32 65535, void ()* @__GLOBAL_init_65535,
+// WITHOUTATEXIT: @llvm.global_dtors = appending global [5 x { i32, ptr, ptr }]{{.*}}@B{{.*}}@E{{.*}}@F{{.*}}@G{{.*}}@D
+// WITHATEXIT: @llvm.global_ctors = appending global [5 x { i32, ptr, ptr }]{{.*}}i32 65535, ptr @A,{{.*}}i32 65535, ptr @C,{{.*}}i32 123, ptr @__GLOBAL_init_123,{{.*}}i32 789, ptr @[[GLOBAL_INIT_789:__GLOBAL_init_789.[0-9]+]],{{.*}}i32 65535, ptr @__GLOBAL_init_65535,
 // WITHATEXIT-NOT: global_dtors
 
 // CHECK: define{{.*}} void @A()
@@ -21,20 +21,20 @@
 
 // CXAATEXIT: define internal void @__GLOBAL_init_123(){{.*}}section "__TEXT,__StaticInit,regular,pure_instructions" !dbg ![[GLOBAL_INIT_SP:.*]] {
 // ATEXIT: define internal void @__GLOBAL_init_123(){{.*}}section "__TEXT,__StaticInit,regular,pure_instructions"
-// CXAATEXIT: call i32 @__cxa_atexit(void (i8*)* bitcast (void ()* @E to void (i8*)*), i8* null, i8* @__dso_handle) {{.*}}, !dbg ![[GLOBAL_INIT_LOC:.*]]
-// CXAATEXIT: call i32 @__cxa_atexit(void (i8*)* bitcast (void ()* @G to void (i8*)*), i8* null, i8* @__dso_handle)
-// ATEXIT: call i32 @atexit(void ()* @E)
-// ATEXIT: call i32 @atexit(void ()* @G)
+// CXAATEXIT: call i32 @__cxa_atexit(ptr @E, ptr null, ptr @__dso_handle) {{.*}}, !dbg ![[GLOBAL_INIT_LOC:.*]]
+// CXAATEXIT: call i32 @__cxa_atexit(ptr @G, ptr null, ptr @__dso_handle)
+// ATEXIT: call i32 @atexit(ptr @E)
+// ATEXIT: call i32 @atexit(ptr @G)
 
 // WITHATEXIT: define internal void @[[GLOBAL_INIT_789]](){{.*}}section "__TEXT,__StaticInit,regular,pure_instructions"
-// CXAATEXIT: call i32 @__cxa_atexit(void (i8*)* bitcast (void ()* @F to void (i8*)*), i8* null, i8* @__dso_handle)
-// ATEXIT: call i32 @atexit(void ()* @F)
+// CXAATEXIT: call i32 @__cxa_atexit(ptr @F, ptr null, ptr @__dso_handle)
+// ATEXIT: call i32 @atexit(ptr @F)
 
 // WITHATEXIT: define internal void @__GLOBAL_init_65535(){{.*}}section "__TEXT,__StaticInit,regular,pure_instructions"
-// CXAATEXIT: call i32 @__cxa_atexit(void (i8*)* bitcast (void ()* @B to void (i8*)*), i8* null, i8* @__dso_handle)
-// CXAATEXIT: call i32 @__cxa_atexit(void (i8*)* bitcast (void ()* @D to void (i8*)*), i8* null, i8* @__dso_handle)
-// ATEXIT: call i32 @atexit(void ()* @B)
-// ATEXIT: call i32 @atexit(void ()* @D)
+// CXAATEXIT: call i32 @__cxa_atexit(ptr @B, ptr null, ptr @__dso_handle)
+// CXAATEXIT: call i32 @__cxa_atexit(ptr @D, ptr null, ptr @__dso_handle)
+// ATEXIT: call i32 @atexit(ptr @B)
+// ATEXIT: call i32 @atexit(ptr @D)
 
 int printf(const char *, ...);
 

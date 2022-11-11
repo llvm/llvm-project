@@ -15,3 +15,28 @@ define <vscale x 1 x i32> @select_opt(<vscale x 1 x i32> %b, <vscale x 1 x i1> %
   %d = select <vscale x 1 x i1> %m, <vscale x 1 x i32> %c, <vscale x 1 x i32> %b
   ret <vscale x 1 x i32> %d
 }
+
+define <vscale x 2 x i64> @load_scalable_of_selected_ptrs(ptr %p0, ptr %p1, i64 %idx) {
+; CHECK-LABEL: @load_scalable_of_selected_ptrs(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, ptr [[P0:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P1:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[ARRAYIDX0]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[L0]], [[L1]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], ptr [[ARRAYIDX0]], ptr [[ARRAYIDX1]]
+; CHECK-NEXT:    [[RET:%.*]] = load <vscale x 2 x i64>, ptr [[SEL]], align 16
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[RET]]
+;
+entry:
+  ; Test introduced in response to a TypeSize warning arising from isSafeToLoadUnconditionally via instcombine.
+  ; deref (p0[0] < p1[0] ? p0 : p1) as <vscale x 2 x i64>.
+  %arrayidx0 = getelementptr inbounds i32, ptr %p0, i64 %idx
+  %arrayidx1 = getelementptr inbounds i32, ptr %p1, i64 %idx
+  %l0 = load i32, ptr %arrayidx0
+  %l1 = load i32, ptr %arrayidx1
+  %cmp = icmp slt i32 %l0, %l1
+  %sel = select i1 %cmp, ptr %arrayidx0, ptr %arrayidx1
+  %ret = load <vscale x 2 x i64>, ptr %sel
+  ret <vscale x 2 x i64> %ret
+}

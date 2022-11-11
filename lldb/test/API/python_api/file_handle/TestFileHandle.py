@@ -80,7 +80,6 @@ def readStrippedLines(f):
 class FileHandleTestCase(lldbtest.TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = lldbtest.Base.compute_mydir(__file__)
 
     # The way normal tests evaluate debugger commands is
     # by using a SBCommandInterpreter directly, which captures

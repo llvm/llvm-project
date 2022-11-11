@@ -3,7 +3,7 @@
 ; ModuleID = '<stdin>'
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32"
 target triple = "i386-pc-linux-gnu"
-@g_3 = common global i8 0, align 1		; <i8*> [#uses=2]
+@g_3 = common global i8 0, align 1		; <ptr> [#uses=2]
 
 define signext i8 @safe_mul_func_int16_t_s_s(i32 %_si1, i8 signext %_si2) nounwind readnone {
 entry:
@@ -43,12 +43,12 @@ entry:
 	br i1 %tobool, label %lor.lhs.false, label %if.then
 
 lor.lhs.false:		; preds = %entry
-	%tmp1 = load i8, i8* @g_3		; <i8> [#uses=1]
+	%tmp1 = load i8, ptr @g_3		; <i8> [#uses=1]
 	%tobool3 = icmp eq i8 %tmp1, 0		; <i1> [#uses=1]
 	br i1 %tobool3, label %return, label %if.then
 
 if.then:		; preds = %lor.lhs.false, %entry
-	%tmp4 = load i8, i8* @g_3		; <i8> [#uses=1]
+	%tmp4 = load i8, ptr @g_3		; <i8> [#uses=1]
 	%conv5 = sext i8 %tmp4 to i32		; <i32> [#uses=1]
 	ret i32 %conv5
 
@@ -93,12 +93,12 @@ entry:
   br i1 %tobool, label %lor.lhs.false, label %if.then
 
 lor.lhs.false:                                    ; preds = %entry
-  %tmp1 = load i8, i8* @g_3                           ; <i8> [#uses=1]
+  %tmp1 = load i8, ptr @g_3                           ; <i8> [#uses=1]
   %tobool3 = icmp eq i8 %tmp1, 0                  ; <i1> [#uses=1]
   br i1 %tobool3, label %return, label %if.then
 
 if.then:                                          ; preds = %lor.lhs.false, %entry
-  %tmp4 = load i8, i8* @g_3                           ; <i8> [#uses=1]
+  %tmp4 = load i8, ptr @g_3                           ; <i8> [#uses=1]
   %conv5 = sext i8 %tmp4 to i32                   ; <i32> [#uses=1]
   ret i32 %conv5
 

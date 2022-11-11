@@ -2,9 +2,6 @@
 Test that lldb watchpoint works for multiple threads.
 """
 
-from __future__ import print_function
-
-
 import re
 import lldb
 from lldbsuite.test.decorators import *
@@ -13,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class WatchpointForMultipleThreadsTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
     main_spec = lldb.SBFileSpec("main.cpp", False)
 

@@ -1,1 +1,8 @@
-; RUN: llvm-ar -M  < %S/Inputs/mri-crlf.mri
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: cd %t
+
+# RUN: echo "FOO" > foo.txt
+# RUN: llvm-ar -M  < %S/Inputs/mri-crlf.mri
+# llvm-ar t crlf.a | FileCheck %s
+
+# CHECK: foo.txt

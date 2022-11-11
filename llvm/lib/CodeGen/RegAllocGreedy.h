@@ -15,6 +15,7 @@
 #include "InterferenceCache.h"
 #include "RegAllocBase.h"
 #include "RegAllocEvictionAdvisor.h"
+#include "RegAllocPriorityAdvisor.h"
 #include "SpillPlacement.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -25,7 +26,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
@@ -54,7 +54,6 @@ class MachineLoop;
 class MachineLoopInfo;
 class MachineOptimizationRemarkEmitter;
 class MachineOptimizationRemarkMissed;
-class SlotIndex;
 class SlotIndexes;
 class TargetInstrInfo;
 class VirtRegMap;
@@ -149,10 +148,17 @@ public:
   size_t getQueueSize() const { return Queue.size(); }
   // end (interface to eviction advisers)
 
+  // Interface to priority advisers
+  bool getRegClassPriorityTrumpsGlobalness() const {
+    return RegClassPriorityTrumpsGlobalness;
+  }
+  bool getReverseLocalAssignment() const { return ReverseLocalAssignment; }
+  // end (interface to priority advisers)
+
 private:
   // Convenient shortcuts.
   using PQueue = std::priority_queue<std::pair<unsigned, unsigned>>;
-  using SmallLISet = SmallPtrSet<const LiveInterval *, 4>;
+  using SmallLISet = SmallSetVector<const LiveInterval *, 4>;
 
   // We need to track all tentative recolorings so we can roll back any
   // successful and unsuccessful recoloring attempts.
@@ -174,7 +180,6 @@ private:
   EdgeBundles *Bundles;
   SpillPlacement *SpillPlacer;
   LiveDebugVariables *DebugVars;
-  AliasAnalysis *AA;
 
   // state
   std::unique_ptr<Spiller> SpillerInstance;
@@ -182,6 +187,8 @@ private:
   std::unique_ptr<VirtRegAuxInfo> VRAI;
   Optional<ExtraRegInfo> ExtraInfo;
   std::unique_ptr<RegAllocEvictionAdvisor> EvictAdvisor;
+
+  std::unique_ptr<RegAllocPriorityAdvisor> PriorityAdvisor;
 
   // Enum CutOffStage to keep a track whether the register allocation failed
   // because of the cutoffs encountered in last chance recoloring.
@@ -273,6 +280,8 @@ private:
   /// machine function.
   bool RegClassPriorityTrumpsGlobalness;
 
+  bool ReverseLocalAssignment;
+
 public:
   RAGreedy(const RegClassFilterFunc F = allocateAllRegClasses);
 
@@ -315,6 +324,7 @@ private:
   void enqueue(PQueue &CurQueue, const LiveInterval *LI);
   const LiveInterval *dequeue(PQueue &CurQueue);
 
+  bool hasVirtRegAlloc();
   BlockFrequency calcSpillCost();
   bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &);
   bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);

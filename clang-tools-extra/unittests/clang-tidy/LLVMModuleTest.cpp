@@ -21,7 +21,7 @@ static std::string runCheck(StringRef Code, const Twine &Filename,
   std::string Result = test::runCheckOnCode<T>(
       Code, &Errors, Filename, std::string("-xc++-header"), ClangTidyOptions{},
       std::move(PathsToContent));
-  if (Errors.size() != (size_t)ExpectedWarning.hasValue())
+  if (Errors.size() != (size_t)ExpectedWarning.has_value())
     return "invalid error count";
   if (ExpectedWarning && *ExpectedWarning != Errors.back().Message.Message)
     return "expected: '" + ExpectedWarning->str() + "', saw: '" +

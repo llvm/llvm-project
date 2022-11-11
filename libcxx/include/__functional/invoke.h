@@ -24,6 +24,7 @@
 #include <__type_traits/is_reference_wrapper.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
+#include <__type_traits/nat.h>
 #include <__type_traits/remove_cv.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
@@ -39,16 +40,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 struct __any
 {
     __any(...);
-};
-
-struct __nat
-{
-#ifndef _LIBCPP_CXX03_LANG
-    __nat() = delete;
-    __nat(const __nat&) = delete;
-    __nat& operator=(const __nat&) = delete;
-    ~__nat() = delete;
-#endif
 };
 
 template <class _MP, bool _IsMemberFunctionPtr, bool _IsMemberObjectPtr>
@@ -257,7 +248,7 @@ struct __member_pointer_traits_imp<_Rp _Class::*, false, true>
 
 template <class _MP>
 struct __member_pointer_traits
-    : public __member_pointer_traits_imp<typename remove_cv<_MP>::type,
+    : public __member_pointer_traits_imp<__remove_cv_t<_MP>,
                     is_member_function_pointer<_MP>::value,
                     is_member_object_pointer<_MP>::value>
 {
@@ -415,10 +406,10 @@ struct __invokable_r
   // or incomplete array types as required by the standard.
   using _Result = decltype(__try_call<_Fp, _Args...>(0));
 
-  using type = typename conditional<
+  using type = __conditional_t<
       _IsNotSame<_Result, __nat>::value,
-      typename conditional< is_void<_Ret>::value, true_type, __is_core_convertible<_Result, _Ret> >::type,
-      false_type >::type;
+      __conditional_t<is_void<_Ret>::value, true_type, __is_core_convertible<_Result, _Ret> >,
+      false_type>;
   static const bool value = type::value;
 };
 template <class _Fp, class ..._Args>
@@ -533,7 +524,7 @@ template <class _Fn, class... _Args>
 using invoke_result_t = typename invoke_result<_Fn, _Args...>::type;
 
 template <class _Fn, class ..._Args>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 invoke_result_t<_Fn, _Args...>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 invoke_result_t<_Fn, _Args...>
 invoke(_Fn&& __f, _Args&&... __args)
     noexcept(is_nothrow_invocable_v<_Fn, _Args...>)
 {

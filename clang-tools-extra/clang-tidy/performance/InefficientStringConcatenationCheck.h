@@ -20,7 +20,7 @@ namespace performance {
 /// concatenating strings, using the operator+, instead of operator+=.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-string-concatenation.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/performance/inefficient-string-concatenation.html
 class InefficientStringConcatenationCheck : public ClangTidyCheck {
 public:
   InefficientStringConcatenationCheck(StringRef Name,

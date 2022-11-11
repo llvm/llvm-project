@@ -6,8 +6,6 @@ from lldbsuite.test import lldbutil
 
 class TestCppIncompleteTypes(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(compiler="gcc")
     def test_limit_debug_info(self):
         self.build()

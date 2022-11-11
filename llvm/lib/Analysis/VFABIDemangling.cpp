@@ -272,6 +272,7 @@ ParseRet tryParseAlign(StringRef &ParseString, Align &Alignment) {
 
   return ParseRet::None;
 }
+
 #ifndef NDEBUG
 // Verify the assumtion that all vectors in the signature of a vector
 // function have the same number of elements.
@@ -292,7 +293,6 @@ bool verifyAllVectorsHaveSameWidth(FunctionType *Signature) {
     return (EC == VTy->getElementCount());
   });
 }
-
 #endif // NDEBUG
 
 // Extract the VectorizationFactor from a given function signature,
@@ -417,8 +417,8 @@ Optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   // this parser:
   // 1. Uniqueness.
   // 2. Must be the last in the parameter list.
-  const auto NGlobalPreds = std::count_if(
-      Parameters.begin(), Parameters.end(), [](const VFParameter PK) {
+  const auto NGlobalPreds =
+      llvm::count_if(Parameters, [](const VFParameter &PK) {
         return PK.ParamKind == VFParamKind::GlobalPredicate;
       });
   assert(NGlobalPreds < 2 && "Cannot have more than one global predicate.");

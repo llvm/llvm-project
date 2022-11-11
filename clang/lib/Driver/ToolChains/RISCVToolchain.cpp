@@ -163,6 +163,7 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   } else {
     CmdArgs.push_back("elf32lriscv");
   }
+  CmdArgs.push_back("-X");
 
   std::string Linker = getToolChain().GetLinkerPath();
 
@@ -200,8 +201,11 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib) &&
       !Args.hasArg(options::OPT_nodefaultlibs)) {
-    if (ToolChain.ShouldLinkCXXStdlib(Args))
-      ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (D.CCCIsCXX()) {
+      if (ToolChain.ShouldLinkCXXStdlib(Args))
+        ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+      CmdArgs.push_back("-lm");
+    }
     CmdArgs.push_back("--start-group");
     CmdArgs.push_back("-lc");
     CmdArgs.push_back("-lgloss");

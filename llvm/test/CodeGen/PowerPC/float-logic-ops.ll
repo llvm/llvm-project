@@ -55,7 +55,8 @@ define <4 x float> @absv4f32_invalid(<4 x float> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; CHECK-NEXT:    lvx v3, 0, r3
+; CHECK-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-NEXT:    xxswapd vs35, vs0
 ; CHECK-NEXT:    xxland vs34, vs34, vs35
 ; CHECK-NEXT:    blr
 entry:

@@ -8,8 +8,6 @@ from lldbsuite.test import lldbutil
 
 class ObjCNewSyntaxTest(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def target(self):
         return self._target
 

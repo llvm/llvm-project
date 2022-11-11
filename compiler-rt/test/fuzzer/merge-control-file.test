@@ -1,4 +1,5 @@
-XFAIL: ios
+# For IOS, we fail to permute the run lines properly (rdar://99889376)
+XFAIL: ios && !iossim
 RUN: mkdir -p %t
 # Use a ".exe" extension because it is needed on Windows to call system()
 # to execute itself again.

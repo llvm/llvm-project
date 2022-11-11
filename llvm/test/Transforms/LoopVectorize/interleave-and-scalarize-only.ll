@@ -114,7 +114,7 @@ declare i32 @llvm.smin.i32(i32, i32)
 define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test_scalarize_with_branch_cond(
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %pred.store.continue8 ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %pred.store.continue5 ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i1
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i1 false, [[TMP0]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add i1 [[OFFSET_IDX]], false
@@ -129,16 +129,16 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    br label %pred.store.continue
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ poison, %vector.body ], [ [[TMP4]], %pred.store.if ]
-; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if7, label %pred.store.continue8
-; CHECK:       pred.store.if7:
+; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if4, label %pred.store.continue5
+; CHECK:       pred.store.if4:
 ; CHECK-NEXT:    [[INDUCTION5:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    br label %pred.store.continue8
-; CHECK:       pred.store.continue8:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ poison, %pred.store.continue ], [ [[TMP7]], %pred.store.if7 ]
+; CHECK-NEXT:    br label %pred.store.continue5
+; CHECK:       pred.store.continue5:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ poison, %pred.store.continue ], [ [[TMP7]], %pred.store.if4 ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP9]], label %middle.block, label %vector.body
@@ -164,6 +164,65 @@ loop.latch:
   %iv.next = add nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
   br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+; Make sure the widened induction gets replaced by scalar-steps for plans
+; including the scalar VF, if it is used in first-order recurrences.
+
+; DBG-LABEL: 'first_order_recurrence_using_induction'
+; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
+; DBG-NEXT: Live-in vp<%1> = vector-trip-count
+; DBG-EMPTY:
+; DBG-NEXT: vector.ph:
+; DBG-NEXT: Successor(s): vector loop
+; DBG-EMPTY:
+; DBG-NEXT: <x1> vector loop: {
+; DBG-NEXT:   vector.body:
+; DBG-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION
+; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<%4>
+; DBG-NEXT:     vp<%4>    = SCALAR-STEPS vp<%2>, ir<0>, ir<1>
+; DBG-NEXT:     EMIT vp<%5> = first-order splice ir<%for> vp<%4>
+; DBG-NEXT:     CLONE store vp<%5>, ir<%dst>
+; DBG-NEXT:     EMIT vp<%7> = VF * UF +(nuw)  vp<%2>
+; DBG-NEXT:     EMIT branch-on-count  vp<%7> vp<%1>
+; DBG-NEXT:   No successors
+; DBG-NEXT: }
+; DBG-NEXT: Successor(s): middle.block
+; DBG-EMPTY:
+; DBG-NEXT: middle.block:
+; DBG-NEXT: No successors
+; DBG-NEXT: }
+
+define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {
+; CHECK-LABEL: @first_order_recurrence_using_induction(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDUCTION1:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[TMP3]], 0
+; CHECK-NEXT:    [[INDUCTION1]] = add i32 [[TMP3]], 1
+; CHECK-NEXT:    store i32 [[VECTOR_RECUR]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    store i32 [[INDUCTION]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], %n.vec
+; CHECK-NEXT:    br i1 [[TMP4]], label %middle.block, label %vector.body
+; CHECK:       middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ],[ %iv.next, %loop ]
+  %for = phi i32 [ 0, %entry ], [ %iv.trunc, %loop ]
+  %iv.trunc = trunc i64 %iv to i32
+  store i32 %for, ptr %dst
+  %iv.next = add nuw nsw i64 %iv, 1
+  %iv.next.trunc = trunc i64 %iv.next to i32
+  %ec = icmp slt i32 %iv.next.trunc, %n
+  br i1 %ec, label %loop, label %exit
 
 exit:
   ret void

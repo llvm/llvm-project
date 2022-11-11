@@ -6,7 +6,7 @@
 define i8 @test_i8(i8 %a) nounwind {
 ; X86-LABEL: test_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    sarb $7, %cl
 ; X86-NEXT:    xorb %cl, %al

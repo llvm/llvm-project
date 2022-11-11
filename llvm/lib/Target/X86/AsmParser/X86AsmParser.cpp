@@ -1921,7 +1921,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           break;
         return Error(Tok.getLoc(), "unknown token in expression");
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case AsmToken::String: {
       if (Parser.isParsingMasm()) {
         // MASM parsers handle strings in expressions as constants.
@@ -1937,7 +1937,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           return Error(ValueLoc, ErrMsg);
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case AsmToken::At:
     case AsmToken::Identifier: {
@@ -3847,7 +3847,13 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
   } else if (isVFCMULCPH(Opcode) || isVFCMULCSH(Opcode) || isVFMULCPH(Opcode) ||
              isVFMULCSH(Opcode)) {
     unsigned Dest = Inst.getOperand(0).getReg();
-    for (unsigned i = 1; i < Inst.getNumOperands(); i++)
+    // The mask variants have different operand list. Scan from the third
+    // operand to avoid emitting incorrect warning.
+    //    VFMULCPHZrr   Dest, Src1, Src2
+    //    VFMULCPHZrrk  Dest, Dest, Mask, Src1, Src2
+    //    VFMULCPHZrrkz Dest, Mask, Src1, Src2
+    for (unsigned i = TSFlags & X86II::EVEX_K ? 2 : 1;
+         i < Inst.getNumOperands(); i++)
       if (Inst.getOperand(i).isReg() && Dest == Inst.getOperand(i).getReg())
         return Warning(Ops[0]->getStartLoc(), "Destination register should be "
                                               "distinct from source registers");
@@ -4258,7 +4264,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
   }
 
-  for (unsigned I = 0, E = array_lengthof(Match); I != E; ++I) {
+  for (unsigned I = 0, E = std::size(Match); I != E; ++I) {
     Tmp.back() = Suffixes[I];
     if (MemOp && HasVectorReg)
       MemOp->Mem.Size = MemSize[I];
@@ -4304,7 +4310,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   if (NumSuccessfulMatches > 1) {
     char MatchChars[4];
     unsigned NumMatches = 0;
-    for (unsigned I = 0, E = array_lengthof(Match); I != E; ++I)
+    for (unsigned I = 0, E = std::size(Match); I != E; ++I)
       if (Match[I] == Match_Success)
         MatchChars[NumMatches++] = Suffixes[I];
 

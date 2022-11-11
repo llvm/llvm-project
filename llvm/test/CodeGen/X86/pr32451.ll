@@ -6,7 +6,7 @@ source_filename = "convert"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i8** @japi1_convert_690(i8**, i8***, i32) {
+define ptr @japi1_convert_690(ptr, ptr, i32) {
 ; CHECK-LABEL: japi1_convert_690:
 ; CHECK:       # %bb.0: # %top
 ; CHECK-NEXT:    subl $12, %esp
@@ -30,28 +30,25 @@ define i8** @japi1_convert_690(i8**, i8***, i32) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 top:
-  %3 = alloca i8***
-  store volatile i8*** %1, i8**** %3
-  %4 = call i8*** @julia.gc_root_decl()
-  %5 = call i8**** @jl_get_ptls_states()
-  %6 = bitcast i8**** %5 to i8***
-  %7 = getelementptr i8**, i8*** %6, i64 3
-  %8 = bitcast i8*** %7 to i64**
-  %9 = load i64*, i64** %8
-  %10 = getelementptr i8**, i8*** %1, i64 1
-  %11 = load i8**, i8*** %10
-  %12 = bitcast i8** %11 to i8*
-  %13 = load i8, i8* %12
-  %14 = trunc i8 %13 to i1
-  %15 = zext i1 %14 to i8
-  %16 = zext i8 %15 to i32
-  %17 = call i8** @jl_box_int32(i32 signext %16)
-  store i8** %17, i8*** %4
-  ret i8** %17
+  %3 = alloca ptr
+  store volatile ptr %1, ptr %3
+  %4 = call ptr @julia.gc_root_decl()
+  %5 = call ptr @jl_get_ptls_states()
+  %6 = getelementptr ptr, ptr %5, i64 3
+  %7 = load ptr, ptr %6
+  %8 = getelementptr ptr, ptr %1, i64 1
+  %9 = load ptr, ptr %8
+  %10 = load i8, ptr %9
+  %11 = trunc i8 %10 to i1
+  %12 = zext i1 %11 to i8
+  %13 = zext i8 %12 to i32
+  %14 = call ptr @jl_box_int32(i32 signext %13)
+  store ptr %14, ptr %4
+  ret ptr %14
 }
 
-declare i8**** @jl_get_ptls_states()
+declare ptr @jl_get_ptls_states()
 
-declare i8** @jl_box_int32(i32)
+declare ptr @jl_box_int32(i32)
 
-declare i8*** @julia.gc_root_decl()
+declare ptr @julia.gc_root_decl()

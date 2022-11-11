@@ -115,7 +115,7 @@ Error DWARFDebugMacro::parseImpl(
   if (IsMacro && Data.isValidOffset(Offset)) {
     // Keep a mapping from Macro contribution to CUs, this will
     // be needed while retrieving macro from DW_MACRO_define_strx form.
-    for (const auto &U : Units.getValue())
+    for (const auto &U : *Units)
       if (auto CUDIE = U->getUnitDIE())
         // Skip units which does not contibutes to macro section.
         if (auto MacroOffset = toSectionOffset(CUDIE.find(DW_AT_macros)))

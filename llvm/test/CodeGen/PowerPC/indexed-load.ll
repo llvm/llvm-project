@@ -11,12 +11,11 @@ target triple = "powerpc64le-unknown-linux-gnu"
 
 ; CHECK-LABEL: f:
 ; CHECK-NOT: stwx {{[0-9]+}}, {{[0-9]+}}, 64
-define void @f(%class.test* %this) {
+define void @f(ptr %this) {
 entry:
-  %Subminor.i.i = getelementptr inbounds %class.test, %class.test* %this, i64 0, i32 1
-  %0 = bitcast [5 x i8]* %Subminor.i.i to i40*
-  %bf.load2.i.i = load i40, i40* %0, align 4
+  %Subminor.i.i = getelementptr inbounds %class.test, ptr %this, i64 0, i32 1
+  %bf.load2.i.i = load i40, ptr %Subminor.i.i, align 4
   %bf.clear7.i.i = and i40 %bf.load2.i.i, -8589934592
-  store i40 %bf.clear7.i.i, i40* %0, align 4
+  store i40 %bf.clear7.i.i, ptr %Subminor.i.i, align 4
   ret void
 }

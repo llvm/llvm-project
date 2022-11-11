@@ -16,7 +16,8 @@ int main() {
   pthread_t tid = pthread_self();
   int res = pthread_getaffinity_np(tid, sizeof(set_x), set_x);
   assert(res == 0);
-  assert(CPU_COUNT_S(sizeof(set_x), set_x) == get_nprocs());
+  int cpus = CPU_COUNT_S(sizeof(set_x), set_x);
+  assert(cpus > 0 && cpus <= get_nprocs());
 
   return 0;
 }

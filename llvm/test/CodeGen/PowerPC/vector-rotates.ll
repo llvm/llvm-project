@@ -11,7 +11,8 @@ define <16 x i8> @rotl_v16i8(<16 x i8> %a) {
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-P8-NEXT:    lvx v3, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd vs35, vs0
 ; CHECK-P8-NEXT:    vrlb v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
@@ -34,7 +35,8 @@ define <8 x i16> @rotl_v8i16(<8 x i16> %a) {
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-P8-NEXT:    lvx v3, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd vs35, vs0
 ; CHECK-P8-NEXT:    vrlh v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
@@ -57,7 +59,8 @@ define <4 x i32> @rotl_v4i32_0(<4 x i32> %a) {
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI2_0@toc@l
-; CHECK-P8-NEXT:    lvx v3, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd vs35, vs0
 ; CHECK-P8-NEXT:    vrlw v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;

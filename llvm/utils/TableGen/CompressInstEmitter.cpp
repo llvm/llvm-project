@@ -716,7 +716,10 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       if (SourceOperandMap[OpNo].TiedOpIdx != -1) {
         if (Source.Operands[OpNo].Rec->isSubClassOf("RegisterClass"))
           CondStream.indent(6)
-              << "(MI.getOperand(" << OpNo << ").getReg() ==  MI.getOperand("
+              << "(MI.getOperand(" << OpNo << ").isReg()) && (MI.getOperand("
+              << SourceOperandMap[OpNo].TiedOpIdx << ").isReg()) &&\n"
+              << "      (MI.getOperand(" << OpNo
+              << ").getReg() ==  MI.getOperand("
               << SourceOperandMap[OpNo].TiedOpIdx << ").getReg()) &&\n";
         else
           PrintFatalError("Unexpected tied operand types!\n");
@@ -735,7 +738,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       case OpData::Reg: {
         Record *Reg = SourceOperandMap[OpNo].Data.Reg;
         CondStream.indent(6)
-            << "(MI.getOperand(" << OpNo << ").getReg() == " << TargetName
+            << "(MI.getOperand(" << OpNo << ").isReg()) &&\n"
+            << "      (MI.getOperand(" << OpNo << ").getReg() == " << TargetName
             << "::" << Reg->getName() << ") &&\n";
         break;
       }
@@ -759,10 +763,12 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
           // Don't check register class if this is a tied operand, it was done
           // for the operand its tied to.
           if (DestOperand.getTiedRegister() == -1)
-            CondStream.indent(6) << "(MRI.getRegClass(" << TargetName
-                                 << "::" << DestOperand.Rec->getName()
-                                 << "RegClassID).contains(MI.getOperand("
-                                 << OpIdx << ").getReg())) &&\n";
+            CondStream.indent(6)
+                << "(MI.getOperand(" << OpIdx << ").isReg()) &&\n"
+                << "      (MRI.getRegClass(" << TargetName
+                << "::" << DestOperand.Rec->getName()
+                << "RegClassID).contains(MI.getOperand(" << OpIdx
+                << ").getReg())) &&\n";
 
           if (CompressOrUncompress)
             CodeStream.indent(6)

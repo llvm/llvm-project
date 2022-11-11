@@ -40,8 +40,10 @@ def ReductionClauseInterface : OpInterface<"ReductionClauseInterface"> {
 
   let methods = [
     InterfaceMethod<
-      "Get reduction vars", "::mlir::Operation::operand_range",
-      "getReductionVars">,
+      "Get reduction vars", "::mlir::SmallVector<::mlir::Value>",
+      "getAllReductionVars", (ins), [{}], [{
+        return $_op.getReductionVars();
+      }]>,
   ];
 }
 

@@ -52,7 +52,7 @@ void ExceptionBaseclassCheck::check(const MatchFinder::MatchResult &Result) {
     diag(BadThrow->getSubExpr()->getBeginLoc(),
          "type %0 is a template instantiation of %1", DiagnosticIDs::Note)
         << BadThrow->getSubExpr()->getType()
-        << Template->getReplacedParameter()->getDecl();
+        << Template->getReplacedParameter();
 
   if (const auto *TypeDecl = Result.Nodes.getNodeAs<NamedDecl>("decl"))
     diag(TypeDecl->getBeginLoc(), "type defined here", DiagnosticIDs::Note);

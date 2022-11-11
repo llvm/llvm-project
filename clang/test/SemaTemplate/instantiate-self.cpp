@@ -5,7 +5,7 @@
 namespace test1 {
   template<typename T> struct A {
     struct B { // expected-note {{not complete until the closing '}'}}
-      B b; // expected-error {{has incomplete type 'test1::A<int>::B'}}
+      B b; // expected-error {{has incomplete type 'B'}}
     };
     B b; // expected-note {{in instantiation of}}
   };

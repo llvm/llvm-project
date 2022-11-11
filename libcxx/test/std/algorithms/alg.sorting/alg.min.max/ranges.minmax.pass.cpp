@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class T, class Proj = identity,
 //          indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
@@ -29,6 +28,7 @@
 #include <array>
 #include <cassert>
 #include <functional>
+#include <memory>
 #include <ranges>
 
 #include "test_iterators.h"

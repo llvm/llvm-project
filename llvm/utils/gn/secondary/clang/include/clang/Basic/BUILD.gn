@@ -158,3 +158,8 @@ clang_tablegen("riscv_vector_builtin_cg") {
   args = [ "-gen-riscv-vector-builtin-codegen" ]
   td_file = "riscv_vector.td"
 }
+
+clang_tablegen("riscv_vector_builtin_sema") {
+  args = [ "-gen-riscv-vector-builtin-sema" ]
+  td_file = "riscv_vector.td"
+}

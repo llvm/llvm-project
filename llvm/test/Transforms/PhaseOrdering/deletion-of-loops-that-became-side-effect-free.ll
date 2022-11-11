@@ -120,7 +120,7 @@ define dso_local zeroext i1 @is_not_empty_variant3(%struct.node* %p) {
 ; O1-NEXT:    [[SIZE_06_I:%.*]] = phi i64 [ [[INC_I:%.*]], [[WHILE_BODY_I]] ], [ 0, [[ENTRY:%.*]] ]
 ; O1-NEXT:    [[P_ADDR_05_I:%.*]] = phi %struct.node* [ [[TMP0:%.*]], [[WHILE_BODY_I]] ], [ [[P]], [[ENTRY]] ]
 ; O1-NEXT:    [[CMP_I:%.*]] = icmp ne i64 [[SIZE_06_I]], -1
-; O1-NEXT:    call void @llvm.assume(i1 [[CMP_I]]) #[[ATTR3:[0-9]+]]
+; O1-NEXT:    call void @llvm.assume(i1 [[CMP_I]])
 ; O1-NEXT:    [[NEXT_I:%.*]] = getelementptr inbounds [[STRUCT_NODE:%.*]], %struct.node* [[P_ADDR_05_I]], i64 0, i32 0
 ; O1-NEXT:    [[TMP0]] = load %struct.node*, %struct.node** [[NEXT_I]], align 8
 ; O1-NEXT:    [[INC_I]] = add i64 [[SIZE_06_I]], 1

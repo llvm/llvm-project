@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Affine/Passes.h"
+
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
@@ -18,12 +19,18 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_AFFINELOOPTILING
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 
 #define DEBUG_TYPE "affine-loop-tile"
@@ -31,7 +38,7 @@ using namespace mlir;
 namespace {
 
 /// A pass to perform loop tiling on all suitable loop nests of a Function.
-struct LoopTiling : public AffineLoopTilingBase<LoopTiling> {
+struct LoopTiling : public impl::AffineLoopTilingBase<LoopTiling> {
   LoopTiling() = default;
   explicit LoopTiling(uint64_t cacheSizeBytes, bool avoidMaxMinBounds = true)
       : avoidMaxMinBounds(avoidMaxMinBounds) {
@@ -73,7 +80,7 @@ static void adjustToDivisorsOfTripCounts(ArrayRef<AffineForOp> band,
       continue;
     // Adjust the tile size to largest factor of the trip count less than
     // tSize.
-    uint64_t constTripCount = mayConst.getValue();
+    uint64_t constTripCount = *mayConst;
     if (constTripCount > 1 && tSizeAdjusted > constTripCount / 2)
       tSizeAdjusted = constTripCount / 2;
     while (constTripCount % tSizeAdjusted != 0)
@@ -129,7 +136,7 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
 
   // Check how many times larger the cache size is when compared to footprint.
   uint64_t cacheSizeBytes = cacheSizeInKiB * 1024;
-  uint64_t excessFactor = llvm::divideCeil(fp.getValue(), cacheSizeBytes);
+  uint64_t excessFactor = llvm::divideCeil(*fp, cacheSizeBytes);
   if (excessFactor <= 1) {
     // No need of any tiling - set tile size to 1.
     std::fill(tileSizes->begin(), tileSizes->end(), 1);

@@ -8,7 +8,7 @@
 ; CHECK: Running pass: PostOrderFunctionAttrsPass on (g)
 ; CHECK: Running pass: PostOrderFunctionAttrsPass on (h)
 
-declare i32 @e(i32(i32)*)
+declare i32 @e(ptr)
 
 define i32 @f(i32 %a) {
   ret i32 %a
@@ -20,6 +20,6 @@ define i32 @g(i32 %b) {
 }
 
 define i32 @h(i32 %b) {
-  %c = call i32 @e(i32(i32)* @f)
+  %c = call i32 @e(ptr @f)
   ret i32 %c
 }

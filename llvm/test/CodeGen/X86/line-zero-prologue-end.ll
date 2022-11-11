@@ -7,7 +7,7 @@
 ; CHECK-NEXT: .loc 1 0 5 {{is_stmt [0-9]+}} ## test/test.c:0:5{{$}}
 @x = common global i32 0, align 4
 define void @test() #0 !dbg !9 {
-  store i32 1, i32* @x, align 4, !dbg !12
+  store i32 1, ptr @x, align 4, !dbg !12
   ret void, !dbg !14
 }
 !llvm.module.flags = !{!0,!2,!4}

@@ -8,8 +8,6 @@ from lldbsuite.test.lldbtest import *
 
 class MultiwordCommandsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_ambiguous_subcommand(self):
         self.expect("platform s", error=True,

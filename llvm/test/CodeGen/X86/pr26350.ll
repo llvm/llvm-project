@@ -19,7 +19,7 @@ define i32 @main() {
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
 entry:
-  %load = load i32, i32* @d, align 4
+  %load = load i32, ptr @d, align 4
   %conv1 = zext i32 %load to i64
   %shl = shl i64 %conv1, 1
   %mul = and i64 %shl, 4294967312

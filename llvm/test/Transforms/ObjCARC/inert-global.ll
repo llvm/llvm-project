@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
 
 %0 = type opaque
 %struct.__NSConstantString_tag = type { i32*, i32, i8*, i64 }

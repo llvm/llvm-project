@@ -21,6 +21,10 @@ if(CYGWIN OR NOT LLVM_ENABLE_PIC)
   set(LLVM_TOOL_LTO_BUILD Off)
 endif()
 
+if (LLVM_TOOL_LLVM_DRIVER_BUILD)
+  add_llvm_tool(llvm-driver)
+endif()
+
 # Add LTO, llvm-ar, llvm-config, and llvm-profdata before clang, ExternalProject
 # requires targets specified in DEPENDS to exist before the call to
 # ExternalProject_Add.
@@ -58,4 +62,8 @@ if (LLVM_TOOL_LLVM_DRIVER_BUILD)
   # This is explicitly added at the end _after_ all tool projects so that it can
   # scrape up tools from other projects into itself.
   add_subdirectory(llvm-driver)
+  # This must be here otherwise CMake complains in add_llvm_tool_symlink that
+  # it can't add_custom_command that happens after llvm-driver is built because
+  # llvm-driver was not created in that directory.
+  generate_driver_tool_targets()
 endif()

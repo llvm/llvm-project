@@ -2,25 +2,16 @@
 <!--
 Visual Studio Native Debugging Visualizers for LLVM
 
-For Visual Studio 2013 only, put this file into 
+For Visual Studio 2013 only, put this file into
 "%USERPROFILE%\Documents\Visual Studio 2013\Visualizers" or create a symbolic link so it updates automatically.
 
 For later versions of Visual Studio, no setup is required.
 -->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
   <Type Name="llvm::SmallVectorImpl&lt;*&gt;">
-    <DisplayString IncludeView ="elt0" Condition="Size == 0"></DisplayString>
-    <DisplayString IncludeView ="elt0">{((value_type*)BeginX)[0]}{*this,view(elt1)}</DisplayString>
-    <DisplayString IncludeView ="elt1" Condition="Size == 1"></DisplayString>
-    <DisplayString IncludeView ="elt1">, {((value_type*)BeginX)[1]}{*this,view(elt2)}</DisplayString>
-    <DisplayString IncludeView ="elt2" Condition="Size == 2"></DisplayString>
-    <DisplayString IncludeView ="elt2">, {((value_type*)BeginX)[2]}{*this,view(elt3)}</DisplayString>
-    <DisplayString IncludeView ="elt3" Condition="Size == 3"></DisplayString>
-    <DisplayString IncludeView ="elt3">, {((value_type*)BeginX)[3]}{*this,view(elt4)}</DisplayString>
-    <DisplayString IncludeView ="elt4" Condition="Size == 4"></DisplayString>
-    <DisplayString IncludeView ="elt4">, /* {Size - 4} more*/ </DisplayString>
     <DisplayString Condition="Size == 0">empty</DisplayString>
-    <DisplayString Condition="Size != 0">{{{*this,view(elt0)}}}</DisplayString>
+    <DisplayString Condition="Size &amp;&amp; Size &lt; 4">{(value_type*)BeginX,[Size]}</DisplayString>
+    <DisplayString Condition="Size &gt; 3">{Size} elements</DisplayString>
     <DisplayString>Uninitialized</DisplayString>
     <Expand>
       <Item Name="[size]">Size</Item>
@@ -37,8 +28,9 @@ For later versions of Visual Studio, no setup is required.
     <DisplayString>Cannot visualize APInts longer than 64 bits</DisplayString>
   </Type>
   <Type Name="llvm::ArrayRef&lt;*&gt;">
-    <DisplayString Condition="Length == 0">empty</DisplayString>
-    <DisplayString Condition="Length != 0">{{ size={Length} }}</DisplayString>
+    <DisplayString Condition="Length &lt; 4">{Data,[Length]}</DisplayString>
+    <DisplayString Condition="Length &gt; 3">{Length} elements</DisplayString>
+    <DisplayString>Uninitialized</DisplayString>
     <Expand>
       <Item Name="[size]">Length</Item>
       <ArrayItems>
@@ -48,7 +40,7 @@ For later versions of Visual Studio, no setup is required.
     </Expand>
   </Type>
   <Type Name="llvm::SmallString&lt;*&gt;">
-    <DisplayString>{(const char*)BeginX,[Size] na}</DisplayString>
+    <DisplayString>{(const char*)BeginX,[Size]s8}</DisplayString>
     <StringView>(const char*)BeginX,[Size]</StringView>
     <Expand>
       <Item Name="[size]">Size</Item>
@@ -61,12 +53,12 @@ For later versions of Visual Studio, no setup is required.
   </Type>
 
   <Type Name="StringView">
-    <DisplayString>{First,[Last - First]s}</DisplayString>
+    <DisplayString>{First,[Last - First]s8}</DisplayString>
   </Type>
-  
+
   <Type Name="llvm::StringRef">
-    <DisplayString>{Data,[Length]s}</DisplayString>
-    <StringView>Data,[Length]s</StringView>
+    <DisplayString>{Data,[Length]s8}</DisplayString>
+    <StringView>Data,[Length]s8</StringView>
     <Expand>
       <Item Name="[size]">Length</Item>
       <ArrayItems>
@@ -121,7 +113,7 @@ For later versions of Visual Studio, no setup is required.
       </Item>
     </Expand>
   </Type>
- 
+
   <Type Name="llvm::iplist&lt;*,*&gt;">
     <DisplayString Condition="Head == 0">{{ empty }}</DisplayString>
     <DisplayString Condition="Head != 0">{{ head={Head} }}</DisplayString>
@@ -184,7 +176,7 @@ For later versions of Visual Studio, no setup is required.
 
   <Type Name="llvm::StringMapEntry&lt;*&gt;">
     <DisplayString Condition="StrLen == 0">empty</DisplayString>
-    <DisplayString Condition="StrLen != 0">({this+1,s}, {second})</DisplayString>
+    <DisplayString Condition="StrLen != 0">({this+1,s8}, {second})</DisplayString>
     <Expand>
       <Item Name="[key]">this+1,s</Item>
       <Item Name="[value]" Condition="StrLen != 0">second</Item>
@@ -194,7 +186,7 @@ For later versions of Visual Studio, no setup is required.
   <Type Name="llvm::Triple">
     <DisplayString>{Data}</DisplayString>
   </Type>
-  
+
   <Type Name="llvm::Optional&lt;*&gt;">
     <DisplayString Condition="!Storage.hasVal">None</DisplayString>
     <DisplayString Condition="Storage.hasVal">{Storage.value}</DisplayString>
@@ -227,24 +219,24 @@ For later versions of Visual Studio, no setup is required.
       <Item Name="[Raw Bytes]" Condition="sizeof($T1)==8">(unsigned char *)Value.buffer,8</Item>
     </Expand>
   </Type>
-  
+
   <!-- Now handle the hard case of big endian.  We need to do the swizzling here, but
        we need to specialize it based on the size of the value type. -->
   <Type Name="llvm::support::detail::packed_endian_specific_integral&lt;*,0,1&gt;">
     <DisplayString Condition="sizeof($T1)==1">{{ big endian value = {*(unsigned char *)Value.buffer} }}</DisplayString>
-    <DisplayString Condition="sizeof($T1)==2">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 8) 
+    <DisplayString Condition="sizeof($T1)==2">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 8)
                                                                     | ($T1)(*((unsigned char *)Value.buffer+1))} }}</DisplayString>
-    <DisplayString Condition="sizeof($T1)==4">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 24) 
-                                                                    | (($T1)(*((unsigned char *)Value.buffer+1)) &lt;&lt; 16) 
-                                                                    | (($T1)(*((unsigned char *)Value.buffer+2)) &lt;&lt; 8) 
+    <DisplayString Condition="sizeof($T1)==4">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 24)
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+1)) &lt;&lt; 16)
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+2)) &lt;&lt; 8)
                                                                     |  ($T1)(*((unsigned char *)Value.buffer+3))} }}</DisplayString>
-    <DisplayString Condition="sizeof($T1)==8">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 56) 
-                                                                    | (($T1)(*((unsigned char *)Value.buffer+1)) &lt;&lt; 48) 
-                                                                    | (($T1)(*((unsigned char *)Value.buffer+2)) &lt;&lt; 40) 
-                                                                    | (($T1)(*((unsigned char *)Value.buffer+3)) &lt;&lt; 32) 
-                                                                    | (($T1)(*((unsigned char *)Value.buffer+4)) &lt;&lt; 24) 
-                                                                    | (($T1)(*((unsigned char *)Value.buffer+5)) &lt;&lt; 16) 
-                                                                    | (($T1)(*((unsigned char *)Value.buffer+6)) &lt;&lt; 8) 
+    <DisplayString Condition="sizeof($T1)==8">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 56)
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+1)) &lt;&lt; 48)
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+2)) &lt;&lt; 40)
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+3)) &lt;&lt; 32)
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+4)) &lt;&lt; 24)
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+5)) &lt;&lt; 16)
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+6)) &lt;&lt; 8)
                                                                     |  ($T1)(*((unsigned char *)Value.buffer+7))} }}</DisplayString>
     <Expand>
       <Item Name="[Raw Bytes]" Condition="sizeof($T1)==1">(unsigned char *)Value.buffer,1</Item>
@@ -303,5 +295,108 @@ For later versions of Visual Studio, no setup is required.
 
       <Item Name="Context">Context</Item>
     </Expand>
+  </Type>
+
+  <Type Name="llvm::ConstantSDNode">
+    <DisplayString>$(Type) {*Value}</DisplayString>
+  </Type>
+
+  <Type Name="llvm::SDNode">
+    <DisplayString>$(Type) {(llvm::ISD::NodeType)this->NodeType}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>NumOperands</Size>
+        <ValuePointer>OperandList</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::ConstantInt">
+    <DisplayString>i{Val.BitWidth} {Val.VAL}</DisplayString>
+  </Type>
+
+  <Type Name="llvm::IntegerType">
+    <DisplayString>{IDAndSubclassData >> 8}bit integer type</DisplayString>
+  </Type>
+
+  <Type Name="llvm::Value">
+    <DisplayString Condition="HasName">$(Type) {*VTy} {this->getName()} {SubclassData}</DisplayString>
+    <DisplayString Condition="!HasName">$(Type) {*VTy} anon {SubclassData}</DisplayString>
+    <Expand>
+      <Item Name="[Inst]" Condition="SubclassID > InstructionVal">(Instruction*)this</Item>
+      <Item Name="Operands">(User*)this</Item>
+      <LinkedListItems>
+        <HeadPointer>UseList</HeadPointer>
+        <NextPointer>Next</NextPointer>
+        <ValueNode>Prev.Value &amp; 3 == 3 ? (User*)(this + 1) : (User*)(this + 2)</ValueNode>
+      </LinkedListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::Use">
+    <Expand>
+      <Item Name="Value">Val</Item>
+      <!--
+      <LinkedListItems>
+        <HeadPointer>this</HeadPointer>
+        <NextPointer>Next</NextPointer>
+        <ValueNode>Prev.Value &amp; 3 == 3 ? (User*)(this + 1) : (User*)(this + 2)</ValueNode>
+      </LinkedListItems>
+      -->
+    </Expand>
+  </Type>
+
+  <!-- uses other values, like Operands -->
+  <Type Name="llvm::User">
+    <DisplayString Condition="HasName">$(Type) {*VTy} {this->getName()} {SubclassData}</DisplayString>
+    <DisplayString Condition="!HasName">$(Type) {*VTy} anon {SubclassData}</DisplayString>
+    <Expand>
+      <Item Name="[Value]">(Value*)this,nd</Item>
+      <Item Name="[Type]">*VTy</Item>
+      <ArrayItems Condition="!HasHungOffUses">
+        <Size>NumUserOperands</Size>
+        <ValuePointer>(llvm::Use*)this - NumUserOperands</ValuePointer>
+      </ArrayItems>
+      <ArrayItems Condition="HasHungOffUses">
+        <Size>NumUserOperands</Size>
+        <ValuePointer>*((llvm::Use**)this - 1)</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::Instruction">
+    <DisplayString>{getOpcodeName(SubclassID - InstructionVal)}</DisplayString>
+    <Expand>
+      <Item Name="[User]">(User*)this,nd</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::GlobalValue">
+    <DisplayString>{this->getName()} {(LinkageTypes)Linkage} {(VisibilityTypes)Visibility} {(DLLStorageClassTypes)DllStorageClass} {(llvm::GlobalValue::ThreadLocalMode) ThreadLocal}</DisplayString>
+  </Type>
+
+  <!-- TODO doesn't work cause it doesn't know the dynamic type -->
+  <Type Name="llvm::ilist_node">
+    <Expand>
+      <LinkedListItems>
+        <HeadPointer>this</HeadPointer>
+        <NextPointer>Next</NextPointer>
+        <ValueNode>this</ValueNode>
+      </LinkedListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::LLVMContext">
+    <Expand>
+      <ExpandedItem>pImpl</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::Module">
+    <DisplayString>{ModuleID,s8} {TargetTriple}</DisplayString>
+  </Type>
+
+  <Type Name="llvm::Pass">
+    <DisplayString>$(Type) {PassID} {Kind}</DisplayString>
   </Type>
 </AutoVisualizer>

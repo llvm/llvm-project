@@ -42,6 +42,7 @@ FunctionPass *createAArch64ExpandPseudoPass();
 FunctionPass *createAArch64SLSHardeningPass();
 FunctionPass *createAArch64IndirectThunks();
 FunctionPass *createAArch64SpeculationHardeningPass();
+FunctionPass *createAArch64KCFIPass();
 FunctionPass *createAArch64LoadStoreOptimizationPass();
 ModulePass *createAArch64LowerHomogeneousPrologEpilogPass();
 FunctionPass *createAArch64SIMDInstrOptPass();
@@ -57,6 +58,7 @@ FunctionPass *createAArch64MIPeepholeOptPass();
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 
 FunctionPass *createAArch64CollectLOHPass();
+FunctionPass *createSMEABIPass();
 ModulePass *createSVEIntrinsicOptsPass();
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
@@ -83,6 +85,7 @@ void initializeAArch64DeadRegisterDefinitionsPass(PassRegistry&);
 void initializeAArch64ExpandPseudoPass(PassRegistry&);
 void initializeAArch64SLSHardeningPass(PassRegistry&);
 void initializeAArch64SpeculationHardeningPass(PassRegistry&);
+void initializeAArch64KCFIPass(PassRegistry &);
 void initializeAArch64LoadStoreOptPass(PassRegistry&);
 void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
 void initializeAArch64MIPeepholeOptPass(PassRegistry &);
@@ -98,6 +101,7 @@ void initializeAArch64StorePairSuppressPass(PassRegistry&);
 void initializeFalkorHWPFFixPass(PassRegistry&);
 void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);
 void initializeLDTLSCleanupPass(PassRegistry&);
+void initializeSMEABIPass(PassRegistry &);
 void initializeSVEIntrinsicOptsPass(PassRegistry&);
 void initializeAArch64StackTaggingPass(PassRegistry&);
 void initializeAArch64StackTaggingPreRAPass(PassRegistry&);

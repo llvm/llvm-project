@@ -15,6 +15,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/raw_ostream.h"
@@ -288,10 +289,9 @@ void Liveness::print(raw_ostream &os) const {
 
   auto printValueRefs = [&](const ValueSetT &values) {
     std::vector<Value> orderedValues(values.begin(), values.end());
-    std::sort(orderedValues.begin(), orderedValues.end(),
-              [&](Value left, Value right) {
-                return valueIds[left] < valueIds[right];
-              });
+    llvm::sort(orderedValues, [&](Value left, Value right) {
+      return valueIds[left] < valueIds[right];
+    });
     for (Value value : orderedValues)
       printValueRef(value);
   };
@@ -307,7 +307,7 @@ void Liveness::print(raw_ostream &os) const {
     os << "\n";
 
     // Print liveness intervals.
-    os << "// --- BeginLiveness";
+    os << "// --- BeginLivenessIntervals";
     for (Operation &op : *block) {
       if (op.getNumResults() < 1)
         continue;
@@ -317,17 +317,30 @@ void Liveness::print(raw_ostream &os) const {
         printValueRef(result);
         os << ":";
         auto liveOperations = resolveLiveness(result);
-        std::sort(liveOperations.begin(), liveOperations.end(),
-                  [&](Operation *left, Operation *right) {
-                    return operationIds[left] < operationIds[right];
-                  });
+        llvm::sort(liveOperations, [&](Operation *left, Operation *right) {
+          return operationIds[left] < operationIds[right];
+        });
         for (Operation *operation : liveOperations) {
           os << "\n//     ";
           operation->print(os);
         }
       }
     }
-    os << "\n// --- EndLiveness\n";
+    os << "\n// --- EndLivenessIntervals\n";
+
+    // Print currently live values.
+    os << "// --- BeginCurrentlyLive\n";
+    for (Operation &op : *block) {
+      auto currentlyLive = liveness->currentlyLiveValues(&op);
+      if (currentlyLive.empty())
+        continue;
+      os << "//     ";
+      op.print(os);
+      os << " [";
+      printValueRefs(currentlyLive);
+      os << "\b]\n";
+    }
+    os << "// --- EndCurrentlyLive\n";
   });
   os << "// -------------------\n";
 }
@@ -376,4 +389,57 @@ Operation *LivenessBlockInfo::getEndOperation(Value value,
       endOperation = useOp;
   }
   return endOperation;
+}
+
+/// Return the values that are currently live as of the given operation.
+LivenessBlockInfo::ValueSetT
+LivenessBlockInfo::currentlyLiveValues(Operation *op) const {
+  ValueSetT liveSet;
+
+  // Given a value, check which ops are within its live range. For each of
+  // those ops, add the value to the set of live values as-of that op.
+  auto addValueToCurrentlyLiveSets = [&](Value value) {
+    // Determine the live range of this value inside this block.
+    Operation *startOfLiveRange = value.getDefiningOp();
+    Operation *endOfLiveRange = nullptr;
+    // If it's a live in or a block argument, then the start is the beginning
+    // of the block.
+    if (isLiveIn(value) || value.isa<BlockArgument>())
+      startOfLiveRange = &block->front();
+    else
+      startOfLiveRange = block->findAncestorOpInBlock(*startOfLiveRange);
+
+    // If it's a live out, then the end is the back of the block.
+    if (isLiveOut(value))
+      endOfLiveRange = &block->back();
+
+    // We must have at least a startOfLiveRange at this point. Given this, we
+    // can use the existing getEndOperation to find the end of the live range.
+    if (startOfLiveRange && !endOfLiveRange)
+      endOfLiveRange = getEndOperation(value, startOfLiveRange);
+
+    assert(endOfLiveRange && "Must have endOfLiveRange at this point!");
+    // If this op is within the live range, insert the value into the set.
+    if (!(op->isBeforeInBlock(startOfLiveRange) ||
+          endOfLiveRange->isBeforeInBlock(op)))
+      liveSet.insert(value);
+  };
+
+  // Handle block arguments if any.
+  for (Value arg : block->getArguments())
+    addValueToCurrentlyLiveSets(arg);
+
+  // Handle live-ins. Between the live ins and all the op results that gives us
+  // every value in the block.
+  for (Value in : inValues)
+    addValueToCurrentlyLiveSets(in);
+
+  // Now walk the block and handle all values used in the block and values
+  // defined by the block.
+  for (Operation &walkOp :
+       llvm::make_range(block->begin(), ++op->getIterator()))
+    for (auto result : walkOp.getResults())
+      addValueToCurrentlyLiveSets(result);
+
+  return liveSet;
 }

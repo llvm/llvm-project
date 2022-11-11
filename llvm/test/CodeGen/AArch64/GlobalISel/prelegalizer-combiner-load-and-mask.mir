@@ -88,12 +88,12 @@ body:             |
 ...
 
 ---
-name:            test_load_s32_atomic
+name:            test_load_mask_s8_s32_atomic
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
-    ; CHECK-LABEL: name: test_load_s32_atomic
+    ; CHECK-LABEL: name: test_load_mask_s8_s32_atomic
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
@@ -104,6 +104,49 @@ body:             |
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_LOAD %0 :: (load seq_cst (s32))
+    %3:_(s32) = G_AND %2, %1
+    $w0 = COPY %3
+...
+
+# The mask is equal to the memory size.
+---
+name:            test_load_mask_s16_s16_atomic
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_load_mask_s16_s16_atomic
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load seq_cst (s16))
+    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = G_CONSTANT i32 65535
+    %2:_(s32) = G_LOAD %0 :: (load seq_cst (s16))
+    %3:_(s32) = G_AND %2, %1
+    $w0 = COPY %3
+...
+
+# The mask is smaller than the memory size which must be preserved, so
+# there's little point to folding.
+---
+name:            test_load_mask_s8_s16_atomic
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_load_mask_s8_s16_atomic
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load seq_cst (s16))
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = G_CONSTANT i32 255
+    %2:_(s32) = G_LOAD %0 :: (load seq_cst (s16))
     %3:_(s32) = G_AND %2, %1
     $w0 = COPY %3
 ...
@@ -272,13 +315,56 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (volatile load (s8))
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
-    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (volatile load (s8))
+    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_LOAD %0 :: (volatile load (s8))
     %3:_(s32) = G_AND %2, %1
+    $w0 = COPY %3
+...
+
+---
+name:            test_volatile_mask_smaller_mem
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_volatile_mask_smaller_mem
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (volatile load (s16))
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = G_CONSTANT i32 255
+    %2:_(s32) = G_LOAD %0 :: (volatile load (s16))
+    %3:_(s32) = G_AND %2, %1
+    $w0 = COPY %3
+...
+---
+name:            test_no_lookthrough_copies_multi_uses
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_no_lookthrough_copies_multi_uses
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; CHECK-NEXT: %v:_(s32) = G_ASSERT_ZEXT [[LOAD]], 16
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND %v, [[C]]
+    ; CHECK-NEXT: $w1 = COPY %v(s32)
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = G_CONSTANT i32 255
+    %2:_(s32) = G_LOAD %0 :: (load (s16))
+    %v:_(s32) = G_ASSERT_ZEXT %2, 16
+    %3:_(s32) = G_AND %v, %1
+    $w1 = COPY %v
     $w0 = COPY %3
 ...

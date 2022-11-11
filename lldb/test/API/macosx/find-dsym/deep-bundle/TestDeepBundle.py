@@ -1,7 +1,6 @@
 """Test that a dSYM can be found when a binary is in a deep bundle with multiple pathname components."""
 
 
-#import unittest2
 from time import sleep
 
 import lldb
@@ -13,8 +12,6 @@ from lldbsuite.test import lldbutil
 exe_name = 'deep-bundle'  # must match Makefile
 
 class DeepBundleTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)

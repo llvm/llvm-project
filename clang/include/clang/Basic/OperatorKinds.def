@@ -38,8 +38,8 @@
 /// "operator*") can be both unary and binary.
 ///
 /// MemberOnly: True if this operator can only be declared as a
-/// non-static member function. False if the operator can be both a
-/// non-member function and a non-static member function.
+/// member function. False if the operator can be both a
+/// non-member function and a member function.
 ///
 /// OVERLOADED_OPERATOR_MULTI is used to enumerate the multi-token
 /// overloaded operator names, e.g., "operator delete []". The macro

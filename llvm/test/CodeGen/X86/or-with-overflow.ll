@@ -9,7 +9,7 @@
 define i8 @or_i8_ri(i8 zeroext %0, i8 zeroext %1) {
 ; X86-LABEL: or_i8_ri:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    orb $-17, %cl
 ; X86-NEXT:    je .LBB0_2
@@ -35,8 +35,8 @@ define i8 @or_i8_ri(i8 zeroext %0, i8 zeroext %1) {
 define i8 @or_i8_rr(i8 zeroext %0, i8 zeroext %1) {
 ; X86-LABEL: or_i8_rr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    orb %al, %cl
 ; X86-NEXT:    je .LBB1_2
 ; X86-NEXT:  # %bb.1:

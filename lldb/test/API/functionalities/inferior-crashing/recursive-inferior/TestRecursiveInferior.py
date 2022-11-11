@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class CrashingRecursiveInferiorTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFailureNetBSD
     def test_recursive_inferior_crashing(self):

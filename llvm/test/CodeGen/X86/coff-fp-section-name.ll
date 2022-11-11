@@ -21,23 +21,23 @@ entry:
   %m = alloca double, align 8
   %n = alloca double, align 8
   %o = alloca double, align 8
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
 
-  store fp128 0xLBB2C11D0AE2E087D73E717A35985531C, fp128* %a, align 16
-  store fp128 0xLBB2C11D0AE2E087D73E717A35985531C, fp128* %b, align 16
-  store fp128 0xL00000000000000004002000000000000, fp128* %c, align 16
-  store fp128 0xL00000000000000007FFF800000000000, fp128* %d, align 16
-  store fp128 0xL00000000000000007FFF000000000000, fp128* %e, align 16
-  store fp128 0xL00000000000000007FFF000000000000, fp128* %f, align 16
-  store fp128 0xL10000000000000003F66244CE242C556, fp128* %g, align 16
-  store float 0x3E212E0BE0000000, float* %h, align 4
-  store float 8.000000e+00, float* %i, align 4
-  store float 0x7FF8000000000000, float* %j, align 4
-  store float 0x7FF0000000000000, float* %k, align 4
-  store double 1.000000e+00, double* %l, align 8
-  store double 8.000000e+00, double* %m, align 8
-  store double 0x7FF8000000000000, double* %n, align 8
-  store double 0x7FF0000000000000, double* %o, align 8
+  store fp128 0xLBB2C11D0AE2E087D73E717A35985531C, ptr %a, align 16
+  store fp128 0xLBB2C11D0AE2E087D73E717A35985531C, ptr %b, align 16
+  store fp128 0xL00000000000000004002000000000000, ptr %c, align 16
+  store fp128 0xL00000000000000007FFF800000000000, ptr %d, align 16
+  store fp128 0xL00000000000000007FFF000000000000, ptr %e, align 16
+  store fp128 0xL00000000000000007FFF000000000000, ptr %f, align 16
+  store fp128 0xL10000000000000003F66244CE242C556, ptr %g, align 16
+  store float 0x3E212E0BE0000000, ptr %h, align 4
+  store float 8.000000e+00, ptr %i, align 4
+  store float 0x7FF8000000000000, ptr %j, align 4
+  store float 0x7FF0000000000000, ptr %k, align 4
+  store double 1.000000e+00, ptr %l, align 8
+  store double 8.000000e+00, ptr %m, align 8
+  store double 0x7FF8000000000000, ptr %n, align 8
+  store double 0x7FF0000000000000, ptr %o, align 8
 
   ret i32 0
 }

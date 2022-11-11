@@ -19,7 +19,7 @@ namespace hicpp {
 /// bitwise operations on signed integer types.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/hicpp-signed-bitwise.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/hicpp/signed-bitwise.html
 class SignedBitwiseCheck : public ClangTidyCheck {
 public:
   SignedBitwiseCheck(StringRef Name, ClangTidyContext *Context);

@@ -54,13 +54,13 @@
 #hello_world = affine_map<(i, j) [s0, s1] -> (i, *j)> // expected-error {{missing left operand of binary op}}
 
 // -----
-#hello_world = affine_map<(i, j) [s0, s1] -> (floordiv i 2, j)> // expected-error {{missing left operand of binary op}}
+#hello_world = affine_map<(i, j) [s0, s1] -> (floordiv i 2, j)> // expected-error {{use of undeclared identifier}}
 
 // -----
-#hello_world = affine_map<(i, j) [s0, s1] -> (ceildiv i 2, j)> // expected-error {{missing left operand of binary op}}
+#hello_world = affine_map<(i, j) [s0, s1] -> (ceildiv i 2, j)> // expected-error {{use of undeclared identifier}}
 
 // -----
-#hello_world = affine_map<(i, j) [s0, s1] -> (mod i 2, j)> // expected-error {{missing left operand of binary op}}
+#hello_world = affine_map<(i, j) [s0, s1] -> (mod i 2, j)> // expected-error {{use of undeclared identifier}}
 
 // -----
 #hello_world = affine_map<(i, j) [s0, s1] -> (-(), j)>
@@ -71,13 +71,13 @@
 #hello_world = affine_map<(i, j) [s0, s1] -> (i, *j+5)> // expected-error {{missing left operand of binary op}}
 
 // -----
-#hello_world = affine_map<(i, j) [s0, s1] -> (i, floordiv j+5)> // expected-error {{missing left operand of binary op}}
+#hello_world = affine_map<(i, j) [s0, s1] -> (i, floordiv j+5)> // expected-error {{use of undeclared identifier}}
 
 // -----
-#hello_world = affine_map<(i, j) [s0, s1] -> (i, ceildiv j+5)> // expected-error {{missing left operand of binary op}}
+#hello_world = affine_map<(i, j) [s0, s1] -> (i, ceildiv j+5)> // expected-error {{use of undeclared identifier}}
 
 // -----
-#hello_world = affine_map<(i, j) [s0, s1] -> (i, mod j+5)> // expected-error {{missing left operand of binary op}}
+#hello_world = affine_map<(i, j) [s0, s1] -> (i, mod j+5)> // expected-error {{use of undeclared identifier}}
 
 // -----
 #hello_world = affine_map<(i, j) [s0, s1] -> (i*j, j)> // expected-error {{non-affine expression: at least one of the multiply operands has to be either a constant or symbolic}}
@@ -106,3 +106,15 @@
 // -----
 #ABC = affine_map<(i,j) -> (i+j)>
 #ABC = affine_map<(i,j) -> (i+j)>  // expected-error {{redefinition of attribute alias id 'ABC'}}
+
+// -----
+
+#map = affine_map<(d0) -> (%)>  // expected-error {{invalid SSA name}}
+
+// -----
+
+func.func @invalid_affine_structure() {
+  %c0 = arith.constant 0 : index
+  %idx = affine.apply affine_map<(d0, d1)> (%c0, %c0) // expected-error {{expected '->' or ':'}}
+  return
+}

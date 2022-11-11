@@ -13,7 +13,7 @@ define void @t3() nounwind  {
 ; X86-64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-64-NEXT:    movb $1, %al
 ; X86-64-NEXT:    jmp _pass_v8qi ## TAILCALL
-  %tmp3 = load <8 x i8>, <8 x i8>* @g_v8qi, align 8
+  %tmp3 = load <8 x i8>, ptr @g_v8qi, align 8
   %tmp3a = bitcast <8 x i8> %tmp3 to x86_mmx
   %tmp4 = tail call i32 (...) @pass_v8qi( x86_mmx %tmp3a ) nounwind
   ret void

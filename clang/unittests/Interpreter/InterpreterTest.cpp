@@ -20,12 +20,18 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
+
+#if defined(_AIX)
+#define CLANG_INTERPRETER_NO_SUPPORT_EXEC
+#endif
 
 namespace {
 using Args = std::vector<const char *>;
@@ -128,6 +134,51 @@ TEST(InterpreterTest, DeclsAndStatements) {
   EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
 }
 
+TEST(InterpreterTest, UndoCommand) {
+  Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
+
+  // Create the diagnostic engine with unowned consumer.
+  std::string DiagnosticOutput;
+  llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
+  auto DiagPrinter = std::make_unique<TextDiagnosticPrinter>(
+      DiagnosticsOS, new DiagnosticOptions());
+
+  auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
+
+  // Fail to undo.
+  auto Err1 = Interp->Undo();
+  EXPECT_EQ("Operation failed. Too many undos",
+            llvm::toString(std::move(Err1)));
+  auto Err2 = Interp->Parse("int foo = 42;");
+  EXPECT_TRUE(!!Err2);
+  auto Err3 = Interp->Undo(2);
+  EXPECT_EQ("Operation failed. Too many undos",
+            llvm::toString(std::move(Err3)));
+
+  // Succeed to undo.
+  auto Err4 = Interp->Parse("int x = 42;");
+  EXPECT_TRUE(!!Err4);
+  auto Err5 = Interp->Undo();
+  EXPECT_FALSE(Err5);
+  auto Err6 = Interp->Parse("int x = 24;");
+  EXPECT_TRUE(!!Err6);
+  auto Err7 = Interp->Parse("#define X 42");
+  EXPECT_TRUE(!!Err7);
+  auto Err8 = Interp->Undo();
+  EXPECT_FALSE(Err8);
+  auto Err9 = Interp->Parse("#define X 24");
+  EXPECT_TRUE(!!Err9);
+
+  // Undo input contains errors.
+  auto Err10 = Interp->Parse("int y = ;");
+  EXPECT_FALSE(!!Err10);
+  EXPECT_EQ("Parsing failed.", llvm::toString(Err10.takeError()));
+  auto Err11 = Interp->Parse("int y = 42;");
+  EXPECT_TRUE(!!Err11);
+  auto Err12 = Interp->Undo();
+  EXPECT_FALSE(Err12);
+}
+
 static std::string MangleName(NamedDecl *ND) {
   ASTContext &C = ND->getASTContext();
   std::unique_ptr<MangleContext> MangleC(C.createMangleContext());
@@ -135,6 +186,14 @@ static std::string MangleName(NamedDecl *ND) {
   llvm::raw_string_ostream RawStr(mangledName);
   MangleC->mangleName(ND, RawStr);
   return RawStr.str();
+}
+
+static bool HostSupportsJit() {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (J)
+    return true;
+  LLVMConsumeError(llvm::wrap(J.takeError()));
+  return false;
 }
 
 struct LLVMInitRAII {
@@ -145,7 +204,7 @@ struct LLVMInitRAII {
   ~LLVMInitRAII() { llvm::llvm_shutdown(); }
 } LLVMInit;
 
-#ifdef _AIX
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
 TEST(IncrementalProcessing, DISABLED_FindMangledNameSymbol) {
 #else
 TEST(IncrementalProcessing, FindMangledNameSymbol) {
@@ -156,6 +215,11 @@ TEST(IncrementalProcessing, FindMangledNameSymbol) {
   auto &PTU(cantFail(Interp->Parse("int f(const char*) {return 0;}")));
   EXPECT_EQ(1U, DeclsSize(PTU.TUPart));
   auto R1DeclRange = PTU.TUPart->decls();
+
+  // We cannot execute on the platform.
+  if (!HostSupportsJit()) {
+    return;
+  }
 
   NamedDecl *FD = cast<FunctionDecl>(*R1DeclRange.begin());
   // Lower the PTU
@@ -189,8 +253,10 @@ static void *AllocateObject(TypeDecl *TD, Interpreter &Interp) {
      << std::hex << std::showbase << (size_t)Addr << ")" << Name << "();";
 
   auto R = Interp.ParseAndExecute(SS.str());
-  if (!R)
+  if (!R) {
+    free(Addr);
     return nullptr;
+  }
 
   return Addr;
 }
@@ -205,7 +271,7 @@ static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
   return R.getFoundDecl();
 }
 
-#ifdef _AIX
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
 TEST(IncrementalProcessing, DISABLED_InstantiateTemplate) {
 #else
 TEST(IncrementalProcessing, InstantiateTemplate) {
@@ -227,6 +293,11 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   auto PTUDeclRange = PTU.TUPart->decls();
   EXPECT_EQ(1, std::distance(PTUDeclRange.begin(), PTUDeclRange.end()));
 
+  // We cannot execute on the platform.
+  if (!HostSupportsJit()) {
+    return;
+  }
+
   // Lower the PTU
   if (llvm::Error Err = Interp->Execute(PTU)) {
     // We cannot execute on the platform.
@@ -246,6 +317,7 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   typedef int (*TemplateSpecFn)(void *);
   auto fn = (TemplateSpecFn)cantFail(Interp->getSymbolAddress(MangledName));
   EXPECT_EQ(42, fn(NewA));
+  free(NewA);
 }
 
 } // end anonymous namespace

@@ -1,13 +1,13 @@
 ; RUN: llc -verify-machineinstrs -mcpu=ppc64le -mtriple=powerpc64le-unknown-linux-gnu < %s
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #0
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #0
 
 ; Function Attrs: nounwind
 define internal fastcc void @foo() unnamed_addr #1 align 2 {
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 undef, i8* align 8 null, i64 16, i1 false)
-  %0 = load <2 x i64>, <2 x i64>* null, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 undef, ptr align 8 null, i64 16, i1 false)
+  %0 = load <2 x i64>, ptr null, align 8
   %1 = extractelement <2 x i64> %0, i32 1
   %.fca.1.insert159.i = insertvalue [2 x i64] undef, i64 %1, 1
   tail call fastcc void @bar([2 x i64] undef, [2 x i64] %.fca.1.insert159.i) #2

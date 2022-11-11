@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class CStringsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_with_run_command(self):
         """Tests that C strings work as expected in expressions"""
         self.build()

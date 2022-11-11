@@ -442,8 +442,7 @@ Error addFunctionPointerRelocationsToCurrentSymbol(jitlink::Symbol &Sym,
 
     auto RelocOffInInstr =
         MIA.getMemoryOperandRelocationOffset(Instr, InstrSize);
-    if (!RelocOffInInstr.hasValue() ||
-        InstrSize - RelocOffInInstr.getValue() != 4) {
+    if (!RelocOffInInstr || InstrSize - *RelocOffInInstr != 4) {
       LLVM_DEBUG(dbgs() << "Skipping unknown self-relocation at "
                         << InstrStart);
       continue;

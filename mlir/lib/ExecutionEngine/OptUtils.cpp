@@ -43,7 +43,7 @@ static Optional<OptimizationLevel> mapToLevel(unsigned optLevel,
     case 2:
       return OptimizationLevel::Oz;
     }
-
+    break;
   case 3:
     return OptimizationLevel::O3;
   }
@@ -68,7 +68,13 @@ mlir::makeOptimizingTransformer(unsigned optLevel, unsigned sizeLevel,
     CGSCCAnalysisManager cgam;
     ModuleAnalysisManager mam;
 
-    PassBuilder pb(targetMachine);
+    PipelineTuningOptions tuningOptions;
+    tuningOptions.LoopUnrolling = true;
+    tuningOptions.LoopInterleaving = true;
+    tuningOptions.LoopVectorization = true;
+    tuningOptions.SLPVectorization = true;
+
+    PassBuilder pb(targetMachine, tuningOptions);
 
     pb.registerModuleAnalyses(mam);
     pb.registerCGSCCAnalyses(cgam);

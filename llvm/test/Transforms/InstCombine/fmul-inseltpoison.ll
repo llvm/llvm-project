@@ -5,7 +5,7 @@
 ; poison
 
 ; Don't crash when attempting to cast a constant FMul to an instruction.
-define void @test8(i32* %inout, i1 %c1) {
+define void @test8(ptr %inout, i1 %c1) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
@@ -19,7 +19,7 @@ define void @test8(i32* %inout, i1 %c1) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* %inout, align 4
+  %0 = load i32, ptr %inout, align 4
   %conv = uitofp i32 %0 to float
   %vecinit = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison>, float %conv, i32 3
   %sub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %vecinit

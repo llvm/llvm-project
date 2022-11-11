@@ -2,7 +2,7 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -disable-cgp-select2branch -x86-cmov-converter=false | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 
-define i32 @test1(i32 %x, i32 %n, i32 %w, i32* %vp) nounwind readnone {
+define i32 @test1(i32 %x, i32 %n, i32 %w, ptr %vp) nounwind readnone {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    btl %esi, %edi
@@ -13,12 +13,12 @@ entry:
 	%0 = lshr i32 %x, %n
 	%1 = and i32 %0, 1
 	%toBool = icmp eq i32 %1, 0
-        %v = load i32, i32* %vp
+        %v = load i32, ptr %vp
 	%.0 = select i1 %toBool, i32 %v, i32 12
 	ret i32 %.0
 }
 
-define i32 @test2(i32 %x, i32 %n, i32 %w, i32* %vp) nounwind readnone {
+define i32 @test2(i32 %x, i32 %n, i32 %w, ptr %vp) nounwind readnone {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    btl %esi, %edi
@@ -29,7 +29,7 @@ entry:
 	%0 = lshr i32 %x, %n
 	%1 = and i32 %0, 1
 	%toBool = icmp eq i32 %1, 0
-        %v = load i32, i32* %vp
+        %v = load i32, ptr %vp
 	%.0 = select i1 %toBool, i32 12, i32 %v
 	ret i32 %.0
 }
@@ -85,11 +85,11 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    xorb $1, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    sarl %cl, %edx
-; CHECK-NEXT:    movb g_96(%rip), %al
+; CHECK-NEXT:    movzbl g_96(%rip), %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %bb.i.i.i
-; CHECK-NEXT:    movb g_100(%rip), %cl
+; CHECK-NEXT:    movzbl g_100(%rip), %ecx
 ; CHECK-NEXT:  .LBB3_2: # %func_4.exit.i
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    testb %dl, %dl
@@ -102,7 +102,7 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB3_5
 ; CHECK-NEXT:  # %bb.4: # %bb.i.i
-; CHECK-NEXT:    movb g_100(%rip), %cl
+; CHECK-NEXT:    movzbl g_100(%rip), %ecx
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:  .LBB3_5: # %func_1.exit
@@ -115,7 +115,7 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i8, i8* @g_3, align 1
+  %0 = load i8, ptr @g_3, align 1
   %1 = sext i8 %0 to i32
   %.lobit.i = lshr i8 %0, 7
   %tmp.i = zext i8 %.lobit.i to i32
@@ -123,12 +123,12 @@ entry:
   %iftmp.17.0.i.i = ashr i32 %1, %tmp.not.i
   %retval56.i.i = trunc i32 %iftmp.17.0.i.i to i8
   %2 = icmp eq i8 %retval56.i.i, 0
-  %g_96.promoted.i = load i8, i8* @g_96
+  %g_96.promoted.i = load i8, ptr @g_96
   %3 = icmp eq i8 %g_96.promoted.i, 0
   br i1 %3, label %func_4.exit.i, label %bb.i.i.i
 
 bb.i.i.i:
-  %4 = load volatile i8, i8* @g_100, align 1
+  %4 = load volatile i8, ptr @g_100, align 1
   br label %func_4.exit.i
 
 func_4.exit.i:
@@ -138,24 +138,24 @@ func_4.exit.i:
   br i1 %brmerge.i, label %func_1.exit, label %bb.i.i
 
 bb.i.i:
-  %5 = load volatile i8, i8* @g_100, align 1
+  %5 = load volatile i8, ptr @g_100, align 1
   br label %func_1.exit
 
 func_1.exit:
   %g_96.tmp.0.i = phi i8 [ %g_96.promoted.i, %bb.i.i ], [ %.mux.i, %func_4.exit.i ]
   %ret = phi i1 [ 0, %bb.i.i ], [ %.not.i, %func_4.exit.i ]
-  store i8 %g_96.tmp.0.i, i8* @g_96
+  store i8 %g_96.tmp.0.i, ptr @g_96
   %6 = zext i8 %g_96.tmp.0.i to i32
-  %7 = tail call i32 (i8*, ...) @printf(i8* noalias getelementptr ([15 x i8], [15 x i8]* @_2E_str, i64 0, i64 0), i32 %6) nounwind
+  %7 = tail call i32 (ptr, ...) @printf(ptr noalias @_2E_str, i32 %6) nounwind
   ret i1 %ret
 }
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind
 
 
 ; Should compile to setcc | -2.
 ; rdar://6668608
-define i32 @test5(i32* nocapture %P) nounwind readonly {
+define i32 @test5(ptr nocapture %P) nounwind readonly {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -164,13 +164,13 @@ define i32 @test5(i32* nocapture %P) nounwind readonly {
 ; CHECK-NEXT:    orl $-2, %eax
 ; CHECK-NEXT:    retq
 entry:
-	%0 = load i32, i32* %P, align 4
+	%0 = load i32, ptr %P, align 4
 	%1 = icmp sgt i32 %0, 41
 	%iftmp.0.0 = select i1 %1, i32 -1, i32 -2
 	ret i32 %iftmp.0.0
 }
 
-define i32 @test6(i32* nocapture %P) nounwind readonly {
+define i32 @test6(ptr nocapture %P) nounwind readonly {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -179,7 +179,7 @@ define i32 @test6(i32* nocapture %P) nounwind readonly {
 ; CHECK-NEXT:    leal 4(%rax,%rax,8), %eax
 ; CHECK-NEXT:    retq
 entry:
-	%0 = load i32, i32* %P, align 4
+	%0 = load i32, ptr %P, align 4
 	%1 = icmp sgt i32 %0, 41
 	%iftmp.0.0 = select i1 %1, i32 4, i32 13
 	ret i32 %iftmp.0.0

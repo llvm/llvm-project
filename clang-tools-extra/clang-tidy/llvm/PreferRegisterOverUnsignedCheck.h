@@ -20,7 +20,7 @@ namespace llvm_check {
 /// the code more explicit.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvm-prefer-register-over-unsigned.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/llvm/prefer-register-over-unsigned.html
 class PreferRegisterOverUnsignedCheck : public ClangTidyCheck {
 public:
   PreferRegisterOverUnsignedCheck(StringRef Name, ClangTidyContext *Context)

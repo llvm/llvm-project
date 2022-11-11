@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H
-#define LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H
+#ifndef LLVM_TRANSFORMS_UTILS_LOWERATOMIC_H
+#define LLVM_TRANSFORMS_UTILS_LOWERATOMIC_H
 
 #include "llvm/IR/Instructions.h"
 
@@ -34,4 +34,4 @@ Value *buildAtomicRMWValue(AtomicRMWInst::BinOp Op, IRBuilderBase &Builder,
                            Value *Loaded, Value *Inc);
 }
 
-#endif // LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H
+#endif // LLVM_TRANSFORMS_UTILS_LOWERATOMIC_H

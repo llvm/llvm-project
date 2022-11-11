@@ -14,6 +14,6 @@ define void @test_prefetch(i8* %a) nounwind {
 ; RV64I-LABEL: test_prefetch:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ret
-  call void @llvm.prefetch(i8* %a, i32 0, i32 1, i32 2)
+  call void @llvm.prefetch(i8* %a, i32 0, i32 2, i32 1)
   ret void
 }

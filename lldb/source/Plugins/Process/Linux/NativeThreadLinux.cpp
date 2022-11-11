@@ -48,19 +48,19 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
     return;
   case eStopReasonTrace:
     log.Printf("%s: %s trace, stopping signal 0x%" PRIx32, __FUNCTION__, header,
-               stop_info.details.signal.signo);
+               stop_info.signo);
     return;
   case eStopReasonBreakpoint:
     log.Printf("%s: %s breakpoint, stopping signal 0x%" PRIx32, __FUNCTION__,
-               header, stop_info.details.signal.signo);
+               header, stop_info.signo);
     return;
   case eStopReasonWatchpoint:
     log.Printf("%s: %s watchpoint, stopping signal 0x%" PRIx32, __FUNCTION__,
-               header, stop_info.details.signal.signo);
+               header, stop_info.signo);
     return;
   case eStopReasonSignal:
     log.Printf("%s: %s signal 0x%02" PRIx32, __FUNCTION__, header,
-               stop_info.details.signal.signo);
+               stop_info.signo);
     return;
   case eStopReasonException:
     log.Printf("%s: %s exception type 0x%02" PRIx64, __FUNCTION__, header,
@@ -68,7 +68,7 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
     return;
   case eStopReasonExec:
     log.Printf("%s: %s exec, stopping signal 0x%" PRIx32, __FUNCTION__, header,
-               stop_info.details.signal.signo);
+               stop_info.signo);
     return;
   case eStopReasonPlanComplete:
     log.Printf("%s: %s plan complete", __FUNCTION__, header);
@@ -285,7 +285,7 @@ void NativeThreadLinux::SetStoppedBySignal(uint32_t signo,
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonSignal;
-  m_stop_info.details.signal.signo = signo;
+  m_stop_info.signo = signo;
 
   m_stop_description.clear();
   if (info) {
@@ -371,7 +371,7 @@ bool NativeThreadLinux::IsStopped(int *signo) {
   // If we are stopped by a signal, return the signo.
   if (signo && m_state == StateType::eStateStopped &&
       m_stop_info.reason == StopReason::eStopReasonSignal) {
-    *signo = m_stop_info.details.signal.signo;
+    *signo = m_stop_info.signo;
   }
 
   // Regardless, we are stopped.
@@ -398,14 +398,14 @@ void NativeThreadLinux::SetStoppedByExec() {
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonExec;
-  m_stop_info.details.signal.signo = SIGSTOP;
+  m_stop_info.signo = SIGSTOP;
 }
 
 void NativeThreadLinux::SetStoppedByBreakpoint() {
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonBreakpoint;
-  m_stop_info.details.signal.signo = SIGTRAP;
+  m_stop_info.signo = SIGTRAP;
   m_stop_description.clear();
 }
 
@@ -434,7 +434,7 @@ void NativeThreadLinux::SetStoppedByWatchpoint(uint32_t wp_index) {
   m_stop_description = ostr.str();
 
   m_stop_info.reason = StopReason::eStopReasonWatchpoint;
-  m_stop_info.details.signal.signo = SIGTRAP;
+  m_stop_info.signo = SIGTRAP;
 }
 
 bool NativeThreadLinux::IsStoppedAtBreakpoint() {
@@ -451,7 +451,7 @@ void NativeThreadLinux::SetStoppedByTrace() {
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonTrace;
-  m_stop_info.details.signal.signo = SIGTRAP;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadLinux::SetStoppedByFork(bool is_vfork, lldb::pid_t child_pid) {
@@ -459,6 +459,7 @@ void NativeThreadLinux::SetStoppedByFork(bool is_vfork, lldb::pid_t child_pid) {
 
   m_stop_info.reason =
       is_vfork ? StopReason::eStopReasonVFork : StopReason::eStopReasonFork;
+  m_stop_info.signo = SIGTRAP;
   m_stop_info.details.fork.child_pid = child_pid;
   m_stop_info.details.fork.child_tid = child_pid;
 }
@@ -467,13 +468,14 @@ void NativeThreadLinux::SetStoppedByVForkDone() {
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonVForkDone;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadLinux::SetStoppedWithNoReason() {
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonNone;
-  m_stop_info.details.signal.signo = 0;
+  m_stop_info.signo = 0;
 }
 
 void NativeThreadLinux::SetStoppedByProcessorTrace(
@@ -481,7 +483,7 @@ void NativeThreadLinux::SetStoppedByProcessorTrace(
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonProcessorTrace;
-  m_stop_info.details.signal.signo = 0;
+  m_stop_info.signo = 0;
   m_stop_description = description.str();
 }
 

@@ -107,9 +107,15 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     if (ExitBlocks.empty())
       continue;
 
-    for (Use &U : I->uses()) {
+    for (Use &U : make_early_inc_range(I->uses())) {
       Instruction *User = cast<Instruction>(U.getUser());
       BasicBlock *UserBB = User->getParent();
+
+      // Skip uses in unreachable blocks.
+      if (!DT.isReachableFromEntry(UserBB)) {
+        U.set(PoisonValue::get(I->getType()));
+        continue;
+      }
 
       // For practical purposes, we consider that the use in a PHI
       // occurs in the respective predecessor block. For more info,
@@ -235,7 +241,7 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     llvm::findDbgValues(DbgValues, I);
 
     // Update pre-existing debug value uses that reside outside the loop.
-    for (auto DVI : DbgValues) {
+    for (auto *DVI : DbgValues) {
       BasicBlock *UserBB = DVI->getParent();
       if (InstBB == UserBB || L->contains(UserBB))
         continue;
@@ -417,7 +423,7 @@ bool llvm::formLCSSARecursively(Loop &L, const DominatorTree &DT,
 static bool formLCSSAOnAllLoops(const LoopInfo *LI, const DominatorTree &DT,
                                 ScalarEvolution *SE) {
   bool Changed = false;
-  for (auto &L : *LI)
+  for (const auto &L : *LI)
     Changed |= formLCSSARecursively(*L, DT, LI, SE);
   return Changed;
 }

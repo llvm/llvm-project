@@ -56,12 +56,12 @@ bb:
 
 bb2:                                              ; preds = %bb
   %i = select i1 undef, i64 0, i64 72057594037927936
-  store i64 %i, i64* undef, align 8
+  store i64 %i, ptr undef, align 8
   ret void
 
 bb1:                                              ; preds = %bb
-  %i50 = load i8, i8* undef, align 8
-  %i52 = load i128, i128* null, align 8
+  %i50 = load i8, ptr undef, align 8
+  %i52 = load i128, ptr null, align 8
   %i62 = icmp eq i8 %i50, 0
   br i1 undef, label %bb66, label %bb64
 
@@ -76,6 +76,6 @@ bb66:                                             ; preds = %bb63
   %i71 = icmp eq i128 %i70, 0
   %i74 = select i1 %i62, i64 0, i64 72057594037927936
   %i75 = select i1 %i71, i64 144115188075855872, i64 %i74
-  store i64 %i75, i64* undef, align 8
+  store i64 %i75, ptr undef, align 8
   ret void
 }

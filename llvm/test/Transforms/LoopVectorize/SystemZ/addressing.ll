@@ -30,9 +30,9 @@ define i32 @foo(i32* nocapture %A) {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 
 entry:
@@ -49,7 +49,7 @@ for.body:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 undef
+  ret i32 poison
 }
 
 
@@ -82,9 +82,9 @@ define i32 @foo1(i32* nocapture noalias %A, i32** nocapture %PtrPtr) {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 
 entry:
@@ -103,5 +103,5 @@ for.body:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 undef
+  ret i32 poison
 }

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // zip_view() = default;
 
@@ -36,7 +35,7 @@ struct NoDefaultCtrView : std::ranges::view_base {
 };
 
 // The default constructor requires all underlying views to be default constructible.
-// It is implicitly required by the tuple's constructor. If any of the iterators are 
+// It is implicitly required by the tuple's constructor. If any of the iterators are
 // not default constructible, zip iterator's =default would be implicitly deleted.
 static_assert(std::is_default_constructible_v<std::ranges::zip_view<DefaultConstructibleView>>);
 static_assert(

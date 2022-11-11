@@ -106,7 +106,7 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
 
 static Reloc::Model getEffectiveRelocModel(bool JIT,
                                            Optional<Reloc::Model> RM) {
-  if (!RM.hasValue() || JIT)
+  if (!RM || JIT)
     return Reloc::Static;
   return *RM;
 }

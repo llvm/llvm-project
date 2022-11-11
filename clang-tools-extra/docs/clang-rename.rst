@@ -131,7 +131,7 @@ That way you can avoid spelling out all the names as command line arguments:
     -input=<string>            - YAML file to load oldname-newname pairs from.
     -new-name=<string>         - The new name to change the symbol to.
     -offset=<uint>             - Locates the symbol by offset as opposed to <line>:<column>.
-    -p=<string>                - Build path
+    -p <string>                - Build path
     -pl                        - Print the locations affected by renaming to stderr.
     -pn                        - Print the found symbol's name prior to renaming to stderr.
     -qualified-name=<string>   - The fully qualified name of the symbol.

@@ -1,4 +1,4 @@
-; RUN: opt -S %s -lowertypetests | FileCheck %s
+; RUN: opt -S %s -passes=lowertypetests | FileCheck %s
 
 
 ; CHECK: define hidden i8* @f2.cfi() !type !0 {

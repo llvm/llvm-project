@@ -13,8 +13,8 @@
 ; }
 
 ; CHECK: for.body:
-; CHECK:  %{{.*}} = load i16, i16* %{{.*}}, align 1, !llvm.access.group !1
-; CHECK:  store i16 %{{.*}}, i16* %{{.*}}, align 1, !llvm.access.group !1
+; CHECK:  %{{.*}} = load i16, ptr %{{.*}}, align 1, !llvm.access.group !1
+; CHECK:  store i16 %{{.*}}, ptr %{{.*}}, align 1, !llvm.access.group !1
 
 
 ; ModuleID = '<stdin>'
@@ -23,7 +23,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
-define void @_Z4testPcl(i8* %out, i64 %size) #0 {
+define void @_Z4testPcl(ptr %out, i64 %size) #0 {
 entry:
   br label %for.cond
 
@@ -33,10 +33,10 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr inbounds i8, i8* %out, i64 %i.0
+  %arrayidx = getelementptr inbounds i8, ptr %out, i64 %i.0
   %add = add nsw i64 %i.0, %size
-  %arrayidx1 = getelementptr inbounds i8, i8* %out, i64 %add
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %arrayidx, i8* %arrayidx1, i64 2, i1 false), !llvm.access.group !4
+  %arrayidx1 = getelementptr inbounds i8, ptr %out, i64 %add
+  call void @llvm.memcpy.p0.p0.i64(ptr %arrayidx, ptr %arrayidx1, i64 2, i1 false), !llvm.access.group !4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -48,7 +48,7 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 
 attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }

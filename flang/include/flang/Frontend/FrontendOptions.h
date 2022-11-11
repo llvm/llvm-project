@@ -14,6 +14,7 @@
 #define FORTRAN_FRONTEND_FRONTENDOPTIONS_H
 
 #include "flang/Common/Fortran-features.h"
+#include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/unparse.h"
 #include "llvm/ADT/StringRef.h"
@@ -219,7 +220,7 @@ public:
 struct FrontendOptions {
   FrontendOptions()
       : showHelp(false), showVersion(false), instrumentedParse(false),
-        needProvenanceRangeToCharBlockMappings(false) {}
+        showColors(false), needProvenanceRangeToCharBlockMappings(false) {}
 
   /// Show the -help text.
   unsigned showHelp : 1;
@@ -229,6 +230,9 @@ struct FrontendOptions {
 
   /// Instrument the parse to get a more verbose log
   unsigned instrumentedParse : 1;
+
+  /// Enable color diagnostics.
+  unsigned showColors : 1;
 
   /// Enable Provenance to character-stream mapping. Allows e.g. IDEs to find
   /// symbols based on source-code location. This is not needed in regular
@@ -254,6 +258,9 @@ struct FrontendOptions {
 
   // The form to process files in, if specified.
   FortranForm fortranForm = FortranForm::Unknown;
+
+  // Default values for environment variables to be set by the runtime.
+  std::vector<Fortran::lower::EnvironmentDefault> envDefaults;
 
   // The column after which characters are ignored in fixed form lines in the
   // source file.

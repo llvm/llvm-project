@@ -2,12 +2,12 @@
 
 // CHECK-LABEL: @test_enum_attr_roundtrip
 func.func @test_enum_attr_roundtrip() -> () {
-  // CHECK: value = #test<"enum first">
-  "test.op"() {value = #test<"enum first">} : () -> ()
-  // CHECK: value = #test<"enum second">
-  "test.op"() {value = #test<"enum second">} : () -> ()
-  // CHECK: value = #test<"enum third">
-  "test.op"() {value = #test<"enum third">} : () -> ()
+  // CHECK: value = #test<enum first>
+  "test.op"() {value = #test<enum first>} : () -> ()
+  // CHECK: value = #test<enum second>
+  "test.op"() {value = #test<enum second>} : () -> ()
+  // CHECK: value = #test<enum third>
+  "test.op"() {value = #test<enum third>} : () -> ()
   return
 }
 

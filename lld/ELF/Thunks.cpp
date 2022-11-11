@@ -916,25 +916,18 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
     write32(buf + 4, 0x48000000 | (offset & 0x03fffffc)); // b    <offset>
   } else if (isInt<34>(offset)) {
     int nextInstOffset;
-    if (!config->power10Stubs) {
-      uint64_t tocOffset = destination.getVA() - getPPC64TocBase();
-      if (tocOffset >> 16 > 0) {
-        const uint64_t addi = ADDI_R12_TO_R12_NO_DISP | (tocOffset & 0xffff);
-        const uint64_t addis = ADDIS_R12_TO_R2_NO_DISP | ((tocOffset >> 16) & 0xffff);
-        write32(buf + 4, addis); // addis r12, r2 , top of offset
-        write32(buf + 8, addi);  // addi  r12, r12, bottom of offset
-        nextInstOffset = 12;
-      } else {
-        const uint64_t addi = ADDI_R12_TO_R2_NO_DISP | (tocOffset & 0xffff);
-        write32(buf + 4, addi); // addi r12, r2, offset
-        nextInstOffset = 8;
-      }
-    } else {
-      const uint64_t paddi = PADDI_R12_NO_DISP |
-                             (((offset >> 16) & 0x3ffff) << 32) |
-                             (offset & 0xffff);
-      writePrefixedInstruction(buf + 4, paddi); // paddi r12, 0, func@pcrel, 1
+    uint64_t tocOffset = destination.getVA() - getPPC64TocBase();
+    if (tocOffset >> 16 > 0) {
+      const uint64_t addi = ADDI_R12_TO_R12_NO_DISP | (tocOffset & 0xffff);
+      const uint64_t addis =
+          ADDIS_R12_TO_R2_NO_DISP | ((tocOffset >> 16) & 0xffff);
+      write32(buf + 4, addis); // addis r12, r2 , top of offset
+      write32(buf + 8, addi);  // addi  r12, r12, bottom of offset
       nextInstOffset = 12;
+    } else {
+      const uint64_t addi = ADDI_R12_TO_R2_NO_DISP | (tocOffset & 0xffff);
+      write32(buf + 4, addi); // addi r12, r2, offset
+      nextInstOffset = 8;
     }
     write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12
     write32(buf + nextInstOffset + 4, BCTR);  // bctr

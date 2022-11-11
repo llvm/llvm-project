@@ -2,7 +2,7 @@
 
 declare swifttailcc void @callee([6 x i64], i64, i64)
 
-@var = external global i8*
+@var = external global ptr
 
 define swifttailcc void @caller(i64 %n) {
 ; CHECK-LABEL: caller:
@@ -23,7 +23,7 @@ define swifttailcc void @caller(i64 %n) {
 
   call void asm sideeffect "", "~{rbx}"()
   %ptr = alloca i8, i64 %n, align 32
-  store i8* %ptr, i8** @var
+  store ptr %ptr, ptr @var
   tail call swifttailcc void @callee([6 x i64] undef, i64 42, i64 0)
   ret void
 }

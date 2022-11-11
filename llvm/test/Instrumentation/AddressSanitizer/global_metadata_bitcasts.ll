@@ -1,7 +1,7 @@
 ; Test that the compiler doesn't crash when the llvm.asan.globals containts
 ; an entry that points to a BitCast instruction.
 
-; RUN: opt < %s -passes='asan-pipeline' -asan-globals-live-support=1 -S
+; RUN: opt < %s -passes=asan -asan-globals-live-support=1 -S
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"

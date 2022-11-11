@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSERCLANG_H
 
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -45,6 +46,9 @@ public:
                                   const DWARFDIE &die,
                                   bool *type_is_new_ptr) override;
 
+  lldb_private::ConstString
+  ConstructDemangledNameFromDWARF(const DWARFDIE &die) override;
+
   lldb_private::Function *
   ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
                          const DWARFDIE &die,
@@ -67,6 +71,22 @@ public:
   GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) override;
 
   lldb_private::ClangASTImporter &GetClangASTImporter();
+
+  /// Extracts an value for a given Clang integer type from a DWARFFormValue.
+  ///
+  /// \param int_type The Clang type that defines the bit size and signedness
+  ///                 of the integer that should be extracted. Has to be either
+  ///                 an integer type or an enum type. For enum types the
+  ///                 underlying integer type will be considered as the
+  ///                 expected integer type that should be extracted.
+  /// \param form_value The DWARFFormValue that contains the integer value.
+  /// \return An APInt containing the same integer value as the given
+  ///         DWARFFormValue with the bit width of the given integer type.
+  ///         Returns an error if the value in the DWARFFormValue does not fit
+  ///         into the given integer type or the integer type isn't supported.
+  llvm::Expected<llvm::APInt>
+  ExtractIntFromFormValue(const lldb_private::CompilerType &int_type,
+                          const DWARFFormValue &form_value) const;
 
 protected:
   /// Protected typedefs and members.
@@ -101,10 +121,17 @@ protected:
   bool ParseTemplateDIE(const DWARFDIE &die,
                         lldb_private::TypeSystemClang::TemplateParameterInfos
                             &template_param_infos);
+
   bool ParseTemplateParameterInfos(
       const DWARFDIE &parent_die,
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
+
+  /// Get the template parameters of a die as a string if the die name does not
+  /// already contain them. This happens with -gsimple-template-names.
+  std::string GetTemplateParametersString(const DWARFDIE &die);
+
+  std::string GetCPlusPlusQualifiedName(const DWARFDIE &die);
 
   bool ParseChildMembers(
       const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
@@ -223,9 +250,8 @@ private:
                          const DWARFDIE &die, ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseSubroutine(const DWARFDIE &die,
                                ParsedDWARFTypeAttributes &attrs);
-  // FIXME: attrs should be passed as a const reference.
   lldb::TypeSP ParseArrayType(const DWARFDIE &die,
-                              ParsedDWARFTypeAttributes &attrs);
+                              const ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParsePointerToMemberType(const DWARFDIE &die,
                                         const ParsedDWARFTypeAttributes &attrs);
 
@@ -285,6 +311,10 @@ struct ParsedDWARFTypeAttributes {
   uint32_t bit_stride = 0;
   uint32_t byte_stride = 0;
   uint32_t encoding = 0;
+  clang::RefQualifierKind ref_qual =
+      clang::RQ_None; ///< Indicates ref-qualifier of
+                      ///< C++ member function if present.
+                      ///< Is RQ_None otherwise.
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSERCLANG_H

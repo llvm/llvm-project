@@ -7,7 +7,7 @@
 ; RUN:     -mcpu=pwr10 -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
 ; RUN:     < %s | FileCheck %s --check-prefix=CHECK-BE
 
-define void @test1(<4 x i32> %A, i32* %a) {
+define void @test1(<4 x i32> %A, ptr %a) {
 ; CHECK-LE-LABEL: test1:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    stxvrwx v2, 0, r5
@@ -20,11 +20,11 @@ define void @test1(<4 x i32> %A, i32* %a) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x i32> %A, i32 0
-  store i32 %vecext, i32* %a, align 4
+  store i32 %vecext, ptr %a, align 4
   ret void
 }
 
-define void @test2(<4 x float> %A, float* %a) {
+define void @test2(<4 x float> %A, ptr %a) {
 ; CHECK-LE-LABEL: test2:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    stxvrwx v2, 0, r5
@@ -37,11 +37,11 @@ define void @test2(<4 x float> %A, float* %a) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x float> %A, i32 0
-  store float %vecext, float* %a, align 4
+  store float %vecext, ptr %a, align 4
   ret void
 }
 
-define void @test3(<2 x double> %A, double* %a) {
+define void @test3(<2 x double> %A, ptr %a) {
 ; CHECK-LE-LABEL: test3:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    stxvrdx v2, 0, r5
@@ -53,11 +53,11 @@ define void @test3(<2 x double> %A, double* %a) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %vecext = extractelement <2 x double> %A, i32 0
-  store double %vecext, double* %a, align 8
+  store double %vecext, ptr %a, align 8
   ret void
 }
 
-define void @test4(<2 x i64> %A, i64* %a) {
+define void @test4(<2 x i64> %A, ptr %a) {
 ; CHECK-LE-LABEL: test4:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    stxvrdx v2, 0, r5
@@ -69,11 +69,11 @@ define void @test4(<2 x i64> %A, i64* %a) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %vecext = extractelement <2 x i64> %A, i32 0
-  store i64 %vecext, i64* %a, align 8
+  store i64 %vecext, ptr %a, align 8
   ret void
 }
 
-define void @test5(<8 x i16> %A, i16* %a) {
+define void @test5(<8 x i16> %A, ptr %a) {
 ; CHECK-LE-LABEL: test5:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    stxvrhx v2, 0, r5
@@ -86,11 +86,11 @@ define void @test5(<8 x i16> %A, i16* %a) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %vecext = extractelement <8 x i16> %A, i32 0
-  store i16 %vecext, i16* %a, align 2
+  store i16 %vecext, ptr %a, align 2
   ret void
 }
 
-define void @test6(<16 x i8> %A, i8* %a) {
+define void @test6(<16 x i8> %A, ptr %a) {
 ; CHECK-LE-LABEL: test6:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    stxvrbx v2, 0, r5
@@ -103,7 +103,7 @@ define void @test6(<16 x i8> %A, i8* %a) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %vecext = extractelement <16 x i8> %A, i32 0
-  store i8 %vecext, i8* %a, align 1
+  store i8 %vecext, ptr %a, align 1
   ret void
 }
 

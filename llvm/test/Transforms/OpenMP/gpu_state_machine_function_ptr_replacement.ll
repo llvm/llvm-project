@@ -63,7 +63,10 @@ worker.exit:                                      ; preds = %entry
   ret void
 }
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1)
+define weak i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1) {
+  ret i32 0
+}
+
 declare void @unknown()
 
 define internal void @__omp_outlined__(i32* noalias %.global_tid., i32* noalias %.bound_tid.) {

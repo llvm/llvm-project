@@ -59,14 +59,14 @@ define <2 x i32> @freeze_ivec() {
   ret <2 x i32> %t1
 }
 
-define i8* @freeze_ptr() {
+define ptr @freeze_ptr() {
 ; X86ASM-LABEL: freeze_ptr:
 ; X86ASM:       # %bb.0:
 ; X86ASM-NEXT:    addq $4, %rax
 ; X86ASM-NEXT:    retq
-  %y1 = freeze i8* undef
-  %t1 = getelementptr i8, i8* %y1, i64 4
-  ret i8* %t1
+  %y1 = freeze ptr undef
+  %t1 = getelementptr i8, ptr %y1, i64 4
+  ret ptr %t1
 }
 
 define i32 @freeze_struct() {

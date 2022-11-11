@@ -1,13 +1,13 @@
 ; RUN: llc < %s -mtriple=i686--
 ; PR3244
 
-@g_62 = external dso_local global i16             ; <i16*> [#uses=1]
-@g_487 = external dso_local global i32            ; <i32*> [#uses=1]
+@g_62 = external dso_local global i16             ; <ptr> [#uses=1]
+@g_487 = external dso_local global i32            ; <ptr> [#uses=1]
 
 define i32 @func_42(i32 %p_43, i32 %p_44, i32 %p_45, i32 %p_46) nounwind {
 entry:
-        %0 = load i16, i16* @g_62, align 2           ; <i16> [#uses=1]
-        %1 = load i32, i32* @g_487, align 4          ; <i32> [#uses=1]
+        %0 = load i16, ptr @g_62, align 2           ; <i16> [#uses=1]
+        %1 = load i32, ptr @g_487, align 4          ; <i32> [#uses=1]
         %2 = trunc i16 %0 to i8         ; <i8> [#uses=1]
         %3 = trunc i32 %1 to i8         ; <i8> [#uses=1]
         %4 = tail call i32 (...) @func_7(i64 -4455561449541442965, i32 1)

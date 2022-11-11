@@ -265,16 +265,6 @@ public:
   }
 };
 
-template <typename Tuple, std::size_t... Is>
-auto tuple_pop_front_impl(const Tuple &tuple, std::index_sequence<Is...>) {
-  return std::make_tuple(std::get<1 + Is>(tuple)...);
-}
-
-template <typename Tuple> auto tuple_pop_front(const Tuple &tuple) {
-  return tuple_pop_front_impl(
-      tuple, std::make_index_sequence<std::tuple_size<Tuple>::value - 1>());
-}
-
 template <typename T, typename... U> struct MatchParents {
   static std::tuple<bool, DynTypedNodeList, const T *, const U *...>
   match(const DynTypedNodeList &NodeList,
@@ -285,10 +275,11 @@ template <typename T, typename... U> struct MatchParents {
       if (NextParentList.size() == 1) {
         auto TailTuple = MatchParents<U...>::match(NextParentList, ParentMap);
         if (std::get<bool>(TailTuple)) {
-          return std::tuple_cat(
-              std::make_tuple(true, std::get<DynTypedNodeList>(TailTuple),
-                              TypedNode),
-              tuple_pop_front(tuple_pop_front(TailTuple)));
+          return std::apply(
+              [TypedNode](bool, DynTypedNodeList NodeList, auto... TupleTail) {
+                return std::make_tuple(true, NodeList, TypedNode, TupleTail...);
+              },
+              TailTuple);
         }
       }
     }

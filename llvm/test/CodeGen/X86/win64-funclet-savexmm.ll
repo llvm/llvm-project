@@ -16,35 +16,35 @@
 ;   }
 ; }
 
-%rtti.TypeDescriptor2 = type { i8**, i8*, [3 x i8] }
+%rtti.TypeDescriptor2 = type { ptr, ptr, [3 x i8] }
 
 $"??_R0H@8" = comdat any
 
-@"??_7type_info@@6B@" = external constant i8*
-@"??_R0H@8" = linkonce_odr global %rtti.TypeDescriptor2 { i8** @"??_7type_info@@6B@", i8* null, [3 x i8] c".H\00" }, comdat
+@"??_7type_info@@6B@" = external constant ptr
+@"??_R0H@8" = linkonce_odr global %rtti.TypeDescriptor2 { ptr @"??_7type_info@@6B@", ptr null, [3 x i8] c".H\00" }, comdat
 
 declare dso_local i32 @__CxxFrameHandler3(...)
 declare dso_local void @"?bar@@YAXHHHHH@Z"(i32, i32, i32, i32, i32)
 declare dso_local void @"?baz@@YAXH@Z"(i32)
 
-define dso_local void @"?foo@@YAXHHHHH@Z"(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define dso_local void @"?foo@@YAXHHHHH@Z"(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) personality ptr @__CxxFrameHandler3 {
 entry:
   %e.addr = alloca i32, align 4
   %d.addr = alloca i32, align 4
   %c.addr = alloca i32, align 4
   %b.addr = alloca i32, align 4
   %a.addr = alloca i32, align 4
-  store i32 %e, i32* %e.addr, align 4
-  store i32 %d, i32* %d.addr, align 4
-  store i32 %c, i32* %c.addr, align 4
-  store i32 %b, i32* %b.addr, align 4
-  store i32 %a, i32* %a.addr, align 4
+  store i32 %e, ptr %e.addr, align 4
+  store i32 %d, ptr %d.addr, align 4
+  store i32 %c, ptr %c.addr, align 4
+  store i32 %b, ptr %b.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
   call void asm sideeffect "nop", "~{bx},~{cx},~{xmm5},~{xmm6},~{ymm7}"()
-  %0 = load i32, i32* %e.addr, align 4
-  %1 = load i32, i32* %d.addr, align 4
-  %2 = load i32, i32* %c.addr, align 4
-  %3 = load i32, i32* %b.addr, align 4
-  %4 = load i32, i32* %a.addr, align 4
+  %0 = load i32, ptr %e.addr, align 4
+  %1 = load i32, ptr %d.addr, align 4
+  %2 = load i32, ptr %c.addr, align 4
+  %3 = load i32, ptr %b.addr, align 4
+  %4 = load i32, ptr %a.addr, align 4
   invoke void @"?bar@@YAXHHHHH@Z"(i32 %4, i32 %3, i32 %2, i32 %1, i32 %0)
           to label %invoke.cont unwind label %catch.dispatch
 
@@ -52,10 +52,10 @@ catch.dispatch:                                   ; preds = %entry
   %5 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %6 = catchpad within %5 [i8* null, i32 64, i8* null]
-  %7 = load i32, i32* %a.addr, align 4
+  %6 = catchpad within %5 [ptr null, i32 64, ptr null]
+  %7 = load i32, ptr %a.addr, align 4
   call void @"?baz@@YAXH@Z"(i32 %7) [ "funclet"(token %6) ]
-  %8 = load i32, i32* %a.addr, align 4
+  %8 = load i32, ptr %a.addr, align 4
   %tobool = icmp ne i32 %8, 0
   br i1 %tobool, label %if.then, label %if.end
 

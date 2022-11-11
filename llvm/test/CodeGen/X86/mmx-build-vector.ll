@@ -14,7 +14,7 @@ declare x86_mmx @llvm.x86.mmx.padd.d(x86_mmx, x86_mmx)
 ; v2i32
 ;
 
-define void @build_v2i32_01(x86_mmx *%p0, i32 %a0, i32 %a1) nounwind {
+define void @build_v2i32_01(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X86-LABEL: build_v2i32_01:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -37,11 +37,11 @@ define void @build_v2i32_01(x86_mmx *%p0, i32 %a0, i32 %a1) nounwind {
   %2 = insertelement <2 x i32>    %1, i32 %a1, i32 1
   %3 = bitcast <2 x i32> %2 to x86_mmx
   %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, x86_mmx *%p0
+  store x86_mmx %4, ptr%p0
   ret void
 }
 
-define void @build_v2i32_0z(x86_mmx *%p0, i32 %a0, i32 %a1) nounwind {
+define void @build_v2i32_0z(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X86-LABEL: build_v2i32_0z:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -60,11 +60,11 @@ define void @build_v2i32_0z(x86_mmx *%p0, i32 %a0, i32 %a1) nounwind {
   %2 = insertelement <2 x i32>    %1, i32   0, i32 1
   %3 = bitcast <2 x i32> %2 to x86_mmx
   %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, x86_mmx *%p0
+  store x86_mmx %4, ptr%p0
   ret void
 }
 
-define void @build_v2i32_u1(x86_mmx *%p0, i32 %a0, i32 %a1) nounwind {
+define void @build_v2i32_u1(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X86-MMX-LABEL: build_v2i32_u1:
 ; X86-MMX:       # %bb.0:
 ; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -94,11 +94,11 @@ define void @build_v2i32_u1(x86_mmx *%p0, i32 %a0, i32 %a1) nounwind {
   %2 = insertelement <2 x i32>    %1, i32   %a1, i32 1
   %3 = bitcast <2 x i32> %2 to x86_mmx
   %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, x86_mmx *%p0
+  store x86_mmx %4, ptr%p0
   ret void
 }
 
-define void @build_v2i32_z1(x86_mmx *%p0, i32 %a0, i32 %a1) nounwind {
+define void @build_v2i32_z1(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X86-LABEL: build_v2i32_z1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -121,11 +121,11 @@ define void @build_v2i32_z1(x86_mmx *%p0, i32 %a0, i32 %a1) nounwind {
   %2 = insertelement <2 x i32>    %1, i32 %a1, i32 1
   %3 = bitcast <2 x i32> %2 to x86_mmx
   %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, x86_mmx *%p0
+  store x86_mmx %4, ptr%p0
   ret void
 }
 
-define void @build_v2i32_00(x86_mmx *%p0, i32 %a0, i32 %a1) nounwind {
+define void @build_v2i32_00(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X86-MMX-LABEL: build_v2i32_00:
 ; X86-MMX:       # %bb.0:
 ; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -155,7 +155,7 @@ define void @build_v2i32_00(x86_mmx *%p0, i32 %a0, i32 %a1) nounwind {
   %2 = insertelement <2 x i32>    %1, i32 %a0, i32 1
   %3 = bitcast <2 x i32> %2 to x86_mmx
   %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, x86_mmx *%p0
+  store x86_mmx %4, ptr%p0
   ret void
 }
 
@@ -163,7 +163,7 @@ define void @build_v2i32_00(x86_mmx *%p0, i32 %a0, i32 %a1) nounwind {
 ; v4i16
 ;
 
-define void @build_v4i16_0123(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
+define void @build_v4i16_0123(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-LABEL: build_v4i16_0123:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -196,11 +196,11 @@ define void @build_v4i16_0123(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
   %4 = insertelement <4 x i16>    %3, i16 %a3, i32 3
   %5 = bitcast <4 x i16> %4 to x86_mmx
   %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, x86_mmx *%p0
+  store x86_mmx %6, ptr%p0
   ret void
 }
 
-define void @build_v4i16_01zz(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
+define void @build_v4i16_01zz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-LABEL: build_v4i16_01zz:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -231,11 +231,11 @@ define void @build_v4i16_01zz(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
   %4 = insertelement <4 x i16>    %3, i16   0, i32 3
   %5 = bitcast <4 x i16> %4 to x86_mmx
   %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, x86_mmx *%p0
+  store x86_mmx %6, ptr%p0
   ret void
 }
 
-define void @build_v4i16_0uuz(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
+define void @build_v4i16_0uuz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-LABEL: build_v4i16_0uuz:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -256,11 +256,11 @@ define void @build_v4i16_0uuz(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
   %4 = insertelement <4 x i16>    %3, i16     0, i32 3
   %5 = bitcast <4 x i16> %4 to x86_mmx
   %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, x86_mmx *%p0
+  store x86_mmx %6, ptr%p0
   ret void
 }
 
-define void @build_v4i16_0zuz(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
+define void @build_v4i16_0zuz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-LABEL: build_v4i16_0zuz:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
@@ -283,11 +283,11 @@ define void @build_v4i16_0zuz(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
   %4 = insertelement <4 x i16>    %3, i16     0, i32 3
   %5 = bitcast <4 x i16> %4 to x86_mmx
   %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, x86_mmx *%p0
+  store x86_mmx %6, ptr%p0
   ret void
 }
 
-define void @build_v4i16_012u(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
+define void @build_v4i16_012u(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-LABEL: build_v4i16_012u:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -318,11 +318,11 @@ define void @build_v4i16_012u(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
   %4 = insertelement <4 x i16>    %3, i16 undef, i32 3
   %5 = bitcast <4 x i16> %4 to x86_mmx
   %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, x86_mmx *%p0
+  store x86_mmx %6, ptr%p0
   ret void
 }
 
-define void @build_v4i16_0u00(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
+define void @build_v4i16_0u00(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-MMX-LABEL: build_v4i16_0u00:
 ; X86-MMX:       # %bb.0:
 ; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -355,7 +355,7 @@ define void @build_v4i16_0u00(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
   %4 = insertelement <4 x i16>    %3, i16   %a0, i32 3
   %5 = bitcast <4 x i16> %4 to x86_mmx
   %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, x86_mmx *%p0
+  store x86_mmx %6, ptr%p0
   ret void
 }
 
@@ -363,7 +363,7 @@ define void @build_v4i16_0u00(x86_mmx *%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) 
 ; v8i8
 ;
 
-define void @build_v8i8_01234567(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
+define void @build_v8i8_01234567(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; X86-LABEL: build_v8i8_01234567:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -416,11 +416,11 @@ define void @build_v8i8_01234567(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
   %8  = insertelement <8 x i8>    %7, i8 %a7, i32 7
   %9  = bitcast <8 x i8> %8 to x86_mmx
   %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, x86_mmx *%p0
+  store x86_mmx %10, ptr%p0
   ret void
 }
 
-define void @build_v8i8_0u2345z7(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
+define void @build_v8i8_0u2345z7(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; X86-LABEL: build_v8i8_0u2345z7:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -471,11 +471,11 @@ define void @build_v8i8_0u2345z7(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
   %8  = insertelement <8 x i8>    %7, i8   %a7, i32 7
   %9  = bitcast <8 x i8> %8 to x86_mmx
   %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, x86_mmx *%p0
+  store x86_mmx %10, ptr%p0
   ret void
 }
 
-define void @build_v8i8_0123zzzu(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
+define void @build_v8i8_0123zzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; X86-LABEL: build_v8i8_0123zzzu:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -524,11 +524,11 @@ define void @build_v8i8_0123zzzu(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
   %8  = insertelement <8 x i8>    %7, i8 undef, i32 7
   %9  = bitcast <8 x i8> %8 to x86_mmx
   %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, x86_mmx *%p0
+  store x86_mmx %10, ptr%p0
   ret void
 }
 
-define void @build_v8i8_0uuuuzzz(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
+define void @build_v8i8_0uuuuzzz(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; X86-LABEL: build_v8i8_0uuuuzzz:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -553,11 +553,11 @@ define void @build_v8i8_0uuuuzzz(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
   %8  = insertelement <8 x i8>    %7, i8     0, i32 7
   %9  = bitcast <8 x i8> %8 to x86_mmx
   %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, x86_mmx *%p0
+  store x86_mmx %10, ptr%p0
   ret void
 }
 
-define void @build_v8i8_0zzzzzzu(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
+define void @build_v8i8_0zzzzzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; X86-LABEL: build_v8i8_0zzzzzzu:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
@@ -584,11 +584,11 @@ define void @build_v8i8_0zzzzzzu(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
   %8  = insertelement <8 x i8>    %7, i8 undef, i32 7
   %9  = bitcast <8 x i8> %8 to x86_mmx
   %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, x86_mmx *%p0
+  store x86_mmx %10, ptr%p0
   ret void
 }
 
-define void @build_v8i8_00000000(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
+define void @build_v8i8_00000000(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; X86-MMX-LABEL: build_v8i8_00000000:
 ; X86-MMX:       # %bb.0:
 ; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -628,7 +628,7 @@ define void @build_v8i8_00000000(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
   %8  = insertelement <8 x i8>    %7, i8 %a0, i32 7
   %9  = bitcast <8 x i8> %8 to x86_mmx
   %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, x86_mmx *%p0
+  store x86_mmx %10, ptr%p0
   ret void
 }
 
@@ -636,7 +636,7 @@ define void @build_v8i8_00000000(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
 ; v2f32
 ;
 
-define void @build_v2f32_01(x86_mmx *%p0, float %a0, float %a1) nounwind {
+define void @build_v2f32_01(ptr%p0, float %a0, float %a1) nounwind {
 ; X86-MMX-LABEL: build_v2f32_01:
 ; X86-MMX:       # %bb.0:
 ; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -671,11 +671,11 @@ define void @build_v2f32_01(x86_mmx *%p0, float %a0, float %a1) nounwind {
   %2 = insertelement <2 x float>    %1, float %a1, i32 1
   %3 = bitcast <2 x float> %2 to x86_mmx
   %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, x86_mmx *%p0
+  store x86_mmx %4, ptr%p0
   ret void
 }
 
-define void @build_v2f32_0z(x86_mmx *%p0, float %a0, float %a1) nounwind {
+define void @build_v2f32_0z(ptr%p0, float %a0, float %a1) nounwind {
 ; X86-MMX-LABEL: build_v2f32_0z:
 ; X86-MMX:       # %bb.0:
 ; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -709,11 +709,11 @@ define void @build_v2f32_0z(x86_mmx *%p0, float %a0, float %a1) nounwind {
   %2 = insertelement <2 x float>    %1, float 0.0, i32 1
   %3 = bitcast <2 x float> %2 to x86_mmx
   %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, x86_mmx *%p0
+  store x86_mmx %4, ptr%p0
   ret void
 }
 
-define void @build_v2f32_u1(x86_mmx *%p0, float %a0, float %a1) nounwind {
+define void @build_v2f32_u1(ptr%p0, float %a0, float %a1) nounwind {
 ; X86-MMX-LABEL: build_v2f32_u1:
 ; X86-MMX:       # %bb.0:
 ; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -744,11 +744,11 @@ define void @build_v2f32_u1(x86_mmx *%p0, float %a0, float %a1) nounwind {
   %2 = insertelement <2 x float>    %1, float   %a1, i32 1
   %3 = bitcast <2 x float> %2 to x86_mmx
   %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, x86_mmx *%p0
+  store x86_mmx %4, ptr%p0
   ret void
 }
 
-define void @build_v2f32_z1(x86_mmx *%p0, float %a0, float %a1) nounwind {
+define void @build_v2f32_z1(ptr%p0, float %a0, float %a1) nounwind {
 ; X86-MMX-LABEL: build_v2f32_z1:
 ; X86-MMX:       # %bb.0:
 ; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -782,11 +782,11 @@ define void @build_v2f32_z1(x86_mmx *%p0, float %a0, float %a1) nounwind {
   %2 = insertelement <2 x float>    %1, float %a1, i32 1
   %3 = bitcast <2 x float> %2 to x86_mmx
   %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, x86_mmx *%p0
+  store x86_mmx %4, ptr%p0
   ret void
 }
 
-define void @build_v2f32_00(x86_mmx *%p0, float %a0, float %a1) nounwind {
+define void @build_v2f32_00(ptr%p0, float %a0, float %a1) nounwind {
 ; X86-MMX-LABEL: build_v2f32_00:
 ; X86-MMX:       # %bb.0:
 ; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -817,6 +817,6 @@ define void @build_v2f32_00(x86_mmx *%p0, float %a0, float %a1) nounwind {
   %2 = insertelement <2 x float>    %1, float %a0, i32 1
   %3 = bitcast <2 x float> %2 to x86_mmx
   %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, x86_mmx *%p0
+  store x86_mmx %4, ptr%p0
   ret void
 }

@@ -280,7 +280,7 @@ define <4 x i32> @combine_vec_neg_xor_consts(<4 x i32> %x) {
 ; load-folded 'add', but currently we favor the virtually
 ; free pcmpeq instruction.
 
-define void @PR52032_oneuse_constant(<8 x i32>* %p) {
+define void @PR52032_oneuse_constant(ptr %p) {
 ; SSE-LABEL: PR52032_oneuse_constant:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqu (%rdi), %xmm0
@@ -300,16 +300,16 @@ define void @PR52032_oneuse_constant(<8 x i32>* %p) {
 ; AVX-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
-  %i3 = load <8 x i32>, <8 x i32>* %p, align 4
+  %i3 = load <8 x i32>, ptr %p, align 4
   %i4 = add nsw <8 x i32> %i3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  store <8 x i32> %i4, <8 x i32>* %p, align 4
+  store <8 x i32> %i4, ptr %p, align 4
   ret void
 }
 
 ; With AVX, we don't transform 'add' to 'sub' because that prevents load folding.
 ; With SSE, we do it because we can't load fold the other op without overwriting the constant op.
 
-define void @PR52032(<8 x i32>* %p) {
+define void @PR52032(ptr %p) {
 ; SSE-LABEL: PR52032:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
@@ -336,13 +336,13 @@ define void @PR52032(<8 x i32>* %p) {
 ; AVX-NEXT:    vmovdqu %ymm0, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
-  %i3 = load <8 x i32>, <8 x i32>* %p, align 4
+  %i3 = load <8 x i32>, ptr %p, align 4
   %i4 = add nsw <8 x i32> %i3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  store <8 x i32> %i4, <8 x i32>* %p, align 4
-  %p2 = getelementptr inbounds <8 x i32>, <8 x i32>* %p, i64 1
-  %i8 = load <8 x i32>, <8 x i32>* %p2, align 4
+  store <8 x i32> %i4, ptr %p, align 4
+  %p2 = getelementptr inbounds <8 x i32>, ptr %p, i64 1
+  %i8 = load <8 x i32>, ptr %p2, align 4
   %i9 = add nsw <8 x i32> %i8, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  store <8 x i32> %i9, <8 x i32>* %p2, align 4
+  store <8 x i32> %i9, ptr %p2, align 4
   ret void
 }
 
@@ -350,7 +350,7 @@ define void @PR52032(<8 x i32>* %p) {
 ; With AVX, we don't transform 'add' to 'sub' because that prevents load folding.
 ; With SSE, we do it because we can't load fold the other op without overwriting the constant op.
 
-define void @PR52032_2(<4 x i32>* %p) {
+define void @PR52032_2(ptr %p) {
 ; SSE-LABEL: PR52032_2:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
@@ -370,19 +370,19 @@ define void @PR52032_2(<4 x i32>* %p) {
 ; AVX-NEXT:    vpaddd 16(%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqu %xmm0, 16(%rdi)
 ; AVX-NEXT:    retq
-  %i3 = load <4 x i32>, <4 x i32>* %p, align 4
+  %i3 = load <4 x i32>, ptr %p, align 4
   %i4 = add nsw <4 x i32> %i3, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %i4, <4 x i32>* %p, align 4
-  %p2 = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i64 1
-  %i8 = load <4 x i32>, <4 x i32>* %p2, align 4
+  store <4 x i32> %i4, ptr %p, align 4
+  %p2 = getelementptr inbounds <4 x i32>, ptr %p, i64 1
+  %i8 = load <4 x i32>, ptr %p2, align 4
   %i9 = add nsw <4 x i32> %i8, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %i9, <4 x i32>* %p2, align 4
+  store <4 x i32> %i9, ptr %p2, align 4
   ret void
 }
 
 ; If we are starting with a 'sub', it is always better to do the transform.
 
-define void @PR52032_3(<4 x i32>* %p) {
+define void @PR52032_3(ptr %p) {
 ; SSE-LABEL: PR52032_3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
@@ -402,19 +402,19 @@ define void @PR52032_3(<4 x i32>* %p) {
 ; AVX-NEXT:    vpaddd 16(%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqu %xmm0, 16(%rdi)
 ; AVX-NEXT:    retq
-  %i3 = load <4 x i32>, <4 x i32>* %p, align 4
+  %i3 = load <4 x i32>, ptr %p, align 4
   %i4 = sub nsw <4 x i32> %i3, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %i4, <4 x i32>* %p, align 4
-  %p2 = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i64 1
-  %i8 = load <4 x i32>, <4 x i32>* %p2, align 4
+  store <4 x i32> %i4, ptr %p, align 4
+  %p2 = getelementptr inbounds <4 x i32>, ptr %p, i64 1
+  %i8 = load <4 x i32>, ptr %p2, align 4
   %i9 = sub nsw <4 x i32> %i8, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %i9, <4 x i32>* %p2, align 4
+  store <4 x i32> %i9, ptr %p2, align 4
   ret void
 }
 
 ; If there's no chance of profitable load folding (because of extra uses), we convert 'add' to 'sub'.
 
-define void @PR52032_4(<4 x i32>* %p, <4 x i32>* %q) {
+define void @PR52032_4(ptr %p, ptr %q) {
 ; SSE-LABEL: PR52032_4:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqu (%rdi), %xmm0
@@ -440,15 +440,15 @@ define void @PR52032_4(<4 x i32>* %p, <4 x i32>* %q) {
 ; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqu %xmm0, 16(%rdi)
 ; AVX-NEXT:    retq
-  %i3 = load <4 x i32>, <4 x i32>* %p, align 4
-  store <4 x i32> %i3, <4 x i32>* %q
+  %i3 = load <4 x i32>, ptr %p, align 4
+  store <4 x i32> %i3, ptr %q
   %i4 = add nsw <4 x i32> %i3, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %i4, <4 x i32>* %p, align 4
-  %p2 = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i64 1
-  %q2 = getelementptr inbounds <4 x i32>, <4 x i32>* %q, i64 1
-  %i8 = load <4 x i32>, <4 x i32>* %p2, align 4
-  store <4 x i32> %i8, <4 x i32>* %q2
+  store <4 x i32> %i4, ptr %p, align 4
+  %p2 = getelementptr inbounds <4 x i32>, ptr %p, i64 1
+  %q2 = getelementptr inbounds <4 x i32>, ptr %q, i64 1
+  %i8 = load <4 x i32>, ptr %p2, align 4
+  store <4 x i32> %i8, ptr %q2
   %i9 = add nsw <4 x i32> %i8, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %i9, <4 x i32>* %p2, align 4
+  store <4 x i32> %i9, ptr %p2, align 4
   ret void
 }

@@ -1,5 +1,5 @@
 # RUN: %build %p/Inputs/dummy-target.c -o %t.out
-# RUN: %lldb %t.out -o 'b main' -o 'break command add 1 -o "script print(95000 + 126)"' -o 'r'
+# RUN: %lldb %t.out -o 'b main' -o 'break command add 1 -o "script print(95000 + 126)"' -o 'r' | FileCheck %s
 
-# CHECK: 95125
+# CHECK: 95126
 # CHECK-NOT: 95126

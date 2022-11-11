@@ -2,16 +2,16 @@ include(CMakeParseArguments)
 include(CompilerRTUtils)
 
 function(get_aix_libatomic_default_link_flags link_flags export_list)
-  set(linkopts
-    "-Wl,-H512 -Wl,-D0 \
-     -Wl,-T512 -Wl,-bhalt:4 -Wl,-bernotok \
-     -Wl,-bnoentry -Wl,-bexport:${export_list} \
-     -Wl,-bmodtype:SRE -Wl,-lc")
+set(linkopts
+  -Wl,-H512 -Wl,-D0
+  -Wl,-T512 -Wl,-bhalt:4 -Wl,-bernotok
+  -Wl,-bnoentry -Wl,-bexport:${export_list}
+  -Wl,-bmodtype:SRE -Wl,-lc)
   # Add `-Wl,-G`. Quoted from release notes of cmake-3.16.0
   # > On AIX, runtime linking is no longer enabled by default.
   # See https://cmake.org/cmake/help/latest/release/3.16.html
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
-    set(linkopts "-Wl,-G" "${linkopts}")
+    set(linkopts -Wl,-G ${linkopts})
   endif()
   set(${link_flags} ${linkopts} PARENT_SCOPE)
 endfunction()
@@ -75,6 +75,6 @@ macro(archive_aix_libatomic name libname)
             DESTINATION ${install_dir})
     add_custom_target(aix-${libname}
                       DEPENDS "${output_dir}/${libname}.a")
+    add_dependencies(${LIB_PARENT_TARGET} aix-${libname})
   endif()
-  add_dependencies(${LIB_PARENT_TARGET} aix-${libname})
 endmacro()

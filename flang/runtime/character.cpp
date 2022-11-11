@@ -20,11 +20,14 @@ namespace Fortran::runtime {
 
 template <typename CHAR>
 inline int CompareToBlankPadding(const CHAR *x, std::size_t chars) {
+  using UNSIGNED_CHAR = std::make_unsigned_t<CHAR>;
+  const auto blank{static_cast<UNSIGNED_CHAR>(' ')};
   for (; chars-- > 0; ++x) {
-    if (*x < ' ') {
+    const UNSIGNED_CHAR ux{*reinterpret_cast<const UNSIGNED_CHAR *>(x)};
+    if (ux < blank) {
       return -1;
     }
-    if (*x > ' ') {
+    if (ux > blank) {
       return 1;
     }
   }
@@ -953,8 +956,12 @@ void RTNAME(Scan)(Descriptor &result, const Descriptor &string,
 }
 
 void RTNAME(Repeat)(Descriptor &result, const Descriptor &string,
-    std::size_t ncopies, const char *sourceFile, int sourceLine) {
+    std::int64_t ncopies, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
+  if (ncopies < 0) {
+    terminator.Crash(
+        "REPEAT has negative NCOPIES=%jd", static_cast<std::intmax_t>(ncopies));
+  }
   std::size_t origBytes{string.ElementBytes()};
   result.Establish(string.type(), origBytes * ncopies, nullptr, 0, nullptr,
       CFI_attribute_allocatable);

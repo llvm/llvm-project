@@ -4,7 +4,7 @@
 %struct.anon = type { i32, i32 }
 
 @c = common dso_local global %struct.anon zeroinitializer, align 4
-@d = dso_local local_unnamed_addr global %struct.anon* @c, align 8
+@d = dso_local local_unnamed_addr global ptr @c, align 8
 @a = common dso_local local_unnamed_addr global i32 0, align 4
 @b = common dso_local local_unnamed_addr global i32 0, align 4
 
@@ -21,15 +21,15 @@ define  void @g() local_unnamed_addr #0 {
 ; CHECK-NEXT:    movl %ecx, a(%rip)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load %struct.anon*, %struct.anon** @d, align 8
-  %y = getelementptr inbounds %struct.anon, %struct.anon* %0, i64 0, i32 1
-  %1 = load i32, i32* %y, align 4
-  %2 = load i32, i32* @b, align 4
+  %0 = load ptr, ptr @d, align 8
+  %y = getelementptr inbounds %struct.anon, ptr %0, i64 0, i32 1
+  %1 = load i32, ptr %y, align 4
+  %2 = load i32, ptr @b, align 4
   %inc = add nsw i32 %2, 1
-  store i32 %inc, i32* @b, align 4
+  store i32 %inc, ptr @b, align 4
   %tobool = icmp ne i32 %inc, 0
   %land.ext = zext i1 %tobool to i32
   %add = add nsw i32 %1, %land.ext
-  store i32 %add, i32* @a, align 4
+  store i32 %add, ptr @a, align 4
   ret void
 }

@@ -852,7 +852,7 @@ void DebugInfo::emitLocation(ExprAST *AST) {
       Scope->getContext(), AST->getLine(), AST->getCol(), Scope));
 }
 
-static DISubroutineType *CreateFunctionType(unsigned NumArgs, DIFile *Unit) {
+static DISubroutineType *CreateFunctionType(unsigned NumArgs) {
   SmallVector<Metadata *, 8> EltTys;
   DIType *DblTy = KSDbgInfo.getDoubleTy();
 
@@ -1253,7 +1253,7 @@ Function *FunctionAST::codegen() {
   unsigned ScopeLine = LineNo;
   DISubprogram *SP = DBuilder->createFunction(
       FContext, P.getName(), StringRef(), Unit, LineNo,
-      CreateFunctionType(TheFunction->arg_size(), Unit), ScopeLine,
+      CreateFunctionType(TheFunction->arg_size()), ScopeLine,
       DINode::FlagPrototyped, DISubprogram::SPFlagDefinition);
   TheFunction->setSubprogram(SP);
 

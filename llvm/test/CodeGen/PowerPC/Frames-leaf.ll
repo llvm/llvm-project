@@ -31,7 +31,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=ppc64-- -frame-pointer=all | \
 ; RUN:   not grep "ld r31, 40(r1)"
 
-define i32* @f1() {
-        %tmp = alloca i32, i32 2                ; <i32*> [#uses=1]
-        ret i32* %tmp
+define ptr @f1() {
+        %tmp = alloca i32, i32 2                ; <ptr> [#uses=1]
+        ret ptr %tmp
 }

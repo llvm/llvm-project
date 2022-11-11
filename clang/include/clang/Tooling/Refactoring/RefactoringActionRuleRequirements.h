@@ -98,7 +98,7 @@ public:
   OptionRequirement() : Opt(createRefactoringOption<OptionType>()) {}
 
   ArrayRef<std::shared_ptr<RefactoringOption>>
-  getRefactoringOptions() const final override {
+  getRefactoringOptions() const final {
     return Opt;
   }
 

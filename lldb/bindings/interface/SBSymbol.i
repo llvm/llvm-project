@@ -49,6 +49,10 @@ public:
     SBAddress
     GetEndAddress ();
 
+    uint64_t GetValue();
+
+    uint64_t GetSize();
+
     uint32_t
     GetPrologueByteSize ();
 

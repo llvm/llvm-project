@@ -135,21 +135,21 @@ define i64 @no_extract_shl(i64 %i) nounwind {
 ; X86-LABEL: no_extract_shl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    shll $5, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    shldl $10, %ecx, %edx
 ; X86-NEXT:    shll $10, %ecx
-; X86-NEXT:    shrl $25, %eax
+; X86-NEXT:    shrl $20, %eax
+; X86-NEXT:    andl $127, %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: no_extract_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shlq $5, %rax
-; X64-NEXT:    shlq $10, %rdi
-; X64-NEXT:    shrq $57, %rax
+; X64-NEXT:    shlq $10, %rax
+; X64-NEXT:    shrq $52, %rdi
+; X64-NEXT:    andl $127, %edi
 ; X64-NEXT:    orq %rdi, %rax
 ; X64-NEXT:    retq
   %lhs_mul = shl i64 %i, 5

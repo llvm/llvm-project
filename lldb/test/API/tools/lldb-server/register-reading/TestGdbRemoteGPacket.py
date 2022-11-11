@@ -24,8 +24,6 @@ def _extract_register_value(reg_info, reg_bank, byte_order, bytes_per_entry=8):
 
 class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfOutOfTreeDebugserver
     @skipUnlessDarwin # G packet not supported
     def test_g_packet(self):

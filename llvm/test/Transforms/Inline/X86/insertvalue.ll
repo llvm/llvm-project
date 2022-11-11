@@ -8,6 +8,7 @@ target triple = "x86_64-unknown-unknown"
 ; Check that insertvalue's aren't free.
 
 ; CHECK: Analyzing call of callee... (caller:caller_range)
+; CHECK-NEXT: Initial cost: -40
 ; CHECK-NEXT: define { i32, i32 } @callee({ i32, i32 } %arg, i32 %arg1) {
 ; CHECK-NEXT: ; cost before = -40, cost after = -35, threshold before = 0, threshold after = 0, cost delta = 5
 ; CHECK-NEXT:   %r = insertvalue { i32, i32 } %arg, i32 %arg1, 0

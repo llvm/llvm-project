@@ -83,6 +83,7 @@ bool GenericToNVVM::runOnModule(Module &M) {
           GV.hasInitializer() ? GV.getInitializer() : nullptr, "", &GV,
           GV.getThreadLocalMode(), llvm::ADDRESS_SPACE_GLOBAL);
       NewGV->copyAttributesFrom(&GV);
+      NewGV->copyMetadata(&GV, /*Offset=*/0);
       GVMap[&GV] = NewGV;
     }
   }
@@ -269,13 +270,6 @@ Value *GenericToNVVM::remapConstantExpr(Module *M, Function *F, ConstantExpr *C,
     // ShuffleVector
     return Builder.CreateShuffleVector(NewOperands[0], NewOperands[1],
                                        NewOperands[2]);
-  case Instruction::ExtractValue:
-    // ExtractValueConstantExpr
-    return Builder.CreateExtractValue(NewOperands[0], C->getIndices());
-  case Instruction::InsertValue:
-    // InsertValueConstantExpr
-    return Builder.CreateInsertValue(NewOperands[0], NewOperands[1],
-                                     C->getIndices());
   case Instruction::GetElementPtr:
     // GetElementPtrConstantExpr
     return Builder.CreateGEP(cast<GEPOperator>(C)->getSourceElementType(),

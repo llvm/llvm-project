@@ -40,7 +40,7 @@ static void TestPathMappings(const PathMappingList &map,
         map.RemapPath(ConstString(match.original.GetPath()), actual_remapped));
     EXPECT_EQ(FileSpec(actual_remapped.GetStringRef()), match.remapped);
     FileSpec unmapped_spec;
-    EXPECT_TRUE(map.ReverseRemapPath(match.remapped, unmapped_spec));
+    EXPECT_TRUE(map.ReverseRemapPath(match.remapped, unmapped_spec).hasValue());
     std::string unmapped_path = unmapped_spec.GetPath();
     EXPECT_EQ(unmapped_path, orig_normalized);
   }

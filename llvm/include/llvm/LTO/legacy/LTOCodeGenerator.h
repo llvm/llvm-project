@@ -102,6 +102,9 @@ struct LTOCodeGenerator {
 
   void setShouldInternalize(bool Value) { ShouldInternalize = Value; }
   void setShouldEmbedUselists(bool Value) { ShouldEmbedUselists = Value; }
+  void setSaveIRBeforeOptPath(std::string Value) {
+    SaveIRBeforeOptPath = Value;
+  }
 
   /// Restore linkage of globals
   ///
@@ -210,6 +213,9 @@ private:
   bool determineTarget();
   std::unique_ptr<TargetMachine> createTargetMachine();
 
+  bool useAIXSystemAssembler();
+  bool runAIXSystemAssembler(SmallString<128> &AssemblyFile);
+
   void emitError(const std::string &ErrMsg);
   void emitWarning(const std::string &ErrMsg);
 
@@ -237,6 +243,7 @@ private:
   bool ShouldRestoreGlobalsLinkage = false;
   std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
   std::unique_ptr<ToolOutputFile> StatsFile = nullptr;
+  std::string SaveIRBeforeOptPath;
 
   lto::Config Config;
 };

@@ -14,7 +14,7 @@
 
 extern "C" {
 
-__attribute__((weak)) const char *__scudo_default_options();
+__attribute__((weak)) const char *__scudo_default_options(void);
 
 // Post-allocation & pre-deallocation hooks.
 // They must be thread-safe and not use heap related functions.
@@ -101,14 +101,14 @@ struct scudo_error_info {
   struct scudo_error_report reports[3];
 };
 
-const char *__scudo_get_stack_depot_addr();
-size_t __scudo_get_stack_depot_size();
+const char *__scudo_get_stack_depot_addr(void);
+size_t __scudo_get_stack_depot_size(void);
 
-const char *__scudo_get_region_info_addr();
-size_t __scudo_get_region_info_size();
+const char *__scudo_get_region_info_addr(void);
+size_t __scudo_get_region_info_size(void);
 
-const char *__scudo_get_ring_buffer_addr();
-size_t __scudo_get_ring_buffer_size();
+const char *__scudo_get_ring_buffer_addr(void);
+size_t __scudo_get_ring_buffer_size(void);
 
 #ifndef M_DECAY_TIME
 #define M_DECAY_TIME -100

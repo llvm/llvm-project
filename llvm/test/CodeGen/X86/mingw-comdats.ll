@@ -50,7 +50,7 @@ define dso_local x86_fastcallcc i32 @fastcall(i32 %x, i32 %y) {
 define linkonce_odr dso_local i32 @_Z3fooi(i32 %x) #1 comdat {
 entry:
   %call = tail call i32 @_Z3bari(i32 %x)
-  %0 = load i32, i32* @gv, align 4
+  %0 = load i32, ptr @gv, align 4
   %add = add nsw i32 %0, %call
   ret i32 %add
 }
@@ -77,7 +77,7 @@ entry:
 define linkonce_odr dso_local i32 @_Z3fooj(i32 %x) !section_prefix !0 {
 entry:
   %call = tail call i32 @_Z3bari(i32 %x)
-  %0 = load i32, i32* @gv, align 4
+  %0 = load i32, ptr @gv, align 4
   %add = add nsw i32 %0, %call
   ret i32 %add
 }

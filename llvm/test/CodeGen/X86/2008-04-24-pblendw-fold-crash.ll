@@ -6,7 +6,7 @@ target triple = "i386-apple-darwin8"
 
 define i32 @main() nounwind  {
 entry:
-	%tmp122 = load <2 x i64>, <2 x i64>* null, align 16		; <<2 x i64>> [#uses=1]
+	%tmp122 = load <2 x i64>, ptr null, align 16		; <<2 x i64>> [#uses=1]
 	%tmp126 = bitcast <2 x i64> %tmp122 to <8 x i16>		; <<8 x i16>> [#uses=1]
 	%tmp129 = call <8 x i16> @llvm.x86.sse41.pblendw( <8 x i16> zeroinitializer, <8 x i16> %tmp126, i32 2 ) nounwind 		; <<8 x i16>> [#uses=0]
 	ret i32 0

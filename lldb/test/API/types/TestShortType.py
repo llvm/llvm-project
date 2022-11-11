@@ -9,8 +9,6 @@ from lldbsuite.test.decorators import *
 
 class ShortTypeTestCase(AbstractBase.GenericTester):
 
-    mydir = AbstractBase.GenericTester.compute_mydir(__file__)
-
     def test_short_type(self):
         """Test that short-type variables are displayed correctly."""
         self.build_and_run('short.cpp', ['short'])

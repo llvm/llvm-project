@@ -15,4 +15,5 @@ add_library(
   FDReader.h
   Timer.h
   Timer.cpp
+  RoundingModeUtils.cpp
 )

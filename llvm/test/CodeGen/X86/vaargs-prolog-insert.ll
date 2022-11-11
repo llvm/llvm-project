@@ -34,12 +34,12 @@ define void @reduce(i32, i32, i32, i32, i32, i32, ...) nounwind {
   br i1 undef, label %8, label %7
 
 7:                                                ; preds = %6
-  call void @llvm.va_start(i8* null)
+  call void @llvm.va_start(ptr null)
   br label %8
 
 8:                                                ; preds = %7, %6
   ret void
 }
 
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_end(ptr)

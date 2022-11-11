@@ -38,8 +38,9 @@
 //   the first one. For instance, (decimate S, 2) returns the even elements of
 //   S.
 //
-// - (sequence "Format", From, To) Generate a sequence of defs with printf.
-//   For instance, (sequence "R%u", 0, 3) -> [ R0, R1, R2, R3 ]
+// - (sequence "Format", From, To, [Stride]) Generate a sequence of defs with
+//   printf. For instance, (sequence "R%u", 0, 3) -> [ R0, R1, R2, R3 ] and
+//   (sequence "R%u", 20, 30, 5) -> [ R20, R25, R30 ].
 //
 //===----------------------------------------------------------------------===//
 

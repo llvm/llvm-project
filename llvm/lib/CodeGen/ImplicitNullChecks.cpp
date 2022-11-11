@@ -758,7 +758,7 @@ void ImplicitNullChecks::rewriteNullChecks(
     ArrayRef<ImplicitNullChecks::NullCheck> NullCheckList) {
   DebugLoc DL;
 
-  for (auto &NC : NullCheckList) {
+  for (const auto &NC : NullCheckList) {
     // Remove the conditional branch dependent on the null check.
     unsigned BranchesRemoved = TII->removeBranch(*NC.getCheckBlock());
     (void)BranchesRemoved;

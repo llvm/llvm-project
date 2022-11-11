@@ -53,8 +53,9 @@ extern "C" {
     const char *module_name; // Module name as a C string. This pointer is a
                              // unique identifier of a module.
     uptr has_dynamic_init;   // Non-zero if the global has dynamic initializer.
-    __asan_global_source_location *location;  // Source location of a global,
-                                              // or NULL if it is unknown.
+    uptr windows_padding;    // TODO: Figure out how to remove this padding
+                             // that's simply here to make the MSVC incremental
+                             // linker happy...
     uptr odr_indicator;      // The address of the ODR indicator symbol.
   };
 
@@ -88,6 +89,20 @@ extern "C" {
   // Sets bytes of the given range of the shadow memory into specific value.
   SANITIZER_INTERFACE_ATTRIBUTE
   void __asan_set_shadow_00(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_01(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_02(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_03(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_04(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_05(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_06(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_07(uptr addr, uptr size);
   SANITIZER_INTERFACE_ATTRIBUTE
   void __asan_set_shadow_f1(uptr addr, uptr size);
   SANITIZER_INTERFACE_ATTRIBUTE

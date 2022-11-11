@@ -29,10 +29,6 @@
 using namespace llvm;
 using namespace dwarf;
 
-namespace llvm {
-class DwarfContext;
-}
-
 using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
 
 namespace {
@@ -327,20 +323,20 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
         FileEntry.Source = Value;
         break;
       case DW_LNCT_directory_index:
-        FileEntry.DirIdx = Value.getAsUnsignedConstant().getValue();
+        FileEntry.DirIdx = Value.getAsUnsignedConstant().value();
         break;
       case DW_LNCT_timestamp:
-        FileEntry.ModTime = Value.getAsUnsignedConstant().getValue();
+        FileEntry.ModTime = Value.getAsUnsignedConstant().value();
         break;
       case DW_LNCT_size:
-        FileEntry.Length = Value.getAsUnsignedConstant().getValue();
+        FileEntry.Length = Value.getAsUnsignedConstant().value();
         break;
       case DW_LNCT_MD5:
-        if (!Value.getAsBlock() || Value.getAsBlock().getValue().size() != 16)
+        if (!Value.getAsBlock() || Value.getAsBlock().value().size() != 16)
           return createStringError(
               errc::invalid_argument,
               "failed to parse file entry because the MD5 hash is invalid");
-        std::uninitialized_copy_n(Value.getAsBlock().getValue().begin(), 16,
+        std::uninitialized_copy_n(Value.getAsBlock().value().begin(), 16,
                                   FileEntry.Checksum.begin());
         break;
       default:
@@ -1386,10 +1382,12 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
       IncludeDir = dwarf::toStringRef(IncludeDirectories[Entry.DirIdx - 1]);
   }
 
-  // For absolute paths only, include the compilation directory of compile unit.
-  // We know that FileName is not absolute, the only way to have an absolute
-  // path at this point would be if IncludeDir is absolute.
-  if (Kind == FileLineInfoKind::AbsoluteFilePath && !CompDir.empty() &&
+  // For absolute paths only, include the compilation directory of compile unit,
+  // unless v5 DirIdx == 0 (IncludeDir indicates the compilation directory). We
+  // know that FileName is not absolute, the only way to have an absolute path
+  // at this point would be if IncludeDir is absolute.
+  if (Kind == FileLineInfoKind::AbsoluteFilePath &&
+      (getVersion() < 5 || Entry.DirIdx != 0) && !CompDir.empty() &&
       !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
     sys::path::append(FilePath, Style, CompDir);
 
@@ -1419,6 +1417,24 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
   Result.Discriminator = Row.Discriminator;
   Result.Source = getSourceByIndex(Row.File, Kind);
   return true;
+}
+
+bool DWARFDebugLine::LineTable::getDirectoryForEntry(
+    const FileNameEntry &Entry, std::string &Directory) const {
+  if (Prologue.getVersion() >= 5) {
+    if (Entry.DirIdx < Prologue.IncludeDirectories.size()) {
+      Directory =
+          dwarf::toString(Prologue.IncludeDirectories[Entry.DirIdx], "");
+      return true;
+    }
+    return false;
+  }
+  if (0 < Entry.DirIdx && Entry.DirIdx <= Prologue.IncludeDirectories.size()) {
+    Directory =
+        dwarf::toString(Prologue.IncludeDirectories[Entry.DirIdx - 1], "");
+    return true;
+  }
+  return false;
 }
 
 // We want to supply the Unit associated with a .debug_line[.dwo] table when

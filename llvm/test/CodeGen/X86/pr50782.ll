@@ -7,7 +7,7 @@
 @f = global i32 0, align 4
 @g = global float 0.000000e+00, align 4
 @e = global i32 0, align 4
-@c = global float* null, align 4
+@c = global ptr null, align 4
 
 ; The FP stack should be preserved across the call to __alloca.
 define void @h(float %i) {
@@ -78,28 +78,27 @@ define void @h(float %i) {
 ; CHECK-NEXT:    fstps (%edx,%ecx,4)
 ; CHECK-NEXT:    jmp LBB0_5
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %1 = alloca i8, i32 %0, align 16
-  %2 = load float, float* @b, align 4
+  %2 = load float, ptr @b, align 4
   %add = fadd float %2, %i
-  store float %add, float* @d, align 4
+  store float %add, ptr @d, align 4
   %tobool.not = icmp eq i32 %0, 0
   br i1 %tobool.not, label %for.cond1.preheader, label %for.body.preheader
 
 for.body.preheader:                               ; preds = %entry
-  %3 = bitcast i8* %1 to float*
-  %4 = load i32, i32* @f, align 4
-  %arrayidx.le = getelementptr inbounds float, float* %3, i32 %4
-  %5 = load float, float* %arrayidx.le, align 4
+  %3 = load i32, ptr @f, align 4
+  %arrayidx.le = getelementptr inbounds float, ptr %1, i32 %3
+  %4 = load float, ptr %arrayidx.le, align 4
   br label %for.cond1.preheader
 
 for.cond1.preheader:                              ; preds = %for.body.preheader, %entry
-  %k.0.lcssa = phi float [ %5, %for.body.preheader ], [ undef, %entry ]
+  %k.0.lcssa = phi float [ %4, %for.body.preheader ], [ undef, %entry ]
   %l.0.lcssa = phi float [ %add, %for.body.preheader ], [ 1.000000e+00, %entry ]
-  %6 = load i32, i32* @e, align 4
-  %conv = sitofp i32 %6 to float
-  %7 = load float*, float** @c, align 4
-  %arrayidx4 = getelementptr inbounds float, float* %7, i32 %6
+  %5 = load i32, ptr @e, align 4
+  %conv = sitofp i32 %5 to float
+  %6 = load ptr, ptr @c, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %6, i32 %5
   br label %for.cond1
 
 for.cond1:                                        ; preds = %for.inc, %for.cond1.preheader
@@ -107,12 +106,12 @@ for.cond1:                                        ; preds = %for.inc, %for.cond1
   %mul = fmul float %m.0, 0.000000e+00
   %div = fdiv float %mul, %l.0.lcssa
   %add2 = fadd float %k.0.lcssa, %div
-  store float %add2, float* @g, align 4
+  store float %add2, ptr @g, align 4
   %cmp = fcmp olt float %add2, %conv
   br i1 %cmp, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.cond1
-  store float %i, float* %arrayidx4, align 4
+  store float %i, ptr %arrayidx4, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.then, %for.cond1

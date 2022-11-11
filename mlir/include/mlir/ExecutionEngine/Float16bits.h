@@ -17,23 +17,36 @@
 #include <cstdint>
 #include <iostream>
 
+#ifdef _WIN32
+#ifdef mlir_float16_utils_EXPORTS // We are building this library
+#define MLIR_FLOAT16_EXPORT __declspec(dllexport)
+#define MLIR_FLOAT16_DEFINE_FUNCTIONS
+#else // We are using this library
+#define MLIR_FLOAT16_EXPORT __declspec(dllimport)
+#endif // mlir_float16_utils_EXPORTS
+#else  // Non-windows: use visibility attributes.
+#define MLIR_FLOAT16_EXPORT __attribute__((visibility("default")))
+#define MLIR_FLOAT16_DEFINE_FUNCTIONS
+#endif // _WIN32
+
 // Implements half precision and bfloat with f16 and bf16, using the MLIR type
 // names. These data types are also used for c-interface runtime routines.
 extern "C" {
-struct f16 {
+struct MLIR_FLOAT16_EXPORT f16 {
   f16(float f = 0);
   uint16_t bits;
 };
 
-struct bf16 {
+struct MLIR_FLOAT16_EXPORT bf16 {
   bf16(float f = 0);
   uint16_t bits;
 };
 }
 
 // Outputs a half precision value.
-std::ostream &operator<<(std::ostream &os, const f16 &f);
+MLIR_FLOAT16_EXPORT std::ostream &operator<<(std::ostream &os, const f16 &f);
 // Outputs a bfloat value.
-std::ostream &operator<<(std::ostream &os, const bf16 &d);
+MLIR_FLOAT16_EXPORT std::ostream &operator<<(std::ostream &os, const bf16 &d);
 
+#undef MLIR_FLOAT16_EXPORT
 #endif // MLIR_EXECUTIONENGINE_FLOAT16BITS_H_

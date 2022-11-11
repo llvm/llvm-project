@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fexceptions -fcxx-exceptions %s -triple=i686-windows-msvc -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fexceptions -fcxx-exceptions %s -triple=i686-windows-msvc -emit-llvm -o - | FileCheck %s
 
 // When generating thunks using musttail due to inalloca parameters, don't push
 // and pop terminate scopes. PR44987
@@ -20,8 +20,8 @@ class C : A, B {
 };
 C c;
 
-// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?f@C@@G3AEXUNonTrivial@@@Z"(%class.C* noundef %this, <{ %struct.NonTrivial }>* inalloca(<{ %struct.NonTrivial }>) %0)
+// CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?f@C@@G3AEXUNonTrivial@@@Z"(ptr noundef %this, ptr inalloca(<{ %struct.NonTrivial }>) %0)
 // CHECK-NOT: invoke
-// CHECK: musttail call x86_thiscallcc void @"?f@C@@EAEXUNonTrivial@@@Z"(%class.C* noundef %{{.*}}, <{ %struct.NonTrivial }>* inalloca(<{ %struct.NonTrivial }>) %0)
+// CHECK: musttail call x86_thiscallcc void @"?f@C@@EAEXUNonTrivial@@@Z"(ptr noundef %{{.*}}, ptr inalloca(<{ %struct.NonTrivial }>) %0)
 // CHECK-NEXT:  ret void
 

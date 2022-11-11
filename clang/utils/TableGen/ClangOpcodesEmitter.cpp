@@ -120,6 +120,9 @@ void ClangOpcodesEmitter::EmitInterp(raw_ostream &OS, StringRef N, Record *R) {
 
     OS << "case OP_" << ID << ": {\n";
 
+    if (CanReturn)
+      OS << "  bool DoReturn = (S.Current == StartFrame);\n";
+
     // Emit calls to read arguments.
     for (size_t I = 0, N = Args.size(); I < N; ++I) {
       OS << "  auto V" << I;
@@ -145,6 +148,9 @@ void ClangOpcodesEmitter::EmitInterp(raw_ostream &OS, StringRef N, Record *R) {
     // Bail out if interpreter returned.
     if (CanReturn) {
       OS << "  if (!S.Current || S.Current->isRoot())\n";
+      OS << "    return true;\n";
+
+      OS << "  if (DoReturn)\n";
       OS << "    return true;\n";
     }
 

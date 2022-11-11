@@ -1,9 +1,9 @@
-; RUN: opt -S -lowertypetests -mtriple=i686-unknown-linux-gnu < %s | FileCheck --check-prefixes=CHECK,X86 %s
-; RUN: opt -S -lowertypetests -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck --check-prefixes=CHECK,X86 %s
-; RUN: opt -S -lowertypetests -mtriple=arm-unknown-linux-gnu < %s | FileCheck --check-prefixes=CHECK,ARM %s
-; RUN: opt -S -lowertypetests -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck --check-prefixes=CHECK,ARM %s
-; RUN: opt -S -lowertypetests -mtriple=riscv32-unknown-linux-gnu < %s | FileCheck --check-prefixes=CHECK,RISCV %s
-; RUN: opt -S -lowertypetests -mtriple=riscv64-unknown-linux-gnu < %s | FileCheck --check-prefixes=CHECK,RISCV %s
+; RUN: opt -S -passes=lowertypetests -mtriple=i686-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,X86 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,X86 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=arm-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,ARM %s
+; RUN: opt -S -passes=lowertypetests -mtriple=aarch64-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,ARM %s
+; RUN: opt -S -passes=lowertypetests -mtriple=riscv32-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,RISCV %s
+; RUN: opt -S -passes=lowertypetests -mtriple=riscv64-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,RISCV %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

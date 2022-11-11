@@ -23,7 +23,7 @@ static bool overrideBuffer(Operation *op, Value buffer) {
   auto copyOp = dyn_cast<memref::CopyOp>(op);
   if (!copyOp)
     return false;
-  return copyOp.target() == buffer;
+  return copyOp.getTarget() == buffer;
 }
 
 /// Replace the uses of `oldOp` with the given `val` and for subview uses
@@ -44,10 +44,10 @@ static void replaceUsesAndPropagateType(Operation *oldOp, Value val,
     }
     builder.setInsertionPoint(subviewUse);
     Type newType = memref::SubViewOp::inferRankReducedResultType(
-        subviewUse.getType().getRank(), val.getType().cast<MemRefType>(),
-        extractFromI64ArrayAttr(subviewUse.static_offsets()),
-        extractFromI64ArrayAttr(subviewUse.static_sizes()),
-        extractFromI64ArrayAttr(subviewUse.static_strides()));
+        subviewUse.getType().getShape(), val.getType().cast<MemRefType>(),
+        extractFromI64ArrayAttr(subviewUse.getStaticOffsets()),
+        extractFromI64ArrayAttr(subviewUse.getStaticSizes()),
+        extractFromI64ArrayAttr(subviewUse.getStaticStrides()));
     Value newSubview = builder.create<memref::SubViewOp>(
         subviewUse->getLoc(), newType.cast<MemRefType>(), val,
         subviewUse.getMixedOffsets(), subviewUse.getMixedSizes(),
@@ -78,8 +78,8 @@ static Value getOrCreateValue(OpFoldResult res, OpBuilder &builder,
 // Returns success if the transformation happened and failure otherwise.
 // This is not a pattern as it requires propagating the new memref type to its
 // uses and requires updating subview ops.
-LogicalResult mlir::memref::multiBuffer(memref::AllocOp allocOp,
-                                        unsigned multiplier) {
+FailureOr<memref::AllocOp> mlir::memref::multiBuffer(memref::AllocOp allocOp,
+                                                     unsigned multiplier) {
   DominanceInfo dom(allocOp->getParentOp());
   LoopLikeOpInterface candidateLoop;
   for (Operation *user : allocOp->getUsers()) {
@@ -104,11 +104,11 @@ LogicalResult mlir::memref::multiBuffer(memref::AllocOp allocOp,
   llvm::Optional<OpFoldResult> singleStep = candidateLoop.getSingleStep();
   if (!inductionVar || !lowerBound || !singleStep)
     return failure();
+
+  if (!dom.dominates(allocOp.getOperation(), candidateLoop))
+    return failure();
+
   OpBuilder builder(candidateLoop);
-  Value stepValue =
-      getOrCreateValue(*singleStep, builder, candidateLoop->getLoc());
-  Value lowerBoundValue =
-      getOrCreateValue(*lowerBound, builder, candidateLoop->getLoc());
   SmallVector<int64_t, 4> newShape(1, multiplier);
   ArrayRef<int64_t> oldShape = allocOp.getType().getShape();
   newShape.append(oldShape.begin(), oldShape.end());
@@ -117,15 +117,28 @@ LogicalResult mlir::memref::multiBuffer(memref::AllocOp allocOp,
                                    allocOp.getType().getMemorySpace());
   builder.setInsertionPoint(allocOp);
   Location loc = allocOp->getLoc();
-  auto newAlloc = builder.create<memref::AllocOp>(loc, newMemref);
+  auto newAlloc = builder.create<memref::AllocOp>(loc, newMemref, ValueRange{},
+                                                  allocOp->getAttrs());
   builder.setInsertionPoint(&candidateLoop.getLoopBody().front(),
                             candidateLoop.getLoopBody().front().begin());
+
+  SmallVector<Value> operands = {*inductionVar};
   AffineExpr induc = getAffineDimExpr(0, allocOp.getContext());
-  AffineExpr init = getAffineDimExpr(1, allocOp.getContext());
-  AffineExpr step = getAffineDimExpr(2, allocOp.getContext());
+  unsigned dimCount = 1;
+  auto getAffineExpr = [&](OpFoldResult e) -> AffineExpr {
+    if (Optional<int64_t> constValue = getConstantIntValue(e)) {
+      return getAffineConstantExpr(*constValue, allocOp.getContext());
+    }
+    auto value = getOrCreateValue(e, builder, candidateLoop->getLoc());
+    operands.push_back(value);
+    return getAffineDimExpr(dimCount++, allocOp.getContext());
+   
+  };
+  auto init = getAffineExpr(*lowerBound);
+  auto step = getAffineExpr(*singleStep);
+
   AffineExpr expr = ((induc - init).floorDiv(step)) % multiplier;
-  auto map = AffineMap::get(3, 0, expr);
-  std::array<Value, 3> operands = {*inductionVar, lowerBoundValue, stepValue};
+  auto map = AffineMap::get(dimCount, 0, expr);
   Value bufferIndex = builder.create<AffineApplyOp>(loc, map, operands);
   SmallVector<OpFoldResult> offsets, sizes, strides;
   offsets.push_back(bufferIndex);
@@ -136,11 +149,11 @@ LogicalResult mlir::memref::multiBuffer(memref::AllocOp allocOp,
     sizes.push_back(builder.getIndexAttr(size));
   auto dstMemref =
       memref::SubViewOp::inferRankReducedResultType(
-          allocOp.getType().getRank(), newMemref, offsets, sizes, strides)
+          allocOp.getType().getShape(), newMemref, offsets, sizes, strides)
           .cast<MemRefType>();
   Value subview = builder.create<memref::SubViewOp>(loc, dstMemref, newAlloc,
                                                     offsets, sizes, strides);
   replaceUsesAndPropagateType(allocOp, subview, builder);
   allocOp.erase();
-  return success();
+  return newAlloc;
 }

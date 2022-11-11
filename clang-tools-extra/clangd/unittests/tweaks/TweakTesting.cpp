@@ -136,7 +136,7 @@ bool TweakTest::isAvailable(WrappedAST &AST,
   // We only care if prepare() succeeded, but must handle Errors.
   if (Result && !*Result)
     consumeError(Result->takeError());
-  return Result.hasValue();
+  return Result.has_value();
 }
 
 TweakTest::WrappedAST TweakTest::build(llvm::StringRef Code) const {

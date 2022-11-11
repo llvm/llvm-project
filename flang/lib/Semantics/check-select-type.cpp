@@ -94,7 +94,8 @@ private:
                 }
                 if (spec->category() == DeclTypeSpec::Character &&
                     !guardDynamicType.IsAssumedLengthCharacter()) { // C1160
-                  context_.Say(parser::FindSourceLocation(typeSpec),
+                  auto location{parser::FindSourceLocation(typeSpec)};
+                  context_.Say(location.empty() ? stmt.source : location,
                       "The type specification statement must have "
                       "LEN type parameter as assumed"_err_en_US);
                   typeSpecRetVal = false;

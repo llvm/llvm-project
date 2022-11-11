@@ -12,6 +12,7 @@
 
 #include <__assert>
 #include <__config>
+#include <cstddef>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -27,22 +28,6 @@
 # define _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
 #endif
 
-// TODO: Define this as a function instead
-#if defined(_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY)
-# if defined(_LIBCPP_CXX03_LANG)
-#   error Support for unspecified stability is only for C++11 and higher
-# endif
-# define _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last)                                                         \
-    do {                                                                                                        \
-      if (!__builtin_is_constant_evaluated())                                                                   \
-        std::shuffle(__first, __last, __libcpp_debug_randomizer());                                             \
-    } while (false)
-#else
-# define _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last)                                                         \
-    do {                                                                                                        \
-    } while (false)
-#endif
-
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
 #   define _LIBCPP_DEBUG_ASSERT(x, m) _LIBCPP_ASSERT(::std::__libcpp_is_constant_evaluated() || (x), m)
 #else
@@ -50,10 +35,6 @@
 #endif
 
 #if defined(_LIBCPP_ENABLE_DEBUG_MODE) || defined(_LIBCPP_BUILDING_LIBRARY)
-
-#include <cstddef>
-#include <cstdio>
-#include <cstdlib>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -106,10 +87,10 @@ struct _C_node
     explicit _C_node(void* __c, __c_node* __n)
         : __c_node(__c, __n) {}
 
-    virtual bool __dereferenceable(const void*) const;
-    virtual bool __decrementable(const void*) const;
-    virtual bool __addable(const void*, ptrdiff_t) const;
-    virtual bool __subscriptable(const void*, ptrdiff_t) const;
+    bool __dereferenceable(const void*) const override;
+    bool __decrementable(const void*) const override;
+    bool __addable(const void*, ptrdiff_t) const override;
+    bool __subscriptable(const void*, ptrdiff_t) const override;
 };
 
 template <class _Cont>
@@ -231,7 +212,7 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_insert_c(_Tp* __c) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 inline void __debug_db_insert_c(_Tp* __c) {
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
     if (!__libcpp_is_constant_evaluated())
         __get_db()->__insert_c(__c);
@@ -241,7 +222,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_inser
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_insert_i(_Tp* __i) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 inline void __debug_db_insert_i(_Tp* __i) {
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
     if (!__libcpp_is_constant_evaluated())
         __get_db()->__insert_i(__i);
@@ -251,7 +232,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_inser
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_erase_c(_Tp* __c) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 inline void __debug_db_erase_c(_Tp* __c) {
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
     if (!__libcpp_is_constant_evaluated())
         __get_db()->__erase_c(__c);
@@ -261,7 +242,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_erase
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_swap(_Tp* __lhs, _Tp* __rhs) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 inline void __debug_db_swap(_Tp* __lhs, _Tp* __rhs) {
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
     if (!__libcpp_is_constant_evaluated())
         __get_db()->swap(__lhs, __rhs);
@@ -272,7 +253,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_swap(
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_invalidate_all(_Tp* __c) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 inline void __debug_db_invalidate_all(_Tp* __c) {
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
     if (!__libcpp_is_constant_evaluated())
         __get_db()->__invalidate_all(__c);

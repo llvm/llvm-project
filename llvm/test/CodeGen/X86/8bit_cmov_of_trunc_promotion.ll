@@ -233,7 +233,7 @@ define i8 @neg_type_mismatch(i32 %a1_wide_orig, i16 %a2_wide_orig, i32 %inc) nou
 define i8 @negative_CopyFromReg(i32 %a1_wide, i32 %a2_wide_orig, i32 %inc) nounwind {
 ; I386-NOCMOV-LABEL: negative_CopyFromReg:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; I386-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; I386-NOCMOV-NEXT:    addl {{[0-9]+}}(%esp), %ecx
 ; I386-NOCMOV-NEXT:    cmpb %cl, %al
@@ -255,7 +255,7 @@ define i8 @negative_CopyFromReg(i32 %a1_wide, i32 %a2_wide_orig, i32 %inc) nounw
 ;
 ; I686-NOCMOV-LABEL: negative_CopyFromReg:
 ; I686-NOCMOV:       # %bb.0:
-; I686-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; I686-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I686-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; I686-NOCMOV-NEXT:    addl {{[0-9]+}}(%esp), %ecx
 ; I686-NOCMOV-NEXT:    cmpb %cl, %al
@@ -297,8 +297,8 @@ define i8 @negative_CopyFromReg(i32 %a1_wide, i32 %a2_wide_orig, i32 %inc) nounw
 define i8 @negative_CopyFromRegs(i32 %a1_wide, i32 %a2_wide) nounwind {
 ; I386-NOCMOV-LABEL: negative_CopyFromRegs:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; I386-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; I386-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; I386-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I386-NOCMOV-NEXT:    cmpb %cl, %al
 ; I386-NOCMOV-NEXT:    jg .LBB4_2
 ; I386-NOCMOV-NEXT:  # %bb.1:
@@ -317,8 +317,8 @@ define i8 @negative_CopyFromRegs(i32 %a1_wide, i32 %a2_wide) nounwind {
 ;
 ; I686-NOCMOV-LABEL: negative_CopyFromRegs:
 ; I686-NOCMOV:       # %bb.0:
-; I686-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; I686-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; I686-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; I686-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I686-NOCMOV-NEXT:    cmpb %cl, %al
 ; I686-NOCMOV-NEXT:    jg .LBB4_2
 ; I686-NOCMOV-NEXT:  # %bb.1:

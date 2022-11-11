@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes='default<O1>' -disable-output -debug-pass-manager=verbose 2>&1 | FileCheck %s --check-prefixes=CHECK,NORMAL
-; RUN: opt < %s -passes='default<O2>' -disable-output -debug-pass-manager=verbose 2>&1 | FileCheck %s --check-prefixes=CHECK,NORMAL
+; RUN: opt < %s -passes='default<O1>' -disable-output -debug-pass-manager=verbose -enable-no-rerun-simplification-pipeline=0 2>&1 | FileCheck %s --check-prefixes=CHECK,RERUNSP
+; RUN: opt < %s -passes='default<O2>' -disable-output -debug-pass-manager=verbose -enable-no-rerun-simplification-pipeline=0 2>&1 | FileCheck %s --check-prefixes=CHECK,RERUNSP
 ; RUN: opt < %s -passes='default<O1>' -disable-output -debug-pass-manager=verbose -enable-no-rerun-simplification-pipeline=1 2>&1 | FileCheck %s --check-prefixes=CHECK,NORERUN
 ; RUN: opt < %s -passes='default<O2>' -disable-output -debug-pass-manager=verbose -enable-no-rerun-simplification-pipeline=1 2>&1 | FileCheck %s --check-prefixes=CHECK,NORERUN
 
@@ -11,7 +11,7 @@
 ; CHECK: Running pass: BDCEPass on f2
 ; CHECK-NOT: BDCEPass
 ; CHECK: PassManager{{.*}}SCC{{.*}} on (f2)
-; NORMAL: Running pass: BDCEPass on f2
+; RERUNSP: Running pass: BDCEPass on f2
 ; NORERUN-NOT: Running pass: BDCEPass on f2
 ; CHECK: PassManager{{.*}}SCC{{.*}} on (f3)
 ; CHECK: Running pass: BDCEPass on f3

@@ -162,7 +162,7 @@ define <2 x double> @test_x86_avx_extractf128_pd_256_2(<4 x double> %a0) {
 }
 
 
-define <4 x double> @test_x86_avx_vbroadcastf128_pd_256(i8* %a0) {
+define <4 x double> @test_x86_avx_vbroadcastf128_pd_256(ptr %a0) {
 ; X86-AVX-LABEL: test_x86_avx_vbroadcastf128_pd_256:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -188,13 +188,13 @@ define <4 x double> @test_x86_avx_vbroadcastf128_pd_256(i8* %a0) {
 ; X64-AVX512VL-NEXT:    vbroadcastf128 (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x1a,0x07]
 ; X64-AVX512VL-NEXT:    # ymm0 = mem[0,1,0,1]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x double> @llvm.x86.avx.vbroadcastf128.pd.256(i8* %a0) ; <<4 x double>> [#uses=1]
+  %res = call <4 x double> @llvm.x86.avx.vbroadcastf128.pd.256(ptr %a0) ; <<4 x double>> [#uses=1]
   ret <4 x double> %res
 }
-declare <4 x double> @llvm.x86.avx.vbroadcastf128.pd.256(i8*) nounwind readonly
+declare <4 x double> @llvm.x86.avx.vbroadcastf128.pd.256(ptr) nounwind readonly
 
 
-define <8 x float> @test_x86_avx_vbroadcastf128_ps_256(i8* %a0) {
+define <8 x float> @test_x86_avx_vbroadcastf128_ps_256(ptr %a0) {
 ; X86-AVX-LABEL: test_x86_avx_vbroadcastf128_ps_256:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -220,10 +220,10 @@ define <8 x float> @test_x86_avx_vbroadcastf128_ps_256(i8* %a0) {
 ; X64-AVX512VL-NEXT:    vbroadcastf128 (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x1a,0x07]
 ; X64-AVX512VL-NEXT:    # ymm0 = mem[0,1,0,1]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(i8* %a0) ; <<8 x float>> [#uses=1]
+  %res = call <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(ptr %a0) ; <<8 x float>> [#uses=1]
   ret <8 x float> %res
 }
-declare <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(i8*) nounwind readonly
+declare <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(ptr) nounwind readonly
 
 
 define <4 x double> @test_x86_avx_blend_pd_256(<4 x double> %a0, <4 x double> %a1) {
@@ -601,7 +601,7 @@ define <4 x double> @test_x86_avx_cvt_ps2_pd_256(<4 x float> %a0) {
 declare <4 x double> @llvm.x86.avx.cvt.ps2.pd.256(<4 x float>) nounwind readnone
 
 
-define void @test_x86_sse2_storeu_dq(i8* %a0, <16 x i8> %a1) {
+define void @test_x86_sse2_storeu_dq(ptr %a0, <16 x i8> %a1) {
   ; add operation forces the execution domain.
 ; X86-AVX-LABEL: test_x86_sse2_storeu_dq:
 ; X86-AVX:       # %bb.0:
@@ -633,13 +633,13 @@ define void @test_x86_sse2_storeu_dq(i8* %a0, <16 x i8> %a1) {
 ; X64-AVX512VL-NEXT:    vmovdqu %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x7f,0x07]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
   %a2 = add <16 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-  call void @llvm.x86.sse2.storeu.dq(i8* %a0, <16 x i8> %a2)
+  call void @llvm.x86.sse2.storeu.dq(ptr %a0, <16 x i8> %a2)
   ret void
 }
-declare void @llvm.x86.sse2.storeu.dq(i8*, <16 x i8>) nounwind
+declare void @llvm.x86.sse2.storeu.dq(ptr, <16 x i8>) nounwind
 
 
-define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
+define void @test_x86_sse2_storeu_pd(ptr %a0, <2 x double> %a1) {
   ; fadd operation forces the execution domain.
 ; X86-AVX-LABEL: test_x86_sse2_storeu_pd:
 ; X86-AVX:       # %bb.0:
@@ -683,13 +683,13 @@ define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
 ; X64-AVX512VL-NEXT:    vmovupd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x11,0x07]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
   %a2 = fadd <2 x double> %a1, <double 0x0, double 0x4200000000000000>
-  call void @llvm.x86.sse2.storeu.pd(i8* %a0, <2 x double> %a2)
+  call void @llvm.x86.sse2.storeu.pd(ptr %a0, <2 x double> %a2)
   ret void
 }
-declare void @llvm.x86.sse2.storeu.pd(i8*, <2 x double>) nounwind
+declare void @llvm.x86.sse2.storeu.pd(ptr, <2 x double>) nounwind
 
 
-define void @test_x86_sse_storeu_ps(i8* %a0, <4 x float> %a1) {
+define void @test_x86_sse_storeu_ps(ptr %a0, <4 x float> %a1) {
 ; X86-AVX-LABEL: test_x86_sse_storeu_ps:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -711,13 +711,13 @@ define void @test_x86_sse_storeu_ps(i8* %a0, <4 x float> %a1) {
 ; X64-AVX512VL:       # %bb.0:
 ; X64-AVX512VL-NEXT:    vmovups %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x07]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
-  call void @llvm.x86.sse.storeu.ps(i8* %a0, <4 x float> %a1)
+  call void @llvm.x86.sse.storeu.ps(ptr %a0, <4 x float> %a1)
   ret void
 }
-declare void @llvm.x86.sse.storeu.ps(i8*, <4 x float>) nounwind
+declare void @llvm.x86.sse.storeu.ps(ptr, <4 x float>) nounwind
 
 
-define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
+define void @test_x86_avx_storeu_dq_256(ptr %a0, <32 x i8> %a1) {
   ; FIXME: unfortunately the execution domain fix pass changes this to vmovups and its hard to force with no 256-bit integer instructions
   ; add operation forces the execution domain.
 ; X86-AVX-LABEL: test_x86_avx_storeu_dq_256:
@@ -760,13 +760,13 @@ define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
 ; X64-AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
   %a2 = add <32 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-  call void @llvm.x86.avx.storeu.dq.256(i8* %a0, <32 x i8> %a2)
+  call void @llvm.x86.avx.storeu.dq.256(ptr %a0, <32 x i8> %a2)
   ret void
 }
-declare void @llvm.x86.avx.storeu.dq.256(i8*, <32 x i8>) nounwind
+declare void @llvm.x86.avx.storeu.dq.256(ptr, <32 x i8>) nounwind
 
 
-define void @test_x86_avx_storeu_pd_256(i8* %a0, <4 x double> %a1) {
+define void @test_x86_avx_storeu_pd_256(ptr %a0, <4 x double> %a1) {
   ; add operation forces the execution domain.
 ; X86-AVX-LABEL: test_x86_avx_storeu_pd_256:
 ; X86-AVX:       # %bb.0:
@@ -802,13 +802,13 @@ define void @test_x86_avx_storeu_pd_256(i8* %a0, <4 x double> %a1) {
 ; X64-AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
   %a2 = fadd <4 x double> %a1, <double 0x0, double 0x0, double 0x0, double 0x0>
-  call void @llvm.x86.avx.storeu.pd.256(i8* %a0, <4 x double> %a2)
+  call void @llvm.x86.avx.storeu.pd.256(ptr %a0, <4 x double> %a2)
   ret void
 }
-declare void @llvm.x86.avx.storeu.pd.256(i8*, <4 x double>) nounwind
+declare void @llvm.x86.avx.storeu.pd.256(ptr, <4 x double>) nounwind
 
 
-define void @test_x86_avx_storeu_ps_256(i8* %a0, <8 x float> %a1) {
+define void @test_x86_avx_storeu_ps_256(ptr %a0, <8 x float> %a1) {
 ; X86-AVX-LABEL: test_x86_avx_storeu_ps_256:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -834,10 +834,10 @@ define void @test_x86_avx_storeu_ps_256(i8* %a0, <8 x float> %a1) {
 ; X64-AVX512VL-NEXT:    vmovups %ymm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x07]
 ; X64-AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
-  call void @llvm.x86.avx.storeu.ps.256(i8* %a0, <8 x float> %a1)
+  call void @llvm.x86.avx.storeu.ps.256(ptr %a0, <8 x float> %a1)
   ret void
 }
-declare void @llvm.x86.avx.storeu.ps.256(i8*, <8 x float>) nounwind
+declare void @llvm.x86.avx.storeu.ps.256(ptr, <8 x float>) nounwind
 
 
 define <2 x double> @test_x86_avx_vpermil_pd(<2 x double> %a0) {

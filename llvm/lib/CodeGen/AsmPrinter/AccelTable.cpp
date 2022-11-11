@@ -245,8 +245,8 @@ public:
 void AccelTableWriter::emitHashes() const {
   uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
   unsigned BucketIdx = 0;
-  for (auto &Bucket : Contents.getBuckets()) {
-    for (auto &Hash : Bucket) {
+  for (const auto &Bucket : Contents.getBuckets()) {
+    for (const auto &Hash : Bucket) {
       uint32_t HashValue = Hash->HashValue;
       if (SkipIdenticalHashes && PrevHash == HashValue)
         continue;
@@ -327,7 +327,7 @@ void AppleAccelTableWriter::emitData() const {
   const auto &Buckets = Contents.getBuckets();
   for (const AccelTableBase::HashList &Bucket : Buckets) {
     uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
-    for (auto &Hash : Bucket) {
+    for (const auto &Hash : Bucket) {
       // Terminate the previous entry if there is no hash collision with the
       // current one.
       if (PrevHash != std::numeric_limits<uint64_t>::max() &&
@@ -667,12 +667,12 @@ void AccelTableBase::print(raw_ostream &OS) const {
   }
 
   OS << "Buckets and Hashes: \n";
-  for (auto &Bucket : Buckets)
-    for (auto &Hash : Bucket)
+  for (const auto &Bucket : Buckets)
+    for (const auto &Hash : Bucket)
       Hash->print(OS);
 
   OS << "Data: \n";
-  for (auto &E : Entries)
+  for (const auto &E : Entries)
     E.second.print(OS);
 }
 

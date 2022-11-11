@@ -280,19 +280,19 @@ v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6,7]
 
 v_fmaak_f32 v0, 0xff32ff, v0, 0x11213141
 // GFX6-9: error: instruction not supported on this GPU
-// GFX10: error: only one literal operand is allowed
+// GFX10: error: only one unique literal operand is allowed
 
 v_fmamk_f32 v0, 0xff32ff, 0x11213141, v0
 // GFX6-9: error: instruction not supported on this GPU
-// GFX10: error: only one literal operand is allowed
+// GFX10: error: only one unique literal operand is allowed
 
 v_fmaak_f32 v0, 0xff32, v0, 0x1122
 // GFX6-9: error: instruction not supported on this GPU
-// GFX10: error: only one literal operand is allowed
+// GFX10: error: only one unique literal operand is allowed
 
 v_fmamk_f32 v0, 0xff32, 0x1122, v0
 // GFX6-9: error: instruction not supported on this GPU
-// GFX10: error: only one literal operand is allowed
+// GFX10: error: only one unique literal operand is allowed
 
 //===----------------------------------------------------------------------===//
 // VOP2 E64.

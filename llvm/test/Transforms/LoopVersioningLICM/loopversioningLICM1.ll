@@ -1,4 +1,3 @@
-; RUN: opt < %s  -O1  -S -loop-versioning-licm -licm -debug-only=loop-versioning-licm -enable-new-pm=0 2>&1 | FileCheck %s
 ; RUN: opt < %s -S -passes='default<O1>,function(loop-versioning-licm,loop-mssa(licm))' -debug-only=loop-versioning-licm 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ;

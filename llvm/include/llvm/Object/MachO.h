@@ -274,12 +274,13 @@ using bind_iterator = content_iterator<MachOBindEntry>;
 ///     symbol. E.g., C++'s "operator new". This is called a "weak bind."
 struct ChainedFixupTarget {
 public:
-  ChainedFixupTarget(int LibOrdinal, StringRef Symbol, uint64_t Addend,
-                     bool WeakImport)
-      : LibOrdinal(LibOrdinal), SymbolName(Symbol), Addend(Addend),
-        WeakImport(WeakImport) {}
+  ChainedFixupTarget(int LibOrdinal, uint32_t NameOffset, StringRef Symbol,
+                     uint64_t Addend, bool WeakImport)
+      : LibOrdinal(LibOrdinal), NameOffset(NameOffset), SymbolName(Symbol),
+        Addend(Addend), WeakImport(WeakImport) {}
 
   int libOrdinal() { return LibOrdinal; }
+  uint32_t nameOffset() { return NameOffset; }
   StringRef symbolName() { return SymbolName; }
   uint64_t addend() { return Addend; }
   bool weakImport() { return WeakImport; }
@@ -289,9 +290,23 @@ public:
 
 private:
   int LibOrdinal;
+  uint32_t NameOffset;
   StringRef SymbolName;
   uint64_t Addend;
   bool WeakImport;
+};
+
+struct ChainedFixupsSegment {
+  ChainedFixupsSegment(uint8_t SegIdx, uint32_t Offset,
+                       const MachO::dyld_chained_starts_in_segment &Header,
+                       std::vector<uint16_t> &&PageStarts)
+      : SegIdx(SegIdx), Offset(Offset), Header(Header),
+        PageStarts(PageStarts){};
+
+  uint32_t SegIdx;
+  uint32_t Offset; // dyld_chained_starts_in_image::seg_info_offset[SegIdx]
+  MachO::dyld_chained_starts_in_segment Header;
+  std::vector<uint16_t> PageStarts; // page_start[] entries, host endianness
 };
 
 /// MachOAbstractFixupEntry is an abstract class representing a fixup in a
@@ -362,19 +377,29 @@ private:
 
 class MachOChainedFixupEntry : public MachOAbstractFixupEntry {
 public:
-  enum class FixupKind { All, Bind, WeakBind, Rebase };
+  enum class FixupKind { Bind, Rebase };
 
   MachOChainedFixupEntry(Error *Err, const MachOObjectFile *O, bool Parse);
 
   bool operator==(const MachOChainedFixupEntry &) const;
+
+  bool isBind() const { return Kind == FixupKind::Bind; }
+  bool isRebase() const { return Kind == FixupKind::Rebase; }
 
   void moveNext();
   void moveToFirst();
   void moveToEnd();
 
 private:
+  void findNextPageWithFixups();
+
   std::vector<ChainedFixupTarget> FixupTargets;
-  uint32_t FixupIndex = 0;
+  std::vector<ChainedFixupsSegment> Segments;
+  ArrayRef<uint8_t> SegmentData;
+  FixupKind Kind;
+  uint32_t InfoSegIndex = 0; // Index into Segments
+  uint32_t PageIndex = 0;    // Index into Segments[InfoSegIdx].PageStarts
+  uint32_t PageOffset = 0;   // Page offset of the current fixup
 };
 using fixup_iterator = content_iterator<MachOChainedFixupEntry>;
 
@@ -434,6 +459,7 @@ public:
 
   /// Return the raw contents of an entire segment.
   ArrayRef<uint8_t> getSegmentContents(StringRef SegmentName) const;
+  ArrayRef<uint8_t> getSegmentContents(size_t SegmentIndex) const;
 
   /// When dsymutil generates the companion file, it strips all unnecessary
   /// sections (e.g. everything in the _TEXT segment) by omitting their body
@@ -685,10 +711,21 @@ public:
   ArrayRef<uint8_t> getDyldInfoBindOpcodes() const;
   ArrayRef<uint8_t> getDyldInfoWeakBindOpcodes() const;
   ArrayRef<uint8_t> getDyldInfoLazyBindOpcodes() const;
-  /// If the optional is None, no header was found, but the object was well-formed.
+  /// If the optional is None, no header was found, but the object was
+  /// well-formed.
   Expected<Optional<MachO::dyld_chained_fixups_header>>
   getChainedFixupsHeader() const;
   Expected<std::vector<ChainedFixupTarget>> getDyldChainedFixupTargets() const;
+
+  // Note: This is a limited, temporary API, which will be removed when Apple
+  // upstreams their implementation. Please do not rely on this.
+  Expected<Optional<MachO::linkedit_data_command>>
+  getChainedFixupsLoadCommand() const;
+  // Returns the number of sections listed in dyld_chained_starts_in_image, and
+  // a ChainedFixupsSegment for each segment that has fixups.
+  Expected<std::pair<size_t, std::vector<ChainedFixupsSegment>>>
+  getChainedFixupsSegments() const;
+
   ArrayRef<uint8_t> getDyldInfoExportsTrie() const;
   SmallVector<uint64_t> getFunctionStarts() const;
   ArrayRef<uint8_t> getUuid() const;

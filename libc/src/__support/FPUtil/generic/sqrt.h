@@ -10,12 +10,13 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_H
 
 #include "sqrt_80_bit_long_double.h"
-#include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PlatformDefs.h"
-#include "src/__support/FPUtil/builtin_wrappers.h"
+#include "src/__support/UInt128.h"
+#include "src/__support/builtin_wrappers.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -35,8 +36,8 @@ template <> struct SpecialLongDouble<long double> {
 template <typename T>
 static inline void normalize(int &exponent,
                              typename FPBits<T>::UIntType &mantissa) {
-  const int shift =
-      clz(mantissa) - (8 * sizeof(mantissa) - 1 - MantissaWidth<T>::VALUE);
+  const int shift = unsafe_clz(mantissa) -
+                    (8 * sizeof(mantissa) - 1 - MantissaWidth<T>::VALUE);
   exponent -= shift;
   mantissa <<= shift;
 }
@@ -48,10 +49,11 @@ inline void normalize<long double>(int &exponent, uint64_t &mantissa) {
 }
 #elif !defined(SPECIAL_X86_LONG_DOUBLE)
 template <>
-inline void normalize<long double>(int &exponent, __uint128_t &mantissa) {
+inline void normalize<long double>(int &exponent, UInt128 &mantissa) {
   const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);
-  const int shift = hi_bits ? (clz(hi_bits) - 15)
-                            : (clz(static_cast<uint64_t>(mantissa)) + 49);
+  const int shift = hi_bits
+                        ? (unsafe_clz(hi_bits) - 15)
+                        : (unsafe_clz(static_cast<uint64_t>(mantissa)) + 49);
   exponent -= shift;
   mantissa <<= shift;
 }
@@ -62,8 +64,7 @@ inline void normalize<long double>(int &exponent, __uint128_t &mantissa) {
 // Correctly rounded IEEE 754 SQRT for all rounding modes.
 // Shift-and-add algorithm.
 template <typename T>
-static inline cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, T>
-sqrt(T x) {
+static inline cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
 
   if constexpr (internal::SpecialLongDouble<T>::VALUE) {
     // Special 80-bit long double.
@@ -78,7 +79,7 @@ sqrt(T x) {
     if (bits.is_inf_or_nan()) {
       if (bits.get_sign() && (bits.get_mantissa() == 0)) {
         // sqrt(-Inf) = NaN
-        return FPBits<T>::build_nan(ONE >> 1);
+        return FPBits<T>::build_quiet_nan(ONE >> 1);
       } else {
         // sqrt(NaN) = NaN
         // sqrt(+Inf) = +Inf
@@ -90,7 +91,7 @@ sqrt(T x) {
       return x;
     } else if (bits.get_sign()) {
       // sqrt( negative numbers ) = NaN
-      return FPBits<T>::build_nan(ONE >> 1);
+      return FPBits<T>::build_quiet_nan(ONE >> 1);
     } else {
       int x_exp = bits.get_exponent();
       UIntType x_mant = bits.get_mantissa();
@@ -160,7 +161,7 @@ sqrt(T x) {
         break;
       }
 
-      return __llvm_libc::bit_cast<T>(y);
+      return cpp::bit_cast<T>(y);
     }
   }
 }

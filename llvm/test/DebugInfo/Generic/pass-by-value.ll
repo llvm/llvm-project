@@ -3,9 +3,6 @@
 ; RUN:   | FileCheck %s --check-prefix=STRICT --implicit-check-not DW_AT_calling_convention
 ;
 
-; Visibility is unsupported for XCOFF object writing
-; XFAIL: -aix
-
 ; // S is not trivially copyable.
 ; struct S {
 ;    ~S() {}

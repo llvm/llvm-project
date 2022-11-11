@@ -1,101 +1,107 @@
 // RUN: mlir-opt %s -test-vector-multi-reduction-lowering-patterns="use-outer-reductions" | FileCheck %s
 
-func.func @vector_multi_reduction(%arg0: vector<2x4xf32>) -> vector<2xf32> {
-    %0 = vector.multi_reduction <mul>, %arg0 [1] : vector<2x4xf32> to vector<2xf32>
+func.func @vector_multi_reduction(%arg0: vector<2x4xf32>, %acc: vector<2xf32>) -> vector<2xf32> {
+    %0 = vector.multi_reduction <mul>, %arg0, %acc [1] : vector<2x4xf32> to vector<2xf32>
     return %0 : vector<2xf32>
 }
 
 // CHECK-LABEL: func @vector_multi_reduction
-//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xf32>
+//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xf32>, %[[ACC:.*]]: vector<2xf32>
 //       CHECK:   %[[TRANSPOSED:.+]] = vector.transpose %[[INPUT]], [1, 0] : vector<2x4xf32> to vector<4x2xf32>
 //       CHECK:   %[[V0:.+]] = vector.extract %[[TRANSPOSED]][0] : vector<4x2xf32>
+//       CHECK:   %[[RV0:.+]] = arith.mulf %[[V0]], %[[ACC]] : vector<2xf32>
 //       CHECK:   %[[V1:.+]] = vector.extract %[[TRANSPOSED]][1] : vector<4x2xf32>
-//       CHECK:   %[[RV01:.+]] = arith.mulf %[[V1]], %[[V0]] : vector<2xf32>
+//       CHECK:   %[[RV01:.+]] = arith.mulf %[[V1]], %[[RV0]] : vector<2xf32>
 //       CHECK:   %[[V2:.+]] = vector.extract %[[TRANSPOSED]][2] : vector<4x2xf32>
 //       CHECK:   %[[RV012:.+]] = arith.mulf %[[V2]], %[[RV01]] : vector<2xf32>
 //       CHECK:   %[[V3:.+]] = vector.extract %[[TRANSPOSED]][3] : vector<4x2xf32>
 //       CHECK:   %[[RESULT_VEC:.+]] = arith.mulf %[[V3]], %[[RV012]] : vector<2xf32>
 //       CHECK:   return %[[RESULT_VEC]] : vector<2xf32>
 
-func.func @vector_multi_reduction_min(%arg0: vector<2x4xf32>) -> vector<2xf32> {
-    %0 = vector.multi_reduction <minf>, %arg0 [1] : vector<2x4xf32> to vector<2xf32>
+func.func @vector_multi_reduction_min(%arg0: vector<2x4xf32>, %acc: vector<2xf32>) -> vector<2xf32> {
+    %0 = vector.multi_reduction <minf>, %arg0, %acc [1] : vector<2x4xf32> to vector<2xf32>
     return %0 : vector<2xf32>
 }
 
 // CHECK-LABEL: func @vector_multi_reduction_min
-//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xf32>
+//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xf32>, %[[ACC:.*]]: vector<2xf32>
 //       CHECK:   %[[TRANSPOSED:.+]] = vector.transpose %[[INPUT]], [1, 0] : vector<2x4xf32> to vector<4x2xf32>
 //       CHECK:   %[[V0:.+]] = vector.extract %[[TRANSPOSED]][0] : vector<4x2xf32>
+//       CHECK:   %[[RV0:.+]] = arith.minf %[[V0]], %[[ACC]] : vector<2xf32>
 //       CHECK:   %[[V1:.+]] = vector.extract %[[TRANSPOSED]][1] : vector<4x2xf32>
-//       CHECK:   %[[RV01:.+]] = arith.minf %[[V1]], %[[V0]] : vector<2xf32>
+//       CHECK:   %[[RV01:.+]] = arith.minf %[[V1]], %[[RV0]] : vector<2xf32>
 //       CHECK:   %[[V2:.+]] = vector.extract %[[TRANSPOSED]][2] : vector<4x2xf32>
 //       CHECK:   %[[RV012:.+]] = arith.minf %[[V2]], %[[RV01]] : vector<2xf32>
 //       CHECK:   %[[V3:.+]] = vector.extract %[[TRANSPOSED]][3] : vector<4x2xf32>
 //       CHECK:   %[[RESULT_VEC:.+]] = arith.minf %[[V3]], %[[RV012]] : vector<2xf32>
 //       CHECK:   return %[[RESULT_VEC]] : vector<2xf32>
 
-func.func @vector_multi_reduction_max(%arg0: vector<2x4xf32>) -> vector<2xf32> {
-    %0 = vector.multi_reduction <maxf>, %arg0 [1] : vector<2x4xf32> to vector<2xf32>
+func.func @vector_multi_reduction_max(%arg0: vector<2x4xf32>, %acc: vector<2xf32>) -> vector<2xf32> {
+    %0 = vector.multi_reduction <maxf>, %arg0, %acc [1] : vector<2x4xf32> to vector<2xf32>
     return %0 : vector<2xf32>
 }
 
 // CHECK-LABEL: func @vector_multi_reduction_max
-//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xf32>
+//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xf32>, %[[ACC:.*]]: vector<2xf32>
 //       CHECK:   %[[TRANSPOSED:.+]] = vector.transpose %[[INPUT]], [1, 0] : vector<2x4xf32> to vector<4x2xf32>
 //       CHECK:   %[[V0:.+]] = vector.extract %[[TRANSPOSED]][0] : vector<4x2xf32>
+//       CHECK:   %[[RV0:.+]] = arith.maxf %[[V0]], %[[ACC]] : vector<2xf32>
 //       CHECK:   %[[V1:.+]] = vector.extract %[[TRANSPOSED]][1] : vector<4x2xf32>
-//       CHECK:   %[[RV01:.+]] = arith.maxf %[[V1]], %[[V0]] : vector<2xf32>
+//       CHECK:   %[[RV01:.+]] = arith.maxf %[[V1]], %[[RV0]] : vector<2xf32>
 //       CHECK:   %[[V2:.+]] = vector.extract %[[TRANSPOSED]][2] : vector<4x2xf32>
 //       CHECK:   %[[RV012:.+]] = arith.maxf %[[V2]], %[[RV01]] : vector<2xf32>
 //       CHECK:   %[[V3:.+]] = vector.extract %[[TRANSPOSED]][3] : vector<4x2xf32>
 //       CHECK:   %[[RESULT_VEC:.+]] = arith.maxf %[[V3]], %[[RV012]] : vector<2xf32>
 //       CHECK:   return %[[RESULT_VEC]] : vector<2xf32>
 
-func.func @vector_multi_reduction_and(%arg0: vector<2x4xi32>) -> vector<2xi32> {
-    %0 = vector.multi_reduction <and>, %arg0 [1] : vector<2x4xi32> to vector<2xi32>
+func.func @vector_multi_reduction_and(%arg0: vector<2x4xi32>, %acc: vector<2xi32>) -> vector<2xi32> {
+    %0 = vector.multi_reduction <and>, %arg0, %acc [1] : vector<2x4xi32> to vector<2xi32>
     return %0 : vector<2xi32>
 }
 
 // CHECK-LABEL: func @vector_multi_reduction_and
-//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xi32>
+//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xi32>, %[[ACC:.*]]: vector<2xi32>
 //       CHECK:   %[[TRANSPOSED:.+]] = vector.transpose %[[INPUT]], [1, 0] : vector<2x4xi32> to vector<4x2xi32>
 //       CHECK:   %[[V0:.+]] = vector.extract %[[TRANSPOSED]][0] : vector<4x2xi32>
+//       CHECK:   %[[RV0:.+]] = arith.andi %[[V0]], %[[ACC]] : vector<2xi32>
 //       CHECK:   %[[V1:.+]] = vector.extract %[[TRANSPOSED]][1] : vector<4x2xi32>
-//       CHECK:   %[[RV01:.+]] = arith.andi %[[V1]], %[[V0]] : vector<2xi32>
+//       CHECK:   %[[RV01:.+]] = arith.andi %[[V1]], %[[RV0]] : vector<2xi32>
 //       CHECK:   %[[V2:.+]] = vector.extract %[[TRANSPOSED]][2] : vector<4x2xi32>
 //       CHECK:   %[[RV012:.+]] = arith.andi %[[V2]], %[[RV01]] : vector<2xi32>
 //       CHECK:   %[[V3:.+]] = vector.extract %[[TRANSPOSED]][3] : vector<4x2xi32>
 //       CHECK:   %[[RESULT_VEC:.+]] = arith.andi %[[V3]], %[[RV012]] : vector<2xi32>
 //       CHECK:   return %[[RESULT_VEC]] : vector<2xi32>
 
-func.func @vector_multi_reduction_or(%arg0: vector<2x4xi32>) -> vector<2xi32> {
-    %0 = vector.multi_reduction <or>, %arg0 [1] : vector<2x4xi32> to vector<2xi32>
+func.func @vector_multi_reduction_or(%arg0: vector<2x4xi32>, %acc: vector<2xi32>) -> vector<2xi32> {
+    %0 = vector.multi_reduction <or>, %arg0, %acc [1] : vector<2x4xi32> to vector<2xi32>
     return %0 : vector<2xi32>
 }
 
 // CHECK-LABEL: func @vector_multi_reduction_or
-//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xi32>
+//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xi32>, %[[ACC:.*]]: vector<2xi32>
 //       CHECK:   %[[TRANSPOSED:.+]] = vector.transpose %[[INPUT]], [1, 0] : vector<2x4xi32> to vector<4x2xi32>
 //       CHECK:   %[[V0:.+]] = vector.extract %[[TRANSPOSED]][0] : vector<4x2xi32>
+//       CHECK:   %[[RV0:.+]] = arith.ori %[[V0]], %[[ACC]] : vector<2xi32>
 //       CHECK:   %[[V1:.+]] = vector.extract %[[TRANSPOSED]][1] : vector<4x2xi32>
-//       CHECK:   %[[RV01:.+]] = arith.ori %[[V1]], %[[V0]] : vector<2xi32>
+//       CHECK:   %[[RV01:.+]] = arith.ori %[[V1]], %[[RV0]] : vector<2xi32>
 //       CHECK:   %[[V2:.+]] = vector.extract %[[TRANSPOSED]][2] : vector<4x2xi32>
 //       CHECK:   %[[RV012:.+]] = arith.ori %[[V2]], %[[RV01]] : vector<2xi32>
 //       CHECK:   %[[V3:.+]] = vector.extract %[[TRANSPOSED]][3] : vector<4x2xi32>
 //       CHECK:   %[[RESULT_VEC:.+]] = arith.ori %[[V3]], %[[RV012]] : vector<2xi32>
 //       CHECK:   return %[[RESULT_VEC]] : vector<2xi32>
 
-func.func @vector_multi_reduction_xor(%arg0: vector<2x4xi32>) -> vector<2xi32> {
-    %0 = vector.multi_reduction <xor>, %arg0 [1] : vector<2x4xi32> to vector<2xi32>
+func.func @vector_multi_reduction_xor(%arg0: vector<2x4xi32>, %acc: vector<2xi32>) -> vector<2xi32> {
+    %0 = vector.multi_reduction <xor>, %arg0, %acc [1] : vector<2x4xi32> to vector<2xi32>
     return %0 : vector<2xi32>
 }
 
 // CHECK-LABEL: func @vector_multi_reduction_xor
-//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xi32>
+//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xi32>, %[[ACC:.*]]: vector<2xi32>
 //       CHECK:   %[[TRANSPOSED:.+]] = vector.transpose %[[INPUT]], [1, 0] : vector<2x4xi32> to vector<4x2xi32>
 //       CHECK:   %[[V0:.+]] = vector.extract %[[TRANSPOSED]][0] : vector<4x2xi32>
+//       CHECK:   %[[RV0:.+]] = arith.xori %[[V0]], %[[ACC]] : vector<2xi32>
 //       CHECK:   %[[V1:.+]] = vector.extract %[[TRANSPOSED]][1] : vector<4x2xi32>
-//       CHECK:   %[[RV01:.+]] = arith.xori %[[V1]], %[[V0]] : vector<2xi32>
+//       CHECK:   %[[RV01:.+]] = arith.xori %[[V1]], %[[RV0]] : vector<2xi32>
 //       CHECK:   %[[V2:.+]] = vector.extract %[[TRANSPOSED]][2] : vector<4x2xi32>
 //       CHECK:   %[[RV012:.+]] = arith.xori %[[V2]], %[[RV01]] : vector<2xi32>
 //       CHECK:   %[[V3:.+]] = vector.extract %[[TRANSPOSED]][3] : vector<4x2xi32>
@@ -103,18 +109,20 @@ func.func @vector_multi_reduction_xor(%arg0: vector<2x4xi32>) -> vector<2xi32> {
 //       CHECK:   return %[[RESULT_VEC]] : vector<2xi32>
 
 
-func.func @vector_reduction_outer(%arg0: vector<2x3x4x5xi32>) -> vector<2x3xi32> {
-    %0 = vector.multi_reduction <add>, %arg0 [2, 3] : vector<2x3x4x5xi32> to vector<2x3xi32>
+func.func @vector_reduction_outer(%arg0: vector<2x3x4x5xi32>, %acc: vector<2x3xi32>) -> vector<2x3xi32> {
+    %0 = vector.multi_reduction <add>, %arg0, %acc [2, 3] : vector<2x3x4x5xi32> to vector<2x3xi32>
     return %0 : vector<2x3xi32>
 }
 
 // CHECK-LABEL: func @vector_reduction_outer
-//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x3x4x5xi32>
+//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x3x4x5xi32>, %[[ACC:.*]]: vector<2x3xi32>
 //       CHECK:   %[[TRANSPOSED:.+]] = vector.transpose %[[INPUT]], [2, 3, 0, 1] : vector<2x3x4x5xi32> to vector<4x5x2x3xi32>
 //       CHECK:   %[[RESHAPED:.+]] = vector.shape_cast %[[TRANSPOSED]] : vector<4x5x2x3xi32> to vector<20x6xi32>
+//       CHECK:   %[[FACC:.+]] = vector.shape_cast %[[ACC]] : vector<2x3xi32> to vector<6xi32>
 //       CHECK:   %[[V0:.+]] = vector.extract %[[RESHAPED]][0] : vector<20x6xi32>
+//       CHECK:   %[[R:.+]] = arith.addi %[[V0]], %[[FACC]] : vector<6xi32>
 //       CHECK:   %[[V1:.+]] = vector.extract %[[RESHAPED]][1] : vector<20x6xi32>
-//       CHECK:   %[[R0:.+]] = arith.addi %[[V1]], %[[V0]] : vector<6xi32>
+//       CHECK:   %[[R0:.+]] = arith.addi %[[V1]], %[[R]] : vector<6xi32>
 //       CHECK:   %[[V2:.+]] = vector.extract %[[RESHAPED]][2] : vector<20x6xi32>
 //       CHECK:   %[[R1:.+]] = arith.addi %[[V2]], %[[R0]] : vector<6xi32>
 //       CHECK:   %[[V3:.+]] = vector.extract %[[RESHAPED]][3] : vector<20x6xi32>
@@ -157,15 +165,15 @@ func.func @vector_reduction_outer(%arg0: vector<2x3x4x5xi32>) -> vector<2x3xi32>
 // This test is mainly to catch a bug that running
 // `InnerOuterDimReductionConversion` on this function results in an
 // infinite loop. So just check that some value is returned.
-func.func @vector_reduction_1D(%arg0 : vector<2xf32>) -> f32 {
-  %0 = vector.multi_reduction #vector.kind<maxf>, %arg0 [0] : vector<2xf32> to f32
+func.func @vector_reduction_1D(%arg0 : vector<2xf32>, %acc: f32) -> f32 {
+  %0 = vector.multi_reduction #vector.kind<maxf>, %arg0, %acc [0] : vector<2xf32> to f32
   return %0 : f32
 }
 // CHECK-LABEL: func @vector_reduction_1D
 //       CHECK:   return %{{.+}}
 
-func.func @vector_multi_reduction_to_scalar(%arg0: vector<2x3xf32>) -> f32 {
-  %0 = vector.multi_reduction <add>, %arg0 [0, 1] : vector<2x3xf32> to f32
+func.func @vector_multi_reduction_to_scalar(%arg0: vector<2x3xf32>, %acc: f32) -> f32 {
+  %0 = vector.multi_reduction <add>, %arg0, %acc [0, 1] : vector<2x3xf32> to f32
   return %0 : f32
 }
 // CHECK-LABEL: func @vector_multi_reduction_to_scalar

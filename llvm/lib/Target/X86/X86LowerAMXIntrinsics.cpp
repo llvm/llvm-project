@@ -78,24 +78,24 @@ private:
                                   IRBuilderBase &B, Value *Row, Value *Col,
                                   Value *Ptr, Value *Stride, Value *Tile);
   template <Intrinsic::ID IntrID>
-  typename std::enable_if<IntrID == Intrinsic::x86_tdpbssd_internal ||
-                              IntrID == Intrinsic::x86_tdpbsud_internal ||
-                              IntrID == Intrinsic::x86_tdpbusd_internal ||
-                              IntrID == Intrinsic::x86_tdpbuud_internal ||
-                              IntrID == Intrinsic::x86_tdpbf16ps_internal,
-                          Value *>::type
+  std::enable_if_t<IntrID == Intrinsic::x86_tdpbssd_internal ||
+                       IntrID == Intrinsic::x86_tdpbsud_internal ||
+                       IntrID == Intrinsic::x86_tdpbusd_internal ||
+                       IntrID == Intrinsic::x86_tdpbuud_internal ||
+                       IntrID == Intrinsic::x86_tdpbf16ps_internal,
+                   Value *>
   createTileDPLoops(BasicBlock *Start, BasicBlock *End, IRBuilderBase &B,
                     Value *Row, Value *Col, Value *K, Value *Acc, Value *LHS,
                     Value *RHS);
   template <bool IsTileLoad>
   bool lowerTileLoadStore(Instruction *TileLoadStore);
   template <Intrinsic::ID IntrID>
-  typename std::enable_if<IntrID == Intrinsic::x86_tdpbssd_internal ||
-                              IntrID == Intrinsic::x86_tdpbsud_internal ||
-                              IntrID == Intrinsic::x86_tdpbusd_internal ||
-                              IntrID == Intrinsic::x86_tdpbuud_internal ||
-                              IntrID == Intrinsic::x86_tdpbf16ps_internal,
-                          bool>::type
+  std::enable_if_t<IntrID == Intrinsic::x86_tdpbssd_internal ||
+                       IntrID == Intrinsic::x86_tdpbsud_internal ||
+                       IntrID == Intrinsic::x86_tdpbusd_internal ||
+                       IntrID == Intrinsic::x86_tdpbuud_internal ||
+                       IntrID == Intrinsic::x86_tdpbf16ps_internal,
+                   bool>
   lowerTileDP(Instruction *TileDP);
   bool lowerTileZero(Instruction *TileZero);
 };
@@ -235,12 +235,12 @@ Value *X86LowerAMXIntrinsics::createTileLoadStoreLoops(
 }
 
 template <Intrinsic::ID IntrID>
-typename std::enable_if<IntrID == Intrinsic::x86_tdpbssd_internal ||
-                            IntrID == Intrinsic::x86_tdpbsud_internal ||
-                            IntrID == Intrinsic::x86_tdpbusd_internal ||
-                            IntrID == Intrinsic::x86_tdpbuud_internal ||
-                            IntrID == Intrinsic::x86_tdpbf16ps_internal,
-                        Value *>::type
+std::enable_if_t<IntrID == Intrinsic::x86_tdpbssd_internal ||
+                     IntrID == Intrinsic::x86_tdpbsud_internal ||
+                     IntrID == Intrinsic::x86_tdpbusd_internal ||
+                     IntrID == Intrinsic::x86_tdpbuud_internal ||
+                     IntrID == Intrinsic::x86_tdpbf16ps_internal,
+                 Value *>
 X86LowerAMXIntrinsics::createTileDPLoops(BasicBlock *Start, BasicBlock *End,
                                          IRBuilderBase &B, Value *Row,
                                          Value *Col, Value *K, Value *Acc,
@@ -469,12 +469,12 @@ X86LowerAMXIntrinsics::createTileDPLoops(BasicBlock *Start, BasicBlock *End,
 }
 
 template <Intrinsic::ID IntrID>
-typename std::enable_if<IntrID == Intrinsic::x86_tdpbssd_internal ||
-                            IntrID == Intrinsic::x86_tdpbsud_internal ||
-                            IntrID == Intrinsic::x86_tdpbusd_internal ||
-                            IntrID == Intrinsic::x86_tdpbuud_internal ||
-                            IntrID == Intrinsic::x86_tdpbf16ps_internal,
-                        bool>::type
+std::enable_if_t<IntrID == Intrinsic::x86_tdpbssd_internal ||
+                     IntrID == Intrinsic::x86_tdpbsud_internal ||
+                     IntrID == Intrinsic::x86_tdpbusd_internal ||
+                     IntrID == Intrinsic::x86_tdpbuud_internal ||
+                     IntrID == Intrinsic::x86_tdpbf16ps_internal,
+                 bool>
 X86LowerAMXIntrinsics::lowerTileDP(Instruction *TileDP) {
   Value *M, *N, *K, *C, *A, *B;
   match(TileDP, m_Intrinsic<IntrID>(m_Value(M), m_Value(N), m_Value(K),

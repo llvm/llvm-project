@@ -36,11 +36,11 @@ using namespace lldb_private;
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread, lldb::StreamSP &stream_sp)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
-      m_enabled(false), m_stream_sp(stream_sp) {}
+      m_enabled(false), m_stream_sp(stream_sp), m_thread(nullptr) {}
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
-      m_enabled(false), m_stream_sp() {}
+      m_enabled(false), m_stream_sp(), m_thread(nullptr) {}
 
 Stream *ThreadPlanTracer::GetLogStream() {
   if (m_stream_sp)
@@ -170,13 +170,14 @@ void ThreadPlanAssemblyTracer::Log() {
       if (instruction_list.GetSize()) {
         const bool show_bytes = true;
         const bool show_address = true;
+        const bool show_control_flow_kind = true;
         Instruction *instruction =
             instruction_list.GetInstructionAtIndex(0).get();
         const FormatEntity::Entry *disassemble_format =
             m_process.GetTarget().GetDebugger().GetDisassemblyFormat();
         instruction->Dump(stream, max_opcode_byte_size, show_address,
-                          show_bytes, nullptr, nullptr, nullptr,
-                          disassemble_format, 0);
+                          show_bytes, show_control_flow_kind, nullptr, nullptr,
+                          nullptr, disassemble_format, 0);
       }
     }
   }

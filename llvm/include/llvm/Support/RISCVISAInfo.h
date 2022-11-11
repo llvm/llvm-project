@@ -60,6 +60,7 @@ public:
   unsigned getXLen() const { return XLen; };
   unsigned getFLen() const { return FLen; };
   unsigned getMinVLen() const { return MinVLen; }
+  unsigned getMaxVLen() const { return 65536; }
   unsigned getMaxELen() const { return MaxELen; }
   unsigned getMaxELenFp() const { return MaxELenFp; }
 

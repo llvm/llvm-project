@@ -151,15 +151,13 @@ class Arg<string type> {
 }
 
 // Gives the option an required argument.
-class EnumArg<string type, string enum> {
+class EnumArg<string type> {
   string ArgType = type;
-  string ArgEnum = enum;
 }
 
 // Gives the option an required argument.
-class OptionalEnumArg<string type, string enum> {
+class OptionalEnumArg<string type> {
   string ArgType = type;
-  string ArgEnum = enum;
   bit OptionalArg = 1;
 }
 

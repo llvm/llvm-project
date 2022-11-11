@@ -33,6 +33,10 @@ struct AllocateStmt;
 struct DeallocateStmt;
 } // namespace parser
 
+namespace semantics {
+class Symbol;
+} // namespace semantics
+
 namespace lower {
 struct SymbolBox;
 
@@ -47,6 +51,9 @@ void genAllocateStmt(AbstractConverter &converter,
 /// Lower a deallocate statement to fir.
 void genDeallocateStmt(AbstractConverter &converter,
                        const parser::DeallocateStmt &stmt, mlir::Location loc);
+
+void genDeallocateBox(AbstractConverter &converter,
+                      const fir::MutableBoxValue &box, mlir::Location loc);
 
 /// Create a MutableBoxValue for an allocatable or pointer entity.
 /// If the variables is a local variable that is not a dummy, it will be
@@ -71,6 +78,12 @@ bool isWholeAllocatable(const SomeExpr &expr);
 
 /// Is \p expr a reference to an entity with the POINTER attribute?
 bool isWholePointer(const SomeExpr &expr);
+
+/// Read the length from \p box for an assumed length character allocatable or
+/// pointer dummy argument given by \p sym.
+mlir::Value getAssumedCharAllocatableOrPointerLen(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, mlir::Value box);
 
 } // namespace lower
 } // namespace Fortran

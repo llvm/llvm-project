@@ -8,7 +8,7 @@
 ; RUN: llvm-mc -triple x86_64-windows-msvc -filetype=obj %S/Inputs/loadconfig-cfg-x64.s -o %t.ldcfg.obj
 
 ; RUN: llvm-as %s -o %t.bc
-; RUN: lld-link -entry:main -guard:cf -guard:longjmp -dll %t.bc %t.lib %t.ldcfg.obj -out:%t2.dll
+; RUN: lld-link -entry:main -guard:cf -dll %t.bc %t.lib %t.ldcfg.obj -out:%t2.dll
 ; RUN: llvm-readobj --coff-load-config %t2.dll | FileCheck %s
 
 ; There must be *two* entries in the table: DLL entry point, and my_handler.
@@ -16,7 +16,11 @@
 ; CHECK:      LoadConfig [
 ; CHECK:        GuardCFFunctionTable: 0x{{[^0].*}}
 ; CHECK-NEXT:   GuardCFFunctionCount: 2
-; CHECK-NEXT:   GuardFlags: 0x10500
+; CHECK-NEXT:   GuardFlags [ (0x10500)
+; CHECK-NEXT:     CF_FUNCTION_TABLE_PRESENT (0x400)
+; CHECK-NEXT:     CF_INSTRUMENTED (0x100)
+; CHECK-NEXT:     CF_LONGJUMP_TABLE_PRESENT (0x10000)
+; CHECK-NEXT:   ]
 ; CHECK:      ]
 ; CHECK:      GuardFidTable [
 ; CHECK-NEXT:   0x180{{.*}}

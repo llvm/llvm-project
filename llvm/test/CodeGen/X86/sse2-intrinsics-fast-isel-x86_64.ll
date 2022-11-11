@@ -79,7 +79,7 @@ define i64 @test_mm_cvttsd_si64(<2 x double> %a0) nounwind {
 }
 declare i64 @llvm.x86.sse2.cvttsd2si64(<2 x double>) nounwind readnone
 
-define <2 x i64> @test_mm_loadu_si64(i64* %a0) nounwind {
+define <2 x i64> @test_mm_loadu_si64(ptr %a0) nounwind {
 ; SSE-LABEL: test_mm_loadu_si64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -89,18 +89,18 @@ define <2 x i64> @test_mm_loadu_si64(i64* %a0) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
-  %ld = load i64, i64* %a0, align 1
+  %ld = load i64, ptr %a0, align 1
   %res0 = insertelement <2 x i64> undef, i64 %ld, i32 0
   %res1 = insertelement <2 x i64> %res0, i64 0, i32 1
   ret <2 x i64> %res1
 }
 
-define void @test_mm_stream_si64(i64 *%a0, i64 %a1) {
+define void @test_mm_stream_si64(ptr%a0, i64 %a1) {
 ; CHECK-LABEL: test_mm_stream_si64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movntiq %rsi, (%rdi)
 ; CHECK-NEXT:    retq
-  store i64 %a1, i64* %a0, align 1, !nontemporal !0
+  store i64 %a1, ptr %a0, align 1, !nontemporal !0
   ret void
 }
 

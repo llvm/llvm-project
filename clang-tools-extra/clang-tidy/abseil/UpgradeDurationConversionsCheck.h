@@ -21,7 +21,7 @@ namespace abseil {
 /// Finds deprecated uses of `absl::Duration` arithmetic operators and factories.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil-upgrade-duration-conversions.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/upgrade-duration-conversions.html
 class UpgradeDurationConversionsCheck : public ClangTidyCheck {
 public:
   UpgradeDurationConversionsCheck(StringRef Name, ClangTidyContext *Context)

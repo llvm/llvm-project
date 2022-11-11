@@ -189,13 +189,13 @@ define i64 @f17(i64 %a, i64 %b) {
 
 ; Test a combination involving an ASHR in which the sign bits matter.
 ; We can't use RNSBG for the ASHR in that case, but we can for the rest.
-define i32 @f18(i32 %a, i32 %b, i32 *%dest) {
+define i32 @f18(i32 %a, i32 %b, ptr %dest) {
 ; CHECK-LABEL: f18:
 ; CHECK: sra %r3, 4
 ; CHECK: rnsbg %r2, %r3, 32, 62, 1
 ; CHECK: br %r14
   %ashrb = ashr i32 %b, 4
-  store i32 %ashrb, i32 *%dest
+  store i32 %ashrb, ptr %dest
   %shlb = shl i32 %ashrb, 1
   %orb = or i32 %shlb, 1
   %and = and i32 %a, %orb
@@ -203,13 +203,13 @@ define i32 @f18(i32 %a, i32 %b, i32 *%dest) {
 }
 
 ; ...and again with i64.
-define i64 @f19(i64 %a, i64 %b, i64 *%dest) {
+define i64 @f19(i64 %a, i64 %b, ptr %dest) {
 ; CHECK-LABEL: f19:
 ; CHECK: srag [[REG:%r[0145]]], %r3, 34
 ; CHECK: rnsbg %r2, [[REG]], 0, 62, 1
 ; CHECK: br %r14
   %ashrb = ashr i64 %b, 34
-  store i64 %ashrb, i64 *%dest
+  store i64 %ashrb, ptr %dest
   %shlb = shl i64 %ashrb, 1
   %orb = or i64 %shlb, 1
   %and = and i64 %a, %orb
@@ -217,12 +217,12 @@ define i64 @f19(i64 %a, i64 %b, i64 *%dest) {
 }
 
 ; Test a combination involving an ASHR in which the sign bits don't matter.
-define i32 @f20(i32 %a, i32 %b, i32 *%dest) {
+define i32 @f20(i32 %a, i32 %b, ptr %dest) {
 ; CHECK-LABEL: f20:
 ; CHECK: rnsbg %r2, %r3, 48, 62, 48
 ; CHECK: br %r14
   %ashrb = ashr i32 %b, 17
-  store i32 %ashrb, i32 *%dest
+  store i32 %ashrb, ptr %dest
   %shlb = shl i32 %ashrb, 1
   %orb = or i32 %shlb, -65535
   %and = and i32 %a, %orb
@@ -230,12 +230,12 @@ define i32 @f20(i32 %a, i32 %b, i32 *%dest) {
 }
 
 ; ...and again with i64.
-define i64 @f21(i64 %a, i64 %b, i64 *%dest) {
+define i64 @f21(i64 %a, i64 %b, ptr %dest) {
 ; CHECK-LABEL: f21:
 ; CHECK: rnsbg %r2, %r3, 48, 62, 16
 ; CHECK: br %r14
   %ashrb = ashr i64 %b, 49
-  store i64 %ashrb, i64 *%dest
+  store i64 %ashrb, ptr %dest
   %shlb = shl i64 %ashrb, 1
   %orb = or i64 %shlb, -65535
   %and = and i64 %a, %orb

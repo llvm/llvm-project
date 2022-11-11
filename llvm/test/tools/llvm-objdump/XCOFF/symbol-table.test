@@ -66,7 +66,7 @@ entry:
 }
 
 ; SYM:      SYMBOL TABLE:
-; SYM-NEXT: 00000000      df *DEBUG*    00000000 .file
+; SYM-NEXT: 00000000      df *DEBUG*    00000000 <stdin>
 ; SYM-NEXT: 00000000         *UND*      00000000 ei
 ; SYM-NEXT: 00000000 l       .text      00000091 .text
 ; SYM-NEXT: 00000000 g     F .text (csect: .text)       00000000 .bar
@@ -88,7 +88,7 @@ entry:
 ; SYM-NEXT: 000000ec l     O *COM*      00000004 si
 
 ; SYM-DES:      SYMBOL TABLE:
-; SYM-DES-NEXT: 00000000      df *DEBUG*    00000000 (idx: 0) .file
+; SYM-DES-NEXT: 00000000      df *DEBUG*    00000000 (idx: 0) <stdin>
 ; SYM-DES-NEXT: 00000000         *UND*      00000000 (idx: 1) ei[UA]
 ; SYM-DES-NEXT: 00000000 l       .text      00000091 (idx: 3) .text[PR]
 ; SYM-DES-NEXT: 00000000 g     F .text (csect: (idx: 3) .text[PR])  00000000 (idx: 5) .bar

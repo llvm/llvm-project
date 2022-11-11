@@ -1014,6 +1014,8 @@ StringRef COFFObjectFile::getFileFormatName() const {
     return "COFF-ARM";
   case COFF::IMAGE_FILE_MACHINE_ARM64:
     return "COFF-ARM64";
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    return "COFF-ARM64EC";
   default:
     return "COFF-<unknown arch>";
   }
@@ -1028,6 +1030,7 @@ Triple::ArchType COFFObjectFile::getArch() const {
   case COFF::IMAGE_FILE_MACHINE_ARMNT:
     return Triple::thumb;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
     return Triple::aarch64;
   default:
     return Triple::UnknownArch;
@@ -1146,13 +1149,7 @@ uint32_t COFFObjectFile::getSymbolIndex(COFFSymbolRef Symbol) const {
 
 Expected<StringRef>
 COFFObjectFile::getSectionName(const coff_section *Sec) const {
-  StringRef Name;
-  if (Sec->Name[COFF::NameSize - 1] == 0)
-    // Null terminated, let ::strlen figure out the length.
-    Name = Sec->Name;
-  else
-    // Not null terminated, use all 8 bytes.
-    Name = StringRef(Sec->Name, COFF::NameSize);
+  StringRef Name = StringRef(Sec->Name, COFF::NameSize).split('\0').first;
 
   // Check for string table entry. First byte is '/'.
   if (Name.startswith("/")) {
@@ -1162,7 +1159,7 @@ COFFObjectFile::getSectionName(const coff_section *Sec) const {
         return createStringError(object_error::parse_failed,
                                  "invalid section name");
     } else {
-      if (Name.substr(1).consumeInteger(10, Offset))
+      if (Name.substr(1).getAsInteger(10, Offset))
         return createStringError(object_error::parse_failed,
                                  "invalid section name");
     }
@@ -1320,6 +1317,7 @@ StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
     }
     break;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
     switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32);
@@ -1902,6 +1900,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
       RVAReloc = COFF::IMAGE_REL_ARM_ADDR32NB;
       break;
     case COFF::IMAGE_FILE_MACHINE_ARM64:
+    case COFF::IMAGE_FILE_MACHINE_ARM64EC:
       RVAReloc = COFF::IMAGE_REL_ARM64_ADDR32NB;
       break;
     default:

@@ -39,11 +39,17 @@ public:
 
 /// Class for matching type names.
 class TypeMatcher {
+  /// Type name for exact match, or name of the python callback if m_match_type
+  /// is `eFormatterMatchCallback`.
+  ConstString m_name;
   RegularExpression m_type_name_regex;
-  ConstString m_type_name;
-  /// False if m_type_name_regex should be used for matching. False if this is
-  /// just matching by comparing with m_type_name string.
-  bool m_is_regex;
+  /// Indicates what kind of matching strategy should be used:
+  /// - eFormatterMatchExact: match the exact type name in m_name.
+  /// - eFormatterMatchRegex: match using the RegularExpression object
+  ///   `m_type_name_regex` instead.
+  /// - eFormatterMatchCallback: run the function in m_name to decide if a type
+  ///   matches or not.
+  lldb::FormatterMatchType m_match_type;
 
   // if the user tries to add formatters for, say, "struct Foo" those will not
   // match any type because of the way we strip qualifiers from typenames this
@@ -71,24 +77,52 @@ public:
   TypeMatcher() = delete;
   /// Creates a matcher that accepts any type with exactly the given type name.
   TypeMatcher(ConstString type_name)
-      : m_type_name(type_name), m_is_regex(false) {}
+      : m_name(type_name), m_match_type(lldb::eFormatterMatchExact) {}
   /// Creates a matcher that accepts any type matching the given regex.
   TypeMatcher(RegularExpression regex)
-      : m_type_name_regex(std::move(regex)), m_is_regex(true) {}
-
-  /// True iff this matches the given type name.
-  bool Matches(ConstString type_name) const {
-    if (m_is_regex)
-      return m_type_name_regex.Execute(type_name.GetStringRef());
-    return m_type_name == type_name ||
-           StripTypeName(m_type_name) == StripTypeName(type_name);
+      : m_type_name_regex(std::move(regex)),
+        m_match_type(lldb::eFormatterMatchRegex) {}
+  /// Creates a matcher using the matching type and string from the given type
+  /// name specifier.
+  TypeMatcher(lldb::TypeNameSpecifierImplSP type_specifier)
+      : m_name(type_specifier->GetName()),
+        m_match_type(type_specifier->GetMatchType()) {
+    if (m_match_type == lldb::eFormatterMatchRegex)
+      m_type_name_regex = RegularExpression(type_specifier->GetName());
   }
+
+  /// True iff this matches the given type.
+  bool Matches(FormattersMatchCandidate candidate_type) const {
+    ConstString type_name = candidate_type.GetTypeName();
+    switch (m_match_type) {
+    case lldb::eFormatterMatchExact:
+      return m_name == type_name ||
+             StripTypeName(m_name) == StripTypeName(type_name);
+    case lldb::eFormatterMatchRegex:
+      return m_type_name_regex.Execute(type_name.GetStringRef());
+    case lldb::eFormatterMatchCallback:
+      // CommandObjectType{Synth,Filter}Add tries to prevent the user from
+      // creating both a synthetic child provider and a filter for the same type
+      // in the same category, but we don't have a type object at that point, so
+      // it creates a dummy candidate without type or script interpreter.
+      // Skip callback matching in these cases.
+      if (candidate_type.GetScriptInterpreter())
+        return candidate_type.GetScriptInterpreter()->FormatterCallbackFunction(
+            m_name.AsCString(),
+            std::make_shared<TypeImpl>(candidate_type.GetType()));
+    }
+    return false;
+  }
+
+  lldb::FormatterMatchType GetMatchType() const { return m_match_type; }
 
   /// Returns the underlying match string for this TypeMatcher.
   ConstString GetMatchString() const {
-    if (m_is_regex)
-      return ConstString(m_type_name_regex.GetText());
-    return StripTypeName(m_type_name);
+    if (m_match_type == lldb::eFormatterMatchExact)
+        return StripTypeName(m_name);
+    if (m_match_type == lldb::eFormatterMatchRegex)
+        return ConstString(m_type_name_regex.GetText());
+    return m_name;
   }
 
   /// Returns true if this TypeMatcher and the given one were most created by
@@ -142,12 +176,29 @@ public:
     return false;
   }
 
-  bool Get(ConstString type, ValueSP &entry) {
+  // Finds the first formatter in the container that matches `candidate`.
+  bool Get(FormattersMatchCandidate candidate, ValueSP &entry) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     for (auto &formatter : llvm::reverse(m_map)) {
-      if (formatter.first.Matches(type)) {
+      if (formatter.first.Matches(candidate)) {
         entry = formatter.second;
         return true;
+      }
+    }
+    return false;
+  }
+
+  // Finds the first match between candidate types in `candidates` and
+  // formatters in this container.
+  bool Get(const FormattersMatchVector &candidates, ValueSP &entry) {
+    for (const FormattersMatchCandidate &candidate : candidates) {
+      if (Get(candidate, entry)) {
+        if (candidate.IsMatch(entry) == false) {
+          entry.reset();
+          continue;
+        } else {
+          return true;
+        }
       }
     }
     return false;
@@ -176,7 +227,8 @@ public:
       return lldb::TypeNameSpecifierImplSP();
     TypeMatcher type_matcher = m_map[index].first;
     return std::make_shared<TypeNameSpecifierImpl>(
-        type_matcher.GetMatchString().GetStringRef(), true);
+        type_matcher.GetMatchString().GetStringRef(),
+        type_matcher.GetMatchType());
   }
 
   void Clear() {
@@ -212,20 +264,6 @@ public:
 protected:
   FormattersContainer(const FormattersContainer &) = delete;
   const FormattersContainer &operator=(const FormattersContainer &) = delete;
-
-  bool Get(const FormattersMatchVector &candidates, ValueSP &entry) {
-    for (const FormattersMatchCandidate &candidate : candidates) {
-      if (Get(candidate.GetTypeName(), entry)) {
-        if (candidate.IsMatch(entry) == false) {
-          entry.reset();
-          continue;
-        } else {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
 
   MapType m_map;
   std::recursive_mutex m_map_mutex;

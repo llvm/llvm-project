@@ -7,19 +7,13 @@ entry:
   %v = alloca [8200 x i32], align 4
   %w = alloca [8200 x i32], align 4
   %q = alloca [8200 x i32], align 4
-  %0 = bitcast [8200 x i32]* %v to i8*
-  call void @llvm.lifetime.start.p0i8(i64 32800, i8* %0) #0
-  %1 = bitcast [8200 x i32]* %w to i8*
-  call void @llvm.lifetime.start.p0i8(i64 32800, i8* %1) #0
-  %2 = bitcast [8200 x i32]* %q to i8*
-  call void @llvm.lifetime.start.p0i8(i64 32800, i8* %2) #0
-  %arraydecay = getelementptr inbounds [8200 x i32], [8200 x i32]* %q, i64 0, i64 0
-  %arraydecay1 = getelementptr inbounds [8200 x i32], [8200 x i32]* %v, i64 0, i64 0
-  %arraydecay2 = getelementptr inbounds [8200 x i32], [8200 x i32]* %w, i64 0, i64 0
-  call void @bar(i32* %arraydecay, i32* %arraydecay1, i32* %arraydecay2) #0
-  %3 = load i32, i32* %arraydecay2, align 4
-  %arrayidx3 = getelementptr inbounds [8200 x i32], [8200 x i32]* %w, i64 0, i64 1
-  %4 = load i32, i32* %arrayidx3, align 4
+  call void @llvm.lifetime.start.p0(i64 32800, ptr %v) #0
+  call void @llvm.lifetime.start.p0(i64 32800, ptr %w) #0
+  call void @llvm.lifetime.start.p0(i64 32800, ptr %q) #0
+  call void @bar(ptr %q, ptr %v, ptr %w) #0
+  %0 = load i32, ptr %w, align 4
+  %arrayidx3 = getelementptr inbounds [8200 x i32], ptr %w, i64 0, i64 1
+  %1 = load i32, ptr %arrayidx3, align 4
 
 ; CHECK: @foo
 ; CHECK-NOT: lwzx
@@ -27,17 +21,17 @@ entry:
 ; CHECK: lwz {{[0-9]+}}, 4([[REG]])
 ; CHECK: blr
 
-  %add = add nsw i32 %4, %3
-  call void @llvm.lifetime.end.p0i8(i64 32800, i8* %2) #0
-  call void @llvm.lifetime.end.p0i8(i64 32800, i8* %1) #0
-  call void @llvm.lifetime.end.p0i8(i64 32800, i8* %0) #0
+  %add = add nsw i32 %1, %0
+  call void @llvm.lifetime.end.p0(i64 32800, ptr %q) #0
+  call void @llvm.lifetime.end.p0(i64 32800, ptr %w) #0
+  call void @llvm.lifetime.end.p0(i64 32800, ptr %v) #0
   ret i32 %add
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #0
 
-declare void @bar(i32*, i32*, i32*)
+declare void @bar(ptr, ptr, ptr)
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #0
 
 attributes #0 = { nounwind }

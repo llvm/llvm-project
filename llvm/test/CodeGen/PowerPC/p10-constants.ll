@@ -361,7 +361,7 @@ while.body.i:                                     ; preds = %sw.epilog.i, %while
   %b.1.i = phi i32 [ %b.2.i, %sw.epilog.i ], [ 0, %while.body ]
   %c.1.i = phi i32 [ %c.2.i, %sw.epilog.i ], [ 291, %while.body ]
   %d.1.i = phi i32 [ %d.2.i, %sw.epilog.i ], [ 1179648, %while.body ]
-  %0 = load i8, i8* null, align 1
+  %0 = load i8, ptr null, align 1
   %cmp1.i = icmp eq i8 %0, 1
   br i1 %cmp1.i, label %if.then.i, label %if.else.i
 

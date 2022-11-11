@@ -114,10 +114,10 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ;
 ; X86-LABEL: func3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shlb $4, %al
 ; X86-NEXT:    sarb $4, %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shlb $4, %cl
 ; X86-NEXT:    sarb $4, %cl
 ; X86-NEXT:    movsbl %cl, %ecx
@@ -231,8 +231,8 @@ define i64 @func5(i64 %x, i64 %y) {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %esi
 ; X86-NEXT:    imull {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    imull {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    addl %ecx, %esi
 ; X86-NEXT:    addl %esi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
@@ -255,10 +255,10 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 ;
 ; X86-LABEL: func6:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shlb $4, %al
 ; X86-NEXT:    sarb $4, %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shlb $4, %cl
 ; X86-NEXT:    sarb $4, %cl
 ; X86-NEXT:    mulb %cl

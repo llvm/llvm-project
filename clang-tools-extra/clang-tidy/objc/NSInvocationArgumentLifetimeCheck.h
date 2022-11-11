@@ -20,7 +20,7 @@ namespace objc {
 /// argument object lifetimes.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc-nsinvocation-argument-lifetime.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/objc/nsinvocation-argument-lifetime.html
 class NSInvocationArgumentLifetimeCheck : public ClangTidyCheck {
 public:
   NSInvocationArgumentLifetimeCheck(StringRef Name, ClangTidyContext *Context)

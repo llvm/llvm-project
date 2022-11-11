@@ -131,6 +131,10 @@ def SDT_X86AESENCDECKL : SDTypeProfile<2, 2, [SDTCisVT<0, v2i64>,
                                               SDTCisVT<2, v2i64>,
                                               SDTCisPtrTy<3>]>;
 
+def SDTX86Cmpccxadd : SDTypeProfile<1, 4, [SDTCisSameAs<0, 2>,
+                                           SDTCisPtrTy<1>, SDTCisSameAs<2, 3>,
+                                           SDTCisVT<4, i8>]>;
+
 def X86MemBarrier : SDNode<"X86ISD::MEMBARRIER", SDT_X86MEMBARRIER,
                             [SDNPHasChain,SDNPSideEffect]>;
 def X86MFence : SDNode<"X86ISD::MFENCE", SDT_X86MEMBARRIER,
@@ -341,6 +345,10 @@ def X86aesdec256kl : SDNode<"X86ISD::AESDEC256KL", SDT_X86AESENCDECKL,
                             [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
                              SDNPMemOperand]>;
 
+def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
+                          [SDNPHasChain, SDNPMayLoad, SDNPMayStore,
+                           SDNPMemOperand]>;
+
 //===----------------------------------------------------------------------===//
 // X86 Operand Definitions.
 //
@@ -388,17 +396,19 @@ def X86AbsMemAsmOperand : AsmOperandClass {
 }
 
 class X86MemOperand<string printMethod,
-          AsmOperandClass parserMatchClass = X86MemAsmOperand> : Operand<iPTR> {
+                    AsmOperandClass parserMatchClass = X86MemAsmOperand,
+                    int size = 0> : Operand<iPTR> {
   let PrintMethod = printMethod;
   let MIOperandInfo = (ops ptr_rc, i8imm, ptr_rc_nosp, i32imm, SEGMENT_REG);
   let ParserMatchClass = parserMatchClass;
   let OperandType = "OPERAND_MEMORY";
+  int Size = size;
 }
 
 // Gather mem operands
 class X86VMemOperand<RegisterClass RC, string printMethod,
-                     AsmOperandClass parserMatchClass>
-    : X86MemOperand<printMethod, parserMatchClass> {
+                     AsmOperandClass parserMatchClass, int size = 0>
+    : X86MemOperand<printMethod, parserMatchClass, size> {
   let MIOperandInfo = (ops ptr_rc, i8imm, RC, i32imm, SEGMENT_REG);
 }
 
@@ -413,48 +423,45 @@ def opaquemem : X86MemOperand<"printMemReference">;
 
 def sibmem: X86MemOperand<"printMemReference", X86SibMemOperand>;
 
-def i8mem   : X86MemOperand<"printbytemem",   X86Mem8AsmOperand>;
-def i16mem  : X86MemOperand<"printwordmem",  X86Mem16AsmOperand>;
-def i32mem  : X86MemOperand<"printdwordmem",  X86Mem32AsmOperand>;
-def i64mem  : X86MemOperand<"printqwordmem",  X86Mem64AsmOperand>;
-def i128mem : X86MemOperand<"printxmmwordmem", X86Mem128AsmOperand>;
-def i256mem : X86MemOperand<"printymmwordmem", X86Mem256AsmOperand>;
-def i512mem : X86MemOperand<"printzmmwordmem", X86Mem512AsmOperand>;
-def f16mem  : X86MemOperand<"printwordmem",   X86Mem16AsmOperand>;
-def f32mem  : X86MemOperand<"printdwordmem",  X86Mem32AsmOperand>;
-def f64mem  : X86MemOperand<"printqwordmem",  X86Mem64AsmOperand>;
-def f80mem  : X86MemOperand<"printtbytemem",  X86Mem80AsmOperand>;
-def f128mem : X86MemOperand<"printxmmwordmem", X86Mem128AsmOperand>;
-def f256mem : X86MemOperand<"printymmwordmem", X86Mem256AsmOperand>;
-def f512mem : X86MemOperand<"printzmmwordmem", X86Mem512AsmOperand>;
+def i8mem   : X86MemOperand<"printbytemem",   X86Mem8AsmOperand, 8>;
+def i16mem  : X86MemOperand<"printwordmem",  X86Mem16AsmOperand, 16>;
+def i32mem  : X86MemOperand<"printdwordmem",  X86Mem32AsmOperand, 32>;
+def i64mem  : X86MemOperand<"printqwordmem",  X86Mem64AsmOperand, 64>;
+def i128mem : X86MemOperand<"printxmmwordmem", X86Mem128AsmOperand, 128>;
+def i256mem : X86MemOperand<"printymmwordmem", X86Mem256AsmOperand, 256>;
+def i512mem : X86MemOperand<"printzmmwordmem", X86Mem512AsmOperand, 512>;
+def f16mem  : X86MemOperand<"printwordmem",   X86Mem16AsmOperand, 16>;
+def f32mem  : X86MemOperand<"printdwordmem",  X86Mem32AsmOperand, 32>;
+def f64mem  : X86MemOperand<"printqwordmem",  X86Mem64AsmOperand, 64>;
+def f80mem  : X86MemOperand<"printtbytemem",  X86Mem80AsmOperand, 80>;
+def f128mem : X86MemOperand<"printxmmwordmem", X86Mem128AsmOperand, 128>;
+def f256mem : X86MemOperand<"printymmwordmem", X86Mem256AsmOperand, 256>;
+def f512mem : X86MemOperand<"printzmmwordmem", X86Mem512AsmOperand, 512>;
 
 // Gather mem operands
-def vx64mem  : X86VMemOperand<VR128,  "printqwordmem",  X86Mem64_RC128Operand>;
-def vx128mem : X86VMemOperand<VR128,  "printxmmwordmem", X86Mem128_RC128Operand>;
-def vx256mem : X86VMemOperand<VR128,  "printymmwordmem", X86Mem256_RC128Operand>;
-def vy128mem : X86VMemOperand<VR256,  "printxmmwordmem", X86Mem128_RC256Operand>;
-def vy256mem : X86VMemOperand<VR256,  "printymmwordmem", X86Mem256_RC256Operand>;
+def vx64mem  : X86VMemOperand<VR128,  "printqwordmem",  X86Mem64_RC128Operand, 64>;
+def vx128mem : X86VMemOperand<VR128,  "printxmmwordmem", X86Mem128_RC128Operand, 128>;
+def vx256mem : X86VMemOperand<VR128,  "printymmwordmem", X86Mem256_RC128Operand, 256>;
+def vy128mem : X86VMemOperand<VR256,  "printxmmwordmem", X86Mem128_RC256Operand, 128>;
+def vy256mem : X86VMemOperand<VR256,  "printymmwordmem", X86Mem256_RC256Operand, 256>;
 
-def vx64xmem  : X86VMemOperand<VR128X, "printqwordmem",  X86Mem64_RC128XOperand>;
-def vx128xmem : X86VMemOperand<VR128X, "printxmmwordmem", X86Mem128_RC128XOperand>;
-def vx256xmem : X86VMemOperand<VR128X, "printymmwordmem", X86Mem256_RC128XOperand>;
-def vy128xmem : X86VMemOperand<VR256X, "printxmmwordmem", X86Mem128_RC256XOperand>;
-def vy256xmem : X86VMemOperand<VR256X, "printymmwordmem", X86Mem256_RC256XOperand>;
-def vy512xmem : X86VMemOperand<VR256X, "printzmmwordmem", X86Mem512_RC256XOperand>;
-def vz256mem  : X86VMemOperand<VR512,  "printymmwordmem", X86Mem256_RC512Operand>;
-def vz512mem  : X86VMemOperand<VR512,  "printzmmwordmem", X86Mem512_RC512Operand>;
+def vx64xmem  : X86VMemOperand<VR128X, "printqwordmem",  X86Mem64_RC128XOperand, 64>;
+def vx128xmem : X86VMemOperand<VR128X, "printxmmwordmem", X86Mem128_RC128XOperand, 128>;
+def vx256xmem : X86VMemOperand<VR128X, "printymmwordmem", X86Mem256_RC128XOperand, 256>;
+def vy128xmem : X86VMemOperand<VR256X, "printxmmwordmem", X86Mem128_RC256XOperand, 128>;
+def vy256xmem : X86VMemOperand<VR256X, "printymmwordmem", X86Mem256_RC256XOperand, 256>;
+def vy512xmem : X86VMemOperand<VR256X, "printzmmwordmem", X86Mem512_RC256XOperand, 512>;
+def vz256mem  : X86VMemOperand<VR512,  "printymmwordmem", X86Mem256_RC512Operand, 256>;
+def vz512mem  : X86VMemOperand<VR512,  "printzmmwordmem", X86Mem512_RC512Operand, 512>;
 
 // A version of i8mem for use on x86-64 and x32 that uses a NOREX GPR instead
 // of a plain GPR, so that it doesn't potentially require a REX prefix.
 def ptr_rc_norex : PointerLikeRegClass<2>;
 def ptr_rc_norex_nosp : PointerLikeRegClass<3>;
 
-def i8mem_NOREX : Operand<iPTR> {
-  let PrintMethod = "printbytemem";
+def i8mem_NOREX : X86MemOperand<"printbytemem", X86Mem8AsmOperand, 8> {
   let MIOperandInfo = (ops ptr_rc_norex, i8imm, ptr_rc_norex_nosp, i32imm,
                        SEGMENT_REG);
-  let ParserMatchClass = X86Mem8AsmOperand;
-  let OperandType = "OPERAND_MEMORY";
 }
 
 // GPRs available for tailcall.
@@ -464,23 +471,17 @@ def ptr_rc_tailcall : PointerLikeRegClass<4>;
 // Special i32mem for addresses of load folding tail calls. These are not
 // allowed to use callee-saved registers since they must be scheduled
 // after callee-saved register are popped.
-def i32mem_TC : Operand<i32> {
-  let PrintMethod = "printdwordmem";
+def i32mem_TC : X86MemOperand<"printdwordmem", X86Mem32AsmOperand, 32> {
   let MIOperandInfo = (ops ptr_rc_tailcall, i8imm, ptr_rc_tailcall,
                        i32imm, SEGMENT_REG);
-  let ParserMatchClass = X86Mem32AsmOperand;
-  let OperandType = "OPERAND_MEMORY";
 }
 
 // Special i64mem for addresses of load folding tail calls. These are not
 // allowed to use callee-saved registers since they must be scheduled
 // after callee-saved register are popped.
-def i64mem_TC : Operand<i64> {
-  let PrintMethod = "printqwordmem";
+def i64mem_TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
   let MIOperandInfo = (ops ptr_rc_tailcall, i8imm,
                        ptr_rc_tailcall, i32imm, SEGMENT_REG);
-  let ParserMatchClass = X86Mem64AsmOperand;
-  let OperandType = "OPERAND_MEMORY";
 }
 
 // Special parser to detect 16-bit mode to select 16-bit displacement.
@@ -920,6 +921,7 @@ def HasVNNI    : Predicate<"Subtarget->hasVNNI()">;
 def HasVP2INTERSECT : Predicate<"Subtarget->hasVP2INTERSECT()">;
 def HasBF16      : Predicate<"Subtarget->hasBF16()">;
 def HasFP16      : Predicate<"Subtarget->hasFP16()">;
+def HasAVXVNNIINT8 : Predicate<"Subtarget->hasAVXVNNIINT8()">;
 def HasAVXVNNI : Predicate <"Subtarget->hasAVXVNNI()">;
 def NoVLX_Or_NoVNNI : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasVNNI()">;
 
@@ -956,6 +958,8 @@ def NoBMI2       : Predicate<"!Subtarget->hasBMI2()">;
 def HasVBMI      : Predicate<"Subtarget->hasVBMI()">;
 def HasVBMI2     : Predicate<"Subtarget->hasVBMI2()">;
 def HasIFMA      : Predicate<"Subtarget->hasIFMA()">;
+def HasAVXIFMA   : Predicate<"Subtarget->hasAVXIFMA()">;
+def NoVLX_Or_NoIFMA : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasIFMA()">;
 def HasRTM       : Predicate<"Subtarget->hasRTM()">;
 def HasADX       : Predicate<"Subtarget->hasADX()">;
 def HasSHA       : Predicate<"Subtarget->hasSHA()">;
@@ -963,6 +967,7 @@ def HasSGX       : Predicate<"Subtarget->hasSGX()">;
 def HasRDSEED    : Predicate<"Subtarget->hasRDSEED()">;
 def HasSSEPrefetch : Predicate<"Subtarget->hasSSEPrefetch()">;
 def NoSSEPrefetch : Predicate<"!Subtarget->hasSSEPrefetch()">;
+def HasPREFETCHI : Predicate<"Subtarget->hasPREFETCHI()">;
 def HasPrefetchW : Predicate<"Subtarget->hasPrefetchW()">;
 def HasPREFETCHWT1 : Predicate<"Subtarget->hasPREFETCHWT1()">;
 def HasLAHFSAHF  : Predicate<"Subtarget->hasLAHFSAHF()">;
@@ -979,13 +984,18 @@ def HasCLFLUSHOPT : Predicate<"Subtarget->hasCLFLUSHOPT()">;
 def HasCLWB      : Predicate<"Subtarget->hasCLWB()">;
 def HasWBNOINVD  : Predicate<"Subtarget->hasWBNOINVD()">;
 def HasRDPID     : Predicate<"Subtarget->hasRDPID()">;
+def HasRDPRU     : Predicate<"Subtarget->hasRDPRU()">;
 def HasWAITPKG   : Predicate<"Subtarget->hasWAITPKG()">;
 def HasINVPCID   : Predicate<"Subtarget->hasINVPCID()">;
 def HasCX8       : Predicate<"Subtarget->hasCX8()">;
 def HasCX16      : Predicate<"Subtarget->hasCX16()">;
 def HasPCONFIG   : Predicate<"Subtarget->hasPCONFIG()">;
 def HasENQCMD    : Predicate<"Subtarget->hasENQCMD()">;
+def HasAMXFP16   : Predicate<"Subtarget->hasAMXFP16()">;
+def HasCMPCCXADD : Predicate<"Subtarget->hasCMPCCXADD()">;
+def HasAVXNECONVERT : Predicate<"Subtarget->hasAVXNECONVERT()">;
 def HasKL        : Predicate<"Subtarget->hasKL()">;
+def HasRAOINT    : Predicate<"Subtarget->hasRAOINT()">;
 def HasWIDEKL    : Predicate<"Subtarget->hasWIDEKL()">;
 def HasHRESET    : Predicate<"Subtarget->hasHRESET()">;
 def HasSERIALIZE : Predicate<"Subtarget->hasSERIALIZE()">;
@@ -1013,8 +1023,8 @@ def NotWin64WithoutFP : Predicate<"!Subtarget->isTargetWin64() ||"
                                   "Subtarget->getFrameLowering()->hasFP(*MF)"> {
   let RecomputePerFunction = 1;
 }
-def IsPS4        : Predicate<"Subtarget->isTargetPS4()">;
-def NotPS4       : Predicate<"!Subtarget->isTargetPS4()">;
+def IsPS         : Predicate<"Subtarget->isTargetPS()">;
+def NotPS        : Predicate<"!Subtarget->isTargetPS()">;
 def IsNaCl       : Predicate<"Subtarget->isTargetNaCl()">;
 def NotNaCl      : Predicate<"!Subtarget->isTargetNaCl()">;
 def SmallCode    : Predicate<"TM.getCodeModel() == CodeModel::Small">;
@@ -3005,6 +3015,67 @@ let Predicates = [HasUINTR, In64BitMode], SchedRW = [WriteSystem] in {
 }
 
 //===----------------------------------------------------------------------===//
+// PREFETCHIT0 and PREFETCHIT1 Instructions
+// prefetch ADDR, RW, Locality, Data
+let Predicates = [HasPREFETCHI, In64BitMode], SchedRW = [WriteLoad] in {
+  def PREFETCHIT0 : I<0x18, MRM7m, (outs), (ins i8mem:$src),
+    "prefetchit0\t$src", [(prefetch addr:$src, (i32 0), (i32 3), (i32 0))]>, TB;
+  def PREFETCHIT1 : I<0x18, MRM6m, (outs), (ins i8mem:$src),
+    "prefetchit1\t$src", [(prefetch addr:$src, (i32 0), (i32 2), (i32 0))]>, TB;
+}
+
+//===----------------------------------------------------------------------===//
+// CMPCCXADD Instructions
+//
+let isCodeGenOnly = 1, ForceDisassemble = 1, mayLoad = 1, mayStore = 1,
+    Predicates = [HasCMPCCXADD, In64BitMode], Defs = [EFLAGS],
+    Constraints = "$dstsrc1 = $dst" in {
+def CMPCCXADDmr32 : I<0xe0, MRMDestMem4VOp3CC, (outs GR32:$dst),
+          (ins GR32:$dstsrc1, i32mem:$dstsrc2, GR32:$src3, ccode:$cond),
+          "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+          [(set GR32:$dst, (X86cmpccxadd addr:$dstsrc2,
+            GR32:$dstsrc1, GR32:$src3, timm:$cond))]>,
+          VEX_4V, T8PD, Sched<[WriteXCHG]>;
+
+def CMPCCXADDmr64 : I<0xe0, MRMDestMem4VOp3CC, (outs GR64:$dst),
+          (ins GR64:$dstsrc1, i64mem:$dstsrc2, GR64:$src3, ccode:$cond),
+          "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+          [(set GR64:$dst, (X86cmpccxadd addr:$dstsrc2,
+            GR64:$dstsrc1, GR64:$src3, timm:$cond))]>,
+          VEX_4V, VEX_W, T8PD, Sched<[WriteXCHG]>;
+}
+
+multiclass CMPCCXADD_Aliases<string Cond, int CC> {
+  def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+                  (CMPCCXADDmr32 GR32:$dst, i32mem:$dstsrc2, GR32:$src3, CC), 0>;
+  def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+                  (CMPCCXADDmr64 GR64:$dst, i64mem:$dstsrc2, GR64:$src3, CC), 0>;
+}
+
+defm : CMPCCXADD_Aliases<"o" ,  0>;
+defm : CMPCCXADD_Aliases<"no",  1>;
+defm : CMPCCXADD_Aliases<"b" ,  2>;
+defm : CMPCCXADD_Aliases<"ae",  3>;
+defm : CMPCCXADD_Aliases<"nb",  3>;
+defm : CMPCCXADD_Aliases<"e" ,  4>;
+defm : CMPCCXADD_Aliases<"z" ,  4>;
+defm : CMPCCXADD_Aliases<"ne",  5>;
+defm : CMPCCXADD_Aliases<"nz",  5>;
+defm : CMPCCXADD_Aliases<"be",  6>;
+defm : CMPCCXADD_Aliases<"nbe", 7>;
+defm : CMPCCXADD_Aliases<"a",   7>;
+defm : CMPCCXADD_Aliases<"s" ,  8>;
+defm : CMPCCXADD_Aliases<"ns",  9>;
+defm : CMPCCXADD_Aliases<"p" , 10>;
+defm : CMPCCXADD_Aliases<"np", 11>;
+defm : CMPCCXADD_Aliases<"l" , 12>;
+defm : CMPCCXADD_Aliases<"ge", 13>;
+defm : CMPCCXADD_Aliases<"nl", 13>;
+defm : CMPCCXADD_Aliases<"le", 14>;
+defm : CMPCCXADD_Aliases<"g",  15>;
+defm : CMPCCXADD_Aliases<"nle",15>;
+
+//===----------------------------------------------------------------------===//
 // Pattern fragments to auto generate TBM instructions.
 //===----------------------------------------------------------------------===//
 
@@ -3172,6 +3243,9 @@ include "X86InstrKL.td"
 
 // AMX instructions
 include "X86InstrAMX.td"
+
+// RAO-INT instructions
+include "X86InstrRAOINT.td"
 
 // System instructions.
 include "X86InstrSystem.td"

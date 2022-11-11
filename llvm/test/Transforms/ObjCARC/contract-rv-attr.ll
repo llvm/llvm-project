@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc-contract -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc-contract -S < %s | FileCheck %s
 ; RUN: opt -passes=objc-arc-contract -S < %s | FileCheck %s
 
 ; CHECK-LABEL: define void @test0() {

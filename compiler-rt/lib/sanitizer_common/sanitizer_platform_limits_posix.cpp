@@ -73,7 +73,9 @@
 #include <sys/vt.h>
 #include <linux/cdrom.h>
 #include <linux/fd.h>
+#if SANITIZER_ANDROID
 #include <linux/fs.h>
+#endif
 #include <linux/hdreg.h>
 #include <linux/input.h>
 #include <linux/ioctl.h>
@@ -181,9 +183,9 @@ typedef struct user_fpregs elf_fpregset_t;
 namespace __sanitizer {
   unsigned struct_utsname_sz = sizeof(struct utsname);
   unsigned struct_stat_sz = sizeof(struct stat);
-#if !SANITIZER_IOS && !(SANITIZER_APPLE && TARGET_CPU_ARM64)
+#if SANITIZER_HAS_STAT64
   unsigned struct_stat64_sz = sizeof(struct stat64);
-#endif // !SANITIZER_IOS && !(SANITIZER_APPLE && TARGET_CPU_ARM64)
+#endif // SANITIZER_HAS_STAT64
   unsigned struct_rusage_sz = sizeof(struct rusage);
   unsigned struct_tm_sz = sizeof(struct tm);
   unsigned struct_passwd_sz = sizeof(struct passwd);
@@ -208,9 +210,9 @@ namespace __sanitizer {
   unsigned struct_regex_sz = sizeof(regex_t);
   unsigned struct_regmatch_sz = sizeof(regmatch_t);
 
-#if (SANITIZER_APPLE && !TARGET_CPU_ARM64) && !SANITIZER_IOS
+#if SANITIZER_HAS_STATFS64
   unsigned struct_statfs64_sz = sizeof(struct statfs64);
-#endif // (SANITIZER_APPLE && !TARGET_CPU_ARM64) && !SANITIZER_IOS
+#endif // SANITIZER_HAS_STATFS64
 
 #if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE
   unsigned struct_fstab_sz = sizeof(struct fstab);
@@ -269,6 +271,10 @@ namespace __sanitizer {
         defined(__powerpc__) || defined(__s390__) || defined(__sparc__) || \
         defined(__hexagon__)
 #      define SIZEOF_STRUCT_USTAT 20
+#    elif defined(__loongarch__)
+  // Not used. The minimum Glibc version available for LoongArch is 2.36
+  // so ustat() wrapper is already gone.
+#      define SIZEOF_STRUCT_USTAT 0
 #    else
 #      error Unknown size of struct ustat
 #    endif
@@ -876,10 +882,10 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_EVIOCGPROP = IOCTL_NOT_PRESENT;
   unsigned IOCTL_EVIOCSKEYCODE_V2 = IOCTL_NOT_PRESENT;
 #endif
-  unsigned IOCTL_FS_IOC_GETFLAGS = FS_IOC_GETFLAGS;
-  unsigned IOCTL_FS_IOC_GETVERSION = FS_IOC_GETVERSION;
-  unsigned IOCTL_FS_IOC_SETFLAGS = FS_IOC_SETFLAGS;
-  unsigned IOCTL_FS_IOC_SETVERSION = FS_IOC_SETVERSION;
+  unsigned IOCTL_FS_IOC_GETFLAGS = _IOR('f', 1, long);
+  unsigned IOCTL_FS_IOC_GETVERSION = _IOR('v', 1, long);
+  unsigned IOCTL_FS_IOC_SETFLAGS = _IOW('f', 2, long);
+  unsigned IOCTL_FS_IOC_SETVERSION = _IOW('v', 2, long);
   unsigned IOCTL_GIO_CMAP = GIO_CMAP;
   unsigned IOCTL_GIO_FONT = GIO_FONT;
   unsigned IOCTL_GIO_UNIMAP = GIO_UNIMAP;
@@ -1269,7 +1275,7 @@ CHECK_SIZE_AND_OFFSET(group, gr_passwd);
 CHECK_SIZE_AND_OFFSET(group, gr_gid);
 CHECK_SIZE_AND_OFFSET(group, gr_mem);
 
-#if HAVE_RPC_XDR_H
+#if HAVE_RPC_XDR_H && !SANITIZER_APPLE
 CHECK_TYPE_SIZE(XDR);
 CHECK_SIZE_AND_OFFSET(XDR, x_op);
 CHECK_SIZE_AND_OFFSET(XDR, x_ops);

@@ -6,15 +6,12 @@ and eStopReasonPlanComplete when breakpoint's condition fails.
 """
 
 
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class StepOverBreakpointsTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)
@@ -91,17 +88,17 @@ class StepOverBreakpointsTestCase(TestBase):
         self.thread.StepOver()
         # We should be stopped at the breakpoint_2 line with stop plan complete reason
         self.assertState(self.process.GetState(), lldb.eStateStopped)
-        self.assertEquals(self.thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(self.thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         self.thread.StepOver()
         # We should be stopped at the breakpoint_3 line with stop plan complete reason
         self.assertState(self.process.GetState(), lldb.eStateStopped)
-        self.assertEquals(self.thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(self.thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         self.thread.StepOver()
         # We should be stopped at the breakpoint_4
         self.assertState(self.process.GetState(), lldb.eStateStopped)
-        self.assertEquals(self.thread.GetStopReason(), lldb.eStopReasonBreakpoint)
+        self.assertStopReason(self.thread.GetStopReason(), lldb.eStopReasonBreakpoint)
         thread1 = lldbutil.get_one_thread_stopped_at_breakpoint(self.process, self.breakpoint4)
         self.assertEquals(self.thread, thread1, "Didn't stop at breakpoint 4.")
 

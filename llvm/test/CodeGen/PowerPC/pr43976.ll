@@ -45,7 +45,7 @@ define dso_local signext i32 @b() local_unnamed_addr #0 {
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load double, double* @a, align 8
+  %0 = load double, ptr @a, align 8
   %conv = fptoui double %0 to i64
   %conv1 = sitofp i64 %conv to double
   %mul = fmul double %conv1, 1.000000e+06

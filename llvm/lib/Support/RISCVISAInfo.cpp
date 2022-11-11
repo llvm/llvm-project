@@ -77,6 +77,8 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zkt", RISCVExtensionVersion{1, 0}},
     {"zk", RISCVExtensionVersion{1, 0}},
 
+    {"zmmul", RISCVExtensionVersion{1, 0}},
+
     {"v", RISCVExtensionVersion{1, 0}},
     {"zvl32b", RISCVExtensionVersion{1, 0}},
     {"zvl64b", RISCVExtensionVersion{1, 0}},
@@ -95,16 +97,22 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zve64x", RISCVExtensionVersion{1, 0}},
     {"zve64f", RISCVExtensionVersion{1, 0}},
     {"zve64d", RISCVExtensionVersion{1, 0}},
+
+    {"zicbom", RISCVExtensionVersion{1, 0}},
+    {"zicboz", RISCVExtensionVersion{1, 0}},
+    {"zicbop", RISCVExtensionVersion{1, 0}},
+
+    {"svnapot", RISCVExtensionVersion{1, 0}},
+    {"svinval", RISCVExtensionVersion{1, 0}},
 };
 
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
-    {"zbe", RISCVExtensionVersion{0, 93}},
-    {"zbf", RISCVExtensionVersion{0, 93}},
-    {"zbm", RISCVExtensionVersion{0, 93}},
-    {"zbp", RISCVExtensionVersion{0, 93}},
-    {"zbr", RISCVExtensionVersion{0, 93}},
-    {"zbt", RISCVExtensionVersion{0, 93}},
+    {"zihintntl", RISCVExtensionVersion{0, 2}},
+
+    {"zca", RISCVExtensionVersion{0, 70}},
     {"zvfh", RISCVExtensionVersion{0, 1}},
+    {"zawrs", RISCVExtensionVersion{1, 0}},
+    {"ztso", RISCVExtensionVersion{0, 1}},
 };
 
 static bool stripExperimentalPrefix(StringRef &Ext) {
@@ -112,7 +120,7 @@ static bool stripExperimentalPrefix(StringRef &Ext) {
 }
 
 // This function finds the first character that doesn't belong to a version
-// (e.g. zbe0p93 is extension 'zbe' of version '0p93'). So the function will
+// (e.g. zba1p0 is extension 'zba' of version '1p0'). So the function will
 // consume [0-9]*p[0-9]* starting from the backward. An extension name will not
 // end with a digit or the letter 'p', so this function will parse correctly.
 // NOTE: This function is NOT able to take empty strings or strings that only
@@ -348,7 +356,7 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
 
   if (!MajorStr.empty() && In.consume_front("p")) {
     MinorStr = In.take_while(isDigit);
-    In = In.substr(MajorStr.size() + 1);
+    In = In.substr(MajorStr.size() + MinorStr.size() - 1);
 
     // Expected 'p' to be followed by minor version number.
     if (MinorStr.empty()) {
@@ -541,7 +549,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     // No matter which version is given to `g`, we always set imafd to default
     // version since the we don't have clear version scheme for that on
     // ISA spec.
-    for (auto Ext : {"i", "m", "a", "f", "d"})
+    for (const auto *Ext : {"i", "m", "a", "f", "d"})
       if (auto Version = findDefaultVersion(Ext))
         ISAInfo->addExtension(Ext, Version->Major, Version->Minor);
       else
@@ -594,8 +602,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     // The order is OK, then push it into features.
     // TODO: Use version number when setting target features
-    // Currently LLVM supports only "mafdcbv".
-    StringRef SupportedStandardExtension = "mafdcbv";
+    // Currently LLVM supports only "mafdcv".
+    StringRef SupportedStandardExtension = "mafdcv";
     if (!SupportedStandardExtension.contains(C))
       return createStringError(errc::invalid_argument,
                                "unsupported standard user-level extension '%c'",

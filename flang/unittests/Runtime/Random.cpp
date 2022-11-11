@@ -47,17 +47,17 @@ TEST(RandomNumber, RandomSeed) {
   Descriptor &desc{statDesc[0].descriptor()};
   std::int32_t n;
   desc.Establish(TypeCategory::Integer, 4, &n, 0, nullptr);
-  RTNAME(RandomSeedSize)(desc, __FILE__, __LINE__);
+  RTNAME(RandomSeedSize)(&desc, __FILE__, __LINE__);
   EXPECT_EQ(n, 1);
   SubscriptValue extent[1]{1};
   desc.Establish(TypeCategory::Integer, 4, &n, 1, extent);
-  RTNAME(RandomSeedGet)(desc, __FILE__, __LINE__);
+  RTNAME(RandomSeedGet)(&desc, __FILE__, __LINE__);
   Descriptor &harvest{statDesc[1].descriptor()};
   float x;
   harvest.Establish(TypeCategory::Real, 4, &x, 1, extent);
   RTNAME(RandomNumber)(harvest, __FILE__, __LINE__);
   float got{x};
-  RTNAME(RandomSeedPut)(desc, __FILE__, __LINE__); // n from RandomSeedGet()
+  RTNAME(RandomSeedPut)(&desc, __FILE__, __LINE__); // n from RandomSeedGet()
   RTNAME(RandomNumber)(harvest, __FILE__, __LINE__);
   EXPECT_EQ(x, got);
 }

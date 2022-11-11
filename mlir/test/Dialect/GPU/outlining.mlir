@@ -286,7 +286,7 @@ func.func @recursive_device_function() {
 // CHECK:     llvm.mlir.addressof @global : !llvm.ptr<i64>
 // CHECK:     gpu.return
 //
-// CHECK:   llvm.mlir.global internal @global(42 : i64) : i64
+// CHECK:   llvm.mlir.global internal @global(42 : i64) {addr_space = 0 : i32} : i64
 //
 // CHECK:   func @device_function()
 // CHECK:   func @recursive_device_function()

@@ -1222,12 +1222,11 @@ define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    and x8, x0, #0x7
-; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    bfi x9, x8, #1, #3
-; CHECK-NEXT:    ldr h1, [x9]
+; CHECK-NEXT:    bfi x8, x0, #1, #3
+; CHECK-NEXT:    ldr h1, [x8]
 ; CHECK-NEXT:    mov v1.h[1], v0.h[1]
 ; CHECK-NEXT:    mov v1.h[2], v0.h[2]
 ; CHECK-NEXT:    mov v1.h[3], v0.h[3]
@@ -1250,11 +1249,10 @@ define <4 x i16> @test_extracts_inserts_varidx_insert(<8 x i16> %x, i32 %idx) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    add x8, sp, #8
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    and x8, x0, #0x3
-; CHECK-NEXT:    add x9, sp, #8
-; CHECK-NEXT:    bfi x9, x8, #1, #2
-; CHECK-NEXT:    str h0, [x9]
+; CHECK-NEXT:    bfi x8, x0, #1, #2
+; CHECK-NEXT:    str h0, [x8]
 ; CHECK-NEXT:    ldr d1, [sp, #8]
 ; CHECK-NEXT:    mov v1.h[1], v0.h[1]
 ; CHECK-NEXT:    mov v1.h[2], v0.h[2]

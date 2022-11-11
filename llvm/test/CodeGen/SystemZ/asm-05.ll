@@ -7,8 +7,8 @@ define void @f1(i64 %base) {
 ; CHECK-LABEL: f1:
 ; CHECK: blah 0(%r2)
 ; CHECK: br %r14
-  %addr = inttoptr i64 %base to i64 *
-  call void asm "blah $0", "=*m" (i64* elementtype(i64) %addr)
+  %addr = inttoptr i64 %base to ptr
+  call void asm "blah $0", "=*m" (ptr elementtype(i64) %addr)
   ret void
 }
 
@@ -16,7 +16,7 @@ define void @f2(i64 %base) {
 ; CHECK-LABEL: f2:
 ; CHECK: blah 0(%r2)
 ; CHECK: br %r14
-  %addr = inttoptr i64 %base to i64 *
-  call void asm "blah $0", "=*o" (i64* elementtype(i64) %addr)
+  %addr = inttoptr i64 %base to ptr
+  call void asm "blah $0", "=*o" (ptr elementtype(i64) %addr)
   ret void
 }

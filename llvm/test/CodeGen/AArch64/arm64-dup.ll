@@ -460,3 +460,47 @@ define void @disguised_dup(<4 x float> %x, <4 x float>* %p1, <4 x float>* %p2) {
   store <4 x float> %dup, <4 x float>* %p2, align 8
   ret void
 }
+
+define <2 x i32> @dup_const2(<2 x i32> %A) nounwind {
+; CHECK-LABEL: dup_const2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #32770
+; CHECK-NEXT:    movk w8, #128, lsl #16
+; CHECK-NEXT:    dup.2s v1, w8
+; CHECK-NEXT:    add.2s v0, v0, v1
+; CHECK-NEXT:    ret
+  %tmp2 = add <2 x i32> %A, <i32 8421378, i32 8421378>
+  ret <2 x i32> %tmp2
+}
+
+define <2 x i32> @dup_const4_ext(<4 x i32> %A) nounwind {
+; CHECK-LABEL: dup_const4_ext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #32769
+; CHECK-NEXT:    movk w8, #128, lsl #16
+; CHECK-NEXT:    dup.2s v1, w8
+; CHECK-NEXT:    add.2s v0, v0, v1
+; CHECK-NEXT:    ret
+  %tmp1 = add <4 x i32> %A, <i32 8421377, i32 8421377, i32 8421377, i32 8421377>
+  %tmp2 = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x i32> %tmp2
+}
+
+define <4 x i32> @dup_const24(<2 x i32> %A, <2 x i32> %B, <4 x i32> %C) nounwind {
+; CHECK-LABEL: dup_const24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    movk w8, #128, lsl #16
+; CHECK-NEXT:    dup.4s v3, w8
+; CHECK-NEXT:    add.2s v0, v0, v3
+; CHECK-NEXT:    mov.d v0[1], v1[0]
+; CHECK-NEXT:    add.4s v1, v2, v3
+; CHECK-NEXT:    eor.16b v0, v1, v0
+; CHECK-NEXT:    ret
+  %tmp1 = add <2 x i32> %A, <i32 8421376, i32 8421376>
+  %tmp4 = shufflevector <2 x i32> %tmp1, <2 x i32> %B, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tmp3 = add <4 x i32> %C, <i32 8421376, i32 8421376, i32 8421376, i32 8421376>
+  %tmp5 = xor <4 x i32> %tmp3, %tmp4
+  ret <4 x i32> %tmp5
+}

@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class TestBreakpointThumbCodesection(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(archs=no_match(["arm"]))
     @skipIf(archs=["arm64"])
     @skipIfDarwinEmbedded   # codegen on darwin always defaults to thumb for armv7/armv7k targets
@@ -31,4 +29,4 @@ class TestBreakpointThumbCodesection(TestBase):
             self.process(), bpid), "Process is not stopped at breakpoint")
 
         self.process().Continue()
-        self.assertEqual(self.process().GetState(), lldb.eStateExited, PROCESS_EXITED)
+        self.assertState(self.process().GetState(), lldb.eStateExited, PROCESS_EXITED)

@@ -6,7 +6,9 @@ class Pooh;
 class Piglet;
 # 8 "" 2
 
+# 8 "" 1 3
 export module std; // might happen, you can't say it won't!
+# 9 "" 2 3
 
 namespace std {
 export template<typename T> class allocator {

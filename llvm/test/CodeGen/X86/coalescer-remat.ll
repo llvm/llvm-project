@@ -19,10 +19,10 @@ define i32 @main() nounwind {
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:
-  %t0 = cmpxchg i64* @val, i64 0, i64 1 monotonic monotonic
+  %t0 = cmpxchg ptr @val, i64 0, i64 1 monotonic monotonic
   %0 = extractvalue { i64, i1 } %t0, 0
-  %1 = tail call i32 (i8*, ...) @printf(i8* getelementptr ([7 x i8], [7 x i8]* @"\01LC", i32 0, i64 0), i64 %0) nounwind
+  %1 = tail call i32 (ptr, ...) @printf(ptr @"\01LC", i64 %0) nounwind
   ret i32 0
 }
 
-declare i32 @printf(i8*, ...) nounwind
+declare i32 @printf(ptr, ...) nounwind

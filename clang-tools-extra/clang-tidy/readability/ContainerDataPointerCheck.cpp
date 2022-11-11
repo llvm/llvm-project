@@ -98,7 +98,8 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
       Lexer::getSourceText(CharSourceRange::getTokenRange(SrcRange),
                            *Result.SourceManager, getLangOpts())};
 
-  if (!isa<DeclRefExpr, ArraySubscriptExpr, CXXOperatorCallExpr, CallExpr>(CE))
+  if (!isa<DeclRefExpr, ArraySubscriptExpr, CXXOperatorCallExpr, CallExpr,
+           MemberExpr>(CE))
     ReplacementText = "(" + ReplacementText + ")";
 
   if (CE->getType()->isPointerType())

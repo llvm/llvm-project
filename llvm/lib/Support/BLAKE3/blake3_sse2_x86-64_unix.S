@@ -1,3 +1,5 @@
+#if defined(__x86_64__)
+
 #if defined(__ELF__) && defined(__linux__)
 .section .note.GNU-stack,"",%progbits
 #endif
@@ -2301,3 +2303,5 @@ PBLENDW_0x3F_MASK:
 	.long  0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000
 PBLENDW_0xC0_MASK:
 	.long  0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF
+
+#endif

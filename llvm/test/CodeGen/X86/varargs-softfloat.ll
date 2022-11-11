@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
 
-%struct.__va_list_tag = type { i32, i32, i8*, i8* }
+%struct.__va_list_tag = type { i32, i32, ptr, ptr }
 
-declare void @llvm.va_end(i8*) #0
-declare void @llvm.va_start(i8*) #10
+declare void @llvm.va_end(ptr) #0
+declare void @llvm.va_start(ptr) #10
 
-define void @hardf(i8* %fmt, ...) #1 {
+define void @hardf(ptr %fmt, ...) #1 {
 ; CHECK-LABEL: hardf
 ; When using XMM registers to pass floating-point parameters,
 ; we need to spill those for va_start.
@@ -19,28 +19,24 @@ define void @hardf(i8* %fmt, ...) #1 {
 ; CHECK: movaps  %xmm6, {{.*}}%rsp
 ; CHECK: movaps  %xmm7, {{.*}}%rsp
   %va = alloca [1 x %struct.__va_list_tag], align 16
-  %arraydecay = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %va, i64 0, i64 0
-  %a = bitcast %struct.__va_list_tag* %arraydecay to i8*
-  call void @llvm.va_start(i8* %a)
-  call void @llvm.va_end(i8* nonnull %a)
+  call void @llvm.va_start(ptr %va)
+  call void @llvm.va_end(ptr nonnull %va)
   ret void
 }
 
-define void @softf(i8* %fmt, ...) #2 {
+define void @softf(ptr %fmt, ...) #2 {
 ; CHECK-LABEL: softf
 ; For software floating point, floats are passed in general
 ; purpose registers, so no need to spill XMM registers.
 ; CHECK-NOT: %xmm
 ; CHECK: retq
   %va = alloca [1 x %struct.__va_list_tag], align 16
-  %arraydecay = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %va, i64 0, i64 0
-  %a = bitcast %struct.__va_list_tag* %arraydecay to i8*
-  call void @llvm.va_start(i8* %a)
-  call void @llvm.va_end(i8* nonnull %a)
+  call void @llvm.va_start(ptr %va)
+  call void @llvm.va_end(ptr nonnull %va)
   ret void
 }
 
-define void @noimplf(i8* %fmt, ...) #3 {
+define void @noimplf(ptr %fmt, ...) #3 {
 ; CHECK-LABEL: noimplf
 ; Even with noimplicitfloat, when using the hardware float API, we
 ; need to emit code to spill the XMM registers (PR36507).
@@ -54,23 +50,19 @@ define void @noimplf(i8* %fmt, ...) #3 {
 ; CHECK: movaps  %xmm6, {{.*}}%rsp
 ; CHECK: movaps  %xmm7, {{.*}}%rsp
   %va = alloca [1 x %struct.__va_list_tag], align 16
-  %arraydecay = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %va, i64 0, i64 0
-  %a = bitcast %struct.__va_list_tag* %arraydecay to i8*
-  call void @llvm.va_start(i8* %a)
-  call void @llvm.va_end(i8* nonnull %a)
+  call void @llvm.va_start(ptr %va)
+  call void @llvm.va_end(ptr nonnull %va)
   ret void
 }
 
-define void @noimplsoftf(i8* %fmt, ...) #4 {
+define void @noimplsoftf(ptr %fmt, ...) #4 {
 ; CHECK-LABEL: noimplsoftf
 ; Combining noimplicitfloat and use-soft-float should not assert (PR48528).
 ; CHECK-NOT: %xmm
 ; CHECK: retq
   %va = alloca [1 x %struct.__va_list_tag], align 16
-  %arraydecay = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %va, i64 0, i64 0
-  %a = bitcast %struct.__va_list_tag* %arraydecay to i8*
-  call void @llvm.va_start(i8* %a)
-  call void @llvm.va_end(i8* nonnull %a)
+  call void @llvm.va_start(ptr %va)
+  call void @llvm.va_end(ptr nonnull %va)
   ret void
 }
 

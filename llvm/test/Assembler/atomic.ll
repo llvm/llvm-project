@@ -47,5 +47,17 @@ define void @fp_atomics(float* %x) {
   ; CHECK: atomicrmw volatile fadd float* %x, float 1.000000e+00 seq_cst
   atomicrmw volatile fadd float* %x, float 1.0 seq_cst
 
+  ; CHECK: atomicrmw fmax float* %x, float 1.000000e+00 seq_cst
+  atomicrmw fmax float* %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw volatile fmax float* %x, float 1.000000e+00 seq_cst
+  atomicrmw volatile fmax float* %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw fmin float* %x, float 1.000000e+00 seq_cst
+  atomicrmw fmin float* %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw volatile fmin float* %x, float 1.000000e+00 seq_cst
+  atomicrmw volatile fmin float* %x, float 1.0 seq_cst
+
   ret void
 }

@@ -118,7 +118,7 @@ define <4 x float> @test_rcp28_ss(<4 x float> %a0) {
 }
 declare <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32) nounwind readnone
 
-define <4 x float> @test_rcp28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
+define <4 x float> @test_rcp28_ss_load(<4 x float> %a0, ptr %a1ptr) {
 ; X86-LABEL: test_rcp28_ss_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -129,12 +129,12 @@ define <4 x float> @test_rcp28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vrcp28ss (%rdi), %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x08,0xcb,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %a1 = load <4 x float>, <4 x float>* %a1ptr
+  %a1 = load <4 x float>, ptr %a1ptr
   %res = call <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1, i32 4) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
 
-define <4 x float> @test_rsqrt28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
+define <4 x float> @test_rsqrt28_ss_load(<4 x float> %a0, ptr %a1ptr) {
 ; X86-LABEL: test_rsqrt28_ss_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -145,7 +145,7 @@ define <4 x float> @test_rsqrt28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vrsqrt28ss (%rdi), %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x08,0xcd,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %a1 = load <4 x float>, <4 x float>* %a1ptr
+  %a1 = load <4 x float>, ptr %a1ptr
   %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1, i32 4) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
@@ -186,7 +186,7 @@ define <4 x float> @test_rsqrt28_ss_mask(<4 x float> %a0, <4 x float> %b0, <4 x 
   ret <4 x float> %res
 }
 
-define <2 x double> @test_rcp28_sd_mask_load(<2 x double> %a0, <2 x double>* %a1ptr, <2 x double> %a2, i8 %mask) {
+define <2 x double> @test_rcp28_sd_mask_load(<2 x double> %a0, ptr %a1ptr, <2 x double> %a2, i8 %mask) {
 ; X86-LABEL: test_rcp28_sd_mask_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
@@ -201,13 +201,13 @@ define <2 x double> @test_rcp28_sd_mask_load(<2 x double> %a0, <2 x double>* %a1
 ; X64-NEXT:    vrcp28sd %xmm0, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0xcb,0xc8]
 ; X64-NEXT:    vmovapd %xmm1, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %a1 = load <2 x double>, <2 x double>* %a1ptr
+  %a1 = load <2 x double>, ptr %a1ptr
   %res = call <2 x double> @llvm.x86.avx512.rcp28.sd(<2 x double> %a0, <2 x double> %a0, <2 x double> %a2, i8 %mask, i32 4) ;
   ret <2 x double> %res
 }
 declare <2 x double> @llvm.x86.avx512.rcp28.sd(<2 x double>, <2 x double>, <2 x double>, i8, i32) nounwind readnone
 
-define <2 x double> @test_rsqrt28_sd_maskz_load(<2 x double> %a0, <2 x double>* %a1ptr, i8 %mask) {
+define <2 x double> @test_rsqrt28_sd_maskz_load(<2 x double> %a0, ptr %a1ptr, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_maskz_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
@@ -220,7 +220,7 @@ define <2 x double> @test_rsqrt28_sd_maskz_load(<2 x double> %a0, <2 x double>* 
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vrsqrt28sd %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %a1 = load <2 x double>, <2 x double>* %a1ptr
+  %a1 = load <2 x double>, ptr %a1ptr
   %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %a0, <2 x double> zeroinitializer, i8 %mask, i32 4) ;
   ret <2 x double> %res
 }
@@ -263,7 +263,7 @@ define <2 x double> @test_rsqrt28_sd_mask(<2 x double> %a0, <2 x double> %b0, <2
 
 declare <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double>, <2 x double>, <2 x double>, i8, i32) nounwind readnone
 
-define <2 x double> @test_rsqrt28_sd_maskz_mem(<2 x double> %a0, double* %ptr, i8 %mask) {
+define <2 x double> @test_rsqrt28_sd_maskz_mem(<2 x double> %a0, ptr %ptr, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_maskz_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
@@ -277,13 +277,13 @@ define <2 x double> @test_rsqrt28_sd_maskz_mem(<2 x double> %a0, double* %ptr, i
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vrsqrt28sd (%rdi), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %mem = load double , double * %ptr, align 8
+  %mem = load double , ptr %ptr, align 8
   %mem_v = insertelement <2 x double> undef, double %mem, i32 0
   %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %mem_v, <2 x double> zeroinitializer, i8 %mask, i32 4) ;
   ret <2 x double> %res
 }
 
-define <2 x double> @test_rsqrt28_sd_maskz_mem_offset(<2 x double> %a0, double* %ptr, i8 %mask) {
+define <2 x double> @test_rsqrt28_sd_maskz_mem_offset(<2 x double> %a0, ptr %ptr, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_maskz_mem_offset:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
@@ -297,8 +297,8 @@ define <2 x double> @test_rsqrt28_sd_maskz_mem_offset(<2 x double> %a0, double* 
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vrsqrt28sd 144(%rdi), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x47,0x12]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %ptr1 = getelementptr double, double* %ptr, i32 18
-  %mem = load double , double * %ptr1, align 8
+  %ptr1 = getelementptr double, ptr %ptr, i32 18
+  %mem = load double , ptr %ptr1, align 8
   %mem_v = insertelement <2 x double> undef, double %mem, i32 0
   %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %mem_v, <2 x double> zeroinitializer, i8 %mask, i32 4) ;
   ret <2 x double> %res

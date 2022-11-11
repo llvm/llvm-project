@@ -279,9 +279,9 @@ define i64 @SUB_LONG(i64 %x, i64 %y) {
 ; CHECK-NEXT:    setc32
 ; CHECK-NEXT:    subc32 a0, a2, a0
 ; CHECK-NEXT:    mvcv16 a2
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    mvcv16 a2
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    subc32 a1, a3, a1
 ; CHECK-NEXT:    rts16
 ;

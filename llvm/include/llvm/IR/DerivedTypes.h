@@ -659,7 +659,7 @@ public:
   }
 
   /// This constructs a pointer type with the same pointee type as input
-  /// PointerType (or opaque pointer is the input PointerType is opaque) and the
+  /// PointerType (or opaque pointer if the input PointerType is opaque) and the
   /// given address space. This is only useful during the opaque pointer
   /// transition.
   /// TODO: remove after opaque pointer transition is complete.

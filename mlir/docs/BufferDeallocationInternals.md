@@ -5,6 +5,8 @@ transformation. The transformation consists of several passes. The main pass
 called BufferDeallocation can be applied via “-buffer-deallocation” on MLIR
 programs.
 
+[TOC]
+
 ## Requirements
 
 In order to use BufferDeallocation on an arbitrary dialect, several control-flow

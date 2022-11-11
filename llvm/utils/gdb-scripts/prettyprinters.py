@@ -137,7 +137,7 @@ class OptionalPrinter(Iterator):
     self.val = None
     if not val['Storage']['hasVal']:
       raise StopIteration
-    return ('value', val['Storage']['value'])
+    return ('value', val['Storage']['val'])
 
   def to_string(self):
     return 'llvm::Optional{}'.format('' if self.val['Storage']['hasVal'] else ' is not initialized')
@@ -385,6 +385,9 @@ class PointerIntPairPrinter:
   def children(self):
     yield ('pointer', self.pointer)
     yield ('value', self.value)
+
+  def to_string(self):
+    return '(%s, %s)' % (self.pointer.type, self.value.type)
 
 def make_pointer_int_pair_printer(val):
   """Factory for an llvm::PointerIntPair printer."""

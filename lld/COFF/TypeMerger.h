@@ -17,8 +17,7 @@
 #include "llvm/Support/Allocator.h"
 #include <atomic>
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 using llvm::codeview::GloballyHashedType;
 using llvm::codeview::TypeIndex;
@@ -79,7 +78,6 @@ private:
   COFFLinkerContext &ctx;
 };
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif

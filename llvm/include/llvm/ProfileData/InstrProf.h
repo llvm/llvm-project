@@ -60,6 +60,11 @@ enum InstrProfSectKind {
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
+/// Return the max count value. We reserver a few large values for special use.
+inline uint64_t getInstrMaxCountValue() {
+  return std::numeric_limits<uint64_t>::max() - 2;
+}
+
 /// Return the name of the profile section corresponding to \p IPSK.
 ///
 /// The name of the section depends on the object format type \p OF. If
@@ -636,8 +641,8 @@ struct CountSumOrPercent {
   void reset() {
     NumEntries = 0;
     CountSum = 0.0f;
-    for (unsigned I = 0; I < IPVK_Last - IPVK_First + 1; I++)
-      ValueCounts[I] = 0.0f;
+    for (double &VC : ValueCounts)
+      VC = 0.0f;
   }
 };
 
@@ -819,6 +824,30 @@ struct InstrProfRecord {
                             OverlapStats &Overlap,
                             OverlapStats &FuncLevelOverlap);
 
+  enum CountPseudoKind {
+    NotPseudo = 0,
+    PseudoHot,
+    PseudoWarm,
+  };
+  enum PseudoCountVal {
+    HotFunctionVal = -1,
+    WarmFunctionVal = -2,
+  };
+  CountPseudoKind getCountPseudoKind() const {
+    uint64_t FirstCount = Counts[0];
+    if (FirstCount == (uint64_t)HotFunctionVal)
+      return PseudoHot;
+    if (FirstCount == (uint64_t)WarmFunctionVal)
+      return PseudoWarm;
+    return NotPseudo;
+  }
+  void setPseudoCount(CountPseudoKind Kind) {
+    if (Kind == PseudoHot)
+      Counts[0] = (uint64_t)HotFunctionVal;
+    else if (Kind == PseudoWarm)
+      Counts[0] = (uint64_t)WarmFunctionVal;
+  }
+
 private:
   struct ValueProfData {
     std::vector<InstrProfValueSiteRecord> IndirectCallSites;
@@ -908,7 +937,7 @@ uint32_t InstrProfRecord::getNumValueKinds() const {
 
 uint32_t InstrProfRecord::getNumValueData(uint32_t ValueKind) const {
   uint32_t N = 0;
-  for (auto &SR : getValueSitesForKind(ValueKind))
+  for (const auto &SR : getValueSitesForKind(ValueKind))
     N += SR.ValueData.size();
   return N;
 }

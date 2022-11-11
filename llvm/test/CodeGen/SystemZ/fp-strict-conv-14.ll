@@ -31,13 +31,13 @@ define i32 @f2(double %f) #0 {
 }
 
 ; Test f128->i32.
-define i32 @f3(fp128 *%src) #0 {
+define i32 @f3(ptr %src) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK-DAG: ld %f0, 0(%r2)
 ; CHECK-DAG: ld %f2, 8(%r2)
 ; CHECK: clfxbr %r2, 5, %f0, 0
 ; CHECK: br %r14
-  %f = load fp128, fp128 *%src
+  %f = load fp128, ptr %src
   %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %f,
                                                metadata !"fpexcept.strict") #0
   ret i32 %conv
@@ -64,13 +64,13 @@ define i64 @f5(double %f) #0 {
 }
 
 ; Test f128->i64.
-define i64 @f6(fp128 *%src) #0 {
+define i64 @f6(ptr %src) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK-DAG: ld %f0, 0(%r2)
 ; CHECK-DAG: ld %f2, 8(%r2)
 ; CHECK: clgxbr %r2, 5, %f0, 0
 ; CHECK: br %r14
-  %f = load fp128, fp128 *%src
+  %f = load fp128, ptr %src
   %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %f,
                                                metadata !"fpexcept.strict") #0
   ret i64 %conv

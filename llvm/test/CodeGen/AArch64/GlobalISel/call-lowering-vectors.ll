@@ -65,3 +65,21 @@ define void @test_return_v3f32() {
   %call = call <3 x float> @bar(float undef)
   ret void
 }
+
+declare void @foo(<3 x i32>)
+define void @test_v3i32_arg() {
+  ; CHECK-LABEL: name: test_v3i32_arg
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32)
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[DEF]](s32)
+  ; CHECK-NEXT:   $q0 = COPY [[BUILD_VECTOR1]](<4 x s32>)
+  ; CHECK-NEXT:   BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   RET_ReallyLR
+  call void @foo(<3 x i32> zeroinitializer)
+  ret void
+}

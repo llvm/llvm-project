@@ -8,7 +8,7 @@ declare {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} @llvm.riscv.vlseg2ff.mask
 define <vscale x 16 x i16> @test_vlseg2ff_nxv16i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v4, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -46,7 +46,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>, i32} @llvm.riscv.vlseg2ff.mask.nxv
 define <vscale x 1 x i8> @test_vlseg2ff_nxv1i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vlseg2e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -84,7 +84,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>, i32} @llvm.riscv
 define <vscale x 1 x i8> @test_vlseg3ff_nxv1i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vlseg3e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -123,7 +123,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vlseg4ff_nxv1i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vlseg4e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -163,7 +163,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vlseg5ff_nxv1i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vlseg5e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -204,7 +204,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vlseg6ff_nxv1i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vlseg6e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -246,7 +246,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vlseg7ff_nxv1i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vlseg7e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -289,7 +289,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vlseg8ff_nxv1i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vlseg8e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -333,7 +333,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>, i32} @llvm.riscv.vlseg2ff.mask.n
 define <vscale x 16 x i8> @test_vlseg2ff_nxv16i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vlseg2e8ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -371,7 +371,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>, i32} @llvm.ri
 define <vscale x 16 x i8> @test_vlseg3ff_nxv16i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vlseg3e8ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -410,7 +410,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x
 define <vscale x 16 x i8> @test_vlseg4ff_nxv16i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vlseg4e8ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -450,7 +450,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>, i32} @llvm.riscv.vlseg2ff.mask.n
 define <vscale x 2 x i32> @test_vlseg2ff_nxv2i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg2e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -488,7 +488,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>, i32} @llvm.ri
 define <vscale x 2 x i32> @test_vlseg3ff_nxv2i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg3e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -527,7 +527,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vlseg4ff_nxv2i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg4e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -567,7 +567,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vlseg5ff_nxv2i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg5e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -608,7 +608,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vlseg6ff_nxv2i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg6e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -650,7 +650,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vlseg7ff_nxv2i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg7e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -693,7 +693,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vlseg8ff_nxv2i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg8e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -737,7 +737,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>, i32} @llvm.riscv.vlseg2ff.mask.n
 define <vscale x 4 x i16> @test_vlseg2ff_nxv4i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -775,7 +775,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>, i32} @llvm.ri
 define <vscale x 4 x i16> @test_vlseg3ff_nxv4i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg3e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -814,7 +814,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vlseg4ff_nxv4i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg4e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -854,7 +854,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vlseg5ff_nxv4i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg5e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -895,7 +895,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vlseg6ff_nxv4i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg6e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -937,7 +937,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vlseg7ff_nxv4i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg7e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -980,7 +980,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vlseg8ff_nxv4i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg8e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1024,7 +1024,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>, i32} @llvm.riscv.vlseg2ff.mask.n
 define <vscale x 1 x i32> @test_vlseg2ff_nxv1i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg2e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1062,7 +1062,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>, i32} @llvm.ri
 define <vscale x 1 x i32> @test_vlseg3ff_nxv1i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg3e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1101,7 +1101,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vlseg4ff_nxv1i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg4e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1141,7 +1141,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vlseg5ff_nxv1i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg5e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1182,7 +1182,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vlseg6ff_nxv1i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg6e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1224,7 +1224,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vlseg7ff_nxv1i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg7e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1267,7 +1267,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vlseg8ff_nxv1i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg8e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1311,7 +1311,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>, i32} @llvm.riscv.vlseg2ff.mask.n
 define <vscale x 8 x i16> @test_vlseg2ff_nxv8i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1349,7 +1349,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>, i32} @llvm.ri
 define <vscale x 8 x i16> @test_vlseg3ff_nxv8i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vlseg3e16ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1388,7 +1388,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x 
 define <vscale x 8 x i16> @test_vlseg4ff_nxv8i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vlseg4e16ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1428,7 +1428,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>, i32} @llvm.riscv.vlseg2ff.mask.nxv
 define <vscale x 8 x i8> @test_vlseg2ff_nxv8i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg2e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1466,7 +1466,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>, i32} @llvm.riscv
 define <vscale x 8 x i8> @test_vlseg3ff_nxv8i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg3e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1505,7 +1505,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vlseg4ff_nxv8i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg4e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1545,7 +1545,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vlseg5ff_nxv8i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg5e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1586,7 +1586,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vlseg6ff_nxv8i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg6e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1628,7 +1628,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vlseg7ff_nxv8i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg7e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1671,7 +1671,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vlseg8ff_nxv8i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg8e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1715,7 +1715,7 @@ declare {<vscale x 8 x i32>,<vscale x 8 x i32>, i32} @llvm.riscv.vlseg2ff.mask.n
 define <vscale x 8 x i32> @test_vlseg2ff_nxv8i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; CHECK-NEXT:    vlseg2e32ff.v v4, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1753,7 +1753,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>, i32} @llvm.riscv.vlseg2ff.mask.nxv
 define <vscale x 4 x i8> @test_vlseg2ff_nxv4i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg2e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1791,7 +1791,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>, i32} @llvm.riscv
 define <vscale x 4 x i8> @test_vlseg3ff_nxv4i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg3e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1830,7 +1830,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vlseg4ff_nxv4i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg4e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1870,7 +1870,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vlseg5ff_nxv4i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg5e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1911,7 +1911,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vlseg6ff_nxv4i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg6e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1953,7 +1953,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vlseg7ff_nxv4i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg7e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -1996,7 +1996,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vlseg8ff_nxv4i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg8e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2040,7 +2040,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>, i32} @llvm.riscv.vlseg2ff.mask.n
 define <vscale x 1 x i16> @test_vlseg2ff_nxv1i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2078,7 +2078,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>, i32} @llvm.ri
 define <vscale x 1 x i16> @test_vlseg3ff_nxv1i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg3e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2117,7 +2117,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vlseg4ff_nxv1i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg4e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2157,7 +2157,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vlseg5ff_nxv1i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg5e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2198,7 +2198,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vlseg6ff_nxv1i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg6e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2240,7 +2240,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vlseg7ff_nxv1i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg7e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2283,7 +2283,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vlseg8ff_nxv1i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg8e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2327,7 +2327,7 @@ declare {<vscale x 32 x i8>,<vscale x 32 x i8>, i32} @llvm.riscv.vlseg2ff.mask.n
 define <vscale x 32 x i8> @test_vlseg2ff_nxv32i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
 ; CHECK-NEXT:    vlseg2e8ff.v v4, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2365,7 +2365,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>, i32} @llvm.riscv.vlseg2ff.mask.nxv
 define <vscale x 2 x i8> @test_vlseg2ff_nxv2i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vlseg2e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2403,7 +2403,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>, i32} @llvm.riscv
 define <vscale x 2 x i8> @test_vlseg3ff_nxv2i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vlseg3e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2442,7 +2442,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vlseg4ff_nxv2i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vlseg4e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2482,7 +2482,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vlseg5ff_nxv2i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vlseg5e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2523,7 +2523,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vlseg6ff_nxv2i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vlseg6e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2565,7 +2565,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vlseg7ff_nxv2i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vlseg7e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2608,7 +2608,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vlseg8ff_nxv2i8(i8* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vlseg8e8ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2652,7 +2652,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>, i32} @llvm.riscv.vlseg2ff.mask.n
 define <vscale x 2 x i16> @test_vlseg2ff_nxv2i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2690,7 +2690,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>, i32} @llvm.ri
 define <vscale x 2 x i16> @test_vlseg3ff_nxv2i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg3e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2729,7 +2729,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vlseg4ff_nxv2i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg4e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2769,7 +2769,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vlseg5ff_nxv2i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg5e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2810,7 +2810,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vlseg6ff_nxv2i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg6e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2852,7 +2852,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vlseg7ff_nxv2i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg7e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2895,7 +2895,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vlseg8ff_nxv2i16(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg8e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2939,7 +2939,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>, i32} @llvm.riscv.vlseg2ff.mask.n
 define <vscale x 4 x i32> @test_vlseg2ff_nxv4i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vlseg2e32ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -2977,7 +2977,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>, i32} @llvm.ri
 define <vscale x 4 x i32> @test_vlseg3ff_nxv4i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vlseg3e32ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3016,7 +3016,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x 
 define <vscale x 4 x i32> @test_vlseg4ff_nxv4i32(i32* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vlseg4e32ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3056,7 +3056,7 @@ declare {<vscale x 16 x half>,<vscale x 16 x half>, i32} @llvm.riscv.vlseg2ff.ma
 define <vscale x 16 x half> @test_vlseg2ff_nxv16f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv16f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v4, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3094,7 +3094,7 @@ declare {<vscale x 4 x double>,<vscale x 4 x double>, i32} @llvm.riscv.vlseg2ff.
 define <vscale x 4 x double> @test_vlseg2ff_nxv4f64(double* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; CHECK-NEXT:    vlseg2e64ff.v v4, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3132,7 +3132,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>, i32} @llvm.riscv.vlseg2ff.
 define <vscale x 1 x double> @test_vlseg2ff_nxv1f64(double* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vlseg2e64ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3170,7 +3170,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>, i32}
 define <vscale x 1 x double> @test_vlseg3ff_nxv1f64(double* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vlseg3e64ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3209,7 +3209,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vlseg4ff_nxv1f64(double* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vlseg4e64ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3249,7 +3249,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vlseg5ff_nxv1f64(double* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vlseg5e64ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3290,7 +3290,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vlseg6ff_nxv1f64(double* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vlseg6e64ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3332,7 +3332,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vlseg7ff_nxv1f64(double* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vlseg7e64ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3375,7 +3375,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vlseg8ff_nxv1f64(double* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vlseg8e64ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3419,7 +3419,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>, i32} @llvm.riscv.vlseg2ff.ma
 define <vscale x 2 x float> @test_vlseg2ff_nxv2f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg2e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3457,7 +3457,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>, i32} @l
 define <vscale x 2 x float> @test_vlseg3ff_nxv2f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg3e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3496,7 +3496,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vlseg4ff_nxv2f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg4e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3536,7 +3536,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vlseg5ff_nxv2f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg5e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3577,7 +3577,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vlseg6ff_nxv2f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg6e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3619,7 +3619,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vlseg7ff_nxv2f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg7e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3662,7 +3662,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vlseg8ff_nxv2f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg8e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3706,7 +3706,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>, i32} @llvm.riscv.vlseg2ff.mask
 define <vscale x 1 x half> @test_vlseg2ff_nxv1f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3744,7 +3744,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>, i32} @llvm
 define <vscale x 1 x half> @test_vlseg3ff_nxv1f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg3e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3783,7 +3783,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vlseg4ff_nxv1f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg4e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3823,7 +3823,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vlseg5ff_nxv1f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg5e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3864,7 +3864,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vlseg6ff_nxv1f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg6e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3906,7 +3906,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vlseg7ff_nxv1f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg7e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3949,7 +3949,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vlseg8ff_nxv1f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg8e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -3993,7 +3993,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>, i32} @llvm.riscv.vlseg2ff.ma
 define <vscale x 1 x float> @test_vlseg2ff_nxv1f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg2e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4031,7 +4031,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>, i32} @l
 define <vscale x 1 x float> @test_vlseg3ff_nxv1f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg3e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4070,7 +4070,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vlseg4ff_nxv1f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg4e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4110,7 +4110,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vlseg5ff_nxv1f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg5e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4151,7 +4151,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vlseg6ff_nxv1f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg6e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4193,7 +4193,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vlseg7ff_nxv1f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg7e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4236,7 +4236,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vlseg8ff_nxv1f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg8e32ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4280,7 +4280,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>, i32} @llvm.riscv.vlseg2ff.mask
 define <vscale x 8 x half> @test_vlseg2ff_nxv8f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4318,7 +4318,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>, i32} @llvm
 define <vscale x 8 x half> @test_vlseg3ff_nxv8f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vlseg3e16ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4357,7 +4357,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8
 define <vscale x 8 x half> @test_vlseg4ff_nxv8f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vlseg4e16ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4397,7 +4397,7 @@ declare {<vscale x 8 x float>,<vscale x 8 x float>, i32} @llvm.riscv.vlseg2ff.ma
 define <vscale x 8 x float> @test_vlseg2ff_nxv8f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; CHECK-NEXT:    vlseg2e32ff.v v4, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4435,7 +4435,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>, i32} @llvm.riscv.vlseg2ff.
 define <vscale x 2 x double> @test_vlseg2ff_nxv2f64(double* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; CHECK-NEXT:    vlseg2e64ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4473,7 +4473,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>, i32}
 define <vscale x 2 x double> @test_vlseg3ff_nxv2f64(double* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; CHECK-NEXT:    vlseg3e64ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4512,7 +4512,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>,<vsca
 define <vscale x 2 x double> @test_vlseg4ff_nxv2f64(double* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; CHECK-NEXT:    vlseg4e64ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4552,7 +4552,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>, i32} @llvm.riscv.vlseg2ff.mask
 define <vscale x 4 x half> @test_vlseg2ff_nxv4f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4590,7 +4590,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>, i32} @llvm
 define <vscale x 4 x half> @test_vlseg3ff_nxv4f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg3e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4629,7 +4629,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vlseg4ff_nxv4f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg4e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4669,7 +4669,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vlseg5ff_nxv4f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg5e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4710,7 +4710,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vlseg6ff_nxv4f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg6e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4752,7 +4752,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vlseg7ff_nxv4f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg7e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4795,7 +4795,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vlseg8ff_nxv4f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vlseg8e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4839,7 +4839,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>, i32} @llvm.riscv.vlseg2ff.mask
 define <vscale x 2 x half> @test_vlseg2ff_nxv2f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4877,7 +4877,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>, i32} @llvm
 define <vscale x 2 x half> @test_vlseg3ff_nxv2f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg3e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4916,7 +4916,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vlseg4ff_nxv2f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg4e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4956,7 +4956,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vlseg5ff_nxv2f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg5ff_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg5e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -4997,7 +4997,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vlseg6ff_nxv2f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg6ff_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg6e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -5039,7 +5039,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vlseg7ff_nxv2f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg7ff_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg7e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -5082,7 +5082,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vlseg8ff_nxv2f16(half* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg8ff_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlseg8e16ff.v v7, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -5126,7 +5126,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>, i32} @llvm.riscv.vlseg2ff.ma
 define <vscale x 4 x float> @test_vlseg2ff_nxv4f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vlseg2e32ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -5164,7 +5164,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>, i32} @l
 define <vscale x 4 x float> @test_vlseg3ff_nxv4f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg3ff_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vlseg3e32ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
@@ -5203,7 +5203,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale 
 define <vscale x 4 x float> @test_vlseg4ff_nxv4f32(float* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg4ff_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vlseg4e32ff.v v6, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)

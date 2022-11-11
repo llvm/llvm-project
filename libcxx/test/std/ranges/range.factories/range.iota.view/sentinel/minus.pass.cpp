@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // friend constexpr iter_difference_t<W> operator-(const iterator& x, const sentinel& y)
 //   requires sized_sentinel_for<Bound, W>;

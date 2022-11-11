@@ -279,6 +279,21 @@ TEST_F(TargetDeclTest, UsingDecl) {
   )cpp";
   EXPECT_DECLS("UnresolvedUsingTypeLoc",
                {"using typename Foo<T>::foo", Rel::Alias});
+
+  // Using enum.
+  Flags.push_back("-std=c++20");
+  Code = R"cpp(
+    namespace ns { enum class A { X }; }
+    [[using enum ns::A]];
+  )cpp";
+  EXPECT_DECLS("UsingEnumDecl", "enum class A : int");
+
+  Code = R"cpp(
+    namespace ns { enum class A { X }; }
+    using enum ns::A;
+    auto m = [[X]];
+  )cpp";
+  EXPECT_DECLS("DeclRefExpr", "X");
 }
 
 TEST_F(TargetDeclTest, BaseSpecifier) {
@@ -1252,6 +1267,15 @@ TEST_F(FindExplicitReferencesTest, All) {
         )cpp",
         "0: targets = {ns}\n"
         "1: targets = {ns::global}, qualifier = 'ns::'\n"},
+       // Using enum declarations.
+       {R"cpp(
+          namespace ns { enum class A {}; }
+          void foo() {
+            using enum $0^ns::$1^A;
+          }
+        )cpp",
+        "0: targets = {ns}\n"
+        "1: targets = {ns::A}, qualifier = 'ns::'\n"},
        // Simple types.
        {R"cpp(
          struct Struct { int a; };
@@ -1612,13 +1636,14 @@ TEST_F(FindExplicitReferencesTest, All) {
        {
            R"cpp(
              void foo() {
-              class {} $0^x;
-              int (*$1^fptr)(int $2^a, int) = nullptr;
+              $0^class {} $1^x;
+              int (*$2^fptr)(int $3^a, int) = nullptr;
              }
            )cpp",
-           "0: targets = {x}, decl\n"
-           "1: targets = {fptr}, decl\n"
-           "2: targets = {a}, decl\n"},
+           "0: targets = {(unnamed)}\n"
+           "1: targets = {x}, decl\n"
+           "2: targets = {fptr}, decl\n"
+           "3: targets = {a}, decl\n"},
        // Namespace aliases should be handled properly.
        {
            R"cpp(

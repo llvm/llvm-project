@@ -123,10 +123,8 @@ define <16 x i8> @t12(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: t12:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmhi v2.16b, v1.16b, v0.16b
-; CHECK-NEXT:    movi v3.16b, #1
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    and v1.16b, v2.16b, v3.16b
-; CHECK-NEXT:    add v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    sub v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %t1 = icmp ugt <16 x i8> %b, %a
   %t2 = select <16 x i1> %t1, <16 x i8> %a, <16 x i8> %b

@@ -1359,8 +1359,7 @@ public:
     if (!Inst)
       return false;
     if (isBlockStmt())
-      return std::find(Instructions.begin(), Instructions.end(), Inst) !=
-             Instructions.end();
+      return llvm::is_contained(Instructions, Inst);
     return represents(Inst->getParent());
   }
 

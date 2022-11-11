@@ -49,6 +49,8 @@ FEATURE(memtag_stack,
         LangOpts.Sanitize.has(SanitizerKind::MemtagStack))
 FEATURE(memtag_heap,
         LangOpts.Sanitize.has(SanitizerKind::MemtagHeap))
+FEATURE(memtag_globals,
+        LangOpts.Sanitize.has(SanitizerKind::MemtagGlobals))
 FEATURE(xray_instrument, LangOpts.XRayInstrument)
 FEATURE(undefined_behavior_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Undefined))
@@ -177,7 +179,6 @@ FEATURE(cxx_thread_local,
 FEATURE(cxx_trailing_return, LangOpts.CPlusPlus11)
 FEATURE(cxx_unicode_literals, LangOpts.CPlusPlus11)
 FEATURE(cxx_unrestricted_unions, LangOpts.CPlusPlus11)
-FEATURE(cxx_unstable, LangOpts.Unstable)
 FEATURE(cxx_user_literals, LangOpts.CPlusPlus11)
 FEATURE(cxx_variadic_templates, LangOpts.CPlusPlus11)
 // C++14 features
@@ -227,12 +228,14 @@ FEATURE(is_trivially_assignable, LangOpts.CPlusPlus)
 FEATURE(is_trivially_constructible, LangOpts.CPlusPlus)
 FEATURE(is_trivially_copyable, LangOpts.CPlusPlus)
 FEATURE(is_union, LangOpts.CPlusPlus)
+FEATURE(kcfi, LangOpts.Sanitize.has(SanitizerKind::KCFI))
 FEATURE(modules, LangOpts.Modules)
 FEATURE(safe_stack, LangOpts.Sanitize.has(SanitizerKind::SafeStack))
 FEATURE(shadow_call_stack,
         LangOpts.Sanitize.has(SanitizerKind::ShadowCallStack))
 FEATURE(tls, PP.getTargetInfo().isTLSSupported())
 FEATURE(underlying_type, LangOpts.CPlusPlus)
+FEATURE(experimental_library, LangOpts.ExperimentalLibrary)
 
 // C11 features supported by other languages as extensions.
 EXTENSION(c_alignas, true)

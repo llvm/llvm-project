@@ -14,10 +14,13 @@
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
 #include "flang/Common/Fortran.h"
+#include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Semantics/symbol.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Operation.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace fir {
@@ -101,13 +104,19 @@ public:
   virtual bool
   createHostAssociateVarClone(const Fortran::semantics::Symbol &sym) = 0;
 
-  virtual void copyHostAssociateVar(const Fortran::semantics::Symbol &sym) = 0;
+  virtual void copyHostAssociateVar(
+      const Fortran::semantics::Symbol &sym,
+      mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
 
-  /// Collect the set of symbols flagged as \p flag in \p eval region.
+  /// Collect the set of symbols with \p flag in \p eval
+  /// region if \p collectSymbols is true. Likewise, collect the
+  /// set of the host symbols with \p flag of the associated symbols in \p eval
+  /// region if collectHostAssociatedSymbols is true.
   virtual void collectSymbolSet(
       pft::Evaluation &eval,
       llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet,
-      Fortran::semantics::Symbol::Flag flag) = 0;
+      Fortran::semantics::Symbol::Flag flag, bool collectSymbols = true,
+      bool collectHostAssociatedSymbols = false) = 0;
 
   //===--------------------------------------------------------------------===//
   // Expressions
@@ -119,7 +128,7 @@ public:
   /// expression value. The clean-up for this temporary is added to \p context.
   virtual fir::ExtendedValue genExprAddr(const SomeExpr &expr,
                                          StatementContext &context,
-                                         mlir::Location *loc = nullptr) = 0;
+                                         mlir::Location *locPtr = nullptr) = 0;
 
   /// Generate the address of the location holding the expression, \p expr.
   fir::ExtendedValue genExprAddr(mlir::Location loc, const SomeExpr *expr,
@@ -134,7 +143,7 @@ public:
   /// Generate the computations of the expression to produce a value.
   virtual fir::ExtendedValue genExprValue(const SomeExpr &expr,
                                           StatementContext &context,
-                                          mlir::Location *loc = nullptr) = 0;
+                                          mlir::Location *locPtr = nullptr) = 0;
 
   /// Generate the computations of the expression, \p expr, to produce a value.
   fir::ExtendedValue genExprValue(mlir::Location loc, const SomeExpr *expr,
@@ -221,7 +230,22 @@ public:
   /// Get the KindMap.
   virtual const fir::KindMapping &getKindMap() = 0;
 
+  AbstractConverter(const Fortran::lower::LoweringOptions &loweringOptions)
+      : loweringOptions(loweringOptions) {}
   virtual ~AbstractConverter() = default;
+
+  //===--------------------------------------------------------------------===//
+  // Miscellaneous
+  //===--------------------------------------------------------------------===//
+
+  /// Return options controlling lowering behavior.
+  const Fortran::lower::LoweringOptions &getLoweringOptions() const {
+    return loweringOptions;
+  }
+
+private:
+  /// Options controlling lowering behavior.
+  const Fortran::lower::LoweringOptions &loweringOptions;
 };
 
 } // namespace lower

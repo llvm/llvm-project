@@ -26,6 +26,8 @@ extern cl::opt<bool> PrintRelocations;
 extern cl::opt<bool> HotData;
 } // namespace opts
 
+uint64_t BinarySection::Count = 0;
+
 bool BinarySection::isELF() const { return BC.isELF(); }
 
 bool BinarySection::isMachO() const { return BC.isMachO(); }
@@ -65,8 +67,8 @@ BinarySection::hash(const BinaryData &BD,
   return Hash;
 }
 
-void BinarySection::emitAsData(MCStreamer &Streamer, StringRef NewName) const {
-  StringRef SectionName = !NewName.empty() ? NewName : getName();
+void BinarySection::emitAsData(MCStreamer &Streamer,
+                               const Twine &SectionName) const {
   StringRef SectionContents = getContents();
   MCSectionELF *ELFSection =
       BC.Ctx->getELFSection(SectionName, getELFType(), getELFFlags());
@@ -167,7 +169,7 @@ BinarySection::~BinarySection() {
     return;
   }
 
-  if (!isAllocatable() &&
+  if (!isAllocatable() && !hasValidSectionID() &&
       (!hasSectionRef() ||
        OutputContents.data() != getContents(Section).data())) {
     delete[] getOutputData();

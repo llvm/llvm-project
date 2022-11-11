@@ -59,7 +59,8 @@ public:
   /// Returns an instance of the concept object for the given interface if it
   /// was registered to this type, null otherwise. This should not be used
   /// directly.
-  template <typename T> typename T::Concept *getInterface() const {
+  template <typename T>
+  typename T::Concept *getInterface() const {
     return interfaceMap.lookup<T>();
   }
 
@@ -174,7 +175,7 @@ struct TypeUniquer {
   /// The use of this method is in general discouraged in favor of
   /// 'get<T, Args>(ctx, args)'.
   template <typename T, typename... Args>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       !std::is_same<typename T::ImplType, TypeStorage>::value, T>
   getWithTypeID(MLIRContext *ctx, TypeID typeID, Args &&...args) {
 #ifndef NDEBUG
@@ -195,7 +196,7 @@ struct TypeUniquer {
   /// The use of this method is in general discouraged in favor of
   /// 'get<T, Args>(ctx, args)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       std::is_same<typename T::ImplType, TypeStorage>::value, T>
   getWithTypeID(MLIRContext *ctx, TypeID typeID) {
 #ifndef NDEBUG
@@ -229,7 +230,7 @@ struct TypeUniquer {
   /// The use of this method is in general discouraged in favor of
   /// 'registerType<T>(ctx)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       !std::is_same<typename T::ImplType, TypeStorage>::value>
   registerType(MLIRContext *ctx, TypeID typeID) {
     ctx->getTypeUniquer().registerParametricStorageType<typename T::ImplType>(
@@ -239,7 +240,7 @@ struct TypeUniquer {
   /// The use of this method is in general discouraged in favor of
   /// 'registerType<T>(ctx)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       std::is_same<typename T::ImplType, TypeStorage>::value>
   registerType(MLIRContext *ctx, TypeID typeID) {
     ctx->getTypeUniquer().registerSingletonStorageType<TypeStorage>(

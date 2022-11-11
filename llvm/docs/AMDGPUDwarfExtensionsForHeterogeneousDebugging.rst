@@ -60,7 +60,7 @@ extensions that includes an example. Finally, appendix
 
 .. _amdgpu-dwarf-extensions:
 
-1. Extensions
+2. Extensions
 =============
 
 The extensions continue to evolve through collaboration with many individuals and
@@ -626,6 +626,49 @@ offset and a size, and creates a composite that effectively uses the second
 location description as an overlay of the first, positioned according to the
 offset and size. See ``DW_OP_LLVM_overlay`` and ``DW_OP_LLVM_bit_overlay`` in
 :ref:`amdgpu-dwarf-composite-location-description-operations`.
+
+Consider an array that has been partially registerized such that the currently
+processed elements are held in registers, whereas the remainder of the array
+remains in memory. Consider the loop in this C function, for example:
+
+.. code::
+  :number-lines:
+
+  extern void foo(uint32_t dst[], uint32_t src[], int len) {
+    for (int i = 0; i < len; ++i)
+      dst[i] += src[i];
+  }
+
+Inside the loop body, the machine code loads ``src[i]`` and ``dst[i]`` into
+registers, adds them, and stores the result back into ``dst[i]``.
+
+Considering the location of ``dst`` and ``src`` in the loop body, the elements
+``dst[i]`` and ``src[i]`` would be located in registers, all other elements are
+located in memory. Let register ``R0`` contain the base address of ``dst``,
+register ``R1`` contain ``i``, and register ``R2`` contain the registerized
+``dst[i]`` element. We can describe the location of ``dst`` as a memory location
+with a register location overlaid at a runtime offset involving ``i``:
+
+.. code::
+  :number-lines:
+
+  // 1. Memory location description of dst elements located in memory:
+  DW_OP_breg0 0
+
+  // 2. Register location description of element dst[i] is located in R2:
+  DW_OP_reg2
+
+  // 3. Offset of the register within the memory of dst:
+  DW_OP_breg1 0
+  DW_OP_lit4
+  DW_OP_mul
+
+  // 4. The size of the register element:
+  DW_OP_lit4
+
+  // 5. Make a composite location description for dst that is the memory #1 with
+  //    the register #2 positioned as an overlay at offset #3 of size #4:
+  DW_OP_LLVM_overlay
 
 .. _amdgpu-dwarf-changes-relative-to-dwarf-version-5:
 
@@ -2333,8 +2376,9 @@ type.
 
     .. note::
 
-      Could also consider adding ``DW_OP_aspace_breg0, DW_OP_aspace_breg1, ...,
-      DW_OP_aspace_bref31`` which would save encoding size.
+      Could also consider adding ``DW_OP_LLVM_aspace_breg0,
+      DW_OP_LLVM_aspace_breg1, ..., DW_OP_LLVM_aspace_bref31`` which would save
+      encoding size.
 
 .. _amdgpu-dwarf-register-location-description-operations:
 
@@ -2842,7 +2886,7 @@ compatible with the definitions in DWARF Version 5.*
 
     *rbss(L)* is the minimum remaining bit storage size of L which is defined as
     follows. LS is the location storage and LO is the location bit offset
-    specified by a single location descriptions SL of L. The remaining bit
+    specified by a single location description SL of L. The remaining bit
     storage size RBSS of SL is the bit size of LS minus LO. *rbss(L)* is the
     minimum RBSS of each single location description SL of L.
 
@@ -2860,11 +2904,10 @@ compatible with the definitions in DWARF Version 5.*
     overlay starting at the overlay offset BO and covering overlay bit size BS.*
 
     1.  If BO is not 0 then push BL followed by performing the ``DW_OP_bit_piece
-        BO`` operation.
-    2.  Push OL followed by performing the ``DW_OP_bit_piece BS`` operation.
+        BO, 0`` operation.
+    2.  Push OL followed by performing the ``DW_OP_bit_piece BS, 0`` operation.
     3.  If *rbss(BL)* is greater than BO plus BS, push BL followed by performing
-        the ``DW_OP_LLVM_bit_offset (BO + BS); DW_OP_bit_piece (rbss(BL) - BO -
-        BS)`` operations.
+        the ``DW_OP_bit_piece (rbss(BL) - BO - BS), (BO + BS)`` operation.
     4.  Perform the ``DW_OP_LLVM_piece_end`` operation.
 
 .. _amdgpu-dwarf-location-list-expressions:
@@ -3168,8 +3211,8 @@ DWARF address space identifiers are used by:
   applied to pointer type, reference type, subprogram, and subprogram type to
   describe how objects having the given type are dereferenced or called (the
   role that ``DW_AT_address_class`` currently provides). The values of
-  ``DW_AT_address_space`` would be target architecture specific and the same as
-  used in ``DW_OP_xderef*``.
+  ``DW_AT_LLVM_address_space`` would be target architecture specific and the
+  same as used in ``DW_OP_xderef*``.
 
 .. note::
 
@@ -4236,7 +4279,7 @@ A.6.4.2.2 CFA Definition Instructions
     AS is set to the target architecture default address space identifier. The
     required action is to define the current CFA rule to be the result of
     evaluating the DWARF operation expression ``DW_OP_constu AS;
-    DW_OP_aspace_bregx R, B`` as a location description.
+    DW_OP_LLVM_aspace_bregx R, B`` as a location description.
 
 2.  ``DW_CFA_def_cfa_sf``
 
@@ -4245,7 +4288,8 @@ A.6.4.2.2 CFA Definition Instructions
     displacement B. AS is set to the target architecture default address space
     identifier. The required action is to define the current CFA rule to be the
     result of evaluating the DWARF operation expression ``DW_OP_constu AS;
-    DW_OP_aspace_bregx R, B * data_alignment_factor`` as a location description.
+    DW_OP_LLVM_aspace_bregx R, B * data_alignment_factor`` as a location
+    description.
 
     *The action is the same as* ``DW_CFA_def_cfa``\ *, except that the second
     operand is signed and factored.*
@@ -4257,7 +4301,7 @@ A.6.4.2.2 CFA Definition Instructions
     displacement B, and a target architecture specific address space identifier
     AS. The required action is to define the current CFA rule to be the result
     of evaluating the DWARF operation expression ``DW_OP_constu AS;
-    DW_OP_aspace_bregx R, B`` as a location description.
+    DW_OP_LLVM_aspace_bregx R, B`` as a location description.
 
     If AS is not one of the values defined by the target architecture specific
     ``DW_ASPACE_*`` values then the DWARF expression is ill-formed.
@@ -4269,7 +4313,7 @@ A.6.4.2.2 CFA Definition Instructions
     displacement B, and an unsigned LEB128 value representing a target
     architecture specific address space identifier AS. The required action is to
     define the current CFA rule to be the result of evaluating the DWARF
-    operation expression ``DW_OP_constu AS; DW_OP_aspace_bregx R,
+    operation expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R,
     B * data_alignment_factor`` as a location description.
 
     If AS is not one of the values defined by the target architecture specific
@@ -4283,7 +4327,7 @@ A.6.4.2.2 CFA Definition Instructions
     The ``DW_CFA_def_cfa_register`` instruction takes a single unsigned LEB128
     operand representing a register number R. The required action is to define
     the current CFA rule to be the result of evaluating the DWARF operation
-    expression ``DW_OP_constu AS; DW_OP_aspace_bregx R, B`` as a location
+    expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R, B`` as a location
     description. B and AS are the old CFA byte displacement and address space
     respectively.
 
@@ -4295,9 +4339,9 @@ A.6.4.2.2 CFA Definition Instructions
     The ``DW_CFA_def_cfa_offset`` instruction takes a single unsigned LEB128
     operand representing a (non-factored) byte displacement B. The required
     action is to define the current CFA rule to be the result of evaluating the
-    DWARF operation expression ``DW_OP_constu AS; DW_OP_aspace_bregx R, B`` as a
-    location description. R and AS are the old CFA register number and address
-    space respectively.
+    DWARF operation expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R, B``
+    as a location description. R and AS are the old CFA register number and
+    address space respectively.
 
     If the subprogram has no current CFA rule, or the rule was defined by a
     ``DW_CFA_def_cfa_expression`` instruction, then the DWARF is ill-formed.
@@ -4307,7 +4351,7 @@ A.6.4.2.2 CFA Definition Instructions
     The ``DW_CFA_def_cfa_offset_sf`` instruction takes a signed LEB128 operand
     representing a factored byte displacement B. The required action is to
     define the current CFA rule to be the result of evaluating the DWARF
-    operation expression ``DW_OP_constu AS; DW_OP_aspace_bregx R, B *
+    operation expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R, B *
     data_alignment_factor`` as a location description. R and AS are the old CFA
     register number and address space respectively.
 

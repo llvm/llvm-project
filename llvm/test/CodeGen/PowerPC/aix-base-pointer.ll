@@ -12,12 +12,11 @@
 
 define float @caller(float %f) {
   %AlignedBuffer = alloca [32 x i32], align 32
-  %Pointer = getelementptr inbounds [32 x i32], [32 x i32]* %AlignedBuffer, i64 0, i64 0
-  call void @callee(i32* %Pointer)
+  call void @callee(ptr %AlignedBuffer)
   ret float %f
 }
 
-declare void @callee(i32*)
+declare void @callee(ptr)
 
 ; 32BIT-LABEL: .caller:
 ; 32BIT:         stw 30, -16(1)

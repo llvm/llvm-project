@@ -70,15 +70,14 @@ define void @g(i64 %a, i64 %b, i64 %c) nounwind {
 ; X86-NEXT:    retl
 entry:
 	%d = alloca %struct.s, align 16
-	%tmp = getelementptr %struct.s, %struct.s* %d, i32 0, i32 0
-	store i64 %a, i64* %tmp, align 16
-	%tmp2 = getelementptr %struct.s, %struct.s* %d, i32 0, i32 1
-	store i64 %b, i64* %tmp2, align 16
-	%tmp4 = getelementptr %struct.s, %struct.s* %d, i32 0, i32 2
-	store i64 %c, i64* %tmp4, align 16
-	call void @f(%struct.s* byval(%struct.s) %d)
-	call void @f(%struct.s* byval(%struct.s) %d)
+	store i64 %a, ptr %d, align 16
+	%tmp2 = getelementptr %struct.s, ptr %d, i32 0, i32 1
+	store i64 %b, ptr %tmp2, align 16
+	%tmp4 = getelementptr %struct.s, ptr %d, i32 0, i32 2
+	store i64 %c, ptr %tmp4, align 16
+	call void @f(ptr byval(%struct.s) %d)
+	call void @f(ptr byval(%struct.s) %d)
 	ret void
 }
 
-declare void @f(%struct.s* byval(%struct.s))
+declare void @f(ptr byval(%struct.s))

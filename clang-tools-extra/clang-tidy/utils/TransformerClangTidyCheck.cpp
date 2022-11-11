@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TransformerClangTidyCheck.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -126,18 +127,28 @@ void TransformerClangTidyCheck::check(
   }
 
   // Associate the diagnostic with the location of the first change.
-  DiagnosticBuilder Diag =
-      diag((*Edits)[0].Range.getBegin(), escapeForDiagnostic(*Explanation));
-  for (const auto &T : *Edits)
-    switch (T.Kind) {
-    case transformer::EditKind::Range:
-      Diag << FixItHint::CreateReplacement(T.Range, T.Replacement);
-      break;
-    case transformer::EditKind::AddInclude:
-      Diag << Inserter.createIncludeInsertion(
-          Result.SourceManager->getFileID(T.Range.getBegin()), T.Replacement);
-      break;
+  {
+    DiagnosticBuilder Diag =
+        diag((*Edits)[0].Range.getBegin(), escapeForDiagnostic(*Explanation));
+    for (const auto &T : *Edits) {
+      switch (T.Kind) {
+      case transformer::EditKind::Range:
+        Diag << FixItHint::CreateReplacement(T.Range, T.Replacement);
+        break;
+      case transformer::EditKind::AddInclude:
+        Diag << Inserter.createIncludeInsertion(
+            Result.SourceManager->getFileID(T.Range.getBegin()), T.Replacement);
+        break;
+      }
     }
+  }
+  // Emit potential notes.
+  for (const auto &T : *Edits) {
+    if (!T.Note.empty()) {
+      diag(T.Range.getBegin(), escapeForDiagnostic(T.Note),
+           DiagnosticIDs::Note);
+    }
+  }
 }
 
 void TransformerClangTidyCheck::storeOptions(

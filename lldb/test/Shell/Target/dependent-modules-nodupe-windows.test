@@ -1,0 +1,24 @@
+# REQUIRES: system-windows
+
+# Checks that dependent modules preloaded by LLDB are not duplicated when the
+# process actually loads the DLL.
+
+# RUN: %clang_host -g0 -O0 -shared %S/Inputs/shlib.c -o %t.shlib.dll \
+# RUN:             %if windows-msvc %{-Wl,-implib:%t.shlib.lib%} \
+# RUN:             %else %{-Wl,--out-implib=%t.shlib.lib%}
+# RUN: %clang_host -g0 -O0 %S/Inputs/main.c %t.shlib.lib -o %t.main.exe
+# RUN: %lldb -b -o "#before" -o "target modules list" -o "b main" -o run \
+# RUN:       -o "#after" -o "target modules list" %t.main.exe | FileCheck %s
+
+# CHECK-LABEL: #before
+# CHECK-NEXT: target modules list
+# CHECK-NEXT: .main.exe
+# CHECK-NEXT: .shlib.dll
+
+# CHECK-LABEL: #after
+# CHECK-NEXT: target modules list
+# CHECK-NEXT: .main.exe
+# CHECK-NEXT: ntdll.dll
+# CHECK-NEXT: kernel32.dll
+# CHECK:      .shlib.dll
+# CHECK-NOT:  .shlib.dll

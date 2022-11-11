@@ -27,7 +27,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TypeSize.h"
 #include <cassert>
 #include <utility>
@@ -241,7 +240,7 @@ void LLVMContextImpl::getSyncScopeNames(
 /// singleton OptBisect if not explicitly set.
 OptPassGate &LLVMContextImpl::getOptPassGate() const {
   if (!OPG)
-    OPG = &(*OptBisector);
+    OPG = &getOptBisector();
   return *OPG;
 }
 
@@ -250,17 +249,17 @@ void LLVMContextImpl::setOptPassGate(OptPassGate& OPG) {
 }
 
 bool LLVMContextImpl::hasOpaquePointersValue() {
-  return OpaquePointers.hasValue();
+  return OpaquePointers.has_value();
 }
 
 bool LLVMContextImpl::getOpaquePointers() {
-  if (LLVM_UNLIKELY(!(OpaquePointers.hasValue())))
+  if (LLVM_UNLIKELY(!OpaquePointers))
     OpaquePointers = OpaquePointersCL;
   return *OpaquePointers;
 }
 
 void LLVMContextImpl::setOpaquePointers(bool OP) {
-  assert((!OpaquePointers.hasValue() || OpaquePointers.getValue() == OP) &&
+  assert((!OpaquePointers || OpaquePointers.value() == OP) &&
          "Cannot change opaque pointers mode once set");
   OpaquePointers = OP;
 }

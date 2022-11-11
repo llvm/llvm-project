@@ -379,11 +379,13 @@ define <16 x i8> @unsigned_sat_constant_v16i8_using_min(<16 x i8> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI24_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI24_0@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI24_1@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI24_1@toc@l
+; CHECK-NEXT:    xxswapd 35, 0
+; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    vminub 2, 2, 3
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vaddubm 2, 2, 3
 ; CHECK-NEXT:    blr
   %c = icmp ult <16 x i8> %x, <i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43>
@@ -397,7 +399,8 @@ define <16 x i8> @unsigned_sat_constant_v16i8_using_cmp_sum(<16 x i8> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI25_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI25_0@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vaddubs 2, 2, 3
 ; CHECK-NEXT:    blr
   %a = add <16 x i8> %x, <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42>
@@ -411,7 +414,8 @@ define <16 x i8> @unsigned_sat_constant_v16i8_using_cmp_notval(<16 x i8> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI26_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI26_0@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vaddubs 2, 2, 3
 ; CHECK-NEXT:    blr
   %a = add <16 x i8> %x, <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42>
@@ -425,11 +429,13 @@ define <8 x i16> @unsigned_sat_constant_v8i16_using_min(<8 x i16> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI27_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI27_0@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI27_1@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI27_1@toc@l
+; CHECK-NEXT:    xxswapd 35, 0
+; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    vminuh 2, 2, 3
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vadduhm 2, 2, 3
 ; CHECK-NEXT:    blr
   %c = icmp ult <8 x i16> %x, <i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43>
@@ -443,7 +449,8 @@ define <8 x i16> @unsigned_sat_constant_v8i16_using_cmp_sum(<8 x i16> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI28_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI28_0@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vadduhs 2, 2, 3
 ; CHECK-NEXT:    blr
   %a = add <8 x i16> %x, <i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42>
@@ -457,7 +464,8 @@ define <8 x i16> @unsigned_sat_constant_v8i16_using_cmp_notval(<8 x i16> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI29_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI29_0@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vadduhs 2, 2, 3
 ; CHECK-NEXT:    blr
   %a = add <8 x i16> %x, <i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42>
@@ -471,11 +479,13 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_min(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI30_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI30_0@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI30_1@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI30_1@toc@l
+; CHECK-NEXT:    xxswapd 35, 0
+; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    vminuw 2, 2, 3
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vadduwm 2, 2, 3
 ; CHECK-NEXT:    blr
   %c = icmp ult <4 x i32> %x, <i32 -43, i32 -43, i32 -43, i32 -43>
@@ -489,7 +499,8 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_sum(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI31_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI31_0@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vadduws 2, 2, 3
 ; CHECK-NEXT:    blr
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>
@@ -503,7 +514,8 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI32_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI32_0@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vadduws 2, 2, 3
 ; CHECK-NEXT:    blr
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>

@@ -23,7 +23,7 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load volatile i32, i32* @a, align 4
+  %0 = load volatile i32, ptr @a, align 4
   %sub = sub i32 -32, %0
   %sh_prom = zext i32 %sub to i64
   %shl2 = shl i64 2, %sh_prom
@@ -32,7 +32,7 @@ entry:
   br i1 %tobool.not, label %lor.rhs, label %lor.end
 
 lor.rhs:                                          ; preds = %entry
-  %1 = load volatile i32, i32* @a, align 4
+  %1 = load volatile i32, ptr @a, align 4
   br label %lor.end
 
 lor.end:                                          ; preds = %lor.rhs, %entry

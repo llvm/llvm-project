@@ -129,10 +129,10 @@ program main
   enddo
   !$omp end target data
 
-  !ERROR: The parameter of the DEVICE clause must be a positive integer expression
+  !ERROR: The device expression of the DEVICE clause must be a positive integer expression
   !$omp target enter data map(alloc:A) device(-2)
 
-  !ERROR: The parameter of the DEVICE clause must be a positive integer expression
+  !ERROR: The device expression of the DEVICE clause must be a positive integer expression
   !$omp target exit data map(delete:A) device(-2)
 
   !ERROR: At most one IF clause can appear on the TARGET ENTER DATA directive

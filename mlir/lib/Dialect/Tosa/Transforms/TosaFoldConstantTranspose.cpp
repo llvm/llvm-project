@@ -30,22 +30,22 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
     if (!outputType.getElementType().isIntOrIndexOrFloat())
       return failure();
 
-    DenseElementsAttr inputValues;
-    if (!matchPattern(op.input1(), m_Constant(&inputValues)))
+    ElementsAttr inputValues;
+    if (!matchPattern(op.getInput1(), m_Constant(&inputValues)))
       return failure();
     // Make sure the input is a constant that has a single user.
-    if (!llvm::hasSingleElement(op.input1().getDefiningOp()->getUsers()))
+    if (!llvm::hasSingleElement(op.getInput1().getDefiningOp()->getUsers()))
       return failure();
 
     DenseIntElementsAttr permAttr;
-    if (!matchPattern(op.perms(), m_Constant(&permAttr)))
+    if (!matchPattern(op.getPerms(), m_Constant(&permAttr)))
       return failure();
     auto permValues = llvm::to_vector<6>(llvm::map_range(
         // TOSA allows both 32- and 64-bit integer tensors here.
         permAttr.getValues<APInt>(),
         [](const APInt &val) { return val.getZExtValue(); }));
 
-    auto inputType = op.input1().getType().cast<ShapedType>();
+    auto inputType = op.getInput1().getType().cast<ShapedType>();
     ArrayRef<int64_t> inputShape = inputType.getShape();
     int64_t numElements = inputType.getNumElements();
 
@@ -57,10 +57,9 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
     // index.
     auto attrValues = inputValues.getValues<Attribute>();
     ArrayRef<int64_t> outputShape = outputType.getShape();
-    for (int srcLinearIndex = 0; srcLinearIndex < numElements;
-         ++srcLinearIndex) {
+    for (const auto &it : llvm::enumerate(attrValues)) {
       SmallVector<uint64_t, 6> srcIndices(inputType.getRank(), 0);
-      int totalCount = srcLinearIndex;
+      int totalCount = it.index();
       for (int dim = inputType.getRank() - 1; dim >= 0; --dim) {
         srcIndices[dim] = totalCount % inputShape[dim];
         totalCount /= inputShape[dim];
@@ -74,7 +73,7 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
       for (int dim = 1; dim < outputType.getRank(); ++dim)
         dstLinearIndex = dstLinearIndex * outputShape[dim] + dstIndices[dim];
 
-      outputValues[dstLinearIndex] = attrValues[srcIndices];
+      outputValues[dstLinearIndex] = it.value();
     }
 
     rewriter.replaceOpWithNewOp<tosa::ConstOp>(

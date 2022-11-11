@@ -7,11 +7,11 @@
 ; GR32 regs.
 
 @x = dso_local thread_local global i32 0, align 4
-define weak_odr hidden i32* @fun0() {
+define weak_odr hidden ptr @fun0() {
 ; CHECK: name: fun0
 ; CHECK: {{%[0-9]+}}:gr32bit = EAR $a0
 ; CHECK: {{%[0-9]+}}:gr32bit = EAR $a1
-  ret i32* @x
+  ret ptr @x
 }
 
 define i32 @fun1() {

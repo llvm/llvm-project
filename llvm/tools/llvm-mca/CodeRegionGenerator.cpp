@@ -48,8 +48,8 @@ public:
       : MCStreamer(Context), Regions(R) {}
 
   // We only want to intercept the emission of new instructions.
-  virtual void emitInstruction(const MCInst &Inst,
-                               const MCSubtargetInfo & /* unused */) override {
+  void emitInstruction(const MCInst &Inst,
+                       const MCSubtargetInfo & /* unused */) override {
     Regions.addInstruction(Inst);
   }
 

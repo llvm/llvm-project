@@ -107,12 +107,10 @@ int main()
 // CHECK: [[CAST_PTR2:%.+]] = bitcast i8** [[LOC_PTR2]] to i32**
 // CHECK: store i32* [[PTR2]], i32** [[CAST_PTR2]]{{.+}}
 
-
-// actual target invocation
-// CHECK: [[BASES_GEP:%.+]] = getelementptr {{.+}} [3 x {{.+}}*], [3 x {{.+}}*]* [[BASE_PTRS]], {{.+}} 0, {{.+}} 0
-// CHECK: [[PTRS_GEP:%.+]] = getelementptr {{.+}} [3 x {{.+}}*], [3 x {{.+}}*]* [[PTRS]], {{.+}} 0, {{.+}} 0
-// CHECK: {{%.+}} = call{{.+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, {{.+}}, {{.+}}, {{.+}}, i8** [[BASES_GEP]], i8** [[PTRS_GEP]], i[[PTRSZ]]* getelementptr inbounds ([3 x i{{.+}}], [3 x i{{.+}}]* [[SIZES]], i{{.+}} 0, i{{.+}} 0), i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[TYPES]], i{{.+}} 0, i{{.+}} 0), i8** null, i8** null, {{.+}}, {{.+}})
-
+  // actual target invocation
+  // CHECK: [[BASES_GEP:%.+]] = getelementptr {{.+}} [3 x {{.+}}*], [3 x {{.+}}*]* [[BASE_PTRS]], {{.+}} 0, {{.+}} 0
+  // CHECK: [[PTRS_GEP:%.+]] = getelementptr {{.+}} [3 x {{.+}}*], [3 x {{.+}}*]* [[PTRS]], {{.+}} 0, {{.+}} 0
+  // CHECK: {{%.+}} = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 0, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* %{{.+}})
 
   omp_loop(0,100,body);
   omp_loop_ref(0,100,body);
@@ -150,11 +148,9 @@ int main()
 // CHECK: [[CAST_PTR2:%.+]] = bitcast i8** [[LOC_PTR2]] to i32**
 // CHECK: store i32* [[PTR2]], i32** [[CAST_PTR2]]{{.+}}
 
-
 // actual target invocation
 // CHECK: [[BASES_GEP:%.+]] = getelementptr {{.+}} [5 x {{.+}}*], [5 x {{.+}}*]* [[BASE_PTRS]], {{.+}} 0, {{.+}} 0
 // CHECK: [[PTRS_GEP:%.+]] = getelementptr {{.+}} [5 x {{.+}}*], [5 x {{.+}}*]* [[PTRS]], {{.+}} 0, {{.+}} 0
-// CHECK: {{%.+}} = call{{.+}} @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, {{.+}}, {{.+}}, {{.+}}, i8** [[BASES_GEP]], i8** [[PTRS_GEP]], i[[PTRSZ]]* getelementptr inbounds ([5 x i{{.+}}], [5 x i{{.+}}]* [[SIZES_TEMPLATE]], i{{.+}} 0, i{{.+}} 0), i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[TYPES_TEMPLATE]], i{{.+}} 0, i{{.+}} 0), i8** null, i8** null, {{.+}}, {{.+}})
 
 // CHECK: define internal void @{{.+}}omp_loop_ref{{.+}}(
 // CHECK: [[BODY:%body.addr]] = alloca %class.anon*

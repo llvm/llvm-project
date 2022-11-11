@@ -16,6 +16,7 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -415,9 +416,6 @@ void Initialize(ThreadState *thr) {
   __tsan::InitializePlatformEarly();
 
 #if !SANITIZER_GO
-  // Re-exec ourselves if we need to set additional env or command line args.
-  MaybeReexec();
-
   InitializeAllocator();
   ReplaceSystemMalloc();
 #endif

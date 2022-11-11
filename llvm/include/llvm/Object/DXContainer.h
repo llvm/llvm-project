@@ -35,10 +35,14 @@ private:
   dxbc::Header Header;
   SmallVector<uint32_t, 4> PartOffsets;
   Optional<DXILData> DXIL;
+  Optional<uint64_t> ShaderFlags;
+  Optional<dxbc::ShaderHash> Hash;
 
   Error parseHeader();
   Error parsePartOffsets();
   Error parseDXILHeader(uint32_t Offset);
+  Error parseShaderFlags(uint32_t Offset);
+  Error parseHash(uint32_t Offset);
   friend class PartIterator;
 
 public:
@@ -116,9 +120,13 @@ public:
   const dxbc::Header &getHeader() const { return Header; }
 
   Optional<DXILData> getDXIL() const { return DXIL; }
+
+  Optional<uint64_t> getShaderFlags() const { return ShaderFlags; }
+
+  Optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
 };
 
 } // namespace object
 } // namespace llvm
 
-#endif // LLVM_OBJECT_DXCONTAINERFILE_H
+#endif // LLVM_OBJECT_DXCONTAINER_H

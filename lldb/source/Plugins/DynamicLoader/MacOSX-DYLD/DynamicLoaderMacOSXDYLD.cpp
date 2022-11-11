@@ -610,8 +610,10 @@ bool DynamicLoaderMacOSXDYLD::RemoveModulesUsingImageInfosAddress(
     // Also copy over the uuid from the old entry to the removed entry so we
     // can use it to lookup the module in the module list.
 
-    ImageInfo::collection::iterator pos, end = m_dyld_image_infos.end();
-    for (pos = m_dyld_image_infos.begin(); pos != end; pos++) {
+    bool found = false;
+
+    for (ImageInfo::collection::iterator pos = m_dyld_image_infos.begin();
+         pos != m_dyld_image_infos.end(); pos++) {
       if (image_infos[idx].address == (*pos).address) {
         image_infos[idx].uuid = (*pos).uuid;
 
@@ -635,11 +637,12 @@ bool DynamicLoaderMacOSXDYLD::RemoveModulesUsingImageInfosAddress(
         // Then remove it from the m_dyld_image_infos:
 
         m_dyld_image_infos.erase(pos);
+        found = true;
         break;
       }
     }
 
-    if (pos == end) {
+    if (!found) {
       if (log) {
         LLDB_LOGF(log, "Could not find image_info entry for unloading image:");
         image_infos[idx].PutToLog(log);
@@ -882,7 +885,7 @@ uint32_t DynamicLoaderMacOSXDYLD::ParseLoadCommands(const DataExtractor &data,
         break;
 
       case llvm::MachO::LC_UUID:
-        dylib_info.uuid = UUID::fromOptionalData(data.GetData(&offset, 16), 16);
+        dylib_info.uuid = UUID(data.GetData(&offset, 16), 16);
         break;
 
       default:
@@ -1090,7 +1093,7 @@ bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
         uuid_t shared_cache_uuid;
         if (m_process->ReadMemory(sharedCacheUUID_address, shared_cache_uuid,
                                   sizeof(uuid_t), err) == sizeof(uuid_t)) {
-          uuid = UUID::fromOptionalData(shared_cache_uuid, 16);
+          uuid = UUID(shared_cache_uuid, 16);
           if (uuid.IsValid()) {
             using_shared_cache = eLazyBoolYes;
           }

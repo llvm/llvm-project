@@ -3,15 +3,15 @@
 
 %struct = type { i16 }
 
-declare i16 @g(%struct*) readnone
+declare i16 @g(ptr) readnone
 
 define void @f() {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i16 @g(%struct* byval(%struct) align 1 undef)
+; CHECK-NEXT:    [[CALL:%.*]] = call i16 @g(ptr byval(%struct) align 1 undef)
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %call = call i16 @g(%struct* byval(%struct) align 1 undef)
+  %call = call i16 @g(ptr byval(%struct) align 1 undef)
   ret void
 }

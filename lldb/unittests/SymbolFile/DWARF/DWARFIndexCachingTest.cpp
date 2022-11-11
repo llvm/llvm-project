@@ -231,7 +231,7 @@ TEST(DWARFIndexCachingTest, CacheSignatureTests) {
   EncodeDecode(sig, /*encode_result=*/false);
   sig.Clear();
 
-  sig.m_uuid = UUID::fromData("@\x00\x11\x22\x33\x44\x55\x66\x77", 8);
+  sig.m_uuid = UUID("@\x00\x11\x22\x33\x44\x55\x66\x77", 8);
   EXPECT_TRUE(sig.IsValid());
   EncodeDecode(sig, /*encode_result=*/true);
   sig.m_mod_time = 0x12345678;

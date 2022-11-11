@@ -10,8 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class ForwardDeclarationTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def do_test(self, dictionary=None):
         """Display *bar_ptr when stopped on a function with forward declaration of struct bar."""
         self.build(dictionary=dictionary)

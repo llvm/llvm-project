@@ -252,3 +252,65 @@ define i8 @rev8_mul_and_lshr(i8 %0) {
   %10 = trunc i64 %9 to i8
   ret i8 %10
 }
+
+define i4 @shuf_4bits(<4 x i1> %x) {
+; CHECK-LABEL: @shuf_4bits(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[X:%.*]] to i4
+; CHECK-NEXT:    [[CAST:%.*]] = call i4 @llvm.bitreverse.i4(i4 [[TMP1]])
+; CHECK-NEXT:    ret i4 [[CAST]]
+;
+  %bitreverse = shufflevector <4 x i1> %x, <4 x i1> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %cast = bitcast <4 x i1> %bitreverse to i4
+  ret i4 %cast
+}
+
+define i4 @shuf_load_4bits(ptr %p) {
+; CHECK-LABEL: @shuf_load_4bits(
+; CHECK-NEXT:    [[X1:%.*]] = load i4, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[CAST:%.*]] = call i4 @llvm.bitreverse.i4(i4 [[X1]])
+; CHECK-NEXT:    ret i4 [[CAST]]
+;
+  %x = load <4 x i1>, ptr %p
+  %bitreverse = shufflevector <4 x i1> %x, <4 x i1> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %cast = bitcast <4 x i1> %bitreverse to i4
+  ret i4 %cast
+}
+
+define i4 @shuf_bitcast_twice_4bits(i4 %x) {
+; CHECK-LABEL: @shuf_bitcast_twice_4bits(
+; CHECK-NEXT:    [[CAST2:%.*]] = call i4 @llvm.bitreverse.i4(i4 [[X:%.*]])
+; CHECK-NEXT:    ret i4 [[CAST2]]
+;
+  %cast1 = bitcast i4 %x to <4 x i1>
+  %bitreverse = shufflevector <4 x i1> %cast1, <4 x i1> undef, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
+  %cast2 = bitcast <4 x i1> %bitreverse to i4
+  ret i4 %cast2
+}
+
+; Negative tests - not reverse
+define i4 @shuf_4bits_not_reverse(<4 x i1> %x) {
+; CHECK-LABEL: @shuf_4bits_not_reverse(
+; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i1> [[BITREVERSE]] to i4
+; CHECK-NEXT:    ret i4 [[CAST]]
+;
+  %bitreverse = shufflevector <4 x i1> %x, <4 x i1> undef, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
+  %cast = bitcast <4 x i1> %bitreverse to i4
+  ret i4 %cast
+}
+
+; Negative test - extra use
+declare void @use(<4 x i1>)
+
+define i4 @shuf_4bits_extra_use(<4 x i1> %x) {
+; CHECK-LABEL: @shuf_4bits_extra_use(
+; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    call void @use(<4 x i1> [[BITREVERSE]])
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i1> [[BITREVERSE]] to i4
+; CHECK-NEXT:    ret i4 [[CAST]]
+;
+  %bitreverse = shufflevector <4 x i1> %x, <4 x i1> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  call void @use(<4 x i1> %bitreverse)
+  %cast = bitcast <4 x i1> %bitreverse to i4
+  ret i4 %cast
+}

@@ -42,6 +42,9 @@
 // Use a function like macro to imply that it must be followed by a semicolon
 #if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
 #define KMP_FALLTHROUGH() [[fallthrough]]
+// icc cannot properly tell this attribute is absent so force off
+#elif defined(__INTEL_COMPILER)
+#define KMP_FALLTHROUGH() ((void)0)
 #elif __has_cpp_attribute(clang::fallthrough)
 #define KMP_FALLTHROUGH() [[clang::fallthrough]]
 #elif __has_attribute(fallthrough) || __GNUC__ >= 7
@@ -53,6 +56,7 @@
 static int runOnTsan;
 static int hasReductionCallback;
 
+namespace {
 class ArcherFlags {
 public:
 #if (LLVM_VERSION) >= 40
@@ -129,6 +133,7 @@ public:
     }
   }
 };
+} // namespace
 
 #if (LLVM_VERSION) >= 40
 extern "C" {
@@ -136,7 +141,7 @@ int __attribute__((weak)) __archer_get_omp_status();
 void __attribute__((weak)) __tsan_flush_memory() {}
 }
 #endif
-ArcherFlags *archer_flags;
+static ArcherFlags *archer_flags;
 
 #ifndef TsanHappensBefore
 // Thread Sanitizer is a tool that finds races in code.
@@ -229,6 +234,7 @@ static int pagesize{0};
 
 // Data structure to provide a threadsafe pool of reusable objects.
 // DataPool<Type of objects>
+namespace {
 template <typename T> struct DataPool final {
   static __thread DataPool<T> *ThreadDataPool;
   std::mutex DPMutex{};
@@ -595,14 +601,15 @@ struct TaskData final : DataPoolEntry<TaskData> {
 
   TaskData(DataPool<TaskData> *dp) : DataPoolEntry<TaskData>(dp) {}
 };
+} // namespace
 
 static inline TaskData *ToTaskData(ompt_data_t *task_data) {
   return reinterpret_cast<TaskData *>(task_data->ptr);
 }
 
 /// Store a mutex for each wait_id to resolve race condition with callbacks.
-std::unordered_map<ompt_wait_id_t, std::mutex> Locks;
-std::mutex LocksMutex;
+static std::unordered_map<ompt_wait_id_t, std::mutex> Locks;
+static std::mutex LocksMutex;
 
 static void ompt_tsan_thread_begin(ompt_thread_t thread_type,
                                    ompt_data_t *thread_data) {

@@ -57,17 +57,14 @@ struct PassTiming : public PassInstrumentation {
     auto tid = llvm::get_threadid();
     auto &activeTimers = activeThreadTimers[tid];
 
+    // Find the parent scope, either using the parent info or the root scope
+    // (e.g. in the case of the top-level pipeline).
     TimingScope *parentScope;
-    if (activeTimers.empty()) {
-      auto it = parentTimerIndices.find(parentInfo);
-      if (it != parentTimerIndices.end())
-        parentScope =
-            &activeThreadTimers[parentInfo.parentThreadID][it->second];
-      else
-        parentScope = &rootScope;
-    } else {
-      parentScope = &activeTimers.back();
-    }
+    auto it = parentTimerIndices.find(parentInfo);
+    if (it != parentTimerIndices.end())
+      parentScope = &activeThreadTimers[parentInfo.parentThreadID][it->second];
+    else
+      parentScope = &rootScope;
 
     // Use nullptr to anchor op-agnostic pipelines, otherwise use the name of
     // the operation.

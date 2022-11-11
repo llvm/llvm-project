@@ -75,6 +75,9 @@ public:
   /// false.
   bool MergeFunctions;
 
+  /// Tuning option to override the default inliner threshold.
+  int InlinerThreshold;
+
   // Experimental option to eagerly invalidate more analyses. This has the
   // potential to decrease max memory usage in exchange for more compile time.
   // This may affect codegen due to either passes using analyses only when
@@ -215,8 +218,9 @@ public:
   /// only intended for use when attempting to optimize code. If frontends
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
-  ModulePassManager buildModuleOptimizationPipeline(OptimizationLevel Level,
-                                                    bool LTOPreLink = false);
+  ModulePassManager
+  buildModuleOptimizationPipeline(OptimizationLevel Level,
+                                  ThinOrFullLTOPhase LTOPhase);
 
   /// Build a per-module default optimization pipeline.
   ///
@@ -372,12 +376,6 @@ public:
   /// the \p AA manager is unspecified if such an error is encountered and this
   /// returns false.
   Error parseAAPipeline(AAManager &AA, StringRef PipelineText);
-
-  /// Returns true if the pass name is the name of an alias analysis pass.
-  bool isAAPassName(StringRef PassName);
-
-  /// Returns true if the pass name is the name of a (non-alias) analysis pass.
-  bool isAnalysisPassName(StringRef PassName);
 
   /// Print pass names.
   void printPassNames(raw_ostream &OS);
@@ -609,7 +607,8 @@ private:
 
   void addPGOInstrPasses(ModulePassManager &MPM, OptimizationLevel Level,
                          bool RunProfileGen, bool IsCS, std::string ProfileFile,
-                         std::string ProfileRemappingFile);
+                         std::string ProfileRemappingFile,
+                         ThinOrFullLTOPhase LTOPhase);
   void invokePeepholeEPCallbacks(FunctionPassManager &, OptimizationLevel);
 
   // Extension Point callbacks

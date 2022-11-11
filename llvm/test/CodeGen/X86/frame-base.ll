@@ -12,8 +12,8 @@ define void @test_frame_rip_conflict() {
 ; CHECK: leaq {{-?[0-9]+}}(%rsp,[[TMPADDR]]),
   %stackvar = alloca i32
 
-  %stackint = ptrtoint i32* %stackvar to i64
-  %addr = add i64 ptrtoint(i32* @var to i64), %stackint
+  %stackint = ptrtoint ptr %stackvar to i64
+  %addr = add i64 ptrtoint(ptr @var to i64), %stackint
 
   call void @eat_i64(i64 %addr)
   ret void

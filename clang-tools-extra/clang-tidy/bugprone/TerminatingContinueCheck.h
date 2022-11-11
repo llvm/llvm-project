@@ -19,7 +19,7 @@ namespace bugprone {
 ///	a condition which always evaluates to false).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-terminating-continue.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/terminating-continue.html
 class TerminatingContinueCheck : public ClangTidyCheck {
 public:
   TerminatingContinueCheck(StringRef Name, ClangTidyContext *Context)

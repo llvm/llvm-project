@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 #include "test_allocator.h"
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool tests()
 {
     {
         std::vector<bool> v;
@@ -59,7 +59,7 @@ int main(int, char**)
     }
 #endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
         std::vector<bool, limited_allocator<bool, 10> > v;
         v.reserve(5);
         try {
@@ -76,5 +76,14 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

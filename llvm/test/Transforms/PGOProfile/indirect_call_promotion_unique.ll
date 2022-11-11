@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@foo = common global i32 ()* null, align 8
+@foo = common global ptr null, align 8
 
 ; The names on the IR and in the profile are both "func1".
 define i32 @func1() {
@@ -13,8 +13,8 @@ entry:
 
 define i32 @bar1() {
 entry:
-  %tmp1 = load i32 ()*, i32 ()** @foo, align 8
-; CHECK: icmp eq i32 ()* %tmp1, @func1
+  %tmp1 = load ptr, ptr @foo, align 8
+; CHECK: icmp eq ptr %tmp1, @func1
   %call = call i32 %tmp1(), !prof !1
   ret i32 %call
 }
@@ -28,8 +28,8 @@ entry:
 
 define i32 @bar2() {
 entry:
-  %tmp2 = load i32 ()*, i32 ()** @foo, align 8
-; CHECK: icmp eq i32 ()* %tmp2, @func2.llvm.10895321227755557127
+  %tmp2 = load ptr, ptr @foo, align 8
+; CHECK: icmp eq ptr %tmp2, @func2.llvm.10895321227755557127
   %call = call i32 %tmp2(), !prof !2
   ret i32 %call
 }
@@ -43,8 +43,8 @@ entry:
 
 define i32 @bar3() {
 entry:
-  %tmp3 = load i32 ()*, i32 ()** @foo, align 8
-; CHECK: icmp eq i32 ()* %tmp3, @func3.__uniq.258901567653530696343884446915951489119
+  %tmp3 = load ptr, ptr @foo, align 8
+; CHECK: icmp eq ptr %tmp3, @func3.__uniq.258901567653530696343884446915951489119
   %call = call i32 %tmp3(), !prof !3
   ret i32 %call
 }
@@ -60,8 +60,8 @@ entry:
 
 define i32 @bar4() {
 entry:
-  %tmp4 = load i32 ()*, i32 ()** @foo, align 8
-; CHECK: icmp eq i32 ()* %tmp4, @func4.__uniq.140291095734751150107370763113257199296.llvm.10650195578168450516
+  %tmp4 = load ptr, ptr @foo, align 8
+; CHECK: icmp eq ptr %tmp4, @func4.__uniq.140291095734751150107370763113257199296.llvm.10650195578168450516
   %call = call i32 %tmp4(), !prof !4
   ret i32 %call
 }
@@ -77,8 +77,8 @@ entry:
 
 define i32 @bar5() {
 entry:
-  %tmp5 = load i32 ()*, i32 ()** @foo, align 8
-; CHECK: icmp eq i32 ()* %tmp5, @func5.__uniq.127882361580787111523790444488985774976.part.818292359123831.llvm.10650195578168450516
+  %tmp5 = load ptr, ptr @foo, align 8
+; CHECK: icmp eq ptr %tmp5, @func5.__uniq.127882361580787111523790444488985774976.part.818292359123831.llvm.10650195578168450516
   %call = call i32 %tmp5(), !prof !5
   ret i32 %call
 }

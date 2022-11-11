@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=never -S | FileCheck --check-prefix=CHECK-PLAIN --implicit-check-not=__asan_stack_malloc %s
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=runtime -S | FileCheck --check-prefixes=CHECK-UAR,CHECK-UAR-RUNTIME %s
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=always -S | FileCheck --check-prefixes=CHECK-UAR,CHECK-UAR-ALWAYS %s
+; RUN: opt < %s -passes=asan -asan-use-after-return=never -S | FileCheck --check-prefix=CHECK-PLAIN --implicit-check-not=__asan_stack_malloc %s
+; RUN: opt < %s -passes=asan -asan-use-after-return=runtime -S | FileCheck --check-prefixes=CHECK-UAR,CHECK-UAR-RUNTIME %s
+; RUN: opt < %s -passes=asan -asan-use-after-return=always -S | FileCheck --check-prefixes=CHECK-UAR,CHECK-UAR-ALWAYS %s
 target datalayout = "e-i64:64-f80:128-s:64-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

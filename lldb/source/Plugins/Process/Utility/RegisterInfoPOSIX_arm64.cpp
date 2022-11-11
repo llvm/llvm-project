@@ -245,7 +245,7 @@ uint32_t RegisterInfoPOSIX_arm64::GetRegisterCount() const {
   return m_register_info_count;
 }
 
-size_t RegisterInfoPOSIX_arm64::GetGPRSize() const {
+size_t RegisterInfoPOSIX_arm64::GetGPRSizeStatic() {
   return sizeof(struct RegisterInfoPOSIX_arm64::GPR);
 }
 
@@ -396,15 +396,11 @@ bool RegisterInfoPOSIX_arm64::IsSVERegVG(unsigned reg) const {
 }
 
 bool RegisterInfoPOSIX_arm64::IsPAuthReg(unsigned reg) const {
-  return std::find(pauth_regnum_collection.begin(),
-                   pauth_regnum_collection.end(),
-                   reg) != pauth_regnum_collection.end();
+  return llvm::is_contained(pauth_regnum_collection, reg);
 }
 
 bool RegisterInfoPOSIX_arm64::IsMTEReg(unsigned reg) const {
-  return std::find(m_mte_regnum_collection.begin(),
-                   m_mte_regnum_collection.end(),
-                   reg) != m_mte_regnum_collection.end();
+  return llvm::is_contained(m_mte_regnum_collection, reg);
 }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEZ0() const { return sve_z0; }

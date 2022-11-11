@@ -97,6 +97,10 @@ PythonObject ToSWIGWrapper(lldb::ExecutionContextRefSP ctx_sp) {
                       SWIGTYPE_p_lldb__SBExecutionContext);
 }
 
+PythonObject ToSWIGWrapper(lldb::TypeImplSP type_impl_sp) {
+  return ToSWIGHelper(new lldb::SBType(type_impl_sp), SWIGTYPE_p_lldb__SBType);
+}
+
 PythonObject ToSWIGWrapper(const TypeSummaryOptions &summary_options) {
   return ToSWIGHelper(new lldb::SBTypeSummaryOptions(summary_options),
                       SWIGTYPE_p_lldb__SBTypeSummaryOptions);

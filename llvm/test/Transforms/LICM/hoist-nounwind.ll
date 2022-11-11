@@ -1,12 +1,12 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop-mssa(licm)' -S %s | FileCheck %s
-; RUN: opt -S -basic-aa -licm -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -licm -verify-memoryssa < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 declare void @f() nounwind
 
 ; Don't hoist load past nounwind call.
-define i32 @test1(i32* noalias nocapture readonly %a) nounwind uwtable {
+define i32 @test1(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: @test1(
 entry:
   br label %for.body
@@ -17,7 +17,7 @@ for.body:
   %i.06 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %x.05 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   tail call void @f() nounwind
-  %i1 = load i32, i32* %a, align 4
+  %i1 = load i32, ptr %a, align 4
   %add = add nsw i32 %i1, %x.05
   %inc = add nuw nsw i32 %i.06, 1
   %exitcond = icmp eq i32 %inc, 1000
@@ -50,7 +50,7 @@ for.cond.cleanup:
 }
 
 ; Hoist a non-volatile load past volatile load.
-define i32 @test3(i32* noalias nocapture readonly %a, i32* %v) nounwind uwtable {
+define i32 @test3(ptr noalias nocapture readonly %a, ptr %v) nounwind uwtable {
 ; CHECK-LABEL: @test3(
 entry:
   br label %for.body
@@ -62,8 +62,8 @@ entry:
 for.body:
   %i.06 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %x.05 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %xxx = load volatile i32, i32* %v, align 4
-  %i1 = load i32, i32* %a, align 4
+  %xxx = load volatile i32, ptr %v, align 4
+  %i1 = load i32, ptr %a, align 4
   %add = add nsw i32 %i1, %x.05
   %inc = add nuw nsw i32 %i.06, 1
   %exitcond = icmp eq i32 %inc, 1000
@@ -74,7 +74,7 @@ for.cond.cleanup:
 }
 
 ; Don't a volatile load past volatile load.
-define i32 @test4(i32* noalias nocapture readonly %a, i32* %v) nounwind uwtable {
+define i32 @test4(ptr noalias nocapture readonly %a, ptr %v) nounwind uwtable {
 ; CHECK-LABEL: @test4(
 entry:
   br label %for.body
@@ -85,8 +85,8 @@ entry:
 for.body:
   %i.06 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %x.05 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %xxx = load volatile i32, i32* %v, align 4
-  %i1 = load volatile i32, i32* %a, align 4
+  %xxx = load volatile i32, ptr %v, align 4
+  %i1 = load volatile i32, ptr %a, align 4
   %add = add nsw i32 %i1, %x.05
   %inc = add nuw nsw i32 %i.06, 1
   %exitcond = icmp eq i32 %inc, 1000

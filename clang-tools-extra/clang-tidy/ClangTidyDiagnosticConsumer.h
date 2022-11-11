@@ -15,6 +15,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 
 namespace clang {
@@ -201,6 +202,11 @@ public:
             DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID)));
   }
 
+  void setOptionsCollector(llvm::StringSet<> *Collector) {
+    OptionsCollector = Collector;
+  }
+  llvm::StringSet<> *getOptionsCollector() const { return OptionsCollector; }
+
 private:
   // Writes to Stats.
   friend class ClangTidyDiagnosticConsumer;
@@ -230,6 +236,7 @@ private:
   bool SelfContainedDiags;
 
   NoLintDirectiveHandler NoLintHandler;
+  llvm::StringSet<> *OptionsCollector = nullptr;
 };
 
 /// Gets the Fix attached to \p Diagnostic.

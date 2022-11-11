@@ -9,10 +9,9 @@ from lldbsuite.test import lldbutil
 
 class TestBasicVector(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
+    @skipIf(bugnumber="rdar://100741983")
     def test(self):
         self.build()
 
@@ -23,13 +22,14 @@ class TestBasicVector(TestBase):
         self.runCmd("settings set target.import-std-module true")
 
         vector_type = "std::vector<int>"
-        size_type = vector_type + "::size_type"
-        iterator = vector_type + "::iterator"
+        size_type = "size_type"
+        value_type = "value_type"
+        iterator = "iterator"
         # LLDB's formatter provides us with a artificial 'item' member.
         iterator_children = [ValueCheck(name="item")]
-        riterator = vector_type + "::reverse_iterator"
+        riterator = "reverse_iterator"
         riterator_children = [
-            ValueCheck(name="__t"),
+            ValueCheck(), # Deprecated __t_ member; no need to check
             ValueCheck(name="current")
         ]
 
@@ -41,12 +41,8 @@ class TestBasicVector(TestBase):
                              ValueCheck(value="2")
                          ])
         self.expect_expr("a.size()", result_type=size_type, result_value="3")
-        front = self.expect_expr("a.front()", result_value="3")
-        value_type = front.GetDisplayTypeName()
-        self.assertIn(value_type, [
-            "std::vector<int>::value_type", # Pre-D112976
-            "std::__vector_base<int, std::allocator<int> >::value_type", # Post-D112976
-            ])
+        front = self.expect_expr("a.front()", result_type=value_type,
+                                 result_value="3")
         self.expect_expr("a[1]", result_type=value_type, result_value="1")
         self.expect_expr("a.back()", result_type=value_type, result_value="2")
 

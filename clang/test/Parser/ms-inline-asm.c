@@ -62,6 +62,18 @@ void t14(void) {
   __asm mov eax, offset A // expected-error {{offset operator cannot yet handle constants}}
 }
 
+// GH57791
+typedef struct S {
+  unsigned bf1:1; // expected-note {{bit-field is declared here}}
+  unsigned bf2:1; // expected-note {{bit-field is declared here}}
+} S;
+void t15(S s) {
+  __asm {
+    mov eax, s.bf1 // expected-error {{an inline asm block cannot have an operand which is a bit-field}}
+    mov s.bf2, eax // expected-error {{an inline asm block cannot have an operand which is a bit-field}}
+  }
+}
+
 int t_fail(void) { // expected-note {{to match this}}
   __asm 
   __asm { // expected-error 3 {{expected}} expected-note {{to match this}}

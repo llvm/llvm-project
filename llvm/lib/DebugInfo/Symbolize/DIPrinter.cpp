@@ -75,7 +75,7 @@ public:
 
   SourceCode(
       StringRef FileName, int64_t Line, int Lines,
-      const Optional<StringRef> &EmbeddedSource = Optional<StringRef>(None))
+      const Optional<StringRef> &EmbeddedSource = Optional<StringRef>())
       : Line(Line), Lines(Lines),
         FirstLine(std::max(static_cast<int64_t>(1), Line - Lines / 2)),
         LastLine(FirstLine + Lines - 1),

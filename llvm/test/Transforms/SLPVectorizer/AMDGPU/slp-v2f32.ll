@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -slp-vectorizer < %s | FileCheck -check-prefixes=GCN,GFX908 %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -slp-vectorizer < %s | FileCheck -check-prefixes=GCN,GFX90A %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -passes=slp-vectorizer < %s | FileCheck -check-prefixes=GCN,GFX908 %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=slp-vectorizer < %s | FileCheck -check-prefixes=GCN,GFX90A %s
 
 ; GCN-LABEL: @fadd_combine
 ; GFX908: fadd float

@@ -19,13 +19,13 @@
 #error "FMA instructions are not supported"
 #endif
 
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 
 namespace __llvm_libc {
 namespace fputil {
 
 template <typename T>
-cpp::EnableIfType<cpp::IsSame<T, float>::Value, T> fma(T x, T y, T z) {
+cpp::enable_if_t<cpp::is_same_v<T, float>, T> fma(T x, T y, T z) {
   float result;
   __asm__ __volatile__("fmadd %s0, %s1, %s2, %s3\n\t"
                        : "=w"(result)
@@ -34,7 +34,7 @@ cpp::EnableIfType<cpp::IsSame<T, float>::Value, T> fma(T x, T y, T z) {
 }
 
 template <typename T>
-cpp::EnableIfType<cpp::IsSame<T, double>::Value, T> fma(T x, T y, T z) {
+cpp::enable_if_t<cpp::is_same_v<T, double>, T> fma(T x, T y, T z) {
   double result;
   __asm__ __volatile__("fmadd %d0, %d1, %d2, %d3\n\t"
                        : "=w"(result)

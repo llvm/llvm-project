@@ -186,3 +186,60 @@ bb237:
 }
 
 declare void @f()
+
+define void @issfeoperand([3 x [2 x [1 x i8]]]* nocapture readonly %array, i1 %cond1, i1 %cond2, i16* nocapture readonly %p1, i32* nocapture writeonly %p2, i32* nocapture writeonly %p3) local_unnamed_addr #0 {
+; CHECK-LABEL: @issfeoperand(
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds [3 x [2 x [1 x i8]]], [3 x [2 x [1 x i8]]]* [[ARRAY:%.*]], i64 109, i64 0, i64 0, i64 undef
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, i8* [[ARRAYIDX31]], align 1
+; CHECK-NEXT:    br label [[COND_FALSE]]
+; CHECK:       cond.false:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ [[LD1]], [[COND_TRUE]] ], [ 0, [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX42:%.*]] = getelementptr inbounds [3 x [2 x [1 x i8]]], [3 x [2 x [1 x i8]]]* [[ARRAY]], i64 109, i64 0, i64 0, i64 undef
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, i8* [[ARRAYIDX42]], align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[LD2]], [[PHI1]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP1]] to i32
+; CHECK-NEXT:    store i32 [[ZEXT]], i32* [[P2:%.*]], align 4
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[COND_END:%.*]], label [[EXIT:%.*]]
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[LD3:%.*]] = load i16, i16* [[P1:%.*]], align 2
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i16 [[LD3]] to i32
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[SEXT]], [[COND_END]] ], [ 0, [[COND_FALSE]] ]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[LD2]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP2]], i32 [[PHI2]], i32 0
+; CHECK-NEXT:    store i32 [[SEL]], i32* [[P3:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+for.body:
+  br i1 %cond1, label %cond.true, label %cond.false
+
+cond.true:                                        ; preds = %for.body
+  %arrayidx31 = getelementptr inbounds [3 x [2 x [1 x i8]]], [3 x [2 x [1 x i8]]]* %array, i64 109, i64 0, i64 0, i64 undef
+  %ld1 = load i8, i8* %arrayidx31, align 1
+  br label %cond.false
+
+cond.false:                                       ; preds = %cond.true, %for.body
+  %phi1 = phi i8 [ %ld1, %cond.true ], [ 0, %for.body ]
+  %arrayidx42 = getelementptr inbounds [3 x [2 x [1 x i8]]], [3 x [2 x [1 x i8]]]* %array, i64 109, i64 0, i64 0, i64 undef
+  %ld2 = load i8, i8* %arrayidx42, align 1
+  %cmp1 = icmp ult i8 %ld2, %phi1
+  %zext = zext i1 %cmp1 to i32
+  store i32 %zext, i32* %p2, align 4
+  br i1 %cond2, label %cond.end, label %exit
+
+cond.end:                                         ; preds = %cond.false
+  %ld3 = load i16, i16* %p1, align 2
+  %sext = sext i16 %ld3 to i32
+  br label %exit
+
+exit:                                             ; preds = %cond.end, %cond.false
+  %phi2 = phi i32 [ %sext, %cond.end ], [ 0, %cond.false ]
+  %cmp2 = icmp eq i8 %ld2, 0
+  %sel = select i1 %cmp2, i32 %phi2, i32 0
+  store i32 %sel, i32* %p3, align 4
+  ret void
+}

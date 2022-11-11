@@ -15,7 +15,7 @@ define void @t(<4 x float> %A) {
 ; AVX-NEXT:    vmovaps %xmm0, 0
 ; AVX-NEXT:    retl
   %tmp1277 = fsub <4 x float> < float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00 >, %A
-  store <4 x float> %tmp1277, <4 x float>* null
+  store <4 x float> %tmp1277, ptr null
   ret void
 }
 
@@ -55,7 +55,7 @@ entry:
   ret <2 x double> %tmp13
 }
 
-define void @t3(<4 x float> %a, <4 x float> %b, <4 x float>* %c, <4 x float>* %d) {
+define void @t3(<4 x float> %a, <4 x float> %b, ptr %c, ptr %d) {
 ; SSE-LABEL: t3:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -74,7 +74,7 @@ define void @t3(<4 x float> %a, <4 x float> %b, <4 x float>* %c, <4 x float>* %d
 ; AVX-NEXT:    vmovaps %xmm0, (%eax)
 ; AVX-NEXT:    retl
 entry:
-  %tmp3 = load <4 x float>, <4 x float>* %c
+  %tmp3 = load <4 x float>, ptr %c
   %tmp11 = bitcast <4 x float> %a to <4 x i32>
   %tmp12 = bitcast <4 x float> %b to <4 x i32>
   %tmp13 = xor <4 x i32> %tmp11, < i32 -1, i32 -1, i32 -1, i32 -1 >
@@ -82,7 +82,7 @@ entry:
   %tmp27 = bitcast <4 x float> %tmp3 to <4 x i32>
   %tmp28 = or <4 x i32> %tmp14, %tmp27
   %tmp30 = bitcast <4 x i32> %tmp28 to <4 x float>
-  store <4 x float> %tmp30, <4 x float>* %d
+  store <4 x float> %tmp30, ptr %d
   ret void
 }
 

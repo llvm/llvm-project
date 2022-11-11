@@ -18,9 +18,9 @@ define void @callee(ppc_fp128 %x) {
 ; CHECK-NEXT:    blr
 entry:
   %x.addr = alloca ppc_fp128, align 16
-  store ppc_fp128 %x, ppc_fp128* %x.addr, align 16
-  %0 = load ppc_fp128, ppc_fp128* %x.addr, align 16
-  store ppc_fp128 %0, ppc_fp128* @g, align 16
+  store ppc_fp128 %x, ptr %x.addr, align 16
+  %0 = load ppc_fp128, ptr %x.addr, align 16
+  store ppc_fp128 %0, ptr @g, align 16
   ret void
 }
 
@@ -43,7 +43,7 @@ define void @caller() {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load ppc_fp128, ppc_fp128* @g, align 16
+  %0 = load ppc_fp128, ptr @g, align 16
   call void @test(ppc_fp128 %0)
   ret void
 }
@@ -82,7 +82,7 @@ define ppc_fp128 @result() {
 ; CHECK-NEXT:    lfd 2, 8(3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load ppc_fp128, ppc_fp128* @g, align 16
+  %0 = load ppc_fp128, ptr @g, align 16
   ret ppc_fp128 %0
 }
 
@@ -106,7 +106,7 @@ define void @use_result() {
 ; CHECK-NEXT:    blr
 entry:
   %call = tail call ppc_fp128 @test_result() #3
-  store ppc_fp128 %call, ppc_fp128* @g, align 16
+  store ppc_fp128 %call, ptr @g, align 16
   ret void
 }
 
@@ -191,7 +191,7 @@ entry:
   ret double %conv
 }
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)
 
 define double @vararg(i32 %a, ...) {
 ; CHECK-LABEL: vararg:
@@ -212,10 +212,9 @@ define double @vararg(i32 %a, ...) {
 ; CHECK-NEXT:    std 3, -8(1)
 ; CHECK-NEXT:    blr
 entry:
-  %va = alloca i8*, align 8
-  %va1 = bitcast i8** %va to i8*
-  call void @llvm.va_start(i8* %va1)
-  %arg = va_arg i8** %va, ppc_fp128
+  %va = alloca ptr, align 8
+  call void @llvm.va_start(ptr %va)
+  %arg = va_arg ptr %va, ppc_fp128
   %conv = fptrunc ppc_fp128 %arg to double
   ret double %conv
 }

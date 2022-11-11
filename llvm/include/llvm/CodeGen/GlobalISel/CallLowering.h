@@ -144,6 +144,9 @@ public:
 
     /// The stack index for sret demotion.
     int DemoteStackIndex;
+
+    /// Expected type identifier for indirect calls with a CFI check.
+    const ConstantInt *CFIType = nullptr;
   };
 
   /// Argument handling is mostly uniform between the four places that
@@ -348,6 +351,9 @@ protected:
   /// parameter of \p Call.
   ISD::ArgFlagsTy getAttributesForArgIdx(const CallBase &Call,
                                          unsigned ArgIdx) const;
+
+  /// \returns Flags corresponding to the attributes on the return from \p Call.
+  ISD::ArgFlagsTy getAttributesForReturn(const CallBase &Call) const;
 
   /// Adds flags to \p Flags based off of the attributes in \p Attrs.
   /// \p OpIdx is the index in \p Attrs to add flags from.

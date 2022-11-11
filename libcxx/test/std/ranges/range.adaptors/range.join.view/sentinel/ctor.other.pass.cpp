@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr sentinel(sentinel<!Const> s);
-//             requires Const && convertible_­to<sentinel_t<V>, sentinel_t<Base>>;
+//             requires Const && convertible_to<sentinel_t<V>, sentinel_t<Base>>;
 
 #include <cassert>
 #include <ranges>

@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=CHECK,AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
 
-define void @foo(<3 x float> %in, <4 x i8>* nocapture %out) nounwind {
+define void @foo(<3 x float> %in, ptr nocapture %out) nounwind {
 ; SSE2-LABEL: foo:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -40,7 +40,7 @@ define void @foo(<3 x float> %in, <4 x i8>* nocapture %out) nounwind {
   %t0 = fptoui <3 x float> %in to <3 x i8>
   %t1 = shufflevector <3 x i8> %t0, <3 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
   %t2 = insertelement <4 x i8> %t1, i8 -1, i32 3
-  store <4 x i8> %t2, <4 x i8>* %out, align 4
+  store <4 x i8> %t2, ptr %out, align 4
   ret void
 }
 
@@ -129,7 +129,7 @@ define <4 x float> @test_buildvector_v4f32_register(float %f0, float %f1, float 
   ret <4 x float> %ins3
 }
 
-define <4 x float> @test_buildvector_v4f32_load(float* %p0, float* %p1, float* %p2, float* %p3) {
+define <4 x float> @test_buildvector_v4f32_load(ptr %p0, ptr %p1, ptr %p2, ptr %p3) {
 ; SSE2-LABEL: test_buildvector_v4f32_load:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -156,10 +156,10 @@ define <4 x float> @test_buildvector_v4f32_load(float* %p0, float* %p1, float* %
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-NEXT:    retq
-  %f0 = load float, float* %p0, align 4
-  %f1 = load float, float* %p1, align 4
-  %f2 = load float, float* %p2, align 4
-  %f3 = load float, float* %p3, align 4
+  %f0 = load float, ptr %p0, align 4
+  %f1 = load float, ptr %p1, align 4
+  %f2 = load float, ptr %p2, align 4
+  %f3 = load float, ptr %p3, align 4
   %ins0 = insertelement <4 x float> undef, float %f0, i32 0
   %ins1 = insertelement <4 x float> %ins0, float %f1, i32 1
   %ins2 = insertelement <4 x float> %ins1, float %f2, i32 2
@@ -167,7 +167,7 @@ define <4 x float> @test_buildvector_v4f32_load(float* %p0, float* %p1, float* %
   ret <4 x float> %ins3
 }
 
-define <4 x float> @test_buildvector_v4f32_partial_load(float %f0, float %f1, float %f2, float* %p3) {
+define <4 x float> @test_buildvector_v4f32_partial_load(float %f0, float %f1, float %f2, ptr %p3) {
 ; SSE2-LABEL: test_buildvector_v4f32_partial_load:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
@@ -189,7 +189,7 @@ define <4 x float> @test_buildvector_v4f32_partial_load(float %f0, float %f1, fl
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-NEXT:    retq
-  %f3 = load float, float* %p3, align 4
+  %f3 = load float, ptr %p3, align 4
   %ins0 = insertelement <4 x float> undef, float %f0, i32 0
   %ins1 = insertelement <4 x float> %ins0, float %f1, i32 1
   %ins2 = insertelement <4 x float> %ins1, float %f2, i32 2
@@ -725,7 +725,7 @@ define <16 x i8> @test_buildvector_v16i8_register_zero_2(i8 %a2, i8 %a3, i8 %a6,
 ; PR46461 - Don't let reduceBuildVecExtToExtBuildVec break splat(zero_extend) patterns,
 ; resulting in the BUILD_VECTOR lowering to individual insertions into a zero vector.
 
-define void @PR46461(i16 %x, <16 x i32>* %y) {
+define void @PR46461(i16 %x, ptr %y) {
 ; SSE-LABEL: PR46461:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movzwl %di, %eax
@@ -764,7 +764,7 @@ define void @PR46461(i16 %x, <16 x i32>* %y) {
   %a = zext i16 %z to i32
   %b = insertelement <16 x i32> undef, i32 %a, i32 0
   %c = shufflevector <16 x i32> %b, <16 x i32> undef, <16 x i32> zeroinitializer
-  store <16 x i32> %c, <16 x i32>* %y
+  store <16 x i32> %c, ptr %y
   ret void
 }
 
@@ -779,13 +779,13 @@ define <4 x i32> @ossfuzz5688(i32 %a0) {
   %3 = extractelement <4 x i32> <i32 30, i32 53, i32 42, i32 12>, i32 %2
   %4 = extractelement <4 x i32> zeroinitializer, i32 %2
   %5 = insertelement <4 x i32> undef, i32 %3, i32 undef
-  store i32 %4, i32* undef
+  store i32 %4, ptr undef
   ret <4 x i32> %5
 }
 
 ; If we do not define all bytes that are extracted, this is a miscompile.
 
-define i32 @PR46586(i8* %p, <4 x i32> %v) {
+define i32 @PR46586(ptr %p, <4 x i32> %v) {
 ; SSE2-LABEL: PR46586:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzbl 3(%rdi), %eax
@@ -819,10 +819,9 @@ define i32 @PR46586(i8* %p, <4 x i32> %v) {
 ; AVX-NEXT:    divl %ecx
 ; AVX-NEXT:    movl %edx, %eax
 ; AVX-NEXT:    retq
-  %p0 = getelementptr inbounds i8, i8* %p, i64 0
-  %p3 = getelementptr inbounds i8, i8* %p, i64 3
-  %t25 = load i8, i8* %p0
-  %t28 = load i8, i8* %p3
+  %p3 = getelementptr inbounds i8, ptr %p, i64 3
+  %t25 = load i8, ptr %p
+  %t28 = load i8, ptr %p3
   %t29 = insertelement <4 x i8> undef, i8 %t25, i32 0
   %t32 = insertelement <4 x i8> %t29, i8 %t28, i32 3
   %t33 = zext <4 x i8> %t32 to <4 x i32>

@@ -20,7 +20,7 @@ namespace fuchsia {
 /// return types.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-trailing-return.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/trailing-return.html
 class TrailingReturnCheck : public ClangTidyCheck {
 public:
   TrailingReturnCheck(StringRef Name, ClangTidyContext *Context)

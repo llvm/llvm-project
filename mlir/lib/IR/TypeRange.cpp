@@ -23,8 +23,6 @@ TypeRange::TypeRange(OperandRange values)
     : TypeRange(values.begin().getBase(), values.size()) {}
 TypeRange::TypeRange(ResultRange values)
     : TypeRange(values.getBase(), values.size()) {}
-TypeRange::TypeRange(ArrayRef<Value> values)
-    : TypeRange(values.data(), values.size()) {}
 TypeRange::TypeRange(ValueRange values) : TypeRange(OwnerT(), values.size()) {
   if (count == 0)
     return;

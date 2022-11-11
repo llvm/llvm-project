@@ -136,7 +136,7 @@ DeclarationFragmentsBuilder::getFragmentsForNNS(const NestedNameSpecifier *NNS,
     Fragments.append("template", DeclarationFragments::FragmentKind::Keyword);
     Fragments.appendSpace();
     // Fallthrough after adding the keyword to handle the actual type.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case NestedNameSpecifier::TypeSpec: {
     const Type *T = NNS->getAsType();
@@ -692,6 +692,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProperty(
   return Fragments.appendSpace()
       .append(getFragmentsForType(Property->getType(),
                                   Property->getASTContext(), After))
+      .appendSpace()
       .append(Property->getName(),
               DeclarationFragments::FragmentKind::Identifier)
       .append(std::move(After));

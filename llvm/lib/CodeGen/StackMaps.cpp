@@ -365,7 +365,7 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
   });
 
   for (auto I = LiveOuts.begin(), E = LiveOuts.end(); I != E; ++I) {
-    for (auto II = std::next(I); II != E; ++II) {
+    for (auto *II = std::next(I); II != E; ++II) {
       if (I->DwarfRegNum != II->DwarfRegNum) {
         // Skip all the now invalid entries.
         I = --II;

@@ -1,4 +1,4 @@
-; RUN: opt < %s -globals-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=globals-aa -passes='require<globals-aa>,gvn' -S | FileCheck %s
 
 @X = internal global i32 4
 

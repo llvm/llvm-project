@@ -15,5 +15,5 @@ void __attribute__((aarch64_vector_pcs)) foo3(void) {} // expected-error {{funct
 typedef int (*fn_ty)(void);
 typedef int __attribute__((aarch64_vector_pcs)) (*aavpcs_fn_ty)(void);
 void foo4(fn_ty ptr1, aavpcs_fn_ty ptr2) {
-  ptr1 = ptr2; // expected-warning {{incompatible function pointer types}}
+  ptr1 = ptr2; // expected-error {{incompatible function pointer types}}
 }

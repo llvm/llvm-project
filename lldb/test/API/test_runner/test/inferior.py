@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 """Inferior program used by process control tests."""
 
-from __future__ import print_function
-
 import argparse
 import datetime
 import signal

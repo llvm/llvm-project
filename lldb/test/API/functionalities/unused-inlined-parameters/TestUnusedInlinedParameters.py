@@ -8,7 +8,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestUnusedInlinedParameters(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def test_unused_inlined_parameters(self):
         self.build()
@@ -18,5 +17,3 @@ class TestUnusedInlinedParameters(TestBase):
         self.assertIn("(void *) unused1 = <no location, value may have been optimized out>",
                       lldbutil.get_description(self.frame().FindVariable("unused1")))
         self.assertEqual(42, self.frame().FindVariable("used").GetValueAsUnsigned())
-        self.assertIn("(int) unused2 = <no location, value may have been optimized out>",
-                      lldbutil.get_description(self.frame().FindVariable("unused2")))

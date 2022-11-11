@@ -22,6 +22,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -44,15 +45,38 @@ AArch64MCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   assert(TheTriple.isOSWindows() &&
          "Windows is the only supported COFF target");
 
-  bool IsIndirect = (TargetFlags & (AArch64II::MO_DLLIMPORT | AArch64II::MO_COFFSTUB));
+  bool IsIndirect =
+      (TargetFlags & (AArch64II::MO_DLLIMPORT | AArch64II::MO_DLLIMPORTAUX |
+                      AArch64II::MO_COFFSTUB));
   if (!IsIndirect)
     return Printer.getSymbol(GV);
 
   SmallString<128> Name;
-  if (TargetFlags & AArch64II::MO_DLLIMPORT)
+
+  if (TargetFlags & AArch64II::MO_DLLIMPORTAUX) {
+    // __imp_aux is specific to arm64EC; it represents the actual address of
+    // an imported function without any thunks.
+    //
+    // If we see a reference to an "aux" symbol, also emit a reference to the
+    // corresponding non-aux symbol.  Otherwise, the Microsoft linker behaves
+    // strangely when linking against x64 import libararies.
+    //
+    // emitSymbolAttribute() doesn't have any real effect here; it just
+    // ensures the symbol name appears in the assembly without any
+    // side-effects. It might make sense to design a cleaner way to express
+    // this.
     Name = "__imp_";
-  else if (TargetFlags & AArch64II::MO_COFFSTUB)
+    Printer.TM.getNameWithPrefix(Name, GV,
+                                 Printer.getObjFileLowering().getMangler());
+    MCSymbol *ExtraSym = Ctx.getOrCreateSymbol(Name);
+    Printer.OutStreamer->emitSymbolAttribute(ExtraSym, MCSA_Global);
+
+    Name = "__imp_aux_";
+  } else if (TargetFlags & AArch64II::MO_DLLIMPORT) {
+    Name = "__imp_";
+  } else if (TargetFlags & AArch64II::MO_COFFSTUB) {
     Name = ".refptr.";
+  }
   Printer.TM.getNameWithPrefix(Name, GV,
                                Printer.getObjFileLowering().getMangler());
 

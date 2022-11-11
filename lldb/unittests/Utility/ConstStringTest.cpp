@@ -8,7 +8,6 @@
 
 #include "lldb/Utility/ConstString.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/YAMLParser.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -137,23 +136,4 @@ TEST(ConstStringTest, CompareStringRef) {
   EXPECT_TRUE(null != "");
   EXPECT_TRUE(null == static_cast<const char *>(nullptr));
   EXPECT_TRUE(null != "bar");
-}
-
-TEST(ConstStringTest, YAML) {
-  std::string buffer;
-  llvm::raw_string_ostream os(buffer);
-
-  // Serialize.
-  std::vector<ConstString> strings = {ConstString("foo"), ConstString("bar"),
-                                      ConstString("")};
-  llvm::yaml::Output yout(os);
-  yout << strings;
-  os.flush();
-
-  // Deserialize.
-  std::vector<ConstString> deserialized;
-  llvm::yaml::Input yin(buffer);
-  yin >> deserialized;
-
-  EXPECT_EQ(strings, deserialized);
 }

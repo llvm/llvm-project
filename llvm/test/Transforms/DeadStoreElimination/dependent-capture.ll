@@ -5,7 +5,6 @@ define void @f() {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call noalias ptr @_Znwm()
 ; CHECK-NEXT:    [[TMP4:%.*]] = call noalias ptr @_Znwm()
-; CHECK-NEXT:    store i8 0, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %tmp1 = call noalias ptr @_Znwm()

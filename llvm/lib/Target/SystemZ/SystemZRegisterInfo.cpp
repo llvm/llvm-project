@@ -290,8 +290,7 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   MachineBasicBlock &MBB = *MI->getParent();
   MachineFunction &MF = *MBB.getParent();
-  auto *TII =
-      static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  auto *TII = MF.getSubtarget<SystemZSubtarget>().getInstrInfo();
   const SystemZFrameLowering *TFI = getFrameLowering(MF);
   DebugLoc DL = MI->getDebugLoc();
 

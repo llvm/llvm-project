@@ -7,7 +7,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; The IR was created using the following C code:
-;; typedef void *jmp_buf;
+;; typedef ptr jmp_buf;
 ;; jmp_buf buf;
 ;;
 ;; __attribute__((noinline)) int bar(int i) {
@@ -25,7 +25,7 @@
 ;; }
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-@buf = common local_unnamed_addr global i8* null, align 8
+@buf = common local_unnamed_addr global ptr null, align 8
 
 ; Functions that use LongJmp should fix the Shadow Stack using previosuly saved
 ; ShadowStackPointer in the input buffer.
@@ -99,12 +99,12 @@ define i32 @bar(i32 %i) local_unnamed_addr {
 ; X86-NEXT:    movl 8(%eax), %esp
 ; X86-NEXT:    jmpl *%ecx
 entry:
-  %0 = load i8*, i8** @buf, align 8
-  tail call void @llvm.eh.sjlj.longjmp(i8* %0)
+  %0 = load ptr, ptr @buf, align 8
+  tail call void @llvm.eh.sjlj.longjmp(ptr %0)
   unreachable
 }
 
-declare void @llvm.eh.sjlj.longjmp(i8*)
+declare void @llvm.eh.sjlj.longjmp(ptr)
 
 ; Functions that call SetJmp should save the current ShadowStackPointer for
 ; future fixing of the Shadow Stack.
@@ -210,16 +210,14 @@ define i32 @foo(i32 %i) local_unnamed_addr {
 ; X86-NEXT:    calll _bar
 ; X86-NEXT:    ud2
 entry:
-  %0 = load i8*, i8** @buf, align 8
-  %1 = bitcast i8* %0 to i8**
-  %2 = tail call i8* @llvm.frameaddress(i32 0)
-  store i8* %2, i8** %1, align 8
-  %3 = tail call i8* @llvm.stacksave()
-  %4 = getelementptr inbounds i8, i8* %0, i64 16
-  %5 = bitcast i8* %4 to i8**
-  store i8* %3, i8** %5, align 8
-  %6 = tail call i32 @llvm.eh.sjlj.setjmp(i8* %0)
-  %tobool = icmp eq i32 %6, 0
+  %0 = load ptr, ptr @buf, align 8
+  %1 = tail call ptr @llvm.frameaddress(i32 0)
+  store ptr %1, ptr %0, align 8
+  %2 = tail call ptr @llvm.stacksave()
+  %3 = getelementptr inbounds i8, ptr %0, i64 16
+  store ptr %2, ptr %3, align 8
+  %4 = tail call i32 @llvm.eh.sjlj.setjmp(ptr %0)
+  %tobool = icmp eq i32 %4, 0
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
@@ -231,10 +229,10 @@ if.end:                                           ; preds = %entry
   ret i32 %add2
 }
 
-declare i8* @llvm.frameaddress(i32)
-declare i8* @llvm.stacksave()
-declare i32 @llvm.eh.sjlj.setjmp(i8*)
+declare ptr @llvm.frameaddress(i32)
+declare ptr @llvm.stacksave()
+declare i32 @llvm.eh.sjlj.setjmp(ptr)
 
 !llvm.module.flags = !{!0}
 
-!0 = !{i32 4, !"cf-protection-return", i32 1}
+!0 = !{i32 8, !"cf-protection-return", i32 1}

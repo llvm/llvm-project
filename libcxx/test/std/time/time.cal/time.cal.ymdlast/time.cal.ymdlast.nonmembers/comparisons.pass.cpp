@@ -33,37 +33,37 @@ int main(int, char**)
     using month_day_last      = std::chrono::month_day_last;
     using year_month_day_last = std::chrono::year_month_day_last;
 
-    AssertComparisons6AreNoexcept<year_month_day_last>();
-    AssertComparisons6ReturnBool<year_month_day_last>();
+    AssertComparisonsAreNoexcept<year_month_day_last>();
+    AssertComparisonsReturnBool<year_month_day_last>();
 
     constexpr month January = std::chrono::January;
     constexpr month February = std::chrono::February;
 
-    static_assert( testComparisons6(
+    static_assert( testComparisons(
         year_month_day_last{year{1234}, month_day_last{January}},
         year_month_day_last{year{1234}, month_day_last{January}},
         true, false), "");
 
     // different month
-    static_assert( testComparisons6(
+    static_assert( testComparisons(
         year_month_day_last{year{1234}, month_day_last{January}},
         year_month_day_last{year{1234}, month_day_last{February}},
         false, true), "");
 
     // different year
-    static_assert( testComparisons6(
+    static_assert( testComparisons(
         year_month_day_last{year{1234}, month_day_last{January}},
         year_month_day_last{year{1235}, month_day_last{January}},
         false, true), "");
 
     // different month
-    static_assert( testComparisons6(
+    static_assert( testComparisons(
         year_month_day_last{year{1234}, month_day_last{January}},
         year_month_day_last{year{1234}, month_day_last{February}},
         false, true), "");
 
     // different year and month
-    static_assert( testComparisons6(
+    static_assert( testComparisons(
         year_month_day_last{year{1234}, month_day_last{February}},
         year_month_day_last{year{1235}, month_day_last{January}},
         false, true), "");
@@ -71,7 +71,7 @@ int main(int, char**)
     // same year, different months
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
-            assert((testComparisons6(
+            assert((testComparisons(
                 year_month_day_last{year{1234}, month_day_last{month{i}}},
                 year_month_day_last{year{1234}, month_day_last{month{j}}},
                 i == j, i < j )));
@@ -79,7 +79,7 @@ int main(int, char**)
     // same month, different years
     for (int i = 1000; i < 2000; ++i)
         for (int j = 1000; j < 2000; ++j)
-        assert((testComparisons6(
+        assert((testComparisons(
             year_month_day_last{year{i}, month_day_last{January}},
             year_month_day_last{year{j}, month_day_last{January}},
             i == j, i < j )));

@@ -14,10 +14,10 @@
 ; instructions that don't directly match a RISC-V instruction.
 
 define half @fadd_s(half %a, half %b) nounwind {
-;CHECKIZFH-LABEL: fadd_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fadd.h fa0, fa0, fa1
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fadd_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fadd.h fa0, fa0, fa1
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fadd_s:
 ; RV32I:       # %bb.0:
@@ -75,10 +75,10 @@ define half @fadd_s(half %a, half %b) nounwind {
 }
 
 define half @fsub_s(half %a, half %b) nounwind {
-;CHECKIZFH-LABEL: fsub_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fsub.h fa0, fa0, fa1
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fsub_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fsub.h fa0, fa0, fa1
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fsub_s:
 ; RV32I:       # %bb.0:
@@ -136,10 +136,10 @@ define half @fsub_s(half %a, half %b) nounwind {
 }
 
 define half @fmul_s(half %a, half %b) nounwind {
-;CHECKIZFH-LABEL: fmul_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmul.h fa0, fa0, fa1
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fmul_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmul.h fa0, fa0, fa1
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fmul_s:
 ; RV32I:       # %bb.0:
@@ -197,10 +197,10 @@ define half @fmul_s(half %a, half %b) nounwind {
 }
 
 define half @fdiv_s(half %a, half %b) nounwind {
-;CHECKIZFH-LABEL: fdiv_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fdiv.h fa0, fa0, fa1
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fdiv_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fdiv.h fa0, fa0, fa1
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fdiv_s:
 ; RV32I:       # %bb.0:
@@ -260,10 +260,10 @@ define half @fdiv_s(half %a, half %b) nounwind {
 declare half @llvm.sqrt.f16(half)
 
 define half @fsqrt_s(half %a) nounwind {
-;CHECKIZFH-LABEL: fsqrt_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fsqrt.h fa0, fa0
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fsqrt_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fsqrt.h fa0, fa0
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fsqrt_s:
 ; RV32I:       # %bb.0:
@@ -297,10 +297,10 @@ define half @fsqrt_s(half %a) nounwind {
 declare half @llvm.copysign.f16(half, half)
 
 define half @fsgnj_s(half %a, half %b) nounwind {
-;CHECKIZFH-LABEL: fsgnj_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fsgnj.h fa0, fa0, fa1
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fsgnj_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fsgnj.h fa0, fa0, fa1
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fsgnj_s:
 ; RV32I:       # %bb.0:
@@ -326,12 +326,12 @@ define half @fsgnj_s(half %a, half %b) nounwind {
 ; This function performs extra work to ensure that
 ; DAGCombiner::visitBITCAST doesn't replace the fneg with an xor.
 define i32 @fneg_s(half %a, half %b) nounwind {
-;CHECKIZFH-LABEL: fneg_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fadd.h ft0, fa0, fa0
-;CHECKIZFH-NEXT:    fneg.h ft1, ft0
-;CHECKIZFH-NEXT:    feq.h a0, ft0, ft1
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fneg_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fadd.h ft0, fa0, fa0
+; CHECKIZFH-NEXT:    fneg.h ft1, ft0
+; CHECKIZFH-NEXT:    feq.h a0, ft0, ft1
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fneg_s:
 ; RV32I:       # %bb.0:
@@ -404,11 +404,11 @@ define i32 @fneg_s(half %a, half %b) nounwind {
 ; This function performs extra work to ensure that
 ; DAGCombiner::visitBITCAST doesn't replace the fneg with an xor.
 define half @fsgnjn_s(half %a, half %b) nounwind {
-;CHECKIZFH-LABEL: fsgnjn_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fadd.h ft0, fa0, fa1
-;CHECKIZFH-NEXT:    fsgnjn.h fa0, fa0, ft0
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fsgnjn_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fadd.h ft0, fa0, fa1
+; CHECKIZFH-NEXT:    fsgnjn.h fa0, fa0, ft0
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fsgnjn_s:
 ; RV32I:       # %bb.0:
@@ -498,12 +498,12 @@ declare half @llvm.fabs.f16(half)
 ; This function performs extra work to ensure that
 ; DAGCombiner::visitBITCAST doesn't replace the fabs with an and.
 define half @fabs_s(half %a, half %b) nounwind {
-;CHECKIZFH-LABEL: fabs_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fadd.h ft0, fa0, fa1
-;CHECKIZFH-NEXT:    fabs.h ft1, ft0
-;CHECKIZFH-NEXT:    fadd.h fa0, ft1, ft0
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fabs_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fadd.h ft0, fa0, fa1
+; CHECKIZFH-NEXT:    fabs.h ft1, ft0
+; CHECKIZFH-NEXT:    fadd.h fa0, ft1, ft0
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fabs_s:
 ; RV32I:       # %bb.0:
@@ -587,10 +587,10 @@ define half @fabs_s(half %a, half %b) nounwind {
 declare half @llvm.minnum.f16(half, half)
 
 define half @fmin_s(half %a, half %b) nounwind {
-;CHECKIZFH-LABEL: fmin_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmin.h fa0, fa0, fa1
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fmin_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmin.h fa0, fa0, fa1
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fmin_s:
 ; RV32I:       # %bb.0:
@@ -650,10 +650,10 @@ define half @fmin_s(half %a, half %b) nounwind {
 declare half @llvm.maxnum.f16(half, half)
 
 define half @fmax_s(half %a, half %b) nounwind {
-;CHECKIZFH-LABEL: fmax_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmax.h fa0, fa0, fa1
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fmax_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmax.h fa0, fa0, fa1
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fmax_s:
 ; RV32I:       # %bb.0:
@@ -713,10 +713,10 @@ define half @fmax_s(half %a, half %b) nounwind {
 declare half @llvm.fma.f16(half, half, half)
 
 define half @fmadd_s(half %a, half %b, half %c) nounwind {
-;CHECKIZFH-LABEL: fmadd_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fmadd_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fmadd_s:
 ; RV32I:       # %bb.0:
@@ -788,12 +788,12 @@ define half @fmadd_s(half %a, half %b, half %c) nounwind {
 }
 
 define half @fmsub_s(half %a, half %b, half %c) nounwind {
-;CHECKIZFH-LABEL: fmsub_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmv.h.x ft0, zero
-;CHECKIZFH-NEXT:    fadd.h ft0, fa2, ft0
-;CHECKIZFH-NEXT:    fmsub.h fa0, fa0, fa1, ft0
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fmsub_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmv.h.x ft0, zero
+; CHECKIZFH-NEXT:    fadd.h ft0, fa2, ft0
+; CHECKIZFH-NEXT:    fmsub.h fa0, fa0, fa1, ft0
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fmsub_s:
 ; RV32I:       # %bb.0:
@@ -889,13 +889,13 @@ define half @fmsub_s(half %a, half %b, half %c) nounwind {
 }
 
 define half @fnmadd_s(half %a, half %b, half %c) nounwind {
-;CHECKIZFH-LABEL: fnmadd_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmv.h.x ft0, zero
-;CHECKIZFH-NEXT:    fadd.h ft1, fa0, ft0
-;CHECKIZFH-NEXT:    fadd.h ft0, fa2, ft0
-;CHECKIZFH-NEXT:    fnmadd.h fa0, ft1, fa1, ft0
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fnmadd_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmv.h.x ft0, zero
+; CHECKIZFH-NEXT:    fadd.h ft1, fa0, ft0
+; CHECKIZFH-NEXT:    fadd.h ft0, fa2, ft0
+; CHECKIZFH-NEXT:    fnmadd.h fa0, ft1, fa1, ft0
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_s:
 ; RV32I:       # %bb.0:
@@ -1021,13 +1021,13 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 }
 
 define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
-;CHECKIZFH-LABEL: fnmadd_s_2:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmv.h.x ft0, zero
-;CHECKIZFH-NEXT:    fadd.h ft1, fa1, ft0
-;CHECKIZFH-NEXT:    fadd.h ft0, fa2, ft0
-;CHECKIZFH-NEXT:    fnmadd.h fa0, ft1, fa0, ft0
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fnmadd_s_2:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmv.h.x ft0, zero
+; CHECKIZFH-NEXT:    fadd.h ft1, fa1, ft0
+; CHECKIZFH-NEXT:    fadd.h ft0, fa2, ft0
+; CHECKIZFH-NEXT:    fnmadd.h fa0, ft1, fa0, ft0
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_s_2:
 ; RV32I:       # %bb.0:
@@ -1165,6 +1165,12 @@ define half @fnmadd_s_3(half %a, half %b, half %c) nounwind {
 ; RV64IZFH-NEXT:    fneg.h fa0, ft0
 ; RV64IZFH-NEXT:    ret
 ;
+; CHECKIZFH-LABEL: fnmadd_s_3:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmadd.h ft0, fa0, fa1, fa2
+; CHECKIZFH-NEXT:    fneg.h fa0, ft0
+; CHECKIZFH-NEXT:    ret
+;
 ; RV32I-LABEL: fnmadd_s_3:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
@@ -1251,6 +1257,11 @@ define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 ; RV64IZFH-NEXT:    fnmadd.h fa0, fa0, fa1, fa2
 ; RV64IZFH-NEXT:    ret
 ;
+; CHECKIZFH-LABEL: fnmadd_nsz:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fnmadd.h fa0, fa0, fa1, fa2
+; CHECKIZFH-NEXT:    ret
+;
 ; RV32I-LABEL: fnmadd_nsz:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
@@ -1326,12 +1337,12 @@ define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 }
 
 define half @fnmsub_s(half %a, half %b, half %c) nounwind {
-;CHECKIZFH-LABEL: fnmsub_s:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmv.h.x ft0, zero
-;CHECKIZFH-NEXT:    fadd.h ft0, fa0, ft0
-;CHECKIZFH-NEXT:    fnmsub.h fa0, ft0, fa1, fa2
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fnmsub_s:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmv.h.x ft0, zero
+; CHECKIZFH-NEXT:    fadd.h ft0, fa0, ft0
+; CHECKIZFH-NEXT:    fnmsub.h fa0, ft0, fa1, fa2
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmsub_s:
 ; RV32I:       # %bb.0:
@@ -1425,12 +1436,12 @@ define half @fnmsub_s(half %a, half %b, half %c) nounwind {
 }
 
 define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
-;CHECKIZFH-LABEL: fnmsub_s_2:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmv.h.x ft0, zero
-;CHECKIZFH-NEXT:    fadd.h ft0, fa1, ft0
-;CHECKIZFH-NEXT:    fnmsub.h fa0, ft0, fa0, fa2
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fnmsub_s_2:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmv.h.x ft0, zero
+; CHECKIZFH-NEXT:    fadd.h ft0, fa1, ft0
+; CHECKIZFH-NEXT:    fnmsub.h fa0, ft0, fa0, fa2
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmsub_s_2:
 ; RV32I:       # %bb.0:
@@ -1526,10 +1537,10 @@ define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
 }
 
 define half @fmadd_s_contract(half %a, half %b, half %c) nounwind {
-;CHECKIZFH-LABEL: fmadd_s_contract:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fmadd_s_contract:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fmadd_s_contract:
 ; RV32I:       # %bb.0:
@@ -1612,12 +1623,12 @@ define half @fmadd_s_contract(half %a, half %b, half %c) nounwind {
 }
 
 define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
-;CHECKIZFH-LABEL: fmsub_s_contract:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmv.h.x ft0, zero
-;CHECKIZFH-NEXT:    fadd.h ft0, fa2, ft0
-;CHECKIZFH-NEXT:    fmsub.h fa0, fa0, fa1, ft0
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fmsub_s_contract:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmv.h.x ft0, zero
+; CHECKIZFH-NEXT:    fadd.h ft0, fa2, ft0
+; CHECKIZFH-NEXT:    fmsub.h fa0, fa0, fa1, ft0
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fmsub_s_contract:
 ; RV32I:       # %bb.0:
@@ -1713,14 +1724,14 @@ define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
 }
 
 define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
-;CHECKIZFH-LABEL: fnmadd_s_contract:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmv.h.x ft0, zero
-;CHECKIZFH-NEXT:    fadd.h ft1, fa0, ft0
-;CHECKIZFH-NEXT:    fadd.h ft2, fa1, ft0
-;CHECKIZFH-NEXT:    fadd.h ft0, fa2, ft0
-;CHECKIZFH-NEXT:    fnmadd.h fa0, ft1, ft2, ft0
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fnmadd_s_contract:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmv.h.x ft0, zero
+; CHECKIZFH-NEXT:    fadd.h ft1, fa0, ft0
+; CHECKIZFH-NEXT:    fadd.h ft2, fa1, ft0
+; CHECKIZFH-NEXT:    fadd.h ft0, fa2, ft0
+; CHECKIZFH-NEXT:    fnmadd.h fa0, ft1, ft2, ft0
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_s_contract:
 ; RV32I:       # %bb.0:
@@ -1853,13 +1864,13 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 }
 
 define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
-;CHECKIZFH-LABEL: fnmsub_s_contract:
-;CHECKIZFH:       # %bb.0:
-;CHECKIZFH-NEXT:    fmv.h.x ft0, zero
-;CHECKIZFH-NEXT:    fadd.h ft1, fa0, ft0
-;CHECKIZFH-NEXT:    fadd.h ft0, fa1, ft0
-;CHECKIZFH-NEXT:    fnmsub.h fa0, ft1, ft0, fa2
-;CHECKIZFH-NEXT:    ret
+; CHECKIZFH-LABEL: fnmsub_s_contract:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fmv.h.x ft0, zero
+; CHECKIZFH-NEXT:    fadd.h ft1, fa0, ft0
+; CHECKIZFH-NEXT:    fadd.h ft0, fa1, ft0
+; CHECKIZFH-NEXT:    fnmsub.h fa0, ft1, ft0, fa2
+; CHECKIZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmsub_s_contract:
 ; RV32I:       # %bb.0:

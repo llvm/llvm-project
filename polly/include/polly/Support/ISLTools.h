@@ -17,6 +17,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/iterator.h"
 #include "isl/isl-noexceptions.h"
+#include <algorithm>
 #include <cassert>
 
 /// In debug builds assert that the @p Size is valid, in non-debug builds
@@ -521,6 +522,11 @@ isl::set subtractParams(isl::set Set, isl::set Params);
 /// can also be a piecewise constant and it would return the minimum/maximum
 /// value. Otherwise, return NaN.
 isl::val getConstant(isl::pw_aff PwAff, bool Max, bool Min);
+
+/// If the relation @p PwAff lies on a hyperplane where the given
+/// dimension @p Pos with the type @p Dim has a fixed value, then
+/// return that value. Otherwise return NaN.
+isl::val getConstant(isl::map Map, isl::dim Dim, int Pos);
 
 /// Check that @p End is valid and return an iterator from @p Begin to @p End
 ///

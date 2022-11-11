@@ -3,7 +3,8 @@
 .. note::
    This document is a work in progress and most of the expected content is not
    yet available. While you can expect changes, we always welcome feedback and
-   additions. Please contact, e.g., through ``openmp-dev@lists.llvm.org``.
+   additions. Please post on the `Discourse forums (Runtimes - 
+   OpenMP) <https://discourse.llvm.org/c/runtimes/openmp/35>`__..
 
 .. toctree::
    :hidden:

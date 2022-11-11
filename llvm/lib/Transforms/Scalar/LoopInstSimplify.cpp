@@ -221,7 +221,7 @@ PreservedAnalyses LoopInstSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
       AR.MSSA->verifyMemorySSA();
   }
   if (!simplifyLoopInst(L, AR.DT, AR.LI, AR.AC, AR.TLI,
-                        MSSAU.hasValue() ? MSSAU.getPointer() : nullptr))
+                        MSSAU ? MSSAU.getPointer() : nullptr))
     return PreservedAnalyses::all();
 
   auto PA = getLoopPassPreservedAnalyses();

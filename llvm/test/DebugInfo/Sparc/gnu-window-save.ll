@@ -41,12 +41,12 @@
 define signext i32 @main() #0 !dbg !4 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
-  %call = call signext i32 (i8*, ...) @printf(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0)), !dbg !12
+  store i32 0, ptr %retval
+  %call = call signext i32 (ptr, ...) @printf(ptr @.str), !dbg !12
   ret i32 0, !dbg !13
 }
 
-declare signext i32 @printf(i8*, ...) #1
+declare signext i32 @printf(ptr, ...) #1
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

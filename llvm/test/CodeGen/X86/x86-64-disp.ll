@@ -14,7 +14,7 @@ define fastcc void @foo() nounwind {
 ; CHECK-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
 ; CHECK-NEXT:    movb $1, call_used_regs(%rax)
 ; CHECK-NEXT:    retq
-	%t = getelementptr [53 x i8], [53 x i8]* @call_used_regs, i64 0, i64 4294967295
-	store i8 1, i8* %t, align 1
+	%t = getelementptr [53 x i8], ptr @call_used_regs, i64 0, i64 4294967295
+	store i8 1, ptr %t, align 1
 	ret void
 }

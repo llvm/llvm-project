@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX7 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 
 define amdgpu_ps float @test_writelane_s_s_s(i32 inreg %data, i32 inreg %lane, i32 inreg %vdst.in) #0 {
 ; GFX7-LABEL: test_writelane_s_s_s:

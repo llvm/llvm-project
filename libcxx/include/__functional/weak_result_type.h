@@ -40,8 +40,9 @@ private:
     struct __two {char __lx; char __lxx;};
     static __two __test(...);
     template <class _Ap, class _Rp>
-        static unary_function<_Ap, _Rp>
-        __test(const volatile unary_function<_Ap, _Rp>*);
+        static __unary_function<_Ap, _Rp>
+        __test(const volatile __unary_function<_Ap, _Rp>*);
+
 public:
     static const bool value = !is_same<decltype(__test((_Tp*)0)), __two>::value;
     typedef decltype(__test((_Tp*)0)) type;
@@ -54,8 +55,9 @@ private:
     struct __two {char __lx; char __lxx;};
     static __two __test(...);
     template <class _A1, class _A2, class _Rp>
-        static binary_function<_A1, _A2, _Rp>
-        __test(const volatile binary_function<_A1, _A2, _Rp>*);
+        static __binary_function<_A1, _A2, _Rp>
+        __test(const volatile __binary_function<_A1, _A2, _Rp>*);
+
 public:
     static const bool value = !is_same<decltype(__test((_Tp*)0)), __two>::value;
     typedef decltype(__test((_Tp*)0)) type;
@@ -88,7 +90,9 @@ struct __weak_result_type_imp // bool is true
     : public __maybe_derive_from_unary_function<_Tp>,
       public __maybe_derive_from_binary_function<_Tp>
 {
-    typedef _LIBCPP_NODEBUG typename _Tp::result_type result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = typename _Tp::result_type;
+#endif
 };
 
 template <class _Tp>
@@ -109,62 +113,68 @@ struct __weak_result_type
 template <class _Rp>
 struct __weak_result_type<_Rp ()>
 {
-    typedef _LIBCPP_NODEBUG _Rp result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
+#endif
 };
 
 template <class _Rp>
 struct __weak_result_type<_Rp (&)()>
 {
-    typedef _LIBCPP_NODEBUG _Rp result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
+#endif
 };
 
 template <class _Rp>
 struct __weak_result_type<_Rp (*)()>
 {
-    typedef _LIBCPP_NODEBUG _Rp result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
+#endif
 };
 
 // 1 argument case
 
 template <class _Rp, class _A1>
 struct __weak_result_type<_Rp (_A1)>
-    : public unary_function<_A1, _Rp>
+    : public __unary_function<_A1, _Rp>
 {
 };
 
 template <class _Rp, class _A1>
 struct __weak_result_type<_Rp (&)(_A1)>
-    : public unary_function<_A1, _Rp>
+    : public __unary_function<_A1, _Rp>
 {
 };
 
 template <class _Rp, class _A1>
 struct __weak_result_type<_Rp (*)(_A1)>
-    : public unary_function<_A1, _Rp>
+    : public __unary_function<_A1, _Rp>
 {
 };
 
 template <class _Rp, class _Cp>
 struct __weak_result_type<_Rp (_Cp::*)()>
-    : public unary_function<_Cp*, _Rp>
+    : public __unary_function<_Cp*, _Rp>
 {
 };
 
 template <class _Rp, class _Cp>
 struct __weak_result_type<_Rp (_Cp::*)() const>
-    : public unary_function<const _Cp*, _Rp>
+    : public __unary_function<const _Cp*, _Rp>
 {
 };
 
 template <class _Rp, class _Cp>
 struct __weak_result_type<_Rp (_Cp::*)() volatile>
-    : public unary_function<volatile _Cp*, _Rp>
+    : public __unary_function<volatile _Cp*, _Rp>
 {
 };
 
 template <class _Rp, class _Cp>
 struct __weak_result_type<_Rp (_Cp::*)() const volatile>
-    : public unary_function<const volatile _Cp*, _Rp>
+    : public __unary_function<const volatile _Cp*, _Rp>
 {
 };
 
@@ -172,43 +182,43 @@ struct __weak_result_type<_Rp (_Cp::*)() const volatile>
 
 template <class _Rp, class _A1, class _A2>
 struct __weak_result_type<_Rp (_A1, _A2)>
-    : public binary_function<_A1, _A2, _Rp>
+    : public __binary_function<_A1, _A2, _Rp>
 {
 };
 
 template <class _Rp, class _A1, class _A2>
 struct __weak_result_type<_Rp (*)(_A1, _A2)>
-    : public binary_function<_A1, _A2, _Rp>
+    : public __binary_function<_A1, _A2, _Rp>
 {
 };
 
 template <class _Rp, class _A1, class _A2>
 struct __weak_result_type<_Rp (&)(_A1, _A2)>
-    : public binary_function<_A1, _A2, _Rp>
+    : public __binary_function<_A1, _A2, _Rp>
 {
 };
 
 template <class _Rp, class _Cp, class _A1>
 struct __weak_result_type<_Rp (_Cp::*)(_A1)>
-    : public binary_function<_Cp*, _A1, _Rp>
+    : public __binary_function<_Cp*, _A1, _Rp>
 {
 };
 
 template <class _Rp, class _Cp, class _A1>
 struct __weak_result_type<_Rp (_Cp::*)(_A1) const>
-    : public binary_function<const _Cp*, _A1, _Rp>
+    : public __binary_function<const _Cp*, _A1, _Rp>
 {
 };
 
 template <class _Rp, class _Cp, class _A1>
 struct __weak_result_type<_Rp (_Cp::*)(_A1) volatile>
-    : public binary_function<volatile _Cp*, _A1, _Rp>
+    : public __binary_function<volatile _Cp*, _A1, _Rp>
 {
 };
 
 template <class _Rp, class _Cp, class _A1>
 struct __weak_result_type<_Rp (_Cp::*)(_A1) const volatile>
-    : public binary_function<const volatile _Cp*, _A1, _Rp>
+    : public __binary_function<const volatile _Cp*, _A1, _Rp>
 {
 };
 
@@ -217,43 +227,57 @@ struct __weak_result_type<_Rp (_Cp::*)(_A1) const volatile>
 template <class _Rp, class _A1, class _A2, class _A3, class ..._A4>
 struct __weak_result_type<_Rp (_A1, _A2, _A3, _A4...)>
 {
-    typedef _Rp result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
+#endif
 };
 
 template <class _Rp, class _A1, class _A2, class _A3, class ..._A4>
 struct __weak_result_type<_Rp (&)(_A1, _A2, _A3, _A4...)>
 {
-    typedef _Rp result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
+#endif
 };
 
 template <class _Rp, class _A1, class _A2, class _A3, class ..._A4>
 struct __weak_result_type<_Rp (*)(_A1, _A2, _A3, _A4...)>
 {
-    typedef _Rp result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
+#endif
 };
 
 template <class _Rp, class _Cp, class _A1, class _A2, class ..._A3>
 struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...)>
 {
-    typedef _Rp result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
+#endif
 };
 
 template <class _Rp, class _Cp, class _A1, class _A2, class ..._A3>
 struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...) const>
 {
-    typedef _Rp result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
+#endif
 };
 
 template <class _Rp, class _Cp, class _A1, class _A2, class ..._A3>
 struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...) volatile>
 {
-    typedef _Rp result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
+#endif
 };
 
 template <class _Rp, class _Cp, class _A1, class _A2, class ..._A3>
 struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...) const volatile>
 {
-    typedef _Rp result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
+#endif
 };
 
 template <class _Tp, class ..._Args>

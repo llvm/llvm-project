@@ -258,7 +258,7 @@ iJIT_RegisterCallbackEx(void *userdata, iJIT_ModeChangedEx
  * This function allows the user to query in which mode, if at all, 
  *VTune is running
  */
-ITT_EXTERN_C iJIT_IsProfilingActiveFlags JITAPI iJIT_IsProfilingActive()
+ITT_EXTERN_C iJIT_IsProfilingActiveFlags JITAPI iJIT_IsProfilingActive(void)
 {
     if (!iJIT_DLL_is_missing)
     {
@@ -273,7 +273,7 @@ ITT_EXTERN_C iJIT_IsProfilingActiveFlags JITAPI iJIT_IsProfilingActive()
  * on success: all functions load,     iJIT_DLL_is_missing = 0, return value = 1
  * on failure: all functions are NULL, iJIT_DLL_is_missing = 1, return value = 0
  */ 
-static int loadiJIT_Funcs()
+static int loadiJIT_Funcs(void)
 {
     static int bDllWasLoaded = 0;
     char *dllName = (char*)rcsid; /* !! Just to avoid unused code elimination */
@@ -416,7 +416,7 @@ static int loadiJIT_Funcs()
  * This function should be called by the user whenever a thread ends, 
  * to free the thread "virtual stack" storage
  */
-ITT_EXTERN_C void JITAPI FinalizeThread()
+ITT_EXTERN_C void JITAPI FinalizeThread(void)
 {
     if (threadLocalStorageHandle)
     {
@@ -444,7 +444,7 @@ ITT_EXTERN_C void JITAPI FinalizeThread()
  * This function should be called by the user when the process ends, 
  * to free the local storage index
 */
-ITT_EXTERN_C void JITAPI FinalizeProcess()
+ITT_EXTERN_C void JITAPI FinalizeProcess(void)
 {
     if (m_libHandle) 
     {
@@ -469,7 +469,7 @@ ITT_EXTERN_C void JITAPI FinalizeProcess()
  * The function will return a unique method ID, the user should maintain 
  * the ID for each method
  */
-ITT_EXTERN_C unsigned int JITAPI iJIT_GetNewMethodID()
+ITT_EXTERN_C unsigned int JITAPI iJIT_GetNewMethodID(void)
 {
     static unsigned int methodID = 0x100000;
 

@@ -40,16 +40,21 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   ParseInputs Inputs;
   Inputs.FeatureModules = FeatureModules;
   auto &Argv = Inputs.CompileCommand.CommandLine;
-  // In tests, omit predefined macros (__GNUC__ etc) for a 25% speedup.
-  // There are hundreds, and we'd generate, parse, serialize, and re-parse them!
-  Argv = {"clang", "-Xclang", "-undef"};
+  Argv = {"clang"};
+  // In tests, unless explicitly specified otherwise, omit predefined macros
+  // (__GNUC__ etc) for a 25% speedup. There are hundreds, and we'd generate,
+  // parse, serialize, and re-parse them!
+  if (!PredefineMacros) {
+    Argv.push_back("-Xclang");
+    Argv.push_back("-undef");
+  }
   // FIXME: this shouldn't need to be conditional, but it breaks a
   // GoToDefinition test for some reason (getMacroArgExpandedLocation fails).
   if (!HeaderCode.empty()) {
     Argv.push_back("-include");
     Argv.push_back(ImplicitHeaderGuard ? ImportThunk : FullHeaderName);
     // ms-compatibility changes the meaning of #import.
-    // The default is OS-dependent (on on windows), ensure it's off.
+    // The default is OS-dependent (on windows), ensure it's off.
     if (ImplicitHeaderGuard)
       Inputs.CompileCommand.CommandLine.push_back("-fno-ms-compatibility");
   }
@@ -59,7 +64,7 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   Argv.push_back(FullFilename);
 
   auto Mangler = CommandMangler::forTests();
-  Mangler.adjust(Inputs.CompileCommand.CommandLine, FullFilename);
+  Mangler(Inputs.CompileCommand, FullFilename);
   Inputs.CompileCommand.Filename = FullFilename;
   Inputs.CompileCommand.Directory = testRoot();
   Inputs.Contents = Code;
@@ -123,7 +128,7 @@ ParsedAST TestTU::build() const {
                                                /*PreambleCallback=*/nullptr);
   auto AST = ParsedAST::build(testPath(Filename), Inputs, std::move(CI),
                               Diags.take(), Preamble);
-  if (!AST.hasValue()) {
+  if (!AST) {
     llvm::errs() << "Failed to build code:\n" << Code;
     std::abort();
   }

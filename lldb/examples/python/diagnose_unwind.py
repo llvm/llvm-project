@@ -5,7 +5,6 @@
 # information about the stack frames, and tries an alternate unwind
 # algorithm, that will help to understand why lldb's unwind algorithm
 # did not succeed.
-from __future__ import print_function
 
 import optparse
 import lldb

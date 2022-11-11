@@ -315,12 +315,6 @@ protected:
   explicit CGOpenMPRuntime(CodeGenModule &CGM, StringRef FirstSeparator,
                            StringRef Separator);
 
-  /// Creates offloading entry for the provided entry ID \a ID,
-  /// address \a Addr, size \a Size, and flags \a Flags.
-  virtual void createOffloadEntry(llvm::Constant *ID, llvm::Constant *Addr,
-                                  uint64_t Size, int32_t Flags,
-                                  llvm::GlobalValue::LinkageTypes Linkage);
-
   /// Helper to emit outlined function for 'target' directive.
   /// \param D Directive to emit.
   /// \param ParentName Name of the function that encloses the target region.
@@ -520,214 +514,7 @@ private:
   QualType KmpDimTy;
   /// Entity that registers the offloading constants that were emitted so
   /// far.
-  class OffloadEntriesInfoManagerTy {
-    CodeGenModule &CGM;
-
-    /// Number of entries registered so far.
-    unsigned OffloadingEntriesNum = 0;
-
-  public:
-    /// Base class of the entries info.
-    class OffloadEntryInfo {
-    public:
-      /// Kind of a given entry.
-      enum OffloadingEntryInfoKinds : unsigned {
-        /// Entry is a target region.
-        OffloadingEntryInfoTargetRegion = 0,
-        /// Entry is a declare target variable.
-        OffloadingEntryInfoDeviceGlobalVar = 1,
-        /// Invalid entry info.
-        OffloadingEntryInfoInvalid = ~0u
-      };
-
-    protected:
-      OffloadEntryInfo() = delete;
-      explicit OffloadEntryInfo(OffloadingEntryInfoKinds Kind) : Kind(Kind) {}
-      explicit OffloadEntryInfo(OffloadingEntryInfoKinds Kind, unsigned Order,
-                                uint32_t Flags)
-          : Flags(Flags), Order(Order), Kind(Kind) {}
-      ~OffloadEntryInfo() = default;
-
-    public:
-      bool isValid() const { return Order != ~0u; }
-      unsigned getOrder() const { return Order; }
-      OffloadingEntryInfoKinds getKind() const { return Kind; }
-      uint32_t getFlags() const { return Flags; }
-      void setFlags(uint32_t NewFlags) { Flags = NewFlags; }
-      llvm::Constant *getAddress() const {
-        return cast_or_null<llvm::Constant>(Addr);
-      }
-      void setAddress(llvm::Constant *V) {
-        assert(!Addr.pointsToAliveValue() && "Address has been set before!");
-        Addr = V;
-      }
-      static bool classof(const OffloadEntryInfo *Info) { return true; }
-
-    private:
-      /// Address of the entity that has to be mapped for offloading.
-      llvm::WeakTrackingVH Addr;
-
-      /// Flags associated with the device global.
-      uint32_t Flags = 0u;
-
-      /// Order this entry was emitted.
-      unsigned Order = ~0u;
-
-      OffloadingEntryInfoKinds Kind = OffloadingEntryInfoInvalid;
-    };
-
-    /// Return true if a there are no entries defined.
-    bool empty() const;
-    /// Return number of entries defined so far.
-    unsigned size() const { return OffloadingEntriesNum; }
-    OffloadEntriesInfoManagerTy(CodeGenModule &CGM) : CGM(CGM) {}
-
-    //
-    // Target region entries related.
-    //
-
-    /// Kind of the target registry entry.
-    enum OMPTargetRegionEntryKind : uint32_t {
-      /// Mark the entry as target region.
-      OMPTargetRegionEntryTargetRegion = 0x0,
-      /// Mark the entry as a global constructor.
-      OMPTargetRegionEntryCtor = 0x02,
-      /// Mark the entry as a global destructor.
-      OMPTargetRegionEntryDtor = 0x04,
-    };
-
-    /// Target region entries info.
-    class OffloadEntryInfoTargetRegion final : public OffloadEntryInfo {
-      /// Address that can be used as the ID of the entry.
-      llvm::Constant *ID = nullptr;
-
-    public:
-      OffloadEntryInfoTargetRegion()
-          : OffloadEntryInfo(OffloadingEntryInfoTargetRegion) {}
-      explicit OffloadEntryInfoTargetRegion(unsigned Order,
-                                            llvm::Constant *Addr,
-                                            llvm::Constant *ID,
-                                            OMPTargetRegionEntryKind Flags)
-          : OffloadEntryInfo(OffloadingEntryInfoTargetRegion, Order, Flags),
-            ID(ID) {
-        setAddress(Addr);
-      }
-
-      llvm::Constant *getID() const { return ID; }
-      void setID(llvm::Constant *V) {
-        assert(!ID && "ID has been set before!");
-        ID = V;
-      }
-      static bool classof(const OffloadEntryInfo *Info) {
-        return Info->getKind() == OffloadingEntryInfoTargetRegion;
-      }
-    };
-
-    /// Initialize target region entry.
-    void initializeTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
-                                         StringRef ParentName, unsigned LineNum,
-                                         unsigned Order);
-    /// Register target region entry.
-    void registerTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
-                                       StringRef ParentName, unsigned LineNum,
-                                       llvm::Constant *Addr, llvm::Constant *ID,
-                                       OMPTargetRegionEntryKind Flags);
-    /// Return true if a target region entry with the provided information
-    /// exists.
-    bool hasTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
-                                  StringRef ParentName, unsigned LineNum,
-                                  bool IgnoreAddressId = false) const;
-    /// brief Applies action \a Action on all registered entries.
-    typedef llvm::function_ref<void(unsigned, unsigned, StringRef, unsigned,
-                                    const OffloadEntryInfoTargetRegion &)>
-        OffloadTargetRegionEntryInfoActTy;
-    void actOnTargetRegionEntriesInfo(
-        const OffloadTargetRegionEntryInfoActTy &Action);
-
-    //
-    // Device global variable entries related.
-    //
-
-    /// Kind of the global variable entry..
-    enum OMPTargetGlobalVarEntryKind : uint32_t {
-      /// Mark the entry as a to declare target.
-      OMPTargetGlobalVarEntryTo = 0x0,
-      /// Mark the entry as a to declare target link.
-      OMPTargetGlobalVarEntryLink = 0x1,
-    };
-
-    /// Device global variable entries info.
-    class OffloadEntryInfoDeviceGlobalVar final : public OffloadEntryInfo {
-      /// Type of the global variable.
-     CharUnits VarSize;
-     llvm::GlobalValue::LinkageTypes Linkage;
-
-   public:
-     OffloadEntryInfoDeviceGlobalVar()
-         : OffloadEntryInfo(OffloadingEntryInfoDeviceGlobalVar) {}
-     explicit OffloadEntryInfoDeviceGlobalVar(unsigned Order,
-                                              OMPTargetGlobalVarEntryKind Flags)
-         : OffloadEntryInfo(OffloadingEntryInfoDeviceGlobalVar, Order, Flags) {}
-     explicit OffloadEntryInfoDeviceGlobalVar(
-         unsigned Order, llvm::Constant *Addr, CharUnits VarSize,
-         OMPTargetGlobalVarEntryKind Flags,
-         llvm::GlobalValue::LinkageTypes Linkage)
-         : OffloadEntryInfo(OffloadingEntryInfoDeviceGlobalVar, Order, Flags),
-           VarSize(VarSize), Linkage(Linkage) {
-       setAddress(Addr);
-      }
-
-      CharUnits getVarSize() const { return VarSize; }
-      void setVarSize(CharUnits Size) { VarSize = Size; }
-      llvm::GlobalValue::LinkageTypes getLinkage() const { return Linkage; }
-      void setLinkage(llvm::GlobalValue::LinkageTypes LT) { Linkage = LT; }
-      static bool classof(const OffloadEntryInfo *Info) {
-        return Info->getKind() == OffloadingEntryInfoDeviceGlobalVar;
-      }
-    };
-
-    /// Initialize device global variable entry.
-    void initializeDeviceGlobalVarEntryInfo(StringRef Name,
-                                            OMPTargetGlobalVarEntryKind Flags,
-                                            unsigned Order);
-
-    /// Register device global variable entry.
-    void
-    registerDeviceGlobalVarEntryInfo(StringRef VarName, llvm::Constant *Addr,
-                                     CharUnits VarSize,
-                                     OMPTargetGlobalVarEntryKind Flags,
-                                     llvm::GlobalValue::LinkageTypes Linkage);
-    /// Checks if the variable with the given name has been registered already.
-    bool hasDeviceGlobalVarEntryInfo(StringRef VarName) const {
-      return OffloadEntriesDeviceGlobalVar.count(VarName) > 0;
-    }
-    /// Applies action \a Action on all registered entries.
-    typedef llvm::function_ref<void(StringRef,
-                                    const OffloadEntryInfoDeviceGlobalVar &)>
-        OffloadDeviceGlobalVarEntryInfoActTy;
-    void actOnDeviceGlobalVarEntriesInfo(
-        const OffloadDeviceGlobalVarEntryInfoActTy &Action);
-
-  private:
-    // Storage for target region entries kind. The storage is to be indexed by
-    // file ID, device ID, parent function name and line number.
-    typedef llvm::DenseMap<unsigned, OffloadEntryInfoTargetRegion>
-        OffloadEntriesTargetRegionPerLine;
-    typedef llvm::StringMap<OffloadEntriesTargetRegionPerLine>
-        OffloadEntriesTargetRegionPerParentName;
-    typedef llvm::DenseMap<unsigned, OffloadEntriesTargetRegionPerParentName>
-        OffloadEntriesTargetRegionPerFile;
-    typedef llvm::DenseMap<unsigned, OffloadEntriesTargetRegionPerFile>
-        OffloadEntriesTargetRegionPerDevice;
-    typedef OffloadEntriesTargetRegionPerDevice OffloadEntriesTargetRegionTy;
-    OffloadEntriesTargetRegionTy OffloadEntriesTargetRegion;
-    /// Storage for device global variable entries kind. The storage is to be
-    /// indexed by mangled name.
-    typedef llvm::StringMap<OffloadEntryInfoDeviceGlobalVar>
-        OffloadEntriesDeviceGlobalVarTy;
-    OffloadEntriesDeviceGlobalVarTy OffloadEntriesDeviceGlobalVar;
-  };
-  OffloadEntriesInfoManagerTy OffloadEntriesInfoManager;
+  llvm::OffloadEntriesInfoManager OffloadEntriesInfoManager;
 
   bool ShouldMarkAsGlobal = true;
   /// List of the emitted declarations.
@@ -773,7 +560,7 @@ private:
   /// metadata.
   void loadOffloadInfoMetadata();
 
-  /// Start scanning from statement \a S and and emit all target regions
+  /// Start scanning from statement \a S and emit all target regions
   /// found along the way.
   /// \param S Starting statement.
   /// \param ParentName Name of the function declaration that is being scanned.
@@ -884,13 +671,11 @@ private:
                             llvm::Function *TaskFunction, QualType SharedsTy,
                             Address Shareds, const OMPTaskDataTy &Data);
 
-  /// Emit code that pushes the trip count of loops associated with constructs
-  /// 'target teams distribute' and 'teams distribute parallel for'.
-  /// \param SizeEmitter Emits the int64 value for the number of iterations of
-  /// the associated loop.
-  void emitTargetNumIterationsCall(
+  /// Return the trip count of loops associated with constructs / 'target teams
+  /// distribute' and 'teams distribute parallel for'. \param SizeEmitter Emits
+  /// the int64 value for the number of iterations of the associated loop.
+  llvm::Value *emitTargetNumIterationsCall(
       CodeGenFunction &CGF, const OMPExecutableDirective &D,
-      llvm::Value *DeviceID,
       llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
                                        const OMPLoopDirective &D)>
           SizeEmitter);
@@ -921,6 +706,9 @@ public:
       : CGOpenMPRuntime(CGM, ".", ".") {}
   virtual ~CGOpenMPRuntime() {}
   virtual void clear();
+
+  /// Returns true if the current target is a GPU.
+  virtual bool isTargetCodegen() const { return false; }
 
   /// Emits code for OpenMP 'if' clause using specified \a CodeGen
   /// function. Here is the logic:
@@ -1656,65 +1444,16 @@ public:
 
   /// Struct that keeps all the relevant information that should be kept
   /// throughout a 'target data' region.
-  class TargetDataInfo {
-    /// Set to true if device pointer information have to be obtained.
-    bool RequiresDevicePointerInfo = false;
-    /// Set to true if Clang emits separate runtime calls for the beginning and
-    /// end of the region.  These calls might have separate map type arrays.
-    bool SeparateBeginEndCalls = false;
-
+  class TargetDataInfo : public llvm::OpenMPIRBuilder::TargetDataInfo {
   public:
-    /// The array of base pointer passed to the runtime library.
-    llvm::Value *BasePointersArray = nullptr;
-    /// The array of section pointers passed to the runtime library.
-    llvm::Value *PointersArray = nullptr;
-    /// The array of sizes passed to the runtime library.
-    llvm::Value *SizesArray = nullptr;
-    /// The array of map types passed to the runtime library for the beginning
-    /// of the region or for the entire region if there are no separate map
-    /// types for the region end.
-    llvm::Value *MapTypesArray = nullptr;
-    /// The array of map types passed to the runtime library for the end of the
-    /// region, or nullptr if there are no separate map types for the region
-    /// end.
-    llvm::Value *MapTypesArrayEnd = nullptr;
-    /// The array of user-defined mappers passed to the runtime library.
-    llvm::Value *MappersArray = nullptr;
-    /// The array of original declaration names of mapped pointers sent to the
-    /// runtime library for debugging
-    llvm::Value *MapNamesArray = nullptr;
-    /// Indicate whether any user-defined mapper exists.
-    bool HasMapper = false;
-    /// The total number of pointers passed to the runtime library.
-    unsigned NumberOfPtrs = 0u;
+    explicit TargetDataInfo() : llvm::OpenMPIRBuilder::TargetDataInfo() {}
+    explicit TargetDataInfo(bool RequiresDevicePointerInfo,
+                            bool SeparateBeginEndCalls)
+        : llvm::OpenMPIRBuilder::TargetDataInfo(RequiresDevicePointerInfo,
+                                                SeparateBeginEndCalls) {}
     /// Map between the a declaration of a capture and the corresponding base
     /// pointer address where the runtime returns the device pointers.
     llvm::DenseMap<const ValueDecl *, Address> CaptureDeviceAddrMap;
-
-    explicit TargetDataInfo() {}
-    explicit TargetDataInfo(bool RequiresDevicePointerInfo,
-                            bool SeparateBeginEndCalls)
-        : RequiresDevicePointerInfo(RequiresDevicePointerInfo),
-          SeparateBeginEndCalls(SeparateBeginEndCalls) {}
-    /// Clear information about the data arrays.
-    void clearArrayInfo() {
-      BasePointersArray = nullptr;
-      PointersArray = nullptr;
-      SizesArray = nullptr;
-      MapTypesArray = nullptr;
-      MapTypesArrayEnd = nullptr;
-      MapNamesArray = nullptr;
-      MappersArray = nullptr;
-      HasMapper = false;
-      NumberOfPtrs = 0u;
-    }
-    /// Return true if the current target data information has valid arrays.
-    bool isValid() {
-      return BasePointersArray && PointersArray && SizesArray &&
-             MapTypesArray && (!HasMapper || MappersArray) && NumberOfPtrs;
-    }
-    bool requiresDevicePointerInfo() { return RequiresDevicePointerInfo; }
-    bool separateBeginEndCalls() { return SeparateBeginEndCalls; }
   };
 
   /// Emit the target data mapping code associated with \a D.
@@ -1729,7 +1468,7 @@ public:
                                    const OMPExecutableDirective &D,
                                    const Expr *IfCond, const Expr *Device,
                                    const RegionCodeGenTy &CodeGen,
-                                   TargetDataInfo &Info);
+                                   CGOpenMPRuntime::TargetDataInfo &Info);
 
   /// Emit the data mapping/movement code associated with the directive
   /// \a D that should be of the form 'target [{enter|exit} data | update]'.
@@ -2489,7 +2228,7 @@ public:
   void emitTargetDataCalls(CodeGenFunction &CGF,
                            const OMPExecutableDirective &D, const Expr *IfCond,
                            const Expr *Device, const RegionCodeGenTy &CodeGen,
-                           TargetDataInfo &Info) override;
+                           CGOpenMPRuntime::TargetDataInfo &Info) override;
 
   /// Emit the data mapping/movement code associated with the directive
   /// \a D that should be of the form 'target [{enter|exit} data | update]'.

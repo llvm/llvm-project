@@ -44,10 +44,10 @@ namespace wasm {
 
 void InputFile::checkArch(Triple::ArchType arch) const {
   bool is64 = arch == Triple::wasm64;
-  if (is64 && !config->is64.hasValue()) {
+  if (is64 && !config->is64) {
     fatal(toString(this) +
           ": must specify -mwasm64 to process wasm64 object files");
-  } else if (config->is64.getValueOr(false) != is64) {
+  } else if (config->is64.value_or(false) != is64) {
     fatal(toString(this) +
           ": wasm32 object file can't be linked in wasm64 mode");
   }

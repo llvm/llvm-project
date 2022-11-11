@@ -9,7 +9,7 @@
 define i32 @foo(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; CHECK32-LABEL: foo:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    roll %cl, %eax
 ; CHECK32-NEXT:    retl
@@ -32,7 +32,7 @@ entry:
 define i32 @bar(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; CHECK32-LABEL: bar:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    shldl %cl, %edx, %eax
@@ -56,7 +56,7 @@ entry:
 define i32 @un(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; CHECK32-LABEL: un:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    rorl %cl, %eax
 ; CHECK32-NEXT:    retl
@@ -79,7 +79,7 @@ entry:
 define i32 @bu(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; CHECK32-LABEL: bu:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    shrdl %cl, %edx, %eax
@@ -141,7 +141,7 @@ entry:
 	ret i32 %2
 }
 
-define i32 @xfoop(i32* %p) nounwind readnone {
+define i32 @xfoop(ptr %p) nounwind readnone {
 ; X86-LABEL: xfoop:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -179,7 +179,7 @@ define i32 @xfoop(i32* %p) nounwind readnone {
 ; BMI264-NEXT:    rorxl $25, (%rdi), %eax
 ; BMI264-NEXT:    retq
 entry:
-	%x = load i32, i32* %p
+	%x = load i32, ptr %p
 	%a = lshr i32 %x, 25
 	%b = shl i32 %x, 7
 	%c = or i32 %a, %b
@@ -247,7 +247,7 @@ entry:
 	ret i32 %2
 }
 
-define i32 @xunp(i32* %p) nounwind readnone {
+define i32 @xunp(ptr %p) nounwind readnone {
 ; X86-LABEL: xunp:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -287,7 +287,7 @@ define i32 @xunp(i32* %p) nounwind readnone {
 entry:
 ; shld-label: xunp:
 ; shld: shldl $25
-	%x = load i32, i32* %p
+	%x = load i32, ptr %p
 	%a = lshr i32 %x, 7
 	%b = shl i32 %x, 25
 	%c = or i32 %a, %b
@@ -429,7 +429,7 @@ define i32 @fshl31(i32 %x) nounwind {
   ret i32 %f
 }
 
-define i32 @fshl_load(i32* %p) nounwind {
+define i32 @fshl_load(ptr %p) nounwind {
 ; X86-LABEL: fshl_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -466,7 +466,7 @@ define i32 @fshl_load(i32* %p) nounwind {
 ; BMI264:       # %bb.0:
 ; BMI264-NEXT:    rorxl $25, (%rdi), %eax
 ; BMI264-NEXT:    retq
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 7)
   ret i32 %f
 }
@@ -586,7 +586,7 @@ define i32 @fshr31(i32 %x) nounwind {
   ret i32 %f
 }
 
-define i32 @fshr_load(i32* %p) nounwind {
+define i32 @fshr_load(ptr %p) nounwind {
 ; X86-LABEL: fshr_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -623,7 +623,7 @@ define i32 @fshr_load(i32* %p) nounwind {
 ; BMI264:       # %bb.0:
 ; BMI264-NEXT:    rorxl $7, (%rdi), %eax
 ; BMI264-NEXT:    retq
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 7)
   ret i32 %f
 }

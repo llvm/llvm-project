@@ -103,7 +103,7 @@ void g() {
   for (auto *a : A()) { // expected-error {{variable 'a' with type 'auto *' has incompatible initializer of type 'int'}}
   }
   // : is not a typo for :: here.
-  for (A NS:A()) { // expected-error {{no viable conversion from 'int' to 'X::A'}}
+  for (A NS:A()) { // expected-error {{no viable conversion from 'int' to 'A'}}
   }
   for (auto not_in_scope : not_in_scope) { // expected-error {{use of undeclared identifier 'not_in_scope'}}
   }
@@ -250,7 +250,7 @@ void DR1442() {
 
 namespace NS {
   class ADL {};
-  int *begin(ADL); // expected-note {{no known conversion from 'NS::NoADL' to 'NS::ADL'}}
+  int *begin(ADL); // expected-note {{no known conversion from 'NS::NoADL' to 'ADL'}}
   int *end(ADL);
 
   class NoADL {};

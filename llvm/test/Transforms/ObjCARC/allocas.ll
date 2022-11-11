@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
 
 declare i8* @llvm.objc.retain(i8*)
 declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)

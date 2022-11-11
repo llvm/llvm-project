@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("ClangAnalysisFlowSensitiveTests") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
@@ -17,19 +17,23 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "CFGMatchSwitchTest.cpp",
     "ChromiumCheckModelTest.cpp",
     "DataflowAnalysisContextTest.cpp",
     "DataflowEnvironmentTest.cpp",
+    "DebugSupportTest.cpp",
     "MapLatticeTest.cpp",
     "MatchSwitchTest.cpp",
     "MultiVarConstantPropagationTest.cpp",
+    "SignAnalysisTest.cpp",
     "SingleVarConstantPropagationTest.cpp",
     "SolverTest.cpp",
-    "SourceLocationsLatticeTest.cpp",
     "TestingSupport.cpp",
     "TestingSupportTest.cpp",
+    "TransferBranchTest.cpp",
     "TransferTest.cpp",
     "TypeErasedDataflowAnalysisTest.cpp",
     "UncheckedOptionalAccessModelTest.cpp",
+    "ValueTest.cpp",
   ]
 }

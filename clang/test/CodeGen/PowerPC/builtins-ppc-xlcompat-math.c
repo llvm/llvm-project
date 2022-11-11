@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -emit-llvm %s \
 // RUN:   -target-cpu pwr7 -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64le-unknown-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -emit-llvm %s \
 // RUN:   -target-cpu pwr8 -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix -emit-llvm %s \
+// RUN: %clang_cc1 -triple powerpc64-unknown-aix -emit-llvm %s \
 // RUN:   -target-cpu pwr7 -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -emit-llvm %s \
+// RUN: %clang_cc1 -triple powerpc-unknown-aix -emit-llvm %s \
 // RUN:   -target-cpu pwr7 -o - | FileCheck %s
 
 // CHECK-LABEL: @mtfsb0(
@@ -42,10 +42,10 @@ void mtfsfi (void) {
 
 // CHECK-LABEL: @fmsub(
 // CHECK:         [[D_ADDR:%.*]] = alloca double, align 8
-// CHECK-NEXT:    store double [[D:%.*]], double* [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load double, double* [[D_ADDR]], align 8
+// CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.ppc.fmsub(double [[TMP0]], double [[TMP1]], double [[TMP2]])
 // CHECK-NEXT:    ret double [[TMP3]]
 //
@@ -55,10 +55,10 @@ double fmsub (double d) {
 
 // CHECK-LABEL: @fmsubs(
 // CHECK:         [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store float [[F:%.*]], float* [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[F_ADDR]], align 4
+// CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.ppc.fmsubs(float [[TMP0]], float [[TMP1]], float [[TMP2]])
 // CHECK-NEXT:    ret float [[TMP3]]
 //
@@ -68,10 +68,10 @@ float fmsubs (float f) {
 
 // CHECK-LABEL: @fnmadd(
 // CHECK:         [[D_ADDR:%.*]] = alloca double, align 8
-// CHECK-NEXT:    store double [[D:%.*]], double* [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load double, double* [[D_ADDR]], align 8
+// CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.ppc.fnmadd(double [[TMP0]], double [[TMP1]], double [[TMP2]])
 // CHECK-NEXT:    ret double [[TMP3]]
 //
@@ -81,10 +81,10 @@ double fnmadd (double d) {
 
 // CHECK-LABEL: @fnmadds(
 // CHECK:         [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store float [[F:%.*]], float* [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[F_ADDR]], align 4
+// CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.ppc.fnmadds(float [[TMP0]], float [[TMP1]], float [[TMP2]])
 // CHECK-NEXT:    ret float [[TMP3]]
 //
@@ -94,10 +94,10 @@ float fnmadds (float f) {
 
 // CHECK-LABEL: @fnmsub(
 // CHECK:         [[D_ADDR:%.*]] = alloca double, align 8
-// CHECK-NEXT:    store double [[D:%.*]], double* [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load double, double* [[D_ADDR]], align 8
+// CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.ppc.fnmsub.f64(double [[TMP0]], double [[TMP1]], double [[TMP2]])
 // CHECK-NEXT:    ret double [[TMP3]]
 //
@@ -107,10 +107,10 @@ double fnmsub (double d) {
 
 // CHECK-LABEL: @fnmsubs(
 // CHECK:         [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store float [[F:%.*]], float* [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[F_ADDR]], align 4
+// CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.ppc.fnmsub.f32(float [[TMP0]], float [[TMP1]], float [[TMP2]])
 // CHECK-NEXT:    ret float [[TMP3]]
 //
@@ -120,8 +120,8 @@ float fnmsubs (float f) {
 
 // CHECK-LABEL: @fre(
 // CHECK:         [[D_ADDR:%.*]] = alloca double, align 8
-// CHECK-NEXT:    store double [[D:%.*]], double* [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[D_ADDR]], align 8
+// CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.ppc.fre(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -131,8 +131,8 @@ double fre (double d) {
 
 // CHECK-LABEL: @fres(
 // CHECK:         [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store float [[F:%.*]], float* [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[F_ADDR]], align 4
+// CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ppc.fres(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //

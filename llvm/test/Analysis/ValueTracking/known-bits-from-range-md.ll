@@ -1,4 +1,4 @@
-; RUN: opt -S -instsimplify -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instsimplify,instcombine < %s | FileCheck %s
 
 define i1 @test0(i8* %ptr) {
 ; CHECK-LABEL: @test0(

@@ -7,14 +7,14 @@
 declare void @llvm.x86.loadiwkey(<2 x i64>, <2 x i64>, <2 x i64>, i32)
 declare { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32, <2 x i64>)
 declare { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32, <2 x i64>, <2 x i64>)
-declare { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64>, i8*)
-declare { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64>, i8*)
-declare { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64>, i8*)
-declare { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64>, i8*)
-declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(i8*, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
-declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(i8*, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
-declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(i8*, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
-declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(i8*, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
+declare { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64>, ptr)
+declare { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64>, ptr)
+declare { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64>, ptr)
+declare { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64>, ptr)
+declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(ptr, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
+declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(ptr, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
+declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(ptr, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
+declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(ptr, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
 
 define void @test_loadiwkey(i32 %ctl, <2 x i64> %intkey, <2 x i64> %enkey_lo, <2 x i64> %enkey_hi) {
 ; X64-LABEL: test_loadiwkey:
@@ -33,7 +33,7 @@ entry:
   ret void
 }
 
-define i32 @test_encodekey128_u32(i32 %htype, <2 x i64> %key, <2 x i64>* nocapture %h0, <2 x i64>* nocapture %h1, <2 x i64>* nocapture %h2, <2 x i64>* nocapture %h3, <2 x i64>* nocapture %h4, <2 x i64>* nocapture %h5) nounwind {
+define i32 @test_encodekey128_u32(i32 %htype, <2 x i64> %key, ptr nocapture %h0, ptr nocapture %h1, ptr nocapture %h2, ptr nocapture %h3, ptr nocapture %h4, ptr nocapture %h5) nounwind {
 ; X64-LABEL: test_encodekey128_u32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    encodekey128 %edi, %eax
@@ -58,16 +58,16 @@ define i32 @test_encodekey128_u32(i32 %htype, <2 x i64> %key, <2 x i64>* nocaptu
 entry:
   %0 = tail call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32 %htype, <2 x i64> %key)
   %1 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %h0, align 16
+  store <2 x i64> %1, ptr %h0, align 16
   %2 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 2
-  store <2 x i64> %2, <2 x i64>* %h1, align 16
+  store <2 x i64> %2, ptr %h1, align 16
   %3 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 3
-  store <2 x i64> %3, <2 x i64>* %h2, align 16
+  store <2 x i64> %3, ptr %h2, align 16
   %4 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 0
   ret i32 %4
 }
 
-define i32 @test_encodekey256_u32(i32 %htype, <2 x i64> %key_lo, <2 x i64> %key_hi, <2 x i64>* nocapture %h0, <2 x i64>* nocapture %h1, <2 x i64>* nocapture %h2, <2 x i64>* nocapture %h3, <2 x i64>* nocapture %h4, <2 x i64>* nocapture %h5, <2 x      i64>* nocapture readnone %h6) nounwind {
+define i32 @test_encodekey256_u32(i32 %htype, <2 x i64> %key_lo, <2 x i64> %key_hi, ptr nocapture %h0, ptr nocapture %h1, ptr nocapture %h2, ptr nocapture %h3, ptr nocapture %h4, ptr nocapture %h5, ptr nocapture readnone %h6) nounwind {
 ; X64-LABEL: test_encodekey256_u32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    encodekey256 %edi, %eax
@@ -97,18 +97,18 @@ define i32 @test_encodekey256_u32(i32 %htype, <2 x i64> %key_lo, <2 x i64> %key_
 entry:
   %0 = tail call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32 %htype, <2 x i64> %key_lo, <2 x i64> %key_hi)
   %1 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %h0, align 16
+  store <2 x i64> %1, ptr %h0, align 16
   %2 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 2
-  store <2 x i64> %2, <2 x i64>* %h1, align 16
+  store <2 x i64> %2, ptr %h1, align 16
   %3 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 3
-  store <2 x i64> %3, <2 x i64>* %h2, align 16
+  store <2 x i64> %3, ptr %h2, align 16
   %4 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 4
-  store <2 x i64> %4, <2 x i64>* %h3, align 16
+  store <2 x i64> %4, ptr %h3, align 16
   %5 = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 0
   ret i32 %5
 }
 
-define i8 @test_mm_aesenc128kl_u8(<2 x i64> %data, i8* %h, <2 x i64>* %out) {
+define i8 @test_mm_aesenc128kl_u8(<2 x i64> %data, ptr %h, ptr %out) {
 ; X64-LABEL: test_mm_aesenc128kl_u8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    aesenc128kl (%rdi), %xmm0
@@ -125,14 +125,14 @@ define i8 @test_mm_aesenc128kl_u8(<2 x i64> %data, i8* %h, <2 x i64>* %out) {
 ; X32-NEXT:    vmovaps %xmm0, (%ecx)
 ; X32-NEXT:    retl
 entry:
-  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64> %data, i8* %h)
+  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64> %data, ptr %h)
   %1 = extractvalue { i8, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %out
+  store <2 x i64> %1, ptr %out
   %2 = extractvalue { i8, <2 x i64> } %0, 0
   ret i8 %2
 }
 
-define i8 @test_mm_aesdec128kl_u8(<2 x i64> %data, i8* %h, <2 x i64>* %out) {
+define i8 @test_mm_aesdec128kl_u8(<2 x i64> %data, ptr %h, ptr %out) {
 ; X64-LABEL: test_mm_aesdec128kl_u8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    aesdec128kl (%rdi), %xmm0
@@ -149,14 +149,14 @@ define i8 @test_mm_aesdec128kl_u8(<2 x i64> %data, i8* %h, <2 x i64>* %out) {
 ; X32-NEXT:    vmovaps %xmm0, (%ecx)
 ; X32-NEXT:    retl
 entry:
-  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64> %data, i8* %h)
+  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64> %data, ptr %h)
   %1 = extractvalue { i8, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %out
+  store <2 x i64> %1, ptr %out
   %2 = extractvalue { i8, <2 x i64> } %0, 0
   ret i8 %2
 }
 
-define i8 @test_mm_aesenc256kl_u8(<2 x i64> %data, i8* %h, <2 x i64>* %out) {
+define i8 @test_mm_aesenc256kl_u8(<2 x i64> %data, ptr %h, ptr %out) {
 ; X64-LABEL: test_mm_aesenc256kl_u8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    aesenc256kl (%rdi), %xmm0
@@ -173,14 +173,14 @@ define i8 @test_mm_aesenc256kl_u8(<2 x i64> %data, i8* %h, <2 x i64>* %out) {
 ; X32-NEXT:    vmovaps %xmm0, (%ecx)
 ; X32-NEXT:    retl
 entry:
-  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> %data, i8* %h)
+  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> %data, ptr %h)
   %1 = extractvalue { i8, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %out
+  store <2 x i64> %1, ptr %out
   %2 = extractvalue { i8, <2 x i64> } %0, 0
   ret i8 %2
 }
 
-define i8 @test_mm_aesdec256kl_u8(<2 x i64> %data, i8* %h, <2 x i64>* %out) {
+define i8 @test_mm_aesdec256kl_u8(<2 x i64> %data, ptr %h, ptr %out) {
 ; X64-LABEL: test_mm_aesdec256kl_u8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    aesdec256kl (%rdi), %xmm0
@@ -197,14 +197,14 @@ define i8 @test_mm_aesdec256kl_u8(<2 x i64> %data, i8* %h, <2 x i64>* %out) {
 ; X32-NEXT:    vmovaps %xmm0, (%ecx)
 ; X32-NEXT:    retl
 entry:
-  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64> %data, i8* %h)
+  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64> %data, ptr %h)
   %1 = extractvalue { i8, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %out
+  store <2 x i64> %1, ptr %out
   %2 = extractvalue { i8, <2 x i64> } %0, 0
   ret i8 %2
 }
 
-define i8 @test_mm_aesencwide128kl_u8(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6, <2 x i64> %v7, <2 x i64>* %out0, <2 x i64>* %out1, <2 x i64>* %out2, <2 x i64>* %out3, <2 x i64>* %out4, <2 x i64>* %out5, <2 x i64>* %out6, <2 x i64>* %out7) nounwind {
+define i8 @test_mm_aesencwide128kl_u8(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6, <2 x i64> %v7, ptr %out0, ptr %out1, ptr %out2, ptr %out3, ptr %out4, ptr %out5, ptr %out6, ptr %out7) nounwind {
 ; X64-LABEL: test_mm_aesencwide128kl_u8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbx
@@ -258,28 +258,28 @@ define i8 @test_mm_aesencwide128kl_u8(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 entry:
-  %0 = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6,      <2 x i64> %v7)
+  %0 = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6,      <2 x i64> %v7)
   %1 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %out0
+  store <2 x i64> %1, ptr %out0
   %2 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 2
-  store <2 x i64> %2, <2 x i64>* %out1
+  store <2 x i64> %2, ptr %out1
   %3 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 3
-  store <2 x i64> %2, <2 x i64>* %out2
+  store <2 x i64> %2, ptr %out2
   %4 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 4
-  store <2 x i64> %2, <2 x i64>* %out3
+  store <2 x i64> %2, ptr %out3
   %5 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 5
-  store <2 x i64> %2, <2 x i64>* %out4
+  store <2 x i64> %2, ptr %out4
   %6 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 6
-  store <2 x i64> %2, <2 x i64>* %out5
+  store <2 x i64> %2, ptr %out5
   %7 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 7
-  store <2 x i64> %2, <2 x i64>* %out6
+  store <2 x i64> %2, ptr %out6
   %8 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 8
-  store <2 x i64> %2, <2 x i64>* %out7
+  store <2 x i64> %2, ptr %out7
   %9 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 0
   ret i8 %9
 }
 
-define i8 @test_mm_aesdecwide128kl_u8(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6, <2 x i64> %v7, <2 x i64>* %out0, <2 x i64>* %out1, <2 x i64>* %out2, <2 x i64>* %out3, <2 x i64>* %out4, <2 x i64>* %out5, <2 x i64>* %out6, <2 x i64>* %out7) nounwind {
+define i8 @test_mm_aesdecwide128kl_u8(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6, <2 x i64> %v7, ptr %out0, ptr %out1, ptr %out2, ptr %out3, ptr %out4, ptr %out5, ptr %out6, ptr %out7) nounwind {
 ; X64-LABEL: test_mm_aesdecwide128kl_u8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbx
@@ -333,28 +333,28 @@ define i8 @test_mm_aesdecwide128kl_u8(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 entry:
-  %0 = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6,      <2 x i64> %v7)
+  %0 = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6,      <2 x i64> %v7)
   %1 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %out0
+  store <2 x i64> %1, ptr %out0
   %2 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 2
-  store <2 x i64> %2, <2 x i64>* %out1
+  store <2 x i64> %2, ptr %out1
   %3 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 3
-  store <2 x i64> %2, <2 x i64>* %out2
+  store <2 x i64> %2, ptr %out2
   %4 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 4
-  store <2 x i64> %2, <2 x i64>* %out3
+  store <2 x i64> %2, ptr %out3
   %5 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 5
-  store <2 x i64> %2, <2 x i64>* %out4
+  store <2 x i64> %2, ptr %out4
   %6 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 6
-  store <2 x i64> %2, <2 x i64>* %out5
+  store <2 x i64> %2, ptr %out5
   %7 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 7
-  store <2 x i64> %2, <2 x i64>* %out6
+  store <2 x i64> %2, ptr %out6
   %8 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 8
-  store <2 x i64> %2, <2 x i64>* %out7
+  store <2 x i64> %2, ptr %out7
   %9 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 0
   ret i8 %9
 }
 
-define i8 @test_mm_aesencwide256kl_u8(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6, <2 x i64> %v7, <2 x i64>* %out0, <2 x i64>* %out1, <2 x i64>* %out2, <2 x i64>* %out3, <2 x i64>* %out4, <2 x i64>* %out5, <2 x i64>* %out6, <2 x i64>* %out7) nounwind {
+define i8 @test_mm_aesencwide256kl_u8(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6, <2 x i64> %v7, ptr %out0, ptr %out1, ptr %out2, ptr %out3, ptr %out4, ptr %out5, ptr %out6, ptr %out7) nounwind {
 ; X64-LABEL: test_mm_aesencwide256kl_u8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbx
@@ -408,28 +408,28 @@ define i8 @test_mm_aesencwide256kl_u8(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 entry:
-  %0 = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6,      <2 x i64> %v7)
+  %0 = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6,      <2 x i64> %v7)
   %1 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %out0
+  store <2 x i64> %1, ptr %out0
   %2 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 2
-  store <2 x i64> %2, <2 x i64>* %out1
+  store <2 x i64> %2, ptr %out1
   %3 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 3
-  store <2 x i64> %2, <2 x i64>* %out2
+  store <2 x i64> %2, ptr %out2
   %4 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 4
-  store <2 x i64> %2, <2 x i64>* %out3
+  store <2 x i64> %2, ptr %out3
   %5 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 5
-  store <2 x i64> %2, <2 x i64>* %out4
+  store <2 x i64> %2, ptr %out4
   %6 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 6
-  store <2 x i64> %2, <2 x i64>* %out5
+  store <2 x i64> %2, ptr %out5
   %7 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 7
-  store <2 x i64> %2, <2 x i64>* %out6
+  store <2 x i64> %2, ptr %out6
   %8 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 8
-  store <2 x i64> %2, <2 x i64>* %out7
+  store <2 x i64> %2, ptr %out7
   %9 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 0
   ret i8 %9
 }
 
-define i8 @test_mm_aesdecwide256kl_u8(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6, <2 x i64> %v7, <2 x i64>* %out0, <2 x i64>* %out1, <2 x i64>* %out2, <2 x i64>* %out3, <2 x i64>* %out4, <2 x i64>* %out5, <2 x i64>* %out6, <2 x i64>* %out7) nounwind {
+define i8 @test_mm_aesdecwide256kl_u8(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6, <2 x i64> %v7, ptr %out0, ptr %out1, ptr %out2, ptr %out3, ptr %out4, ptr %out5, ptr %out6, ptr %out7) nounwind {
 ; X64-LABEL: test_mm_aesdecwide256kl_u8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbx
@@ -483,23 +483,23 @@ define i8 @test_mm_aesdecwide256kl_u8(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 entry:
-  %0 = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6,      <2 x i64> %v7)
+  %0 = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6,      <2 x i64> %v7)
   %1 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %out0
+  store <2 x i64> %1, ptr %out0
   %2 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 2
-  store <2 x i64> %2, <2 x i64>* %out1
+  store <2 x i64> %2, ptr %out1
   %3 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 3
-  store <2 x i64> %2, <2 x i64>* %out2
+  store <2 x i64> %2, ptr %out2
   %4 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 4
-  store <2 x i64> %2, <2 x i64>* %out3
+  store <2 x i64> %2, ptr %out3
   %5 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 5
-  store <2 x i64> %2, <2 x i64>* %out4
+  store <2 x i64> %2, ptr %out4
   %6 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 6
-  store <2 x i64> %2, <2 x i64>* %out5
+  store <2 x i64> %2, ptr %out5
   %7 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 7
-  store <2 x i64> %2, <2 x i64>* %out6
+  store <2 x i64> %2, ptr %out6
   %8 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 8
-  store <2 x i64> %2, <2 x i64>* %out7
+  store <2 x i64> %2, ptr %out7
   %9 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 0
   ret i8 %9
 }
@@ -508,7 +508,7 @@ entry:
 
 @foo = external dso_local global [64 x i8]
 
-define i8 @test_mm_aesenc256kl_u8_global(<2 x i64> %data, <2 x i64>* %out) {
+define i8 @test_mm_aesenc256kl_u8_global(<2 x i64> %data, ptr %out) {
 ; X64-LABEL: test_mm_aesenc256kl_u8_global:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    aesenc256kl foo(%rip), %xmm0
@@ -524,15 +524,14 @@ define i8 @test_mm_aesenc256kl_u8_global(<2 x i64> %data, <2 x i64>* %out) {
 ; X32-NEXT:    vmovaps %xmm0, (%ecx)
 ; X32-NEXT:    retl
 entry:
-  %h = bitcast [64 x i8]* @foo to i8*
-  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> %data, i8* %h)
+  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> %data, ptr @foo)
   %1 = extractvalue { i8, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %out
+  store <2 x i64> %1, ptr %out
   %2 = extractvalue { i8, <2 x i64> } %0, 0
   ret i8 %2
 }
 
-define i8 @test_mm_aesdecwide256kl_u8_global(<2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6, <2 x i64> %v7, <2 x i64>* %out0, <2 x i64>* %out1, <2 x i64>* %out2, <2 x i64>* %out3, <2 x i64>* %out4, <2 x i64>* %out5, <2 x i64>* %out6, <2 x i64>* %out7) nounwind {
+define i8 @test_mm_aesdecwide256kl_u8_global(<2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6, <2 x i64> %v7, ptr %out0, ptr %out1, ptr %out2, ptr %out3, ptr %out4, ptr %out5, ptr %out6, ptr %out7) nounwind {
 ; X64-LABEL: test_mm_aesdecwide256kl_u8_global:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
@@ -582,24 +581,23 @@ define i8 @test_mm_aesdecwide256kl_u8_global(<2 x i64> %v0, <2 x i64> %v1, <2 x 
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 entry:
-  %p = bitcast [64 x i8]* @foo to i8*
-  %0 = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(i8* %p, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6,      <2 x i64> %v7)
+  %0 = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(ptr @foo, <2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6,      <2 x i64> %v7)
   %1 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 1
-  store <2 x i64> %1, <2 x i64>* %out0
+  store <2 x i64> %1, ptr %out0
   %2 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 2
-  store <2 x i64> %2, <2 x i64>* %out1
+  store <2 x i64> %2, ptr %out1
   %3 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 3
-  store <2 x i64> %2, <2 x i64>* %out2
+  store <2 x i64> %2, ptr %out2
   %4 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 4
-  store <2 x i64> %2, <2 x i64>* %out3
+  store <2 x i64> %2, ptr %out3
   %5 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 5
-  store <2 x i64> %2, <2 x i64>* %out4
+  store <2 x i64> %2, ptr %out4
   %6 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 6
-  store <2 x i64> %2, <2 x i64>* %out5
+  store <2 x i64> %2, ptr %out5
   %7 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 7
-  store <2 x i64> %2, <2 x i64>* %out6
+  store <2 x i64> %2, ptr %out6
   %8 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 8
-  store <2 x i64> %2, <2 x i64>* %out7
+  store <2 x i64> %2, ptr %out7
   %9 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %0, 0
   ret i8 %9
 }

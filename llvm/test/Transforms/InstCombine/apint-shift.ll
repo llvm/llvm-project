@@ -199,9 +199,9 @@ define <2 x i19> @eq_lshr_shl_splat_vec(<2 x i19> %X) {
 
 define <2 x i7> @lshr_shl_splat_vec(<2 x i7> %X) {
 ; CHECK-LABEL: @lshr_shl_splat_vec(
-; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i7> [[X:%.*]], <i7 -8, i7 -8>
-; CHECK-NEXT:    [[SH1:%.*]] = lshr exact <2 x i7> [[MUL]], <i7 1, i7 1>
-; CHECK-NEXT:    ret <2 x i7> [[SH1]]
+; CHECK-NEXT:    [[DOTNEG:%.*]] = mul <2 x i7> [[X:%.*]], <i7 60, i7 60>
+; CHECK-NEXT:    [[SH2:%.*]] = and <2 x i7> [[DOTNEG]], <i7 60, i7 60>
+; CHECK-NEXT:    ret <2 x i7> [[SH2]]
 ;
   %mul = mul <2 x i7> %X, <i7 -8, i7 -8>
   %sh1 = lshr exact <2 x i7> %mul, <i7 3, i7 3>
@@ -565,7 +565,7 @@ define i40 @test26(i40 %A) {
 define i177 @ossfuzz_9880(i177 %X) {
 ; CHECK-LABEL: @ossfuzz_9880(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i177, align 8
-; CHECK-NEXT:    [[L1:%.*]] = load i177, i177* [[A]], align 8
+; CHECK-NEXT:    [[L1:%.*]] = load i177, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L1]], -1
 ; CHECK-NEXT:    [[B5_NEG:%.*]] = sext i1 [[TMP1]] to i177
 ; CHECK-NEXT:    [[B14:%.*]] = add i177 [[L1]], [[B5_NEG]]
@@ -574,7 +574,7 @@ define i177 @ossfuzz_9880(i177 %X) {
 ; CHECK-NEXT:    ret i177 [[B1]]
 ;
   %A = alloca i177
-  %L1 = load i177, i177* %A
+  %L1 = load i177, ptr %A
   %B = or i177 0, -1
   %B5 = udiv i177 %L1, %B
   %B4 = add i177 %B5, %B

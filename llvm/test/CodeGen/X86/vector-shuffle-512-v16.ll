@@ -291,35 +291,35 @@ define <16 x float> @shuffle_v16f32_0b_0a_09_08_0f_0e_0d_0c_03_02_01_00_07_06_05
   ret <16 x float> %1
 }
 
-define <16 x float> @shuffle_v16f32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18(<16 x float> %a, <16 x float>* %b)  {
+define <16 x float> @shuffle_v16f32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18(<16 x float> %a, ptr %b)  {
 ; ALL-LABEL: shuffle_v16f32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovaps {{.*#+}} zmm1 = [15,31,14,22,13,29,4,28,11,27,10,26,9,25,8,24]
 ; ALL-NEXT:    vpermt2ps (%rdi), %zmm1, %zmm0
 ; ALL-NEXT:    retq
-  %c = load <16 x float>, <16 x float>* %b
+  %c = load <16 x float>, ptr %b
   %d = shufflevector <16 x float> %a, <16 x float> %c, <16 x i32> <i32 15, i32 31, i32 14, i32 22, i32 13, i32 29, i32 4, i32 28, i32 11, i32 27, i32 10, i32 26, i32 9, i32 25, i32 8, i32 24>
   ret <16 x float> %d
 }
 
-define <16 x float> @shuffle_v16f32_load_08_11_10_00_12_15_14_04(<16 x float> %a0, <16 x float>* %a1) {
+define <16 x float> @shuffle_v16f32_load_08_11_10_00_12_15_14_04(<16 x float> %a0, ptr %a1) {
 ; ALL-LABEL: shuffle_v16f32_load_08_11_10_00_12_15_14_04:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vshufps {{.*#+}} zmm1 = zmm0[2,0],mem[0,0],zmm0[6,4],mem[4,4],zmm0[10,8],mem[8,8],zmm0[14,12],mem[12,12]
 ; ALL-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[0,3],zmm1[0,2],zmm0[4,7],zmm1[4,6],zmm0[8,11],zmm1[8,10],zmm0[12,15],zmm1[12,14]
 ; ALL-NEXT:    retq
-  %1 = load <16 x float>, <16 x float>* %a1
+  %1 = load <16 x float>, ptr %a1
   %2 = shufflevector <16 x float> %1, <16 x float> %a0, <16 x i32> <i32 16, i32 19, i32 18, i32 0, i32 20, i32 23, i32 22, i32 4, i32 24, i32 27, i32 26, i32 8, i32 28, i32 31, i32 30, i32 12>
   ret <16 x float> %2
 }
 
-define <16 x i32> @shuffle_v16i32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18(<16 x i32> %a, <16 x i32>* %b)  {
+define <16 x i32> @shuffle_v16i32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18(<16 x i32> %a, ptr %b)  {
 ; ALL-LABEL: shuffle_v16i32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,31,14,22,13,29,4,28,11,27,10,26,9,25,8,24]
 ; ALL-NEXT:    vpermt2d (%rdi), %zmm1, %zmm0
 ; ALL-NEXT:    retq
-  %c = load <16 x i32>, <16 x i32>* %b
+  %c = load <16 x i32>, ptr %b
   %d = shufflevector <16 x i32> %a, <16 x i32> %c, <16 x i32> <i32 15, i32 31, i32 14, i32 22, i32 13, i32 29, i32 4, i32 28, i32 11, i32 27, i32 10, i32 26, i32 9, i32 25, i32 8, i32 24>
   ret <16 x i32> %d
 }
@@ -373,13 +373,12 @@ define <4 x i32> @test_v16i32_0_4_8_12(<16 x i32> %v) {
   ret <4 x i32> %res
 }
 
-define <8 x float> @shuffle_v16f32_extract_256(float* %RET, float* %a) {
+define <8 x float> @shuffle_v16f32_extract_256(ptr %RET, ptr %a) {
 ; ALL-LABEL: shuffle_v16f32_extract_256:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovups 32(%rsi), %ymm0
 ; ALL-NEXT:    retq
-  %ptr_a = bitcast float* %a to <16 x float>*
-  %v_a = load <16 x float>, <16 x float>* %ptr_a, align 4
+  %v_a = load <16 x float>, ptr %a, align 4
   %v2 = shufflevector <16 x float> %v_a, <16 x float> undef, <8 x i32>  <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x float> %v2
 }
@@ -436,12 +435,12 @@ define <16 x float> @shuffle_v16f32_00_01_10_10_04_05_14_14_08_09_18_18_0c_0d_1c
   ret <16 x float> %shuffle
 }
 
-define <16 x i32> @insert_mem_and_zero_v16i32(i32* %ptr) {
+define <16 x i32> @insert_mem_and_zero_v16i32(ptr %ptr) {
 ; ALL-LABEL: insert_mem_and_zero_v16i32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; ALL-NEXT:    retq
-  %a = load i32, i32* %ptr
+  %a = load i32, ptr %ptr
   %v = insertelement <16 x i32> undef, i32 %a, i32 0
   %shuffle = shufflevector <16 x i32> %v, <16 x i32> zeroinitializer, <16 x i32> <i32 0, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i32> %shuffle
@@ -855,7 +854,7 @@ define <16 x float> @mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_00_01_02_
 %struct.foo = type { [4 x double], [3 x [4 x double]], [4 x double] }
 
 ; This test previously hung in shuffle combining. https://github.com/ispc/ispc/issues/1864
-define void @ispc_1864(<16 x float>* %arg) {
+define void @ispc_1864(ptr %arg) {
 ; ALL-LABEL: ispc_1864:
 ; ALL:       # %bb.0: # %bb
 ; ALL-NEXT:    pushq %rbp
@@ -877,21 +876,21 @@ define void @ispc_1864(<16 x float>* %arg) {
 ; ALL-NEXT:    retq
 bb:
   %tmp = alloca [30 x %struct.foo], align 64
-  %tmp1 = load <16 x float>, <16 x float>* %arg, align 4
+  %tmp1 = load <16 x float>, ptr %arg, align 4
   %tmp2 = fmul <16 x float> %tmp1, <float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00>
   %tmp3 = fpext <16 x float> %tmp2 to <16 x double>
-  %tmp4 = getelementptr inbounds [30 x %struct.foo], [30 x %struct.foo]* %tmp, i64 0, i64 3, i32 2, i64 0
+  %tmp4 = getelementptr inbounds [30 x %struct.foo], ptr %tmp, i64 0, i64 3, i32 2, i64 0
   %tmp5 = extractelement <16 x double> %tmp3, i32 10
-  store double %tmp5, double* %tmp4, align 32
-  %tmp6 = getelementptr inbounds [30 x %struct.foo], [30 x %struct.foo]* %tmp, i64 0, i64 3, i32 2, i64 1
+  store double %tmp5, ptr %tmp4, align 32
+  %tmp6 = getelementptr inbounds [30 x %struct.foo], ptr %tmp, i64 0, i64 3, i32 2, i64 1
   %tmp7 = extractelement <16 x double> %tmp3, i32 11
-  store double %tmp7, double* %tmp6, align 8
-  %tmp8 = getelementptr inbounds [30 x %struct.foo], [30 x %struct.foo]* %tmp, i64 0, i64 3, i32 2, i64 2
+  store double %tmp7, ptr %tmp6, align 8
+  %tmp8 = getelementptr inbounds [30 x %struct.foo], ptr %tmp, i64 0, i64 3, i32 2, i64 2
   %tmp9 = extractelement <16 x double> %tmp3, i32 12
-  store double %tmp9, double* %tmp8, align 16
-  %tmp10 = getelementptr inbounds [30 x %struct.foo], [30 x %struct.foo]* %tmp, i64 0, i64 3, i32 2, i64 3
+  store double %tmp9, ptr %tmp8, align 16
+  %tmp10 = getelementptr inbounds [30 x %struct.foo], ptr %tmp, i64 0, i64 3, i32 2, i64 3
   %tmp11 = extractelement <16 x double> %tmp3, i32 13
-  store double %tmp11, double* %tmp10, align 8
+  store double %tmp11, ptr %tmp10, align 8
   ret void
 }
 

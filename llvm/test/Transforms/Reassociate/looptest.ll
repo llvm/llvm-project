@@ -13,7 +13,7 @@
 ; In this case, we want to reassociate the specified expr so that i+j can be
 ; hoisted out of the inner most loop.
 ;
-; RUN: opt < %s -reassociate -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate -S | FileCheck %s
 ; END.
 @.LC0 = internal global [4 x i8] c"%d\0A\00"		; <[4 x i8]*> [#uses=1]
 

@@ -653,7 +653,7 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // demonstrated by test/CodeGen/Hexagon/tail-dup-subreg-abort.ll.
   // Disable tail duplication for this case for now, until the problem is
   // fixed.
-  for (auto SB : TailBB.successors()) {
+  for (auto *SB : TailBB.successors()) {
     for (auto &I : *SB) {
       if (!I.isPHI())
         break;
@@ -716,8 +716,7 @@ bool TailDuplicator::canCompletelyDuplicateBB(MachineBasicBlock &BB) {
 
 bool TailDuplicator::duplicateSimpleBB(
     MachineBasicBlock *TailBB, SmallVectorImpl<MachineBasicBlock *> &TDBBs,
-    const DenseSet<Register> &UsedByPhi,
-    SmallVectorImpl<MachineInstr *> &Copies) {
+    const DenseSet<Register> &UsedByPhi) {
   SmallPtrSet<MachineBasicBlock *, 8> Succs(TailBB->succ_begin(),
                                             TailBB->succ_end());
   SmallVector<MachineBasicBlock *, 8> Preds(TailBB->predecessors());
@@ -799,6 +798,15 @@ bool TailDuplicator::canTailDuplicate(MachineBasicBlock *TailBB,
     return false;
   if (!PredCond.empty())
     return false;
+  // FIXME: This is overly conservative; it may be ok to relax this in the
+  // future under more specific conditions. If TailBB is an INLINEASM_BR
+  // indirect target, we need to see if the edge from PredBB to TailBB is from
+  // an INLINEASM_BR in PredBB, and then also if that edge was from the
+  // indirect target list, fallthrough/default target, or potentially both. If
+  // it's both, TailDuplicator::tailDuplicate will remove the edge, corrupting
+  // the successor list in PredBB and predecessor list in TailBB.
+  if (TailBB->isInlineAsmBrIndirectTarget())
+    return false;
   return true;
 }
 
@@ -826,7 +834,7 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
   getRegsUsedByPHIs(*TailBB, &UsedByPhi);
 
   if (IsSimple)
-    return duplicateSimpleBB(TailBB, TDBBs, UsedByPhi, Copies);
+    return duplicateSimpleBB(TailBB, TDBBs, UsedByPhi);
 
   // Iterate through all the unique predecessors and tail-duplicate this
   // block into them, if possible. Copying the list ahead of time also

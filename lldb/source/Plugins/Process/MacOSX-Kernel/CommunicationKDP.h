@@ -21,8 +21,6 @@
 
 class CommunicationKDP : public lldb_private::Communication {
 public:
-  enum { eBroadcastBitRunPacketSent = kLoUserBroadcastBit };
-
   const static uint32_t kMaxPacketSize = 1200;
   const static uint32_t kMaxDataSize = 1024;
   typedef lldb_private::StreamBuffer<4096> PacketStreamType;
@@ -79,7 +77,7 @@ public:
   // Constructors and Destructors
   CommunicationKDP(const char *comm_name);
 
-  virtual ~CommunicationKDP();
+  ~CommunicationKDP() override;
 
   bool SendRequestPacket(const PacketStreamType &request_packet);
 
@@ -223,6 +221,8 @@ protected:
   // Classes that inherit from CommunicationKDP can see and modify these
   uint32_t m_addr_byte_size;
   lldb::ByteOrder m_byte_order;
+  std::string m_bytes;
+  std::recursive_mutex m_bytes_mutex;
   std::chrono::seconds m_packet_timeout;
   std::recursive_mutex m_sequence_mutex; // Restrict access to sending/receiving
                                          // packets to a single thread at a time

@@ -4,12 +4,12 @@
 
 ; CHECK: "l__ZZ20-[Example1 whatever]E4C.91"
 
-	%struct.A = type { i32*, i32 }
-@"_ZZ20-[Example1 whatever]E4C.91" = private constant %struct.A { i32* null, i32 1 }		; <%struct.A*> [#uses=1]
+	%struct.A = type { ptr, i32 }
+@"_ZZ20-[Example1 whatever]E4C.91" = private constant %struct.A { ptr null, i32 1 }		; <ptr> [#uses=1]
 
-define internal i32* @"\01-[Example1 whatever]"() nounwind optsize ssp {
+define internal ptr @"\01-[Example1 whatever]"() nounwind optsize ssp {
 entry:
-	%0 = getelementptr %struct.A, %struct.A* @"_ZZ20-[Example1 whatever]E4C.91", i64 0, i32 0		; <i32**> [#uses=1]
-	%1 = load i32*, i32** %0, align 8		; <i32*> [#uses=1]
-	ret i32* %1
+	%0 = getelementptr %struct.A, ptr @"_ZZ20-[Example1 whatever]E4C.91", i64 0, i32 0		; <ptr> [#uses=1]
+	%1 = load ptr, ptr %0, align 8		; <ptr> [#uses=1]
+	ret ptr %1
 }

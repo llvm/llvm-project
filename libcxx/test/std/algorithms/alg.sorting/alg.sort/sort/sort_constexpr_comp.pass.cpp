@@ -22,6 +22,8 @@
 #include "test_iterators.h"
 #include "MoveOnly.h"
 
+const int LargeN = 128;
+
 template<int N, class T, class Iter>
 TEST_CONSTEXPR_CXX20 bool test()
 {
@@ -62,14 +64,14 @@ int main(int, char**)
 {
     test<7, int, int*>();
     test<7, int, random_access_iterator<int*> >();
-    test<257, int, int*>();
-    test<257, int, random_access_iterator<int*> >();
+    test<LargeN, int, int*>();
+    test<LargeN, int, random_access_iterator<int*> >();
 
 #if TEST_STD_VER >= 11
     test<7, MoveOnly, MoveOnly*>();
     test<7, MoveOnly, random_access_iterator<MoveOnly*> >();
-    test<257, MoveOnly, MoveOnly*>();
-    test<257, MoveOnly, random_access_iterator<MoveOnly*> >();
+    test<LargeN, MoveOnly, MoveOnly*>();
+    test<LargeN, MoveOnly, random_access_iterator<MoveOnly*> >();
 #endif
 
     test_pointers<17, char, char**>();
@@ -81,9 +83,9 @@ int main(int, char**)
 
 #if TEST_STD_VER >= 20
     test<7, int, contiguous_iterator<int*>>();
-    test<257, int, contiguous_iterator<int*>>();
+    test<LargeN, int, contiguous_iterator<int*>>();
     test<7, MoveOnly, contiguous_iterator<MoveOnly*>>();
-    test<257, MoveOnly, contiguous_iterator<MoveOnly*>>();
+    test<LargeN, MoveOnly, contiguous_iterator<MoveOnly*>>();
     test_pointers<17, char, contiguous_iterator<char**>>();
     test_pointers<17, const char, contiguous_iterator<const char**>>();
     test_pointers<17, int, contiguous_iterator<int**>>();
@@ -91,16 +93,16 @@ int main(int, char**)
     static_assert(test<7, int, int*>());
     static_assert(test<7, int, random_access_iterator<int*>>());
     static_assert(test<7, int, contiguous_iterator<int*>>());
-    static_assert(test<257, int, int*>());
-    static_assert(test<257, int, random_access_iterator<int*>>());
-    static_assert(test<257, int, contiguous_iterator<int*>>());
+    static_assert(test<LargeN, int, int*>());
+    static_assert(test<LargeN, int, random_access_iterator<int*>>());
+    static_assert(test<LargeN, int, contiguous_iterator<int*>>());
 
     static_assert(test<7, MoveOnly, MoveOnly*>());
     static_assert(test<7, MoveOnly, random_access_iterator<MoveOnly*>>());
     static_assert(test<7, MoveOnly, contiguous_iterator<MoveOnly*>>());
-    static_assert(test<257, MoveOnly, MoveOnly*>());
-    static_assert(test<257, MoveOnly, random_access_iterator<MoveOnly*>>());
-    static_assert(test<257, MoveOnly, contiguous_iterator<MoveOnly*>>());
+    static_assert(test<LargeN, MoveOnly, MoveOnly*>());
+    static_assert(test<LargeN, MoveOnly, random_access_iterator<MoveOnly*>>());
+    static_assert(test<LargeN, MoveOnly, contiguous_iterator<MoveOnly*>>());
 
     static_assert(test_pointers<17, char, char**>());
     static_assert(test_pointers<17, char, random_access_iterator<char**>>());

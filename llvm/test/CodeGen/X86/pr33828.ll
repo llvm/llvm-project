@@ -28,7 +28,7 @@ entry:
   br label %if.end
 
 if.end:
-  %tmp1 = load i8, i8* @var_580, align 1
+  %tmp1 = load i8, ptr @var_580, align 1
   %conv7 = sext i8 %tmp1 to i32
   %conv8 = zext i16 %phitmp to i32
   %mul = shl nuw nsw i32 %conv8, 1

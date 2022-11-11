@@ -2,7 +2,6 @@
 
 
 
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -10,8 +9,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class SharedLibTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def common_test_expr(self, preload_symbols):
         if "clang" in self.getCompiler() and "3.4" in self.getCompilerVersion():

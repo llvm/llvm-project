@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 \
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z13
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z14 \
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z14 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z14
 ;
 ; Test that loads into operations that can fold one memory operand get zero

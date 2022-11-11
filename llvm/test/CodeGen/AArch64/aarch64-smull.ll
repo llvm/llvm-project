@@ -46,6 +46,136 @@ define <2 x i64> @smull_v2i32_v2i64(<2 x i32>* %A, <2 x i32>* %B) nounwind {
   ret <2 x i64> %tmp5
 }
 
+define <8 x i32> @smull_zext_v8i8_v8i32(<8 x i8>* %A, <8 x i16>* %B) nounwind {
+; CHECK-LABEL: smull_zext_v8i8_v8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshll v2.4s, v1.4h, #0
+; CHECK-NEXT:    sshll2 v1.4s, v1.8h, #0
+; CHECK-NEXT:    ushll2 v3.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    mul v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ret
+  %load.A = load <8 x i8>, <8 x i8>* %A
+  %load.B = load <8 x i16>, <8 x i16>* %B
+  %zext.A = zext <8 x i8> %load.A to <8 x i32>
+  %sext.B = sext <8 x i16> %load.B to <8 x i32>
+  %res = mul <8 x i32> %zext.A, %sext.B
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @smull_zext_v8i8_v8i32_sext_first_operand(<8 x i16>* %A, <8 x i8>* %B) nounwind {
+; CHECK-LABEL: smull_zext_v8i8_v8i32_sext_first_operand:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    sshll v2.4s, v0.4h, #0
+; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-NEXT:    ushll2 v3.4s, v1.8h, #0
+; CHECK-NEXT:    ushll v4.4s, v1.4h, #0
+; CHECK-NEXT:    mul v1.4s, v0.4s, v3.4s
+; CHECK-NEXT:    mul v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    ret
+  %load.A = load <8 x i16>, <8 x i16>* %A
+  %load.B = load <8 x i8>, <8 x i8>* %B
+  %sext.A = sext <8 x i16> %load.A to <8 x i32>
+  %zext.B = zext <8 x i8> %load.B to <8 x i32>
+  %res = mul <8 x i32> %sext.A, %zext.B
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @smull_zext_v8i8_v8i32_top_bit_is_1(<8 x i16>* %A, <8 x i16>* %B) nounwind {
+; CHECK-LABEL: smull_zext_v8i8_v8i32_top_bit_is_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    orr v0.8h, #128, lsl #8
+; CHECK-NEXT:    sshll v2.4s, v1.4h, #0
+; CHECK-NEXT:    sshll2 v1.4s, v1.8h, #0
+; CHECK-NEXT:    ushll2 v3.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    mul v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ret
+  %load.A = load <8 x i16>, <8 x i16>* %A
+  %or.A = or <8 x i16> %load.A, <i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000>
+  %load.B = load <8 x i16>, <8 x i16>* %B
+  %zext.A = zext <8 x i16> %or.A  to <8 x i32>
+  %sext.B = sext <8 x i16> %load.B to <8 x i32>
+  %res = mul <8 x i32> %zext.A, %sext.B
+  ret <8 x i32> %res
+}
+
+define <4 x i32> @smull_zext_v4i16_v4i32(<4 x i8>* %A, <4 x i16>* %B) nounwind {
+; CHECK-LABEL: smull_zext_v4i16_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %load.A = load <4 x i8>, <4 x i8>* %A
+  %load.B = load <4 x i16>, <4 x i16>* %B
+  %zext.A = zext <4 x i8> %load.A to <4 x i32>
+  %sext.B = sext <4 x i16> %load.B to <4 x i32>
+  %res = mul <4 x i32> %zext.A, %sext.B
+  ret <4 x i32> %res
+}
+
+define <2 x i64> @smull_zext_v2i32_v2i64(<2 x i16>* %A, <2 x i32>* %B) nounwind {
+; CHECK-LABEL: smull_zext_v2i32_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x1]
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    ldrh w11, [x0, #2]
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    mul x9, x11, x10
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    mov v0.d[1], x9
+; CHECK-NEXT:    ret
+  %load.A = load <2 x i16>, <2 x i16>* %A
+  %load.B = load <2 x i32>, <2 x i32>* %B
+  %zext.A = zext <2 x i16> %load.A to <2 x i64>
+  %sext.B = sext <2 x i32> %load.B to <2 x i64>
+  %res = mul <2 x i64> %zext.A, %sext.B
+  ret <2 x i64> %res
+}
+
+define <2 x i64> @smull_zext_and_v2i32_v2i64(<2 x i32>* %A, <2 x i32>* %B) nounwind {
+; CHECK-LABEL: smull_zext_and_v2i32_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    bic v0.2s, #128, lsl #24
+; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    mov x8, v1.d[1]
+; CHECK-NEXT:    mov x11, v0.d[1]
+; CHECK-NEXT:    mul x9, x10, x9
+; CHECK-NEXT:    mul x8, x11, x8
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ret
+  %load.A = load <2 x i32>, <2 x i32>* %A
+  %and.A = and <2 x i32> %load.A, <i32 u0x7FFFFFFF, i32 u0x7FFFFFFF>
+  %load.B = load <2 x i32>, <2 x i32>* %B
+  %zext.A = zext <2 x i32> %and.A to <2 x i64>
+  %sext.B = sext <2 x i32> %load.B to <2 x i64>
+  %res = mul <2 x i64> %zext.A, %sext.B
+  ret <2 x i64> %res
+}
+
 define <8 x i16> @umull_v8i8_v8i16(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: umull_v8i8_v8i16:
 ; CHECK:       // %bb.0:

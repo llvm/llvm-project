@@ -12,9 +12,9 @@
 @__tls_guard = internal thread_local unnamed_addr global i1 false
 @sum1 = internal thread_local global i32 0, align 4
 
-declare void @_ZN1SC1Ev(%struct.S*)
-declare void @_ZN1SD1Ev(%struct.S*)
-declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
+declare void @_ZN1SC1Ev(ptr)
+declare void @_ZN1SD1Ev(ptr)
+declare i32 @_tlv_atexit(ptr, ptr, ptr)
 
 ; Every GPR should be saved - except rdi, rax, and rsp
 ; CHECK-LABEL: _ZTW2sg
@@ -60,18 +60,18 @@ declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
 ; CHECK-O0: popq %r9
 ; CHECK-O0: popq %r10
 ; CHECK-O0: popq %r11
-define cxx_fast_tlscc nonnull %struct.S* @_ZTW2sg() nounwind {
-  %.b.i = load i1, i1* @__tls_guard, align 1
+define cxx_fast_tlscc nonnull ptr @_ZTW2sg() nounwind {
+  %.b.i = load i1, ptr @__tls_guard, align 1
   br i1 %.b.i, label %__tls_init.exit, label %init.i
 
 init.i:
-  store i1 true, i1* @__tls_guard, align 1
-  tail call void @_ZN1SC1Ev(%struct.S* nonnull @sg) #2
-  %1 = tail call i32 @_tlv_atexit(void (i8*)* nonnull bitcast (void (%struct.S*)* @_ZN1SD1Ev to void (i8*)*), i8* nonnull getelementptr inbounds (%struct.S, %struct.S* @sg, i64 0, i32 0), i8* nonnull @__dso_handle) #2
+  store i1 true, ptr @__tls_guard, align 1
+  tail call void @_ZN1SC1Ev(ptr nonnull @sg) #2
+  %1 = tail call i32 @_tlv_atexit(ptr nonnull @_ZN1SD1Ev, ptr nonnull @sg, ptr nonnull @__dso_handle) #2
   br label %__tls_init.exit
 
 __tls_init.exit:
-  ret %struct.S* @sg
+  ret ptr @sg
 }
 
 ; CHECK-LABEL: _ZTW4sum1
@@ -102,8 +102,8 @@ __tls_init.exit:
 ; CHECK-O0-NOT: movq %rcx
 ; CHECK-O0-NOT: movq %rbx
 ; CHECK-O0: callq
-define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind {
-  ret i32* @sum1
+define cxx_fast_tlscc nonnull ptr @_ZTW4sum1() nounwind {
+  ret ptr @sum1
 }
 
 ; Make sure at O0 we don't overwrite RBP.
@@ -111,8 +111,8 @@ define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind {
 ; CHECK-O0: pushq %rbp
 ; CHECK-O0: movq %rsp, %rbp
 ; CHECK-O0-NOT: movq %r{{.*}}, (%rbp) 
-define cxx_fast_tlscc i32* @_ZTW4sum2() #0 {
-  ret i32* @sum1
+define cxx_fast_tlscc ptr @_ZTW4sum2() #0 {
+  ret ptr @sum1
 }
 
 ; Make sure at O0, we don't generate spilling/reloading of the CSRs.
@@ -134,20 +134,20 @@ define cxx_fast_tlscc i32* @_ZTW4sum2() #0 {
 %class.C = type { i32 }
 @tC = internal thread_local global %class.C zeroinitializer, align 4
 declare cxx_fast_tlscc void @tls_helper()
-define cxx_fast_tlscc %class.C* @tls_test2() #1 {
+define cxx_fast_tlscc ptr @tls_test2() #1 {
   call cxx_fast_tlscc void @tls_helper()
-  ret %class.C* @tC
+  ret ptr @tC
 }
 
 ; Make sure we do not allow tail call when caller and callee have different
 ; calling conventions.
-declare %class.C* @_ZN1CD1Ev(%class.C* readnone returned %this)
+declare ptr @_ZN1CD1Ev(ptr readnone returned %this)
 ; CHECK-LABEL: tls_test
 ; CHECK: callq {{.*}}tlv_atexit
 define cxx_fast_tlscc void @tls_test() {
 entry:
-  store i32 0, i32* getelementptr inbounds (%class.C, %class.C* @tC, i64 0, i32 0), align 4
-  %0 = tail call i32 @_tlv_atexit(void (i8*)* bitcast (%class.C* (%class.C*)* @_ZN1CD1Ev to void (i8*)*), i8* bitcast (%class.C* @tC to i8*), i8* nonnull @__dso_handle) #1
+  store i32 0, ptr @tC, align 4
+  %0 = tail call i32 @_tlv_atexit(ptr @_ZN1CD1Ev, ptr @tC, ptr nonnull @__dso_handle) #1
   ret void
 }
 
@@ -163,8 +163,8 @@ entry:
 ; CHECK-NOT: pushq %rcx
 ; CHECK-NOT: pushq %rbx
 ; CHECK: callq
-define cxx_fast_tlscc nonnull i8* @test_ssp() #2 {
-  ret i8* @ssp_var
+define cxx_fast_tlscc nonnull ptr @test_ssp() #2 {
+  ret ptr @ssp_var
 }
 attributes #0 = { nounwind "frame-pointer"="all" }
 attributes #1 = { nounwind }

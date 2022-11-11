@@ -37,5 +37,5 @@ unsigned unit3() {
 // CHECK: call i32 @llvm.bpf.preserve.type.info(i32 5, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[ENUM_AA]]
 
 // CHECK: ![[ENUM_AA]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "AA"
-// CHECK: ![[TYPEDEF_INT]] = !DIDerivedType(tag: DW_TAG_typedef, name: "__int"
 // CHECK: ![[STRUCT_S]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "s"
+// CHECK: ![[TYPEDEF_INT]] = !DIDerivedType(tag: DW_TAG_typedef, name: "__int"

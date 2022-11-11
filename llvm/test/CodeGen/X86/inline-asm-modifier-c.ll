@@ -13,6 +13,6 @@ define dso_local i32 @test_inlineasm_c_output_template0() {
 ; CHECK: #TEST baz
 @baz = internal global i32 0, align 4
 define dso_local i32 @test_inlineasm_c_output_template1() {
-  tail call void asm sideeffect "#TEST ${0:c}", "i"(i32* nonnull @baz)
+  tail call void asm sideeffect "#TEST ${0:c}", "i"(ptr nonnull @baz)
   ret i32 42
 }

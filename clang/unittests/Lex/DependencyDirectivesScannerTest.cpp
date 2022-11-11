@@ -57,10 +57,11 @@ TEST(MinimizeSourceToDependencyDirectivesTest, Empty) {
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("abc def\nxyz", Out, Tokens,
                                                     Directives));
-  EXPECT_TRUE(Out.empty());
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
   EXPECT_TRUE(Tokens.empty());
-  ASSERT_EQ(1u, Directives.size());
-  ASSERT_EQ(pp_eof, Directives.back().Kind);
+  ASSERT_EQ(2u, Directives.size());
+  EXPECT_EQ(tokens_present_before_eof, Directives[0].Kind);
+  EXPECT_EQ(pp_eof, Directives[1].Kind);
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, AllTokens) {
@@ -121,6 +122,21 @@ TEST(MinimizeSourceToDependencyDirectivesTest, EmptyHash) {
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives("#\n#define MACRO a\n", Out));
   EXPECT_STREQ("#define MACRO a\n", Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest, HashHash) {
+  SmallVector<char, 128> Out;
+
+  StringRef Source = R"(
+    #define S
+    #if 0
+      ##pragma cool
+      ##include "t.h"
+    #endif
+    #define E
+    )";
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
+  EXPECT_STREQ("#define S\n#if 0\n#endif\n#define E\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, Define) {
@@ -451,7 +467,7 @@ TEST(MinimizeSourceToDependencyDirectivesTest, Pragma) {
   SmallVector<char, 128> Out;
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#pragma A\n", Out));
-  EXPECT_STREQ("", Out.data());
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#pragma push_macro(\"MACRO\")\n", Out));
@@ -470,15 +486,15 @@ TEST(MinimizeSourceToDependencyDirectivesTest, Pragma) {
   EXPECT_STREQ("#pragma include_alias(<A>, <B>)\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#pragma clang\n", Out));
-  EXPECT_STREQ("", Out.data());
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
 
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives("#pragma clang module\n", Out));
-  EXPECT_STREQ("", Out.data());
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#pragma clang module impor\n", Out));
-  EXPECT_STREQ("", Out.data());
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#pragma clang module import\n", Out));
@@ -663,7 +679,7 @@ TEST(MinimizeSourceToDependencyDirectivesTest, PoundWarningAndError) {
            "#error \\\n#include <t.h>\n",
        }) {
     ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
-    EXPECT_STREQ("", Out.data());
+    EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
   }
 
   for (auto Source : {
@@ -767,7 +783,8 @@ TEST(MinimizeSourceToDependencyDirectivesTest,
 )";
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
   EXPECT_STREQ(
-      "#if NEVER_ENABLED\n#define why(fmt,...) #error don't try me\n#endif\n",
+      "#if NEVER_ENABLED\n#define why(fmt,...) #error don't try me\n#endif\n"
+      "<TokBeforeEOF>\n",
       Out.data());
 
   Source = R"(#if NEVER_ENABLED
@@ -778,7 +795,8 @@ TEST(MinimizeSourceToDependencyDirectivesTest,
   )";
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
   EXPECT_STREQ(
-      "#if NEVER_ENABLED\n#define why(fmt,...) \"quote dropped\n#endif\n",
+      "#if NEVER_ENABLED\n#define why(fmt,...) \"quote dropped\n#endif\n"
+      "<TokBeforeEOF>\n",
       Out.data());
 }
 
@@ -799,11 +817,11 @@ TEST(MinimizeSourceToDependencyDirectivesTest,
 
   StringRef Source = "#define X '\\ \t\nx'\nvoid foo() {}";
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
-  EXPECT_STREQ("#define X '\\ \t\nx'\n", Out.data());
+  EXPECT_STREQ("#define X '\\ \t\nx'\n<TokBeforeEOF>\n", Out.data());
 
   Source = "#define X \"\\ \r\nx\"\nvoid foo() {}";
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
-  EXPECT_STREQ("#define X \"\\ \r\nx\"\n", Out.data());
+  EXPECT_STREQ("#define X \"\\ \r\nx\"\n<TokBeforeEOF>\n", Out.data());
 
   Source = "#define X \"\\ \r\nx\n#include <x>\n";
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
@@ -848,11 +866,56 @@ ort \
                "exp\\\nort import:l[[rename]];"
                "import<<=3;import a b d e d e f e;"
                "import foo[[no_unique_address]];import foo();"
-               "import f(:sefse);import f(->a=3);\n",
+               "import f(:sefse);import f(->a=3);"
+               "<TokBeforeEOF>\n",
                Out.data());
-  ASSERT_EQ(Directives.size(), 10u);
+  ASSERT_EQ(Directives.size(), 11u);
   EXPECT_EQ(Directives[0].Kind, pp_include);
   EXPECT_EQ(Directives[1].Kind, cxx_export_module_decl);
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest, TokensBeforeEOF) {
+  SmallString<128> Out;
+
+  StringRef Source = R"(
+    #define A
+    #ifdef B
+    int x;
+    #endif
+    )";
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
+  EXPECT_STREQ("#define A\n<TokBeforeEOF>\n", Out.data());
+
+  Source = R"(
+    #ifndef A
+    #define A
+    #endif // some comment
+
+    // other comment
+    )";
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
+  EXPECT_STREQ("#ifndef A\n#define A\n#endif\n", Out.data());
+
+  Source = R"(
+    #ifndef A
+    #define A
+    #endif /* some comment
+
+    */
+    )";
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
+  EXPECT_STREQ("#ifndef A\n#define A\n#endif\n", Out.data());
+
+  Source = R"(
+    #ifndef A
+    #define A
+    #endif /* some comment
+
+    */
+    int x;
+    )";
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
+  EXPECT_STREQ("#ifndef A\n#define A\n#endif\n<TokBeforeEOF>\n", Out.data());
 }
 
 } // end anonymous namespace

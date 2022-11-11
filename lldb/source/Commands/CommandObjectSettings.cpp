@@ -13,6 +13,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 
@@ -153,7 +154,7 @@ insert-before or insert-after.");
       return;
 
     // Complete option name
-    if (arg[0] != '-')
+    if (arg[0] == '-')
       return;
 
     // Complete setting value

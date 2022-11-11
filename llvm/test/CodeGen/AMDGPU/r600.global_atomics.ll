@@ -505,36 +505,36 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}atomic_inc_add
-; EG: MEM_RAT ATOMIC_INC_UINT
-define amdgpu_kernel void @atomic_inc_add(i32 addrspace(1)* %out) {
+; FUNC-LABEL: {{^}}atomic_add_1
+; EG: MEM_RAT ATOMIC_ADD
+define amdgpu_kernel void @atomic_add_1(i32 addrspace(1)* %out) {
 entry:
   %gep = getelementptr i32, i32 addrspace(1)* %out, i64 4
   %val = atomicrmw volatile add i32 addrspace(1)* %gep, i32 1 seq_cst
   ret void
 }
 
-; FUNC-LABEL: {{^}}atomic_dec_add
-; EG: MEM_RAT ATOMIC_DEC_UINT
-define amdgpu_kernel void @atomic_dec_add(i32 addrspace(1)* %out) {
+; FUNC-LABEL: {{^}}atomic_add_neg1
+; EG: MEM_RAT ATOMIC_ADD
+define amdgpu_kernel void @atomic_add_neg1(i32 addrspace(1)* %out) {
 entry:
   %gep = getelementptr i32, i32 addrspace(1)* %out, i64 4
   %val = atomicrmw volatile add i32 addrspace(1)* %gep, i32 -1 seq_cst
   ret void
 }
 
-; FUNC-LABEL: {{^}}atomic_inc_sub
-; EG: MEM_RAT ATOMIC_INC_UINT
-define amdgpu_kernel void @atomic_inc_sub(i32 addrspace(1)* %out) {
+; FUNC-LABEL: {{^}}atomic_sub_neg1
+; EG: MEM_RAT ATOMIC_SUB
+define amdgpu_kernel void @atomic_sub_neg1(i32 addrspace(1)* %out) {
 entry:
   %gep = getelementptr i32, i32 addrspace(1)* %out, i64 4
   %val = atomicrmw volatile sub i32 addrspace(1)* %gep, i32 -1 seq_cst
   ret void
 }
 
-; FUNC-LABEL: {{^}}atomic_dec_sub
-; EG: MEM_RAT ATOMIC_DEC_UINT
-define amdgpu_kernel void @atomic_dec_sub(i32 addrspace(1)* %out) {
+; FUNC-LABEL: {{^}}atomic_sub_1
+; EG: MEM_RAT ATOMIC_SUB
+define amdgpu_kernel void @atomic_sub_1(i32 addrspace(1)* %out) {
 entry:
   %gep = getelementptr i32, i32 addrspace(1)* %out, i64 4
   %val = atomicrmw volatile sub i32 addrspace(1)* %gep, i32 1 seq_cst

@@ -1911,7 +1911,7 @@ entry:
 define <4 x float> @test_mm_mask_fmadd_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_fmadd_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x09,0xa9,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = (xmm1 * xmm0) + xmm2
@@ -1939,7 +1939,7 @@ entry:
 define <4 x float> @test_mm_mask_fmadd_round_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_fmadd_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x09,0xa9,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = (xmm1 * xmm0) + xmm2
@@ -1961,7 +1961,7 @@ declare <4 x float> @llvm.x86.avx512.mask.vfmadd.ss(<4 x float>, <4 x float>, <4
 define <4 x float> @test_mm_maskz_fmadd_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B, <4 x float> %__C) {
 ; X86-LABEL: test_mm_maskz_fmadd_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x75,0x89,0xa9,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = (xmm1 * xmm0) + xmm2
@@ -1988,7 +1988,7 @@ entry:
 define <4 x float> @test_mm_maskz_fmadd_round_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B, <4 x float> %__C) {
 ; X86-LABEL: test_mm_maskz_fmadd_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x75,0x89,0xa9,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = (xmm1 * xmm0) + xmm2
@@ -2010,7 +2010,7 @@ declare <4 x float> @llvm.x86.avx512.maskz.vfmadd.ss(<4 x float>, <4 x float>, <
 define <4 x float> @test_mm_mask3_fmadd_ss(<4 x float> %__W, <4 x float> %__X, <4 x float> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fmadd_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xb9,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = (xmm0 * xmm1) + xmm2
@@ -2040,7 +2040,7 @@ entry:
 define <4 x float> @test_mm_mask3_fmadd_round_ss(<4 x float> %__W, <4 x float> %__X, <4 x float> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fmadd_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xb9,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = (xmm0 * xmm1) + xmm2
@@ -2064,7 +2064,7 @@ declare <4 x float> @llvm.x86.avx512.mask3.vfmadd.ss(<4 x float>, <4 x float>, <
 define <4 x float> @test_mm_mask_fmsub_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_fmsub_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x09,0xab,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = (xmm1 * xmm0) - xmm2
@@ -2093,7 +2093,7 @@ entry:
 define <4 x float> @test_mm_mask_fmsub_round_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_fmsub_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x09,0xab,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = (xmm1 * xmm0) - xmm2
@@ -2114,7 +2114,7 @@ entry:
 define <4 x float> @test_mm_maskz_fmsub_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B, <4 x float> %__C) {
 ; X86-LABEL: test_mm_maskz_fmsub_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x75,0x89,0xab,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = (xmm1 * xmm0) - xmm2
@@ -2142,7 +2142,7 @@ entry:
 define <4 x float> @test_mm_maskz_fmsub_round_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B, <4 x float> %__C) {
 ; X86-LABEL: test_mm_maskz_fmsub_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x75,0x89,0xab,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = (xmm1 * xmm0) - xmm2
@@ -2163,7 +2163,7 @@ entry:
 define <4 x float> @test_mm_mask3_fmsub_ss(<4 x float> %__W, <4 x float> %__X, <4 x float> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fmsub_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xbb,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = (xmm0 * xmm1) - xmm2
@@ -2194,7 +2194,7 @@ entry:
 define <4 x float> @test_mm_mask3_fmsub_round_ss(<4 x float> %__W, <4 x float> %__X, <4 x float> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fmsub_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xbb,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = (xmm0 * xmm1) - xmm2
@@ -2218,7 +2218,7 @@ declare <4 x float> @llvm.x86.avx512.mask3.vfmsub.ss(<4 x float>, <4 x float>, <
 define <4 x float> @test_mm_mask_fnmadd_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_fnmadd_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x09,0xad,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = -(xmm1 * xmm0) + xmm2
@@ -2247,7 +2247,7 @@ entry:
 define <4 x float> @test_mm_mask_fnmadd_round_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_fnmadd_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x09,0xad,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = -(xmm1 * xmm0) + xmm2
@@ -2268,7 +2268,7 @@ entry:
 define <4 x float> @test_mm_maskz_fnmadd_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B, <4 x float> %__C) {
 ; X86-LABEL: test_mm_maskz_fnmadd_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x75,0x89,0xad,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = -(xmm1 * xmm0) + xmm2
@@ -2296,7 +2296,7 @@ entry:
 define <4 x float> @test_mm_maskz_fnmadd_round_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B, <4 x float> %__C) {
 ; X86-LABEL: test_mm_maskz_fnmadd_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x75,0x89,0xad,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = -(xmm1 * xmm0) + xmm2
@@ -2317,7 +2317,7 @@ entry:
 define <4 x float> @test_mm_mask3_fnmadd_ss(<4 x float> %__W, <4 x float> %__X, <4 x float> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fnmadd_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xbd,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = -(xmm0 * xmm1) + xmm2
@@ -2348,7 +2348,7 @@ entry:
 define <4 x float> @test_mm_mask3_fnmadd_round_ss(<4 x float> %__W, <4 x float> %__X, <4 x float> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fnmadd_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xbd,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = -(xmm0 * xmm1) + xmm2
@@ -2371,7 +2371,7 @@ entry:
 define <4 x float> @test_mm_mask_fnmsub_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_fnmsub_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x09,0xaf,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = -(xmm1 * xmm0) - xmm2
@@ -2401,7 +2401,7 @@ entry:
 define <4 x float> @test_mm_mask_fnmsub_round_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_fnmsub_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x09,0xaf,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = -(xmm1 * xmm0) - xmm2
@@ -2423,7 +2423,7 @@ entry:
 define <4 x float> @test_mm_maskz_fnmsub_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B, <4 x float> %__C) {
 ; X86-LABEL: test_mm_maskz_fnmsub_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x75,0x89,0xaf,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = -(xmm1 * xmm0) - xmm2
@@ -2452,7 +2452,7 @@ entry:
 define <4 x float> @test_mm_maskz_fnmsub_round_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B, <4 x float> %__C) {
 ; X86-LABEL: test_mm_maskz_fnmsub_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x75,0x89,0xaf,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = -(xmm1 * xmm0) - xmm2
@@ -2474,7 +2474,7 @@ entry:
 define <4 x float> @test_mm_mask3_fnmsub_ss(<4 x float> %__W, <4 x float> %__X, <4 x float> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fnmsub_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xbf,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = -(xmm0 * xmm1) - xmm2
@@ -2506,7 +2506,7 @@ entry:
 define <4 x float> @test_mm_mask3_fnmsub_round_ss(<4 x float> %__W, <4 x float> %__X, <4 x float> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fnmsub_round_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xbf,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = -(xmm0 * xmm1) - xmm2
@@ -2529,7 +2529,7 @@ entry:
 define <2 x double> @test_mm_mask_fmadd_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_fmadd_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x09,0xa9,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = (xmm1 * xmm0) + xmm2
@@ -2557,7 +2557,7 @@ entry:
 define <2 x double> @test_mm_mask_fmadd_round_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_fmadd_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x09,0xa9,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = (xmm1 * xmm0) + xmm2
@@ -2579,7 +2579,7 @@ declare <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double>, <2 x double>,
 define <2 x double> @test_mm_maskz_fmadd_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B, <2 x double> %__C) {
 ; X86-LABEL: test_mm_maskz_fmadd_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xf5,0x89,0xa9,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = (xmm1 * xmm0) + xmm2
@@ -2606,7 +2606,7 @@ entry:
 define <2 x double> @test_mm_maskz_fmadd_round_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B, <2 x double> %__C) {
 ; X86-LABEL: test_mm_maskz_fmadd_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xf5,0x89,0xa9,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = (xmm1 * xmm0) + xmm2
@@ -2628,7 +2628,7 @@ declare <2 x double> @llvm.x86.avx512.maskz.vfmadd.sd(<2 x double>, <2 x double>
 define <2 x double> @test_mm_mask3_fmadd_sd(<2 x double> %__W, <2 x double> %__X, <2 x double> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fmadd_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xb9,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = (xmm0 * xmm1) + xmm2
@@ -2658,7 +2658,7 @@ entry:
 define <2 x double> @test_mm_mask3_fmadd_round_sd(<2 x double> %__W, <2 x double> %__X, <2 x double> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fmadd_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmadd231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xb9,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = (xmm0 * xmm1) + xmm2
@@ -2682,7 +2682,7 @@ declare <2 x double> @llvm.x86.avx512.mask3.vfmadd.sd(<2 x double>, <2 x double>
 define <2 x double> @test_mm_mask_fmsub_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_fmsub_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x09,0xab,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = (xmm1 * xmm0) - xmm2
@@ -2711,7 +2711,7 @@ entry:
 define <2 x double> @test_mm_mask_fmsub_round_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_fmsub_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x09,0xab,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = (xmm1 * xmm0) - xmm2
@@ -2732,7 +2732,7 @@ entry:
 define <2 x double> @test_mm_maskz_fmsub_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B, <2 x double> %__C) {
 ; X86-LABEL: test_mm_maskz_fmsub_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xf5,0x89,0xab,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = (xmm1 * xmm0) - xmm2
@@ -2760,7 +2760,7 @@ entry:
 define <2 x double> @test_mm_maskz_fmsub_round_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B, <2 x double> %__C) {
 ; X86-LABEL: test_mm_maskz_fmsub_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xf5,0x89,0xab,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = (xmm1 * xmm0) - xmm2
@@ -2781,7 +2781,7 @@ entry:
 define <2 x double> @test_mm_mask3_fmsub_sd(<2 x double> %__W, <2 x double> %__X, <2 x double> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fmsub_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xbb,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = (xmm0 * xmm1) - xmm2
@@ -2812,7 +2812,7 @@ entry:
 define <2 x double> @test_mm_mask3_fmsub_round_sd(<2 x double> %__W, <2 x double> %__X, <2 x double> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fmsub_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfmsub231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xbb,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = (xmm0 * xmm1) - xmm2
@@ -2836,7 +2836,7 @@ declare <2 x double> @llvm.x86.avx512.mask3.vfmsub.sd(<2 x double>, <2 x double>
 define <2 x double> @test_mm_mask_fnmadd_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_fnmadd_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x09,0xad,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = -(xmm1 * xmm0) + xmm2
@@ -2865,7 +2865,7 @@ entry:
 define <2 x double> @test_mm_mask_fnmadd_round_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_fnmadd_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x09,0xad,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = -(xmm1 * xmm0) + xmm2
@@ -2886,7 +2886,7 @@ entry:
 define <2 x double> @test_mm_maskz_fnmadd_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B, <2 x double> %__C) {
 ; X86-LABEL: test_mm_maskz_fnmadd_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xf5,0x89,0xad,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = -(xmm1 * xmm0) + xmm2
@@ -2914,7 +2914,7 @@ entry:
 define <2 x double> @test_mm_maskz_fnmadd_round_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B, <2 x double> %__C) {
 ; X86-LABEL: test_mm_maskz_fnmadd_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xf5,0x89,0xad,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = -(xmm1 * xmm0) + xmm2
@@ -2935,7 +2935,7 @@ entry:
 define <2 x double> @test_mm_mask3_fnmadd_sd(<2 x double> %__W, <2 x double> %__X, <2 x double> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fnmadd_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xbd,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = -(xmm0 * xmm1) + xmm2
@@ -2966,7 +2966,7 @@ entry:
 define <2 x double> @test_mm_mask3_fnmadd_round_sd(<2 x double> %__W, <2 x double> %__X, <2 x double> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fnmadd_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmadd231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xbd,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = -(xmm0 * xmm1) + xmm2
@@ -2989,7 +2989,7 @@ entry:
 define <2 x double> @test_mm_mask_fnmsub_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_fnmsub_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x09,0xaf,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = -(xmm1 * xmm0) - xmm2
@@ -3019,7 +3019,7 @@ entry:
 define <2 x double> @test_mm_mask_fnmsub_round_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_fnmsub_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x09,0xaf,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} = -(xmm1 * xmm0) - xmm2
@@ -3041,7 +3041,7 @@ entry:
 define <2 x double> @test_mm_maskz_fnmsub_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B, <2 x double> %__C) {
 ; X86-LABEL: test_mm_maskz_fnmsub_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xf5,0x89,0xaf,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = -(xmm1 * xmm0) - xmm2
@@ -3070,7 +3070,7 @@ entry:
 define <2 x double> @test_mm_maskz_fnmsub_round_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B, <2 x double> %__C) {
 ; X86-LABEL: test_mm_maskz_fnmsub_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xf5,0x89,0xaf,0xc2]
 ; X86-NEXT:    ## xmm0 {%k1} {z} = -(xmm1 * xmm0) - xmm2
@@ -3092,7 +3092,7 @@ entry:
 define <2 x double> @test_mm_mask3_fnmsub_sd(<2 x double> %__W, <2 x double> %__X, <2 x double> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fnmsub_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xbf,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = -(xmm0 * xmm1) - xmm2
@@ -3124,7 +3124,7 @@ entry:
 define <2 x double> @test_mm_mask3_fnmsub_round_sd(<2 x double> %__W, <2 x double> %__X, <2 x double> %__Y, i8 zeroext %__U) {
 ; X86-LABEL: test_mm_mask3_fnmsub_round_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vfnmsub231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xbf,0xd1]
 ; X86-NEXT:    ## xmm2 {%k1} = -(xmm0 * xmm1) - xmm2
@@ -3147,7 +3147,7 @@ entry:
 define <4 x float> @test_mm_mask_add_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_add_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vaddss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x58,0xc2]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3172,7 +3172,7 @@ entry:
 define <4 x float> @test_mm_maskz_add_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_maskz_add_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vaddss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x58,0xc1]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3196,7 +3196,7 @@ entry:
 define <2 x double> @test_mm_mask_add_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_add_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vaddsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x58,0xc2]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3221,7 +3221,7 @@ entry:
 define <2 x double> @test_mm_maskz_add_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_maskz_add_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x58,0xc1]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3245,7 +3245,7 @@ entry:
 define <4 x float> @test_mm_mask_sub_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_sub_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vsubss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x5c,0xc2]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3270,7 +3270,7 @@ entry:
 define <4 x float> @test_mm_maskz_sub_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_maskz_sub_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vsubss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x5c,0xc1]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3294,7 +3294,7 @@ entry:
 define <2 x double> @test_mm_mask_sub_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_sub_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vsubsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x5c,0xc2]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3319,7 +3319,7 @@ entry:
 define <2 x double> @test_mm_maskz_sub_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_maskz_sub_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vsubsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x5c,0xc1]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3343,7 +3343,7 @@ entry:
 define <4 x float> @test_mm_mask_mul_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_mul_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vmulss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x59,0xc2]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3368,7 +3368,7 @@ entry:
 define <4 x float> @test_mm_maskz_mul_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_maskz_mul_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vmulss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x59,0xc1]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3392,7 +3392,7 @@ entry:
 define <2 x double> @test_mm_mask_mul_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_mul_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vmulsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x59,0xc2]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3417,7 +3417,7 @@ entry:
 define <2 x double> @test_mm_maskz_mul_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_maskz_mul_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vmulsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x59,0xc1]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3441,7 +3441,7 @@ entry:
 define <4 x float> @test_mm_mask_div_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_mask_div_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vdivss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x5e,0xc2]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3466,7 +3466,7 @@ entry:
 define <4 x float> @test_mm_maskz_div_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
 ; X86-LABEL: test_mm_maskz_div_ss:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vdivss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x5e,0xc1]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3490,7 +3490,7 @@ entry:
 define <2 x double> @test_mm_mask_div_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_mask_div_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vdivsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x5e,0xc2]
 ; X86-NEXT:    retl ## encoding: [0xc3]
@@ -3515,7 +3515,7 @@ entry:
 define <2 x double> @test_mm_maskz_div_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
 ; X86-LABEL: test_mm_maskz_div_sd:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vdivsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x5e,0xc1]
 ; X86-NEXT:    retl ## encoding: [0xc3]

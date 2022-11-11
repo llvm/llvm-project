@@ -67,7 +67,7 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
     if (RD->getDeclContext())
       RD->printQualifiedName(OS, Policy);
     else
-      RD->printName(OS);
+      RD->printName(OS, Policy);
   } else if (const TypedefNameDecl *TDD = RD->getTypedefNameForAnonDecl()) {
     // FIXME: We should not have to check for a null decl context here.
     // Right now we do it because the implicit Obj-C decls don't have one.

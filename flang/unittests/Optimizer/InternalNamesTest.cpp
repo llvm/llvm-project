@@ -255,4 +255,21 @@ TEST(InternalNamesTest, isExternalFacingUniquedName) {
   ASSERT_TRUE(NameUniquer::isExternalFacingUniquedName(result));
 }
 
+TEST(InternalNamesTest, getTypeDescriptorName) {
+  std::string derivedTypeName = "_QMdispatch1Tp1";
+  std::string expectedBindingTableName = "_QMdispatch1E.dt.p1";
+  ASSERT_EQ(expectedBindingTableName,
+      fir::NameUniquer::getTypeDescriptorName(derivedTypeName));
+  ASSERT_EQ("", fir::NameUniquer::getTypeDescriptorName("_QMdispatch1Pp1"));
+}
+
+TEST(InternalNamesTest, getTypeDescriptorBindingTableName) {
+  std::string derivedTypeName = "_QMdispatch1Tp1";
+  std::string expectedBindingTableName = "_QMdispatch1E.v.p1";
+  ASSERT_EQ(expectedBindingTableName,
+      fir::NameUniquer::getTypeDescriptorBindingTableName(derivedTypeName));
+  ASSERT_EQ("",
+      fir::NameUniquer::getTypeDescriptorBindingTableName("_QMdispatch1Pp1"));
+}
+
 // main() from gtest_main

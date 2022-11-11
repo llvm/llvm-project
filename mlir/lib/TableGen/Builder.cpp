@@ -22,6 +22,13 @@ StringRef Builder::Parameter::getCppType() const {
   if (const auto *stringInit = dyn_cast<llvm::StringInit>(def))
     return stringInit->getValue();
   const llvm::Record *record = cast<llvm::DefInit>(def)->getDef();
+  // Inlining the first part of `Record::getValueAsString` to give better
+  // error messages.
+  const llvm::RecordVal *type = record->getValue("type");
+  if (!type || !type->getValue()) {
+    llvm::PrintFatalError("Builder DAG arguments must be either strings or "
+                          "defs which inherit from CArg");
+  }
   return record->getValueAsString("type");
 }
 

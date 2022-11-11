@@ -243,6 +243,10 @@ public:
   const FileSystemOptions &getFileSystemOpts() const { return FileSystemOpts; }
 
   llvm::vfs::FileSystem &getVirtualFileSystem() const { return *FS; }
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getVirtualFileSystemPtr() const {
+    return FS;
+  }
 
   void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
     this->FS = std::move(FS);

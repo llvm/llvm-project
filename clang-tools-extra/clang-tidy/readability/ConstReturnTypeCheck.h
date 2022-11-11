@@ -19,7 +19,7 @@ namespace readability {
 /// the `const` qualifier from that return type.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-const-return-type.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/const-return-type.html
 class ConstReturnTypeCheck : public ClangTidyCheck {
  public:
   using ClangTidyCheck::ClangTidyCheck;

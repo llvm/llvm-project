@@ -14,6 +14,15 @@
 using namespace llvm;
 using namespace clang;
 
+void clang::DiagnosticsTestHelper(DiagnosticsEngine &diag) {
+  unsigned delayedDiagID = 0U;
+
+  EXPECT_EQ(diag.DelayedDiagID, delayedDiagID);
+  EXPECT_FALSE(diag.DiagStates.empty());
+  EXPECT_TRUE(diag.DiagStatesByLoc.empty());
+  EXPECT_TRUE(diag.DiagStateOnPushStack.empty());
+}
+
 namespace {
 
 // Check that DiagnosticErrorTrap works with SuppressAllDiagnostics.
@@ -71,6 +80,32 @@ TEST(DiagnosticTest, fatalsAsError) {
     EXPECT_EQ(Diags.getNumWarnings(), FatalsAsError);
   }
 }
+
+// Check that soft RESET works as intended
+TEST(DiagnosticTest, softReset) {
+  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+                          new IgnoringDiagConsumer());
+
+  unsigned numWarnings = 0U, numErrors = 0U;
+
+  Diags.Reset(true);
+  // Check For ErrorOccurred and TrapNumErrorsOccurred
+  EXPECT_FALSE(Diags.hasErrorOccurred());
+  EXPECT_FALSE(Diags.hasFatalErrorOccurred());
+  EXPECT_FALSE(Diags.hasUncompilableErrorOccurred());
+  // Check for UnrecoverableErrorOccurred and TrapNumUnrecoverableErrorsOccurred
+  EXPECT_FALSE(Diags.hasUnrecoverableErrorOccurred());
+
+  EXPECT_EQ(Diags.getNumWarnings(), numWarnings);
+  EXPECT_EQ(Diags.getNumErrors(), numErrors);
+
+  // Check for private variables of DiagnosticsEngine differentiating soft reset
+  DiagnosticsTestHelper(Diags);
+
+  EXPECT_FALSE(Diags.isDiagnosticInFlight());
+  EXPECT_TRUE(Diags.isLastDiagnosticIgnored());
+}
+
 TEST(DiagnosticTest, diagnosticError) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
                           new IgnoringDiagConsumer());

@@ -6,22 +6,46 @@
 ; RUN: llvm-lto -lto-pass-remarks-output=%t.yaml \
 ; RUN:          -lto-pass-remarks-with-hotness \
 ; RUN:          -exported-symbol _main -o %t.o %t.bc
-; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
+; RUN: cat %t.yaml | FileCheck -check-prefixes=YAML,YAML-NO-ANNOTATE %s
 
 ; RUN: llvm-lto -lto-pass-remarks-output=%t.t300.yaml \
 ; RUN:          -lto-pass-remarks-with-hotness \
 ; RUN:          -lto-pass-remarks-hotness-threshold=300 \
 ; RUN:          -exported-symbol _main -o %t.o %t.bc
-; RUN: FileCheck -check-prefix=YAML %s < %t.t300.yaml
+; RUN: FileCheck -check-prefixes=YAML,YAML-NO-ANNOTATE %s < %t.t300.yaml
 
 ; RUN: llvm-lto -lto-pass-remarks-output=%t.t301.yaml \
 ; RUN:          -lto-pass-remarks-with-hotness \
 ; RUN:          -lto-pass-remarks-hotness-threshold=301 \
 ; RUN:          -exported-symbol _main -o %t.o %t.bc
-; RUN: not FileCheck -check-prefix=YAML %s < %t.t301.yaml
+; RUN: not FileCheck -check-prefixes=YAML,YAML-NO-ANNOTATE %s < %t.t301.yaml
+
+; Check that remarks are annotated with LTO phase information with `-annotate-inline-lto-phase`.
+; RUN: llvm-as < %s >%t.bc
+; RUN: rm -f %t.yaml %t.t300.yaml %t.t301.yaml
+; RUN: llvm-lto -lto-pass-remarks-output=%t.yaml \
+; RUN:          -lto-pass-remarks-with-hotness \
+; RUN:          -annotate-inline-phase \
+; RUN:          -exported-symbol _main -o %t.o %t.bc
+; RUN: cat %t.yaml | FileCheck -check-prefixes=YAML,YAML-ANNOTATE %s
+
+; RUN: llvm-lto -lto-pass-remarks-output=%t.t300.yaml \
+; RUN:          -lto-pass-remarks-with-hotness \
+; RUN:          -lto-pass-remarks-hotness-threshold=300 \
+; RUN:          -annotate-inline-phase \
+; RUN:          -exported-symbol _main -o %t.o %t.bc
+; RUN: FileCheck -check-prefixes=YAML,YAML-ANNOTATE %s < %t.t300.yaml
+
+; RUN: llvm-lto -lto-pass-remarks-output=%t.t301.yaml \
+; RUN:          -lto-pass-remarks-with-hotness \
+; RUN:          -lto-pass-remarks-hotness-threshold=301 \
+; RUN:          -annotate-inline-phase \
+; RUN:          -exported-symbol _main -o %t.o %t.bc
+; RUN: not FileCheck -check-prefixes=YAML,YAML-ANNOTATE %s < %t.t301.yaml
 
 ; YAML:      --- !Passed
-; YAML-NEXT: Pass:            inline
+; YAML-NO-ANNOTATE-NEXT: Pass:            inline
+; YAML-ANNOTATE-NEXT: Pass:            postlink-cgscc-inline
 ; YAML-NEXT: Name:            Inlined
 ; YAML-NEXT: Function:        main
 ; YAML-NEXT: Hotness:         300

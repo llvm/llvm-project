@@ -53,10 +53,23 @@ bool ProvenanceAnalysis::relatedSelect(const SelectInst *A,
 
 bool ProvenanceAnalysis::relatedPHI(const PHINode *A,
                                     const Value *B) {
-  // If the values are PHIs in the same block, we can do a more precise as well
-  // as efficient check: just check for relations between the values on
-  // corresponding edges.
-  if (const PHINode *PNB = dyn_cast<PHINode>(B))
+
+  auto comparePHISources = [this](const PHINode *PNA, const Value *B) -> bool {
+    // Check each unique source of the PHI node against B.
+    SmallPtrSet<const Value *, 4> UniqueSrc;
+    for (Value *PV1 : PNA->incoming_values()) {
+      if (UniqueSrc.insert(PV1).second && related(PV1, B))
+        return true;
+    }
+
+    // All of the arms checked out.
+    return false;
+  };
+
+  if (const PHINode *PNB = dyn_cast<PHINode>(B)) {
+    // If the values are PHIs in the same block, we can do a more precise as
+    // well as efficient check: just check for relations between the values on
+    // corresponding edges.
     if (PNB->getParent() == A->getParent()) {
       for (unsigned i = 0, e = A->getNumIncomingValues(); i != e; ++i)
         if (related(A->getIncomingValue(i),
@@ -65,15 +78,11 @@ bool ProvenanceAnalysis::relatedPHI(const PHINode *A,
       return false;
     }
 
-  // Check each unique source of the PHI node against B.
-  SmallPtrSet<const Value *, 4> UniqueSrc;
-  for (Value *PV1 : A->incoming_values()) {
-    if (UniqueSrc.insert(PV1).second && related(PV1, B))
-      return true;
+    if (!comparePHISources(PNB, A))
+      return false;
   }
 
-  // All of the arms checked out.
-  return false;
+  return comparePHISources(A, B);
 }
 
 /// Test if the value of P, or any value covered by its provenance, is ever
@@ -125,22 +134,19 @@ bool ProvenanceAnalysis::relatedCheck(const Value *A, const Value *B) {
   bool BIsIdentified = IsObjCIdentifiedObject(B);
 
   // An ObjC-Identified object can't alias a load if it is never locally stored.
-  if (AIsIdentified) {
-    // Check for an obvious escape.
-    if (isa<LoadInst>(B))
-      return IsStoredObjCPointer(A);
-    if (BIsIdentified) {
-      // Check for an obvious escape.
-      if (isa<LoadInst>(A))
-        return IsStoredObjCPointer(B);
-      // Both pointers are identified and escapes aren't an evident problem.
-      return false;
-    }
-  } else if (BIsIdentified) {
-    // Check for an obvious escape.
-    if (isa<LoadInst>(A))
-      return IsStoredObjCPointer(B);
-  }
+
+  // Check for an obvious escape.
+  if ((AIsIdentified && isa<LoadInst>(B) && !IsStoredObjCPointer(A)) ||
+      (BIsIdentified && isa<LoadInst>(A) && !IsStoredObjCPointer(B)))
+    return false;
+
+  if ((AIsIdentified && isa<LoadInst>(B)) ||
+      (BIsIdentified && isa<LoadInst>(A)))
+    return true;
+
+  // Both pointers are identified and escapes aren't an evident problem.
+  if (AIsIdentified && BIsIdentified && !isa<LoadInst>(A) && !isa<LoadInst>(B))
+    return false;
 
    // Special handling for PHI and Select.
   if (const PHINode *PN = dyn_cast<PHINode>(A))
@@ -174,6 +180,8 @@ bool ProvenanceAnalysis::related(const Value *A, const Value *B) {
     return Pair.first->second;
 
   bool Result = relatedCheck(A, B);
+  assert(relatedCheck(B, A) == Result &&
+         "relatedCheck result depending on order of parameters!");
   CachedResults[ValuePairTy(A, B)] = Result;
   return Result;
 }

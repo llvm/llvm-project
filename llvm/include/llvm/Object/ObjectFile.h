@@ -328,6 +328,8 @@ public:
     return section_iterator_range(section_begin(), section_end());
   }
 
+  virtual bool hasDebugInfo() const;
+
   /// The number of bytes used to represent an address in this object
   ///        file format.
   virtual uint8_t getBytesInAddress() const = 0;

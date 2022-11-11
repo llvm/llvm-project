@@ -19,13 +19,13 @@
 
 define void @test_baseptr(i64 %x, i64 %y, i32 %E, i32 %H, i32 %C) nounwind {
 entry:
-  %ptr = alloca i8*, align 8
+  %ptr = alloca ptr, align 8
   %0 = alloca i8, i64 %x, align 16
-  store i8* %0, i8** %ptr, align 8
+  store ptr %0, ptr %ptr, align 8
   call void @llvm.x86.mwaitx(i32 %E, i32 %H, i32 %C)
-  %1 = load i8*, i8** %ptr, align 8
-  %arrayidx = getelementptr inbounds i8, i8* %1, i64 %y
-  store volatile i8 42, i8* %arrayidx, align 1
+  %1 = load ptr, ptr %ptr, align 8
+  %arrayidx = getelementptr inbounds i8, ptr %1, i64 %y
+  store volatile i8 42, ptr %arrayidx, align 1
   ret void
 }
 ; CHECK-LABEL: test_baseptr:
@@ -81,9 +81,9 @@ entry:
 
 define void @test_opaque_sp_adjustment(i32 %E, i32 %H, i32 %C, i64 %x) {
 entry:
-  %ptr = alloca i8*, align 8
+  %ptr = alloca ptr, align 8
   call void @llvm.x86.mwaitx(i32 %E, i32 %H, i32 %C)
-  %g = load i32, i32* @g, align 4
+  %g = load i32, ptr @g, align 4
   %tobool = icmp ne i32 %g, 0
   br i1 %tobool, label %if.then, label %if.end
 
@@ -92,9 +92,9 @@ if.then:
   br label %if.end
 
 if.end:
-  %ptr2 = load i8*, i8** %ptr, align 8
-  %arrayidx = getelementptr inbounds i8, i8* %ptr2, i64 %x
-  store volatile i8 42, i8* %arrayidx, align 1
+  %ptr2 = load ptr, ptr %ptr, align 8
+  %arrayidx = getelementptr inbounds i8, ptr %ptr2, i64 %x
+  store volatile i8 42, ptr %arrayidx, align 1
   ret void
 }
 ; CHECK-LABEL: test_opaque_sp_adjustment:
@@ -147,21 +147,21 @@ if.end:
 ; basic block which, combined with stack realignment, requires a base pointer.
 define void @test_variable_size_object(i32 %E, i32 %H, i32 %C, i64 %x) {
 entry:
-  %ptr = alloca i8*, align 8
+  %ptr = alloca ptr, align 8
   call void @llvm.x86.mwaitx(i32 %E, i32 %H, i32 %C)
-  %g = load i32, i32* @g, align 4
+  %g = load i32, ptr @g, align 4
   %tobool = icmp ne i32 %g, 0
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:
   %i5 = alloca i8, i64 %x, align 16
-  store i8* %i5, i8** %ptr, align 8
+  store ptr %i5, ptr %ptr, align 8
   br label %if.end
 
 if.end:
-  %ptr2 = load i8*, i8** %ptr, align 8
-  %arrayidx = getelementptr inbounds i8, i8* %ptr2, i64 %x
-  store volatile i8 42, i8* %arrayidx, align 1
+  %ptr2 = load ptr, ptr %ptr, align 8
+  %arrayidx = getelementptr inbounds i8, ptr %ptr2, i64 %x
+  store volatile i8 42, ptr %arrayidx, align 1
   ret void
 }
 

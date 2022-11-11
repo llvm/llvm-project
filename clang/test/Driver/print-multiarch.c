@@ -1,6 +1,6 @@
-// Check the output of -print-multiarch.
+/// GCC --disable-multiarch, GCC --enable-multiarch (upstream and Debian specific) have different behaviors.
+/// We choose not to support the option.
 
-// RUN: %clang -print-multiarch --target=x86_64-unknown-linux-gnu \
-// RUN:        -resource-dir=%S/Inputs/resource_dir \
-// RUN:      | FileCheck --check-prefix=PRINT-MULTIARCH %s
-// PRINT-MULTIARCH: {{^}}x86_64-linux-gnu{{$}}
+// RUN: not %clang -print-multiarch --target=x86_64-unknown-linux-gnu 2>&1 | FileCheck %s
+
+// CHECK: error: unsupported option '-print-multiarch'

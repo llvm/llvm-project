@@ -1,4 +1,4 @@
-; RUN: opt -licm -basic-aa < %s -S | FileCheck %s
+; RUN: opt -licm < %s -S | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 
 define void @dgefa() nounwind ssp {

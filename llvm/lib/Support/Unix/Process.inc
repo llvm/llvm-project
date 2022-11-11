@@ -14,7 +14,6 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/ManagedStatic.h"
 #include <mutex>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
@@ -327,10 +326,6 @@ extern "C" int del_curterm(struct term *termp);
 extern "C" int tigetnum(char *capname);
 #endif
 
-#ifdef LLVM_ENABLE_TERMINFO
-static ManagedStatic<std::mutex> TermColorMutex;
-#endif
-
 bool checkTerminalEnvironmentForColors() {
   if (const char *TermStr = std::getenv("TERM")) {
     return StringSwitch<bool>(TermStr)
@@ -351,7 +346,8 @@ bool checkTerminalEnvironmentForColors() {
 static bool terminalHasColors(int fd) {
 #ifdef LLVM_ENABLE_TERMINFO
   // First, acquire a global lock because these C routines are thread hostile.
-  std::lock_guard<std::mutex> G(*TermColorMutex);
+  static std::mutex TermColorMutex;
+  std::lock_guard<std::mutex> G(TermColorMutex);
 
   struct term *previous_term = set_curterm(nullptr);
   int errret = 0;

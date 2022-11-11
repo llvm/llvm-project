@@ -20,7 +20,6 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-class DominatorTree;
 class Function;
 class LoopInfo;
 

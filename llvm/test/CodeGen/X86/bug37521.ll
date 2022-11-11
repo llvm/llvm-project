@@ -20,8 +20,7 @@ define void @foo() #0 {
 ; CHECK-NEXT:    callq goo@PLT
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq
-  %k = bitcast <16 x float>* @a to <2 x i256>*
-  %load = load <2 x i256>, <2 x i256>* %k, align 64
+  %load = load <2 x i256>, ptr @a, align 64
   call void @goo(<2 x i256> %load)
   ret void
 }

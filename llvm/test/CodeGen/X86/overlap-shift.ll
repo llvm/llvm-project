@@ -9,7 +9,7 @@
 
 ; Check that the shift gets turned into an LEA.
 
-@G = external dso_local global i32                ; <i32*> [#uses=1]
+@G = external dso_local global i32                ; <ptr> [#uses=1]
 
 define i32 @test1(i32 %X) {
 ; CHECK-LABEL: test1:
@@ -19,7 +19,7 @@ define i32 @test1(i32 %X) {
 ; CHECK-NEXT:    mov dword ptr [G], ecx
 ; CHECK-NEXT:    ret
         %Z = shl i32 %X, 2              ; <i32> [#uses=1]
-        store volatile i32 %Z, i32* @G
+        store volatile i32 %Z, ptr @G
         ret i32 %X
 }
 

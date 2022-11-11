@@ -42,6 +42,8 @@
 # CHECK: error: command failed with exit status: 127
 # CHECK: ***
 
+# CHECK: PASS: shtest-shell :: continuations.txt
+
 # CHECK: PASS: shtest-shell :: dev-null.txt
 
 # CHECK: FAIL: shtest-shell :: diff-b.txt

@@ -3,10 +3,10 @@
 ; RUN: llc < %s -mtriple=x86_64-- -O2 | FileCheck %s -check-prefix=CHECK-X64
 
 ; CHECK-LABEL: shift1
-define void @shift1(i256 %x, i256 %a, i256* nocapture %r) nounwind readnone {
+define void @shift1(i256 %x, i256 %a, ptr nocapture %r) nounwind readnone {
 entry:
 	%0 = ashr i256 %x, %a
-	store i256 %0, i256* %r
+	store i256 %0, ptr %r
         ret void
 }
 

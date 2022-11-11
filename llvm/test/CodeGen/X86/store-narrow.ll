@@ -7,50 +7,64 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; rdar://7860110
 
-define void @test1(i32* nocapture %a0, i8 zeroext %a1) nounwind ssp {
+define void @test1(ptr nocapture %a0, i8 zeroext %a1) nounwind ssp {
 ; X64-LABEL: test1:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movb %sil, (%rdi)
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: test1:
-; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb %al, (%ecx)
-; X86-NEXT:    retl
+; X86-BWON-LABEL: test1:
+; X86-BWON:       ## %bb.0: ## %entry
+; X86-BWON-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BWON-NEXT:    movb %al, (%ecx)
+; X86-BWON-NEXT:    retl
+;
+; X86-BWOFF-LABEL: test1:
+; X86-BWOFF:       ## %bb.0: ## %entry
+; X86-BWOFF-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BWOFF-NEXT:    movb %al, (%ecx)
+; X86-BWOFF-NEXT:    retl
 entry:
-  %A = load i32, i32* %a0, align 4
+  %A = load i32, ptr %a0, align 4
   %B = and i32 %A, -256     ; 0xFFFFFF00
   %C = zext i8 %a1 to i32
   %D = or i32 %C, %B
-  store i32 %D, i32* %a0, align 4
+  store i32 %D, ptr %a0, align 4
   ret void
 }
 
-define void @test2(i32* nocapture %a0, i8 zeroext %a1) nounwind ssp {
+define void @test2(ptr nocapture %a0, i8 zeroext %a1) nounwind ssp {
 ; X64-LABEL: test2:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movb %sil, 1(%rdi)
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: test2:
-; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb %al, 1(%ecx)
-; X86-NEXT:    retl
+; X86-BWON-LABEL: test2:
+; X86-BWON:       ## %bb.0: ## %entry
+; X86-BWON-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BWON-NEXT:    movb %al, 1(%ecx)
+; X86-BWON-NEXT:    retl
+;
+; X86-BWOFF-LABEL: test2:
+; X86-BWOFF:       ## %bb.0: ## %entry
+; X86-BWOFF-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BWOFF-NEXT:    movb %al, 1(%ecx)
+; X86-BWOFF-NEXT:    retl
 entry:
-  %A = load i32, i32* %a0, align 4
+  %A = load i32, ptr %a0, align 4
   %B = and i32 %A, -65281    ; 0xFFFF00FF
   %C = zext i8 %a1 to i32
   %CS = shl i32 %C, 8
   %D = or i32 %B, %CS
-  store i32 %D, i32* %a0, align 4
+  store i32 %D, ptr %a0, align 4
   ret void
 }
 
-define void @test3(i32* nocapture %a0, i16 zeroext %a1) nounwind ssp {
+define void @test3(ptr nocapture %a0, i16 zeroext %a1) nounwind ssp {
 ; X64-LABEL: test3:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movw %si, (%rdi)
@@ -70,15 +84,15 @@ define void @test3(i32* nocapture %a0, i16 zeroext %a1) nounwind ssp {
 ; X86-BWOFF-NEXT:    movw %ax, (%ecx)
 ; X86-BWOFF-NEXT:    retl
 entry:
-  %A = load i32, i32* %a0, align 4
+  %A = load i32, ptr %a0, align 4
   %B = and i32 %A, -65536    ; 0xFFFF0000
   %C = zext i16 %a1 to i32
   %D = or i32 %B, %C
-  store i32 %D, i32* %a0, align 4
+  store i32 %D, ptr %a0, align 4
   ret void
 }
 
-define void @test4(i32* nocapture %a0, i16 zeroext %a1) nounwind ssp {
+define void @test4(ptr nocapture %a0, i16 zeroext %a1) nounwind ssp {
 ; X64-LABEL: test4:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movw %si, 2(%rdi)
@@ -98,16 +112,16 @@ define void @test4(i32* nocapture %a0, i16 zeroext %a1) nounwind ssp {
 ; X86-BWOFF-NEXT:    movw %ax, 2(%ecx)
 ; X86-BWOFF-NEXT:    retl
 entry:
-  %A = load i32, i32* %a0, align 4
+  %A = load i32, ptr %a0, align 4
   %B = and i32 %A, 65535    ; 0x0000FFFF
   %C = zext i16 %a1 to i32
   %CS = shl i32 %C, 16
   %D = or i32 %B, %CS
-  store i32 %D, i32* %a0, align 4
+  store i32 %D, ptr %a0, align 4
   ret void
 }
 
-define void @test5(i64* nocapture %a0, i16 zeroext %a1) nounwind ssp {
+define void @test5(ptr nocapture %a0, i16 zeroext %a1) nounwind ssp {
 ; X64-LABEL: test5:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movw %si, 2(%rdi)
@@ -127,60 +141,76 @@ define void @test5(i64* nocapture %a0, i16 zeroext %a1) nounwind ssp {
 ; X86-BWOFF-NEXT:    movw %ax, 2(%ecx)
 ; X86-BWOFF-NEXT:    retl
 entry:
-  %A = load i64, i64* %a0, align 4
+  %A = load i64, ptr %a0, align 4
   %B = and i64 %A, -4294901761    ; 0xFFFFFFFF0000FFFF
   %C = zext i16 %a1 to i64
   %CS = shl i64 %C, 16
   %D = or i64 %B, %CS
-  store i64 %D, i64* %a0, align 4
+  store i64 %D, ptr %a0, align 4
   ret void
 }
 
-define void @test6(i64* nocapture %a0, i8 zeroext %a1) nounwind ssp {
+define void @test6(ptr nocapture %a0, i8 zeroext %a1) nounwind ssp {
 ; X64-LABEL: test6:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movb %sil, 5(%rdi)
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: test6:
-; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb %al, 5(%ecx)
-; X86-NEXT:    retl
+; X86-BWON-LABEL: test6:
+; X86-BWON:       ## %bb.0: ## %entry
+; X86-BWON-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BWON-NEXT:    movb %al, 5(%ecx)
+; X86-BWON-NEXT:    retl
+;
+; X86-BWOFF-LABEL: test6:
+; X86-BWOFF:       ## %bb.0: ## %entry
+; X86-BWOFF-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BWOFF-NEXT:    movb %al, 5(%ecx)
+; X86-BWOFF-NEXT:    retl
 entry:
-  %A = load i64, i64* %a0, align 4
+  %A = load i64, ptr %a0, align 4
   %B = and i64 %A, -280375465082881    ; 0xFFFF00FFFFFFFFFF
   %C = zext i8 %a1 to i64
   %CS = shl i64 %C, 40
   %D = or i64 %B, %CS
-  store i64 %D, i64* %a0, align 4
+  store i64 %D, ptr %a0, align 4
   ret void
 }
 
-define i32 @test7(i64* nocapture %a0, i8 zeroext %a1, i32* %P2) nounwind {
+define i32 @test7(ptr nocapture %a0, i8 zeroext %a1, ptr %P2) nounwind {
 ; X64-LABEL: test7:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movl (%rdx), %eax
 ; X64-NEXT:    movb %sil, 5(%rdi)
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: test7:
-; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %eax
-; X86-NEXT:    movb %cl, 5(%edx)
-; X86-NEXT:    retl
+; X86-BWON-LABEL: test7:
+; X86-BWON:       ## %bb.0: ## %entry
+; X86-BWON-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BWON-NEXT:    movl (%eax), %eax
+; X86-BWON-NEXT:    movb %cl, 5(%edx)
+; X86-BWON-NEXT:    retl
+;
+; X86-BWOFF-LABEL: test7:
+; X86-BWOFF:       ## %bb.0: ## %entry
+; X86-BWOFF-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BWOFF-NEXT:    movl (%eax), %eax
+; X86-BWOFF-NEXT:    movb %cl, 5(%edx)
+; X86-BWOFF-NEXT:    retl
 entry:
-  %OtherLoad = load i32 , i32 *%P2
-  %A = load i64, i64* %a0, align 4
+  %OtherLoad = load i32 , ptr%P2
+  %A = load i64, ptr %a0, align 4
   %B = and i64 %A, -280375465082881    ; 0xFFFF00FFFFFFFFFF
   %C = zext i8 %a1 to i64
   %CS = shl i64 %C, 40
   %D = or i64 %B, %CS
-  store i64 %D, i64* %a0, align 4
+  store i64 %D, ptr %a0, align 4
   ret i32 %OtherLoad
 }
 
@@ -198,10 +228,10 @@ define void @test8() nounwind {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    orb $1, _g_16
 ; X86-NEXT:    retl
-  %tmp = load i32, i32* @g_16
-  store i32 0, i32* @g_16
+  %tmp = load i32, ptr @g_16
+  store i32 0, ptr @g_16
   %or = or i32 %tmp, 1
-  store i32 %or, i32* @g_16
+  store i32 %or, ptr @g_16
   ret void
 }
 
@@ -215,14 +245,14 @@ define void @test9() nounwind {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    orb $1, _g_16
 ; X86-NEXT:    retl
-  %tmp = load i32, i32* @g_16
+  %tmp = load i32, ptr @g_16
   %or = or i32 %tmp, 1
-  store i32 %or, i32* @g_16
+  store i32 %or, ptr @g_16
   ret void
 }
 
 ; rdar://8494845 + PR8244
-define i8 @test10(i8* %P) nounwind ssp {
+define i8 @test10(ptr %P) nounwind ssp {
 ; X64-LABEL: test10:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movsbl (%rdi), %eax
@@ -237,7 +267,7 @@ define i8 @test10(i8* %P) nounwind ssp {
 ; X86-NEXT:    movb %ah, %al
 ; X86-NEXT:    retl
 entry:
-  %tmp = load i8, i8* %P, align 1
+  %tmp = load i8, ptr %P, align 1
   %conv = sext i8 %tmp to i32
   %shr3 = lshr i32 %conv, 8
   %conv2 = trunc i32 %shr3 to i8

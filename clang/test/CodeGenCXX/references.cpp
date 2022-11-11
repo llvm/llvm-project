@@ -1,16 +1,16 @@
-// RUN: not %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -verify -emit-llvm -o - %s | FileCheck %s
+// RUN: not %clang_cc1 -triple x86_64-apple-darwin -verify -emit-llvm -o - %s | FileCheck %s
 void t1() {
   // CHECK-LABEL: define{{.*}} void @_Z2t1v
-  // CHECK: [[REFLOAD:%.*]] = load i32*, i32** @a, align 8
-  // CHECK: load i32, i32* [[REFLOAD]], align 4
+  // CHECK: [[REFLOAD:%.*]] = load ptr, ptr @a, align 8
+  // CHECK: load i32, ptr [[REFLOAD]], align 4
   extern int& a;
   int b = a; 
 }
 
 void t2(int& a) {
   // CHECK-LABEL: define{{.*}} void @_Z2t2Ri
-  // CHECK: [[REFLOAD2:%.*]] = load i32*, i32** {{.*}}, align 8
-  // CHECK: load i32, i32* [[REFLOAD2]], align 4
+  // CHECK: [[REFLOAD2:%.*]] = load ptr, ptr {{.*}}, align 8
+  // CHECK: load i32, ptr [[REFLOAD2]], align 4
   int b = a;
 }
 
@@ -241,7 +241,7 @@ struct A {
 };
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
-// CHECK: call void @_ZN2N31AC1Ei(%"struct.N3::A"* {{[^,]*}} @_ZGRN2N35sA123E_, i32 noundef 123)
+// CHECK: call void @_ZN2N31AC1Ei(ptr {{[^,]*}} @_ZGRN2N35sA123E_, i32 noundef 123)
 // CHECK: call i32 @__cxa_atexit
 // CHECK: ret void
 const A &sA123 = A(123);
@@ -256,7 +256,7 @@ struct A {
 
 void f() {
   // CHECK-LABEL: define{{.*}} void @_ZN2N41fEv
-  // CHECK: call void @_ZN2N41AC1Ev(%"struct.N4::A"* {{[^,]*}} @_ZGRZN2N41fEvE2ar_)
+  // CHECK: call void @_ZN2N41AC1Ev(ptr {{[^,]*}} @_ZGRZN2N41fEvE2ar_)
   // CHECK: call i32 @__cxa_atexit
   // CHECK: ret void
   static const A& ar = A();
@@ -271,7 +271,7 @@ void f(const bool&);
 AnyS g();
 void h() {
   // CHECK: call i8 @_ZN2N51gEv()
-  // CHECK: call void @_ZN2N51fERKb(i8*
+  // CHECK: call void @_ZN2N51fERKb(ptr
   f(g().b);
 }
 }
@@ -284,16 +284,14 @@ namespace PR9565 {
     // CHECK: call void @llvm.memcpy
     a x = { 0, 0 };
     // CHECK: [[WITH_SEVENTEEN:%[.a-zA-Z0-9]+]] = or i32 [[WITHOUT_SEVENTEEN:%[.a-zA-Z0-9]+]], 17
-    // CHECK: store i32 [[WITH_SEVENTEEN]], i32* [[XA:%[.a-zA-Z0-9]+]]
+    // CHECK: store i32 [[WITH_SEVENTEEN]], ptr [[XA:%[.a-zA-Z0-9]+]]
     x.a = 17;
-    // CHECK-NEXT: bitcast
     // CHECK-NEXT: load
     // CHECK-NEXT: shl
     // CHECK-NEXT: ashr
     // CHECK-NEXT: store i32
-    // CHECK-NEXT: store i32*
+    // CHECK-NEXT: store ptr
     const int &y = x.a;
-    // CHECK-NEXT: bitcast
     // CHECK-NEXT: load
     // CHECK-NEXT: and
     // CHECK-NEXT: or i32 {{.*}}, 19456
@@ -307,6 +305,6 @@ namespace N6 {
   extern struct x {char& x;}y;
   int a() { return y.x; }
   // CHECK-LABEL: define{{.*}} i32 @_ZN2N61aEv
-  // CHECK: [[REFLOAD3:%.*]] = load i8*, i8** getelementptr inbounds (%"struct.N6::x", %"struct.N6::x"* @_ZN2N61yE, i32 0, i32 0), align 8
-  // CHECK: load i8, i8* [[REFLOAD3]], align 1
+  // CHECK: [[REFLOAD3:%.*]] = load ptr, ptr @_ZN2N61yE, align 8
+  // CHECK: load i8, ptr [[REFLOAD3]], align 1
 }

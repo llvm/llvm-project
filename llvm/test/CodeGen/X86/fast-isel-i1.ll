@@ -21,20 +21,20 @@ exit:		; preds = %next
 	ret i32 %v
 }
 
-define void @test2(i8* %a) nounwind {
+define void @test2(ptr %a) nounwind {
 entry:
 ; clang uses i8 constants for booleans, so we test with an i8 1.
 ; CHECK-LABEL: test2:
-; CHECK: movb {{.*}} %al
+; CHECK: movzbl {{.*}} %eax
 ; CHECK-NEXT: xorb $1, %al
 ; CHECK-NEXT: testb $1
-  %tmp = load i8, i8* %a, align 1
+  %tmp = load i8, ptr %a, align 1
   %xor = xor i8 %tmp, 1
   %tobool = trunc i8 %xor to i1
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:
-  call void @test2(i8* null)
+  call void @test2(ptr null)
   br label %if.end
 
 if.end:

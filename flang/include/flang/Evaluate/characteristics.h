@@ -16,6 +16,7 @@
 #include "common.h"
 #include "expression.h"
 #include "shape.h"
+#include "tools.h"
 #include "type.h"
 #include "flang/Common/Fortran-features.h"
 #include "flang/Common/Fortran.h"
@@ -190,7 +191,8 @@ struct DummyDataObject {
   bool operator!=(const DummyDataObject &that) const {
     return !(*this == that);
   }
-  bool IsCompatibleWith(const DummyDataObject &) const;
+  bool IsCompatibleWith(
+      const DummyDataObject &, std::string *whyNot = nullptr) const;
   static std::optional<DummyDataObject> Characterize(
       const semantics::Symbol &, FoldingContext &);
   bool CanBePassedViaImplicitInterface() const;
@@ -209,7 +211,9 @@ struct DummyProcedure {
   explicit DummyProcedure(Procedure &&);
   bool operator==(const DummyProcedure &) const;
   bool operator!=(const DummyProcedure &that) const { return !(*this == that); }
-  bool IsCompatibleWith(const DummyProcedure &) const;
+  bool IsCompatibleWith(
+      const DummyProcedure &, std::string *whyNot = nullptr) const;
+  bool CanBePassedViaImplicitInterface() const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
   CopyableIndirection<Procedure> procedure;
@@ -243,7 +247,8 @@ struct DummyArgument {
   void SetIntent(common::Intent);
   bool CanBePassedViaImplicitInterface() const;
   bool IsTypelessIntrinsicDummy() const;
-  bool IsCompatibleWith(const DummyArgument &) const;
+  bool IsCompatibleWith(
+      const DummyArgument &, std::string *whyNot = nullptr) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
   // name and pass are not characteristics and so do not participate in
@@ -284,7 +289,8 @@ struct FunctionResult {
   }
   void SetType(DynamicType t) { std::get<TypeAndShape>(u).set_type(t); }
   bool CanBeReturnedViaImplicitInterface() const;
-  bool IsCompatibleWith(const FunctionResult &) const;
+  bool IsCompatibleWith(
+      const FunctionResult &, std::string *whyNot = nullptr) const;
 
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
@@ -329,7 +335,8 @@ struct Procedure {
   int FindPassIndex(std::optional<parser::CharBlock>) const;
   bool CanBeCalledViaImplicitInterface() const;
   bool CanOverride(const Procedure &, std::optional<int> passIndex) const;
-  bool IsCompatibleWith(const Procedure &) const;
+  bool IsCompatibleWith(const Procedure &, std::string *whyNot = nullptr,
+      const SpecificIntrinsic * = nullptr) const;
 
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 

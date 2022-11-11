@@ -52,9 +52,15 @@ write_lit_cfg("lit_api_site_cfg") {
   input = "//lldb/test/API/lit.site.cfg.py.in"
   output = lldb_lit_api_site_cfg_file
   extra_values = [
+    "LIBCXX_LIBRARY_DIR=" + rebase_path("$root_build_dir/lib"),
+    "LIBCXX_GENERATED_INCLUDE_DIR=" +
+        rebase_path("$root_build_dir/include/c++/v1"),
+    "LIBCXX_GENERATED_INCLUDE_TARGET_DIR=",
     "LLDB_BUILD_INTEL_PT=0",
-    "LLDB_DOTEST_ARGS=",
+    "LLDB_TEST_COMMON_ARGS=",
+    "LLDB_TEST_USER_ARGS=",
     "LLDB_ENABLE_PYTHON=0",
+    "LLDB_HAS_LIBCXX=0",  # FIXME: support this (?)
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
     "LLDB_TEST_ARCH=$current_cpu",
     "LLDB_TEST_COMPILER=" + rebase_path("$root_build_dir/bin/clang"),
@@ -70,6 +76,7 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLVM_BUILD_MODE=.",
     "LLVM_ENABLE_SHARED_LIBS=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
+    "LLVM_INCLUDE_DIR=" + rebase_path("$root_out_dir/include"),
     "LLVM_USE_SANITIZER=",
     "Lua_EXECUTABLE=",
     "LLDB_FRAMEWORK_DIR=XXX_framework_dir",
@@ -104,6 +111,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "LLDB_TEST_MODULE_CACHE_LLDB=" +
         rebase_path(
             "$target_gen_dir/lldb-test-build.noindex/module-cache-lldb"),
+    "LLDB_TOOL_LLDB_SERVER_BUILD=1",
     "LLDB_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "LLDB_USE_SYSTEM_DEBUGSERVER=1",  # XXX port //lldb/tools/debugserver (?)
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
@@ -131,12 +139,22 @@ write_lit_cfg("lit_unit_site_cfg") {
   extra_values = [ "LLVM_BUILD_MODE=." ]
 }
 
+action("lit-lldb-init-quiet") {
+  script = "//llvm/utils/gn/build/write_file.py"
+  outputs = [ "$root_out_dir/obj/lldb/test/Shell/lit-lldb-init-quiet" ]
+  args = [
+    rebase_path(outputs[0], root_build_dir),
+    "command source -C --silent-run true lit-lldb-init",
+  ]
+}
+
 # This target should contain all dependencies of check-lldb.
 # //:default depends on it, so that ninja's default target builds all
 # prerequisites for check-lldb but doesn't run check-lldb itself.
 group("test") {
   deps = [
     ":lit-lldb-init",
+    ":lit-lldb-init-quiet",
     ":lit_api_site_cfg",
     ":lit_shell_site_cfg",
     ":lit_site_cfg",
@@ -163,12 +181,12 @@ group("test") {
     "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-pdbutil",
     "//llvm/tools/llvm-readobj:symlinks",
-    "//llvm/tools/split-file",
     "//llvm/tools/yaml2obj",
     "//llvm/utils/FileCheck",
     "//llvm/utils/count",
     "//llvm/utils/llvm-lit",
     "//llvm/utils/not",
+    "//llvm/utils/split-file",
   ]
   testonly = true
 }

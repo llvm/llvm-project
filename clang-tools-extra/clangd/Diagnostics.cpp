@@ -196,7 +196,7 @@ bool tryMoveToMainFile(Diag &D, FullSourceLoc DiagLoc) {
     return false;
 
   // Add a note that will point to real diagnostic.
-  auto FE = SM.getFileEntryRefForID(SM.getFileID(DiagLoc)).getValue();
+  auto FE = *SM.getFileEntryRefForID(SM.getFileID(DiagLoc));
   D.Notes.emplace(D.Notes.begin());
   Note &N = D.Notes.front();
   N.AbsFile = std::string(FE.getFileEntry().tryGetRealPathName());
@@ -918,9 +918,19 @@ llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
     // information to be worth linking.
     // https://clang.llvm.org/docs/DiagnosticsReference.html
     break;
-  case Diag::ClangTidy:
-    return {("https://clang.llvm.org/extra/clang-tidy/checks/" + Name + ".html")
-                .str()};
+  case Diag::ClangTidy: {
+    StringRef Module, Check;
+    // This won't correctly get the module for clang-analyzer checks, but as we
+    // don't link in the analyzer that shouldn't be an issue.
+    // This would also need updating if anyone decides to create a module with a
+    // '-' in the name.
+    std::tie(Module, Check) = Name.split('-');
+    if (Module.empty() || Check.empty())
+      return llvm::None;
+    return ("https://clang.llvm.org/extra/clang-tidy/checks/" + Module + "/" +
+            Check + ".html")
+        .str();
+  }
   case Diag::Clangd:
     if (Name == "unused-includes")
       return {"https://clangd.llvm.org/guides/include-cleaner"};

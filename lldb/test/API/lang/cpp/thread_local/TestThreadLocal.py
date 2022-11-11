@@ -9,8 +9,6 @@ from lldbsuite.test import lldbtest
 
 class PlatformProcessCrashInfoTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=["windows", "linux", "freebsd", "netbsd"])
     def test_thread_local(self):
         # Set a breakpoint on the first instruction of the main function,

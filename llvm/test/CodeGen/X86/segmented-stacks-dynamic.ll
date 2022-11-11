@@ -7,7 +7,7 @@
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-gnux32 -filetype=obj
 
 ; Just to prevent the alloca from being optimized away
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 define i32 @test_basic(i32 %l) #0 {
 ; X86-LABEL: test_basic:
@@ -179,7 +179,7 @@ define i32 @test_basic(i32 %l) #0 {
 ; X32ABI-NEXT:    retq
 ; X32ABI-NEXT:    jmp .LBB0_2
         %mem = alloca i32, i32 %l
-        call void @dummy_use (i32* %mem, i32 %l)
+        call void @dummy_use (ptr %mem, i32 %l)
         %terminate = icmp eq i32 %l, 0
         br i1 %terminate, label %true, label %false
 

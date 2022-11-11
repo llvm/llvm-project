@@ -655,7 +655,7 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
 
     for (unsigned i = 0; i < Memo.PhysRegs.size(); ++i) {
       if (Memo.PhysRegs[i] != "")
-        OS << "  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, "
+        OS << "  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, "
            << "TII.get(TargetOpcode::COPY), " << Memo.PhysRegs[i]
            << ").addReg(Op" << i << ");\n";
     }

@@ -12,7 +12,7 @@ int test_function() {
 // CHECK-NEXT: test_function {{.*}}dll_malloc_left_oob.cpp:[[@LINE-3]]
 // CHECK-NEXT: main {{.*}}dll_host.cpp
 //
-// CHECK: [[ADDR]] is located 1 bytes to the left of 42-byte region
+// CHECK: [[ADDR]] is located 1 bytes before 42-byte region
 // CHECK-LABEL: allocated by thread T0 here:
 // CHECK-NEXT:   malloc
 // CHECK-NEXT:   test_function {{.*}}dll_malloc_left_oob.cpp:[[@LINE-10]]

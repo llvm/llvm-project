@@ -11,7 +11,7 @@ struct A {
   friend bool operator!=(const B&, const B&) = default; // expected-error {{invalid parameter type for defaulted equality comparison}}
   friend bool operator<(const A&, const A&);
   friend bool operator<(const B&, const B&) = default; // expected-error {{invalid parameter type for defaulted relational comparison}}
-  friend bool operator>(A, A) = default; // expected-warning {{implicitly deleted}}
+  friend bool operator>(A, A) = default; // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
 
   bool operator<(const A&) const;
   bool operator<=(const A&) const = default;
@@ -29,8 +29,8 @@ struct A {
 
 template<typename T> struct Dependent {
   using U = typename T::type;
-  bool operator==(U) const = default; // expected-error {{found 'Dependent<Bad>::U'}}
-  friend bool operator==(U, U) = default; // expected-error {{found 'Dependent<Bad>::U'}}
+  bool operator==(U) const = default; // expected-error {{found 'U'}}
+  friend bool operator==(U, U) = default; // expected-error {{found 'U'}}
 };
 
 struct Good { using type = const Dependent<Good>&; };
@@ -87,11 +87,11 @@ namespace LookupContext {
       bool operator>=(const B&, const B&); // expected-note 2{{best match}}
 
       struct B {
-        bool operator!=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
-        bool operator<(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
-        bool operator<=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
-        bool operator>(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
-        bool operator>=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
+        bool operator!=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}} expected-note{{replace 'default'}}
+        bool operator<(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}} expected-note{{replace 'default'}}
+        bool operator<=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}} expected-note{{replace 'default'}}
+        bool operator>(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}} expected-note{{replace 'default'}}
+        bool operator>=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}} expected-note{{replace 'default'}}
       };
       return B();
     }
@@ -144,7 +144,7 @@ namespace P1946 {
   struct B {
     A a; // expected-note {{no viable three-way comparison}}
     friend bool operator==(B, B) = default; // ok
-    friend bool operator==(const B&, const B&) = default; // expected-warning {{deleted}}
+    friend bool operator==(const B&, const B&) = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
   };
 }
 

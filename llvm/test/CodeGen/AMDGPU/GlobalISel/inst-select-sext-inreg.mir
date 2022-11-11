@@ -11,9 +11,11 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s32_1
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[S_BFE_I32_:%[0-9]+]]:sreg_32 = S_BFE_I32 [[COPY]], 65536, implicit-def $scc
-    ; GCN: $sgpr0 = COPY [[S_BFE_I32_]]
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_BFE_I32_:%[0-9]+]]:sreg_32 = S_BFE_I32 [[COPY]], 65536, implicit-def $scc
+    ; GCN-NEXT: $sgpr0 = COPY [[S_BFE_I32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_SEXT_INREG %0, 1
     $sgpr0 = COPY %1
@@ -29,9 +31,11 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s32_2
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[S_BFE_I32_:%[0-9]+]]:sreg_32 = S_BFE_I32 [[COPY]], 131072, implicit-def $scc
-    ; GCN: $sgpr0 = COPY [[S_BFE_I32_]]
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_BFE_I32_:%[0-9]+]]:sreg_32 = S_BFE_I32 [[COPY]], 131072, implicit-def $scc
+    ; GCN-NEXT: $sgpr0 = COPY [[S_BFE_I32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_SEXT_INREG %0, 2
     $sgpr0 = COPY %1
@@ -47,9 +51,11 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s32_8
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[S_SEXT_I32_I8_:%[0-9]+]]:sreg_32 = S_SEXT_I32_I8 [[COPY]]
-    ; GCN: $sgpr0 = COPY [[S_SEXT_I32_I8_]]
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_SEXT_I32_I8_:%[0-9]+]]:sreg_32 = S_SEXT_I32_I8 [[COPY]]
+    ; GCN-NEXT: $sgpr0 = COPY [[S_SEXT_I32_I8_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_SEXT_INREG %0, 8
     $sgpr0 = COPY %1
@@ -65,9 +71,11 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s32_16
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[S_SEXT_I32_I16_:%[0-9]+]]:sreg_32 = S_SEXT_I32_I16 [[COPY]]
-    ; GCN: $sgpr0 = COPY [[S_SEXT_I32_I16_]]
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_SEXT_I32_I16_:%[0-9]+]]:sreg_32 = S_SEXT_I32_I16 [[COPY]]
+    ; GCN-NEXT: $sgpr0 = COPY [[S_SEXT_I32_I16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_SEXT_INREG %0, 16
     $sgpr0 = COPY %1
@@ -83,9 +91,11 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s32_31
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[S_BFE_I32_:%[0-9]+]]:sreg_32 = S_BFE_I32 [[COPY]], 2031616, implicit-def $scc
-    ; GCN: $sgpr0 = COPY [[S_BFE_I32_]]
+    ; GCN: liveins: $sgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[S_BFE_I32_:%[0-9]+]]:sreg_32 = S_BFE_I32 [[COPY]], 2031616, implicit-def $scc
+    ; GCN-NEXT: $sgpr0 = COPY [[S_BFE_I32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_SEXT_INREG %0, 31
     $sgpr0 = COPY %1
@@ -101,11 +111,13 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s64_1
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
-    ; GCN: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 65536, implicit-def $scc
-    ; GCN: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
+    ; GCN-NEXT: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 65536, implicit-def $scc
+    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_SEXT_INREG %0, 1
     $sgpr0_sgpr1 = COPY %1
@@ -121,11 +133,13 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s64_2
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
-    ; GCN: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 131072, implicit-def $scc
-    ; GCN: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
+    ; GCN-NEXT: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 131072, implicit-def $scc
+    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_SEXT_INREG %0, 2
     $sgpr0_sgpr1 = COPY %1
@@ -141,11 +155,13 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s64_8
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
-    ; GCN: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 524288, implicit-def $scc
-    ; GCN: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
+    ; GCN-NEXT: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 524288, implicit-def $scc
+    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_SEXT_INREG %0, 8
     $sgpr0_sgpr1 = COPY %1
@@ -161,11 +177,13 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s64_16
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
-    ; GCN: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 1048576, implicit-def $scc
-    ; GCN: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
+    ; GCN-NEXT: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 1048576, implicit-def $scc
+    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_SEXT_INREG %0, 16
     $sgpr0_sgpr1 = COPY %1
@@ -181,11 +199,13 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s64_31
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
-    ; GCN: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 2031616, implicit-def $scc
-    ; GCN: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
+    ; GCN-NEXT: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 2031616, implicit-def $scc
+    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_SEXT_INREG %0, 31
     $sgpr0_sgpr1 = COPY %1
@@ -202,11 +222,13 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s64_32
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
-    ; GCN: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 2097152, implicit-def $scc
-    ; GCN: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
+    ; GCN-NEXT: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 2097152, implicit-def $scc
+    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_SEXT_INREG %0, 32
     $sgpr0_sgpr1 = COPY %1
@@ -222,11 +244,13 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; GCN-LABEL: name: sext_inreg_sgpr_s64_63
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
-    ; GCN: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 4128768, implicit-def $scc
-    ; GCN: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[DEF]], %subreg.sub1
+    ; GCN-NEXT: [[S_BFE_I64_:%[0-9]+]]:sreg_64 = S_BFE_I64 [[REG_SEQUENCE]], 4128768, implicit-def $scc
+    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_BFE_I64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_SEXT_INREG %0, 63
     $sgpr0_sgpr1 = COPY %1
@@ -242,9 +266,11 @@ body: |
     liveins: $vgpr0
 
     ; GCN-LABEL: name: sext_inreg_vgpr_s32_1
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], 0, 1, implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_BFE_I32_e64_]]
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], 0, 1, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY [[V_BFE_I32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_SEXT_INREG %0, 1
     $vgpr0 = COPY %1
@@ -260,9 +286,11 @@ body: |
     liveins: $vgpr0
 
     ; GCN-LABEL: name: sext_inreg_vgpr_s32_2
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], 0, 2, implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_BFE_I32_e64_]]
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], 0, 2, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY [[V_BFE_I32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_SEXT_INREG %0, 2
     $vgpr0 = COPY %1
@@ -278,9 +306,11 @@ body: |
     liveins: $vgpr0
 
     ; GCN-LABEL: name: sext_inreg_vgpr_s32_8
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], 0, 8, implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_BFE_I32_e64_]]
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], 0, 8, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY [[V_BFE_I32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_SEXT_INREG %0, 8
     $vgpr0 = COPY %1
@@ -296,9 +326,11 @@ body: |
     liveins: $vgpr0
 
     ; GCN-LABEL: name: sext_inreg_vgpr_s32_16
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], 0, 16, implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_BFE_I32_e64_]]
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], 0, 16, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY [[V_BFE_I32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_SEXT_INREG %0, 16
     $vgpr0 = COPY %1
@@ -314,9 +346,11 @@ body: |
     liveins: $vgpr0
 
     ; GCN-LABEL: name: sext_inreg_vgpr_s32_31
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], 0, 31, implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_BFE_I32_e64_]]
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], 0, 31, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY [[V_BFE_I32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_SEXT_INREG %0, 31
     $vgpr0 = COPY %1

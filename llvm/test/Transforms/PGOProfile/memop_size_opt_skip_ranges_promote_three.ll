@@ -1,8 +1,8 @@
 ; RUN: opt < %s -passes=pgo-memop-opt -pgo-memop-count-threshold=100 -pgo-memop-percent-threshold=10 -S | FileCheck %s
 
-define void @foo(i8* %dst, i8* %src, i8* %dst2, i8* %src2, i64 %n) !prof !27 {
+define void @foo(ptr %dst, ptr %src, ptr %dst2, ptr %src2, i64 %n) !prof !27 {
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %n, i1 false), !prof !28
+  call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %n, i1 false), !prof !28
   ret void
 }
 
@@ -12,16 +12,16 @@ entry:
 ; CHECK:    i64 2, label %[[CASE_2_LABEL:.*]]
 ; CHECK:  ], !prof [[SWITCH_BW:![0-9]+]]
 ; CHECK: [[CASE_0_LABEL]]:
-; CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 0, i1 false)
+; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 0, i1 false)
 ; CHECK:   br label %[[MERGE_LABEL:.*]]
 ; CHECK: [[CASE_1_LABEL]]:
-; CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 1, i1 false)
+; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 1, i1 false)
 ; CHECK:   br label %[[MERGE_LABEL:.*]]
 ; CHECK: [[CASE_2_LABEL]]:
-; CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 2, i1 false)
+; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 2, i1 false)
 ; CHECK:   br label %[[MERGE_LABEL:.*]]
 ; CHECK: [[DEFAULT_LABEL]]:
-; CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %n, i1 false), !prof [[NEWVP:![0-9]+]]
+; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %n, i1 false), !prof [[NEWVP:![0-9]+]]
 ; CHECK:   br label %[[MERGE_LABEL]]
 ; CHECK: [[MERGE_LABEL]]:
 ; CHECK:   ret void
@@ -31,7 +31,7 @@ entry:
 ; CHECK: [[SWITCH_BW]] = !{!"branch_weights", i32 524, i32 101, i32 101, i32 101}
 ; CHECK: [[NEWVP]] = !{!"VP", i32 1, i64 524, i64 9, i64 104, i64 17, i64 103, i64 33, i64 103, i64 65, i64 102, i64 129, i64 102, i64 3, i64 101}
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1)
 
 !llvm.module.flags = !{!0}
 

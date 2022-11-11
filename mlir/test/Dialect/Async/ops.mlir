@@ -26,13 +26,13 @@ func.func @empty_async_execute() -> !async.token {
 // CHECK-LABEL: @return_async_value
 func.func @return_async_value() -> !async.value<f32> {
   // CHECK: async.execute -> !async.value<f32>
-  %token, %results = async.execute -> !async.value<f32> {
+  %token, %bodyResults = async.execute -> !async.value<f32> {
     %cst = arith.constant 1.000000e+00 : f32
     async.yield %cst : f32
   }
 
-  // CHECK: return %results : !async.value<f32>
-  return %results : !async.value<f32>
+  // CHECK: return %bodyResults : !async.value<f32>
+  return %bodyResults : !async.value<f32>
 }
 
 // CHECK-LABEL: @return_captured_value
@@ -49,14 +49,14 @@ func.func @return_captured_value() -> !async.token {
 
 // CHECK-LABEL: @return_async_values
 func.func @return_async_values() -> (!async.value<f32>, !async.value<f32>) {
-  %token, %results:2 = async.execute -> (!async.value<f32>, !async.value<f32>) {
+  %token, %bodyResults:2 = async.execute -> (!async.value<f32>, !async.value<f32>) {
     %cst1 = arith.constant 1.000000e+00 : f32
     %cst2 = arith.constant 2.000000e+00 : f32
     async.yield %cst1, %cst2 : f32, f32
   }
 
-  // CHECK: return %results#0, %results#1 : !async.value<f32>, !async.value<f32>
-  return %results#0, %results#1 : !async.value<f32>, !async.value<f32>
+  // CHECK: return %bodyResults#0, %bodyResults#1 : !async.value<f32>, !async.value<f32>
+  return %bodyResults#0, %bodyResults#1 : !async.value<f32>, !async.value<f32>
 }
 
 // CHECK-LABEL: @async_token_dependencies
@@ -135,4 +135,35 @@ func.func @create_group_and_await_all(%arg0: !async.token,
 
   %3 = arith.addi %1, %2 : index
   return %3 : index
+}
+
+// CHECK-LABEL: @async_func_return_token
+async.func @async_func_return_token() -> !async.token {
+  // CHECK: return
+  return
+}
+
+// CHECK-LABEL: @async_func_return_value
+async.func @async_func_return_value() -> !async.value<i32> {
+  %0 = arith.constant 42 : i32
+  // CHECK: return %[[value:.*]] : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @async_func_return_optional_token
+async.func @async_func_return_optional_token() -> (!async.token, !async.value<i32>) {
+  %0 = arith.constant 42 : i32
+  // CHECK: return %[[value:.*]] : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @async_call
+func.func @async_call() {
+  // CHECK: async.call @async_func_return_token
+  // CHECK: async.call @async_func_return_value
+  // CHECK: async.call @async_func_return_optional_token
+  %0 = async.call @async_func_return_token() : () -> !async.token
+  %1 = async.call @async_func_return_value() : () -> !async.value<i32>
+  %2, %3 = async.call @async_func_return_optional_token() : () -> (!async.token, !async.value<i32>)
+  return
 }

@@ -439,49 +439,49 @@ define i32 @xor_or_xor_common_op_commute8(i32 %a, i32 %b, i32 %c) {
   ret i32 %r
 }
 
-define i32 @xor_or_xor_common_op_extra_use1(i32 %a, i32 %b, i32 %c, i32* %p) {
+define i32 @xor_or_xor_common_op_extra_use1(i32 %a, i32 %b, i32 %c, ptr %p) {
 ; CHECK-LABEL: @xor_or_xor_common_op_extra_use1(
 ; CHECK-NEXT:    [[AC:%.*]] = xor i32 [[A:%.*]], [[C:%.*]]
-; CHECK-NEXT:    store i32 [[AC]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[AC]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[AB:%.*]] = or i32 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor i32 [[AC]], [[AB]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ac = xor i32 %a, %c
-  store i32 %ac, i32* %p
+  store i32 %ac, ptr %p
   %ab = or i32 %a, %b
   %r = xor i32 %ac, %ab
   ret i32 %r
 }
 
-define i32 @xor_or_xor_common_op_extra_use2(i32 %a, i32 %b, i32 %c, i32* %p) {
+define i32 @xor_or_xor_common_op_extra_use2(i32 %a, i32 %b, i32 %c, ptr %p) {
 ; CHECK-LABEL: @xor_or_xor_common_op_extra_use2(
 ; CHECK-NEXT:    [[AC:%.*]] = xor i32 [[A:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AB:%.*]] = or i32 [[A]], [[B:%.*]]
-; CHECK-NEXT:    store i32 [[AB]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[AB]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = xor i32 [[AC]], [[AB]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ac = xor i32 %a, %c
   %ab = or i32 %a, %b
-  store i32 %ab, i32* %p
+  store i32 %ab, ptr %p
   %r = xor i32 %ac, %ab
   ret i32 %r
 }
 
-define i32 @xor_or_xor_common_op_extra_use3(i32 %a, i32 %b, i32 %c, i32* %p1, i32* %p2) {
+define i32 @xor_or_xor_common_op_extra_use3(i32 %a, i32 %b, i32 %c, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @xor_or_xor_common_op_extra_use3(
 ; CHECK-NEXT:    [[AC:%.*]] = xor i32 [[A:%.*]], [[C:%.*]]
-; CHECK-NEXT:    store i32 [[AC]], i32* [[P1:%.*]], align 4
+; CHECK-NEXT:    store i32 [[AC]], ptr [[P1:%.*]], align 4
 ; CHECK-NEXT:    [[AB:%.*]] = or i32 [[A]], [[B:%.*]]
-; CHECK-NEXT:    store i32 [[AB]], i32* [[P2:%.*]], align 4
+; CHECK-NEXT:    store i32 [[AB]], ptr [[P2:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = xor i32 [[AC]], [[AB]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ac = xor i32 %a, %c
-  store i32 %ac, i32* %p1
+  store i32 %ac, ptr %p1
   %ab = or i32 %a, %b
-  store i32 %ab, i32* %p2
+  store i32 %ab, ptr %p2
   %r = xor i32 %ac, %ab
   ret i32 %r
 }

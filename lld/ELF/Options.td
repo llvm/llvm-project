@@ -50,10 +50,9 @@ def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">
 
 def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 
-def build_id: F<"build-id">, HelpText<"Alias for --build-id=fast">;
-
-def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">,
+def build_id: J<"build-id=">, HelpText<"Generate build ID note">,
   MetaVarName<"[fast,md5,sha1,uuid,0x<hexstring>]">;
+def : F<"build-id">, Alias<build_id>, AliasArgs<["fast"]>, HelpText<"Alias for --build-id=fast">;
 
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
@@ -61,7 +60,7 @@ defm check_sections: B<"check-sections",
 
 defm compress_debug_sections:
   Eq<"compress-debug-sections", "Compress DWARF debug sections">,
-  MetaVarName<"[none,zlib]">;
+  MetaVarName<"[none,zlib,zstd]">;
 
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
@@ -119,12 +118,13 @@ defm call_graph_profile_sort: BB<"call-graph-profile-sort",
 // --chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--"], "chroot">;
 
-defm color_diagnostics: BB<"color-diagnostics",
-  "Alias for --color-diagnostics=always",
-  "Alias for --color-diagnostics=never">;
-def color_diagnostics_eq: JJ<"color-diagnostics=">,
+def color_diagnostics: JJ<"color-diagnostics=">,
   HelpText<"Use colors in diagnostics (default: auto)">,
   MetaVarName<"[auto,always,never]">;
+def : Flag<["--"], "color-diagnostics">, Alias<color_diagnostics>, AliasArgs<["always"]>,
+  HelpText<"Alias for --color-diagnostics=always">;
+def : Flag<["--"], "no-color-diagnostics">, Alias<color_diagnostics>, AliasArgs<["never"]>,
+  HelpText<"Alias for --color-diagnostics=never">;
 
 def cref: FF<"cref">,
   HelpText<"Output cross reference table. If -Map is specified, print to the map file">;
@@ -297,6 +297,9 @@ def no_omagic: F<"no-omagic">, MetaVarName<"<magic>">,
 def no_undefined: F<"no-undefined">,
   HelpText<"Report unresolved symbols even if the linker is creating a shared library">;
 
+def no_warnings: FF<"no-warnings">, HelpText<"Suppress warnings and cancel --fatal-warnings">;
+def : Flag<["-"], "w">, Alias<no_warnings>, HelpText<"Alias for --no-warnings">;
+
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
@@ -408,8 +411,10 @@ defm threads
          "Number of threads. '1' disables multi-threading. By default all "
          "available hardware threads are used">;
 
-def time_trace: FF<"time-trace">, HelpText<"Record time trace">;
-def time_trace_file_eq: JJ<"time-trace-file=">, HelpText<"Specify time trace output file">;
+def time_trace_eq: JJ<"time-trace=">, MetaVarName<"<file>">,
+  HelpText<"Record time trace to <file>">;
+def : FF<"time-trace">, Alias<time_trace_eq>,
+  HelpText<"Record time trace to file next to output">;
 
 defm time_trace_granularity: EEq<"time-trace-granularity",
   "Minimum time granularity (in microseconds) traced by time profiler">;
@@ -501,6 +506,8 @@ def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
 def visual_studio_diagnostics_format : FF<"vs-diagnostics">,
 HelpText<"Format diagnostics for Visual Studio compatibility">;
 
+def package_metadata: JJ<"package-metadata=">, HelpText<"Emit package metadata note">;
+
 // Aliases
 def: Separate<["-"], "f">, Alias<auxiliary>, HelpText<"Alias for --auxiliary">;
 def: F<"call_shared">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
@@ -538,7 +545,7 @@ def: Flag<["-"], "t">, Alias<trace>, HelpText<"Alias for --trace">;
 def: Joined<["-", "--"], "Ttext-segment=">, Alias<Ttext_segment>;
 def: JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>, HelpText<"Alias for --trace-symbol">;
 def: JoinedOrSeparate<["-"], "u">, Alias<undefined>, HelpText<"Alias for --undefined">;
-def: Flag<["-"], "V">, Alias<version>, HelpText<"Alias for --version">;
+def: Flag<["-"], "V">, Alias<v>, HelpText<"Alias for -v">;
 
 // LTO-related options.
 def lto_aa_pipeline: JJ<"lto-aa-pipeline=">,
@@ -583,6 +590,8 @@ def opt_remarks_with_hotness: FF<"opt-remarks-with-hotness">,
 def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
   HelpText<"The format used for serializing remarks (default: YAML)">;
 def save_temps: F<"save-temps">, HelpText<"Save intermediate LTO compilation results">;
+def save_temps_eq: JJ<"save-temps=">, HelpText<"Save select intermediate LTO compilation results">,
+  Values<"resolution,preopt,promote,internalize,import,opt,precodegen,prelink,combinedindex">;
 def lto_basic_block_sections: JJ<"lto-basic-block-sections=">,
   HelpText<"Enable basic block sections for LTO">;
 defm lto_unique_basic_block_section_names: BB<"lto-unique-basic-block-section-names",
@@ -596,6 +605,7 @@ def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
 defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
 def thinlto_emit_imports_files: FF<"thinlto-emit-imports-files">;
+def thinlto_emit_index_files: FF<"thinlto-emit-index-files">;
 def thinlto_index_only: FF<"thinlto-index-only">;
 def thinlto_index_only_eq: JJ<"thinlto-index-only=">;
 def thinlto_jobs: JJ<"thinlto-jobs=">,
@@ -690,7 +700,6 @@ def plugin_opt_eq : J<"plugin-opt=">;
 // Options listed below are silently ignored for now for compatibility.
 def: F<"detect-odr-violations">;
 def: Flag<["-"], "d">;
-def: Flag<["-"], "dc">;
 def: Flag<["-"], "g">;
 def: F<"long-plt">;
 def: FF<"no-add-needed">;

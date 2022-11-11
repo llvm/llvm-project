@@ -14,10 +14,10 @@ int PR10013(void) {
   int *PR10013_x = 0;
   {
     extern int PR10013_x;
-    extern int PR10013_x; 
+    extern int PR10013_x;
   }
-  
-  return PR10013_x; // expected-warning{{incompatible pointer to integer conversion}}
+
+  return PR10013_x; // expected-error{{incompatible pointer to integer conversion}}
 }
 
 static int test1_a[]; // expected-warning {{tentative array definition assumed to have one element}}

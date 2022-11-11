@@ -107,10 +107,10 @@ public:
 
   void finishedMainFile(DiagnosticsEngine &Diags) override;
 
-  bool needSystemDependencies() final override { return IncludeSystemHeaders; }
+  bool needSystemDependencies() final { return IncludeSystemHeaders; }
 
   bool sawDependency(StringRef Filename, bool FromModule, bool IsSystem,
-                     bool IsModuleFile, bool IsMissing) final override;
+                     bool IsModuleFile, bool IsMissing) final;
 
 protected:
   void outputDependencyFile(llvm::raw_ostream &OS);

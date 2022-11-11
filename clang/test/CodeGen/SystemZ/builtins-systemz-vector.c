@@ -1,5 +1,5 @@
 // REQUIRES: systemz-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -target-cpu z13 -triple s390x-ibm-linux -flax-vector-conversions=none \
+// RUN: %clang_cc1 -target-cpu z13 -triple s390x-ibm-linux -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
 
 typedef __attribute__((vector_size(16))) signed char vec_schar;
@@ -29,17 +29,17 @@ int cc;
 
 void test_core(void) {
   len = __builtin_s390_lcbb(cptr, 0);
-  // CHECK: call i32 @llvm.s390.lcbb(i8* %{{.*}}, i32 0)
+  // CHECK: call i32 @llvm.s390.lcbb(ptr %{{.*}}, i32 0)
   len = __builtin_s390_lcbb(cptr, 15);
-  // CHECK: call i32 @llvm.s390.lcbb(i8* %{{.*}}, i32 15)
+  // CHECK: call i32 @llvm.s390.lcbb(ptr %{{.*}}, i32 15)
 
   vsc = __builtin_s390_vlbb(cptr, 0);
-  // CHECK: call <16 x i8> @llvm.s390.vlbb(i8* %{{.*}}, i32 0)
+  // CHECK: call <16 x i8> @llvm.s390.vlbb(ptr %{{.*}}, i32 0)
   vsc = __builtin_s390_vlbb(cptr, 15);
-  // CHECK: call <16 x i8> @llvm.s390.vlbb(i8* %{{.*}}, i32 15)
+  // CHECK: call <16 x i8> @llvm.s390.vlbb(ptr %{{.*}}, i32 15)
 
   vsc = __builtin_s390_vll(len, cptr);
-  // CHECK: call <16 x i8> @llvm.s390.vll(i32 %{{.*}}, i8* %{{.*}})
+  // CHECK: call <16 x i8> @llvm.s390.vll(i32 %{{.*}}, ptr %{{.*}})
 
   vul = __builtin_s390_vpdi(vul, vul, 0);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 0)
@@ -78,7 +78,7 @@ void test_core(void) {
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vpksgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
   __builtin_s390_vstl(vsc, len, ptr);
-  // CHECK: call void @llvm.s390.vstl(<16 x i8> %{{.*}}, i32 %{{.*}}, i8* %{{.*}})
+  // CHECK: call void @llvm.s390.vstl(<16 x i8> %{{.*}}, i32 %{{.*}}, ptr %{{.*}})
 
   vss = __builtin_s390_vuphb(vsc);
   // CHECK: call <8 x i16> @llvm.s390.vuphb(<16 x i8> %{{.*}})

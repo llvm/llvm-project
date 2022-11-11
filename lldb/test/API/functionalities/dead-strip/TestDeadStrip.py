@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class DeadStripTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr44429")
     def test(self):
         """Test breakpoint works correctly with dead-code stripping."""

@@ -3,8 +3,8 @@
 ; Test how we handle pathologically large stack frames when RAX is live through
 ; the prologue and epilogue.
 
-declare void @bar(i8*)
-declare void @llvm.va_start(i8*)
+declare void @bar(ptr)
+declare void @llvm.va_start(ptr)
 
 ; For stack frames between 2GB and 16GB, do multiple adjustments.
 
@@ -24,9 +24,8 @@ define i32 @stack_frame_8gb(i32 %x, ...) nounwind {
 ; CHECK:      retq
   %1 = alloca [u0x200000000 x i8]
   %va = alloca i8, i32 24
-  call void @llvm.va_start(i8* %va)
-  %2 = getelementptr inbounds [u0x200000000 x i8], [u0x200000000 x i8]* %1, i32 0, i32 0
-  call void @bar(i8* %2)
+  call void @llvm.va_start(ptr %va)
+  call void @bar(ptr %1)
   ret i32 %x
 }
 
@@ -54,9 +53,8 @@ define i32 @stack_frame_16gb(i32 %x, ...) nounwind {
 ; CHECK:      retq
   %1 = alloca [u0x400000000 x i8]
   %va = alloca i8, i32 24
-  call void @llvm.va_start(i8* %va)
-  %2 = getelementptr inbounds [u0x400000000 x i8], [u0x400000000 x i8]* %1, i32 0, i32 0
-  call void @bar(i8* %2)
+  call void @llvm.va_start(ptr %va)
+  call void @bar(ptr %1)
   ret i32 %x
 }
 

@@ -23,8 +23,8 @@ body:             |
 
 ...
 # UNPROFITABLE-LABEL: name: f1_2s
-# UNPROFITABLE: %3:fpr64 = FMULv2f32 %0, %1
-# UNPROFITABLE-NEXT: FSUBv2f32 killed %3, %2
+# UNPROFITABLE: [[R1:%[0-9]+]]:fpr64 = FNEGv2f32 %2
+# UNPROFITABLE-NEXT: FMLAv2f32 killed [[R1]], %0, %1
 #
 # PROFITABLE-LABEL: name: f1_2s
 # PROFITABLE: [[R1:%[0-9]+]]:fpr64 = FNEGv2f32 %2
@@ -49,8 +49,8 @@ body:             |
 
 ...
 # UNPROFITABLE-LABEL: name: f1_4s
-# UNPROFITABLE: %3:fpr128 = FMULv4f32 %0, %1
-# UNPROFITABLE-NEXT: FSUBv4f32 killed %3, %2
+# UNPROFITABLE: [[R1:%[0-9]+]]:fpr128 = FMULv4f32 %0, %1
+# UNPROFITABLE-NEXT: FSUBv4f32 killed [[R1]], %2
 #
 # PROFITABLE-LABEL: name: f1_4s
 # PROFITABLE: [[R1:%[0-9]+]]:fpr128 = FNEGv4f32 %2

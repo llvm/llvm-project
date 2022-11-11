@@ -5,7 +5,7 @@
 ; If we are transferring XMM conversion results to MMX registers we could use the MMX equivalents
 ; (CVTPD2PI/CVTTPD2PI + CVTPS2PI/CVTTPS2PI) without affecting rounding/exceptions etc.
 
-define void @cvt_v2f64_v2i32(<2 x double>, <1 x i64>*) nounwind {
+define void @cvt_v2f64_v2i32(<2 x double>, ptr) nounwind {
 ; X86-LABEL: cvt_v2f64_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -37,11 +37,11 @@ define void @cvt_v2f64_v2i32(<2 x double>, <1 x i64>*) nounwind {
   %7 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %6, x86_mmx %6)
   %8 = bitcast x86_mmx %7 to i64
   %9 = insertelement <1 x i64> undef, i64 %8, i32 0
-  store <1 x i64> %9, <1 x i64>* %1
+  store <1 x i64> %9, ptr %1
   ret void
 }
 
-define void @cvtt_v2f64_v2i32(<2 x double>, <1 x i64>*) nounwind {
+define void @cvtt_v2f64_v2i32(<2 x double>, ptr) nounwind {
 ; X86-LABEL: cvtt_v2f64_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -73,11 +73,11 @@ define void @cvtt_v2f64_v2i32(<2 x double>, <1 x i64>*) nounwind {
   %7 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %6, x86_mmx %6)
   %8 = bitcast x86_mmx %7 to i64
   %9 = insertelement <1 x i64> undef, i64 %8, i32 0
-  store <1 x i64> %9, <1 x i64>* %1
+  store <1 x i64> %9, ptr %1
   ret void
 }
 
-define void @fptosi_v2f64_v2i32(<2 x double>, <1 x i64>*) nounwind {
+define void @fptosi_v2f64_v2i32(<2 x double>, ptr) nounwind {
 ; X86-LABEL: fptosi_v2f64_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -107,11 +107,11 @@ define void @fptosi_v2f64_v2i32(<2 x double>, <1 x i64>*) nounwind {
   %5 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %4, x86_mmx %4)
   %6 = bitcast x86_mmx %5 to i64
   %7 = insertelement <1 x i64> undef, i64 %6, i32 0
-  store <1 x i64> %7, <1 x i64>* %1
+  store <1 x i64> %7, ptr %1
   ret void
 }
 
-define void @cvt_v2f32_v2i32(<4 x float>, <1 x i64>*) nounwind {
+define void @cvt_v2f32_v2i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: cvt_v2f32_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -143,11 +143,11 @@ define void @cvt_v2f32_v2i32(<4 x float>, <1 x i64>*) nounwind {
   %7 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %6, x86_mmx %6)
   %8 = bitcast x86_mmx %7 to i64
   %9 = insertelement <1 x i64> undef, i64 %8, i32 0
-  store <1 x i64> %9, <1 x i64>* %1
+  store <1 x i64> %9, ptr %1
   ret void
 }
 
-define void @cvtt_v2f32_v2i32(<4 x float>, <1 x i64>*) nounwind {
+define void @cvtt_v2f32_v2i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: cvtt_v2f32_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -179,11 +179,11 @@ define void @cvtt_v2f32_v2i32(<4 x float>, <1 x i64>*) nounwind {
   %7 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %6, x86_mmx %6)
   %8 = bitcast x86_mmx %7 to i64
   %9 = insertelement <1 x i64> undef, i64 %8, i32 0
-  store <1 x i64> %9, <1 x i64>* %1
+  store <1 x i64> %9, ptr %1
   ret void
 }
 
-define void @fptosi_v4f32_v4i32(<4 x float>, <1 x i64>*) nounwind {
+define void @fptosi_v4f32_v4i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: fptosi_v4f32_v4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -214,11 +214,11 @@ define void @fptosi_v4f32_v4i32(<4 x float>, <1 x i64>*) nounwind {
   %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
   %7 = bitcast x86_mmx %6 to i64
   %8 = insertelement <1 x i64> undef, i64 %7, i32 0
-  store <1 x i64> %8, <1 x i64>* %1
+  store <1 x i64> %8, ptr %1
   ret void
 }
 
-define void @fptosi_v2f32_v2i32(<4 x float>, <1 x i64>*) nounwind {
+define void @fptosi_v2f32_v2i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: fptosi_v2f32_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -250,14 +250,14 @@ define void @fptosi_v2f32_v2i32(<4 x float>, <1 x i64>*) nounwind {
   %7 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %6, x86_mmx %6)
   %8 = bitcast x86_mmx %7 to i64
   %9 = insertelement <1 x i64> undef, i64 %8, i32 0
-  store <1 x i64> %9, <1 x i64>* %1
+  store <1 x i64> %9, ptr %1
   ret void
 }
 
 ; FIXME: If we are transferring MMX registers to XMM for conversion we could use the MMX equivalents
 ; (CVTPI2PD + CVTPI2PS) without affecting rounding/exceptions etc.
 
-define <2 x double> @sitofp_v2i32_v2f64(<1 x i64>*) nounwind {
+define <2 x double> @sitofp_v2i32_v2f64(ptr) nounwind {
 ; X86-LABEL: sitofp_v2i32_v2f64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -280,18 +280,17 @@ define <2 x double> @sitofp_v2i32_v2f64(<1 x i64>*) nounwind {
 ; X64-NEXT:    movq2dq %mm0, %xmm0
 ; X64-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %2 = bitcast <1 x i64>* %0 to x86_mmx*
-  %3 = load x86_mmx, x86_mmx* %2, align 8
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  %5 = bitcast x86_mmx %4 to i64
-  %6 = insertelement <2 x i64> undef, i64 %5, i32 0
-  %7 = bitcast <2 x i64> %6 to <4 x i32>
-  %8 = shufflevector <4 x i32> %7, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
-  %9 = sitofp <2 x i32> %8 to <2 x double>
-  ret <2 x double> %9
+  %2 = load x86_mmx, ptr %0, align 8
+  %3 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %2, x86_mmx %2)
+  %4 = bitcast x86_mmx %3 to i64
+  %5 = insertelement <2 x i64> undef, i64 %4, i32 0
+  %6 = bitcast <2 x i64> %5 to <4 x i32>
+  %7 = shufflevector <4 x i32> %6, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %8 = sitofp <2 x i32> %7 to <2 x double>
+  ret <2 x double> %8
 }
 
-define <4 x float> @sitofp_v2i32_v2f32(<1 x i64>*) nounwind {
+define <4 x float> @sitofp_v2i32_v2f32(ptr) nounwind {
 ; X86-LABEL: sitofp_v2i32_v2f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -308,16 +307,15 @@ define <4 x float> @sitofp_v2i32_v2f32(<1 x i64>*) nounwind {
 ; X64-NEXT:    movq2dq %mm0, %xmm0
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %2 = bitcast <1 x i64>* %0 to x86_mmx*
-  %3 = load x86_mmx, x86_mmx* %2, align 8
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  %5 = bitcast x86_mmx %4 to <2 x i32>
-  %6 = shufflevector <2 x i32> %5, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %7 = sitofp <4 x i32> %6 to <4 x float>
-  ret <4 x float> %7
+  %2 = load x86_mmx, ptr %0, align 8
+  %3 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %2, x86_mmx %2)
+  %4 = bitcast x86_mmx %3 to <2 x i32>
+  %5 = shufflevector <2 x i32> %4, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %6 = sitofp <4 x i32> %5 to <4 x float>
+  ret <4 x float> %6
 }
 
-define <4 x float> @cvt_v2i32_v2f32(<1 x i64>*) nounwind {
+define <4 x float> @cvt_v2i32_v2f32(ptr) nounwind {
 ; X86-LABEL: cvt_v2i32_v2f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -341,15 +339,14 @@ define <4 x float> @cvt_v2i32_v2f32(<1 x i64>*) nounwind {
 ; X64-NEXT:    movq2dq %mm0, %xmm0
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %2 = bitcast <1 x i64>* %0 to x86_mmx*
-  %3 = load x86_mmx, x86_mmx* %2, align 8
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  %5 = bitcast x86_mmx %4 to i64
-  %6 = insertelement <2 x i64> undef, i64 %5, i32 0
-  %7 = insertelement <2 x i64> %6, i64 0, i32 1
-  %8 = bitcast <2 x i64> %7 to <4 x i32>
-  %9 = tail call <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32> %8)
-  ret <4 x float> %9
+  %2 = load x86_mmx, ptr %0, align 8
+  %3 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %2, x86_mmx %2)
+  %4 = bitcast x86_mmx %3 to i64
+  %5 = insertelement <2 x i64> undef, i64 %4, i32 0
+  %6 = insertelement <2 x i64> %5, i64 0, i32 1
+  %7 = bitcast <2 x i64> %6 to <4 x i32>
+  %8 = tail call <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32> %7)
+  ret <4 x float> %8
 }
 
 declare x86_mmx @llvm.x86.mmx.padd.d(x86_mmx, x86_mmx)

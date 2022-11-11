@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=i686-unknown-windows-msvc -objc-arc-contract -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=i686-unknown-windows-msvc -passes=objc-arc-contract -S -o - %s | FileCheck %s
 
 ; Generated (and lightly modified and cleaned up) from the following source:
 ; id f();

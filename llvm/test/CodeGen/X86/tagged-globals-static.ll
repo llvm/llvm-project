@@ -6,12 +6,12 @@ target triple = "x86_64-unknown-linux-gnu"
 @global = external dso_local global i32
 declare dso_local void @func()
 
-define i32* @global_addr() #0 {
+define ptr @global_addr() #0 {
   ; CHECK-LABEL: global_addr:
   ; CHECK: movq global@GOTPCREL_NORELAX(%rip), %rax
   ; CHECK: retq
 
-  ret i32* @global
+  ret ptr @global
 }
 
 define i32 @global_load() #0 {
@@ -20,7 +20,7 @@ define i32 @global_load() #0 {
   ; CHECK: movl ([[REG]]), %eax
   ; CHECK: retq
 
-  %load = load i32, i32* @global
+  %load = load i32, ptr @global
   ret i32 %load
 }
 
@@ -30,16 +30,16 @@ define void @global_store() #0 {
   ; CHECK: movl $0, ([[REG]])
   ; CHECK: retq
 
-  store i32 0, i32* @global
+  store i32 0, ptr @global
   ret void
 }
 
-define void ()* @func_addr() #0 {
+define ptr @func_addr() #0 {
   ; CHECK-LABEL: func_addr:
   ; CHECK: movl $func, %eax
   ; CHECK: retq
 
-  ret void ()* @func
+  ret ptr @func
 }
 
 ; Jump tables shouldn't go through the GOT.

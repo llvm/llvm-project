@@ -27,5 +27,6 @@ AMDGPU_ATTRIBUTE(WORKGROUP_ID_Z, "amdgpu-no-workgroup-id-z")
 AMDGPU_ATTRIBUTE(WORKITEM_ID_X, "amdgpu-no-workitem-id-x")
 AMDGPU_ATTRIBUTE(WORKITEM_ID_Y, "amdgpu-no-workitem-id-y")
 AMDGPU_ATTRIBUTE(WORKITEM_ID_Z, "amdgpu-no-workitem-id-z")
+AMDGPU_ATTRIBUTE(LDS_KERNEL_ID, "amdgpu-no-lds-kernel-id")
 
 #undef AMDGPU_ATTRIBUTE

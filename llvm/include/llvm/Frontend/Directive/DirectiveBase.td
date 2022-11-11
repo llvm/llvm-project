@@ -74,6 +74,9 @@ class Clause<string c> {
   // Define an alternative name return in get<LanguageName>ClauseName function.
   string alternativeName = "";
 
+  // Define aliases used in the parser.
+  list<string> aliases = [];
+
   // Optional class holding value of the clause in clang AST.
   string clangClass = "";
 
@@ -88,6 +91,7 @@ class Clause<string c> {
 
   // List of allowed clause values
   list<ClauseVal> allowedClauseValues = [];
+
   // If set to true, value class is part of a list. Single class by default.
   bit isValueList = false;
 
@@ -101,6 +105,14 @@ class Clause<string c> {
   // Set clause used by default when unknown. Function returning the kind
   // of enumeration will use this clause as the default.
   bit isDefault = false;
+
+  // Prefix before the actual value. Used in the parser generation.
+  // `clause(prefix: value)`
+  string prefix = "";
+
+  // Set the prefix as optional.
+  // `clause([prefix]: value)`
+  bit isPrefixOptional = true;
 }
 
 // Hold information about clause validity by version.

@@ -7,7 +7,7 @@
 ; PR14887
 ; These tests inject a store into the chain to test the inreg versions of pmovsx
 
-define void @test1(<2 x i8>* %in, <2 x i64>* %out) nounwind {
+define void @test1(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxbq (%rdi), %xmm0
@@ -33,14 +33,14 @@ define void @test1(<2 x i8>* %in, <2 x i64>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <2 x i8>, <2 x i8>* %in, align 1
+  %wide.load35 = load <2 x i8>, ptr %in, align 1
   %sext = sext <2 x i8> %wide.load35 to <2 x i64>
-  store <2 x i64> zeroinitializer, <2 x i64>* undef, align 8
-  store <2 x i64> %sext, <2 x i64>* %out, align 8
+  store <2 x i64> zeroinitializer, ptr undef, align 8
+  store <2 x i64> %sext, ptr %out, align 8
   ret void
 }
 
-define void @test2(<4 x i8>* %in, <4 x i64>* %out) nounwind {
+define void @test2(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test2:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxbq (%rdi), %xmm0
@@ -81,14 +81,14 @@ define void @test2(<4 x i8>* %in, <4 x i64>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <4 x i8>, <4 x i8>* %in, align 1
+  %wide.load35 = load <4 x i8>, ptr %in, align 1
   %sext = sext <4 x i8> %wide.load35 to <4 x i64>
-  store <4 x i64> zeroinitializer, <4 x i64>* undef, align 8
-  store <4 x i64> %sext, <4 x i64>* %out, align 8
+  store <4 x i64> zeroinitializer, ptr undef, align 8
+  store <4 x i64> %sext, ptr %out, align 8
   ret void
 }
 
-define void @test3(<4 x i8>* %in, <4 x i32>* %out) nounwind {
+define void @test3(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test3:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxbd (%rdi), %xmm0
@@ -114,14 +114,14 @@ define void @test3(<4 x i8>* %in, <4 x i32>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <4 x i8>, <4 x i8>* %in, align 1
+  %wide.load35 = load <4 x i8>, ptr %in, align 1
   %sext = sext <4 x i8> %wide.load35 to <4 x i32>
-  store <4 x i32> zeroinitializer, <4 x i32>* undef, align 8
-  store <4 x i32> %sext, <4 x i32>* %out, align 8
+  store <4 x i32> zeroinitializer, ptr undef, align 8
+  store <4 x i32> %sext, ptr %out, align 8
   ret void
 }
 
-define void @test4(<8 x i8>* %in, <8 x i32>* %out) nounwind {
+define void @test4(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test4:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxbd (%rdi), %xmm0
@@ -162,14 +162,14 @@ define void @test4(<8 x i8>* %in, <8 x i32>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <8 x i8>, <8 x i8>* %in, align 1
+  %wide.load35 = load <8 x i8>, ptr %in, align 1
   %sext = sext <8 x i8> %wide.load35 to <8 x i32>
-  store <8 x i32> zeroinitializer, <8 x i32>* undef, align 8
-  store <8 x i32> %sext, <8 x i32>* %out, align 8
+  store <8 x i32> zeroinitializer, ptr undef, align 8
+  store <8 x i32> %sext, ptr %out, align 8
   ret void
 }
 
-define void @test5(<8 x i8>* %in, <8 x i16>* %out) nounwind {
+define void @test5(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test5:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxbw (%rdi), %xmm0
@@ -195,14 +195,14 @@ define void @test5(<8 x i8>* %in, <8 x i16>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <8 x i8>, <8 x i8>* %in, align 1
+  %wide.load35 = load <8 x i8>, ptr %in, align 1
   %sext = sext <8 x i8> %wide.load35 to <8 x i16>
-  store <8 x i16> zeroinitializer, <8 x i16>* undef, align 8
-  store <8 x i16> %sext, <8 x i16>* %out, align 8
+  store <8 x i16> zeroinitializer, ptr undef, align 8
+  store <8 x i16> %sext, ptr %out, align 8
   ret void
 }
 
-define void @test6(<16 x i8>* %in, <16 x i16>* %out) nounwind {
+define void @test6(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test6:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxbw (%rdi), %xmm0
@@ -243,14 +243,14 @@ define void @test6(<16 x i8>* %in, <16 x i16>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <16 x i8>, <16 x i8>* %in, align 1
+  %wide.load35 = load <16 x i8>, ptr %in, align 1
   %sext = sext <16 x i8> %wide.load35 to <16 x i16>
-  store <16 x i16> zeroinitializer, <16 x i16>* undef, align 8
-  store <16 x i16> %sext, <16 x i16>* %out, align 8
+  store <16 x i16> zeroinitializer, ptr undef, align 8
+  store <16 x i16> %sext, ptr %out, align 8
   ret void
 }
 
-define void @test7(<2 x i16>* %in, <2 x i64>* %out) nounwind {
+define void @test7(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test7:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxwq (%rdi), %xmm0
@@ -276,14 +276,14 @@ define void @test7(<2 x i16>* %in, <2 x i64>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <2 x i16>, <2 x i16>* %in, align 1
+  %wide.load35 = load <2 x i16>, ptr %in, align 1
   %sext = sext <2 x i16> %wide.load35 to <2 x i64>
-  store <2 x i64> zeroinitializer, <2 x i64>* undef, align 8
-  store <2 x i64> %sext, <2 x i64>* %out, align 8
+  store <2 x i64> zeroinitializer, ptr undef, align 8
+  store <2 x i64> %sext, ptr %out, align 8
   ret void
 }
 
-define void @test8(<4 x i16>* %in, <4 x i64>* %out) nounwind {
+define void @test8(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test8:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxwq (%rdi), %xmm0
@@ -324,14 +324,14 @@ define void @test8(<4 x i16>* %in, <4 x i64>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <4 x i16>, <4 x i16>* %in, align 1
+  %wide.load35 = load <4 x i16>, ptr %in, align 1
   %sext = sext <4 x i16> %wide.load35 to <4 x i64>
-  store <4 x i64> zeroinitializer, <4 x i64>* undef, align 8
-  store <4 x i64> %sext, <4 x i64>* %out, align 8
+  store <4 x i64> zeroinitializer, ptr undef, align 8
+  store <4 x i64> %sext, ptr %out, align 8
   ret void
 }
 
-define void @test9(<4 x i16>* %in, <4 x i32>* %out) nounwind {
+define void @test9(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test9:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxwd (%rdi), %xmm0
@@ -357,14 +357,14 @@ define void @test9(<4 x i16>* %in, <4 x i32>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <4 x i16>, <4 x i16>* %in, align 1
+  %wide.load35 = load <4 x i16>, ptr %in, align 1
   %sext = sext <4 x i16> %wide.load35 to <4 x i32>
-  store <4 x i32> zeroinitializer, <4 x i32>* undef, align 8
-  store <4 x i32> %sext, <4 x i32>* %out, align 8
+  store <4 x i32> zeroinitializer, ptr undef, align 8
+  store <4 x i32> %sext, ptr %out, align 8
   ret void
 }
 
-define void @test10(<8 x i16>* %in, <8 x i32>* %out) nounwind {
+define void @test10(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test10:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxwd (%rdi), %xmm0
@@ -405,14 +405,14 @@ define void @test10(<8 x i16>* %in, <8 x i32>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <8 x i16>, <8 x i16>* %in, align 1
+  %wide.load35 = load <8 x i16>, ptr %in, align 1
   %sext = sext <8 x i16> %wide.load35 to <8 x i32>
-  store <8 x i32> zeroinitializer, <8 x i32>* undef, align 8
-  store <8 x i32> %sext, <8 x i32>* %out, align 8
+  store <8 x i32> zeroinitializer, ptr undef, align 8
+  store <8 x i32> %sext, ptr %out, align 8
   ret void
 }
 
-define void @test11(<2 x i32>* %in, <2 x i64>* %out) nounwind {
+define void @test11(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test11:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxdq (%rdi), %xmm0
@@ -438,14 +438,14 @@ define void @test11(<2 x i32>* %in, <2 x i64>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovups %xmm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %xmm0, (%eax)
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <2 x i32>, <2 x i32>* %in, align 1
+  %wide.load35 = load <2 x i32>, ptr %in, align 1
   %sext = sext <2 x i32> %wide.load35 to <2 x i64>
-  store <2 x i64> zeroinitializer, <2 x i64>* undef, align 8
-  store <2 x i64> %sext, <2 x i64>* %out, align 8
+  store <2 x i64> zeroinitializer, ptr undef, align 8
+  store <2 x i64> %sext, ptr %out, align 8
   ret void
 }
 
-define void @test12(<4 x i32>* %in, <4 x i64>* %out) nounwind {
+define void @test12(ptr %in, ptr %out) nounwind {
 ; SSE41-LABEL: test12:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxdq (%rdi), %xmm0
@@ -486,9 +486,9 @@ define void @test12(<4 x i32>* %in, <4 x i64>* %out) nounwind {
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
 ; X32-AVX2-NEXT:    retl
-  %wide.load35 = load <4 x i32>, <4 x i32>* %in, align 1
+  %wide.load35 = load <4 x i32>, ptr %in, align 1
   %sext = sext <4 x i32> %wide.load35 to <4 x i64>
-  store <4 x i64> zeroinitializer, <4 x i64>* undef, align 8
-  store <4 x i64> %sext, <4 x i64>* %out, align 8
+  store <4 x i64> zeroinitializer, ptr undef, align 8
+  store <4 x i64> %sext, ptr %out, align 8
   ret void
 }

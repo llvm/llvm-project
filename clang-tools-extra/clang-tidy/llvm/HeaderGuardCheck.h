@@ -17,7 +17,7 @@ namespace llvm_check {
 
 /// Finds and fixes header guards that do not adhere to LLVM style.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvm-header-guard.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/llvm/header-guard.html
 /// The check supports these options:
 ///   - `HeaderFileExtensions`: a semicolon-separated list of filename
 ///     extensions of header files (The filename extension should not contain

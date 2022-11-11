@@ -12,6 +12,7 @@
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
 #include "clang/Tooling/Transformer/Stencil.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
@@ -1617,10 +1618,9 @@ TEST_F(TransformerTest, MultipleFiles) {
       "clang-tool", std::make_shared<PCHContainerOperations>(),
       {{"input.h", Header}}));
 
-  std::sort(Changes.begin(), Changes.end(),
-            [](const AtomicChange &L, const AtomicChange &R) {
-              return L.getFilePath() < R.getFilePath();
-            });
+  llvm::sort(Changes, [](const AtomicChange &L, const AtomicChange &R) {
+    return L.getFilePath() < R.getFilePath();
+  });
 
   ASSERT_EQ(Changes[0].getFilePath(), "./input.h");
   EXPECT_THAT(Changes[0].getInsertedHeaders(), IsEmpty());

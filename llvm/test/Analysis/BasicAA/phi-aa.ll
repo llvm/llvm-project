@@ -223,3 +223,26 @@ split:
   load i32, i32* %ptr.next.phi
   br label %loop
 }
+
+; CHECK-LABEL: phi_of_geps_based_on_alloca
+; CHECK: NoAlias:	i32* %gep3, i32* %phi
+define void @phi_of_geps_based_on_alloca(i1 %c) {
+  %a = alloca [3 x i32]
+  %p = bitcast [3 x i32]* %a to i32*
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr i32, i32* %p, i64 1
+  br label %join
+
+else:
+  %gep2 = getelementptr i32, i32* %p, i64 2
+  br label %join
+
+join:
+  %phi = phi i32* [ %gep1, %if ], [ %gep2, %else ]
+  %gep3 = getelementptr i32, i32* %p, i64 3
+  load i32, i32* %phi
+  load i32, i32* %gep3
+  ret void
+}

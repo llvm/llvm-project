@@ -1,5 +1,5 @@
 import("//llvm/utils/TableGen/tablegen.gni")
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 tablegen("AutomataAutomata") {
   visibility = [ ":TableGenTests" ]

@@ -31,9 +31,6 @@
 
 namespace lldb_private {
 class Debugger;
-namespace repro {
-class DataRecorder;
-}
 } // namespace lldb_private
 
 namespace curses {
@@ -63,8 +60,7 @@ public:
 
   IOHandler(Debugger &debugger, IOHandler::Type type,
             const lldb::FileSP &input_sp, const lldb::StreamFileSP &output_sp,
-            const lldb::StreamFileSP &error_sp, uint32_t flags,
-            repro::DataRecorder *data_recorder);
+            const lldb::StreamFileSP &error_sp, uint32_t flags);
 
   virtual ~IOHandler();
 
@@ -173,7 +169,6 @@ protected:
   lldb::StreamFileSP m_output_sp;
   lldb::StreamFileSP m_error_sp;
   std::recursive_mutex m_output_mutex;
-  repro::DataRecorder *m_data_recorder;
   Predicate<bool> m_popped;
   Flags m_flags;
   Type m_type;
@@ -338,8 +333,7 @@ public:
                     uint32_t line_number_start, // If non-zero show line numbers
                                                 // starting at
                                                 // 'line_number_start'
-                    IOHandlerDelegate &delegate,
-                    repro::DataRecorder *data_recorder);
+                    IOHandlerDelegate &delegate);
 
   IOHandlerEditline(Debugger &debugger, IOHandler::Type type,
                     const lldb::FileSP &input_sp,
@@ -351,8 +345,7 @@ public:
                     uint32_t line_number_start, // If non-zero show line numbers
                                                 // starting at
                                                 // 'line_number_start'
-                    IOHandlerDelegate &delegate,
-                    repro::DataRecorder *data_recorder);
+                    IOHandlerDelegate &delegate);
 
   IOHandlerEditline(Debugger &, IOHandler::Type, const char *, const char *,
                     const char *, bool, bool, uint32_t,

@@ -311,3 +311,25 @@ void testMembersFromBasesInDependentContext() {
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:310:19 %s -o - | FileCheck -check-prefix=CHECK-MEMBERS-FROM-BASE-DEPENDENT %s
   // CHECK-MEMBERS-FROM-BASE-DEPENDENT: [#Base4#]base4
 }
+
+namespace members_using_fixits {
+  struct Bar {
+    void method();
+    int field;
+  };
+  struct Baz: Bar {
+    using Bar::method;
+    using Bar::field;
+  };
+  void testMethod(Baz* ptr) {
+    ptr.m
+  }
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:325:10 %s -o - | FileCheck -check-prefix=CHECK-METHOD-DECLARED-VIA-USING %s
+  // CHECK-METHOD-DECLARED-VIA-USING: [#void#]method() (requires fix-it: {325:8-325:9} to "->")
+
+  void testField(Baz* ptr) {
+    ptr.f
+  }
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:331:10 %s -o - | FileCheck -check-prefix=CHECK-FIELD-DECLARED-VIA-USING %s
+  // CHECK-FIELD-DECLARED-VIA-USING: [#int#]field (requires fix-it: {331:8-331:9} to "->")
+}

@@ -7,31 +7,31 @@
 ; RUN:     -ppc-vsr-nums-as-vr -mcpu=pwr10 | FileCheck %s
 
 ; Function Attrs: nounwind
-define void @dcbfps_test(i8* %a) {
+define void @dcbfps_test(ptr %a) {
 ; CHECK-LABEL: dcbfps_test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r3, r3, 3
 ; CHECK-NEXT:    dcbfps 0, r3
 ; CHECK-NEXT:    blr
 entry:
-  %add.a = getelementptr inbounds i8, i8* %a, i64 3
-  tail call void @llvm.ppc.dcbfps(i8* %add.a)
+  %add.a = getelementptr inbounds i8, ptr %a, i64 3
+  tail call void @llvm.ppc.dcbfps(ptr %add.a)
 ret void
 }
 
-declare void @llvm.ppc.dcbfps(i8*)
+declare void @llvm.ppc.dcbfps(ptr)
 
 ; Function Attrs: nounwind
-define void @dcbstps_test(i8* %a) {
+define void @dcbstps_test(ptr %a) {
 ; CHECK-LABEL: dcbstps_test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r3, r3, 3
 ; CHECK-NEXT:    dcbstps 0, r3
 ; CHECK-NEXT:    blr
 entry:
-  %add.a = getelementptr inbounds i8, i8* %a, i64 3
-  tail call void @llvm.ppc.dcbstps(i8* %add.a)
+  %add.a = getelementptr inbounds i8, ptr %a, i64 3
+  tail call void @llvm.ppc.dcbstps(ptr %add.a)
 ret void
 }
 
-declare void @llvm.ppc.dcbstps(i8*)
+declare void @llvm.ppc.dcbstps(ptr)

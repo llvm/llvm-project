@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=gvn -S | FileCheck %s
 
 @g = global i32 0
 
@@ -50,5 +50,5 @@ declare i32 @TestPure(i32) readonly
 
 declare i32 @TestNone(i32)
 
-; CHECK: attributes [[READNONE]] = { readnone }
-; CHECK: attributes [[READONLY]] = { readonly }
+; CHECK: attributes [[READNONE]] = { memory(none) }
+; CHECK: attributes [[READONLY]] = { memory(read) }

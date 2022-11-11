@@ -131,8 +131,8 @@ gpu.module @test_module {
     // CHECK: %[[#MASK:]] = llvm.lshr %[[#MINUS_ONE]], %[[#NUM_LANES]] : i32
     // CHECK: %[[#CLAMP:]] = llvm.sub %[[#WIDTH]], %[[#ONE]] : i32
     // CHECK: %[[#SHFL:]] = nvvm.shfl.sync bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
-    // CHECK: llvm.extractvalue %[[#SHFL]][0 : index] : !llvm.struct<(f32, i1)>
-    // CHECK: llvm.extractvalue %[[#SHFL]][1 : index] : !llvm.struct<(f32, i1)>
+    // CHECK: llvm.extractvalue %[[#SHFL]][0] : !llvm.struct<(f32, i1)>
+    // CHECK: llvm.extractvalue %[[#SHFL]][1] : !llvm.struct<(f32, i1)>
     %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : f32
     // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : i32) : i32
     // CHECK: %[[#MINUS_ONE:]] = llvm.mlir.constant(-1 : i32) : i32
@@ -140,8 +140,8 @@ gpu.module @test_module {
     // CHECK: %[[#NUM_LANES:]] = llvm.sub %[[#THIRTY_TWO]], %[[#WIDTH]] : i32
     // CHECK: %[[#MASK:]] = llvm.lshr %[[#MINUS_ONE]], %[[#NUM_LANES]] : i32
     // CHECK: %[[#SHFL:]] = nvvm.shfl.sync up %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#NUM_LANES]] {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
-    // CHECK: llvm.extractvalue %[[#SHFL]][0 : index] : !llvm.struct<(f32, i1)>
-    // CHECK: llvm.extractvalue %[[#SHFL]][1 : index] : !llvm.struct<(f32, i1)>
+    // CHECK: llvm.extractvalue %[[#SHFL]][0] : !llvm.struct<(f32, i1)>
+    // CHECK: llvm.extractvalue %[[#SHFL]][1] : !llvm.struct<(f32, i1)>
     %shflu, %predu = gpu.shuffle up %arg0, %arg1, %arg2 : f32
     // CHECK: nvvm.shfl.sync down {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
     %shfld, %predd = gpu.shuffle down %arg0, %arg1, %arg2 : f32
@@ -170,9 +170,9 @@ gpu.module @test_module {
   // CHECK: llvm.func @__nv_fabs(f64) -> f64
   // CHECK-LABEL: func @gpu_fabs
   func.func @gpu_fabs(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = math.abs %arg_f32 : f32
+    %result32 = math.absf %arg_f32 : f32
     // CHECK: llvm.call @__nv_fabsf(%{{.*}}) : (f32) -> f32
-    %result64 = math.abs %arg_f64 : f64
+    %result64 = math.absf %arg_f64 : f64
     // CHECK: llvm.call @__nv_fabs(%{{.*}}) : (f64) -> f64
     func.return %result32, %result64 : f32, f64
   }
@@ -479,6 +479,20 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_unroll
+  func.func @gpu_unroll(%arg0 : vector<4xf32>) -> vector<4xf32> {
+    %result = math.exp %arg0 : vector<4xf32>
+    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
+    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
+    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
+    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
+    func.return %result : vector<4xf32>
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK-LABEL: @kernel_func
   // CHECK: attributes
   // CHECK: gpu.kernel
@@ -487,4 +501,3 @@ gpu.module @test_module {
     gpu.return
   }
 }
-

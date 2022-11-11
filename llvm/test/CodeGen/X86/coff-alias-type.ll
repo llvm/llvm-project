@@ -2,9 +2,9 @@
 
 %struct.MyStruct = type { i8 }
 
-@_ZN8MyStructC1Ev = dso_local alias void (%struct.MyStruct*), void (%struct.MyStruct*)* @_ZN8MyStructC2Ev
+@_ZN8MyStructC1Ev = dso_local alias void (ptr), ptr @_ZN8MyStructC2Ev
 
-define dso_local void @_ZN8MyStructC2Ev(%struct.MyStruct* %this) {
+define dso_local void @_ZN8MyStructC2Ev(ptr %this) {
 entry:
   ret void
 }

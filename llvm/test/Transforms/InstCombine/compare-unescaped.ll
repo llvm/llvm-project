@@ -3,7 +3,7 @@
 
 @gp = global i32* null, align 8
 
-declare noalias i8* @malloc(i64)
+declare noalias i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
 
 define i1 @compare_global_trivialeq() {
 ; CHECK-LABEL: @compare_global_trivialeq(

@@ -45,22 +45,22 @@ program mm
  !DEF: /mm/c (Implicit) ObjectEntity REAL(4)
  c = 2.0
 !$omp parallel do  private(a,t,/c/) shared(c)
- !DEF: /mm/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+ !DEF: /mm/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,10
-  !DEF: /mm/Block1/a (OmpPrivate) HostAssoc REAL(4)
+  !DEF: /mm/OtherConstruct1/a (OmpPrivate) HostAssoc REAL(4)
   !REF: /mm/b
-  !REF: /mm/Block1/i
+  !REF: /mm/OtherConstruct1/i
   a = a+b(i)
-  !DEF: /mm/Block1/t (OmpPrivate) HostAssoc TYPE(myty)
+  !DEF: /mm/OtherConstruct1/t (OmpPrivate) HostAssoc TYPE(myty)
   !REF: /md/myty/a
-  !REF: /mm/Block1/i
+  !REF: /mm/OtherConstruct1/i
   t%a = i
-  !DEF: /mm/Block1/y (OmpPrivate) HostAssoc REAL(4)
+  !DEF: /mm/OtherConstruct1/y (OmpPrivate) HostAssoc REAL(4)
   y = 0.
-  !DEF: /mm/Block1/x (OmpPrivate) HostAssoc REAL(4)
-  !REF: /mm/Block1/a
-  !REF: /mm/Block1/i
-  !REF: /mm/Block1/y
+  !DEF: /mm/OtherConstruct1/x (OmpPrivate) HostAssoc REAL(4)
+  !REF: /mm/OtherConstruct1/a
+  !REF: /mm/OtherConstruct1/i
+  !REF: /mm/OtherConstruct1/y
   x = a+i+y
   !REF: /mm/c
   c = 3.0

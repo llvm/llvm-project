@@ -71,7 +71,7 @@ void DbiStreamBuilder::setPublicsStreamIndex(uint32_t Index) {
 }
 
 void DbiStreamBuilder::addNewFpoData(const codeview::FrameData &FD) {
-  if (!NewFpoData.hasValue())
+  if (!NewFpoData)
     NewFpoData.emplace(false);
 
   NewFpoData->addFrameData(FD);
@@ -285,7 +285,7 @@ Error DbiStreamBuilder::finalize() {
 }
 
 Error DbiStreamBuilder::finalizeMsfLayout() {
-  if (NewFpoData.hasValue()) {
+  if (NewFpoData) {
     DbgStreams[(int)DbgHeaderType::NewFPO].emplace();
     DbgStreams[(int)DbgHeaderType::NewFPO]->Size =
         NewFpoData->calculateSerializedSize();
@@ -306,7 +306,7 @@ Error DbiStreamBuilder::finalizeMsfLayout() {
   }
 
   for (auto &S : DbgStreams) {
-    if (!S.hasValue())
+    if (!S)
       continue;
     auto ExpectedIndex = Msf.addStream(S->Size);
     if (!ExpectedIndex)
@@ -427,14 +427,14 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
 
   for (auto &Stream : DbgStreams) {
     uint16_t StreamNumber = kInvalidStreamIndex;
-    if (Stream.hasValue())
+    if (Stream)
       StreamNumber = Stream->StreamNumber;
     if (auto EC = Writer.writeInteger(StreamNumber))
       return EC;
   }
 
   for (auto &Stream : DbgStreams) {
-    if (!Stream.hasValue())
+    if (!Stream)
       continue;
     assert(Stream->StreamNumber != kInvalidStreamIndex);
 

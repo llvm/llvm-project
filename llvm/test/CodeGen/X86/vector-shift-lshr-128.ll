@@ -950,8 +950,8 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ;
 ; XOPAVX2-LABEL: splatvar_modulo_shift_v16i8:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; XOPAVX2-NEXT:    vpbroadcastb %xmm1, %xmm1
+; XOPAVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; XOPAVX2-NEXT:    vpshlb %xmm1, %xmm0, %xmm0
@@ -1166,11 +1166,9 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) nounwind {
 ; SSE2-LABEL: constant_shift_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,65535,65535,65535,65535,65535]
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm2
+; SSE2-NEXT:    pandn %xmm0, %xmm1
 ; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: constant_shift_v8i16:
@@ -1220,11 +1218,9 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) nounwind {
 ; X86-SSE-LABEL: constant_shift_v8i16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,65535,65535,65535,65535,65535]
-; X86-SSE-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSE-NEXT:    pandn %xmm0, %xmm2
+; X86-SSE-NEXT:    pandn %xmm0, %xmm1
 ; X86-SSE-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    pand %xmm1, %xmm0
-; X86-SSE-NEXT:    por %xmm2, %xmm0
+; X86-SSE-NEXT:    por %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %shift = lshr <8 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
   ret <8 x i16> %shift

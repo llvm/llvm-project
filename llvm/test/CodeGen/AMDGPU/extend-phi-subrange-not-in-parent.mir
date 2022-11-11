@@ -17,39 +17,51 @@ machineFunctionInfo:
 body:             |
   ; CHECK-LABEL: name: subrange_for_this_mask_not_found
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK:   [[DEF1:%[0-9]+]]:vreg_1024_align2 = IMPLICIT_DEF
-  ; CHECK:   [[COPY:%[0-9]+]]:av_1024_align2 = COPY [[DEF1]]
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   S_NOP 0, implicit [[DEF1]]
-  ; CHECK:   S_NOP 0, implicit [[DEF1]]
-  ; CHECK:   [[DEF2:%[0-9]+]]:vreg_1024_align2 = IMPLICIT_DEF
-  ; CHECK:   S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   undef %5.sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15_sub16:av_1024_align2 = COPY [[COPY]].sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15_sub16 {
-  ; CHECK:     internal %5.sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23_sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31:av_1024_align2 = COPY [[COPY]].sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23_sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31
-  ; CHECK:   }
-  ; CHECK:   %5.sub0:av_1024_align2 = IMPLICIT_DEF
-  ; CHECK:   S_NOP 0, implicit %5.sub0
-  ; CHECK: bb.3:
-  ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   S_NOP 0, implicit %5
-  ; CHECK: bb.4:
-  ; CHECK:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
-  ; CHECK:   [[DEF2:%[0-9]+]]:av_1024_align2 = IMPLICIT_DEF
-  ; CHECK:   S_CBRANCH_VCCNZ %bb.3, implicit undef $vcc
-  ; CHECK: bb.5:
-  ; CHECK:   undef %3.sub0:vreg_1024_align2 = COPY [[DEF]]
-  ; CHECK:   S_NOP 0, implicit %3
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:av_1024_align2 = COPY [[DEF1]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead %3:vreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   S_NOP 0, implicit [[DEF1]]
+  ; CHECK-NEXT:   S_NOP 0, implicit [[DEF1]]
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_1024_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef %6.sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15_sub16:av_1024_align2 = COPY [[COPY]].sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15_sub16 {
+  ; CHECK-NEXT:     internal %6.sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23_sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31:av_1024_align2 = COPY [[COPY]].sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23_sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31
+  ; CHECK-NEXT:   }
+  ; CHECK-NEXT:   %6.sub0:av_1024_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   S_NOP 0, implicit %6.sub0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit %6
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:av_1024_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit undef $vcc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5:
+  ; CHECK-NEXT:   undef %4.sub0:vreg_1024_align2 = COPY [[DEF]]
+  ; CHECK-NEXT:   S_NOP 0, implicit %4
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vreg_1024_align2 = IMPLICIT_DEF
     %2:vreg_1024_align2 = COPY %1
 
   bb.1:
+    %5:vreg_64 = IMPLICIT_DEF
     S_NOP 0, implicit %1
     S_NOP 0, implicit %1
     %1:vreg_1024_align2 = IMPLICIT_DEF

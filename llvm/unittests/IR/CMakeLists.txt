@@ -34,6 +34,7 @@ add_llvm_unittest(IRTests
   ModuleTest.cpp
   PassManagerTest.cpp
   PatternMatch.cpp
+  ShuffleVectorInstTest.cpp
   TimePassesTest.cpp
   TypesTest.cpp
   UseTest.cpp

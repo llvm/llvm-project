@@ -39,7 +39,7 @@ public:
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
 };
-} // end anonymous namespace
+} // end namespace
 
 static MCDisassembler *createLoongArchDisassembler(const Target &T,
                                                    const MCSubtargetInfo &STI,

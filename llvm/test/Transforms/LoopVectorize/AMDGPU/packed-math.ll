@@ -31,9 +31,9 @@ define half @vectorize_v2f16_loop(half addrspace(1)* noalias %s) {
 ; GFX9:       scalar.ph:
 ; GFX9-NEXT:    br label [[FOR_BODY:%.*]]
 ; GFX9:       for.body:
-; GFX9-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; GFX9-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; GFX9:       for.end:
-; GFX9-NEXT:    [[ADD_LCSSA:%.*]] = phi half [ undef, [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
+; GFX9-NEXT:    [[ADD_LCSSA:%.*]] = phi half [ poison, [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; GFX9-NEXT:    ret half [[ADD_LCSSA]]
 ;
 ; VI-LABEL: @vectorize_v2f16_loop(
@@ -63,9 +63,9 @@ define half @vectorize_v2f16_loop(half addrspace(1)* noalias %s) {
 ; VI:       scalar.ph:
 ; VI-NEXT:    br label [[FOR_BODY:%.*]]
 ; VI:       for.body:
-; VI-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; VI-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VI:       for.end:
-; VI-NEXT:    [[ADD_LCSSA:%.*]] = phi half [ undef, [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
+; VI-NEXT:    [[ADD_LCSSA:%.*]] = phi half [ poison, [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; VI-NEXT:    ret half [[ADD_LCSSA]]
 ;
 ; CI-LABEL: @vectorize_v2f16_loop(

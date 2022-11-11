@@ -28,6 +28,9 @@ enum class FloatABI {
 
 FloatABI getSparcFloatABI(const Driver &D, const llvm::opt::ArgList &Args);
 
+std::string getSparcTargetCPU(const Driver &D, const llvm::opt::ArgList &Args,
+                              const llvm::Triple &Triple);
+
 void getSparcTargetFeatures(const Driver &D, const llvm::opt::ArgList &Args,
                             std::vector<llvm::StringRef> &Features);
 const char *getSparcAsmModeForCPU(llvm::StringRef Name,

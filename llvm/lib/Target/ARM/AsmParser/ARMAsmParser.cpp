@@ -302,7 +302,7 @@ class ARMAsmParser : public MCTargetAsmParser {
     ITInst.addOperand(MCOperand::createImm(ITState.Mask));
     Out.emitInstruction(ITInst, getSTI());
 
-    // Emit the conditonal instructions
+    // Emit the conditional instructions
     assert(PendingConditionalInsts.size() <= 4);
     for (const MCInst &Inst : PendingConditionalInsts) {
       Out.emitInstruction(Inst, getSTI());
@@ -734,7 +734,7 @@ public:
   void ReportNearMisses(SmallVectorImpl<NearMissInfo> &NearMisses, SMLoc IDLoc,
                         OperandVector &Operands);
 
-  void doBeforeLabelEmit(MCSymbol *Symbol) override;
+  void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override;
 
   void onLabelParsed(MCSymbol *Symbol) override;
 };
@@ -6223,7 +6223,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
     // Fall though for the Identifier case that is not a register or a
     // special name.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AsmToken::LParen:  // parenthesized expressions like (_strcmp-4)
   case AsmToken::Integer: // things like 1f and 2b as a branch targets
@@ -6290,7 +6290,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return false;
     }
     // w/ a ':' after the '#', it's just like a plain ':'.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AsmToken::Colon: {
     S = Parser.getTok().getLoc();
@@ -8273,6 +8273,26 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error (Operands[3]->getStartLoc(),
                     "Qd register and Qn register can't be identical");
     }
+    if (Operands[3]->getReg() == Operands[5]->getReg()) {
+      return Error (Operands[3]->getStartLoc(),
+                    "Qd register and Qm register can't be identical");
+    }
+    break;
+  }
+  case ARM::MVE_VREV64_8:
+  case ARM::MVE_VREV64_16:
+  case ARM::MVE_VREV64_32:
+  case ARM::MVE_VQDMULL_qr_s32bh:
+  case ARM::MVE_VQDMULL_qr_s32th: {
+    if (Operands[3]->getReg() == Operands[4]->getReg()) {
+      return Error (Operands[3]->getStartLoc(),
+                    "Qd register and Qn register can't be identical");
+    }
+    break;
+  }
+  case ARM::MVE_VCADDi32:
+  case ARM::MVE_VCADDf32:
+  case ARM::MVE_VHCADDs32: {
     if (Operands[3]->getReg() == Operands[5]->getReg()) {
       return Error (Operands[3]->getStartLoc(),
                     "Qd register and Qm register can't be identical");
@@ -11184,7 +11204,7 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
   return false;
 }
 
-void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol) {
+void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
   // We need to flush the current implicit IT block on a label, because it is
   // not legal to branch into an IT block.
   flushPendingInstructions(getStreamer());
@@ -11381,11 +11401,11 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
     StringRef Name = Parser.getTok().getIdentifier();
     Optional<unsigned> Ret = ELFAttrs::attrTypeFromString(
         Name, ARMBuildAttrs::getARMAttributeTags());
-    if (!Ret.hasValue()) {
+    if (!Ret) {
       Error(TagLoc, "attribute name not recognised: " + Name);
       return false;
     }
-    Tag = Ret.getValue();
+    Tag = *Ret;
     Parser.Lex();
   } else {
     const MCExpr *AttrExpr;
@@ -11439,12 +11459,20 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
       return true;
   }
 
+  std::string EscapedValue;
   if (IsStringValue) {
     if (Parser.getTok().isNot(AsmToken::String))
       return Error(Parser.getTok().getLoc(), "bad string constant");
 
-    StringValue = Parser.getTok().getStringContents();
-    Parser.Lex();
+    if (Tag == ARMBuildAttrs::also_compatible_with) {
+      if (Parser.parseEscapedString(EscapedValue))
+        return Error(Parser.getTok().getLoc(), "bad escaped string constant");
+
+      StringValue = EscapedValue;
+    } else {
+      StringValue = Parser.getTok().getStringContents();
+      Parser.Lex();
+    }
   }
 
   if (Parser.parseEOL())

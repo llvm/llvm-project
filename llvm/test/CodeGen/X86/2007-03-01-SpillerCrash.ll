@@ -9,7 +9,7 @@ define void @test() nounwind {
 ; CHECK-NEXT:    ud2
 test.exit:
 	fmul <4 x float> zeroinitializer, zeroinitializer		; <<4 x float>>:0 [#uses=4]
-	load <4 x float>, <4 x float>* null		; <<4 x float>>:1 [#uses=1]
+	load <4 x float>, ptr null		; <<4 x float>>:1 [#uses=1]
 	shufflevector <4 x float> %1, <4 x float> undef, <4 x i32> < i32 3, i32 3, i32 3, i32 3 >		; <<4 x float>>:2 [#uses=1]
 	fmul <4 x float> %0, %2		; <<4 x float>>:3 [#uses=1]
 	fsub <4 x float> zeroinitializer, %3		; <<4 x float>>:4 [#uses=1]

@@ -366,3 +366,7 @@ unsigned MCSubtargetInfo::getMinPrefetchStride(unsigned NumMemAccesses,
                                                bool HasCall) const {
   return 1;
 }
+
+bool MCSubtargetInfo::shouldPrefetchAddressSpace(unsigned AS) const {
+  return !AS;
+}

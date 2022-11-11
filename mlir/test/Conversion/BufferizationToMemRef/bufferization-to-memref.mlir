@@ -39,21 +39,19 @@ func.func @conversion_unknown(%arg0 : memref<*xf32>) -> memref<*xf32> {
 
 // -----
 
-// CHECK: #[[$MAP:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-#map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 // CHECK-LABEL: func @conversion_with_layout_map(
-//  CHECK-SAME:     %[[ARG:.*]]: memref<?xf32, #[[$MAP]]>
+//  CHECK-SAME:     %[[ARG:.*]]: memref<?xf32, strided<[?], offset: ?>>
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[DIM:.*]] = memref.dim %[[ARG]], %[[C0]]
 //       CHECK:   %[[ALLOC:.*]] = memref.alloc(%[[DIM]]) : memref<?xf32>
-//       CHECK:   %[[CASTED:.*]] = memref.cast %[[ALLOC]] : memref<?xf32> to memref<?xf32, #[[$MAP]]>
+//       CHECK:   %[[CASTED:.*]] = memref.cast %[[ALLOC]] : memref<?xf32> to memref<?xf32, strided<[?], offset: ?>>
 //       CHECK:   memref.copy
 //       CHECK:   memref.dealloc
 //       CHECK:   return %[[CASTED]]
-func.func @conversion_with_layout_map(%arg0 : memref<?xf32, #map>) -> memref<?xf32, #map> {
-  %1 = bufferization.clone %arg0 : memref<?xf32, #map> to memref<?xf32, #map>
-  memref.dealloc %arg0 : memref<?xf32, #map>
-  return %1 : memref<?xf32, #map>
+func.func @conversion_with_layout_map(%arg0 : memref<?xf32, strided<[?], offset: ?>>) -> memref<?xf32, strided<[?], offset: ?>> {
+  %1 = bufferization.clone %arg0 : memref<?xf32, strided<[?], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
+  memref.dealloc %arg0 : memref<?xf32, strided<[?], offset: ?>>
+  return %1 : memref<?xf32, strided<[?], offset: ?>>
 }
 
 // -----
@@ -61,11 +59,10 @@ func.func @conversion_with_layout_map(%arg0 : memref<?xf32, #map>) -> memref<?xf
 // This bufferization.clone cannot be lowered because a buffer with this layout
 // map cannot be allocated (or casted to).
 
-#map2 = affine_map<(d0)[s0] -> (d0 * 10 + s0)>
-func.func @conversion_with_invalid_layout_map(%arg0 : memref<?xf32, #map2>)
-    -> memref<?xf32, #map2> {
+func.func @conversion_with_invalid_layout_map(%arg0 : memref<?xf32, strided<[10], offset: ?>>)
+    -> memref<?xf32, strided<[10], offset: ?>> {
 // expected-error@+1 {{failed to legalize operation 'bufferization.clone' that was explicitly marked illegal}}
-  %1 = bufferization.clone %arg0 : memref<?xf32, #map2> to memref<?xf32, #map2>
-  memref.dealloc %arg0 : memref<?xf32, #map2>
-  return %1 : memref<?xf32, #map2>
+  %1 = bufferization.clone %arg0 : memref<?xf32, strided<[10], offset: ?>> to memref<?xf32, strided<[10], offset: ?>>
+  memref.dealloc %arg0 : memref<?xf32, strided<[10], offset: ?>>
+  return %1 : memref<?xf32, strided<[10], offset: ?>>
 }

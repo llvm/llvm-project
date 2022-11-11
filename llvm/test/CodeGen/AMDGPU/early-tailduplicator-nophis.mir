@@ -10,20 +10,25 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tail_duplicate_nophis
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK:   S_BRANCH %bb.3
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK:   S_SLEEP 9
-  ; CHECK: bb.3:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[PHI:%[0-9]+]]:sreg_32 = PHI [[DEF]], %bb.2, %1, %bb.3, [[S_MOV_B32_]], %bb.0
-  ; CHECK:   S_NOP 0, implicit [[PHI]]
-  ; CHECK:   S_SLEEP 1
-  ; CHECK:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK:   S_BRANCH %bb.3
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; CHECK-NEXT:   S_BRANCH %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   S_SLEEP 9
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sreg_32 = PHI [[DEF]], %bb.2, %1, %bb.3, [[S_MOV_B32_]], %bb.0
+  ; CHECK-NEXT:   S_NOP 0, implicit [[PHI]]
+  ; CHECK-NEXT:   S_SLEEP 1
+  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; CHECK-NEXT:   S_BRANCH %bb.3
   bb.1:
 
   bb.2:

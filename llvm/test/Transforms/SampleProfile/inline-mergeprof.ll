@@ -1,6 +1,4 @@
 ; Test we lose details of not inlined profile without '-sample-profile-merge-inlinee'
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=false -use-profiled-call-graph=0 -enable-new-pm=0 -S | FileCheck -check-prefix=SCALE %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -use-profiled-call-graph=0 -enable-new-pm=0 -S | FileCheck -check-prefix=SCALE %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=false -use-profiled-call-graph=0 -S | FileCheck -check-prefix=SCALE %s
 
 ; Test we properly merge not inlined profile with '-sample-profile-merge-inlinee'
@@ -13,7 +11,6 @@
 
 ; Test we properly merge not inlined profile with '--sample-profile-merge-inlinee' even if '--disable-sample-loader-inlining' is true
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.md5.prof -sample-profile-merge-inlinee=true --disable-sample-loader-inlining -use-profiled-call-graph=0 -S | FileCheck -check-prefix=MERGE  %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true --disable-sample-loader-inlining -use-profiled-call-graph=0 -enable-new-pm=0 -S | FileCheck -check-prefix=SCALE %s
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
@@ -22,12 +19,12 @@ entry:
   %retval = alloca i32, align 4
   %s = alloca i32, align 4
   %i = alloca i32, align 4
-  %tmp = load i32, i32* %i, align 4, !dbg !8
-  %tmp1 = load i32, i32* %s, align 4, !dbg !8
+  %tmp = load i32, ptr %i, align 4, !dbg !8
+  %tmp1 = load i32, ptr %s, align 4, !dbg !8
   %call = call i32 @_Z3sumii(i32 %tmp, i32 %tmp1), !dbg !8
 ; SCALE: call i32 @_Z3sumii
 ; MERGE: call i32 @_Z3sumii
-  store i32 %call, i32* %s, align 4, !dbg !8
+  store i32 %call, ptr %s, align 4, !dbg !8
   ret i32 0, !dbg !11
 }
 
@@ -35,13 +32,13 @@ define i32 @_Z3sumii(i32 %x, i32 %y) #0 !dbg !12 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  store i32 %y, i32* %y.addr, align 4
-  %tmp = load i32, i32* %x.addr, align 4, !dbg !13
-  %tmp1 = load i32, i32* %y.addr, align 4, !dbg !13
+  store i32 %x, ptr %x.addr, align 4
+  store i32 %y, ptr %y.addr, align 4
+  %tmp = load i32, ptr %x.addr, align 4, !dbg !13
+  %tmp1 = load i32, ptr %y.addr, align 4, !dbg !13
   %add = add nsw i32 %tmp, %tmp1, !dbg !13
-  %tmp2 = load i32, i32* %x.addr, align 4, !dbg !13
-  %tmp3 = load i32, i32* %y.addr, align 4, !dbg !13
+  %tmp2 = load i32, ptr %x.addr, align 4, !dbg !13
+  %tmp3 = load i32, ptr %y.addr, align 4, !dbg !13
   %cmp1 = icmp ne i32 %tmp3, 100, !dbg !13
   br i1 %cmp1, label %if.then, label %if.else, !dbg !13
 
@@ -57,17 +54,17 @@ define i32 @_Z3subii(i32 %x, i32 %y) #0 !dbg !16 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  store i32 %y, i32* %y.addr, align 4
-  %tmp = load i32, i32* %x.addr, align 4, !dbg !17
-  %tmp1 = load i32, i32* %y.addr, align 4, !dbg !17
+  store i32 %x, ptr %x.addr, align 4
+  store i32 %y, ptr %y.addr, align 4
+  %tmp = load i32, ptr %x.addr, align 4, !dbg !17
+  %tmp1 = load i32, ptr %y.addr, align 4, !dbg !17
   %add = sub nsw i32 %tmp, %tmp1, !dbg !17
   ret i32 %add, !dbg !18
 }
 
 attributes #0 = { "use-sample-profile" }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

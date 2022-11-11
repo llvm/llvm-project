@@ -199,10 +199,10 @@ bb3:
 ; PR26354: https://llvm.org/bugs/show_bug.cgi?id=26354
 ; Don't create a shufflevector if we know that we're not going to replace the insertelement.
 
-define double @pr26354(<2 x double>* %tmp, i1 %B) {
+define double @pr26354(ptr %tmp, i1 %B) {
 ; CHECK-LABEL: @pr26354(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* [[TMP:%.*]], align 16
+; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, ptr [[TMP:%.*]], align 16
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[E2:%.*]] = extractelement <2 x double> [[LD]], i64 1
@@ -217,7 +217,7 @@ define double @pr26354(<2 x double>* %tmp, i1 %B) {
 ;
 
 entry:
-  %ld = load <2 x double>, <2 x double>* %tmp
+  %ld = load <2 x double>, ptr %tmp
   %e1 = extractelement <2 x double> %ld, i32 0
   %e2 = extractelement <2 x double> %ld, i32 1
   br i1 %B, label %if, label %end
@@ -240,7 +240,7 @@ define <4 x float> @PR30923(<2 x float> %x) {
 ; CHECK-LABEL: @PR30923(
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[EXT1:%.*]] = extractelement <2 x float> [[X:%.*]], i64 1
-; CHECK-NEXT:    store float [[EXT1]], float* undef, align 4
+; CHECK-NEXT:    store float [[EXT1]], ptr undef, align 4
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[EXT2:%.*]] = extractelement <2 x float> [[X]], i64 0
@@ -250,7 +250,7 @@ define <4 x float> @PR30923(<2 x float> %x) {
 ;
 bb1:
   %ext1 = extractelement <2 x float> %x, i32 1
-  store float %ext1, float* undef, align 4
+  store float %ext1, ptr undef, align 4
   br label %bb2
 
 bb2:

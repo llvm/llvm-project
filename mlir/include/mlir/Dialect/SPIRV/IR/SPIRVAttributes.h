@@ -58,7 +58,7 @@ public:
   static InterfaceVarABIAttr get(IntegerAttr descriptorSet, IntegerAttr binding,
                                  IntegerAttr storageClass);
 
-  /// Returns the attribute kind's name (without the 'spv.' prefix).
+  /// Returns the attribute kind's name (without the 'spirv.' prefix).
   static StringRef getKindName();
 
   /// Returns descriptor set.
@@ -90,7 +90,7 @@ public:
   static VerCapExtAttr get(IntegerAttr version, ArrayAttr capabilities,
                            ArrayAttr extensions);
 
-  /// Returns the attribute kind's name (without the 'spv.' prefix).
+  /// Returns the attribute kind's name (without the 'spirv.' prefix).
   static StringRef getKindName();
 
   /// Returns the version.
@@ -142,7 +142,7 @@ public:
                            DeviceType deviceType, uint32_t deviceId,
                            ResourceLimitsAttr limits);
 
-  /// Returns the attribute kind's name (without the 'spv.' prefix).
+  /// Returns the attribute kind's name (without the 'spirv.' prefix).
   static StringRef getKindName();
 
   /// Returns the (version, capabilities, extensions) triple attribute.

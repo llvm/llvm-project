@@ -49,6 +49,9 @@ public:
 } // end anonymous namespace
 
 void ARCAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  ARC_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                      getSubtargetInfo().getFeatureBits());
+
   SmallString<128> Str;
   raw_svector_ostream O(Str);
 

@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 // Basic base class test.
 struct f0_s0 { unsigned a; };
 struct f0_s1 : public f0_s0 { void *b; };
-// CHECK-LABEL: define{{.*}} void @_Z2f05f0_s1(i32 %a0.coerce0, i8* %a0.coerce1)
+// CHECK-LABEL: define{{.*}} void @_Z2f05f0_s1(i32 %a0.coerce0, ptr %a0.coerce1)
 void f0(f0_s1 a0) { }
 
 // Check with two eight-bytes in base class.
@@ -34,17 +34,17 @@ s4_mfp f4_1(s4_mfp a) { return a; }
 
 // A struct with <= one eightbyte before a member data pointer should still
 // be allowed in registers.
-// CHECK-LABEL: define{{.*}} void @{{.*}}f_struct_with_mdp{{.*}}(i8* %a.coerce0, i64 %a.coerce1)
+// CHECK-LABEL: define{{.*}} void @{{.*}}f_struct_with_mdp{{.*}}(ptr %a.coerce0, i64 %a.coerce1)
 struct struct_with_mdp { char *a; s4_mdp b; };
 void f_struct_with_mdp(struct_with_mdp a) { (void)a; }
 
 // A struct with anything before a member function will be too big and
 // goes in memory.
-// CHECK-LABEL: define{{.*}} void @{{.*}}f_struct_with_mfp_0{{.*}}(%struct{{.*}} byval(%struct{{.*}}) align 8 %a)
+// CHECK-LABEL: define{{.*}} void @{{.*}}f_struct_with_mfp_0{{.*}}(ptr byval(%struct{{.*}}) align 8 %a)
 struct struct_with_mfp_0 { char a; s4_mfp b; };
 void f_struct_with_mfp_0(struct_with_mfp_0 a) { (void)a; }
 
-// CHECK-LABEL: define{{.*}} void @{{.*}}f_struct_with_mfp_1{{.*}}(%struct{{.*}} byval(%struct{{.*}}) align 8 %a)
+// CHECK-LABEL: define{{.*}} void @{{.*}}f_struct_with_mfp_1{{.*}}(ptr byval(%struct{{.*}}) align 8 %a)
 struct struct_with_mfp_1 { void *a; s4_mfp b; };
 void f_struct_with_mfp_1(struct_with_mfp_1 a) { (void)a; }
 
@@ -57,7 +57,7 @@ void AddKeyword(StringRef, int x);
 
 void foo() {
   // CHECK-LABEL: define{{.*}} void @_ZN6PR75233fooEv()
-  // CHECK: call void @_ZN6PR752310AddKeywordENS_9StringRefEi(i8* {{.*}}, i32 4)
+  // CHECK: call void @_ZN6PR752310AddKeywordENS_9StringRefEi(ptr {{.*}}, i32 4)
   AddKeyword(StringRef(), 4);
 }
 }
@@ -69,7 +69,7 @@ namespace PR7742 { // Also rdar://8250764
 
   struct c2 : public s2 {};
 
-  // CHECK-LABEL: define{{.*}} <2 x float> @_ZN6PR77423fooEPNS_2c2E(%"struct.PR7742::c2"* %P)
+  // CHECK-LABEL: define{{.*}} <2 x float> @_ZN6PR77423fooEPNS_2c2E(ptr %P)
   c2 foo(c2 *P) {
     return c2();
   }
@@ -87,7 +87,7 @@ namespace PR5179 {
     B1 b1;
   };
 
-  // CHECK-LABEL: define{{.*}} i8* @_ZN6PR51793barENS_2B2E(i32* %b2.coerce)
+  // CHECK-LABEL: define{{.*}} ptr @_ZN6PR51793barENS_2B2E(ptr %b2.coerce)
   const void *bar(B2 b2) {
     return b2.b1.pa;
   }
@@ -143,16 +143,16 @@ namespace test7 {
 
   // And a couple extra related tests:
   A y(A, long double, long, long, StringRef) { return A(); }
-  // CHECK: define{{.*}} void @_ZN5test71yENS_1AEellNS_9StringRefE({{.*}} i8*
+  // CHECK: define{{.*}} void @_ZN5test71yENS_1AEellNS_9StringRefE({{.*}} ptr
   struct StringDouble {char * ptr; double d;};
   A z(A, A, A, A, A, StringDouble) { return A(); }
   A zz(A, A, A, A, StringDouble) { return A(); }
   // CHECK: define{{.*}} void @_ZN5test71zENS_1AES0_S0_S0_S0_NS_12StringDoubleE({{.*}} byval({{.*}}) align 8 {{%.*}})
-  // CHECK: define{{.*}} void @_ZN5test72zzENS_1AES0_S0_S0_NS_12StringDoubleE({{.*}} i8*
+  // CHECK: define{{.*}} void @_ZN5test72zzENS_1AES0_S0_S0_NS_12StringDoubleE({{.*}} ptr
 }
 
 namespace test8 {
-  // CHECK: declare void @_ZN5test83fooENS_1BE(%"class.test8::B"* byval(%"class.test8::B") align 8)
+  // CHECK: declare void @_ZN5test83fooENS_1BE(ptr byval(%"class.test8::B") align 8)
   class A {
    char big[17];
   };
@@ -173,25 +173,25 @@ namespace test9 {
 
   struct T { void *data[2]; };
 
-  // CHECK: define{{.*}} void @_ZN5test93fooEPNS_1SEPNS_1TE([[S:%.*]]* %0, [[T:%.*]]* %1)
+  // CHECK: define{{.*}} void @_ZN5test93fooEPNS_1SEPNS_1TE(ptr %0, ptr %1)
   void foo(S*, T*) {}
 
-  // CHECK: define{{.*}} void @_ZN5test91aEiiiiNS_1TEPv([[S]]* noalias sret([[S]]) align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, i32 %3, [[T]]* byval([[T]]) align 8 %4, i8* %5)
+  // CHECK: define{{.*}} void @_ZN5test91aEiiiiNS_1TEPv(ptr noalias sret([[S:%.*]]) align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, i32 %3, ptr byval([[T:%.*]]) align 8 %4, ptr %5)
   S a(int, int, int, int, T, void*) {
     return S();
   }
 
-  // CHECK: define{{.*}} [[S]]* @_ZN5test91bEPNS_1SEiiiiNS_1TEPv([[S]]* {{%.*}}, i32 %0, i32 %1, i32 %2, i32 %3, [[T:%.*]]* byval([[T]]) align 8 %4, i8* %5)
+  // CHECK: define{{.*}} ptr @_ZN5test91bEPNS_1SEiiiiNS_1TEPv(ptr {{%.*}}, i32 %0, i32 %1, i32 %2, i32 %3, ptr byval([[T]]) align 8 %4, ptr %5)
   S* b(S* sret, int, int, int, int, T, void*) {
     return sret;
   }
 
-  // CHECK: define{{.*}} void @_ZN5test91cEiiiNS_1TEPv([[S]]* noalias sret([[S]]) align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, i8* {{%.*}}, i8* {{%.*}}, i8* %3)
+  // CHECK: define{{.*}} void @_ZN5test91cEiiiNS_1TEPv(ptr noalias sret([[S]]) align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, ptr {{%.*}}, ptr {{%.*}}, ptr %3)
   S c(int, int, int, T, void*) {
     return S();
   }
 
-  // CHECK: define{{.*}} [[S]]* @_ZN5test91dEPNS_1SEiiiNS_1TEPv([[S]]* {{%.*}}, i32 %0, i32 %1, i32 %2, i8* {{%.*}}, i8* {{%.*}}, i8* %3)
+  // CHECK: define{{.*}} ptr @_ZN5test91dEPNS_1SEiiiNS_1TEPv(ptr {{%.*}}, i32 %0, i32 %1, i32 %2, ptr {{%.*}}, ptr {{%.*}}, ptr %3)
   S* d(S* sret, int, int, int, T, void*) {
     return sret;
   }
@@ -207,7 +207,7 @@ struct BasePacked {
 struct DerivedPacked : public BasePacked {
   int three;
 };
-// CHECK-LABEL: define{{.*}} i32 @_ZN6test1020FuncForDerivedPackedENS_13DerivedPackedE({{.*}}* byval({{.*}}) align 8
+// CHECK-LABEL: define{{.*}} i32 @_ZN6test1020FuncForDerivedPackedENS_13DerivedPackedE(ptr byval({{.*}}) align 8
 int FuncForDerivedPacked(DerivedPacked d) {
   return d.three;
 }

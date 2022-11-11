@@ -125,7 +125,7 @@ define <2 x i64> @pmovzxbq_1() nounwind {
 ; X64-AVX512-NEXT:    ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
 entry:
-	%0 = load i16, i16* @g16, align 2		; <i16> [#uses=1]
+	%0 = load i16, ptr @g16, align 2		; <i16> [#uses=1]
 	%1 = insertelement <8 x i16> undef, i16 %0, i32 0		; <<8 x i16>> [#uses=1]
 	%2 = bitcast <8 x i16> %1 to <16 x i8>		; <<16 x i8>> [#uses=1]
 	%3 = tail call <2 x i64> @llvm.x86.sse41.pmovzxbq(<16 x i8> %2) nounwind readnone		; <<2 x i64>> [#uses=1]
@@ -556,7 +556,7 @@ entry:
   ret <2 x float> %tmp9
 }
 
-define <4 x float> @insertps_from_shufflevector_1(<4 x float> %a, <4 x float>* nocapture readonly %pb) {
+define <4 x float> @insertps_from_shufflevector_1(<4 x float> %a, ptr nocapture readonly %pb) {
 ; X86-SSE-LABEL: insertps_from_shufflevector_1:
 ; X86-SSE:       ## %bb.0: ## %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -602,7 +602,7 @@ define <4 x float> @insertps_from_shufflevector_1(<4 x float> %a, <4 x float>* n
 ; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[0]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
 entry:
-  %0 = load <4 x float>, <4 x float>* %pb, align 16
+  %0 = load <4 x float>, ptr %pb, align 16
   %vecinit6 = shufflevector <4 x float> %a, <4 x float> %0, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
   ret <4 x float> %vecinit6
 }
@@ -632,7 +632,7 @@ entry:
 
 ; For loading an i32 from memory into an xmm register we use pinsrd
 ; instead of insertps
-define <4 x i32> @pinsrd_from_shufflevector_i32(<4 x i32> %a, <4 x i32>* nocapture readonly %pb) {
+define <4 x i32> @pinsrd_from_shufflevector_i32(<4 x i32> %a, ptr nocapture readonly %pb) {
 ; X86-SSE-LABEL: pinsrd_from_shufflevector_i32:
 ; X86-SSE:       ## %bb.0: ## %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -680,7 +680,7 @@ define <4 x i32> @pinsrd_from_shufflevector_i32(<4 x i32> %a, <4 x i32>* nocaptu
 ; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %pb, align 16
+  %0 = load <4 x i32>, ptr %pb, align 16
   %vecinit6 = shufflevector <4 x i32> %a, <4 x i32> %0, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
   ret <4 x i32> %vecinit6
 }
@@ -714,7 +714,7 @@ entry:
   ret <4 x i32> %vecinit6
 }
 
-define <4 x float> @insertps_from_load_ins_elt_undef(<4 x float> %a, float* %b) {
+define <4 x float> @insertps_from_load_ins_elt_undef(<4 x float> %a, ptr %b) {
 ; X86-SSE-LABEL: insertps_from_load_ins_elt_undef:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -753,14 +753,14 @@ define <4 x float> @insertps_from_load_ins_elt_undef(<4 x float> %a, float* %b) 
 ; X64-AVX512-NEXT:    vinsertps $16, (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0x07,0x10]
 ; X64-AVX512-NEXT:    ## xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %1 = load float, float* %b, align 4
+  %1 = load float, ptr %b, align 4
   %2 = insertelement <4 x float> undef, float %1, i32 0
   %result = shufflevector <4 x float> %a, <4 x float> %2, <4 x i32> <i32 0, i32 4, i32 2, i32 3>
   ret <4 x float> %result
 }
 
 ; TODO: Like on pinsrd_from_shufflevector_i32, remove this mov instr
-define <4 x i32> @insertps_from_load_ins_elt_undef_i32(<4 x i32> %a, i32* %b) {
+define <4 x i32> @insertps_from_load_ins_elt_undef_i32(<4 x i32> %a, ptr %b) {
 ; X86-SSE-LABEL: insertps_from_load_ins_elt_undef_i32:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -793,7 +793,7 @@ define <4 x i32> @insertps_from_load_ins_elt_undef_i32(<4 x i32> %a, i32* %b) {
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vpinsrd $2, (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x22,0x07,0x02]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %1 = load i32, i32* %b, align 4
+  %1 = load i32, ptr %b, align 4
   %2 = insertelement <4 x i32> undef, i32 %1, i32 0
   %result = shufflevector <4 x i32> %a, <4 x i32> %2, <4 x i32> <i32 0, i32 1, i32 4, i32 3>
   ret <4 x i32> %result
@@ -1368,7 +1368,7 @@ define <8 x i16> @blendvb_fallback(<8 x i1> %mask, <8 x i16> %x, <8 x i16> %y) {
 }
 
 ; On X86, account for the argument's move to registers
-define <4 x float> @insertps_from_vector_load(<4 x float> %a, <4 x float>* nocapture readonly %pb) {
+define <4 x float> @insertps_from_vector_load(<4 x float> %a, ptr nocapture readonly %pb) {
 ; X86-SSE-LABEL: insertps_from_vector_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -1413,14 +1413,14 @@ define <4 x float> @insertps_from_vector_load(<4 x float> %a, <4 x float>* nocap
 ; X64-AVX512-NEXT:    vinsertps $48, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0x30]
 ; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[0]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %1 = load <4 x float>, <4 x float>* %pb, align 16
+  %1 = load <4 x float>, ptr %pb, align 16
   %2 = tail call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a, <4 x float> %1, i32 48)
   ret <4 x float> %2
 }
 
 ;; Use a non-zero CountS for insertps
 ;; Try to match a bit more of the instr, since we need the load's offset.
-define <4 x float> @insertps_from_vector_load_offset(<4 x float> %a, <4 x float>* nocapture readonly %pb) {
+define <4 x float> @insertps_from_vector_load_offset(<4 x float> %a, ptr nocapture readonly %pb) {
 ; X86-SSE-LABEL: insertps_from_vector_load_offset:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -1465,13 +1465,13 @@ define <4 x float> @insertps_from_vector_load_offset(<4 x float> %a, <4 x float>
 ; X64-AVX512-NEXT:    vinsertps $96, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0x60]
 ; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1],xmm1[1],xmm0[3]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %1 = load <4 x float>, <4 x float>* %pb, align 16
+  %1 = load <4 x float>, ptr %pb, align 16
   %2 = tail call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a, <4 x float> %1, i32 96)
   ret <4 x float> %2
 }
 
 ;; Try to match a bit more of the instr, since we need the load's offset.
-define <4 x float> @insertps_from_vector_load_offset_2(<4 x float> %a, <4 x float>* nocapture readonly %pb, i64 %index) {
+define <4 x float> @insertps_from_vector_load_offset_2(<4 x float> %a, ptr nocapture readonly %pb, i64 %index) {
 ; X86-SSE-LABEL: insertps_from_vector_load_offset_2:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -1525,13 +1525,13 @@ define <4 x float> @insertps_from_vector_load_offset_2(<4 x float> %a, <4 x floa
 ; X64-AVX512-NEXT:    vinsertps $192, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0xc0]
 ; X64-AVX512-NEXT:    ## xmm0 = xmm1[3],xmm0[1,2,3]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %1 = getelementptr inbounds <4 x float>, <4 x float>* %pb, i64 %index
-  %2 = load <4 x float>, <4 x float>* %1, align 16
+  %1 = getelementptr inbounds <4 x float>, ptr %pb, i64 %index
+  %2 = load <4 x float>, ptr %1, align 16
   %3 = tail call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a, <4 x float> %2, i32 192)
   ret <4 x float> %3
 }
 
-define <4 x float> @insertps_from_broadcast_loadf32(<4 x float> %a, float* nocapture readonly %fb, i64 %index) {
+define <4 x float> @insertps_from_broadcast_loadf32(<4 x float> %a, ptr nocapture readonly %fb, i64 %index) {
 ; X86-SSE-LABEL: insertps_from_broadcast_loadf32:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x08]
@@ -1573,8 +1573,8 @@ define <4 x float> @insertps_from_broadcast_loadf32(<4 x float> %a, float* nocap
 ; X64-AVX512-NEXT:    vinsertps $48, (%rdi,%rsi,4), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0x04,0xb7,0x30]
 ; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],mem[0]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %1 = getelementptr inbounds float, float* %fb, i64 %index
-  %2 = load float, float* %1, align 4
+  %1 = getelementptr inbounds float, ptr %fb, i64 %index
+  %2 = load float, ptr %1, align 4
   %3 = insertelement <4 x float> undef, float %2, i32 0
   %4 = insertelement <4 x float> %3, float %2, i32 1
   %5 = insertelement <4 x float> %4, float %2, i32 2
@@ -1583,7 +1583,7 @@ define <4 x float> @insertps_from_broadcast_loadf32(<4 x float> %a, float* nocap
   ret <4 x float> %7
 }
 
-define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, <4 x float>* nocapture readonly %b) {
+define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, ptr nocapture readonly %b) {
 ; X86-SSE-LABEL: insertps_from_broadcast_loadv4f32:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -1624,7 +1624,7 @@ define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, <4 x float
 ; X64-AVX512-NEXT:    vinsertps $48, (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0x07,0x30]
 ; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],mem[0]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %1 = load <4 x float>, <4 x float>* %b, align 4
+  %1 = load <4 x float>, ptr %b, align 4
   %2 = extractelement <4 x float> %1, i32 0
   %3 = insertelement <4 x float> undef, float %2, i32 0
   %4 = insertelement <4 x float> %3, float %2, i32 1
@@ -1634,7 +1634,7 @@ define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, <4 x float
   ret <4 x float> %7
 }
 
-define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, float* nocapture readonly %fb, i64 %index) {
+define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, ptr nocapture readonly %fb, i64 %index) {
 ; X86-SSE-LABEL: insertps_from_broadcast_multiple_use:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x08]
@@ -1738,8 +1738,8 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; X64-AVX512-NEXT:    vaddps %xmm3, %xmm2, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xe8,0x58,0xcb]
 ; X64-AVX512-NEXT:    vaddps %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x58,0xc1]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %1 = getelementptr inbounds float, float* %fb, i64 %index
-  %2 = load float, float* %1, align 4
+  %1 = getelementptr inbounds float, ptr %fb, i64 %index
+  %2 = load float, ptr %1, align 4
   %3 = insertelement <4 x float> undef, float %2, i32 0
   %4 = insertelement <4 x float> %3, float %2, i32 1
   %5 = insertelement <4 x float> %4, float %2, i32 2
@@ -1754,7 +1754,7 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
   ret <4 x float> %13
 }
 
-define <4 x float> @insertps_with_undefs(<4 x float> %a, float* %b) {
+define <4 x float> @insertps_with_undefs(<4 x float> %a, ptr %b) {
 ; X86-SSE-LABEL: insertps_with_undefs:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -1807,7 +1807,7 @@ define <4 x float> @insertps_with_undefs(<4 x float> %a, float* %b) {
 ; X64-AVX512-NEXT:    vmovlhps %xmm0, %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf0,0x16,0xc0]
 ; X64-AVX512-NEXT:    ## xmm0 = xmm1[0],xmm0[0]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %1 = load float, float* %b, align 4
+  %1 = load float, ptr %b, align 4
   %2 = insertelement <4 x float> undef, float %1, i32 0
   %result = shufflevector <4 x float> %a, <4 x float> %2, <4 x i32> <i32 4, i32 undef, i32 0, i32 7>
   ret <4 x float> %result
@@ -1815,7 +1815,7 @@ define <4 x float> @insertps_with_undefs(<4 x float> %a, float* %b) {
 
 ; Test for a bug in X86ISelLowering.cpp:getINSERTPS where we were using
 ; the destination index to change the load, instead of the source index.
-define <4 x float> @pr20087(<4 x float> %a, <4 x float> *%ptr) {
+define <4 x float> @pr20087(<4 x float> %a, ptr%ptr) {
 ; X86-SSE-LABEL: pr20087:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -1860,13 +1860,13 @@ define <4 x float> @pr20087(<4 x float> %a, <4 x float> *%ptr) {
 ; X64-AVX512-NEXT:    vinsertps $178, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0xb2]
 ; X64-AVX512-NEXT:    ## xmm0 = xmm0[0],zero,xmm0[2],xmm1[2]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %load = load <4 x float> , <4 x float> *%ptr
+  %load = load <4 x float> , ptr%ptr
   %ret = shufflevector <4 x float> %load, <4 x float> %a, <4 x i32> <i32 4, i32 undef, i32 6, i32 2>
   ret <4 x float> %ret
 }
 
 ; Edge case for insertps where we end up with a shuffle with mask=<0, 7, -1, -1>
-define void @insertps_pr20411(<4 x i32> %shuffle109, <4 x i32> %shuffle116, i32* noalias nocapture %RET) #1 {
+define void @insertps_pr20411(<4 x i32> %shuffle109, <4 x i32> %shuffle116, ptr noalias nocapture %RET) #1 {
 ; X86-SSE-LABEL: insertps_pr20411:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -1924,8 +1924,7 @@ define void @insertps_pr20411(<4 x i32> %shuffle109, <4 x i32> %shuffle116, i32*
 ; X64-AVX512-NEXT:    vmovups %xmm0, (%rdi) ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
   %shuffle117 = shufflevector <4 x i32> %shuffle109, <4 x i32> %shuffle116, <4 x i32> <i32 0, i32 7, i32 undef, i32 undef>
-  %ptrcast = bitcast i32* %RET to <4 x i32>*
-  store <4 x i32> %shuffle117, <4 x i32>* %ptrcast, align 4
+  store <4 x i32> %shuffle117, ptr %RET, align 4
   ret void
 }
 

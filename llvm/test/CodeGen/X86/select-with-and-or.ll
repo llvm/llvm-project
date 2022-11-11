@@ -65,14 +65,14 @@ define <4 x i32> @test6(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
   ret <4 x i32> %r
 }
 
-define <4 x i32> @test7(<4 x float> %a, <4 x float> %b, <4 x i32>* %p) {
+define <4 x i32> @test7(<4 x float> %a, <4 x float> %b, ptr %p) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpnleps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vandps (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %f = fcmp ult <4 x float> %a, %b
-  %l = load <4 x i32>, <4 x i32>* %p, align 16
+  %l = load <4 x i32>, ptr %p, align 16
   %r = select <4 x i1> %f, <4 x i32> %l, <4 x i32> zeroinitializer
   ret <4 x i32> %r
 }
@@ -143,14 +143,14 @@ define <2 x double> @test6f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
   ret <2 x double> %r
 }
 
-define <2 x double> @test7f(<2 x double> %a, <2 x double> %b, <2 x double>* %p) {
+define <2 x double> @test7f(<2 x double> %a, <2 x double> %b, ptr %p) {
 ; CHECK-LABEL: test7f:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vandpd (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %f = fcmp oeq <2 x double> %a, %b
-  %l = load <2 x double>, <2 x double>* %p, align 16
+  %l = load <2 x double>, ptr %p, align 16
   %r = select <2 x i1> %f, <2 x double> %l, <2 x double> zeroinitializer
   ret <2 x double> %r
 }

@@ -16,6 +16,7 @@ add_llvm_tool(llvm-lipo
   llvm-lipo.cpp
   DEPENDS
   LipoOptsTableGen
+  GENERATE_DRIVER
 )
 
 if(LLVM_INSTALL_CCTOOLS_SYMLINKS)

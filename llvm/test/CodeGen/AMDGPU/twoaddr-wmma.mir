@@ -1,0 +1,217 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1100 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: test_v_wmma_f32_16x16x16_f16_twoaddr_w32
+# GCN: early-clobber %2:vreg_256 = V_WMMA_F32_16X16X16_F16_threeaddr_w32 8, killed %1, 8, killed %1, 8, %0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_f32_16x16x16_f16_twoaddr_w32
+registers:
+  - { id: 0, class: vreg_256 }
+  - { id: 1, class: vreg_256 }
+  - { id: 2, class: vreg_256 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_256 = V_WMMA_F32_16X16X16_F16_twoaddr_w32 8, killed %1:vreg_256, 8, killed %1:vreg_256, 8, %0:vreg_256, 0, 0, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_v_wmma_f32_16x16x16_bf16_twoaddr_w32
+# GCN: early-clobber %2:vreg_256 = V_WMMA_F32_16X16X16_BF16_threeaddr_w32 8, killed %1, 8, killed %1, 8, %0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_f32_16x16x16_bf16_twoaddr_w32
+registers:
+  - { id: 0, class: vreg_256 }
+  - { id: 1, class: vreg_256 }
+  - { id: 2, class: vreg_256 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_256 = V_WMMA_F32_16X16X16_BF16_twoaddr_w32 8, killed %1:vreg_256, 8, killed %1:vreg_256, 8, %0:vreg_256, 0, 0, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_v_wmma_f16_16x16x16_f16_twoaddr_w32
+# GCN: early-clobber %2:vreg_256 = V_WMMA_F16_16X16X16_F16_threeaddr_w32 8, killed %1, 8, killed %1, 8, %0, 0, 0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_f16_16x16x16_f16_twoaddr_w32
+registers:
+  - { id: 0, class: vreg_256 }
+  - { id: 1, class: vreg_256 }
+  - { id: 2, class: vreg_256 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_256 = V_WMMA_F16_16X16X16_F16_twoaddr_w32 8, killed %1:vreg_256, 8, killed %1:vreg_256, 8, %0:vreg_256, 0, 0, 0, 0, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_v_wmma_bf16_16x16x16_bf16_twoaddr_w32
+# GCN: early-clobber %2:vreg_256 = V_WMMA_BF16_16X16X16_BF16_threeaddr_w32 8, killed %1, 8, killed %1, 8, %0, 0, 0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_bf16_16x16x16_bf16_twoaddr_w32
+registers:
+  - { id: 0, class: vreg_256 }
+  - { id: 1, class: vreg_256 }
+  - { id: 2, class: vreg_256 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_256 = V_WMMA_BF16_16X16X16_BF16_twoaddr_w32 8, killed %1:vreg_256, 8, killed %1:vreg_256, 8, %0:vreg_256, 0, 0, 0, 0, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_v_wmma_i32_16x16x16_iu8_twoaddr_w32
+# GCN: early-clobber %2:vreg_256 = V_WMMA_I32_16X16X16_IU8_threeaddr_w32 8, killed %1, 8, killed %1, 8, %0, 0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_i32_16x16x16_iu8_twoaddr_w32
+registers:
+  - { id: 0, class: vreg_256 }
+  - { id: 1, class: vreg_128 }
+  - { id: 2, class: vreg_256 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_256 = V_WMMA_I32_16X16X16_IU8_twoaddr_w32 8, killed %1:vreg_128, 8, killed %1:vreg_128, 8, %0:vreg_256, 0, 0, 0, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_v_wmma_i32_16x16x16_iu4_twoaddr_w32
+# GCN: early-clobber %2:vreg_256 = V_WMMA_I32_16X16X16_IU4_threeaddr_w32 8, killed %1, 8, killed %1, 8, %0, 0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_i32_16x16x16_iu4_twoaddr_w32
+registers:
+  - { id: 0, class: vreg_256 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_256 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_256 = V_WMMA_I32_16X16X16_IU4_twoaddr_w32 8, killed %1:vreg_64, 8, killed %1:vreg_64, 8, %0:vreg_256, 0, 0, 0, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_v_wmma_f32_16x16x16_f16_twoaddr_w64
+# GCN: early-clobber %2:vreg_128 = V_WMMA_F32_16X16X16_F16_threeaddr_w64 8, killed %1, 8, killed %1, 8, %0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_f32_16x16x16_f16_twoaddr_w64
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_256 }
+  - { id: 2, class: vreg_128 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_128 = V_WMMA_F32_16X16X16_F16_twoaddr_w64 8, killed %1:vreg_256, 8, killed %1:vreg_256, 8, %0:vreg_128, 0, 0, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_v_wmma_f32_16x16x16_bf16_twoaddr_w64
+# GCN: early-clobber %2:vreg_128 = V_WMMA_F32_16X16X16_BF16_threeaddr_w64 8, killed %1, 8, killed %1, 8, %0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_f32_16x16x16_bf16_twoaddr_w64
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_256 }
+  - { id: 2, class: vreg_128 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_128 = V_WMMA_F32_16X16X16_BF16_twoaddr_w64 8, killed %1:vreg_256, 8, killed %1:vreg_256, 8, %0:vreg_128, 0, 0, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_v_wmma_f16_16x16x16_f16_twoaddr_w64
+# GCN: early-clobber %2:vreg_128 = V_WMMA_F16_16X16X16_F16_threeaddr_w64 8, killed %1, 8, killed %1, 8, %0, 0, 0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_f16_16x16x16_f16_twoaddr_w64
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_256 }
+  - { id: 2, class: vreg_128 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_128 = V_WMMA_F16_16X16X16_F16_twoaddr_w64 8, killed %1:vreg_256, 8, killed %1:vreg_256, 8, %0:vreg_128, 0, 0, 0, 0, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_v_wmma_bf16_16x16x16_bf16_twoaddr_w64
+# GCN: early-clobber %2:vreg_128 = V_WMMA_BF16_16X16X16_BF16_threeaddr_w64 8, killed %1, 8, killed %1, 8, %0, 0, 0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_bf16_16x16x16_bf16_twoaddr_w64
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_256 }
+  - { id: 2, class: vreg_128 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_128 = V_WMMA_BF16_16X16X16_BF16_twoaddr_w64 8, killed %1:vreg_256, 8, killed %1:vreg_256, 8, %0:vreg_128, 0, 0, 0, 0, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_v_wmma_i32_16x16x16_iu8_twoaddr_w64
+# GCN: early-clobber %2:vreg_128 = V_WMMA_I32_16X16X16_IU8_threeaddr_w64 8, killed %1, 8, killed %1, 8, %0, 0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_i32_16x16x16_iu8_twoaddr_w64
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_128 }
+  - { id: 2, class: vreg_128 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_128 = V_WMMA_I32_16X16X16_IU8_twoaddr_w64 8, killed %1:vreg_128, 8, killed %1:vreg_128, 8, %0:vreg_128, 0, 0, 0, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_v_wmma_i32_16x16x16_iu4_twoaddr_w64
+# GCN: early-clobber %2:vreg_128 = V_WMMA_I32_16X16X16_IU4_threeaddr_w64 8, killed %1, 8, killed %1, 8, %0, 0, 0, 0, implicit $exec
+
+---
+name:            test_v_wmma_i32_16x16x16_iu4_twoaddr_w64
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_128 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    early-clobber %2:vreg_128 = V_WMMA_I32_16X16X16_IU4_twoaddr_w64 8, killed %1:vreg_64, 8, killed %1:vreg_64, 8, %0:vreg_128, 0, 0, 0, implicit $exec
+
+...

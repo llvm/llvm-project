@@ -11,13 +11,13 @@
 
 // Build
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t-cache -F %t \
-// RUN:     -ivfsoverlay %t.yaml -fsyntax-only %s -verify -Wauto-import \
+// RUN:     -ivfsoverlay %t.yaml -fsyntax-only %s -verify -Rmodule-include-translation \
 // RUN:     -Werror=non-modular-include-in-framework-module
 
 // Rebuild
 // RUN: echo ' ' >> %t/SomeFramework.framework/Modules/module.modulemap
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t-cache -F %t \
-// RUN:     -ivfsoverlay %t.yaml -fsyntax-only %s -verify -Wauto-import \
+// RUN:     -ivfsoverlay %t.yaml -fsyntax-only %s -verify -Rmodule-include-translation \
 // RUN:     -Werror=non-modular-include-in-framework-module
 
 // Load from PCH
@@ -32,11 +32,11 @@
 
 // While indexing
 // RUN: c-index-test -index-file %s -fmodules -fimplicit-module-maps -fmodules-cache-path=%t-cache -F %t \
-// RUN:     -ivfsoverlay %t.yaml -fsyntax-only -Wauto-import \
+// RUN:     -ivfsoverlay %t.yaml -fsyntax-only -Rmodule-include-translation \
 // RUN:     -Werror=non-modular-include-in-framework-module | FileCheck %s
 // RUN: echo ' ' >> %t/SomeFramework.framework/Modules/module.modulemap
 // RUN: c-index-test -index-file %s -fmodules -fimplicit-module-maps -fmodules-cache-path=%t-cache -F %t \
-// RUN:     -ivfsoverlay %t.yaml -fsyntax-only -Wauto-import \
+// RUN:     -ivfsoverlay %t.yaml -fsyntax-only -Rmodule-include-translation \
 // RUN:     -Werror=non-modular-include-in-framework-module | FileCheck %s
 // CHECK: warning: treating
 // CHECK-NOT: error
@@ -49,11 +49,11 @@
 
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t-cache -F %t \
 // RUN:     -ivfsoverlay %t.yaml -ivfsoverlay %t2.yaml -fsyntax-only %s -verify \
-// RUN:     -Wauto-import -Werror=non-modular-include-in-framework-module
+// RUN:     -Rmodule-include-translation -Werror=non-modular-include-in-framework-module
 // RUN: echo ' ' >> %t/hide_module.map
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t-cache -F %t \
 // RUN:     -ivfsoverlay %t.yaml -ivfsoverlay %t2.yaml -fsyntax-only %s -verify \
-// RUN:     -Wauto-import -Werror=non-modular-include-in-framework-module
+// RUN:     -Rmodule-include-translation -Werror=non-modular-include-in-framework-module
 
 // Within a module build
 // RUN: echo '@import import_some_frame;' | \
@@ -67,8 +67,8 @@
 // RUN:      -Werror=non-modular-include-in-framework-module -x objective-c -I %t
 
 #ifndef WITH_PREFIX
-#import <SomeFramework/public_header.h> // expected-warning{{treating}}
-#import <SomeFramework/public_header2.h> // expected-warning{{treating}}
-#import <SomeFramework/public_header3.h> // expected-warning{{treating}}
+#import <SomeFramework/public_header.h> // expected-remark{{treating}}
+#import <SomeFramework/public_header2.h> // expected-remark{{treating}}
+#import <SomeFramework/public_header3.h> // expected-remark{{treating}}
 @import SomeFramework.public_header2;
 #endif

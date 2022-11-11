@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -no-opaque-pointers -Werror -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -Werror -triple i386-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -Werror -triple armv7-linux -emit-llvm -o - %s | FileCheck %s --check-prefix=ARM
-// RUN: %clang_cc1 -no-opaque-pointers -Werror -triple powerpc64le-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -Werror -triple aarch64-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -DINFRONT -Werror -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -DINFRONT -Werror -triple i386-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -DINFRONT -Werror -triple armv7-linux -emit-llvm -o - %s | FileCheck %s --check-prefix=ARM
-// RUN: %clang_cc1 -no-opaque-pointers -DINFRONT -Werror -triple powerpc64le-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -DINFRONT -Werror -triple aarch64-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Werror -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Werror -triple i386-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Werror -triple armv7-linux -emit-llvm -o - %s | FileCheck %s --check-prefix=ARM
+// RUN: %clang_cc1 -Werror -triple powerpc64le-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Werror -triple aarch64-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -DINFRONT -Werror -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -DINFRONT -Werror -triple i386-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -DINFRONT -Werror -triple armv7-linux -emit-llvm -o - %s | FileCheck %s --check-prefix=ARM
+// RUN: %clang_cc1 -DINFRONT -Werror -triple powerpc64le-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -DINFRONT -Werror -triple aarch64-linux -emit-llvm -o - %s | FileCheck %s
 
 #ifdef INFRONT
 typedef union __attribute__((transparent_union)) {
@@ -21,14 +21,14 @@ typedef union {
 
 void f0(transp_t0 obj);
 
-// CHECK-LABEL: define{{.*}} void @f1_0(i32* noundef %a0)
-// CHECK:  call void @f0(i8* %{{.*}})
-// CHECK:  call void %{{.*}}(i8* noundef %{{[a-z0-9]*}})
+// CHECK-LABEL: define{{.*}} void @f1_0(ptr noundef %a0)
+// CHECK:  call void @f0(ptr %{{.*}})
+// CHECK:  call void %{{.*}}(ptr noundef %{{[a-z0-9]*}})
 // CHECK: }
 
-// ARM-LABEL: define{{.*}} arm_aapcscc void @f1_0(i32* noundef %a0)
-// ARM:  call arm_aapcscc void @f0(i8* %{{.*}})
-// ARM:  call arm_aapcscc void %{{.*}}(i8* noundef %{{[a-z0-9]*}})
+// ARM-LABEL: define{{.*}} arm_aapcscc void @f1_0(ptr noundef %a0)
+// ARM:  call arm_aapcscc void @f0(ptr %{{.*}})
+// ARM:  call arm_aapcscc void %{{.*}}(ptr noundef %{{[a-z0-9]*}})
 // ARM: }
 void f1_0(int *a0) {
   void (*f0p)(void *) = f0;

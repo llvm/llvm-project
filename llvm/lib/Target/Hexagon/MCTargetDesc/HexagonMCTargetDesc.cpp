@@ -46,6 +46,7 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "HexagonGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
@@ -345,6 +346,10 @@ createHexagonObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return new HexagonTargetELFStreamer(S, STI);
 }
 
+static MCTargetStreamer *createHexagonNullTargetStreamer(MCStreamer &S) {
+  return new HexagonTargetStreamer(S);
+}
+
 static void LLVM_ATTRIBUTE_UNUSED clearFeature(MCSubtargetInfo* STI, uint64_t F) {
   if (STI->getFeatureBits()[F])
     STI->ToggleFeature(F);
@@ -411,7 +416,7 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
 }
 
 static bool isCPUValid(StringRef CPU) {
-  return Hexagon::getCpu(CPU).hasValue();
+  return Hexagon::getCpu(CPU).has_value();
 }
 
 namespace {
@@ -474,22 +479,22 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   switch (CpuArch) {
   case ArchV69:
     FB.set(ExtensionHVXV69);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
     case ArchV68:
       FB.set(ExtensionHVXV68);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ArchV67:
       FB.set(ExtensionHVXV67);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ArchV66:
       FB.set(ExtensionHVXV66);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ArchV65:
       FB.set(ExtensionHVXV65);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ArchV62:
       FB.set(ExtensionHVXV62);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ArchV60:
       FB.set(ExtensionHVXV60);
       break;
@@ -658,6 +663,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTargetMC() {
   // Register the asm streamer
   TargetRegistry::RegisterAsmTargetStreamer(getTheHexagonTarget(),
                                             createMCAsmTargetStreamer);
+
+  // Register the null streamer
+  TargetRegistry::RegisterNullTargetStreamer(getTheHexagonTarget(),
+                                             createHexagonNullTargetStreamer);
 
   // Register the MC Inst Printer
   TargetRegistry::RegisterMCInstPrinter(getTheHexagonTarget(),

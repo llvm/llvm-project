@@ -17,7 +17,7 @@ define void @simple_widen(<2 x float> %a, <2 x float> %b) {
 ; X64-NEXT:    retq
 entry:
   %0 = select <2 x i1> undef, <2 x float> %a, <2 x float> %b
-  store <2 x float> %0, <2 x float>* undef
+  store <2 x float> %0, ptr undef
   ret void
 }
 
@@ -42,7 +42,7 @@ define void @complex_inreg_work(<2 x float> %a, <2 x float> %b, <2 x float> %c) 
 entry:
   %0 = fcmp oeq <2 x float> %c, %c
   %1 = select <2 x i1> %0, <2 x float> %a, <2 x float> %b
-  store <2 x float> %1, <2 x float>* undef
+  store <2 x float> %1, ptr undef
   ret void
 }
 
@@ -60,7 +60,7 @@ define void @zero_test() {
 ; X64-NEXT:    retq
 entry:
   %0 = select <2 x i1> undef, <2 x float> undef, <2 x float> zeroinitializer
-  store <2 x float> %0, <2 x float>* undef
+  store <2 x float> %0, ptr undef
   ret void
 }
 
@@ -112,7 +112,7 @@ define void @full_test() {
    br label %B1
 
  B1:                                               ; preds = %entry
-   %0 = load <2 x float>, <2 x float>* %Cy119
+   %0 = load <2 x float>, ptr %Cy119
    %1 = fptosi <2 x float> %0 to <2 x i32>
    %2 = sitofp <2 x i32> %1 to <2 x float>
    %3 = fcmp ogt <2 x float> %0, zeroinitializer
@@ -120,8 +120,8 @@ define void @full_test() {
    %5 = select <2 x i1> %3, <2 x float> %4, <2 x float> %2
    %6 = fcmp oeq <2 x float> %2, %0
    %7 = select <2 x i1> %6, <2 x float> %0, <2 x float> %5
-   store <2 x float> %7, <2 x float>* %Cy118
-   %8 = load <2 x float>, <2 x float>* %Cy118
-   store <2 x float> %8, <2 x float>* %Cy11a
+   store <2 x float> %7, ptr %Cy118
+   %8 = load <2 x float>, ptr %Cy118
+   store <2 x float> %8, ptr %Cy11a
    ret void
 }

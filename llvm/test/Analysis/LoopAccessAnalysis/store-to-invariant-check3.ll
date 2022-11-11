@@ -1,4 +1,4 @@
-; RUN: opt -passes='print-access-info' -disable-output  < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<access-info>' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; Inner loop has a store to invariant address, but LAA does not need to identify
 ; the store to invariant address, since it is a single store.

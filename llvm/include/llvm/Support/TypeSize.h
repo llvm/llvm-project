@@ -93,7 +93,7 @@ public:
   }
 
   template <typename U = ScalarTy>
-  friend typename std::enable_if_t<std::is_signed<U>::value, LeafTy>
+  friend std::enable_if_t<std::is_signed<U>::value, LeafTy>
   operator-(const LeafTy &LHS) {
     LeafTy Copy = LHS;
     return Copy *= -1;
@@ -211,7 +211,7 @@ protected:
   }
 
   template <typename U = ScalarTy>
-  friend typename std::enable_if<std::is_signed<U>::value, LeafTy>::type
+  friend std::enable_if_t<std::is_signed<U>::value, LeafTy>
   operator-(const LeafTy &LHS) {
     LeafTy Copy = LHS;
     return Copy *= -1;

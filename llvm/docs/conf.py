@@ -236,6 +236,7 @@ basedir = os.path.dirname(__file__)
 man_page_authors = "Maintained by the LLVM Team (https://llvm.org/)."
 command_guide_subpath = 'CommandGuide'
 command_guide_path = os.path.join(basedir, command_guide_subpath)
+manpages_url = '{page}.html'
 
 
 def process_md(name):
@@ -289,6 +290,3 @@ intersphinx_mapping = {}
 # Pygment lexer are sometimes out of date (when parsing LLVM for example) or
 # wrong. Suppress the warning so the build doesn't abort.
 suppress_warnings = [ 'misc.highlighting_failure' ]
-
-# Direct html-ified man pages to llvm.org
-manpages_url = 'https://llvm.org/docs/CommandGuide/{page}.html'

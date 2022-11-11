@@ -9,13 +9,13 @@
 
 ; CNL: LLVM ERROR: Cannot select: intrinsic %llvm.x86.clwb
 
-define void @clwb(i8* %p) nounwind {
+define void @clwb(ptr %p) nounwind {
 ; CHECK-LABEL: clwb:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    clwb (%eax)
 ; CHECK-NEXT:    retl
-  tail call void @llvm.x86.clwb(i8* %p)
+  tail call void @llvm.x86.clwb(ptr %p)
   ret void
 }
-declare void @llvm.x86.clwb(i8*) nounwind
+declare void @llvm.x86.clwb(ptr) nounwind

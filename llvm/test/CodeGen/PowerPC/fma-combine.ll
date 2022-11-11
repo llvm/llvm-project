@@ -93,9 +93,9 @@ define dso_local double @fma_combine_two_uses(double %a, double %b, double %c) {
 ; CHECK-NEXT:    blr
 entry:
   %fneg = fneg double %a
-  store double %fneg, double* @v, align 8
+  store double %fneg, ptr @v, align 8
   %fneg1 = fneg double %c
-  store double %fneg1, double* @z, align 8
+  store double %fneg1, ptr @z, align 8
   %mul = fmul double %fneg1, %b
   %add = fsub double %mul, %a
   ret double %add
@@ -131,7 +131,7 @@ define dso_local double @fma_combine_one_use(double %a, double %b, double %c) {
 ; CHECK-NEXT:    blr
 entry:
   %fneg = fneg double %a
-  store double %fneg, double* @v, align 8
+  store double %fneg, ptr @v, align 8
   %fneg1 = fneg double %c
   %mul = fmul double %fneg1, %b
   %add = fsub double %mul, %a
@@ -182,13 +182,13 @@ define dso_local float @fma_combine_no_ice() {
 ; CHECK-NEXT:    xsmaddasp 1, 2, 3
 ; CHECK-NEXT:    xsmaddasp 1, 4, 2
 ; CHECK-NEXT:    blr
-  %tmp = load float, float* undef, align 4
-  %tmp2 = load float, float* undef, align 4
+  %tmp = load float, ptr undef, align 4
+  %tmp2 = load float, ptr undef, align 4
   %tmp3 = fmul contract reassoc float %tmp, 0x3FE372D780000000
   %tmp4 = fadd contract reassoc float %tmp3, 1.000000e+00
   %tmp5 = fmul contract reassoc float %tmp2, %tmp4
-  %tmp6 = load float, float* undef, align 4
-  %tmp7 = load float, float* undef, align 4
+  %tmp6 = load float, ptr undef, align 4
+  %tmp7 = load float, ptr undef, align 4
   %tmp8 = fmul contract reassoc float %tmp7, 0x3FE372D780000000
   %tmp9 = fsub contract reassoc nsz float -1.000000e+00, %tmp8
   %tmp10 = fmul contract reassoc float %tmp9, %tmp6

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple x86_64-unknown-windows-msvc -objc-arc -S -o - %s | FileCheck %s
+; RUN: opt -mtriple x86_64-unknown-windows-msvc -passes=objc-arc -S -o - %s | FileCheck %s
 
 ; bool g();
 ; id h();

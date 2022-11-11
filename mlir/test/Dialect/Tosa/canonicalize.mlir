@@ -408,3 +408,21 @@ func.func @single_bit_reshape() -> tensor<1xi1> {
   %1 = "tosa.reshape"(%0) {new_shape = [1]} : (tensor<1x1xi1>) -> tensor<1xi1>
   return %1 : tensor<1xi1>
 }
+
+// -----
+
+// CHECK-LABEL: @fold_resize_nearest
+func.func @fold_resize_nearest(%arg0 : tensor<1x15x13x1xi8>) -> tensor<1x15x13x1xi8> {
+  // CHECK: return %arg0
+  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<1x15x13x1xi8>) -> tensor<1x15x13x1xi8>
+  return %resize : tensor<1x15x13x1xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_resize_bilinear
+func.func @fold_resize_bilinear(%arg0 : tensor<1x15x13x1xi8>) -> tensor<1x15x13x1xi8> {
+  // CHECK: return %arg0
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<1x15x13x1xi8>) -> tensor<1x15x13x1xi8>
+  return %resize : tensor<1x15x13x1xi8>
+}

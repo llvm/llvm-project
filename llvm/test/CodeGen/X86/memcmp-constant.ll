@@ -4,15 +4,14 @@
 @.str1 = private constant [4 x i8] c"\00\00\00\00", align 1
 @.str2 = private constant [4 x i8] c"\ff\ff\ff\ff", align 1
 
-declare i32 @memcmp(i8*, i8*, i64)
+declare i32 @memcmp(ptr, ptr, i64)
 
 define i32 @length4_same() nounwind {
 ; CHECK-LABEL: length4_same:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-  %s1 = getelementptr inbounds [4 x i8], [4 x i8]* @.str1, i32 0, i32 0
-  %m = tail call i32 @memcmp(i8* %s1, i8* %s1, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr @.str1, ptr @.str1, i64 4) nounwind
   ret i32 %m
 }
 
@@ -21,8 +20,7 @@ define i1 @length4_same_lt() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-  %s1 = getelementptr inbounds [4 x i8], [4 x i8]* @.str1, i32 0, i32 0
-  %m = tail call i32 @memcmp(i8* %s1, i8* %s1, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr @.str1, ptr @.str1, i64 4) nounwind
   %c = icmp slt i32 %m, 0
   ret i1 %c
 }
@@ -32,8 +30,7 @@ define i1 @length4_same_gt() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-  %s1 = getelementptr inbounds [4 x i8], [4 x i8]* @.str1, i32 0, i32 0
-  %m = tail call i32 @memcmp(i8* %s1, i8* %s1, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr @.str1, ptr @.str1, i64 4) nounwind
   %c = icmp sgt i32 %m, 0
   ret i1 %c
 }
@@ -43,8 +40,7 @@ define i1 @length4_same_le() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    retq
-  %s1 = getelementptr inbounds [4 x i8], [4 x i8]* @.str1, i32 0, i32 0
-  %m = tail call i32 @memcmp(i8* %s1, i8* %s1, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr @.str1, ptr @.str1, i64 4) nounwind
   %c = icmp sle i32 %m, 0
   ret i1 %c
 }
@@ -54,8 +50,7 @@ define i1 @length4_same_ge() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    retq
-  %s1 = getelementptr inbounds [4 x i8], [4 x i8]* @.str1, i32 0, i32 0
-  %m = tail call i32 @memcmp(i8* %s1, i8* %s1, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr @.str1, ptr @.str1, i64 4) nounwind
   %c = icmp sge i32 %m, 0
   ret i1 %c
 }
@@ -66,9 +61,7 @@ define i32 @length4() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retq
-  %s1 = getelementptr inbounds [4 x i8], [4 x i8]* @.str1, i32 0, i32 0
-  %s2 = getelementptr inbounds [4 x i8], [4 x i8]* @.str2, i32 0, i32 0
-  %m = tail call i32 @memcmp(i8* %s1, i8* %s2, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr @.str1, ptr @.str2, i64 4) nounwind
   ret i32 %m
 }
 
@@ -77,9 +70,7 @@ define i1 @length4_lt() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    retq
-  %s1 = getelementptr inbounds [4 x i8], [4 x i8]* @.str1, i32 0, i32 0
-  %s2 = getelementptr inbounds [4 x i8], [4 x i8]* @.str2, i32 0, i32 0
-  %m = tail call i32 @memcmp(i8* %s1, i8* %s2, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr @.str1, ptr @.str2, i64 4) nounwind
   %c = icmp slt i32 %m, 0
   ret i1 %c
 }
@@ -89,9 +80,7 @@ define i1 @length4_gt() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-  %s1 = getelementptr inbounds [4 x i8], [4 x i8]* @.str1, i32 0, i32 0
-  %s2 = getelementptr inbounds [4 x i8], [4 x i8]* @.str2, i32 0, i32 0
-  %m = tail call i32 @memcmp(i8* %s1, i8* %s2, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr @.str1, ptr @.str2, i64 4) nounwind
   %c = icmp sgt i32 %m, 0
   ret i1 %c
 }
@@ -101,9 +90,7 @@ define i1 @length4_le() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    retq
-  %s1 = getelementptr inbounds [4 x i8], [4 x i8]* @.str1, i32 0, i32 0
-  %s2 = getelementptr inbounds [4 x i8], [4 x i8]* @.str2, i32 0, i32 0
-  %m = tail call i32 @memcmp(i8* %s1, i8* %s2, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr @.str1, ptr @.str2, i64 4) nounwind
   %c = icmp sle i32 %m, 0
   ret i1 %c
 }
@@ -113,9 +100,7 @@ define i1 @length4_ge() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-  %s1 = getelementptr inbounds [4 x i8], [4 x i8]* @.str1, i32 0, i32 0
-  %s2 = getelementptr inbounds [4 x i8], [4 x i8]* @.str2, i32 0, i32 0
-  %m = tail call i32 @memcmp(i8* %s1, i8* %s2, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr @.str1, ptr @.str2, i64 4) nounwind
   %c = icmp sge i32 %m, 0
   ret i1 %c
 }

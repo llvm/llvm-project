@@ -18,6 +18,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 namespace llvm {
 class SmallBitVector;
@@ -240,6 +241,30 @@ public:
                           getContext());
   }
 
+  /// Returns a new AffineMap with the same number of dims and symbols and one
+  /// less result at `pos`, dropped.
+  AffineMap dropResult(int64_t pos) { return dropResults({pos}); }
+
+  // Returns a new AffineMap with the same number of dims and symbols, but all
+  // positions in `positions` dropped from results.
+  AffineMap dropResults(ArrayRef<int64_t> positions) {
+    SmallVector<int64_t> reverse_sorted_positions = llvm::to_vector(positions);
+    llvm::sort(reverse_sorted_positions, std::greater<int64_t>());
+
+    auto exprs = llvm::to_vector<4>(getResults());
+    for (int64_t pos : reverse_sorted_positions)
+      exprs.erase(exprs.begin() + pos);
+    return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
+  }
+
+  /// Returns a new AffineMap with the same number of dims and symbols and an
+  /// extra result inserted at `pos`.
+  AffineMap insertResult(AffineExpr expr, unsigned pos) {
+    auto exprs = llvm::to_vector<4>(getResults());
+    exprs.insert(exprs.begin() + pos, expr);
+    return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
+  }
+
   /// Folds the results of the application of an affine map on the provided
   /// operands to a constant if possible.
   LogicalResult constantFold(ArrayRef<Attribute> operandConstants,
@@ -300,6 +325,12 @@ public:
   /// Returns the null AffineMap if `numResults` == 0.
   /// Returns `*this` if `numResults` >= `this->getNumResults()`.
   AffineMap getMinorSubMap(unsigned numResults) const;
+
+  /// Get the largest known divisor of all map expressions.
+  /// For eg: for (d0, d1) -> (8*d0 + 4, 4*d1 + 2), the result is 2.
+  /// In the case of maps with no expressions or all zero constant expressions,
+  /// the largest known divisor is trivially the max uint64_t value.
+  uint64_t getLargestKnownDivisorOfMapExprs();
 
   friend ::llvm::hash_code hash_value(AffineMap arg);
 
@@ -568,6 +599,11 @@ inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
   map.print(os);
   return os;
 }
+
+// Return a bitvector where each bit set indicates a dimension that is not used
+// by any of the maps in the input array `maps`.
+llvm::SmallBitVector getUnusedDimsBitVector(ArrayRef<AffineMap> maps);
+
 } // namespace mlir
 
 namespace llvm {

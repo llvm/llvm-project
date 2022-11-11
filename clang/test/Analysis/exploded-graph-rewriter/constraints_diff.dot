@@ -15,8 +15,7 @@ Node0x1 [shape=record,label=
       "program_state": {
         "store": null,
         "environment": null,
-        "dynamic_types": null,
-        "constructing_objects": null,
+        "dynamic_types": null,        
         "checker_messages": null,
         "constraints": [
           { "symbol": "reg_$0<x>", "range": "{ [0, 10] }" }
@@ -53,8 +52,7 @@ Node0x3 [shape=record,label=
       "program_state": {
         "store": null,
         "environment": null,
-        "dynamic_types": null,
-        "constructing_objects": null,
+        "dynamic_types": null,        
         "checker_messages": null,
         "constraints": [
           { "symbol": "reg_$0<x>", "range": "{ [0, 5] }" }
@@ -81,8 +79,7 @@ Node0x5 [shape=record,label=
         "store": null,
         "environment": null,
         "constraints": null,
-        "dynamic_types": null,
-        "constructing_objects": null,
+        "dynamic_types": null,        
         "checker_messages": null
       }
     }

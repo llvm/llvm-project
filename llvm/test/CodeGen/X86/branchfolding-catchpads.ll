@@ -5,7 +5,7 @@ declare i32 @__CxxFrameHandler3(...)
 declare void @throw()
 declare i16 @f()
 
-define i16 @test1(i16 %a, i8* %b) personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define i16 @test1(i16 %a, ptr %b) personality ptr @__CxxFrameHandler3 {
 entry:
   %cmp = icmp eq i16 %a, 10
   br i1 %cmp, label %if.then, label %if.else
@@ -22,13 +22,13 @@ catch.dispatch:
   %cs = catchswitch within none [ label %catch, label %catch.2 ] unwind to caller
 
 catch:
-  catchpad within %cs [i8* null, i32 8, i8* null]
+  catchpad within %cs [ptr null, i32 8, ptr null]
   call void @throw() noreturn
   br label %unreachable
 
 catch.2:
-  catchpad within %cs [i8* null, i32 64, i8* null]
-  store i8 1, i8* %b
+  catchpad within %cs [ptr null, i32 64, ptr null]
+  store i8 1, ptr %b
   call void @throw() noreturn
   br label %unreachable
 
@@ -47,7 +47,7 @@ unreachable:
 ;
 ; CHECK-LABEL: .def     test1;
 
-define i16 @test2(i16 %a, i8* %b) personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define i16 @test2(i16 %a, ptr %b) personality ptr @__CxxFrameHandler3 {
 entry:
   %cmp = icmp eq i16 %a, 10
   br i1 %cmp, label %if.then, label %if.else
@@ -64,18 +64,18 @@ catch.dispatch:
   %cs = catchswitch within none [ label %catch, label %catch.2, label %catch.3 ] unwind to caller
 
 catch:
-  catchpad within %cs [i8* null, i32 8, i8* null]
+  catchpad within %cs [ptr null, i32 8, ptr null]
   call void @throw() noreturn
   br label %unreachable
 
 catch.2:
-  %c2 = catchpad within %cs [i8* null, i32 32, i8* null]
-  store i8 1, i8* %b
+  %c2 = catchpad within %cs [ptr null, i32 32, ptr null]
+  store i8 1, ptr %b
   catchret from %c2 to label %cleanup
 
 catch.3:
-  %c3 = catchpad within %cs [i8* null, i32 64, i8* null]
-  store i8 2, i8* %b
+  %c3 = catchpad within %cs [ptr null, i32 64, ptr null]
+  store i8 2, ptr %b
   catchret from %c3 to label %cleanup
 
 cleanup:
@@ -95,7 +95,7 @@ unreachable:
 
 declare void @g()
 
-define void @test3() optsize personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define void @test3() optsize personality ptr @__CxxFrameHandler3 {
 entry:
   switch i32 undef, label %if.end57 [
     i32 64, label %sw.bb
@@ -118,27 +118,27 @@ while.cond.i163.preheader:
   unreachable
 
 sw.bb44:
-  %temp0 = load void ()*, void ()** undef
+  %temp0 = load ptr, ptr undef
   invoke void %temp0()
           to label %if.end57 unwind label %catch.dispatch
 
 sw.epilog:
-  %temp1 = load i8*, i8** undef
+  %temp1 = load ptr, ptr undef
   br label %if.end57
 
 catch.dispatch:
   %cs = catchswitch within none [label %catch1, label %catch2, label %catch3] unwind to caller
 
 catch1:
-  %c1 = catchpad within %cs [i8* null, i32 8, i8* null]
+  %c1 = catchpad within %cs [ptr null, i32 8, ptr null]
   unreachable
 
 catch2:
-  %c2 = catchpad within %cs [i8* null, i32 32, i8* null]
+  %c2 = catchpad within %cs [ptr null, i32 32, ptr null]
   unreachable
 
 catch3:
-  %c3 = catchpad within %cs [i8* null, i32 64, i8* null]
+  %c3 = catchpad within %cs [ptr null, i32 64, ptr null]
   unreachable
 
 if.then56:

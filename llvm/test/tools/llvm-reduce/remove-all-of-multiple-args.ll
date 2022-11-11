@@ -6,7 +6,7 @@ define i32 @t(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-FINAL: () {
 ;
 ; CHECK-INTERESTINGNESS: ret i32
-; CHECK-FINAL: ret i32 undef
+; CHECK-FINAL: ret i32 0
 
   ret i32 %a1
 }

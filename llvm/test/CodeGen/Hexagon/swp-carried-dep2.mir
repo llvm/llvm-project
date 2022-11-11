@@ -52,7 +52,7 @@ body:             |
     %11:intregs = IMPLICIT_DEF
     J2_loop0i %bb.1, 6, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
 
-  bb.1 (address-taken):
+  bb.1 (machine-block-address-taken):
     successors: %bb.1, %bb.2
 
     %0:intregs = PHI %11, %bb.0, %6, %bb.1

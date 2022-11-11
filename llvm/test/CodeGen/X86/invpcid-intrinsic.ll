@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mattr=+invpcid | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+invpcid | FileCheck %s --check-prefix=X86_64
 
-define void @test_invpcid(i32 %type, i8* %descriptor) {
+define void @test_invpcid(i32 %type, ptr %descriptor) {
 ; X86-LABEL: test_invpcid:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -16,11 +16,11 @@ define void @test_invpcid(i32 %type, i8* %descriptor) {
 ; X86_64-NEXT:    invpcid (%rsi), %rax
 ; X86_64-NEXT:    retq
 entry:
-  call void @llvm.x86.invpcid(i32 %type, i8* %descriptor)
+  call void @llvm.x86.invpcid(i32 %type, ptr %descriptor)
   ret void
 }
 
-define void @test_invpcid2(i32* readonly %type, i8* %descriptor) {
+define void @test_invpcid2(ptr readonly %type, ptr %descriptor) {
 ; X86-LABEL: test_invpcid2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -35,9 +35,9 @@ define void @test_invpcid2(i32* readonly %type, i8* %descriptor) {
 ; X86_64-NEXT:    invpcid (%rsi), %rax
 ; X86_64-NEXT:    retq
 entry:
-  %0 = load i32, i32* %type, align 4
-  tail call void @llvm.x86.invpcid(i32 %0, i8* %descriptor) #1
+  %0 = load i32, ptr %type, align 4
+  tail call void @llvm.x86.invpcid(i32 %0, ptr %descriptor) #1
   ret void
 }
 
-declare void @llvm.x86.invpcid(i32, i8*)
+declare void @llvm.x86.invpcid(i32, ptr)

@@ -228,12 +228,4 @@ def: Flag<["-"], "d">,
   Alias<debug>,
   HelpText<"Alias for --debug">;
 
-def capture: F<"capture">,
-  HelpText<"Tells the debugger to capture a reproducer.">;
-def capture_path: Separate<["--", "-"], "capture-path">,
-  MetaVarName<"<filename>">,
-  HelpText<"Tells the debugger to use the given filename for the reproducer.">;
-def generate_on_exit: F<"reproducer-generate-on-exit">,
-  HelpText<"Generate reproducer on exit.">;
-
 def REM : R<["--"], "">;

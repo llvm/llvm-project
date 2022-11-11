@@ -3,9 +3,9 @@
 
 target triple = "x86_64-pc-win"
 
-define void @load1(i8* nocapture readonly %x) {
-  call void @llvm.asan.check.memaccess(i8* %x, i32 0)
+define void @load1(ptr nocapture readonly %x) {
+  call void @llvm.asan.check.memaccess(ptr %x, i32 0)
   ret void
 }
 
-declare void @llvm.asan.check.memaccess(i8*, i32 immarg)
+declare void @llvm.asan.check.memaccess(ptr, i32 immarg)

@@ -61,6 +61,20 @@ enum UnwindOpcodes {
   UOP_TrapFrame,
   UOP_Context,
   UOP_ClearUnwoundToCall,
+  UOP_PACSignLR,
+  UOP_SaveAnyRegI,
+  UOP_SaveAnyRegIP,
+  UOP_SaveAnyRegD,
+  UOP_SaveAnyRegDP,
+  UOP_SaveAnyRegQ,
+  UOP_SaveAnyRegQP,
+  UOP_SaveAnyRegIX,
+  UOP_SaveAnyRegIPX,
+  UOP_SaveAnyRegDX,
+  UOP_SaveAnyRegDPX,
+  UOP_SaveAnyRegQX,
+  UOP_SaveAnyRegQPX,
+
   // The following set of unwind opcodes is for ARM.  They are documented at
   // https://docs.microsoft.com/en-us/cpp/build/arm-exception-handling
 

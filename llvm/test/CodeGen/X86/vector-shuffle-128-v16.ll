@@ -996,7 +996,7 @@ define <16 x i8> @shuffle_v16i8_01_03_05_07_09_11_13_15_17_19_21_23_25_27_29_31(
 
 ; PR27780 - https://bugs.llvm.org/show_bug.cgi?id=27780
 
-define <16 x i8> @load_fold_pblendvb(<16 x i8>* %px, <16 x i8> %y) {
+define <16 x i8> @load_fold_pblendvb(ptr %px, <16 x i8> %y) {
 ; SSE2-LABEL: load_fold_pblendvb:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
@@ -1033,12 +1033,12 @@ define <16 x i8> @load_fold_pblendvb(<16 x i8>* %px, <16 x i8> %y) {
 ; AVX512VL-NEXT:    kmovd %eax, %k1
 ; AVX512VL-NEXT:    vmovdqu8 (%rdi), %xmm0 {%k1}
 ; AVX512VL-NEXT:    retq
-  %x = load <16 x i8>, <16 x i8>* %px, align 16
+  %x = load <16 x i8>, ptr %px, align 16
   %select = shufflevector <16 x i8> %x, <16 x i8> %y, <16 x i32> <i32 16, i32 17, i32 2, i32 19, i32 4, i32 5, i32 6, i32 23, i32 24, i32 25, i32 10, i32 27, i32 12, i32 13, i32 14, i32 31>
   ret <16 x i8> %select
 }
 
-define <16 x i8> @load_fold_pblendvb_commute(<16 x i8>* %px, <16 x i8> %y) {
+define <16 x i8> @load_fold_pblendvb_commute(ptr %px, <16 x i8> %y) {
 ; SSE2-LABEL: load_fold_pblendvb_commute:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
@@ -1079,7 +1079,7 @@ define <16 x i8> @load_fold_pblendvb_commute(<16 x i8>* %px, <16 x i8> %y) {
 ; AVX512VL-NEXT:    vmovdqu8 %xmm0, %xmm1 {%k1}
 ; AVX512VL-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
-  %x = load <16 x i8>, <16 x i8>* %px, align 16
+  %x = load <16 x i8>, ptr %px, align 16
   %select = shufflevector <16 x i8> %y, <16 x i8> %x, <16 x i32> <i32 16, i32 17, i32 2, i32 19, i32 4, i32 5, i32 6, i32 23, i32 24, i32 25, i32 10, i32 27, i32 12, i32 13, i32 14, i32 31>
   ret <16 x i8> %select
 }
@@ -1777,7 +1777,7 @@ entry:
   ret <16 x i8> %s.2.0
 }
 
-define void @constant_gets_selected(<4 x i32>* %ptr1, <4 x i32>* %ptr2) {
+define void @constant_gets_selected(ptr %ptr1, ptr %ptr2) {
 ; SSE-LABEL: constant_gets_selected:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    xorps %xmm0, %xmm0
@@ -1795,8 +1795,8 @@ entry:
   %weird_zero = bitcast <4 x i32> zeroinitializer to <16 x i8>
   %shuffle.i = shufflevector <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 0, i8 0, i8 0>, <16 x i8> %weird_zero, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27>
   %weirder_zero = bitcast <16 x i8> %shuffle.i to <4 x i32>
-  store <4 x i32> %weirder_zero, <4 x i32>* %ptr1, align 16
-  store <4 x i32> zeroinitializer, <4 x i32>* %ptr2, align 16
+  store <4 x i32> %weirder_zero, ptr %ptr1, align 16
+  store <4 x i32> zeroinitializer, ptr %ptr2, align 16
   ret void
 }
 
@@ -2159,7 +2159,7 @@ define <16 x i8> @shuffle_v16i8_bitcast_unpack(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i8> %bitcast8
 }
 
-define <16 x i8> @insert_dup_mem_v16i8_i32(i32* %ptr) {
+define <16 x i8> @insert_dup_mem_v16i8_i32(ptr %ptr) {
 ; SSE2-LABEL: insert_dup_mem_v16i8_i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -2205,14 +2205,14 @@ define <16 x i8> @insert_dup_mem_v16i8_i32(i32* %ptr) {
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpbroadcastb (%rdi), %xmm0
 ; XOPAVX2-NEXT:    retq
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
   %tmp2 = bitcast <4 x i32> %tmp1 to <16 x i8>
   %tmp3 = shufflevector <16 x i8> %tmp2, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %tmp3
 }
 
-define <16 x i8> @insert_dup_mem_v16i8_sext_i8(i8* %ptr) {
+define <16 x i8> @insert_dup_mem_v16i8_sext_i8(ptr %ptr) {
 ; SSE2-LABEL: insert_dup_mem_v16i8_sext_i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzbl (%rdi), %eax
@@ -2263,7 +2263,7 @@ define <16 x i8> @insert_dup_mem_v16i8_sext_i8(i8* %ptr) {
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpbroadcastb (%rdi), %xmm0
 ; XOPAVX2-NEXT:    retq
-  %tmp = load i8, i8* %ptr, align 1
+  %tmp = load i8, ptr %ptr, align 1
   %tmp1 = sext i8 %tmp to i32
   %tmp2 = insertelement <4 x i32> zeroinitializer, i32 %tmp1, i32 0
   %tmp3 = bitcast <4 x i32> %tmp2 to <16 x i8>
@@ -2271,7 +2271,7 @@ define <16 x i8> @insert_dup_mem_v16i8_sext_i8(i8* %ptr) {
   ret <16 x i8> %tmp4
 }
 
-define <16 x i8> @insert_dup_elt1_mem_v16i8_i32(i32* %ptr) {
+define <16 x i8> @insert_dup_elt1_mem_v16i8_i32(ptr %ptr) {
 ; SSE2-LABEL: insert_dup_elt1_mem_v16i8_i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -2313,14 +2313,14 @@ define <16 x i8> @insert_dup_elt1_mem_v16i8_i32(i32* %ptr) {
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpbroadcastb 1(%rdi), %xmm0
 ; XOPAVX2-NEXT:    retq
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
   %tmp2 = bitcast <4 x i32> %tmp1 to <16 x i8>
   %tmp3 = shufflevector <16 x i8> %tmp2, <16 x i8> undef, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <16 x i8> %tmp3
 }
 
-define <16 x i8> @insert_dup_elt2_mem_v16i8_i32(i32* %ptr) {
+define <16 x i8> @insert_dup_elt2_mem_v16i8_i32(ptr %ptr) {
 ; SSE2-LABEL: insert_dup_elt2_mem_v16i8_i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -2362,14 +2362,14 @@ define <16 x i8> @insert_dup_elt2_mem_v16i8_i32(i32* %ptr) {
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpbroadcastb 2(%rdi), %xmm0
 ; XOPAVX2-NEXT:    retq
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
   %tmp2 = bitcast <4 x i32> %tmp1 to <16 x i8>
   %tmp3 = shufflevector <16 x i8> %tmp2, <16 x i8> undef, <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
   ret <16 x i8> %tmp3
 }
 
-define <16 x i8> @insert_dup_elt1_mem_v16i8_sext_i8(i8* %ptr) {
+define <16 x i8> @insert_dup_elt1_mem_v16i8_sext_i8(ptr %ptr) {
 ; SSE2-LABEL: insert_dup_elt1_mem_v16i8_sext_i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movsbl (%rdi), %eax
@@ -2429,7 +2429,7 @@ define <16 x i8> @insert_dup_elt1_mem_v16i8_sext_i8(i8* %ptr) {
 ; XOPAVX2-NEXT:    vmovd %eax, %xmm0
 ; XOPAVX2-NEXT:    vpbroadcastb %xmm0, %xmm0
 ; XOPAVX2-NEXT:    retq
-  %tmp = load i8, i8* %ptr, align 1
+  %tmp = load i8, ptr %ptr, align 1
   %tmp1 = sext i8 %tmp to i32
   %tmp2 = insertelement <4 x i32> zeroinitializer, i32 %tmp1, i32 0
   %tmp3 = bitcast <4 x i32> %tmp2 to <16 x i8>
@@ -2437,7 +2437,7 @@ define <16 x i8> @insert_dup_elt1_mem_v16i8_sext_i8(i8* %ptr) {
   ret <16 x i8> %tmp4
 }
 
-define <16 x i8> @insert_dup_elt2_mem_v16i8_sext_i8(i8* %ptr) {
+define <16 x i8> @insert_dup_elt2_mem_v16i8_sext_i8(ptr %ptr) {
 ; SSE2-LABEL: insert_dup_elt2_mem_v16i8_sext_i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movsbl (%rdi), %eax
@@ -2497,7 +2497,7 @@ define <16 x i8> @insert_dup_elt2_mem_v16i8_sext_i8(i8* %ptr) {
 ; XOPAVX2-NEXT:    vmovd %eax, %xmm0
 ; XOPAVX2-NEXT:    vpbroadcastb %xmm0, %xmm0
 ; XOPAVX2-NEXT:    retq
-  %tmp = load i8, i8* %ptr, align 1
+  %tmp = load i8, ptr %ptr, align 1
   %tmp1 = sext i8 %tmp to i32
   %tmp2 = insertelement <4 x i32> zeroinitializer, i32 %tmp1, i32 0
   %tmp3 = bitcast <4 x i32> %tmp2 to <16 x i8>
@@ -2505,7 +2505,7 @@ define <16 x i8> @insert_dup_elt2_mem_v16i8_sext_i8(i8* %ptr) {
   ret <16 x i8> %tmp4
 }
 
-define <16 x i8> @PR31364(i8* nocapture readonly %a, i8* nocapture readonly %b) {
+define <16 x i8> @PR31364(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; SSE2-LABEL: PR31364:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzbl (%rdi), %eax
@@ -2548,15 +2548,15 @@ define <16 x i8> @PR31364(i8* nocapture readonly %a, i8* nocapture readonly %b) 
 ; AVX-NEXT:    vpinsrb $1, (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1],zero,xmm0[1,1,1,1,1,0,0,0]
 ; AVX-NEXT:    retq
-  %v0 = load i8, i8* %a, align 1
+  %v0 = load i8, ptr %a, align 1
   %vecins = insertelement <16 x i8> <i8 undef, i8 undef, i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, i8 %v0, i32 0
-  %v1 = load i8, i8* %b, align 1
+  %v1 = load i8, ptr %b, align 1
   %vecins2 = insertelement <16 x i8> %vecins, i8 %v1, i32 1
   %result = shufflevector <16 x i8> %vecins2, <16 x i8> undef, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 3, i32 1, i32 1, i32 1, i32 1, i32 1, i32 0, i32 0, i32 0>
   ret <16 x i8> %result
 }
 
-define <16 x i8> @PR31301(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
+define <16 x i8> @PR31301(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; SSE2-LABEL: PR31301:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movzbl (%rdi), %eax
@@ -2629,10 +2629,10 @@ define <16 x i8> @PR31301(i8* nocapture readonly %x, i8* nocapture readonly %y) 
 ; XOPAVX2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; XOPAVX2-NEXT:    retq
 entry:
-  %0 = load i8, i8* %x, align 1
+  %0 = load i8, ptr %x, align 1
   %1 = insertelement <16 x i8> undef, i8 %0, i32 0
   %lane = shufflevector <16 x i8> %1, <16 x i8> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %2 = load i8, i8* %y, align 1
+  %2 = load i8, ptr %y, align 1
   %3 = insertelement <16 x i8> undef, i8 %2, i32 0
   %lane3 = shufflevector <16 x i8> %3, <16 x i8> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %vzip.i = shufflevector <16 x i8> %lane, <16 x i8> %lane3, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>

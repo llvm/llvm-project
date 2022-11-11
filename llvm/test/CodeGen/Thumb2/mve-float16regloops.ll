@@ -1426,12 +1426,11 @@ define void @arm_biquad_cascade_df2T_f16(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    ldrd r12, r6, [r0, #4]
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    and r8, r3, #1
+; CHECK-NEXT:    ldrd r12, r6, [r0, #4]
+; CHECK-NEXT:    ldrb.w r9, [r0]
 ; CHECK-NEXT:    vldr.16 s0, .LCPI17_0
-; CHECK-NEXT:    lsr.w r9, r3, #1
+; CHECK-NEXT:    lsr.w r8, r3, #1
 ; CHECK-NEXT:    b .LBB17_3
 ; CHECK-NEXT:  .LBB17_1: @ %if.else
 ; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
@@ -1441,7 +1440,7 @@ define void @arm_biquad_cascade_df2T_f16(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
 ; CHECK-NEXT:    vstr.16 s5, [r12, #2]
 ; CHECK-NEXT:    adds r6, #10
-; CHECK-NEXT:    subs r0, #1
+; CHECK-NEXT:    subs.w r9, r9, #1
 ; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    beq .LBB17_8
@@ -1458,7 +1457,7 @@ define void @arm_biquad_cascade_df2T_f16(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:    vldrh.u16 q1, [r12]
 ; CHECK-NEXT:    vmov.f32 s5, s1
 ; CHECK-NEXT:    mov r5, r2
-; CHECK-NEXT:    wls lr, r9, .LBB17_6
+; CHECK-NEXT:    wls lr, r8, .LBB17_6
 ; CHECK-NEXT:  @ %bb.4: @ %while.body.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
 ; CHECK-NEXT:    mov r5, r2
@@ -1466,7 +1465,7 @@ define void @arm_biquad_cascade_df2T_f16(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:    @ Parent Loop BB17_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    ldrh r7, [r1], #4
-; CHECK-NEXT:    vmov r3, s0
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vfma.f16 q1, q2, r7
 ; CHECK-NEXT:    ldrh r4, [r1, #-2]
 ; CHECK-NEXT:    vmov.u16 r7, q1[0]
@@ -1478,19 +1477,19 @@ define void @arm_biquad_cascade_df2T_f16(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:    strh r4, [r5, #2]
 ; CHECK-NEXT:    vmov.f32 s4, s5
 ; CHECK-NEXT:    strh r7, [r5], #4
-; CHECK-NEXT:    vmov.16 q1[2], r3
+; CHECK-NEXT:    vmov.16 q1[2], r0
 ; CHECK-NEXT:    le lr, .LBB17_5
 ; CHECK-NEXT:  .LBB17_6: @ %while.end
 ; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
-; CHECK-NEXT:    cmp.w r8, #0
+; CHECK-NEXT:    lsls r0, r3, #31
 ; CHECK-NEXT:    beq .LBB17_1
 ; CHECK-NEXT:  @ %bb.7: @ %if.then
 ; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
-; CHECK-NEXT:    ldrh r1, [r1]
-; CHECK-NEXT:    vfma.f16 q1, q2, r1
-; CHECK-NEXT:    vmov.u16 r1, q1[0]
-; CHECK-NEXT:    vfma.f16 q1, q3, r1
-; CHECK-NEXT:    strh r1, [r5]
+; CHECK-NEXT:    ldrh r0, [r1]
+; CHECK-NEXT:    vfma.f16 q1, q2, r0
+; CHECK-NEXT:    vmov.u16 r0, q1[0]
+; CHECK-NEXT:    vfma.f16 q1, q3, r0
+; CHECK-NEXT:    strh r0, [r5]
 ; CHECK-NEXT:    vmovx.f16 s2, s4
 ; CHECK-NEXT:    vstr.16 s2, [r12]
 ; CHECK-NEXT:    b .LBB17_2

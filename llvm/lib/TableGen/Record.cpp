@@ -24,6 +24,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -79,6 +80,7 @@ struct RecordKeeperImpl {
   FoldingSet<TernOpInit> TheTernOpInitPool;
   FoldingSet<FoldOpInit> TheFoldOpInitPool;
   FoldingSet<IsAOpInit> TheIsAOpInitPool;
+  FoldingSet<ExistsOpInit> TheExistsOpInitPool;
   DenseMap<std::pair<RecTy *, Init *>, VarInit *> TheVarInitPool;
   DenseMap<std::pair<TypedInit *, unsigned>, VarBitInit *> TheVarBitInitPool;
   DenseMap<std::pair<TypedInit *, unsigned>, VarListElementInit *>
@@ -884,6 +886,23 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
       }
     }
     break;
+
+  case LOG2:
+    if (IntInit *LHSi = dyn_cast_or_null<IntInit>(
+            LHS->convertInitializerTo(IntRecTy::get(RK)))) {
+      int64_t LHSv = LHSi->getValue();
+      if (LHSv <= 0) {
+        PrintFatalError(CurRec->getLoc(),
+                        "Illegal operation: logtwo is undefined "
+                        "on arguments less than or equal to 0");
+      } else {
+        uint64_t Log = Log2_64(LHSv);
+        assert(Log <= INT64_MAX &&
+               "Log of an int64_t must be smaller than INT64_MAX");
+        return IntInit::get(RK, static_cast<int64_t>(Log));
+      }
+    }
+    break;
   }
   return const_cast<UnOpInit *>(this);
 }
@@ -907,6 +926,7 @@ std::string UnOpInit::getAsString() const {
   case SIZE: Result = "!size"; break;
   case EMPTY: Result = "!empty"; break;
   case GETDAGOP: Result = "!getdagop"; break;
+  case LOG2 : Result = "!logtwo"; break;
   }
   return Result + "(" + LHS->getAsString() + ")";
 }
@@ -1164,6 +1184,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
   case ADD:
   case SUB:
   case MUL:
+  case DIV:
   case AND:
   case OR:
   case XOR:
@@ -1182,6 +1203,16 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       case ADD: Result = LHSv + RHSv; break;
       case SUB: Result = LHSv - RHSv; break;
       case MUL: Result = LHSv * RHSv; break;
+      case DIV:
+        if (RHSv == 0)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: division by zero");
+        else if (LHSv == INT64_MIN && RHSv == -1)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: INT64_MIN / -1");
+        else
+          Result = LHSv / RHSv;
+        break;
       case AND: Result = LHSv & RHSv; break;
       case OR:  Result = LHSv | RHSv; break;
       case XOR: Result = LHSv ^ RHSv; break;
@@ -1214,6 +1245,7 @@ std::string BinOpInit::getAsString() const {
   case ADD: Result = "!add"; break;
   case SUB: Result = "!sub"; break;
   case MUL: Result = "!mul"; break;
+  case DIV: Result = "!div"; break;
   case AND: Result = "!and"; break;
   case OR: Result = "!or"; break;
   case XOR: Result = "!xor"; break;
@@ -1656,6 +1688,81 @@ Init *IsAOpInit::getBit(unsigned Bit) const {
 
 std::string IsAOpInit::getAsString() const {
   return (Twine("!isa<") + CheckType->getAsString() + ">(" +
+          Expr->getAsString() + ")")
+      .str();
+}
+
+static void ProfileExistsOpInit(FoldingSetNodeID &ID, RecTy *CheckType,
+                                Init *Expr) {
+  ID.AddPointer(CheckType);
+  ID.AddPointer(Expr);
+}
+
+ExistsOpInit *ExistsOpInit::get(RecTy *CheckType, Init *Expr) {
+  FoldingSetNodeID ID;
+  ProfileExistsOpInit(ID, CheckType, Expr);
+
+  detail::RecordKeeperImpl &RK = Expr->getRecordKeeper().getImpl();
+  void *IP = nullptr;
+  if (ExistsOpInit *I = RK.TheExistsOpInitPool.FindNodeOrInsertPos(ID, IP))
+    return I;
+
+  ExistsOpInit *I = new (RK.Allocator) ExistsOpInit(CheckType, Expr);
+  RK.TheExistsOpInitPool.InsertNode(I, IP);
+  return I;
+}
+
+void ExistsOpInit::Profile(FoldingSetNodeID &ID) const {
+  ProfileExistsOpInit(ID, CheckType, Expr);
+}
+
+Init *ExistsOpInit::Fold(Record *CurRec, bool IsFinal) const {
+  if (StringInit *Name = dyn_cast<StringInit>(Expr)) {
+    if (!CurRec && !IsFinal)
+      return const_cast<ExistsOpInit *>(this);
+
+    // Self-references are allowed, but their resolution is delayed until
+    // the final resolve to ensure that we get the correct type for them.
+    auto *Anonymous = dyn_cast<AnonymousNameInit>(CurRec->getNameInit());
+    if (Name == CurRec->getNameInit() ||
+        (Anonymous && Name == Anonymous->getNameInit())) {
+      if (!IsFinal)
+        return const_cast<ExistsOpInit *>(this);
+
+      // No doubt that there exists a record, so we should check if types are
+      // compatiable.
+      return IntInit::get(getRecordKeeper(),
+                          CurRec->getType()->typeIsA(CheckType));
+    }
+
+    // Look up all defined records to see if we can find one.
+    Record *D = CheckType->getRecordKeeper().getDef(Name->getValue());
+    if (!D) {
+      if (IsFinal)
+        return IntInit::get(getRecordKeeper(), 0);
+      return const_cast<ExistsOpInit *>(this);
+    }
+
+    // Check if types are compatiable.
+    return IntInit::get(getRecordKeeper(),
+                        DefInit::get(D)->getType()->typeIsA(CheckType));
+  }
+  return const_cast<ExistsOpInit *>(this);
+}
+
+Init *ExistsOpInit::resolveReferences(Resolver &R) const {
+  Init *NewExpr = Expr->resolveReferences(R);
+  if (Expr != NewExpr || R.isFinal())
+    return get(CheckType, NewExpr)->Fold(R.getCurrentRecord(), R.isFinal());
+  return const_cast<ExistsOpInit *>(this);
+}
+
+Init *ExistsOpInit::getBit(unsigned Bit) const {
+  return VarBitInit::get(const_cast<ExistsOpInit *>(this), Bit);
+}
+
+std::string ExistsOpInit::getAsString() const {
+  return (Twine("!exists<") + CheckType->getAsString() + ">(" +
           Expr->getAsString() + ")")
       .str();
 }
@@ -2162,6 +2269,7 @@ static void ProfileDagInit(FoldingSetNodeID &ID, Init *V, StringInit *VN,
 
 DagInit *DagInit::get(Init *V, StringInit *VN, ArrayRef<Init *> ArgRange,
                       ArrayRef<StringInit *> NameRange) {
+  assert(ArgRange.size() == NameRange.size());
   FoldingSetNodeID ID;
   ProfileDagInit(ID, V, VN, ArgRange, NameRange);
 
@@ -2348,6 +2456,14 @@ void RecordVal::print(raw_ostream &OS, bool PrintSem) const {
   if (PrintSem) OS << ";\n";
 }
 
+void Record::updateClassLoc(SMLoc Loc) {
+  assert(Locs.size() == 1);
+  ForwardDeclarationLocs.push_back(Locs.front());
+
+  Locs.clear();
+  Locs.push_back(Loc);
+}
+
 void Record::checkName() {
   // Ensure the record name has string type.
   const TypedInit *TypedName = cast<const TypedInit>(Name);
@@ -2522,10 +2638,10 @@ Init *Record::getValueInit(StringRef FieldName) const {
 
 StringRef Record::getValueAsString(StringRef FieldName) const {
   llvm::Optional<StringRef> S = getValueAsOptionalString(FieldName);
-  if (!S.hasValue())
+  if (!S)
     PrintFatalError(getLoc(), "Record `" + getName() +
       "' does not have a field named `" + FieldName + "'!\n");
-  return S.getValue();
+  return S.value();
 }
 
 llvm::Optional<StringRef>

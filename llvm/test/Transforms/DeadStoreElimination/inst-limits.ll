@@ -1,4 +1,4 @@
-; RUN: opt -S -dse < %s | FileCheck %s
+; RUN: opt -S -passes=dse < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; This test is not relevant for DSE with MemorySSA. Non-memory instructions
@@ -12,8 +12,8 @@ define i32 @test_within_limit() !dbg !4 {
 entry:
   ; The first store; later there is a second store to the same location,
   ; so this store should be optimized away by DSE.
-  ; CHECK-NOT: store i32 1, i32* @x, align 4
-  store i32 1, i32* @x, align 4
+  ; CHECK-NOT: store i32 1, ptr @x, align 4
+  store i32 1, ptr @x, align 4
 
   ; Insert 98 dummy instructions between the two stores
   %0 = bitcast i32 0 to i32
@@ -119,8 +119,8 @@ entry:
   ; effect on the working of DSE in any way.
   call void @llvm.dbg.value(metadata i32 undef, metadata !10, metadata !DIExpression()), !dbg !DILocation(scope: !4)
 
-  ; CHECK:  store i32 -1, i32* @x, align 4
-  store i32 -1, i32* @x, align 4
+  ; CHECK:  store i32 -1, ptr @x, align 4
+  store i32 -1, ptr @x, align 4
   ret i32 0
 }
 
@@ -128,8 +128,8 @@ entry:
 define i32 @test_outside_limit() {
 entry:
   ; The first store; later there is a second store to the same location
-  ; CHECK-NOT: store i32 1, i32* @x, align 4
-  store i32 1, i32* @x, align 4
+  ; CHECK-NOT: store i32 1, ptr @x, align 4
+  store i32 1, ptr @x, align 4
 
   ; Insert 99 dummy instructions between the two stores; this is
   ; one too many instruction for the DSE to take place.
@@ -233,8 +233,8 @@ entry:
   %97 = bitcast i32 0 to i32
   %98 = bitcast i32 0 to i32
 
-  ; CHECK:  store i32 -1, i32* @x, align 4
-  store i32 -1, i32* @x, align 4
+  ; CHECK:  store i32 -1, ptr @x, align 4
+  store i32 -1, ptr @x, align 4
   ret i32 0
 }
 
@@ -255,6 +255,6 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !9 = !{!10}
 !10 = !DILocalVariable(name: "x", scope: !4, type: !8)
 !11 = !{i32 2, !"Dwarf Version", i32 4}
-!12 = !{i32* undef}
+!12 = !{ptr undef}
 
 !13 = !{i32 1, !"Debug Info Version", i32 3}

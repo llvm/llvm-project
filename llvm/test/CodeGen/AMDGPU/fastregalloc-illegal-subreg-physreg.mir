@@ -15,9 +15,10 @@ body:             |
 
     ; CHECK-LABEL: name: invalid_subreg_index
     ; CHECK: liveins: $vgpr0, $sgpr0
-    ; CHECK: $m0 = COPY renamable $sgpr0
-    ; CHECK: undef renamable $vgpr1 = V_INTERP_P2_F32 undef $vgpr1, undef $vgpr0, 0, 1, implicit $mode, implicit $m0, implicit $exec, implicit-def dead $vgpr0_vgpr1
-    ; CHECK: S_ENDPGM 0, implicit killed renamable $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $m0 = COPY renamable $sgpr0
+    ; CHECK-NEXT: undef renamable $vgpr1 = V_INTERP_P2_F32 undef $vgpr1, undef $vgpr0, 0, 1, implicit $mode, implicit $m0, implicit $exec, implicit-def dead $vgpr0_vgpr1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit killed renamable $sgpr0
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1

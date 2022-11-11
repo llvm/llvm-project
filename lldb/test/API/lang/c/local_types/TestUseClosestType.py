@@ -15,8 +15,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestUseClosestType(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(bugnumber="<rdar://problem/53262085>")

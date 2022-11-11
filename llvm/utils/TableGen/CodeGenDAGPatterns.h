@@ -50,7 +50,7 @@ using TreePatternNodePtr = std::shared_ptr<TreePatternNode>;
 /// To reduce the allocations even further, make MachineValueTypeSet own
 /// the storage and use std::array as the bit container.
 struct MachineValueTypeSet {
-  static_assert(std::is_same<std::underlying_type<MVT::SimpleValueType>::type,
+  static_assert(std::is_same<std::underlying_type_t<MVT::SimpleValueType>,
                              uint8_t>::value,
                 "Change uint8_t here to the SimpleValueType's type");
   static unsigned constexpr Capacity = std::numeric_limits<uint8_t>::max()+1;
@@ -101,6 +101,8 @@ struct MachineValueTypeSet {
   void erase(MVT T) {
     Words[T.SimpleTy / WordWidth] &= ~(WordType(1) << (T.SimpleTy % WordWidth));
   }
+
+  void writeToStream(raw_ostream &OS) const;
 
   struct const_iterator {
     // Some implementations of the C++ library require these traits to be
@@ -185,6 +187,8 @@ private:
   std::array<WordType,NumWords> Words;
 };
 
+raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T);
+
 struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   using SetType = MachineValueTypeSet;
   SmallVector<unsigned, 16> AddrSpaces;
@@ -239,7 +243,6 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   bool assign_if(const TypeSetByHwMode &VTS, Predicate P);
 
   void writeToStream(raw_ostream &OS) const;
-  static void writeToStream(const SetType &S, raw_ostream &OS);
 
   bool operator==(const TypeSetByHwMode &VTS) const;
   bool operator!=(const TypeSetByHwMode &VTS) const { return !(*this == VTS); }
@@ -537,6 +540,9 @@ public:
 
   // Predicate code uses the PatFrag's captured operands.
   bool usesOperands() const;
+
+  // Check if the HasNoUse predicate is set.
+  bool hasNoUse() const;
 
   // Is the desired predefined predicate for a load?
   bool isLoad() const;

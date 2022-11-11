@@ -5,8 +5,8 @@ define i32 @main() nounwind ssp !dbg !0 {
 entry:
   %retval = alloca i32, align 4
   %a = alloca [0 x i32], align 4
-  store i32 0, i32* %retval
-  call void @llvm.dbg.declare(metadata [0 x i32]* %a, metadata !6, metadata !DIExpression()), !dbg !11
+  store i32 0, ptr %retval
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !6, metadata !DIExpression()), !dbg !11
   ret i32 0, !dbg !12
 }
 

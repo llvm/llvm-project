@@ -19,7 +19,7 @@ namespace modernize {
 /// with the unary version.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-unary-static-assert.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/unary-static-assert.html
 class UnaryStaticAssertCheck : public ClangTidyCheck {
 public:
   UnaryStaticAssertCheck(StringRef Name, ClangTidyContext *Context)

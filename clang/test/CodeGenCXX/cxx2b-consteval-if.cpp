@@ -26,3 +26,30 @@ constexpr void f() {
 void g() {
   f();
 }
+
+namespace GH55638 {
+
+constexpr bool is_constant_evaluated() noexcept {
+  if consteval { return true; } else { return false; }
+}
+
+constexpr int compiletime(int) {
+   return 2;
+}
+
+constexpr int runtime(int) {
+   return 1;
+}
+
+constexpr int test(int x) {
+  if(is_constant_evaluated())
+    return compiletime(x);  // CHECK-NOT: call {{.*}}compiletime
+   return runtime(x);  // CHECK: call {{.*}}runtime
+}
+
+int f(int x) {
+  x = test(x);
+  return x;
+}
+
+}

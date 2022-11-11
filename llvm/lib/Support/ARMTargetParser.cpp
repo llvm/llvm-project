@@ -39,12 +39,6 @@ ARM::ArchKind ARM::parseArch(StringRef Arch) {
 unsigned ARM::parseArchVersion(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
   switch (parseArch(Arch)) {
-  case ArchKind::ARMV2:
-  case ArchKind::ARMV2A:
-    return 2;
-  case ArchKind::ARMV3:
-  case ArchKind::ARMV3M:
-    return 3;
   case ArchKind::ARMV4:
   case ArchKind::ARMV4T:
     return 4;
@@ -94,58 +88,58 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   llvm_unreachable("Unhandled architecture");
 }
 
+static ARM::ProfileKind getProfileKind(ARM::ArchKind AK) {
+  switch (AK) {
+  case ARM::ArchKind::ARMV6M:
+  case ARM::ArchKind::ARMV7M:
+  case ARM::ArchKind::ARMV7EM:
+  case ARM::ArchKind::ARMV8MMainline:
+  case ARM::ArchKind::ARMV8MBaseline:
+  case ARM::ArchKind::ARMV8_1MMainline:
+    return ARM::ProfileKind::M;
+  case ARM::ArchKind::ARMV7R:
+  case ARM::ArchKind::ARMV8R:
+    return ARM::ProfileKind::R;
+  case ARM::ArchKind::ARMV7A:
+  case ARM::ArchKind::ARMV7VE:
+  case ARM::ArchKind::ARMV7K:
+  case ARM::ArchKind::ARMV8A:
+  case ARM::ArchKind::ARMV8_1A:
+  case ARM::ArchKind::ARMV8_2A:
+  case ARM::ArchKind::ARMV8_3A:
+  case ARM::ArchKind::ARMV8_4A:
+  case ARM::ArchKind::ARMV8_5A:
+  case ARM::ArchKind::ARMV8_6A:
+  case ARM::ArchKind::ARMV8_7A:
+  case ARM::ArchKind::ARMV8_8A:
+  case ARM::ArchKind::ARMV9A:
+  case ARM::ArchKind::ARMV9_1A:
+  case ARM::ArchKind::ARMV9_2A:
+  case ARM::ArchKind::ARMV9_3A:
+    return ARM::ProfileKind::A;
+  case ARM::ArchKind::ARMV4:
+  case ARM::ArchKind::ARMV4T:
+  case ARM::ArchKind::ARMV5T:
+  case ARM::ArchKind::ARMV5TE:
+  case ARM::ArchKind::ARMV5TEJ:
+  case ARM::ArchKind::ARMV6:
+  case ARM::ArchKind::ARMV6K:
+  case ARM::ArchKind::ARMV6T2:
+  case ARM::ArchKind::ARMV6KZ:
+  case ARM::ArchKind::ARMV7S:
+  case ARM::ArchKind::IWMMXT:
+  case ARM::ArchKind::IWMMXT2:
+  case ARM::ArchKind::XSCALE:
+  case ARM::ArchKind::INVALID:
+    return ARM::ProfileKind::INVALID;
+  }
+  llvm_unreachable("Unhandled architecture");
+}
+
 // Profile A/R/M
 ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
-  switch (parseArch(Arch)) {
-  case ArchKind::ARMV6M:
-  case ArchKind::ARMV7M:
-  case ArchKind::ARMV7EM:
-  case ArchKind::ARMV8MMainline:
-  case ArchKind::ARMV8MBaseline:
-  case ArchKind::ARMV8_1MMainline:
-    return ProfileKind::M;
-  case ArchKind::ARMV7R:
-  case ArchKind::ARMV8R:
-    return ProfileKind::R;
-  case ArchKind::ARMV7A:
-  case ArchKind::ARMV7VE:
-  case ArchKind::ARMV7K:
-  case ArchKind::ARMV8A:
-  case ArchKind::ARMV8_1A:
-  case ArchKind::ARMV8_2A:
-  case ArchKind::ARMV8_3A:
-  case ArchKind::ARMV8_4A:
-  case ArchKind::ARMV8_5A:
-  case ArchKind::ARMV8_6A:
-  case ArchKind::ARMV8_7A:
-  case ArchKind::ARMV8_8A:
-  case ArchKind::ARMV9A:
-  case ArchKind::ARMV9_1A:
-  case ArchKind::ARMV9_2A:
-  case ArchKind::ARMV9_3A:
-    return ProfileKind::A;
-  case ArchKind::ARMV2:
-  case ArchKind::ARMV2A:
-  case ArchKind::ARMV3:
-  case ArchKind::ARMV3M:
-  case ArchKind::ARMV4:
-  case ArchKind::ARMV4T:
-  case ArchKind::ARMV5T:
-  case ArchKind::ARMV5TE:
-  case ArchKind::ARMV5TEJ:
-  case ArchKind::ARMV6:
-  case ArchKind::ARMV6K:
-  case ArchKind::ARMV6T2:
-  case ArchKind::ARMV6KZ:
-  case ArchKind::ARMV7S:
-  case ArchKind::IWMMXT:
-  case ArchKind::IWMMXT2:
-  case ArchKind::XSCALE:
-  case ArchKind::INVALID:
-    return ProfileKind::INVALID;
-  }
-  llvm_unreachable("Unhandled architecture");
+  return getProfileKind(parseArch(Arch));
 }
 
 StringRef ARM::getArchSynonym(StringRef Arch) {
@@ -556,6 +550,17 @@ bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
   return StartingNumFeatures != Features.size();
 }
 
+ARM::ArchKind ARM::convertV9toV8(ARM::ArchKind AK) {
+  if (getProfileKind(AK) != ProfileKind::A)
+    return ARM::ArchKind::INVALID;
+  if (AK < ARM::ArchKind::ARMV9A || AK > ARM::ArchKind::ARMV9_3A)
+    return ARM::ArchKind::INVALID;
+  unsigned AK_v8 = static_cast<unsigned>(ARM::ArchKind::ARMV8_5A);
+  AK_v8 += static_cast<unsigned>(AK) -
+           static_cast<unsigned>(ARM::ArchKind::ARMV9A);
+  return static_cast<ARM::ArchKind>(AK_v8);
+}
+
 StringRef ARM::getDefaultCPU(StringRef Arch) {
   ArchKind AK = parseArch(Arch);
   if (AK == ArchKind::INVALID)
@@ -637,4 +642,73 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
       return "aapcs-linux";
     return "aapcs";
   }
+}
+
+StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
+  if (MArch.empty())
+    MArch = Triple.getArchName();
+  MArch = llvm::ARM::getCanonicalArchName(MArch);
+
+  // Some defaults are forced.
+  switch (Triple.getOS()) {
+  case llvm::Triple::FreeBSD:
+  case llvm::Triple::NetBSD:
+  case llvm::Triple::OpenBSD:
+    if (!MArch.empty() && MArch == "v6")
+      return "arm1176jzf-s";
+    if (!MArch.empty() && MArch == "v7")
+      return "cortex-a8";
+    break;
+  case llvm::Triple::Win32:
+    // FIXME: this is invalid for WindowsCE
+    if (llvm::ARM::parseArchVersion(MArch) <= 7)
+      return "cortex-a9";
+    break;
+  case llvm::Triple::IOS:
+  case llvm::Triple::MacOSX:
+  case llvm::Triple::TvOS:
+  case llvm::Triple::WatchOS:
+  case llvm::Triple::DriverKit:
+    if (MArch == "v7k")
+      return "cortex-a7";
+    break;
+  default:
+    break;
+  }
+
+  if (MArch.empty())
+    return StringRef();
+
+  StringRef CPU = llvm::ARM::getDefaultCPU(MArch);
+  if (!CPU.empty() && !CPU.equals("invalid"))
+    return CPU;
+
+  // If no specific architecture version is requested, return the minimum CPU
+  // required by the OS and environment.
+  switch (Triple.getOS()) {
+  case llvm::Triple::NetBSD:
+    switch (Triple.getEnvironment()) {
+    case llvm::Triple::EABI:
+    case llvm::Triple::EABIHF:
+    case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIHF:
+      return "arm926ej-s";
+    default:
+      return "strongarm";
+    }
+  case llvm::Triple::NaCl:
+  case llvm::Triple::OpenBSD:
+    return "cortex-a8";
+  default:
+    switch (Triple.getEnvironment()) {
+    case llvm::Triple::EABIHF:
+    case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::MuslEABIHF:
+      return "arm1176jzf-s";
+    default:
+      return "arm7tdmi";
+    }
+  }
+
+  llvm_unreachable("invalid arch name");
 }

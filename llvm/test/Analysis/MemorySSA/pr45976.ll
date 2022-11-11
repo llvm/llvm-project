@@ -26,7 +26,7 @@ bb49.us.i.us:                                     ; preds = %bb49.us.preheader.i
   br label %bb18.i
 
 bb78.loopexit3.i:                                 ; preds = %bb49.preheader.i
-  store i64 0, i64* @global1, align 8
+  store i64 0, ptr @global1, align 8
   br label %.exit
 
 .exit.loopexit:                                   ; preds = %bb18.i
@@ -39,8 +39,8 @@ bb4.i.us.preheader:                               ; preds = %.exit
   br label %bb4.i.us
 
 bb4.i.us:                                         ; preds = %bb4.i.us, %bb4.i.us.preheader
-  store i32 0, i32* undef, align 4
-  store i32 undef, i32* getelementptr inbounds ([3 x [8 x [8 x { i32, i64, i8, i8, i16, i32 }]]], [3 x [8 x [8 x { i32, i64, i8, i8, i16, i32 }]]]* @global2, i64 0, i64 0, i64 6, i64 6, i32 0), align 8
+  store i32 0, ptr undef, align 4
+  store i32 undef, ptr getelementptr inbounds ([3 x [8 x [8 x { i32, i64, i8, i8, i16, i32 }]]], ptr @global2, i64 0, i64 0, i64 6, i64 6, i32 0), align 8
   br label %bb4.i.us
 
 bb4.i:                                            ; preds = %.exit

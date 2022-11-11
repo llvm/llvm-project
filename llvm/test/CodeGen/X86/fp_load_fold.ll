@@ -3,74 +3,74 @@
 
 ; Test that the load of the memory location is folded into the operation.
 
-define double @test_add(double %X, double* %P) {
+define double @test_add(double %X, ptr %P) {
 ; CHECK-LABEL: test_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
 ; CHECK-NEXT:    fld qword ptr [esp + 4]
 ; CHECK-NEXT:    fadd qword ptr [eax]
 ; CHECK-NEXT:    ret
-	%Y = load double, double* %P		; <double> [#uses=1]
+	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fadd double %X, %Y		; <double> [#uses=1]
 	ret double %R
 }
 
-define double @test_mul(double %X, double* %P) {
+define double @test_mul(double %X, ptr %P) {
 ; CHECK-LABEL: test_mul:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
 ; CHECK-NEXT:    fld qword ptr [esp + 4]
 ; CHECK-NEXT:    fmul qword ptr [eax]
 ; CHECK-NEXT:    ret
-	%Y = load double, double* %P		; <double> [#uses=1]
+	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fmul double %X, %Y		; <double> [#uses=1]
 	ret double %R
 }
 
-define double @test_sub(double %X, double* %P) {
+define double @test_sub(double %X, ptr %P) {
 ; CHECK-LABEL: test_sub:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
 ; CHECK-NEXT:    fld qword ptr [esp + 4]
 ; CHECK-NEXT:    fsub qword ptr [eax]
 ; CHECK-NEXT:    ret
-	%Y = load double, double* %P		; <double> [#uses=1]
+	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fsub double %X, %Y		; <double> [#uses=1]
 	ret double %R
 }
 
-define double @test_subr(double %X, double* %P) {
+define double @test_subr(double %X, ptr %P) {
 ; CHECK-LABEL: test_subr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
 ; CHECK-NEXT:    fld qword ptr [eax]
 ; CHECK-NEXT:    fsub qword ptr [esp + 4]
 ; CHECK-NEXT:    ret
-	%Y = load double, double* %P		; <double> [#uses=1]
+	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fsub double %Y, %X		; <double> [#uses=1]
 	ret double %R
 }
 
-define double @test_div(double %X, double* %P) {
+define double @test_div(double %X, ptr %P) {
 ; CHECK-LABEL: test_div:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
 ; CHECK-NEXT:    fld qword ptr [esp + 4]
 ; CHECK-NEXT:    fdiv qword ptr [eax]
 ; CHECK-NEXT:    ret
-	%Y = load double, double* %P		; <double> [#uses=1]
+	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fdiv double %X, %Y		; <double> [#uses=1]
 	ret double %R
 }
 
-define double @test_divr(double %X, double* %P) {
+define double @test_divr(double %X, ptr %P) {
 ; CHECK-LABEL: test_divr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
 ; CHECK-NEXT:    fld qword ptr [eax]
 ; CHECK-NEXT:    fdiv qword ptr [esp + 4]
 ; CHECK-NEXT:    ret
-	%Y = load double, double* %P		; <double> [#uses=1]
+	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fdiv double %Y, %X		; <double> [#uses=1]
 	ret double %R
 }

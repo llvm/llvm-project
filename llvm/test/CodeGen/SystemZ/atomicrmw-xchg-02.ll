@@ -10,7 +10,7 @@
 ;   tested in CHECK.  CHECK-SHIFT also checks that %r3 is not modified before
 ;   being used in the RISBG (in contrast to things like atomic addition,
 ;   which shift %r3 left so that %b is at the high end of the word).
-define i16 @f1(i16 *%src, i16 %b) {
+define i16 @f1(ptr %src, i16 %b) {
 ; CHECK-LABEL: f1:
 ; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
 ; CHECK-DAG: sll %r2, 3
@@ -36,13 +36,13 @@ define i16 @f1(i16 *%src, i16 %b) {
 ; CHECK-SHIFT: rll {{%r[0-9]+}}, {{%r[0-9]+}}, 0([[NEGSHIFT]])
 ; CHECK-SHIFT: rll
 ; CHECK-SHIFT: br %r14
-  %res = atomicrmw xchg i16 *%src, i16 %b seq_cst
+  %res = atomicrmw xchg ptr %src, i16 %b seq_cst
   ret i16 %res
 }
 
 ; Check exchange with a constant.  We should force the constant into
 ; a register and use the sequence above.
-define i16 @f2(i16 *%src) {
+define i16 @f2(ptr %src) {
 ; CHECK-LABEL: f2:
 ; CHECK: lhi [[VALUE:%r[0-9]+]], -25536
 ; CHECK: risbg {{%r[0-9]+}}, [[VALUE]], 32, 47, 16
@@ -50,6 +50,6 @@ define i16 @f2(i16 *%src) {
 ;
 ; CHECK-SHIFT-LABEL: f2:
 ; CHECK-SHIFT: br %r14
-  %res = atomicrmw xchg i16 *%src, i16 40000 seq_cst
+  %res = atomicrmw xchg ptr %src, i16 40000 seq_cst
   ret i16 %res
 }

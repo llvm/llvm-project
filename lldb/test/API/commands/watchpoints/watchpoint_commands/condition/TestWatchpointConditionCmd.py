@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class WatchpointConditionCmdTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -84,4 +82,4 @@ class WatchpointConditionCmdTestCase(TestBase):
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should now be 2.
         self.expect("watchpoint list -v",
-                    substrs=['hit_count = 5'])
+                    substrs=['hit_count = 1'])

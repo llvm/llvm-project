@@ -1413,7 +1413,7 @@ entry:
 
 ; Test that resultant libcalls retain order even when their non-strict FLOP form could be
 ; trivially optimized into differing sequences.
-define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %result) #0 {
+define void @test_constrained_libcall_multichain(ptr %firstptr, ptr %result) #0 {
 ; PC64LE-LABEL: test_constrained_libcall_multichain:
 ; PC64LE:       # %bb.0:
 ; PC64LE-NEXT:    mflr 0
@@ -1570,11 +1570,11 @@ define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %r
 ; PC64-NEXT:    ld 0, 16(1)
 ; PC64-NEXT:    mtlr 0
 ; PC64-NEXT:    blr
-  %load = load float, float* %firstptr
+  %load = load float, ptr %firstptr
   %first = call ppc_fp128 @llvm.experimental.constrained.fpext.f32.ppcf128(
                     float %load,
                     metadata !"fpexcept.strict") #1
-  store ppc_fp128 %first, ppc_fp128* %result
+  store ppc_fp128 %first, ptr %result
 
   ; For unconstrained FLOPs, these next two FP instructions would necessarily
   ; be executed in series with one another.
@@ -1583,15 +1583,15 @@ define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %r
                     ppc_fp128 %first,
                     metadata !"round.dynamic",
                     metadata !"fpexcept.strict") #1
-  %stridx1 = getelementptr ppc_fp128, ppc_fp128* %result, i32 1
-  store ppc_fp128 %fadd, ppc_fp128* %stridx1
+  %stridx1 = getelementptr ppc_fp128, ptr %result, i32 1
+  store ppc_fp128 %fadd, ptr %stridx1
   %fmul = call ppc_fp128 @llvm.experimental.constrained.fmul.ppcf128(
                     ppc_fp128 %fadd,
                     ppc_fp128 %fadd,
                     metadata !"round.dynamic",
                     metadata !"fpexcept.strict") #1
-  %stridx2 = getelementptr ppc_fp128, ppc_fp128* %stridx1, i32 1
-  store ppc_fp128 %fadd, ppc_fp128* %stridx2
+  %stridx2 = getelementptr ppc_fp128, ptr %stridx1, i32 1
+  store ppc_fp128 %fadd, ptr %stridx2
 
   ; For unconstrained FLOPs, these next two FP instructions could be reordered
   ; or even executed in parallel with respect to the previous two instructions.
@@ -1605,9 +1605,9 @@ define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %r
                     ppc_fp128 %powi,
                     metadata !"round.dynamic",
                     metadata !"fpexcept.strict") #1
-  store float %tinypow, float* %firstptr
-  %stridxn1 = getelementptr ppc_fp128, ppc_fp128* %result, i32 -1
-  store ppc_fp128 %powi, ppc_fp128* %stridxn1
+  store float %tinypow, ptr %firstptr
+  %stridxn1 = getelementptr ppc_fp128, ptr %result, i32 -1
+  store ppc_fp128 %powi, ptr %stridxn1
   ret void
 }
 

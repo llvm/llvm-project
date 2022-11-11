@@ -26,6 +26,13 @@ def SDT_RISCVFCVT_X
     : SDTypeProfile<1, 2, [SDTCisVT<0, XLenVT>, SDTCisFP<1>,
                            SDTCisVT<2, XLenVT>]>;
 
+def SDT_RISCVFROUND
+    : SDTypeProfile<1, 3, [SDTCisFP<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
+                           SDTCisVT<3, XLenVT>]>;
+
+def riscv_fround
+    : SDNode<"RISCVISD::FROUND", SDT_RISCVFROUND>;
+
 def riscv_fmv_w_x_rv64
     : SDNode<"RISCVISD::FMV_W_X_RV64", SDT_RISCVFMV_W_X_RV64>;
 def riscv_fmv_x_anyextw_rv64
@@ -160,7 +167,7 @@ class FPStore_r<bits<3> funct3, string opcodestr, RegisterClass rty,
     : RVInstS<funct3, OPC_STORE_FP, (outs),
               (ins rty:$rs2, GPR:$rs1, simm12:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">,
-      Sched<[sw, ReadStoreData, ReadFMemBase]>;
+      Sched<[sw, ReadFStoreData, ReadFMemBase]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
     UseNamedOperandTable = 1, hasPostISelHook = 1, isCommutable = 1 in
@@ -289,6 +296,16 @@ multiclass FPCmp_rr_m<bits<7> funct7, bits<3> funct3, string opcodestr,
     def Ext.Suffix : FPCmp_rr<funct7, funct3, opcodestr, Ext.Reg, Commutable>;
 }
 
+class PseudoFROUND<RegisterClass Ty>
+    : Pseudo<(outs Ty:$rd), (ins Ty:$rs1, Ty:$rs2, ixlenimm:$rm),
+      [(set Ty:$rd, (riscv_fround Ty:$rs1, Ty:$rs2, timm:$rm))]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let usesCustomInserter = 1;
+  let mayRaiseFPException = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -314,7 +331,7 @@ defm : FPFMADynFrmAlias_m<FMSUB_S,  "fmsub.s",  FINX>;
 defm : FPFMADynFrmAlias_m<FNMSUB_S, "fnmsub.s", FINX>;
 defm : FPFMADynFrmAlias_m<FNMADD_S, "fnmadd.s", FINX>;
 
-let SchedRW = [WriteFALU32, ReadFALU32, ReadFALU32] in {
+let SchedRW = [WriteFAdd32, ReadFAdd32, ReadFAdd32] in {
 defm FADD_S : FPALU_rr_frm_m<0b0000000, "fadd.s", FINX, /*Commutable*/1>;
 defm FSUB_S : FPALU_rr_frm_m<0b0000100, "fsub.s", FINX>;
 }
@@ -564,7 +581,9 @@ def : PatSetCC<FPR32, any_fsetccs, SETOLT, FLT_S>;
 def : PatSetCC<FPR32, any_fsetccs, SETLE, FLE_S>;
 def : PatSetCC<FPR32, any_fsetccs, SETOLE, FLE_S>;
 
-def Select_FPR32_Using_CC_GPR : SelectCC_rrirr<FPR32, GPR>;
+defm Select_FPR32 : SelectCC_GPR_rrirr<FPR32>;
+
+def PseudoFROUND_S : PseudoFROUND<FPR32>;
 
 /// Loads
 

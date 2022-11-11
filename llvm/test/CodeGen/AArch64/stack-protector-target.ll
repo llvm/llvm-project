@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=aarch64-fuchsia < %s -o - | FileCheck --check-prefixes=FUCHSIA-AARCH64-COMMON,FUCHSIA-AARCH64-USER %s
 ; RUN: llc -mtriple=aarch64-fuchsia -mattr=+tpidr-el1 < %s -o - | FileCheck --check-prefixes=FUCHSIA-AARCH64-COMMON,FUCHSIA-AARCH64-KERNEL %s
 ; RUN: llc -mtriple=aarch64-windows < %s -o - | FileCheck --check-prefix=WINDOWS-AARCH64 %s
+; RUN: llc -mtriple=arm64ec-windows-msvc < %s -o - | FileCheck --check-prefix=WINDOWS-ARM64EC %s
 
 define void @_Z1fv() sspreq {
 entry:
@@ -35,3 +36,10 @@ declare void @_Z7CapturePi(i32*)
 ; WINDOWS-AARCH64: bl  _Z7CapturePi
 ; WINDOWS-AARCH64: ldr x0, [sp, #8]
 ; WINDOWS-AARCH64: bl  __security_check_cookie
+
+; WINDOWS-ARM64EC: adrp x8, __security_cookie
+; WINDOWS-ARM64EC: ldr x8, [x8, :lo12:__security_cookie]
+; WINDOWS-ARM64EC: str x8, [sp, #8]
+; WINDOWS-ARM64EC: bl  _Z7CapturePi
+; WINDOWS-ARM64EC: ldr x0, [sp, #8]
+; WINDOWS-ARM64EC: bl  __security_check_cookie_arm64ec

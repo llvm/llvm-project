@@ -34,22 +34,21 @@
 // RUN: %libomptarget-run-fail-generic 2>&1 \
 // RUN: | %fcheck-generic
 
-
 // END.
 
 #include <stdio.h>
 
 #define BEFORE 0
-#define AFTER  1
+#define AFTER 1
 
 #if EXTENDS == BEFORE
-# define SMALL 2:3
-# define LARGE 0:5
+#define SMALL 2 : 3
+#define LARGE 0 : 5
 #elif EXTENDS == AFTER
-# define SMALL 0:3
-# define LARGE 0:5
+#define SMALL 0 : 3
+#define LARGE 0 : 5
 #else
-# error EXTENDS undefined
+#error EXTENDS undefined
 #endif
 
 int main() {
@@ -59,9 +58,9 @@ int main() {
   fprintf(stderr, "addr=%p, size=%ld\n", arr, sizeof arr);
 
   // CHECK-NOT: Libomptarget
-#pragma omp target data map(alloc: arr[LARGE])
+#pragma omp target data map(alloc : arr[LARGE])
   {
-#pragma omp target update CLAUSE(present: arr[SMALL])
+#pragma omp target update CLAUSE(present : arr[SMALL])
   }
 
   // CHECK: arr is present
@@ -69,9 +68,9 @@ int main() {
 
   // CHECK: Libomptarget message: device mapping required by 'present' motion modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
   // CHECK: Libomptarget fatal error 1: failure of target construct while offloading is mandatory
-#pragma omp target data map(alloc: arr[SMALL])
+#pragma omp target data map(alloc : arr[SMALL])
   {
-#pragma omp target update CLAUSE(present: arr[LARGE])
+#pragma omp target update CLAUSE(present : arr[LARGE])
   }
 
   // CHECK-NOT: arr is present

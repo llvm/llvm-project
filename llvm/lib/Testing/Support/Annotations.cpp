@@ -33,12 +33,12 @@ Annotations::Annotations(llvm::StringRef Text) {
   Code.reserve(Text.size());
   while (!Text.empty()) {
     if (Text.consume_front("^")) {
-      Points[Name.getValueOr("")].push_back(Code.size());
+      Points[Name.value_or("")].push_back(Code.size());
       Name = llvm::None;
       continue;
     }
     if (Text.consume_front("[[")) {
-      OpenRanges.emplace_back(Name.getValueOr(""), Code.size());
+      OpenRanges.emplace_back(Name.value_or(""), Code.size());
       Name = llvm::None;
       continue;
     }
@@ -79,6 +79,11 @@ std::vector<size_t> Annotations::points(llvm::StringRef Name) const {
   return {I->getValue().begin(), I->getValue().end()};
 }
 
+const llvm::StringMap<llvm::SmallVector<size_t, 1>> &
+Annotations::all_points() const {
+  return Points;
+}
+
 Annotations::Range Annotations::range(llvm::StringRef Name) const {
   auto I = Ranges.find(Name);
   require(I != Ranges.end() && I->getValue().size() == 1,
@@ -92,6 +97,11 @@ Annotations::ranges(llvm::StringRef Name) const {
   if (I == Ranges.end())
     return {};
   return {I->getValue().begin(), I->getValue().end()};
+}
+
+const llvm::StringMap<llvm::SmallVector<Annotations::Range, 1>> &
+Annotations::all_ranges() const {
+  return Ranges;
 }
 
 llvm::raw_ostream &llvm::operator<<(llvm::raw_ostream &O,

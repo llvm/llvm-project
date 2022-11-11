@@ -33,7 +33,7 @@ template <class Emitter> class LabelScope;
 
 /// Compilation context for statements.
 template <class Emitter>
-class ByteCodeStmtGen : public ByteCodeExprGen<Emitter> {
+class ByteCodeStmtGen final : public ByteCodeExprGen<Emitter> {
   using LabelTy = typename Emitter::LabelTy;
   using AddrTy = typename Emitter::AddrTy;
   using OptLabelTy = llvm::Optional<LabelTy>;
@@ -58,6 +58,11 @@ private:
   bool visitDeclStmt(const DeclStmt *DS);
   bool visitReturnStmt(const ReturnStmt *RS);
   bool visitIfStmt(const IfStmt *IS);
+  bool visitWhileStmt(const WhileStmt *S);
+  bool visitDoStmt(const DoStmt *S);
+  bool visitForStmt(const ForStmt *S);
+  bool visitBreakStmt(const BreakStmt *S);
+  bool visitContinueStmt(const ContinueStmt *S);
 
   /// Compiles a variable declaration.
   bool visitVarDecl(const VarDecl *VD);

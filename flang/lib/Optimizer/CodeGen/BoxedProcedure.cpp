@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "flang/Optimizer/CodeGen/CodeGen.h"
+
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
-#include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -18,6 +18,11 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace fir {
+#define GEN_PASS_DEF_BOXEDPROCEDUREPASS
+#include "flang/Optimizer/CodeGen/CGPasses.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-procedure-pointer"
 
@@ -62,8 +67,7 @@ public:
       return false;
     }
     if (auto recTy = ty.dyn_cast<RecordType>()) {
-      if (llvm::any_of(visitedTypes,
-                       [&](mlir::Type rt) { return rt == recTy; }))
+      if (llvm::is_contained(visitedTypes, recTy))
         return false;
       bool result = false;
       visitedTypes.push_back(recTy);
@@ -170,7 +174,8 @@ private:
 /// the frame pointer during execution. In LLVM IR, the frame pointer is
 /// designated with the `nest` attribute. The thunk's address will then be used
 /// as the call target instead of the original function's address directly.
-class BoxedProcedurePass : public BoxedProcedurePassBase<BoxedProcedurePass> {
+class BoxedProcedurePass
+    : public fir::impl::BoxedProcedurePassBase<BoxedProcedurePass> {
 public:
   BoxedProcedurePass() { options = {true}; }
   BoxedProcedurePass(bool useThunks) { options = {useThunks}; }
@@ -221,7 +226,8 @@ public:
           if (embox.getHost()) {
             // Create the thunk.
             auto module = embox->getParentOfType<mlir::ModuleOp>();
-            FirOpBuilder builder(rewriter, getKindMapping(module));
+            fir::KindMapping kindMap = getKindMapping(module);
+            FirOpBuilder builder(rewriter, kindMap);
             auto loc = embox.getLoc();
             mlir::Type i8Ty = builder.getI8Type();
             mlir::Type i8Ptr = builder.getRefType(i8Ty);
@@ -251,12 +257,10 @@ public:
             rewriter.setInsertionPoint(mem);
             auto toTy = typeConverter.convertType(unwrapRefType(ty));
             bool isPinned = mem.getPinned();
-            llvm::StringRef uniqName;
-            if (mem.getUniqName().hasValue())
-              uniqName = mem.getUniqName().getValue();
-            llvm::StringRef bindcName;
-            if (mem.getBindcName().hasValue())
-              bindcName = mem.getBindcName().getValue();
+            llvm::StringRef uniqName =
+                mem.getUniqName().value_or(llvm::StringRef());
+            llvm::StringRef bindcName =
+                mem.getBindcName().value_or(llvm::StringRef());
             rewriter.replaceOpWithNewOp<AllocaOp>(
                 mem, toTy, uniqName, bindcName, isPinned, mem.getTypeparams(),
                 mem.getShape());
@@ -266,12 +270,10 @@ public:
           if (typeConverter.needsConversion(ty)) {
             rewriter.setInsertionPoint(mem);
             auto toTy = typeConverter.convertType(unwrapRefType(ty));
-            llvm::StringRef uniqName;
-            if (mem.getUniqName().hasValue())
-              uniqName = mem.getUniqName().getValue();
-            llvm::StringRef bindcName;
-            if (mem.getBindcName().hasValue())
-              bindcName = mem.getBindcName().getValue();
+            llvm::StringRef uniqName =
+                mem.getUniqName().value_or(llvm::StringRef());
+            llvm::StringRef bindcName =
+                mem.getBindcName().value_or(llvm::StringRef());
             rewriter.replaceOpWithNewOp<AllocMemOp>(
                 mem, toTy, uniqName, bindcName, mem.getTypeparams(),
                 mem.getShape());
@@ -307,7 +309,7 @@ public:
             auto toTy = typeConverter.convertType(ty);
             auto toOnTy = typeConverter.convertType(onTy);
             rewriter.replaceOpWithNewOp<LenParamIndexOp>(
-                mem, toTy, index.getFieldId(), toOnTy);
+                mem, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
           }
         } else if (op->getDialect() == firDialect) {
           rewriter.startRootUpdate(op);

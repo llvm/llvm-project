@@ -39,7 +39,8 @@ protected:
 
 public:
   ProcessStructReader(Process *process, lldb::addr_t base_addr,
-                      CompilerType struct_type) {
+                      CompilerType struct_type)
+      : m_byte_order(lldb::eByteOrderInvalid), m_addr_byte_size(0) {
     if (!process)
       return;
     if (base_addr == 0 || base_addr == LLDB_INVALID_ADDRESS)

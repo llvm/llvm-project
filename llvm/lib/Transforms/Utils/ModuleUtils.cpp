@@ -254,8 +254,8 @@ void VFABI::setVectorVariantNames(CallInst *CI,
   for (const std::string &VariantMapping : VariantMappings) {
     LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << VariantMapping << "'\n");
     Optional<VFInfo> VI = VFABI::tryDemangleForVFABI(VariantMapping, *M);
-    assert(VI.hasValue() && "Cannot add an invalid VFABI name.");
-    assert(M->getNamedValue(VI.getValue().VectorName) &&
+    assert(VI && "Cannot add an invalid VFABI name.");
+    assert(M->getNamedValue(VI.value().VectorName) &&
            "Cannot add variant to attribute: "
            "vector function declaration is missing.");
   }
@@ -274,6 +274,14 @@ void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
       ModuleConstant, "llvm.embedded.object");
   GV->setSection(SectionName);
   GV->setAlignment(Alignment);
+
+  LLVMContext &Ctx = M.getContext();
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("llvm.embedded.objects");
+  Metadata *MDVals[] = {ConstantAsMetadata::get(GV),
+                        MDString::get(Ctx, SectionName)};
+
+  MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
+  GV->setMetadata(LLVMContext::MD_exclude, llvm::MDNode::get(Ctx, {}));
 
   appendToCompilerUsed(M, GV);
 }

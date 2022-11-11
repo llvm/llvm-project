@@ -88,7 +88,7 @@ subroutine test_vector_subcripted_section_to_box(v, x)
 ! CHECK:  %[[VAL_26:.*]] = fir.shape %[[VAL_9]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_27:.*]] = fir.embox %[[VAL_11]](%[[VAL_26]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:  fir.call @_QPtakes_box(%[[VAL_27]]) : (!fir.box<!fir.array<?xf32>>) -> ()
-! CHECK:  fir.freemem %[[VAL_11]]
+! CHECK:  fir.freemem %[[VAL_11]] : !fir.heap<!fir.array<?xf32>>
 end subroutine
 
 ! Test external function declarations

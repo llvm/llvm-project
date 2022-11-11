@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=asan-pipeline %s | FileCheck %s
+; RUN: opt -S -passes=asan %s | FileCheck %s
 
 ; The IR of this testcase is generated from the following C code:
 ; void bar (int);

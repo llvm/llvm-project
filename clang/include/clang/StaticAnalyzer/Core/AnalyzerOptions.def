@@ -440,10 +440,18 @@ ANALYZER_OPTION(
 ANALYZER_OPTION(
     unsigned, RegionStoreSmallStructLimit, "region-store-small-struct-limit",
     "The largest number of fields a struct can have and still be considered "
-    "small This is currently used to decide whether or not it is worth forcing "
+    "small. This is currently used to decide whether or not it is worth forcing "
     "a LazyCompoundVal on bind. To disable all small-struct-dependent "
     "behavior, set the option to 0.",
     2)
+
+ANALYZER_OPTION(
+    unsigned, RegionStoreSmallArrayLimit, "region-store-small-array-limit",
+    "The largest number of elements an array can have and still be considered "
+    "small. This is currently used to decide whether or not it is worth forcing "
+    "a LazyCompoundVal on bind. To disable all small-array-dependent "
+    "behavior, set the option to 0.",
+    5)
 
 //===----------------------------------------------------------------------===//
 // String analyzer options.

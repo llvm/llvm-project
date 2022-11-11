@@ -11,6 +11,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/STLExtras.h"
@@ -59,7 +60,7 @@ private:
   static void registerSignalHandler();
 
   /// The textual description of the currently executing pipeline.
-  std::string pipeline;
+  std::string pipelineElements;
 
   /// The MLIR operation representing the IR before the crash.
   Operation *preCrashOperation;
@@ -92,8 +93,8 @@ llvm::ManagedStatic<llvm::SmallSetVector<RecoveryReproducerContext *, 1>>
 RecoveryReproducerContext::RecoveryReproducerContext(
     std::string passPipelineStr, Operation *op,
     PassManager::ReproducerStreamFactory &streamFactory, bool verifyPasses)
-    : pipeline(std::move(passPipelineStr)), preCrashOperation(op->clone()),
-      streamFactory(streamFactory),
+    : pipelineElements(std::move(passPipelineStr)),
+      preCrashOperation(op->clone()), streamFactory(streamFactory),
       disableThreads(!op->getContext()->isMultithreadingEnabled()),
       verifyPasses(verifyPasses) {
   enable();
@@ -117,17 +118,19 @@ void RecoveryReproducerContext::generate(std::string &description) {
   }
   descOS << "reproducer generated at `" << stream->description() << "`";
 
-  // Output the current pass manager configuration to the crash stream.
-  auto &os = stream->os();
-  os << "// configuration: -pass-pipeline='" << pipeline << "'";
-  if (disableThreads)
-    os << " -mlir-disable-threading";
-  if (verifyPasses)
-    os << " -verify-each";
-  os << '\n';
+  std::string pipeline = (preCrashOperation->getName().getStringRef() + "(" +
+                          pipelineElements + ")")
+                             .str();
+  AsmState state(preCrashOperation);
+  state.attachResourcePrinter(
+      "mlir_reproducer", [&](Operation *op, AsmResourceBuilder &builder) {
+        builder.buildString("pipeline", pipeline);
+        builder.buildBool("disable_threading", disableThreads);
+        builder.buildBool("verify_each", verifyPasses);
+      });
 
   // Output the .mlir module.
-  preCrashOperation->print(os);
+  preCrashOperation->print(stream->os(), state);
 }
 
 void RecoveryReproducerContext::disable() {
@@ -437,4 +440,51 @@ void PassManager::enableCrashReproducerGeneration(
       factory, genLocalReproducer);
   addInstrumentation(
       std::make_unique<CrashReproducerInstrumentation>(*crashReproGenerator));
+}
+
+//===----------------------------------------------------------------------===//
+// Asm Resource
+//===----------------------------------------------------------------------===//
+
+void PassReproducerOptions::attachResourceParser(ParserConfig &config) {
+  auto parseFn = [this](AsmParsedResourceEntry &entry) -> LogicalResult {
+    if (entry.getKey() == "pipeline") {
+      FailureOr<std::string> value = entry.parseAsString();
+      if (succeeded(value))
+        this->pipeline = std::move(*value);
+      return value;
+    }
+    if (entry.getKey() == "disable_threading") {
+      FailureOr<bool> value = entry.parseAsBool();
+      if (succeeded(value))
+        this->disableThreading = *value;
+      return value;
+    }
+    if (entry.getKey() == "verify_each") {
+      FailureOr<bool> value = entry.parseAsBool();
+      if (succeeded(value))
+        this->verifyEach = *value;
+      return value;
+    }
+    return entry.emitError() << "unknown 'mlir_reproducer' resource key '"
+                             << entry.getKey() << "'";
+  };
+  config.attachResourceParser("mlir_reproducer", parseFn);
+}
+
+LogicalResult PassReproducerOptions::apply(PassManager &pm) const {
+  if (pipeline.has_value()) {
+    FailureOr<OpPassManager> reproPm = parsePassPipeline(*pipeline);
+    if (failed(reproPm))
+      return failure();
+    static_cast<OpPassManager &>(pm) = std::move(*reproPm);
+  }
+
+  if (disableThreading.has_value())
+    pm.getContext()->disableMultithreading(*disableThreading);
+
+  if (verifyEach.has_value())
+    pm.enableVerifier(*verifyEach);
+
+  return success();
 }

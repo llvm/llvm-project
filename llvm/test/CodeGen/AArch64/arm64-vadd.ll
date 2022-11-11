@@ -935,6 +935,25 @@ define <4 x i32> @addhn2_4s_natural(<2 x i32> %low, <2 x i64>* %A, <2 x i64>* %B
         ret <4 x i32> %res
 }
 
+define <4 x i32> @addhn_addhn2_4s(<2 x i64>* %A, <2 x i64>* %B, <2 x i64>* %C, <2 x i64>* %D) nounwind {
+;CHECK-LABEL: addhn_addhn2_4s
+;CHECK:     addhn.2s
+;CHECK:     addhn2.4s
+;CHECK-NOT: uzp2.4s
+            %tmp1 = load <2 x i64>, <2 x i64>* %A
+            %tmp2 = load <2 x i64>, <2 x i64>* %B
+            %sum1 = add <2 x i64> %tmp1, %tmp2
+            %low_bits = lshr <2 x i64> %sum1, <i64 32, i64 32>
+            %narrowed1 = trunc <2 x i64> %low_bits to <2 x i32>
+            %tmp3 = load <2 x i64>, <2 x i64>* %C
+            %tmp4 = load <2 x i64>, <2 x i64>* %D
+            %sum2 = add <2 x i64> %tmp3, %tmp4
+            %high_bits = lshr <2 x i64> %sum1, <i64 32, i64 32>
+            %narrowed2 = trunc <2 x i64> %high_bits to <2 x i32>
+            %res = shufflevector <2 x i32> %narrowed1, <2 x i32> %narrowed2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+            ret <4 x i32> %res
+}
+
 define <8 x i8> @subhn8b_natural(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ;CHECK-LABEL: subhn8b_natural:
 ;CHECK: subhn.8b

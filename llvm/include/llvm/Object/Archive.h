@@ -379,10 +379,10 @@ protected:
   uint64_t getArchiveMagicLen() const;
   void setFirstRegular(const Child &C);
 
-private:
   StringRef SymbolTable;
   StringRef StringTable;
 
+private:
   StringRef FirstRegularData;
   uint16_t FirstRegularStartOfFile = -1;
 

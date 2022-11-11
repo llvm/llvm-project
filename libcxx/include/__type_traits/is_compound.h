@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_compound)
+#if __has_builtin(__is_compound)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_compound : _BoolConstant<__is_compound(_Tp)> { };
@@ -29,7 +29,7 @@ template <class _Tp>
 inline constexpr bool is_compound_v = __is_compound(_Tp);
 #endif
 
-#else // __has_keyword(__is_compound)
+#else // __has_builtin(__is_compound)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_compound
     : public integral_constant<bool, !is_fundamental<_Tp>::value> {};
@@ -39,7 +39,7 @@ template <class _Tp>
 inline constexpr bool is_compound_v = is_compound<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_compound)
+#endif // __has_builtin(__is_compound)
 
 _LIBCPP_END_NAMESPACE_STD
 

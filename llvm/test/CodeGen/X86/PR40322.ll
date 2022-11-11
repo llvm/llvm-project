@@ -1,12 +1,12 @@
 ; RUN: llc < %s -mtriple=i686-windows-gnu | FileCheck %s --check-prefix=CHECK-MINGW-X86
 
-%struct.as = type { i32* }
+%struct.as = type { ptr }
 
 @_ZZ2amiE2au = internal unnamed_addr global %struct.as zeroinitializer, align 4
 @_ZGVZ2amiE2au = internal global i64 0, align 8
-@_ZTIi = external constant i8*
+@_ZTIi = external constant ptr
 
-define void @_Z2ami(i32) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @_Z2ami(i32) #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-MINGW-X86-LABEL: _Z2ami:
 ; CHECK-MINGW-X86:       # %bb.0: # %entry
 ; CHECK-MINGW-X86-NEXT:    pushl %edi
@@ -15,7 +15,7 @@ define void @_Z2ami(i32) #0 personality i8* bitcast (i32 (...)* @__gxx_personali
 ; CHECK-MINGW-X86-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-MINGW-X86-NEXT:    .cfi_offset %esi, -12
 ; CHECK-MINGW-X86-NEXT:    .cfi_offset %edi, -8
-; CHECK-MINGW-X86-NEXT:    movb __ZGVZ2amiE2au, %al
+; CHECK-MINGW-X86-NEXT:    movzbl __ZGVZ2amiE2au, %eax
 ; CHECK-MINGW-X86-NEXT:    testb %al, %al
 ; CHECK-MINGW-X86-NEXT:    jne LBB0_4
 ; CHECK-MINGW-X86-NEXT:  # %bb.1: # %init.check
@@ -98,66 +98,65 @@ define void @_Z2ami(i32) #0 personality i8* bitcast (i32 (...)* @__gxx_personali
 ; CHECK-MINGW-X86-NEXT:    calll __Unwind_Resume
 ; CHECK-MINGW-X86-NEXT:  Lfunc_end0:
 entry:
-  %1 = load atomic i8, i8* bitcast (i64* @_ZGVZ2amiE2au to i8*) acquire, align 8
+  %1 = load atomic i8, ptr @_ZGVZ2amiE2au acquire, align 8
   %guard.uninitialized = icmp eq i8 %1, 0
   br i1 %guard.uninitialized, label %init.check, label %init.end
 
 init.check:                                       ; preds = %entry
-  %2 = tail call i32 @__cxa_guard_acquire(i64* nonnull @_ZGVZ2amiE2au)
+  %2 = tail call i32 @__cxa_guard_acquire(ptr nonnull @_ZGVZ2amiE2au)
   %tobool = icmp eq i32 %2, 0
   br i1 %tobool, label %init.end, label %init
 
 init:                                             ; preds = %init.check
-  %call.i3 = invoke i8* @_Znwj(i32 4)
+  %call.i3 = invoke ptr @_Znwj(i32 4)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %init
-  store i8* %call.i3, i8** bitcast (%struct.as* @_ZZ2amiE2au to i8**), align 4
-  tail call void @__cxa_guard_release(i64* nonnull @_ZGVZ2amiE2au)
+  store ptr %call.i3, ptr @_ZZ2amiE2au, align 4
+  tail call void @__cxa_guard_release(ptr nonnull @_ZGVZ2amiE2au)
   br label %init.end
 
 init.end:                                         ; preds = %init.check, %invoke.cont, %entry
-  %call.i = tail call i8* @_Znwj(i32 4)
-  %exception = tail call i8* @__cxa_allocate_exception(i32 4)
-  %3 = bitcast i8* %exception to i32*
-  store i32 0, i32* %3, align 16
-  invoke void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null)
+  %call.i = tail call ptr @_Znwj(i32 4)
+  %exception = tail call ptr @__cxa_allocate_exception(i32 4)
+  store i32 0, ptr %exception, align 16
+  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null)
           to label %unreachable unwind label %lpad1
 
 lpad:                                             ; preds = %init
-  %4 = landingpad { i8*, i32 }
+  %3 = landingpad { ptr, i32 }
           cleanup
-  %5 = extractvalue { i8*, i32 } %4, 0
-  %6 = extractvalue { i8*, i32 } %4, 1
-  tail call void @__cxa_guard_abort(i64* nonnull @_ZGVZ2amiE2au) #1
+  %4 = extractvalue { ptr, i32 } %3, 0
+  %5 = extractvalue { ptr, i32 } %3, 1
+  tail call void @__cxa_guard_abort(ptr nonnull @_ZGVZ2amiE2au) #1
   br label %eh.resume
 
 lpad1:                                            ; preds = %init.end
-  %7 = landingpad { i8*, i32 }
+  %6 = landingpad { ptr, i32 }
           cleanup
-  %8 = extractvalue { i8*, i32 } %7, 0
-  %9 = extractvalue { i8*, i32 } %7, 1
-  tail call void @_ZdlPv(i8* nonnull %call.i)
+  %7 = extractvalue { ptr, i32 } %6, 0
+  %8 = extractvalue { ptr, i32 } %6, 1
+  tail call void @_ZdlPv(ptr nonnull %call.i)
   br label %eh.resume
 
 eh.resume:                                        ; preds = %lpad1, %lpad
-  %exn.slot.0 = phi i8* [ %8, %lpad1 ], [ %5, %lpad ]
-  %ehselector.slot.0 = phi i32 [ %9, %lpad1 ], [ %6, %lpad ]
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn.slot.0, 0
-  %lpad.val2 = insertvalue { i8*, i32 } %lpad.val, i32 %ehselector.slot.0, 1
-  resume { i8*, i32 } %lpad.val2
+  %exn.slot.0 = phi ptr [ %7, %lpad1 ], [ %4, %lpad ]
+  %ehselector.slot.0 = phi i32 [ %8, %lpad1 ], [ %5, %lpad ]
+  %lpad.val = insertvalue { ptr, i32 } undef, ptr %exn.slot.0, 0
+  %lpad.val2 = insertvalue { ptr, i32 } %lpad.val, i32 %ehselector.slot.0, 1
+  resume { ptr, i32 } %lpad.val2
 
 unreachable:                                      ; preds = %init.end
   unreachable
 }
 
-declare i32 @__cxa_guard_acquire(i64*)
+declare i32 @__cxa_guard_acquire(ptr)
 declare i32 @__gxx_personality_v0(...)
-declare void @__cxa_guard_abort(i64*)
-declare void @__cxa_guard_release(i64*)
-declare i8* @__cxa_allocate_exception(i32)
-declare void @__cxa_throw(i8*, i8*, i8*)
-declare noalias nonnull i8* @_Znwj(i32)
-declare i8* @__cxa_begin_catch(i8*)
+declare void @__cxa_guard_abort(ptr)
+declare void @__cxa_guard_release(ptr)
+declare ptr @__cxa_allocate_exception(i32)
+declare void @__cxa_throw(ptr, ptr, ptr)
+declare noalias nonnull ptr @_Znwj(i32)
+declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
-declare void @_ZdlPv(i8*)
+declare void @_ZdlPv(ptr)

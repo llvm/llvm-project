@@ -4,6 +4,7 @@ static_library("BinaryFormat") {
   sources = [
     "AMDGPUMetadataVerifier.cpp",
     "COFF.cpp",
+    "DXContainer.cpp",
     "Dwarf.cpp",
     "ELF.cpp",
     "MachO.cpp",

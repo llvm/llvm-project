@@ -1,0 +1,14 @@
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000400000
+Sections:        
+  - Name:            .text1
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400000
+    AddressAlign:    0x0000000000001000
+    Size:            0xb0

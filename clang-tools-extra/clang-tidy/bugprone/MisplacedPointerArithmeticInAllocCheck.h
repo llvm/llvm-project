@@ -19,7 +19,7 @@ namespace bugprone {
 /// memory allocation function instead of its argument.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-misplaced-operator-in-alloc.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/misplaced-operator-in-alloc.html
 class MisplacedPointerArithmeticInAllocCheck : public ClangTidyCheck {
 public:
   MisplacedPointerArithmeticInAllocCheck(StringRef Name,

@@ -431,9 +431,9 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 [[TEMP_MASK:s\[[0-9]+:[0-9]+\]]], vcc
 ; GCN-NEXT: s_xor_b64  [[MASK:s\[[0-9]+:[0-9]+\]]], exec, [[TEMP_MASK]]
 
-; GCN: BB{{[0-9]+_[0-9]+}}: ; %Flow
-; GCN-NEXT: s_or_saveexec_b64 [[TEMP_MASK1:s\[[0-9]+:[0-9]+\]]], [[MASK]]
-; GCN-NEXT: s_xor_b64 exec, exec, [[TEMP_MASK1]]
+; GCN: .LBB{{[0-9]+_[0-9]+}}: ; %Flow1
+; GCN-NEXT: s_andn2_saveexec_b64 [[MASK]], [[MASK]]
+; GCN-NEXT: s_cbranch_execnz
 
 ; GCN: .L[[LOOP_BODY:BB[0-9]+_[0-9]+]]: ; %loop{{$}}
 ; GCN: ;;#ASMSTART
@@ -508,11 +508,11 @@ define amdgpu_kernel void @long_branch_hang(i32 addrspace(1)* nocapture %arg, i3
 bb:
   %tmp = icmp slt i32 %arg2, 9
   %tmp6 = icmp eq i32 %arg1, 0
-  %tmp7 = icmp sgt i32 %arg4, 0
   %tmp8 = icmp sgt i32 %arg4, 5
   br i1 %tmp8, label %bb9, label %bb13
 
 bb9:                                              ; preds = %bb
+  %tmp7 = icmp sgt i32 %arg4, 0
   %tmp10 = and i1 %tmp7, %tmp
   %tmp11 = icmp slt i32 %arg3, %arg4
   %tmp12 = or i1 %tmp11, %tmp7

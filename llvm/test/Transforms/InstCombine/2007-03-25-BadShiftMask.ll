@@ -9,11 +9,9 @@ define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U:%.*]] = alloca %struct..1anon, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds %struct..1anon, %struct..1anon* [[U]], i64 0, i32 0
-; CHECK-NEXT:    store double 0x7FF0000000000000, double* [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP34:%.*]] = bitcast %struct..1anon* [[U]] to %struct..0anon*
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds %struct..0anon, %struct..0anon* [[TMP34]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
+; CHECK-NEXT:    store double 0x7FF0000000000000, ptr [[U]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds %struct..0anon, ptr [[U]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP89:%.*]] = and i32 [[TMP6]], 2146435072
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[TMP89]], 2146435072
 ; CHECK-NEXT:    br i1 [[TMP0]], label %cond_false, label %cond_true
@@ -24,12 +22,9 @@ define i32 @main() {
 ;
 entry:
   %u = alloca %struct..1anon, align 8
-  %tmp1 = getelementptr %struct..1anon, %struct..1anon* %u, i32 0, i32 0
-  store double 0x7FF0000000000000, double* %tmp1
-  %tmp3 = getelementptr %struct..1anon, %struct..1anon* %u, i32 0, i32 0
-  %tmp34 = bitcast double* %tmp3 to %struct..0anon*
-  %tmp5 = getelementptr %struct..0anon, %struct..0anon* %tmp34, i32 0, i32 1
-  %tmp6 = load i32, i32* %tmp5
+  store double 0x7FF0000000000000, ptr %u
+  %tmp5 = getelementptr %struct..0anon, ptr %u, i32 0, i32 1
+  %tmp6 = load i32, ptr %tmp5
   %tmp7 = shl i32 %tmp6, 1
   %tmp8 = lshr i32 %tmp7, 21
   %tmp89 = trunc i32 %tmp8 to i16

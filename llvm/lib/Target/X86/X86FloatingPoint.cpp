@@ -99,17 +99,17 @@ namespace {
     // but the exact mapping of FP registers to stack slots is fixed later.
     struct LiveBundle {
       // Bit mask of live FP registers. Bit 0 = FP0, bit 1 = FP1, &c.
-      unsigned Mask;
+      unsigned Mask = 0;
 
       // Number of pre-assigned live registers in FixStack. This is 0 when the
       // stack order has not yet been fixed.
-      unsigned FixCount;
+      unsigned FixCount = 0;
 
       // Assigned stack order for live-in registers.
       // FixStack[i] == getStackEntry(i) for all i < FixCount.
       unsigned char FixStack[8];
 
-      LiveBundle() : Mask(0), FixCount(0) {}
+      LiveBundle() = default;
 
       // Have the live registers been assigned a stack order yet?
       bool isFixed() const { return !Mask || FixCount; }

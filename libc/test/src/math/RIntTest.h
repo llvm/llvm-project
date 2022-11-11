@@ -37,7 +37,7 @@ private:
   const T neg_zero = T(FPBits::neg_zero());
   const T inf = T(FPBits::inf());
   const T neg_inf = T(FPBits::neg_inf());
-  const T nan = T(FPBits::build_nan(1));
+  const T nan = T(FPBits::build_quiet_nan(1));
 
   static inline mpfr::RoundingMode to_mpfr_rounding_mode(int mode) {
     switch (mode) {

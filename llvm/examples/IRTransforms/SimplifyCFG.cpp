@@ -81,11 +81,11 @@ static bool removeDeadBlocks_v1(Function &F) {
     // for (PHINode &PN : make_early_inc_range(Succ->phis()))
     //  PN.removeIncomingValue(&BB);
 
-    // Replace all instructions in BB with an undef constant. The block is
+    // Replace all instructions in BB with a poison constant. The block is
     // unreachable, so the results of the instructions should never get used.
     while (!BB.empty()) {
       Instruction &I = BB.back();
-      I.replaceAllUsesWith(UndefValue::get(I.getType()));
+      I.replaceAllUsesWith(PoisonValue::get(I.getType()));
       I.eraseFromParent();
     }
 

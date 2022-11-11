@@ -17,19 +17,19 @@ struct SymbolInfoTy;
 
 namespace objdump {
 Optional<XCOFF::StorageMappingClass>
-getXCOFFSymbolCsectSMC(const object::XCOFFObjectFile *Obj,
+getXCOFFSymbolCsectSMC(const object::XCOFFObjectFile &Obj,
                        const object::SymbolRef &Sym);
 
 Optional<object::SymbolRef>
-getXCOFFSymbolContainingSymbolRef(const object::XCOFFObjectFile *Obj,
+getXCOFFSymbolContainingSymbolRef(const object::XCOFFObjectFile &Obj,
                                   const object::SymbolRef &Sym);
 
-bool isLabel(const object::XCOFFObjectFile *Obj, const object::SymbolRef &Sym);
+bool isLabel(const object::XCOFFObjectFile &Obj, const object::SymbolRef &Sym);
 
 std::string getXCOFFSymbolDescription(const SymbolInfoTy &SymbolInfo,
                                       StringRef SymbolName);
 
-Error getXCOFFRelocationValueString(const object::XCOFFObjectFile *Obj,
+Error getXCOFFRelocationValueString(const object::XCOFFObjectFile &Obj,
                                     const object::RelocationRef &RelRef,
                                     llvm::SmallVectorImpl<char> &Result);
 } // namespace objdump

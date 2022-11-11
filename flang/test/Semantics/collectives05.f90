@@ -52,6 +52,8 @@ program main
   call co_reduce(string, operation=char_op, result_image=1, stat=status, errmsg=message)
   call co_reduce(foo,    operation=left,    result_image=1, stat=status, errmsg=message)
 
+  call co_reduce(result_image=1, operation=left,     a=foo, errmsg=message, stat=status)
+
   allocate(foo_t :: polymorphic)
 
   ! Test all statically verifiable semantic requirements on co_reduce arguments
@@ -160,7 +162,7 @@ program main
   !ERROR: to be determined
   call co_reduce(i, int_op, result_image=1, stat=status, errmsg=conindexed_string[1])
 
-  ! errmsg argument must be a scalar
+  ! errmsg argument must be a character scalar
   !ERROR: to be determined
   call co_reduce(i, int_op, result_image=1, stat=status, errmsg=character_array)
 

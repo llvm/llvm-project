@@ -998,8 +998,8 @@ bool HexagonHardwareLoops::isInvalidLoopOperation(const MachineInstr *MI,
 
   static const unsigned Regs01[] = { LC0, SA0, LC1, SA1 };
   static const unsigned Regs1[]  = { LC1, SA1 };
-  auto CheckRegs = IsInnerHWLoop ? makeArrayRef(Regs01, array_lengthof(Regs01))
-                                 : makeArrayRef(Regs1, array_lengthof(Regs1));
+  auto CheckRegs = IsInnerHWLoop ? makeArrayRef(Regs01, std::size(Regs01))
+                                 : makeArrayRef(Regs1, std::size(Regs1));
   for (unsigned R : CheckRegs)
     if (MI->modifiesRegister(R, TRI))
       return true;
@@ -1263,13 +1263,8 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
         .addMBB(LoopStart).addImm(CountImm);
   }
 
-  // Make sure the loop start always has a reference in the CFG.  We need
-  // to create a BlockAddress operand to get this mechanism to work both the
-  // MachineBasicBlock and BasicBlock objects need the flag set.
-  LoopStart->setHasAddressTaken();
-  // This line is needed to set the hasAddressTaken flag on the BasicBlock
-  // object.
-  BlockAddress::get(const_cast<BasicBlock *>(LoopStart->getBasicBlock()));
+  // Make sure the loop start always has a reference in the CFG.
+  LoopStart->setMachineBlockAddressTaken();
 
   // Replace the loop branch with an endloop instruction.
   DebugLoc LastIDL = LastI->getDebugLoc();

@@ -3,8 +3,8 @@
 ; CHECK: movq ([[A0:%rdi|%rcx]]), %rax
 ; CHECK: movq 8([[A0]]), %rdx
 
-define i128 @test(i128 *%P) {
-        %A = load i128, i128* %P
+define i128 @test(ptr%P) {
+        %A = load i128, ptr %P
         ret i128 %A
 }
 

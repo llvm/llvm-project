@@ -1,7 +1,5 @@
 """Test lldb's stepping speed."""
 
-from __future__ import print_function
-
 import sys
 import lldb
 from lldbsuite.test import configuration
@@ -13,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class SteppingSpeedBench(BenchBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         BenchBase.setUp(self)

@@ -32,8 +32,8 @@ concept C = requires(T t) { t.a.b; };
 
 static_assert(C<Good>);
 static_assert(!C<Bad>);
-static_assert(C<Bad>); // cxx20-error {{static_assert failed}}
-  // cxx20-note@-1 {{because 'DotFollowingFunctionName::Bad' does not satisfy 'C'}}
+static_assert(C<Bad>); // cxx20-error {{static assertion failed}}
+  // cxx20-note@-1 {{because 'Bad' does not satisfy 'C'}}
 #endif
 } // namespace DotFollowingFunctionName
 
@@ -53,11 +53,11 @@ static_assert(!DotFollowingPointer::f(Bad{}), "");
 #if __cplusplus >= 202002L
 template <class T>
 concept C = requires(T t) { t.begin(); };
-  // cxx20-note@-1 {{because 't.begin()' would be invalid: member reference type 'Holder<Incomplete> *' is a pointer}}
+  // cxx20-note@-1 {{because 't.begin()' would be invalid: member reference type 'Bad' (aka 'Holder<Incomplete> *') is a pointer}}
 
 static_assert(C<Good>);
 static_assert(!C<Bad>);
-static_assert(C<Bad>); // cxx20-error {{static_assert failed}}
-  // cxx20-note@-1 {{because 'DotFollowingPointer::Bad' (aka 'Holder<Incomplete> *') does not satisfy 'C'}}
+static_assert(C<Bad>); // cxx20-error {{static assertion failed}}
+  // cxx20-note@-1 {{because 'Bad' (aka 'Holder<Incomplete> *') does not satisfy 'C'}}
 #endif
 } // namespace DotFollowingPointer

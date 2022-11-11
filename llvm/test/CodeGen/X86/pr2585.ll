@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefix=X64
 
-@0 = external dso_local constant <4 x i32>		; <<4 x i32>*>:0 [#uses=1]
-@1 = external dso_local constant <4 x i16>		; <<4 x i16>*>:1 [#uses=1]
+@0 = external dso_local constant <4 x i32>		; <ptr>:0 [#uses=1]
+@1 = external dso_local constant <4 x i16>		; <ptr>:1 [#uses=1]
 
 define internal void @PR2585() {
 ; X32-LABEL: PR2585:
@@ -21,12 +21,12 @@ define internal void @PR2585() {
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-NEXT:    movq %xmm0, __unnamed_2(%rip)
 ; X64-NEXT:    retq
-	load <4 x i32>, <4 x i32>* @0, align 16		; <<4 x i32>>:1 [#uses=1]
+	load <4 x i32>, ptr @0, align 16		; <<4 x i32>>:1 [#uses=1]
 	bitcast <4 x i32> %1 to <8 x i16>		; <<8 x i16>>:2 [#uses=1]
 	shufflevector <8 x i16> %2, <8 x i16> undef, <8 x i32> < i32 0, i32 2, i32 4, i32 6, i32 undef, i32 undef, i32 undef, i32 undef >		; <<8 x i16>>:3 [#uses=1]
 	bitcast <8 x i16> %3 to <2 x i64>		; <<2 x i64>>:4 [#uses=1]
 	extractelement <2 x i64> %4, i32 0		; <i64>:5 [#uses=1]
 	bitcast i64 %5 to <4 x i16>		; <<4 x i16>>:6 [#uses=1]
-	store <4 x i16> %6, <4 x i16>* @1, align 8
+	store <4 x i16> %6, ptr @1, align 8
 	ret void
 }

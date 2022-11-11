@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class PrintObjectArrayTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     def test_print_array(self):
         """Test that expr -O -Z works"""
@@ -26,6 +24,8 @@ class PrintObjectArrayTestCase(TestBase):
         disable_constant_classes = {
             'CC':
             'xcrun clang',  # FIXME: Remove when flags are available upstream.
+            'USE_SYSTEM_STDLIB':
+            '1', # See above.
             'CFLAGS_EXTRAS':
             '-fno-constant-nsnumber-literals ' +
             '-fno-constant-nsarray-literals ' +

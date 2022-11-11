@@ -53,6 +53,13 @@ uint64_t DWARFBaseDIE::GetAttributeValueAsUnsigned(const dw_attr_t attr,
     return fail_value;
 }
 
+llvm::Optional<uint64_t>
+DWARFBaseDIE::GetAttributeValueAsOptionalUnsigned(const dw_attr_t attr) const {
+  if (IsValid())
+    return m_die->GetAttributeValueAsOptionalUnsigned(GetCU(), attr);
+  return llvm::None;
+}
+
 uint64_t DWARFBaseDIE::GetAttributeValueAsAddress(const dw_attr_t attr,
                                               uint64_t fail_value) const {
   if (IsValid())

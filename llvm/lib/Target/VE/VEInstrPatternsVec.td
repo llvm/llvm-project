@@ -25,6 +25,20 @@ def: Pat<(i64 (repl_i32 i32:$val)),
               (zero_f32 (i2l $val)),
               (SLLri (i2l $val), 32))>;
 
+///// Mask Load & Store /////
+
+// Store for v256i1, v512i1 are implemented in 2 ways.  These STVM/STVM512
+// pseudo instruction is used for frameindex related load/store instructions.
+// Custom Lowering is used for other load/store instructions.
+
+def : Pat<(v256i1 (load ADDRrii:$addr)),
+          (LDVMrii ADDRrii:$addr)>;
+def : Pat<(v512i1 (load ADDRrii:$addr)),
+          (LDVM512rii ADDRrii:$addr)>;
+def : Pat<(store v256i1:$vx, ADDRrii:$addr),
+          (STVMrii ADDRrii:$addr, $vx)>;
+def : Pat<(store v512i1:$vx, ADDRrii:$addr),
+          (STVM512rii ADDRrii:$addr, $vx)>;
 
 multiclass vbrd_elem32<ValueType v32, ValueType s32, SDPatternOperator ImmOp,
                        SDNodeXForm ImmCast, OutPatFrag SuperRegCast> {

@@ -1,4 +1,4 @@
-; RUN: opt -S -objc-arc-contract < %s | FileCheck %s
+; RUN: opt -S -passes=objc-arc-contract < %s | FileCheck %s
 
 ; The optimizer should be able to move the autorelease past a control triangle
 ; and various scary looking things and fold it into an objc_retainAutorelease.

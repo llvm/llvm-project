@@ -19,7 +19,7 @@ namespace misc {
 /// ineffective, useless parts.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-redundant-expression.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/redundant-expression.html
 class RedundantExpressionCheck : public ClangTidyCheck {
 public:
   RedundantExpressionCheck(StringRef Name, ClangTidyContext *Context)

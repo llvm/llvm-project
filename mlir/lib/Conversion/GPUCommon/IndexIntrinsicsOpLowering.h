@@ -11,7 +11,6 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "llvm/ADT/StringSwitch.h"
 
 namespace mlir {
 
@@ -37,7 +36,7 @@ public:
     auto loc = op->getLoc();
     MLIRContext *context = rewriter.getContext();
     Value newOp;
-    switch (op.dimension()) {
+    switch (op.getDimension()) {
     case gpu::Dimension::x:
       newOp = rewriter.create<XOp>(loc, IntegerType::get(context, 32));
       break;

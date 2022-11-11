@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple powerpc-linux-gnu -S -O0 -o - %s -target-feature +altivec | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc-linux-gnu -S -O0 -o - %s -target-feature +altivec | FileCheck %s
 
 // REQUIRES: powerpc-registered-target
 

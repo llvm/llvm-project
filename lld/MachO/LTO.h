@@ -14,14 +14,11 @@
 #include <memory>
 #include <vector>
 
-namespace llvm {
-namespace lto {
+namespace llvm::lto {
 class LTO;
-} // namespace lto
-} // namespace llvm
+} // namespace llvm::lto
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class BitcodeFile;
 class ObjFile;
@@ -39,7 +36,6 @@ private:
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> files;
 };
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

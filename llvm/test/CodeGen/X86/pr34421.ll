@@ -27,14 +27,12 @@ define void @thread_selfcounts() noimplicitfloat noredzone nounwind {
 entry:
   %counts = alloca [2 x i64], align 16
   %thread_counts = alloca [3 x i64], align 16
-  %arraydecay = getelementptr inbounds [3 x i64], [3 x i64]* %thread_counts, i64 0, i64 0
-  %0 = load i64, i64* %arraydecay, align 16
-  %arrayidx3 = getelementptr inbounds [2 x i64], [2 x i64]* %counts, i64 0, i64 0
-  store i64 %0, i64* %arrayidx3, align 16
-  %arrayidx6 = getelementptr inbounds [3 x i64], [3 x i64]* %thread_counts, i64 0, i64 1
-  %1 = load i64, i64* %arrayidx6, align 8
-  %arrayidx10 = getelementptr inbounds [2 x i64], [2 x i64]* %counts, i64 0, i64 1
-  store i64 %1, i64* %arrayidx10, align 8
+  %0 = load i64, ptr %thread_counts, align 16
+  store i64 %0, ptr %counts, align 16
+  %arrayidx6 = getelementptr inbounds [3 x i64], ptr %thread_counts, i64 0, i64 1
+  %1 = load i64, ptr %arrayidx6, align 8
+  %arrayidx10 = getelementptr inbounds [2 x i64], ptr %counts, i64 0, i64 1
+  store i64 %1, ptr %arrayidx10, align 8
   unreachable
 }
 

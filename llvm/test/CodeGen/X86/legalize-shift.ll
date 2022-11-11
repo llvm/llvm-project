@@ -14,9 +14,9 @@ define void @PR36250() nounwind {
 ; X64-NEXT:    cmpq $0, (%rax)
 ; X64-NEXT:    sete (%rax)
 ; X64-NEXT:    retq
-   %1 = load i448, i448* undef
+   %1 = load i448, ptr undef
    %2 = sub i448 0, %1
    %3 = icmp eq i448 %1, %2
-   store i1 %3, i1* undef
+   store i1 %3, ptr undef
    ret void
 }

@@ -293,7 +293,7 @@ struct CastAwayContractionLeadingOneDim
     if (oldAccType.getRank() < 2)
       return failure();
     // TODO: implement masks.
-    if (llvm::size(contractOp.getMasks()) != 0)
+    if (!contractOp.getMasks().empty())
       return failure();
     if (oldAccType.getShape()[0] != 1)
       return failure();
@@ -301,7 +301,7 @@ struct CastAwayContractionLeadingOneDim
     // greedily to drop more.
     int64_t dropDim = 1;
 
-    auto oldIndexingMaps = contractOp.getIndexingMaps();
+    auto oldIndexingMaps = contractOp.getIndexingMapsArray();
     SmallVector<AffineMap> newIndexingMaps;
 
     auto oldIteratorTypes = contractOp.getIteratorTypes();
@@ -401,8 +401,9 @@ struct CastAwayContractionLeadingOneDim
 
 class CastAwayElementwiseLeadingOneDim : public RewritePattern {
 public:
-  CastAwayElementwiseLeadingOneDim(MLIRContext *context)
-      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context) {}
+  CastAwayElementwiseLeadingOneDim(MLIRContext *context,
+                                   PatternBenefit benefit = 1)
+      : RewritePattern(MatchAnyOpTypeTag(), benefit, context) {}
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
@@ -436,12 +437,12 @@ public:
 } // namespace
 
 void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns
       .add<CastAwayExtractStridedSliceLeadingOneDim,
            CastAwayInsertStridedSliceLeadingOneDim, CastAwayInsertLeadingOneDim,
            CastAwayTransferReadLeadingOneDim,
            CastAwayTransferWriteLeadingOneDim, CastAwayElementwiseLeadingOneDim,
-           CastAwayContractionLeadingOneDim>(patterns.getContext());
-  populateShapeCastFoldingPatterns(patterns);
+           CastAwayContractionLeadingOneDim>(patterns.getContext(), benefit);
+  populateShapeCastFoldingPatterns(patterns, benefit);
 }

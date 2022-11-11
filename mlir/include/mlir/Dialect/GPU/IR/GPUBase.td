@@ -53,7 +53,7 @@ def GPU_Dialect : Dialect {
     static unsigned getPrivateAddressSpace() { return 5; }
   }];
 
-  let dependentDialects = ["arith::ArithmeticDialect"];
+  let dependentDialects = ["arith::ArithDialect"];
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
 }
@@ -67,6 +67,9 @@ def IsMMAMatrixTypePred : CPred<"$_self.isa<::mlir::gpu::MMAMatrixType>()">;
 
 def GPU_MMAMatrix : DialectType<
   GPU_Dialect, IsMMAMatrixTypePred, "MMAMatrix type">;
+
+// Memref type acceptable to gpu.subgroup_mma_{load|store}_matrix ops.
+def GPU_MMAMemRef : MemRefOf<[F16, F32, VectorOfRankAndType<[1], [F16, F32]>]>;
 
 class MMAMatrixOf<list<Type> allowedTypes> :
   ContainerType<AnyTypeOf<allowedTypes>, IsMMAMatrixTypePred,
@@ -96,24 +99,22 @@ def GPU_AsyncOpInterface : OpInterface<"AsyncOpInterface"> {
       }],
       "OperandRange", "getAsyncDependencies", (ins), [{}], [{
         ConcreteOp op = cast<ConcreteOp>(this->getOperation());
-        return op.asyncDependencies();
+        return op.getAsyncDependencies();
       }]
     >,
     InterfaceMethod<[{
-        Adds a new token to the list of async dependencies.
+        Adds a new token to the list of async dependencies if it is not already there.
       }],
       "void", "addAsyncDependency", (ins "Value":$token),
       [{}], [{
-        ::mlir::gpu::addAsyncDependency(this->getOperation(), token);
+        if (!::llvm::is_contained(this->getAsyncDependencies(), token))
+          ::mlir::gpu::addAsyncDependency(this->getOperation(), token);
       }]
     >,
     InterfaceMethod<[{
         Query the result that represents the async token to depend on.
       }],
-      "OpResult", "getAsyncToken", (ins), [{}], [{
-        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
-        return op.asyncToken().template dyn_cast_or_null<OpResult>();
-      }]
+      "Value", "getAsyncToken"
     >
   ];
 }

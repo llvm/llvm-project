@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/Alignment.h"
 #include <cassert>
 #include <vector>
@@ -338,9 +339,9 @@ private:
   uint64_t UnsafeStackSize = 0;
 
 public:
-  explicit MachineFrameInfo(unsigned StackAlignment, bool StackRealignable,
+  explicit MachineFrameInfo(Align StackAlignment, bool StackRealignable,
                             bool ForcedRealign)
-      : StackAlignment(assumeAligned(StackAlignment)),
+      : StackAlignment(StackAlignment),
         StackRealignable(StackRealignable), ForcedRealign(ForcedRealign) {}
 
   MachineFrameInfo(const MachineFrameInfo &) = delete;
@@ -486,14 +487,21 @@ public:
     return Objects[ObjectIdx + NumFixedObjects].Alignment;
   }
 
+  /// Should this stack ID be considered in MaxAlignment.
+  bool contributesToMaxAlignment(uint8_t StackID) {
+    return StackID == TargetStackID::Default ||
+           StackID == TargetStackID::ScalableVector;
+  }
+
   /// setObjectAlignment - Change the alignment of the specified stack object.
   void setObjectAlignment(int ObjectIdx, Align Alignment) {
     assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     Objects[ObjectIdx + NumFixedObjects].Alignment = Alignment;
 
-    // Only ensure max alignment for the default stack.
-    if (getStackID(ObjectIdx) == 0)
+    // Only ensure max alignment for the default and scalable vector stack.
+    uint8_t StackID = getStackID(ObjectIdx);
+    if (contributesToMaxAlignment(StackID))
       ensureMaxAlignment(Alignment);
   }
 

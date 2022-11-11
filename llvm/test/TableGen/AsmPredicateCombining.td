@@ -47,16 +47,20 @@ def AsmCond2a: SubtargetFeature<"cond2a", "cond2a", "true", "">;
 def AsmCond2b: SubtargetFeature<"cond2b", "cond2b", "true", "">;
 def AsmCond3a: SubtargetFeature<"cond3a", "cond3a", "true", "">;
 def AsmCond3b: SubtargetFeature<"cond3b", "cond3b", "true", "">;
+def AsmCond4 : SubtargetFeature<"cond4", "cond4", "true", "">;
 
 def AsmPred1 : Predicate<"Pred1">, AssemblerPredicate<(all_of AsmCond1)>;
 def AsmPred2 : Predicate<"Pred2">, AssemblerPredicate<(all_of AsmCond2a, AsmCond2b)>;
 def AsmPred3 : Predicate<"Pred3">, AssemblerPredicate<(any_of AsmCond3a, AsmCond3b)>;
+def AsmPred4 : Predicate<"Pred4">, AssemblerPredicate<(all_of AsmCond4, (not (any_of AsmCond3a, AsmCond3b)))>;
 // MATCHER:      if (FB[arch::AsmCond1])
 // MATCHER-NEXT:   Features.set(Feature_AsmPred1Bit);
 // MATCHER-NEXT: if (FB[arch::AsmCond2a] && FB[arch::AsmCond2b])
 // MATCHER-NEXT:   Features.set(Feature_AsmPred2Bit);
-// MATCHER-NEXT: if ((FB[arch::AsmCond3a] || FB[arch::AsmCond3b]))
+// MATCHER-NEXT: if (FB[arch::AsmCond3a] || FB[arch::AsmCond3b])
 // MATCHER-NEXT:   Features.set(Feature_AsmPred3Bit);
+// MATCHER-NEXT: if (FB[arch::AsmCond4] && !(FB[arch::AsmCond3a] || FB[arch::AsmCond3b]))
+// MATCHER-NEXT:   Features.set(Feature_AsmPred4Bit);
 
 def insn1 : TestInsn<1, [AsmPred1]>;
 // DISASS: return (Bits[arch::AsmCond1]);
@@ -65,10 +69,10 @@ def insn2 : TestInsn<2, [AsmPred2]>;
 // DISASS: return (Bits[arch::AsmCond2a] && Bits[arch::AsmCond2b])
 
 def insn3 : TestInsn<3, [AsmPred3]>;
-// DISASS: return ((Bits[arch::AsmCond3a] || Bits[arch::AsmCond3b]))
+// DISASS: return (Bits[arch::AsmCond3a] || Bits[arch::AsmCond3b])
 
 def insn4 : TestInsn<4, [AsmPred1, AsmPred2]>;
-// DISASS: return (Bits[arch::AsmCond1] && Bits[arch::AsmCond2a] && Bits[arch::AsmCond2b])
+// DISASS: return (Bits[arch::AsmCond1] && (Bits[arch::AsmCond2a] && Bits[arch::AsmCond2b]))
 
 def insn5 : TestInsn<5, [AsmPred1, AsmPred3]>;
 // DISASS: return (Bits[arch::AsmCond1] && (Bits[arch::AsmCond3a] || Bits[arch::AsmCond3b]))

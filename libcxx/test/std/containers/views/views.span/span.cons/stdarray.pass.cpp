@@ -15,8 +15,8 @@
 //     constexpr span(const array<value_type, N>& arr) noexcept;
 //
 // Remarks: These constructors shall not participate in overload resolution unless:
-//   — extent == dynamic_extent || N == extent is true, and
-//   — remove_pointer_t<decltype(data(arr))>(*)[] is convertible to ElementType(*)[].
+//   - extent == dynamic_extent || N == extent is true, and
+//   - remove_pointer_t<decltype(data(arr))>(*)[] is convertible to ElementType(*)[].
 //
 
 

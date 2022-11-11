@@ -2,7 +2,7 @@
 
 ; Check that the X86 Domain Reassignment pass doesn't drop IMPLICIT_DEF nodes,
 ; which would later cause crashes (e.g. in LiveVariables) - see PR37430
-define void @domain_reassignment_implicit_def(i1 %cond, i8 *%mem, float %arg) {
+define void @domain_reassignment_implicit_def(i1 %cond, ptr%mem, float %arg) {
 ; CHECK:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK:    vcmpneqss %xmm1, %xmm0, %k0
 ; CHECK:    kmovb %k0, (%rsi)
@@ -19,6 +19,6 @@ L19:                                              ; preds = %top
 
 L21:                                              ; preds = %L19, %L15
   %.sroa.0.0 = phi i8 [ undef, %L19 ], [ %tmp48, %L15 ]
-  store i8 %.sroa.0.0, i8* %mem, align 1
+  store i8 %.sroa.0.0, ptr %mem, align 1
   ret void
 }

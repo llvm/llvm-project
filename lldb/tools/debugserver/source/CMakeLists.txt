@@ -95,7 +95,7 @@ check_c_source_compiles(
     #else
     #error Not building for ARM64
     #endif
-    int main() { return 0; }
+    int main(void) { return 0; }
     "
     BUILDING_FOR_ARM64_OSX
 )

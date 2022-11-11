@@ -17,18 +17,15 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
-namespace llvm {
-namespace codeview {
+namespace llvm::codeview {
 struct GloballyHashedType;
-} // namespace codeview
-namespace pdb {
+}
+namespace llvm::pdb {
 class NativeSession;
 class TpiStream;
 }
-} // namespace llvm
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 using llvm::codeview::GloballyHashedType;
 using llvm::codeview::TypeIndex;
@@ -175,7 +172,6 @@ TpiSource *makePrecompSource(COFFLinkerContext &ctx, ObjFile *file);
 TpiSource *makeUsePrecompSource(COFFLinkerContext &ctx, ObjFile *file,
                                 llvm::codeview::PrecompRecord ts);
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif

@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class CPPBreakpointCommandsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def make_breakpoint(self, name, type, expected_num_locations):
         bkpt = self.target.BreakpointCreateByName(name,
                                                   type,

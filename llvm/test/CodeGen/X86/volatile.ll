@@ -23,10 +23,10 @@ define void @foo() nounwind  {
 ; NOOPT-NEXT:    movsd %xmm0, x
 ; NOOPT-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NOOPT-NEXT:    retl
-  %a = load volatile double, double* @x
-  store volatile double 0.0, double* @x
-  store volatile double 0.0, double* @x
-  %b = load volatile double, double* @x
+  %a = load volatile double, ptr @x
+  store volatile double 0.0, ptr @x
+  store volatile double 0.0, ptr @x
+  %b = load volatile double, ptr @x
   ret void
 }
 
@@ -35,6 +35,6 @@ define void @bar() nounwind  {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    retl
-  %c = load volatile double, double* @x
+  %c = load volatile double, ptr @x
   ret void
 }

@@ -41,6 +41,9 @@
 _start:
   callq _shared@PLT
 
-# CHECK: error: {{.*}}.so: undefined reference to _unresolved [--no-allow-shlib-undefined]
-# CHECK2: error: {{.*}}2.so: undefined reference to _unresolved [--no-allow-shlib-undefined]
-# WARN: warning: {{.*}}.so: undefined reference to _unresolved [--no-allow-shlib-undefined]
+# CHECK:       error: undefined reference due to --no-allow-shlib-undefined: _unresolved
+# CHECK-NEXT:  >>> referenced by {{.*}}.so
+# CHECK2:      error: undefined reference due to --no-allow-shlib-undefined: _unresolved
+# CHECK2-NEXT: >>> referenced by {{.*}}2.so
+# WARN:        warning: undefined reference due to --no-allow-shlib-undefined: _unresolved
+# WARN-NEXT:   >>> referenced by {{.*}}.so

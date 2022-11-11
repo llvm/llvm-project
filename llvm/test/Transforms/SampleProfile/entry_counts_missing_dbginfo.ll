@@ -1,4 +1,4 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/entry_counts_cold.prof -S -profile-sample-accurate | FileCheck %s
+; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/entry_counts_cold.prof -profile-sample-accurate | FileCheck %s
 ; ModuleID = 'temp.bc'
 ; This is a test similar to entry_counts_cold.ll. The key differences are:
 ; - we want profile-sample-accurate. Normally, that would trigger resetting function entry counts to 0, and then update
@@ -16,26 +16,26 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; Function Attrs: nounwind ssp uwtable
 ; CHECK: define i32 @top({{.*}} !prof [[TOP:![0-9]+]]
-define i32 @top(i32* %p) #0 !dbg !8 {
+define i32 @top(ptr %p) #0 !dbg !8 {
 entry:
-  %p.addr = alloca i32*, align 8
-  store i32* %p, i32** %p.addr, align 8, !tbaa !15
-  call void @llvm.dbg.declare(metadata i32** %p.addr, metadata !14, metadata !DIExpression()), !dbg !19
-  %0 = load i32*, i32** %p.addr, align 8, !dbg !20, !tbaa !15
-  %call = call i32 @foo(i32* %0), !dbg !21
+  %p.addr = alloca ptr, align 8
+  store ptr %p, ptr %p.addr, align 8, !tbaa !15
+  call void @llvm.dbg.declare(metadata ptr %p.addr, metadata !14, metadata !DIExpression()), !dbg !19
+  %0 = load ptr, ptr %p.addr, align 8, !dbg !20, !tbaa !15
+  %call = call i32 @foo(ptr %0), !dbg !21
 ; foo is inlined
 ; CHECK-NOT: call i32 @foo
 ; CHECK: call i32 @bar
-  %1 = load i32*, i32** %p.addr, align 8, !dbg !22, !tbaa !15
-  %2 = load i32, i32* %1, align 4, !dbg !24, !tbaa !25
+  %1 = load ptr, ptr %p.addr, align 8, !dbg !22, !tbaa !15
+  %2 = load i32, ptr %1, align 4, !dbg !24, !tbaa !25
   %tobool = icmp ne i32 %2, 0, !dbg !24
   br i1 %tobool, label %if.then, label %if.end, !dbg !27
 
 if.then:                                          ; preds = %entry
-  %3 = load i32*, i32** %p.addr, align 8, !dbg !28, !tbaa !15
+  %3 = load ptr, ptr %p.addr, align 8, !dbg !28, !tbaa !15
 ; bar is not inlined
 ; CHECK: call i32 @bar
-  %call1 = call i32 @bar(i32* %3), !dbg !29
+  %call1 = call i32 @bar(ptr %3), !dbg !29
   br label %if.end, !dbg !29
 
 if.end:                                           ; preds = %if.then, %entry
@@ -47,61 +47,59 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind ssp uwtable
 ; CHECK: define i32 @foo({{.*}} !prof [[FOO:![0-9]+]]
-define i32 @foo(i32* %p) #0 !dbg !31 {
+define i32 @foo(ptr %p) #0 !dbg !31 {
 entry:
-  %p.addr = alloca i32*, align 8
+  %p.addr = alloca ptr, align 8
   %a = alloca i32, align 4
-  store i32* %p, i32** %p.addr, align 8, !tbaa !15
-  call void @llvm.dbg.declare(metadata i32** %p.addr, metadata !33, metadata !DIExpression()), !dbg !35
-  %0 = bitcast i32* %a to i8*, !dbg !36
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #4, !dbg !36
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !34, metadata !DIExpression()), !dbg !37
-  %1 = load i32*, i32** %p.addr, align 8, !dbg !38, !tbaa !15
-  %arrayidx = getelementptr inbounds i32, i32* %1, i64 3, !dbg !38
-  %2 = load i32, i32* %arrayidx, align 4, !dbg !38, !tbaa !25
-  %3 = load i32*, i32** %p.addr, align 8, !dbg !39, !tbaa !15
-  %arrayidx1 = getelementptr inbounds i32, i32* %3, i64 2, !dbg !39
-  %4 = load i32, i32* %arrayidx1, align 4, !dbg !40, !tbaa !25
-  %add = add nsw i32 %4, %2, !dbg !40
-  store i32 %add, i32* %arrayidx1, align 4, !dbg !40, !tbaa !25
-  %5 = load i32*, i32** %p.addr, align 8, !dbg !41, !tbaa !15
-  %call = call i32 @bar(i32* %5), !dbg !42
-  store i32 %call, i32* %a, align 4, !dbg !43, !tbaa !25
-  %6 = load i32, i32* %a, align 4, !dbg !44, !tbaa !25
-  %add2 = add nsw i32 %6, 1, !dbg !45
-  %7 = bitcast i32* %a to i8*, !dbg !46
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %7) #4, !dbg !46
+  store ptr %p, ptr %p.addr, align 8, !tbaa !15
+  call void @llvm.dbg.declare(metadata ptr %p.addr, metadata !33, metadata !DIExpression()), !dbg !35
+  call void @llvm.lifetime.start.p0(i64 4, ptr %a) #4, !dbg !36
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !34, metadata !DIExpression()), !dbg !37
+  %0 = load ptr, ptr %p.addr, align 8, !dbg !38, !tbaa !15
+  %arrayidx = getelementptr inbounds i32, ptr %0, i64 3, !dbg !38
+  %1 = load i32, ptr %arrayidx, align 4, !dbg !38, !tbaa !25
+  %2 = load ptr, ptr %p.addr, align 8, !dbg !39, !tbaa !15
+  %arrayidx1 = getelementptr inbounds i32, ptr %2, i64 2, !dbg !39
+  %3 = load i32, ptr %arrayidx1, align 4, !dbg !40, !tbaa !25
+  %add = add nsw i32 %3, %1, !dbg !40
+  store i32 %add, ptr %arrayidx1, align 4, !dbg !40, !tbaa !25
+  %4 = load ptr, ptr %p.addr, align 8, !dbg !41, !tbaa !15
+  %call = call i32 @bar(ptr %4), !dbg !42
+  store i32 %call, ptr %a, align 4, !dbg !43, !tbaa !25
+  %5 = load i32, ptr %a, align 4, !dbg !44, !tbaa !25
+  %add2 = add nsw i32 %5, 1, !dbg !45
+  call void @llvm.lifetime.end.p0(i64 4, ptr %a) #4, !dbg !46
   ret i32 %add2, !dbg !47
 }
 
 ; Function Attrs: nounwind ssp uwtable
-; CHECK: define i32 @bar(i32* %p) #0 !prof [[BAR:![0-9]+]] {
-define i32 @bar(i32* %p) #0 {
+; CHECK: define i32 @bar(ptr %p) #0 !prof [[BAR:![0-9]+]] {
+define i32 @bar(ptr %p) #0 {
 entry:
-  %p.addr = alloca i32*, align 8
-  store i32* %p, i32** %p.addr, align 8, !tbaa !15
-  call void @llvm.dbg.declare(metadata i32** %p.addr, metadata !50, metadata !DIExpression()), !dbg !51
+  %p.addr = alloca ptr, align 8
+  store ptr %p, ptr %p.addr, align 8, !tbaa !15
+  call void @llvm.dbg.declare(metadata ptr %p.addr, metadata !50, metadata !DIExpression()), !dbg !51
   ; CHECK: call void (...) @baz(), !dbg !{{[0-9]+}}
   call void (...) @baz(), !dbg !52, !prof !100
-  %0 = load i32*, i32** %p.addr, align 8, !dbg !53, !tbaa !15
-  %arrayidx = getelementptr inbounds i32, i32* %0, i64 2, !dbg !53
-  %1 = load i32, i32* %arrayidx, align 4, !dbg !53, !tbaa !25
-  %2 = load i32*, i32** %p.addr, align 8, !dbg !54, !tbaa !15
-  %arrayidx1 = getelementptr inbounds i32, i32* %2, i64 1, !dbg !54
-  %3 = load i32, i32* %arrayidx1, align 4, !dbg !55, !tbaa !25
+  %0 = load ptr, ptr %p.addr, align 8, !dbg !53, !tbaa !15
+  %arrayidx = getelementptr inbounds i32, ptr %0, i64 2, !dbg !53
+  %1 = load i32, ptr %arrayidx, align 4, !dbg !53, !tbaa !25
+  %2 = load ptr, ptr %p.addr, align 8, !dbg !54, !tbaa !15
+  %arrayidx1 = getelementptr inbounds i32, ptr %2, i64 1, !dbg !54
+  %3 = load i32, ptr %arrayidx1, align 4, !dbg !55, !tbaa !25
   %add = add nsw i32 %3, %1, !dbg !55
-  store i32 %add, i32* %arrayidx1, align 4, !dbg !55, !tbaa !25
-  %4 = load i32*, i32** %p.addr, align 8, !dbg !56, !tbaa !15
-  %arrayidx2 = getelementptr inbounds i32, i32* %4, i64 3, !dbg !56
-  %5 = load i32, i32* %arrayidx2, align 4, !dbg !56, !tbaa !25
+  store i32 %add, ptr %arrayidx1, align 4, !dbg !55, !tbaa !25
+  %4 = load ptr, ptr %p.addr, align 8, !dbg !56, !tbaa !15
+  %arrayidx2 = getelementptr inbounds i32, ptr %4, i64 3, !dbg !56
+  %5 = load i32, ptr %arrayidx2, align 4, !dbg !56, !tbaa !25
   ret i32 %5, !dbg !57
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
 
 declare void @baz(...) #3
 

@@ -23,55 +23,58 @@
 #include "unique_ptr_test_helper.h"
 
 template <class APtr, class BPtr>
-void testAssign(APtr& aptr, BPtr& bptr) {
+TEST_CONSTEXPR_CXX23 void testAssign(APtr& aptr, BPtr& bptr) {
   A* p = bptr.get();
-  assert(A::count == 2);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(A::count == 2);
   aptr = std::move(bptr);
   assert(aptr.get() == p);
   assert(bptr.get() == 0);
-  assert(A::count == 1);
-  assert(B::count == 1);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    assert(A::count == 1);
+    assert(B::count == 1);
+  }
 }
 
 template <class LHS, class RHS>
-void checkDeleter(LHS& lhs, RHS& rhs, int LHSState, int RHSState) {
+TEST_CONSTEXPR_CXX23 void checkDeleter(LHS& lhs, RHS& rhs, int LHSState, int RHSState) {
   assert(lhs.get_deleter().state() == LHSState);
   assert(rhs.get_deleter().state() == RHSState);
 }
 
 template <class T>
 struct NCConvertingDeleter {
-  NCConvertingDeleter() = default;
+  TEST_CONSTEXPR_CXX23 NCConvertingDeleter()                      = default;
   NCConvertingDeleter(NCConvertingDeleter const&) = delete;
-  NCConvertingDeleter(NCConvertingDeleter&&) = default;
+  TEST_CONSTEXPR_CXX23 NCConvertingDeleter(NCConvertingDeleter&&) = default;
 
   template <class U>
-  NCConvertingDeleter(NCConvertingDeleter<U>&&) {}
+  TEST_CONSTEXPR_CXX23 NCConvertingDeleter(NCConvertingDeleter<U>&&) {}
 
-  void operator()(T*) const {}
+  TEST_CONSTEXPR_CXX23 void operator()(T*) const {}
 };
 
 template <class T>
 struct NCConvertingDeleter<T[]> {
-  NCConvertingDeleter() = default;
+  TEST_CONSTEXPR_CXX23 NCConvertingDeleter()                      = default;
   NCConvertingDeleter(NCConvertingDeleter const&) = delete;
-  NCConvertingDeleter(NCConvertingDeleter&&) = default;
+  TEST_CONSTEXPR_CXX23 NCConvertingDeleter(NCConvertingDeleter&&) = default;
 
   template <class U>
-  NCConvertingDeleter(NCConvertingDeleter<U>&&) {}
+  TEST_CONSTEXPR_CXX23 NCConvertingDeleter(NCConvertingDeleter<U>&&) {}
 
-  void operator()(T*) const {}
+  TEST_CONSTEXPR_CXX23 void operator()(T*) const {}
 };
 
 struct NCGenericDeleter {
-  NCGenericDeleter() = default;
+  TEST_CONSTEXPR_CXX23 NCGenericDeleter()                   = default;
   NCGenericDeleter(NCGenericDeleter const&) = delete;
-  NCGenericDeleter(NCGenericDeleter&&) = default;
+  TEST_CONSTEXPR_CXX23 NCGenericDeleter(NCGenericDeleter&&) = default;
 
-  void operator()(void*) const {}
+  TEST_CONSTEXPR_CXX23 void operator()(void*) const {}
 };
 
-void test_sfinae() {
+TEST_CONSTEXPR_CXX23 void test_sfinae() {
   using DA = NCConvertingDeleter<A>; // non-copyable deleters
   using DB = NCConvertingDeleter<B>;
   using UA = std::unique_ptr<A>;
@@ -114,15 +117,17 @@ void test_sfinae() {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX23 bool test() {
   test_sfinae();
   {
     std::unique_ptr<B> bptr(new B);
     std::unique_ptr<A> aptr(new A);
     testAssign(aptr, bptr);
   }
-  assert(A::count == 0);
-  assert(B::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    assert(A::count == 0);
+    assert(B::count == 0);
+  }
   {
     Deleter<B> del(42);
     std::unique_ptr<B, Deleter<B> > bptr(new B, std::move(del));
@@ -130,8 +135,10 @@ int main(int, char**) {
     testAssign(aptr, bptr);
     checkDeleter(aptr, bptr, 42, 0);
   }
-  assert(A::count == 0);
-  assert(B::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    assert(A::count == 0);
+    assert(B::count == 0);
+  }
   {
     CDeleter<A> adel(6);
     CDeleter<B> bdel(42);
@@ -140,8 +147,19 @@ int main(int, char**) {
     testAssign(aptr, bptr);
     checkDeleter(aptr, bptr, 42, 42);
   }
-  assert(A::count == 0);
-  assert(B::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    assert(A::count == 0);
+    assert(B::count == 0);
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
 
   return 0;
 }

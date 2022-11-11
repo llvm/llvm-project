@@ -14,7 +14,7 @@ int main() {
   // CHECK: ERROR: HWAddressSanitizer: invalid-free on address {{.*}} at pc {{[0x]+}}[[PC:.*]] on thread T{{[0-9]+}}
   // CHECK: #0 {{[0x]+}}{{.*}}[[PC]] in {{.*}}free
   // CHECK: #1 {{.*}} in main {{.*}}wild-free-close.c:[[@LINE-3]]
-  // CHECK: is located 8 bytes to the left of 1-byte region [{{[0x]+}}{{.*}}[[ADDR]]
+  // CHECK: is located 8 bytes before a 1-byte region [{{[0x]+}}{{.*}}[[ADDR]]
   // CHECK-NOT: Segmentation fault
   // CHECK-NOT: SIGSEGV
   return 0;

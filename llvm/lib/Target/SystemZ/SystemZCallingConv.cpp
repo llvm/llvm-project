@@ -28,7 +28,3 @@ const MCPhysReg SystemZ::XPLINK64ArgGPRs[SystemZ::XPLINK64NumArgGPRs] = {
 const MCPhysReg SystemZ::XPLINK64ArgFPRs[SystemZ::XPLINK64NumArgFPRs] = {
     SystemZ::F0D, SystemZ::F2D, SystemZ::F4D, SystemZ::F6D
 };
-
-const MCPhysReg SystemZ::XPLINK64ArgVRs[SystemZ::XPLINK64NumArgVRs] = {
-    SystemZ::V24, SystemZ::V25, SystemZ::V26, SystemZ::V27,
-    SystemZ::V28, SystemZ::V29, SystemZ::V30, SystemZ::V31};

@@ -19,7 +19,7 @@ namespace cert {
 /// reasonable error handling for conversion errors.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert-err34-c.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cert/err34-c.html
 class StrToNumCheck : public ClangTidyCheck {
 public:
   StrToNumCheck(StringRef Name, ClangTidyContext *Context)

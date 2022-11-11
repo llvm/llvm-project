@@ -8,20 +8,20 @@
 ; RUN: opt -module-summary %s -o %t.bc
 ; RUN: opt -module-summary %p/Inputs/funcimport_forcecold.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
-; RUN: opt -function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=IMPORT
+; RUN: opt -passes=function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=IMPORT
 
 ; Next rebuild caller module summary with non-critical edges forced cold (which
 ; should affect all edges in this test as we don't have any sample pgo).
 ; Make sure we don't import.
 ; RUN: opt -force-summary-edges-cold=all-non-critical -module-summary %s -o %t.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
-; RUN: opt -function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=NOIMPORT
+; RUN: opt -passes=function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=NOIMPORT
 
 ; Next rebuild caller module summary with all edges forced cold.
 ; Make sure we don't import.
 ; RUN: opt -force-summary-edges-cold=all -module-summary %s -o %t.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
-; RUN: opt -function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=NOIMPORT
+; RUN: opt -passes=function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=NOIMPORT
 
 define i32 @main() {
 entry:

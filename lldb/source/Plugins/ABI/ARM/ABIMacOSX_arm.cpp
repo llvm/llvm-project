@@ -1186,8 +1186,7 @@ static const RegisterInfo g_register_infos[] = {
      nullptr,
      }};
 
-static const uint32_t k_num_register_infos =
-    llvm::array_lengthof(g_register_infos);
+static const uint32_t k_num_register_infos = std::size(g_register_infos);
 
 const lldb_private::RegisterInfo *
 ABIMacOSX_arm::GetRegisterInfoArray(uint32_t &count) {
@@ -1235,7 +1234,7 @@ bool ABIMacOSX_arm::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   llvm::ArrayRef<addr_t>::iterator ai = args.begin(), ae = args.end();
 
-  for (size_t i = 0; i < llvm::array_lengthof(reg_names); ++i) {
+  for (size_t i = 0; i < std::size(reg_names); ++i) {
     if (ai == ae)
       break;
 
@@ -1496,16 +1495,16 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
                   reg_ctx->ReadRegister(r2_reg_info, r2_reg_value) &&
                   reg_ctx->ReadRegister(r3_reg_info, r3_reg_value)) {
                 Status error;
-                if (r0_reg_value.GetAsMemoryData(r0_reg_info,
+                if (r0_reg_value.GetAsMemoryData(*r0_reg_info,
                                                  heap_data_up->GetBytes() + 0,
                                                  4, byte_order, error) &&
-                    r1_reg_value.GetAsMemoryData(r1_reg_info,
+                    r1_reg_value.GetAsMemoryData(*r1_reg_info,
                                                  heap_data_up->GetBytes() + 4,
                                                  4, byte_order, error) &&
-                    r2_reg_value.GetAsMemoryData(r2_reg_info,
+                    r2_reg_value.GetAsMemoryData(*r2_reg_info,
                                                  heap_data_up->GetBytes() + 8,
                                                  4, byte_order, error) &&
-                    r3_reg_value.GetAsMemoryData(r3_reg_info,
+                    r3_reg_value.GetAsMemoryData(*r3_reg_info,
                                                  heap_data_up->GetBytes() + 12,
                                                  4, byte_order, error)) {
                   DataExtractor data(DataBufferSP(heap_data_up.release()),

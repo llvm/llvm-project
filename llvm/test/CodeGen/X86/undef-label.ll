@@ -23,10 +23,10 @@ define dso_local void @xyz() {
 ; CHECK-NEXT:  .LBB0_2: # %bar
 ; CHECK-NEXT:    retq
 entry:
-  br i1 fcmp oeq (double bitcast (i64 ptrtoint (i32* @g to i64) to double), double 0.000000e+00), label %bar, label %foo
+  br i1 fcmp oeq (double bitcast (i64 ptrtoint (ptr @g to i64) to double), double 0.000000e+00), label %bar, label %foo
 
 foo:
-  br i1 fcmp ogt (double bitcast (i64 ptrtoint (i32* @g to i64) to double), double 0.000000e+00), label %foo, label %bar
+  br i1 fcmp ogt (double bitcast (i64 ptrtoint (ptr @g to i64) to double), double 0.000000e+00), label %foo, label %bar
 
 bar:
   ret void

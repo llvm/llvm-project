@@ -18,6 +18,9 @@ template <typename T>
 class OperationPass;
 class RewritePatternSet;
 
+#define GEN_PASS_DECL_CONVERTOPENACCTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
 static constexpr unsigned kPtrBasePosInDataDescriptor = 0;
 static constexpr unsigned kPtrPosInDataDescriptor = 1;
 static constexpr unsigned kSizePosInDataDescriptor = 2;
@@ -27,7 +30,7 @@ static constexpr unsigned kSizePosInDataDescriptor = 2;
 /// The Value may be null, in which case none of the operations are valid.
 ///
 /// The data descriptor holds information needed to perform data operations
-/// and movments with the runtime.
+/// and movements with the runtime.
 /// `BasePointer`: base of the pointer being mapped.
 /// `Pointer`: actual pointer of the data being mapped.
 /// `Size`: size of the data being mapped.

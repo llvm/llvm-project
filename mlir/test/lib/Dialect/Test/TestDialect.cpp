@@ -10,10 +10,11 @@
 #include "TestAttributes.h"
 #include "TestInterfaces.h"
 #include "TestTypes.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
@@ -59,9 +60,22 @@ static_assert(OpTrait::hasSingleBlockImplicitTerminator<
               "hasSingleBlockImplicitTerminator does not match "
               "SingleBlockImplicitTerminatorOp");
 
+struct TestResourceBlobManagerInterface
+    : public ResourceBlobManagerDialectInterfaceBase<
+          TestDialectResourceBlobHandle> {
+  using ResourceBlobManagerDialectInterfaceBase<
+      TestDialectResourceBlobHandle>::ResourceBlobManagerDialectInterfaceBase;
+};
+
 // Test support for interacting with the AsmPrinter.
 struct TestOpAsmInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
+  TestOpAsmInterface(Dialect *dialect, TestResourceBlobManagerInterface &mgr)
+      : OpAsmDialectInterface(dialect), blobManager(mgr) {}
+
+  //===------------------------------------------------------------------===//
+  // Aliases
+  //===------------------------------------------------------------------===//
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
     StringAttr strAttr = attr.dyn_cast<StringAttr>();
@@ -106,8 +120,50 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
         return AliasResult::FinalAlias;
       }
     }
+    if (auto recType = type.dyn_cast<TestRecursiveType>()) {
+      if (recType.getName() == "type_to_alias") {
+        // We only make alias for a specific recursive type.
+        os << "testrec";
+        return AliasResult::FinalAlias;
+      }
+    }
     return AliasResult::NoAlias;
   }
+
+  //===------------------------------------------------------------------===//
+  // Resources
+  //===------------------------------------------------------------------===//
+
+  std::string
+  getResourceKey(const AsmDialectResourceHandle &handle) const override {
+    return cast<TestDialectResourceBlobHandle>(handle).getKey().str();
+  }
+
+  FailureOr<AsmDialectResourceHandle>
+  declareResource(StringRef key) const final {
+    return blobManager.insert(key);
+  }
+
+  LogicalResult parseResource(AsmParsedResourceEntry &entry) const final {
+    FailureOr<AsmResourceBlob> blob = entry.parseAsBlob();
+    if (failed(blob))
+      return failure();
+
+    // Update the blob for this entry.
+    blobManager.update(entry.getKey(), std::move(*blob));
+    return success();
+  }
+
+  void
+  buildResources(Operation *op,
+                 const SetVector<AsmDialectResourceHandle> &referencedResources,
+                 AsmResourceBuilder &provider) const final {
+    blobManager.buildResources(provider, referencedResources.getArrayRef());
+  }
+
+private:
+  /// The blob manager for the dialect.
+  TestResourceBlobManagerInterface &blobManager;
 };
 
 struct TestDialectFoldInterface : public DialectFoldInterface {
@@ -305,8 +361,11 @@ void TestDialect::initialize() {
   registerDynamicOp(getDynamicOneOperandTwoResultsOp(this));
   registerDynamicOp(getDynamicCustomParserPrinterOp(this));
 
-  addInterfaces<TestOpAsmInterface, TestDialectFoldInterface,
-                TestInlinerInterface, TestReductionPatternInterface>();
+  auto &blobInterface = addInterface<TestResourceBlobManagerInterface>();
+  addInterface<TestOpAsmInterface>(blobInterface);
+
+  addInterfaces<TestDialectFoldInterface, TestInlinerInterface,
+                TestReductionPatternInterface>();
   allowUnknownOperations();
 
   // Instantiate our fallback op interface that we'll use on specific
@@ -399,6 +458,22 @@ TestDialect::getOperationPrinter(Operation *op) const {
     };
   }
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// TypedAttrOp
+//===----------------------------------------------------------------------===//
+
+/// Parse an attribute with a given type.
+static ParseResult parseAttrElideType(AsmParser &parser, TypeAttr type,
+                                      Attribute &attr) {
+  return parser.parseAttribute(attr, type.getValue());
+}
+
+/// Print an attribute without its type.
+static void printAttrElideType(AsmPrinter &printer, Operation *op,
+                               TypeAttr type, Attribute attr) {
+  printer.printAttributeWithoutType(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -616,7 +691,7 @@ static ParseResult parseCustomDirectiveOptionalOperandRef(
   if (parser.parseInteger(operandCount))
     return failure();
   bool expectedOptionalOperand = operandCount == 0;
-  return success(expectedOptionalOperand != optOperand.hasValue());
+  return success(expectedOptionalOperand != optOperand.has_value());
 }
 
 //===----------------------------------------------------------------------===//
@@ -865,7 +940,7 @@ ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
 
   // If location of the op is explicitly provided, then use it; Else use
   // the parser's current location.
-  Location opLoc = explicitLoc.getValueOr(currLocation);
+  Location opLoc = explicitLoc.value_or(currLocation);
 
   // Derive the SSA-values for op's operands.
   if (parser.resolveOperands(operands, opFntype.getInputs(), loc,
@@ -956,6 +1031,26 @@ void PolyForOp::getAsmBlockArgumentNames(Region &region,
 }
 
 //===----------------------------------------------------------------------===//
+// TestAttrWithLoc - parse/printOptionalLocationSpecifier
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseOptionalLoc(OpAsmParser &p, Attribute &loc) {
+  Optional<Location> result;
+  SMLoc sourceLoc = p.getCurrentLocation();
+  if (p.parseOptionalLocationSpecifier(result))
+    return failure();
+  if (result)
+    loc = *result;
+  else
+    loc = p.getEncodedSourceLoc(sourceLoc);
+  return success();
+}
+
+static void printOptionalLoc(OpAsmPrinter &p, Operation *op, Attribute loc) {
+  p.printOptionalLocationSpecifier(loc.cast<LocationAttr>());
+}
+
+//===----------------------------------------------------------------------===//
 // Test removing op with inner ops.
 //===----------------------------------------------------------------------===//
 
@@ -1018,6 +1113,36 @@ LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
                              operands[1].getType());
   }
   inferredReturnTypes.assign({operands[0].getType()});
+  return success();
+}
+
+// TODO: We should be able to only define either inferReturnType or
+// refineReturnType, currently only refineReturnType can be omitted.
+LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<Type> &returnTypes) {
+  returnTypes.clear();
+  return OpWithRefineTypeInterfaceOp::refineReturnTypes(
+      context, location, operands, attributes, regions, returnTypes);
+}
+
+LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
+    MLIRContext *, Optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<Type> &returnTypes) {
+  if (operands[0].getType() != operands[1].getType()) {
+    return emitOptionalError(location, "operand type mismatch ",
+                             operands[0].getType(), " vs ",
+                             operands[1].getType());
+  }
+  // TODO: Add helper to make this more concise to write.
+  if (returnTypes.empty())
+    returnTypes.resize(1, nullptr);
+  if (returnTypes[0] && returnTypes[0] != operands[0].getType())
+    return emitOptionalError(location,
+                             "required first operand and result to match");
+  returnTypes[0] = operands[0].getType();
   return success();
 }
 
@@ -1310,8 +1435,8 @@ void RegionIfOp::getSuccessorRegions(
     Optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
   // We always branch to the join region.
-  if (index.hasValue()) {
-    if (index.getValue() < 2)
+  if (index.has_value()) {
+    if (index.value() < 2)
       regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
     else
       regions.push_back(RegionSuccessor(getResults()));
@@ -1465,7 +1590,6 @@ void TestReflectBoundsOp::inferResultRanges(
 
 #include "TestOpEnums.cpp.inc"
 #include "TestOpInterfaces.cpp.inc"
-#include "TestOpStructs.cpp.inc"
 #include "TestTypeInterfaces.cpp.inc"
 
 #define GET_OP_CLASSES

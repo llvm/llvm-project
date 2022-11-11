@@ -1,4 +1,3 @@
-// XFAIL: aix
 // RUN: %clang_pgogen -O2 -o %t.0 %s
 // RUN: %clang_pgogen=%/t.d1 -O2 -o %t.1 %s
 // RUN: %clang_pgogen=%/t.d1/%:t.d2 -O2 -o %t.2 %s

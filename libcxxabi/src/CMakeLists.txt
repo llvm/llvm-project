@@ -99,6 +99,13 @@ else()
   add_link_flags_if_supported(-nodefaultlibs)
 endif()
 
+if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG AND LIBCXXABI_USE_LLVM_UNWINDER)
+  # If we're linking directly against the libunwind that we're building
+  # in the same invocation, don't try to link in the toolchain's
+  # default libunwind (which may be missing still).
+  add_link_flags_if_supported(--unwindlib=none)
+endif()
+
 if ( APPLE )
   if (LLVM_USE_SANITIZER)
     if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
@@ -180,10 +187,21 @@ if (LIBCXXABI_ENABLE_SHARED)
   set_target_properties(cxxabi_shared
     PROPERTIES
       LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-      OUTPUT_NAME "c++abi"
+      OUTPUT_NAME "${LIBCXXABI_SHARED_OUTPUT_NAME}"
       SOVERSION "1"
       VERSION "${LIBCXXABI_LIBRARY_VERSION}"
   )
+
+  if (ZOS)
+    add_custom_command(TARGET cxxabi_shared POST_BUILD
+      COMMAND
+        ${LIBCXXABI_LIBCXX_PATH}/utils/zos_rename_dll_side_deck.sh
+        $<TARGET_LINKER_FILE_NAME:cxxabi_shared> $<TARGET_FILE_NAME:cxxabi_shared> "${LIBCXXABI_DLL_NAME}"
+      COMMENT "Rename dll name inside the side deck file"
+      WORKING_DIRECTORY $<TARGET_FILE_DIR:cxxabi_shared>
+    )
+  endif ()
+
   target_link_libraries(cxxabi_shared
     PUBLIC cxxabi_shared_objects
     PRIVATE ${LIBCXXABI_SHARED_LIBRARIES} ${LIBCXXABI_LIBRARIES})
@@ -267,7 +285,7 @@ if (LIBCXXABI_ENABLE_STATIC)
   set_target_properties(cxxabi_static
     PROPERTIES
       LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-      OUTPUT_NAME "c++abi"
+      OUTPUT_NAME "${LIBCXXABI_STATIC_OUTPUT_NAME}"
     )
   target_link_libraries(cxxabi_static
     PUBLIC cxxabi_static_objects

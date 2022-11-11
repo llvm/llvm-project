@@ -128,19 +128,6 @@ public:
   }
 };
 
-// Specialize is_trivially_copyable to avoid limitation of llvm::is_trivially_copyable
-// when compiled with gcc 4.9.
-template <typename PointerTy, unsigned IntBits, typename IntType,
-          typename PtrTraits,
-          typename Info>
-struct is_trivially_copyable<PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info>> : std::true_type {
-#ifdef HAVE_STD_IS_TRIVIALLY_COPYABLE
-  static_assert(std::is_trivially_copyable<PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info>>::value,
-                "inconsistent behavior between llvm:: and std:: implementation of is_trivially_copyable");
-#endif
-};
-
-
 template <typename PointerT, unsigned IntBits, typename PtrTraits>
 struct PointerIntPairInfo {
   static_assert(PtrTraits::NumLowBitsAvailable <

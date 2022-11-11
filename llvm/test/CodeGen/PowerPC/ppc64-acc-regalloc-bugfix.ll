@@ -14,7 +14,7 @@ dmblvi_entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> zeroinitializer, <16 x i8> undef, <16 x i8> undef, <16 x i8> zeroinitializer)
   %1 = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble.acc(<512 x i1> %0)
   %2 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %1, 2
-  store <16 x i8> %2, <16 x i8>* null, align 1
+  store <16 x i8> %2, ptr null, align 1
   unreachable
 }
 

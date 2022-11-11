@@ -29,7 +29,11 @@
   !ERROR: Invalid STATUS value 'old'
   close(status='old', unit=17)
 
-  !ERROR: IOSTAT variable 'const_stat' must be definable
+  !Ok: trailing spaces ignored
+  close(status='keep ', unit=17)
+
+  !ERROR: IOSTAT variable 'const_stat' is not definable
+  !BECAUSE: '6666_4' is not a variable or pointer
   close(14, iostat=const_stat)
 
 9 continue

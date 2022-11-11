@@ -17,17 +17,23 @@ class DILocBug:
     self.bb_name = bb_name
     self.fn_name = fn_name
     self.instr = instr
+  def __str__(self):
+    return self.action + self.bb_name + self.fn_name + self.instr
 
 class DISPBug:
   def __init__(self, action, fn_name):
     self.action = action
     self.fn_name = fn_name
+  def __str__(self):
+    return self.action + self.fn_name
 
 class DIVarBug:
   def __init__(self, action, name, fn_name):
     self.action = action
     self.name = name
     self.fn_name = fn_name
+  def __str__(self):
+    return self.action + self.name + self.fn_name
 
 # Report the bugs in form of html.
 def generate_html_report(di_location_bugs, di_subprogram_bugs, di_var_bugs, \
@@ -326,10 +332,12 @@ def generate_html_report(di_location_bugs, di_subprogram_bugs, di_var_bugs, \
 
   print("The " + html_file + " generated.")
 
-# Read the JSON file.
-def get_json(file):
+# Read the JSON file in chunks.
+def get_json_chunk(file,start,size):
   json_parsed = None
   di_checker_data = []
+  skipped_lines = 0
+  line = 0
 
   # The file contains json object per line.
   # An example of the line (formatted json):
@@ -353,19 +361,25 @@ def get_json(file):
   #}
   with open(file) as json_objects_file:
     for json_object_line in json_objects_file:
+      line += 1
+      if line < start:
+        continue
+      if line >= start+size:
+        break
       try:
         json_object = loads(json_object_line)
       except:
-        print ("error: No valid di-checker data found.")
-        sys.exit(1)
-      di_checker_data.append(json_object)
+        skipped_lines += 1
+      else:
+        di_checker_data.append(json_object)
 
-  return di_checker_data
+  return (di_checker_data, skipped_lines, line)
 
 # Parse the program arguments.
 def parse_program_args(parser):
   parser.add_argument("file_name", type=str, help="json file to process")
   parser.add_argument("html_file", type=str, help="html file to output data")
+  parser.add_argument("-compress", action="store_true", help="create reduced html report")
 
   return parser.parse_args()
 
@@ -377,8 +391,6 @@ def Main():
     print ("error: The output file must be '.html'.")
     sys.exit(1)
 
-  debug_info_bugs = get_json(opts.file_name)
-
   # Use the defaultdict in order to make multidim dicts.
   di_location_bugs = defaultdict(lambda: defaultdict(dict))
   di_subprogram_bugs = defaultdict(lambda: defaultdict(dict))
@@ -389,63 +401,141 @@ def Main():
   di_sp_bugs_summary = OrderedDict()
   di_var_bugs_summary = OrderedDict()
 
-  # Map the bugs into the file-pass pairs.
-  for bugs_per_pass in debug_info_bugs:
-    bugs_file = bugs_per_pass["file"]
-    bugs_pass = bugs_per_pass["pass"]
+  # Compress similar bugs.
+  # DILocBugs with same pass & instruction name.
+  di_loc_pass_instr_set = set()
+  # DISPBugs with same pass & function name.
+  di_sp_pass_fn_set = set()
+  # DIVarBugs with same pass & variable name.
+  di_var_pass_var_set = set()
 
-    bugs = bugs_per_pass["bugs"][0]
+  start_line = 0
+  chunk_size = 1000000
+  end_line = chunk_size - 1
+  skipped_lines = 0
+  skipped_bugs = 0
+  # Process each chunk of 1 million JSON lines.
+  while True:
+    if start_line > end_line:
+      break
+    (debug_info_bugs, skipped, end_line) = get_json_chunk(opts.file_name,start_line,chunk_size)
+    start_line += chunk_size
+    skipped_lines += skipped
 
-    di_loc_bugs = []
-    di_sp_bugs = []
-    di_var_bugs = []
+    # Map the bugs into the file-pass pairs.
+    for bugs_per_pass in debug_info_bugs:
+      try:
+        bugs_file = bugs_per_pass["file"]
+        bugs_pass = bugs_per_pass["pass"]
+        bugs = bugs_per_pass["bugs"][0]
+      except:
+        skipped_lines += 1
+        continue
 
-    for bug in bugs:
-      bugs_metadata = bug["metadata"]
-      if bugs_metadata == "DILocation":
-        action = bug["action"]
-        bb_name = bug["bb-name"]
-        fn_name = bug["fn-name"]
-        instr = bug["instr"]
-        di_loc_bugs.append(DILocBug(action, bb_name, fn_name, instr))
+      di_loc_bugs = []
+      di_sp_bugs = []
+      di_var_bugs = []
 
-        # Fill the summary dict.
-        if bugs_pass in di_location_bugs_summary:
-          di_location_bugs_summary[bugs_pass] += 1
+      # Omit duplicated bugs.
+      di_loc_set = set()
+      di_sp_set = set()
+      di_var_set = set()
+      for bug in bugs:
+        try:
+          bugs_metadata = bug["metadata"]
+        except:
+          skipped_bugs += 1
+          continue
+
+        if bugs_metadata == "DILocation":
+          try:
+            action = bug["action"]
+            bb_name = bug["bb-name"]
+            fn_name = bug["fn-name"]
+            instr = bug["instr"]
+          except:
+            skipped_bugs += 1
+            continue
+          di_loc_bug = DILocBug(action, bb_name, fn_name, instr)
+          if not str(di_loc_bug) in di_loc_set:
+            di_loc_set.add(str(di_loc_bug))
+            if opts.compress:
+              pass_instr = bugs_pass + instr
+              if not pass_instr in di_loc_pass_instr_set:
+                di_loc_pass_instr_set.add(pass_instr)
+                di_loc_bugs.append(di_loc_bug)
+            else:
+              di_loc_bugs.append(di_loc_bug)
+
+          # Fill the summary dict.
+          if bugs_pass in di_location_bugs_summary:
+            di_location_bugs_summary[bugs_pass] += 1
+          else:
+            di_location_bugs_summary[bugs_pass] = 1
+        elif bugs_metadata == "DISubprogram":
+          try:
+            action = bug["action"]
+            name = bug["name"]
+          except:
+            skipped_bugs += 1
+            continue
+          di_sp_bug = DISPBug(action, name)
+          if not str(di_sp_bug) in di_sp_set:
+            di_sp_set.add(str(di_sp_bug))
+            if opts.compress:
+              pass_fn = bugs_pass + name
+              if not pass_fn in di_sp_pass_fn_set:
+                di_sp_pass_fn_set.add(pass_fn)
+                di_sp_bugs.append(di_sp_bug)
+            else:
+              di_sp_bugs.append(di_sp_bug)
+
+          # Fill the summary dict.
+          if bugs_pass in di_sp_bugs_summary:
+            di_sp_bugs_summary[bugs_pass] += 1
+          else:
+            di_sp_bugs_summary[bugs_pass] = 1
+        elif bugs_metadata == "dbg-var-intrinsic":
+          try:
+            action = bug["action"]
+            fn_name = bug["fn-name"]
+            name = bug["name"]
+          except:
+            skipped_bugs += 1
+            continue
+          di_var_bug = DIVarBug(action, name, fn_name)
+          if not str(di_var_bug) in di_var_set:
+            di_var_set.add(str(di_var_bug))
+            if opts.compress:
+              pass_var = bugs_pass + name
+              if not pass_var in di_var_pass_var_set:
+                di_var_pass_var_set.add(pass_var)
+                di_var_bugs.append(di_var_bug)
+            else:
+              di_var_bugs.append(di_var_bug)
+
+          # Fill the summary dict.
+          if bugs_pass in di_var_bugs_summary:
+            di_var_bugs_summary[bugs_pass] += 1
+          else:
+            di_var_bugs_summary[bugs_pass] = 1
         else:
-          di_location_bugs_summary[bugs_pass] = 1
-      elif bugs_metadata == "DISubprogram":
-        action = bug["action"]
-        name = bug["name"]
-        di_sp_bugs.append(DISPBug(action, name))
+          # Unsupported metadata.
+          skipped_bugs += 1
+          continue
 
-        # Fill the summary dict.
-        if bugs_pass in di_sp_bugs_summary:
-          di_sp_bugs_summary[bugs_pass] += 1
-        else:
-          di_sp_bugs_summary[bugs_pass] = 1
-      elif bugs_metadata == "dbg-var-intrinsic":
-        action = bug["action"]
-        fn_name = bug["fn-name"]
-        name = bug["name"]
-        di_var_bugs.append(DIVarBug(action, name, fn_name))
-
-        # Fill the summary dict.
-        if bugs_pass in di_var_bugs_summary:
-          di_var_bugs_summary[bugs_pass] += 1
-        else:
-          di_var_bugs_summary[bugs_pass] = 1
-      else:
-        print ("error: Unsupported metadata.")
-        sys.exit(1)
-
-    di_location_bugs[bugs_file][bugs_pass] = di_loc_bugs
-    di_subprogram_bugs[bugs_file][bugs_pass] = di_sp_bugs
-    di_variable_bugs[bugs_file][bugs_pass] = di_var_bugs
+      di_location_bugs[bugs_file][bugs_pass] = di_loc_bugs
+      di_subprogram_bugs[bugs_file][bugs_pass] = di_sp_bugs
+      di_variable_bugs[bugs_file][bugs_pass] = di_var_bugs
 
   generate_html_report(di_location_bugs, di_subprogram_bugs, di_variable_bugs, \
                        di_location_bugs_summary, di_sp_bugs_summary, \
                        di_var_bugs_summary, opts.html_file)
+
+  if skipped_lines > 0:
+    print ("Skipped lines: " + str(skipped_lines))
+  if skipped_bugs > 0:
+    print ("Skipped bugs: " + str(skipped_bugs))
 
 if __name__ == "__main__":
   Main()

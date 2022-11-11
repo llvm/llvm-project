@@ -149,7 +149,7 @@ bool matchesRange(SourceRange Range, unsigned StartLine,
 llvm::Optional<DynTypedMatcher> getSingleMatcher(const VariantValue &Value) {
   llvm::Optional<DynTypedMatcher> Result =
       Value.getMatcher().getSingleMatcher();
-  EXPECT_TRUE(Result.hasValue());
+  EXPECT_TRUE(Result);
   return Result;
 }
 
@@ -280,7 +280,7 @@ TEST(ParserTest, FullParserTest) {
   EXPECT_TRUE(matches("unsigned aaaccbb;", M));
 
   Code = "hasInitializer(\n    binaryOperator(hasLHS(\"A\")))";
-  EXPECT_TRUE(!Parser::parseMatcherExpression(Code, &Error).hasValue());
+  EXPECT_TRUE(!Parser::parseMatcherExpression(Code, &Error));
   EXPECT_EQ("1:1: Error parsing argument 1 for matcher hasInitializer.\n"
             "2:5: Error parsing argument 1 for matcher binaryOperator.\n"
             "2:20: Error building matcher hasLHS.\n"
@@ -421,7 +421,7 @@ TEST(ParserTest, ParseMultiline) {
   )
 )matcher";
     Diagnostics Error;
-    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).hasValue());
+    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error));
   }
 
   {
@@ -432,7 +432,7 @@ TEST(ParserTest, ParseMultiline) {
   )
 )matcher";
     Diagnostics Error;
-    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).hasValue());
+    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error));
   }
 
   {
@@ -440,7 +440,7 @@ TEST(ParserTest, ParseMultiline) {
   "paramName")
 )matcher";
     Diagnostics Error;
-    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).hasValue());
+    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error));
   }
 
   {
@@ -449,27 +449,27 @@ TEST(ParserTest, ParseMultiline) {
   )
 )matcher";
     Diagnostics Error;
-    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).hasValue());
+    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).has_value());
   }
 
   {
     Code = R"matcher(decl(decl()
 , decl()))matcher";
     Diagnostics Error;
-    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).hasValue());
+    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).has_value());
   }
 
   {
     Code = R"matcher(decl(decl(),
 decl()))matcher";
     Diagnostics Error;
-    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).hasValue());
+    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).has_value());
   }
 
   {
     Code = "namedDecl(hasName(\"n\"\n))";
     Diagnostics Error;
-    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).hasValue());
+    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).has_value());
   }
 
   {
@@ -481,7 +481,7 @@ decl()))matcher";
   ("paramName")
 )matcher";
     M = Parser::parseMatcherExpression(Code, nullptr, &NamedValues, &Error);
-    EXPECT_FALSE(M.hasValue());
+    EXPECT_FALSE(M);
     EXPECT_EQ("1:15: Malformed bind() expression.", Error.toStringFull());
   }
 
@@ -494,7 +494,7 @@ decl()))matcher";
   bind("paramName")
 )matcher";
     M = Parser::parseMatcherExpression(Code, nullptr, &NamedValues, &Error);
-    EXPECT_FALSE(M.hasValue());
+    EXPECT_FALSE(M);
     EXPECT_EQ("1:11: Period not followed by valid chained call.",
               Error.toStringFull());
   }
@@ -506,7 +506,7 @@ decl()))matcher";
 ()
 )matcher";
     M = Parser::parseMatcherExpression(Code, nullptr, nullptr, &Error);
-    EXPECT_FALSE(M.hasValue());
+    EXPECT_FALSE(M);
     EXPECT_EQ("1:8: Error parsing matcher. Found token "
               "<NewLine> while looking for '('.",
               Error.toStringFull());
@@ -521,7 +521,7 @@ decl()))matcher";
   )
 )matcher";
     M = Parser::parseMatcherExpression(Code, nullptr, nullptr, &Error);
-    EXPECT_FALSE(M.hasValue());
+    EXPECT_FALSE(M);
     StringRef Expected = R"error(1:1: Error parsing argument 1 for matcher varDecl.
 2:3: Matcher not found: doesNotExist)error";
     EXPECT_EQ(Expected, Error.toStringFull());

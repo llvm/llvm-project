@@ -13,10 +13,14 @@ import sys
 # LLDB modules
 from lldbsuite.support import gmodules
 
-
-debug_info_categories = [
-    'dwarf', 'dwo', 'dsym', 'gmodules'
-]
+# Key: Category name
+# Value: should be used in lldbtest's debug-info replication
+debug_info_categories = {
+    'dwarf'    : True,
+    'dwo'      : True,
+    'dsym'     : True,
+    'gmodules' : False
+}
 
 all_categories = {
     'basic_process': 'Basic process execution sniff tests.',
@@ -64,7 +68,7 @@ def is_supported_on_platform(category, platform, compiler_path):
         return platform in ["darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]
     elif category == "gmodules":
         # First, check to see if the platform can even support gmodules.
-        if platform not in ["freebsd", "darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]:
+        if platform not in ["darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]:
             return False
         return gmodules.is_compiler_clang_with_gmodules(compiler_path)
     return True

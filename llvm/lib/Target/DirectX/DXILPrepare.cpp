@@ -160,6 +160,13 @@ public:
               GEP->setOperand(0, NoOpBitcast);
             continue;
           }
+          if (auto *CB = dyn_cast<CallBase>(&I)) {
+            CB->removeFnAttrs(AttrMask);
+            CB->removeRetAttrs(AttrMask);
+            for (size_t Idx = 0, End = CB->arg_size(); Idx < End; ++Idx)
+              CB->removeParamAttrs(Idx, AttrMask);
+            continue;
+          }
         }
       }
     }

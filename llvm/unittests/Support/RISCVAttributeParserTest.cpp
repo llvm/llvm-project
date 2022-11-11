@@ -45,7 +45,7 @@ static bool testAttribute(unsigned Tag, unsigned Value, unsigned ExpectedTag,
   cantFail(Parser.parse(Bytes, support::little));
 
   Optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
-  return Attr.hasValue() && Attr.getValue() == ExpectedValue;
+  return Attr && *Attr == ExpectedValue;
 }
 
 static bool testTagString(unsigned Tag, const char *name) {

@@ -1,9 +1,5 @@
-// configuration: -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-before=cse
-
-// Test of the reproducer run option. The first line has to be the
-// configuration (matching what is produced by reproducer).
-
-// RUN: mlir-opt %s -run-reproducer 2>&1 | FileCheck -check-prefix=BEFORE %s
+// RUN: mlir-opt %s -dump-pass-pipeline 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -mlir-print-ir-before=cse 2>&1 | FileCheck -check-prefix=BEFORE %s
 
 func.func @foo() {
   %0 = arith.constant 0 : i32
@@ -14,9 +10,20 @@ func.func @bar() {
   return
 }
 
-// BEFORE: // -----// IR Dump Before{{.*}}CSE //----- //
+{-#
+  external_resources: {
+    mlir_reproducer: {
+      verify_each: true,
+      // CHECK:  builtin.module(func.func(cse,canonicalize{ max-iterations=1 region-simplify=false top-down=false}))
+      pipeline: "builtin.module(func.func(cse,canonicalize{max-iterations=1 region-simplify=false top-down=false}))",
+      disable_threading: true
+    }
+  }
+#-}
+
+// BEFORE: // -----// IR Dump Before{{.*}}CSE (cse) //----- //
 // BEFORE-NEXT: func @foo()
-// BEFORE: // -----// IR Dump Before{{.*}}CSE //----- //
+// BEFORE: // -----// IR Dump Before{{.*}}CSE (cse) //----- //
 // BEFORE-NEXT: func @bar()
-// BEFORE-NOT: // -----// IR Dump Before{{.*}}Canonicalizer //----- //
+// BEFORE-NOT: // -----// IR Dump Before{{.*}}Canonicalizer (canonicalize) //----- //
 // BEFORE-NOT: // -----// IR Dump After

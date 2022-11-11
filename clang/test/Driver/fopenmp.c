@@ -140,7 +140,7 @@
 // CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC: "-{{B?}}static" {{.*}} "-liomp5"
 // CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC-NOT: "-Bdynamic"
 //
-// RUN: %clang -target x86_64-linux-gnu -fopenmp -fopenmp-enable-irbuilder -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-OPENMPIRBUILDER
+// RUN: %clang -target x86_64-linux-gnu -fopenmp=libomp -fopenmp-enable-irbuilder -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-OPENMPIRBUILDER
 //
 // CHECK-CC1-OPENMPIRBUILDER: "-cc1"
 // CHECK-CC1-OPENMPIRBUILDER-SAME: "-fopenmp"

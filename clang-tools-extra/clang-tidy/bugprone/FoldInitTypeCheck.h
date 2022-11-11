@@ -23,7 +23,7 @@ namespace bugprone {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-fold-init-type.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/fold-init-type.html
 class FoldInitTypeCheck : public ClangTidyCheck {
 public:
   FoldInitTypeCheck(StringRef Name, ClangTidyContext *Context)

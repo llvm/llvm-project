@@ -56,9 +56,7 @@ define i1 @test_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    crmove 4*cr5+lt, eq
-; CHECK-NEXT:    xscmpuqp cr0, v2, v3
-; CHECK-NEXT:    crmove 4*cr5+gt, eq
-; CHECK-NEXT:    crnor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
+; CHECK-NEXT:    crnot 4*cr5+lt, 4*cr5+lt
 ; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    isel r3, r3, r4, 4*cr5+lt

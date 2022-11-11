@@ -6,4 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-int main() { return 0; }
+#include "utils/IntegrationTest/test.h"
+
+TEST_MAIN() { return 0; }

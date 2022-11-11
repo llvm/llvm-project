@@ -142,7 +142,7 @@ bool isValidScheme(llvm::StringRef Scheme) {
     return false;
   if (!llvm::isAlpha(Scheme[0]))
     return false;
-  return std::all_of(Scheme.begin() + 1, Scheme.end(), [](char C) {
+  return llvm::all_of(llvm::drop_begin(Scheme), [](char C) {
     return llvm::isAlnum(C) || C == '+' || C == '.' || C == '-';
   });
 }

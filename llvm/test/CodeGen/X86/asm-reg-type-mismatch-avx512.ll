@@ -10,6 +10,6 @@ define i64 @test1() nounwind {
 ; CHECK-NEXT:    vmovq %xmm16, %rax
 ; CHECK-NEXT:    retq
 entry:
-  %0 = tail call i64 asm sideeffect "vmovq $1, $0", "={xmm16},*m,~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) null) nounwind
+  %0 = tail call i64 asm sideeffect "vmovq $1, $0", "={xmm16},*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) null) nounwind
   ret i64 %0
 }

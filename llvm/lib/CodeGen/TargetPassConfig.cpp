@@ -960,7 +960,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     // pad is shared by multiple invokes and is also a target of a normal
     // edge from elsewhere.
     addPass(createSjLjEHPreparePass(TM));
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
@@ -1113,6 +1113,7 @@ bool TargetPassConfig::addISelPasses() {
 
   addPass(createPreISelIntrinsicLoweringPass());
   PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  addPass(createExpandLargeDivRemPass());
   addIRPasses();
   addCodeGenPrepare();
   addPassesToHandleExceptions();
@@ -1403,6 +1404,11 @@ FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
 
   // With no -regalloc= override, ask the target for a regalloc pass.
   return createTargetRegisterAllocator(Optimized);
+}
+
+bool TargetPassConfig::isCustomizedRegAlloc() {
+  return RegAlloc !=
+         (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator;
 }
 
 bool TargetPassConfig::addRegAssignAndRewriteFast() {

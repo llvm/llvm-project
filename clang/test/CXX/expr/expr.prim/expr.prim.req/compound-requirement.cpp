@@ -35,14 +35,14 @@ using r2i2 = r2<A>; // expected-error{{constraints not satisfied for class templ
 using r2i3 = r2<D>;
 using r2i4 = r2<const D>; // expected-error{{constraints not satisfied for class template 'r2' [with T = const D]}}
 
-template<typename T> requires requires { { sizeof(T) }; } // expected-note{{because 'sizeof(T)' would be invalid: invalid application of 'sizeof' to an incomplete type 'void'}} expected-note{{because 'sizeof(T)' would be invalid: invalid application of 'sizeof' to an incomplete type 'nonexistent'}}
+template<typename T> requires requires { { sizeof(T) }; } // expected-note{{because 'sizeof(T)' would be invalid: invalid application of 'sizeof' to an incomplete type 'void'}} expected-note{{because 'sizeof(T)' would be invalid: invalid application of 'sizeof' to an incomplete type 'class nonexistent'}}
 struct r3 {};
 
 using r3i1 = r3<int>;
 using r3i2 = r3<A>;
 using r3i3 = r3<A &>;
 using r3i4 = r3<void>; // expected-error{{constraints not satisfied for class template 'r3' [with T = void]}}
-using r3i4 = r3<class nonexistent>; // expected-error{{constraints not satisfied for class template 'r3' [with T = nonexistent]}}
+using r3i4 = r3<class nonexistent>; // expected-error{{constraints not satisfied for class template 'r3' [with T = class nonexistent]}}
 
 // Non-dependent expressions
 
@@ -149,7 +149,7 @@ namespace std_example {
   template<typename T> constexpr bool is_same_v<T, T> = true;
 
   template<typename T, typename U> concept same_as = is_same_v<T, U>;
-  // expected-note@-1 {{because 'is_same_v<int, int *>' evaluated to false}}
+  // expected-note@-1 {{because 'is_same_v<int, typename T2::inner>' evaluated to false}}
 
   static_assert(C1<int>);
   static_assert(C1<int*>);
@@ -173,9 +173,9 @@ namespace std_example {
     int operator *() { return 0; }
   };
   static_assert(C2<T1>);
-  template<C2 T> struct C2_check {}; // expected-note{{because 'int' does not satisfy 'C2'}} expected-note{{because 'std_example::T2' does not satisfy 'C2'}}
+  template<C2 T> struct C2_check {}; // expected-note{{because 'int' does not satisfy 'C2'}} expected-note{{because 'T2' does not satisfy 'C2'}}
   using c2c1 = C2_check<int>; // expected-error{{constraints not satisfied for class template 'C2_check' [with T = int]}}
-  using c2c2 = C2_check<T2>; // expected-error{{constraints not satisfied for class template 'C2_check' [with T = std_example::T2]}}
+  using c2c2 = C2_check<T2>; // expected-error{{constraints not satisfied for class template 'C2_check' [with T = T2]}}
 
   template<typename T>
   void g(T t) noexcept(sizeof(T) == 1) {}

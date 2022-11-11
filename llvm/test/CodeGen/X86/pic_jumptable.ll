@@ -28,10 +28,10 @@ entry:
 ;; When they're not enabled, make sure we don't see them at all.
 ; CHECK-NOT: .data_region
 ; CHECK-LINUX-NOT: .data_region
-	%Y_addr = alloca i32		; <i32*> [#uses=2]
+	%Y_addr = alloca i32		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
-	store i32 %Y, i32* %Y_addr
-	%tmp = load i32, i32* %Y_addr		; <i32> [#uses=1]
+	store i32 %Y, ptr %Y_addr
+	%tmp = load i32, ptr %Y_addr		; <i32> [#uses=1]
 	switch i32 %tmp, label %bb10 [
 		 i32 0, label %bb3
 		 i32 1, label %bb

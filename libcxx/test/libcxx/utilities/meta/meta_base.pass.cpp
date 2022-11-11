@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 
+#include "test_macros.h"
+
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wprivate-header")
+#include <__type_traits/is_valid_expansion.h>
 #include <type_traits>
 #include <cassert>
-
-#include "test_macros.h"
 
 struct Bomb;
 template <int N, class T = Bomb >
@@ -77,13 +79,6 @@ void test_is_valid_trait() {
   static_assert(std::_IsValidExpansion<HasFooType, MemberTest2>::value, "");
   static_assert(std::_IsValidExpansion<FuncCallable, MemberTest, int>::value, "");
   static_assert(!std::_IsValidExpansion<FuncCallable, MemberTest, void*>::value, "");
-}
-
-void test_first_and_second_type() {
-  ASSERT_SAME_TYPE(std::_FirstType<int, long, void*>, int);
-  ASSERT_SAME_TYPE(std::_FirstType<char>, char);
-  ASSERT_SAME_TYPE(std::_SecondType<char, long>, long);
-  ASSERT_SAME_TYPE(std::_SecondType<long long, int, void*>, int);
 }
 
 int main(int, char**) {

@@ -15,7 +15,7 @@
 ; RUN:     -mtriple=powerpc-ibm-aix-xcoff -vec-extabi \
 ; RUN:     < %s | FileCheck %s --check-prefixes=P9BE-AIX32
 
-define void @test64(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
+define void @test64(ptr nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9LE-LABEL: test64:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    add 5, 3, 4
@@ -113,29 +113,27 @@ define void @test64(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-AIX32-NEXT:    blr
 entry:
   %idx.ext63 = sext i32 %i_pix2 to i64
-  %add.ptr64 = getelementptr inbounds i8, i8* %pix2, i64 %idx.ext63
-  %arrayidx5.1 = getelementptr inbounds i8, i8* %add.ptr64, i64 4
-  %0 = bitcast i8* %add.ptr64 to <4 x i16>*
-  %1 = load <4 x i16>, <4 x i16>* %0, align 1
-  %reorder_shuffle117 = shufflevector <4 x i16> %1, <4 x i16> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-  %2 = zext <4 x i16> %reorder_shuffle117 to <4 x i32>
-  %3 = sub nsw <4 x i32> zeroinitializer, %2
-  %4 = bitcast i8* %arrayidx5.1 to <4 x i16>*
-  %5 = load <4 x i16>, <4 x i16>* %4, align 1
-  %reorder_shuffle115 = shufflevector <4 x i16> %5, <4 x i16> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-  %6 = zext <4 x i16> %reorder_shuffle115 to <4 x i32>
-  %7 = sub nsw <4 x i32> zeroinitializer, %6
-  %8 = shl nsw <4 x i32> %7, <i32 16, i32 16, i32 16, i32 16>
-  %9 = add nsw <4 x i32> %8, %3
-  %10 = sub nsw <4 x i32> %9, zeroinitializer
-  %11 = shufflevector <4 x i32> undef, <4 x i32> %10, <4 x i32> <i32 2, i32 7, i32 0, i32 5>
-  %12 = add nsw <4 x i32> zeroinitializer, %11
-  %13 = shufflevector <4 x i32> %12, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-  store <4 x i32> %13, <4 x i32>* undef, align 16
+  %add.ptr64 = getelementptr inbounds i8, ptr %pix2, i64 %idx.ext63
+  %arrayidx5.1 = getelementptr inbounds i8, ptr %add.ptr64, i64 4
+  %0 = load <4 x i16>, ptr %add.ptr64, align 1
+  %reorder_shuffle117 = shufflevector <4 x i16> %0, <4 x i16> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %1 = zext <4 x i16> %reorder_shuffle117 to <4 x i32>
+  %2 = sub nsw <4 x i32> zeroinitializer, %1
+  %3 = load <4 x i16>, ptr %arrayidx5.1, align 1
+  %reorder_shuffle115 = shufflevector <4 x i16> %3, <4 x i16> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %4 = zext <4 x i16> %reorder_shuffle115 to <4 x i32>
+  %5 = sub nsw <4 x i32> zeroinitializer, %4
+  %6 = shl nsw <4 x i32> %5, <i32 16, i32 16, i32 16, i32 16>
+  %7 = add nsw <4 x i32> %6, %2
+  %8 = sub nsw <4 x i32> %7, zeroinitializer
+  %9 = shufflevector <4 x i32> undef, <4 x i32> %8, <4 x i32> <i32 2, i32 7, i32 0, i32 5>
+  %10 = add nsw <4 x i32> zeroinitializer, %9
+  %11 = shufflevector <4 x i32> %10, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  store <4 x i32> %11, ptr undef, align 16
   ret void
 }
 
-define void @test32(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
+define void @test32(ptr nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9LE-LABEL: test32:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    add 5, 3, 4
@@ -219,29 +217,27 @@ define void @test32(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-AIX32-NEXT:    blr
 entry:
   %idx.ext63 = sext i32 %i_pix2 to i64
-  %add.ptr64 = getelementptr inbounds i8, i8* %pix2, i64 %idx.ext63
-  %arrayidx5.1 = getelementptr inbounds i8, i8* %add.ptr64, i64 4
-  %0 = bitcast i8* %add.ptr64 to <4 x i8>*
-  %1 = load <4 x i8>, <4 x i8>* %0, align 1
-  %reorder_shuffle117 = shufflevector <4 x i8> %1, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-  %2 = zext <4 x i8> %reorder_shuffle117 to <4 x i32>
-  %3 = sub nsw <4 x i32> zeroinitializer, %2
-  %4 = bitcast i8* %arrayidx5.1 to <4 x i8>*
-  %5 = load <4 x i8>, <4 x i8>* %4, align 1
-  %reorder_shuffle115 = shufflevector <4 x i8> %5, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-  %6 = zext <4 x i8> %reorder_shuffle115 to <4 x i32>
-  %7 = sub nsw <4 x i32> zeroinitializer, %6
-  %8 = shl nsw <4 x i32> %7, <i32 16, i32 16, i32 16, i32 16>
-  %9 = add nsw <4 x i32> %8, %3
-  %10 = sub nsw <4 x i32> %9, zeroinitializer
-  %11 = shufflevector <4 x i32> undef, <4 x i32> %10, <4 x i32> <i32 2, i32 7, i32 0, i32 5>
-  %12 = add nsw <4 x i32> zeroinitializer, %11
-  %13 = shufflevector <4 x i32> %12, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-  store <4 x i32> %13, <4 x i32>* undef, align 16
+  %add.ptr64 = getelementptr inbounds i8, ptr %pix2, i64 %idx.ext63
+  %arrayidx5.1 = getelementptr inbounds i8, ptr %add.ptr64, i64 4
+  %0 = load <4 x i8>, ptr %add.ptr64, align 1
+  %reorder_shuffle117 = shufflevector <4 x i8> %0, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %1 = zext <4 x i8> %reorder_shuffle117 to <4 x i32>
+  %2 = sub nsw <4 x i32> zeroinitializer, %1
+  %3 = load <4 x i8>, ptr %arrayidx5.1, align 1
+  %reorder_shuffle115 = shufflevector <4 x i8> %3, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %4 = zext <4 x i8> %reorder_shuffle115 to <4 x i32>
+  %5 = sub nsw <4 x i32> zeroinitializer, %4
+  %6 = shl nsw <4 x i32> %5, <i32 16, i32 16, i32 16, i32 16>
+  %7 = add nsw <4 x i32> %6, %2
+  %8 = sub nsw <4 x i32> %7, zeroinitializer
+  %9 = shufflevector <4 x i32> undef, <4 x i32> %8, <4 x i32> <i32 2, i32 7, i32 0, i32 5>
+  %10 = add nsw <4 x i32> zeroinitializer, %9
+  %11 = shufflevector <4 x i32> %10, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  store <4 x i32> %11, ptr undef, align 16
   ret void
 }
 
-define void @test16(i16* nocapture readonly %sums, i32 signext %delta, i32 signext %thresh) {
+define void @test16(ptr nocapture readonly %sums, i32 signext %delta, i32 signext %thresh) {
 ; P9LE-LABEL: test16:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    sldi 4, 4, 1
@@ -354,10 +350,10 @@ entry:
   br label %for.body
 
 for.body:                                         ; preds = %entry
-  %arrayidx8 = getelementptr inbounds i16, i16* %sums, i64 %idxprom
-  %0 = load i16, i16* %arrayidx8, align 2
-  %arrayidx16 = getelementptr inbounds i16, i16* %sums, i64 %idxprom15
-  %1 = load i16, i16* %arrayidx16, align 2
+  %arrayidx8 = getelementptr inbounds i16, ptr %sums, i64 %idxprom
+  %0 = load i16, ptr %arrayidx8, align 2
+  %arrayidx16 = getelementptr inbounds i16, ptr %sums, i64 %idxprom15
+  %1 = load i16, ptr %arrayidx16, align 2
   %2 = insertelement <4 x i16> undef, i16 %0, i32 2
   %3 = insertelement <4 x i16> %2, i16 %1, i32 3
   %4 = zext <4 x i16> %3 to <4 x i32>
@@ -379,7 +375,7 @@ if.end:                                           ; preds = %for.body
   ret void
 }
 
-define void @test8(i8* nocapture readonly %sums, i32 signext %delta, i32 signext %thresh) {
+define void @test8(ptr nocapture readonly %sums, i32 signext %delta, i32 signext %thresh) {
 ; P9LE-LABEL: test8:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    add 6, 3, 4
@@ -496,10 +492,10 @@ entry:
   br label %for.body
 
 for.body:                                         ; preds = %entry
-  %arrayidx8 = getelementptr inbounds i8, i8* %sums, i64 %idxprom
-  %0 = load i8, i8* %arrayidx8, align 2
-  %arrayidx16 = getelementptr inbounds i8, i8* %sums, i64 %idxprom15
-  %1 = load i8, i8* %arrayidx16, align 2
+  %arrayidx8 = getelementptr inbounds i8, ptr %sums, i64 %idxprom
+  %0 = load i8, ptr %arrayidx8, align 2
+  %arrayidx16 = getelementptr inbounds i8, ptr %sums, i64 %idxprom15
+  %1 = load i8, ptr %arrayidx16, align 2
   %2 = insertelement <4 x i8> undef, i8 %0, i32 2
   %3 = insertelement <4 x i8> %2, i8 %1, i32 3
   %4 = zext <4 x i8> %3 to <4 x i32>

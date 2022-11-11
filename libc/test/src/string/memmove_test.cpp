@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/ArrayRef.h"
+#include "src/__support/CPP/span.h"
 #include "src/string/memmove.h"
 #include "utils/UnitTest/MemoryMatcher.h"
 #include "utils/UnitTest/Test.h"
 
-using __llvm_libc::cpp::Array;
-using __llvm_libc::cpp::ArrayRef;
-using __llvm_libc::cpp::MutableArrayRef;
+using __llvm_libc::cpp::array;
+using __llvm_libc::cpp::span;
 
 TEST(LlvmLibcMemmoveTest, MoveZeroByte) {
   char Buffer[] = {'a', 'b', 'y', 'z'};
@@ -21,7 +20,7 @@ TEST(LlvmLibcMemmoveTest, MoveZeroByte) {
   void *const Dst = Buffer;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 0);
   EXPECT_EQ(Ret, Dst);
-  EXPECT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 TEST(LlvmLibcMemmoveTest, DstAndSrcPointToSameAddress) {
@@ -30,7 +29,7 @@ TEST(LlvmLibcMemmoveTest, DstAndSrcPointToSameAddress) {
   void *const Dst = Buffer;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer, 1);
   EXPECT_EQ(Ret, Dst);
-  EXPECT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 TEST(LlvmLibcMemmoveTest, DstStartsBeforeSrc) {
@@ -41,7 +40,7 @@ TEST(LlvmLibcMemmoveTest, DstStartsBeforeSrc) {
   void *const Dst = Buffer + 1;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 2);
   EXPECT_EQ(Ret, Dst);
-  EXPECT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 TEST(LlvmLibcMemmoveTest, DstStartsAfterSrc) {
@@ -50,7 +49,7 @@ TEST(LlvmLibcMemmoveTest, DstStartsAfterSrc) {
   void *const Dst = Buffer + 2;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 1, 2);
   EXPECT_EQ(Ret, Dst);
-  EXPECT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 // e.g. `Dst` follow `src`.
@@ -63,7 +62,7 @@ TEST(LlvmLibcMemmoveTest, SrcFollowDst) {
   void *const Dst = Buffer + 1;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 1);
   EXPECT_EQ(Ret, Dst);
-  EXPECT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 TEST(LlvmLibcMemmoveTest, DstFollowSrc) {
@@ -72,7 +71,7 @@ TEST(LlvmLibcMemmoveTest, DstFollowSrc) {
   void *const Dst = Buffer + 2;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 1, 1);
   EXPECT_EQ(Ret, Dst);
-  EXPECT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 static constexpr int kMaxSize = 512;
@@ -86,13 +85,13 @@ char GetRandomChar() {
   return Seed;
 }
 
-void Randomize(MutableArrayRef<char> Buffer) {
+void Randomize(span<char> Buffer) {
   for (auto &current : Buffer)
     current = GetRandomChar();
 }
 
-TEST(LlvmLibcMemmoveTest, Thorough) {
-  using LargeBuffer = Array<char, 3 * kMaxSize>;
+TEST(LlvmLibcMemmoveTest, SizeSweep) {
+  using LargeBuffer = array<char, 3 * kMaxSize>;
   LargeBuffer GroundTruth;
   Randomize(GroundTruth);
   for (int Size = 0; Size < kMaxSize; ++Size) {
@@ -107,7 +106,7 @@ TEST(LlvmLibcMemmoveTest, Thorough) {
       void *const Ret =
           __llvm_libc::memmove(Dst, Buffer.data() + SrcOffset, Size);
       EXPECT_EQ(Ret, Dst);
-      EXPECT_MEM_EQ(Buffer, Expected);
+      ASSERT_MEM_EQ(Buffer, Expected);
     }
   }
 }

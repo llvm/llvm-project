@@ -20,7 +20,7 @@ namespace altera {
 /// degradation.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/altera-id-dependent-backward-branch.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/altera/id-dependent-backward-branch.html
 class IdDependentBackwardBranchCheck : public ClangTidyCheck {
 private:
   enum LoopType { UnknownLoop = -1, DoLoop = 0, WhileLoop = 1, ForLoop = 2 };

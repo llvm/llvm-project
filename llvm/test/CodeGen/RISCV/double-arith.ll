@@ -660,17 +660,11 @@ define double @fnmadd_d_2(double %a, double %b, double %c) nounwind {
 }
 
 define double @fnmadd_d_3(double %a, double %b, double %c) nounwind {
-; RV32IFD-LABEL: fnmadd_d_3:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fmadd.d ft0, fa0, fa1, fa2
-; RV32IFD-NEXT:    fneg.d fa0, ft0
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: fnmadd_d_3:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmadd.d ft0, fa0, fa1, fa2
-; RV64IFD-NEXT:    fneg.d fa0, ft0
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: fnmadd_d_3:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fmadd.d ft0, fa0, fa1, fa2
+; CHECKIFD-NEXT:    fneg.d fa0, ft0
+; CHECKIFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_d_3:
 ; RV32I:       # %bb.0:
@@ -701,15 +695,10 @@ define double @fnmadd_d_3(double %a, double %b, double %c) nounwind {
 
 
 define double @fnmadd_nsz(double %a, double %b, double %c) nounwind {
-; RV32IFD-LABEL: fnmadd_nsz:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fnmadd.d fa0, fa0, fa1, fa2
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: fnmadd_nsz:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fnmadd.d fa0, fa0, fa1, fa2
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: fnmadd_nsz:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fnmadd.d fa0, fa0, fa1, fa2
+; CHECKIFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_nsz:
 ; RV32I:       # %bb.0:

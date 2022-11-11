@@ -133,3 +133,163 @@ body:             |
     RET_ReallyLR implicit $w0
 
 ...
+
+---
+name: zextload_s32_from_s8_atomic_unordered
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: zextload_s32_from_s8_atomic_unordered
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load unordered (s8))
+    ; CHECK-NEXT: $w0 = COPY [[LDRBBui]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr(p0) = COPY $x0
+    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load unordered (s8))
+    $w0 = COPY %2
+    RET_ReallyLR implicit $w0
+
+...
+
+---
+name: zextload_s32_from_s8_atomic_monotonic
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: zextload_s32_from_s8_atomic_monotonic
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load monotonic (s8))
+    ; CHECK-NEXT: $w0 = COPY [[LDRBBui]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr(p0) = COPY $x0
+    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load monotonic (s8))
+    $w0 = COPY %2
+    RET_ReallyLR implicit $w0
+
+...
+
+---
+name: zextload_s32_from_s8_atomic_acquire
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: zextload_s32_from_s8_atomic_acquire
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDARB:%[0-9]+]]:gpr32 = LDARB [[COPY]] :: (load acquire (s8))
+    ; CHECK-NEXT: $w0 = COPY [[LDARB]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr(p0) = COPY $x0
+    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load acquire (s8))
+    $w0 = COPY %2
+    RET_ReallyLR implicit $w0
+
+...
+
+---
+name: zextload_s32_from_s8_atomic_seq_cst
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: zextload_s32_from_s8_atomic_seq_cst
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDARB:%[0-9]+]]:gpr32 = LDARB [[COPY]] :: (load seq_cst (s8))
+    ; CHECK-NEXT: $w0 = COPY [[LDARB]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr(p0) = COPY $x0
+    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load seq_cst (s8))
+    $w0 = COPY %2
+    RET_ReallyLR implicit $w0
+
+...
+
+---
+name: zextload_s32_from_s16_atomic_unordered
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: zextload_s32_from_s16_atomic_unordered
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load unordered (s16))
+    ; CHECK-NEXT: $w0 = COPY [[LDRHHui]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr(p0) = COPY $x0
+    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load unordered (s16))
+    $w0 = COPY %2
+    RET_ReallyLR implicit $w0
+
+...
+
+---
+name: zextload_s32_from_s16_atomic_monotonic
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: zextload_s32_from_s16_atomic_monotonic
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load monotonic (s16))
+    ; CHECK-NEXT: $w0 = COPY [[LDRHHui]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr(p0) = COPY $x0
+    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load monotonic (s16))
+    $w0 = COPY %2
+    RET_ReallyLR implicit $w0
+
+...
+
+---
+name: zextload_s32_from_s16_atomic_acquire
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: zextload_s32_from_s16_atomic_acquire
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDARH:%[0-9]+]]:gpr32 = LDARH [[COPY]] :: (load acquire (s16))
+    ; CHECK-NEXT: $w0 = COPY [[LDARH]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr(p0) = COPY $x0
+    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load acquire (s16))
+    $w0 = COPY %2
+    RET_ReallyLR implicit $w0
+
+...
+
+---
+name: zextload_s32_from_s16_atomic_seq_cst
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: zextload_s32_from_s16_atomic_seq_cst
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDARH:%[0-9]+]]:gpr32 = LDARH [[COPY]] :: (load seq_cst (s16))
+    ; CHECK-NEXT: $w0 = COPY [[LDARH]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr(p0) = COPY $x0
+    %2:gpr(s32) = G_ZEXTLOAD %0(p0) :: (load seq_cst (s16))
+    $w0 = COPY %2
+    RET_ReallyLR implicit $w0
+
+...

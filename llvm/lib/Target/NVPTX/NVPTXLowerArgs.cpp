@@ -98,6 +98,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
+#include <numeric>
 #include <queue>
 
 #define DEBUG_TYPE "nvptx-lower-args"
@@ -303,7 +304,7 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
   }
 
   for (Load &CurLoad : Loads) {
-    Align NewLoadAlign(greatestCommonDivisor(NewArgAlign, CurLoad.Offset));
+    Align NewLoadAlign(std::gcd(NewArgAlign, CurLoad.Offset));
     Align CurLoadAlign(CurLoad.Inst->getAlign());
     CurLoad.Inst->setAlignment(std::max(NewLoadAlign, CurLoadAlign));
   }
@@ -373,7 +374,7 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   // later load/stores assume that alignment, and we are going to replace
   // the use of the byval parameter with this alloca instruction.
   AllocA->setAlignment(Func->getParamAlign(Arg->getArgNo())
-                           .getValueOr(DL.getPrefTypeAlign(StructType)));
+                           .value_or(DL.getPrefTypeAlign(StructType)));
   Arg->replaceAllUsesWith(AllocA);
 
   Value *ArgInParam = new AddrSpaceCastInst(

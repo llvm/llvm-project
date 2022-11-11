@@ -152,11 +152,11 @@ void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
   MBB->getParent()->deleteMachineBasicBlock(MBB);
 }
 
-static inline unsigned getFnStackAlignment(const TargetSubtargetInfo *STI,
+static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
                                            const Function &F) {
   if (auto MA = F.getFnStackAlign())
-    return MA->value();
-  return STI->getFrameLowering()->getStackAlign().value();
+    return *MA;
+  return STI->getFrameLowering()->getStackAlign();
 }
 
 MachineFunction::MachineFunction(Function &F, const LLVMTargetMachine &Target,
@@ -306,7 +306,7 @@ bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
 }
 
-LLVM_NODISCARD unsigned
+[[nodiscard]] unsigned
 MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
   FrameInstructions.push_back(Inst);
   return FrameInstructions.size() - 1;
@@ -530,9 +530,11 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 
 MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
     ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol,
-    MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker) {
+    MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker, MDNode *PCSections,
+    uint32_t CFIType) {
   return MachineInstr::ExtraInfo::create(Allocator, MMOs, PreInstrSymbol,
-                                         PostInstrSymbol, HeapAllocMarker);
+                                         PostInstrSymbol, HeapAllocMarker,
+                                         PCSections, CFIType);
 }
 
 const char *MachineFunction::createExternalSymbolName(StringRef Name) {
@@ -777,7 +779,7 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
     }
 
   } else if (const auto *CPI = dyn_cast<CatchPadInst>(FirstI)) {
-    for (unsigned I = CPI->getNumArgOperands(); I != 0; --I) {
+    for (unsigned I = CPI->arg_size(); I != 0; --I) {
       Value *TypeInfo = CPI->getArgOperand(I - 1)->stripPointerCasts();
       addCatchTypeInfo(LandingPad, dyn_cast<GlobalValue>(TypeInfo));
     }
@@ -911,8 +913,8 @@ static const MachineInstr *getCallInstr(const MachineInstr *MI) {
   if (!MI->isBundle())
     return MI;
 
-  for (auto &BMI : make_range(getBundleStart(MI->getIterator()),
-                              getBundleEnd(MI->getIterator())))
+  for (const auto &BMI : make_range(getBundleStart(MI->getIterator()),
+                                    getBundleEnd(MI->getIterator())))
     if (BMI.isCandidateForCallSiteEntry())
       return &BMI;
 

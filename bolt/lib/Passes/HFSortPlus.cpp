@@ -245,7 +245,7 @@ public:
       // Making sure the comparison is deterministic
       return L->Id < R->Id;
     };
-    std::stable_sort(HotChains.begin(), HotChains.end(), DensityComparator);
+    llvm::stable_sort(HotChains, DensityComparator);
 
     // Return the set of clusters that are left, which are the ones that
     // didn't get merged (so their first func is its original func)
@@ -453,9 +453,9 @@ private:
     }
 
     // Sort the pairs by the weight in reverse order
-    std::sort(
-        ArcsToMerge.begin(), ArcsToMerge.end(),
-        [](const Arc *L, const Arc *R) { return L->weight() > R->weight(); });
+    llvm::sort(ArcsToMerge, [](const Arc *L, const Arc *R) {
+      return L->weight() > R->weight();
+    });
 
     // Merge the pairs of chains
     for (const Arc *Arc : ArcsToMerge) {
@@ -567,8 +567,7 @@ private:
     Into->Score = score(Into);
 
     // Remove chain From From the list of active chains
-    auto it = std::remove(HotChains.begin(), HotChains.end(), From);
-    HotChains.erase(it, HotChains.end());
+    llvm::erase_value(HotChains, From);
   }
 
 private:

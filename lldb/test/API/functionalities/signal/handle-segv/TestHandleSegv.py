@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class HandleSegvTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows  # signals do not exist on Windows
     @skipIfDarwin
     @expectedFailureNetBSD
@@ -43,5 +41,5 @@ class HandleSegvTestCase(TestBase):
 
         # Continue until we exit.
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)

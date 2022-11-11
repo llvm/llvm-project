@@ -19,8 +19,8 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool test() {
+
     {
         std::vector<int> v(100);
         const int lvalue = 1;
@@ -114,6 +114,16 @@ int main(int, char**)
         for (++j; j < 101; ++j)
             assert(v[j] == 0);
     }
+#endif
+
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
 #endif
 
   return 0;

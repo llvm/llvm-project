@@ -16,15 +16,15 @@
 #include "llvm/Object/Minidump.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Object/XCOFFObjectFile.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
 enum RawSegments : unsigned { none = 0, data = 1, linkedit = 1 << 1 };
 std::error_code coff2yaml(llvm::raw_ostream &Out,
                           const llvm::object::COFFObjectFile &Obj);
 llvm::Error elf2yaml(llvm::raw_ostream &Out,
-                         const llvm::object::ObjectFile &Obj);
+                     const llvm::object::ObjectFile &Obj);
 llvm::Error macho2yaml(llvm::raw_ostream &Out, const llvm::object::Binary &Obj,
                        unsigned RawSegments);
 llvm::Error minidump2yaml(llvm::raw_ostream &Out,
@@ -34,6 +34,7 @@ llvm::Error xcoff2yaml(llvm::raw_ostream &Out,
 std::error_code wasm2yaml(llvm::raw_ostream &Out,
                           const llvm::object::WasmObjectFile &Obj);
 llvm::Error archive2yaml(llvm::raw_ostream &Out, llvm::MemoryBufferRef Source);
+llvm::Error offload2yaml(llvm::raw_ostream &Out, llvm::MemoryBufferRef Source);
 llvm::Error dxcontainer2yaml(llvm::raw_ostream &Out,
                              llvm::MemoryBufferRef Source);
 
@@ -43,7 +44,7 @@ class DWARFContext;
 namespace DWARFYAML {
 struct Data;
 }
-}
+} // namespace llvm
 
 void dumpDebugAbbrev(llvm::DWARFContext &DCtx, llvm::DWARFYAML::Data &Y);
 llvm::Error dumpDebugAddr(llvm::DWARFContext &DCtx, llvm::DWARFYAML::Data &Y);

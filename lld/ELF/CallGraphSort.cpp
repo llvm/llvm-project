@@ -156,7 +156,7 @@ static bool isNewDensityBad(Cluster &a, Cluster &b) {
 // Find the leader of V's belonged cluster (represented as an equivalence
 // class). We apply union-find path-halving technique (simple to implement) in
 // the meantime as it decreases depths and the time complexity.
-static int getLeader(std::vector<int> &leaders, int v) {
+static int getLeader(int *leaders, int v) {
   while (leaders[v] != v) {
     leaders[v] = leaders[leaders[v]];
     v = leaders[v];
@@ -181,9 +181,9 @@ static void mergeClusters(std::vector<Cluster> &cs, Cluster &into, int intoIdx,
 // then sort the clusters by density.
 DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
   std::vector<int> sorted(clusters.size());
-  std::vector<int> leaders(clusters.size());
+  std::unique_ptr<int[]> leaders(new int[clusters.size()]);
 
-  std::iota(leaders.begin(), leaders.end(), 0);
+  std::iota(leaders.get(), leaders.get() + clusters.size(), 0);
   std::iota(sorted.begin(), sorted.end(), 0);
   llvm::stable_sort(sorted, [&](int a, int b) {
     return clusters[a].getDensity() > clusters[b].getDensity();
@@ -198,7 +198,7 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
     if (c.bestPred.from == -1 || c.bestPred.weight * 10 <= c.initialWeight)
       continue;
 
-    int predL = getLeader(leaders, c.bestPred.from);
+    int predL = getLeader(leaders.get(), c.bestPred.from);
     if (l == predL)
       continue;
 

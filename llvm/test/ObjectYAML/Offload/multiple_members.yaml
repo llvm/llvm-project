@@ -1,0 +1,43 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+!Offload
+Members:
+  - ImageKind:        IMG_Cubin
+    OffloadKind:      OFK_OpenMP
+    Flags:            0
+    String:
+    - Key:              "triple"
+      Value:            "nvptx64-nvidia-cuda"
+    - Key:              "arch"
+      Value:            "sm_70"
+    Content:          "deadbeef"  
+  - ImageKind:        IMG_Bitcode
+    OffloadKind:      OFK_OpenMP
+    Flags:            0
+    String:
+    - Key:              "triple"
+      Value:            "amdgcn-amd-amdhsa"
+    - Key:              "arch"
+      Value:            "gfx908"
+    Content:          "cafefeed"  
+
+# CHECK: --- !Offload
+# CHECK-NEXT: Members:
+# CHECK-NEXT:   - ImageKind:       IMG_Cubin
+# CHECK-NEXT:     OffloadKind:     OFK_OpenMP
+# CHECK-NEXT:     Flags:           0
+# CHECK-NEXT:     String:
+# CHECK-NEXT:       - Key:             triple
+# CHECK-NEXT:         Value:           nvptx64-nvidia-cuda
+# CHECK-NEXT:       - Key:             arch
+# CHECK-NEXT:         Value:           sm_70
+# CHECK-NEXT:     Content:         DEADBEEF
+# CHECK-NEXT:   - ImageKind:       IMG_Bitcode
+# CHECK-NEXT:     OffloadKind:     OFK_OpenMP
+# CHECK-NEXT:     Flags:           0
+# CHECK-NEXT:     String:
+# CHECK-NEXT:       - Key:             triple
+# CHECK-NEXT:         Value:           amdgcn-amd-amdhsa
+# CHECK-NEXT:       - Key:             arch
+# CHECK-NEXT:         Value:           gfx908
+# CHECK-NEXT:     Content:         CAFEFEED
+# CHECK-NEXT: ...

@@ -79,6 +79,9 @@ set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
 option(LIBCXXABI_INSTALL_HEADERS "Install the libc++abi headers." ON)
 option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
 
+set(LIBCXXABI_SHARED_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the shared libc++abi runtime library.")
+set(LIBCXXABI_STATIC_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the static libc++abi runtime library.")
+
 set(LIBCXXABI_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE PATH "Path to install the libc++abi headers at.")
 
 if(LLVM_LIBRARY_OUTPUT_INTDIR)
@@ -228,6 +231,10 @@ set(LIBCXXABI_CXX_FLAGS "")
 set(LIBCXXABI_COMPILE_FLAGS "")
 set(LIBCXXABI_LINK_FLAGS "")
 set(LIBCXXABI_LIBRARIES "")
+set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
+    "Additional Compile only flags which can be provided in cache")
+set(LIBCXXABI_ADDITIONAL_LIBRARIES "" CACHE STRING
+    "Additional libraries libc++abi is linked to which can be provided in cache")
 
 # Include macros for adding and removing libc++abi flags.
 include(HandleLibcxxabiFlags)
@@ -245,6 +252,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   add_target_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
+add_compile_flags("${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
+add_library_flags("${LIBCXXABI_ADDITIONAL_LIBRARIES}")
 
 # Configure compiler. Must happen after setting the target flags.
 include(config-ix)

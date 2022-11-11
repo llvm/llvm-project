@@ -136,7 +136,7 @@ void ArgList::AddAllArgs(ArgStringList &Output,
 /// that accepts a single specifier, given the above which accepts any number.
 void ArgList::AddAllArgs(ArgStringList &Output, OptSpecifier Id0,
                          OptSpecifier Id1, OptSpecifier Id2) const {
-  for (auto Arg: filtered(Id0, Id1, Id2)) {
+  for (auto *Arg : filtered(Id0, Id1, Id2)) {
     Arg->claim();
     Arg->render(*this, Output);
   }
@@ -144,7 +144,7 @@ void ArgList::AddAllArgs(ArgStringList &Output, OptSpecifier Id0,
 
 void ArgList::AddAllArgValues(ArgStringList &Output, OptSpecifier Id0,
                               OptSpecifier Id1, OptSpecifier Id2) const {
-  for (auto Arg : filtered(Id0, Id1, Id2)) {
+  for (auto *Arg : filtered(Id0, Id1, Id2)) {
     Arg->claim();
     const auto &Values = Arg->getValues();
     Output.append(Values.begin(), Values.end());
@@ -154,7 +154,7 @@ void ArgList::AddAllArgValues(ArgStringList &Output, OptSpecifier Id0,
 void ArgList::AddAllArgsTranslated(ArgStringList &Output, OptSpecifier Id0,
                                    const char *Translation,
                                    bool Joined) const {
-  for (auto Arg: filtered(Id0)) {
+  for (auto *Arg : filtered(Id0)) {
     Arg->claim();
 
     if (Joined) {

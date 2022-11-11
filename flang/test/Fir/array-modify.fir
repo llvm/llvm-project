@@ -123,7 +123,7 @@ func.func @overlap(%arg0: !fir.ref<!fir.array<100xf32>>) {
 // CHECK:             %[[VAL_42:.*]] = fir.load %[[VAL_41]] : !fir.ref<f32>
 // CHECK:             fir.store %[[VAL_42]] to %[[VAL_45]] : !fir.ref<f32>
 // CHECK:           }
-// CHECK:           fir.freemem %[[VAL_8]]
+// CHECK:           fir.freemem %[[VAL_8]] : !fir.heap<!fir.array<100xf32>>
 // CHECK:           return
 // CHECK:         }
 

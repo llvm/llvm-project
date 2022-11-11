@@ -1,3 +1,6 @@
+# Test fail on device (rdar://99981102)
+XFAIL: tvos && !tvossim
+
 # Test that the minimizer stops when it sees a different bug.
 UNSUPPORTED: freebsd
 

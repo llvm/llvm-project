@@ -21,12 +21,11 @@
 #ifndef LLVM_TOOLS_LLVM_IFS_ERRORCOLLECTOR_H
 #define LLVM_TOOLS_LLVM_IFS_ERRORCOLLECTOR_H
 
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <vector>
 
 namespace llvm {
-
-class Error;
 
 namespace ifs {
 

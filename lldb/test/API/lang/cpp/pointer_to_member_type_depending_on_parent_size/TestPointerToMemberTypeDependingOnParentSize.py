@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # GCC rejects the test code because `ToLayout` is not complete when
     # pointer_to_member_member is declared.
     @skipIf(compiler="gcc")

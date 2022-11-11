@@ -4,7 +4,7 @@
 
 define dso_local double @twoaddressinstruction() local_unnamed_addr {
 for.end:
-  %0 = load i64, i64* undef, align 8
+  %0 = load i64, ptr undef, align 8
   br label %for.body14.preheader
 
 for.body14.preheader:                             ; preds = %for.end

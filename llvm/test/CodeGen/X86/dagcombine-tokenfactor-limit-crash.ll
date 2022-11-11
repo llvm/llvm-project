@@ -27,33 +27,33 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT:     popq    %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
-define void @spam(%struct.snork* noalias sret(%struct.snork) %arg, %struct.snork* %arg2) {
+define void @spam(ptr noalias sret(%struct.snork) %arg, ptr %arg2) {
 bb:
   %tmp = alloca i8, i64 66112, align 32
-  %tmp7 = ptrtoint i8* %tmp to i64
-  %tmp914 = inttoptr i64 undef to %struct.wombat*
-  %tmp915 = inttoptr i64 undef to %struct.snork*
-  %tmp916 = inttoptr i64 undef to %struct.snork*
-  %tmp917 = inttoptr i64 undef to %struct.wombat*
-  %tmp918 = inttoptr i64 undef to %struct.snork*
-  %tmp921 = inttoptr i64 undef to %struct.snork*
-  %tmp2055 = inttoptr i64 %tmp7 to i64*
-  store i64 -868076584853899022, i64* %tmp2055, align 1
+  %tmp7 = ptrtoint ptr %tmp to i64
+  %tmp914 = inttoptr i64 undef to ptr
+  %tmp915 = inttoptr i64 undef to ptr
+  %tmp916 = inttoptr i64 undef to ptr
+  %tmp917 = inttoptr i64 undef to ptr
+  %tmp918 = inttoptr i64 undef to ptr
+  %tmp921 = inttoptr i64 undef to ptr
+  %tmp2055 = inttoptr i64 %tmp7 to ptr
+  store i64 -868076584853899022, ptr %tmp2055, align 1
   %tmp2056 = add i64 %tmp7, 8263
-  %tmp2057 = inttoptr i64 %tmp2056 to i8*
-  store i8 -13, i8* %tmp2057, align 1
+  %tmp2057 = inttoptr i64 %tmp2056 to ptr
+  store i8 -13, ptr %tmp2057, align 1
   br label %bb2058
 
 bb2058:                                           ; preds = %bb
-  call void @hoge(%struct.snork* %arg)
-  call void @hoge(%struct.snork* %arg)
-  call void @hoge(%struct.snork* %tmp915)
-  call void @hoge(%struct.snork* %tmp916)
-  call void @eggs(%struct.snork* %tmp918, %struct.wombat* %tmp914, %struct.wombat* %tmp917)
-  call void @hoge(%struct.snork* %tmp921)
+  call void @hoge(ptr %arg)
+  call void @hoge(ptr %arg)
+  call void @hoge(ptr %tmp915)
+  call void @hoge(ptr %tmp916)
+  call void @eggs(ptr %tmp918, ptr %tmp914, ptr %tmp917)
+  call void @hoge(ptr %tmp921)
   ret void
 }
 
-declare void @hoge(%struct.snork*)
+declare void @hoge(ptr)
 
-declare void @eggs(%struct.snork*, %struct.wombat*, %struct.wombat*)
+declare void @eggs(ptr, ptr, ptr)

@@ -241,14 +241,21 @@ bool CFGuard::doInitialization(Module &M) {
   GuardFnPtrType = PointerType::get(GuardFnType, 0);
 
   // Get or insert the guard check or dispatch global symbols.
+  llvm::StringRef GuardFnName;
   if (GuardMechanism == CF_Check) {
-    GuardFnGlobal =
-        M.getOrInsertGlobal("__guard_check_icall_fptr", GuardFnPtrType);
+    GuardFnName = "__guard_check_icall_fptr";
+  } else if (GuardMechanism == CF_Dispatch) {
+    GuardFnName = "__guard_dispatch_icall_fptr";
   } else {
-    assert(GuardMechanism == CF_Dispatch && "Invalid CFGuard mechanism");
-    GuardFnGlobal =
-        M.getOrInsertGlobal("__guard_dispatch_icall_fptr", GuardFnPtrType);
+    assert(false && "Invalid CFGuard mechanism");
   }
+  GuardFnGlobal = M.getOrInsertGlobal(GuardFnName, GuardFnPtrType, [&] {
+    auto *Var = new GlobalVariable(M, GuardFnPtrType, false,
+                                   GlobalVariable::ExternalLinkage, nullptr,
+                                   GuardFnName);
+    Var->setDSOLocal(true);
+    return Var;
+  });
 
   return true;
 }

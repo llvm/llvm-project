@@ -255,7 +255,7 @@ define <2 x i64> @test_mm_cvtpd_epi32_zext(<2 x double> %a0) nounwind {
 }
 
 
-define <2 x i64> @test_mm_cvtpd_epi32_zext_load(<2 x double>* %p0) nounwind {
+define <2 x i64> @test_mm_cvtpd_epi32_zext_load(ptr %p0) nounwind {
 ; X86-SSE-LABEL: test_mm_cvtpd_epi32_zext_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -288,7 +288,7 @@ define <2 x i64> @test_mm_cvtpd_epi32_zext_load(<2 x double>* %p0) nounwind {
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vcvtpd2dqx (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0xe6,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %a0 = load <2 x double>, <2 x double>* %p0
+  %a0 = load <2 x double>, ptr %p0
   %cvt = call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> %a0)
   %res = shufflevector <4 x i32> %cvt, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   %bc = bitcast <4 x i32> %res to <2 x i64>
@@ -336,7 +336,7 @@ define <4 x float> @test_x86_sse2_cvtpd2ps_zext(<2 x double> %a0) nounwind {
   ret <4 x float> %res
 }
 
-define <4 x float> @test_x86_sse2_cvtpd2ps_zext_load(<2 x double>* %p0) nounwind {
+define <4 x float> @test_x86_sse2_cvtpd2ps_zext_load(ptr %p0) nounwind {
 ; X86-SSE-LABEL: test_x86_sse2_cvtpd2ps_zext_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -369,7 +369,7 @@ define <4 x float> @test_x86_sse2_cvtpd2ps_zext_load(<2 x double>* %p0) nounwind
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vcvtpd2psx (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x5a,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %a0 = load <2 x double>, <2 x double>* %p0
+  %a0 = load <2 x double>, ptr %p0
   %cvt = call <4 x float> @llvm.x86.sse2.cvtpd2ps(<2 x double> %a0)
   %res = shufflevector <4 x float> %cvt, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x float> %res
@@ -438,7 +438,7 @@ define <4 x float> @test_x86_sse2_cvtsd2ss(<4 x float> %a0, <2 x double> %a1) {
 declare <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float>, <2 x double>) nounwind readnone
 
 
-define <4 x float> @test_x86_sse2_cvtsd2ss_load(<4 x float> %a0, <2 x double>* %p1) {
+define <4 x float> @test_x86_sse2_cvtsd2ss_load(<4 x float> %a0, ptr %p1) {
 ; X86-SSE-LABEL: test_x86_sse2_cvtsd2ss_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -471,13 +471,13 @@ define <4 x float> @test_x86_sse2_cvtsd2ss_load(<4 x float> %a0, <2 x double>* %
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x5a,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %a1 = load <2 x double>, <2 x double>* %p1
+  %a1 = load <2 x double>, ptr %p1
   %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
 
 
-define <4 x float> @test_x86_sse2_cvtsd2ss_load_optsize(<4 x float> %a0, <2 x double>* %p1) optsize {
+define <4 x float> @test_x86_sse2_cvtsd2ss_load_optsize(<4 x float> %a0, ptr %p1) optsize {
 ; X86-SSE-LABEL: test_x86_sse2_cvtsd2ss_load_optsize:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -510,7 +510,7 @@ define <4 x float> @test_x86_sse2_cvtsd2ss_load_optsize(<4 x float> %a0, <2 x do
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x5a,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %a1 = load <2 x double>, <2 x double>* %p1
+  %a1 = load <2 x double>, ptr %p1
   %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
@@ -559,7 +559,7 @@ define <2 x i64> @test_mm_cvttpd_epi32_zext(<2 x double> %a0) nounwind {
 }
 
 
-define <2 x i64> @test_mm_cvttpd_epi32_zext_load(<2 x double>* %p0) nounwind {
+define <2 x i64> @test_mm_cvttpd_epi32_zext_load(ptr %p0) nounwind {
 ; X86-SSE-LABEL: test_mm_cvttpd_epi32_zext_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -592,7 +592,7 @@ define <2 x i64> @test_mm_cvttpd_epi32_zext_load(<2 x double>* %p0) nounwind {
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vcvttpd2dqx (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xe6,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %a0 = load <2 x double>, <2 x double>* %p0
+  %a0 = load <2 x double>, ptr %p0
   %cvt = call <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double> %a0)
   %res = shufflevector <4 x i32> %cvt, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   %bc = bitcast <4 x i32> %res to <2 x i64>
@@ -1361,7 +1361,7 @@ define <8 x i16> @test_x86_sse2_psrl_w(<8 x i16> %a0, <8 x i16> %a1) {
 declare <8 x i16> @llvm.x86.sse2.psrl.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 
-define <8 x i16> @test_x86_sse2_psrl_w_load(<8 x i16> %a0, <8 x i16>* %p) {
+define <8 x i16> @test_x86_sse2_psrl_w_load(<8 x i16> %a0, ptr %p) {
 ; X86-SSE-LABEL: test_x86_sse2_psrl_w_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -1394,7 +1394,7 @@ define <8 x i16> @test_x86_sse2_psrl_w_load(<8 x i16> %a0, <8 x i16>* %p) {
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vpsrlw (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd1,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %a1 = load <8 x i16>, <8 x i16>* %p
+  %a1 = load <8 x i16>, ptr %p
   %res = call <8 x i16> @llvm.x86.sse2.psrl.w(<8 x i16> %a0, <8 x i16> %a1) ; <<8 x i16>> [#uses=1]
   ret <8 x i16> %res
 }
@@ -1666,7 +1666,7 @@ define void @mfence() nounwind {
 }
 declare void @llvm.x86.sse2.mfence() nounwind
 
-define void @clflush(i8* %p) nounwind {
+define void @clflush(ptr %p) nounwind {
 ; X86-LABEL: clflush:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -1677,7 +1677,7 @@ define void @clflush(i8* %p) nounwind {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    clflush (%rdi) ## encoding: [0x0f,0xae,0x3f]
 ; X64-NEXT:    retq ## encoding: [0xc3]
-  tail call void @llvm.x86.sse2.clflush(i8* %p)
+  tail call void @llvm.x86.sse2.clflush(ptr %p)
   ret void
 }
-declare void @llvm.x86.sse2.clflush(i8*) nounwind
+declare void @llvm.x86.sse2.clflush(ptr) nounwind

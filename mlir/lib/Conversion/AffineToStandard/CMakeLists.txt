@@ -13,7 +13,7 @@ add_mlir_conversion_library(MLIRAffineToStandard
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRAffineUtils
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRIR
   MLIRMemRefDialect
   MLIRSCFDialect

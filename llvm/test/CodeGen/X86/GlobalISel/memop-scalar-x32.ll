@@ -4,47 +4,47 @@
 
 ;TODO merge with x86-64 tests (many operations not suppored yet)
 
-define i1 @test_load_i1(i1 * %p1) {
+define i1 @test_load_i1(ptr %p1) {
 ; CHECK-LABEL: test_load_i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %eax
-; CHECK-NEXT:    movb (%eax), %al
+; CHECK-NEXT:    movzbl (%eax), %eax
 ; CHECK-NEXT:    retl
-  %r = load i1, i1* %p1
+  %r = load i1, ptr %p1
   ret i1 %r
 }
 
-define i8 @test_load_i8(i8 * %p1) {
+define i8 @test_load_i8(ptr %p1) {
 ; CHECK-LABEL: test_load_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %eax
-; CHECK-NEXT:    movb (%eax), %al
+; CHECK-NEXT:    movzbl (%eax), %eax
 ; CHECK-NEXT:    retl
-  %r = load i8, i8* %p1
+  %r = load i8, ptr %p1
   ret i8 %r
 }
 
-define i16 @test_load_i16(i16 * %p1) {
+define i16 @test_load_i16(ptr %p1) {
 ; CHECK-LABEL: test_load_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %eax
 ; CHECK-NEXT:    movzwl (%eax), %eax
 ; CHECK-NEXT:    retl
-  %r = load i16, i16* %p1
+  %r = load i16, ptr %p1
   ret i16 %r
 }
 
-define i32 @test_load_i32(i32 * %p1) {
+define i32 @test_load_i32(ptr %p1) {
 ; CHECK-LABEL: test_load_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    retl
-  %r = load i32, i32* %p1
+  %r = load i32, ptr %p1
   ret i32 %r
 }
 
-define i1 * @test_store_i1(i1 %val, i1 * %p1) {
+define ptr @test_store_i1(i1 %val, ptr %p1) {
 ; CHECK-LABEL: test_store_i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %ecx
@@ -52,60 +52,60 @@ define i1 * @test_store_i1(i1 %val, i1 * %p1) {
 ; CHECK-NEXT:    andb $1, %cl
 ; CHECK-NEXT:    movb %cl, (%eax)
 ; CHECK-NEXT:    retl
-  store i1 %val, i1* %p1
-  ret i1 * %p1;
+  store i1 %val, ptr %p1
+  ret ptr %p1;
 }
 
-define i8 * @test_store_i8(i8 %val, i8 * %p1) {
+define ptr @test_store_i8(i8 %val, ptr %p1) {
 ; CHECK-LABEL: test_store_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %ecx
 ; CHECK-NEXT:    movl 8(%esp), %eax
 ; CHECK-NEXT:    movb %cl, (%eax)
 ; CHECK-NEXT:    retl
-  store i8 %val, i8* %p1
-  ret i8 * %p1;
+  store i8 %val, ptr %p1
+  ret ptr %p1;
 }
 
-define i16 * @test_store_i16(i16 %val, i16 * %p1) {
+define ptr @test_store_i16(i16 %val, ptr %p1) {
 ; CHECK-LABEL: test_store_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %ecx
 ; CHECK-NEXT:    movl 8(%esp), %eax
 ; CHECK-NEXT:    movw %cx, (%eax)
 ; CHECK-NEXT:    retl
-  store i16 %val, i16* %p1
-  ret i16 * %p1;
+  store i16 %val, ptr %p1
+  ret ptr %p1;
 }
 
-define i32 * @test_store_i32(i32 %val, i32 * %p1) {
+define ptr @test_store_i32(i32 %val, ptr %p1) {
 ; CHECK-LABEL: test_store_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %ecx
 ; CHECK-NEXT:    movl 8(%esp), %eax
 ; CHECK-NEXT:    movl %ecx, (%eax)
 ; CHECK-NEXT:    retl
-  store i32 %val, i32* %p1
-  ret i32 * %p1;
+  store i32 %val, ptr %p1
+  ret ptr %p1;
 }
 
-define i32* @test_load_ptr(i32** %ptr1) {
+define ptr @test_load_ptr(ptr %ptr1) {
 ; CHECK-LABEL: test_load_ptr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    retl
-  %p = load i32*, i32** %ptr1
-  ret i32* %p
+  %p = load ptr, ptr %ptr1
+  ret ptr %p
 }
 
-define void @test_store_ptr(i32** %ptr1, i32* %a) {
+define void @test_store_ptr(ptr %ptr1, ptr %a) {
 ; CHECK-LABEL: test_store_ptr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl 4(%esp), %eax
 ; CHECK-NEXT:    movl 8(%esp), %ecx
 ; CHECK-NEXT:    movl %ecx, (%eax)
 ; CHECK-NEXT:    retl
-  store i32* %a, i32** %ptr1
+  store ptr %a, ptr %ptr1
   ret void
 }

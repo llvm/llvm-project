@@ -8,11 +8,11 @@ declare <4 x float> @llvm.copysign.v4f32(<4 x float>, <4 x float>) nounwind read
 
 ; Try to identify arg based on higher address.
 ; FUNC-LABEL: {{^}}test_copysign_f32:
-; SI: s_load_dwordx2 s[[[SMAG:[0-9]+]]:[[SSIGN:[0-9]+]]], {{.*}} 0xb
-; VI: s_load_dwordx2 s[[[SMAG:[0-9]+]]:[[SSIGN:[0-9]+]]], {{.*}} 0x2c
+; SI: s_load_dwordx4 s[[[#LOAD:]]:[[#END:]]], {{.*}} 0x9
+; VI: s_load_dwordx4 s[[[#LOAD:]]:[[#END:]]], {{.*}} 0x24
 
-; GCN-DAG: v_mov_b32_e32 [[VSIGN:v[0-9]+]], s[[SSIGN]]
-; GCN-DAG: v_mov_b32_e32 [[VMAG:v[0-9]+]], s[[SMAG]]
+; GCN-DAG: v_mov_b32_e32 [[VSIGN:v[0-9]+]], s[[#LOAD + 3]]
+; GCN-DAG: v_mov_b32_e32 [[VMAG:v[0-9]+]], s[[#LOAD + 2]]
 ; GCN-DAG: s_brev_b32 [[SCONST:s[0-9]+]], -2
 ; GCN: v_bfi_b32 [[RESULT:v[0-9]+]], [[SCONST]], [[VMAG]], [[VSIGN]]
 ; GCN: buffer_store_dword [[RESULT]],

@@ -20,7 +20,7 @@ namespace portability {
 /// ``std::allocator<const T>``. They do not compile with libstdc++ or MSVC.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/portability-std-allocator-const.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/portability/std-allocator-const.html
 class StdAllocatorConstCheck : public ClangTidyCheck {
 public:
   StdAllocatorConstCheck(StringRef Name, ClangTidyContext *Context)

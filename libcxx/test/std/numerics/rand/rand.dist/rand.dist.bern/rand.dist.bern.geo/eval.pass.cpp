@@ -23,10 +23,7 @@
 #include "test_macros.h"
 
 template <class T>
-inline
-T
-sqr(T x)
-{
+T sqr(T x) {
     return x * x;
 }
 
@@ -40,18 +37,17 @@ void test_small_inputs() {
   }
 }
 
-void
-test1()
-{
-    typedef std::geometric_distribution<> D;
+template <class T>
+void test1() {
+    typedef std::geometric_distribution<T> D;
     typedef std::mt19937 G;
     G g;
     D d(.03125);
     const int N = 1000000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -83,18 +79,17 @@ test1()
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
 }
 
-void
-test2()
-{
-    typedef std::geometric_distribution<> D;
+template <class T>
+void test2() {
+    typedef std::geometric_distribution<T> D;
     typedef std::mt19937 G;
     G g;
     D d(0.05);
     const int N = 1000000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -126,18 +121,17 @@ test2()
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
 }
 
-void
-test3()
-{
-    typedef std::geometric_distribution<> D;
+template <class T>
+void test3() {
+    typedef std::geometric_distribution<T> D;
     typedef std::minstd_rand G;
     G g;
     D d(.25);
     const int N = 1000000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -169,18 +163,17 @@ test3()
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
 }
 
-void
-test4()
-{
-    typedef std::geometric_distribution<> D;
+template <class T>
+void test4() {
+    typedef std::geometric_distribution<T> D;
     typedef std::mt19937 G;
     G g;
     D d(0.5);
     const int N = 1000000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -212,18 +205,17 @@ test4()
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
 }
 
-void
-test5()
-{
-    typedef std::geometric_distribution<> D;
+template <class T>
+void test5() {
+    typedef std::geometric_distribution<T> D;
     typedef std::mt19937 G;
     G g;
     D d(0.75);
     const int N = 1000000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -255,18 +247,17 @@ test5()
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
 }
 
-void
-test6()
-{
-    typedef std::geometric_distribution<> D;
+template <class T>
+void test6() {
+    typedef std::geometric_distribution<T> D;
     typedef std::mt19937 G;
     G g;
     D d(0.96875);
     const int N = 1000000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -298,15 +289,38 @@ test6()
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
 }
 
-int main(int, char**)
-{
-    test1();
-    test2();
-    test3();
-    test4();
-    test5();
-    test6();
+template <class T>
+void tests() {
+    test1<T>();
+    test2<T>();
+    test3<T>();
+    test4<T>();
+    test5<T>();
+    test6<T>();
+}
+
+int main(int, char**) {
     test_small_inputs();
 
-  return 0;
+    tests<short>();
+    tests<int>();
+    tests<long>();
+    tests<long long>();
+
+    tests<unsigned short>();
+    tests<unsigned int>();
+    tests<unsigned long>();
+    tests<unsigned long long>();
+
+#if defined(_LIBCPP_VERSION) // extension
+    // TODO: std::geometric_distribution currently doesn't work reliably with small types.
+    // tests<int8_t>();
+    // tests<uint8_t>();
+#if !defined(TEST_HAS_NO_INT128)
+    tests<__int128_t>();
+    tests<__uint128_t>();
+#endif
+#endif
+
+    return 0;
 }

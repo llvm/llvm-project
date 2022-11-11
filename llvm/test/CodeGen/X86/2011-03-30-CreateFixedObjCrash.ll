@@ -4,7 +4,7 @@
 
 %struct.T0 = type {}
 
-define void @fn4(%struct.T0* byval(%struct.T0) %arg0) nounwind ssp {
+define void @fn4(ptr byval(%struct.T0) %arg0) nounwind ssp {
 entry:
   ret void
 }

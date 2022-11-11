@@ -167,7 +167,7 @@ define <2 x float> @f6(<2 x float> %a) {
 ; with flowing build command:
 ; clang -cc1  -triple i386-pc-linux-gnu -mreassociate  t.c -emit-llvm -O2
 
-define dso_local fp128 @foo(fp128* nocapture readonly %qr) local_unnamed_addr{
+define dso_local fp128 @foo(ptr nocapture readonly %qr) local_unnamed_addr{
 ; X86-LABEL: foo:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
@@ -202,7 +202,7 @@ define dso_local fp128 @foo(fp128* nocapture readonly %qr) local_unnamed_addr{
 ; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* %qr, align 16
+  %0 = load fp128, ptr %qr, align 16
   %1 = tail call reassoc fp128 @llvm.arithmetic.fence.f128(fp128 %0)
   ret fp128 %1
 }

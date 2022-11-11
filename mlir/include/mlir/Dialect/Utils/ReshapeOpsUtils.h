@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H
 #define MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H
 
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
@@ -86,9 +87,9 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
   // Fold producer-consumer reshape ops that where the operand type of the
   // producer is same as the return type of the consumer.
   auto reshapeSrcOp =
-      reshapeOp.src().template getDefiningOp<InverseReshapeOpTy>();
+      reshapeOp.getSrc().template getDefiningOp<InverseReshapeOpTy>();
   if (reshapeSrcOp && reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
-    return reshapeSrcOp.src();
+    return reshapeSrcOp.getSrc();
   // Reshape of a constant can be replaced with a new constant.
   if (auto elements = operands.front().dyn_cast_or_null<DenseElementsAttr>()) {
     return elements.reshape(
@@ -122,10 +123,10 @@ static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
                             "extent dimensions to zero-rank tensor/memref");
     return success();
   }
-  if (collapsedRank != op.reassociation().size())
+  if (collapsedRank != op.getReassociation().size())
     return op.emitOpError("expected rank of the collapsed type(")
            << collapsedRank << ") to be the number of reassociation maps("
-           << op.reassociation().size() << ")";
+           << op.getReassociation().size() << ")";
   auto maps = op.getReassociationMaps();
   for (auto it : llvm::enumerate(maps))
     if (it.value().getNumDims() != expandedRank)
@@ -172,15 +173,16 @@ struct ComposeReassociativeReshapeOps : public OpRewritePattern<ReshapeOpTy> {
   using OpRewritePattern<ReshapeOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(ReshapeOpTy reshapeOp,
                                 PatternRewriter &rewriter) const override {
-    auto srcReshapeOp = reshapeOp.src().template getDefiningOp<ReshapeOpTy>();
+    auto srcReshapeOp =
+        reshapeOp.getSrc().template getDefiningOp<ReshapeOpTy>();
     if (!srcReshapeOp)
       return failure();
 
     ShapedType resultType = reshapeOp.getResultType();
 
-    if (hasNonIdentityLayout(srcReshapeOp.src().getType()) ||
-        hasNonIdentityLayout(reshapeOp.src().getType()) ||
-        hasNonIdentityLayout(reshapeOp.result().getType()))
+    if (hasNonIdentityLayout(srcReshapeOp.getSrc().getType()) ||
+        hasNonIdentityLayout(reshapeOp.getSrc().getType()) ||
+        hasNonIdentityLayout(reshapeOp.getResult().getType()))
       return failure();
 
     Optional<SmallVector<ReassociationIndices>> reassociationIndices =
@@ -190,7 +192,7 @@ struct ComposeReassociativeReshapeOps : public OpRewritePattern<ReshapeOpTy> {
     if (!reassociationIndices)
       return failure();
     rewriter.replaceOpWithNewOp<ReshapeOpTy>(
-        reshapeOp, resultType, srcReshapeOp.src(), *reassociationIndices);
+        reshapeOp, resultType, srcReshapeOp.getSrc(), *reassociationIndices);
     return success();
   }
 };
@@ -228,16 +230,16 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
   using OpRewritePattern<CollapseOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(CollapseOpTy collapseOp,
                                 PatternRewriter &rewriter) const override {
-    auto expandOp = collapseOp.src().template getDefiningOp<ExpandOpTy>();
+    auto expandOp = collapseOp.getSrc().template getDefiningOp<ExpandOpTy>();
     if (!expandOp)
       return failure();
 
     ShapedType srcType = expandOp.getSrcType();
     ShapedType resultType = collapseOp.getResultType();
 
-    if (hasNonIdentityLayout(collapseOp.src().getType()) ||
-        hasNonIdentityLayout(expandOp.src().getType()) ||
-        hasNonIdentityLayout(expandOp.result().getType()))
+    if (hasNonIdentityLayout(collapseOp.getSrc().getType()) ||
+        hasNonIdentityLayout(expandOp.getSrc().getType()) ||
+        hasNonIdentityLayout(expandOp.getResult().getType()))
       return failure();
 
     int64_t srcRank = srcType.getRank();
@@ -274,10 +276,10 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
     }
     if (isResultCollapsed)
       rewriter.replaceOpWithNewOp<CollapseOpTy>(
-          collapseOp, resultType, expandOp.src(), composedReassociation);
+          collapseOp, resultType, expandOp.getSrc(), composedReassociation);
     else
       rewriter.replaceOpWithNewOp<ExpandOpTy>(
-          collapseOp, resultType, expandOp.src(), composedReassociation);
+          collapseOp, resultType, expandOp.getSrc(), composedReassociation);
     return success();
   }
 };
@@ -287,16 +289,16 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
   using OpRewritePattern<ExpandOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(ExpandOpTy expandOp,
                                 PatternRewriter &rewriter) const override {
-    auto collapseOp = expandOp.src().template getDefiningOp<CollapseOpTy>();
+    auto collapseOp = expandOp.getSrc().template getDefiningOp<CollapseOpTy>();
     if (!collapseOp)
       return failure();
 
     ShapedType srcType = collapseOp.getSrcType();
     ShapedType resultType = expandOp.getResultType();
 
-    if (hasNonIdentityLayout(expandOp.src().getType()) ||
-        hasNonIdentityLayout(collapseOp.src().getType()) ||
-        hasNonIdentityLayout(collapseOp.result().getType()))
+    if (hasNonIdentityLayout(expandOp.getSrc().getType()) ||
+        hasNonIdentityLayout(collapseOp.getSrc().getType()) ||
+        hasNonIdentityLayout(collapseOp.getResult().getType()))
       return failure();
 
     int64_t srcRank = srcType.getRank();
@@ -310,21 +312,21 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
       auto composedReassociation = findCollapsingReassociation(
           srcReassociation, resultReassociation, srcType.getShape(),
           resultType.getShape());
-      if (!composedReassociation.hasValue())
+      if (!composedReassociation)
         return failure();
 
       rewriter.replaceOpWithNewOp<CollapseOpTy>(
-          expandOp, resultType, collapseOp.src(), *composedReassociation);
+          expandOp, resultType, collapseOp.getSrc(), *composedReassociation);
       return success();
     }
     auto composedReassociation =
         findCollapsingReassociation(resultReassociation, srcReassociation,
                                     resultType.getShape(), srcType.getShape());
-    if (!composedReassociation.hasValue())
+    if (!composedReassociation)
       return failure();
 
     rewriter.replaceOpWithNewOp<ExpandOpTy>(
-        expandOp, resultType, collapseOp.src(), *composedReassociation);
+        expandOp, resultType, collapseOp.getSrc(), *composedReassociation);
     return success();
   }
 
@@ -357,7 +359,7 @@ private:
       // Find reassociation to collapse `srcSubShape` into `resultSubShape`.
       auto subShapeReassociation =
           getReassociationIndicesForCollapse(srcSubShape, resultSubShape);
-      if (!subShapeReassociation.hasValue())
+      if (!subShapeReassociation)
         return llvm::None;
 
       // Remap the subshape indices back to the original srcShape.
@@ -371,6 +373,144 @@ private:
     return {std::move(composedReassociation)};
   }
 };
+
+/// The input parameters `offsets`, `sizes`, `strides` specify a rectangular
+/// non rank-reducing slice of the collapse_shape output. Try to find which
+/// dimensions have been sliced and which dimensions are not sliced (offset = 0,
+/// size = dim, size = 1). Note that this conservative as it cannot detect if a
+/// dynamic size corresponds to the full tensor dimension or not.
+llvm::SmallBitVector getSlicedDimensions(ArrayRef<OpFoldResult> sliceInputShape,
+                                         ArrayRef<Range> sliceParams);
+
+/// Determine which dimensions are linearized by a `tensor.collapse_shape` op by
+/// inspecting its reassociation indices.
+llvm::SmallBitVector
+getLinearizedDimensions(ArrayRef<ReassociationIndices> reassociationIndices);
+
+/// Given the parameters for both operations in a `CollapseShape->ExtractSlice`
+/// chain and reified source and result shapes of the CollapseShapeOp, this
+/// class provides two functions that assist with directly forming the result
+/// of the extract slice by "tiling the CollapseShapeOp by 1".
+//// Example:
+// clang-format off
+/// ```
+/// %0 = linalg.generic ... -> tensor<3x7x11x10xf32>
+/// %1 = tensor.collapse_shape %0 [[0, 1, 2], [3]] : ... to tensor<341x10xf32>
+/// %2 = tensor.extract_slice %1 [13, 0] [10, 10] [2, 1] : .... tensor<10x10xf32>
+/// ```
+/// This class helps build the below IR to replace %2:
+/// ```
+/// %dest = tensor.empty() : tensor<10x10xf32>
+/// %2 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%arg0) -> tensor<10x10xf32> {
+///    %linear_index = affine.apply affine_map<(d0)[]->(d0*2 + 11)>(%iv)
+///    %3:3 = arith.delinearize_index %iv into (3, 7, 11)
+///
+///    // This function takes %3 (multiIndices) and the parameters for the slice below.
+///    %4 = tensor.extract_slice %0 [%3#0, %3#1, %3#2, 0] [1, 1, 1, 10] [1, 1, 1, 1] :
+///          tensor<3x7x11x10xf32> to tensor<1x1x1x10xf32>
+///
+///    %5 = tensor.collapse_shape %4 [[0, 1, 2], [3]] : 
+///          tensor<1x1x1x10xf32> into tensor<1x10xf32>
+///    %6 = tensor.insert_slice %5 into %arg0 [%iv, 0] [1, 10] [1, 1] :
+///          tensor<1x10xf32> into tensor<10x10xf32>
+///    scf.yield %6 : tensor<10x10xf32>
+/// }
+/// ```
+// clang-format on
+class SliceFromCollapseHelper {
+public:
+  SliceFromCollapseHelper(ArrayRef<ReassociationIndices> reassociationIndices,
+                          ArrayRef<OpFoldResult> collapseShapeInputShape,
+                          ArrayRef<OpFoldResult> collapseShapeOutputShape,
+                          ArrayRef<Range> extractSliceParams)
+      : reassociationIndices(reassociationIndices),
+        collapseShapeInputShape(collapseShapeInputShape),
+        collapseShapeOutputShape(collapseShapeOutputShape),
+        sliceParams(extractSliceParams),
+        linearizedDimensions(getLinearizedDimensions(reassociationIndices)),
+        slicedDimensions(getSlicedDimensions(collapseShapeOutputShape,
+                                             extractSliceParams)) {}
+
+  /// This function takes multi-indices and maps them to ExtractSlice parameters
+  /// in the index space of the CollapseShape's source tensor. This function's
+  /// signature can be described by `(D_0, D_1,.. D_{n-1}) -> (offsets, sizes,
+  /// strides)` where `n` the number of "tiled dimensions", which are the
+  /// dimensions of the output that are linearized by the collapse shape op and
+  /// are also sliced. Each `D_i` is a tuple that must represent a valid
+  /// multi-index for the `i-th` tiled dimension. In the example above, there is
+  /// only one tiled dimension (D_0) and `arith.delinearize_index` produces the
+  /// multi-index (%3) that would be passed to this function to generate the
+  /// parameters for the `tensor.extract_slice` op (%4).
+  SmallVector<Range> getExtractSliceParams(MLIRContext *ctx,
+                                           ArrayRef<ValueRange> multiIndices);
+
+  /// This function takes indices in the index space of the "tiled dimensions"
+  /// described above and returns a set of Range variables that describe how the
+  /// slice should be inserted into the destination. In the example above, `%iv`
+  /// would be passed to this function to generate the parameters for the
+  /// `tensor.insert_slice` op producing %6.
+  SmallVector<Range> getInsertSliceParams(MLIRContext *ctx,
+                                          ValueRange tileIndices);
+
+private:
+  SmallVector<ReassociationIndices> reassociationIndices;
+  SmallVector<OpFoldResult> collapseShapeInputShape;
+  SmallVector<OpFoldResult> collapseShapeOutputShape;
+  SmallVector<Range> sliceParams;
+  llvm::SmallBitVector linearizedDimensions;
+  llvm::SmallBitVector slicedDimensions;
+};
+
+/// Parameters required to simplify a collapsing reshape op with a rank-reducing
+/// slice operation. See `getSimplifyCollapseShapeWithRankReducingSliceInfo`.
+struct CollapseShapeRankReducingSliceSimplificationInfo {
+  /// The shape of the output of the rank-reducing slice.
+  RankedTensorType sliceResultType;
+  /// The reassociation indices for the new collapse shape op, if required. If
+  /// `None`, the slice should replace the collapse shape op.
+  Optional<SmallVector<ReassociationIndices>> newReassociationIndices;
+};
+
+/// A collapsing reshape operation can sometimes be simplified or eliminated by
+/// inserting a single rank-reducing slice operation between it and the source
+/// tensor. The slice op will either take the place of the source, allowing for
+/// a new, simpler reshape op to replace the original, or the reshape op will be
+/// completely replaced by the slice result.
+///
+/// This function returns the parameters required to implement this pattern. If
+/// the pattern is not applicable, then failure is returned.
+///
+/// ### Example:
+/// ```
+/// %result = tensor.collapse_shape %0 [[0, 1], [2, 3]]
+///    : tensor<?x1x30x10xf32> to tensor<?x300xf32>
+/// ```
+/// can be transformed to
+/// ```
+/// %tmp = tensor.extract_slice %0 [0, 0, 0, 0]
+///                         [0, %dim1, 30, 30]
+///                         [1, 1, 1 1]
+///   : tensor<?x1x30x10xf32> to tensor<?x30x10xf32>
+/// %result = tensor.collapse_shape %tmp [[0], [1, 2]]
+///   : tensor<?x30x10xf32> to tensor<?x300xf32>
+/// ```
+///
+/// ### Example:
+/// ```
+/// %result = tensor.collapse_shape %1 [[0, 1], [2]]
+///    : tensor<?x1x30xf32> to tensor<?x30xf32>
+/// ```
+/// can be transformed to
+/// ```
+/// %result = tensor.extract_slice %1 [0, 0, 0]
+///                                   [%dim2, 1, 30]
+///                                   [1, 1, 1]
+///    : tensor<?x1x30xf32> to tensor<?x30xf32>
+/// ```
+FailureOr<CollapseShapeRankReducingSliceSimplificationInfo>
+getSimplifyCollapseShapeWithRankReducingSliceInfo(
+    RankedTensorType sourceType,
+    ArrayRef<ReassociationIndices> reassociationIndices);
 
 } // namespace mlir
 

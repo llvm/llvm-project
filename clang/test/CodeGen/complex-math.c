@@ -627,3 +627,15 @@ _Complex double foo(_Complex double a, _Complex double b) {
   // ARM7K: call { double, double } @__muldc3
   return a*b;
 }
+
+typedef _Complex double ComplexDouble;
+typedef double Double;
+
+float _Complex double_cr_sugar(ComplexDouble a, Double b) {
+  // X86-LABEL: @double_cr_sugar(
+  // X86: fmul
+  // X86: fmul
+  // X86-NOT: fmul
+  // X86: ret
+  return a *= b;
+}

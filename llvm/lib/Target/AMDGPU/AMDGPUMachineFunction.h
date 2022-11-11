@@ -11,11 +11,12 @@
 
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Function.h"
 
 namespace llvm {
 
@@ -44,9 +45,6 @@ protected:
   /// stages.
   Align DynLDSAlign;
 
-  // State of MODE register, assumed FP mode.
-  AMDGPU::SIModeRegisterDefaults Mode;
-
   // Kernels + shaders. i.e. functions called by the hardware and not called
   // by other functions.
   bool IsEntryFunction = false;
@@ -69,7 +67,7 @@ public:
     return ExplicitKernArgSize;
   }
 
-  unsigned getMaxKernArgAlign() const { return MaxKernArgAlign.value(); }
+  Align getMaxKernArgAlign() const { return MaxKernArgAlign; }
 
   uint32_t getLDSSize() const {
     return LDSSize;
@@ -77,10 +75,6 @@ public:
 
   uint32_t getGDSSize() const {
     return GDSSize;
-  }
-
-  AMDGPU::SIModeRegisterDefaults getMode() const {
-    return Mode;
   }
 
   bool isEntryFunction() const {
@@ -101,8 +95,20 @@ public:
     return WaveLimiter;
   }
 
-  unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV);
-  void allocateModuleLDSGlobal(const Function &F);
+  unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV) {
+    return allocateLDSGlobal(DL, GV, DynLDSAlign);
+  }
+  unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV,
+                             Align Trailing);
+
+  void allocateKnownAddressLDSGlobal(const Function &F);
+
+  // A kernel function may have an associated LDS allocation, and a kernel-scope
+  // LDS allocation must have an associated kernel function
+  static const GlobalVariable *
+  getKernelLDSGlobalFromFunction(const Function &F);
+
+  static Optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
 
   Align getDynLDSAlign() const { return DynLDSAlign; }
 

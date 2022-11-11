@@ -1883,7 +1883,7 @@ static bool optimizeEdges(const PathDiagnosticConstruct &C, PathPieces &path,
                  lexicalContains(PM, s1Start, s1End)) {
           SourceRange EdgeRange(PieceI->getEndLocation().asLocation(),
                                 PieceI->getStartLocation().asLocation());
-          if (!getLengthOnSingleLine(SM, EdgeRange).hasValue())
+          if (!getLengthOnSingleLine(SM, EdgeRange))
             removeEdge = true;
         }
       }
@@ -2363,15 +2363,15 @@ PathSensitiveBugReport::getInterestingnessKind(const MemRegion *R) const {
 }
 
 bool PathSensitiveBugReport::isInteresting(SVal V) const {
-  return getInterestingnessKind(V).hasValue();
+  return getInterestingnessKind(V).has_value();
 }
 
 bool PathSensitiveBugReport::isInteresting(SymbolRef sym) const {
-  return getInterestingnessKind(sym).hasValue();
+  return getInterestingnessKind(sym).has_value();
 }
 
 bool PathSensitiveBugReport::isInteresting(const MemRegion *R) const {
-  return getInterestingnessKind(R).hasValue();
+  return getInterestingnessKind(R).has_value();
 }
 
 bool PathSensitiveBugReport::isInteresting(const LocationContext *LC)  const {
@@ -3097,9 +3097,8 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
     if (getAnalyzerOptions().ShouldDisplayNotesAsEvents) {
       // For path diagnostic consumers that don't support extra notes,
       // we may optionally convert those to path notes.
-      for (auto I = report->getNotes().rbegin(),
-           E = report->getNotes().rend(); I != E; ++I) {
-        PathDiagnosticNotePiece *Piece = I->get();
+      for (const auto &I : llvm::reverse(report->getNotes())) {
+        PathDiagnosticNotePiece *Piece = I.get();
         auto ConvertedPiece = std::make_shared<PathDiagnosticEventPiece>(
           Piece->getLocation(), Piece->getString());
         for (const auto &R: Piece->getRanges())
@@ -3108,9 +3107,8 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
         Pieces.push_front(std::move(ConvertedPiece));
       }
     } else {
-      for (auto I = report->getNotes().rbegin(),
-           E = report->getNotes().rend(); I != E; ++I)
-        Pieces.push_front(*I);
+      for (const auto &I : llvm::reverse(report->getNotes()))
+        Pieces.push_front(I);
     }
 
     for (const auto &I : report->getFixits())

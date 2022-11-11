@@ -405,19 +405,19 @@ define <2 x i1> @op_ugt_sum_vec_commute2(<2 x i8> %p1, <2 x i8> %p2) {
   ret <2 x i1> %c
 }
 
-define i1 @sum_ugt_op_uses(i8 %p1, i8 %p2, i8* %p3) {
+define i1 @sum_ugt_op_uses(i8 %p1, i8 %p2, ptr %p3) {
 ; CHECK-LABEL: @sum_ugt_op_uses(
 ; CHECK-NEXT:    [[X:%.*]] = sdiv i8 42, [[P1:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 42, [[P2:%.*]]
 ; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[X]], [[Y]]
-; CHECK-NEXT:    store i8 [[A]], i8* [[P3:%.*]], align 1
+; CHECK-NEXT:    store i8 [[A]], ptr [[P3:%.*]], align 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X]], [[A]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %x = sdiv i8 42, %p1
   %y = sdiv i8 42, %p2
   %a = add i8 %x, %y
-  store i8 %a, i8* %p3
+  store i8 %a, ptr %p3
   %c = icmp ugt i8 %x, %a
   ret i1 %c
 }
@@ -452,15 +452,15 @@ define i1 @sum_ult_op_commute2(i8 %p1, i8 %p2) {
   ret i1 %c
 }
 
-define i1 @sum_ult_op_uses(i8 %x, i8 %y, i8* %p) {
+define i1 @sum_ult_op_uses(i8 %x, i8 %y, ptr %p) {
 ; CHECK-LABEL: @sum_ult_op_uses(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    store i8 [[A]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 [[A]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[A]], [[X]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %a = add i8 %y, %x
-  store i8 %a, i8* %p
+  store i8 %a, ptr %p
   %c = icmp ult i8 %a, %x
   ret i1 %c
 }
@@ -1209,3 +1209,71 @@ define i1 @icmp_add_add_C_extra_use2(i32 %a, i32 %b) {
   %cmp = icmp ult i32 %add2, %a
   ret i1 %cmp
 }
+
+; PR57635 - fold ULT->ULE pre-decrement of a non-zero inputs
+
+define i1 @icmp_dec_assume_nonzero(i8 %x) {
+; CHECK-LABEL: @icmp_dec_assume_nonzero(
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 8
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %z = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %z)
+  %i = add i8 %x, -1
+  %c = icmp ult i8 %i, 7
+  ret i1 %c
+}
+
+define i1 @icmp_dec_sub_assume_nonzero(i8 %x) {
+; CHECK-LABEL: @icmp_dec_sub_assume_nonzero(
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 12
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %z = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %z)
+  %i = sub i8 %x, 1
+  %c = icmp ult i8 %i, 11
+  ret i1 %c
+}
+
+define i1 @icmp_dec_nonzero(i16 %x) {
+; CHECK-LABEL: @icmp_dec_nonzero(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i16 [[X:%.*]], 8
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %o = or i16 %x, 4
+  %i = add i16 %o, -1
+  %c = icmp ult i16 %i, 7
+  ret i1 %c
+}
+
+define <2 x i1> @icmp_dec_nonzero_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_dec_nonzero_vec(
+; CHECK-NEXT:    [[O:%.*]] = or <2 x i32> [[X:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[I:%.*]] = add nsw <2 x i32> [[O]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i32> [[I]], <i32 15, i32 17>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %o = or <2 x i32> %x, <i32 8, i32 8>
+  %i = add <2 x i32> %o, <i32 -1, i32 -1>
+  %c = icmp ult <2 x i32> %i, <i32 15, i32 17>
+  ret <2 x i1> %c
+}
+
+; Negative test
+define i1 @icmp_dec_notnonzero(i8 %x) {
+; CHECK-LABEL: @icmp_dec_notnonzero(
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[I]], 11
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add i8 %x, -1
+  %c = icmp ult i8 %i, 11
+  ret i1 %c
+}
+
+declare void @llvm.assume(i1)

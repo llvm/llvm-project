@@ -11,8 +11,10 @@ else()
   set(BOLT_DRIVER_DEPS "")
 endif()
 
-add_llvm_tool(llvm-bolt
+add_bolt_tool(llvm-bolt
   llvm-bolt.cpp
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
 
   DEPENDS
   ${BOLT_DRIVER_DEPS}
@@ -25,8 +27,8 @@ target_link_libraries(llvm-bolt
   LLVMBOLTUtils
   )
 
-add_llvm_tool_symlink(perf2bolt llvm-bolt)
-add_llvm_tool_symlink(llvm-boltdiff llvm-bolt)
+add_bolt_tool_symlink(perf2bolt llvm-bolt)
+add_bolt_tool_symlink(llvm-boltdiff llvm-bolt)
 
 set(BOLT_DEPENDS
   llvm-bolt

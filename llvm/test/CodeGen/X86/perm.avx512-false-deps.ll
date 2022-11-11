@@ -59,7 +59,7 @@ define <4 x i64> @permq_rr_256(<4 x i64> %a0, <4 x i64> %idx) {
   ret <4 x i64> %res
 }
 
-define <4 x i64> @permq_rm_256(<4 x i64>* %p0, <4 x i64> %idx) {
+define <4 x i64> @permq_rm_256(ptr %p0, <4 x i64> %idx) {
 ; ENABLE-LABEL: permq_rm_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -79,13 +79,13 @@ define <4 x i64> @permq_rm_256(<4 x i64>* %p0, <4 x i64> %idx) {
 ; DISABLE-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <4 x i64>, <4 x i64>* %p0, align 64
+  %a0 = load <4 x i64>, ptr %p0, align 64
   %2 = call <4 x i64> @llvm.x86.avx512.permvar.di.256(<4 x i64> %a0, <4 x i64> %idx)
   %res = add <4 x i64> %idx, %2
   ret <4 x i64> %res
 }
 
-define <4 x i64> @permq_mi_256(<4 x i64>* %p0) {
+define <4 x i64> @permq_mi_256(ptr %p0) {
 ; ENABLE-LABEL: permq_mi_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -103,12 +103,12 @@ define <4 x i64> @permq_mi_256(<4 x i64>* %p0) {
 ; DISABLE-NEXT:    vpermpd {{.*#+}} ymm0 = mem[3,2,2,0]
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <4 x i64>, <4 x i64>* %p0, align 64
+  %a0 = load <4 x i64>, ptr %p0, align 64
   %2 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 2, i32 0>
   ret <4 x i64> %2
 }
 
-define <4 x i64> @permq_broadcast_256(i64* %p0, <4 x i64> %idx) {
+define <4 x i64> @permq_broadcast_256(ptr %p0, <4 x i64> %idx) {
 ; ENABLE-LABEL: permq_broadcast_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -132,7 +132,7 @@ define <4 x i64> @permq_broadcast_256(i64* %p0, <4 x i64> %idx) {
 ; DISABLE-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load i64, i64* %p0, align 4
+  %v0 = load i64, ptr %p0, align 4
   %t0 = insertelement <4 x i64> undef, i64 %v0, i64 0
   %a0 = shufflevector <4 x i64> %t0, <4 x i64> undef, <4 x i32> zeroinitializer
   %2 = call <4 x i64> @llvm.x86.avx512.permvar.di.256(<4 x i64> %a0, <4 x i64> %idx)
@@ -140,7 +140,7 @@ define <4 x i64> @permq_broadcast_256(i64* %p0, <4 x i64> %idx) {
   ret <4 x i64> %res
 }
 
-define <4 x i64> @permq_maskz_256(<4 x i64> %a0, <4 x i64> %idx, i8* %mask) {
+define <4 x i64> @permq_maskz_256(<4 x i64> %a0, <4 x i64> %idx, ptr %mask) {
 ; ENABLE-LABEL: permq_maskz_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -164,7 +164,7 @@ define <4 x i64> @permq_maskz_256(<4 x i64> %a0, <4 x i64> %idx, i8* %mask) {
 ; DISABLE-NEXT:    vpaddq %ymm2, %ymm0, %ymm0 {%k1}
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <4 x i64> @llvm.x86.avx512.mask.permvar.di.256(<4 x i64> %a0, <4 x i64> %idx, <4 x i64> zeroinitializer, i8 %2)
   %t = add <4 x i64> %a0, %idx
   %res = add <4 x i64> %3, %t
@@ -206,7 +206,7 @@ define <8 x i64> @permq_rr_512(<8 x i64> %a0, <8 x i64> %idx) {
   ret <8 x i64> %res
 }
 
-define <8 x i64> @permq_rm_512(<8 x i64>* %p0, <8 x i64> %idx) {
+define <8 x i64> @permq_rm_512(ptr %p0, <8 x i64> %idx) {
 ; ENABLE-LABEL: permq_rm_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -226,13 +226,13 @@ define <8 x i64> @permq_rm_512(<8 x i64>* %p0, <8 x i64> %idx) {
 ; DISABLE-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <8 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <8 x i64>, <8 x i64>* %p0, align 64
+  %a0 = load <8 x i64>, ptr %p0, align 64
   %2 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %a0, <8 x i64> %idx)
   %res = add <8 x i64> %idx, %2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @permq_broadcast_512(i64* %p0, <8 x i64> %idx) {
+define <8 x i64> @permq_broadcast_512(ptr %p0, <8 x i64> %idx) {
 ; ENABLE-LABEL: permq_broadcast_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -256,7 +256,7 @@ define <8 x i64> @permq_broadcast_512(i64* %p0, <8 x i64> %idx) {
 ; DISABLE-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load i64, i64* %p0, align 4
+  %v0 = load i64, ptr %p0, align 4
   %t0 = insertelement <8 x i64> undef, i64 %v0, i64 0
   %a0 = shufflevector <8 x i64> %t0, <8 x i64> undef, <8 x i32> zeroinitializer
   %2 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %a0, <8 x i64> %idx)
@@ -264,7 +264,7 @@ define <8 x i64> @permq_broadcast_512(i64* %p0, <8 x i64> %idx) {
   ret <8 x i64> %res
 }
 
-define <8 x i64> @permq_maskz_512(<8 x i64> %a0, <8 x i64> %idx, i8* %mask) {
+define <8 x i64> @permq_maskz_512(<8 x i64> %a0, <8 x i64> %idx, ptr %mask) {
 ; ENABLE-LABEL: permq_maskz_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -288,7 +288,7 @@ define <8 x i64> @permq_maskz_512(<8 x i64> %a0, <8 x i64> %idx, i8* %mask) {
 ; DISABLE-NEXT:    vpaddq %zmm2, %zmm0, %zmm0 {%k1}
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <8 x i64> @llvm.x86.avx512.mask.permvar.di.512(<8 x i64> %a0, <8 x i64> %idx, <8 x i64> zeroinitializer, i8 %2)
   %t = add <8 x i64> %a0, %idx
   %res = add <8 x i64> %3, %t
@@ -330,7 +330,7 @@ define <8 x i32> @permd_rr_256(<8 x i32> %a0, <8 x i32> %idx) {
   ret <8 x i32> %res
 }
 
-define <8 x i32> @permd_rm_256(<8 x i32>* %p0, <8 x i32> %idx) {
+define <8 x i32> @permd_rm_256(ptr %p0, <8 x i32> %idx) {
 ; ENABLE-LABEL: permd_rm_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -350,13 +350,13 @@ define <8 x i32> @permd_rm_256(<8 x i32>* %p0, <8 x i32> %idx) {
 ; DISABLE-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <8 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <8 x i32>, <8 x i32>* %p0, align 64
+  %a0 = load <8 x i32>, ptr %p0, align 64
   %2 = call <8 x i32> @llvm.x86.avx512.mask.permvar.si.256(<8 x i32> %a0, <8 x i32> %idx, <8 x i32> undef, i8 -1)
   %res = add <8 x i32> %idx, %2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @permd_broadcast_256(i32* %p0, <8 x i32> %idx) {
+define <8 x i32> @permd_broadcast_256(ptr %p0, <8 x i32> %idx) {
 ; ENABLE-LABEL: permd_broadcast_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -380,7 +380,7 @@ define <8 x i32> @permd_broadcast_256(i32* %p0, <8 x i32> %idx) {
 ; DISABLE-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load i32, i32* %p0, align 4
+  %v0 = load i32, ptr %p0, align 4
   %t0 = insertelement <8 x i32> undef, i32 %v0, i32 0
   %a0 = shufflevector <8 x i32> %t0, <8 x i32> undef, <8 x i32> zeroinitializer
   %2 = call <8 x i32> @llvm.x86.avx512.mask.permvar.si.256(<8 x i32> %a0, <8 x i32> %idx, <8 x i32> zeroinitializer, i8 -1)
@@ -388,7 +388,7 @@ define <8 x i32> @permd_broadcast_256(i32* %p0, <8 x i32> %idx) {
   ret <8 x i32> %res
 }
 
-define <8 x i32> @permd_maskz_256(<8 x i32> %a0, <8 x i32> %idx, i8* %mask) {
+define <8 x i32> @permd_maskz_256(<8 x i32> %a0, <8 x i32> %idx, ptr %mask) {
 ; ENABLE-LABEL: permd_maskz_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -412,7 +412,7 @@ define <8 x i32> @permd_maskz_256(<8 x i32> %a0, <8 x i32> %idx, i8* %mask) {
 ; DISABLE-NEXT:    vpaddd %ymm2, %ymm0, %ymm0 {%k1}
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <8 x i32> @llvm.x86.avx512.mask.permvar.si.256(<8 x i32> %a0, <8 x i32> %idx, <8 x i32> zeroinitializer, i8 %2)
   %t = add <8 x i32> %a0, %idx
   %res = add <8 x i32> %3, %t
@@ -453,7 +453,7 @@ define <16 x i32> @permd_rr_512(<16 x i32> %a0, <16 x i32> %idx) {
   ret <16 x i32> %res
 }
 
-define <16 x i32> @permd_rm_512(<16 x i32>* %p0, <16 x i32> %idx) {
+define <16 x i32> @permd_rm_512(ptr %p0, <16 x i32> %idx) {
 ; ENABLE-LABEL: permd_rm_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -473,13 +473,13 @@ define <16 x i32> @permd_rm_512(<16 x i32>* %p0, <16 x i32> %idx) {
 ; DISABLE-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <8 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <16 x i32>, <16 x i32>* %p0, align 64
+  %a0 = load <16 x i32>, ptr %p0, align 64
   %2 = call <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32> %a0, <16 x i32> %idx, <16 x i32> undef, i16 -1)
   %res = add <16 x i32> %idx, %2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @permd_broadcast_512(i32* %p0, <16 x i32> %idx) {
+define <16 x i32> @permd_broadcast_512(ptr %p0, <16 x i32> %idx) {
 ; ENABLE-LABEL: permd_broadcast_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -503,7 +503,7 @@ define <16 x i32> @permd_broadcast_512(i32* %p0, <16 x i32> %idx) {
 ; DISABLE-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load i32, i32* %p0, align 4
+  %v0 = load i32, ptr %p0, align 4
   %t0 = insertelement <16 x i32> undef, i32 %v0, i32 0
   %a0 = shufflevector <16 x i32> %t0, <16 x i32> undef, <16 x i32> zeroinitializer
   %2 = call <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32> %a0, <16 x i32> %idx, <16 x i32> undef, i16 -1)
@@ -511,7 +511,7 @@ define <16 x i32> @permd_broadcast_512(i32* %p0, <16 x i32> %idx) {
   ret <16 x i32> %res
 }
 
-define <16 x i32> @permd_maskz_512(<16 x i32> %a0, <16 x i32> %idx, i16* %mask) {
+define <16 x i32> @permd_maskz_512(<16 x i32> %a0, <16 x i32> %idx, ptr %mask) {
 ; ENABLE-LABEL: permd_maskz_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -535,7 +535,7 @@ define <16 x i32> @permd_maskz_512(<16 x i32> %a0, <16 x i32> %idx, i16* %mask) 
 ; DISABLE-NEXT:    vpaddd %zmm2, %zmm0, %zmm0 {%k1}
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i16, i16* %mask
+  %2 = load i16, ptr %mask
   %3 = call <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32> %a0, <16 x i32> %idx, <16 x i32> zeroinitializer, i16 %2)
   %t = add <16 x i32> %a0, %idx
   %res = add <16 x i32> %3, %t
@@ -606,7 +606,7 @@ define <4 x double> @permpd_rr_256(<4 x double> %a0, <4 x i64> %idx) {
   ret <4 x double> %res
 }
 
-define <4 x double> @permpd_rm_256(<4 x double>* %p0, <4 x i64> %idx) {
+define <4 x double> @permpd_rm_256(ptr %p0, <4 x i64> %idx) {
 ; ENABLE-LABEL: permpd_rm_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -632,14 +632,14 @@ define <4 x double> @permpd_rm_256(<4 x double>* %p0, <4 x i64> %idx) {
 ; DISABLE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <4 x double>, <4 x double>* %p0, align 64
+  %a0 = load <4 x double>, ptr %p0, align 64
   %2 = call <4 x double> @llvm.x86.avx512.permvar.df.256(<4 x double> %a0, <4 x i64> %idx)
   %a1 = sitofp <4 x i64> %idx to <4 x double>
   %res = fadd <4 x double> %2, %a1
   ret <4 x double> %res
 }
 
-define <4 x double> @permpd_mi_256(<4 x double>* %p0) {
+define <4 x double> @permpd_mi_256(ptr %p0) {
 ; ENABLE-LABEL: permpd_mi_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -657,12 +657,12 @@ define <4 x double> @permpd_mi_256(<4 x double>* %p0) {
 ; DISABLE-NEXT:    vpermpd {{.*#+}} ymm0 = mem[3,2,2,0]
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <4 x double>, <4 x double>* %p0, align 64
+  %a0 = load <4 x double>, ptr %p0, align 64
   %2 = shufflevector <4 x double> %a0, <4 x double> undef, <4 x i32> <i32 3, i32 2, i32 2, i32 0>
   ret <4 x double> %2
 }
 
-define <4 x double> @permpd_broadcast_256(double* %p0, <4 x i64> %idx) {
+define <4 x double> @permpd_broadcast_256(ptr %p0, <4 x i64> %idx) {
 ; ENABLE-LABEL: permpd_broadcast_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -688,7 +688,7 @@ define <4 x double> @permpd_broadcast_256(double* %p0, <4 x i64> %idx) {
 ; DISABLE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load double, double* %p0, align 4
+  %v0 = load double, ptr %p0, align 4
   %t0 = insertelement <4 x double> undef, double %v0, i64 0
   %a0 = shufflevector <4 x double> %t0, <4 x double> undef, <4 x i32> zeroinitializer
   %2 = call <4 x double> @llvm.x86.avx512.permvar.df.256(<4 x double> %a0, <4 x i64> %idx)
@@ -697,7 +697,7 @@ define <4 x double> @permpd_broadcast_256(double* %p0, <4 x i64> %idx) {
   ret <4 x double> %res
 }
 
-define <4 x double> @permpd_maskz_256(<4 x double> %a0, <4 x i64> %idx, i8* %mask) {
+define <4 x double> @permpd_maskz_256(<4 x double> %a0, <4 x i64> %idx, ptr %mask) {
 ; ENABLE-LABEL: permpd_maskz_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -723,7 +723,7 @@ define <4 x double> @permpd_maskz_256(<4 x double> %a0, <4 x i64> %idx, i8* %mas
 ; DISABLE-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <4 x double> @llvm.x86.avx512.mask.permvar.df.256(<4 x double> %a0, <4 x i64> %idx, <4 x double> zeroinitializer, i8 %2)
   %a1 = sitofp <4 x i64> %idx to <4 x double>
   %t = fadd <4 x double> %a0, %a1
@@ -771,7 +771,7 @@ define <8 x double> @permpd_rr_512(<8 x double> %a0, <8 x i64> %idx) {
   ret <8 x double> %res
 }
 
-define <8 x double> @permpd_rm_512(<8 x double>* %p0, <8 x i64> %idx) {
+define <8 x double> @permpd_rm_512(ptr %p0, <8 x i64> %idx) {
 ; ENABLE-LABEL: permpd_rm_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -797,14 +797,14 @@ define <8 x double> @permpd_rm_512(<8 x double>* %p0, <8 x i64> %idx) {
 ; DISABLE-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <8 x double>, <8 x double>* %p0, align 64
+  %a0 = load <8 x double>, ptr %p0, align 64
   %2 = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> %a0, <8 x i64> %idx)
   %a1 = sitofp <8 x i64> %idx to <8 x double>
   %res = fadd <8 x double> %2, %a1
   ret <8 x double> %res
 }
 
-define <8 x double> @permpd_broadcast_512(double* %p0, <8 x i64> %idx) {
+define <8 x double> @permpd_broadcast_512(ptr %p0, <8 x i64> %idx) {
 ; ENABLE-LABEL: permpd_broadcast_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -830,7 +830,7 @@ define <8 x double> @permpd_broadcast_512(double* %p0, <8 x i64> %idx) {
 ; DISABLE-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load double, double* %p0, align 4
+  %v0 = load double, ptr %p0, align 4
   %t0 = insertelement <8 x double> undef, double %v0, i64 0
   %a0 = shufflevector <8 x double> %t0, <8 x double> undef, <8 x i32> zeroinitializer
   %2 = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> %a0, <8 x i64> %idx)
@@ -839,7 +839,7 @@ define <8 x double> @permpd_broadcast_512(double* %p0, <8 x i64> %idx) {
   ret <8 x double> %res
 }
 
-define <8 x double> @permpd_maskz_512(<8 x double> %a0, <8 x i64> %idx, i8* %mask) {
+define <8 x double> @permpd_maskz_512(<8 x double> %a0, <8 x i64> %idx, ptr %mask) {
 ; ENABLE-LABEL: permpd_maskz_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -865,7 +865,7 @@ define <8 x double> @permpd_maskz_512(<8 x double> %a0, <8 x i64> %idx, i8* %mas
 ; DISABLE-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <8 x double> @llvm.x86.avx512.mask.permvar.df.512(<8 x double> %a0, <8 x i64> %idx, <8 x double> zeroinitializer, i8 %2)
   %a1 = sitofp <8 x i64> %idx to <8 x double>
   %t = fadd <8 x double> %a0, %a1
@@ -914,7 +914,7 @@ define <8 x float> @permps_rr_256(<8 x float> %a0, <8 x i32> %idx) {
   ret <8 x float> %res
 }
 
-define <8 x float> @permps_rm_256(<8 x float>* %p0, <8 x i32> %idx) {
+define <8 x float> @permps_rm_256(ptr %p0, <8 x i32> %idx) {
 ; ENABLE-LABEL: permps_rm_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -940,14 +940,14 @@ define <8 x float> @permps_rm_256(<8 x float>* %p0, <8 x i32> %idx) {
 ; DISABLE-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <8 x float>, <8 x float>* %p0, align 64
+  %a0 = load <8 x float>, ptr %p0, align 64
   %2 = call <8 x float> @llvm.x86.avx512.mask.permvar.sf.256(<8 x float> %a0, <8 x i32> %idx, <8 x float> zeroinitializer, i8 -1)
   %a1 = sitofp <8 x i32> %idx to <8 x float>
   %res = fadd <8 x float> %2, %a1
   ret <8 x float> %res
 }
 
-define <8 x float> @permps_broadcast_256(float* %p0, <8 x i32> %idx) {
+define <8 x float> @permps_broadcast_256(ptr %p0, <8 x i32> %idx) {
 ; ENABLE-LABEL: permps_broadcast_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -973,7 +973,7 @@ define <8 x float> @permps_broadcast_256(float* %p0, <8 x i32> %idx) {
 ; DISABLE-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load float, float* %p0, align 4
+  %v0 = load float, ptr %p0, align 4
   %t0 = insertelement <8 x float> undef, float %v0, i32 0
   %a0 = shufflevector <8 x float> %t0, <8 x float> undef, <8 x i32> zeroinitializer
   %2 = call <8 x float> @llvm.x86.avx512.mask.permvar.sf.256(<8 x float> %a0, <8 x i32> %idx, <8 x float> zeroinitializer, i8 -1)
@@ -982,7 +982,7 @@ define <8 x float> @permps_broadcast_256(float* %p0, <8 x i32> %idx) {
   ret <8 x float> %res
 }
 
-define <8 x float> @permps_maskz_256(<8 x float> %a0, <8 x i32> %idx, i8* %mask) {
+define <8 x float> @permps_maskz_256(<8 x float> %a0, <8 x i32> %idx, ptr %mask) {
 ; ENABLE-LABEL: permps_maskz_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -1008,7 +1008,7 @@ define <8 x float> @permps_maskz_256(<8 x float> %a0, <8 x i32> %idx, i8* %mask)
 ; DISABLE-NEXT:    vaddps %ymm0, %ymm2, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <8 x float> @llvm.x86.avx512.mask.permvar.sf.256(<8 x float> %a0, <8 x i32> %idx, <8 x float> zeroinitializer, i8 %2)
   %a1 = sitofp <8 x i32> %idx to <8 x float>
   %t = fadd <8 x float> %a0, %a1
@@ -1055,7 +1055,7 @@ define <16 x float> @permps_rr_512(<16 x float> %a0, <16 x i32> %idx) {
   ret <16 x float> %res
 }
 
-define <16 x float> @permps_rm_512(<16 x float>* %p0, <16 x i32> %idx) {
+define <16 x float> @permps_rm_512(ptr %p0, <16 x i32> %idx) {
 ; ENABLE-LABEL: permps_rm_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1081,14 +1081,14 @@ define <16 x float> @permps_rm_512(<16 x float>* %p0, <16 x i32> %idx) {
 ; DISABLE-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <16 x float>, <16 x float>* %p0, align 64
+  %a0 = load <16 x float>, ptr %p0, align 64
   %2 = call <16 x float> @llvm.x86.avx512.permvar.sf.512(<16 x float> %a0, <16 x i32> %idx)
   %a1 = sitofp <16 x i32> %idx to <16 x float>
   %res = fadd <16 x float> %2, %a1
   ret <16 x float> %res
 }
 
-define <16 x float> @permps_broadcast_512(float* %p0, <16 x i32> %idx) {
+define <16 x float> @permps_broadcast_512(ptr %p0, <16 x i32> %idx) {
 ; ENABLE-LABEL: permps_broadcast_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1114,7 +1114,7 @@ define <16 x float> @permps_broadcast_512(float* %p0, <16 x i32> %idx) {
 ; DISABLE-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load float, float* %p0, align 4
+  %v0 = load float, ptr %p0, align 4
   %t0 = insertelement <16 x float> undef, float %v0, i32 0
   %a0 = shufflevector <16 x float> %t0, <16 x float> undef, <16 x i32> zeroinitializer
   %2 = call <16 x float> @llvm.x86.avx512.permvar.sf.512(<16 x float> %a0, <16 x i32> %idx)
@@ -1123,7 +1123,7 @@ define <16 x float> @permps_broadcast_512(float* %p0, <16 x i32> %idx) {
   ret <16 x float> %res
 }
 
-define <16 x float> @permps_maskz_512(<16 x float> %a0, <16 x i32> %idx, i16* %mask) {
+define <16 x float> @permps_maskz_512(<16 x float> %a0, <16 x i32> %idx, ptr %mask) {
 ; ENABLE-LABEL: permps_maskz_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -1149,7 +1149,7 @@ define <16 x float> @permps_maskz_512(<16 x float> %a0, <16 x i32> %idx, i16* %m
 ; DISABLE-NEXT:    vaddps %zmm0, %zmm2, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i16, i16* %mask
+  %2 = load i16, ptr %mask
   %3 = call <16 x float> @llvm.x86.avx512.mask.permvar.sf.512(<16 x float> %a0, <16 x i32> %idx, <16 x float> zeroinitializer, i16 %2)
   %a1 = sitofp <16 x i32> %idx to <16 x float>
   %t = fadd <16 x float> %a0, %a1

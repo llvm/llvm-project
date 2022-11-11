@@ -265,6 +265,8 @@ public:
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc50-cpp");
     CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
         "cert-msc51-cpp");
+    CheckFactories.registerCheck<bugprone::SignalHandlerCheck>(
+        "cert-msc54-cpp");
     // OOP
     CheckFactories.registerCheck<performance::MoveConstructorInitCheck>(
         "cert-oop11-cpp");

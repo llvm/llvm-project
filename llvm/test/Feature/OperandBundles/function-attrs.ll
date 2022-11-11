@@ -1,4 +1,4 @@
-; RUN: opt -S -function-attrs < %s -enable-new-pm=0 | FileCheck %s
+; RUN: opt -S -passes=inferattrs,function-attrs < %s | FileCheck %s
 
 declare void @f_readonly() readonly
 declare void @f_readnone() readnone
@@ -43,8 +43,8 @@ define void @test_3(i32* %x) {
   ret void
 }
 
-; CHECK: attributes #0 = { nofree readonly }
-; CHECK: attributes #1 = { nofree nosync readnone }
-; CHECK: attributes #2 = { writeonly }
+; CHECK: attributes #0 = { nofree memory(read) }
+; CHECK: attributes #1 = { nofree nosync memory(none) }
+; CHECK: attributes #2 = { memory(write) }
 ; CHECK: attributes #3 = { nofree }
 ; CHECK: attributes #4 = { nofree nosync }

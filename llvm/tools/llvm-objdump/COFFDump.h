@@ -28,8 +28,8 @@ Error getCOFFRelocationValueString(const object::COFFObjectFile *Obj,
 
 void printCOFFUnwindInfo(const object::COFFObjectFile *O);
 void printCOFFFileHeader(const object::COFFObjectFile &Obj);
-void printCOFFSymbolTable(const object::COFFImportFile *I);
-void printCOFFSymbolTable(const object::COFFObjectFile *O);
+void printCOFFSymbolTable(const object::COFFImportFile &I);
+void printCOFFSymbolTable(const object::COFFObjectFile &O);
 } // namespace objdump
 } // namespace llvm
 

@@ -50,30 +50,30 @@ entry:
   ret i64 %1
 }
 
-define void @darn_loop(i64* noundef %darn) {
+define void @darn_loop(ptr noundef %darn) {
 ; OPT-LABEL: @darn_loop
 ; OPT-COUNT-32: tail call i64 @llvm.ppc.darn()
 entry:
   %inc = alloca i32, align 4
-  store i32 0, i32* %inc, align 4
+  store i32 0, ptr %inc, align 4
   br label %cond
 
 cond:
-  %0 = load i32, i32* %inc, align 4
+  %0 = load i32, ptr %inc, align 4
   %cmp = icmp ne i32 %0, 32
   br i1 %cmp, label %body, label %end_loop
 
 body:
   %1 = call i64 @llvm.ppc.darn()
-  %2 = load i32, i32* %inc, align 4
-  %idx = getelementptr inbounds i64, i64* %darn, i32 %2
-  store i64 %1, i64* %idx, align 8
+  %2 = load i32, ptr %inc, align 4
+  %idx = getelementptr inbounds i64, ptr %darn, i32 %2
+  store i64 %1, ptr %idx, align 8
   br label %incr
 
 incr:
-  %3 = load i32, i32* %inc, align 4
+  %3 = load i32, ptr %inc, align 4
   %ninc = add nsw i32 %3, 1
-  store i32 %ninc, i32* %inc, align 4
+  store i32 %ninc, ptr %inc, align 4
   br label %cond
 
 end_loop:

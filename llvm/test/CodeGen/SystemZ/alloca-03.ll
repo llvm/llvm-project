@@ -11,11 +11,11 @@ define void @f0() {
 ; CHECK-NEXT:    aghi %r15, 168
 ; CHECK-NEXT:    br %r14
   %x = alloca i64
-  store volatile i64 10, i64* %x
+  store volatile i64 10, ptr %x
   ret void
 }
 
-; Allocate %len * 8, no need to align stack.
+; Allocate ptr 8, no need to align stack.
 define void @f1(i64 %len) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
@@ -35,7 +35,7 @@ define void @f1(i64 %len) {
 ; CHECK-NEXT:    lmg %r11, %r15, 248(%r11)
 ; CHECK-NEXT:    br %r14
   %x = alloca i64, i64 %len
-  store volatile i64 10, i64* %x
+  store volatile i64 10, ptr %x
   ret void
 }
 
@@ -59,7 +59,7 @@ define void @f2() {
 ; CHECK-NEXT:    lmg %r11, %r15, 248(%r11)
 ; CHECK-NEXT:    br %r14
   %x = alloca i64, i64 1, align 128
-  store volatile i64 10, i64* %x, align 128
+  store volatile i64 10, ptr %x, align 128
   ret void
 }
 
@@ -84,7 +84,7 @@ define void @f3(i64 %len) {
 ; CHECK-NEXT:    lmg %r11, %r15, 248(%r11)
 ; CHECK-NEXT:    br %r14
   %x = alloca i64, i64 %len, align 128
-  store volatile i64 10, i64* %x, align 128
+  store volatile i64 10, ptr %x, align 128
   ret void
 }
 
@@ -98,7 +98,7 @@ define void @f4() {
 ; CHECK-NEXT:    aghi %r15, 168
 ; CHECK-NEXT:    br %r14
   %x = alloca i32
-  store volatile i32 10, i32* %x
+  store volatile i32 10, ptr %x
   ret void
 }
 
@@ -122,6 +122,6 @@ define void @f5() {
 ; CHECK-NEXT:    lmg %r11, %r15, 248(%r11)
 ; CHECK-NEXT:    br %r14
   %x = alloca i32, i64 1, align 128
-  store volatile i32 10, i32* %x
+  store volatile i32 10, ptr %x
   ret void
 }

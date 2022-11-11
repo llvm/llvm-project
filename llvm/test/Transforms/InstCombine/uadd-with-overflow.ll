@@ -31,7 +31,7 @@ define { i8, i1 } @fold_on_constant_add_no_overflow(i8 %x) {
 
 define { i8, i1 } @no_fold_on_constant_add_overflow(i8 %x) {
 ; CHECK-LABEL: @no_fold_on_constant_add_overflow(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
 ;
   %a = add nuw i8 %x, 200

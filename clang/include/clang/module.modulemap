@@ -42,6 +42,7 @@ module Clang_Basic {
   textual header "Basic/BuiltinsHexagon.def"
   textual header "Basic/BuiltinsHexagonDep.def"
   textual header "Basic/BuiltinsHexagonMapCustomDep.def"
+  textual header "Basic/BuiltinsLoongArch.def"
   textual header "Basic/BuiltinsMips.def"
   textual header "Basic/BuiltinsNEON.def"
   textual header "Basic/BuiltinsNVPTX.def"
@@ -71,9 +72,17 @@ module Clang_Basic {
   textual header "Basic/RISCVVTypes.def"
   textual header "Basic/Sanitizers.def"
   textual header "Basic/TargetCXXABI.def"
-  textual header "Basic/TokenKinds.def"
+  textual header "Basic/TransformTypeTraits.def"
 
   module * { export * }
+}
+module Clang_Basic_TokenKinds {
+  requires cplusplus
+
+  header "Basic/TokenKinds.h"
+  textual header "Basic/TokenKinds.def"
+
+  export *
 }
 
 module Clang_CodeGen { requires cplusplus umbrella "CodeGen" module * { export * } }
@@ -182,5 +191,8 @@ module Clang_ToolingCore {
 
 module Clang_ToolingInclusions {
   requires cplusplus
-  umbrella "Tooling/Inclusions" module * { export * }
+  umbrella "Tooling/Inclusions"
+  textual header "Tooling/Inclusions/CSymbolMap.inc"
+  textual header "Tooling/Inclusions/StdSymbolMap.inc"
+  module * { export * }
 }

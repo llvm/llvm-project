@@ -49,7 +49,7 @@ define float @fneg_f32(float %x) nounwind {
   ret float %y
 }
 
-define void @fneg_f64_mem(double* %x, double* %y) nounwind {
+define void @fneg_f64_mem(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: fneg_f64_mem:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -68,13 +68,13 @@ define void @fneg_f64_mem(double* %x, double* %y) nounwind {
 ; SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE2-NEXT:    movsd %xmm0, (%eax)
 ; SSE2-NEXT:    retl
-  %a = load double, double* %x
+  %a = load double, ptr %x
   %b = fneg double %a
-  store double %b, double* %y
+  store double %b, ptr %y
   ret void
 }
 
-define void @fneg_f32_mem(float* %x, float* %y) nounwind {
+define void @fneg_f32_mem(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: fneg_f32_mem:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -94,8 +94,8 @@ define void @fneg_f32_mem(float* %x, float* %y) nounwind {
 ; SSE2-NEXT:    movd %ecx, %xmm0
 ; SSE2-NEXT:    movd %xmm0, (%eax)
 ; SSE2-NEXT:    retl
-  %a = load float, float* %x
+  %a = load float, ptr %x
   %b = fneg float %a
-  store float %b, float* %y
+  store float %b, ptr %y
   ret void
 }

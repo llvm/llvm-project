@@ -13,9 +13,9 @@ define void @test(i8* %p1, i16* %p16) {
   ret void
 }
 
-; CHECK: Function Attrs: inaccessiblememonly nocallback nofree nosync nounwind speculatable willreturn
+; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite)
 ; CHECK: declare i8* @llvm.launder.invariant.group.p0i8(i8*)
-; CHECK: Function Attrs: inaccessiblememonly nocallback nofree nosync nounwind speculatable willreturn
+; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite)
 ; CHECK: declare i16* @llvm.launder.invariant.group.p0i16(i16*)
 declare i8* @llvm.invariant.group.barrier(i8*)
 declare i8* @llvm.invariant.group.barrier.p0i8(i8*)

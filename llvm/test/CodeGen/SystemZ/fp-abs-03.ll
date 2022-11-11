@@ -26,7 +26,7 @@ define double @f2(double %f) {
 ; be better implemented using an NI on the upper byte.  Do some extra
 ; processing so that using FPRs is unequivocally better.
 declare fp128 @llvm.fabs.f128(fp128 %f)
-define void @f3(fp128 *%ptr, fp128 *%ptr2) {
+define void @f3(ptr %ptr, ptr %ptr2) {
 ; CHECK-LABEL: f3:
 ; CHECK-DAG: vl [[REG1:%v[0-9]+]], 0(%r2)
 ; CHECK-DAG: vl [[REG2:%v[0-9]+]], 0(%r3)
@@ -34,10 +34,10 @@ define void @f3(fp128 *%ptr, fp128 *%ptr2) {
 ; CHECK: wfdxb [[RES:%v[0-9]+]], [[POSREG1]], [[REG2]]
 ; CHECK: vst [[RES]], 0(%r2)
 ; CHECK: br %r14
-  %orig = load fp128, fp128 *%ptr
+  %orig = load fp128, ptr %ptr
   %abs = call fp128 @llvm.fabs.f128(fp128 %orig)
-  %op2 = load fp128, fp128 *%ptr2
+  %op2 = load fp128, ptr %ptr2
   %res = fdiv fp128 %abs, %op2
-  store fp128 %res, fp128 *%ptr
+  store fp128 %res, ptr %ptr
   ret void
 }

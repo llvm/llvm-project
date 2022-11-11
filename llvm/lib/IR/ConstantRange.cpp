@@ -1238,7 +1238,10 @@ ConstantRange ConstantRange::sdiv(const ConstantRange &RHS) const {
   // separately by combining division results with the appropriate signs.
   APInt Zero = APInt::getZero(getBitWidth());
   APInt SignedMin = APInt::getSignedMinValue(getBitWidth());
-  ConstantRange PosFilter(APInt(getBitWidth(), 1), SignedMin);
+  // There are no positive 1-bit values. The 1 would get interpreted as -1.
+  ConstantRange PosFilter =
+      getBitWidth() == 1 ? getEmpty()
+                         : ConstantRange(APInt(getBitWidth(), 1), SignedMin);
   ConstantRange NegFilter(SignedMin, Zero);
   ConstantRange PosL = intersectWith(PosFilter);
   ConstantRange NegL = intersectWith(NegFilter);

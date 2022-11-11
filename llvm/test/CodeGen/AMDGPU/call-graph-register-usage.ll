@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=5 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN-V5 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -mcpu=fiji -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -mcpu=iceland -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
 
@@ -182,6 +183,9 @@ declare void @external() #0
 ; NumSgprs: 48
 ; NumVgprs: 24
 ; GCN: ScratchSize: 16384
+;
+; GCN-V5-LABEL: {{^}}usage_external:
+; GCN-V5: ScratchSize: 0
 define amdgpu_kernel void @usage_external() #0 {
   call void @external()
   ret void
@@ -194,6 +198,9 @@ declare void @external_recurse() #2
 ; NumSgprs: 48
 ; NumVgprs: 24
 ; GCN: ScratchSize: 16384
+;
+; GCN-V5-LABEL: {{^}}usage_external_recurse:
+; GCN-V5: ScratchSize: 0
 define amdgpu_kernel void @usage_external_recurse() #0 {
   call void @external_recurse()
   ret void
@@ -201,6 +208,9 @@ define amdgpu_kernel void @usage_external_recurse() #0 {
 
 ; GCN-LABEL: {{^}}direct_recursion_use_stack:
 ; GCN: ScratchSize: 18448{{$}}
+;
+; GCN-V5-LABEL: {{^}}direct_recursion_use_stack:
+; GCN-V5: ScratchSize: 2064{{$}}
 define void @direct_recursion_use_stack(i32 %val) #2 {
   %alloca = alloca [512 x i32], align 4, addrspace(5)
   call void asm sideeffect "; use $0", "v"([512 x i32] addrspace(5)* %alloca) #0
@@ -220,6 +230,9 @@ ret:
 ; GCN: is_ptr64 = 1
 ; GCN: is_dynamic_callstack = 1
 ; GCN: workitem_private_segment_byte_size = 18448{{$}}
+;
+; GCN-V5-LABEL: {{^}}usage_direct_recursion:
+; GCN-V5: .amdhsa_private_segment_fixed_size 2064{{$}}
 define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
   call void @direct_recursion_use_stack(i32 %n)
   ret void

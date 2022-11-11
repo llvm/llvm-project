@@ -1,4 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: not --crash llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERR %s
+
+; ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.s.memrealtime
 
 declare i64 @llvm.amdgcn.s.memrealtime() #0
 

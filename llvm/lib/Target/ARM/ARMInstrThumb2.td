@@ -3896,7 +3896,7 @@ def t2TBH_JT : t2PseudoInst<(outs),
         (ins GPR:$base, GPR:$index, i32imm:$jt, i32imm:$pclbl), 0, IIC_Br, []>,
         Sched<[WriteBr]>;
 
-def t2TBB : T2I<(outs), (ins addrmode_tbb:$addr), IIC_Br,
+def t2TBB : T2I<(outs), (ins (addrmode_tbb $Rn, $Rm):$addr), IIC_Br,
                     "tbb", "\t$addr", []>, Sched<[WriteBrTbl]> {
   bits<4> Rn;
   bits<4> Rm;
@@ -3909,7 +3909,7 @@ def t2TBB : T2I<(outs), (ins addrmode_tbb:$addr), IIC_Br,
   let DecoderMethod = "DecodeThumbTableBranch";
 }
 
-def t2TBH : T2I<(outs), (ins addrmode_tbh:$addr), IIC_Br,
+def t2TBH : T2I<(outs), (ins (addrmode_tbh $Rn, $Rm):$addr), IIC_Br,
                    "tbh", "\t$addr", []>, Sched<[WriteBrTbl]> {
   bits<4> Rn;
   bits<4> Rm;
@@ -5717,7 +5717,8 @@ let isBranch = 1, isTerminator = 1, isIndirectBranch = 1 in {
 
 
 class PACBTIHintSpaceInst<string asm, string ops, bits<8> imm>
-  : V8_1MI<(outs), (ins), AddrModeNone, NoItinerary, asm, ops, "", []> {
+  : Thumb2XI<(outs), (ins), AddrModeNone, 4, NoItinerary, !strconcat(asm, "\t", ops), "", []>,
+    Requires<[HasV7, IsMClass]> {
   let Inst{31-8} = 0b111100111010111110000000;
   let Inst{7-0}  = imm;
 

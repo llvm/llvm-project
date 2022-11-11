@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class ProcessSaveCoreMinidumpTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump(self):

@@ -11,7 +11,7 @@ define void @bitstore_fold() {
 ; CHECK-NEXT:    movb $0, 0
 ; CHECK-NEXT:    retq
 BB:
-   store i32 -1, i32* null
-   store i1 false, i1* null
+   store i32 -1, ptr null
+   store i1 false, ptr null
    ret void
 }

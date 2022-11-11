@@ -66,14 +66,14 @@ public:
       report_fatal_error("Invalid rule identifier");
   }
 
-  virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
-                       MachineIRBuilder &B) const override;
+  bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
+               MachineIRBuilder &B) const override;
 };
 
 bool AArch64O0PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                                 MachineInstr &MI,
                                                 MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B, KB, MDT);
+  CombinerHelper Helper(Observer, B, /*IsPreLegalize*/ true, KB, MDT);
   AArch64GenO0PreLegalizerCombinerHelper Generated(GeneratedRuleCfg, Helper);
 
   if (Generated.tryCombineAll(Observer, MI, B))

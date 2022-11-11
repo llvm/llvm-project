@@ -3,24 +3,24 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@0 = external global { { [86 x i8]*, i32, i32 }, { i16, i16, [20 x i8] }*, i8, i8 }
+@0 = external global { { ptr, i32, i32 }, ptr, i8, i8 }
 
 declare void @g()
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
 
 ; CHECK-LABEL: @f
 define void @f() align 2 {
 entry:
-  %P = alloca i32*, align 8
+  %P = alloca ptr, align 8
   br label %cond.end.i.i.i.i
 
 cond.end.i.i.i.i:                                 ; preds = %cont20, %entry
   br i1 undef, label %cont20, label %if.end
 
 cont20:                                           ; preds = %cond.end.i.i.i.i, %cond.end.i.i.i.i, %cond.end.i.i.i.i
-  store i32* undef, i32** %P, align 8
+  store ptr undef, ptr %P, align 8
   br label %cond.end.i.i.i.i
 
 if.end:                                           ; preds = %cond.end.i.i.i.i
@@ -41,7 +41,7 @@ block.exit: ; preds = %cond.exit
   unreachable
 
 sw.bb94:                                          ; preds = %cond.exit
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull undef)
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull undef)
   br label %cleanup
 
 cleanup:                                          ; preds = %sw.bb94, %cond.exit, %cond.exit

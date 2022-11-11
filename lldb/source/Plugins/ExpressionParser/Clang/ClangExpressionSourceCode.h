@@ -78,9 +78,19 @@ protected:
                             Wrapping wrap, WrapKind wrap_kind);
 
 private:
-  void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
-                             StreamString &stream,
-                             const std::string &expr) const;
+  /// Writes "using" declarations for local variables into the specified stream.
+  ///
+  /// Behaviour is undefined if 'frame == nullptr'.
+  ///
+  /// \param[out] stream Stream that this function generates "using"
+  ///             declarations into.
+  ///
+  /// \param[in]  expr Expression source that we're evaluating.
+  ///
+  /// \param[in]  frame StackFrame which carries information about the local
+  ///             variables that we're generating "using" declarations for.
+  void AddLocalVariableDecls(StreamString &stream, const std::string &expr,
+                             StackFrame *frame) const;
 
   /// String marking the start of the user expression.
   std::string m_start_marker;

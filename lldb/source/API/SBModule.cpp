@@ -617,9 +617,9 @@ uint32_t SBModule::GetVersion(uint32_t *versions, uint32_t num_versions) {
   if (num_versions > 0)
     versions[0] = version.empty() ? UINT32_MAX : version.getMajor();
   if (num_versions > 1)
-    versions[1] = version.getMinor().getValueOr(UINT32_MAX);
+    versions[1] = version.getMinor().value_or(UINT32_MAX);
   if (num_versions > 2)
-    versions[2] = version.getSubminor().getValueOr(UINT32_MAX);
+    versions[2] = version.getSubminor().value_or(UINT32_MAX);
   for (uint32_t i = 3; i < num_versions; ++i)
     versions[i] = UINT32_MAX;
   return result;

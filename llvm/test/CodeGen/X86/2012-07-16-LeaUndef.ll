@@ -7,7 +7,7 @@ A:
   br label %C
 C:
   %B908 = add i32 %E83, %E820
-  store i32 %B908, i32* undef
+  store i32 %B908, ptr undef
   %Sl2391 = select i1 undef, i32 undef, i32 %E83
   %Cmp3114 = icmp ne i32 %Sl2391, undef
   br i1 %Cmp3114, label %C, label %G

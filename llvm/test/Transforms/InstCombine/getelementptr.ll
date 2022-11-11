@@ -796,7 +796,7 @@ entry:
 
 define i32 @test35() nounwind {
 ; CHECK-LABEL: @test35(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([17 x i8], [17 x i8]* @"\01LC8", i64 0, i64 0), i8* getelementptr inbounds ([[T0:%.*]], %t0* @s, i64 0, i32 1, i64 0)) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([17 x i8], [17 x i8]* @"\01LC8", i64 0, i64 0), i8* nonnull getelementptr inbounds ([[T0:%.*]], %t0* @s, i64 0, i32 1, i64 0)) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 0
 ;
   call i32 (i8*, ...) @printf(i8* getelementptr ([17 x i8], [17 x i8]* @"\01LC8", i32 0, i32 0),
@@ -1313,7 +1313,7 @@ define i8* @D98588(i8* %c1, i64 %offset) {
   ret i8* %gep
 }
 
-declare noalias i8* @malloc(i64) nounwind
+declare noalias i8* @malloc(i64) nounwind allockind("alloc,uninitialized") allocsize(0)
 
 define i32 @test_gep_bitcast_malloc(%struct.A* %a) {
 ; CHECK-LABEL: @test_gep_bitcast_malloc(

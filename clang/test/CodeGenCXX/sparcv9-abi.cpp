@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple sparcv9-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple sparcv9-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 struct pod {
   int a, b;
@@ -16,7 +16,7 @@ void f2(struct notpod);
 
 // CHECK-LABEL: caller
 // CHECK: call void @_Z2f13pod(i64
-// CHECK: call void @_Z2f26notpod(%struct.notpod*
+// CHECK: call void @_Z2f26notpod(ptr
 void caller()
 {
   pod p1;

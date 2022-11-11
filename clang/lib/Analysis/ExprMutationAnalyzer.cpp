@@ -455,14 +455,16 @@ const Stmt *ExprMutationAnalyzer::findRangeLoopMutation(const Expr *Exp) {
   // array is considered modified if the loop-variable is a non-const reference.
   const auto DeclStmtToNonRefToArray = declStmt(hasSingleDecl(varDecl(hasType(
       hasUnqualifiedDesugaredType(referenceType(pointee(arrayType())))))));
-  const auto RefToArrayRefToElements = match(
-      findAll(stmt(cxxForRangeStmt(
-                       hasLoopVariable(varDecl(hasType(nonConstReferenceType()))
-                                           .bind(NodeID<Decl>::value)),
-                       hasRangeStmt(DeclStmtToNonRefToArray),
-                       hasRangeInit(canResolveToExpr(equalsNode(Exp)))))
-                  .bind("stmt")),
-      Stm, Context);
+  const auto RefToArrayRefToElements =
+      match(findAll(stmt(cxxForRangeStmt(
+                             hasLoopVariable(
+                                 varDecl(anyOf(hasType(nonConstReferenceType()),
+                                               hasType(nonConstPointerType())))
+                                     .bind(NodeID<Decl>::value)),
+                             hasRangeStmt(DeclStmtToNonRefToArray),
+                             hasRangeInit(canResolveToExpr(equalsNode(Exp)))))
+                        .bind("stmt")),
+            Stm, Context);
 
   if (const auto *BadRangeInitFromArray =
           selectFirst<Stmt>("stmt", RefToArrayRefToElements))

@@ -104,10 +104,8 @@ MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
       consumeError(StatusOrErr.takeError());
       IgnoredDoublePointValues.push_back(DoubleValue.convertToDouble());
     }
-    llvm::sort(IgnoredFloatingPointValues.begin(),
-               IgnoredFloatingPointValues.end());
-    llvm::sort(IgnoredDoublePointValues.begin(),
-               IgnoredDoublePointValues.end());
+    llvm::sort(IgnoredFloatingPointValues);
+    llvm::sort(IgnoredDoublePointValues);
   }
 }
 

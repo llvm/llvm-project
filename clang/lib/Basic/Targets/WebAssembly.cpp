@@ -104,10 +104,10 @@ void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
     switch (Level) {
     case RelaxedSIMD:
       Features["relaxed-simd"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case SIMD128:
       Features["simd128"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case NoSIMD:
       break;
     }
@@ -118,7 +118,7 @@ void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
   case NoSIMD:
   case SIMD128:
     Features["simd128"] = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case RelaxedSIMD:
     Features["relaxed-simd"] = false;
     break;
@@ -147,6 +147,9 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["mutable-globals"] = true;
     Features["tail-call"] = true;
     setSIMDLevel(Features, SIMD128, true);
+  } else if (CPU == "generic") {
+    Features["sign-ext"] = true;
+    Features["mutable-globals"] = true;
   }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);

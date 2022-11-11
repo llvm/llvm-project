@@ -105,3 +105,14 @@ void calls(void) {
   func(1, 2); // OK
   func(1, 2, 3); // both-warning {{too many arguments in call to 'func'}}
 }
+
+// Issue 58181 -- we would issue the warning about the function without a
+// prototype twice when the function was declared static in the following
+// example.
+static int GH58181(int x, int y);
+static int GH58181(x, y) // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
+    int x;
+    int y;
+{
+    return x + y;
+}

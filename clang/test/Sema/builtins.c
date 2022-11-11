@@ -28,7 +28,7 @@ void test7(void) {
   const void *X;
   X = CFSTR("\242"); // expected-warning {{input conversion stopped}}
   X = CFSTR("\0"); // no-warning
-  X = CFSTR(242); // expected-error {{CFString literal is not a string constant}} expected-warning {{incompatible integer to pointer conversion}}
+  X = CFSTR(242); // expected-error {{CFString literal is not a string constant}} expected-error {{incompatible integer to pointer conversion}}
   X = CFSTR("foo", "bar"); // expected-error {{too many arguments to function call}}
 }
 
@@ -201,8 +201,8 @@ void test18(void) {
   result = __builtin___strlcat_chk(dst, src, sizeof(dst), sizeof(dst));
 
   ptr = __builtin___memccpy_chk(dst, src, '\037', sizeof(src));      // expected-error {{too few arguments to function call}}
-  ptr = __builtin___strlcpy_chk(dst, src, sizeof(dst), sizeof(dst)); // expected-warning {{incompatible integer to pointer conversion}}
-  ptr = __builtin___strlcat_chk(dst, src, sizeof(dst), sizeof(dst)); // expected-warning {{incompatible integer to pointer conversion}}
+  ptr = __builtin___strlcpy_chk(dst, src, sizeof(dst), sizeof(dst)); // expected-error {{incompatible integer to pointer conversion}}
+  ptr = __builtin___strlcat_chk(dst, src, sizeof(dst), sizeof(dst)); // expected-error {{incompatible integer to pointer conversion}}
 }
 
 void no_ms_builtins(void) {

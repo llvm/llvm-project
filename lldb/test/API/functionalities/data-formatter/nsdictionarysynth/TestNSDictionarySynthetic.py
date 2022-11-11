@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class NSDictionarySyntheticTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -88,7 +86,7 @@ class NSDictionarySyntheticTestCase(TestBase):
                 '[2] = ',
                 '[3] = '])
         self.expect(
-            'frame variable dictionary --ptr-depth 1 --dynamic-type no-run-target',
+            'frame variable dictionary --ptr-depth 1',
             substrs=[
                 '3 key/value pairs',
                 '@"bar"',
@@ -96,7 +94,7 @@ class NSDictionarySyntheticTestCase(TestBase):
                 '@"baz"',
                 '2 key/value pairs'])
         self.expect(
-            'frame variable mutabledict --ptr-depth 1 --dynamic-type no-run-target',
+            'frame variable mutabledict --ptr-depth 1',
             substrs=[
                 '4 key/value pairs',
                 '(int)23',
@@ -105,7 +103,7 @@ class NSDictionarySyntheticTestCase(TestBase):
                 '@"sourceofstuff"',
                 '3 key/value pairs'])
         self.expect(
-            'frame variable mutabledict --ptr-depth 2 --dynamic-type no-run-target',
+            'frame variable mutabledict --ptr-depth 2',
             substrs=[
                 '4 key/value pairs',
                 '(int)23',
@@ -116,7 +114,7 @@ class NSDictionarySyntheticTestCase(TestBase):
                 '@"bar"',
                 '@"2 elements"'])
         self.expect(
-            'frame variable mutabledict --ptr-depth 3 --dynamic-type no-run-target',
+            'frame variable mutabledict --ptr-depth 3',
             substrs=[
                 '4 key/value pairs',
                 '(int)23',

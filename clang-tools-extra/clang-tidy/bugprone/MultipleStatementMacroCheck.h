@@ -20,7 +20,7 @@ namespace bugprone {
 /// other ones will be executed unconditionally.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-multiple-statement-macro.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/multiple-statement-macro.html
 class MultipleStatementMacroCheck : public ClangTidyCheck {
 public:
   MultipleStatementMacroCheck(StringRef Name, ClangTidyContext *Context)

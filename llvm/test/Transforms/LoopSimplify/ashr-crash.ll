@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -loop-rotate -licm -instcombine -indvars -loop-unroll -S %s | FileCheck %s
+; RUN: opt -loop-rotate -licm -instcombine -indvars -loop-unroll -S %s | FileCheck %s
 ;
 ; PR18361: ScalarEvolution::getAddRecExpr():
 ;          Assertion `isLoopInvariant(Operands[i],...

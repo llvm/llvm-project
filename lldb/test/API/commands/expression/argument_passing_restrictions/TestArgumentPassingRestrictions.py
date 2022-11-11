@@ -17,8 +17,6 @@ from lldbsuite.test import lldbutil
 
 class TestArgumentPassingRestrictions(TestBase):
 
-  mydir = TestBase.compute_mydir(__file__)
-
   @skipIf(compiler="clang", compiler_version=['<', '7.0'])
   def test_argument_passing_restrictions(self):
     self.build()

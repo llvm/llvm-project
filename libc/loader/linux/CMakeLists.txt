@@ -83,3 +83,14 @@ add_loader_object(
   SRC
     crtn.cpp
 )
+
+add_custom_target(libc-startup)
+set(startup_components crt1 crti crtn)
+foreach(target IN LISTS startup_components)
+  set(fq_target_name libc.loader.linux.${target})
+  add_dependencies(libc-startup ${fq_target_name})
+  get_target_property(loader_object ${fq_target_name} LOADER_OBJECT)
+  install(FILES ${loader_object}
+          DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          COMPONENT ${LIBC_COMPONENT})
+endforeach()

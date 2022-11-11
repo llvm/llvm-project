@@ -48,6 +48,10 @@ JITTargetMachineBuilder::createTargetMachine() {
   if (!TheTarget)
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
 
+  if (!TheTarget->hasJIT())
+    return make_error<StringError>("Target has no JIT support",
+                                   inconvertibleErrorCode());
+
   auto *TM =
       TheTarget->createTargetMachine(TT.getTriple(), CPU, Features.getString(),
                                      Options, RM, CM, OptLevel, /*JIT*/ true);

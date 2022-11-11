@@ -264,13 +264,13 @@ define <16 x i8> @vselect_packss_v16i64(<16 x i64> %a0, <16 x i64> %a1, <16 x i8
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm9
 ; AVX1-NEXT:    vpcmpeqq %xmm8, %xmm9, %xmm8
 ; AVX1-NEXT:    vpcmpeqq %xmm7, %xmm3, %xmm3
-; AVX1-NEXT:    vpackssdw %xmm8, %xmm3, %xmm8
+; AVX1-NEXT:    vpackssdw %xmm8, %xmm3, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm7
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vpcmpeqq %xmm7, %xmm3, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm8
+; AVX1-NEXT:    vpcmpeqq %xmm7, %xmm8, %xmm7
 ; AVX1-NEXT:    vpcmpeqq %xmm6, %xmm2, %xmm2
+; AVX1-NEXT:    vpackssdw %xmm7, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpackssdw %xmm8, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm6
 ; AVX1-NEXT:    vpcmpeqq %xmm3, %xmm6, %xmm3

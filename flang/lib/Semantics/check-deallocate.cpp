@@ -26,7 +26,8 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
               } else if (!IsVariableName(*symbol)) {
                 context_.Say(name.source,
                     "name in DEALLOCATE statement must be a variable name"_err_en_US);
-              } else if (!IsAllocatableOrPointer(*symbol)) { // C932
+              } else if (!IsAllocatableOrPointer(
+                             symbol->GetUltimate())) { // C932
                 context_.Say(name.source,
                     "name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
               } else {

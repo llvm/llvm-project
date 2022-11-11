@@ -12,9 +12,9 @@ entry:
 ; CHECK-NOT: rlwimi
 ; CHECK: andi
 
-  %0 = load i32, i32* @m, align 4
+  %0 = load i32, ptr @m, align 4
   %or = or i32 %0, 250
-  store i32 %or, i32* @m, align 4
+  store i32 %or, ptr @m, align 4
   %and = and i32 %or, 249
   %sub.i = sub i32 %and, 0
   %sext = shl i32 %sub.i, 24

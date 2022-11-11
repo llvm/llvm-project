@@ -9,15 +9,14 @@
 
 // amdgpu does not have a working printf definition
 // XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-oldDriver
 // XFAIL: amdgcn-amd-amdhsa-LTO
 
-#include <stdio.h>
 #include <omp.h>
+#include <stdio.h>
 
 static void check(char *X, int Dev) {
   printf("  host X = %c\n", *X);
-  #pragma omp target device(Dev)
+#pragma omp target device(Dev)
   printf("device X = %c\n", *X);
 }
 
@@ -34,62 +33,62 @@ int main(void) {
   //      CHECK:   host X = h
   // CHECK-NEXT: device X = d
   char X = 'd';
-  #pragma omp target enter data map(to:X)
+#pragma omp target enter data map(to : X)
   X = 'h';
   CHECK_DATA();
 
-  //--------------------------------------------------
-  // Check behavior when specifying host directly.
-  //--------------------------------------------------
+//--------------------------------------------------
+// Check behavior when specifying host directly.
+//--------------------------------------------------
 
-  // CHECK-NEXT: omp_is_initial_device() = 1
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target device(DevInit) map(always,tofrom:X)
+// CHECK-NEXT: omp_is_initial_device() = 1
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target device(DevInit) map(always, tofrom : X)
   printf("omp_is_initial_device() = %d\n", omp_is_initial_device());
   CHECK_DATA();
 
-  // CHECK-NEXT: omp_is_initial_device() = 1
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target teams device(DevInit) num_teams(1) map(always,tofrom:X)
+// CHECK-NEXT: omp_is_initial_device() = 1
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target teams device(DevInit) num_teams(1) map(always, tofrom : X)
   printf("omp_is_initial_device() = %d\n", omp_is_initial_device());
   CHECK_DATA();
 
-  // Check that __kmpc_push_target_tripcount_mapper doesn't fail. I'm not sure
-  // how to check that it actually pushes to the initial device.
-  #pragma omp target teams device(DevInit) num_teams(1)
-  #pragma omp distribute
+// Check that __kmpc_push_target_tripcount_mapper doesn't fail. I'm not sure
+// how to check that it actually pushes to the initial device.
+#pragma omp target teams device(DevInit) num_teams(1)
+#pragma omp distribute
   for (int i = 0; i < 2; ++i)
-  ;
+    ;
 
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target data device(DevInit) map(always,tofrom:X)
-  ;
-  CHECK_DATA();
-
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target enter data device(DevInit) map(always,to:X)
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target data device(DevInit) map(always, tofrom : X)
   ;
   CHECK_DATA();
 
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target exit data device(DevInit) map(always,from:X)
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target enter data device(DevInit) map(always, to : X)
   ;
   CHECK_DATA();
 
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target update device(DevInit) to(X)
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target exit data device(DevInit) map(always, from : X)
   ;
   CHECK_DATA();
 
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target update device(DevInit) from(X)
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target update device(DevInit) to(X)
+  ;
+  CHECK_DATA();
+
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target update device(DevInit) from(X)
   ;
   CHECK_DATA();
 
@@ -99,54 +98,54 @@ int main(void) {
 
   omp_set_default_device(DevInit);
 
-  // CHECK-NEXT: omp_is_initial_device() = 1
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target map(always,tofrom:X)
+// CHECK-NEXT: omp_is_initial_device() = 1
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target map(always, tofrom : X)
   printf("omp_is_initial_device() = %d\n", omp_is_initial_device());
   CHECK_DATA();
 
-  // CHECK-NEXT: omp_is_initial_device() = 1
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target teams num_teams(1) map(always,tofrom:X)
+// CHECK-NEXT: omp_is_initial_device() = 1
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target teams num_teams(1) map(always, tofrom : X)
   printf("omp_is_initial_device() = %d\n", omp_is_initial_device());
   CHECK_DATA();
 
-  // Check that __kmpc_push_target_tripcount_mapper doesn't fail. I'm not sure
-  // how to check that it actually pushes to the initial device.
-  #pragma omp target teams num_teams(1)
-  #pragma omp distribute
+// Check that __kmpc_push_target_tripcount_mapper doesn't fail. I'm not sure
+// how to check that it actually pushes to the initial device.
+#pragma omp target teams num_teams(1)
+#pragma omp distribute
   for (int i = 0; i < 2; ++i)
-  ;
+    ;
 
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target data map(always,tofrom:X)
-  ;
-  CHECK_DATA();
-
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target enter data map(always,to:X)
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target data map(always, tofrom : X)
   ;
   CHECK_DATA();
 
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target exit data map(always,from:X)
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target enter data map(always, to : X)
   ;
   CHECK_DATA();
 
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target update to(X)
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target exit data map(always, from : X)
   ;
   CHECK_DATA();
 
-  // CHECK-NEXT:   host X = h
-  // CHECK-NEXT: device X = d
-  #pragma omp target update from(X)
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target update to(X)
+  ;
+  CHECK_DATA();
+
+// CHECK-NEXT:   host X = h
+// CHECK-NEXT: device X = d
+#pragma omp target update from(X)
   ;
   CHECK_DATA();
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='asan-pipeline' -S | llc -o /dev/null
+; RUN: opt < %s -passes=asan -S | llc -o /dev/null
 ; The bug manifests as a reg alloc failure:
 ; error: ran out of registers during register allocation
 ; ModuleID = 'z.o'

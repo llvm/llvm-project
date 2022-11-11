@@ -49,6 +49,8 @@ struct SIProgramInfo {
     uint32_t AccumOffset = 0;
     uint32_t TgSplit = 0;
     uint32_t NumSGPR = 0;
+    unsigned SGPRSpill = 0;
+    unsigned VGPRSpill = 0;
     uint32_t LDSSize = 0;
     bool FlatUsed = false;
 

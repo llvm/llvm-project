@@ -34,7 +34,7 @@ computeConversionSet(iterator_range<Region::iterator> region,
                      Location regionLoc,
                      SmallVectorImpl<Operation *> &toConvert,
                      ConversionTarget *target = nullptr) {
-  if (llvm::empty(region))
+  if (region.empty())
     return success();
 
   // Traverse starting from the entry block.
@@ -1337,7 +1337,7 @@ FailureOr<Block *> ConversionPatternRewriterImpl::convertBlockSignature(
                                                  argReplacements);
   if (failed(result))
     return failure();
-  if (Block *newBlock = result.getValue()) {
+  if (Block *newBlock = *result) {
     if (newBlock != block)
       blockActions.push_back(BlockAction::getTypeConversion(newBlock));
   }
@@ -1407,9 +1407,7 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
   bool resultChanged = false;
 
   // Create mappings for each of the new result values.
-  Value newValue, result;
-  for (auto it : llvm::zip(newValues, op->getResults())) {
-    std::tie(newValue, result) = it;
+  for (auto [newValue, result] : llvm::zip(newValues, op->getResults())) {
     if (!newValue) {
       resultChanged = true;
       continue;
@@ -2554,9 +2552,7 @@ replaceMaterialization(ConversionPatternRewriterImpl &rewriterImpl,
 
   // For each of the materialization results, update the inverse mappings to
   // point to the replacement values.
-  for (auto it : llvm::zip(matResults, values)) {
-    Value matResult, newValue;
-    std::tie(matResult, newValue) = it;
+  for (auto [matResult, newValue] : llvm::zip(matResults, values)) {
     auto inverseMapIt = inverseMapping.find(matResult);
     if (inverseMapIt == inverseMapping.end())
       continue;
@@ -2782,7 +2778,7 @@ static LogicalResult legalizeUnresolvedMaterialization(
 
       // If an argument materialization failed, fallback to trying a target
       // materialization.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case UnresolvedMaterialization::Target:
       newMaterialization = converter->materializeTargetConversion(
           rewriter, op->getLoc(), outputType, inputOperands);
@@ -3044,7 +3040,7 @@ Value TypeConverter::materializeConversion(
     OpBuilder &builder, Location loc, Type resultType, ValueRange inputs) {
   for (MaterializationCallbackFn &fn : llvm::reverse(materializations))
     if (Optional<Value> result = fn(builder, resultType, inputs, loc))
-      return result.getValue();
+      return *result;
   return nullptr;
 }
 
@@ -3060,6 +3056,29 @@ auto TypeConverter::convertBlockSignature(Block *block)
 // FunctionOpInterfaceSignatureConversion
 //===----------------------------------------------------------------------===//
 
+static LogicalResult convertFuncOpTypes(FunctionOpInterface funcOp,
+                                        TypeConverter &typeConverter,
+                                        ConversionPatternRewriter &rewriter) {
+  FunctionType type = funcOp.getFunctionType().cast<FunctionType>();
+
+  // Convert the original function types.
+  TypeConverter::SignatureConversion result(type.getNumInputs());
+  SmallVector<Type, 1> newResults;
+  if (failed(typeConverter.convertSignatureArgs(type.getInputs(), result)) ||
+      failed(typeConverter.convertTypes(type.getResults(), newResults)) ||
+      failed(rewriter.convertRegionTypes(&funcOp.getFunctionBody(),
+                                         typeConverter, &result)))
+    return failure();
+
+  // Update the function signature in-place.
+  auto newType = FunctionType::get(rewriter.getContext(),
+                                   result.getConvertedTypes(), newResults);
+
+  rewriter.updateRootInPlace(funcOp, [&] { funcOp.setType(newType); });
+
+  return success();
+}
+
 /// Create a default conversion pattern that rewrites the type signature of a
 /// FunctionOpInterface op. This only supports ops which use FunctionType to
 /// represent their type.
@@ -3071,27 +3090,21 @@ struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
       : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(Operation *op, ArrayRef<Value> /*operands*/,
                   ConversionPatternRewriter &rewriter) const override {
     FunctionOpInterface funcOp = cast<FunctionOpInterface>(op);
-    FunctionType type = funcOp.getFunctionType().cast<FunctionType>();
+    return convertFuncOpTypes(funcOp, *typeConverter, rewriter);
+  }
+};
 
-    // Convert the original function types.
-    TypeConverter::SignatureConversion result(type.getNumInputs());
-    SmallVector<Type, 1> newResults;
-    if (failed(typeConverter->convertSignatureArgs(type.getInputs(), result)) ||
-        failed(typeConverter->convertTypes(type.getResults(), newResults)) ||
-        failed(rewriter.convertRegionTypes(&funcOp.getBody(), *typeConverter,
-                                           &result)))
-      return failure();
+struct AnyFunctionOpInterfaceSignatureConversion
+    : public OpInterfaceConversionPattern<FunctionOpInterface> {
+  using OpInterfaceConversionPattern::OpInterfaceConversionPattern;
 
-    // Update the function signature in-place.
-    auto newType = FunctionType::get(rewriter.getContext(),
-                                     result.getConvertedTypes(), newResults);
-
-    rewriter.updateRootInPlace(op, [&] { funcOp.setType(newType); });
-
-    return success();
+  LogicalResult
+  matchAndRewrite(FunctionOpInterface funcOp, ArrayRef<Value> /*operands*/,
+                  ConversionPatternRewriter &rewriter) const override {
+    return convertFuncOpTypes(funcOp, *typeConverter, rewriter);
   }
 };
 } // namespace
@@ -3101,6 +3114,12 @@ void mlir::populateFunctionOpInterfaceTypeConversionPattern(
     TypeConverter &converter) {
   patterns.add<FunctionOpInterfaceSignatureConversion>(
       functionLikeOpName, patterns.getContext(), converter);
+}
+
+void mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(
+    RewritePatternSet &patterns, TypeConverter &converter) {
+  patterns.add<AnyFunctionOpInterfaceSignatureConversion>(
+      converter, patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3151,7 +3170,7 @@ auto ConversionTarget::isLegal(Operation *op) const
     auto legalityFnIt = opRecursiveLegalityFns.find(op->getName());
     if (legalityFnIt != opRecursiveLegalityFns.end()) {
       legalityDetails.isRecursivelyLegal =
-          legalityFnIt->second(op).getValueOr(true);
+          legalityFnIt->second(op).value_or(true);
     } else {
       legalityDetails.isRecursivelyLegal = true;
     }
@@ -3251,6 +3270,76 @@ auto ConversionTarget::getOpInfo(OperationName op) const
     return LegalizationInfo{LegalizationAction::Dynamic,
                             /*isRecursivelyLegal=*/false, unknownLegalityFn};
   return llvm::None;
+}
+
+//===----------------------------------------------------------------------===//
+// PDL Configuration
+//===----------------------------------------------------------------------===//
+
+void PDLConversionConfig::notifyRewriteBegin(PatternRewriter &rewriter) {
+  auto &rewriterImpl =
+      static_cast<ConversionPatternRewriter &>(rewriter).getImpl();
+  rewriterImpl.currentTypeConverter = getTypeConverter();
+}
+
+void PDLConversionConfig::notifyRewriteEnd(PatternRewriter &rewriter) {
+  auto &rewriterImpl =
+      static_cast<ConversionPatternRewriter &>(rewriter).getImpl();
+  rewriterImpl.currentTypeConverter = nullptr;
+}
+
+/// Remap the given value using the rewriter and the type converter in the
+/// provided config.
+static FailureOr<SmallVector<Value>>
+pdllConvertValues(ConversionPatternRewriter &rewriter, ValueRange values) {
+  SmallVector<Value> mappedValues;
+  if (failed(rewriter.getRemappedValues(values, mappedValues)))
+    return failure();
+  return std::move(mappedValues);
+}
+
+void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
+  patterns.getPDLPatterns().registerRewriteFunction(
+      "convertValue",
+      [](PatternRewriter &rewriter, Value value) -> FailureOr<Value> {
+        auto results = pdllConvertValues(
+            static_cast<ConversionPatternRewriter &>(rewriter), value);
+        if (failed(results))
+          return failure();
+        return results->front();
+      });
+  patterns.getPDLPatterns().registerRewriteFunction(
+      "convertValues", [](PatternRewriter &rewriter, ValueRange values) {
+        return pdllConvertValues(
+            static_cast<ConversionPatternRewriter &>(rewriter), values);
+      });
+  patterns.getPDLPatterns().registerRewriteFunction(
+      "convertType",
+      [](PatternRewriter &rewriter, Type type) -> FailureOr<Type> {
+        auto &rewriterImpl =
+            static_cast<ConversionPatternRewriter &>(rewriter).getImpl();
+        if (TypeConverter *converter = rewriterImpl.currentTypeConverter) {
+          if (Type newType = converter->convertType(type))
+            return newType;
+          return failure();
+        }
+        return type;
+      });
+  patterns.getPDLPatterns().registerRewriteFunction(
+      "convertTypes",
+      [](PatternRewriter &rewriter,
+         TypeRange types) -> FailureOr<SmallVector<Type>> {
+        auto &rewriterImpl =
+            static_cast<ConversionPatternRewriter &>(rewriter).getImpl();
+        TypeConverter *converter = rewriterImpl.currentTypeConverter;
+        if (!converter)
+          return SmallVector<Type>(types);
+
+        SmallVector<Type> remappedTypes;
+        if (failed(converter->convertTypes(types, remappedTypes)))
+          return failure();
+        return std::move(remappedTypes);
+      });
 }
 
 //===----------------------------------------------------------------------===//

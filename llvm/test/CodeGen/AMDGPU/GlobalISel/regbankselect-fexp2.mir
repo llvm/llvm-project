@@ -10,9 +10,11 @@ body: |
   bb.0:
     liveins: $sgpr0
     ; CHECK-LABEL: name: fexp2_s
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[FEXP2_:%[0-9]+]]:vgpr(s32) = G_FEXP2 [[COPY1]]
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[FEXP2_:%[0-9]+]]:vgpr(s32) = G_FEXP2 [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_FEXP2 %0
 ...
@@ -25,8 +27,10 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: fexp2_v
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[FEXP2_:%[0-9]+]]:vgpr(s32) = G_FEXP2 [[COPY]]
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[FEXP2_:%[0-9]+]]:vgpr(s32) = G_FEXP2 [[COPY]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_FEXP2 %0
 ...

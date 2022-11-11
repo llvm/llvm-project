@@ -9,9 +9,10 @@ static_library("FlowSensitive") {
     "ControlFlowContext.cpp",
     "DataflowAnalysisContext.cpp",
     "DataflowEnvironment.cpp",
-    "SourceLocationsLattice.cpp",
+    "DebugSupport.cpp",
     "Transfer.cpp",
     "TypeErasedDataflowAnalysis.cpp",
+    "Value.cpp",
     "WatchedLiteralsSolver.cpp",
   ]
 }

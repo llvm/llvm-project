@@ -21,7 +21,7 @@ define zeroext i8 @test_udivrem_zext_ah(i8 %x, i8 %y) {
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
   %div = udiv i8 %x, %y
-  store i8 %div, i8* @z
+  store i8 %div, ptr @z
   %1 = urem i8 %x, %y
   ret i8 %1
 }
@@ -49,7 +49,7 @@ define zeroext i8 @test_urem_zext_ah(i8 %x, i8 %y) {
 define i8 @test_urem_noext_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_urem_noext_ah:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    divb %cl
 ; X32-NEXT:    movzbl %ah, %eax
@@ -109,7 +109,7 @@ define signext i8 @test_sdivrem_sext_ah(i8 %x, i8 %y) {
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
   %div = sdiv i8 %x, %y
-  store i8 %div, i8* @z
+  store i8 %div, ptr @z
   %1 = srem i8 %x, %y
   ret i8 %1
 }
@@ -137,7 +137,7 @@ define signext i8 @test_srem_sext_ah(i8 %x, i8 %y) {
 define i8 @test_srem_noext_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_srem_noext_ah:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    idivb %cl
 ; X32-NEXT:    movsbl %ah, %eax

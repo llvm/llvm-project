@@ -1,7 +1,7 @@
-; RUN: opt -mtriple=x86_64-unknown-linux -S -lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/use-typeid1-typeid2.yaml -lowertypetests-write-summary=%t < %s | FileCheck --check-prefixes=CHECK,X86 %s
+; RUN: opt -mtriple=x86_64-unknown-linux -S -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/use-typeid1-typeid2.yaml -lowertypetests-write-summary=%t %s | FileCheck --check-prefixes=CHECK,X86 %s
 ; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-X86 %s < %t
 
-; RUN: opt -mtriple=aarch64-unknown-linux -S -lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/use-typeid1-typeid2.yaml -lowertypetests-write-summary=%t < %s | FileCheck --check-prefixes=CHECK,ARM %s
+; RUN: opt -mtriple=aarch64-unknown-linux -S -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/use-typeid1-typeid2.yaml -lowertypetests-write-summary=%t %s | FileCheck --check-prefixes=CHECK,ARM %s
 ; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-ARM %s < %t
 
 @foo = constant [2048 x i8] zeroinitializer, !type !0, !type !1, !type !2, !type !3

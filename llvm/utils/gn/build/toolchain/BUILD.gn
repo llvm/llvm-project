@@ -253,6 +253,12 @@ stage2_unix_toolchain("stage2_baremetal_aarch64") {
   toolchain_args = {
     current_os = "baremetal"
     current_cpu = "arm64"
+
+    # FIXME: These should be set in all toolchains building sanitizers,
+    # see discussion at https://reviews.llvm.org/D127906#3587329
+    use_asan = false
+    use_tsan = false
+    use_ubsan = false
   }
 }
 

@@ -6,8 +6,6 @@ from lldbsuite.test import lldbutil
 
 class TestGdbRemoteSingleStep(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows # No pty support to test any inferior std -i/e/o
     @skipIf(triple='^mips')
     def test_single_step_only_steps_one_instruction_with_s(self):

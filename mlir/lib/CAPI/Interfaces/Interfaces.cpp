@@ -46,7 +46,7 @@ MlirLogicalResult mlirInferTypeOpInterfaceInferReturnTypes(
   if (!info)
     return mlirLogicalResultFailure();
 
-  llvm::Optional<Location> maybeLocation = llvm::None;
+  llvm::Optional<Location> maybeLocation;
   if (!mlirLocationIsNull(location))
     maybeLocation = unwrap(location);
   SmallVector<Value> unwrappedOperands;

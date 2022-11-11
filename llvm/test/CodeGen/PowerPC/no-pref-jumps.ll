@@ -22,11 +22,11 @@ entry:
 ; CHECK: blr
 
 if.then:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @bar to void ()*)() #0
+  tail call void @bar() #0
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @car to void ()*)() #0
+  tail call void @car() #0
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

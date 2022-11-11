@@ -79,7 +79,7 @@ InterfaceVarABIAttr getInterfaceVarABIAttr(unsigned descriptorSet,
                                            MLIRContext *context);
 
 /// Returns whether the given SPIR-V target (described by TargetEnvAttr) needs
-/// ABI attributes for interface variables (spv.interface_var_abi).
+/// ABI attributes for interface variables (spirv.interface_var_abi).
 bool needsInterfaceVarABIAttrs(TargetEnvAttr targetAttr);
 
 /// Returns the attribute name for specifying entry point information.

@@ -54,7 +54,7 @@ namespace noex {
 
   struct A {};
 
-  void g1() noexcept(A());     // expected-error {{value of type 'noex::A' is not implicitly convertible to 'bool'}}
+  void g1() noexcept(A());     // expected-error {{value of type 'A' is not implicitly convertible to 'bool'}}
   void g2(bool b) noexcept(b); // expected-error {{noexcept specifier argument is not a constant expression}} expected-note {{function parameter 'b' with unknown value}} expected-note {{here}}
 }
 

@@ -17,6 +17,6 @@ define void @a() {
 entry:
   %b = alloca i16, align 2
   %0 = call i16 asm "", "={k6},~{dirflag},~{fpsr},~{flags}"() #1
-  store i16 %0, i16* %b, align 2
+  store i16 %0, ptr %b, align 2
   ret void
 }

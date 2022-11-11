@@ -11,7 +11,7 @@
 
 void test_vsm3partw1(uint32x4_t a, uint32x4_t b, uint32x4_t c) {
   // CHECK-LABEL: @test_vsm3partw1(
-  // CHECK-NO-CRYPTO: warning: call to undeclared function 'vsm3partw1q_u32'
+  // CHECK-NO-CRYPTO: error: always_inline function 'vsm3partw1q_u32' requires target feature 'sm4'
   // CHECK: call <4 x i32> @llvm.aarch64.crypto.sm3partw1
   uint32x4_t result = vsm3partw1q_u32(a, b, c);
 }

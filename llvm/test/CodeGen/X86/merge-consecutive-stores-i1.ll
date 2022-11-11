@@ -9,7 +9,7 @@
 
 define void @foo() {
 entry:
-  store i1 0, i1* getelementptr inbounds (%struct.X, %struct.X* @b, i64 0, i32 0), align 4
-  store i1 0, i1* getelementptr inbounds (%struct.X, %struct.X* @b, i64 0, i32 1), align 1
+  store i1 0, ptr @b, align 4
+  store i1 0, ptr getelementptr inbounds (%struct.X, ptr @b, i64 0, i32 1), align 1
   ret void
 }

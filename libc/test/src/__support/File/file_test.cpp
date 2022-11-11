@@ -26,7 +26,7 @@ class StringFile : public __llvm_libc::File {
 
   static size_t str_read(__llvm_libc::File *f, void *data, size_t len);
   static size_t str_write(__llvm_libc::File *f, const void *data, size_t len);
-  static int str_seek(__llvm_libc::File *f, long offset, int whence);
+  static long str_seek(__llvm_libc::File *f, long offset, int whence);
   static int str_close(__llvm_libc::File *f) { return 0; }
   static int str_flush(__llvm_libc::File *f) { return 0; }
 
@@ -94,7 +94,7 @@ size_t StringFile::str_write(__llvm_libc::File *f, const void *data,
   return i;
 }
 
-int StringFile::str_seek(__llvm_libc::File *f, long offset, int whence) {
+long StringFile::str_seek(__llvm_libc::File *f, long offset, int whence) {
   StringFile *sf = static_cast<StringFile *>(f);
   if (whence == SEEK_SET)
     sf->pos = offset;
@@ -102,7 +102,7 @@ int StringFile::str_seek(__llvm_libc::File *f, long offset, int whence) {
     sf->pos += offset;
   if (whence == SEEK_END)
     sf->pos = SIZE + offset;
-  return 0;
+  return sf->pos;
 }
 
 StringFile *new_string_file(char *buffer, size_t buflen, int bufmode,
@@ -453,6 +453,33 @@ TEST(LlvmLibcFileTest, ZeroLengthBuffer) {
   ASSERT_STREQ(f_fbf->get_str(), WRITE_DATA);
   ASSERT_STREQ(f_lbf->get_str(), WRITE_DATA);
   ASSERT_STREQ(f_nbf->get_str(), WRITE_DATA);
+
+  ASSERT_EQ(f_fbf->close(), 0);
+  ASSERT_EQ(f_lbf->close(), 0);
+  ASSERT_EQ(f_nbf->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, WriteNothing) {
+  const char WRITE_DATA[] = "";
+  constexpr size_t WRITE_SIZE = 0;
+  constexpr size_t FILE_BUFFER_SIZE = 5;
+  char file_buffer_fbf[FILE_BUFFER_SIZE];
+  char file_buffer_lbf[FILE_BUFFER_SIZE];
+  char file_buffer_nbf[FILE_BUFFER_SIZE];
+  StringFile *f_fbf =
+      new_string_file(file_buffer_fbf, FILE_BUFFER_SIZE, _IOFBF, false, "w");
+  StringFile *f_lbf =
+      new_string_file(file_buffer_lbf, FILE_BUFFER_SIZE, _IOLBF, false, "w");
+  StringFile *f_nbf =
+      new_string_file(file_buffer_nbf, FILE_BUFFER_SIZE, _IONBF, false, "w");
+
+  ASSERT_EQ(WRITE_SIZE, f_fbf->write(WRITE_DATA, WRITE_SIZE));
+  ASSERT_EQ(WRITE_SIZE, f_lbf->write(WRITE_DATA, WRITE_SIZE));
+  ASSERT_EQ(WRITE_SIZE, f_nbf->write(WRITE_DATA, WRITE_SIZE));
+
+  ASSERT_FALSE(f_fbf->error_unlocked());
+  ASSERT_FALSE(f_lbf->error_unlocked());
+  ASSERT_FALSE(f_nbf->error_unlocked());
 
   ASSERT_EQ(f_fbf->close(), 0);
   ASSERT_EQ(f_lbf->close(), 0);

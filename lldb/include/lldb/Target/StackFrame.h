@@ -202,7 +202,7 @@ public:
   ///   frames may be unable to provide this value; they will return false.
   bool GetFrameBaseValue(Scalar &value, Status *error_ptr);
 
-  /// Get the DWARFExpression corresponding to the Canonical Frame Address.
+  /// Get the DWARFExpressionList corresponding to the Canonical Frame Address.
   ///
   /// Often a register (bp), but sometimes a register + offset.
   ///
@@ -212,7 +212,7 @@ public:
   ///
   /// \return
   ///   Returns the corresponding DWARF expression, or NULL.
-  DWARFExpression *GetFrameBaseExpression(Status *error_ptr);
+  DWARFExpressionList *GetFrameBaseExpression(Status *error_ptr);
 
   /// Get the current lexical scope block for this StackFrame, if possible.
   ///
@@ -254,9 +254,14 @@ public:
   ///     that are visible to the entire compilation unit (e.g. file
   ///     static in C, globals that are homed in this CU).
   ///
+  /// \param [out] error_ptr
+  ///   If there is an error in the debug information that prevents variables
+  ///   from being fetched. \see SymbolFile::GetFrameVariableError() for full
+  ///   details.
+  ///
   /// \return
   ///     A pointer to a list of variables.
-  VariableList *GetVariableList(bool get_file_globals);
+  VariableList *GetVariableList(bool get_file_globals, Status *error_ptr);
 
   /// Retrieve the list of variables that are in scope at this StackFrame's
   /// pc.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-pc-win32 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-win32 -emit-llvm %s -o - | FileCheck %s
 
 // PR15768
 
@@ -19,9 +19,9 @@ S C::variadic_sret(const char *f, ...) { return S(); }
 S C::cdecl_sret() { return S(); }
 S C::byval_and_sret(S a) { return S(); }
 
-// CHECK: define dso_local void @"?variadic_sret@C@@QAA?AUS@@PBDZZ"(%struct.C* {{[^,]*}} %this, %struct.S* noalias sret(%struct.S) align 4 %agg.result, i8* noundef %f, ...)
-// CHECK: define dso_local void @"?cdecl_sret@C@@QAA?AUS@@XZ"(%struct.C* {{[^,]*}} %this, %struct.S* noalias sret(%struct.S) align 4 %agg.result)
-// CHECK: define dso_local void @"?byval_and_sret@C@@QAA?AUS@@U2@@Z"(%struct.C* {{[^,]*}} %this, %struct.S* noalias sret(%struct.S) align 4 %agg.result, %struct.S* noundef byval(%struct.S) align 4 %a)
+// CHECK: define dso_local void @"?variadic_sret@C@@QAA?AUS@@PBDZZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.S) align 4 %agg.result, ptr noundef %f, ...)
+// CHECK: define dso_local void @"?cdecl_sret@C@@QAA?AUS@@XZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.S) align 4 %agg.result)
+// CHECK: define dso_local void @"?byval_and_sret@C@@QAA?AUS@@U2@@Z"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.S) align 4 %agg.result, ptr noundef byval(%struct.S) align 4 %a)
 
 int main() {
   C c;
@@ -41,4 +41,4 @@ struct A {
 S A::f(int x) {
   return S();
 }
-// CHECK-LABEL: define dso_local x86_fastcallcc void @"?f@A@@QAI?AUS@@H@Z"(%struct.A* inreg noundef nonnull align 1 dereferenceable(1) %this, %struct.S* inreg noalias sret(%struct.S) align 4 %agg.result, i32 noundef %x)
+// CHECK-LABEL: define dso_local x86_fastcallcc void @"?f@A@@QAI?AUS@@H@Z"(ptr inreg noundef nonnull align 1 dereferenceable(1) %this, ptr inreg noalias sret(%struct.S) align 4 %agg.result, i32 noundef %x)

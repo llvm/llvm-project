@@ -16,6 +16,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <cstddef>
 #include <memory>
 
 // check that std::allocation_result exists and isn't restricted to pointers

@@ -91,7 +91,7 @@ Location FusedLoc::get(ArrayRef<Location> locs, Attribute metadata,
   for (auto loc : locs) {
     // If the location is a fused location we decompose it if it has no
     // metadata or the metadata is the same as the top level metadata.
-    if (auto fusedLoc = loc.dyn_cast<FusedLoc>()) {
+    if (auto fusedLoc = llvm::dyn_cast<FusedLoc>(loc)) {
       if (fusedLoc.getMetadata() == metadata) {
         // UnknownLoc's have already been removed from FusedLocs so we can
         // simply add all of the internal locations.

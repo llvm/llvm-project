@@ -12,8 +12,8 @@
 ; the past as we no longer need to restore the TOC pointer into R2 after
 ; most calls.
 
-@Func = external local_unnamed_addr global i32 (...)*, align 8
-@FuncLocal = common dso_local local_unnamed_addr global i32 (...)* null, align 8
+@Func = external local_unnamed_addr global ptr, align 8
+@FuncLocal = common dso_local local_unnamed_addr global ptr null, align 8
 
 ; No calls in this function but we assign the function pointers.
 define dso_local void @AssignFuncPtr() local_unnamed_addr {
@@ -25,8 +25,8 @@ define dso_local void @AssignFuncPtr() local_unnamed_addr {
 ; CHECK-NEXT:    pstd r4, FuncLocal@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i32 (...)* @Function, i32 (...)** @Func, align 8
-  store i32 (...)* @Function, i32 (...)** @FuncLocal, align 8
+  store ptr @Function, ptr @Func, align 8
+  store ptr @Function, ptr @FuncLocal, align 8
   ret void
 }
 
@@ -40,7 +40,7 @@ define dso_local void @TailCallLocalFuncPtr() local_unnamed_addr {
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:    #TC_RETURNr8 ctr 0
 entry:
-  %0 = load i32 ()*, i32 ()** bitcast (i32 (...)** @FuncLocal to i32 ()**), align 8
+  %0 = load ptr, ptr @FuncLocal, align 8
   %call = tail call signext i32 %0()
   ret void
 }
@@ -56,12 +56,12 @@ define dso_local void @TailCallExtrnFuncPtr() local_unnamed_addr {
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:    #TC_RETURNr8 ctr 0
 entry:
-  %0 = load i32 ()*, i32 ()** bitcast (i32 (...)** @Func to i32 ()**), align 8
+  %0 = load ptr, ptr @Func, align 8
   %call = tail call signext i32 %0()
   ret void
 }
 
-define dso_local signext i32 @TailCallParamFuncPtr(i32 (...)* nocapture %passedfunc) local_unnamed_addr {
+define dso_local signext i32 @TailCallParamFuncPtr(ptr nocapture %passedfunc) local_unnamed_addr {
 ; CHECK-LABEL: TailCallParamFuncPtr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtctr r3
@@ -69,12 +69,11 @@ define dso_local signext i32 @TailCallParamFuncPtr(i32 (...)* nocapture %passedf
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:    #TC_RETURNr8 ctr 0
 entry:
-  %callee.knr.cast = bitcast i32 (...)* %passedfunc to i32 ()*
-  %call = tail call signext i32 %callee.knr.cast()
+  %call = tail call signext i32 %passedfunc()
   ret i32 %call
 }
 
-define dso_local signext i32 @NoTailIndirectCall(i32 (...)* nocapture %passedfunc, i32 signext %a) local_unnamed_addr {
+define dso_local signext i32 @NoTailIndirectCall(ptr nocapture %passedfunc, i32 signext %a) local_unnamed_addr {
 ; CHECK-LABEL: NoTailIndirectCall:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
@@ -96,8 +95,7 @@ define dso_local signext i32 @NoTailIndirectCall(i32 (...)* nocapture %passedfun
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
-  %callee.knr.cast = bitcast i32 (...)* %passedfunc to i32 ()*
-  %call = tail call signext i32 %callee.knr.cast()
+  %call = tail call signext i32 %passedfunc()
   %add = add nsw i32 %call, %a
   ret i32 %add
 }
@@ -108,7 +106,7 @@ define dso_local signext i32 @TailCallDirect() local_unnamed_addr {
 ; CHECK-NEXT:    b Function@notoc
 ; CHECK-NEXT:    #TC_RETURNd8 Function@notoc 0
 entry:
-  %call = tail call signext i32 bitcast (i32 (...)* @Function to i32 ()*)()
+  %call = tail call signext i32 @Function()
   ret i32 %call
 }
 
@@ -132,7 +130,7 @@ define dso_local signext i32 @NoTailCallDirect(i32 signext %a) local_unnamed_add
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
-  %call = tail call signext i32 bitcast (i32 (...)* @Function to i32 ()*)()
+  %call = tail call signext i32 @Function()
   %add = add nsw i32 %call, %a
   ret i32 %add
 }
@@ -181,7 +179,7 @@ define dso_local signext i32 @TailCallAbs() local_unnamed_addr {
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:    #TC_RETURNr8 ctr 0
 entry:
-  %call = tail call signext i32 inttoptr (i64 400 to i32 ()*)()
+  %call = tail call signext i32 inttoptr (i64 400 to ptr)()
   ret i32 %call
 }
 
@@ -208,7 +206,7 @@ define dso_local signext i32 @NoTailCallAbs(i32 signext %a) local_unnamed_addr {
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
-  %call = tail call signext i32 inttoptr (i64 400 to i32 ()*)()
+  %call = tail call signext i32 inttoptr (i64 400 to ptr)()
   %add = add nsw i32 %call, %a
   ret i32 %add
 }

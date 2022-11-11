@@ -1,5 +1,6 @@
 include(CheckLibraryExists)
 include(GNUInstallDirs)
+include(ExtendPath)
 
 string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 
@@ -41,13 +42,13 @@ target_link_libraries(libgcc_s PRIVATE
   c
 )
 
-get_filename_component(LLVM_LIBGCC_LIBUNWIND_STATIC_ROOT "${CMAKE_INSTALL_PREFIX}/${LIBUNWIND_INSTALL_LIBRARY_DIR}" ABSOLUTE)
+extend_path(LLVM_LIBGCC_LIBUNWIND_STATIC_ROOT "${CMAKE_INSTALL_PREFIX}" "${LIBUNWIND_INSTALL_LIBRARY_DIR}")
 #string(REPLACE "${CMAKE_INSTALL_FULL_LIBDIR}/" "" LLVM_LIBGCC_LIBUNWIND_STATIC_ROOT "${LLVM_LIBGCC_LIBUNWIND_STATIC_ROOT}")
 
 install(TARGETS libgcc_s
         LIBRARY DESTINATION "${LLVM_LIBGCC_LIBUNWIND_STATIC_ROOT}" COMPONENT unwind
         ARCHIVE DESTINATION "${LLVM_LIBGCC_LIBUNWIND_STATIC_ROOT}" COMPONENT unwind
-        RUNTIME DESTINATION bin COMPONENT unwind)
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT unwind)
 
 get_compiler_rt_install_dir(${LLVM_LIBGCC_TARGET_ARCH} install_dir_builtins)
 string(REGEX REPLACE "^lib/" "" install_dir_builtins "${install_dir_builtins}")

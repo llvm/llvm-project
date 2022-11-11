@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -Wauto-import -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -I %S/Inputs/Conflicts %s -verify
+// RUN: %clang_cc1 -Rmodule-include-translation -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -I %S/Inputs/Conflicts %s -verify
 
 @import Conflicts;
 

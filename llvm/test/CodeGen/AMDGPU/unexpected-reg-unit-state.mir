@@ -14,13 +14,14 @@ body:             |
 
     ; CHECK-LABEL: name: bar
     ; CHECK: liveins: $vgpr0
-    ; CHECK: V_CMP_NE_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
-    ; CHECK: renamable $sgpr4_sgpr5 = COPY $vcc
-    ; CHECK: SI_SPILL_S64_SAVE $sgpr4_sgpr5, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
-    ; CHECK: renamable $sgpr4_sgpr5 = COPY $vcc
-    ; CHECK: $vcc = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.0, align 4, addrspace 5)
-    ; CHECK: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, 3, killed $sgpr4_sgpr5, implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit killed $vgpr0, implicit killed renamable $vcc
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: V_CMP_NE_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
+    ; CHECK-NEXT: renamable $sgpr4_sgpr5 = COPY $vcc
+    ; CHECK-NEXT: SI_SPILL_S64_SAVE $sgpr4_sgpr5, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: renamable $sgpr4_sgpr5 = COPY $vcc
+    ; CHECK-NEXT: $vcc = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, 3, killed $sgpr4_sgpr5, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit killed $vgpr0, implicit killed renamable $vcc
     %0:vgpr_32 = COPY $vgpr0
     V_CMP_NE_U32_e32 0, %0, implicit-def $vcc, implicit $exec
     %3:sreg_64_xexec = COPY $vcc

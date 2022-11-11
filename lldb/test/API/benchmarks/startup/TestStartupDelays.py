@@ -1,8 +1,5 @@
 """Test lldb's startup delays creating a target, setting a breakpoint, and run to breakpoint stop."""
 
-from __future__ import print_function
-
-
 import sys
 import lldb
 from lldbsuite.test import configuration
@@ -12,8 +9,6 @@ from lldbsuite.test.lldbbench import *
 
 
 class StartupDelaysBench(BenchBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         BenchBase.setUp(self)

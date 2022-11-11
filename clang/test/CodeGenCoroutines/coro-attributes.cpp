@@ -14,7 +14,9 @@ struct coro {
 };
 
 // CHECK: void @_Z3foov() #[[FOO_ATTR_NUM:[0-9]+]]
+// CHECK: declare token @llvm.coro.save(ptr) #[[SAVE_ATTR_NUM:[0-9]+]]
 // CHECK: attributes #[[FOO_ATTR_NUM]] = { {{.*}} presplitcoroutine
+// CHECK: attributes #[[SAVE_ATTR_NUM]] = { {{.*}}nomerge
 coro foo() {
   co_await suspend_always{};
 }

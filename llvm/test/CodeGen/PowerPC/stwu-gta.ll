@@ -8,8 +8,8 @@ target triple = "powerpc-unknown-linux"
 
 define void @_GLOBAL__I_a() nounwind section ".text.startup" {
 entry:
-  store i32 5, i32* getelementptr inbounds (%class.Two.0.5, %class.Two.0.5* @foo, i32 0, i32 0), align 4
-  store i32 6, i32* getelementptr inbounds (%class.Two.0.5, %class.Two.0.5* @foo, i32 0, i32 1), align 4
+  store i32 5, ptr @foo, align 4
+  store i32 6, ptr getelementptr inbounds (%class.Two.0.5, ptr @foo, i32 0, i32 1), align 4
   ret void
 }
 

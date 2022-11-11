@@ -23,7 +23,7 @@ $_ZN1AC2Eb = comdat any
 
 @g_a = dso_local global %class.A zeroinitializer, align 1
 @g_b = dso_local global %class.A zeroinitializer, align 1
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_symcollision.cc, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_symcollision.cc, ptr null }]
 
 define internal fastcc void @__cxx_global_var_init() unnamed_addr section ".text.startup" {
 entry:
@@ -36,20 +36,20 @@ cond.true:                                        ; preds = %entry
 
 cond.end:                                         ; preds = %entry, %cond.true
   %cond = phi i1 [ %call1, %cond.true ], [ false, %entry ]
-  call void @_ZN1AC2Eb(%class.A* nonnull @g_a, i1 zeroext %cond)
+  call void @_ZN1AC2Eb(ptr nonnull @g_a, i1 zeroext %cond)
   ret void
 }
 
 declare dso_local zeroext i1 @_Z3bari(i32) local_unnamed_addr
 
-define linkonce_odr dso_local void @_ZN1AC2Eb(%class.A* %this, i1 zeroext %a) unnamed_addr comdat align 2 {
+define linkonce_odr dso_local void @_ZN1AC2Eb(ptr %this, i1 zeroext %a) unnamed_addr comdat align 2 {
 entry:
   ret void
 }
 
 define internal fastcc void @__cxx_global_var_init.1() unnamed_addr  section ".text.startup" {
 entry:
-  call void @_ZN1AC2Eb(%class.A* nonnull @g_b, i1 zeroext true)
+  call void @_ZN1AC2Eb(ptr nonnull @g_b, i1 zeroext true)
   ret void
 }
 

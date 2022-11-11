@@ -265,8 +265,7 @@ bool CodeCoverageTool::isEquivalentFile(StringRef FilePath1,
                                         StringRef FilePath2) {
   auto Status1 = getFileStatus(FilePath1);
   auto Status2 = getFileStatus(FilePath2);
-  return Status1.hasValue() && Status2.hasValue() &&
-         sys::fs::equivalent(Status1.getValue(), Status2.getValue());
+  return Status1 && Status2 && sys::fs::equivalent(*Status1, *Status2);
 }
 
 ErrorOr<const MemoryBuffer &>
@@ -437,8 +436,7 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
       CoverageMapping::load(ObjectFilenames, PGOFilename, CoverageArches,
                             ViewOpts.CompilationDirectory);
   if (Error E = CoverageOrErr.takeError()) {
-    error("Failed to load coverage: " + toString(std::move(E)),
-          join(ObjectFilenames.begin(), ObjectFilenames.end(), ", "));
+    error("Failed to load coverage: " + toString(std::move(E)));
     return nullptr;
   }
   auto Coverage = std::move(CoverageOrErr.get());
@@ -673,13 +671,6 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
                "file"),
       cl::cat(FilteringCategory));
 
-  // Allow for accepting previous option name.
-  cl::list<std::string> NameFilterFilesDeprecated(
-      "name-whitelist", cl::Optional, cl::Hidden,
-      cl::desc("Show code coverage only for functions listed in the given "
-               "file. Deprecated, use -name-allowlist instead"),
-      cl::cat(FilteringCategory));
-
   cl::list<std::string> NameRegexFilters(
       "name-regex", cl::Optional,
       cl::desc("Show code coverage only for functions that match the given "
@@ -817,16 +808,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     }
 
     // Read in -name-allowlist files.
-    if (!NameFilterFiles.empty() || !NameFilterFilesDeprecated.empty()) {
+    if (!NameFilterFiles.empty()) {
       std::string SpecialCaseListErr;
-      if (!NameFilterFiles.empty())
-        NameAllowlist = SpecialCaseList::create(
-            NameFilterFiles, *vfs::getRealFileSystem(), SpecialCaseListErr);
-      if (!NameFilterFilesDeprecated.empty())
-        NameAllowlist = SpecialCaseList::create(NameFilterFilesDeprecated,
-                                                *vfs::getRealFileSystem(),
-                                                SpecialCaseListErr);
-
+      NameAllowlist = SpecialCaseList::create(
+          NameFilterFiles, *vfs::getRealFileSystem(), SpecialCaseListErr);
       if (!NameAllowlist)
         error(SpecialCaseListErr);
     }
@@ -836,14 +821,9 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       auto NameFilterer = std::make_unique<CoverageFilters>();
       for (const auto &Name : NameFilters)
         NameFilterer->push_back(std::make_unique<NameCoverageFilter>(Name));
-      if (NameAllowlist) {
-        if (!NameFilterFiles.empty())
-          NameFilterer->push_back(
-              std::make_unique<NameAllowlistCoverageFilter>(*NameAllowlist));
-        if (!NameFilterFilesDeprecated.empty())
-          NameFilterer->push_back(
-              std::make_unique<NameWhitelistCoverageFilter>(*NameAllowlist));
-      }
+      if (NameAllowlist && !NameFilterFiles.empty())
+        NameFilterer->push_back(
+            std::make_unique<NameAllowlistCoverageFilter>(*NameAllowlist));
       for (const auto &Regex : NameRegexFilters)
         NameFilterer->push_back(
             std::make_unique<NameRegexCoverageFilter>(Regex));
@@ -1054,7 +1034,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
 
   sys::fs::file_status Status;
   if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("Could not read profile data!", EC.message());
+    error("Could not read profile data!" + EC.message(), PGOFilename);
     return 1;
   }
 
@@ -1171,6 +1151,12 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
     return 1;
   }
 
+  sys::fs::file_status Status;
+  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
+    error("Could not read profile data!" + EC.message(), PGOFilename);
+    return 1;
+  }
+
   auto Coverage = load();
   if (!Coverage)
     return 1;
@@ -1206,17 +1192,28 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
                               cl::desc("Don't export per-function data"),
                               cl::cat(ExportCategory));
 
+  cl::opt<bool> SkipBranches("skip-branches", cl::Optional,
+                              cl::desc("Don't export branch data (LCOV)"),
+                              cl::cat(ExportCategory));
+
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
 
   ViewOpts.SkipExpansions = SkipExpansions;
   ViewOpts.SkipFunctions = SkipFunctions;
+  ViewOpts.SkipBranches = SkipBranches;
 
   if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text &&
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {
     error("Coverage data can only be exported as textual JSON or an "
           "lcov tracefile.");
+    return 1;
+  }
+
+  sys::fs::file_status Status;
+  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
+    error("Could not read profile data!" + EC.message(), PGOFilename);
     return 1;
   }
 

@@ -16,18 +16,22 @@ using namespace llvm;
 namespace {
 
 #define EXPECT_VTY_EQ(LHS, RHS)                                                \
-  ASSERT_NE(LHS, nullptr) << #LHS << " must not be null";                      \
-  ASSERT_NE(RHS, nullptr) << #RHS << " must not be null";                      \
-  EXPECT_EQ(LHS, RHS) << "Expect that " << #LHS << " == " << #RHS << " where " \
-                      << #LHS << " = " << *LHS << " and " << #RHS << " = "     \
-                      << *RHS;
+  do {                                                                         \
+    ASSERT_NE(LHS, nullptr) << #LHS << " must not be null";                    \
+    ASSERT_NE(RHS, nullptr) << #RHS << " must not be null";                    \
+    EXPECT_EQ(LHS, RHS) << "Expect that " << #LHS << " == " << #RHS            \
+                        << " where " << #LHS << " = " << *LHS << " and "       \
+                        << #RHS << " = " << *RHS;                              \
+  } while (false)
 
 #define EXPECT_VTY_NE(LHS, RHS)                                                \
-  ASSERT_NE(LHS, nullptr) << #LHS << " must not be null";                      \
-  ASSERT_NE(RHS, nullptr) << #RHS << " must not be null";                      \
-  EXPECT_NE(LHS, RHS) << "Expect that " << #LHS << " != " << #RHS << " where " \
-                      << #LHS << " = " << *LHS << " and " << #RHS << " = "     \
-                      << *RHS;
+  do {                                                                         \
+    ASSERT_NE(LHS, nullptr) << #LHS << " must not be null";                    \
+    ASSERT_NE(RHS, nullptr) << #RHS << " must not be null";                    \
+    EXPECT_NE(LHS, RHS) << "Expect that " << #LHS << " != " << #RHS            \
+                        << " where " << #LHS << " = " << *LHS << " and "       \
+                        << #RHS << " = " << *RHS;                              \
+  } while (false)
 
 TEST(VectorTypesTest, FixedLength) {
   LLVMContext Ctx;

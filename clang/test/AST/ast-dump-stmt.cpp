@@ -99,8 +99,8 @@ void TestUnionInitList()
   U us[3] = {1};
 // CHECK: VarDecl {{.+}} <col:3, col:15> col:5 us 'U[3]' cinit
 // CHECK-NEXT: `-InitListExpr {{.+}} <col:13, col:15> 'U[3]'
-// CHECK-NEXT:   |-array_filler: InitListExpr {{.+}} <col:15> 'U' field Field {{.+}} 'i' 'int'
-// CHECK-NEXT:   `-InitListExpr {{.+}} <col:14> 'U' field Field {{.+}} 'i' 'int'
+// CHECK-NEXT:   |-array_filler: InitListExpr {{.+}} <col:15> 'U':'U' field Field {{.+}} 'i' 'int'
+// CHECK-NEXT:   `-InitListExpr {{.+}} <col:14> 'U':'U' field Field {{.+}} 'i' 'int'
 // CHECK-NEXT:     `-IntegerLiteral {{.+}} <col:14> 'int' 1
 }
 
@@ -229,19 +229,19 @@ void TestIteration() {
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:16> col:16 implicit used __range1 'Container &' cinit
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:16> 'Container' lvalue Var 0x{{[^ ]*}} 'C' 'Container'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:16> 'Container':'Container' lvalue Var 0x{{[^ ]*}} 'C' 'Container':'Container'
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:14> col:14 implicit used __begin1 'int *':'int *' cinit
   // CHECK-NEXT: CXXMemberCallExpr 0x{{[^ ]*}} <col:14> 'int *'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:14> '<bound member function type>' .begin 0x{{[^ ]*}}
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'Container' lvalue Var 0x{{[^ ]*}} '__range1' 'Container &'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'Container':'Container' lvalue Var 0x{{[^ ]*}} '__range1' 'Container &'
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:14> col:14 implicit used __end1 'int *':'int *' cinit
   // CHECK-NEXT: CXXMemberCallExpr 0x{{[^ ]*}} <col:14> 'int *'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:14> '<bound member function type>' .end 0x{{[^ ]*}}
   // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'Container' lvalue Var 0x{{[^ ]*}} '__range1' 'Container &'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'Container':'Container' lvalue Var 0x{{[^ ]*}} '__range1' 'Container &'
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:14> 'bool' '!='
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *':'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *':'int *'

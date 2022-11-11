@@ -213,7 +213,7 @@ define double @test10(double %x) nounwind  {
 
 declare double @trunc(double) nounwind readnone
 
-define float @test11(float* %xptr) nounwind optsize {
+define float @test11(ptr %xptr) nounwind optsize {
 ; CHECK-SSE-LABEL: test11:
 ; CHECK-SSE:       ## %bb.0:
 ; CHECK-SSE-NEXT:    roundss $11, (%rdi), %xmm0
@@ -228,12 +228,12 @@ define float @test11(float* %xptr) nounwind optsize {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundss $11, (%rdi), %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %x = load float, float* %xptr
+  %x = load float, ptr %xptr
   %call = tail call float @truncf(float %x) nounwind readnone
   ret float %call
 }
 
-define double @test12(double* %xptr) nounwind optsize {
+define double @test12(ptr %xptr) nounwind optsize {
 ; CHECK-SSE-LABEL: test12:
 ; CHECK-SSE:       ## %bb.0:
 ; CHECK-SSE-NEXT:    roundsd $11, (%rdi), %xmm0
@@ -248,12 +248,12 @@ define double @test12(double* %xptr) nounwind optsize {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundsd $11, (%rdi), %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %x = load double, double* %xptr
+  %x = load double, ptr %xptr
   %call = tail call double @trunc(double %x) nounwind readnone
   ret double %call
 }
 
-define float @test11_pgso(float* %xptr) nounwind !prof !14 {
+define float @test11_pgso(ptr %xptr) nounwind !prof !14 {
 ; CHECK-SSE-LABEL: test11_pgso:
 ; CHECK-SSE:       ## %bb.0:
 ; CHECK-SSE-NEXT:    roundss $11, (%rdi), %xmm0
@@ -268,12 +268,12 @@ define float @test11_pgso(float* %xptr) nounwind !prof !14 {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundss $11, (%rdi), %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %x = load float, float* %xptr
+  %x = load float, ptr %xptr
   %call = tail call float @truncf(float %x) nounwind readnone
   ret float %call
 }
 
-define double @test12_pgso(double* %xptr) nounwind !prof !14 {
+define double @test12_pgso(ptr %xptr) nounwind !prof !14 {
 ; CHECK-SSE-LABEL: test12_pgso:
 ; CHECK-SSE:       ## %bb.0:
 ; CHECK-SSE-NEXT:    roundsd $11, (%rdi), %xmm0
@@ -288,7 +288,7 @@ define double @test12_pgso(double* %xptr) nounwind !prof !14 {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundsd $11, (%rdi), %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %x = load double, double* %xptr
+  %x = load double, ptr %xptr
   %call = tail call double @trunc(double %x) nounwind readnone
   ret double %call
 }

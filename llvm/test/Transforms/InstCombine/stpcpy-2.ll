@@ -8,15 +8,13 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @hello = constant [6 x i8] c"hello\00"
 @a = common global [32 x i8] zeroinitializer, align 1
 
-declare i16* @stpcpy(i8*, i8*)
+declare i16 @stpcpy(ptr, ptr)
 
 define void @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
 
-  %dst = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0
-  %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
 
-  call i16* @stpcpy(i8* %dst, i8* %src)
-; CHECK: call i16* @stpcpy
+  call i16 @stpcpy(ptr @a, ptr @hello)
+; CHECK: call i16 @stpcpy
   ret void
 }

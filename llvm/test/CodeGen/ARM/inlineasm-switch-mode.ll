@@ -1,4 +1,4 @@
-;RUN: llc -mtriple=thumbv7-linux-gnueabi < %s | llvm-mc -triple=thumbv7-linux-gnueabi -filetype=obj | llvm-objdump -d - | FileCheck %s
+;RUN: llc -mtriple=thumbv7-linux-gnueabi < %s | llvm-mc -triple=thumbv7-linux-gnueabi -filetype=obj | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 define hidden i32 @bah(i8* %start) #0 align 2 {
   %1 = ptrtoint i8* %start to i32
@@ -8,6 +8,6 @@ define hidden i32 @bah(i8* %start) #0 align 2 {
 }
 
 ; CHECK: $a{{.*}}:
-; CHECK-NEXT: 04 70 2d e5     str     r7, [sp, #-4]!
+; CHECK-NEXT: e52d7004        str     r7, [sp, #-4]!
 ; CHECK: $t{{.*}}:
-; CHECK-NEXT: 48 1c   adds    r0, r1, #1
+; CHECK-NEXT: 1c48    adds    r0, r1, #1

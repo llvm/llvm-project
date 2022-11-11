@@ -44,6 +44,6 @@ private:
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
 };
-} // namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_MCTARGETDESC_LOONGARCHINSTPRINTER_H

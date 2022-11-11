@@ -4,31 +4,31 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
-define i32 @foo1(i32* align 32 %a) #0 {
+define i32 @foo1(ptr align 32 %a) #0 {
 ; CHECK-LABEL: @foo1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A:%.*]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A:%.*]], align 32
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   ret i32 %0
 
 }
 
-define i32 @foo2(i32* align 32 %a) #0 {
+define i32 @foo2(ptr align 32 %a) #0 {
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V:%.*]] = call i32* @func1(i32* [[A:%.*]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 32
+; CHECK-NEXT:    [[V:%.*]] = call ptr @func1(ptr [[A:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 32
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  %v = call i32* @func1(i32* %a)
-  %0 = load i32, i32* %v, align 4
+  %v = call ptr @func1(ptr %a)
+  %0 = load i32, ptr %v, align 4
   ret i32 %0
 
 }
 
-declare i32* @func1(i32* returned) nounwind
+declare ptr @func1(ptr returned) nounwind
 

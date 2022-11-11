@@ -47,12 +47,10 @@ define i32 @test3(i32 %a, i32 %b) nounwind readnone {
   ret i32 %t3
 }
 
-; TODO this should optimize but doesn't due to missing vector support in InstCombiner::foldICmpEquality.
 define <2 x i32> @test3vec(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
 ; CHECK-LABEL: @test3vec(
-; CHECK-NEXT:    [[T0:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T0]], [[T1]]
+; CHECK-NEXT:    [[T2_UNSHIFTED:%.*]] = xor <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp sgt <2 x i32> [[T2_UNSHIFTED]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[T2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
@@ -65,9 +63,8 @@ define <2 x i32> @test3vec(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
 
 define <2 x i32> @test3vec_undef1(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
 ; CHECK-LABEL: @test3vec_undef1(
-; CHECK-NEXT:    [[T0:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 24, i32 undef>
-; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 24, i32 24>
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T0]], [[T1]]
+; CHECK-NEXT:    [[T2_UNSHIFTED:%.*]] = xor <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp ult <2 x i32> [[T2_UNSHIFTED]], <i32 16777216, i32 16777216>
 ; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[T2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
@@ -80,9 +77,8 @@ define <2 x i32> @test3vec_undef1(<2 x i32> %a, <2 x i32> %b) nounwind readnone 
 
 define <2 x i32> @test3vec_undef2(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
 ; CHECK-LABEL: @test3vec_undef2(
-; CHECK-NEXT:    [[T0:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 undef, i32 17>
-; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 undef, i32 17>
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T0]], [[T1]]
+; CHECK-NEXT:    [[T2_UNSHIFTED:%.*]] = xor <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp ult <2 x i32> [[T2_UNSHIFTED]], <i32 131072, i32 131072>
 ; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[T2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
@@ -223,19 +219,19 @@ define i1 @shift_trunc_signbit_test(i32 %x) {
   ret i1 %r
 }
 
-define <2 x i1> @shift_trunc_signbit_test_vec_uses(<2 x i17> %x, <2 x i17>* %p1, <2 x i13>* %p2) {
+define <2 x i1> @shift_trunc_signbit_test_vec_uses(<2 x i17> %x, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @shift_trunc_signbit_test_vec_uses(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i17> [[X:%.*]], <i17 4, i17 4>
-; CHECK-NEXT:    store <2 x i17> [[SH]], <2 x i17>* [[P1:%.*]], align 8
+; CHECK-NEXT:    store <2 x i17> [[SH]], ptr [[P1:%.*]], align 8
 ; CHECK-NEXT:    [[TR:%.*]] = trunc <2 x i17> [[SH]] to <2 x i13>
-; CHECK-NEXT:    store <2 x i13> [[TR]], <2 x i13>* [[P2:%.*]], align 4
+; CHECK-NEXT:    store <2 x i13> [[TR]], ptr [[P2:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i17> [[X]], <i17 -1, i17 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %sh = lshr <2 x i17> %x, <i17 4, i17 4>
-  store <2 x i17> %sh, <2 x i17>* %p1
+  store <2 x i17> %sh, ptr %p1
   %tr = trunc <2 x i17> %sh to <2 x i13>
-  store <2 x i13> %tr, <2 x i13>* %p2
+  store <2 x i13> %tr, ptr %p2
   %r = icmp sgt <2 x i13> %tr, <i13 -1, i13 -1>
   ret <2 x i1> %r
 }

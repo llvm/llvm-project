@@ -9,7 +9,7 @@
 @.str = internal constant [25 x i8] c"image\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00"
 @.str2 = internal constant [30 x i8] c"xxxxxxxxxxxxxxxxxxxxxxxxxxxxx\00", align 4
 
-define void @t1(i32 %argc, i8** %argv) nounwind  {
+define void @t1(i32 %argc, ptr %argv) nounwind  {
 entry:
 ; SSE2-Darwin-LABEL: t1:
 ; SSE2-Darwin: movsd _.str+16, %xmm0
@@ -47,15 +47,14 @@ entry:
 ; X86-64: movb $0
 ; X86-64: movq $0
   %tmp1 = alloca [25 x i8]
-  %tmp2 = bitcast [25 x i8]* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp2, i8* align 1 getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i32 0, i32 0), i32 25, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %tmp1, ptr align 1 @.str, i32 25, i1 false)
   unreachable
 }
 
 ;rdar://7774704
 %struct.s0 = type { [2 x double] }
 
-define void @t2(%struct.s0* nocapture %a, %struct.s0* nocapture %b) nounwind ssp {
+define void @t2(ptr nocapture %a, ptr nocapture %b) nounwind ssp {
 entry:
 ; SSE2-Darwin-LABEL: t2:
 ; SSE2-Darwin: movaps (%ecx), %xmm0
@@ -84,13 +83,11 @@ entry:
 ; X86-64-LABEL: t2:
 ; X86-64: movaps (%rsi), %xmm0
 ; X86-64: movaps %xmm0, (%rdi)
-  %tmp2 = bitcast %struct.s0* %a to i8*           ; <i8*> [#uses=1]
-  %tmp3 = bitcast %struct.s0* %b to i8*           ; <i8*> [#uses=1]
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %tmp2, i8* align 16 %tmp3, i32 16, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 16 %a, ptr align 16 %b, i32 16, i1 false)
   ret void
 }
 
-define void @t3(%struct.s0* nocapture %a, %struct.s0* nocapture %b) nounwind ssp {
+define void @t3(ptr nocapture %a, ptr nocapture %b) nounwind ssp {
 entry:
 ; SSE2-Darwin-LABEL: t3:
 ; SSE2-Darwin: movsd (%ecx), %xmm0
@@ -133,9 +130,7 @@ entry:
 ; X86-64: movq 8(%rsi), %rcx
 ; X86-64: movq %rcx, 8(%rdi)
 ; X86-64: movq %rax, (%rdi)
-  %tmp2 = bitcast %struct.s0* %a to i8*           ; <i8*> [#uses=1]
-  %tmp3 = bitcast %struct.s0* %b to i8*           ; <i8*> [#uses=1]
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %tmp2, i8* align 8 %tmp3, i32 16, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 8 %a, ptr align 8 %b, i32 16, i1 false)
   ret void
 }
 
@@ -201,9 +196,8 @@ entry:
 ; NHM_64: movaps   %xmm0, -40(%rsp)
 
   %tmp1 = alloca [30 x i8]
-  %tmp2 = bitcast [30 x i8]* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp2, i8* align 1 getelementptr inbounds ([30 x i8], [30 x i8]* @.str2, i32 0, i32 0), i32 30, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %tmp1, ptr align 1 @.str2, i32 30, i1 false)
   unreachable
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind

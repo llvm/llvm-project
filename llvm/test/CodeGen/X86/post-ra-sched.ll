@@ -9,7 +9,7 @@
 ; happens during the post-RA-scheduler, which should be enabled by
 ; default with the above specified cpus.
 
-@ptrs = external dso_local global [0 x i32*], align 4
+@ptrs = external dso_local global [0 x ptr], align 4
 @idxa = common global i32 0, align 4
 @idxb = common global i32 0, align 4
 @res = common global i32 0, align 4
@@ -26,15 +26,15 @@ define void @addindirect() {
 ; CHECK-NEXT:    movl %ecx, res
 ; CHECK-NEXT:    retl
 entry:
-  %0 = load i32, i32* @idxa, align 4
-  %arrayidx = getelementptr inbounds [0 x i32*], [0 x i32*]* @ptrs, i32 0, i32 %0
-  %1 = load i32*, i32** %arrayidx, align 4
-  %2 = load i32, i32* %1, align 4
-  %3 = load i32, i32* @idxb, align 4
-  %arrayidx1 = getelementptr inbounds [0 x i32*], [0 x i32*]* @ptrs, i32 0, i32 %3
-  %4 = load i32*, i32** %arrayidx1, align 4
-  %5 = load i32, i32* %4, align 4
+  %0 = load i32, ptr @idxa, align 4
+  %arrayidx = getelementptr inbounds [0 x ptr], ptr @ptrs, i32 0, i32 %0
+  %1 = load ptr, ptr %arrayidx, align 4
+  %2 = load i32, ptr %1, align 4
+  %3 = load i32, ptr @idxb, align 4
+  %arrayidx1 = getelementptr inbounds [0 x ptr], ptr @ptrs, i32 0, i32 %3
+  %4 = load ptr, ptr %arrayidx1, align 4
+  %5 = load i32, ptr %4, align 4
   %add = add i32 %5, %2
-  store i32 %add, i32* @res, align 4
+  store i32 %add, ptr @res, align 4
   ret void
 }

@@ -28,7 +28,7 @@
   ! CHECK: call {{.*}}EndIoStatement
   endfile(8)
 
-  ! CHECK: call {{.*}}BeginWaitAll
+  ! CHECK: call {{.*}}BeginWaitAll(%{{.*}}, %{{.*}}, %{{.*}})
   ! CHECK: call {{.*}}EndIoStatement
   wait(unit=8)
 
@@ -67,12 +67,26 @@
   inquire (iolength=length) existsvar, length, a
 end
 
-! Tests the 3 basic inquire formats
+! CHECK-LABEL: internalnamelistio
+subroutine internalNamelistIO()
+  ! CHECK: %[[internal:[0-9]+]] = fir.alloca !fir.char<1,12> {bindc_name = "internal"
+  character(12) :: internal
+  integer :: x = 123
+  namelist /nml/x
+  ! CHECK: %[[internal_:[0-9]+]] = fir.convert %[[internal]] : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
+  ! CHECK: %[[cookie:[0-9]+]] = fir.call @_FortranAioBeginInternalListOutput(%[[internal_]]
+  ! CHECK: fir.call @_FortranAioOutputNamelist(%[[cookie]]
+  ! CHECK: fir.call @_FortranAioEndIoStatement(%[[cookie]]
+  write(internal,nml=nml)
+end
+
+! Tests the 4 basic inquire formats
 ! CHECK-LABEL: func @_QPinquire_test
 subroutine inquire_test(ch, i, b)
   character(80) :: ch
   integer :: i
   logical :: b
+  integer :: id_func
 
   ! CHARACTER
   ! CHECK: %[[sugar:.*]] = fir.call {{.*}}BeginInquireUnit
@@ -91,6 +105,13 @@ subroutine inquire_test(ch, i, b)
   ! CHECK: call @_FortranAioInquireLogical(%[[snicker]], %c{{.*}}, %[[b:.*]]) : (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
   ! CHECK: call {{.*}}EndIoStatement
   inquire(90, opened=b)
+
+  ! PENDING with ID
+  ! CHECK-DAG: %[[chip:.*]] = fir.call {{.*}}BeginInquireUnit
+  ! CHECK-DAG: fir.call @_QPid_func
+  ! CHECK: call @_FortranAioInquirePendingId(%[[chip]], %{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
+  ! CHECK: call {{.*}}EndIoStatement
+  inquire(91, id=id_func(), pending=b)
 end subroutine inquire_test
 
 ! CHECK-LABEL: @_QPboz

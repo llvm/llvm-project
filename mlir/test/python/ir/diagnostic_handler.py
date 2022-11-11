@@ -85,6 +85,23 @@ def testDiagnosticEmptyNotes():
   assert not handler.had_error
 
 
+# CHECK-LABEL: TEST: testDiagnosticNonEmptyNotes
+@run
+def testDiagnosticNonEmptyNotes():
+  ctx = Context()
+  def callback(d):
+    # CHECK: DIAGNOSTIC:
+    # CHECK:   message='arith.addi' op requires one result
+    # CHECK:   notes=['see current operation: "arith.addi"() : () -> ()']
+    print(f"DIAGNOSTIC:")
+    print(f"  message={d.message}")
+    print(f"  notes={list(map(str, d.notes))}")
+    return True
+  handler = ctx.attach_diagnostic_handler(callback)
+  loc = Location.unknown(ctx)
+  Operation.create('arith.addi', loc=loc).verify()
+  assert not handler.had_error
+
 # CHECK-LABEL: TEST: testDiagnosticCallbackException
 @run
 def testDiagnosticCallbackException():

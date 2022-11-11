@@ -10,7 +10,7 @@
 ;    return fptr(1,2,3,4,5);
 ;}
 
-@fptr = global i32 (i32, i32, i32, i32, i32)* @__regcall3__func, align 4
+@fptr = global ptr @__regcall3__func, align 4
 
 declare x86_regcallcc i32 @__regcall3__func(i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 inreg)
 
@@ -31,7 +31,7 @@ define i32 @test() {
 ; CHECK-NEXT:    calll   *%ebx
 
 entry:
-  %0 = load i32 (i32, i32, i32, i32, i32)*, i32 (i32, i32, i32, i32, i32)** @fptr, align 4
+  %0 = load ptr, ptr @fptr, align 4
   %call = call x86_regcallcc i32 %0(i32 inreg 1, i32 inreg 2, i32 inreg 3, i32 inreg 4, i32 inreg 5)
   ret i32 %call
 }

@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS Support)
 
-add_llvm_tool(merge-fdata
+add_bolt_tool(merge-fdata
   merge-fdata.cpp
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
 
   DEPENDS
   intrinsics_gen

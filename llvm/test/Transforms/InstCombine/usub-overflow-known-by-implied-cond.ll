@@ -11,7 +11,7 @@ define i32 @test1(i32 %a, i32 %b) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[BB3]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -67,7 +67,7 @@ define i32 @test3(i32 %a, i32 %b) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[BB3]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -151,7 +151,7 @@ define i32 @test6(i32 %a, i32 %b) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 true, label [[BB3]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
 ;

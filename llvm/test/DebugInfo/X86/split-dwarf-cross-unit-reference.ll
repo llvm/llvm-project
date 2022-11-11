@@ -110,43 +110,33 @@ declare void @_Z1fv() #2
 define void @_Z3foo2t1(i32 %t.coerce) #3 !dbg !20 {
 entry:
   %t.i = alloca %struct.t1, align 4
-  call void @llvm.dbg.declare(metadata %struct.t1* %t.i, metadata !15, metadata !16), !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %t.i, metadata !15, metadata !16), !dbg !21
   %t = alloca %struct.t1, align 4
   %agg.tmp = alloca %struct.t1, align 4
-  %coerce.dive = getelementptr inbounds %struct.t1, %struct.t1* %t, i32 0, i32 0
-  store i32 %t.coerce, i32* %coerce.dive, align 4
-  call void @llvm.dbg.declare(metadata %struct.t1* %t, metadata !23, metadata !16), !dbg !24
-  %0 = bitcast %struct.t1* %agg.tmp to i8*, !dbg !25
-  %1 = bitcast %struct.t1* %t to i8*, !dbg !25
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 4, i1 false), !dbg !25
-  %coerce.dive1 = getelementptr inbounds %struct.t1, %struct.t1* %agg.tmp, i32 0, i32 0, !dbg !26
-  %2 = load i32, i32* %coerce.dive1, align 4, !dbg !26
-  %coerce.dive.i = getelementptr inbounds %struct.t1, %struct.t1* %t.i, i32 0, i32 0
-  store i32 %2, i32* %coerce.dive.i, align 4
+  store i32 %t.coerce, ptr %t, align 4
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !23, metadata !16), !dbg !24
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %t, i64 4, i1 false), !dbg !25
+  %0 = load i32, ptr %agg.tmp, align 4, !dbg !26
+  store i32 %0, ptr %t.i, align 4
   call void @_Z1fv(), !dbg !27
   ret void, !dbg !28
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #4
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #4
 
 ; Function Attrs: noinline uwtable
 define void @_Z3bar2t1(i32 %t.coerce) #3 !dbg !29 {
 entry:
   %t.i = alloca %struct.t1, align 4
-  call void @llvm.dbg.declare(metadata %struct.t1* %t.i, metadata !15, metadata !16), !dbg !30
+  call void @llvm.dbg.declare(metadata ptr %t.i, metadata !15, metadata !16), !dbg !30
   %t = alloca %struct.t1, align 4
   %agg.tmp = alloca %struct.t1, align 4
-  %coerce.dive = getelementptr inbounds %struct.t1, %struct.t1* %t, i32 0, i32 0
-  store i32 %t.coerce, i32* %coerce.dive, align 4
-  call void @llvm.dbg.declare(metadata %struct.t1* %t, metadata !32, metadata !16), !dbg !33
-  %0 = bitcast %struct.t1* %agg.tmp to i8*, !dbg !34
-  %1 = bitcast %struct.t1* %t to i8*, !dbg !34
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 4, i1 false), !dbg !34
-  %coerce.dive1 = getelementptr inbounds %struct.t1, %struct.t1* %agg.tmp, i32 0, i32 0, !dbg !35
-  %2 = load i32, i32* %coerce.dive1, align 4, !dbg !35
-  %coerce.dive.i = getelementptr inbounds %struct.t1, %struct.t1* %t.i, i32 0, i32 0
-  store i32 %2, i32* %coerce.dive.i, align 4
+  store i32 %t.coerce, ptr %t, align 4
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !32, metadata !16), !dbg !33
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %t, i64 4, i1 false), !dbg !34
+  %0 = load i32, ptr %agg.tmp, align 4, !dbg !35
+  store i32 %0, ptr %t.i, align 4
   call void @_Z1fv(), !dbg !36
   ret void, !dbg !37
 }

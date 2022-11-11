@@ -52,6 +52,15 @@ int __attribute__((target("default"))) redef2(void) { return 1;}
 // expected-note@-2 {{previous definition is here}}
 int __attribute__((target("default"))) redef2(void) { return 1;}
 
+int redef3(void) { return 1; }
+// expected-warning@+4 {{attribute declaration must precede definition}}
+// expected-note@-2 {{previous definition is here}}
+// expected-error@+2 {{redefinition of 'redef3'}}
+// expected-note@-4 {{previous definition is here}}
+int __attribute__((target("default"))) redef3(void) { return 1; }
+// allow this, since we don't complain about more than one redefinition
+int __attribute__((target("sse4.2"))) redef3(void) { return 1; }
+
 int __attribute__((target("sse4.2"))) mv_after_use(void) { return 1; }
 int use3(void) {
   return mv_after_use();

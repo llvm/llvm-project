@@ -241,9 +241,9 @@ attributes #3 = { nofree nounwind uwtable "frame-pointer"="none" "min-legal-vect
 !34 = !{i32 999999, i64 4045, i32 29}
 !35 = !{i32 5, !"CG Profile", !36}
 !36 = !{!37, !38, !39}
-!37 = !{void ()* @foo, i32 (i32)* @bar, i64 1022188}
-!38 = !{void ()* @foo, void (i32)* @work, i64 85360}
-!39 = !{i32 ()* @main, void ()* @foo, i64 2080}
+!37 = !{ptr @foo, ptr @bar, i64 1022188}
+!38 = !{ptr @foo, ptr @work, i64 85360}
+!39 = !{ptr @main, ptr @foo, i64 2080}
 !40 = !{!"clang version 14.0.0 (https://github.com/llvm/llvm-project.git 755f5e23159796d727c3d95d60894a52eb675b1b)"}
 !41 = distinct !DISubprogram(name: "bar", scope: !42, file: !42, line: 3, type: !43, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !44)
 !42 = !DIFile(filename: "/tmp/aaa.c", directory: "")

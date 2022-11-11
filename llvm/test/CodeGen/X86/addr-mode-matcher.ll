@@ -24,16 +24,14 @@ bb1692:
 ; %load1 = (load (and (shl %xor, 2), 1020))
   %tmp1701 = shl i32 %xor, 2
   %tmp1702 = and i32 %tmp1701, 1020
-  %tmp1703 = getelementptr inbounds [1028 x i8], [1028 x i8]* null, i32 0, i32 %tmp1702
-  %tmp1704 = bitcast i8* %tmp1703 to i32*
-  %load1 = load i32, i32* %tmp1704, align 4
+  %tmp1703 = getelementptr inbounds [1028 x i8], ptr null, i32 0, i32 %tmp1702
+  %load1 = load i32, ptr %tmp1703, align 4
 
 ; %load2 = (load (shl (and %xor, 255), 2))
   %tmp1698 = and i32 %xor, 255
   %tmp1706 = shl i32 %tmp1698, 2
-  %tmp1707 = getelementptr inbounds [1028 x i8], [1028 x i8]* null, i32 0, i32 %tmp1706
-  %tmp1708 = bitcast i8* %tmp1707 to i32*
-  %load2 = load i32, i32* %tmp1708, align 4
+  %tmp1707 = getelementptr inbounds [1028 x i8], ptr null, i32 0, i32 %tmp1706
+  %load2 = load i32, ptr %tmp1707, align 4
 
   %tmp1710 = or i32 %load2, %a
 
@@ -43,16 +41,16 @@ bb1692:
 ; references in MatchScope and RecordedNodes stale.
   %tmp1711 = xor i32 %load1, %tmp1710
 
-  %tmp1744 = getelementptr inbounds [256 x i32], [256 x i32]* null, i32 0, i32 %tmp1711
-  store i32 0, i32* %tmp1744, align 4
+  %tmp1744 = getelementptr inbounds [256 x i32], ptr null, i32 0, i32 %tmp1711
+  store i32 0, ptr %tmp1744, align 4
   %tmp1745 = add i32 %tmp1694, 1
-  indirectbr i8* undef, [label %bb1756, label %bb1692]
+  indirectbr ptr undef, [label %bb1756, label %bb1692]
 
 bb1756:
   br label %bb2705
 
 bb2705:
-  indirectbr i8* undef, [label %bb5721, label %bb5736]
+  indirectbr ptr undef, [label %bb5721, label %bb5736]
 
 bb5721:
   br label %bb2705

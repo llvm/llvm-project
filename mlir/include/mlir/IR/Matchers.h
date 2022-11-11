@@ -28,11 +28,10 @@ template <
     typename AttrClass,
     // Require AttrClass to be a derived class from Attribute and get its
     // value type
-    typename ValueType =
-        typename std::enable_if<std::is_base_of<Attribute, AttrClass>::value,
-                                AttrClass>::type::ValueType,
+    typename ValueType = typename std::enable_if_t<
+        std::is_base_of<Attribute, AttrClass>::value, AttrClass>::ValueType,
     // Require the ValueType is not void
-    typename = typename std::enable_if<!std::is_void<ValueType>::value>::type>
+    typename = std::enable_if_t<!std::is_void<ValueType>::value>>
 struct attr_value_binder {
   ValueType *bind_value;
 
@@ -179,20 +178,18 @@ using has_operation_or_value_matcher_t =
 
 /// Statically switch to a Value matcher.
 template <typename MatcherClass>
-typename std::enable_if_t<
-    llvm::is_detected<detail::has_operation_or_value_matcher_t, MatcherClass,
-                      Value>::value,
-    bool>
+std::enable_if_t<llvm::is_detected<detail::has_operation_or_value_matcher_t,
+                                   MatcherClass, Value>::value,
+                 bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
   return matcher.match(op->getOperand(idx));
 }
 
 /// Statically switch to an Operation matcher.
 template <typename MatcherClass>
-typename std::enable_if_t<
-    llvm::is_detected<detail::has_operation_or_value_matcher_t, MatcherClass,
-                      Operation *>::value,
-    bool>
+std::enable_if_t<llvm::is_detected<detail::has_operation_or_value_matcher_t,
+                                   MatcherClass, Operation *>::value,
+                 bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
   if (auto *defOp = op->getOperand(idx).getDefiningOp())
     return matcher.match(defOp);
@@ -224,10 +221,9 @@ struct PatternMatcherValue {
 template <typename TupleT, class CallbackT, std::size_t... Is>
 constexpr void enumerateImpl(TupleT &&tuple, CallbackT &&callback,
                              std::index_sequence<Is...>) {
-  (void)std::initializer_list<int>{
-      0,
-      (callback(std::integral_constant<std::size_t, Is>{}, std::get<Is>(tuple)),
-       0)...};
+
+  (callback(std::integral_constant<std::size_t, Is>{}, std::get<Is>(tuple)),
+   ...);
 }
 
 template <typename... Tys, typename CallbackT>

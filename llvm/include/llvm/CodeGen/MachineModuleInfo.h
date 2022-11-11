@@ -41,7 +41,6 @@
 
 namespace llvm {
 
-class BasicBlock;
 class Function;
 class LLVMTargetMachine;
 class MachineFunction;

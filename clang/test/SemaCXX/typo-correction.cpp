@@ -753,7 +753,7 @@ namespace PR46487 {
   // because it doesn't make the expression valid.
   // expected-error@+2 {{did you mean 'g_var_bool'}}
   // expected-error@+1 {{assigning to 'bool' from incompatible type 'void'}}
-  enum : decltype((g_var_long = throw))::a {
+  enum : typename decltype((g_var_long = throw))::a {
     b = g_volatile_uchar // expected-error {{did you mean 'g_volatile_char'}}
   };
 }

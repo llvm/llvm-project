@@ -35,13 +35,14 @@ other classes receive hidden LTO visibility. Classes with internal linkage
 (e.g. classes declared in unnamed namespaces) also receive hidden LTO
 visibility.
 
-During the LTO link, all classes with public LTO visibility will be refined
-to hidden LTO visibility when the ``--lto-whole-program-visibility`` lld linker
-option is applied (``-plugin-opt=whole-program-visibility`` for gold). This flag
-can be used to defer specifying whether classes have hidden LTO visibility until
-link time, to allow bitcode objects to be shared by different LTO links.
-Due to an implementation limitation, symbols associated with classes with hidden
-LTO visibility may still be exported from the binary when using this flag. It is
+During the LTO link, all classes with public LTO visibility but not marked with
+``[[clang::lto_visibility_public]]`` (see below) will be refined to hidden LTO
+visibility when the ``--lto-whole-program-visibility`` lld linker option is
+applied (``-plugin-opt=whole-program-visibility`` for gold).  This flag can be
+used to defer specifying whether classes have hidden LTO visibility until link
+time, to allow bitcode objects to be shared by different LTO links.  Due to an
+implementation limitation, symbols associated with classes with hidden LTO
+visibility may still be exported from the binary when using this flag. It is
 unsafe to refer to these symbols, and their visibility may be relaxed to hidden
 in a future compiler release.
 

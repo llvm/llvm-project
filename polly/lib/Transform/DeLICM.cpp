@@ -1428,13 +1428,13 @@ public:
   static char ID;
   explicit DeLICMWrapperPass() : ScopPass(ID) {}
 
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequiredTransitive<ScopInfoRegionPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.setPreservesAll();
   }
 
-  virtual bool runOnScop(Scop &S) override {
+  bool runOnScop(Scop &S) override {
     // Free resources for previous scop's computation, if not yet done.
     releaseMemory();
 
@@ -1444,7 +1444,7 @@ public:
     return Impl->isModified();
   }
 
-  virtual void printScop(raw_ostream &OS, Scop &S) const override {
+  void printScop(raw_ostream &OS, Scop &S) const override {
     if (!Impl)
       return;
     assert(Impl->getScop() == &S);
@@ -1453,7 +1453,7 @@ public:
     Impl->print(OS);
   }
 
-  virtual void releaseMemory() override { Impl.reset(); }
+  void releaseMemory() override { Impl.reset(); }
 };
 
 char DeLICMWrapperPass::ID;

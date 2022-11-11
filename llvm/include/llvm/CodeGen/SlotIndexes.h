@@ -108,9 +108,6 @@ class raw_ostream;
 
     PointerIntPair<IndexListEntry*, 2, unsigned> lie;
 
-    SlotIndex(IndexListEntry *entry, unsigned slot)
-      : lie(entry, slot) {}
-
     IndexListEntry* listEntry() const {
       assert(isValid() && "Attempt to compare reserved index.");
 #ifdef EXPENSIVE_CHECKS
@@ -138,6 +135,11 @@ class raw_ostream;
 
     /// Construct an invalid index.
     SlotIndex() = default;
+
+    // Creates a SlotIndex from an IndexListEntry and a slot. Generally should
+    // not be used. This method is only public to facilitate writing certain
+    // unit tests.
+    SlotIndex(IndexListEntry *entry, unsigned slot) : lie(entry, slot) {}
 
     // Construct a new slot index from the given one, and set the slot.
     SlotIndex(const SlotIndex &li, Slot s) : lie(li.listEntry(), unsigned(s)) {
@@ -215,8 +217,12 @@ class raw_ostream;
     }
 
     /// Return the scaled distance from this index to the given one, where all
-    /// slots on the same instruction have zero distance.
-    int getInstrDistance(SlotIndex other) const {
+    /// slots on the same instruction have zero distance, assuming that the slot
+    /// indices are packed as densely as possible. There are normally gaps
+    /// between instructions, so this assumption often doesn't hold. This
+    /// results in this function often returning a value greater than the actual
+    /// instruction distance.
+    int getApproxInstrDistance(SlotIndex other) const {
       return (other.listEntry()->getIndex() - listEntry()->getIndex())
         / Slot_Count;
     }

@@ -18,7 +18,7 @@ namespace bugprone {
 /// Finds memset calls with potential mistakes in their arguments.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-memset-usage.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-memset-usage.html
 class SuspiciousMemsetUsageCheck : public ClangTidyCheck {
 public:
   SuspiciousMemsetUsageCheck(StringRef Name, ClangTidyContext *Context)

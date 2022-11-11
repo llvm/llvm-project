@@ -13,6 +13,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Syntax/Nodes.h"
+#include "clang/Tooling/Syntax/TokenBufferTokenManager.h"
 #include "clang/Tooling/Syntax/Tree.h"
 
 namespace clang {
@@ -21,19 +22,21 @@ namespace syntax {
 /// Build a syntax tree for the main file.
 /// This usually covers the whole TranslationUnitDecl, but can be restricted by
 /// the ASTContext's traversal scope.
-syntax::TranslationUnit *buildSyntaxTree(Arena &A, ASTContext &Context);
+syntax::TranslationUnit *
+buildSyntaxTree(Arena &A, TokenBufferTokenManager &TBTM, ASTContext &Context);
 
 // Create syntax trees from subtrees not backed by the source code.
 
 // Synthesis of Leafs
 /// Create `Leaf` from token with `Spelling` and assert it has the desired
 /// `TokenKind`.
-syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K,
-                         StringRef Spelling);
+syntax::Leaf *createLeaf(syntax::Arena &A, TokenBufferTokenManager &TBTM,
+                         tok::TokenKind K, StringRef Spelling);
 
 /// Infer the token spelling from its `TokenKind`, then create `Leaf` from
 /// this token
-syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K);
+syntax::Leaf *createLeaf(syntax::Arena &A, TokenBufferTokenManager &TBTM,
+                         tok::TokenKind K);
 
 // Synthesis of Trees
 /// Creates the concrete syntax node according to the specified `NodeKind` `K`.
@@ -44,7 +47,8 @@ createTree(syntax::Arena &A,
            syntax::NodeKind K);
 
 // Synthesis of Syntax Nodes
-syntax::EmptyStatement *createEmptyStatement(syntax::Arena &A);
+syntax::EmptyStatement *createEmptyStatement(syntax::Arena &A,
+                                             TokenBufferTokenManager &TBTM);
 
 /// Creates a completely independent copy of `N` with its macros expanded.
 ///
@@ -52,7 +56,9 @@ syntax::EmptyStatement *createEmptyStatement(syntax::Arena &A);
 /// * Detached, i.e. `Parent == NextSibling == nullptr` and
 /// `Role == Detached`.
 /// * Synthesized, i.e. `Original == false`.
-syntax::Node *deepCopyExpandingMacros(syntax::Arena &A, const syntax::Node *N);
+syntax::Node *deepCopyExpandingMacros(syntax::Arena &A,
+                                      TokenBufferTokenManager &TBTM,
+                                      const syntax::Node *N);
 } // namespace syntax
 } // namespace clang
 #endif

@@ -289,7 +289,7 @@ fooVar:
 	.long	.Laddr_table_base0              # DW_AT_addr_base
 	.byte	2                               # Abbrev [2] 0x27:0xb DW_TAG_variable
 	.byte	3                               # DW_AT_name
-	.long	50                              # DW_AT_type
+	.long	46                              # DW_AT_type
                                         # DW_AT_external
 	.byte	0                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
@@ -306,11 +306,11 @@ fooVar:
 	.byte	1                               # DW_AT_frame_base
 	.byte	87
                                         # DW_AT_call_all_calls
-	.long	74                              # DW_AT_abstract_origin
+	.long	70                              # DW_AT_abstract_origin
 	.byte	5                               # Abbrev [5] 0x42:0x7 DW_TAG_formal_parameter
 	.byte	1                               # DW_AT_location
 	.byte	85
-	.long	79                              # DW_AT_abstract_origin
+	.long	75                              # DW_AT_abstract_origin
 	.byte	0                               # End Of Children Mark
 	.byte	6                               # Abbrev [6] 0x4a:0xe DW_TAG_subprogram
 	.byte	5                               # DW_AT_linkage_name
@@ -323,10 +323,10 @@ fooVar:
 	.byte	7                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	2                               # DW_AT_decl_line
-	.long	88                              # DW_AT_type
+	.long	84                              # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	8                               # Abbrev [8] 0x58:0x5 DW_TAG_pointer_type
-	.long	50                              # DW_AT_type
+	.long	46                              # DW_AT_type
 	.byte	9                               # Abbrev [9] 0x5d:0x31 DW_TAG_subprogram
 	.byte	2                               # DW_AT_low_pc
 	.long	.Lfunc_end1-.Lfunc_begin1       # DW_AT_high_pc
@@ -337,7 +337,7 @@ fooVar:
 	.byte	9                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	6                               # DW_AT_decl_line
-	.long	50                              # DW_AT_type
+	.long	46                              # DW_AT_type
                                         # DW_AT_external
 	.byte	10                              # Abbrev [10] 0x6d:0xa DW_TAG_formal_parameter
 	.byte	1                               # DW_AT_location
@@ -345,15 +345,15 @@ fooVar:
 	.byte	10                              # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	6                               # DW_AT_decl_line
-	.long	50                              # DW_AT_type
+	.long	46                              # DW_AT_type
 	.byte	11                              # Abbrev [11] 0x77:0x9 DW_TAG_variable
 	.long	.Ldebug_loc0                    # DW_AT_location
 	.byte	7                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	7                               # DW_AT_decl_line
-	.long	50                              # DW_AT_type
+	.long	46                              # DW_AT_type
 	.byte	12                              # Abbrev [12] 0x80:0xd DW_TAG_inlined_subroutine
-	.long	74                              # DW_AT_abstract_origin
+	.long	70                              # DW_AT_abstract_origin
 	.byte	2                               # DW_AT_low_pc
 	.long	.Ltmp1-.Lfunc_begin1            # DW_AT_high_pc
 	.byte	0                               # DW_AT_call_file

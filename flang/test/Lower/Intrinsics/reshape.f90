@@ -54,3 +54,29 @@ subroutine reshape_test(x, source, pd, sh, ord)
   ! CHECK:  %[[VAL_39:.*]] = fir.convert %[[VAL_28]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<none>
   ! CHECK:  %[[VAL_41:.*]] = fir.call @_FortranAReshape({{.*}}, {{.*}}, %{{.*}}, %[[VAL_38]], %[[VAL_39]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
   end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_reshape_shape_slice() {
+! CHECK:         %[[VAL_1:.*]] = fir.address_of(@_QFtest_reshape_shape_sliceEdims) : !fir.ref<!fir.array<4xi32>>
+! CHECK:         %[[VAL_2:.*]] = arith.constant 4 : index
+! CHECK:         %[[VAL_3:.*]] = fir.address_of(@_QFtest_reshape_shape_sliceEtmp) : !fir.ref<!fir.array<4xf32>>
+! CHECK:         %[[VAL_4:.*]] = arith.constant 4 : index
+! CHECK:         %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
+! CHECK:         %[[VAL_6:.*]] = fir.embox %[[VAL_3]](%[[VAL_5]]) : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<4xf32>>
+! CHECK:         %[[VAL_7:.*]] = arith.constant 1 : i64
+! CHECK:         %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> index
+! CHECK:         %[[VAL_9:.*]] = arith.constant 1 : i64
+! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i64) -> index
+! CHECK:         %[[VAL_11:.*]] = arith.constant 2 : i64
+! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (i64) -> index
+! CHECK:         %[[VAL_13:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+! CHECK:         %[[VAL_14:.*]] = fir.slice %[[VAL_8]], %[[VAL_12]], %[[VAL_10]] : (index, index, index) -> !fir.slice<1>
+! CHECK:         %[[VAL_15:.*]] = fir.embox %[[VAL_1]](%[[VAL_13]]) [%[[VAL_14]]] : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<2xi32>>
+! CHECK:         %[[VAL_25:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.array<4xf32>>) -> !fir.box<none>
+! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_15]] : (!fir.box<!fir.array<2xi32>>) -> !fir.box<none>
+! CHECK:         %[[VAL_30:.*]] = fir.call @_FortranAReshape(%{{.*}}, %[[VAL_25]], %[[VAL_26]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+subroutine test_reshape_shape_slice()
+  integer, parameter :: i = 1
+  real :: tmp(4) = [1,2,3,4]
+  integer ::  dims(4) = [2,2,2,2]
+  call some_proc(reshape(tmp, dims(i:2)))
+end

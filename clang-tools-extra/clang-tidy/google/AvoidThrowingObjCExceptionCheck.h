@@ -21,7 +21,7 @@ namespace objc {
 /// the Google Objective-C Style Guide.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/google/objc-avoid-throwing-exception.html
 class AvoidThrowingObjCExceptionCheck : public ClangTidyCheck {
  public:
   AvoidThrowingObjCExceptionCheck(StringRef Name, ClangTidyContext *Context)

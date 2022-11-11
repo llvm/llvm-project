@@ -2,6 +2,7 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx810 -verify-machineinstrs | FileCheck --check-prefix=GCN %s
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX10 %s
 
 ; GCN-LABEL: {{^}}image_gather4_b_2d_v4f16:
 ; UNPACKED: image_gather4_b v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x4 d16{{$}}

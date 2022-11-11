@@ -5,7 +5,7 @@
 declare {i16, i32} @llvm.x86.rdrand.16()
 declare {i32, i32} @llvm.x86.rdrand.32()
 
-define i32 @_rdrand16_step(i16* %random_val) {
+define i32 @_rdrand16_step(ptr %random_val) {
 ; X86-LABEL: _rdrand16_step:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -26,12 +26,12 @@ define i32 @_rdrand16_step(i16* %random_val) {
 ; X64-NEXT:    retq
   %call = call {i16, i32} @llvm.x86.rdrand.16()
   %randval = extractvalue {i16, i32} %call, 0
-  store i16 %randval, i16* %random_val
+  store i16 %randval, ptr %random_val
   %isvalid = extractvalue {i16, i32} %call, 1
   ret i32 %isvalid
 }
 
-define i32 @_rdrand32_step(i32* %random_val) {
+define i32 @_rdrand32_step(ptr %random_val) {
 ; X86-LABEL: _rdrand32_step:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -50,7 +50,7 @@ define i32 @_rdrand32_step(i32* %random_val) {
 ; X64-NEXT:    retq
   %call = call {i32, i32} @llvm.x86.rdrand.32()
   %randval = extractvalue {i32, i32} %call, 0
-  store i32 %randval, i32* %random_val
+  store i32 %randval, ptr %random_val
   %isvalid = extractvalue {i32, i32} %call, 1
   ret i32 %isvalid
 }
@@ -79,7 +79,7 @@ define i32 @CSE() nounwind {
 }
 
 ; Check that MachineLICM doesn't hoist rdrand instructions.
-define void @loop(i32* %p, i32 %n) nounwind {
+define void @loop(ptr %p, i32 %n) nounwind {
 ; X86-LABEL: loop:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
@@ -123,13 +123,13 @@ entry:
   br i1 %tobool1, label %while.end, label %while.body
 
 while.body:                                       ; preds = %entry, %while.body
-  %p.addr.03 = phi i32* [ %incdec.ptr, %while.body ], [ %p, %entry ]
+  %p.addr.03 = phi ptr [ %incdec.ptr, %while.body ], [ %p, %entry ]
   %n.addr.02 = phi i32 [ %dec, %while.body ], [ %n, %entry ]
   %dec = add nsw i32 %n.addr.02, -1
-  %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.03, i64 1
+  %incdec.ptr = getelementptr inbounds i32, ptr %p.addr.03, i64 1
   %rand = tail call { i32, i32 } @llvm.x86.rdrand.32() nounwind
   %v1 = extractvalue { i32, i32 } %rand, 0
-  store i32 %v1, i32* %p.addr.03, align 4
+  store i32 %v1, ptr %p.addr.03, align 4
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %while.end, label %while.body
 

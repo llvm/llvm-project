@@ -18,7 +18,7 @@
 #ifndef MLIR_C_DIALECT_FUNC_H
 #define MLIR_C_DIALECT_FUNC_H
 
-#include "mlir-c/Registration.h"
+#include "mlir-c/IR.h"
 
 #ifdef __cplusplus
 extern "C" {

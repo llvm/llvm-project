@@ -121,6 +121,10 @@ class FrameAnalysis {
   /// Set of functions that require the stack to be 16B aligned
   DenseSet<const BinaryFunction *> FunctionsRequireAlignment;
 
+  /// Set of functions that performs computations with stack addresses and
+  /// complicates our understanding of aliasing of stack spaces.
+  DenseSet<const BinaryFunction *> FunctionsWithStackArithmetic;
+
   /// Owns ArgAccesses for all instructions. References to elements are
   /// attached to instructions as indexes to this vector, in MCAnnotations.
   std::vector<ArgAccesses> ArgAccessesVector;
@@ -130,7 +134,6 @@ class FrameAnalysis {
   /// Analysis stats counters
   uint64_t NumFunctionsNotOptimized{0};
   uint64_t NumFunctionsFailedRestoreFI{0};
-  uint64_t CountFunctionsNotOptimized{0};
   uint64_t CountFunctionsFailedRestoreFI{0};
   uint64_t CountDenominator{0};
 
@@ -182,6 +185,12 @@ public:
   /// Return true if \p Func cannot operate with a misaligned CFA
   bool requiresAlignment(const BinaryFunction &Func) const {
     return FunctionsRequireAlignment.count(&Func);
+  }
+
+  /// Return true if \p Func does computation with the address of any stack
+  /// position, meaning we have limited alias analysis on this function.
+  bool hasStackArithmetic(const BinaryFunction &Func) const {
+    return FunctionsWithStackArithmetic.count(&Func);
   }
 
   /// Functions for retrieving our specific MCAnnotation data from instructions

@@ -152,7 +152,7 @@ func.func @memref_reinterpret_cast_too_many_offsets(%in: memref<?xf32>) {
   // expected-error @+1 {{expected 1 offset values}}
   %out = memref.reinterpret_cast %in to
            offset: [0, 0], sizes: [10, 10], strides: [10, 1]
-           : memref<?xf32> to memref<10x10xf32, offset: 0, strides: [10, 1]>
+           : memref<?xf32> to memref<10x10xf32, strided<[10, 1], offset: 0>>
   return
 }
 
@@ -162,7 +162,7 @@ func.func @memref_reinterpret_cast_incompatible_element_types(%in: memref<*xf32>
   // expected-error @+1 {{different element types specified}}
   %out = memref.reinterpret_cast %in to
            offset: [0], sizes: [10], strides: [1]
-         : memref<*xf32> to memref<10xi32, offset: 0, strides: [1]>
+         : memref<*xf32> to memref<10xi32, strided<[1], offset: 0>>
   return
 }
 
@@ -172,7 +172,7 @@ func.func @memref_reinterpret_cast_incompatible_memory_space(%in: memref<*xf32>)
   // expected-error @+1 {{different memory spaces specified}}
   %out = memref.reinterpret_cast %in to
            offset: [0], sizes: [10], strides: [1]
-         : memref<*xf32> to memref<10xi32, offset: 0, strides: [1], 2>
+         : memref<*xf32> to memref<10xi32, strided<[1], offset: 0>, 2>
   return
 }
 
@@ -182,7 +182,7 @@ func.func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
   // expected-error @+1 {{expected result type with offset = 2 instead of 1}}
   %out = memref.reinterpret_cast %in to
            offset: [1], sizes: [10], strides: [1]
-         : memref<?xf32> to memref<10xf32, offset: 2, strides: [1]>
+         : memref<?xf32> to memref<10xf32, strided<[1], offset: 2>>
   return
 }
 
@@ -192,7 +192,7 @@ func.func @memref_reinterpret_cast_size_mismatch(%in: memref<*xf32>) {
   // expected-error @+1 {{expected result type with size = 10 instead of 1 in dim = 0}}
   %out = memref.reinterpret_cast %in to
            offset: [0], sizes: [10], strides: [1]
-         : memref<*xf32> to memref<1xf32, offset: 0, strides: [1]>
+         : memref<*xf32> to memref<1xf32, strided<[1], offset: 0>>
   return
 }
 
@@ -202,7 +202,7 @@ func.func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
   // expected-error @+1 {{expected result type with stride = 2 instead of 1 in dim = 0}}
   %out = memref.reinterpret_cast %in to
            offset: [2], sizes: [10], strides: [2]
-         : memref<?xf32> to memref<10xf32, offset: 2, strides: [1]>
+         : memref<?xf32> to memref<10xf32, strided<[1], offset: 2>>
   return
 }
 
@@ -272,11 +272,11 @@ func.func @memref_reshape_dst_shape_rank_mismatch(
 // -----
 
 func.func @memref_reshape_src_affine_map_is_not_identity(
-        %buf: memref<4x4xf32, offset: 0, strides: [3, 2]>,
+        %buf: memref<4x4xf32, strided<[3, 2], offset: 0>>,
         %shape: memref<1xi32>) {
   // expected-error @+1 {{source memref type should have identity affine map}}
   memref.reshape %buf(%shape)
-    : (memref<4x4xf32, offset: 0, strides: [3, 2]>, memref<1xi32>)
+    : (memref<4x4xf32, strided<[3, 2], offset: 0>>, memref<1xi32>)
     -> memref<8xf32>
 }
 
@@ -286,7 +286,7 @@ func.func @memref_reshape_result_affine_map_is_not_identity(
         %buf: memref<4x4xf32>, %shape: memref<1xi32>) {
   // expected-error @+1 {{result memref type should have identity affine map}}
   memref.reshape %buf(%shape)
-    : (memref<4x4xf32>, memref<1xi32>) -> memref<8xf32, offset: 0, strides: [2]>
+    : (memref<4x4xf32>, memref<1xi32>) -> memref<8xf32, strided<[2], offset: 0>>
 }
 
 // -----
@@ -423,11 +423,11 @@ func.func @expand_shape_to_smaller_rank(%arg0: memref<1xf32>) {
 // -----
 
 func.func @expand_shape_invalid_result_layout(
-    %arg0: memref<30x20xf32, offset : 100, strides : [4000, 2]>) {
-  // expected-error @+1 {{expected expanded type to be 'memref<2x15x20xf32, affine_map<(d0, d1, d2) -> (d0 * 60000 + d1 * 4000 + d2 * 2 + 100)>>' but found 'memref<2x15x20xf32, affine_map<(d0, d1, d2) -> (d0 * 5000 + d1 * 4000 + d2 * 2 + 100)>>'}}
+    %arg0: memref<30x20xf32, strided<[4000, 2], offset: 100>>) {
+  // expected-error @+1 {{expected expanded type to be 'memref<2x15x20xf32, strided<[60000, 4000, 2], offset: 100>>' but found 'memref<2x15x20xf32, strided<[5000, 4000, 2], offset: 100>>'}}
   %0 = memref.expand_shape %arg0 [[0, 1], [2]] :
-      memref<30x20xf32, offset : 100, strides : [4000, 2]>
-      into memref<2x15x20xf32, offset : 100, strides : [5000, 4000, 2]>
+      memref<30x20xf32, strided<[4000, 2], offset: 100>>
+      into memref<2x15x20xf32, strided<[5000, 4000, 2], offset: 100>>
 }
 
 // -----
@@ -435,7 +435,7 @@ func.func @expand_shape_invalid_result_layout(
 func.func @collapse_shape_mismatch_indices_num(%arg0: memref<?x?x?xf32>) {
   // expected-error @+1 {{invalid number of reassociation groups: found 1, expected 2}}
   %0 = memref.collapse_shape %arg0 [[0, 1]] :
-    memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
+    memref<?x?x?xf32> into memref<?x?xf32, strided<[?, 1], offset: 0>>
 }
 
 // -----
@@ -443,17 +443,17 @@ func.func @collapse_shape_mismatch_indices_num(%arg0: memref<?x?x?xf32>) {
 func.func @collapse_shape_invalid_reassociation(%arg0: memref<?x?x?xf32>) {
   // expected-error @+1 {{reassociation indices must be contiguous}}
   %0 = memref.collapse_shape %arg0 [[0, 1], [1, 2]] :
-    memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
+    memref<?x?x?xf32> into memref<?x?xf32, strided<[?, 1], offset: 0>>
 }
 
 // -----
 
 func.func @collapse_shape_reshaping_non_contiguous(
-    %arg0: memref<3x4x5xf32, offset: 0, strides: [270, 50, 10]>) {
+    %arg0: memref<3x4x5xf32, strided<[270, 50, 10], offset: 0>>) {
   // expected-error @+1 {{invalid source layout map or collapsing non-contiguous dims}}
   %0 = memref.collapse_shape %arg0 [[0, 1], [2]] :
-      memref<3x4x5xf32, offset: 0, strides: [270, 50, 10]>
-      into memref<12x5xf32, offset: 0, strides: [50, 1]>
+      memref<3x4x5xf32, strided<[270, 50, 10], offset: 0>>
+      into memref<12x5xf32, strided<[50, 1], offset: 0>>
   return
 }
 
@@ -628,10 +628,10 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 // -----
 
 func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = memref.alloc() : memref<8x16x4xf32, offset: 0, strides: [64, 4, 1], 2>
+  %0 = memref.alloc() : memref<8x16x4xf32, strided<[64, 4, 1], offset: 0>, 2>
   // expected-error@+1 {{different memory spaces}}
   %1 = memref.subview %0[0, 0, 0][%arg2, %arg2, %arg2][1, 1, 1]
-    : memref<8x16x4xf32, offset: 0, strides: [64, 4, 1], 2> to
+    : memref<8x16x4xf32, strided<[64, 4, 1], offset: 0>, 2> to
       memref<8x?x4xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * s0 + d1 * 4 + d2)>>
   return
 }
@@ -643,7 +643,7 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{is not strided}}
   %1 = memref.subview %0[0, 0, 0][%arg2, %arg2, %arg2][1, 1, 1]
     : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 + d1, d1 + d2, d2)>> to
-      memref<8x?x4xf32, offset: 0, strides: [?, 4, 1]>
+      memref<8x?x4xf32, strided<[?, 4, 1], offset: 0>>
   return
 }
 
@@ -654,7 +654,7 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{expected 3 offset values}}
   %1 = memref.subview %0[%arg0, %arg1, 0, 0][%arg2, 0, 0, 0][1, 1, 1, 1]
     : memref<8x16x4xf32> to
-      memref<8x?x4xf32, offset: 0, strides:[?, ?, 4]>
+      memref<8x?x4xf32, strided<[?, ?, 4], offset: 0>>
   return
 }
 
@@ -684,7 +684,7 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @invalid_rank_reducing_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>' or a rank-reduced version. (mismatch of result sizes)}}
+  // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, strided<[64, 4, 1]>>' or a rank-reduced version. (mismatch of result sizes)}}
   %1 = memref.subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to memref<16x4xf32>
   return
@@ -694,7 +694,7 @@ func.func @invalid_rank_reducing_subview(%arg0 : index, %arg1 : index, %arg2 : i
 
 func.func @invalid_rank_reducing_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2 + 8)>>' or a rank-reduced version. (mismatch of result sizes)}}
+  // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, strided<[64, 4, 1], offset: 8>>' or a rank-reduced version. (mismatch of result sizes)}}
   %1 = memref.subview %0[0, 2, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to memref<16x4xf32>
   return
@@ -703,7 +703,7 @@ func.func @invalid_rank_reducing_subview(%arg0 : index, %arg1 : index, %arg2 : i
 // -----
 
 func.func @invalid_rank_reducing_subview(%arg0 : memref<?x?xf32>, %arg1 : index, %arg2 : index) {
-  // expected-error@+1 {{expected result type to be 'memref<?x1xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' or a rank-reduced version. (mismatch of result layout)}}
+  // expected-error@+1 {{expected result type to be 'memref<?x1xf32, strided<[?, 1], offset: ?>>' or a rank-reduced version. (mismatch of result layout)}}
   %0 = memref.subview %arg0[0, %arg1][%arg2, 1][1, 1] : memref<?x?xf32> to memref<?xf32>
   return
 }
@@ -715,7 +715,7 @@ func.func @invalid_rank_reducing_subview(%arg0 : memref<?x?xf32>, %arg1 : index,
 func.func @subview_bad_offset_1(%arg0: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
   %c8 = arith.constant 8 : index
-  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, strided<[16, 1], offset: ?>>' or a rank-reduced version}}
   %s2 = memref.subview %arg0[%c8, %c8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
   return
 }
@@ -727,36 +727,34 @@ func.func @subview_bad_offset_1(%arg0: memref<16x16xf32>) {
 func.func @subview_bad_offset_2(%arg0: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
   %c8 = arith.constant 8 : index
-  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, strided<[16, 1], offset: ?>>' or a rank-reduced version}}
   %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
   return
 }
 
 // -----
-
-#map0 = affine_map<(d0, d1)[s0] -> (d0 * 16 + d1 + s0 * 437)>
 
 func.func @subview_bad_offset_3(%arg0: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
   %c8 = arith.constant 8 : index
-  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
-  %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, strided<[16, 1], offset: ?>>' or a rank-reduced version}}
+  %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, strided<[16, 1], offset: 437>>
   return
 }
 
 // -----
 
-func.func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]>) {
-  // expected-error@+1{{operand type 'memref<12x4x16xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2)>>' and result type 'memref<12x4x16xf32, affine_map<(d0, d1, d2) -> (d0 * 128 + d1 * 32 + d2 * 2)>>' are cast incompatible}}
-  %0 = memref.cast %arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]> to memref<12x4x16xf32, offset:0, strides:[128, 32, 2]>
+func.func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, strided<[64, 16, 1], offset: 0>>) {
+  // expected-error@+1{{operand type 'memref<12x4x16xf32, strided<[64, 16, 1]>>' and result type 'memref<12x4x16xf32, strided<[128, 32, 2]>>' are cast incompatible}}
+  %0 = memref.cast %arg0 : memref<12x4x16xf32, strided<[64, 16, 1], offset: 0>> to memref<12x4x16xf32, strided<[128, 32, 2], offset: 0>>
   return
 }
 
 // -----
 
-func.func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]>) {
-  // expected-error@+1{{operand type 'memref<12x4x16xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2)>>' and result type 'memref<12x4x16xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2 + 16)>>' are cast incompatible}}
-  %0 = memref.cast %arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]> to memref<12x4x16xf32, offset:16, strides:[64, 16, 1]>
+func.func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, strided<[64, 16, 1], offset: 0>>) {
+  // expected-error@+1{{operand type 'memref<12x4x16xf32, strided<[64, 16, 1]>>' and result type 'memref<12x4x16xf32, strided<[64, 16, 1], offset: 16>>' are cast incompatible}}
+  %0 = memref.cast %arg0 : memref<12x4x16xf32, strided<[64, 16, 1], offset: 0>> to memref<12x4x16xf32, strided<[64, 16, 1], offset: 16>>
   return
 }
 
@@ -993,4 +991,38 @@ func.func @atomic_yield_type_mismatch(%I: memref<10xf32>, %i : index) {
       memref.atomic_yield %c1 : i32
   }
   return
+}
+
+// -----
+
+#map0 = affine_map<(d0) -> (d0 floordiv 8, d0 mod 8)>
+func.func @memref_realloc_layout(%src : memref<256xf32, #map0>) -> memref<?xf32>{
+  // expected-error@+1 {{unsupported layout}}
+  %0 = memref.realloc %src : memref<256xf32, #map0> to memref<?xf32>
+  return %0 : memref<?xf32>
+}
+
+// -----
+
+func.func @memref_realloc_sizes_1(%src : memref<2xf32>) -> memref<?xf32>{
+  // expected-error@+1 {{missing dimension operand}}
+  %0 = memref.realloc %src : memref<2xf32> to memref<?xf32>
+  return %0 : memref<?xf32>
+}
+
+// -----
+
+func.func @memref_realloc_sizes_2(%src : memref<?xf32>, %d : index)
+  -> memref<4xf32>{
+  // expected-error@+1 {{unnecessary dimension operand}}
+  %0 = memref.realloc %src(%d) : memref<?xf32> to memref<4xf32>
+  return %0 : memref<4xf32>
+}
+
+// -----
+
+func.func @memref_realloc_type(%src : memref<256xf32>) -> memref<?xi32>{
+  // expected-error@+1 {{different element types}}
+  %0 = memref.realloc %src : memref<256xf32> to memref<?xi32>
+  return %0 : memref<?xi32>
 }

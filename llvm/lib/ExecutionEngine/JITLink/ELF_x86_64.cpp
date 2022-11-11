@@ -27,7 +27,6 @@
 
 using namespace llvm;
 using namespace llvm::jitlink;
-using namespace llvm::jitlink::ELF_x86_64_Edges;
 
 namespace {
 
@@ -69,7 +68,8 @@ public:
 private:
   Section &getTLSInfoSection(LinkGraph &G) {
     if (!TLSInfoTable)
-      TLSInfoTable = &G.createSection(ELFTLSInfoSectionName, MemProt::Read);
+      TLSInfoTable =
+          &G.createSection(ELFTLSInfoSectionName, orc::MemProt::Read);
     return *TLSInfoTable;
   }
 
@@ -106,34 +106,48 @@ class ELFLinkGraphBuilder_x86_64 : public ELFLinkGraphBuilder<object::ELF64LE> {
 private:
   using ELFT = object::ELF64LE;
 
-  static Expected<ELF_x86_64_Edges::ELFX86RelocationKind>
-  getRelocationKind(const uint32_t Type) {
+  enum ELFX86RelocationKind : Edge::Kind {
+    Branch32 = Edge::FirstRelocation,
+    Pointer32Signed,
+    Pointer64,
+    PCRel32,
+    PCRel32GOTLoad,
+    PCRel32GOTLoadRelaxable,
+    PCRel32REXGOTLoadRelaxable,
+    PCRel32TLV,
+    PCRel64GOT,
+    GOTOFF64,
+    GOT64,
+    Delta64,
+  };
+
+  static Expected<ELFX86RelocationKind> getRelocationKind(const uint32_t Type) {
     switch (Type) {
     case ELF::R_X86_64_32S:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::Pointer32Signed;
+      return ELFX86RelocationKind::Pointer32Signed;
     case ELF::R_X86_64_PC32:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32;
+      return ELFX86RelocationKind::PCRel32;
     case ELF::R_X86_64_PC64:
     case ELF::R_X86_64_GOTPC64:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::Delta64;
+      return ELFX86RelocationKind::Delta64;
     case ELF::R_X86_64_64:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::Pointer64;
+      return ELFX86RelocationKind::Pointer64;
     case ELF::R_X86_64_GOTPCREL:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32GOTLoad;
+      return ELFX86RelocationKind::PCRel32GOTLoad;
     case ELF::R_X86_64_GOTPCRELX:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32GOTLoadRelaxable;
+      return ELFX86RelocationKind::PCRel32GOTLoadRelaxable;
     case ELF::R_X86_64_REX_GOTPCRELX:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32REXGOTLoadRelaxable;
+      return ELFX86RelocationKind::PCRel32REXGOTLoadRelaxable;
     case ELF::R_X86_64_GOTPCREL64:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel64GOT;
+      return ELFX86RelocationKind::PCRel64GOT;
     case ELF::R_X86_64_GOT64:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::GOT64;
+      return ELFX86RelocationKind::GOT64;
     case ELF::R_X86_64_GOTOFF64:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::GOTOFF64;
+      return ELFX86RelocationKind::GOTOFF64;
     case ELF::R_X86_64_PLT32:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::Branch32;
+      return ELFX86RelocationKind::Branch32;
     case ELF::R_X86_64_TLSGD:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32TLV;
+      return ELFX86RelocationKind::PCRel32TLV;
     }
     return make_error<JITLinkError>(
         "Unsupported x86-64 relocation type " + formatv("{0:d}: ", Type) +
@@ -152,8 +166,8 @@ private:
             "No SHT_REL in valid x64 ELF object files",
             inconvertibleErrorCode());
 
-      if (Error Err = Base::forEachRelocation(RelSect, this,
-                                              &Self::addSingleRelocation))
+      if (Error Err = Base::forEachRelaRelocation(RelSect, this,
+                                                  &Self::addSingleRelocation))
         return Err;
     }
 
@@ -398,33 +412,6 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
     return Ctx->notifyFailed(std::move(Err));
 
   ELFJITLinker_x86_64::link(std::move(Ctx), std::move(G), std::move(Config));
-}
-const char *getELFX86RelocationKindName(Edge::Kind R) {
-  switch (R) {
-  case Branch32:
-    return "Branch32";
-  case Pointer32Signed:
-    return "Pointer32Signed";
-  case Pointer64:
-    return "Pointer64";
-  case PCRel32:
-    return "PCRel32";
-  case PCRel32GOTLoad:
-    return "PCRel32GOTLoad";
-  case PCRel32GOTLoadRelaxable:
-    return "PCRel32GOTLoadRelaxable";
-  case PCRel32REXGOTLoadRelaxable:
-    return "PCRel32REXGOTLoad";
-  case PCRel64GOT:
-    return "PCRel64GOT";
-  case Delta64:
-    return "Delta64";
-  case GOT64:
-    return "GOT64";
-  case GOTOFF64:
-    return "GOTOFF64";
-  }
-  return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
 }
 } // end namespace jitlink
 } // end namespace llvm

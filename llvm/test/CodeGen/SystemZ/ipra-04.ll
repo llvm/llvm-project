@@ -9,26 +9,26 @@
 ; DBG: Call Instruction After Register Usage Info Propagation :
 ; DBG-NEXT: CallBRASL @fun1{{.*}} $r14d $r15d
 
-declare dso_local fastcc signext i32 @foo(i16*, i32 signext) unnamed_addr
+declare dso_local fastcc signext i32 @foo(ptr, i32 signext) unnamed_addr
 
-define internal fastcc void @fun1(i16* %arg, i16* nocapture %arg1) unnamed_addr #0 {
+define internal fastcc void @fun1(ptr %arg, ptr nocapture %arg1) unnamed_addr #0 {
 bb:
-  %tmp = load i16, i16* undef, align 2
+  %tmp = load i16, ptr undef, align 2
   %tmp2 = shl i16 %tmp, 4
-  %tmp3 = tail call fastcc signext i32 @foo(i16* nonnull %arg, i32 signext 5)
+  %tmp3 = tail call fastcc signext i32 @foo(ptr nonnull %arg, i32 signext 5)
   %tmp4 = or i16 0, %tmp2
   %tmp5 = or i16 %tmp4, 0
-  store i16 %tmp5, i16* undef, align 2
-  %tmp6 = getelementptr inbounds i16, i16* %arg, i64 5
-  %tmp7 = load i16, i16* %tmp6, align 2
-  store i16 %tmp7, i16* %arg1, align 2
+  store i16 %tmp5, ptr undef, align 2
+  %tmp6 = getelementptr inbounds i16, ptr %arg, i64 5
+  %tmp7 = load i16, ptr %tmp6, align 2
+  store i16 %tmp7, ptr %arg1, align 2
   ret void
 }
 
-define fastcc void @fun0(i8* nocapture readonly %arg, i16* nocapture %arg1, i32 signext %arg2) unnamed_addr {
+define fastcc void @fun0(ptr nocapture readonly %arg, ptr nocapture %arg1, i32 signext %arg2) unnamed_addr {
 bb:
   %a = alloca i8, i64 undef
-  call fastcc void @fun1(i16* nonnull undef, i16* %arg1)
+  call fastcc void @fun1(ptr nonnull undef, ptr %arg1)
   ret void
 }
 

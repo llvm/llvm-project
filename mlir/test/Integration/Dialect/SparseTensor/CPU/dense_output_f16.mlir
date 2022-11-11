@@ -1,9 +1,7 @@
-// FIXME: The runtime needs support for _Float16 on X86, see PR55992
-// UNSUPPORTED: i386, x86_64
 // RUN: mlir-opt %s --sparse-compiler | \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
@@ -84,9 +82,9 @@ module {
     call @dump_vec(%0) : (tensor<?xf16, #DenseVector>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %sv1 : tensor<?xf16, #SparseVector>
-    sparse_tensor.release %sv2 : tensor<?xf16, #SparseVector>
-    sparse_tensor.release %0 : tensor<?xf16, #DenseVector>
+    bufferization.dealloc_tensor %sv1 : tensor<?xf16, #SparseVector>
+    bufferization.dealloc_tensor %sv2 : tensor<?xf16, #SparseVector>
+    bufferization.dealloc_tensor %0 : tensor<?xf16, #DenseVector>
     return
   }
 }

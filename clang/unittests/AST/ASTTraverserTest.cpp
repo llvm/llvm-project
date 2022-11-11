@@ -280,7 +280,7 @@ TemplateArgument type int
 
 TEST(Traverse, IgnoreUnlessSpelledInSourceVars) {
 
-  auto AST = buildASTFromCode(R"cpp(
+  auto AST = buildASTFromCodeWithArgs(R"cpp(
 
 struct String
 {
@@ -346,7 +346,7 @@ void varDeclCtors() {
   }
 }
 
-)cpp");
+)cpp", {"-std=c++14"});
 
   {
     auto FN =
@@ -715,7 +715,7 @@ FunctionDecl 'foo'
 
 TEST(Traverse, IgnoreUnlessSpelledInSourceReturns) {
 
-  auto AST = buildASTFromCode(R"cpp(
+  auto AST = buildASTFromCodeWithArgs(R"cpp(
 
 struct A
 {
@@ -784,7 +784,7 @@ B func12() {
   return c;
 }
 
-)cpp");
+)cpp", {"-std=c++14"});
 
   auto getFunctionNode = [&AST](const std::string &name) {
     auto BN = ast_matchers::match(functionDecl(hasName(name)).bind("fn"),
@@ -1011,7 +1011,7 @@ LambdaExpr
 | |-FieldDecl ''
 | |-FieldDecl ''
 | |-FieldDecl ''
-| `-CXXDestructorDecl '~'
+| `-CXXDestructorDecl '~(lambda at input.cc:9:3)'
 |-ImplicitCastExpr
 | `-DeclRefExpr 'a'
 |-DeclRefExpr 'b'
@@ -1211,9 +1211,9 @@ void decompTuple()
 CXXRecordDecl 'Record'
 |-CXXRecordDecl 'Record'
 |-CXXConstructorDecl 'Record'
-| |-CXXCtorInitializer 'struct Simple'
+| |-CXXCtorInitializer 'Simple'
 | | `-CXXConstructExpr
-| |-CXXCtorInitializer 'struct Other'
+| |-CXXCtorInitializer 'Other'
 | | `-CXXConstructExpr
 | |-CXXCtorInitializer 'm_i'
 | | `-IntegerLiteral
@@ -1234,7 +1234,7 @@ CXXRecordDecl 'Record'
               R"cpp(
 CXXRecordDecl 'Record'
 |-CXXConstructorDecl 'Record'
-| |-CXXCtorInitializer 'struct Simple'
+| |-CXXCtorInitializer 'Simple'
 | | `-CXXConstructExpr
 | |-CXXCtorInitializer 'm_i'
 | | `-IntegerLiteral

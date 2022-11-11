@@ -29,21 +29,16 @@ define void @test_pr55100(i32 %N) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
-; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[N]], [[IV_1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = sext i16 [[TMP8]] to i32
-; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_2_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP13:%.*]] = trunc i32 [[UMIN]] to i16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[UMIN]] to i16
 ; CHECK-NEXT:    unreachable
 ; CHECK:       loop.2.header:
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i16 [ [[IV_2_NEXT:%.*]], [[LOOP_2_LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

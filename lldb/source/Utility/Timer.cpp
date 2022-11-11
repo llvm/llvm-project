@@ -150,7 +150,7 @@ void Timer::DumpCategoryTimes(Stream *s) {
     return; // Later code will break without any elements.
 
   // Sort by time
-  llvm::sort(sorted.begin(), sorted.end(), CategoryMapIteratorSortCriterion);
+  llvm::sort(sorted, CategoryMapIteratorSortCriterion);
 
   for (const auto &stats : sorted)
     s->Printf("%.9f sec (total: %.3fs; child: %.3fs; count: %" PRIu64

@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate -S | FileCheck %s
 
 ; This test is to make sure while processing a block, uses of instructions
 ; from a different basic block don't get added to be re-optimized

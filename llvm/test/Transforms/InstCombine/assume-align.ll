@@ -3,43 +3,41 @@
 
 declare void @llvm.assume(i1 noundef)
 
-define void @f1(i8* %a) {
+define void @f1(ptr %a) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i64 4
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i8* [[PTR]] to i64
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[PTR]], i64 4) ]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[PTR]] to i32*
-; CHECK-NEXT:    store i32 4, i32* [[TMP3]], align 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 4) ]
+; CHECK-NEXT:    store i32 4, ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %ptr = getelementptr inbounds i8, i8* %a, i64 4
-  %0 = ptrtoint i8* %ptr to i64
+  %ptr = getelementptr inbounds i8, ptr %a, i64 4
+  %0 = ptrtoint ptr %ptr to i64
   %1 = and i64 %0, 3
   %2 = icmp eq i64 %1, 0
   br i1 %2, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  call void @llvm.assume(i1 true) [ "align"(i8* %ptr, i64 4) ]
-  %3 = ptrtoint i8* %ptr to i64
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 4) ]
+  %3 = ptrtoint ptr %ptr to i64
   %4 = and i64 %3, 3
   %5 = icmp eq i64 %4, 0
   br i1 %5, label %if.then1, label %if.else1
 
 if.then1:                                         ; preds = %if.then
-  %6 = bitcast i8* %ptr to i32*
-  store i32 4, i32* %6, align 4
+  store i32 4, ptr %ptr, align 4
   br label %if.end
 
 if.else1:                                         ; preds = %if.then
-  store i8 1, i8* %ptr, align 1
+  store i8 1, ptr %ptr, align 1
   br label %if.end
 
 if.end:                                           ; preds = %if.then1, %if.else1, %entry
@@ -48,56 +46,54 @@ if.end:                                           ; preds = %if.then1, %if.else1
 
 ; TODO: We could fold away the branch "br i1 %3, ..." by either using a GEP or make getKnowledgeValidInContext aware the alignment bundle offset, and the improvement of value tracking of GEP.
 
-define void @f2(i8* %a) {
+define void @f2(ptr %a) {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[A:%.*]], i64 32, i32 24) ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 8
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i8* [[TMP0]] to i64
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32, i32 24) ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP0]] to i64*
-; CHECK-NEXT:    store i64 16, i64* [[TMP4]], align 8
+; CHECK-NEXT:    store i64 16, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    store i8 1, i8* [[TMP0]], align 8
+; CHECK-NEXT:    store i8 1, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.assume(i1 true) [ "align"(i8* %a, i64 32, i32 24) ]
-  %0 = getelementptr inbounds i8, i8* %a, i64 8
-  %1 = ptrtoint i8* %0 to i64
+  call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 32, i32 24) ]
+  %0 = getelementptr inbounds i8, ptr %a, i64 8
+  %1 = ptrtoint ptr %0 to i64
   %2 = and i64 %1, 15
   %3 = icmp eq i64 %2, 0
   br i1 %3, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %4 = bitcast i8* %0 to i64*
-  store i64 16, i64* %4, align 4
+  store i64 16, ptr %0, align 4
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  store i8 1, i8* %0, align 1
+  store i8 1, ptr %0, align 1
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
   ret void
 }
 
-define void @f3(i64 %a, i8* %b) {
+define void @f3(i64 %a, ptr %b) {
 ; CHECK-LABEL: @f3(
-; CHECK-NEXT:    [[C:%.*]] = ptrtoint i8* [[B:%.*]] to i64
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[B]], i64 4294967296) ]
+; CHECK-NEXT:    [[C:%.*]] = ptrtoint ptr [[B:%.*]] to i64
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[B]], i64 4294967296) ]
 ; CHECK-NEXT:    [[D:%.*]] = add i64 [[C]], [[A:%.*]]
 ; CHECK-NEXT:    call void @g(i64 [[D]])
 ; CHECK-NEXT:    ret void
 ;
-  %c = ptrtoint i8* %b to i64
-  call void @llvm.assume(i1 true) [ "align"(i8* %b, i64 4294967296) ]
+  %c = ptrtoint ptr %b to i64
+  call void @llvm.assume(i1 true) [ "align"(ptr %b, i64 4294967296) ]
   %d = add i64 %a, %c
   call void @g(i64 %d)
   ret void
@@ -105,24 +101,24 @@ define void @f3(i64 %a, i8* %b) {
 
 declare void @g(i64)
 
-define i8 @assume_align_zero(i8* %p) {
+define i8 @assume_align_zero(ptr %p) {
 ; CHECK-LABEL: @assume_align_zero(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[P:%.*]], i64 0) ]
-; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[P]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P:%.*]], i64 0) ]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
-  call void @llvm.assume(i1 true) [ "align"(i8* %p, i64 0) ]
-  %v = load i8, i8* %p
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i64 0) ]
+  %v = load i8, ptr %p
   ret i8 %v
 }
 
-define i8 @assume_align_non_pow2(i8* %p) {
+define i8 @assume_align_non_pow2(ptr %p) {
 ; CHECK-LABEL: @assume_align_non_pow2(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[P:%.*]], i64 123) ]
-; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[P]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P:%.*]], i64 123) ]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
-  call void @llvm.assume(i1 true) [ "align"(i8* %p, i64 123) ]
-  %v = load i8, i8* %p
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i64 123) ]
+  %v = load i8, ptr %p
   ret i8 %v
 }

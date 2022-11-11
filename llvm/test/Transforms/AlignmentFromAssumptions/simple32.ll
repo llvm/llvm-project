@@ -2,99 +2,99 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 ; RUN: opt < %s -passes=alignment-from-assumptions -S | FileCheck %s
 
-define i32 @foo(i32* nocapture %a) nounwind uwtable readonly {
+define i32 @foo(ptr nocapture %a) nounwind uwtable readonly {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
+; CHECK-SAME: (ptr nocapture [[A:%.*]]) #0
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32) ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 32
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 32
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32)]
-  %0 = load i32, i32* %a, align 4
+  call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32)]
+  %0 = load i32, ptr %a, align 4
   ret i32 %0
 
 }
 
-define i32 @foo2(i32* nocapture %a) nounwind uwtable readonly {
+define i32 @foo2(ptr nocapture %a) nounwind uwtable readonly {
 ; CHECK-LABEL: define {{[^@]+}}@foo2
-; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
+; CHECK-SAME: (ptr nocapture [[A:%.*]]) #0
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32, i64 24) ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 -2
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 16
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32, i64 24) ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 -2
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 16
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32, i64 24)]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 -2
-  %0 = load i32, i32* %arrayidx, align 4
+  call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32, i64 24)]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 -2
+  %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 
 }
 
-define i32 @foo2a(i32* nocapture %a) nounwind uwtable readonly {
+define i32 @foo2a(ptr nocapture %a) nounwind uwtable readonly {
 ; CHECK-LABEL: define {{[^@]+}}@foo2a
-; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
+; CHECK-SAME: (ptr nocapture [[A:%.*]]) #0
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32, i64 28) ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 32
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32, i64 28) ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 32
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32, i64 28)]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 1
-  %0 = load i32, i32* %arrayidx, align 4
+  call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32, i64 28)]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 1
+  %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 
 }
 
 ; TODO: this can be 8-bytes aligned
-define i32 @foo2b(i32* nocapture %a) nounwind uwtable readonly {
+define i32 @foo2b(ptr nocapture %a) nounwind uwtable readonly {
 ; CHECK-LABEL: define {{[^@]+}}@foo2b
-; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
+; CHECK-SAME: (ptr nocapture [[A:%.*]]) #0
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32, i64 28) ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 -1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32, i64 28) ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 -1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32, i64 28)]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 -1
-  %0 = load i32, i32* %arrayidx, align 4
+  call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32, i64 28)]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 -1
+  %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 
 }
 
-define i32 @goo(i32* nocapture %a) nounwind uwtable readonly {
+define i32 @goo(ptr nocapture %a) nounwind uwtable readonly {
 ; CHECK-LABEL: define {{[^@]+}}@goo
-; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
+; CHECK-SAME: (ptr nocapture [[A:%.*]]) #0
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32) ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 32
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 32
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32)]
-  %0 = load i32, i32* %a, align 4
+  call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32)]
+  %0 = load i32, ptr %a, align 4
   ret i32 %0
 
 }
 
-define i32 @hoo(i32* nocapture %a) nounwind uwtable readonly {
+define i32 @hoo(ptr nocapture %a) nounwind uwtable readonly {
 ; CHECK-LABEL: define {{[^@]+}}@hoo
-; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
+; CHECK-SAME: (ptr nocapture [[A:%.*]]) #0
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[R_06:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 32
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 32
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP0]], [[R_06]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
@@ -105,14 +105,14 @@ define i32 @hoo(i32* nocapture %a) nounwind uwtable readonly {
 ; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
-  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32)]
+  call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32)]
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %r.06 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %r.06
   %indvars.iv.next = add i64 %indvars.iv, 8
   %1 = trunc i64 %indvars.iv.next to i32
@@ -125,17 +125,17 @@ for.end:                                          ; preds = %for.body
 
 }
 
-define i32 @joo(i32* nocapture %a) nounwind uwtable readonly {
+define i32 @joo(ptr nocapture %a) nounwind uwtable readonly {
 ; CHECK-LABEL: define {{[^@]+}}@joo
-; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
+; CHECK-SAME: (ptr nocapture [[A:%.*]]) #0
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 4, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[R_06:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 16
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 16
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP0]], [[R_06]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
@@ -146,14 +146,14 @@ define i32 @joo(i32* nocapture %a) nounwind uwtable readonly {
 ; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
-  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32)]
+  call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32)]
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ 4, %entry ], [ %indvars.iv.next, %for.body ]
   %r.06 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %r.06
   %indvars.iv.next = add i64 %indvars.iv, 8
   %1 = trunc i64 %indvars.iv.next to i32
@@ -166,17 +166,17 @@ for.end:                                          ; preds = %for.body
 
 }
 
-define i32 @koo(i32* nocapture %a) nounwind uwtable readonly {
+define i32 @koo(ptr nocapture %a) nounwind uwtable readonly {
 ; CHECK-LABEL: define {{[^@]+}}@koo
-; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
+; CHECK-SAME: (ptr nocapture [[A:%.*]]) #0
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[R_06:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 16
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 16
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP0]], [[R_06]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
@@ -187,14 +187,14 @@ define i32 @koo(i32* nocapture %a) nounwind uwtable readonly {
 ; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
-  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32)]
+  call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32)]
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %r.06 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %r.06
   %indvars.iv.next = add i64 %indvars.iv, 4
   %1 = trunc i64 %indvars.iv.next to i32
@@ -207,17 +207,17 @@ for.end:                                          ; preds = %for.body
 
 }
 
-define i32 @koo2(i32* nocapture %a) nounwind uwtable readonly {
+define i32 @koo2(ptr nocapture %a) nounwind uwtable readonly {
 ; CHECK-LABEL: define {{[^@]+}}@koo2
-; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
+; CHECK-SAME: (ptr nocapture [[A:%.*]]) #0
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ -4, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[R_06:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 16
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 16
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP0]], [[R_06]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
@@ -228,14 +228,14 @@ define i32 @koo2(i32* nocapture %a) nounwind uwtable readonly {
 ; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
-  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32)]
+  call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32)]
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ -4, %entry ], [ %indvars.iv.next, %for.body ]
   %r.06 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %r.06
   %indvars.iv.next = add i64 %indvars.iv, 4
   %1 = trunc i64 %indvars.iv.next to i32
@@ -248,46 +248,40 @@ for.end:                                          ; preds = %for.body
 
 }
 
-define i32 @moo(i32* nocapture %a) nounwind uwtable {
+define i32 @moo(ptr nocapture %a) nounwind uwtable {
 ; CHECK-LABEL: define {{[^@]+}}@moo
-; CHECK-SAME: (i32* nocapture [[A:%.*]]) #1
+; CHECK-SAME: (ptr nocapture [[A:%.*]]) #1
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32) ]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* align 32 [[TMP0]], i8 0, i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 32 [[A]], i8 0, i64 64, i1 false)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
-  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32)]
-  %0 = bitcast i32* %a to i8*
-  tail call void @llvm.memset.p0i8.i64(i8* align 4 %0, i8 0, i64 64, i1 false)
+  call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32)]
+  tail call void @llvm.memset.p0.i64(ptr align 4 %a, i8 0, i64 64, i1 false)
   ret i32 undef
 
 }
 
-define i32 @moo2(i32* nocapture %a, i32* nocapture %b) nounwind uwtable {
+define i32 @moo2(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
 ; CHECK-LABEL: define {{[^@]+}}@moo2
-; CHECK-SAME: (i32* nocapture [[A:%.*]], i32* nocapture [[B:%.*]]) #1
+; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) #1
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[B]], i64 128) ]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[B]] to i8*
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 32 [[TMP0]], i8* align 128 [[TMP1]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[B]], i64 128) ]
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 32 [[A]], ptr align 128 [[B]], i64 64, i1 false)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
-  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32)]
-  call void @llvm.assume(i1 true) ["align"(i32* %b, i64 128)]
-  %0 = bitcast i32* %a to i8*
-  %1 = bitcast i32* %b to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 64, i1 false)
+  call void @llvm.assume(i1 true) ["align"(ptr %a, i64 32)]
+  call void @llvm.assume(i1 true) ["align"(ptr %b, i64 128)]
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 64, i1 false)
   ret i32 undef
 
 }
 
 declare void @llvm.assume(i1) nounwind
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 

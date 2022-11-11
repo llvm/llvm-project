@@ -18,7 +18,7 @@ namespace bugprone {
 /// Finds temporaries that look like RAII objects.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-unused-raii.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unused-raii.html
 class UnusedRaiiCheck : public ClangTidyCheck {
 public:
   UnusedRaiiCheck(StringRef Name, ClangTidyContext *Context)

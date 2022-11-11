@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -33,7 +33,7 @@ protected:
       }
     )MLIR";
 
-    registry.insert<func::FuncDialect, arith::ArithmeticDialect>();
+    registry.insert<func::FuncDialect, arith::ArithDialect>();
     ctx.appendDialectRegistry(registry);
     module = parseSourceString<ModuleOp>(ir, &ctx);
     mapFn = cast<func::FuncOp>(module->front());

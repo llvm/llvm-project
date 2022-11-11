@@ -11,21 +11,21 @@ define i32 @foo(i32, i32, i32) #0 {
   %6 = alloca i32, align 4
   %7 = alloca i32, align 4
   %8 = alloca i32, align 4
-  store i32 %0, i32* %4, align 4
-  store i32 %1, i32* %5, align 4
-  store i32 %2, i32* %6, align 4
-  store i32 0, i32* %7, align 4
-  %9 = load i32, i32* %5, align 4
+  store i32 %0, ptr %4, align 4
+  store i32 %1, ptr %5, align 4
+  store i32 %2, ptr %6, align 4
+  store i32 0, ptr %7, align 4
+  %9 = load i32, ptr %5, align 4
   %I10 = icmp ne i32 %9, 0
   br i1 %I10, label %B11, label %B21
 
 B11: 
-  store i32 0, i32* %8, align 4
+  store i32 0, ptr %8, align 4
   br label %B12
 
 B12:
-  %I13 = load i32, i32* %8, align 4
-  %I14 = load i32, i32* %6, align 4
+  %I13 = load i32, ptr %8, align 4
+  %I14 = load i32, ptr %6, align 4
   %I15 = icmp slt i32 %I13, %I14
 ; CHECK: br label %B20
   br i1 %I15, label %B16, label %B20
@@ -34,17 +34,17 @@ B16:
   br label %B17
 
 B17: 
-  %I18 = load i32, i32* %8, align 4
+  %I18 = load i32, ptr %8, align 4
   %I19 = add nsw i32 %I18, 1
-  store i32 %I19, i32* %8, align 4
+  store i32 %I19, ptr %8, align 4
   br label %B12
 
 B20:
-  store i32 1, i32* %7, align 4
+  store i32 1, ptr %7, align 4
   br label %B21
 
 B21: 
-  %I22 = load i32, i32* %7, align 4
+  %I22 = load i32, ptr %7, align 4
   ret i32 %I22
 }
 

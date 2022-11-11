@@ -23,6 +23,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFGPrinter.h"
+#include "llvm/Analysis/CFGSCCPrinter.h"
 #include "llvm/Analysis/CFLAndersAliasAnalysis.h"
 #include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -72,6 +73,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/PassManager.h"
@@ -86,6 +88,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
+#include "llvm/Transforms/Coroutines/CoroConditionalWrapper.h"
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "llvm/Transforms/Coroutines/CoroElide.h"
 #include "llvm/Transforms/Coroutines/CoroSplit.h"
@@ -138,6 +141,7 @@
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/PoisonChecking.h"
+#include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
@@ -372,7 +376,7 @@ AnalysisKey NoOpLoopAnalysis::Key;
 /// We currently only use this for --print-before/after.
 bool shouldPopulateClassToPassNames() {
   return PrintPipelinePasses || !printBeforePasses().empty() ||
-         !printAfterPasses().empty();
+         !printAfterPasses().empty() || !isFilterPassesEmpty();
 }
 
 // A pass for testing -print-on-crash.
@@ -850,6 +854,11 @@ parseStackLifetimeOptions(StringRef Params) {
   return Result;
 }
 
+Expected<bool> parseDependenceAnalysisPrinterOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "normalized-results",
+                               "DependenceAnalysisPrinter");
+}
+
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
@@ -890,6 +899,8 @@ static bool isModulePassName(StringRef Name, CallbacksT &Callbacks) {
   if (Name == "cgscc")
     return true;
   if (Name == "function" || Name == "function<eager-inv>")
+    return true;
+  if (Name == "coro-cond")
     return true;
 
   // Explicitly handle custom-parsed pass names.
@@ -1085,6 +1096,13 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
       MPM.addPass(std::move(NestedMPM));
       return Error::success();
     }
+    if (Name == "coro-cond") {
+      ModulePassManager NestedMPM;
+      if (auto Err = parseModulePassPipeline(NestedMPM, InnerPipeline))
+        return Err;
+      MPM.addPass(CoroConditionalWrapper(std::move(NestedMPM)));
+      return Error::success();
+    }
     if (Name == "cgscc") {
       CGSCCPassManager CGPM;
       if (auto Err = parseCGSCCPassPipeline(CGPM, InnerPipeline))
@@ -1184,12 +1202,12 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
   if (Name == "require<" NAME ">") {                                           \
     MPM.addPass(                                                               \
         RequireAnalysisPass<                                                   \
-            std::remove_reference<decltype(CREATE_PASS)>::type, Module>());    \
+            std::remove_reference_t<decltype(CREATE_PASS)>, Module>());        \
     return Error::success();                                                   \
   }                                                                            \
   if (Name == "invalidate<" NAME ">") {                                        \
     MPM.addPass(InvalidateAnalysisPass<                                        \
-                std::remove_reference<decltype(CREATE_PASS)>::type>());        \
+                std::remove_reference_t<decltype(CREATE_PASS)>>());            \
     return Error::success();                                                   \
   }
 #define CGSCC_PASS(NAME, CREATE_PASS)                                          \
@@ -1318,14 +1336,14 @@ Error PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
 #define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
   if (Name == "require<" NAME ">") {                                           \
     CGPM.addPass(RequireAnalysisPass<                                          \
-                 std::remove_reference<decltype(CREATE_PASS)>::type,           \
+                 std::remove_reference_t<decltype(CREATE_PASS)>,               \
                  LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,    \
                  CGSCCUpdateResult &>());                                      \
     return Error::success();                                                   \
   }                                                                            \
   if (Name == "invalidate<" NAME ">") {                                        \
     CGPM.addPass(InvalidateAnalysisPass<                                       \
-                 std::remove_reference<decltype(CREATE_PASS)>::type>());       \
+                 std::remove_reference_t<decltype(CREATE_PASS)>>());           \
     return Error::success();                                                   \
   }
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
@@ -1394,8 +1412,9 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
         return Err;
       // Add the nested pass manager with the appropriate adaptor.
       bool UseMemorySSA = (Name == "loop-mssa");
-      bool UseBFI = llvm::any_of(
-          InnerPipeline, [](auto Pipeline) { return Pipeline.Name == "licm"; });
+      bool UseBFI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
+        return Pipeline.Name.contains("simple-loop-unswitch");
+      });
       bool UseBPI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
         return Pipeline.Name == "loop-predication";
       });
@@ -1439,12 +1458,12 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
   if (Name == "require<" NAME ">") {                                           \
     FPM.addPass(                                                               \
         RequireAnalysisPass<                                                   \
-            std::remove_reference<decltype(CREATE_PASS)>::type, Function>());  \
+            std::remove_reference_t<decltype(CREATE_PASS)>, Function>());      \
     return Error::success();                                                   \
   }                                                                            \
   if (Name == "invalidate<" NAME ">") {                                        \
     FPM.addPass(InvalidateAnalysisPass<                                        \
-                std::remove_reference<decltype(CREATE_PASS)>::type>());        \
+                std::remove_reference_t<decltype(CREATE_PASS)>>());            \
     return Error::success();                                                   \
   }
 // FIXME: UseMemorySSA is set to false. Maybe we could do things like:
@@ -1535,14 +1554,14 @@ Error PassBuilder::parseLoopPass(LoopPassManager &LPM,
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)                                       \
   if (Name == "require<" NAME ">") {                                           \
     LPM.addPass(RequireAnalysisPass<                                           \
-                std::remove_reference<decltype(CREATE_PASS)>::type, Loop,      \
+                std::remove_reference_t<decltype(CREATE_PASS)>, Loop,          \
                 LoopAnalysisManager, LoopStandardAnalysisResults &,            \
                 LPMUpdater &>());                                              \
     return Error::success();                                                   \
   }                                                                            \
   if (Name == "invalidate<" NAME ">") {                                        \
     LPM.addPass(InvalidateAnalysisPass<                                        \
-                std::remove_reference<decltype(CREATE_PASS)>::type>());        \
+                std::remove_reference_t<decltype(CREATE_PASS)>>());            \
     return Error::success();                                                   \
   }
 #include "PassRegistry.def"
@@ -1558,13 +1577,13 @@ bool PassBuilder::parseAAPassName(AAManager &AA, StringRef Name) {
 #define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
   if (Name == NAME) {                                                          \
     AA.registerModuleAnalysis<                                                 \
-        std::remove_reference<decltype(CREATE_PASS)>::type>();                 \
+        std::remove_reference_t<decltype(CREATE_PASS)>>();                     \
     return true;                                                               \
   }
 #define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
   if (Name == NAME) {                                                          \
     AA.registerFunctionAnalysis<                                               \
-        std::remove_reference<decltype(CREATE_PASS)>::type>();                 \
+        std::remove_reference_t<decltype(CREATE_PASS)>>();                     \
     return true;                                                               \
   }
 #include "PassRegistry.def"
@@ -1752,40 +1771,6 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   }
 
   return Error::success();
-}
-
-bool PassBuilder::isAAPassName(StringRef PassName) {
-#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
-  if (PassName == NAME)                                                        \
-    return true;
-#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
-  if (PassName == NAME)                                                        \
-    return true;
-#include "PassRegistry.def"
-  return false;
-}
-
-bool PassBuilder::isAnalysisPassName(StringRef PassName) {
-#define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
-  if (PassName == NAME)                                                        \
-    return true;
-#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
-  if (PassName == NAME)                                                        \
-    return true;
-#define LOOP_ANALYSIS(NAME, CREATE_PASS)                                       \
-  if (PassName == NAME)                                                        \
-    return true;
-#define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
-  if (PassName == NAME)                                                        \
-    return true;
-#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
-  if (PassName == NAME)                                                        \
-    return true;
-#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
-  if (PassName == NAME)                                                        \
-    return true;
-#include "PassRegistry.def"
-  return false;
 }
 
 static void printPassName(StringRef PassName, raw_ostream &OS) {

@@ -1,0 +1,26 @@
+import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+if (llvm_install_binutils_symlinks) {
+  symlink_or_copy("debuginfod") {
+    deps = [ ":llvm-debuginfod" ]
+    source = "llvm-debuginfod"
+    output = "$root_out_dir/bin/debuginfod"
+  }
+}
+
+# //:llvm-debuginfod depends on this symlink target, see comment in //BUILD.gn.
+group("symlinks") {
+  deps = [ ":llvm-debuginfod" ]
+  if (llvm_install_binutils_symlinks) {
+    deps += [ ":debuginfod" ]
+  }
+}
+
+executable("llvm-debuginfod") {
+  deps = [
+    "//llvm/lib/Debuginfod",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "llvm-debuginfod.cpp" ]
+}

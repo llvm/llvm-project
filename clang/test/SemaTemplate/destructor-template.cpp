@@ -98,7 +98,7 @@ struct S {
   template <class>
   ~S(); // expected-error{{destructor cannot be declared as a template}}
 };
-struct T : S {    // expected-note{{destructor of 'T' is implicitly deleted because base class 'PR38671::S' has no destructor}}
-  ~T() = default; // expected-warning{{explicitly defaulted destructor is implicitly deleted}}
+struct T : S {
+  ~T() = default;
 };
 } // namespace PR38671

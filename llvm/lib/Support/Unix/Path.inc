@@ -1273,18 +1273,19 @@ static std::error_code remove_directories_impl(const T &Entry,
   while (Begin != End) {
     auto &Item = *Begin;
     ErrorOr<basic_file_status> st = Item.status();
-    if (!st && !IgnoreErrors)
-      return st.getError();
+    if (st) {
+      if (is_directory(*st)) {
+        EC = remove_directories_impl(Item, IgnoreErrors);
+        if (EC && !IgnoreErrors)
+          return EC;
+      }
 
-    if (is_directory(*st)) {
-      EC = remove_directories_impl(Item, IgnoreErrors);
+      EC = fs::remove(Item.path(), true);
       if (EC && !IgnoreErrors)
         return EC;
+    } else if (!IgnoreErrors) {
+      return st.getError();
     }
-
-    EC = fs::remove(Item.path(), true);
-    if (EC && !IgnoreErrors)
-      return EC;
 
     Begin.increment(EC);
     if (EC && !IgnoreErrors)

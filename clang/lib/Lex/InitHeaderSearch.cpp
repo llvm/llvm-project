@@ -246,7 +246,7 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     case llvm::Triple::Win32:
       if (triple.getEnvironment() != llvm::Triple::Cygnus)
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       // FIXME: temporary hack: hard-coded paths.
       AddPath("/usr/local/include", System, false);
@@ -461,8 +461,13 @@ void InitHeaderSearch::AddDefaultIncludePaths(const LangOptions &Lang,
   if (triple.isOSDarwin()) {
     if (HSOpts.UseStandardSystemIncludes) {
       // Add the default framework include paths on Darwin.
-      AddPath("/System/Library/Frameworks", System, true);
-      AddPath("/Library/Frameworks", System, true);
+      if (triple.isDriverKit()) {
+        AddPath("/System/DriverKit/System/Library/Frameworks", System, true);
+      }
+      else {
+        AddPath("/System/Library/Frameworks", System, true);
+        AddPath("/Library/Frameworks", System, true);
+      }
     }
     return;
   }

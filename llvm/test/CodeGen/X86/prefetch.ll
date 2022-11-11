@@ -21,7 +21,7 @@
 
 ; rdar://10538297
 
-define void @t(i8* %ptr) nounwind  {
+define void @t(ptr %ptr) nounwind  {
 ; SSE-LABEL: t:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -74,15 +74,15 @@ define void @t(i8* %ptr) nounwind  {
 ; 3DNOW-NEXT:    prefetchw (%eax)
 ; 3DNOW-NEXT:    retl
 entry:
-	tail call void @llvm.prefetch( i8* %ptr, i32 0, i32 1, i32 1 )
-	tail call void @llvm.prefetch( i8* %ptr, i32 0, i32 2, i32 1 )
-	tail call void @llvm.prefetch( i8* %ptr, i32 0, i32 3, i32 1 )
-	tail call void @llvm.prefetch( i8* %ptr, i32 0, i32 0, i32 1 )
-	tail call void @llvm.prefetch( i8* %ptr, i32 1, i32 1, i32 1 )
-	tail call void @llvm.prefetch( i8* %ptr, i32 1, i32 2, i32 1 )
-	tail call void @llvm.prefetch( i8* %ptr, i32 1, i32 3, i32 1 )
-	tail call void @llvm.prefetch( i8* %ptr, i32 1, i32 0, i32 1 )
+	tail call void @llvm.prefetch( ptr %ptr, i32 0, i32 1, i32 1 )
+	tail call void @llvm.prefetch( ptr %ptr, i32 0, i32 2, i32 1 )
+	tail call void @llvm.prefetch( ptr %ptr, i32 0, i32 3, i32 1 )
+	tail call void @llvm.prefetch( ptr %ptr, i32 0, i32 0, i32 1 )
+	tail call void @llvm.prefetch( ptr %ptr, i32 1, i32 1, i32 1 )
+	tail call void @llvm.prefetch( ptr %ptr, i32 1, i32 2, i32 1 )
+	tail call void @llvm.prefetch( ptr %ptr, i32 1, i32 3, i32 1 )
+	tail call void @llvm.prefetch( ptr %ptr, i32 1, i32 0, i32 1 )
 	ret void
 }
 
-declare void @llvm.prefetch(i8*, i32, i32, i32) nounwind
+declare void @llvm.prefetch(ptr, i32, i32, i32) nounwind

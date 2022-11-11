@@ -11,15 +11,6 @@
 @C = global i1 mul (i1 icmp ult (ptr @X, ptr @Y), i1 icmp ult (ptr @X, ptr @Z))
 ; CHECK: @C = global i1 and (i1 icmp ult (ptr @X, ptr @Y), i1 icmp ult (ptr @X, ptr @Z))
 
-@D = global i1 sdiv (i1 icmp ult (ptr @X, ptr @Y), i1 icmp ult (ptr @X, ptr @Z))
-; CHECK: @D = global i1 icmp ult (ptr @X, ptr @Y)
-@E = global i1 udiv (i1 icmp ult (ptr @X, ptr @Y), i1 icmp ult (ptr @X, ptr @Z))
-; CHECK: @E = global i1 icmp ult (ptr @X, ptr @Y)
-@F = global i1 srem (i1 icmp ult (ptr @X, ptr @Y), i1 icmp ult (ptr @X, ptr @Z))
-; CHECK: @F = global i1 false 
-@G = global i1 urem (i1 icmp ult (ptr @X, ptr @Y), i1 icmp ult (ptr @X, ptr @Z))
-; CHECK: @G = global i1 false 
-
 @H = global i1 icmp ule (ptr @X, ptr @Y)
 ; CHECK: @H = global i1 icmp ule (ptr @X, ptr @Y)
 
@@ -58,13 +49,6 @@
 
 ; CHECK: @T5 = global ptr @A
 @T5 = global ptr inttoptr (i64 add (i64 trunc (i256 lshr (i256 or (i256 and (i256 and (i256 shl (i256 zext (i64 ptrtoint (ptr @B to i64) to i256), i256 64), i256 -6277101735386680763495507056286727952638980837032266301441), i256 6277101735386680763835789423207666416102355444464034512895), i256 shl (i256 zext (i64 ptrtoint (ptr @A to i64) to i256), i256 192)), i256 192) to i64), i64 trunc (i256 lshr (i256 or (i256 and (i256 and (i256 shl (i256 zext (i64 ptrtoint (ptr @B to i64) to i256), i256 64), i256 -6277101735386680763495507056286727952638980837032266301441), i256 6277101735386680763835789423207666416102355444464034512895), i256 shl (i256 zext (i64 ptrtoint (ptr @A to i64) to i256), i256 192)), i256 128) to i64)) to ptr)
-
-
-
-; PR6096
-
-; No check line. This used to crash llvm-as.
-@T6 = global <2 x i1> fcmp ole (<2 x float> fdiv (<2 x float> undef, <2 x float> <float 1.000000e+00, float 1.000000e+00>), <2 x float> zeroinitializer)
 
 
 ; PR9011

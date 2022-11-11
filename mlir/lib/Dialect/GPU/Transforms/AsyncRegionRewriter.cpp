@@ -11,10 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Async/IR/Async.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+
+#include "mlir/Dialect/Async/IR/Async.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Utils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -24,9 +25,16 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_GPUASYNCREGIONPASS
+#include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
+
 namespace {
-class GpuAsyncRegionPass : public GpuAsyncRegionPassBase<GpuAsyncRegionPass> {
+class GpuAsyncRegionPass
+    : public impl::GpuAsyncRegionPassBase<GpuAsyncRegionPass> {
   struct ThreadTokenCallback;
   struct DeferWaitCallback;
   struct SingleTokenUseCallback;
@@ -69,7 +77,7 @@ private:
     if (auto waitOp = llvm::dyn_cast<gpu::WaitOp>(op)) {
       if (currentToken)
         waitOp.addAsyncDependency(currentToken);
-      currentToken = waitOp.asyncToken();
+      currentToken = waitOp.getAsyncToken();
       return success();
     }
     builder.setInsertionPoint(op);
@@ -124,7 +132,8 @@ private:
   }
 
   Value createWaitOp(Location loc, Type resultType, ValueRange operands) {
-    return builder.create<gpu::WaitOp>(loc, resultType, operands).asyncToken();
+    return builder.create<gpu::WaitOp>(loc, resultType, operands)
+        .getAsyncToken();
   }
 
   OpBuilder builder;
@@ -161,7 +170,7 @@ async::ExecuteOp addExecuteResults(async::ExecuteOp executeOp,
   OpBuilder builder(executeOp);
   auto newOp = builder.create<async::ExecuteOp>(
       executeOp.getLoc(), TypeRange{resultTypes}.drop_front() /*drop token*/,
-      executeOp.dependencies(), executeOp.operands());
+      executeOp.getDependencies(), executeOp.getBodyOperands());
   BlockAndValueMapping mapper;
   newOp.getRegion().getBlocks().clear();
   executeOp.getRegion().cloneInto(&newOp.getRegion(), mapper);
@@ -181,12 +190,12 @@ struct GpuAsyncRegionPass::DeferWaitCallback {
   // ops, add the region's last `gpu.wait` op to the worklist if it is
   // synchronous and is the last op with side effects.
   void operator()(async::ExecuteOp executeOp) {
-    if (!areAllUsersExecuteOrAwait(executeOp.token()))
+    if (!areAllUsersExecuteOrAwait(executeOp.getToken()))
       return;
     // async.execute's region is currently restricted to one block.
     for (auto &op : llvm::reverse(executeOp.getBody()->without_terminator())) {
       if (auto waitOp = dyn_cast<gpu::WaitOp>(op)) {
-        if (!waitOp.asyncToken())
+        if (!waitOp.getAsyncToken())
           worklist.push_back(waitOp);
         return;
       }
@@ -202,14 +211,14 @@ struct GpuAsyncRegionPass::DeferWaitCallback {
       auto executeOp = waitOp->getParentOfType<async::ExecuteOp>();
 
       // Erase `gpu.wait` and return async dependencies from execute op instead.
-      SmallVector<Value, 4> dependencies = waitOp.asyncDependencies();
+      SmallVector<Value, 4> dependencies = waitOp.getAsyncDependencies();
       waitOp.erase();
       executeOp = addExecuteResults(executeOp, dependencies);
 
       // Add the async dependency to each user of the `async.execute` token.
       auto asyncTokens = executeOp.getResults().take_back(dependencies.size());
-      SmallVector<Operation *, 4> users(executeOp.token().user_begin(),
-                                        executeOp.token().user_end());
+      SmallVector<Operation *, 4> users(executeOp.getToken().user_begin(),
+                                        executeOp.getToken().user_end());
       for (Operation *user : users)
         addAsyncDependencyAfter(asyncTokens, user);
     }
@@ -242,7 +251,7 @@ private:
           builder.setInsertionPointAfter(op);
           for (auto asyncToken : asyncTokens)
             tokens.push_back(
-                builder.create<async::AwaitOp>(loc, asyncToken).result());
+                builder.create<async::AwaitOp>(loc, asyncToken).getResult());
           // Set `it` after the inserted async.await ops.
           it = builder.getInsertionPoint();
         })
@@ -250,7 +259,7 @@ private:
           // Set `it` to the beginning of the region and add asyncTokens to the
           // async.execute operands.
           it = executeOp.getBody()->begin();
-          executeOp.operandsMutable().append(asyncTokens);
+          executeOp.getBodyOperandsMutable().append(asyncTokens);
           SmallVector<Type, 1> tokenTypes(
               asyncTokens.size(), builder.getType<gpu::AsyncTokenType>());
           SmallVector<Location, 1> tokenLocs(asyncTokens.size(),
@@ -279,7 +288,7 @@ private:
     // If the new waitOp is at the end of an async.execute region, add it to the
     // worklist. 'operator()(executeOp)' would do the same, but this is faster.
     auto executeOp = dyn_cast<async::ExecuteOp>(it->getParentOp());
-    if (executeOp && areAllUsersExecuteOrAwait(executeOp.token()) &&
+    if (executeOp && areAllUsersExecuteOrAwait(executeOp.getToken()) &&
         !it->getNextNode())
       worklist.push_back(waitOp);
   }
@@ -292,8 +301,8 @@ private:
 struct GpuAsyncRegionPass::SingleTokenUseCallback {
   void operator()(async::ExecuteOp executeOp) {
     // Extract !gpu.async.token results which have multiple uses.
-    auto multiUseResults =
-        llvm::make_filter_range(executeOp.results(), [](OpResult result) {
+    auto multiUseResults = llvm::make_filter_range(
+        executeOp.getBodyResults(), [](OpResult result) {
           if (result.use_empty() || result.hasOneUse())
             return false;
           auto valueType = result.getType().dyn_cast<async::ValueType>();
@@ -311,16 +320,16 @@ struct GpuAsyncRegionPass::SingleTokenUseCallback {
               });
 
     for (auto index : indices) {
-      assert(!executeOp.results()[index].getUses().empty());
+      assert(!executeOp.getBodyResults()[index].getUses().empty());
       // Repeat async.yield token result, one for each use after the first one.
-      auto uses = llvm::drop_begin(executeOp.results()[index].getUses());
+      auto uses = llvm::drop_begin(executeOp.getBodyResults()[index].getUses());
       auto count = std::distance(uses.begin(), uses.end());
       auto yieldOp = cast<async::YieldOp>(executeOp.getBody()->getTerminator());
       SmallVector<Value, 4> operands(count, yieldOp.getOperand(index));
       executeOp = addExecuteResults(executeOp, operands);
       // Update 'uses' to refer to the new executeOp.
-      uses = llvm::drop_begin(executeOp.results()[index].getUses());
-      auto results = executeOp.results().take_back(count);
+      uses = llvm::drop_begin(executeOp.getBodyResults()[index].getUses());
+      auto results = executeOp.getBodyResults().take_back(count);
       for (auto pair : llvm::zip(uses, results))
         std::get<0>(pair).set(std::get<1>(pair));
     }

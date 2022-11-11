@@ -128,6 +128,15 @@ public:
     }
   }
 
+  void TruncateFrame(std::int64_t at, IoErrorHandler &handler) {
+    RUNTIME_CHECK(handler, !dirty_);
+    if (at <= fileOffset_) {
+      Reset(at);
+    } else if (at < fileOffset_ + length_) {
+      length_ = at - fileOffset_;
+    }
+  }
+
 private:
   STORE &Store() { return static_cast<STORE &>(*this); }
 

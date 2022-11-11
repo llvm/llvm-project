@@ -211,7 +211,7 @@ public:
 template<class T> struct Mystery;
 template<class T> typedef Mystery<T>::type getMysteriousThing() { // \
   expected-error {{function definition declared 'typedef'}} \
-  expected-error {{missing 'typename' prior to dependent}}
+  expected-warning {{implicit 'typename' is a C++20 extension}}
   return Mystery<T>::get();
 }
 
@@ -384,7 +384,7 @@ namespace PR15045 {
 
   int f() {
     Cl0 c;
-    return c->a;  // expected-error {{member reference type 'PR15045::Cl0' is not a pointer; did you mean to use '.'?}}
+    return c->a;  // expected-error {{member reference type 'Cl0' is not a pointer; did you mean to use '.'?}}
   }
 }
 
@@ -442,7 +442,7 @@ struct Bar {
 };
 
 void bar(Bar *o) {
-  o.~Bar(); // expected-error {{member reference type 'dotPointerDestructor::Bar *' is a pointer; did you mean to use '->'}}
+  o.~Bar(); // expected-error {{member reference type 'Bar *' is a pointer; did you mean to use '->'}}
 }  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:5}:"->"
 
 }

@@ -388,10 +388,10 @@ define i33 @fshr_undef_shift_amount(i33 %x, i33 %y) {
 
 define i33 @fshr_constant_shift_amount_modulo_bitwidth_constexpr(i33 %x, i33 %y) {
 ; CHECK-LABEL: @fshr_constant_shift_amount_modulo_bitwidth_constexpr(
-; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshr.i33(i33 [[X:%.*]], i33 [[Y:%.*]], i33 ptrtoint (i8* @external_global to i33))
+; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshr.i33(i33 [[X:%.*]], i33 [[Y:%.*]], i33 ptrtoint (ptr @external_global to i33))
 ; CHECK-NEXT:    ret i33 [[R]]
 ;
-  %shamt = ptrtoint i8* @external_global to i33
+  %shamt = ptrtoint ptr @external_global to i33
   %r = call i33 @llvm.fshr.i33(i33 %x, i33 %y, i33 %shamt)
   ret i33 %r
 }
@@ -416,11 +416,11 @@ define <2 x i31> @fshl_constant_shift_amount_modulo_bitwidth_vec(<2 x i31> %x, <
 
 define <2 x i31> @fshl_constant_shift_amount_modulo_bitwidth_vec_const_expr(<2 x i31> %x, <2 x i31> %y) {
 ; CHECK-LABEL: @fshl_constant_shift_amount_modulo_bitwidth_vec_const_expr(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[X:%.*]], <2 x i31> [[Y:%.*]], <2 x i31> <i31 34, i31 ptrtoint (i8* @external_global to i31)>)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[X:%.*]], <2 x i31> [[Y:%.*]], <2 x i31> <i31 34, i31 ptrtoint (ptr @external_global to i31)>)
 ; CHECK-NEXT:    ret <2 x i31> [[R]]
 ;
-  %shamt = ptrtoint i8* @external_global to i31
-  %r = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> %y, <2 x i31> <i31 34, i31 ptrtoint (i8* @external_global to i31)>)
+  %shamt = ptrtoint ptr @external_global to i31
+  %r = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> %y, <2 x i31> <i31 34, i31 ptrtoint (ptr @external_global to i31)>)
   ret <2 x i31> %r
 }
 

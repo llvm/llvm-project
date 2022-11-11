@@ -82,12 +82,12 @@ Diagnostics:
   EXPECT_THAT(Results[1].CompileFlags.Add, ElementsAre(val("b\naz\n")));
 
   ASSERT_TRUE(Results[2].Index.Background);
-  EXPECT_EQ("Skip", *Results[2].Index.Background.getValue());
+  EXPECT_EQ("Skip", *Results[2].Index.Background.value());
   EXPECT_THAT(Results[3].Diagnostics.ClangTidy.CheckOptions,
               ElementsAre(PairVal("IgnoreMacros", "true"),
                           PairVal("example-check.ExampleOption", "0")));
   EXPECT_TRUE(Results[3].Diagnostics.UnusedIncludes);
-  EXPECT_EQ("Strict", *Results[3].Diagnostics.UnusedIncludes.getValue());
+  EXPECT_EQ("Strict", *Results[3].Diagnostics.UnusedIncludes.value());
 }
 
 TEST(ParseYAML, Locations) {
@@ -163,10 +163,10 @@ Index:
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_EQ(Results.size(), 1u);
   ASSERT_TRUE(Results[0].Index.External);
-  EXPECT_FALSE(Results[0].Index.External.getValue()->File.hasValue());
-  EXPECT_FALSE(Results[0].Index.External.getValue()->MountPoint.hasValue());
-  EXPECT_FALSE(Results[0].Index.External.getValue()->Server.hasValue());
-  EXPECT_THAT(*Results[0].Index.External.getValue()->IsNone, testing::Eq(true));
+  EXPECT_FALSE(Results[0].Index.External.value()->File.has_value());
+  EXPECT_FALSE(Results[0].Index.External.value()->MountPoint.has_value());
+  EXPECT_FALSE(Results[0].Index.External.value()->Server.has_value());
+  EXPECT_THAT(*Results[0].Index.External.value()->IsNone, testing::Eq(true));
 }
 
 TEST(ParseYAML, ExternalBlock) {
@@ -182,10 +182,10 @@ Index:
       Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
   ASSERT_EQ(Results.size(), 1u);
   ASSERT_TRUE(Results[0].Index.External);
-  EXPECT_THAT(*Results[0].Index.External.getValue()->File, val("foo"));
-  EXPECT_THAT(*Results[0].Index.External.getValue()->MountPoint, val("baz"));
+  EXPECT_THAT(*Results[0].Index.External.value()->File, val("foo"));
+  EXPECT_THAT(*Results[0].Index.External.value()->MountPoint, val("baz"));
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
-  EXPECT_THAT(*Results[0].Index.External.getValue()->Server, val("bar"));
+  EXPECT_THAT(*Results[0].Index.External.value()->Server, val("bar"));
 }
 
 TEST(ParseYAML, AllScopes) {

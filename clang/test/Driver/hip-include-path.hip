@@ -3,15 +3,15 @@
 // REQUIRES: libgcc
 // UNSUPPORTED: system-windows
 
-// RUN: %clang -c -### -target x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
+// RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
 // RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm -nogpulib %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,CLANG,HIP %s
 
-// RUN: %clang -c -### -target x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
+// RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
 // RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm -nobuiltininc -nogpulib %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,NOCLANG,HIP %s
 
-// RUN: %clang -c -### -target x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
+// RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
 // RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm -nogpuinc -nogpulib %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,CLANG,NOHIP %s
 
@@ -37,7 +37,7 @@
 // NOCLANG-NOT: "{{[^"]*}}/lib{{[^"]*}}/clang/{{[^"]*}}/include"
 // NOHIP-NOT: "{{.*}}Inputs/rocm/include"
 
-// RUN: %clang -c -### -target x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
+// RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
 // RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm -nogpulib %s 2>&1 \
 // RUN:   --hip-version=3.5 | FileCheck -check-prefixes=ROCM35 %s
 

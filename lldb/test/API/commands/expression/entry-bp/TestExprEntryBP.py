@@ -8,8 +8,6 @@ from lldbsuite.test.lldbtest import *
 
 class ExprEntryBPTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_expr_entry_bp(self):

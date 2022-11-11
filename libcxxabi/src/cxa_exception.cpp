@@ -444,6 +444,14 @@ __cxa_begin_catch(void* unwind_arg) throw()
             (
                 static_cast<_Unwind_Exception*>(unwind_exception)
             );
+
+#if defined(__MVS__)
+    // Remove the exception object from the linked list of exceptions that the z/OS unwinder
+    // maintains before adding it to the libc++abi list of caught exceptions.
+    // The libc++abi will manage the lifetime of the exception from this point forward.
+    _UnwindZOS_PopException();
+#endif
+
     if (native_exception)
     {
         // Increment the handler count, removing the flag about being rethrown

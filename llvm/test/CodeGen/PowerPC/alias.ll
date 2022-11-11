@@ -2,16 +2,16 @@
 ; RUN: llc -relocation-model=static -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -code-model=large | FileCheck --check-prefix=CHECK --check-prefix=LARGE %s
 
 @foo = dso_local global i32 42
-@fooa = dso_local alias i32, i32* @foo
+@fooa = dso_local alias i32, ptr @foo
 
 @foo2 = dso_local global i64 42
-@foo2a = dso_local alias i64, i64* @foo2
+@foo2a = dso_local alias i64, ptr @foo2
 
 ; CHECK-LABEL: bar:
 define dso_local i32 @bar() {
 ; MEDIUM: addis 3, 2, fooa@toc@ha
 ; LARGE: addis 3, 2, .L[[L0:.*]]@toc@ha
-  %a = load i32, i32* @fooa
+  %a = load i32, ptr @fooa
   ret i32 %a
 }
 
@@ -20,7 +20,7 @@ define i64 @bar2() {
 ; MEDIUM: addis 3, 2, foo2a@toc@ha
 ; MEDIUM: addi 3, 3, foo2a@toc@l
 ; LARGE: addis 3, 2, .L[[L1:.*]]@toc@ha
-  %a = load i64, i64* @foo2a
+  %a = load i64, ptr @foo2a
   ret i64 %a
 }
 

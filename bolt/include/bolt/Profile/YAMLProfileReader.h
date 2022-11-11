@@ -33,9 +33,9 @@ public:
 
   Error preprocessProfile(BinaryContext &BC) override;
 
-  virtual bool hasLocalsWithFileName() const override;
+  bool hasLocalsWithFileName() const override;
 
-  virtual bool mayHaveProfileData(const BinaryFunction &BF) override;
+  bool mayHaveProfileData(const BinaryFunction &BF) override;
 
   /// Check if the file contains YAML.
   static bool isYAML(StringRef Filename);

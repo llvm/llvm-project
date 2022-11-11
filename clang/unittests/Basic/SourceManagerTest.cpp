@@ -51,6 +51,73 @@ protected:
   IntrusiveRefCntPtr<TargetInfo> Target;
 };
 
+TEST_F(SourceManagerTest, isInMemoryBuffersNoSourceLocationInfo) {
+  // Check for invalid source location for each method
+  SourceLocation LocEmpty;
+  bool isWrittenInBuiltInFileFalse = SourceMgr.isWrittenInBuiltinFile(LocEmpty);
+  bool isWrittenInCommandLineFileFalse =
+      SourceMgr.isWrittenInCommandLineFile(LocEmpty);
+  bool isWrittenInScratchSpaceFalse =
+      SourceMgr.isWrittenInScratchSpace(LocEmpty);
+
+  EXPECT_FALSE(isWrittenInBuiltInFileFalse);
+  EXPECT_FALSE(isWrittenInCommandLineFileFalse);
+  EXPECT_FALSE(isWrittenInScratchSpaceFalse);
+
+  // Check for valid source location per filename for each method
+  const char *Source = "int x";
+
+  std::unique_ptr<llvm::MemoryBuffer> BuiltInBuf =
+      llvm::MemoryBuffer::getMemBuffer(Source);
+  const FileEntry *BuiltInFile =
+      FileMgr.getVirtualFile("<built-in>", BuiltInBuf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(BuiltInFile, std::move(BuiltInBuf));
+  FileID BuiltInFileID =
+      SourceMgr.getOrCreateFileID(BuiltInFile, SrcMgr::C_User);
+  SourceMgr.setMainFileID(BuiltInFileID);
+  SourceLocation LocBuiltIn =
+      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
+  bool isWrittenInBuiltInFileTrue =
+      SourceMgr.isWrittenInBuiltinFile(LocBuiltIn);
+
+  std::unique_ptr<llvm::MemoryBuffer> CommandLineBuf =
+      llvm::MemoryBuffer::getMemBuffer(Source);
+  const FileEntry *CommandLineFile = FileMgr.getVirtualFile(
+      "<command line>", CommandLineBuf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(CommandLineFile, std::move(CommandLineBuf));
+  FileID CommandLineFileID =
+      SourceMgr.getOrCreateFileID(CommandLineFile, SrcMgr::C_User);
+  SourceMgr.setMainFileID(CommandLineFileID);
+  SourceLocation LocCommandLine =
+      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
+  bool isWrittenInCommandLineFileTrue =
+      SourceMgr.isWrittenInCommandLineFile(LocCommandLine);
+
+  std::unique_ptr<llvm::MemoryBuffer> ScratchSpaceBuf =
+      llvm::MemoryBuffer::getMemBuffer(Source);
+  const FileEntry *ScratchSpaceFile = FileMgr.getVirtualFile(
+      "<scratch space>", ScratchSpaceBuf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(ScratchSpaceFile, std::move(ScratchSpaceBuf));
+  FileID ScratchSpaceFileID =
+      SourceMgr.getOrCreateFileID(ScratchSpaceFile, SrcMgr::C_User);
+  SourceMgr.setMainFileID(ScratchSpaceFileID);
+  SourceLocation LocScratchSpace =
+      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
+  bool isWrittenInScratchSpaceTrue =
+      SourceMgr.isWrittenInScratchSpace(LocScratchSpace);
+
+  EXPECT_TRUE(isWrittenInBuiltInFileTrue);
+  EXPECT_TRUE(isWrittenInCommandLineFileTrue);
+  EXPECT_TRUE(isWrittenInScratchSpaceTrue);
+}
+
+TEST_F(SourceManagerTest, isInSystemHeader) {
+  // Check for invalid source location
+  SourceLocation LocEmpty;
+  bool isInSystemHeaderFalse = SourceMgr.isInSystemHeader(LocEmpty);
+  ASSERT_FALSE(isInSystemHeaderFalse);
+}
+
 TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   const char *source =
     "#define M(x) [x]\n"
@@ -102,6 +169,83 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(idLoc, rsqrLoc));
   EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(macroExpStartLoc, idLoc));
   EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(idLoc, macroExpEndLoc));
+}
+
+TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithTokenSplit) {
+  const char *main = R"cpp(
+    #define ID(X) X
+    ID(
+      ID(a >> b)
+      c
+    )
+  )cpp";
+
+  SourceMgr.setMainFileID(
+      SourceMgr.createFileID(llvm::MemoryBuffer::getMemBuffer(main)));
+
+  TrivialModuleLoader ModLoader;
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, &*Target);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup =*/nullptr,
+                  /*OwnsHeaderSearch =*/false);
+  PP.Initialize(*Target);
+  PP.EnterMainSourceFile();
+  llvm::SmallString<8> Scratch;
+
+  std::vector<Token> toks;
+  while (1) {
+    Token tok;
+    PP.Lex(tok);
+    if (tok.is(tok::eof))
+      break;
+    toks.push_back(tok);
+  }
+
+  // Make sure we got the tokens that we expected.
+  ASSERT_EQ(4U, toks.size()) << "a >> b c";
+  // Sanity check their order.
+  for (unsigned I = 0; I < toks.size() - 1; ++I) {
+    EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(toks[I].getLocation(),
+                                                    toks[I + 1].getLocation()));
+    EXPECT_FALSE(SourceMgr.isBeforeInTranslationUnit(toks[I + 1].getLocation(),
+                                                     toks[I].getLocation()));
+  }
+
+  // Split the >> into two > tokens, as happens when parsing nested templates.
+  unsigned RightShiftIndex = 1;
+  SourceLocation RightShift = toks[RightShiftIndex].getLocation();
+  EXPECT_EQ(">>", Lexer::getSpelling(SourceMgr.getSpellingLoc(RightShift),
+                                     Scratch, SourceMgr, LangOpts));
+  SourceLocation Greater1 = PP.SplitToken(RightShift, /*Length=*/1);
+  SourceLocation Greater2 = RightShift.getLocWithOffset(1);
+  EXPECT_TRUE(Greater1.isMacroID());
+  EXPECT_EQ(">", Lexer::getSpelling(SourceMgr.getSpellingLoc(Greater1), Scratch,
+                                    SourceMgr, LangOpts));
+  EXPECT_EQ(">", Lexer::getSpelling(SourceMgr.getSpellingLoc(Greater2), Scratch,
+                                    SourceMgr, LangOpts));
+  EXPECT_EQ(SourceMgr.getImmediateExpansionRange(Greater1).getBegin(),
+            RightShift);
+
+  for (unsigned I = 0; I < toks.size(); ++I) {
+    SCOPED_TRACE("Token " + std::to_string(I));
+    // Right-shift is the parent of Greater1, so it compares less.
+    EXPECT_EQ(
+        SourceMgr.isBeforeInTranslationUnit(toks[I].getLocation(), Greater1),
+        I <= RightShiftIndex);
+    EXPECT_EQ(
+        SourceMgr.isBeforeInTranslationUnit(toks[I].getLocation(), Greater2),
+        I <= RightShiftIndex);
+    EXPECT_EQ(
+        SourceMgr.isBeforeInTranslationUnit(Greater1, toks[I].getLocation()),
+        RightShiftIndex < I);
+    EXPECT_EQ(
+        SourceMgr.isBeforeInTranslationUnit(Greater2, toks[I].getLocation()),
+        RightShiftIndex < I);
+  }
+  EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(Greater1, Greater2));
+  EXPECT_FALSE(SourceMgr.isBeforeInTranslationUnit(Greater2, Greater1));
 }
 
 TEST_F(SourceManagerTest, getColumnNumber) {

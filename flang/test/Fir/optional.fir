@@ -51,3 +51,37 @@ func.func @bar3() -> i1 {
   %1 = fir.call @foo3(%0) : (!fir.boxchar<1>) -> i1
   return %1 : i1
 }
+
+// CHECK-LABEL: @foo4(
+// CHECK-SAME: ptr %[[arg:.*]])
+func.func @foo4(%arg0: !fir.boxproc<(i32)->(i64)>) -> i1 {
+  // CHECK: %[[ptr:.*]] = ptrtoint ptr %[[arg]] to i64
+  // CHECK: icmp ne i64 %[[ptr]], 0
+  %0 = fir.is_present %arg0 : (!fir.boxproc<(i32)->(i64)>) -> i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: @bar4
+func.func @bar4() -> i1 {
+  %0 = fir.absent !fir.boxproc<(i32)->(i64)>
+  // CHECK: call i1 @foo4(ptr null)
+  %1 = fir.call @foo4(%0) : (!fir.boxproc<(i32)->(i64)>) -> i1
+  return %1 : i1
+}
+
+// CHECK-LABEL: @foo5(
+// CHECK-SAME: ptr %[[arg:.*]])
+func.func @foo5(%arg0: (i32)->(i64)) -> i1 {
+  // CHECK: %[[ptr:.*]] = ptrtoint ptr %[[arg]] to i64
+  // CHECK: icmp ne i64 %[[ptr]], 0
+  %0 = fir.is_present %arg0 : ((i32)->(i64)) -> i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: @bar5
+func.func @bar5() -> i1 {
+  %0 = fir.absent (i32)->(i64)
+  // CHECK: call i1 @foo5(ptr null)
+  %1 = fir.call @foo5(%0) : ((i32)->(i64)) -> i1
+  return %1 : i1
+}

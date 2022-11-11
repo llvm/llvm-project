@@ -79,7 +79,7 @@ TosaOp createOpAndInfer(PatternRewriter &rewriter, Location loc, Type resultTy,
   return op;
 }
 
-class TransposeConvDilatedConverter
+class TransposeConvNonStridedConverter
     : public OpRewritePattern<tosa::TransposeConv2DOp> {
 public:
   using OpRewritePattern<tosa::TransposeConv2DOp>::OpRewritePattern;
@@ -97,11 +97,9 @@ public:
 
     llvm::SmallVector<int64_t> pad;
     llvm::SmallVector<int64_t> stride;
-    llvm::SmallVector<int64_t> dilation;
 
-    getValuesFromIntArrayAttribute(op.out_pad().cast<ArrayAttr>(), pad);
-    getValuesFromIntArrayAttribute(op.stride().cast<ArrayAttr>(), stride);
-    getValuesFromIntArrayAttribute(op.dilation().cast<ArrayAttr>(), dilation);
+    getValuesFromIntArrayAttribute(op.getOutPad().cast<ArrayAttr>(), pad);
+    getValuesFromIntArrayAttribute(op.getStride().cast<ArrayAttr>(), stride);
 
     // If striding is all 1 we can modify padding and reverse the kernel along
     // the x/y direction to make it a regular convolution. This is much simpler
@@ -113,16 +111,14 @@ public:
         !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
       return failure();
 
-    int64_t kernelHeight = (weightTy.getDimSize(1) - 1) * dilation[0] + 1;
-    int64_t kernelWidth = (weightTy.getDimSize(2) - 1) * dilation[1] + 1;
-    int64_t requiredInputHeight = resultTy.getDimSize(1) + kernelHeight - 1;
-    int64_t requiredInputWidth = resultTy.getDimSize(2) + kernelWidth - 1;
+    int64_t kernelHeight = weightTy.getDimSize(1);
+    int64_t kernelWidth = weightTy.getDimSize(2);
 
     llvm::SmallVector<int64_t> convPad(4, 0);
     convPad[0] = kernelHeight - 1 - pad[0];
-    convPad[2] = kernelWidth - 1 - pad[1];
-    convPad[1] = requiredInputHeight - convPad[0] - inputTy.getDimSize(1);
-    convPad[3] = requiredInputWidth - convPad[2] - inputTy.getDimSize(2);
+    convPad[1] = kernelHeight - 1 - pad[1];
+    convPad[2] = kernelWidth - 1 - pad[2];
+    convPad[3] = kernelWidth - 1 - pad[3];
 
     auto reverse1 = rewriter.create<tosa::ReverseOp>(
         loc, weightTy, weight, rewriter.getI64IntegerAttr(1));
@@ -130,17 +126,16 @@ public:
         loc, weightTy, reverse1, rewriter.getI64IntegerAttr(2));
 
     Value conv2d;
-    if (op.quantization_info().hasValue()) {
+    if (op.getQuantizationInfo()) {
       conv2d = rewriter.create<tosa::Conv2DOp>(
           loc, resultTy, input, reverse2, bias,
           rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
-          rewriter.getI64ArrayAttr(dilation),
-          op.quantization_info().getValue());
+          rewriter.getI64ArrayAttr({1, 1}), *op.getQuantizationInfo());
     } else {
       conv2d = rewriter.create<tosa::Conv2DOp>(
           loc, resultTy, input, reverse2, bias,
           rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
-          rewriter.getI64ArrayAttr(dilation));
+          rewriter.getI64ArrayAttr({1, 1}));
     }
 
     rewriter.replaceOp(op, conv2d);
@@ -171,17 +166,13 @@ public:
 
     llvm::SmallVector<int64_t> pad;
     llvm::SmallVector<int64_t> stride;
-    llvm::SmallVector<int64_t> dilation;
 
-    getValuesFromIntArrayAttribute(op.out_pad().cast<ArrayAttr>(), pad);
-    getValuesFromIntArrayAttribute(op.stride().cast<ArrayAttr>(), stride);
-    getValuesFromIntArrayAttribute(op.dilation().cast<ArrayAttr>(), dilation);
+    getValuesFromIntArrayAttribute(op.getOutPad().cast<ArrayAttr>(), pad);
+    getValuesFromIntArrayAttribute(op.getStride().cast<ArrayAttr>(), stride);
 
     // If striding is all 1 we can modify padding and reverse the kernel along
     // the x/y direction to make it a regular convolution. This is much simpler
     // then handling striding....
-    if (llvm::any_of(dilation, [](int64_t v) { return v != 1; }))
-      return failure();
 
     // If strides are all 1 we dont need to use this one.
     if (llvm::all_of(stride, [](int64_t v) { return v == 1; }))
@@ -209,8 +200,8 @@ public:
     Value weightPaddingVal = createOpAndInfer<tosa::ConstOp>(
         rewriter, loc, weightPaddingAttr.getType(), weightPaddingAttr);
 
-    if (op.quantization_info().hasValue()) {
-      auto quantInfo = op.quantization_info().getValue();
+    if (op.getQuantizationInfo().has_value()) {
+      auto quantInfo = op.getQuantizationInfo().value();
       weight = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(weightETy), weight,
           weightPaddingVal, nullptr,
@@ -273,8 +264,8 @@ public:
     Value inputPaddingVal = createOpAndInfer<tosa::ConstOp>(
         rewriter, loc, inputPaddingAttr.getType(), inputPaddingAttr);
 
-    if (op.quantization_info().hasValue()) {
-      auto quantInfo = op.quantization_info().getValue();
+    if (op.getQuantizationInfo().has_value()) {
+      auto quantInfo = op.getQuantizationInfo().value();
       input = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(inputETy), input,
           inputPaddingVal, nullptr,
@@ -297,14 +288,14 @@ public:
 
     // Perform the convolution using the zero bias.
     Value conv2d;
-    if (op.quantization_info().hasValue()) {
+    if (op.getQuantizationInfo()) {
       conv2d = createOpAndInfer<tosa::Conv2DOp>(
                    rewriter, loc, UnrankedTensorType::get(resultETy), input,
                    weight, zeroBias,
                    /*pad=*/rewriter.getI64ArrayAttr({0, 0, 0, 0}),
                    /*stride=*/rewriter.getI64ArrayAttr({1, 1}),
                    /*dilation=*/rewriter.getI64ArrayAttr({1, 1}),
-                   op.quantization_info().getValue())
+                   *op.getQuantizationInfo())
                    .getResult();
     } else {
       conv2d = createOpAndInfer<tosa::Conv2DOp>(
@@ -351,7 +342,7 @@ public:
     llvm::SmallVector<int64_t, 4> sliceSize(resultTy.getShape().begin(),
                                             resultTy.getShape().begin());
     sliceBegin[1] = pad[0];
-    sliceBegin[2] = pad[1];
+    sliceBegin[2] = pad[2];
 
     auto slice = createOpAndInfer<tosa::SliceOp>(
                      rewriter, loc, UnrankedTensorType::get(resultETy), conv2d,
@@ -372,6 +363,6 @@ public:
 
 void mlir::tosa::populateTosaDecomposeTransposeConv(
     MLIRContext *ctx, RewritePatternSet &patterns) {
-  patterns.add<TransposeConvDilatedConverter>(ctx);
+  patterns.add<TransposeConvNonStridedConverter>(ctx);
   patterns.add<TransposeConvStridedConverter>(ctx);
 }

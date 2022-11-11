@@ -44,7 +44,7 @@ add_dependencies(mlir-headers LinalgOdsGen)
 
 add_mlir_dialect(LinalgOps linalg)
 
-set(LLVM_TARGET_DEFINITIONS LinalgOps.td)
+set(LLVM_TARGET_DEFINITIONS LinalgEnums.td)
 mlir_tablegen(LinalgOpsEnums.h.inc -gen-enum-decls)
 mlir_tablegen(LinalgOpsEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIRLinalgOpsEnumsIncGen)

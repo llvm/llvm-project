@@ -5,6 +5,7 @@ declare float @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1
 declare <2 x half> @llvm.amdgcn.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i1)
 declare float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)*, float)
 declare <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1v2f16.v2f16(<2 x half> addrspace(1)*, <2 x half>)
+declare float @llvm.amdgcn.flat.atomic.fadd.f32.p0f32.f32(float*, float)
 
 ; GCN-LABEL: {{^}}buffer_atomic_add_f32:
 ; GCN: buffer_atomic_add_f32 v0, v1, s[0:3], 0 idxen
@@ -99,4 +100,12 @@ define amdgpu_kernel void @global_atomic_fadd_f32_wrong_subtarget(float addrspac
   ret void
 }
 
+; GCN-LABEL: {{^}}flat_atomic_fadd_f32_wrong_subtarget:
+; GCN: flat_atomic_add_f32 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
+define amdgpu_kernel void @flat_atomic_fadd_f32_wrong_subtarget(float* %ptr, float %data) #1 {
+  %ret = call float @llvm.amdgcn.flat.atomic.fadd.f32.p0f32.f32(float* %ptr, float %data)
+  ret void
+}
+
 attributes #0 = { "target-cpu"="gfx803" "target-features"="+atomic-fadd-no-rtn-insts"}
+attributes #1 = { "target-cpu"="gfx803" "target-features"="+flat-atomic-fadd-f32-inst"}

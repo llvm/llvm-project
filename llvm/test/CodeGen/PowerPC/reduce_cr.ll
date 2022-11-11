@@ -22,14 +22,14 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 ;CHECK-NEXT: - BB4[optional1]: float = 0.625, int = 8
 
 
-define void @loop_test(i32* %tags, i32 %count) {
+define void @loop_test(ptr %tags, i32 %count) {
 entry:
   br label %for.check
 for.check:
   %count.loop = phi i32 [%count, %entry], [%count.sub, %for.latch]
   %done.count = icmp ugt i32 %count.loop, 0
-  %tag_ptr = getelementptr inbounds i32, i32* %tags, i32 %count
-  %tag = load i32, i32* %tag_ptr
+  %tag_ptr = getelementptr inbounds i32, ptr %tags, i32 %count
+  %tag = load i32, ptr %tag_ptr
   %done.tag = icmp eq i32 %tag, 0
   %done = and i1 %done.count, %done.tag
   br i1 %done, label %test1, label %exit, !prof !1

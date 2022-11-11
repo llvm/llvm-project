@@ -16,13 +16,13 @@
 @magic32 =  private unnamed_addr constant [4 x i32] [i32 464, i32 472, i32 413, i32 0], align 4
 @strA = private unnamed_addr constant [14 x i8] c"hello world!\0A\00", align 1
 @.str = private unnamed_addr constant [9 x i8] c"abcdefgh\00", align 1
-@p = global i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0), align 4
+@p = global ptr @.str, align 4
 
 ; Function Attrs: noinline nounwind optnone
 define i8 @foo() #0 {
 entry:
-  %0 = load i8*, i8** @p, align 4
-  %1 = load i8, i8* %0, align 1
+  %0 = load ptr, ptr @p, align 4
+  %1 = load i8, ptr %0, align 1
   ret i8 %1
 }
 

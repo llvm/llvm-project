@@ -292,7 +292,7 @@ namespace dr1687 { // dr1687: 7
 #if __cplusplus > 201703L
   enum E1 {};
   enum E2 {};
-  auto c = To<E1>() <=> To<E2>(); // expected-error {{invalid operands to binary expression ('To<dr1687::E1>' and 'To<dr1687::E2>')}}
+  auto c = To<E1>() <=> To<E2>(); // expected-error {{invalid operands to binary expression ('To<E1>' and 'To<E2>')}}
 #endif
 }
 

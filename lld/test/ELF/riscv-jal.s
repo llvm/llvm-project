@@ -23,8 +23,8 @@
 
 # RUN: not ld.lld %t.rv32.o --defsym foo=_start+0x100000 --defsym bar=_start+4-0x100002 -o /dev/null 2>&1 | FileCheck --check-prefix=ERROR-RANGE %s
 # RUN: not ld.lld %t.rv64.o --defsym foo=_start+0x100000 --defsym bar=_start+4-0x100002 -o /dev/null 2>&1 | FileCheck --check-prefix=ERROR-RANGE %s
-# ERROR-RANGE: relocation R_RISCV_JAL out of range: 524288 is not in [-524288, 524287]; references foo
-# ERROR-RANGE: relocation R_RISCV_JAL out of range: -524289 is not in [-524288, 524287]; references bar
+# ERROR-RANGE: relocation R_RISCV_JAL out of range: 1048576 is not in [-1048576, 1048575]; references foo
+# ERROR-RANGE: relocation R_RISCV_JAL out of range: -1048578 is not in [-1048576, 1048575]; references bar
 
 # RUN: not ld.lld %t.rv32.o --defsym foo=_start+1 --defsym bar=_start+4+3 -o /dev/null 2>&1 | FileCheck --check-prefix=ERROR-ALIGN %s
 # RUN: not ld.lld %t.rv64.o --defsym foo=_start+1 --defsym bar=_start+4+3 -o /dev/null 2>&1 | FileCheck --check-prefix=ERROR-ALIGN %s

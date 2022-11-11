@@ -11,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class PersistentPtrUpdateTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test(self):
         """Test that we can have persistent pointer variables"""
         self.build()

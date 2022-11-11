@@ -58,14 +58,14 @@ public:
 // CHECK:       [B2 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:       [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
 // CHECK-NEXT:    3: a
-// CHECK-NEXT:    4: [B1.3] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:    4: [B1.3] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:    5: const A &b = a;
-// CHECK-NEXT:    6: A() (CXXConstructExpr, class A)
+// CHECK-NEXT:    6: A() (CXXConstructExpr, A)
 // CHECK-NEXT:    7: [B1.6] (BindTemporary)
-// CHECK-NEXT:    8: [B1.7] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:    8: [B1.7] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:    9: [B1.8]
 // CHECK-NEXT:   10: const A &c = A();
 // CHECK-NEXT:   11: [B1.10] (Lifetime ends)
@@ -84,9 +84,9 @@ void test_const_ref() {
 // CHECK:      [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:       [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A[2])
+// CHECK-NEXT:    1:  (CXXConstructExpr, A[2])
 // CHECK-NEXT:    2: A a[2];
-// CHECK-NEXT:    3:  (CXXConstructExpr, class A[0])
+// CHECK-NEXT:    3:  (CXXConstructExpr, A[0])
 // CHECK-NEXT:    4: A b[0];
 // lifetime of a ends when its destructors are run
 // CHECK-NEXT:    5: [B1.2] (Lifetime ends)
@@ -104,15 +104,15 @@ void test_array() {
 // CHECK:      [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:       [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
-// CHECK-NEXT:    3:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    3:  (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A c;
-// CHECK-NEXT:    5:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    5:  (CXXConstructExpr, A)
 // CHECK-NEXT:    6: A d;
 // CHECK-NEXT:    7: [B1.6] (Lifetime ends)
 // CHECK-NEXT:    8: [B1.4] (Lifetime ends)
-// CHECK-NEXT:    9:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    9:  (CXXConstructExpr, A)
 // CHECK-NEXT:   10: A b;
 // CHECK-NEXT:   11: [B1.10] (Lifetime ends)
 // CHECK-NEXT:   12: [B1.2] (Lifetime ends)
@@ -132,7 +132,7 @@ void test_scope() {
 // CHECK:      [B4 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B3
 // CHECK:       [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A c;
 // CHECK-NEXT:    3: [B1.2] (Lifetime ends)
 // CHECK-NEXT:    4: [B3.4] (Lifetime ends)
@@ -146,9 +146,9 @@ void test_scope() {
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B3]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
-// CHECK-NEXT:    3:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    3:  (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A b;
 // CHECK-NEXT:    5: UV
 // CHECK-NEXT:    6: [B3.5] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -174,23 +174,23 @@ void test_return() {
 // CHECK-NEXT:    Preds (2): B2 B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A c;
 // CHECK-NEXT:    3: [B2.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (1): B4
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:       [B3]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A c;
 // CHECK-NEXT:    3: [B3.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (1): B4
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:       [B4]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
 // CHECK-NEXT:    3: a
 // CHECK-NEXT:    4: [B4.3] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:    5: [B4.4] (CXXConstructExpr, class A)
+// CHECK-NEXT:    5: [B4.4] (CXXConstructExpr, A)
 // CHECK-NEXT:    6: A b = a;
 // CHECK-NEXT:    7: b
 // CHECK-NEXT:    8: [B4.7] (ImplicitCastExpr, NoOp, const class A)
@@ -215,14 +215,14 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:    Succs (1): B8
 // CHECK:       [B1]
 // CHECK-NEXT:    1: [B8.6] (Lifetime ends)
-// CHECK-NEXT:    2:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    2:  (CXXConstructExpr, A)
 // CHECK-NEXT:    3: A e;
 // CHECK-NEXT:    4: [B1.3] (Lifetime ends)
 // CHECK-NEXT:    5: [B8.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (2): B2 B5
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A d;
 // CHECK-NEXT:    3: [B2.2] (Lifetime ends)
 // CHECK-NEXT:    4: [B4.2] (Lifetime ends)
@@ -236,7 +236,7 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:    Preds (1): B4
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B4]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A c;
 // CHECK-NEXT:    3: UV
 // CHECK-NEXT:    4: [B4.3] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -244,7 +244,7 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:    Preds (1): B8
 // CHECK-NEXT:    Succs (2): B3 B2
 // CHECK:       [B5]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A d;
 // CHECK-NEXT:    3: [B5.2] (Lifetime ends)
 // CHECK-NEXT:    4: [B7.2] (Lifetime ends)
@@ -258,7 +258,7 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:    Preds (1): B7
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B7]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A c;
 // CHECK-NEXT:    3: UV
 // CHECK-NEXT:    4: [B7.3] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -266,11 +266,11 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:    Preds (1): B8
 // CHECK-NEXT:    Succs (2): B6 B5
 // CHECK:       [B8]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
 // CHECK-NEXT:    3: a
 // CHECK-NEXT:    4: [B8.3] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:    5: [B8.4] (CXXConstructExpr, class A)
+// CHECK-NEXT:    5: [B8.4] (CXXConstructExpr, A)
 // CHECK-NEXT:    6: A b = a;
 // CHECK-NEXT:    7: b
 // CHECK-NEXT:    8: [B8.7] (ImplicitCastExpr, NoOp, const class A)
@@ -310,7 +310,7 @@ void test_if_jumps() {
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B4
 // CHECK:       [B3]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A c;
 // CHECK-NEXT:    3: [B3.2] (Lifetime ends)
 // CHECK-NEXT:    4: [B4.4] (Lifetime ends)
@@ -319,7 +319,7 @@ void test_if_jumps() {
 // CHECK:       [B4]
 // CHECK-NEXT:    1: a
 // CHECK-NEXT:    2: [B4.1] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:    3: [B4.2] (CXXConstructExpr, class A)
+// CHECK-NEXT:    3: [B4.2] (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A b = a;
 // CHECK-NEXT:    5: b
 // CHECK-NEXT:    6: [B4.5] (ImplicitCastExpr, NoOp, const class A)
@@ -331,7 +331,7 @@ void test_if_jumps() {
 // CHECK-NEXT:    Preds (2): B2 B5
 // CHECK-NEXT:    Succs (2): B3 B1
 // CHECK:       [B5]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
 // CHECK-NEXT:    Preds (1): B6
 // CHECK-NEXT:    Succs (1): B4
@@ -347,7 +347,7 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:    Succs (1): B11
 // CHECK:       [B1]
 // CHECK-NEXT:    1: [B10.4] (Lifetime ends)
-// CHECK-NEXT:    2:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    2:  (CXXConstructExpr, A)
 // CHECK-NEXT:    3: A e;
 // CHECK-NEXT:    4: [B1.3] (Lifetime ends)
 // CHECK-NEXT:    5: [B11.2] (Lifetime ends)
@@ -357,7 +357,7 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:    Preds (2): B3 B6
 // CHECK-NEXT:    Succs (1): B10
 // CHECK:       [B3]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A d;
 // CHECK-NEXT:    3: [B3.2] (Lifetime ends)
 // CHECK-NEXT:    4: [B9.2] (Lifetime ends)
@@ -395,7 +395,7 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:    Preds (1): B9
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:       [B9]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A c;
 // CHECK-NEXT:    3: UV
 // CHECK-NEXT:    4: [B9.3] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -405,7 +405,7 @@ void test_while_implicit_scope() {
 // CHECK:       [B10]
 // CHECK-NEXT:    1: a
 // CHECK-NEXT:    2: [B10.1] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:    3: [B10.2] (CXXConstructExpr, class A)
+// CHECK-NEXT:    3: [B10.2] (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A b = a;
 // CHECK-NEXT:    5: b
 // CHECK-NEXT:    6: [B10.5] (ImplicitCastExpr, NoOp, const class A)
@@ -417,7 +417,7 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:    Preds (2): B2 B11
 // CHECK-NEXT:    Succs (2): B9 B1
 // CHECK:       [B11]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
 // CHECK-NEXT:    Preds (1): B12
 // CHECK-NEXT:    Succs (1): B10
@@ -441,7 +441,7 @@ void test_while_jumps() {
 // CHECK:       [B12 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B11
 // CHECK:       [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A d;
 // CHECK-NEXT:    3: [B1.2] (Lifetime ends)
 // CHECK-NEXT:    4: [B11.2] (Lifetime ends)
@@ -454,7 +454,7 @@ void test_while_jumps() {
 // CHECK-NEXT:    Preds (2): B3 B6
 // CHECK-NEXT:    Succs (2): B10 B1
 // CHECK:       [B3]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A c;
 // CHECK-NEXT:    3: [B3.2] (Lifetime ends)
 // CHECK-NEXT:    4: [B9.2] (Lifetime ends)
@@ -489,7 +489,7 @@ void test_while_jumps() {
 // CHECK-NEXT:    Preds (1): B9
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:       [B9]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A b;
 // CHECK-NEXT:    3: UV
 // CHECK-NEXT:    4: [B9.3] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -500,7 +500,7 @@ void test_while_jumps() {
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B9
 // CHECK:       [B11]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
 // CHECK-NEXT:    Preds (1): B12
 // CHECK-NEXT:    Succs (1): B9
@@ -532,7 +532,7 @@ void test_do_jumps() {
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B4
 // CHECK:       [B3]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A c;
 // CHECK-NEXT:    3: [B3.2] (Lifetime ends)
 // CHECK-NEXT:    4: [B4.4] (Lifetime ends)
@@ -541,7 +541,7 @@ void test_do_jumps() {
 // CHECK:       [B4]
 // CHECK-NEXT:    1: a
 // CHECK-NEXT:    2: [B4.1] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:    3: [B4.2] (CXXConstructExpr, class A)
+// CHECK-NEXT:    3: [B4.2] (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A b = a;
 // CHECK-NEXT:    5: b
 // CHECK-NEXT:    6: [B4.5] (ImplicitCastExpr, NoOp, const class A)
@@ -553,7 +553,7 @@ void test_do_jumps() {
 // CHECK-NEXT:    Preds (2): B2 B5
 // CHECK-NEXT:    Succs (2): B3 B1
 // CHECK:       [B5]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
 // CHECK-NEXT:    Preds (1): B6
 // CHECK-NEXT:    Succs (1): B4
@@ -569,7 +569,7 @@ void test_for_implicit_scope() {
 // CHECK:       [B1]
 // CHECK-NEXT:    1: [B10.4] (Lifetime ends)
 // CHECK-NEXT:    2: [B11.4] (Lifetime ends)
-// CHECK-NEXT:    3:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    3:  (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A f;
 // CHECK-NEXT:    5: [B1.4] (Lifetime ends)
 // CHECK-NEXT:    6: [B11.2] (Lifetime ends)
@@ -579,7 +579,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:    Preds (2): B3 B6
 // CHECK-NEXT:    Succs (1): B10
 // CHECK:       [B3]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A e;
 // CHECK-NEXT:    3: [B3.2] (Lifetime ends)
 // CHECK-NEXT:    4: [B9.2] (Lifetime ends)
@@ -617,7 +617,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:    Preds (1): B9
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:       [B9]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A d;
 // CHECK-NEXT:    3: UV
 // CHECK-NEXT:    4: [B9.3] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -627,7 +627,7 @@ void test_for_implicit_scope() {
 // CHECK:       [B10]
 // CHECK-NEXT:    1: b
 // CHECK-NEXT:    2: [B10.1] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:    3: [B10.2] (CXXConstructExpr, class A)
+// CHECK-NEXT:    3: [B10.2] (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A c = b;
 // CHECK-NEXT:    5: c
 // CHECK-NEXT:    6: [B10.5] (ImplicitCastExpr, NoOp, const class A)
@@ -639,9 +639,9 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:    Preds (2): B2 B11
 // CHECK-NEXT:    Succs (2): B9 B1
 // CHECK:       [B11]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
-// CHECK-NEXT:    3:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    3:  (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A b;
 // CHECK-NEXT:    Preds (1): B12
 // CHECK-NEXT:    Succs (1): B10
@@ -665,7 +665,7 @@ void test_for_jumps() {
 // CHECK:       [B2 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:       [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, class A)
+// CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
 // CHECK-NEXT:    3: int n;
 // CHECK-NEXT:    4: n
@@ -762,7 +762,7 @@ struct B {
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
 // CHECK-NEXT:   label:
-// CHECK-NEXT:    1:  (CXXConstructExpr, struct B)
+// CHECK-NEXT:    1:  (CXXConstructExpr, B)
 // CHECK-NEXT:    2: B b;
 // CHECK-NEXT:    3: [B2.2] (Lifetime ends)
 // CHECK-NEXT:    T: goto label;

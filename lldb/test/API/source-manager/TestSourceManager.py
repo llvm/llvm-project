@@ -9,8 +9,6 @@ o test_modify_source_file_while_debugging:
   Test the caching mechanism of the source manager.
 """
 
-from __future__ import print_function
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -25,8 +23,6 @@ def ansi_color_surround_regex(inner_regex_text):
     return "\033\\[3[0-7]m%s\033\\[0m" % inner_regex_text
 
 class SourceManagerTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     NO_DEBUG_INFO_TESTCASE = True
 

@@ -14,8 +14,10 @@ using namespace llvm;
 static bool shouldReduceSection(GlobalObject &GO) { return GO.hasSection(); }
 
 static bool shouldReduceAlign(GlobalObject &GO) {
-  return GO.getAlign().hasValue();
+  return GO.getAlign().has_value();
 }
+
+static bool shouldReduceComdat(GlobalObject &GO) { return GO.hasComdat(); }
 
 static void reduceGOs(Oracle &O, Module &Program) {
   for (auto &GO : Program.global_objects()) {
@@ -23,10 +25,11 @@ static void reduceGOs(Oracle &O, Module &Program) {
       GO.setSection("");
     if (shouldReduceAlign(GO) && !O.shouldKeep())
       GO.setAlignment(MaybeAlign());
+    if (shouldReduceComdat(GO) && !O.shouldKeep())
+      GO.setComdat(nullptr);
   }
 }
 
 void llvm::reduceGlobalObjectsDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing GlobalObjects...\n";
-  runDeltaPass(Test, reduceGOs);
+  runDeltaPass(Test, reduceGOs, "Reducing GlobalObjects");
 }

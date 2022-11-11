@@ -53,7 +53,7 @@ choice.
 C++ Standard Versions
 ---------------------
 
-Unless otherwise documented, LLVM subprojects are written using standard C++14
+Unless otherwise documented, LLVM subprojects are written using standard C++17
 code and avoid unnecessary vendor-specific extensions.
 
 Nevertheless, we restrict ourselves to features which are available in the
@@ -63,7 +63,13 @@ section `Software`).
 Each toolchain provides a good reference for what it accepts:
 
 * Clang: https://clang.llvm.org/cxx_status.html
-* GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx14
+
+  * libc++: https://libcxx.llvm.org/Status/Cxx17.html
+
+* GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx17
+
+  * libstdc++: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html#status.iso.2017
+
 * MSVC: https://msdn.microsoft.com/en-us/library/hh567368.aspx
 
 
@@ -1019,6 +1025,24 @@ Or better yet (in this case) as:
 
 The idea is to reduce indentation and the amount of code you have to keep track
 of when reading the code.
+
+Note: this advice does not apply to a ``constexpr if`` statement. The
+substatement of the ``else`` clause may be a discarded statement, so removing
+the ``else`` can cause unexpected template instantiations. Thus, the following
+example is correct:
+
+.. code-block:: c++
+
+  template<typename T>
+  static constexpr bool VarTempl = true;
+
+  template<typename T>
+  int func() {
+    if constexpr (VarTempl<T>)
+      return 1;
+    else
+      static_assert(!VarTempl<T>);
+  }
 
 Turn Predicate Loops into Predicate Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

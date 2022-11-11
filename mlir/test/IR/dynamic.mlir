@@ -124,3 +124,18 @@ func.func @customOpParserPrinter() {
   test.dynamic_custom_parser_printer custom_keyword
   return
 }
+
+//===----------------------------------------------------------------------===//
+// Dynamic dialect
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// Check that the verifier of a dynamic operation in a dynamic dialect
+// can fail. This shows that the dialect is correctly registered.
+
+func.func @failedDynamicDialectOpVerifier() {
+  // expected-error@+1 {{expected a single result, no operands and no regions}}
+  "test_dyn.one_result"() : () -> ()
+  return
+}

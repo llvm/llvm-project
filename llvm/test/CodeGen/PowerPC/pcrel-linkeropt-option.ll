@@ -34,6 +34,6 @@ define dso_local i8 @Read8() local_unnamed_addr {
 ; OFF-NEXT:    lbz r3, 0(r3)
 ; OFF-NEXT:    blr
 entry:
-  %0 = load i8, i8* @input8, align 1
+  %0 = load i8, ptr @input8, align 1
   ret i8 %0
 }

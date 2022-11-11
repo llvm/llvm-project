@@ -26,6 +26,7 @@ define amdgpu_kernel void @call_debug_loc() {
   ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:sreg_32 = COPY [[COPY5]], debug-location !6
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[COPY4]], debug-location !6
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:sreg_32 = COPY [[COPY3]], debug-location !6
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF debug-location !6
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 10
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY16]], [[COPY1]], implicit $exec, debug-location !6
@@ -42,10 +43,11 @@ define amdgpu_kernel void @call_debug_loc() {
   ; CHECK-NEXT:   $sgpr12 = COPY [[COPY13]], debug-location !6
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY14]], debug-location !6
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY15]], debug-location !6
+  ; CHECK-NEXT:   $sgpr15 = COPY [[DEF]], debug-location !6
   ; CHECK-NEXT:   $vgpr31 = COPY [[V_OR3_B32_e64_]], debug-location !6
   ; CHECK-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def $scc, debug-location !6
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0, debug-location !6 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @callee, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, debug-location !6
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @callee, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, debug-location !6
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, debug-location !6
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:

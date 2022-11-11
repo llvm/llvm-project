@@ -5,7 +5,7 @@ RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
 RUN:   %p/Inputs/unreachable.s -o %t.o
 RUN: %clangxx %cxxflags -no-pie %t.o -o %t.exe %t.so
 RUN: llvm-bolt %t.exe -o %t \
-RUN:   -reorder-blocks=none -split-functions=1 -eliminate-unreachable \
+RUN:   -reorder-blocks=none -split-functions -eliminate-unreachable \
 RUN:   -funcs=foo -use-gnu-stack -print-cfg -print-finalized \
 RUN:   | FileCheck %s --check-prefix=BOLT
 RUN: llvm-objdump -d %t --print-imm-hex --disassemble-symbols=foo \

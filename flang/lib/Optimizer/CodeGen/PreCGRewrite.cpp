@@ -10,9 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CGOps.h"
-#include "PassDetail.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
+
+#include "CGOps.h"
+#include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -20,6 +21,11 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
+
+namespace fir {
+#define GEN_PASS_DEF_CODEGENREWRITE
+#include "flang/Optimizer/CodeGen/CGPasses.h.inc"
+} // namespace fir
 
 //===----------------------------------------------------------------------===//
 // Codegen rewrite: rewriting of subgraphs of ops
@@ -79,9 +85,11 @@ public:
     // If the embox does not include a shape, then do not convert it
     if (auto shapeVal = embox.getShape())
       return rewriteDynamicShape(embox, rewriter, shapeVal);
+    if (embox.getType().isa<fir::ClassType>())
+      TODO(embox.getLoc(), "embox conversion for fir.class type");
     if (auto boxTy = embox.getType().dyn_cast<fir::BoxType>())
       if (auto seqTy = boxTy.getEleTy().dyn_cast<fir::SequenceType>())
-        if (seqTy.hasConstantShape())
+        if (!seqTy.hasDynamicExtents())
           return rewriteStaticShape(embox, rewriter, seqTy);
     return mlir::failure();
   }
@@ -99,7 +107,8 @@ public:
     }
     auto xbox = rewriter.create<fir::cg::XEmboxOp>(
         loc, embox.getType(), embox.getMemref(), shapeOpers, llvm::None,
-        llvm::None, llvm::None, llvm::None, embox.getTypeparams());
+        llvm::None, llvm::None, llvm::None, embox.getTypeparams(),
+        embox.getTdesc());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -134,7 +143,8 @@ public:
       }
     auto xbox = rewriter.create<fir::cg::XEmboxOp>(
         loc, embox.getType(), embox.getMemref(), shapeOpers, shiftOpers,
-        sliceOpers, subcompOpers, substrOpers, embox.getTypeparams());
+        sliceOpers, subcompOpers, substrOpers, embox.getTypeparams(),
+        embox.getTdesc());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -258,33 +268,98 @@ public:
   }
 };
 
-class CodeGenRewrite : public fir::CodeGenRewriteBase<CodeGenRewrite> {
+class DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
 public:
-  void runOnOperation() override final {
-    auto op = getOperation();
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DeclareOp declareOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    rewriter.replaceOp(declareOp, declareOp.getMemref());
+    return mlir::success();
+  }
+};
+
+class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
+public:
+  void runOn(mlir::Operation *op, mlir::Region &region) {
     auto &context = getContext();
     mlir::OpBuilder rewriter(&context);
     mlir::ConversionTarget target(context);
-    target.addLegalDialect<mlir::arith::ArithmeticDialect, fir::FIROpsDialect,
+    target.addLegalDialect<mlir::arith::ArithDialect, fir::FIROpsDialect,
                            fir::FIRCodeGenDialect, mlir::func::FuncDialect>();
     target.addIllegalOp<fir::ArrayCoorOp>();
     target.addIllegalOp<fir::ReboxOp>();
+    target.addIllegalOp<fir::DeclareOp>();
     target.addDynamicallyLegalOp<fir::EmboxOp>([](fir::EmboxOp embox) {
       return !(embox.getShape() || embox.getType()
-                                       .cast<fir::BoxType>()
+                                       .cast<fir::BaseBoxType>()
                                        .getEleTy()
                                        .isa<fir::SequenceType>());
     });
     mlir::RewritePatternSet patterns(&context);
-    patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion>(
-        &context);
+    patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion,
+                    DeclareOpConversion>(&context);
     if (mlir::failed(
             mlir::applyPartialConversion(op, target, std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(&context),
                       "error in running the pre-codegen conversions");
       signalPassFailure();
     }
+    // Erase any residual.
+    simplifyRegion(region);
   }
+
+  void runOnOperation() override final {
+    // Call runOn on all top level regions that may contain emboxOp/arrayCoorOp.
+    auto mod = getOperation();
+    for (auto func : mod.getOps<mlir::func::FuncOp>())
+      runOn(func, func.getBody());
+    for (auto global : mod.getOps<fir::GlobalOp>())
+      runOn(global, global.getRegion());
+  }
+
+  // Clean up the region.
+  void simplifyRegion(mlir::Region &region) {
+    for (auto &block : region.getBlocks())
+      for (auto &op : block.getOperations()) {
+        for (auto &reg : op.getRegions())
+          simplifyRegion(reg);
+        maybeEraseOp(&op);
+      }
+    doDCE();
+  }
+
+  /// Run a simple DCE cleanup to remove any dead code after the rewrites.
+  void doDCE() {
+    std::vector<mlir::Operation *> workList;
+    workList.swap(opsToErase);
+    while (!workList.empty()) {
+      for (auto *op : workList) {
+        std::vector<mlir::Value> opOperands(op->operand_begin(),
+                                            op->operand_end());
+        LLVM_DEBUG(llvm::dbgs() << "DCE on " << *op << '\n');
+        ++numDCE;
+        op->erase();
+        for (auto opnd : opOperands)
+          maybeEraseOp(opnd.getDefiningOp());
+      }
+      workList.clear();
+      workList.swap(opsToErase);
+    }
+  }
+
+  void maybeEraseOp(mlir::Operation *op) {
+    if (!op)
+      return;
+    if (op->hasTrait<mlir::OpTrait::IsTerminator>())
+      return;
+    if (mlir::isOpTriviallyDead(op))
+      opsToErase.push_back(op);
+  }
+
+private:
+  std::vector<mlir::Operation *> opsToErase;
 };
 
 } // namespace

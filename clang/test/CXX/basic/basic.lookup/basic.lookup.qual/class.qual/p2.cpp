@@ -31,8 +31,8 @@ X0::X0 X0::f1() { return X0(); } // expected-error{{qualified reference to 'X0' 
 
 struct X0::X0 X0::f2() { return X0(); }
 
-template<typename T> X1<T>::X1<T> X1<T>::f2() { } // expected-error{{missing 'typename'}}
-template<typename T> X1<T>::X1<T> (X1<T>::f2)(int) { } // expected-error{{missing 'typename'}}
+template<typename T> X1<T>::X1<T> X1<T>::f2() { } // expected-warning{{missing 'typename'}}
+template<typename T> X1<T>::X1<T> (X1<T>::f2)(int) { } // expected-warning{{missing 'typename'}}
 template<typename T> struct X1<T>::X1<T> (X1<T>::f2)(float) { }
 template<typename T> struct X1<T>::X1 (X1<T>::f2)(double) { }
 template<typename T> typename X1<T>::template X1<T> X1<T>::f2(short) { } // expected-warning {{qualified reference to 'X1' is a constructor name rather than a template name in this context}}

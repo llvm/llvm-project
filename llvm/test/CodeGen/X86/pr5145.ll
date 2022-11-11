@@ -5,7 +5,7 @@
 define void @atomic_maxmin_i8() {
 ; CHECK-LABEL: atomic_maxmin_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movb sc8(%rip), %al
+; CHECK-NEXT:    movzbl sc8(%rip), %eax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -17,7 +17,7 @@ define void @atomic_maxmin_i8() {
 ; CHECK-NEXT:    lock cmpxchgb %cl, sc8(%rip)
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
-; CHECK-NEXT:    movb sc8(%rip), %al
+; CHECK-NEXT:    movzbl sc8(%rip), %eax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_3: # %atomicrmw.start2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -29,7 +29,7 @@ define void @atomic_maxmin_i8() {
 ; CHECK-NEXT:    lock cmpxchgb %cl, sc8(%rip)
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  # %bb.4: # %atomicrmw.end1
-; CHECK-NEXT:    movb sc8(%rip), %al
+; CHECK-NEXT:    movzbl sc8(%rip), %eax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_5: # %atomicrmw.start8
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -41,7 +41,7 @@ define void @atomic_maxmin_i8() {
 ; CHECK-NEXT:    lock cmpxchgb %cl, sc8(%rip)
 ; CHECK-NEXT:    jne .LBB0_5
 ; CHECK-NEXT:  # %bb.6: # %atomicrmw.end7
-; CHECK-NEXT:    movb sc8(%rip), %al
+; CHECK-NEXT:    movzbl sc8(%rip), %eax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_7: # %atomicrmw.start14
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -54,9 +54,9 @@ define void @atomic_maxmin_i8() {
 ; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  # %bb.8: # %atomicrmw.end13
 ; CHECK-NEXT:    retq
-  %1 = atomicrmw max  i8* @sc8, i8 5 acquire
-  %2 = atomicrmw min  i8* @sc8, i8 6 acquire
-  %3 = atomicrmw umax i8* @sc8, i8 7 acquire
-  %4 = atomicrmw umin i8* @sc8, i8 8 acquire
+  %1 = atomicrmw max  ptr @sc8, i8 5 acquire
+  %2 = atomicrmw min  ptr @sc8, i8 6 acquire
+  %3 = atomicrmw umax ptr @sc8, i8 7 acquire
+  %4 = atomicrmw umin ptr @sc8, i8 8 acquire
   ret void
 }

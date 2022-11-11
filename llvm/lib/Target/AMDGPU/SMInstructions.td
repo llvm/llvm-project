@@ -102,132 +102,87 @@ def SGPR_IMM_Offset : OffsetMode<1, 1, "_SGPR_IMM",
                                  (ins SReg_32:$soffset, smem_offset_mod:$offset),
                                  "$soffset$offset">;
 
-class SM_Probe_Pseudo <string opName, string variant, RegisterClass baseClass,
-                       dag offsets, string asmOffsets,
-                       bit hasOffset, bit hasSOffset>
+class SM_Probe_Pseudo <string opName, RegisterClass baseClass, OffsetMode offsets>
   : SM_Pseudo<opName, (outs),
-              !con((ins i8imm:$sdata, baseClass:$sbase), offsets),
-              " $sdata, $sbase, " # asmOffsets> {
+              !con((ins i8imm:$sdata, baseClass:$sbase), offsets.Ins),
+              " $sdata, $sbase, " # offsets.Asm> {
   let mayLoad = 0;
   let mayStore = 0;
   let has_glc = 0;
   let LGKM_CNT = 0;
   let ScalarStore = 0;
   let hasSideEffects = 1;
-  let has_offset = hasOffset;
-  let has_soffset = hasSOffset;
-  let PseudoInstr = opName # variant;
+  let has_offset = offsets.HasOffset;
+  let has_soffset = offsets.HasSOffset;
+  let PseudoInstr = opName # offsets.Variant;
 }
 
-class SM_Load_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> pattern=[]>
-  : SM_Pseudo<opName, outs, ins, asmOps, pattern> {
-  RegisterClass BaseClass;
+class SM_Load_Pseudo <string opName, RegisterClass baseClass,
+                      RegisterClass dstClass, OffsetMode offsets>
+  : SM_Pseudo<opName, (outs dstClass:$sdst),
+              !con((ins baseClass:$sbase), offsets.Ins, (ins CPol:$cpol)),
+              " $sdst, $sbase, " # offsets.Asm # "$cpol", []> {
+  RegisterClass BaseClass = baseClass;
   let mayLoad = 1;
   let mayStore = 0;
   let has_glc = 1;
   let has_dlc = 1;
+  let has_offset = offsets.HasOffset;
+  let has_soffset = offsets.HasSOffset;
+  let PseudoInstr = opName # offsets.Variant;
 }
 
 class SM_Store_Pseudo <string opName, RegisterClass baseClass,
-                       RegisterClass srcClass, dag ins, string asmOps>
-  : SM_Pseudo<opName, (outs), ins, asmOps, []> {
+                       RegisterClass srcClass, OffsetMode offsets>
+  : SM_Pseudo<opName, (outs), !con((ins srcClass:$sdata, baseClass:$sbase),
+                                   offsets.Ins, (ins CPol:$cpol)),
+              " $sdata, $sbase, " # offsets.Asm # "$cpol"> {
   RegisterClass BaseClass = baseClass;
   RegisterClass SrcClass = srcClass;
   let mayLoad = 0;
   let mayStore = 1;
   let has_glc = 1;
   let has_dlc = 1;
+  let has_offset = offsets.HasOffset;
+  let has_soffset = offsets.HasSOffset;
   let ScalarStore = 1;
+  let PseudoInstr = opName # offsets.Variant;
 }
 
-class SM_Discard_Pseudo <string opName, string variant, dag offsets,
-                         string asmOffsets, bit hasOffset, bit hasSOffset>
-  : SM_Pseudo<opName, (outs), !con((ins SReg_64:$sbase), offsets),
-              " $sbase, " # asmOffsets> {
+class SM_Discard_Pseudo <string opName, OffsetMode offsets>
+  : SM_Pseudo<opName, (outs), !con((ins SReg_64:$sbase), offsets.Ins),
+              " $sbase, " # offsets.Asm> {
   let mayLoad = 0;
   let mayStore = 0;
   let has_glc = 0;
   let has_sdst = 0;
   let ScalarStore = 0;
   let hasSideEffects = 1;
-  let has_offset = hasOffset;
-  let has_soffset = hasSOffset;
-  let PseudoInstr = opName # variant;
+  let has_offset = offsets.HasOffset;
+  let has_soffset = offsets.HasSOffset;
+  let PseudoInstr = opName # offsets.Variant;
 }
 
 multiclass SM_Pseudo_Loads<string opName,
                            RegisterClass baseClass,
                            RegisterClass dstClass> {
-  def _IMM  : SM_Load_Pseudo <opName,
-                              (outs dstClass:$sdst),
-                              (ins baseClass:$sbase, i32imm:$offset, CPol:$cpol),
-                              " $sdst, $sbase, $offset$cpol", []> {
-    let has_offset = 1;
-    let BaseClass = baseClass;
-    let PseudoInstr = opName # "_IMM";
-    let has_glc = 1;
-    let has_dlc = 1;
-  }
-
-  def _SGPR  : SM_Load_Pseudo <opName,
-                              (outs dstClass:$sdst),
-                              (ins baseClass:$sbase, SReg_32:$soffset, CPol:$cpol),
-                              " $sdst, $sbase, $soffset$cpol", []> {
-    let has_soffset = 1;
-    let BaseClass = baseClass;
-    let PseudoInstr = opName # "_SGPR";
-    let has_glc = 1;
-    let has_dlc = 1;
-  }
-
-  def _SGPR_IMM  : SM_Load_Pseudo <opName,
-                                   (outs dstClass:$sdst),
-                                   (ins baseClass:$sbase, SReg_32:$soffset,
-                                        i32imm:$offset, CPol:$cpol),
-                                   " $sdst, $sbase, $soffset$offset$cpol", []> {
-    let has_offset = 1;
-    let has_soffset = 1;
-    let BaseClass = baseClass;
-    let PseudoInstr = opName # "_SGPR_IMM";
-    let has_glc = 1;
-    let has_dlc = 1;
-  }
+  def _IMM : SM_Load_Pseudo <opName, baseClass, dstClass, IMM_Offset>;
+  def _SGPR : SM_Load_Pseudo <opName, baseClass, dstClass, SGPR_Offset>;
+  def _SGPR_IMM : SM_Load_Pseudo <opName, baseClass, dstClass, SGPR_IMM_Offset>;
 }
 
 multiclass SM_Pseudo_Stores<string opName,
                            RegisterClass baseClass,
                            RegisterClass srcClass> {
-  def _IMM : SM_Store_Pseudo <opName, baseClass, srcClass,
-    (ins srcClass:$sdata, baseClass:$sbase, i32imm:$offset, CPol:$cpol),
-    " $sdata, $sbase, $offset$cpol"> {
-    let has_offset = 1;
-    let PseudoInstr = opName # "_IMM";
-  }
-
-  def _SGPR : SM_Store_Pseudo <opName, baseClass, srcClass,
-    (ins srcClass:$sdata, baseClass:$sbase, SReg_32:$soffset, CPol:$cpol),
-    " $sdata, $sbase, $soffset$cpol"> {
-    let has_soffset = 1;
-    let PseudoInstr = opName # "_SGPR";
-  }
-
-  def _SGPR_IMM : SM_Store_Pseudo <opName, baseClass, srcClass,
-    (ins srcClass:$sdata, baseClass:$sbase, SReg_32:$soffset, i32imm:$offset,
-     CPol:$cpol),
-    " $sdata, $sbase, $soffset$offset$cpol"> {
-    let has_offset = 1;
-    let has_soffset = 1;
-    let PseudoInstr = opName # "_SGPR_IMM";
-  }
+  def _IMM : SM_Store_Pseudo <opName, baseClass, srcClass, IMM_Offset>;
+  def _SGPR : SM_Store_Pseudo <opName, baseClass, srcClass, SGPR_Offset>;
+  def _SGPR_IMM : SM_Store_Pseudo <opName, baseClass, srcClass, SGPR_IMM_Offset>;
 }
 
 multiclass SM_Pseudo_Discards<string opName> {
-  def _IMM  : SM_Discard_Pseudo <opName, "_IMM",
-    (ins smem_offset:$offset), "$offset", 1, 0>;
-  def _SGPR : SM_Discard_Pseudo <opName, "_SGPR",
-    (ins SReg_32:$soffset), "$soffset", 0, 1>;
-  def _SGPR_IMM : SM_Discard_Pseudo <opName, "_SGPR_IMM",
-    (ins SReg_32:$soffset, smem_offset_mod:$offset), "$soffset$offset", 1, 1>;
+  def _IMM : SM_Discard_Pseudo <opName, IMM_Offset>;
+  def _SGPR : SM_Discard_Pseudo <opName, SGPR_Offset>;
+  def _SGPR_IMM : SM_Discard_Pseudo <opName, SGPR_IMM_Offset>;
 }
 
 class SM_Time_Pseudo<string opName, SDPatternOperator node = null_frag> : SM_Pseudo<
@@ -250,12 +205,9 @@ class SM_Inval_Pseudo <string opName, SDPatternOperator node = null_frag> : SM_P
 }
 
 multiclass SM_Pseudo_Probe<string opName, RegisterClass baseClass> {
-  def _IMM  : SM_Probe_Pseudo <opName, "_IMM", baseClass,
-    (ins smem_offset:$offset), "$offset", 1, 0>;
-  def _SGPR : SM_Probe_Pseudo <opName, "_SGPR", baseClass,
-    (ins SReg_32:$soffset), "$soffset", 0, 1>;
-  def _SGPR_IMM : SM_Probe_Pseudo <opName, "_SGPR_IMM", baseClass,
-    (ins SReg_32:$soffset, smem_offset_mod:$offset), "$soffset$offset", 1, 1>;
+  def _IMM  : SM_Probe_Pseudo <opName, baseClass, IMM_Offset>;
+  def _SGPR : SM_Probe_Pseudo <opName, baseClass, SGPR_Offset>;
+  def _SGPR_IMM : SM_Probe_Pseudo <opName, baseClass, SGPR_IMM_Offset>;
 }
 
 class SM_WaveId_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
@@ -596,10 +548,10 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
                         soffset{6-0}, ?);
 }
 
-class SMEM_Real_Load_vi<bits<8> op, string ps, dag offsets>
-    : SMEM_Real_vi<op, !cast<SM_Pseudo>(ps)> {
-  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps).BaseClass;
-  let InOperandList = !con((ins BaseClass:$sbase), offsets, (ins CPol:$cpol));
+class SMEM_Real_Load_vi<bits<8> op, string ps, OffsetMode offsets>
+    : SMEM_Real_vi<op, !cast<SM_Pseudo>(ps # offsets.Variant)> {
+  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
+  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
 }
 
 // The alternative GFX9 SGPR encoding using soffset to encode the
@@ -614,14 +566,12 @@ class SMEM_Real_SGPR_alt_gfx9 {
 }
 
 multiclass SM_Real_Loads_vi<bits<8> op, string ps> {
-  def _IMM_vi : SMEM_Real_Load_vi <op, ps#"_IMM", (ins smem_offset:$offset)>;
-  def _SGPR_vi : SMEM_Real_Load_vi <op, ps#"_SGPR", (ins SReg_32:$soffset)>;
-  def _SGPR_alt_gfx9 : SMEM_Real_Load_vi <op, ps#"_SGPR",
-                                          (ins SReg_32:$soffset)>,
+  def _IMM_vi : SMEM_Real_Load_vi <op, ps, IMM_Offset>;
+  def _SGPR_vi : SMEM_Real_Load_vi <op, ps, SGPR_Offset>;
+  def _SGPR_alt_gfx9 : SMEM_Real_Load_vi <op, ps, SGPR_Offset>,
                        SMEM_Real_SGPR_alt_gfx9;
   let IsGFX9SpecificEncoding = true in
-  def _SGPR_IMM_gfx9 : SMEM_Real_Load_vi <
-    op, ps#"_SGPR_IMM", (ins SReg_32:$soffset, smem_offset_mod:$offset)>;
+  def _SGPR_IMM_gfx9 : SMEM_Real_Load_vi <op, ps, SGPR_IMM_Offset>;
 }
 
 class SMEM_Real_Store_Base_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps> {
@@ -632,23 +582,21 @@ class SMEM_Real_Store_Base_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps>
   let Inst{12-6}  = !if(ps.has_sdst, sdata{6-0}, ?);
 }
 
-class SMEM_Real_Store_vi <bits<8> op, string ps, dag offsets>
-    : SMEM_Real_Store_Base_vi <op, !cast<SM_Pseudo>(ps)> {
-  RegisterClass SrcClass = !cast<SM_Store_Pseudo>(ps).SrcClass;
-  RegisterClass BaseClass = !cast<SM_Store_Pseudo>(ps).BaseClass;
+class SMEM_Real_Store_vi <bits<8> op, string ps, OffsetMode offsets>
+    : SMEM_Real_Store_Base_vi <op, !cast<SM_Pseudo>(ps # offsets.Variant)> {
+  RegisterClass SrcClass = !cast<SM_Store_Pseudo>(ps # offsets.Variant).SrcClass;
+  RegisterClass BaseClass = !cast<SM_Store_Pseudo>(ps # offsets.Variant).BaseClass;
   let InOperandList = !con((ins SrcClass:$sdata, BaseClass:$sbase),
-                           offsets, (ins CPol:$cpol));
+                           offsets.Ins, (ins CPol:$cpol));
 }
 
 multiclass SM_Real_Stores_vi<bits<8> op, string ps> {
-  def _IMM_vi : SMEM_Real_Store_vi <op, ps#_IMM, (ins smem_offset:$offset)>;
-  def _SGPR_vi : SMEM_Real_Store_vi <op, ps#_SGPR, (ins SReg_32:$soffset)>;
-  def _SGPR_alt_gfx9 : SMEM_Real_Store_vi <op, ps#"_SGPR",
-                                           (ins SReg_32:$soffset)>,
+  def _IMM_vi : SMEM_Real_Store_vi <op, ps, IMM_Offset>;
+  def _SGPR_vi : SMEM_Real_Store_vi <op, ps, SGPR_Offset>;
+  def _SGPR_alt_gfx9 : SMEM_Real_Store_vi <op, ps, SGPR_Offset>,
                        SMEM_Real_SGPR_alt_gfx9;
   let IsGFX9SpecificEncoding = true in
-  def _SGPR_IMM_gfx9 : SMEM_Real_Store_vi <
-    op, ps#"_SGPR_IMM", (ins SReg_32:$soffset, smem_offset_mod:$offset)>;
+  def _SGPR_IMM_gfx9 : SMEM_Real_Store_vi <op, ps, SGPR_IMM_Offset>;
 }
 
 multiclass SM_Real_Probe_vi<bits<8> op, string ps> {
@@ -883,8 +831,10 @@ def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{ return isUniformL
 def SMRDImm         : ComplexPattern<iPTR, 2, "SelectSMRDImm">;
 def SMRDImm32       : ComplexPattern<iPTR, 2, "SelectSMRDImm32">;
 def SMRDSgpr        : ComplexPattern<iPTR, 2, "SelectSMRDSgpr">;
+def SMRDSgprImm     : ComplexPattern<iPTR, 3, "SelectSMRDSgprImm">;
 def SMRDBufferImm   : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm">;
 def SMRDBufferImm32 : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm32">;
+def SMRDBufferSgprImm : ComplexPattern<iPTR, 2, "SelectSMRDBufferSgprImm">;
 
 multiclass SMRD_Pattern <string Instr, ValueType vt> {
 
@@ -903,11 +853,18 @@ multiclass SMRD_Pattern <string Instr, ValueType vt> {
 
   // 3. SGPR offset
   def : GCNPat <
-    (smrd_load (SMRDSgpr i64:$sbase, i32:$offset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $offset, 0))
+    (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $soffset, 0))
   >;
 
-  // 4. No offset
+  // 4. SGPR+IMM offset
+  def : GCNPat <
+    (smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))> {
+    let OtherPredicates = [isGFX9Plus];
+  }
+
+  // 5. No offset
   def : GCNPat <
     (vt (smrd_load (i64 SReg_64:$sbase))),
     (vt (!cast<SM_Pseudo>(Instr#"_IMM") i64:$sbase, 0, 0))
@@ -933,9 +890,18 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
 
   // 3. Offset loaded in an 32bit SGPR
   def : GCNPat <
-    (SIsbuffer_load v4i32:$sbase, i32:$offset, timm:$cachepolicy),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") SReg_128:$sbase, SReg_32:$offset, (extract_cpol $cachepolicy)))
+    (SIsbuffer_load v4i32:$sbase, i32:$soffset, timm:$cachepolicy),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") SReg_128:$sbase, SReg_32:$soffset, (extract_cpol $cachepolicy)))
   >;
+
+  // 4. Offset as an 32-bit SGPR + immediate
+  def : GCNPat <
+    (SIsbuffer_load v4i32:$sbase, (SMRDBufferSgprImm i32:$soffset, i32:$offset),
+                    timm:$cachepolicy),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") SReg_128:$sbase, SReg_32:$soffset, i32imm:$offset,
+                                             (extract_cpol $cachepolicy)))> {
+    let OtherPredicates = [isGFX9Plus];
+  }
 }
 
 // Global and constant loads can be selected to either MUBUF or SMRD
@@ -1021,19 +987,16 @@ class SMEM_Real_gfx10<bits<8> op, SM_Pseudo ps>
   let Inst{16}    = !if(ps.has_glc, cpol{CPolBit.GLC}, ?);
 }
 
-multiclass SM_Real_Loads_gfx10<bits<8> op, string ps,
-                               SM_Load_Pseudo immPs = !cast<SM_Load_Pseudo>(ps#_IMM),
-                               SM_Load_Pseudo sgprPs = !cast<SM_Load_Pseudo>(ps#_SGPR)> {
-  def _IMM_gfx10 : SMEM_Real_gfx10<op, immPs> {
-    let InOperandList = (ins immPs.BaseClass:$sbase, smem_offset:$offset, CPol:$cpol);
-  }
-  def _SGPR_gfx10 : SMEM_Real_gfx10<op, sgprPs> {
-    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
-  }
-  def _SGPR_IMM_gfx10 : SMEM_Real_gfx10<op, !cast<SM_Load_Pseudo>(ps#_SGPR_IMM)> {
-    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$soffset,
-                             smem_offset_mod:$offset, CPol:$cpol);
-  }
+class SMEM_Real_Load_gfx10<bits<8> op, string ps, OffsetMode offsets>
+    : SMEM_Real_gfx10<op, !cast<SM_Pseudo>(ps # offsets.Variant)> {
+  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
+  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
+}
+
+multiclass SM_Real_Loads_gfx10<bits<8> op, string ps> {
+  def _IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps, IMM_Offset>;
+  def _SGPR_gfx10 : SMEM_Real_Load_gfx10<op, ps, SGPR_Offset>;
+  def _SGPR_IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps, SGPR_IMM_Offset>;
 }
 
 class SMEM_Real_Store_gfx10<bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx10<op, ps> {
@@ -1227,17 +1190,16 @@ class SMEM_Real_gfx11<bits<8> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{14}    = !if(ps.has_glc, cpol{CPolBit.GLC}, 0);
 }
 
-class SMEM_Real_Load_gfx11<bits<8> op, string ps, string opName, dag offsets> :
-    SMEM_Real_gfx11<op, !cast<SM_Pseudo>(ps), opName> {
-  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps).BaseClass;
-  let InOperandList = !con((ins BaseClass:$sbase), offsets, (ins CPol:$cpol));
+class SMEM_Real_Load_gfx11<bits<8> op, string ps, string opName, OffsetMode offsets> :
+    SMEM_Real_gfx11<op, !cast<SM_Pseudo>(ps # offsets.Variant), opName> {
+  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
+  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
 }
 
 multiclass SM_Real_Loads_gfx11<bits<8> op, string ps, string opName> {
-  def _IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_IMM", opName, (ins smem_offset:$offset)>;
-  def _SGPR_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_SGPR", opName, (ins SReg_32:$soffset)>;
-  def _SGPR_IMM_gfx11 : SMEM_Real_Load_gfx11<
-    op, ps#"_SGPR_IMM", opName, (ins SReg_32:$soffset, smem_offset_mod:$offset)>;
+  def _IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps, opName, IMM_Offset>;
+  def _SGPR_gfx11 : SMEM_Real_Load_gfx11<op, ps, opName, SGPR_Offset>;
+  def _SGPR_IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps, opName, SGPR_IMM_Offset>;
   def : MnemonicAlias<!cast<SM_Pseudo>(ps#"_IMM").Mnemonic, opName>,
                       Requires<[isGFX11Plus]>;
 }

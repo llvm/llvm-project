@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <experimental/memory_resource>
-
 // UNSUPPORTED: c++03
+
+// test_memory_resource requires RTTI for dynamic_cast
+// UNSUPPORTED: no-rtti
+
+// <experimental/memory_resource>
 
 //------------------------------------------------------------------------------
 // TESTING void * memory_resource::allocate(size_t, size_t = max_align)
@@ -20,6 +23,8 @@
 //  C) 'allocate' is not marked as 'noexcept'.
 //  D) Invoking 'allocate' invokes 'do_allocate' with the same arguments.
 //  E) If 'do_allocate' throws then 'allocate' propagates that exception.
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/memory_resource>
 #include <type_traits>

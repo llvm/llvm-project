@@ -22,20 +22,20 @@
 
 # Provide existing symbol. The value should be 0, even though we
 # have value of 1 in PROVIDE()
-# RUN: echo "SECTIONS { PROVIDE(somesym = 1);}" > %t.script
+# RUN: echo "SECTIONS { PROVIDE(somesym =1);}" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=PROVIDE2 %s
 # PROVIDE2: 0000000000000000 g       *ABS*  0000000000000000 somesym
 
 # Provide existing symbol. The value should be 0, even though we
 # have value of 1 in PROVIDE_HIDDEN(). Visibility should not change
-# RUN: echo "SECTIONS { PROVIDE_HIDDEN(somesym = 1);}" > %t.script
+# RUN: echo "SECTIONS { PROVIDE_HIDDEN(somesym =1);}" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN2 %s
 # HIDDEN2: 0000000000000000 g       *ABS*  0000000000000000 somesym
 
 # Hidden symbol assignment.
-# RUN: echo "SECTIONS { HIDDEN(newsym = 1);}" > %t.script
+# RUN: echo "SECTIONS { HIDDEN(newsym =1);}" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN3 %s
 # HIDDEN3: 0000000000000001 l       *ABS*  0000000000000000 .hidden newsym
@@ -72,6 +72,11 @@
 # SIMPLE2: 0000000000000100 g       *ABS*  0000000000000000 foo
 # SIMPLE2: 0000000000000100 g       *ABS*  0000000000000000 bar
 # SIMPLE2: 0000000000000100 g       *ABS*  0000000000000000 baz
+
+# RUN: echo 'PROVIDE(somesym + 1);' > %t.script
+# RUN: not ld.lld -T %t.script %t -o /dev/null 2>&1 | FileCheck %s --check-prefix=PROVIDE-ERR
+
+# PROVIDE-ERR: {{.*}}:1: = expected, but got +
 
 .global _start
 _start:

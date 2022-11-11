@@ -10,16 +10,14 @@ define void @test() {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ -9, [[BB:%.*]] ], [ [[TMP6:%.*]], [[BB1:%.*]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ -9, [[BB:%.*]] ], [ -10, [[BB1:%.*]] ]
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ -9, [[BB2]] ], [ [[TMP6]], [[BB10:%.*]] ]
 ; CHECK-NEXT:    br i1 false, label [[BB5:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[TMP6]] = add nsw i32 [[TMP4]], -1
 ; CHECK-NEXT:    br i1 undef, label [[BB8:%.*]], label [[BB9:%.*]]
 ; CHECK:       bb8:
-; CHECK-NEXT:    br label [[BB10]]
+; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    br label [[BB10]]
 ; CHECK:       bb10:

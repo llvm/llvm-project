@@ -50,17 +50,12 @@ namespace {
 
 struct OrderMap {
   DenseMap<const Value *, std::pair<unsigned, bool>> IDs;
-  unsigned LastGlobalConstantID = 0;
   unsigned LastGlobalValueID = 0;
 
   OrderMap() = default;
 
-  bool isGlobalConstant(unsigned ID) const {
-    return ID <= LastGlobalConstantID;
-  }
-
   bool isGlobalValue(unsigned ID) const {
-    return ID <= LastGlobalValueID && !isGlobalConstant(ID);
+    return ID <= LastGlobalValueID;
   }
 
   unsigned size() const { return IDs.size(); }
@@ -84,7 +79,7 @@ static void orderValue(const Value *V, OrderMap &OM) {
     return;
 
   if (const Constant *C = dyn_cast<Constant>(V)) {
-    if (C->getNumOperands() && !isa<GlobalValue>(C)) {
+    if (C->getNumOperands()) {
       for (const Value *Op : C->operands())
         if (!isa<BasicBlock>(Op) && !isa<GlobalValue>(Op))
           orderValue(Op, OM);
@@ -104,39 +99,40 @@ static OrderMap orderModule(const Module &M) {
   // and ValueEnumerator::incorporateFunction().
   OrderMap OM;
 
-  // In the reader, initializers of GlobalValues are set *after* all the
-  // globals have been read.  Rather than awkwardly modeling this behaviour
-  // directly in predictValueUseListOrderImpl(), just assign IDs to
-  // initializers of GlobalValues before GlobalValues themselves to model this
-  // implicitly.
-  for (const GlobalVariable &G : M.globals())
-    if (G.hasInitializer())
-      if (!isa<GlobalValue>(G.getInitializer()))
-        orderValue(G.getInitializer(), OM);
-  for (const GlobalAlias &A : M.aliases())
-    if (!isa<GlobalValue>(A.getAliasee()))
-      orderValue(A.getAliasee(), OM);
-  for (const GlobalIFunc &I : M.ifuncs())
-    if (!isa<GlobalValue>(I.getResolver()))
-      orderValue(I.getResolver(), OM);
-  for (const Function &F : M) {
-    for (const Use &U : F.operands())
-      if (!isa<GlobalValue>(U.get()))
-        orderValue(U.get(), OM);
-  }
+  // Initializers of GlobalValues are processed in
+  // BitcodeReader::ResolveGlobalAndAliasInits().  Match the order there rather
+  // than ValueEnumerator, and match the code in predictValueUseListOrderImpl()
+  // by giving IDs in reverse order.
+  //
+  // Since GlobalValues never reference each other directly (just through
+  // initializers), their relative IDs only matter for determining order of
+  // uses in their initializers.
+  for (const GlobalVariable &G : reverse(M.globals()))
+    orderValue(&G, OM);
+  for (const GlobalAlias &A : reverse(M.aliases()))
+    orderValue(&A, OM);
+  for (const GlobalIFunc &I : reverse(M.ifuncs()))
+    orderValue(&I, OM);
+  for (const Function &F : reverse(M))
+    orderValue(&F, OM);
+  OM.LastGlobalValueID = OM.size();
 
-  // As constants used in metadata operands are emitted as module-level
-  // constants, we must order them before other operands. Also, we must order
-  // these before global values, as these will be read before setting the
-  // global values' initializers. The latter matters for constants which have
-  // uses towards other constants that are used as initializers.
   auto orderConstantValue = [&OM](const Value *V) {
-    if ((isa<Constant>(V) && !isa<GlobalValue>(V)) || isa<InlineAsm>(V))
+    if (isa<Constant>(V) || isa<InlineAsm>(V))
       orderValue(V, OM);
   };
+
   for (const Function &F : M) {
     if (F.isDeclaration())
       continue;
+    // Here we need to match the union of ValueEnumerator::incorporateFunction()
+    // and WriteFunction().  Basic blocks are implicitly declared before
+    // anything else (by declaring their size).
+    for (const BasicBlock &BB : F)
+      orderValue(&BB, OM);
+
+    // Metadata used by instructions is decoded before the actual instructions,
+    // so visit any constants used by it beforehand.
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB)
         for (const Value *V : I.operands()) {
@@ -151,49 +147,17 @@ static OrderMap orderModule(const Module &M) {
             }
           }
         }
-  }
-  OM.LastGlobalConstantID = OM.size();
 
-  // Initializers of GlobalValues are processed in
-  // BitcodeReader::ResolveGlobalAndAliasInits().  Match the order there rather
-  // than ValueEnumerator, and match the code in predictValueUseListOrderImpl()
-  // by giving IDs in reverse order.
-  //
-  // Since GlobalValues never reference each other directly (just through
-  // initializers), their relative IDs only matter for determining order of
-  // uses in their initializers.
-  for (const Function &F : M)
-    orderValue(&F, OM);
-  for (const GlobalAlias &A : M.aliases())
-    orderValue(&A, OM);
-  for (const GlobalIFunc &I : M.ifuncs())
-    orderValue(&I, OM);
-  for (const GlobalVariable &G : M.globals())
-    orderValue(&G, OM);
-  OM.LastGlobalValueID = OM.size();
-
-  for (const Function &F : M) {
-    if (F.isDeclaration())
-      continue;
-    // Here we need to match the union of ValueEnumerator::incorporateFunction()
-    // and WriteFunction().  Basic blocks are implicitly declared before
-    // anything else (by declaring their size).
-    for (const BasicBlock &BB : F)
-      orderValue(&BB, OM);
     for (const Argument &A : F.args())
       orderValue(&A, OM);
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB) {
         for (const Value *Op : I.operands())
-          if ((isa<Constant>(*Op) && !isa<GlobalValue>(*Op)) ||
-              isa<InlineAsm>(*Op))
-            orderValue(Op, OM);
+          orderConstantValue(Op);
         if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
           orderValue(SVI->getShuffleMaskForBitcode(), OM);
-      }
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
         orderValue(&I, OM);
+      }
   }
   return OM;
 }
@@ -222,18 +186,6 @@ static void predictValueUseListOrderImpl(const Value *V, const Function *F,
 
     auto LID = OM.lookup(LU->getUser()).first;
     auto RID = OM.lookup(RU->getUser()).first;
-
-    // Global values are processed in reverse order.
-    //
-    // Moreover, initializers of GlobalValues are set *after* all the globals
-    // have been read (despite having earlier IDs).  Rather than awkwardly
-    // modeling this behaviour here, orderModule() has assigned IDs to
-    // initializers of GlobalValues before GlobalValues themselves.
-    if (OM.isGlobalValue(LID) && OM.isGlobalValue(RID)) {
-      if (LID == RID)
-        return LU->getOperandNo() > RU->getOperandNo();
-      return LID < RID;
-    }
 
     // If ID is 4, then expect: 7 6 5 1 2 3.
     if (LID < RID) {
@@ -317,16 +269,25 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
       predictValueUseListOrder(&A, &F, OM, Stack);
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB) {
-        for (const Value *Op : I.operands())
+        for (const Value *Op : I.operands()) {
           if (isa<Constant>(*Op) || isa<InlineAsm>(*Op)) // Visit GlobalValues.
             predictValueUseListOrder(Op, &F, OM, Stack);
+          if (const auto *MAV = dyn_cast<MetadataAsValue>(Op)) {
+            if (const auto *VAM =
+                    dyn_cast<ValueAsMetadata>(MAV->getMetadata())) {
+              predictValueUseListOrder(VAM->getValue(), &F, OM, Stack);
+            } else if (const auto *AL =
+                           dyn_cast<DIArgList>(MAV->getMetadata())) {
+              for (const auto *VAM : AL->getArgs())
+                predictValueUseListOrder(VAM->getValue(), &F, OM, Stack);
+            }
+          }
+        }
         if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
           predictValueUseListOrder(SVI->getShuffleMaskForBitcode(), &F, OM,
                                    Stack);
-      }
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
         predictValueUseListOrder(&I, &F, OM, Stack);
+      }
   }
 
   // Visit globals last, since the module-level use-list block will be seen
@@ -841,7 +802,7 @@ void ValueEnumerator::organizeMetadata() {
   //   - by function, then
   //   - by isa<MDString>
   // and then sort by the original/current ID.  Since the IDs are guaranteed to
-  // be unique, the result of std::sort will be deterministic.  There's no need
+  // be unique, the result of llvm::sort will be deterministic.  There's no need
   // for std::stable_sort.
   llvm::sort(Order, [this](MDIndex LHS, MDIndex RHS) {
     return std::make_tuple(LHS.F, getMetadataTypeOrder(LHS.get(MDs)), LHS.ID) <

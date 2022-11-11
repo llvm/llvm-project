@@ -28,6 +28,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TextAPI/Architecture.h"
 
@@ -176,16 +177,14 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     exit(EXIT_SUCCESS);
   }
 
-  for (auto Arg : InputArgs.filtered(LIPO_UNKNOWN))
+  for (auto *Arg : InputArgs.filtered(LIPO_UNKNOWN))
     reportError("unknown argument '" + Arg->getAsString(InputArgs) + "'");
 
-  for (auto Arg : InputArgs.filtered(LIPO_INPUT))
+  for (auto *Arg : InputArgs.filtered(LIPO_INPUT))
     C.InputFiles.push_back({None, Arg->getValue()});
-  for (auto Arg : InputArgs.filtered(LIPO_arch)) {
+  for (auto *Arg : InputArgs.filtered(LIPO_arch)) {
     validateArchitectureName(Arg->getValue(0));
-    if (!Arg->getValue(1))
-      reportError(
-          "arch is missing an argument: expects -arch arch_type file_name");
+    assert(Arg->getValue(1) && "file_name is missing");
     C.InputFiles.push_back({StringRef(Arg->getValue(0)), Arg->getValue(1)});
   }
 
@@ -195,7 +194,7 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
   if (InputArgs.hasArg(LIPO_output))
     C.OutputFile = std::string(InputArgs.getLastArgValue(LIPO_output));
 
-  for (auto Segalign : InputArgs.filtered(LIPO_segalign)) {
+  for (auto *Segalign : InputArgs.filtered(LIPO_segalign)) {
     if (!Segalign->getValue(1))
       reportError("segalign is missing an argument: expects -segalign "
                   "arch_type alignment_value");
@@ -239,7 +238,7 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     std::string Buf;
     raw_string_ostream OS(Buf);
     OS << "only one of the following actions can be specified:";
-    for (auto Arg : ActionArgs)
+    for (auto *Arg : ActionArgs)
       OS << " " << Arg->getSpelling();
     reportError(OS.str());
   }
@@ -293,11 +292,8 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     return C;
 
   case LIPO_replace:
-    for (auto Action : ActionArgs) {
-      if (!Action->getValue(1))
-        reportError(
-            "replace is missing an argument: expects -replace arch_type "
-            "file_name");
+    for (auto *Action : ActionArgs) {
+      assert(Action->getValue(1) && "file_name is missing");
       validateArchitectureName(Action->getValue(0));
       C.ReplacementFiles.push_back(
           {StringRef(Action->getValue(0)), Action->getValue(1)});
@@ -430,7 +426,7 @@ static void printBinaryArchs(LLVMContext &LLVMCtx, const Binary *Binary,
   Expected<Slice> SliceOrErr = createSliceFromIR(*IR, 0);
   if (!SliceOrErr)
     reportError(IR->getFileName(), SliceOrErr.takeError());
-  
+
   OS << SliceOrErr->getArchString() << " \n";
 }
 
@@ -723,9 +719,13 @@ replaceSlices(LLVMContext &LLVMCtx,
   exit(EXIT_SUCCESS);
 }
 
-int main(int argc, char **argv) {
+int llvm_lipo_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
-  Config C = parseLipoOptions(makeArrayRef(argv + 1, argc));
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
+
+  Config C = parseLipoOptions(makeArrayRef(argv + 1, argc - 1));
   LLVMContext LLVMCtx;
   SmallVector<OwningBinary<Binary>, 1> InputBinaries =
       readInputBinaries(LLVMCtx, C.InputFiles);

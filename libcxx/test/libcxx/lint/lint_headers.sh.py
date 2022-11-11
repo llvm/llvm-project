@@ -20,9 +20,11 @@ def exclude_from_consideration(path):
 
 def check_for_pragma_GCC_system_header(pretty_fname, lines):
     if pretty_fname not in ['__undef_macros']:
-        if '#  pragma GCC system_header\n' not in lines:
-            print('FAILED TO FIND #  pragma GCC system_header in libcxx/include/%s!' % pretty_fname)
-            return False
+        for line in lines:
+            if re.match('# *pragma GCC system_header\n', line):
+                return True
+        print('FAILED TO FIND #  pragma GCC system_header in libcxx/include/%s' % pretty_fname)
+        return False
     return True
 
 

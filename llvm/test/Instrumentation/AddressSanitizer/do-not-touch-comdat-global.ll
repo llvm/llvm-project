@@ -1,6 +1,6 @@
 ; This test checks that we instrument regular globals, but do not touch
 ; the COMDAT ones.
-; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
+; RUN: opt < %s -passes=asan -S | FileCheck %s
 target datalayout = "e-m:w-p:32:32-i64:64-f80:32-n8:16:32-S32"
 target triple = "i686-pc-windows-msvc"
 ; no action should be taken for these globals

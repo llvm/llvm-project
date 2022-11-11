@@ -10,15 +10,15 @@
 
 // template <class charT, class traits, class Allocator>
 // basic_string<charT, traits, Allocator>
-// to_string(charT zero = charT('0'), charT one = charT('1')) const;
+// to_string(charT zero = charT('0'), charT one = charT('1')) const; // constexpr since C++23
 //
 // template <class charT, class traits>
-// basic_string<charT, traits, allocator<charT> > to_string() const;
+// basic_string<charT, traits, allocator<charT> > to_string() const; // constexpr since C++23
 //
 // template <class charT>
-// basic_string<charT, char_traits<charT>, allocator<charT> > to_string() const;
+// basic_string<charT, char_traits<charT>, allocator<charT> > to_string() const; // constexpr since C++23
 //
-// basic_string<char, char_traits<char>, allocator<char> > to_string() const;
+// basic_string<char, char_traits<char>, allocator<char> > to_string() const; // constexpr since C++23
 
 #include <bitset>
 #include <cassert>
@@ -31,7 +31,7 @@
 #include "test_macros.h"
 
 template <class CharT, std::size_t N>
-void check_equal(std::basic_string<CharT> const& s, std::bitset<N> const& b, CharT zero, CharT one) {
+TEST_CONSTEXPR_CXX23 void check_equal(std::basic_string<CharT> const& s, std::bitset<N> const& b, CharT zero, CharT one) {
     assert(s.size() == b.size());
     for (std::size_t i = 0; i < b.size(); ++i) {
         if (b[i]) {
@@ -43,7 +43,7 @@ void check_equal(std::basic_string<CharT> const& s, std::bitset<N> const& b, Cha
 }
 
 template <std::size_t N>
-void test_to_string() {
+TEST_CONSTEXPR_CXX23 bool test_to_string() {
     std::vector<std::bitset<N> > const cases = get_test_cases<N>();
     for (std::size_t c = 0; c != cases.size(); ++c) {
         std::bitset<N> const v = cases[c];
@@ -106,18 +106,29 @@ void test_to_string() {
             check_equal(s, v, 'x', 'y');
         }
     }
+    return true;
 }
 
 int main(int, char**) {
-    test_to_string<0>();
-    test_to_string<1>();
-    test_to_string<31>();
-    test_to_string<32>();
-    test_to_string<33>();
-    test_to_string<63>();
-    test_to_string<64>();
-    test_to_string<65>();
-    test_to_string<1000>();
+  test_to_string<0>();
+  test_to_string<1>();
+  test_to_string<31>();
+  test_to_string<32>();
+  test_to_string<33>();
+  test_to_string<63>();
+  test_to_string<64>();
+  test_to_string<65>();
+  test_to_string<1000>(); // not in constexpr because of constexpr evaluation step limits
+#if TEST_STD_VER > 20
+  static_assert(test_to_string<0>());
+  static_assert(test_to_string<1>());
+  static_assert(test_to_string<31>());
+  static_assert(test_to_string<32>());
+  static_assert(test_to_string<33>());
+  static_assert(test_to_string<63>());
+  static_assert(test_to_string<64>());
+  static_assert(test_to_string<65>());
+#endif
 
-    return 0;
+  return 0;
 }

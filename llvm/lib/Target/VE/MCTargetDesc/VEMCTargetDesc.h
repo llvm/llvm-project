@@ -44,6 +44,7 @@ std::unique_ptr<MCObjectTargetWriter> createVEELFObjectWriter(uint8_t OSABI);
 // Defines symbolic names for the VE instructions.
 //
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "VEGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

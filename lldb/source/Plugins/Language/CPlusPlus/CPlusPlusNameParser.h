@@ -33,6 +33,7 @@ public:
     ParsedName name;
     llvm::StringRef arguments;
     llvm::StringRef qualifiers;
+    llvm::StringRef return_type;
   };
 
   // Treats given text as a function definition and parses it.
@@ -117,6 +118,7 @@ private:
   void Advance();
   void TakeBack();
   bool ConsumeToken(clang::tok::TokenKind kind);
+
   template <typename... Ts> bool ConsumeToken(Ts... kinds);
   Bookmark SetBookmark();
   size_t GetCurrentPosition();
@@ -163,6 +165,16 @@ private:
 
   // Consumes full type name like 'Namespace::Class<int>::Method()::InnerClass'
   bool ConsumeTypename();
+
+  /// Consumes ABI tags enclosed within '[abi:' ... ']'
+  ///
+  /// Since there is no restriction on what the ABI tag
+  /// string may contain, this API supports parsing a small
+  /// set of special characters.
+  ///
+  /// The following regex describes the set of supported characters:
+  ///   [A-Za-z,.\s\d]+
+  bool ConsumeAbiTag();
 
   llvm::Optional<ParsedNameRanges> ParseFullNameImpl();
   llvm::StringRef GetTextForRange(const Range &range);

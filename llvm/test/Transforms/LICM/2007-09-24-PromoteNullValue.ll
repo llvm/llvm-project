@@ -25,7 +25,7 @@ cond_true11:		; preds = %bb6
 	br label %return
 
 cond_next14:		; preds = %bb6
-	store i8 0, i8* null
+	store i8 0, ptr null
 	br label %bb15
 
 bb15:		; preds = %cond_next14, %bb

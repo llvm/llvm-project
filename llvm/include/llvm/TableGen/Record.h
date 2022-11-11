@@ -311,6 +311,7 @@ protected:
     IK_CondOpInit,
     IK_FoldOpInit,
     IK_IsAOpInit,
+    IK_ExistsOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
@@ -783,7 +784,7 @@ public:
 ///
 class UnOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum UnaryOp : uint8_t { CAST, NOT, HEAD, TAIL, SIZE, EMPTY, GETDAGOP };
+  enum UnaryOp : uint8_t { CAST, NOT, HEAD, TAIL, SIZE, EMPTY, GETDAGOP, LOG2 };
 
 private:
   Init *LHS;
@@ -832,9 +833,30 @@ public:
 /// !op (X, Y) - Combine two inits.
 class BinOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum BinaryOp : uint8_t { ADD, SUB, MUL, AND, OR, XOR, SHL, SRA, SRL, LISTCONCAT,
-                            LISTSPLAT, STRCONCAT, INTERLEAVE, CONCAT, EQ,
-                            NE, LE, LT, GE, GT, SETDAGOP };
+  enum BinaryOp : uint8_t {
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    AND,
+    OR,
+    XOR,
+    SHL,
+    SRA,
+    SRL,
+    LISTCONCAT,
+    LISTSPLAT,
+    STRCONCAT,
+    INTERLEAVE,
+    CONCAT,
+    EQ,
+    NE,
+    LE,
+    LT,
+    GE,
+    GT,
+    SETDAGOP
+  };
 
 private:
   Init *LHS, *RHS;
@@ -1085,6 +1107,40 @@ public:
   // Fold - If possible, fold this to a simpler init.  Return this if not
   // possible to fold.
   Init *Fold() const;
+
+  bool isComplete() const override { return false; }
+
+  Init *resolveReferences(Resolver &R) const override;
+
+  Init *getBit(unsigned Bit) const override;
+
+  std::string getAsString() const override;
+};
+
+/// !exists<type>(expr) - Dynamically determine if a record of `type` named
+/// `expr` exists.
+class ExistsOpInit : public TypedInit, public FoldingSetNode {
+private:
+  RecTy *CheckType;
+  Init *Expr;
+
+  ExistsOpInit(RecTy *CheckType, Init *Expr)
+      : TypedInit(IK_ExistsOpInit, IntRecTy::get(CheckType->getRecordKeeper())),
+        CheckType(CheckType), Expr(Expr) {}
+
+public:
+  ExistsOpInit(const ExistsOpInit &) = delete;
+  ExistsOpInit &operator=(const ExistsOpInit &) = delete;
+
+  static bool classof(const Init *I) { return I->getKind() == IK_ExistsOpInit; }
+
+  static ExistsOpInit *get(RecTy *CheckType, Init *Expr);
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // possible to fold.
+  Init *Fold(Record *CurRec, bool IsFinal = false) const;
 
   bool isComplete() const override { return false; }
 
@@ -1443,6 +1499,9 @@ private:
   Init *Value;
   bool IsUsed = false;
 
+  /// Reference locations to this record value.
+  SmallVector<SMRange> ReferenceLocs;
+
 public:
   RecordVal(Init *N, RecTy *T, FieldKind K);
   RecordVal(Init *N, SMLoc Loc, RecTy *T, FieldKind K);
@@ -1489,6 +1548,12 @@ public:
   /// Set the value and source location of the field.
   bool setValue(Init *V, SMLoc NewLoc);
 
+  /// Add a reference to this record value.
+  void addReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
+
+  /// Return the references of this record value.
+  ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
+
   /// Whether this value is used. Useful for reporting warnings, for example
   /// when a template argument is unused.
   void setUsed(bool Used) { IsUsed = Used; }
@@ -1521,8 +1586,11 @@ public:
 private:
   Init *Name;
   // Location where record was instantiated, followed by the location of
-  // multiclass prototypes used.
+  // multiclass prototypes used, and finally by the locations of references to
+  // this record.
   SmallVector<SMLoc, 4> Locs;
+  SmallVector<SMLoc, 0> ForwardDeclarationLocs;
+  SmallVector<SMRange, 0> ReferenceLocs;
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
@@ -1579,7 +1647,7 @@ public:
     return Name;
   }
 
-  const std::string getNameInitAsString() const {
+  std::string getNameInitAsString() const {
     return getNameInit()->getAsUnquotedString();
   }
 
@@ -1587,6 +1655,19 @@ public:
 
   ArrayRef<SMLoc> getLoc() const { return Locs; }
   void appendLoc(SMLoc Loc) { Locs.push_back(Loc); }
+
+  ArrayRef<SMLoc> getForwardDeclarationLocs() const {
+    return ForwardDeclarationLocs;
+  }
+
+  /// Add a reference to this record value.
+  void appendReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
+
+  /// Return the references of this record value.
+  ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
+
+  // Update a class location when encountering a (re-)definition.
+  void updateClassLoc(SMLoc Loc);
 
   // Make the type that this record should have based on its superclasses.
   RecordRecTy *getType();

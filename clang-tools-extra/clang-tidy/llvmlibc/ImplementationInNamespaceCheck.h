@@ -18,7 +18,7 @@ namespace llvm_libc {
 /// Checks all llvm-libc implementation is within the correct namespace.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvmlibc-implementation-in-namespace.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/llvmlibc/implementation-in-namespace.html
 class ImplementationInNamespaceCheck : public ClangTidyCheck {
 public:
   ImplementationInNamespaceCheck(StringRef Name, ClangTidyContext *Context)

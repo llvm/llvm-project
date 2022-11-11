@@ -162,10 +162,13 @@ public:
   DecodeStatus convertSDWAInst(MCInst &MI) const;
   DecodeStatus convertDPP8Inst(MCInst &MI) const;
   DecodeStatus convertMIMGInst(MCInst &MI) const;
+  DecodeStatus convertVOP3DPPInst(MCInst &MI) const;
   DecodeStatus convertVOP3PDPPInst(MCInst &MI) const;
   DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
+  void convertMacDPPInst(MCInst &MI) const;
 
   MCOperand decodeOperand_VGPR_32(unsigned Val) const;
+  MCOperand decodeOperand_VGPR_32_Lo128(unsigned Val) const;
   MCOperand decodeOperand_VRegOrLds_32(unsigned Val) const;
 
   MCOperand decodeOperand_VS_32(unsigned Val) const;
@@ -233,6 +236,7 @@ public:
   MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
                         bool MandatoryLiteral = false) const;
   MCOperand decodeDstOp(const OpWidthTy Width, unsigned Val) const;
+  MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
 
@@ -257,6 +261,8 @@ public:
   bool isGFX11Plus() const;
 
   bool hasArchitectedFlatScratch() const;
+
+  bool isMacDPP(MCInst &MI) const;
 };
 
 //===----------------------------------------------------------------------===//

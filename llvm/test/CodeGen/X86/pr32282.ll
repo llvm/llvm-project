@@ -59,15 +59,15 @@ define dso_local void @foo(i64 %x) nounwind {
 ; X64-NEXT:    setne -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = alloca i8, align 1
-  %2 = load i64, i64* @d, align 8
+  %2 = load i64, ptr @d, align 8
   %3 = or i64 -3013716102214263007, %2
   %4 = xor i64 %3, -1
-  %5 = load i64, i64* @e, align 8
-  %6 = load i8, i8* @b, align 1
+  %5 = load i64, ptr @e, align 8
+  %6 = load i8, ptr @b, align 1
   %7 = trunc i8 %6 to i1
   %8 = zext i1 %7 to i64
   %9 = xor i64 %5, %8
-  %10 = load i8, i8* @c, align 1
+  %10 = load i8, ptr @c, align 1
   %11 = trunc i8 %10 to i1
   %12 = zext i1 %11 to i32
   %13 = or i32 551409149, %12
@@ -81,6 +81,6 @@ define dso_local void @foo(i64 %x) nounwind {
   %21 = sdiv i64 %x, %20
   %22 = icmp ne i64 %21, 0
   %23 = zext i1 %22 to i8
-  store i8 %23, i8* %1, align 1
+  store i8 %23, ptr %1, align 1
   ret void
 }

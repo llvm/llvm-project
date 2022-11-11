@@ -11,50 +11,50 @@ target datalayout = "E-p:64:64:64-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-
 
 define void @frob() {
 ; CHECK-LABEL: @frob(
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 0), align 16
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 1), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 2), align 8
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 1, i64 0), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 1, i64 1), align 16
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 1, i64 2), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 0, i64 0), align 8
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 0, i64 1), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 0, i64 2), align 16
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 1, i64 0), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 1, i64 1), align 8
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 1, i64 2), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 0, i64 0), align 16
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 0, i64 1), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 0, i64 2), align 8
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 1, i64 0), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 1, i64 1), align 16
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 1, i64 2), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 1, i64 0, i32 0, i64 0), align 8
-; CHECK-NEXT:    store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 2, i64 0, i32 0, i64 0), align 16
-; CHECK-NEXT:    store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 1, i64 0, i32 0, i64 1), align 8
+; CHECK-NEXT:    store i32 1, ptr @Y, align 16
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 1), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 2), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 1, i64 0), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 1, i64 1), align 16
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 1, i64 2), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 0, i64 0), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 0, i64 1), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 0, i64 2), align 16
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 1, i64 0), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 1, i64 1), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 1, i32 1, i64 2), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 0, i64 0), align 16
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 0, i64 1), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 0, i64 2), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 1, i64 0), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 1, i64 1), align 16
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 2, i32 1, i64 2), align 4
+; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 1, i64 0, i32 0, i64 0), align 8
+; CHECK-NEXT:    store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 2, i64 0, i32 0, i64 0), align 16
+; CHECK-NEXT:    store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 1, i64 0, i32 0, i64 1), align 8
 ; CHECK-NEXT:    ret void
 ;
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 0), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 1), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 2), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 3), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 4), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 5), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 6), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 7), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 8), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 9), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 10), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 11), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 12), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 13), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 14), align 8
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 15), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 16), align 8
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 17), align 4
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 18), align 8
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 36), align 8
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 19), align 8
+  store i32 1, ptr @Y, align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 1), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 2), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 3), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 4), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 5), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 6), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 7), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 8), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 9), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 10), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 11), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 12), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 13), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 14), align 8
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 15), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 16), align 8
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 17), align 4
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 18), align 8
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 36), align 8
+  store i32 1, ptr getelementptr ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 19), align 8
   ret void
 }
 
@@ -68,13 +68,12 @@ define i64 @test2() {
 ; CHECK-NEXT:    ret i64 1000
 ;
 entry:
-  %A = bitcast i8* getelementptr inbounds ([1000 x i8], [1000 x i8]* @X, i64 1, i64 0) to i8*
-  %B = bitcast i8* getelementptr inbounds ([1000 x i8], [1000 x i8]* @X, i64 0, i64 0) to i8*
+  %A = bitcast ptr getelementptr inbounds ([1000 x i8], ptr @X, i64 1, i64 0) to ptr
 
-  %B2 = ptrtoint i8* %B to i64
+  %B2 = ptrtoint ptr @X to i64
   %C = sub i64 0, %B2
-  %D = getelementptr i8, i8* %A, i64 %C
-  %E = ptrtoint i8* %D to i64
+  %D = getelementptr i8, ptr %A, i64 %C
+  %E = ptrtoint ptr %D to i64
 
   ret i64 %E
 }
@@ -88,13 +87,12 @@ define i16 @test2_as1() {
 ;
 
 entry:
-  %A = bitcast i8 addrspace(1)* getelementptr inbounds ([1000 x i8], [1000 x i8] addrspace(1)* @X_as1, i64 1, i64 0) to i8 addrspace(1)*
-  %B = bitcast i8 addrspace(1)* getelementptr inbounds ([1000 x i8], [1000 x i8] addrspace(1)* @X_as1, i64 0, i64 0) to i8 addrspace(1)*
+  %A = bitcast ptr addrspace(1) getelementptr inbounds ([1000 x i8], ptr addrspace(1) @X_as1, i64 1, i64 0) to ptr addrspace(1)
 
-  %B2 = ptrtoint i8 addrspace(1)* %B to i16
+  %B2 = ptrtoint ptr addrspace(1) @X_as1 to i16
   %C = sub i16 0, %B2
-  %D = getelementptr i8, i8 addrspace(1)* %A, i16 %C
-  %E = ptrtoint i8 addrspace(1)* %D to i16
+  %D = getelementptr i8, ptr addrspace(1) %A, i16 %C
+  %E = ptrtoint ptr addrspace(1) %D to i16
 
   ret i16 %E
 }
@@ -104,17 +102,17 @@ entry:
 ; an offset of 8-byte.
 ; Every element in the @CallerInfos array is 16-byte aligned so
 ; any access from the following gep is 8-byte aligned.
-%struct.CallerInfo = type { i8*, i32 }
+%struct.CallerInfo = type { ptr, i32 }
 @CallerInfos = global [128 x %struct.CallerInfo] zeroinitializer, align 16
 
 define i32 @test_gep_in_struct(i64 %idx) {
 ; CHECK-LABEL: @test_gep_in_struct(
-; CHECK-NEXT:    [[NS7:%.*]] = getelementptr inbounds [128 x %struct.CallerInfo], [128 x %struct.CallerInfo]* @CallerInfos, i64 0, i64 [[IDX:%.*]], i32 1
-; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[NS7]], align 8
+; CHECK-NEXT:    [[NS7:%.*]] = getelementptr inbounds [128 x %struct.CallerInfo], ptr @CallerInfos, i64 0, i64 [[IDX:%.*]], i32 1
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[NS7]], align 8
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
-  %NS7 = getelementptr inbounds [128 x %struct.CallerInfo], [128 x %struct.CallerInfo]* @CallerInfos, i64 0, i64 %idx, i32 1
-  %res = load i32, i32* %NS7, align 1
+  %NS7 = getelementptr inbounds [128 x %struct.CallerInfo], ptr @CallerInfos, i64 0, i64 %idx, i32 1
+  %res = load i32, ptr %NS7, align 1
   ret i32 %res
 }
 
@@ -122,81 +120,81 @@ define i32 @test_gep_in_struct(i64 %idx) {
 @g2 = external global i8
 
 declare i64 @get.i64()
-declare void @use.ptr(i8*)
+declare void @use.ptr(ptr)
 
-define i8* @gep_sub_self() {
+define ptr @gep_sub_self() {
 ; CHECK-LABEL: @gep_sub_self(
-; CHECK-NEXT:    ret i8* getelementptr (i8, i8* @g, i64 sub (i64 0, i64 ptrtoint (i8* @g to i64)))
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i64 sub (i64 0, i64 ptrtoint (ptr @g to i64)))
 ;
-  %p.int = ptrtoint i8* @g to i64
+  %p.int = ptrtoint ptr @g to i64
   %p.int.neg = sub i64 0, %p.int
-  %p1 = getelementptr i8, i8* @g, i64 %p.int.neg
-  ret i8* %p1
+  %p1 = getelementptr i8, ptr @g, i64 %p.int.neg
+  ret ptr %p1
 }
 
-define i8* @gep_sub_self_plus_addr(i64 %addr) {
+define ptr @gep_sub_self_plus_addr(i64 %addr) {
 ; CHECK-LABEL: @gep_sub_self_plus_addr(
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, i8* getelementptr (i8, i8* @g, i64 sub (i64 0, i64 ptrtoint (i8* @g to i64))), i64 [[ADDR:%.*]]
-; CHECK-NEXT:    ret i8* [[P2]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr getelementptr (i8, ptr @g, i64 sub (i64 0, i64 ptrtoint (ptr @g to i64))), i64 [[ADDR:%.*]]
+; CHECK-NEXT:    ret ptr [[P2]]
 ;
-  %p.int = ptrtoint i8* @g to i64
+  %p.int = ptrtoint ptr @g to i64
   %p.int.neg = sub i64 0, %p.int
-  %p1 = getelementptr i8, i8* @g, i64 %p.int.neg
-  %p2 = getelementptr i8, i8* %p1, i64 %addr
-  ret i8* %p2
+  %p1 = getelementptr i8, ptr @g, i64 %p.int.neg
+  %p2 = getelementptr i8, ptr %p1, i64 %addr
+  ret ptr %p2
 }
 
-define i8* @gep_plus_addr_sub_self(i64 %addr) {
+define ptr @gep_plus_addr_sub_self(i64 %addr) {
 ; CHECK-LABEL: @gep_plus_addr_sub_self(
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, i8* @g, i64 [[ADDR:%.*]]
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, i8* [[P1]], i64 sub (i64 0, i64 ptrtoint (i8* @g to i64))
-; CHECK-NEXT:    ret i8* [[P2]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr @g, i64 [[ADDR:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P1]], i64 sub (i64 0, i64 ptrtoint (ptr @g to i64))
+; CHECK-NEXT:    ret ptr [[P2]]
 ;
-  %p.int = ptrtoint i8* @g to i64
+  %p.int = ptrtoint ptr @g to i64
   %p.int.neg = sub i64 0, %p.int
-  %p1 = getelementptr i8, i8* @g, i64 %addr
-  %p2 = getelementptr i8, i8* %p1, i64 %p.int.neg
-  ret i8* %p2
+  %p1 = getelementptr i8, ptr @g, i64 %addr
+  %p2 = getelementptr i8, ptr %p1, i64 %p.int.neg
+  ret ptr %p2
 }
 
-define i8* @gep_plus_addr_sub_self_in_loop() {
+define ptr @gep_plus_addr_sub_self_in_loop() {
 ; CHECK-LABEL: @gep_plus_addr_sub_self_in_loop(
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ADDR:%.*]] = call i64 @get.i64()
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, i8* getelementptr (i8, i8* @g, i64 sub (i64 0, i64 ptrtoint (i8* @g to i64))), i64 [[ADDR]]
-; CHECK-NEXT:    call void @use.ptr(i8* [[P2]])
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr getelementptr (i8, ptr @g, i64 sub (i64 0, i64 ptrtoint (ptr @g to i64))), i64 [[ADDR]]
+; CHECK-NEXT:    call void @use.ptr(ptr [[P2]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
-  %p.int = ptrtoint i8* @g to i64
+  %p.int = ptrtoint ptr @g to i64
   %p.int.neg = sub i64 0, %p.int
   br label %loop
 
 loop:
   %addr = call i64 @get.i64()
-  %p1 = getelementptr i8, i8* @g, i64 %addr
-  %p2 = getelementptr i8, i8* %p1, i64 %p.int.neg
-  call void @use.ptr(i8* %p2)
+  %p1 = getelementptr i8, ptr @g, i64 %addr
+  %p2 = getelementptr i8, ptr %p1, i64 %p.int.neg
+  call void @use.ptr(ptr %p2)
   br label %loop
 }
 
-define i8* @gep_sub_other() {
+define ptr @gep_sub_other() {
 ; CHECK-LABEL: @gep_sub_other(
-; CHECK-NEXT:    ret i8* getelementptr (i8, i8* @g, i64 sub (i64 0, i64 ptrtoint (i8* @g2 to i64)))
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i64 sub (i64 0, i64 ptrtoint (ptr @g2 to i64)))
 ;
-  %p.int = ptrtoint i8* @g2 to i64
+  %p.int = ptrtoint ptr @g2 to i64
   %p.int.neg = sub i64 0, %p.int
-  %p1 = getelementptr i8, i8* @g, i64 %p.int.neg
-  ret i8* %p1
+  %p1 = getelementptr i8, ptr @g, i64 %p.int.neg
+  ret ptr %p1
 }
 
 define i64 @gep_sub_other_to_int() {
 ; CHECK-LABEL: @gep_sub_other_to_int(
-; CHECK-NEXT:    ret i64 sub (i64 ptrtoint (i8* @g to i64), i64 ptrtoint (i8* @g2 to i64))
+; CHECK-NEXT:    ret i64 sub (i64 ptrtoint (ptr @g to i64), i64 ptrtoint (ptr @g2 to i64))
 ;
-  %p.int = ptrtoint i8* @g2 to i64
+  %p.int = ptrtoint ptr @g2 to i64
   %p.int.neg = sub i64 0, %p.int
-  %p1 = getelementptr i8, i8* @g, i64 %p.int.neg
-  %p1.int = ptrtoint i8* %p1 to i64
+  %p1 = getelementptr i8, ptr @g, i64 %p.int.neg
+  %p1.int = ptrtoint ptr %p1 to i64
   ret i64 %p1.int
 }

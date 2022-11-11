@@ -160,9 +160,7 @@ define <8 x i16> @concat_trunc_packssdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ; AVX2-NEXT:    vpsrad $17, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [15,15,15,15]
 ; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpackusdw %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: concat_trunc_packssdw_128:

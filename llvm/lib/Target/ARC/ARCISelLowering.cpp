@@ -288,7 +288,6 @@ SDValue ARCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = RetCCInfo.getNextStackOffset();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
 
@@ -392,8 +391,7 @@ SDValue ARCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Glue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getConstant(NumBytes, dl, PtrVT, true),
-                             DAG.getConstant(0, dl, PtrVT, true), Glue, dl);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, Glue, dl);
   Glue = Chain.getValue(1);
 
   // Handle result values, copying them out of physregs into vregs that we
@@ -560,18 +558,17 @@ SDValue ARCTargetLowering::LowerCallArguments(
                                         ARC::R4, ARC::R5, ARC::R6, ARC::R7};
     auto *AFI = MF.getInfo<ARCFunctionInfo>();
     unsigned FirstVAReg = CCInfo.getFirstUnallocated(ArgRegs);
-    if (FirstVAReg < array_lengthof(ArgRegs)) {
+    if (FirstVAReg < std::size(ArgRegs)) {
       int Offset = 0;
       // Save remaining registers, storing higher register numbers at a higher
       // address
-      // There are (array_lengthof(ArgRegs) - FirstVAReg) registers which
+      // There are (std::size(ArgRegs) - FirstVAReg) registers which
       // need to be saved.
-      int VarFI =
-          MFI.CreateFixedObject((array_lengthof(ArgRegs) - FirstVAReg) * 4,
-                                CCInfo.getNextStackOffset(), true);
+      int VarFI = MFI.CreateFixedObject((std::size(ArgRegs) - FirstVAReg) * 4,
+                                        CCInfo.getNextStackOffset(), true);
       AFI->setVarArgsFrameIndex(VarFI);
       SDValue FIN = DAG.getFrameIndex(VarFI, MVT::i32);
-      for (unsigned i = FirstVAReg; i < array_lengthof(ArgRegs); i++) {
+      for (unsigned i = FirstVAReg; i < std::size(ArgRegs); i++) {
         // Move argument from phys reg -> virt reg
         unsigned VReg = RegInfo.createVirtualRegister(&ARC::GPR32RegClass);
         RegInfo.addLiveIn(ArgRegs[i], VReg);

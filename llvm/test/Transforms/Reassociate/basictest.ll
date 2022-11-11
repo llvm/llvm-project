@@ -259,8 +259,8 @@ define i64 @test16(i1 %cmp, i64 %a, i64 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[FACTOR:%.*]] = mul i64 [[A:%.*]], -4
-; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[FACTOR]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[A:%.*]], 2
+; CHECK-NEXT:    [[ADD2:%.*]] = sub i64 [[B:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i64 [[ADD2]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i64 0

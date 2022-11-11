@@ -8,6 +8,8 @@
 
 // <locale>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // template<class Codecvt, class Elem = wchar_t,
 //          class Wide_alloc = allocator<Elem>,
 //          class Byte_alloc = allocator<char>>

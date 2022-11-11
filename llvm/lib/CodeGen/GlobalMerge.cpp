@@ -62,6 +62,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -181,7 +182,7 @@ namespace {
     void collectUsedGlobalVariables(Module &M, StringRef Name);
 
     /// Keep track of the GlobalVariable that must not be merged away
-    SmallPtrSet<const GlobalVariable *, 16> MustKeepGlobalVariables;
+    SmallSetVector<const GlobalVariable *, 16> MustKeepGlobalVariables;
 
   public:
     static char ID;             // Pass identification, replacement for typeid.
@@ -592,6 +593,13 @@ void GlobalMerge::setMustKeepGlobalVariables(Module &M) {
         if (const GlobalVariable *GV =
                 dyn_cast<GlobalVariable>(U->stripPointerCasts()))
           MustKeepGlobalVariables.insert(GV);
+        else if (const ConstantArray *CA = dyn_cast<ConstantArray>(U->stripPointerCasts())) {
+          for (const Use &Elt : CA->operands()) {
+            if (const GlobalVariable *GV =
+                    dyn_cast<GlobalVariable>(Elt->stripPointerCasts()))
+              MustKeepGlobalVariables.insert(GV);
+          }
+        }
       }
     }
   }
@@ -609,6 +617,12 @@ bool GlobalMerge::doInitialization(Module &M) {
   bool Changed = false;
   setMustKeepGlobalVariables(M);
 
+  LLVM_DEBUG({
+      dbgs() << "Number of GV that must be kept:  " <<
+                MustKeepGlobalVariables.size() << "\n";
+      for (const GlobalVariable *KeptGV : MustKeepGlobalVariables)
+        dbgs() << "Kept: " << *KeptGV << "\n";
+  });
   // Grab all non-const globals.
   for (auto &GV : M.globals()) {
     // Merge is safe for "normal" internal or external globals only

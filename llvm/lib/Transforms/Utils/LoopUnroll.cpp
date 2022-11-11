@@ -66,6 +66,7 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <assert.h>
+#include <numeric>
 #include <type_traits>
 #include <vector>
 
@@ -341,7 +342,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       Info.TripMultiple = 0;
     } else {
       Info.BreakoutTrip = Info.TripMultiple =
-          (unsigned)GreatestCommonDivisor64(ULO.Count, Info.TripMultiple);
+          (unsigned)std::gcd(ULO.Count, Info.TripMultiple);
     }
     Info.ExitOnTrue = !L->contains(BI->getSuccessor(0));
     Info.ExitingBlocks.push_back(ExitingBlock);
@@ -464,8 +465,10 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   if (SE) {
     if (ULO.ForgetAllSCEV)
       SE->forgetAllLoops();
-    else
+    else {
       SE->forgetTopmostLoop(L);
+      SE->forgetBlockAndLoopDispositions();
+    }
   }
 
   if (!LatchIsExiting)
@@ -513,7 +516,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           if (const DILocation *DIL = I.getDebugLoc()) {
             auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(ULO.Count);
             if (NewDIL)
-              I.setDebugLoc(NewDIL.getValue());
+              I.setDebugLoc(*NewDIL);
             else
               LLVM_DEBUG(dbgs()
                          << "Failed to create new discriminator: "
@@ -575,6 +578,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           if (It != LastValueMap.end())
             Incoming = It->second;
           PHI.addIncoming(Incoming, New);
+          SE->forgetValue(&PHI);
         }
       }
       // Keep track of new headers and latches as we create them, so that

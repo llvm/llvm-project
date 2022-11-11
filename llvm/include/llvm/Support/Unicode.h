@@ -14,6 +14,10 @@
 #ifndef LLVM_SUPPORT_UNICODE_H
 #define LLVM_SUPPORT_UNICODE_H
 
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
+#include <string>
+
 namespace llvm {
 class StringRef;
 
@@ -30,18 +34,12 @@ enum ColumnWidthErrors {
 /// terminal, so we define the semantic that should be suitable for generic case
 /// of a terminal capable to output Unicode characters.
 ///
-/// All characters from the Unicode code point range are considered printable
-/// except for:
-///   * C0 and C1 control character ranges;
-///   * default ignorable code points as per 5.21 of
-///     http://www.unicode.org/versions/Unicode6.2.0/UnicodeStandard-6.2.pdf
-///     except for U+00AD SOFT HYPHEN, as it's actually displayed on most
-///     terminals;
-///   * format characters (category = Cf);
-///   * surrogates (category = Cs);
-///   * unassigned characters (category = Cn).
+/// Printable codepoints are those in the categories L, M, N, P, S and Zs
 /// \return true if the character is considered printable.
 bool isPrintable(int UCS);
+
+// Formatting codepoints are codepoints in the Cf category.
+bool isFormatting(int UCS);
 
 /// Gets the number of positions the UTF8-encoded \p Text is likely to occupy
 /// when output on a terminal ("character width"). This depends on the
@@ -62,6 +60,30 @@ int columnWidthUTF8(StringRef Text);
 /// Fold input unicode character according the Simple unicode case folding
 /// rules.
 int foldCharSimple(int C);
+
+/// Maps the name or the alias of a Unicode character to its associated
+/// codepoints.
+/// The names and aliases are derived from UnicodeData.txt and NameAliases.txt
+/// For compatibility with the semantics of named character escape sequences in
+/// C++, this mapping does an exact match sensitive to casing and spacing.
+/// \return The codepoint of the corresponding character, if any.
+Optional<char32_t> nameToCodepointStrict(StringRef Name);
+
+struct LooseMatchingResult {
+  char32_t CodePoint;
+  SmallString<64> Name;
+};
+
+Optional<LooseMatchingResult> nameToCodepointLooseMatching(StringRef Name);
+
+struct MatchForCodepointName {
+  std::string Name;
+  uint32_t Distance = 0;
+  char32_t Value = 0;
+};
+
+SmallVector<MatchForCodepointName>
+nearestMatchesForCodepointName(StringRef Pattern, std::size_t MaxMatchesCount);
 
 } // namespace unicode
 } // namespace sys

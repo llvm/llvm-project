@@ -99,14 +99,11 @@ layout, and the second one is a `memref` of 4-element vectors with a 2-strided,
   iterator_types = ["parallel"]
 }
 
-// memory layouts
-#identity = affine_map<(d0) -> (d0)>
-
-func.func @example(%A: memref<?xf32, #identity>,
-              %B: memref<?xvector<4xf32>, offset: 1, strides: [2]>) {
+func.func @example(%A: memref<?xf32, strided<[1]>>,
+              %B: memref<?xvector<4xf32>, strided<[2], offset: 1>>) {
   linalg.generic #attrs
-  ins(%A: memref<?xf32, #identity>)
-  outs(%B: memref<?xvector<4xf32>, offset: 1, strides: [2]>) {
+  ins(%A: memref<?xf32, strided<[1]>>)
+  outs(%B: memref<?xvector<4xf32>, strided<[2], offset: 1>>) {
   ^bb0(%a: f32, %b: vector<4xf32>):
     %c = "some_compute"(%a, %b): (f32, vector<4xf32>) -> (vector<4xf32>)
     linalg.yield %c: vector<4xf32>
@@ -122,17 +119,19 @@ materialized by a lowering into a form that will resemble:
 // Run: mlir-opt example1.mlir -allow-unregistered-dialect -convert-linalg-to-loops
 // This converted representation is in the `scf` dialect.
 // It's syntax can be found here: https://mlir.llvm.org/docs/Dialects/SCFDialect/
-#map0 = affine_map<(d0) -> (d0 * 2 + 1)>
 
-func.func @example(%arg0: memref<?xf32>, %arg1: memref<?xvector<4xf32>, #map0>) {
+func.func @example(%arg0: memref<?xf32>,
+                   %arg1: memref<?xvector<4xf32>, strided<[2], offset: 1>>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0 = memref.dim %arg0, %c0 : memref<?xf32>
   scf.for %arg2 = %c0 to %0 step %c1 {
     %1 = memref.load %arg0[%arg2] : memref<?xf32>
-    %2 = memref.load %arg1[%arg2] : memref<?xvector<4xf32>, #map0>
+    %2 = memref.load %arg1[%arg2]
+       : memref<?xvector<4xf32>, strided<[2], offset: 1>>
     %3 = "some_compute"(%1, %2) : (f32, vector<4xf32>) -> vector<4xf32>
-    memref.store %3, %arg1[%arg2] : memref<?xvector<4xf32>, #map0>
+    memref.store %3, %arg1[%arg2]
+       : memref<?xvector<4xf32>, strided<[2], offset: 1>>
   }
   return
 }
@@ -186,10 +185,10 @@ uses an identity layout.
   iterator_types = ["parallel", "parallel"]
 }
 
-func.func @example(%A: memref<8x?xf32, offset: 0, strides: [2, 2]>,
+func.func @example(%A: memref<8x?xf32, strided<[2, 2], offset: 0>>,
               %B: memref<?xvector<4xf32>>) {
   linalg.generic #attrs
-  ins(%A: memref<8x?xf32, offset: 0, strides: [2, 2]>)
+  ins(%A: memref<8x?xf32, strided<[2, 2], offset: 0>>)
   outs(%B: memref<?xvector<4xf32>>) {
   ^bb0(%a: f32, %b: vector<4xf32>):
     %c = "some_compute"(%a, %b): (f32, vector<4xf32>) -> (vector<4xf32>)
@@ -204,16 +203,15 @@ materialized by a lowering into a form that will resemble:
 
 ```mlir
 // Run: mlir-opt example2.mlir -allow-unregistered-dialect -convert-linalg-to-loops
-#map0 = affine_map<(d0, d1) -> (d0 * 2 + d1 * 2)>
 
-func.func @example(%arg0: memref<8x?xf32, #map0>, %arg1: memref<?xvector<4xf32>>) {
+func.func @example(%arg0: memref<8x?xf32, strided<[2, 2]>>, %arg1: memref<?xvector<4xf32>>) {
   %c8 = arith.constant 8 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %0 = memref.dim %arg0, %c1 : memref<8x?xf32, #map0>
+  %0 = memref.dim %arg0, %c1 : memref<8x?xf32, strided<[2, 2]>>
   scf.for %arg2 = %c0 to %0 step %c1 {
     scf.for %arg3 = %c0 to %c8 step %c1 {
-      %1 = memref.load %arg0[%arg3, %arg2] : memref<8x?xf32, #map0>
+      %1 = memref.load %arg0[%arg3, %arg2] : memref<8x?xf32, strided<[2, 2]>>
       %2 = memref.load %arg1[%arg3] : memref<?xvector<4xf32>>
       %3 = "some_compute"(%1, %2) : (f32, vector<4xf32>) -> vector<4xf32>
       memref.store %3, %arg1[%arg3] : memref<?xvector<4xf32>>
@@ -400,16 +398,17 @@ into a form that will resemble:
 ```mlir
 // Run: mlir-opt example4.mlir -convert-linalg-to-std
 
-#map0 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
-
 func.func @example(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
-  %0 = memref.cast %arg0 : memref<?x?xf32> to memref<?x?xf32, #map0>
-  %1 = memref.cast %arg1 : memref<?x?xf32> to memref<?x?xf32, #map0>
-  %2 = memref.cast %arg2 : memref<?x?xf32> to memref<?x?xf32, #map0>
-  call @pointwise_add(%0, %1, %2) : (memref<?x?xf32, #map0>, memref<?x?xf32, #map0>, memref<?x?xf32, #map0>) -> ()
+  %0 = memref.cast %arg0 : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %1 = memref.cast %arg1 : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %2 = memref.cast %arg2 : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  call @pointwise_add(%0, %1, %2) : (memref<?x?xf32, strided<[?, ?], offset: ?>>,
+    memref<?x?xf32, strided<[?, ?], offset: ?>>, memref<?x?xf32, strided<[?, ?], offset: ?>>) -> ()
   return
 }
-func.func @pointwise_add(memref<?x?xf32, #map0>, memref<?x?xf32, #map0>, memref<?x?xf32, #map0>) attributes {llvm.emit_c_interface}
+func.func @pointwise_add(memref<?x?xf32, strided<[?, ?], offset: ?>>,
+                         memref<?x?xf32, strided<[?, ?], offset: ?>>,
+                         memref<?x?xf32, strided<[?, ?], offset: ?>>) attributes {llvm.emit_c_interface}
 ```
 
 Which, after lowering to LLVM resembles:

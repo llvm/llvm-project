@@ -13,28 +13,30 @@ define void @test1([65536 x i32]** %sp, [65536 x i32]* %t, i32 %n) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lw a0, 0(a0)
 ; RV32I-NEXT:    lui a2, 20
+; RV32I-NEXT:    addi a2, a2, -1920
 ; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    li a2, 2
-; RV32I-NEXT:    sw a2, -1920(a0)
+; RV32I-NEXT:    sw a2, 0(a0)
 ; RV32I-NEXT:    li a3, 1
-; RV32I-NEXT:    sw a3, -1916(a0)
-; RV32I-NEXT:    sw a3, -1920(a1)
-; RV32I-NEXT:    sw a2, -1916(a1)
+; RV32I-NEXT:    sw a3, 4(a0)
+; RV32I-NEXT:    sw a3, 0(a1)
+; RV32I-NEXT:    sw a2, 4(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test1:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    ld a0, 0(a0)
 ; RV64I-NEXT:    lui a2, 20
+; RV64I-NEXT:    addiw a2, a2, -1920
 ; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    li a2, 2
-; RV64I-NEXT:    sw a2, -1920(a0)
+; RV64I-NEXT:    sw a2, 0(a0)
 ; RV64I-NEXT:    li a3, 1
-; RV64I-NEXT:    sw a3, -1916(a0)
-; RV64I-NEXT:    sw a3, -1920(a1)
-; RV64I-NEXT:    sw a2, -1916(a1)
+; RV64I-NEXT:    sw a3, 4(a0)
+; RV64I-NEXT:    sw a3, 0(a1)
+; RV64I-NEXT:    sw a2, 4(a1)
 ; RV64I-NEXT:    ret
 entry:
   %s = load [65536 x i32]*, [65536 x i32]** %sp
@@ -123,21 +125,23 @@ define void @test3([65536 x i32]* %t) {
 ; RV32I-LABEL: test3:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, 20
+; RV32I-NEXT:    addi a1, a1, -1920
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    li a1, 2
-; RV32I-NEXT:    sw a1, -1916(a0)
+; RV32I-NEXT:    sw a1, 4(a0)
 ; RV32I-NEXT:    li a1, 3
-; RV32I-NEXT:    sw a1, -1912(a0)
+; RV32I-NEXT:    sw a1, 8(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test3:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a1, 20
+; RV64I-NEXT:    addiw a1, a1, -1920
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    li a1, 2
-; RV64I-NEXT:    sw a1, -1916(a0)
+; RV64I-NEXT:    sw a1, 4(a0)
 ; RV64I-NEXT:    li a1, 3
-; RV64I-NEXT:    sw a1, -1912(a0)
+; RV64I-NEXT:    sw a1, 8(a0)
 ; RV64I-NEXT:    ret
 entry:
   %0 = bitcast [65536 x i32]* %t to i8*

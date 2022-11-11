@@ -4,9 +4,9 @@
 ; RUN: llc < %s -mcpu=skx -mtriple=x86_64-unknown-linux-gnu -mattr=+avx2,-avx512f | FileCheck --check-prefix=X64 %s
 ; RUN: llc < %s -mcpu=skylake -mtriple=x86_64-unknown-linux-gnu -mattr=-avx2 | FileCheck --check-prefix=NOGATHER %s
 
-declare <2 x i32> @llvm.masked.gather.v2i32(<2 x i32*> %ptrs, i32 %align, <2 x i1> %masks, <2 x i32> %passthro)
+declare <2 x i32> @llvm.masked.gather.v2i32(<2 x ptr> %ptrs, i32 %align, <2 x i1> %masks, <2 x i32> %passthro)
 
-define <2 x i32> @masked_gather_v2i32(<2 x i32*>* %ptr, <2 x i1> %masks, <2 x i32> %passthro) {
+define <2 x i32> @masked_gather_v2i32(ptr %ptr, <2 x i1> %masks, <2 x i32> %passthro) {
 ; X86-LABEL: masked_gather_v2i32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
@@ -50,12 +50,12 @@ define <2 x i32> @masked_gather_v2i32(<2 x i32*>* %ptr, <2 x i1> %masks, <2 x i3
 ; NOGATHER-NEXT:    vmovdqa %xmm1, %xmm0
 ; NOGATHER-NEXT:    retq
 entry:
-  %ld  = load <2 x i32*>, <2 x i32*>* %ptr
-  %res = call <2 x i32> @llvm.masked.gather.v2i32(<2 x i32*> %ld, i32 0, <2 x i1> %masks, <2 x i32> %passthro)
+  %ld  = load <2 x ptr>, ptr %ptr
+  %res = call <2 x i32> @llvm.masked.gather.v2i32(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i32> %passthro)
   ret <2 x i32> %res
 }
 
-define <4 x i32> @masked_gather_v2i32_concat(<2 x i32*>* %ptr, <2 x i1> %masks, <2 x i32> %passthro) {
+define <4 x i32> @masked_gather_v2i32_concat(ptr %ptr, <2 x i1> %masks, <2 x i32> %passthro) {
 ; X86-LABEL: masked_gather_v2i32_concat:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
@@ -99,15 +99,15 @@ define <4 x i32> @masked_gather_v2i32_concat(<2 x i32*>* %ptr, <2 x i1> %masks, 
 ; NOGATHER-NEXT:    vmovdqa %xmm1, %xmm0
 ; NOGATHER-NEXT:    retq
 entry:
-  %ld  = load <2 x i32*>, <2 x i32*>* %ptr
-  %res = call <2 x i32> @llvm.masked.gather.v2i32(<2 x i32*> %ld, i32 0, <2 x i1> %masks, <2 x i32> %passthro)
+  %ld  = load <2 x ptr>, ptr %ptr
+  %res = call <2 x i32> @llvm.masked.gather.v2i32(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i32> %passthro)
   %res2 = shufflevector <2 x i32> %res, <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %res2
 }
 
-declare <2 x float> @llvm.masked.gather.v2float(<2 x float*> %ptrs, i32 %align, <2 x i1> %masks, <2 x float> %passthro)
+declare <2 x float> @llvm.masked.gather.v2float(<2 x ptr> %ptrs, i32 %align, <2 x i1> %masks, <2 x float> %passthro)
 
-define <2 x float> @masked_gather_v2float(<2 x float*>* %ptr, <2 x i1> %masks, <2 x float> %passthro) {
+define <2 x float> @masked_gather_v2float(ptr %ptr, <2 x i1> %masks, <2 x float> %passthro) {
 ; X86-LABEL: masked_gather_v2float:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
@@ -152,12 +152,12 @@ define <2 x float> @masked_gather_v2float(<2 x float*>* %ptr, <2 x i1> %masks, <
 ; NOGATHER-NEXT:    vmovaps %xmm1, %xmm0
 ; NOGATHER-NEXT:    retq
 entry:
-  %ld  = load <2 x float*>, <2 x float*>* %ptr
-  %res = call <2 x float> @llvm.masked.gather.v2float(<2 x float*> %ld, i32 0, <2 x i1> %masks, <2 x float> %passthro)
+  %ld  = load <2 x ptr>, ptr %ptr
+  %res = call <2 x float> @llvm.masked.gather.v2float(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x float> %passthro)
   ret <2 x float> %res
 }
 
-define <4 x float> @masked_gather_v2float_concat(<2 x float*>* %ptr, <2 x i1> %masks, <2 x float> %passthro) {
+define <4 x float> @masked_gather_v2float_concat(ptr %ptr, <2 x i1> %masks, <2 x float> %passthro) {
 ; X86-LABEL: masked_gather_v2float_concat:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
@@ -202,16 +202,16 @@ define <4 x float> @masked_gather_v2float_concat(<2 x float*>* %ptr, <2 x i1> %m
 ; NOGATHER-NEXT:    vmovaps %xmm1, %xmm0
 ; NOGATHER-NEXT:    retq
 entry:
-  %ld  = load <2 x float*>, <2 x float*>* %ptr
-  %res = call <2 x float> @llvm.masked.gather.v2float(<2 x float*> %ld, i32 0, <2 x i1> %masks, <2 x float> %passthro)
+  %ld  = load <2 x ptr>, ptr %ptr
+  %res = call <2 x float> @llvm.masked.gather.v2float(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x float> %passthro)
   %res2 = shufflevector <2 x float> %res, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x float> %res2
 }
 
 
-declare <4 x i32> @llvm.masked.gather.v4i32(<4 x i32*> %ptrs, i32 %align, <4 x i1> %masks, <4 x i32> %passthro)
+declare <4 x i32> @llvm.masked.gather.v4i32(<4 x ptr> %ptrs, i32 %align, <4 x i1> %masks, <4 x i32> %passthro)
 
-define <4 x i32> @masked_gather_v4i32(<4 x i32*> %ptrs, <4 x i1> %masks, <4 x i32> %passthro) {
+define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ptrs, <4 x i1> %masks, <4 x i32> %passthro) {
 ; X86-LABEL: masked_gather_v4i32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vpslld $31, %xmm1, %xmm1
@@ -265,13 +265,13 @@ define <4 x i32> @masked_gather_v4i32(<4 x i32*> %ptrs, <4 x i1> %masks, <4 x i3
 ; NOGATHER-NEXT:    vzeroupper
 ; NOGATHER-NEXT:    retq
 entry:
-  %res = call <4 x i32> @llvm.masked.gather.v4i32(<4 x i32*> %ptrs, i32 0, <4 x i1> %masks, <4 x i32> %passthro)
+  %res = call <4 x i32> @llvm.masked.gather.v4i32(<4 x ptr> %ptrs, i32 0, <4 x i1> %masks, <4 x i32> %passthro)
   ret <4 x i32> %res
 }
 
-declare <4 x float> @llvm.masked.gather.v4float(<4 x float*> %ptrs, i32 %align, <4 x i1> %masks, <4 x float> %passthro)
+declare <4 x float> @llvm.masked.gather.v4float(<4 x ptr> %ptrs, i32 %align, <4 x i1> %masks, <4 x float> %passthro)
 
-define <4 x float> @masked_gather_v4float(<4 x float*> %ptrs, <4 x i1> %masks, <4 x float> %passthro) {
+define <4 x float> @masked_gather_v4float(<4 x ptr> %ptrs, <4 x i1> %masks, <4 x float> %passthro) {
 ; X86-LABEL: masked_gather_v4float:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vpslld $31, %xmm1, %xmm1
@@ -326,13 +326,13 @@ define <4 x float> @masked_gather_v4float(<4 x float*> %ptrs, <4 x i1> %masks, <
 ; NOGATHER-NEXT:    vzeroupper
 ; NOGATHER-NEXT:    retq
 entry:
-  %res = call <4 x float> @llvm.masked.gather.v4float(<4 x float*> %ptrs, i32 0, <4 x i1> %masks, <4 x float> %passthro)
+  %res = call <4 x float> @llvm.masked.gather.v4float(<4 x ptr> %ptrs, i32 0, <4 x i1> %masks, <4 x float> %passthro)
   ret <4 x float> %res
 }
 
-declare <8 x i32> @llvm.masked.gather.v8i32(<8 x i32*> %ptrs, i32 %align, <8 x i1> %masks, <8 x i32> %passthro)
+declare <8 x i32> @llvm.masked.gather.v8i32(<8 x ptr> %ptrs, i32 %align, <8 x i1> %masks, <8 x i32> %passthro)
 
-define <8 x i32> @masked_gather_v8i32(<8 x i32*>* %ptr, <8 x i1> %masks, <8 x i32> %passthro) {
+define <8 x i32> @masked_gather_v8i32(ptr %ptr, <8 x i1> %masks, <8 x i32> %passthro) {
 ; X86-LABEL: masked_gather_v8i32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
@@ -428,14 +428,14 @@ define <8 x i32> @masked_gather_v8i32(<8 x i32*>* %ptr, <8 x i1> %masks, <8 x i3
 ; NOGATHER-NEXT:    vmovaps %ymm1, %ymm0
 ; NOGATHER-NEXT:    retq
 entry:
-  %ld  = load <8 x i32*>, <8 x i32*>* %ptr
-  %res = call <8 x i32> @llvm.masked.gather.v8i32(<8 x i32*> %ld, i32 0, <8 x i1> %masks, <8 x i32> %passthro)
+  %ld  = load <8 x ptr>, ptr %ptr
+  %res = call <8 x i32> @llvm.masked.gather.v8i32(<8 x ptr> %ld, i32 0, <8 x i1> %masks, <8 x i32> %passthro)
   ret <8 x i32> %res
 }
 
-declare <8 x float> @llvm.masked.gather.v8float(<8 x float*> %ptrs, i32 %align, <8 x i1> %masks, <8 x float> %passthro)
+declare <8 x float> @llvm.masked.gather.v8float(<8 x ptr> %ptrs, i32 %align, <8 x i1> %masks, <8 x float> %passthro)
 
-define <8 x float> @masked_gather_v8float(<8 x float*>* %ptr, <8 x i1> %masks, <8 x float> %passthro) {
+define <8 x float> @masked_gather_v8float(ptr %ptr, <8 x i1> %masks, <8 x float> %passthro) {
 ; X86-LABEL: masked_gather_v8float:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
@@ -531,14 +531,14 @@ define <8 x float> @masked_gather_v8float(<8 x float*>* %ptr, <8 x i1> %masks, <
 ; NOGATHER-NEXT:    vmovaps %ymm1, %ymm0
 ; NOGATHER-NEXT:    retq
 entry:
-  %ld  = load <8 x float*>, <8 x float*>* %ptr
-  %res = call <8 x float> @llvm.masked.gather.v8float(<8 x float*> %ld, i32 0, <8 x i1> %masks, <8 x float> %passthro)
+  %ld  = load <8 x ptr>, ptr %ptr
+  %res = call <8 x float> @llvm.masked.gather.v8float(<8 x ptr> %ld, i32 0, <8 x i1> %masks, <8 x float> %passthro)
   ret <8 x float> %res
 }
 
-declare <4 x i64> @llvm.masked.gather.v4i64(<4 x i64*> %ptrs, i32 %align, <4 x i1> %masks, <4 x i64> %passthro)
+declare <4 x i64> @llvm.masked.gather.v4i64(<4 x ptr> %ptrs, i32 %align, <4 x i1> %masks, <4 x i64> %passthro)
 
-define <4 x i64> @masked_gather_v4i64(<4 x i64*>* %ptr, <4 x i1> %masks, <4 x i64> %passthro) {
+define <4 x i64> @masked_gather_v4i64(ptr %ptr, <4 x i1> %masks, <4 x i64> %passthro) {
 ; X86-LABEL: masked_gather_v4i64:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vpslld $31, %xmm0, %xmm0
@@ -599,14 +599,14 @@ define <4 x i64> @masked_gather_v4i64(<4 x i64*>* %ptr, <4 x i1> %masks, <4 x i6
 ; NOGATHER-NEXT:    vmovaps %ymm1, %ymm0
 ; NOGATHER-NEXT:    retq
 entry:
-  %ld  = load <4 x i64*>, <4 x i64*>* %ptr
-  %res = call <4 x i64> @llvm.masked.gather.v4i64(<4 x i64*> %ld, i32 0, <4 x i1> %masks, <4 x i64> %passthro)
+  %ld  = load <4 x ptr>, ptr %ptr
+  %res = call <4 x i64> @llvm.masked.gather.v4i64(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i64> %passthro)
   ret <4 x i64> %res
 }
 
-declare <4 x double> @llvm.masked.gather.v4double(<4 x double*> %ptrs, i32 %align, <4 x i1> %masks, <4 x double> %passthro)
+declare <4 x double> @llvm.masked.gather.v4double(<4 x ptr> %ptrs, i32 %align, <4 x i1> %masks, <4 x double> %passthro)
 
-define <4 x double> @masked_gather_v4double(<4 x double*>* %ptr, <4 x i1> %masks, <4 x double> %passthro) {
+define <4 x double> @masked_gather_v4double(ptr %ptr, <4 x i1> %masks, <4 x double> %passthro) {
 ; X86-LABEL: masked_gather_v4double:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vpslld $31, %xmm0, %xmm0
@@ -667,14 +667,14 @@ define <4 x double> @masked_gather_v4double(<4 x double*>* %ptr, <4 x i1> %masks
 ; NOGATHER-NEXT:    vmovaps %ymm1, %ymm0
 ; NOGATHER-NEXT:    retq
 entry:
-  %ld  = load <4 x double*>, <4 x double*>* %ptr
-  %res = call <4 x double> @llvm.masked.gather.v4double(<4 x double*> %ld, i32 0, <4 x i1> %masks, <4 x double> %passthro)
+  %ld  = load <4 x ptr>, ptr %ptr
+  %res = call <4 x double> @llvm.masked.gather.v4double(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x double> %passthro)
   ret <4 x double> %res
 }
 
-declare <2 x i64> @llvm.masked.gather.v2i64(<2 x i64*> %ptrs, i32 %align, <2 x i1> %masks, <2 x i64> %passthro)
+declare <2 x i64> @llvm.masked.gather.v2i64(<2 x ptr> %ptrs, i32 %align, <2 x i1> %masks, <2 x i64> %passthro)
 
-define <2 x i64> @masked_gather_v2i64(<2 x i64*>* %ptr, <2 x i1> %masks, <2 x i64> %passthro) {
+define <2 x i64> @masked_gather_v2i64(ptr %ptr, <2 x i1> %masks, <2 x i64> %passthro) {
 ; X86-LABEL: masked_gather_v2i64:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vpsllq $63, %xmm0, %xmm0
@@ -716,14 +716,14 @@ define <2 x i64> @masked_gather_v2i64(<2 x i64*>* %ptr, <2 x i1> %masks, <2 x i6
 ; NOGATHER-NEXT:    vmovdqa %xmm1, %xmm0
 ; NOGATHER-NEXT:    retq
 entry:
-  %ld  = load <2 x i64*>, <2 x i64*>* %ptr
-  %res = call <2 x i64> @llvm.masked.gather.v2i64(<2 x i64*> %ld, i32 0, <2 x i1> %masks, <2 x i64> %passthro)
+  %ld  = load <2 x ptr>, ptr %ptr
+  %res = call <2 x i64> @llvm.masked.gather.v2i64(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i64> %passthro)
   ret <2 x i64> %res
 }
 
-declare <2 x double> @llvm.masked.gather.v2double(<2 x double*> %ptrs, i32 %align, <2 x i1> %masks, <2 x double> %passthro)
+declare <2 x double> @llvm.masked.gather.v2double(<2 x ptr> %ptrs, i32 %align, <2 x i1> %masks, <2 x double> %passthro)
 
-define <2 x double> @masked_gather_v2double(<2 x double*>* %ptr, <2 x i1> %masks, <2 x double> %passthro) {
+define <2 x double> @masked_gather_v2double(ptr %ptr, <2 x i1> %masks, <2 x double> %passthro) {
 ; X86-LABEL: masked_gather_v2double:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vpsllq $63, %xmm0, %xmm0
@@ -765,13 +765,13 @@ define <2 x double> @masked_gather_v2double(<2 x double*>* %ptr, <2 x i1> %masks
 ; NOGATHER-NEXT:    vmovaps %xmm1, %xmm0
 ; NOGATHER-NEXT:    retq
 entry:
-  %ld  = load <2 x double*>, <2 x double*>* %ptr
-  %res = call <2 x double> @llvm.masked.gather.v2double(<2 x double*> %ld, i32 0, <2 x i1> %masks, <2 x double> %passthro)
+  %ld  = load <2 x ptr>, ptr %ptr
+  %res = call <2 x double> @llvm.masked.gather.v2double(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x double> %passthro)
   ret <2 x double> %res
 }
 
 
-define <2 x double> @masked_gather_zeromask(<2 x double*>* %ptr, <2 x double> %dummy, <2 x double> %passthru) {
+define <2 x double> @masked_gather_zeromask(ptr %ptr, <2 x double> %dummy, <2 x double> %passthru) {
 ; X86-LABEL: masked_gather_zeromask:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
@@ -787,7 +787,7 @@ define <2 x double> @masked_gather_zeromask(<2 x double*>* %ptr, <2 x double> %d
 ; NOGATHER-NEXT:    vmovaps %xmm1, %xmm0
 ; NOGATHER-NEXT:    retq
 entry:
-  %ld  = load <2 x double*>, <2 x double*>* %ptr
-  %res = call <2 x double> @llvm.masked.gather.v2double(<2 x double*> %ld, i32 0, <2 x i1> zeroinitializer, <2 x double> %passthru)
+  %ld  = load <2 x ptr>, ptr %ptr
+  %res = call <2 x double> @llvm.masked.gather.v2double(<2 x ptr> %ld, i32 0, <2 x i1> zeroinitializer, <2 x double> %passthru)
   ret <2 x double> %res
 }

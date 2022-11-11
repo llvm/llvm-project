@@ -269,8 +269,7 @@ define i32 @test_nouseful_bits(i8 %a, i32 %b) {
 ; CHECK-NEXT:    lsl w8, w8, #8
 ; CHECK-NEXT:    mov w9, w8
 ; CHECK-NEXT:    bfxil w9, w0, #0, #8
-; CHECK-NEXT:    bfi w8, w9, #16, #16
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    orr w0, w8, w9, lsl #16
 ; CHECK-NEXT:    ret
   %conv = zext i8 %a to i32     ;   0  0  0  A
   %shl = shl i32 %b, 8          ;   B2 B1 B0 0
@@ -580,9 +579,8 @@ define <2 x i32> @test_complex_type(<2 x i32>* %addr, i64 %in, i64* %bf ) {
 define i64 @test_truncated_shift(i64 %x, i64 %y) {
 ; CHECK-LABEL: test_truncated_shift:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    lsl w8, w1, #25
-; CHECK-NEXT:    lsr x8, x8, #25
-; CHECK-NEXT:    bfi x0, x8, #25, #5
+; CHECK-NEXT:    // kill: def $w1 killed $w1 killed $x1 def $x1
+; CHECK-NEXT:    bfi x0, x1, #25, #5
 ; CHECK-NEXT:    ret
 entry:
   %and = and i64 %x, -1040187393
@@ -590,4 +588,51 @@ entry:
   %and5 = and i64 %shl4, 1040187392
   %or = or i64 %and5, %and
   ret i64 %or
+}
+
+define i64 @test_and_extended_shift_with_imm(i64 %0) {
+; CHECK-LABEL: test_and_extended_shift_with_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0 def $x0
+; CHECK-NEXT:    ubfiz x0, x0, #7, #8
+; CHECK-NEXT:    ret
+  %2 = shl i64 %0, 7
+  %3 = and i64 %2, 32640  ; #0x7f80
+  ret i64 %3
+}
+
+; orr with left-shifted operand is better than bfi, since it improves data
+; dependency, and orr has a smaller latency and higher throughput than bfm on
+; some AArch64 processors (for the rest, orr is at least as good as bfm)
+;
+; ubfx x8, x0, #8, #7
+; and x9, x0, #0x7f
+; orr x0, x9, x8, lsl #7
+define i64 @test_orr_not_bfxil_i64(i64 %0) {
+; CHECK-LABEL: test_orr_not_bfxil_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx x8, x0, #8, #7
+; CHECK-NEXT:    and x9, x0, #0x7f
+; CHECK-NEXT:    orr x0, x9, x8, lsl #7
+; CHECK-NEXT:    ret
+  %2 = and i64 %0, 127
+  %3 = lshr i64 %0, 1
+  %4 = and i64 %3, 16256  ; 0x3f80
+  %5 = or i64 %4, %2
+  ret i64 %5
+}
+
+; The 32-bit test for `test_orr_not_bfxil_i64`.
+define i32 @test_orr_not_bfxil_i32(i32 %0) {
+; CHECK-LABEL: test_orr_not_bfxil_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx w8, w0, #8, #7
+; CHECK-NEXT:    and w9, w0, #0x7f
+; CHECK-NEXT:    orr w0, w9, w8, lsl #7
+; CHECK-NEXT:    ret
+  %2 = and i32 %0, 127
+  %3 = lshr i32 %0, 1
+  %4 = and i32 %3, 16256  ; 0x3f80
+  %5 = or i32 %4, %2
+  ret i32 %5
 }

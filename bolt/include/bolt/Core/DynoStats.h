@@ -142,12 +142,11 @@ DynoStats operator+(const DynoStats &A, const DynoStats &B);
 /// The function relies on branch instructions being in-sync with CFG for
 /// branch instructions stats. Thus it is better to call it after
 /// fixBranches().
-DynoStats getDynoStats(const BinaryFunction &BF);
+DynoStats getDynoStats(BinaryFunction &BF);
 
 /// Return program-wide dynostats.
 template <typename FuncsType>
-inline DynoStats getDynoStats(const FuncsType &Funcs) {
-  bool IsAArch64 = Funcs.begin()->second.getBinaryContext().isAArch64();
+inline DynoStats getDynoStats(FuncsType &Funcs, bool IsAArch64) {
   DynoStats dynoStats(IsAArch64);
   for (auto &BFI : Funcs) {
     auto &BF = BFI.second;
@@ -159,17 +158,16 @@ inline DynoStats getDynoStats(const FuncsType &Funcs) {
 
 /// Call a function with optional before and after dynostats printing.
 template <typename FnType, typename FuncsType>
-inline void callWithDynoStats(FnType &&Func, const FuncsType &Funcs,
-                              StringRef Phase, const bool Flag) {
-  bool IsAArch64 = Funcs.begin()->second.getBinaryContext().isAArch64();
+inline void callWithDynoStats(FnType &&Func, FuncsType &Funcs, StringRef Phase,
+                              const bool Flag, bool IsAArch64) {
   DynoStats DynoStatsBefore(IsAArch64);
   if (Flag)
-    DynoStatsBefore = getDynoStats(Funcs);
+    DynoStatsBefore = getDynoStats(Funcs, IsAArch64);
 
   Func();
 
   if (Flag) {
-    const DynoStats DynoStatsAfter = getDynoStats(Funcs);
+    const DynoStats DynoStatsAfter = getDynoStats(Funcs, IsAArch64);
     const bool Changed = (DynoStatsAfter != DynoStatsBefore);
     outs() << "BOLT-INFO: program-wide dynostats after running " << Phase
            << (Changed ? "" : " (no change)") << ":\n\n"

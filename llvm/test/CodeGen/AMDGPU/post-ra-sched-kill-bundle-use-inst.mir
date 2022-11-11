@@ -16,17 +16,18 @@ body:             |
 
     ; CHECK-LABEL: name: kill_flag_use_first_bundle_inst
     ; CHECK: liveins: $sgpr4_sgpr5, $sgpr7
-    ; CHECK: renamable $sgpr0 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 0, 0
-    ; CHECK: $m0 = S_MOV_B32 -1
-    ; CHECK: $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
-    ; CHECK: BUNDLE implicit $vgpr0, implicit $m0, implicit $exec {
-    ; CHECK:   DS_GWS_INIT $vgpr0, 8, implicit $m0, implicit $exec
-    ; CHECK:   S_WAITCNT 0
-    ; CHECK: }
-    ; CHECK: BUNDLE implicit killed $vgpr0, implicit $m0, implicit $exec {
-    ; CHECK:   DS_GWS_BARRIER killed $vgpr0, 8, implicit $m0, implicit $exec
-    ; CHECK:   S_WAITCNT 0
-    ; CHECK: }
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $sgpr0 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 0, 0
+    ; CHECK-NEXT: $m0 = S_MOV_B32 -1
+    ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
+    ; CHECK-NEXT: BUNDLE implicit $vgpr0, implicit $m0, implicit $exec {
+    ; CHECK-NEXT:   DS_GWS_INIT $vgpr0, 8, implicit $m0, implicit $exec
+    ; CHECK-NEXT:   S_WAITCNT 0
+    ; CHECK-NEXT: }
+    ; CHECK-NEXT: BUNDLE implicit killed $vgpr0, implicit $m0, implicit $exec {
+    ; CHECK-NEXT:   DS_GWS_BARRIER killed $vgpr0, 8, implicit $m0, implicit $exec
+    ; CHECK-NEXT:   S_WAITCNT 0
+    ; CHECK-NEXT: }
     renamable $sgpr0 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 0, 0
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $exec

@@ -43,7 +43,7 @@ public:
   /// \}
 
   SymbolFileOnDemand(std::unique_ptr<SymbolFile> &&symbol_file);
-  virtual ~SymbolFileOnDemand() override;
+  ~SymbolFileOnDemand() override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return "ondemand"; }
@@ -117,6 +117,9 @@ public:
                                 lldb::SymbolContextItem resolve_scope,
                                 lldb_private::SymbolContext &sc) override;
 
+  lldb_private::Status
+  CalculateFrameVariableError(lldb_private::StackFrame &frame) override;
+
   uint32_t ResolveSymbolContext(
       const lldb_private::SourceLocationSpec &src_location_spec,
       lldb::SymbolContextItem resolve_scope,
@@ -135,9 +138,8 @@ public:
                            uint32_t max_matches,
                            lldb_private::VariableList &variables) override;
 
-  void FindFunctions(lldb_private::ConstString name,
+  void FindFunctions(const lldb_private::Module::LookupInfo &lookup_info,
                      const lldb_private::CompilerDeclContext &parent_decl_ctx,
-                     lldb::FunctionNameType name_type_mask,
                      bool include_inlines,
                      lldb_private::SymbolContextList &sc_list) override;
 
@@ -216,6 +218,12 @@ public:
   }
   void SetDebugInfoIndexWasSavedToCache() override {
     m_sym_file_impl->SetDebugInfoIndexWasSavedToCache();
+  }
+  bool GetDebugInfoHadFrameVariableErrors() const override {
+    return m_sym_file_impl->GetDebugInfoHadFrameVariableErrors();
+  }
+  void SetDebugInfoHadFrameVariableErrors() override {
+    return m_sym_file_impl->SetDebugInfoHadFrameVariableErrors();
   }
 
 private:

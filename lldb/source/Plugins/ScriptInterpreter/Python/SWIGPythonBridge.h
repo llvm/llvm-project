@@ -75,6 +75,10 @@ bool LLDBSwigPythonWatchpointCallbackFunction(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::StackFrameSP &sb_frame, const lldb::WatchpointSP &sb_wp);
 
+bool LLDBSwigPythonFormatterCallbackFunction(
+    const char *python_function_name, const char *session_dictionary_name,
+    lldb::TypeImplSP type_impl_sp);
+
 bool LLDBSwigPythonCallTypeScript(const char *python_function_name,
                                   const void *session_dictionary,
                                   const lldb::ValueObjectSP &valobj_sp,

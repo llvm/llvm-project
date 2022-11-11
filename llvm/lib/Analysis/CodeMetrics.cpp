@@ -133,7 +133,8 @@ void CodeMetrics::analyzeBasicBlock(
         // When preparing for LTO, liberally consider calls as inline
         // candidates.
         if (!Call->isNoInline() && IsLoweredToCall &&
-            ((F->hasInternalLinkage() && F->hasOneUse()) || PrepareForLTO)) {
+            ((F->hasInternalLinkage() && F->hasOneLiveUse()) ||
+             PrepareForLTO)) {
           ++NumInlineCandidates;
         }
 
@@ -176,7 +177,7 @@ void CodeMetrics::analyzeBasicBlock(
       if (InvI->cannotDuplicate())
         notDuplicatable = true;
 
-    NumInsts += TTI.getUserCost(&I, TargetTransformInfo::TCK_CodeSize);
+    NumInsts += TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
   }
 
   if (isa<ReturnInst>(BB->getTerminator()))

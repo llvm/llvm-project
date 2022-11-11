@@ -7,8 +7,6 @@ from lldbsuite.test import lldbutil
 
 class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_qProcessInfo_returns_running_process(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()

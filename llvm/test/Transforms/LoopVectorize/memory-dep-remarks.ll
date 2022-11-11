@@ -1,5 +1,5 @@
-; RUN: opt -passes='loop(require<access-info>),function(loop-vectorize)' -disable-output -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s
-; RUN: opt < %s -passes='loop(require<access-info>),function(loop-vectorize)' -o /dev/null -pass-remarks-output=%t.yaml
+; RUN: opt -passes='function(loop-vectorize,require<access-info>)' -disable-output -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='function(require<access-info>,loop-vectorize)' -o /dev/null -pass-remarks-output=%t.yaml
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

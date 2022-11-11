@@ -411,8 +411,8 @@ def G_SELECT : GenericInstruction {
 
 // Generic pointer offset.
 def G_PTR_ADD : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type1:$src2);
+  let OutOperandList = (outs ptype0:$dst);
+  let InOperandList = (ins ptype0:$src1, type1:$src2);
   let hasSideEffects = false;
 }
 
@@ -1126,6 +1126,8 @@ def G_ATOMICRMW_UMAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UMIN : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FADD : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FSUB : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMAX : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMIN : G_ATOMICRMW_OP;
 
 def G_FENCE : GenericInstruction {
   let OutOperandList = (outs);

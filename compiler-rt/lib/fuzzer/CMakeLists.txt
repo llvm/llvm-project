@@ -66,6 +66,7 @@ if(OS_NAME MATCHES "Linux|Fuchsia" AND
   append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ LIBFUZZER_CFLAGS)
 elseif(TARGET cxx-headers OR HAVE_LIBCXX)
   # libFuzzer uses C++ standard library headers.
+  list(APPEND LIBFUZZER_CFLAGS ${COMPILER_RT_CXX_CFLAGS})
   set(LIBFUZZER_DEPS cxx-headers)
 endif()
 
@@ -141,7 +142,7 @@ if(OS_NAME MATCHES "Linux|Fuchsia" AND
     get_target_flags_for_arch(${arch} target_cflags)
     if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
       get_compiler_rt_target(${arch} target)
-      set(target_cflags "--target=${target} ${target_cflags}")
+      set(target_cflags --target=${target} ${target_cflags})
     endif()
     set(cxx_${arch}_merge_dir "${CMAKE_CURRENT_BINARY_DIR}/cxx_${arch}_merge.dir")
     file(MAKE_DIRECTORY ${cxx_${arch}_merge_dir})

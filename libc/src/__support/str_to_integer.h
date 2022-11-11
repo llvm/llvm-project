@@ -9,7 +9,7 @@
 #ifndef LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
 #define LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
 
-#include "src/__support/CPP/Limits.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/ctype_utils.h"
 #include <errno.h>
 #include <limits.h>
@@ -92,15 +92,14 @@ static inline T strtointeger(const char *__restrict src,
     src = src + 2;
   }
 
-  constexpr bool IS_UNSIGNED = (__llvm_libc::cpp::NumericLimits<T>::min() == 0);
+  constexpr bool IS_UNSIGNED = (cpp::numeric_limits<T>::min() == 0);
   const bool is_positive = (result_sign == '+');
   unsigned long long constexpr NEGATIVE_MAX =
-      !IS_UNSIGNED ? static_cast<unsigned long long>(
-                         __llvm_libc::cpp::NumericLimits<T>::max()) +
-                         1
-                   : __llvm_libc::cpp::NumericLimits<T>::max();
+      !IS_UNSIGNED
+          ? static_cast<unsigned long long>(cpp::numeric_limits<T>::max()) + 1
+          : cpp::numeric_limits<T>::max();
   unsigned long long const abs_max =
-      (is_positive ? __llvm_libc::cpp::NumericLimits<T>::max() : NEGATIVE_MAX);
+      (is_positive ? cpp::numeric_limits<T>::max() : NEGATIVE_MAX);
   unsigned long long const abs_max_div_by_base = abs_max / base;
   while (isalnum(*src)) {
     int cur_digit = b36_char_to_int(*src);
@@ -137,9 +136,9 @@ static inline T strtointeger(const char *__restrict src,
 
   if (result == abs_max) {
     if (is_positive || IS_UNSIGNED)
-      return __llvm_libc::cpp::NumericLimits<T>::max();
+      return cpp::numeric_limits<T>::max();
     else // T is signed and there is a negative overflow
-      return __llvm_libc::cpp::NumericLimits<T>::min();
+      return cpp::numeric_limits<T>::min();
   }
 
   return is_positive ? static_cast<T>(result) : -static_cast<T>(result);

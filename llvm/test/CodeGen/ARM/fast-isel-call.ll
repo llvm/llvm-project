@@ -2,6 +2,7 @@
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi | FileCheck %s --check-prefix=ARM
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios | FileCheck %s --check-prefix=THUMB
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-MACHO
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=static -mtriple=armv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-MACHO-STATIC
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-ELF
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=THUMB-LONG
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=-fpregs | FileCheck %s --check-prefix=ARM-NOVFP
@@ -109,9 +110,13 @@ entry:
 ; ARM-LONG-MACHO: {{(movt [[R1]], :upper16:L_bar\$non_lazy_ptr)?}}
 ; ARM-LONG-MACHO: ldr [[R:r[0-9]+]], [[[R1]]]
 
-; ARM-LONG-ELF: movw [[R1:r[0-9]*]], :lower16:bar
-; ARM-LONG-ELF: movt [[R1]], :upper16:bar
-; ARM-LONG-ELF: ldr [[R:r[0-9]+]], [[[R1]]]
+; ARM-LONG-MACHO-STATIC: movw [[R:.*]], :lower16:_bar
+; ARM-LONG-MACHO-STATIC: movt [[R]], :upper16:_bar
+; ARM-LONG-MACHO-STATIC-NOT: ldr{{.*}}[[R]]
+
+; ARM-LONG-ELF: movw [[R:r[0-9]*]], :lower16:bar
+; ARM-LONG-ELF: movt [[R]], :upper16:bar
+; ARM-LONG-ELF-NOT: ldr{{.*}}[[R]]
 
 ; ARM-LONG: blx [[R]]
 ; THUMB-LABEL: @t10

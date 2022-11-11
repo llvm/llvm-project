@@ -1,7 +1,7 @@
 Support, Getting Involved, and FAQ
 ==================================
 
-Please do not hesitate to reach out to us via openmp-dev@lists.llvm.org or join
+Please do not hesitate to reach out to us on the `Discourse forums (Runtimes - OpenMP) <https://discourse.llvm.org/c/runtimes/openmp/35>`_ or join
 one of our :ref:`regular calls <calls>`. Some common questions are answered in
 the :ref:`faq`.
 
@@ -37,7 +37,7 @@ FAQ
 .. note::
    The FAQ is a work in progress and most of the expected content is not
    yet available. While you can expect changes, we always welcome feedback and
-   additions. Please contact, e.g., through ``openmp-dev@lists.llvm.org``.
+   additions. Please post on the `Discourse forums (Runtimes - OpenMP) <https://discourse.llvm.org/c/runtimes/openmp/35>`__.
 
 
 Q: How to contribute a patch to the webpage or any other part?
@@ -329,3 +329,101 @@ can fail. If this warning is triggered it means that the kernel may run out of
 stack memory during execution and crash. The environment variable
 ``LIBOMPTARGET_STACK_SIZE`` can be used to increase the stack size if this
 occurs.
+
+Q: Can OpenMP offloading compile for multiple architectures?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Since LLVM version 15.0, OpenMP offloading supports offloading to multiple
+architectures at once. This allows for executables to be run on different
+targets, such as offloading to AMD and NVIDIA GPUs simultaneously, as well as
+multiple sub-architectures for the same target. Additionally, static libraries
+will only extract archive members if an architecture is used, allowing users to
+create generic libraries.
+
+The architecture can either be specified manually using ``--offload-arch=``. If
+``--offload-arch=`` is present no ``-fopenmp-targets=`` flag is present then the
+targets will be inferred from the architectures. Conversely, if
+``--fopenmp-targets=`` is present with no ``--offload-arch``  then the target
+architecture will be set to a default value, usually the architecture supported
+by the system LLVM was built on.
+
+For example, an executable can be built that runs on AMDGPU and NVIDIA hardware
+given that the necessary build tools are installed for both.
+
+.. code-block:: shell
+
+   clang example.c -fopenmp --offload-arch=gfx90a --offload-arch=sm_80
+
+If just given the architectures we should be able to infer the triples,
+otherwise we can specify them manually.
+
+.. code-block:: shell
+
+   clang example.c -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,nvptx64-nvidia-cuda \
+      -Xopenmp-target=amdgcn-amd-amdhsa --offload-arch=gfx90a \
+      -Xopenmp-target=nvptx64-nvidia-cuda --offload-arch=sm_80
+
+When linking against a static library that contains device code for multiple
+architectures, only the images used by the executable will be extracted.
+
+.. code-block:: shell
+
+   clang example.c -fopenmp --offload-arch=gfx90a,gfx90a,sm_70,sm_80 -c
+   llvm-ar rcs libexample.a example.o
+   clang app.c -fopenmp --offload-arch=gfx90a -o app
+
+The supported device images can be viewed using the ``--offloading`` option with
+``llvm-objdump``.
+
+.. code-block:: shell
+
+   clang example.c -fopenmp --offload-arch=gfx90a --offload-arch=sm_80 -o example
+   llvm-objdump --offloading example
+
+   a.out:  file format elf64-x86-64
+
+   OFFLOADING IMAGE [0]:
+   kind            elf
+   arch            gfx90a
+   triple          amdgcn-amd-amdhsa
+   producer        openmp
+
+   OFFLOADING IMAGE [1]:
+   kind            elf
+   arch            sm_80
+   triple          nvptx64-nvidia-cuda
+   producer        openmp
+
+Q: Can I link OpenMP offloading with CUDA or HIP?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+OpenMP offloading files can currently be experimentally linked with CUDA and HIP
+files. This will allow OpenMP to call a CUDA device function or vice-versa.
+However, the global state will be distinct between the two images at runtime.
+This means any global variables will potentially have different values when
+queried from OpenMP or CUDA.
+
+Linking CUDA and HIP currently requires enabling a different compilation mode
+for CUDA / HIP with ``--offload-new-driver`` and to link using
+``--offload-link``. Additionally, ``-fgpu-rdc`` must be used to create a
+linkable device image.
+
+.. code-block:: shell
+
+   clang++ openmp.cpp -fopenmp --offload-arch=sm_80 -c
+   clang++ cuda.cu --offload-new-driver --offload-arch=sm_80 -fgpu-rdc -c
+   clang++ openmp.o cuda.o --offload-link -o app
+
+Q: Are libomptarget and plugins backward compatible?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+No. libomptarget and plugins are now built as LLVM libraries starting from LLVM
+15. Because LLVM libraries are not backward compatible, libomptarget and plugins
+are not as well. Given that fact, the interfaces between 1) the Clang compiler
+and libomptarget, 2) the Clang compiler and device runtime library, and
+3) libomptarget and plugins are not guaranteed to be compatible with an earlier
+version. Users are responsible for ensuring compatibility when not using the
+Clang compiler and runtime libraries from the same build. Nevertheless, in order
+to better support third-party libraries and toolchains that depend on existing
+libomptarget entry points, contributors are discouraged from making
+modifications to them.

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/dwarf.h"
@@ -268,9 +269,9 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
     cie_sp->ptr_encoding = DW_EH_PE_absptr; // default
     cie_sp->version = m_cfi_data.GetU8(&offset);
     if (cie_sp->version > CFI_VERSION4) {
-      Host::SystemLog(Host::eSystemLogError,
-                      "CIE parse error: CFI version %d is not supported\n",
-                      cie_sp->version);
+      Debugger::ReportError(
+          llvm::formatv("CIE parse error: CFI version {0} is not supported",
+                        cie_sp->version));
       return nullptr;
     }
 
@@ -287,10 +288,10 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
 
     if (i == CFI_AUG_MAX_SIZE &&
         cie_sp->augmentation[CFI_AUG_MAX_SIZE - 1] != '\0') {
-      Host::SystemLog(Host::eSystemLogError,
-                      "CIE parse error: CIE augmentation string was too large "
-                      "for the fixed sized buffer of %d bytes.\n",
-                      CFI_AUG_MAX_SIZE);
+      Debugger::ReportError(llvm::formatv(
+          "CIE parse error: CIE augmentation string was too large "
+          "for the fixed sized buffer of {0} bytes.",
+          CFI_AUG_MAX_SIZE));
       return nullptr;
     }
 
@@ -451,10 +452,9 @@ void DWARFCallFrameInfo::GetFDEIndex() {
     }
 
     if (next_entry > m_cfi_data.GetByteSize() + 1) {
-      Host::SystemLog(Host::eSystemLogError, "error: Invalid fde/cie next "
-                                             "entry offset of 0x%x found in "
-                                             "cie/fde at 0x%x\n",
-                      next_entry, current_entry);
+      Debugger::ReportError(llvm::formatv("Invalid fde/cie next entry offset "
+                                          "of {0:x} found in cie/fde at {1:x}",
+                                          next_entry, current_entry));
       // Don't trust anything in this eh_frame section if we find blatantly
       // invalid data.
       m_fde_index.Clear();
@@ -484,10 +484,9 @@ void DWARFCallFrameInfo::GetFDEIndex() {
       cie_offset = cie_id;
 
     if (cie_offset > m_cfi_data.GetByteSize()) {
-      Host::SystemLog(Host::eSystemLogError,
-                      "error: Invalid cie offset of 0x%x "
-                      "found in cie/fde at 0x%x\n",
-                      cie_offset, current_entry);
+      Debugger::ReportError(llvm::formatv("Invalid cie offset of {0:x} "
+                                          "found in cie/fde at {1:x}",
+                                          cie_offset, current_entry));
       // Don't trust anything in this eh_frame section if we find blatantly
       // invalid data.
       m_fde_index.Clear();
@@ -513,10 +512,9 @@ void DWARFCallFrameInfo::GetFDEIndex() {
       FDEEntryMap::Entry fde(addr, length, current_entry);
       m_fde_index.Append(fde);
     } else {
-      Host::SystemLog(Host::eSystemLogError, "error: unable to find CIE at "
-                                             "0x%8.8x for cie_id = 0x%8.8x for "
-                                             "entry at 0x%8.8x.\n",
-                      cie_offset, cie_id, current_entry);
+      Debugger::ReportError(llvm::formatv(
+          "unable to find CIE at {0:x} for cie_id = {1:x} for entry at {2:x}.",
+          cie_offset, cie_id, current_entry));
     }
     offset = next_entry;
   }

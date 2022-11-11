@@ -49,9 +49,15 @@ static int findTool(int Argc, char **Argv) {
 
   StringRef Stem = sys::path::stem(ToolName);
   auto Is = [=](StringRef Tool) {
-    auto I = Stem.rfind_insensitive(Tool);
-    return I != StringRef::npos && (I + Tool.size() == Stem.size() ||
-                                    !llvm::isAlnum(Stem[I + Tool.size()]));
+    auto IsImpl = [=](StringRef Stem) {
+      auto I = Stem.rfind_insensitive(Tool);
+      return I != StringRef::npos && (I + Tool.size() == Stem.size() ||
+                                      !llvm::isAlnum(Stem[I + Tool.size()]));
+    };
+    for (StringRef S : {Stem, ToolName})
+      if (IsImpl(S))
+        return true;
+    return false;
   };
 
 #define LLVM_DRIVER_TOOL(tool, entry)                                          \

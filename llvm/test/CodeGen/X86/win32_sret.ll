@@ -13,7 +13,7 @@
 ; is callee-cleanup. However, in MSVC's cdecl calling convention, sret pointer
 ; arguments are caller-cleanup like normal arguments.
 
-define void @sret1(i8* sret(i8) %x) nounwind {
+define void @sret1(ptr sret(i8) %x) nounwind {
 entry:
 ; WIN32-LABEL:      _sret1:
 ; WIN32:      movb $42, ({{%e[abcd]x}})
@@ -29,11 +29,11 @@ entry:
 ; LINUX-LABEL:      sret1:
 ; LINUX:      retl $4
 
-  store i8 42, i8* %x, align 4
+  store i8 42, ptr %x, align 4
   ret void
 }
 
-define void @sret2(i8* sret(i8) %x, i8 %y) nounwind {
+define void @sret2(ptr sret(i8) %x, i8 %y) nounwind {
 entry:
 ; WIN32-LABEL:      _sret2:
 ; WIN32:      movb {{.*}}, ({{%e[abcd]x}})
@@ -49,11 +49,11 @@ entry:
 ; LINUX-LABEL:      sret2:
 ; LINUX:      retl $4
 
-  store i8 %y, i8* %x
+  store i8 %y, ptr %x
   ret void
 }
 
-define void @sret3(i8* sret(i8) %x, i8* %y) nounwind {
+define void @sret3(ptr sret(i8) %x, ptr %y) nounwind {
 entry:
 ; WIN32-LABEL:      _sret3:
 ; WIN32:      movb $42, ([[REG1:%e[abcd]x]])
@@ -70,15 +70,15 @@ entry:
 ; LINUX-LABEL:      sret3:
 ; LINUX:      retl $4
 
-  store i8 42, i8* %x
-  store i8 13, i8* %y
+  store i8 42, ptr %x
+  store i8 13, ptr %y
   ret void
 }
 
 ; PR15556
 %struct.S4 = type { i32, i32, i32 }
 
-define void @sret4(%struct.S4* noalias sret(%struct.S4) %agg.result) {
+define void @sret4(ptr noalias sret(%struct.S4) %agg.result) {
 entry:
 ; WIN32-LABEL:     _sret4:
 ; WIN32:     movl $42, ({{%e[abcd]x}})
@@ -94,21 +94,19 @@ entry:
 ; LINUX-LABEL:     sret4:
 ; LINUX:     retl $4
 
-  %x = getelementptr inbounds %struct.S4, %struct.S4* %agg.result, i32 0, i32 0
-  store i32 42, i32* %x, align 4
+  store i32 42, ptr %agg.result, align 4
   ret void
 }
 
 %struct.S5 = type { i32 }
 %class.C5 = type { i8 }
 
-define x86_thiscallcc void @"\01?foo@C5@@QAE?AUS5@@XZ"(%struct.S5* noalias sret(%struct.S5) %agg.result, %class.C5* %this) {
+define x86_thiscallcc void @"\01?foo@C5@@QAE?AUS5@@XZ"(ptr noalias sret(%struct.S5) %agg.result, ptr %this) {
 entry:
-  %this.addr = alloca %class.C5*, align 4
-  store %class.C5* %this, %class.C5** %this.addr, align 4
-  %this1 = load %class.C5*, %class.C5** %this.addr
-  %x = getelementptr inbounds %struct.S5, %struct.S5* %agg.result, i32 0, i32 0
-  store i32 42, i32* %x, align 4
+  %this.addr = alloca ptr, align 4
+  store ptr %this, ptr %this.addr, align 4
+  %this1 = load ptr, ptr %this.addr
+  store i32 42, ptr %agg.result, align 4
   ret void
 ; WIN32-LABEL:     {{^}}"?foo@C5@@QAE?AUS5@@XZ":
 ; MINGW_X86-LABEL: {{^}}"?foo@C5@@QAE?AUS5@@XZ":
@@ -127,7 +125,7 @@ define void @call_foo5() {
 entry:
   %c = alloca %class.C5, align 1
   %s = alloca %struct.S5, align 4
-  call x86_thiscallcc void @"\01?foo@C5@@QAE?AUS5@@XZ"(%struct.S5* sret(%struct.S5) %s, %class.C5* %c)
+  call x86_thiscallcc void @"\01?foo@C5@@QAE?AUS5@@XZ"(ptr sret(%struct.S5) %s, ptr %c)
 ; WIN32-LABEL:      {{^}}_call_foo5:
 ; MINGW_X86-LABEL:  {{^}}_call_foo5:
 ; CYGWIN-LABEL:     {{^}}_call_foo5:
@@ -147,7 +145,7 @@ entry:
 
 
 %struct.test6 = type { i32, i32, i32 }
-define void @test6_f(%struct.test6* %x) nounwind {
+define void @test6_f(ptr %x) nounwind {
 ; WIN32-LABEL: _test6_f:
 ; MINGW_X86-LABEL: _test6_f:
 ; CYGWIN-LABEL: _test6_f:
@@ -172,14 +170,14 @@ define void @test6_f(%struct.test6* %x) nounwind {
 ; CYGWIN-NEXT: calll   _test6_g
 
   %tmp = alloca %struct.test6, align 4
-  call x86_thiscallcc void @test6_g(%struct.test6* sret(%struct.test6) %tmp, %struct.test6* %x)
+  call x86_thiscallcc void @test6_g(ptr sret(%struct.test6) %tmp, ptr %x)
   ret void
 }
-declare x86_thiscallcc void @test6_g(%struct.test6* sret(%struct.test6), %struct.test6*)
+declare x86_thiscallcc void @test6_g(ptr sret(%struct.test6), ptr)
 
 ; Flipping the parameters at the IR level generates the same code.
 %struct.test7 = type { i32, i32, i32 }
-define void @test7_f(%struct.test7* %x) nounwind {
+define void @test7_f(ptr %x) nounwind {
 ; WIN32-LABEL: _test7_f:
 ; MINGW_X86-LABEL: _test7_f:
 ; CYGWIN-LABEL: _test7_f:
@@ -199,15 +197,13 @@ define void @test7_f(%struct.test7* %x) nounwind {
 ; CYGWIN-NEXT: {{pushl   %eax|movl %eax, \(%esp\)}}
 
   %tmp = alloca %struct.test7, align 4
-  call x86_thiscallcc void @test7_g(%struct.test7* %x, %struct.test7* sret(%struct.test7) %tmp)
+  call x86_thiscallcc void @test7_g(ptr %x, ptr sret(%struct.test7) %tmp)
   ret void
 }
 
-define x86_thiscallcc void @test7_g(%struct.test7* %in, %struct.test7* sret(%struct.test7) %out) {
-  %s = getelementptr %struct.test7, %struct.test7* %in, i32 0, i32 0
-  %d = getelementptr %struct.test7, %struct.test7* %out, i32 0, i32 0
-  %v = load i32, i32* %s
-  store i32 %v, i32* %d
+define x86_thiscallcc void @test7_g(ptr %in, ptr sret(%struct.test7) %out) {
+  %v = load i32, ptr %in
+  store i32 %v, ptr %out
   call void @clobber_eax()
   ret void
 
@@ -223,8 +219,8 @@ declare void @clobber_eax()
 ; Test what happens if the first parameter has to be split by codegen.
 ; Realistically, no frontend will generate code like this, but here it is for
 ; completeness.
-define void @test8_f(i64 inreg %a, i64* sret(i64) %out) {
-  store i64 %a, i64* %out
+define void @test8_f(i64 inreg %a, ptr sret(i64) %out) {
+  store i64 %a, ptr %out
   call void @clobber_eax()
   ret void
 

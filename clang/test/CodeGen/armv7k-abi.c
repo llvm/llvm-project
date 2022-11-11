@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7k-apple-watchos2.0 -target-abi aapcs16 -target-cpu cortex-a7 %s -o - -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -triple thumbv7k-apple-watchos2.0 -target-abi aapcs16 -target-cpu cortex-a7 %s -o - -emit-llvm | FileCheck %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
@@ -39,10 +39,10 @@ typedef struct {
   double z;
 } BigStruct;
 
-// CHECK: define{{.*}} void @big_struct_indirect(%struct.BigStruct* noundef %b)
+// CHECK: define{{.*}} void @big_struct_indirect(ptr noundef %b)
 void big_struct_indirect(BigStruct b) {}
 
-// CHECK: define{{.*}} void @return_big_struct_indirect(%struct.BigStruct* noalias sret
+// CHECK: define{{.*}} void @return_big_struct_indirect(ptr noalias sret
 BigStruct return_big_struct_indirect() {}
 
 // Structs smaller than 16 bytes should be passed directly, and coerced to
@@ -84,12 +84,11 @@ typedef struct {
 // CHECK: define{{.*}} [2 x i32] @return_oddly_sized_struct()
 OddlySizedStruct return_oddly_sized_struct() {}
 
-// CHECK: define{{.*}} <4 x float> @test_va_arg_vec(i8* noundef %l)
+// CHECK: define{{.*}} <4 x float> @test_va_arg_vec(ptr noundef %l)
 // CHECK:   [[ALIGN_TMP:%.*]] = add i32 {{%.*}}, 15
 // CHECK:   [[ALIGNED:%.*]] = and i32 [[ALIGN_TMP]], -16
-// CHECK:   [[ALIGNED_I8:%.*]] = inttoptr i32 [[ALIGNED]] to i8*
-// CHECK:   [[ALIGNED_VEC:%.*]] = bitcast i8* [[ALIGNED_I8]] to <4 x float>
-// CHECK:   load <4 x float>, <4 x float>* [[ALIGNED_VEC]], align 16
+// CHECK:   [[ALIGNED_I8:%.*]] = inttoptr i32 [[ALIGNED]] to ptr
+// CHECK:   load <4 x float>, ptr [[ALIGNED_I8]], align 16
 float32x4_t test_va_arg_vec(__builtin_va_list l) {
   return __builtin_va_arg(l, float32x4_t);
 }

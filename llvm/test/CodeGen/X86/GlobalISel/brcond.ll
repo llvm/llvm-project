@@ -44,15 +44,15 @@ entry:
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:
-  store i32 %tValue, i32* %retval, align 4
+  store i32 %tValue, ptr %retval, align 4
   br label %return
 
 if.else:
-  store i32 %fValue, i32* %retval, align 4
+  store i32 %fValue, ptr %retval, align 4
   br label %return
 
 return:
-  %0 = load i32, i32* %retval, align 4
+  %0 = load i32, ptr %retval, align 4
   ret i32 %0
 }
 

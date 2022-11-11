@@ -236,23 +236,21 @@ static Expected<SectionRename> parseRenameSectionValue(StringRef FlagValue) {
 }
 
 static Expected<std::pair<StringRef, uint64_t>>
-parseSetSectionAlignment(StringRef FlagValue) {
+parseSetSectionAttribute(StringRef Option, StringRef FlagValue) {
   if (!FlagValue.contains('='))
-    return createStringError(
-        errc::invalid_argument,
-        "bad format for --set-section-alignment: missing '='");
+    return make_error<StringError>("bad format for " + Option + ": missing '='",
+                                   errc::invalid_argument);
   auto Split = StringRef(FlagValue).split('=');
   if (Split.first.empty())
-    return createStringError(
-        errc::invalid_argument,
-        "bad format for --set-section-alignment: missing section name");
-  uint64_t NewAlign;
-  if (Split.second.getAsInteger(0, NewAlign))
-    return createStringError(
-        errc::invalid_argument,
-        "invalid alignment for --set-section-alignment: '%s'",
-        Split.second.str().c_str());
-  return std::make_pair(Split.first, NewAlign);
+    return make_error<StringError>("bad format for " + Option +
+                                       ": missing section name",
+                                   errc::invalid_argument);
+  uint64_t Value;
+  if (Split.second.getAsInteger(0, Value))
+    return make_error<StringError>("invalid value for " + Option + ": '" +
+                                       Split.second + "'",
+                                   errc::invalid_argument);
+  return std::make_pair(Split.first, Value);
 }
 
 static Expected<SectionFlagsUpdate>
@@ -561,8 +559,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   ObjcopyOptTable T;
 
   const char *const *DashDash =
-      std::find_if(RawArgsArr.begin(), RawArgsArr.end(),
-                   [](StringRef Str) { return Str == "--"; });
+      llvm::find_if(RawArgsArr, [](StringRef Str) { return Str == "--"; });
   ArrayRef<const char *> ArgsArr = makeArrayRef(RawArgsArr.begin(), DashDash);
   if (DashDash != RawArgsArr.end())
     DashDash = std::next(DashDash);
@@ -589,11 +586,11 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 
   SmallVector<const char *, 2> Positional;
 
-  for (auto Arg : InputArgs.filtered(OBJCOPY_UNKNOWN))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_UNKNOWN))
     return createStringError(errc::invalid_argument, "unknown argument '%s'",
                              Arg->getAsString(InputArgs).c_str());
 
-  for (auto Arg : InputArgs.filtered(OBJCOPY_INPUT))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_INPUT))
     Positional.push_back(Arg->getValue());
   std::copy(DashDash, RawArgsArr.end(), std::back_inserter(Positional));
 
@@ -721,29 +718,20 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     }
   }
 
-  if (auto Arg = InputArgs.getLastArg(OBJCOPY_compress_debug_sections,
-                                      OBJCOPY_compress_debug_sections_eq)) {
-    Config.CompressionType = DebugCompressionType::Z;
-
-    if (Arg->getOption().getID() == OBJCOPY_compress_debug_sections_eq) {
-      Config.CompressionType =
-          StringSwitch<DebugCompressionType>(
-              InputArgs.getLastArgValue(OBJCOPY_compress_debug_sections_eq))
-              .Case("zlib-gnu", DebugCompressionType::GNU)
-              .Case("zlib", DebugCompressionType::Z)
-              .Default(DebugCompressionType::None);
-      if (Config.CompressionType == DebugCompressionType::None)
-        return createStringError(
-            errc::invalid_argument,
-            "invalid or unsupported --compress-debug-sections format: %s",
-            InputArgs.getLastArgValue(OBJCOPY_compress_debug_sections_eq)
-                .str()
-                .c_str());
-    }
-    if (!zlib::isAvailable())
+  if (const auto *A = InputArgs.getLastArg(OBJCOPY_compress_debug_sections)) {
+    Config.CompressionType = StringSwitch<DebugCompressionType>(A->getValue())
+                                 .Case("zlib", DebugCompressionType::Zlib)
+                                 .Case("zstd", DebugCompressionType::Zstd)
+                                 .Default(DebugCompressionType::None);
+    if (Config.CompressionType == DebugCompressionType::None) {
       return createStringError(
           errc::invalid_argument,
-          "LLVM was not compiled with LLVM_ENABLE_ZLIB: can not compress");
+          "invalid or unsupported --compress-debug-sections format: %s",
+          A->getValue());
+    }
+    if (const char *Reason = compression::getReasonIfUnsupported(
+            compression::formatFor(Config.CompressionType)))
+      return createStringError(errc::invalid_argument, Reason);
   }
 
   Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);
@@ -766,7 +754,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_extract_partition))
     Config.ExtractPartition = Arg->getValue();
 
-  for (auto Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))
       return createStringError(errc::invalid_argument,
                                "bad format for --redefine-sym");
@@ -777,12 +765,12 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                                Old2New.first.str().c_str());
   }
 
-  for (auto Arg : InputArgs.filtered(OBJCOPY_redefine_symbols))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbols))
     if (Error E = addSymbolsToRenameFromFile(Config.SymbolsToRename, DC.Alloc,
                                              Arg->getValue()))
       return std::move(E);
 
-  for (auto Arg : InputArgs.filtered(OBJCOPY_rename_section)) {
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_rename_section)) {
     Expected<SectionRename> SR =
         parseRenameSectionValue(StringRef(Arg->getValue()));
     if (!SR)
@@ -792,14 +780,14 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                                "multiple renames of section '%s'",
                                SR->OriginalName.str().c_str());
   }
-  for (auto Arg : InputArgs.filtered(OBJCOPY_set_section_alignment)) {
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_section_alignment)) {
     Expected<std::pair<StringRef, uint64_t>> NameAndAlign =
-        parseSetSectionAlignment(Arg->getValue());
+        parseSetSectionAttribute("--set-section-alignment", Arg->getValue());
     if (!NameAndAlign)
       return NameAndAlign.takeError();
     Config.SetSectionAlignment[NameAndAlign->first] = NameAndAlign->second;
   }
-  for (auto Arg : InputArgs.filtered(OBJCOPY_set_section_flags)) {
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_section_flags)) {
     Expected<SectionFlagsUpdate> SFU =
         parseSetSectionFlagValue(Arg->getValue());
     if (!SFU)
@@ -810,42 +798,48 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
           "--set-section-flags set multiple times for section '%s'",
           SFU->Name.str().c_str());
   }
-  // Prohibit combinations of --set-section-flags when the section name is used
-  // by --rename-section, either as a source or a destination.
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_section_type)) {
+    Expected<std::pair<StringRef, uint64_t>> NameAndType =
+        parseSetSectionAttribute("--set-section-type", Arg->getValue());
+    if (!NameAndType)
+      return NameAndType.takeError();
+    Config.SetSectionType[NameAndType->first] = NameAndType->second;
+  }
+  // Prohibit combinations of --set-section-{flags,type} when the section name
+  // is used as the destination of a --rename-section.
   for (const auto &E : Config.SectionsToRename) {
     const SectionRename &SR = E.second;
-    if (Config.SetSectionFlags.count(SR.OriginalName))
+    auto Err = [&](const char *Option) {
       return createStringError(
           errc::invalid_argument,
-          "--set-section-flags=%s conflicts with --rename-section=%s=%s",
-          SR.OriginalName.str().c_str(), SR.OriginalName.str().c_str(),
-          SR.NewName.str().c_str());
-    if (Config.SetSectionFlags.count(SR.NewName))
-      return createStringError(
-          errc::invalid_argument,
-          "--set-section-flags=%s conflicts with --rename-section=%s=%s",
+          "--set-section-%s=%s conflicts with --rename-section=%s=%s", Option,
           SR.NewName.str().c_str(), SR.OriginalName.str().c_str(),
           SR.NewName.str().c_str());
+    };
+    if (Config.SetSectionFlags.count(SR.NewName))
+      return Err("flags");
+    if (Config.SetSectionType.count(SR.NewName))
+      return Err("type");
   }
 
-  for (auto Arg : InputArgs.filtered(OBJCOPY_remove_section))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_remove_section))
     if (Error E = Config.ToRemove.addMatcher(NameOrPattern::create(
             Arg->getValue(), SectionMatchStyle, ErrorCallback)))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_keep_section))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_keep_section))
     if (Error E = Config.KeepSection.addMatcher(NameOrPattern::create(
             Arg->getValue(), SectionMatchStyle, ErrorCallback)))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_only_section))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_only_section))
     if (Error E = Config.OnlySection.addMatcher(NameOrPattern::create(
             Arg->getValue(), SectionMatchStyle, ErrorCallback)))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_add_section)) {
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_add_section)) {
     if (Error Err = loadNewSectionData(Arg->getValue(), "--add-section",
                                        Config.AddSection))
       return std::move(Err);
   }
-  for (auto Arg : InputArgs.filtered(OBJCOPY_update_section)) {
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_update_section)) {
     if (Error Err = loadNewSectionData(Arg->getValue(), "--update-section",
                                        Config.UpdateSection))
       return std::move(Err);
@@ -885,66 +879,66 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     Config.StripDebug = true;
     ELFConfig.KeepFileSymbols = true;
   }
-  for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
     if (Error E = Config.SymbolsToLocalize.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbols))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_localize_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToLocalize, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbol))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_keep_global_symbol))
     if (Error E = Config.SymbolsToKeepGlobal.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbols))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_keep_global_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToKeepGlobal, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbol))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_globalize_symbol))
     if (Error E = Config.SymbolsToGlobalize.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbols))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_globalize_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToGlobalize, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbol))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_weaken_symbol))
     if (Error E = Config.SymbolsToWeaken.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbols))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_weaken_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToWeaken, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbol))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_strip_symbol))
     if (Error E = Config.SymbolsToRemove.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbols))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_strip_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToRemove, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbol))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbol))
     if (Error E =
             Config.UnneededSymbolsToRemove.addMatcher(NameOrPattern::create(
                 Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbols))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbols))
     if (Error E = addSymbolsFromFile(Config.UnneededSymbolsToRemove, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbol))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_keep_symbol))
     if (Error E = Config.SymbolsToKeep.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbols))
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_keep_symbols))
     if (Error E =
             addSymbolsFromFile(Config.SymbolsToKeep, DC.Alloc, Arg->getValue(),
                                SymbolMatchStyle, ErrorCallback))
@@ -970,7 +964,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     return createStringError(errc::invalid_argument,
                              "--preserve-dates requires a file");
 
-  for (auto Arg : InputArgs)
+  for (auto *Arg : InputArgs)
     if (Arg->getOption().matches(OBJCOPY_set_start)) {
       auto EAddr = getAsInteger<uint64_t>(Arg->getValue());
       if (!EAddr)
@@ -998,11 +992,6 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         "cannot specify both --compress-debug-sections and "
         "--decompress-debug-sections");
   }
-
-  if (Config.DecompressDebugSections && !zlib::isAvailable())
-    return createStringError(
-        errc::invalid_argument,
-        "LLVM was not compiled with LLVM_ENABLE_ZLIB: cannot decompress");
 
   if (Config.ExtractPartition && Config.ExtractMainPartition)
     return createStringError(errc::invalid_argument,
@@ -1051,13 +1040,13 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
     exit(0);
   }
 
-  for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_add_rpath))
+  for (auto *Arg : InputArgs.filtered(INSTALL_NAME_TOOL_add_rpath))
     MachOConfig.RPathToAdd.push_back(Arg->getValue());
 
   for (auto *Arg : InputArgs.filtered(INSTALL_NAME_TOOL_prepend_rpath))
     MachOConfig.RPathToPrepend.push_back(Arg->getValue());
 
-  for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_delete_rpath)) {
+  for (auto *Arg : InputArgs.filtered(INSTALL_NAME_TOOL_delete_rpath)) {
     StringRef RPath = Arg->getValue();
 
     // Cannot add and delete the same rpath at the same time.
@@ -1132,10 +1121,10 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
       InputArgs.hasArg(INSTALL_NAME_TOOL_delete_all_rpaths);
 
   SmallVector<StringRef, 2> Positional;
-  for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_UNKNOWN))
+  for (auto *Arg : InputArgs.filtered(INSTALL_NAME_TOOL_UNKNOWN))
     return createStringError(errc::invalid_argument, "unknown argument '%s'",
                              Arg->getAsString(InputArgs).c_str());
-  for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_INPUT))
+  for (auto *Arg : InputArgs.filtered(INSTALL_NAME_TOOL_INPUT))
     Positional.push_back(Arg->getValue());
   if (Positional.empty())
     return createStringError(errc::invalid_argument, "no input file specified");
@@ -1204,7 +1193,15 @@ objcopy::parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr,
   // We only support -r for now, which removes all bitcode sections and
   // the __LLVM segment if it's now empty.
   cantFail(Config.ToRemove.addMatcher(NameOrPattern::create(
+      "__LLVM,__asm", MatchStyle::Literal, ErrorCallback)));
+  cantFail(Config.ToRemove.addMatcher(NameOrPattern::create(
+      "__LLVM,__bitcode", MatchStyle::Literal, ErrorCallback)));
+  cantFail(Config.ToRemove.addMatcher(NameOrPattern::create(
       "__LLVM,__bundle", MatchStyle::Literal, ErrorCallback)));
+  cantFail(Config.ToRemove.addMatcher(NameOrPattern::create(
+      "__LLVM,__cmdline", MatchStyle::Literal, ErrorCallback)));
+  cantFail(Config.ToRemove.addMatcher(NameOrPattern::create(
+      "__LLVM,__swift_cmdline", MatchStyle::Literal, ErrorCallback)));
   MachOConfig.EmptySegmentsToRemove.insert("__LLVM");
 
   DC.CopyConfigs.push_back(std::move(ConfigMgr));
@@ -1218,8 +1215,7 @@ Expected<DriverConfig>
 objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
                            function_ref<Error(Error)> ErrorCallback) {
   const char *const *DashDash =
-      std::find_if(RawArgsArr.begin(), RawArgsArr.end(),
-                   [](StringRef Str) { return Str == "--"; });
+      llvm::find_if(RawArgsArr, [](StringRef Str) { return Str == "--"; });
   ArrayRef<const char *> ArgsArr = makeArrayRef(RawArgsArr.begin(), DashDash);
   if (DashDash != RawArgsArr.end())
     DashDash = std::next(DashDash);
@@ -1246,10 +1242,10 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
   }
 
   SmallVector<StringRef, 2> Positional;
-  for (auto Arg : InputArgs.filtered(STRIP_UNKNOWN))
+  for (auto *Arg : InputArgs.filtered(STRIP_UNKNOWN))
     return createStringError(errc::invalid_argument, "unknown argument '%s'",
                              Arg->getAsString(InputArgs).c_str());
-  for (auto Arg : InputArgs.filtered(STRIP_INPUT))
+  for (auto *Arg : InputArgs.filtered(STRIP_INPUT))
     Positional.push_back(Arg->getValue());
   std::copy(DashDash, RawArgsArr.end(), std::back_inserter(Positional));
 
@@ -1292,22 +1288,22 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
   ELFConfig.KeepFileSymbols = InputArgs.hasArg(STRIP_keep_file_symbols);
   MachOConfig.KeepUndefined = InputArgs.hasArg(STRIP_keep_undefined);
 
-  for (auto Arg : InputArgs.filtered(STRIP_keep_section))
+  for (auto *Arg : InputArgs.filtered(STRIP_keep_section))
     if (Error E = Config.KeepSection.addMatcher(NameOrPattern::create(
             Arg->getValue(), SectionMatchStyle, ErrorCallback)))
       return std::move(E);
 
-  for (auto Arg : InputArgs.filtered(STRIP_remove_section))
+  for (auto *Arg : InputArgs.filtered(STRIP_remove_section))
     if (Error E = Config.ToRemove.addMatcher(NameOrPattern::create(
             Arg->getValue(), SectionMatchStyle, ErrorCallback)))
       return std::move(E);
 
-  for (auto Arg : InputArgs.filtered(STRIP_strip_symbol))
+  for (auto *Arg : InputArgs.filtered(STRIP_strip_symbol))
     if (Error E = Config.SymbolsToRemove.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
 
-  for (auto Arg : InputArgs.filtered(STRIP_keep_symbol))
+  for (auto *Arg : InputArgs.filtered(STRIP_keep_symbol))
     if (Error E = Config.SymbolsToKeep.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
       return std::move(E);

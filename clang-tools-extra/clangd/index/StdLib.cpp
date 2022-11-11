@@ -80,7 +80,7 @@ std::string buildUmbrella(llvm::StringLiteral Mandatory,
       "#endif\n",
       Mandatory);
 
-  llvm::sort(Headers.begin(), Headers.end());
+  llvm::sort(Headers);
   auto Last = std::unique(Headers.begin(), Headers.end());
   for (auto Header = Headers.begin(); Header != Last; ++Header) {
     OS << llvm::formatv("#if __has_include({0})\n"

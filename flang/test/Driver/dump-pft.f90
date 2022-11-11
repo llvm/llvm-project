@@ -1,13 +1,7 @@
-!-------------
-! RUN COMMANDS
-!-------------
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree %s 2>&1 | FileCheck %s --check-prefix=PARSE_TREE
 ! RUN: %flang_fc1 -fdebug-dump-pft %s 2>&1 | FileCheck %s --check-prefix=PFT
 ! RUN: bbc -pft-test %s 2>&1 | FileCheck %s --check-prefix=PFT
 
-!-----------------
-! EXPECTEED OUTPUT
-!-----------------
 ! PFT: 1 Subroutine test_routine: subroutine test_routine(a, b, n)
 ! PFT-NEXT:  1 EndSubroutineStmt: end subroutine
 ! PRF-NEXT: End Subroutine test_routine
@@ -25,8 +19,5 @@
 ! PARSE_TREE-NEXT: | EndSubroutineStmt ->
 ! PARSE_TREE-NO: Subroutine test_routine: subroutine test_routine(a, b, n)
 
-!-------
-! INPUT
-!-------
 subroutine test_routine(a, b, n)
 end subroutine

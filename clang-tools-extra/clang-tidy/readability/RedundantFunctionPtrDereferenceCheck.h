@@ -18,7 +18,7 @@ namespace readability {
 /// Eliminate redundant dereferences of a function pointer.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-function-ptr-dereference.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-function-ptr-dereference.html
 class RedundantFunctionPtrDereferenceCheck : public ClangTidyCheck {
 public:
   RedundantFunctionPtrDereferenceCheck(StringRef Name, ClangTidyContext *Context)

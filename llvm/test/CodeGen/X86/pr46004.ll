@@ -15,8 +15,8 @@ define void @fuzz22357(i128 %a0) {
 ; X64-NEXT:    retq
   %1 = add i128 %a0, 170141183460469231731687303715884105727
   %2 = add nuw nsw i128 %1, 22222
-  %3 = getelementptr i8, i8* undef, i128 %2
-  store i8 0, i8* %3, align 1
+  %3 = getelementptr i8, ptr undef, i128 %2
+  store i8 0, ptr %3, align 1
   ret void
 }
 
@@ -30,7 +30,7 @@ define void @fuzz22723(i128 %a0) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    retq
   %1 = add i128 %a0, 170141183460469231731687303715884105727
-  %2 = getelementptr i128*, i128** undef, i128 %1
-  store i128* undef, i128** %2, align 8
+  %2 = getelementptr ptr, ptr undef, i128 %1
+  store ptr undef, ptr %2, align 8
   ret void
 }

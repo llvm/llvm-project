@@ -70,11 +70,11 @@ define i32 @foo() local_unnamed_addr #0 {
 ; CHECK-X32-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X32-NEXT:    retq
   %a = alloca i32, i64 18000, align 16
-  %b0 = getelementptr inbounds i32, i32* %a, i64 98
-  %b1 = getelementptr inbounds i32, i32* %a, i64 7198
-  store volatile i32 1, i32* %b0
-  store volatile i32 1, i32* %b1
-  %c = load volatile i32, i32* %a
+  %b0 = getelementptr inbounds i32, ptr %a, i64 98
+  %b1 = getelementptr inbounds i32, ptr %a, i64 7198
+  store volatile i32 1, ptr %b0
+  store volatile i32 1, ptr %b1
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -98,13 +98,13 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
 ; CHECK-X64-NEXT:    .cfi_def_cfa_offset 71888
 ; CHECK-X64-NEXT:    .cfi_offset %rax, -16
 ; CHECK-X64-NEXT:    movl 71888(%rsp), %eax
-; CHECK-X64-NEXT:    addl %esi, %edi
 ; CHECK-X64-NEXT:    addl %ecx, %edx
-; CHECK-X64-NEXT:    addl %edi, %edx
-; CHECK-X64-NEXT:    addl %r9d, %r8d
 ; CHECK-X64-NEXT:    addl 71896(%rsp), %eax
+; CHECK-X64-NEXT:    addl %esi, %edx
+; CHECK-X64-NEXT:    addl %r9d, %eax
 ; CHECK-X64-NEXT:    addl %r8d, %eax
 ; CHECK-X64-NEXT:    addl %edx, %eax
+; CHECK-X64-NEXT:    addl %edi, %eax
 ; CHECK-X64-NEXT:    movl %eax, 264(%rsp)
 ; CHECK-X64-NEXT:    movl %eax, 28664(%rsp)
 ; CHECK-X64-NEXT:    addq $71872, %rsp # imm = 0x118C0
@@ -141,16 +141,16 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
 ; CHECK-X86-NEXT:    .cfi_offset %edx, -12
 ; CHECK-X86-NEXT:    .cfi_offset %esi, -8
 ; CHECK-X86-NEXT:    movl 72056(%esp), %eax
-; CHECK-X86-NEXT:    movl 72048(%esp), %edx
-; CHECK-X86-NEXT:    movl 72040(%esp), %ecx
+; CHECK-X86-NEXT:    movl 72048(%esp), %ecx
+; CHECK-X86-NEXT:    movl 72040(%esp), %edx
 ; CHECK-X86-NEXT:    movl 72032(%esp), %esi
 ; CHECK-X86-NEXT:    addl 72036(%esp), %esi
-; CHECK-X86-NEXT:    addl 72044(%esp), %ecx
-; CHECK-X86-NEXT:    addl %esi, %ecx
-; CHECK-X86-NEXT:    addl 72052(%esp), %edx
+; CHECK-X86-NEXT:    addl 72044(%esp), %edx
+; CHECK-X86-NEXT:    addl 72052(%esp), %ecx
 ; CHECK-X86-NEXT:    addl 72060(%esp), %eax
-; CHECK-X86-NEXT:    addl %edx, %eax
 ; CHECK-X86-NEXT:    addl %ecx, %eax
+; CHECK-X86-NEXT:    addl %edx, %eax
+; CHECK-X86-NEXT:    addl %esi, %eax
 ; CHECK-X86-NEXT:    movl %eax, 392(%esp)
 ; CHECK-X86-NEXT:    movl %eax, 28792(%esp)
 ; CHECK-X86-NEXT:    addl $72012, %esp # imm = 0x1194C
@@ -184,13 +184,13 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
 ; CHECK-X32-NEXT:    .cfi_def_cfa_offset 71888
 ; CHECK-X32-NEXT:    .cfi_offset %rax, -16
 ; CHECK-X32-NEXT:    movl 71888(%esp), %eax
-; CHECK-X32-NEXT:    addl %esi, %edi
 ; CHECK-X32-NEXT:    addl %ecx, %edx
-; CHECK-X32-NEXT:    addl %edi, %edx
-; CHECK-X32-NEXT:    addl %r9d, %r8d
 ; CHECK-X32-NEXT:    addl 71896(%esp), %eax
+; CHECK-X32-NEXT:    addl %esi, %edx
+; CHECK-X32-NEXT:    addl %r9d, %eax
 ; CHECK-X32-NEXT:    addl %r8d, %eax
 ; CHECK-X32-NEXT:    addl %edx, %eax
+; CHECK-X32-NEXT:    addl %edi, %eax
 ; CHECK-X32-NEXT:    movl %eax, 264(%esp)
 ; CHECK-X32-NEXT:    movl %eax, 28664(%esp)
 ; CHECK-X32-NEXT:    addl $71872, %esp # imm = 0x118C0
@@ -199,8 +199,8 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
 ; CHECK-X32-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X32-NEXT:    retq
   %all = alloca i32, i64 18000, align 16
-  %b0 = getelementptr inbounds i32, i32* %all, i64 98
-  %b1 = getelementptr inbounds i32, i32* %all, i64 7198
+  %b0 = getelementptr inbounds i32, ptr %all, i64 98
+  %b1 = getelementptr inbounds i32, ptr %all, i64 7198
   %ab = add i32 %a, %b
   %cd = add i32 %c, %d
   %ef = add i32 %e, %f
@@ -208,8 +208,8 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
   %abcd = add i32 %ab, %cd
   %efgh = add i32 %ef, %gh
   %sum = add i32 %abcd, %efgh
-  store volatile i32 %sum, i32* %b0
-  store volatile i32 %sum, i32* %b1
+  store volatile i32 %sum, ptr %b0
+  store volatile i32 %sum, ptr %b1
   ret void
 }
 

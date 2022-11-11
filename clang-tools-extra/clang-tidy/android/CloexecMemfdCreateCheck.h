@@ -18,7 +18,7 @@ namespace android {
 /// Finds code that uses memfd_create() without using the MFD_CLOEXEC flag.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd-create.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-memfd-create.html
 class CloexecMemfdCreateCheck : public CloexecCheck {
 public:
   CloexecMemfdCreateCheck(StringRef Name, ClangTidyContext *Context)

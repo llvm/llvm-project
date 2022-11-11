@@ -4,139 +4,131 @@
 ; PR1201
 
 ; 'if (p) delete p;' cannot result in a call to 'operator delete(0)'.
-define void @test6a(i8* %foo) minsize {
+define void @test6a(ptr %foo) minsize {
 ; CHECK-LABEL: @test6a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq ptr [[FOO:%.*]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @_ZdlPv(i8* [[FOO]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    tail call void @_ZdlPv(ptr [[FOO]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tobool = icmp eq i8* %foo, null
+  %tobool = icmp eq ptr %foo, null
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  tail call void @_ZdlPv(i8* %foo) builtin
+  tail call void @_ZdlPv(ptr %foo) builtin
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
-declare i8* @_ZnwmRKSt9nothrow_t(i64, i8*) nobuiltin
-declare void @_ZdlPvRKSt9nothrow_t(i8*, i8*) nobuiltin
+declare ptr @_ZnwmRKSt9nothrow_t(i64, ptr) nobuiltin
+declare void @_ZdlPvRKSt9nothrow_t(ptr, ptr) nobuiltin
 declare i32 @__gxx_personality_v0(...)
-declare void @_ZN1AC2Ev(i8* %this)
+declare void @_ZN1AC2Ev(ptr %this)
 
-define void @test7() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test7() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    invoke void @_ZN1AC2Ev(i8* undef)
+; CHECK-NEXT:    invoke void @_ZN1AC2Ev(ptr undef)
 ; CHECK-NEXT:    to label [[DOTNOEXC_I:%.*]] unwind label [[LPAD_I:%.*]]
 ; CHECK:       .noexc.i:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad.i:
-; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    resume { i8*, i32 } [[TMP0]]
+; CHECK-NEXT:    resume { ptr, i32 } [[TMP0]]
 ;
 entry:
   %nt = alloca i8
-  %call.i = tail call i8* @_ZnwmRKSt9nothrow_t(i64 1, i8* %nt) builtin nounwind
-  invoke void @_ZN1AC2Ev(i8* undef)
+  %call.i = tail call ptr @_ZnwmRKSt9nothrow_t(i64 1, ptr %nt) builtin nounwind
+  invoke void @_ZN1AC2Ev(ptr undef)
   to label %.noexc.i unwind label %lpad.i
 
 .noexc.i:                                         ; preds = %entry
   unreachable
 
 lpad.i:                                           ; preds = %entry
-  %0 = landingpad { i8*, i32 } cleanup
-  call void @_ZdlPvRKSt9nothrow_t(i8* %call.i, i8* %nt) builtin nounwind
-  resume { i8*, i32 } %0
+  %0 = landingpad { ptr, i32 } cleanup
+  call void @_ZdlPvRKSt9nothrow_t(ptr %call.i, ptr %nt) builtin nounwind
+  resume { ptr, i32 } %0
 }
 
-declare i8* @_Znwm(i64) nobuiltin
-define i8* @_Znwj(i32 %n) nobuiltin {
+declare ptr @_Znwm(i64) nobuiltin
+define ptr @_Znwj(i32 %n) nobuiltin {
 ; CHECK-LABEL: @_Znwj(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[N:%.*]] to i64
-; CHECK-NEXT:    [[M:%.*]] = call i8* @_Znwm(i64 [[Z]])
-; CHECK-NEXT:    ret i8* [[M]]
+; CHECK-NEXT:    [[M:%.*]] = call ptr @_Znwm(i64 [[Z]])
+; CHECK-NEXT:    ret ptr [[M]]
 ;
   %z = zext i32 %n to i64
-  %m = call i8* @_Znwm(i64 %z)
-  ret i8* %m
+  %m = call ptr @_Znwm(i64 %z)
+  ret ptr %m
 }
-declare i8* @_Znam(i64) nobuiltin
-declare i8* @_Znaj(i32) nobuiltin
-declare void @_ZdlPv(i8*) nobuiltin
-declare void @_ZdaPv(i8*) nobuiltin
+declare ptr @_Znam(i64) nobuiltin
+declare ptr @_Znaj(i32) nobuiltin
+declare void @_ZdlPv(ptr) nobuiltin
+declare void @_ZdaPv(ptr) nobuiltin
 
-define linkonce void @_ZdlPvm(i8* %p, i64) nobuiltin {
+define linkonce void @_ZdlPvm(ptr %p, i64) nobuiltin {
 ; CHECK-LABEL: @_ZdlPvm(
-; CHECK-NEXT:    call void @_ZdlPv(i8* [[P:%.*]])
+; CHECK-NEXT:    call void @_ZdlPv(ptr [[P:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @_ZdlPv(i8* %p)
+  call void @_ZdlPv(ptr %p)
   ret void
 }
-define linkonce void @_ZdlPvj(i8* %p, i32) nobuiltin {
+define linkonce void @_ZdlPvj(ptr %p, i32) nobuiltin {
 ; CHECK-LABEL: @_ZdlPvj(
-; CHECK-NEXT:    call void @_ZdlPv(i8* [[P:%.*]])
+; CHECK-NEXT:    call void @_ZdlPv(ptr [[P:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @_ZdlPv(i8* %p)
+  call void @_ZdlPv(ptr %p)
   ret void
 }
-define linkonce void @_ZdaPvm(i8* %p, i64) nobuiltin {
+define linkonce void @_ZdaPvm(ptr %p, i64) nobuiltin {
 ; CHECK-LABEL: @_ZdaPvm(
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[P:%.*]])
+; CHECK-NEXT:    call void @_ZdaPv(ptr [[P:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @_ZdaPv(i8* %p)
+  call void @_ZdaPv(ptr %p)
   ret void
 }
-define linkonce void @_ZdaPvj(i8* %p, i32) nobuiltin {
+define linkonce void @_ZdaPvj(ptr %p, i32) nobuiltin {
 ; CHECK-LABEL: @_ZdaPvj(
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[P:%.*]])
+; CHECK-NEXT:    call void @_ZdaPv(ptr [[P:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @_ZdaPv(i8* %p)
+  call void @_ZdaPv(ptr %p)
   ret void
 }
 
 
 ; new(size_t, align_val_t)
-declare i8* @_ZnwmSt11align_val_t(i64, i64) nobuiltin
-declare i8* @_ZnwjSt11align_val_t(i32, i32) nobuiltin
+declare ptr @_ZnwmSt11align_val_t(i64, i64) nobuiltin
 ; new[](size_t, align_val_t)
-declare i8* @_ZnamSt11align_val_t(i64, i64) nobuiltin
-declare i8* @_ZnajSt11align_val_t(i32, i32) nobuiltin
+declare ptr @_ZnamSt11align_val_t(i64, i64) nobuiltin
 ; new(size_t, align_val_t, nothrow)
-declare i8* @_ZnwmSt11align_val_tRKSt9nothrow_t(i64, i64, i8*) nobuiltin
-declare i8* @_ZnwjSt11align_val_tRKSt9nothrow_t(i32, i32, i8*) nobuiltin
+declare ptr @_ZnwmSt11align_val_tRKSt9nothrow_t(i64, i64, ptr) nobuiltin
 ; new[](size_t, align_val_t, nothrow)
-declare i8* @_ZnamSt11align_val_tRKSt9nothrow_t(i64, i64, i8*) nobuiltin
-declare i8* @_ZnajSt11align_val_tRKSt9nothrow_t(i32, i32, i8*) nobuiltin
-; delete(void*, align_val_t)
-declare void @_ZdlPvSt11align_val_t(i8*, i64) nobuiltin
-; delete[](void*, align_val_t)
-declare void @_ZdaPvSt11align_val_t(i8*, i64) nobuiltin
-; delete(void*, align_val_t, nothrow)
-declare void @_ZdlPvSt11align_val_tRKSt9nothrow_t(i8*, i64, i8*) nobuiltin
-; delete[](void*, align_val_t, nothrow)
-declare void @_ZdaPvSt11align_val_tRKSt9nothrow_t(i8*, i64, i8*) nobuiltin
-; delete(void*, unsigned int, align_val_t)
-declare void @_ZdlPvjSt11align_val_t(i8*, i32, i32) nobuiltin
-; delete(void*, unsigned long, align_val_t)
-declare void @_ZdlPvmSt11align_val_t(i8*, i64, i64) nobuiltin
-; delete[](void*, unsigned int, align_val_t)
-declare void @_ZdaPvjSt11align_val_t(i8*, i32, i32) nobuiltin
-; delete[](void*, unsigned long, align_val_t)
-declare void @_ZdaPvmSt11align_val_t(i8*, i64, i64) nobuiltin
+declare ptr @_ZnamSt11align_val_tRKSt9nothrow_t(i64, i64, ptr) nobuiltin
+; delete(ptr, align_val_t)
+declare void @_ZdlPvSt11align_val_t(ptr, i64) nobuiltin
+; delete[](ptr, align_val_t)
+declare void @_ZdaPvSt11align_val_t(ptr, i64) nobuiltin
+; delete(ptr, align_val_t, nothrow)
+declare void @_ZdlPvSt11align_val_tRKSt9nothrow_t(ptr, i64, ptr) nobuiltin
+; delete[](ptr, align_val_t, nothrow)
+declare void @_ZdaPvSt11align_val_tRKSt9nothrow_t(ptr, i64, ptr) nobuiltin
+; delete(ptr, unsigned long, align_val_t)
+declare void @_ZdlPvmSt11align_val_t(ptr, i64, i64) nobuiltin
+; delete[](ptr, unsigned long, align_val_t)
+declare void @_ZdaPvmSt11align_val_t(ptr, i64, i64) nobuiltin
 
 declare void @llvm.assume(i1)
 
@@ -145,82 +137,66 @@ define void @test8() {
 ; CHECK-NEXT:    ret void
 ;
   %nt = alloca i8
-  %nw = call i8* @_Znwm(i64 32) builtin
-  call void @_ZdlPv(i8* %nw) builtin
-  %na = call i8* @_Znam(i64 32) builtin
-  call void @_ZdaPv(i8* %na) builtin
-  %nwm = call i8* @_Znwm(i64 32) builtin
-  call void @_ZdlPvm(i8* %nwm, i64 32) builtin
-  %nwj = call i8* @_Znwj(i32 32) builtin
-  call void @_ZdlPvj(i8* %nwj, i32 32) builtin
-  %nam = call i8* @_Znam(i64 32) builtin
-  call void @_ZdaPvm(i8* %nam, i64 32) builtin
-  %naj = call i8* @_Znaj(i32 32) builtin
-  call void @_ZdaPvj(i8* %naj, i32 32) builtin
-  %nwa = call i8* @_ZnwmSt11align_val_t(i64 32, i64 8) builtin
-  call void @_ZdlPvSt11align_val_t(i8* %nwa, i64 8) builtin
-  %naa = call i8* @_ZnamSt11align_val_t(i64 32, i64 8) builtin
-  call void @_ZdaPvSt11align_val_t(i8* %naa, i64 8) builtin
-  %nwja = call i8* @_ZnwjSt11align_val_t(i32 32, i32 8) builtin
-  call void @_ZdlPvSt11align_val_t(i8* %nwja, i64 8) builtin
-  %naja = call i8* @_ZnajSt11align_val_t(i32 32, i32 8) builtin
-  call void @_ZdaPvSt11align_val_t(i8* %naja, i64 8) builtin
-  %nwat = call i8* @_ZnwmSt11align_val_tRKSt9nothrow_t(i64 32, i64 8, i8* %nt) builtin
-  call void @_ZdlPvSt11align_val_tRKSt9nothrow_t(i8* %nwat, i64 8, i8* %nt) builtin
-  %naat = call i8* @_ZnamSt11align_val_tRKSt9nothrow_t(i64 32, i64 8, i8* %nt) builtin
-  call void @_ZdaPvSt11align_val_tRKSt9nothrow_t(i8* %naat, i64 8, i8* %nt) builtin
-  %nwjat = call i8* @_ZnwjSt11align_val_tRKSt9nothrow_t(i32 32, i32 8, i8* %nt) builtin
-  call void @_ZdlPvSt11align_val_tRKSt9nothrow_t(i8* %nwjat, i64 8, i8* %nt) builtin
-  %najat = call i8* @_ZnajSt11align_val_tRKSt9nothrow_t(i32 32, i32 8, i8* %nt) builtin
-  call void @_ZdaPvSt11align_val_tRKSt9nothrow_t(i8* %najat, i64 8, i8* %nt) builtin
-  %nwa2 = call i8* @_ZnwmSt11align_val_t(i64 32, i64 8) builtin
-  call void @_ZdlPvmSt11align_val_t(i8* %nwa2, i64 32, i64 8) builtin
-  %nwja2 = call i8* @_ZnwjSt11align_val_t(i32 32, i32 8) builtin
-  call void @_ZdlPvjSt11align_val_t(i8* %nwa2, i32 32, i32 8) builtin
-  %naa2 = call i8* @_ZnamSt11align_val_t(i64 32, i64 8) builtin
-  call void @_ZdaPvmSt11align_val_t(i8* %naa2, i64 32, i64 8) builtin
-  %naja2 = call i8* @_ZnajSt11align_val_t(i32 32, i32 8) builtin
-  call void @_ZdaPvjSt11align_val_t(i8* %naja2, i32 32, i32 8) builtin
+  %nw = call ptr @_Znwm(i64 32) builtin
+  call void @_ZdlPv(ptr %nw) builtin
+  %na = call ptr @_Znam(i64 32) builtin
+  call void @_ZdaPv(ptr %na) builtin
+  %nwm = call ptr @_Znwm(i64 32) builtin
+  call void @_ZdlPvm(ptr %nwm, i64 32) builtin
+  %nam = call ptr @_Znam(i64 32) builtin
+  call void @_ZdaPvm(ptr %nam, i64 32) builtin
+  %nwa = call ptr @_ZnwmSt11align_val_t(i64 32, i64 8) builtin
+  call void @_ZdlPvSt11align_val_t(ptr %nwa, i64 8) builtin
+  %naa = call ptr @_ZnamSt11align_val_t(i64 32, i64 8) builtin
+  call void @_ZdaPvSt11align_val_t(ptr %naa, i64 8) builtin
+  %nwat = call ptr @_ZnwmSt11align_val_tRKSt9nothrow_t(i64 32, i64 8, ptr %nt) builtin
+  call void @_ZdlPvSt11align_val_tRKSt9nothrow_t(ptr %nwat, i64 8, ptr %nt) builtin
+  %naat = call ptr @_ZnamSt11align_val_tRKSt9nothrow_t(i64 32, i64 8, ptr %nt) builtin
+  call void @_ZdaPvSt11align_val_tRKSt9nothrow_t(ptr %naat, i64 8, ptr %nt) builtin
+  %nwa2 = call ptr @_ZnwmSt11align_val_t(i64 32, i64 8) builtin
+  call void @_ZdlPvmSt11align_val_t(ptr %nwa2, i64 32, i64 8) builtin
+  %naa2 = call ptr @_ZnamSt11align_val_t(i64 32, i64 8) builtin
+  call void @_ZdaPvmSt11align_val_t(ptr %naa2, i64 32, i64 8) builtin
 
   ; Check that the alignment assume does not prevent the removal.
-  %nwa3 = call i8* @_ZnwmSt11align_val_t(i64 32, i64 16) builtin
-  call void @llvm.assume(i1 true) [ "align"(i8* %nwa3, i64 16) ]
-  call void @_ZdlPvmSt11align_val_t(i8* %nwa3, i64 32, i64 16) builtin
+  %nwa3 = call ptr @_ZnwmSt11align_val_t(i64 32, i64 16) builtin
+  call void @llvm.assume(i1 true) [ "align"(ptr %nwa3, i64 16) ]
+  call void @_ZdlPvmSt11align_val_t(ptr %nwa3, i64 32, i64 16) builtin
 
   ret void
 }
 
 define void @test10()  {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    call void @_ZdlPv(i8* null)
+; CHECK-NEXT:    call void @_ZdlPv(ptr null)
 ; CHECK-NEXT:    ret void
 ;
-  call void @_ZdlPv(i8* null)
+  call void @_ZdlPv(ptr null)
   ret void
 }
 
 define void @test11() {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(8) i8* @_Znwm(i64 8) #[[ATTR5]]
-; CHECK-NEXT:    call void @_ZdlPv(i8* [[CALL]])
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(8) ptr @_Znwm(i64 8) #[[ATTR5]]
+; CHECK-NEXT:    call void @_ZdlPv(ptr [[CALL]])
 ; CHECK-NEXT:    ret void
 ;
-  %call = call i8* @_Znwm(i64 8) builtin
-  call void @_ZdlPv(i8* %call)
+  %call = call ptr @_Znwm(i64 8) builtin
+  call void @_ZdlPv(ptr %call)
   ret void
 }
 
-declare i8* @llvm.launder.invariant.group(i8*)
-declare i8* @llvm.strip.invariant.group(i8*)
+declare ptr @llvm.launder.invariant.group(ptr)
+declare ptr @llvm.strip.invariant.group(ptr)
 
 define void @test17() {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    ret void
 ;
-  %nw1 = call i8* @_Znwm(i64 32) builtin
-  %nw2 = call i8* @llvm.launder.invariant.group(i8* %nw1)
-  %nw3 = call i8* @llvm.strip.invariant.group(i8* %nw2)
-  store i8 1, i8* %nw3
-  call void @_ZdlPv(i8* %nw2) builtin
+  %nw1 = call ptr @_Znwm(i64 32) builtin
+  %nw2 = call ptr @llvm.launder.invariant.group(ptr %nw1)
+  %nw3 = call ptr @llvm.strip.invariant.group(ptr %nw2)
+  store i8 1, ptr %nw3
+  call void @_ZdlPv(ptr %nw2) builtin
   ret void
 }

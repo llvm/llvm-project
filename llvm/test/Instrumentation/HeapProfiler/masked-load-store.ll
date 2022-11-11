@@ -1,10 +1,10 @@
-; RUN: opt < %s -memprof -memprof-use-callbacks -S \
+; RUN: opt < %s -passes=memprof -memprof-use-callbacks -S \
 ; RUN:     | FileCheck %s -check-prefix=LOAD -check-prefix=STORE -check-prefix=ALL
-; RUN: opt < %s -memprof -memprof-use-callbacks -memprof-instrument-reads=0 -S \
+; RUN: opt < %s -passes=memprof -memprof-use-callbacks -memprof-instrument-reads=0 -S \
 ; RUN:     | FileCheck %s -check-prefix=NOLOAD -check-prefix=STORE -check-prefix=ALL
-; RUN: opt < %s -memprof -memprof-use-callbacks -memprof-instrument-writes=0 -S \
+; RUN: opt < %s -passes=memprof -memprof-use-callbacks -memprof-instrument-writes=0 -S \
 ; RUN:     | FileCheck %s -check-prefix=LOAD -check-prefix=NOSTORE -check-prefix=ALL
-; RUN: opt < %s -memprof -memprof-use-callbacks -memprof-instrument-reads=0 -memprof-instrument-writes=0 -S \
+; RUN: opt < %s -passes=memprof -memprof-use-callbacks -memprof-instrument-reads=0 -memprof-instrument-writes=0 -S \
 ; RUN:     | FileCheck %s -check-prefix=NOLOAD -check-prefix=NOSTORE -check-prefix=ALL
 ; Support memory profiling instrumentation for constant-mask llvm.masked.{load,store}
 

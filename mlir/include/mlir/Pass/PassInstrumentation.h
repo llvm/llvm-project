@@ -125,7 +125,8 @@ private:
 } // namespace mlir
 
 namespace llvm {
-template <> struct DenseMapInfo<mlir::PassInstrumentation::PipelineParentInfo> {
+template <>
+struct DenseMapInfo<mlir::PassInstrumentation::PipelineParentInfo> {
   using T = mlir::PassInstrumentation::PipelineParentInfo;
   using PairInfo = DenseMapInfo<std::pair<uint64_t, void *>>;
 

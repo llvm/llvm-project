@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.7.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.7.0 %s -emit-llvm -o - | FileCheck %s
 
 // CHECK: %{{[a-z0-9]+}} = notail call i32 @callee0(i32 noundef %
 // CHECK: %{{[a-z0-9]+}} = notail call i32 @callee1(i32 noundef %
 
 // Check that indirect calls do not have the notail marker.
-// CHECK: store i32 (i32)* @callee1, i32 (i32)** [[ALLOCA1:%[A-Za-z0-9]+]], align 8
-// CHECK: [[INDIRFUNC:%[0-9]+]] = load i32 (i32)*, i32 (i32)** [[ALLOCA1]], align 8
+// CHECK: store ptr @callee1, ptr [[ALLOCA1:%[A-Za-z0-9]+]], align 8
+// CHECK: [[INDIRFUNC:%[0-9]+]] = load ptr, ptr [[ALLOCA1]], align 8
 // CHECK: %{{[a-z0-9]+}} = call i32 [[INDIRFUNC]](i32 noundef %{{[0-9]+}}
 
 // CHECK: %{{[a-z0-9]+}} = call i32 @callee2(i32 noundef %

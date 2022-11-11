@@ -342,3 +342,96 @@ return:                                           ; preds = %for.body, %for.cond
   store i32 %b.03.lcssa, i32* %a, align 4
   ret void
 }
+
+; Test case for PR56044. Check that SCEVs for exit phis are properly invalidated.
+define i32 @test_pr56044(i64* %src, i32 %a) {
+; CHECK-LABEL: @test_pr56044(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_1_PEEL_BEGIN:%.*]]
+; CHECK:       loop.1.peel.begin:
+; CHECK-NEXT:    br label [[LOOP_1_PEEL:%.*]]
+; CHECK:       loop.1.peel:
+; CHECK-NEXT:    call void @fn(i32 5)
+; CHECK-NEXT:    [[L_PEEL:%.*]] = load i64, i64* [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[ADD_PEEL:%.*]] = add i64 [[L_PEEL]], [[L_PEEL]]
+; CHECK-NEXT:    [[EC_1_PEEL:%.*]] = icmp sgt i32 [[A:%.*]], 4
+; CHECK-NEXT:    br i1 [[EC_1_PEEL]], label [[MID:%.*]], label [[LOOP_1_PEEL_NEXT:%.*]]
+; CHECK:       loop.1.peel.next:
+; CHECK-NEXT:    br label [[LOOP_1_PEEL_NEXT1:%.*]]
+; CHECK:       loop.1.peel.next1:
+; CHECK-NEXT:    br label [[ENTRY_PEEL_NEWPH:%.*]]
+; CHECK:       entry.peel.newph:
+; CHECK-NEXT:    br label [[LOOP_1:%.*]]
+; CHECK:       loop.1:
+; CHECK-NEXT:    call void @fn(i32 18)
+; CHECK-NEXT:    [[L:%.*]] = load i64, i64* [[SRC]], align 8
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[L]], [[L]]
+; CHECK-NEXT:    [[EC_1:%.*]] = icmp sgt i32 [[A]], 4
+; CHECK-NEXT:    br i1 [[EC_1]], label [[MID_LOOPEXIT:%.*]], label [[LOOP_1]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       mid.loopexit:
+; CHECK-NEXT:    [[LCSSA_1_PH:%.*]] = phi i64 [ [[ADD]], [[LOOP_1]] ]
+; CHECK-NEXT:    br label [[MID]]
+; CHECK:       mid:
+; CHECK-NEXT:    [[LCSSA_1:%.*]] = phi i64 [ [[ADD_PEEL]], [[LOOP_1_PEEL]] ], [ [[LCSSA_1_PH]], [[MID_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[LCSSA_1]] to i32
+; CHECK-NEXT:    [[ADD_2:%.*]] = sub i32 [[A]], [[TRUNC]]
+; CHECK-NEXT:    br label [[LOOP_2_PEEL_BEGIN:%.*]]
+; CHECK:       loop.2.peel.begin:
+; CHECK-NEXT:    br label [[LOOP_2_PEEL:%.*]]
+; CHECK:       loop.2.peel:
+; CHECK-NEXT:    [[IV_2_NEXT_PEEL:%.*]] = add i32 0, [[ADD_2]]
+; CHECK-NEXT:    [[IV_1_NEXT_PEEL:%.*]] = add nuw nsw i32 0, 1
+; CHECK-NEXT:    [[EC_2_PEEL:%.*]] = icmp ult i32 [[IV_1_NEXT_PEEL]], 12345
+; CHECK-NEXT:    br i1 [[EC_2_PEEL]], label [[LOOP_2_PEEL_NEXT:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.2.peel.next:
+; CHECK-NEXT:    br label [[LOOP_2_PEEL_NEXT2:%.*]]
+; CHECK:       loop.2.peel.next2:
+; CHECK-NEXT:    br label [[MID_PEEL_NEWPH:%.*]]
+; CHECK:       mid.peel.newph:
+; CHECK-NEXT:    br label [[LOOP_2:%.*]]
+; CHECK:       loop.2:
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[IV_1_NEXT_PEEL]], [[MID_PEEL_NEWPH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP_2]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[IV_2_NEXT_PEEL]], [[MID_PEEL_NEWPH]] ], [ [[IV_2_NEXT:%.*]], [[LOOP_2]] ]
+; CHECK-NEXT:    [[IV_2_NEXT]] = add i32 2, [[IV_2]]
+; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw nsw i32 [[IV_1]], 1
+; CHECK-NEXT:    [[EC_2:%.*]] = icmp ult i32 [[IV_1_NEXT]], 12345
+; CHECK-NEXT:    br i1 [[EC_2]], label [[LOOP_2]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[LCSSA_2_PH:%.*]] = phi i32 [ [[IV_2_NEXT]], [[LOOP_2]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[LCSSA_2:%.*]] = phi i32 [ [[IV_2_NEXT_PEEL]], [[LOOP_2_PEEL]] ], [ [[LCSSA_2_PH]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i32 [[LCSSA_2]]
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %p.1 = phi i32 [ 5, %entry ], [ 18, %loop.1 ]
+  call void @fn(i32 %p.1)
+  %l = load i64, i64* %src, align 8
+  %add = add i64 %l, %l
+  %ec.1 = icmp sgt i32 %a, 4
+  br i1 %ec.1, label %mid, label %loop.1
+
+mid:
+  %lcssa.1 = phi i64 [ %add, %loop.1 ]
+  %trunc = trunc i64 %lcssa.1 to i32
+  %add.2 = sub i32 %a, %trunc
+  br label %loop.2
+
+loop.2:
+  %iv.1 = phi i32 [ 0, %mid ], [ %iv.1.next, %loop.2 ]
+  %iv.2 = phi i32 [ %add.2, %mid ], [ %iv.2.next, %loop.2 ]
+  %p.2 = phi i32 [ 0, %mid ], [ 2, %loop.2 ]
+  %iv.2.next = add i32 %p.2, %iv.2
+  %iv.1.next = add nuw nsw i32 %iv.1, 1
+  %ec.2 = icmp ult i32 %iv.1.next, 12345
+  br i1 %ec.2, label %loop.2, label %exit
+
+exit:
+  %lcssa.2 = phi i32 [ %iv.2.next, %loop.2 ]
+  ret i32 %lcssa.2
+}
+
+declare void @fn(i32)

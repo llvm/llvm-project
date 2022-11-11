@@ -1,4 +1,4 @@
-; RUN: opt < %s -tbaa -basic-aa -argpromotion -mem2reg -S | FileCheck %s
+; RUN: opt < %s -passes=argpromotion,mem2reg -S | FileCheck %s
 
 target datalayout = "E-p:64:64:64"
 

@@ -1,8 +1,8 @@
-// RUN: clang-pseudo -grammar=%cxx-bnf-file -source=%s --print-forest | FileCheck %s
+// RUN: clang-pseudo -grammar=cxx -source=%s --print-forest | FileCheck %s
 class Foo {
 public:
 };
-// CHECK:      decl-specifier-seq~class-specifier := class-head { member-specification }
+// CHECK:      decl-specifier-seq~class-specifier := class-head { member-specification [recover=Brackets] }
 // CHECK-NEXT: ├─class-head := class-key class-head-name
 // CHECK-NEXT: │ ├─class-key~CLASS := tok[0]
 // CHECK-NEXT: │ └─class-head-name~IDENTIFIER := tok[1]

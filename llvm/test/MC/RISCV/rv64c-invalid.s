@@ -1,4 +1,5 @@
 # RUN: not llvm-mc -triple=riscv64 -mattr=+c < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=riscv64 -mattr=+experimental-zca < %s 2>&1 | FileCheck %s
 
 ## GPRC
 c.ld ra, 4(sp) # CHECK: :[[@LINE]]:6: error: invalid operand for instruction

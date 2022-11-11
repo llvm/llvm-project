@@ -143,7 +143,7 @@ bool mlir::isLegalForReturnOpTypeConversionPattern(Operation *op,
   // If this is a `return` and the user pass wants to convert/transform across
   // function boundaries, then `converter` is invoked to check whether the the
   // `return` op is legal.
-  if (dyn_cast<ReturnOp>(op) && !returnOpAlwaysLegal)
+  if (isa<ReturnOp>(op) && !returnOpAlwaysLegal)
     return converter.isLegal(op);
 
   // ReturnLike operations have to be legalized with their parent. For

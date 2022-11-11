@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -O0 -ffreestanding -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -emit-llvm -o - -Wall -Werror |opt -instnamer -S |FileCheck %s
+// RUN: %clang_cc1 %s -O0 -ffreestanding -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -emit-llvm -o - -Wall -Werror | opt -passes=instnamer -S | FileCheck %s
 // This test checks validity of att\gcc style inline assmebly for avx512 k and Yk constraints.
 // Also checks mask register allows flexible type (size <= 64 bit)
 

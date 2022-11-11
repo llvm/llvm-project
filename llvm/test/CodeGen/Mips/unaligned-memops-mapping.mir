@@ -1,5 +1,5 @@
 # RUN: llc -O0 -march=mips -mcpu=mips32r3 -mattr=+micromips,+eva -start-after=finalize-isel \
-# RUN:     -filetype obj %s -o - | llvm-objdump --mattr=+eva -d - | FileCheck %s
+# RUN:     -filetype obj %s -o - | llvm-objdump --no-print-imm-hex --mattr=+eva -d - | FileCheck %s
 
 # Test that MIPS unaligned load/store instructions can be mapped to their
 # corresponding microMIPS instructions.

@@ -21,9 +21,9 @@ allocas:
 ; CHECK: _chkstk
 ; CHECK: ret
 
-define <8 x float> @foo(<8 x float> %y, i64* %p, double %x) {
+define <8 x float> @foo(<8 x float> %y, ptr %p, double %x) {
   %i = fptoui double %x to i64
-  store i64 %i, i64* %p
+  store i64 %i, ptr %p
   %ret = fadd <8 x float> %y, %y
   ret <8 x float> %ret
 }

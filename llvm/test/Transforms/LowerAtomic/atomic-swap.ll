@@ -9,7 +9,7 @@ define i8 @cmpswap() {
 ; CHECK-NEXT: [[SAME:%[a-z0-9]+]] = icmp eq i8 [[OLDVAL]], 0
 ; CHECK-NEXT: [[TO_STORE:%[a-z0-9]+]] = select i1 [[SAME]], i8 42, i8 [[OLDVAL]]
 ; CHECK-NEXT: store i8 [[TO_STORE]], i8* [[ADDR]]
-; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = insertvalue { i8, i1 } undef, i8 [[OLDVAL]], 0
+; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = insertvalue { i8, i1 } poison, i8 [[OLDVAL]], 0
 ; CHECK-NEXT: [[RES:%[a-z0-9]+]] = insertvalue { i8, i1 } [[TMP]], i1 [[SAME]], 1
 ; CHECK-NEXT: [[VAL:%[a-z0-9]+]] = extractvalue { i8, i1 } [[RES]], 0
   ret i8 %j

@@ -384,7 +384,7 @@ TYPE_PARSER(construct<PrivateOrSequence>(Parser<PrivateStmt>{}) ||
 
 // R730 end-type-stmt -> END TYPE [type-name]
 TYPE_PARSER(construct<EndTypeStmt>(
-    recovery("END TYPE" >> maybe(name), endStmtErrorRecovery)))
+    recovery("END TYPE" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R731 sequence-stmt -> SEQUENCE
 TYPE_PARSER(construct<SequenceStmt>("SEQUENCE"_tok))
@@ -607,7 +607,7 @@ TYPE_PARSER(
     construct<Enumerator>(namedConstant, maybe("=" >> scalarIntConstantExpr)))
 
 // R763 end-enum-stmt -> END ENUM
-TYPE_PARSER(recovery("END ENUM"_tok, "END" >> SkipPast<'\n'>{}) >>
+TYPE_PARSER(recovery("END ENUM"_tok, constructEndStmtErrorRecovery) >>
     construct<EndEnumStmt>())
 
 // R801 type-declaration-stmt ->
@@ -758,8 +758,8 @@ TYPE_PARSER(construct<AccessStmt>(accessSpec,
             Parser<AccessId>{}))))
 
 // R828 access-id -> access-name | generic-spec
-TYPE_PARSER(construct<AccessId>(indirect(genericSpec)) ||
-    construct<AccessId>(name)) // initially ambiguous with genericSpec
+// "access-name" is ambiguous with "generic-spec"
+TYPE_PARSER(construct<AccessId>(indirect(genericSpec)))
 
 // R829 allocatable-stmt -> ALLOCATABLE [::] allocatable-decl-list
 TYPE_PARSER(construct<AllocatableStmt>("ALLOCATABLE" >> maybe("::"_tok) >>
@@ -1074,6 +1074,9 @@ TYPE_PARSER(
 
 TYPE_PARSER(construct<CharLiteralConstantSubstring>(
     charLiteralConstant, parenthesized(Parser<SubstringRange>{})))
+
+TYPE_PARSER(sourced(construct<SubstringInquiry>(Parser<Substring>{}) /
+    ("%LEN"_tok || "%KIND"_tok)))
 
 // R910 substring-range -> [scalar-int-expr] : [scalar-int-expr]
 TYPE_PARSER(construct<SubstringRange>(

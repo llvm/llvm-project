@@ -1,10 +1,10 @@
 ; RUN: not llvm-as < %s > /dev/null 2>&1
 
-declare void @llvm.gcroot(i8**, i8*)
+declare void @llvm.gcroot(ptr, ptr)
 
-define void @f(i8* %x) {
-	%root = alloca i8*
-	call void @llvm.gcroot(i8** %root, i8* null)
-	store i8* %x, i8** %root
+define void @f(ptr %x) {
+	%root = alloca ptr
+	call void @llvm.gcroot(ptr %root, ptr null)
+	store ptr %x, ptr %root
 	ret void
 }

@@ -278,7 +278,7 @@ public:
       return llvm::make_error<StringError>(errc::invalid_argument,
                                            "Id not bound: " + BaseId);
     llvm::Optional<std::string> S = tooling::buildAccess(*E, *Match.Context);
-    if (!S.hasValue())
+    if (!S)
       return llvm::make_error<StringError>(
           errc::invalid_argument,
           "Could not construct object text from ID: " + BaseId);

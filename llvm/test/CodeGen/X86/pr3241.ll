@@ -9,7 +9,7 @@ entry:
 	%t1 = call i32 @safe_add_macro_uint32_t_u_u() nounwind
 	%t2 = icmp sgt i32 %t1, 0
 	%t3 = zext i1 %t2 to i32
-	%t4 = load i32, i32* @g_620, align 4
+	%t4 = load i32, ptr @g_620, align 4
 	%t5 = icmp eq i32 %t3, %t4
 	%t6 = xor i32 %p_21, 1
 	%t7 = call i32 @func_55(i32 %t6) nounwind

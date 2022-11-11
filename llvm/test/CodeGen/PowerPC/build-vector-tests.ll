@@ -127,26 +127,26 @@
 ;}                                                                            //
 ;// P8: lxvd2x, xxswapd, xvcvspsxws                                           //
 ;// P9: lxvx, xvcvspsxws                                                      //
-;vector int fromDiffMemConsAConvftoi(float *ptr) {                            //
+;vector int fromDiffMemConsAConvftoi(ptr ptr) {                            //
 ;  return (vector int) { ptr[0], ptr[1], ptr[2], ptr[3] };                    //
 ;}                                                                            //
 ;// P8: 2 x lxvd2x, 2 x xxswapd, vperm, xvcvspsxws                            //
 ;// P9: 2 x lxvx, vperm, xvcvspsxws                                           //
-;vector int fromDiffMemConsDConvftoi(float *ptr) {                            //
+;vector int fromDiffMemConsDConvftoi(ptr ptr) {                            //
 ;  return (vector int) { ptr[3], ptr[2], ptr[1], ptr[0] };                    //
 ;}                                                                            //
 ;// P8: 4 x lxsspx, 2 x xxmrghd, 2 x xvcvspsxws, vmrgew                       //
 ;// P9: 4 x lxssp, 2 x xxmrghd, 2 x xvcvspsxws, vmrgew                        //
 ;// Note: if the consecutive loads learns to handle pre-inc, this can be:     //
 ;//       sldi 2, load, xvcvspuxws                                            //
-;vector int fromDiffMemVarAConvftoi(float *arr, int elem) {                   //
+;vector int fromDiffMemVarAConvftoi(ptr arr, int elem) {                   //
 ;  return (vector int) { arr[elem], arr[elem+1], arr[elem+2], arr[elem+3] };  //
 ;}                                                                            //
 ;// P8: 4 x lxsspx, 2 x xxmrghd, 2 x xvcvspsxws, vmrgew                       //
 ;// P9: 4 x lxssp, 2 x xxmrghd, 2 x xvcvspsxws, vmrgew                        //
 ;// Note: if the consecutive loads learns to handle pre-inc, this can be:     //
 ;//       sldi 2, 2 x load, vperm, xvcvspuxws                                 //
-;vector int fromDiffMemVarDConvftoi(float *arr, int elem) {                   //
+;vector int fromDiffMemVarDConvftoi(ptr arr, int elem) {                   //
 ;  return (vector int) { arr[elem], arr[elem-1], arr[elem-2], arr[elem-3] };  //
 ;}                                                                            //
 ;// P8: xscvdpsxws, xxspltw                                                   //
@@ -156,7 +156,7 @@
 ;}                                                                            //
 ;// P8: lxsspx, xscvdpsxws, xxspltw                                           //
 ;// P9: lxvwsx, xvcvspsxws                                                    //
-;vector int spltMemValConvftoi(float *ptr) {                                  //
+;vector int spltMemValConvftoi(ptr ptr) {                                  //
 ;  return (vector int)*ptr;                                                   //
 ;}                                                                            //
 ;// P8: vspltisw                                                              //
@@ -176,22 +176,22 @@
 ;}                                                                            //
 ;// P8: 2 x lxvd2x, 2 x xxswapd, xxmrgld, xxmrghd, 2 x xvcvspsxws, vmrgew     //
 ;// P9: 2 x lxvx, 2 x xxswapd, xxmrgld, xxmrghd, 2 x xvcvspsxws, vmrgew       //
-;vector int fromDiffMemConsAConvdtoi(double *ptr) {                           //
+;vector int fromDiffMemConsAConvdtoi(ptr ptr) {                           //
 ;  return (vector int) { ptr[0], ptr[1], ptr[2], ptr[3] };                    //
 ;}                                                                            //
 ;// P8: 4 x lxsdx, 2 x xxmrghd, 2 x xvcvspsxws, vmrgew                        //
 ;// P9: 4 x lfd, 2 x xxmrghd, 2 x xvcvspsxws, vmrgew                          //
-;vector int fromDiffMemConsDConvdtoi(double *ptr) {                           //
+;vector int fromDiffMemConsDConvdtoi(ptr ptr) {                           //
 ;  return (vector int) { ptr[3], ptr[2], ptr[1], ptr[0] };                    //
 ;}                                                                            //
 ;// P8: lfdux, 3 x lxsdx, 2 x xxmrghd, 2 x xvcvspsxws, vmrgew                 //
 ;// P9: lfdux, 3 x lfd, 2 x xxmrghd, 2 x xvcvspsxws, vmrgew                   //
-;vector int fromDiffMemVarAConvdtoi(double *arr, int elem) {                  //
+;vector int fromDiffMemVarAConvdtoi(ptr arr, int elem) {                  //
 ;  return (vector int) { arr[elem], arr[elem+1], arr[elem+2], arr[elem+3] };  //
 ;}                                                                            //
 ;// P8: lfdux, 3 x lxsdx, 2 x xxmrghd, 2 x xvcvspsxws, vmrgew                 //
 ;// P9: lfdux, 3 x lfd, 2 x xxmrghd, 2 x xvcvspsxws, vmrgew                   //
-;vector int fromDiffMemVarDConvdtoi(double *arr, int elem) {                  //
+;vector int fromDiffMemVarDConvdtoi(ptr arr, int elem) {                  //
 ;  return (vector int) { arr[elem], arr[elem-1], arr[elem-2], arr[elem-3] };  //
 ;}                                                                            //
 ;// P8: xscvdpsxws, xxspltw                                                   //
@@ -201,7 +201,7 @@
 ;}                                                                            //
 ;// P8: lxsdx, xscvdpsxws, xxspltw                                            //
 ;// P9: lxssp, xscvdpsxws, xxspltw                                            //
-;vector int spltMemValConvdtoi(double *ptr) {                                 //
+;vector int spltMemValConvdtoi(ptr ptr) {                                 //
 ;  return (vector int)*ptr;                                                   //
 ;}                                                                            //
 ;/*=================================== int ===================================*/
@@ -297,19 +297,19 @@
 ;}                                                                            //
 ;// P8: lxvd2x, xxswapd, xvcvspuxws                                           //
 ;// P9: lxvx, xvcvspuxws                                                      //
-;vector unsigned int fromDiffMemConsAConvftoui(float *ptr) {                  //
+;vector unsigned int fromDiffMemConsAConvftoui(ptr ptr) {                  //
 ;  return (vector unsigned int) { ptr[0], ptr[1], ptr[2], ptr[3] };           //
 ;}                                                                            //
 ;// P8: 2 x lxvd2x, 2 x xxswapd, vperm, xvcvspuxws                            //
 ;// P9: 2 x lxvx, vperm, xvcvspuxws                                           //
-;vector unsigned int fromDiffMemConsDConvftoui(float *ptr) {                  //
+;vector unsigned int fromDiffMemConsDConvftoui(ptr ptr) {                  //
 ;  return (vector unsigned int) { ptr[3], ptr[2], ptr[1], ptr[0] };           //
 ;}                                                                            //
 ;// P8: lfsux, 3 x lxsspx, 2 x xxmrghd, 2 x xvcvspuxws, vmrgew                //
 ;// P9: lfsux, 3 x lfs, 2 x xxmrghd, 2 x xvcvspuxws, vmrgew                   //
 ;// Note: if the consecutive loads learns to handle pre-inc, this can be:     //
 ;//       sldi 2, load, xvcvspuxws                                            //
-;vector unsigned int fromDiffMemVarAConvftoui(float *arr, int elem) {         //
+;vector unsigned int fromDiffMemVarAConvftoui(ptr arr, int elem) {         //
 ;  return (vector unsigned int) { arr[elem], arr[elem+1],                     //
 ;                                 arr[elem+2], arr[elem+3] };                 //
 ;}                                                                            //
@@ -317,7 +317,7 @@
 ;// P9: lfsux, 3 x lfs, 2 x xxmrghd, 2 x xvcvspuxws, vmrgew                   //
 ;// Note: if the consecutive loads learns to handle pre-inc, this can be:     //
 ;//       sldi 2, 2 x load, vperm, xvcvspuxws                                 //
-;vector unsigned int fromDiffMemVarDConvftoui(float *arr, int elem) {         //
+;vector unsigned int fromDiffMemVarDConvftoui(ptr arr, int elem) {         //
 ;  return (vector unsigned int) { arr[elem], arr[elem-1],                     //
 ;                                 arr[elem-2], arr[elem-3] };                 //
 ;}                                                                            //
@@ -328,7 +328,7 @@
 ;}                                                                            //
 ;// P8: lxsspx, xscvdpuxws, xxspltw                                           //
 ;// P9: lxvwsx, xvcvspuxws                                                    //
-;vector unsigned int spltMemValConvftoui(float *ptr) {                        //
+;vector unsigned int spltMemValConvftoui(ptr ptr) {                        //
 ;  return (vector unsigned int)*ptr;                                          //
 ;}                                                                            //
 ;// P8: vspltisw                                                              //
@@ -349,23 +349,23 @@
 ;}                                                                            //
 ;// P8: 2 x lxvd2x, 2 x xxswapd, xxmrgld, xxmrghd, 2 x xvcvspuxws, vmrgew     //
 ;// P9: 2 x lxvx, xxmrgld, xxmrghd, 2 x xvcvspuxws, vmrgew                    //
-;vector unsigned int fromDiffMemConsAConvdtoui(double *ptr) {                 //
+;vector unsigned int fromDiffMemConsAConvdtoui(ptr ptr) {                 //
 ;  return (vector unsigned int) { ptr[0], ptr[1], ptr[2], ptr[3] };           //
 ;}                                                                            //
 ;// P8: 4 x lxsdx, 2 x xxmrghd, 2 x xvcvspuxws, vmrgew                        //
 ;// P9: 4 x lfd, 2 x xxmrghd, 2 x xvcvspuxws, vmrgew                          //
-;vector unsigned int fromDiffMemConsDConvdtoui(double *ptr) {                 //
+;vector unsigned int fromDiffMemConsDConvdtoui(ptr ptr) {                 //
 ;  return (vector unsigned int) { ptr[3], ptr[2], ptr[1], ptr[0] };           //
 ;}                                                                            //
 ;// P8: lfdux, 3 x lxsdx, 2 x xxmrghd, 2 x xvcvspuxws, vmrgew                 //
 ;// P9: lfdux, 3 x lfd, 2 x xxmrghd, 2 x xvcvspuxws, vmrgew                   //
-;vector unsigned int fromDiffMemVarAConvdtoui(double *arr, int elem) {        //
+;vector unsigned int fromDiffMemVarAConvdtoui(ptr arr, int elem) {        //
 ;  return (vector unsigned int) { arr[elem], arr[elem+1],                     //
 ;                                 arr[elem+2], arr[elem+3] };                 //
 ;}                                                                            //
 ;// P8: lfdux, 3 x lxsdx, 2 x xxmrghd, 2 x xvcvspuxws, vmrgew                 //
 ;// P9: lfdux, 3 x lfd, 2 x xxmrghd, 2 x xvcvspuxws, vmrgew                   //
-;vector unsigned int fromDiffMemVarDConvdtoui(double *arr, int elem) {        //
+;vector unsigned int fromDiffMemVarDConvdtoui(ptr arr, int elem) {        //
 ;  return (vector unsigned int) { arr[elem], arr[elem-1],                     //
 ;                                 arr[elem-2], arr[elem-3] };                 //
 ;}                                                                            //
@@ -376,7 +376,7 @@
 ;}                                                                            //
 ;// P8: lxsspx, xscvdpuxws, xxspltw                                           //
 ;// P9: lfd, xscvdpuxws, xxspltw                                              //
-;vector unsigned int spltMemValConvdtoui(double *ptr) {                       //
+;vector unsigned int spltMemValConvdtoui(ptr ptr) {                       //
 ;  return (vector unsigned int)*ptr;                                          //
 ;}                                                                            //
 ;/*=============================== unsigned int ==============================*/
@@ -468,22 +468,22 @@
 ;}                                                                            //
 ;// P8: 2 x lxsspx, xxmrghd, xvcvdpsxds                                       //
 ;// P9: 2 x lxssp, xxmrghd, xvcvdpsxds                                        //
-;vector long long fromDiffMemConsAConvftoll(float *ptr) {                     //
+;vector long long fromDiffMemConsAConvftoll(ptr ptr) {                     //
 ;  return (vector long long) { ptr[0], ptr[1] };                              //
 ;}                                                                            //
 ;// P8: 2 x lxsspx, xxmrghd, xvcvdpsxds                                       //
 ;// P9: 2 x lxssp, xxmrghd, xvcvdpsxds                                        //
-;vector long long fromDiffMemConsDConvftoll(float *ptr) {                     //
+;vector long long fromDiffMemConsDConvftoll(ptr ptr) {                     //
 ;  return (vector long long) { ptr[3], ptr[2] };                              //
 ;}                                                                            //
 ;// P8: sldi 2, lfsux, lxsspx, xxmrghd, xvcvdpsxds                            //
 ;// P9: sldi 2, lfsux, lfs, xxmrghd, xvcvdpsxds                               //
-;vector long long fromDiffMemVarAConvftoll(float *arr, int elem) {            //
+;vector long long fromDiffMemVarAConvftoll(ptr arr, int elem) {            //
 ;  return (vector long long) { arr[elem], arr[elem+1] };                      //
 ;}                                                                            //
 ;// P8: sldi 2, lfsux, lxsspx, xxmrghd, xvcvdpsxds                            //
 ;// P9: sldi 2, lfsux, lfs, xxmrghd, xvcvdpsxds                               //
-;vector long long fromDiffMemVarDConvftoll(float *arr, int elem) {            //
+;vector long long fromDiffMemVarDConvftoll(ptr arr, int elem) {            //
 ;  return (vector long long) { arr[elem], arr[elem-1] };                      //
 ;}                                                                            //
 ;// P8: xscvdpsxds, xxspltd                                                   //
@@ -493,7 +493,7 @@
 ;}                                                                            //
 ;// P8: lxsspx, xscvdpsxds, xxspltd                                           //
 ;// P9: lfs, xscvdpsxds, xxspltd                                              //
-;vector long long spltMemValConvftoll(float *ptr) {                           //
+;vector long long spltMemValConvftoll(ptr ptr) {                           //
 ;  return (vector long long)*ptr;                                             //
 ;}                                                                            //
 ;// P8: constant pool load (possible: vmrgew (xxlxor), (vspltisw))            //
@@ -513,22 +513,22 @@
 ;}                                                                            //
 ;// P8: lxvd2x, xxswapd, xvcvdpsxds                                           //
 ;// P9: lxvx, xvcvdpsxds                                                      //
-;vector long long fromDiffMemConsAConvdtoll(double *ptr) {                    //
+;vector long long fromDiffMemConsAConvdtoll(ptr ptr) {                    //
 ;  return (vector long long) { ptr[0], ptr[1] };                              //
 ;}                                                                            //
 ;// P8: lxvd2x, xvcvdpsxds                                                    //
 ;// P9: lxvx, xxswapd, xvcvdpsxds                                             //
-;vector long long fromDiffMemConsDConvdtoll(double *ptr) {                    //
+;vector long long fromDiffMemConsDConvdtoll(ptr ptr) {                    //
 ;  return (vector long long) { ptr[3], ptr[2] };                              //
 ;}                                                                            //
 ;// P8: sldi 3, lxvd2x, xxswapd, xvcvdpsxds                                   //
 ;// P9: sldi 3, lxvx, xvcvdpsxds                                              //
-;vector long long fromDiffMemVarAConvdtoll(double *arr, int elem) {           //
+;vector long long fromDiffMemVarAConvdtoll(ptr arr, int elem) {           //
 ;  return (vector long long) { arr[elem], arr[elem+1] };                      //
 ;}                                                                            //
 ;// P8: sldi 3, lxvd2x, xvcvdpsxds                                            //
 ;// P9: sldi 3, lxvx, xxswapd, xvcvdpsxds                                     //
-;vector long long fromDiffMemVarDConvdtoll(double *arr, int elem) {           //
+;vector long long fromDiffMemVarDConvdtoll(ptr arr, int elem) {           //
 ;  return (vector long long) { arr[elem], arr[elem-1] };                      //
 ;}                                                                            //
 ;// P8: xscvdpsxds, xxspltd                                                   //
@@ -538,7 +538,7 @@
 ;}                                                                            //
 ;// P8: lxvdsx, xvcvdpsxds                                                    //
 ;// P9: lxvdsx, xvcvdpsxds                                                    //
-;vector long long spltMemValConvdtoll(double *ptr) {                          //
+;vector long long spltMemValConvdtoll(ptr ptr) {                          //
 ;  return (vector long long)*ptr;                                             //
 ;}                                                                            //
 ;/*=============================== long long =================================*/
@@ -634,22 +634,22 @@
 ;}                                                                            //
 ;// P8: 2 x lxsspx, xxmrghd, xvcvdpuxds                                       //
 ;// P9: 2 x lxssp, xxmrghd, xvcvdpuxds                                        //
-;vector unsigned long long fromDiffMemConsAConvftoull(float *ptr) {           //
+;vector unsigned long long fromDiffMemConsAConvftoull(ptr ptr) {           //
 ;  return (vector unsigned long long) { ptr[0], ptr[1] };                     //
 ;}                                                                            //
 ;// P8: 2 x lxsspx, xxmrghd, xvcvdpuxds                                       //
 ;// P9: 2 x lxssp, xxmrghd, xvcvdpuxds                                        //
-;vector unsigned long long fromDiffMemConsDConvftoull(float *ptr) {           //
+;vector unsigned long long fromDiffMemConsDConvftoull(ptr ptr) {           //
 ;  return (vector unsigned long long) { ptr[3], ptr[2] };                     //
 ;}                                                                            //
 ;// P8: sldi 2, lfsux, lxsspx, xxmrghd, xvcvdpuxds                            //
 ;// P9: sldi 2, lfsux, lfs, xxmrghd, xvcvdpuxds                               //
-;vector unsigned long long fromDiffMemVarAConvftoull(float *arr, int elem) {  //
+;vector unsigned long long fromDiffMemVarAConvftoull(ptr arr, int elem) {  //
 ;  return (vector unsigned long long) { arr[elem], arr[elem+1] };             //
 ;}                                                                            //
 ;// P8: sldi 2, lfsux, lxsspx, xxmrghd, xvcvdpuxds                            //
 ;// P9: sldi 2, lfsux, lfs, xxmrghd, xvcvdpuxds                               //
-;vector unsigned long long fromDiffMemVarDConvftoull(float *arr, int elem) {  //
+;vector unsigned long long fromDiffMemVarDConvftoull(ptr arr, int elem) {  //
 ;  return (vector unsigned long long) { arr[elem], arr[elem-1] };             //
 ;}                                                                            //
 ;// P8: xscvdpuxds, xxspltd                                                   //
@@ -659,7 +659,7 @@
 ;}                                                                            //
 ;// P8: lxsspx, xscvdpuxds, xxspltd                                           //
 ;// P9: lfs, xscvdpuxds, xxspltd                                              //
-;vector unsigned long long spltMemValConvftoull(float *ptr) {                 //
+;vector unsigned long long spltMemValConvftoull(ptr ptr) {                 //
 ;  return (vector unsigned long long)*ptr;                                    //
 ;}                                                                            //
 ;// P8: constant pool load (possible: vmrgew (xxlxor), (vspltisw))            //
@@ -679,22 +679,22 @@
 ;}                                                                            //
 ;// P8: lxvd2x, xxswapd, xvcvdpuxds                                           //
 ;// P9: lxvx, xvcvdpuxds                                                      //
-;vector unsigned long long fromDiffMemConsAConvdtoull(double *ptr) {          //
+;vector unsigned long long fromDiffMemConsAConvdtoull(ptr ptr) {          //
 ;  return (vector unsigned long long) { ptr[0], ptr[1] };                     //
 ;}                                                                            //
 ;// P8: lxvd2x, xvcvdpuxds                                                    //
 ;// P9: lxvx, xxswapd, xvcvdpuxds                                             //
-;vector unsigned long long fromDiffMemConsDConvdtoull(double *ptr) {          //
+;vector unsigned long long fromDiffMemConsDConvdtoull(ptr ptr) {          //
 ;  return (vector unsigned long long) { ptr[3], ptr[2] };                     //
 ;}                                                                            //
 ;// P8: sldi 3, lxvd2x, xxswapd, xvcvdpuxds                                   //
 ;// P9: sldi 3, lxvx, xvcvdpuxds                                              //
-;vector unsigned long long fromDiffMemVarAConvdtoull(double *arr, int elem) { //
+;vector unsigned long long fromDiffMemVarAConvdtoull(ptr arr, int elem) { //
 ;  return (vector unsigned long long) { arr[elem], arr[elem+1] };             //
 ;}                                                                            //
 ;// P8: sldi 3, lxvd2x, xvcvdpuxds                                            //
 ;// P9: sldi 3, lxvx, xxswapd, xvcvdpuxds                                     //
-;vector unsigned long long fromDiffMemVarDConvdtoull(double *arr, int elem) { //
+;vector unsigned long long fromDiffMemVarDConvdtoull(ptr arr, int elem) { //
 ;  return (vector unsigned long long) { arr[elem], arr[elem-1] };             //
 ;}                                                                            //
 ;// P8: xscvdpuxds, xxspltd                                                   //
@@ -704,7 +704,7 @@
 ;}                                                                            //
 ;// P8: lxvdsx, xvcvdpuxds                                                    //
 ;// P9: lxvdsx, xvcvdpuxds                                                    //
-;vector unsigned long long spltMemValConvdtoull(double *ptr) {                //
+;vector unsigned long long spltMemValConvdtoull(ptr ptr) {                //
 ;  return (vector unsigned long long)*ptr;                                    //
 ;}                                                                            //
 ;/*========================== unsigned long long ==============================*/
@@ -879,13 +879,14 @@ define <4 x i32> @fromDiffConstsi() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 242, i32 -113, i32 889, i32 19>
 }
 
-define <4 x i32> @fromDiffMemConsAi(i32* nocapture readonly %arr) {
+define <4 x i32> @fromDiffMemConsAi(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsAi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv v2, 0(r3)
@@ -907,21 +908,21 @@ define <4 x i32> @fromDiffMemConsAi(i32* nocapture readonly %arr) {
 ; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load i32, i32* %arr, align 4
+  %0 = load i32, ptr %arr, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i32, i32* %arr, i64 1
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %arr, i64 1
+  %1 = load i32, ptr %arrayidx1, align 4
   %vecinit2 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
-  %arrayidx3 = getelementptr inbounds i32, i32* %arr, i64 2
-  %2 = load i32, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %arr, i64 2
+  %2 = load i32, ptr %arrayidx3, align 4
   %vecinit4 = insertelement <4 x i32> %vecinit2, i32 %2, i32 2
-  %arrayidx5 = getelementptr inbounds i32, i32* %arr, i64 3
-  %3 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %arr, i64 3
+  %3 = load i32, ptr %arrayidx5, align 4
   %vecinit6 = insertelement <4 x i32> %vecinit4, i32 %3, i32 3
   ret <4 x i32> %vecinit6
 }
 
-define <4 x i32> @fromDiffMemConsDi(i32* nocapture readonly %arr) {
+define <4 x i32> @fromDiffMemConsDi(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsDi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv v2, 0(r3)
@@ -947,29 +948,30 @@ define <4 x i32> @fromDiffMemConsDi(i32* nocapture readonly %arr) {
 ;
 ; P8LE-LABEL: fromDiffMemConsDi:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
 ; P8LE-NEXT:    addis r4, r2, .LCPI7_0@toc@ha
-; P8LE-NEXT:    addi r3, r4, .LCPI7_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
-; P8LE-NEXT:    xxswapd v3, vs0
-; P8LE-NEXT:    vperm v2, v3, v3, v2
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    addi r4, r4, .LCPI7_0@toc@l
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    xxswapd v3, vs1
+; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 3
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 3
+  %0 = load i32, ptr %arrayidx, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i32, i32* %arr, i64 2
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %arr, i64 2
+  %1 = load i32, ptr %arrayidx1, align 4
   %vecinit2 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
-  %arrayidx3 = getelementptr inbounds i32, i32* %arr, i64 1
-  %2 = load i32, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %arr, i64 1
+  %2 = load i32, ptr %arrayidx3, align 4
   %vecinit4 = insertelement <4 x i32> %vecinit2, i32 %2, i32 2
-  %3 = load i32, i32* %arr, align 4
+  %3 = load i32, ptr %arr, align 4
   %vecinit6 = insertelement <4 x i32> %vecinit4, i32 %3, i32 3
   ret <4 x i32> %vecinit6
 }
 
-define <4 x i32> @fromDiffMemVarAi(i32* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarAi(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -996,28 +998,28 @@ define <4 x i32> @fromDiffMemVarAi(i32* nocapture readonly %arr, i32 signext %el
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds i32, i32* %arr, i64 %idxprom1
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %arr, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx2, align 4
   %vecinit3 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
   %add4 = add nsw i32 %elem, 2
   %idxprom5 = sext i32 %add4 to i64
-  %arrayidx6 = getelementptr inbounds i32, i32* %arr, i64 %idxprom5
-  %2 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %arr, i64 %idxprom5
+  %2 = load i32, ptr %arrayidx6, align 4
   %vecinit7 = insertelement <4 x i32> %vecinit3, i32 %2, i32 2
   %add8 = add nsw i32 %elem, 3
   %idxprom9 = sext i32 %add8 to i64
-  %arrayidx10 = getelementptr inbounds i32, i32* %arr, i64 %idxprom9
-  %3 = load i32, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %arr, i64 %idxprom9
+  %3 = load i32, ptr %arrayidx10, align 4
   %vecinit11 = insertelement <4 x i32> %vecinit7, i32 %3, i32 3
   ret <4 x i32> %vecinit11
 }
 
-define <4 x i32> @fromDiffMemVarDi(i32* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarDi(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -1059,37 +1061,38 @@ define <4 x i32> @fromDiffMemVarDi(i32* nocapture readonly %arr, i32 signext %el
 ; P8LE-NEXT:    sldi r4, r4, 2
 ; P8LE-NEXT:    addis r5, r2, .LCPI9_0@toc@ha
 ; P8LE-NEXT:    add r3, r3, r4
+; P8LE-NEXT:    addi r4, r5, .LCPI9_0@toc@l
 ; P8LE-NEXT:    addi r3, r3, -12
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
 ; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    addi r3, r5, .LCPI9_0@toc@l
-; P8LE-NEXT:    lvx v3, 0, r3
+; P8LE-NEXT:    xxswapd v3, vs1
 ; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds i32, i32* %arr, i64 %idxprom1
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %arr, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx2, align 4
   %vecinit3 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
   %sub4 = add nsw i32 %elem, -2
   %idxprom5 = sext i32 %sub4 to i64
-  %arrayidx6 = getelementptr inbounds i32, i32* %arr, i64 %idxprom5
-  %2 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %arr, i64 %idxprom5
+  %2 = load i32, ptr %arrayidx6, align 4
   %vecinit7 = insertelement <4 x i32> %vecinit3, i32 %2, i32 2
   %sub8 = add nsw i32 %elem, -3
   %idxprom9 = sext i32 %sub8 to i64
-  %arrayidx10 = getelementptr inbounds i32, i32* %arr, i64 %idxprom9
-  %3 = load i32, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %arr, i64 %idxprom9
+  %3 = load i32, ptr %arrayidx10, align 4
   %vecinit11 = insertelement <4 x i32> %vecinit7, i32 %3, i32 3
   ret <4 x i32> %vecinit11
 }
 
-define <4 x i32> @fromRandMemConsi(i32* nocapture readonly %arr) {
+define <4 x i32> @fromRandMemConsi(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromRandMemConsi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lwz r4, 16(r3)
@@ -1138,22 +1141,22 @@ define <4 x i32> @fromRandMemConsi(i32* nocapture readonly %arr) {
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 4
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 4
+  %0 = load i32, ptr %arrayidx, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i32, i32* %arr, i64 18
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %arr, i64 18
+  %1 = load i32, ptr %arrayidx1, align 4
   %vecinit2 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
-  %arrayidx3 = getelementptr inbounds i32, i32* %arr, i64 2
-  %2 = load i32, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %arr, i64 2
+  %2 = load i32, ptr %arrayidx3, align 4
   %vecinit4 = insertelement <4 x i32> %vecinit2, i32 %2, i32 2
-  %arrayidx5 = getelementptr inbounds i32, i32* %arr, i64 88
-  %3 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %arr, i64 88
+  %3 = load i32, ptr %arrayidx5, align 4
   %vecinit6 = insertelement <4 x i32> %vecinit4, i32 %3, i32 3
   ret <4 x i32> %vecinit6
 }
 
-define <4 x i32> @fromRandMemVari(i32* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromRandMemVari(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromRandMemVari:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -1212,23 +1215,23 @@ define <4 x i32> @fromRandMemVari(i32* nocapture readonly %arr, i32 signext %ele
 entry:
   %add = add nsw i32 %elem, 4
   %idxprom = sext i32 %add to i64
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
   %add1 = add nsw i32 %elem, 1
   %idxprom2 = sext i32 %add1 to i64
-  %arrayidx3 = getelementptr inbounds i32, i32* %arr, i64 %idxprom2
-  %1 = load i32, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %arr, i64 %idxprom2
+  %1 = load i32, ptr %arrayidx3, align 4
   %vecinit4 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
   %add5 = add nsw i32 %elem, 2
   %idxprom6 = sext i32 %add5 to i64
-  %arrayidx7 = getelementptr inbounds i32, i32* %arr, i64 %idxprom6
-  %2 = load i32, i32* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds i32, ptr %arr, i64 %idxprom6
+  %2 = load i32, ptr %arrayidx7, align 4
   %vecinit8 = insertelement <4 x i32> %vecinit4, i32 %2, i32 2
   %add9 = add nsw i32 %elem, 8
   %idxprom10 = sext i32 %add9 to i64
-  %arrayidx11 = getelementptr inbounds i32, i32* %arr, i64 %idxprom10
-  %3 = load i32, i32* %arrayidx11, align 4
+  %arrayidx11 = getelementptr inbounds i32, ptr %arr, i64 %idxprom10
+  %3 = load i32, ptr %arrayidx11, align 4
   %vecinit12 = insertelement <4 x i32> %vecinit8, i32 %3, i32 3
   ret <4 x i32> %vecinit12
 }
@@ -1261,7 +1264,7 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-define <4 x i32> @spltMemVali(i32* nocapture readonly %ptr) {
+define <4 x i32> @spltMemVali(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemVali:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxvwsx v2, 0, r3
@@ -1284,7 +1287,7 @@ define <4 x i32> @spltMemVali(i32* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load i32, i32* %ptr, align 4
+  %0 = load i32, ptr %ptr, align 4
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %0, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %splat.splat
@@ -1404,13 +1407,14 @@ define <4 x i32> @fromDiffConstsConvftoi() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI16_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>
 }
 
-define <4 x i32> @fromDiffMemConsAConvftoi(float* nocapture readonly %ptr) {
+define <4 x i32> @fromDiffMemConsAConvftoi(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvftoi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv vs0, 0(r3)
@@ -1436,13 +1440,12 @@ define <4 x i32> @fromDiffMemConsAConvftoi(float* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvspsxws v2, v2
 ; P8LE-NEXT:    blr
 entry:
-  %0 = bitcast float* %ptr to <4 x float>*
-  %1 = load <4 x float>, <4 x float>* %0, align 4
-  %2 = fptosi <4 x float> %1 to <4 x i32>
-  ret <4 x i32> %2
+  %0 = load <4 x float>, ptr %ptr, align 4
+  %1 = fptosi <4 x float> %0 to <4 x i32>
+  ret <4 x i32> %1
 }
 
-define <4 x i32> @fromDiffMemConsDConvftoi(float* nocapture readonly %ptr) {
+define <4 x i32> @fromDiffMemConsDConvftoi(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvftoi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv v2, 0(r3)
@@ -1475,34 +1478,35 @@ define <4 x i32> @fromDiffMemConsDConvftoi(float* nocapture readonly %ptr) {
 ;
 ; P8LE-LABEL: fromDiffMemConsDConvftoi:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
 ; P8LE-NEXT:    addis r4, r2, .LCPI18_0@toc@ha
-; P8LE-NEXT:    addi r3, r4, .LCPI18_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
-; P8LE-NEXT:    xxswapd v3, vs0
-; P8LE-NEXT:    vperm v2, v3, v3, v2
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    addi r4, r4, .LCPI18_0@toc@l
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    xxswapd v3, vs1
+; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    xvcvspsxws v2, v2
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds float, float* %ptr, i64 3
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %ptr, i64 3
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptosi float %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
-  %arrayidx1 = getelementptr inbounds float, float* %ptr, i64 2
-  %1 = load float, float* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %ptr, i64 2
+  %1 = load float, ptr %arrayidx1, align 4
   %conv2 = fptosi float %1 to i32
   %vecinit3 = insertelement <4 x i32> %vecinit, i32 %conv2, i32 1
-  %arrayidx4 = getelementptr inbounds float, float* %ptr, i64 1
-  %2 = load float, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %ptr, i64 1
+  %2 = load float, ptr %arrayidx4, align 4
   %conv5 = fptosi float %2 to i32
   %vecinit6 = insertelement <4 x i32> %vecinit3, i32 %conv5, i32 2
-  %3 = load float, float* %ptr, align 4
+  %3 = load float, ptr %ptr, align 4
   %conv8 = fptosi float %3 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit6, i32 %conv8, i32 3
   ret <4 x i32> %vecinit9
 }
 
-define <4 x i32> @fromDiffMemVarAConvftoi(float* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarAConvftoi(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvftoi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -1564,32 +1568,32 @@ define <4 x i32> @fromDiffMemVarAConvftoi(float* nocapture readonly %arr, i32 si
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds float, float* %arr, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %arr, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptosi float %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds float, float* %arr, i64 %idxprom1
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %arr, i64 %idxprom1
+  %1 = load float, ptr %arrayidx2, align 4
   %conv3 = fptosi float %1 to i32
   %vecinit4 = insertelement <4 x i32> %vecinit, i32 %conv3, i32 1
   %add5 = add nsw i32 %elem, 2
   %idxprom6 = sext i32 %add5 to i64
-  %arrayidx7 = getelementptr inbounds float, float* %arr, i64 %idxprom6
-  %2 = load float, float* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds float, ptr %arr, i64 %idxprom6
+  %2 = load float, ptr %arrayidx7, align 4
   %conv8 = fptosi float %2 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit4, i32 %conv8, i32 2
   %add10 = add nsw i32 %elem, 3
   %idxprom11 = sext i32 %add10 to i64
-  %arrayidx12 = getelementptr inbounds float, float* %arr, i64 %idxprom11
-  %3 = load float, float* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds float, ptr %arr, i64 %idxprom11
+  %3 = load float, ptr %arrayidx12, align 4
   %conv13 = fptosi float %3 to i32
   %vecinit14 = insertelement <4 x i32> %vecinit9, i32 %conv13, i32 3
   ret <4 x i32> %vecinit14
 }
 
-define <4 x i32> @fromDiffMemVarDConvftoi(float* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarDConvftoi(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvftoi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -1651,26 +1655,26 @@ define <4 x i32> @fromDiffMemVarDConvftoi(float* nocapture readonly %arr, i32 si
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds float, float* %arr, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %arr, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptosi float %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds float, float* %arr, i64 %idxprom1
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %arr, i64 %idxprom1
+  %1 = load float, ptr %arrayidx2, align 4
   %conv3 = fptosi float %1 to i32
   %vecinit4 = insertelement <4 x i32> %vecinit, i32 %conv3, i32 1
   %sub5 = add nsw i32 %elem, -2
   %idxprom6 = sext i32 %sub5 to i64
-  %arrayidx7 = getelementptr inbounds float, float* %arr, i64 %idxprom6
-  %2 = load float, float* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds float, ptr %arr, i64 %idxprom6
+  %2 = load float, ptr %arrayidx7, align 4
   %conv8 = fptosi float %2 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit4, i32 %conv8, i32 2
   %sub10 = add nsw i32 %elem, -3
   %idxprom11 = sext i32 %sub10 to i64
-  %arrayidx12 = getelementptr inbounds float, float* %arr, i64 %idxprom11
-  %3 = load float, float* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds float, ptr %arr, i64 %idxprom11
+  %3 = load float, ptr %arrayidx12, align 4
   %conv13 = fptosi float %3 to i32
   %vecinit14 = insertelement <4 x i32> %vecinit9, i32 %conv13, i32 3
   ret <4 x i32> %vecinit14
@@ -1708,7 +1712,7 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-define <4 x i32> @spltMemValConvftoi(float* nocapture readonly %ptr) {
+define <4 x i32> @spltMemValConvftoi(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvftoi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfiwzx f0, 0, r3
@@ -1737,7 +1741,7 @@ define <4 x i32> @spltMemValConvftoi(float* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load float, float* %ptr, align 4
+  %0 = load float, ptr %ptr, align 4
   %conv = fptosi float %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -1858,13 +1862,14 @@ define <4 x i32> @fromDiffConstsConvdtoi() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI25_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI25_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>
 }
 
-define <4 x i32> @fromDiffMemConsAConvdtoi(double* nocapture readonly %ptr) {
+define <4 x i32> @fromDiffMemConsAConvdtoi(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvdtoi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv vs0, 0(r3)
@@ -1913,18 +1918,16 @@ define <4 x i32> @fromDiffMemConsAConvdtoi(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    vmrgew v2, v3, v2
 ; P8LE-NEXT:    blr
 entry:
-  %0 = bitcast double* %ptr to <2 x double>*
-  %1 = load <2 x double>, <2 x double>* %0, align 8
-  %2 = fptosi <2 x double> %1 to <2 x i32>
-  %arrayidx4 = getelementptr inbounds double, double* %ptr, i64 2
-  %3 = bitcast double* %arrayidx4 to <2 x double>*
-  %4 = load <2 x double>, <2 x double>* %3, align 8
-  %5 = fptosi <2 x double> %4 to <2 x i32>
-  %vecinit9 = shufflevector <2 x i32> %2, <2 x i32> %5, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %0 = load <2 x double>, ptr %ptr, align 8
+  %1 = fptosi <2 x double> %0 to <2 x i32>
+  %arrayidx4 = getelementptr inbounds double, ptr %ptr, i64 2
+  %2 = load <2 x double>, ptr %arrayidx4, align 8
+  %3 = fptosi <2 x double> %2 to <2 x i32>
+  %vecinit9 = shufflevector <2 x i32> %1, <2 x i32> %3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %vecinit9
 }
 
-define <4 x i32> @fromDiffMemConsDConvdtoi(double* nocapture readonly %ptr) {
+define <4 x i32> @fromDiffMemConsDConvdtoi(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvdtoi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfd f0, 24(r3)
@@ -1977,25 +1980,25 @@ define <4 x i32> @fromDiffMemConsDConvdtoi(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    vmrgew v2, v3, v2
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds double, double* %ptr, i64 3
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %ptr, i64 3
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptosi double %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
-  %arrayidx1 = getelementptr inbounds double, double* %ptr, i64 2
-  %1 = load double, double* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %ptr, i64 2
+  %1 = load double, ptr %arrayidx1, align 8
   %conv2 = fptosi double %1 to i32
   %vecinit3 = insertelement <4 x i32> %vecinit, i32 %conv2, i32 1
-  %arrayidx4 = getelementptr inbounds double, double* %ptr, i64 1
-  %2 = load double, double* %arrayidx4, align 8
+  %arrayidx4 = getelementptr inbounds double, ptr %ptr, i64 1
+  %2 = load double, ptr %arrayidx4, align 8
   %conv5 = fptosi double %2 to i32
   %vecinit6 = insertelement <4 x i32> %vecinit3, i32 %conv5, i32 2
-  %3 = load double, double* %ptr, align 8
+  %3 = load double, ptr %ptr, align 8
   %conv8 = fptosi double %3 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit6, i32 %conv8, i32 3
   ret <4 x i32> %vecinit9
 }
 
-define <4 x i32> @fromDiffMemVarAConvdtoi(double* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarAConvdtoi(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvdtoi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -2053,32 +2056,32 @@ define <4 x i32> @fromDiffMemVarAConvdtoi(double* nocapture readonly %arr, i32 s
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds double, double* %arr, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %arr, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptosi double %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds double, double* %arr, i64 %idxprom1
-  %1 = load double, double* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %arr, i64 %idxprom1
+  %1 = load double, ptr %arrayidx2, align 8
   %conv3 = fptosi double %1 to i32
   %vecinit4 = insertelement <4 x i32> %vecinit, i32 %conv3, i32 1
   %add5 = add nsw i32 %elem, 2
   %idxprom6 = sext i32 %add5 to i64
-  %arrayidx7 = getelementptr inbounds double, double* %arr, i64 %idxprom6
-  %2 = load double, double* %arrayidx7, align 8
+  %arrayidx7 = getelementptr inbounds double, ptr %arr, i64 %idxprom6
+  %2 = load double, ptr %arrayidx7, align 8
   %conv8 = fptosi double %2 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit4, i32 %conv8, i32 2
   %add10 = add nsw i32 %elem, 3
   %idxprom11 = sext i32 %add10 to i64
-  %arrayidx12 = getelementptr inbounds double, double* %arr, i64 %idxprom11
-  %3 = load double, double* %arrayidx12, align 8
+  %arrayidx12 = getelementptr inbounds double, ptr %arr, i64 %idxprom11
+  %3 = load double, ptr %arrayidx12, align 8
   %conv13 = fptosi double %3 to i32
   %vecinit14 = insertelement <4 x i32> %vecinit9, i32 %conv13, i32 3
   ret <4 x i32> %vecinit14
 }
 
-define <4 x i32> @fromDiffMemVarDConvdtoi(double* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarDConvdtoi(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvdtoi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -2136,26 +2139,26 @@ define <4 x i32> @fromDiffMemVarDConvdtoi(double* nocapture readonly %arr, i32 s
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds double, double* %arr, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %arr, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptosi double %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds double, double* %arr, i64 %idxprom1
-  %1 = load double, double* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %arr, i64 %idxprom1
+  %1 = load double, ptr %arrayidx2, align 8
   %conv3 = fptosi double %1 to i32
   %vecinit4 = insertelement <4 x i32> %vecinit, i32 %conv3, i32 1
   %sub5 = add nsw i32 %elem, -2
   %idxprom6 = sext i32 %sub5 to i64
-  %arrayidx7 = getelementptr inbounds double, double* %arr, i64 %idxprom6
-  %2 = load double, double* %arrayidx7, align 8
+  %arrayidx7 = getelementptr inbounds double, ptr %arr, i64 %idxprom6
+  %2 = load double, ptr %arrayidx7, align 8
   %conv8 = fptosi double %2 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit4, i32 %conv8, i32 2
   %sub10 = add nsw i32 %elem, -3
   %idxprom11 = sext i32 %sub10 to i64
-  %arrayidx12 = getelementptr inbounds double, double* %arr, i64 %idxprom11
-  %3 = load double, double* %arrayidx12, align 8
+  %arrayidx12 = getelementptr inbounds double, ptr %arr, i64 %idxprom11
+  %3 = load double, ptr %arrayidx12, align 8
   %conv13 = fptosi double %3 to i32
   %vecinit14 = insertelement <4 x i32> %vecinit9, i32 %conv13, i32 3
   ret <4 x i32> %vecinit14
@@ -2192,7 +2195,7 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-define <4 x i32> @spltMemValConvdtoi(double* nocapture readonly %ptr) {
+define <4 x i32> @spltMemValConvdtoi(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvdtoi:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfd f0, 0(r3)
@@ -2221,7 +2224,7 @@ define <4 x i32> @spltMemValConvdtoi(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load double, double* %ptr, align 8
+  %0 = load double, ptr %ptr, align 8
   %conv = fptosi double %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -2398,13 +2401,14 @@ define <4 x i32> @fromDiffConstsui() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI37_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI37_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 242, i32 -113, i32 889, i32 19>
 }
 
-define <4 x i32> @fromDiffMemConsAui(i32* nocapture readonly %arr) {
+define <4 x i32> @fromDiffMemConsAui(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsAui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv v2, 0(r3)
@@ -2426,21 +2430,21 @@ define <4 x i32> @fromDiffMemConsAui(i32* nocapture readonly %arr) {
 ; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load i32, i32* %arr, align 4
+  %0 = load i32, ptr %arr, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i32, i32* %arr, i64 1
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %arr, i64 1
+  %1 = load i32, ptr %arrayidx1, align 4
   %vecinit2 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
-  %arrayidx3 = getelementptr inbounds i32, i32* %arr, i64 2
-  %2 = load i32, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %arr, i64 2
+  %2 = load i32, ptr %arrayidx3, align 4
   %vecinit4 = insertelement <4 x i32> %vecinit2, i32 %2, i32 2
-  %arrayidx5 = getelementptr inbounds i32, i32* %arr, i64 3
-  %3 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %arr, i64 3
+  %3 = load i32, ptr %arrayidx5, align 4
   %vecinit6 = insertelement <4 x i32> %vecinit4, i32 %3, i32 3
   ret <4 x i32> %vecinit6
 }
 
-define <4 x i32> @fromDiffMemConsDui(i32* nocapture readonly %arr) {
+define <4 x i32> @fromDiffMemConsDui(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsDui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv v2, 0(r3)
@@ -2466,29 +2470,30 @@ define <4 x i32> @fromDiffMemConsDui(i32* nocapture readonly %arr) {
 ;
 ; P8LE-LABEL: fromDiffMemConsDui:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
 ; P8LE-NEXT:    addis r4, r2, .LCPI39_0@toc@ha
-; P8LE-NEXT:    addi r3, r4, .LCPI39_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
-; P8LE-NEXT:    xxswapd v3, vs0
-; P8LE-NEXT:    vperm v2, v3, v3, v2
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    addi r4, r4, .LCPI39_0@toc@l
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    xxswapd v3, vs1
+; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 3
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 3
+  %0 = load i32, ptr %arrayidx, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i32, i32* %arr, i64 2
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %arr, i64 2
+  %1 = load i32, ptr %arrayidx1, align 4
   %vecinit2 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
-  %arrayidx3 = getelementptr inbounds i32, i32* %arr, i64 1
-  %2 = load i32, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %arr, i64 1
+  %2 = load i32, ptr %arrayidx3, align 4
   %vecinit4 = insertelement <4 x i32> %vecinit2, i32 %2, i32 2
-  %3 = load i32, i32* %arr, align 4
+  %3 = load i32, ptr %arr, align 4
   %vecinit6 = insertelement <4 x i32> %vecinit4, i32 %3, i32 3
   ret <4 x i32> %vecinit6
 }
 
-define <4 x i32> @fromDiffMemVarAui(i32* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarAui(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -2515,28 +2520,28 @@ define <4 x i32> @fromDiffMemVarAui(i32* nocapture readonly %arr, i32 signext %e
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds i32, i32* %arr, i64 %idxprom1
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %arr, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx2, align 4
   %vecinit3 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
   %add4 = add nsw i32 %elem, 2
   %idxprom5 = sext i32 %add4 to i64
-  %arrayidx6 = getelementptr inbounds i32, i32* %arr, i64 %idxprom5
-  %2 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %arr, i64 %idxprom5
+  %2 = load i32, ptr %arrayidx6, align 4
   %vecinit7 = insertelement <4 x i32> %vecinit3, i32 %2, i32 2
   %add8 = add nsw i32 %elem, 3
   %idxprom9 = sext i32 %add8 to i64
-  %arrayidx10 = getelementptr inbounds i32, i32* %arr, i64 %idxprom9
-  %3 = load i32, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %arr, i64 %idxprom9
+  %3 = load i32, ptr %arrayidx10, align 4
   %vecinit11 = insertelement <4 x i32> %vecinit7, i32 %3, i32 3
   ret <4 x i32> %vecinit11
 }
 
-define <4 x i32> @fromDiffMemVarDui(i32* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarDui(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -2578,37 +2583,38 @@ define <4 x i32> @fromDiffMemVarDui(i32* nocapture readonly %arr, i32 signext %e
 ; P8LE-NEXT:    sldi r4, r4, 2
 ; P8LE-NEXT:    addis r5, r2, .LCPI41_0@toc@ha
 ; P8LE-NEXT:    add r3, r3, r4
+; P8LE-NEXT:    addi r4, r5, .LCPI41_0@toc@l
 ; P8LE-NEXT:    addi r3, r3, -12
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
 ; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    addi r3, r5, .LCPI41_0@toc@l
-; P8LE-NEXT:    lvx v3, 0, r3
+; P8LE-NEXT:    xxswapd v3, vs1
 ; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds i32, i32* %arr, i64 %idxprom1
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %arr, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx2, align 4
   %vecinit3 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
   %sub4 = add nsw i32 %elem, -2
   %idxprom5 = sext i32 %sub4 to i64
-  %arrayidx6 = getelementptr inbounds i32, i32* %arr, i64 %idxprom5
-  %2 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %arr, i64 %idxprom5
+  %2 = load i32, ptr %arrayidx6, align 4
   %vecinit7 = insertelement <4 x i32> %vecinit3, i32 %2, i32 2
   %sub8 = add nsw i32 %elem, -3
   %idxprom9 = sext i32 %sub8 to i64
-  %arrayidx10 = getelementptr inbounds i32, i32* %arr, i64 %idxprom9
-  %3 = load i32, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %arr, i64 %idxprom9
+  %3 = load i32, ptr %arrayidx10, align 4
   %vecinit11 = insertelement <4 x i32> %vecinit7, i32 %3, i32 3
   ret <4 x i32> %vecinit11
 }
 
-define <4 x i32> @fromRandMemConsui(i32* nocapture readonly %arr) {
+define <4 x i32> @fromRandMemConsui(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromRandMemConsui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lwz r4, 16(r3)
@@ -2657,22 +2663,22 @@ define <4 x i32> @fromRandMemConsui(i32* nocapture readonly %arr) {
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 4
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 4
+  %0 = load i32, ptr %arrayidx, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i32, i32* %arr, i64 18
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %arr, i64 18
+  %1 = load i32, ptr %arrayidx1, align 4
   %vecinit2 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
-  %arrayidx3 = getelementptr inbounds i32, i32* %arr, i64 2
-  %2 = load i32, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %arr, i64 2
+  %2 = load i32, ptr %arrayidx3, align 4
   %vecinit4 = insertelement <4 x i32> %vecinit2, i32 %2, i32 2
-  %arrayidx5 = getelementptr inbounds i32, i32* %arr, i64 88
-  %3 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %arr, i64 88
+  %3 = load i32, ptr %arrayidx5, align 4
   %vecinit6 = insertelement <4 x i32> %vecinit4, i32 %3, i32 3
   ret <4 x i32> %vecinit6
 }
 
-define <4 x i32> @fromRandMemVarui(i32* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromRandMemVarui(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromRandMemVarui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -2731,23 +2737,23 @@ define <4 x i32> @fromRandMemVarui(i32* nocapture readonly %arr, i32 signext %el
 entry:
   %add = add nsw i32 %elem, 4
   %idxprom = sext i32 %add to i64
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %vecinit = insertelement <4 x i32> undef, i32 %0, i32 0
   %add1 = add nsw i32 %elem, 1
   %idxprom2 = sext i32 %add1 to i64
-  %arrayidx3 = getelementptr inbounds i32, i32* %arr, i64 %idxprom2
-  %1 = load i32, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %arr, i64 %idxprom2
+  %1 = load i32, ptr %arrayidx3, align 4
   %vecinit4 = insertelement <4 x i32> %vecinit, i32 %1, i32 1
   %add5 = add nsw i32 %elem, 2
   %idxprom6 = sext i32 %add5 to i64
-  %arrayidx7 = getelementptr inbounds i32, i32* %arr, i64 %idxprom6
-  %2 = load i32, i32* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds i32, ptr %arr, i64 %idxprom6
+  %2 = load i32, ptr %arrayidx7, align 4
   %vecinit8 = insertelement <4 x i32> %vecinit4, i32 %2, i32 2
   %add9 = add nsw i32 %elem, 8
   %idxprom10 = sext i32 %add9 to i64
-  %arrayidx11 = getelementptr inbounds i32, i32* %arr, i64 %idxprom10
-  %3 = load i32, i32* %arrayidx11, align 4
+  %arrayidx11 = getelementptr inbounds i32, ptr %arr, i64 %idxprom10
+  %3 = load i32, ptr %arrayidx11, align 4
   %vecinit12 = insertelement <4 x i32> %vecinit8, i32 %3, i32 3
   ret <4 x i32> %vecinit12
 }
@@ -2780,7 +2786,7 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-define <4 x i32> @spltMemValui(i32* nocapture readonly %ptr) {
+define <4 x i32> @spltMemValui(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxvwsx v2, 0, r3
@@ -2803,7 +2809,7 @@ define <4 x i32> @spltMemValui(i32* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load i32, i32* %ptr, align 4
+  %0 = load i32, ptr %ptr, align 4
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %0, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %splat.splat
@@ -2923,13 +2929,14 @@ define <4 x i32> @fromDiffConstsConvftoui() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI48_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI48_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>
 }
 
-define <4 x i32> @fromDiffMemConsAConvftoui(float* nocapture readonly %ptr) {
+define <4 x i32> @fromDiffMemConsAConvftoui(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvftoui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv vs0, 0(r3)
@@ -2955,13 +2962,12 @@ define <4 x i32> @fromDiffMemConsAConvftoui(float* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvspuxws v2, v2
 ; P8LE-NEXT:    blr
 entry:
-  %0 = bitcast float* %ptr to <4 x float>*
-  %1 = load <4 x float>, <4 x float>* %0, align 4
-  %2 = fptoui <4 x float> %1 to <4 x i32>
-  ret <4 x i32> %2
+  %0 = load <4 x float>, ptr %ptr, align 4
+  %1 = fptoui <4 x float> %0 to <4 x i32>
+  ret <4 x i32> %1
 }
 
-define <4 x i32> @fromDiffMemConsDConvftoui(float* nocapture readonly %ptr) {
+define <4 x i32> @fromDiffMemConsDConvftoui(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvftoui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv v2, 0(r3)
@@ -2994,34 +3000,35 @@ define <4 x i32> @fromDiffMemConsDConvftoui(float* nocapture readonly %ptr) {
 ;
 ; P8LE-LABEL: fromDiffMemConsDConvftoui:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
 ; P8LE-NEXT:    addis r4, r2, .LCPI50_0@toc@ha
-; P8LE-NEXT:    addi r3, r4, .LCPI50_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
-; P8LE-NEXT:    xxswapd v3, vs0
-; P8LE-NEXT:    vperm v2, v3, v3, v2
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    addi r4, r4, .LCPI50_0@toc@l
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    xxswapd v3, vs1
+; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    xvcvspuxws v2, v2
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds float, float* %ptr, i64 3
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %ptr, i64 3
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptoui float %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
-  %arrayidx1 = getelementptr inbounds float, float* %ptr, i64 2
-  %1 = load float, float* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %ptr, i64 2
+  %1 = load float, ptr %arrayidx1, align 4
   %conv2 = fptoui float %1 to i32
   %vecinit3 = insertelement <4 x i32> %vecinit, i32 %conv2, i32 1
-  %arrayidx4 = getelementptr inbounds float, float* %ptr, i64 1
-  %2 = load float, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %ptr, i64 1
+  %2 = load float, ptr %arrayidx4, align 4
   %conv5 = fptoui float %2 to i32
   %vecinit6 = insertelement <4 x i32> %vecinit3, i32 %conv5, i32 2
-  %3 = load float, float* %ptr, align 4
+  %3 = load float, ptr %ptr, align 4
   %conv8 = fptoui float %3 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit6, i32 %conv8, i32 3
   ret <4 x i32> %vecinit9
 }
 
-define <4 x i32> @fromDiffMemVarAConvftoui(float* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarAConvftoui(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvftoui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -3083,33 +3090,33 @@ define <4 x i32> @fromDiffMemVarAConvftoui(float* nocapture readonly %arr, i32 s
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds float, float* %arr, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %arr, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptoui float %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds float, float* %arr, i64 %idxprom1
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %arr, i64 %idxprom1
+  %1 = load float, ptr %arrayidx2, align 4
   %conv3 = fptoui float %1 to i32
   %vecinit4 = insertelement <4 x i32> %vecinit, i32 %conv3, i32 1
   %add5 = add nsw i32 %elem, 2
   %idxprom6 = sext i32 %add5 to i64
-  %arrayidx7 = getelementptr inbounds float, float* %arr, i64 %idxprom6
-  %2 = load float, float* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds float, ptr %arr, i64 %idxprom6
+  %2 = load float, ptr %arrayidx7, align 4
   %conv8 = fptoui float %2 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit4, i32 %conv8, i32 2
   %add10 = add nsw i32 %elem, 3
   %idxprom11 = sext i32 %add10 to i64
-  %arrayidx12 = getelementptr inbounds float, float* %arr, i64 %idxprom11
-  %3 = load float, float* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds float, ptr %arr, i64 %idxprom11
+  %3 = load float, ptr %arrayidx12, align 4
   %conv13 = fptoui float %3 to i32
   %vecinit14 = insertelement <4 x i32> %vecinit9, i32 %conv13, i32 3
   ret <4 x i32> %vecinit14
 ; FIXME: implement finding consecutive loads with pre-inc
 }
 
-define <4 x i32> @fromDiffMemVarDConvftoui(float* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarDConvftoui(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvftoui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -3171,26 +3178,26 @@ define <4 x i32> @fromDiffMemVarDConvftoui(float* nocapture readonly %arr, i32 s
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds float, float* %arr, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %arr, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptoui float %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds float, float* %arr, i64 %idxprom1
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %arr, i64 %idxprom1
+  %1 = load float, ptr %arrayidx2, align 4
   %conv3 = fptoui float %1 to i32
   %vecinit4 = insertelement <4 x i32> %vecinit, i32 %conv3, i32 1
   %sub5 = add nsw i32 %elem, -2
   %idxprom6 = sext i32 %sub5 to i64
-  %arrayidx7 = getelementptr inbounds float, float* %arr, i64 %idxprom6
-  %2 = load float, float* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds float, ptr %arr, i64 %idxprom6
+  %2 = load float, ptr %arrayidx7, align 4
   %conv8 = fptoui float %2 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit4, i32 %conv8, i32 2
   %sub10 = add nsw i32 %elem, -3
   %idxprom11 = sext i32 %sub10 to i64
-  %arrayidx12 = getelementptr inbounds float, float* %arr, i64 %idxprom11
-  %3 = load float, float* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds float, ptr %arr, i64 %idxprom11
+  %3 = load float, ptr %arrayidx12, align 4
   %conv13 = fptoui float %3 to i32
   %vecinit14 = insertelement <4 x i32> %vecinit9, i32 %conv13, i32 3
   ret <4 x i32> %vecinit14
@@ -3228,7 +3235,7 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-define <4 x i32> @spltMemValConvftoui(float* nocapture readonly %ptr) {
+define <4 x i32> @spltMemValConvftoui(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvftoui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfiwzx f0, 0, r3
@@ -3257,7 +3264,7 @@ define <4 x i32> @spltMemValConvftoui(float* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load float, float* %ptr, align 4
+  %0 = load float, ptr %ptr, align 4
   %conv = fptoui float %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -3378,13 +3385,14 @@ define <4 x i32> @fromDiffConstsConvdtoui() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI57_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI57_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>
 }
 
-define <4 x i32> @fromDiffMemConsAConvdtoui(double* nocapture readonly %ptr) {
+define <4 x i32> @fromDiffMemConsAConvdtoui(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvdtoui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv vs0, 0(r3)
@@ -3433,18 +3441,16 @@ define <4 x i32> @fromDiffMemConsAConvdtoui(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    vmrgew v2, v3, v2
 ; P8LE-NEXT:    blr
 entry:
-  %0 = bitcast double* %ptr to <2 x double>*
-  %1 = load <2 x double>, <2 x double>* %0, align 8
-  %2 = fptoui <2 x double> %1 to <2 x i32>
-  %arrayidx4 = getelementptr inbounds double, double* %ptr, i64 2
-  %3 = bitcast double* %arrayidx4 to <2 x double>*
-  %4 = load <2 x double>, <2 x double>* %3, align 8
-  %5 = fptoui <2 x double> %4 to <2 x i32>
-  %vecinit9 = shufflevector <2 x i32> %2, <2 x i32> %5, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %0 = load <2 x double>, ptr %ptr, align 8
+  %1 = fptoui <2 x double> %0 to <2 x i32>
+  %arrayidx4 = getelementptr inbounds double, ptr %ptr, i64 2
+  %2 = load <2 x double>, ptr %arrayidx4, align 8
+  %3 = fptoui <2 x double> %2 to <2 x i32>
+  %vecinit9 = shufflevector <2 x i32> %1, <2 x i32> %3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %vecinit9
 }
 
-define <4 x i32> @fromDiffMemConsDConvdtoui(double* nocapture readonly %ptr) {
+define <4 x i32> @fromDiffMemConsDConvdtoui(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvdtoui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfd f0, 24(r3)
@@ -3497,25 +3503,25 @@ define <4 x i32> @fromDiffMemConsDConvdtoui(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    vmrgew v2, v3, v2
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds double, double* %ptr, i64 3
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %ptr, i64 3
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptoui double %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
-  %arrayidx1 = getelementptr inbounds double, double* %ptr, i64 2
-  %1 = load double, double* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %ptr, i64 2
+  %1 = load double, ptr %arrayidx1, align 8
   %conv2 = fptoui double %1 to i32
   %vecinit3 = insertelement <4 x i32> %vecinit, i32 %conv2, i32 1
-  %arrayidx4 = getelementptr inbounds double, double* %ptr, i64 1
-  %2 = load double, double* %arrayidx4, align 8
+  %arrayidx4 = getelementptr inbounds double, ptr %ptr, i64 1
+  %2 = load double, ptr %arrayidx4, align 8
   %conv5 = fptoui double %2 to i32
   %vecinit6 = insertelement <4 x i32> %vecinit3, i32 %conv5, i32 2
-  %3 = load double, double* %ptr, align 8
+  %3 = load double, ptr %ptr, align 8
   %conv8 = fptoui double %3 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit6, i32 %conv8, i32 3
   ret <4 x i32> %vecinit9
 }
 
-define <4 x i32> @fromDiffMemVarAConvdtoui(double* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarAConvdtoui(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvdtoui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -3573,32 +3579,32 @@ define <4 x i32> @fromDiffMemVarAConvdtoui(double* nocapture readonly %arr, i32 
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds double, double* %arr, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %arr, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptoui double %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds double, double* %arr, i64 %idxprom1
-  %1 = load double, double* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %arr, i64 %idxprom1
+  %1 = load double, ptr %arrayidx2, align 8
   %conv3 = fptoui double %1 to i32
   %vecinit4 = insertelement <4 x i32> %vecinit, i32 %conv3, i32 1
   %add5 = add nsw i32 %elem, 2
   %idxprom6 = sext i32 %add5 to i64
-  %arrayidx7 = getelementptr inbounds double, double* %arr, i64 %idxprom6
-  %2 = load double, double* %arrayidx7, align 8
+  %arrayidx7 = getelementptr inbounds double, ptr %arr, i64 %idxprom6
+  %2 = load double, ptr %arrayidx7, align 8
   %conv8 = fptoui double %2 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit4, i32 %conv8, i32 2
   %add10 = add nsw i32 %elem, 3
   %idxprom11 = sext i32 %add10 to i64
-  %arrayidx12 = getelementptr inbounds double, double* %arr, i64 %idxprom11
-  %3 = load double, double* %arrayidx12, align 8
+  %arrayidx12 = getelementptr inbounds double, ptr %arr, i64 %idxprom11
+  %3 = load double, ptr %arrayidx12, align 8
   %conv13 = fptoui double %3 to i32
   %vecinit14 = insertelement <4 x i32> %vecinit9, i32 %conv13, i32 3
   ret <4 x i32> %vecinit14
 }
 
-define <4 x i32> @fromDiffMemVarDConvdtoui(double* nocapture readonly %arr, i32 signext %elem) {
+define <4 x i32> @fromDiffMemVarDConvdtoui(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvdtoui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -3656,26 +3662,26 @@ define <4 x i32> @fromDiffMemVarDConvdtoui(double* nocapture readonly %arr, i32 
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds double, double* %arr, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %arr, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptoui double %0 to i32
   %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds double, double* %arr, i64 %idxprom1
-  %1 = load double, double* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %arr, i64 %idxprom1
+  %1 = load double, ptr %arrayidx2, align 8
   %conv3 = fptoui double %1 to i32
   %vecinit4 = insertelement <4 x i32> %vecinit, i32 %conv3, i32 1
   %sub5 = add nsw i32 %elem, -2
   %idxprom6 = sext i32 %sub5 to i64
-  %arrayidx7 = getelementptr inbounds double, double* %arr, i64 %idxprom6
-  %2 = load double, double* %arrayidx7, align 8
+  %arrayidx7 = getelementptr inbounds double, ptr %arr, i64 %idxprom6
+  %2 = load double, ptr %arrayidx7, align 8
   %conv8 = fptoui double %2 to i32
   %vecinit9 = insertelement <4 x i32> %vecinit4, i32 %conv8, i32 2
   %sub10 = add nsw i32 %elem, -3
   %idxprom11 = sext i32 %sub10 to i64
-  %arrayidx12 = getelementptr inbounds double, double* %arr, i64 %idxprom11
-  %3 = load double, double* %arrayidx12, align 8
+  %arrayidx12 = getelementptr inbounds double, ptr %arr, i64 %idxprom11
+  %3 = load double, ptr %arrayidx12, align 8
   %conv13 = fptoui double %3 to i32
   %vecinit14 = insertelement <4 x i32> %vecinit9, i32 %conv13, i32 3
   ret <4 x i32> %vecinit14
@@ -3712,7 +3718,7 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-define <4 x i32> @spltMemValConvdtoui(double* nocapture readonly %ptr) {
+define <4 x i32> @spltMemValConvdtoui(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvdtoui:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfd f0, 0(r3)
@@ -3741,7 +3747,7 @@ define <4 x i32> @spltMemValConvdtoui(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load double, double* %ptr, align 8
+  %0 = load double, ptr %ptr, align 8
   %conv = fptoui double %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -3934,7 +3940,7 @@ entry:
   ret <2 x i64> <i64 242, i64 -113>
 }
 
-define <2 x i64> @fromDiffMemConsAll(i64* nocapture readonly %arr) {
+define <2 x i64> @fromDiffMemConsAll(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsAll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv v2, 0(r3)
@@ -3956,15 +3962,15 @@ define <2 x i64> @fromDiffMemConsAll(i64* nocapture readonly %arr) {
 ; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load i64, i64* %arr, align 8
+  %0 = load i64, ptr %arr, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i64, i64* %arr, i64 1
-  %1 = load i64, i64* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %arr, i64 1
+  %1 = load i64, ptr %arrayidx1, align 8
   %vecinit2 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit2
 }
 
-define <2 x i64> @fromDiffMemConsDll(i64* nocapture readonly %arr) {
+define <2 x i64> @fromDiffMemConsDll(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsDll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv v2, 16(r3)
@@ -3990,16 +3996,16 @@ define <2 x i64> @fromDiffMemConsDll(i64* nocapture readonly %arr) {
 ; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i64, i64* %arr, i64 3
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %arr, i64 3
+  %0 = load i64, ptr %arrayidx, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i64, i64* %arr, i64 2
-  %1 = load i64, i64* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %arr, i64 2
+  %1 = load i64, ptr %arrayidx1, align 8
   %vecinit2 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit2
 }
 
-define <2 x i64> @fromDiffMemVarAll(i64* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarAll(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -4026,18 +4032,18 @@ define <2 x i64> @fromDiffMemVarAll(i64* nocapture readonly %arr, i32 signext %e
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds i64, i64* %arr, i64 %idxprom
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %arr, i64 %idxprom
+  %0 = load i64, ptr %arrayidx, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds i64, i64* %arr, i64 %idxprom1
-  %1 = load i64, i64* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds i64, ptr %arr, i64 %idxprom1
+  %1 = load i64, ptr %arrayidx2, align 8
   %vecinit3 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit3
 }
 
-define <2 x i64> @fromDiffMemVarDll(i64* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarDll(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -4073,18 +4079,18 @@ define <2 x i64> @fromDiffMemVarDll(i64* nocapture readonly %arr, i32 signext %e
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds i64, i64* %arr, i64 %idxprom
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %arr, i64 %idxprom
+  %0 = load i64, ptr %arrayidx, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds i64, i64* %arr, i64 %idxprom1
-  %1 = load i64, i64* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds i64, ptr %arr, i64 %idxprom1
+  %1 = load i64, ptr %arrayidx2, align 8
   %vecinit3 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit3
 }
 
-define <2 x i64> @fromRandMemConsll(i64* nocapture readonly %arr) {
+define <2 x i64> @fromRandMemConsll(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromRandMemConsll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    ld r4, 32(r3)
@@ -4117,16 +4123,16 @@ define <2 x i64> @fromRandMemConsll(i64* nocapture readonly %arr) {
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i64, i64* %arr, i64 4
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %arr, i64 4
+  %0 = load i64, ptr %arrayidx, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i64, i64* %arr, i64 18
-  %1 = load i64, i64* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %arr, i64 18
+  %1 = load i64, ptr %arrayidx1, align 8
   %vecinit2 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit2
 }
 
-define <2 x i64> @fromRandMemVarll(i64* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromRandMemVarll(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromRandMemVarll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -4169,13 +4175,13 @@ define <2 x i64> @fromRandMemVarll(i64* nocapture readonly %arr, i32 signext %el
 entry:
   %add = add nsw i32 %elem, 4
   %idxprom = sext i32 %add to i64
-  %arrayidx = getelementptr inbounds i64, i64* %arr, i64 %idxprom
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %arr, i64 %idxprom
+  %0 = load i64, ptr %arrayidx, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
   %add1 = add nsw i32 %elem, 1
   %idxprom2 = sext i32 %add1 to i64
-  %arrayidx3 = getelementptr inbounds i64, i64* %arr, i64 %idxprom2
-  %1 = load i64, i64* %arrayidx3, align 8
+  %arrayidx3 = getelementptr inbounds i64, ptr %arr, i64 %idxprom2
+  %1 = load i64, ptr %arrayidx3, align 8
   %vecinit4 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit4
 }
@@ -4208,7 +4214,7 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-define <2 x i64> @spltMemValll(i64* nocapture readonly %ptr) {
+define <2 x i64> @spltMemValll(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxvdsx v2, 0, r3
@@ -4229,7 +4235,7 @@ define <2 x i64> @spltMemValll(i64* nocapture readonly %ptr) {
 ; P8LE-NEXT:    lxvdsx v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load i64, i64* %ptr, align 8
+  %0 = load i64, ptr %ptr, align 8
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %0, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %splat.splat
@@ -4341,7 +4347,7 @@ entry:
   ret <2 x i64> <i64 24, i64 234>
 }
 
-define <2 x i64> @fromDiffMemConsAConvftoll(float* nocapture readonly %ptr) {
+define <2 x i64> @fromDiffMemConsAConvftoll(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvftoll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfs f0, 0(r3)
@@ -4374,17 +4380,17 @@ define <2 x i64> @fromDiffMemConsAConvftoll(float* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvdpsxds v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load float, float* %ptr, align 4
+  %0 = load float, ptr %ptr, align 4
   %conv = fptosi float %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
-  %arrayidx1 = getelementptr inbounds float, float* %ptr, i64 1
-  %1 = load float, float* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %ptr, i64 1
+  %1 = load float, ptr %arrayidx1, align 4
   %conv2 = fptosi float %1 to i64
   %vecinit3 = insertelement <2 x i64> %vecinit, i64 %conv2, i32 1
   ret <2 x i64> %vecinit3
 }
 
-define <2 x i64> @fromDiffMemConsDConvftoll(float* nocapture readonly %ptr) {
+define <2 x i64> @fromDiffMemConsDConvftoll(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvftoll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfs f0, 12(r3)
@@ -4417,18 +4423,18 @@ define <2 x i64> @fromDiffMemConsDConvftoll(float* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvdpsxds v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds float, float* %ptr, i64 3
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %ptr, i64 3
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptosi float %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
-  %arrayidx1 = getelementptr inbounds float, float* %ptr, i64 2
-  %1 = load float, float* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %ptr, i64 2
+  %1 = load float, ptr %arrayidx1, align 4
   %conv2 = fptosi float %1 to i64
   %vecinit3 = insertelement <2 x i64> %vecinit, i64 %conv2, i32 1
   ret <2 x i64> %vecinit3
 }
 
-define <2 x i64> @fromDiffMemVarAConvftoll(float* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarAConvftoll(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvftoll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -4466,20 +4472,20 @@ define <2 x i64> @fromDiffMemVarAConvftoll(float* nocapture readonly %arr, i32 s
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds float, float* %arr, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %arr, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptosi float %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds float, float* %arr, i64 %idxprom1
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %arr, i64 %idxprom1
+  %1 = load float, ptr %arrayidx2, align 4
   %conv3 = fptosi float %1 to i64
   %vecinit4 = insertelement <2 x i64> %vecinit, i64 %conv3, i32 1
   ret <2 x i64> %vecinit4
 }
 
-define <2 x i64> @fromDiffMemVarDConvftoll(float* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarDConvftoll(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvftoll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -4517,14 +4523,14 @@ define <2 x i64> @fromDiffMemVarDConvftoll(float* nocapture readonly %arr, i32 s
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds float, float* %arr, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %arr, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptosi float %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds float, float* %arr, i64 %idxprom1
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %arr, i64 %idxprom1
+  %1 = load float, ptr %arrayidx2, align 4
   %conv3 = fptosi float %1 to i64
   %vecinit4 = insertelement <2 x i64> %vecinit, i64 %conv3, i32 1
   ret <2 x i64> %vecinit4
@@ -4561,7 +4567,7 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-define <2 x i64> @spltMemValConvftoll(float* nocapture readonly %ptr) {
+define <2 x i64> @spltMemValConvftoll(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvftoll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfs f0, 0(r3)
@@ -4590,7 +4596,7 @@ define <2 x i64> @spltMemValConvftoll(float* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xxspltd v2, vs0, 0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load float, float* %ptr, align 4
+  %0 = load float, ptr %ptr, align 4
   %conv = fptosi float %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -4703,7 +4709,7 @@ entry:
   ret <2 x i64> <i64 24, i64 234>
 }
 
-define <2 x i64> @fromDiffMemConsAConvdtoll(double* nocapture readonly %ptr) {
+define <2 x i64> @fromDiffMemConsAConvdtoll(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvdtoll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv vs0, 0(r3)
@@ -4729,13 +4735,12 @@ define <2 x i64> @fromDiffMemConsAConvdtoll(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvdpsxds v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = bitcast double* %ptr to <2 x double>*
-  %1 = load <2 x double>, <2 x double>* %0, align 8
-  %2 = fptosi <2 x double> %1 to <2 x i64>
-  ret <2 x i64> %2
+  %0 = load <2 x double>, ptr %ptr, align 8
+  %1 = fptosi <2 x double> %0 to <2 x i64>
+  ret <2 x i64> %1
 }
 
-define <2 x i64> @fromDiffMemConsDConvdtoll(double* nocapture readonly %ptr) {
+define <2 x i64> @fromDiffMemConsDConvdtoll(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvdtoll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv vs0, 16(r3)
@@ -4765,18 +4770,18 @@ define <2 x i64> @fromDiffMemConsDConvdtoll(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvdpsxds v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds double, double* %ptr, i64 3
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %ptr, i64 3
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptosi double %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
-  %arrayidx1 = getelementptr inbounds double, double* %ptr, i64 2
-  %1 = load double, double* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %ptr, i64 2
+  %1 = load double, ptr %arrayidx1, align 8
   %conv2 = fptosi double %1 to i64
   %vecinit3 = insertelement <2 x i64> %vecinit, i64 %conv2, i32 1
   ret <2 x i64> %vecinit3
 }
 
-define <2 x i64> @fromDiffMemVarAConvdtoll(double* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarAConvdtoll(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvdtoll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -4807,20 +4812,20 @@ define <2 x i64> @fromDiffMemVarAConvdtoll(double* nocapture readonly %arr, i32 
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds double, double* %arr, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %arr, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptosi double %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds double, double* %arr, i64 %idxprom1
-  %1 = load double, double* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %arr, i64 %idxprom1
+  %1 = load double, ptr %arrayidx2, align 8
   %conv3 = fptosi double %1 to i64
   %vecinit4 = insertelement <2 x i64> %vecinit, i64 %conv3, i32 1
   ret <2 x i64> %vecinit4
 }
 
-define <2 x i64> @fromDiffMemVarDConvdtoll(double* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarDConvdtoll(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvdtoll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -4860,14 +4865,14 @@ define <2 x i64> @fromDiffMemVarDConvdtoll(double* nocapture readonly %arr, i32 
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds double, double* %arr, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %arr, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptosi double %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds double, double* %arr, i64 %idxprom1
-  %1 = load double, double* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %arr, i64 %idxprom1
+  %1 = load double, ptr %arrayidx2, align 8
   %conv3 = fptosi double %1 to i64
   %vecinit4 = insertelement <2 x i64> %vecinit, i64 %conv3, i32 1
   ret <2 x i64> %vecinit4
@@ -4904,7 +4909,7 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-define <2 x i64> @spltMemValConvdtoll(double* nocapture readonly %ptr) {
+define <2 x i64> @spltMemValConvdtoll(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvdtoll:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxvdsx vs0, 0, r3
@@ -4929,7 +4934,7 @@ define <2 x i64> @spltMemValConvdtoll(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvdpsxds v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load double, double* %ptr, align 8
+  %0 = load double, ptr %ptr, align 8
   %conv = fptosi double %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -5122,7 +5127,7 @@ entry:
   ret <2 x i64> <i64 242, i64 -113>
 }
 
-define <2 x i64> @fromDiffMemConsAull(i64* nocapture readonly %arr) {
+define <2 x i64> @fromDiffMemConsAull(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsAull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv v2, 0(r3)
@@ -5144,15 +5149,15 @@ define <2 x i64> @fromDiffMemConsAull(i64* nocapture readonly %arr) {
 ; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load i64, i64* %arr, align 8
+  %0 = load i64, ptr %arr, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i64, i64* %arr, i64 1
-  %1 = load i64, i64* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %arr, i64 1
+  %1 = load i64, ptr %arrayidx1, align 8
   %vecinit2 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit2
 }
 
-define <2 x i64> @fromDiffMemConsDull(i64* nocapture readonly %arr) {
+define <2 x i64> @fromDiffMemConsDull(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsDull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv v2, 16(r3)
@@ -5178,16 +5183,16 @@ define <2 x i64> @fromDiffMemConsDull(i64* nocapture readonly %arr) {
 ; P8LE-NEXT:    lxvd2x v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i64, i64* %arr, i64 3
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %arr, i64 3
+  %0 = load i64, ptr %arrayidx, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i64, i64* %arr, i64 2
-  %1 = load i64, i64* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %arr, i64 2
+  %1 = load i64, ptr %arrayidx1, align 8
   %vecinit2 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit2
 }
 
-define <2 x i64> @fromDiffMemVarAull(i64* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarAull(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -5214,18 +5219,18 @@ define <2 x i64> @fromDiffMemVarAull(i64* nocapture readonly %arr, i32 signext %
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds i64, i64* %arr, i64 %idxprom
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %arr, i64 %idxprom
+  %0 = load i64, ptr %arrayidx, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds i64, i64* %arr, i64 %idxprom1
-  %1 = load i64, i64* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds i64, ptr %arr, i64 %idxprom1
+  %1 = load i64, ptr %arrayidx2, align 8
   %vecinit3 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit3
 }
 
-define <2 x i64> @fromDiffMemVarDull(i64* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarDull(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -5261,18 +5266,18 @@ define <2 x i64> @fromDiffMemVarDull(i64* nocapture readonly %arr, i32 signext %
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds i64, i64* %arr, i64 %idxprom
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %arr, i64 %idxprom
+  %0 = load i64, ptr %arrayidx, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds i64, i64* %arr, i64 %idxprom1
-  %1 = load i64, i64* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds i64, ptr %arr, i64 %idxprom1
+  %1 = load i64, ptr %arrayidx2, align 8
   %vecinit3 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit3
 }
 
-define <2 x i64> @fromRandMemConsull(i64* nocapture readonly %arr) {
+define <2 x i64> @fromRandMemConsull(ptr nocapture readonly %arr) {
 ; P9BE-LABEL: fromRandMemConsull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    ld r4, 32(r3)
@@ -5305,16 +5310,16 @@ define <2 x i64> @fromRandMemConsull(i64* nocapture readonly %arr) {
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i64, i64* %arr, i64 4
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %arr, i64 4
+  %0 = load i64, ptr %arrayidx, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
-  %arrayidx1 = getelementptr inbounds i64, i64* %arr, i64 18
-  %1 = load i64, i64* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %arr, i64 18
+  %1 = load i64, ptr %arrayidx1, align 8
   %vecinit2 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit2
 }
 
-define <2 x i64> @fromRandMemVarull(i64* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromRandMemVarull(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromRandMemVarull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -5357,13 +5362,13 @@ define <2 x i64> @fromRandMemVarull(i64* nocapture readonly %arr, i32 signext %e
 entry:
   %add = add nsw i32 %elem, 4
   %idxprom = sext i32 %add to i64
-  %arrayidx = getelementptr inbounds i64, i64* %arr, i64 %idxprom
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %arr, i64 %idxprom
+  %0 = load i64, ptr %arrayidx, align 8
   %vecinit = insertelement <2 x i64> undef, i64 %0, i32 0
   %add1 = add nsw i32 %elem, 1
   %idxprom2 = sext i32 %add1 to i64
-  %arrayidx3 = getelementptr inbounds i64, i64* %arr, i64 %idxprom2
-  %1 = load i64, i64* %arrayidx3, align 8
+  %arrayidx3 = getelementptr inbounds i64, ptr %arr, i64 %idxprom2
+  %1 = load i64, ptr %arrayidx3, align 8
   %vecinit4 = insertelement <2 x i64> %vecinit, i64 %1, i32 1
   ret <2 x i64> %vecinit4
 }
@@ -5396,7 +5401,7 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-define <2 x i64> @spltMemValull(i64* nocapture readonly %ptr) {
+define <2 x i64> @spltMemValull(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxvdsx v2, 0, r3
@@ -5417,7 +5422,7 @@ define <2 x i64> @spltMemValull(i64* nocapture readonly %ptr) {
 ; P8LE-NEXT:    lxvdsx v2, 0, r3
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load i64, i64* %ptr, align 8
+  %0 = load i64, ptr %ptr, align 8
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %0, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %splat.splat
@@ -5529,7 +5534,7 @@ entry:
   ret <2 x i64> <i64 24, i64 234>
 }
 
-define <2 x i64> @fromDiffMemConsAConvftoull(float* nocapture readonly %ptr) {
+define <2 x i64> @fromDiffMemConsAConvftoull(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvftoull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfs f0, 0(r3)
@@ -5562,17 +5567,17 @@ define <2 x i64> @fromDiffMemConsAConvftoull(float* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvdpuxds v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load float, float* %ptr, align 4
+  %0 = load float, ptr %ptr, align 4
   %conv = fptoui float %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
-  %arrayidx1 = getelementptr inbounds float, float* %ptr, i64 1
-  %1 = load float, float* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %ptr, i64 1
+  %1 = load float, ptr %arrayidx1, align 4
   %conv2 = fptoui float %1 to i64
   %vecinit3 = insertelement <2 x i64> %vecinit, i64 %conv2, i32 1
   ret <2 x i64> %vecinit3
 }
 
-define <2 x i64> @fromDiffMemConsDConvftoull(float* nocapture readonly %ptr) {
+define <2 x i64> @fromDiffMemConsDConvftoull(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvftoull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfs f0, 12(r3)
@@ -5605,18 +5610,18 @@ define <2 x i64> @fromDiffMemConsDConvftoull(float* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvdpuxds v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds float, float* %ptr, i64 3
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %ptr, i64 3
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptoui float %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
-  %arrayidx1 = getelementptr inbounds float, float* %ptr, i64 2
-  %1 = load float, float* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %ptr, i64 2
+  %1 = load float, ptr %arrayidx1, align 4
   %conv2 = fptoui float %1 to i64
   %vecinit3 = insertelement <2 x i64> %vecinit, i64 %conv2, i32 1
   ret <2 x i64> %vecinit3
 }
 
-define <2 x i64> @fromDiffMemVarAConvftoull(float* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarAConvftoull(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvftoull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -5654,20 +5659,20 @@ define <2 x i64> @fromDiffMemVarAConvftoull(float* nocapture readonly %arr, i32 
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds float, float* %arr, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %arr, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptoui float %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds float, float* %arr, i64 %idxprom1
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %arr, i64 %idxprom1
+  %1 = load float, ptr %arrayidx2, align 4
   %conv3 = fptoui float %1 to i64
   %vecinit4 = insertelement <2 x i64> %vecinit, i64 %conv3, i32 1
   ret <2 x i64> %vecinit4
 }
 
-define <2 x i64> @fromDiffMemVarDConvftoull(float* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarDConvftoull(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvftoull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
@@ -5705,14 +5710,14 @@ define <2 x i64> @fromDiffMemVarDConvftoull(float* nocapture readonly %arr, i32 
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds float, float* %arr, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %arr, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fptoui float %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds float, float* %arr, i64 %idxprom1
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %arr, i64 %idxprom1
+  %1 = load float, ptr %arrayidx2, align 4
   %conv3 = fptoui float %1 to i64
   %vecinit4 = insertelement <2 x i64> %vecinit, i64 %conv3, i32 1
   ret <2 x i64> %vecinit4
@@ -5749,7 +5754,7 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-define <2 x i64> @spltMemValConvftoull(float* nocapture readonly %ptr) {
+define <2 x i64> @spltMemValConvftoull(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvftoull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfs f0, 0(r3)
@@ -5778,7 +5783,7 @@ define <2 x i64> @spltMemValConvftoull(float* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xxspltd v2, vs0, 0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load float, float* %ptr, align 4
+  %0 = load float, ptr %ptr, align 4
   %conv = fptoui float %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -5891,7 +5896,7 @@ entry:
   ret <2 x i64> <i64 24, i64 234>
 }
 
-define <2 x i64> @fromDiffMemConsAConvdtoull(double* nocapture readonly %ptr) {
+define <2 x i64> @fromDiffMemConsAConvdtoull(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvdtoull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv vs0, 0(r3)
@@ -5917,13 +5922,12 @@ define <2 x i64> @fromDiffMemConsAConvdtoull(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvdpuxds v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = bitcast double* %ptr to <2 x double>*
-  %1 = load <2 x double>, <2 x double>* %0, align 8
-  %2 = fptoui <2 x double> %1 to <2 x i64>
-  ret <2 x i64> %2
+  %0 = load <2 x double>, ptr %ptr, align 8
+  %1 = fptoui <2 x double> %0 to <2 x i64>
+  ret <2 x i64> %1
 }
 
-define <2 x i64> @fromDiffMemConsDConvdtoull(double* nocapture readonly %ptr) {
+define <2 x i64> @fromDiffMemConsDConvdtoull(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvdtoull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxv vs0, 16(r3)
@@ -5953,18 +5957,18 @@ define <2 x i64> @fromDiffMemConsDConvdtoull(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvdpuxds v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds double, double* %ptr, i64 3
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %ptr, i64 3
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptoui double %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
-  %arrayidx1 = getelementptr inbounds double, double* %ptr, i64 2
-  %1 = load double, double* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %ptr, i64 2
+  %1 = load double, ptr %arrayidx1, align 8
   %conv2 = fptoui double %1 to i64
   %vecinit3 = insertelement <2 x i64> %vecinit, i64 %conv2, i32 1
   ret <2 x i64> %vecinit3
 }
 
-define <2 x i64> @fromDiffMemVarAConvdtoull(double* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarAConvdtoull(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvdtoull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -5995,20 +5999,20 @@ define <2 x i64> @fromDiffMemVarAConvdtoull(double* nocapture readonly %arr, i32
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds double, double* %arr, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %arr, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptoui double %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
   %add = add nsw i32 %elem, 1
   %idxprom1 = sext i32 %add to i64
-  %arrayidx2 = getelementptr inbounds double, double* %arr, i64 %idxprom1
-  %1 = load double, double* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %arr, i64 %idxprom1
+  %1 = load double, ptr %arrayidx2, align 8
   %conv3 = fptoui double %1 to i64
   %vecinit4 = insertelement <2 x i64> %vecinit, i64 %conv3, i32 1
   ret <2 x i64> %vecinit4
 }
 
-define <2 x i64> @fromDiffMemVarDConvdtoull(double* nocapture readonly %arr, i32 signext %elem) {
+define <2 x i64> @fromDiffMemVarDConvdtoull(ptr nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvdtoull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 3
@@ -6048,14 +6052,14 @@ define <2 x i64> @fromDiffMemVarDConvdtoull(double* nocapture readonly %arr, i32
 ; P8LE-NEXT:    blr
 entry:
   %idxprom = sext i32 %elem to i64
-  %arrayidx = getelementptr inbounds double, double* %arr, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %arr, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 8
   %conv = fptoui double %0 to i64
   %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
   %sub = add nsw i32 %elem, -1
   %idxprom1 = sext i32 %sub to i64
-  %arrayidx2 = getelementptr inbounds double, double* %arr, i64 %idxprom1
-  %1 = load double, double* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %arr, i64 %idxprom1
+  %1 = load double, ptr %arrayidx2, align 8
   %conv3 = fptoui double %1 to i64
   %vecinit4 = insertelement <2 x i64> %vecinit, i64 %conv3, i32 1
   ret <2 x i64> %vecinit4
@@ -6092,7 +6096,7 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-define <2 x i64> @spltMemValConvdtoull(double* nocapture readonly %ptr) {
+define <2 x i64> @spltMemValConvdtoull(ptr nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvdtoull:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lxvdsx vs0, 0, r3
@@ -6117,7 +6121,7 @@ define <2 x i64> @spltMemValConvdtoull(double* nocapture readonly %ptr) {
 ; P8LE-NEXT:    xvcvdpuxds v2, vs0
 ; P8LE-NEXT:    blr
 entry:
-  %0 = load double, double* %ptr, align 8
+  %0 = load double, ptr %ptr, align 8
   %conv = fptoui double %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer

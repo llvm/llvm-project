@@ -47,7 +47,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  virtual MachineFunctionProperties getRequiredProperties() const override {
+  MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::IsSSA);
   }

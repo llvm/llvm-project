@@ -22,7 +22,7 @@
 
 define void @call_test_byval_mem1() {
 entry:
-  %call = call zeroext i8 @test_byval_mem1(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, %struct_S1* byval(%struct_S1) align 1 @gS1)
+  %call = call zeroext i8 @test_byval_mem1(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, ptr byval(%struct_S1) align 1 @gS1)
   ret void
 }
 
@@ -43,10 +43,9 @@ entry:
 ; ASM64BIT:       bl .test_byval_mem1
 ; ASM64BIT:       addi 1, 1, 128
 
-define zeroext  i8 @test_byval_mem1(i32, i32, i32, i32, i32, i32, i32, i32, %struct_S1* byval(%struct_S1) align 1 %s) {
+define zeroext  i8 @test_byval_mem1(i32, i32, i32, i32, i32, i32, i32, i32, ptr byval(%struct_S1) align 1 %s) {
 entry:
-  %gep = getelementptr inbounds %struct_S1, %struct_S1* %s, i32 0, i32 0
-  %load = load i8, i8* %gep, align 1
+  %load = load i8, ptr %s, align 1
   ret i8 %load
 }
 
@@ -73,7 +72,7 @@ entry:
 
 define void @call_test_byval_mem2() {
 entry:
-  %call = call zeroext i8 @test_byval_mem2(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, %struct_S256* byval(%struct_S256) align 1 @gS256)
+  %call = call zeroext i8 @test_byval_mem2(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, ptr byval(%struct_S256) align 1 @gS256)
   ret void
 }
 
@@ -143,10 +142,10 @@ entry:
 ; ASM64BIT:       addi 1, 1, 368
 
 
-define zeroext i8 @test_byval_mem2(i32, i32, i32, i32, i32, i32, i32, i32, %struct_S256* byval(%struct_S256) align 1 %s) {
+define zeroext i8 @test_byval_mem2(i32, i32, i32, i32, i32, i32, i32, i32, ptr byval(%struct_S256) align 1 %s) {
 entry:
-  %gep = getelementptr inbounds %struct_S256, %struct_S256* %s, i32 0, i32 0, i32 255
-  %load = load i8, i8* %gep, align 1
+  %gep = getelementptr inbounds %struct_S256, ptr %s, i32 0, i32 0, i32 255
+  %load = load i8, ptr %gep, align 1
   ret i8 %load
 }
 
@@ -172,7 +171,7 @@ entry:
 
 define void @call_test_byval_mem3() {
 entry:
-  call void @test_byval_mem3(i32 42, float 0x40091EB860000000, %struct_S57* byval(%struct_S57) align 1 @gS57)
+  call void @test_byval_mem3(i32 42, float 0x40091EB860000000, ptr byval(%struct_S57) align 1 @gS57)
   ret void
 }
 
@@ -234,7 +233,7 @@ entry:
 ; ASM64BIT:       bl .test_byval_mem3
 ; ASM64BIT:       addi 1, 1, 128
 
-define void @test_byval_mem3(i32, float, %struct_S57* byval(%struct_S57) align 1 %s) {
+define void @test_byval_mem3(i32, float, ptr byval(%struct_S57) align 1 %s) {
 entry:
   ret void
 }
@@ -288,7 +287,7 @@ entry:
 
 define void @call_test_byval_mem4() {
 entry:
-  call void @test_byval_mem4(i32 42, %struct_S31* byval(%struct_S31) align 1 @gS31, %struct_S256* byval(%struct_S256) align 1 @gS256)
+  call void @test_byval_mem4(i32 42, ptr byval(%struct_S31) align 1 @gS31, ptr byval(%struct_S256) align 1 @gS256)
   ret void
 }
 
@@ -385,7 +384,7 @@ entry:
 ; ASM64BIT:       bl .test_byval_mem4
 ; ASM64BIT:       addi 1, 1, 352
 
-define void @test_byval_mem4(i32, %struct_S31* byval(%struct_S31) align 1, %struct_S256* byval(%struct_S256) align 1 %s) {
+define void @test_byval_mem4(i32, ptr byval(%struct_S31) align 1, ptr byval(%struct_S256) align 1 %s) {
 entry:
   ret void
 }

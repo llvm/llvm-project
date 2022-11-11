@@ -1,7 +1,7 @@
-; RUN: opt < %s -globals-aa -function-attrs | \
+; RUN: opt < %s -passes='require<globals-aa>,function-attrs' | \
 ; RUN:   opt -S -strip -strip-dead-prototypes -strip-named-metadata > %t.no_dbg
 
-; RUN: opt < %s -debugify-each -globals-aa -function-attrs | \
+; RUN: opt < %s -debugify-each -passes='require<globals-aa>,function-attrs' | \
 ; RUN:   opt -S -strip -strip-dead-prototypes -strip-named-metadata > %t.with_dbg
 
 ; RUN: diff %t.no_dbg %t.with_dbg

@@ -110,7 +110,7 @@ void ConstraintSystem::dump(ArrayRef<std::string> Names) const {
   if (Constraints.empty())
     return;
 
-  for (auto &Row : Constraints) {
+  for (const auto &Row : Constraints) {
     SmallVector<std::string, 16> Parts;
     for (unsigned I = 1, S = Row.size(); I < S; ++I) {
       if (Row[I] == 0)

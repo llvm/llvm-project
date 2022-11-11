@@ -7,7 +7,7 @@
 define <vscale x 1 x i64> @vwmacc_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i32> %vb, <vscale x 1 x i64> %vc) {
 ; CHECK-LABEL: vwmacc_vv_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vwmacc.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -22,7 +22,7 @@ define <vscale x 1 x i64> @vwmacc_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1
 define <vscale x 1 x i64> @vwmacc_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <vscale x 1 x i64> %vc) {
 ; CHECK-LABEL: vwmacc_vx_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vwmacc.vx v9, a0, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -39,7 +39,7 @@ define <vscale x 1 x i64> @vwmacc_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <vs
 define <vscale x 1 x i64> @vwmaccu_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i32> %vb, <vscale x 1 x i64> %vc) {
 ; CHECK-LABEL: vwmaccu_vv_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vwmaccu.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -54,7 +54,7 @@ define <vscale x 1 x i64> @vwmaccu_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 
 define <vscale x 1 x i64> @vwmaccu_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <vscale x 1 x i64> %vc) {
 ; CHECK-LABEL: vwmaccu_vx_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vwmaccu.vx v9, a0, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -71,7 +71,7 @@ define <vscale x 1 x i64> @vwmaccu_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <v
 define <vscale x 1 x i64> @vwmaccsu_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i32> %vb, <vscale x 1 x i64> %vc) {
 ; CHECK-LABEL: vwmaccsu_vv_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vwmaccsu.vv v10, v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -86,7 +86,7 @@ define <vscale x 1 x i64> @vwmaccsu_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x
 define <vscale x 1 x i64> @vwmaccsu_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <vscale x 1 x i64> %vc) {
 ; CHECK-LABEL: vwmaccsu_vx_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vwmaccsu.vx v9, a0, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -103,7 +103,7 @@ define <vscale x 1 x i64> @vwmaccsu_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <
 define <vscale x 1 x i64> @vwmaccus_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <vscale x 1 x i64> %vc) {
 ; CHECK-LABEL: vwmaccus_vx_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vwmaccus.vx v9, a0, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -120,7 +120,7 @@ define <vscale x 1 x i64> @vwmaccus_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %b, <
 define <vscale x 2 x i64> @vwmacc_vv_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i32> %vb, <vscale x 2 x i64> %vc) {
 ; CHECK-LABEL: vwmacc_vv_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vwmacc.vv v10, v8, v9
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -135,7 +135,7 @@ define <vscale x 2 x i64> @vwmacc_vv_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2
 define <vscale x 2 x i64> @vwmacc_vx_nxv2i32(<vscale x 2 x i32> %va, i32 %b, <vscale x 2 x i64> %vc) {
 ; CHECK-LABEL: vwmacc_vx_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vwmacc.vx v10, a0, v8
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -152,7 +152,7 @@ define <vscale x 2 x i64> @vwmacc_vx_nxv2i32(<vscale x 2 x i32> %va, i32 %b, <vs
 define <vscale x 2 x i64> @vwmaccu_vv_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i32> %vb, <vscale x 2 x i64> %vc) {
 ; CHECK-LABEL: vwmaccu_vv_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vwmaccu.vv v10, v8, v9
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -167,7 +167,7 @@ define <vscale x 2 x i64> @vwmaccu_vv_nxv2i32(<vscale x 2 x i32> %va, <vscale x 
 define <vscale x 2 x i64> @vwmaccu_vx_nxv2i32(<vscale x 2 x i32> %va, i32 %b, <vscale x 2 x i64> %vc) {
 ; CHECK-LABEL: vwmaccu_vx_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vwmaccu.vx v10, a0, v8
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -184,7 +184,7 @@ define <vscale x 2 x i64> @vwmaccu_vx_nxv2i32(<vscale x 2 x i32> %va, i32 %b, <v
 define <vscale x 2 x i64> @vwmaccsu_vv_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i32> %vb, <vscale x 2 x i64> %vc) {
 ; CHECK-LABEL: vwmaccsu_vv_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vwmaccsu.vv v10, v9, v8
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -199,7 +199,7 @@ define <vscale x 2 x i64> @vwmaccsu_vv_nxv2i32(<vscale x 2 x i32> %va, <vscale x
 define <vscale x 2 x i64> @vwmaccsu_vx_nxv2i32(<vscale x 2 x i32> %va, i32 %b, <vscale x 2 x i64> %vc) {
 ; CHECK-LABEL: vwmaccsu_vx_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vwmaccsu.vx v10, a0, v8
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -216,7 +216,7 @@ define <vscale x 2 x i64> @vwmaccsu_vx_nxv2i32(<vscale x 2 x i32> %va, i32 %b, <
 define <vscale x 2 x i64> @vwmaccus_vx_nxv2i32(<vscale x 2 x i32> %va, i32 %b, <vscale x 2 x i64> %vc) {
 ; CHECK-LABEL: vwmaccus_vx_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vwmaccus.vx v10, a0, v8
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -233,7 +233,7 @@ define <vscale x 2 x i64> @vwmaccus_vx_nxv2i32(<vscale x 2 x i32> %va, i32 %b, <
 define <vscale x 4 x i64> @vwmacc_vv_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i32> %vb, <vscale x 4 x i64> %vc) {
 ; CHECK-LABEL: vwmacc_vv_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vwmacc.vv v12, v8, v10
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -248,7 +248,7 @@ define <vscale x 4 x i64> @vwmacc_vv_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4
 define <vscale x 4 x i64> @vwmacc_vx_nxv4i32(<vscale x 4 x i32> %va, i32 %b, <vscale x 4 x i64> %vc) {
 ; CHECK-LABEL: vwmacc_vx_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vwmacc.vx v12, a0, v8
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -265,7 +265,7 @@ define <vscale x 4 x i64> @vwmacc_vx_nxv4i32(<vscale x 4 x i32> %va, i32 %b, <vs
 define <vscale x 4 x i64> @vwmaccu_vv_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i32> %vb, <vscale x 4 x i64> %vc) {
 ; CHECK-LABEL: vwmaccu_vv_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vwmaccu.vv v12, v8, v10
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -280,7 +280,7 @@ define <vscale x 4 x i64> @vwmaccu_vv_nxv4i32(<vscale x 4 x i32> %va, <vscale x 
 define <vscale x 4 x i64> @vwmaccu_vx_nxv4i32(<vscale x 4 x i32> %va, i32 %b, <vscale x 4 x i64> %vc) {
 ; CHECK-LABEL: vwmaccu_vx_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vwmaccu.vx v12, a0, v8
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -297,7 +297,7 @@ define <vscale x 4 x i64> @vwmaccu_vx_nxv4i32(<vscale x 4 x i32> %va, i32 %b, <v
 define <vscale x 4 x i64> @vwmaccsu_vv_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i32> %vb, <vscale x 4 x i64> %vc) {
 ; CHECK-LABEL: vwmaccsu_vv_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vwmaccsu.vv v12, v10, v8
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -312,7 +312,7 @@ define <vscale x 4 x i64> @vwmaccsu_vv_nxv4i32(<vscale x 4 x i32> %va, <vscale x
 define <vscale x 4 x i64> @vwmaccsu_vx_nxv4i32(<vscale x 4 x i32> %va, i32 %b, <vscale x 4 x i64> %vc) {
 ; CHECK-LABEL: vwmaccsu_vx_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vwmaccsu.vx v12, a0, v8
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -329,7 +329,7 @@ define <vscale x 4 x i64> @vwmaccsu_vx_nxv4i32(<vscale x 4 x i32> %va, i32 %b, <
 define <vscale x 4 x i64> @vwmaccus_vx_nxv4i32(<vscale x 4 x i32> %va, i32 %b, <vscale x 4 x i64> %vc) {
 ; CHECK-LABEL: vwmaccus_vx_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vwmaccus.vx v12, a0, v8
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -346,7 +346,7 @@ define <vscale x 4 x i64> @vwmaccus_vx_nxv4i32(<vscale x 4 x i32> %va, i32 %b, <
 define <vscale x 8 x i64> @vwmacc_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i64> %vc) {
 ; CHECK-LABEL: vwmacc_vv_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vwmacc.vv v16, v8, v12
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -361,7 +361,7 @@ define <vscale x 8 x i64> @vwmacc_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8
 define <vscale x 8 x i64> @vwmacc_vx_nxv8i32(<vscale x 8 x i32> %va, i32 %b, <vscale x 8 x i64> %vc) {
 ; CHECK-LABEL: vwmacc_vx_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vwmacc.vx v16, a0, v8
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -378,7 +378,7 @@ define <vscale x 8 x i64> @vwmacc_vx_nxv8i32(<vscale x 8 x i32> %va, i32 %b, <vs
 define <vscale x 8 x i64> @vwmaccu_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i64> %vc) {
 ; CHECK-LABEL: vwmaccu_vv_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vwmaccu.vv v16, v8, v12
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -393,7 +393,7 @@ define <vscale x 8 x i64> @vwmaccu_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 
 define <vscale x 8 x i64> @vwmaccu_vx_nxv8i32(<vscale x 8 x i32> %va, i32 %b, <vscale x 8 x i64> %vc) {
 ; CHECK-LABEL: vwmaccu_vx_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vwmaccu.vx v16, a0, v8
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -410,7 +410,7 @@ define <vscale x 8 x i64> @vwmaccu_vx_nxv8i32(<vscale x 8 x i32> %va, i32 %b, <v
 define <vscale x 8 x i64> @vwmaccsu_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i64> %vc) {
 ; CHECK-LABEL: vwmaccsu_vv_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vwmaccsu.vv v16, v12, v8
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -425,7 +425,7 @@ define <vscale x 8 x i64> @vwmaccsu_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x
 define <vscale x 8 x i64> @vwmaccsu_vx_nxv8i32(<vscale x 8 x i32> %va, i32 %b, <vscale x 8 x i64> %vc) {
 ; CHECK-LABEL: vwmaccsu_vx_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vwmaccsu.vx v16, a0, v8
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -442,7 +442,7 @@ define <vscale x 8 x i64> @vwmaccsu_vx_nxv8i32(<vscale x 8 x i32> %va, i32 %b, <
 define <vscale x 8 x i64> @vwmaccus_vx_nxv8i32(<vscale x 8 x i32> %va, i32 %b, <vscale x 8 x i64> %vc) {
 ; CHECK-LABEL: vwmaccus_vx_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vwmaccus.vx v16, a0, v8
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret

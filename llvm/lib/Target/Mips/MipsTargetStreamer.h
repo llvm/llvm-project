@@ -178,7 +178,7 @@ public:
 
   MipsABIFlagsSection &getABIFlagsSection() { return ABIFlagsSection; }
   const MipsABIInfo &getABI() const {
-    assert(ABI.hasValue() && "ABI hasn't been set!");
+    assert(ABI && "ABI hasn't been set!");
     return *ABI;
   }
 

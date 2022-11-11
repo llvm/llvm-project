@@ -320,6 +320,14 @@ void bindSymbols(MLIRContext *ctx, AffineExprTy &e, AffineExprTy2 &...exprs) {
   e = getAffineSymbolExpr(N, ctx);
   bindSymbols<N + 1, AffineExprTy2 &...>(ctx, exprs...);
 }
+
+template <typename AffineExprTy>
+void bindSymbolsList(MLIRContext *ctx, SmallVectorImpl<AffineExprTy> &exprs) {
+  int idx = 0;
+  for (AffineExprTy &e : exprs)
+    e = getAffineSymbolExpr(idx++, ctx);
+}
+
 } // namespace detail
 
 /// Bind a list of AffineExpr references to DimExpr at positions:

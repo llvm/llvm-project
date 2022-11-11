@@ -49,8 +49,6 @@ class ThreadGDBRemote;
 class ProcessGDBRemote : public Process,
                          private GDBRemoteClientBase::ContinueDelegate {
 public:
-  ProcessGDBRemote(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
-
   ~ProcessGDBRemote() override;
 
   static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
@@ -79,16 +77,16 @@ public:
   CommandObject *GetPluginCommandObject() override;
 
   // Creating a new process, or attaching to an existing one
-  Status WillLaunch(Module *module) override;
+  Status DoWillLaunch(Module *module) override;
 
   Status DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) override;
 
   void DidLaunch() override;
 
-  Status WillAttachToProcessWithID(lldb::pid_t pid) override;
+  Status DoWillAttachToProcessWithID(lldb::pid_t pid) override;
 
-  Status WillAttachToProcessWithName(const char *process_name,
-                                     bool wait_for_launch) override;
+  Status DoWillAttachToProcessWithName(const char *process_name,
+                                       bool wait_for_launch) override;
 
   Status DoConnectRemote(llvm::StringRef remote_url) override;
 
@@ -239,6 +237,8 @@ protected:
   friend class GDBRemoteCommunicationClient;
   friend class GDBRemoteRegisterContext;
 
+  ProcessGDBRemote(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
+
   bool SupportsMemoryTagging() override;
 
   /// Broadcaster event bits definitions.
@@ -307,8 +307,6 @@ protected:
   bool CanResume(lldb::StateType state) { return state == lldb::eStateStopped; }
 
   bool HasExited(lldb::StateType state) { return state == lldb::eStateExited; }
-
-  bool ProcessIDIsValid() const;
 
   void Clear();
 

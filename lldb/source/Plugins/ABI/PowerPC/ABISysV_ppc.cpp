@@ -204,8 +204,7 @@ static const RegisterInfo g_register_infos[] = {
      nullptr,
      }};
 
-static const uint32_t k_num_register_infos =
-    llvm::array_lengthof(g_register_infos);
+static const uint32_t k_num_register_infos = std::size(g_register_infos);
 
 const lldb_private::RegisterInfo *
 ABISysV_ppc::GetRegisterInfoArray(uint32_t &count) {
@@ -622,7 +621,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
             if (reg_ctx->ReadRegister(altivec_reg, reg_value)) {
               Status error;
               if (reg_value.GetAsMemoryData(
-                      altivec_reg, heap_data_up->GetBytes(),
+                      *altivec_reg, heap_data_up->GetBytes(),
                       heap_data_up->GetByteSize(), byte_order, error)) {
                 DataExtractor data(DataBufferSP(heap_data_up.release()),
                                    byte_order,

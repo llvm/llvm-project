@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class DoubleTypesExprTestCase(AbstractBase.GenericTester):
 
-    mydir = AbstractBase.GenericTester.compute_mydir(__file__)
-
     # rdar://problem/8493023
     # test/types failures for Test*TypesExpr.py: element offset computed wrong
     # and sign error?

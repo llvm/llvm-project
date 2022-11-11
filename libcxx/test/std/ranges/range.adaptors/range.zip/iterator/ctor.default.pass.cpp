@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // iterator() = default;
 
@@ -57,7 +56,7 @@ constexpr bool test() {
     auto [x] = *iter;
     assert(x == 0); // PODIter has to be initialised to have value 0
   }
-  
+
   {
     ZipIter iter = {};
     auto [x] = *iter;

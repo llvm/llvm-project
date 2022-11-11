@@ -2,14 +2,14 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s --check-prefix=DARWIN
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -relocation-model=static | FileCheck %s --check-prefix=LINUX
 
-@ptr = external global i32*		; <i32**> [#uses=1]
-@src = external global [0 x i32]		; <[0 x i32]*> [#uses=1]
-@dst = external global [0 x i32]		; <[0 x i32]*> [#uses=1]
-@lptr = internal global i32* null		; <i32**> [#uses=1]
-@ldst = internal global [500 x i32] zeroinitializer, align 32		; <[500 x i32]*> [#uses=1]
-@lsrc = internal global [500 x i32] zeroinitializer, align 32		; <[500 x i32]*> [#uses=0]
-@bsrc = internal global [500000 x i32] zeroinitializer, align 32		; <[500000 x i32]*> [#uses=0]
-@bdst = internal global [500000 x i32] zeroinitializer, align 32		; <[500000 x i32]*> [#uses=0]
+@ptr = external global ptr		; <ptr> [#uses=1]
+@src = external global [0 x i32]		; <ptr> [#uses=1]
+@dst = external global [0 x i32]		; <ptr> [#uses=1]
+@lptr = internal global ptr null		; <ptr> [#uses=1]
+@ldst = internal global [500 x i32] zeroinitializer, align 32		; <ptr> [#uses=1]
+@lsrc = internal global [500 x i32] zeroinitializer, align 32		; <ptr> [#uses=0]
+@bsrc = internal global [500000 x i32] zeroinitializer, align 32		; <ptr> [#uses=0]
+@bdst = internal global [500000 x i32] zeroinitializer, align 32		; <ptr> [#uses=0]
 
 define void @test1() nounwind {
 ; DARWIN-LABEL: test1:
@@ -27,8 +27,8 @@ define void @test1() nounwind {
 ; LINUX-NEXT:    movq dst@GOTPCREL(%rip), %rcx
 ; LINUX-NEXT:    movl %eax, (%rcx)
 ; LINUX-NEXT:    retq
-	%tmp = load i32, i32* getelementptr ([0 x i32], [0 x i32]* @src, i32 0, i32 0)		; <i32> [#uses=1]
-	store i32 %tmp, i32* getelementptr ([0 x i32], [0 x i32]* @dst, i32 0, i32 0)
+	%tmp = load i32, ptr @src		; <i32> [#uses=1]
+	store i32 %tmp, ptr @dst
 	ret void
 }
 
@@ -46,7 +46,7 @@ define void @test2() nounwind {
 ; LINUX-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
 ; LINUX-NEXT:    movq %rax, (%rcx)
 ; LINUX-NEXT:    retq
-	store i32* getelementptr ([0 x i32], [0 x i32]* @dst, i32 0, i32 0), i32** @ptr
+	store ptr @dst, ptr @ptr
 	ret void
 }
 
@@ -61,7 +61,7 @@ define void @test3() nounwind {
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    movq $ldst, lptr(%rip)
 ; LINUX-NEXT:    retq
-	store i32* getelementptr ([500 x i32], [500 x i32]* @ldst, i32 0, i32 0), i32** @lptr
+	store ptr @ldst, ptr @lptr
 	br label %return
 
 return:		; preds = %0

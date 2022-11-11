@@ -9,5 +9,7 @@ add_clang_library(clangPseudoCXX
   cxx_gen
 
   LINK_LIBS
+  clangBasic
+  clangPseudo
   clangPseudoGrammar
   )

@@ -60,7 +60,7 @@ int main(int, char**)
         {
             size_t idx = 0;
             try {
-                std::stod("", &idx);
+                (void)std::stod("", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);
@@ -69,7 +69,7 @@ int main(int, char**)
         {
             size_t idx = 0;
             try {
-                std::stod("  - 8", &idx);
+                (void)std::stod("  - 8", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);
@@ -78,7 +78,7 @@ int main(int, char**)
         {
             size_t idx = 0;
             try {
-                std::stod("a1", &idx);
+                (void)std::stod("a1", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);
@@ -127,7 +127,7 @@ int main(int, char**)
         {
             size_t idx = 0;
             try {
-                std::stod(L"", &idx);
+                (void)std::stod(L"", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);
@@ -136,7 +136,7 @@ int main(int, char**)
         {
             size_t idx = 0;
             try {
-                std::stod(L"  - 8", &idx);
+                (void)std::stod(L"  - 8", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);
@@ -145,7 +145,7 @@ int main(int, char**)
         {
             size_t idx = 0;
             try {
-                std::stod(L"a1", &idx);
+                (void)std::stod(L"a1", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);

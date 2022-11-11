@@ -267,10 +267,9 @@ public:
     if (!BlockInfoRecords.empty() && BlockInfoRecords.back().BlockID == BlockID)
       return &BlockInfoRecords.back();
 
-    for (unsigned i = 0, e = static_cast<unsigned>(BlockInfoRecords.size());
-         i != e; ++i)
-      if (BlockInfoRecords[i].BlockID == BlockID)
-        return &BlockInfoRecords[i];
+    for (BlockInfo &BI : BlockInfoRecords)
+      if (BI.BlockID == BlockID)
+        return &BI;
     return nullptr;
   }
 
@@ -386,12 +385,12 @@ private:
       const BitCodeAbbrevOp &Op = Abbv->getOperandInfo(i++);
 
       if (Op.isLiteral())
-        EmitAbbreviatedLiteral(Op, Code.getValue());
+        EmitAbbreviatedLiteral(Op, Code.value());
       else {
         assert(Op.getEncoding() != BitCodeAbbrevOp::Array &&
                Op.getEncoding() != BitCodeAbbrevOp::Blob &&
                "Expected literal or scalar");
-        EmitAbbreviatedField(Op, Code.getValue());
+        EmitAbbreviatedField(Op, Code.value());
       }
     }
 

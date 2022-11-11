@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=powerpc64-linux-gnu -mcpu=pwr9 -mattr=+vsx -slp-vectorizer < %s | FileCheck %s --check-prefix=CHECK-P9
-; RUN: opt -S -mtriple=powerpc64-linux-gnu -mcpu=pwr8 -mattr=+vsx -slp-vectorizer < %s | FileCheck %s --check-prefix=CHECK-P8
+; RUN: opt -S -mtriple=powerpc64-linux-gnu -mcpu=pwr9 -mattr=+vsx -passes=slp-vectorizer < %s | FileCheck %s --check-prefix=CHECK-P9
+; RUN: opt -S -mtriple=powerpc64-linux-gnu -mcpu=pwr8 -mattr=+vsx -passes=slp-vectorizer < %s | FileCheck %s --check-prefix=CHECK-P8
 
 %struct._pp = type { i16, i16, i16, i16 }
 

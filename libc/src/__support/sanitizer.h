@@ -42,6 +42,13 @@
 #define LLVM_LIBC_HAVE_ADDRESS_SANITIZER 1
 #endif
 
+// HWAddressSanitizer (HWASan) is a fast, low memory overhead error detector.
+#ifdef LLVM_LIBC_HAVE_HWADDRESS_SANITIZER
+#error "LLVM_LIBC_HAVE_HWADDRESS_SANITIZER cannot be directly set."
+#elif LLVM_LIBC_HAVE_FEATURE(hwaddress_sanitizer)
+#define LLVM_LIBC_HAVE_HWADDRESS_SANITIZER 1
+#endif
+
 #if LLVM_LIBC_HAVE_MEMORY_SANITIZER
 #include <sanitizer/msan_interface.h>
 #define SANITIZER_MEMORY_INITIALIZED(addr, size) __msan_unpoison(addr, size)

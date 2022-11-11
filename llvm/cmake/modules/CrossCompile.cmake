@@ -15,7 +15,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/cmake/platforms/${toolchain}.cmake)
     set(CROSS_TOOLCHAIN_FLAGS_INIT
       -DCMAKE_TOOLCHAIN_FILE=\"${LLVM_MAIN_SRC_DIR}/cmake/platforms/${toolchain}.cmake\")
-  else()
+  elseif (NOT CMAKE_CROSSCOMPILING)
     set(CROSS_TOOLCHAIN_FLAGS_INIT
       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}

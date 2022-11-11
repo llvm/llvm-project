@@ -1,55 +1,82 @@
 add_header_library(
   array
   HDRS
-    Array.h
-)
-
-add_header_library(
-  array_ref
-  HDRS
-    ArrayRef.h
+    array.h
 )
 
 add_header_library(
   bit
   HDRS
-    Bit.h
+    bit.h
 )
 
 add_header_library(
   bitset
   HDRS
-    Bitset.h
+    bitset.h
+)
+
+add_header_library(
+  cstddef
+  HDRS
+    cstddef.h
+  DEPENDS
+    .type_traits
 )
 
 add_header_library(
   functional
   HDRS
-    Functional.h
+    functional.h
 )
 
 add_header_library(
   limits
   HDRS
-    Limits.h
+    limits.h
+)
+
+add_header_library(
+  span
+  HDRS
+    span.h
+  DEPENDS
+    .array
+    .type_traits
 )
 
 add_header_library(
   string_view
   HDRS
-    StringView.h
+    string_view.h
+)
+
+add_header_library(
+  stringstream
+  HDRS
+    stringstream.h
+  DEPENDS
+    .span
+    .string_view
+    libc.src.__support.integer_to_string
+)
+
+add_header_library(
+  optional
+  HDRS
+    optional.h
 )
 
 add_header_library(
   type_traits
   HDRS
-    TypeTraits.h
+    type_traits.h
 )
 
 add_header_library(
   utility
   HDRS
-    Utility.h
+    utility.h
 )
 
 add_header_library(
@@ -67,21 +94,7 @@ add_header_library(
 )
 
 add_header_library(
-  blockstore
-  HDRS
-    blockstore.h
-)
-
-add_header_library(
   error
   HDRS
     error.h
-)
-
-add_header_library(
-  uint
-  HDRS
-    UInt.h
-  DEPENDS
-    libc.src.__support.CPP.array
 )

@@ -115,7 +115,10 @@ void no_warning_on_tuple_types_copy(Mytuple t) {
 Mytuple getMytuple();
 
 void deconstruct_tuple_types_warning() {
-  auto [a, b] = getMytuple(); // expected-warning{{Value stored to '[a, b]' during its initialization is never read}}
+  // The initializers reference the decomposed region, so the warning is not reported
+  // FIXME: ideally we want to ignore that the initializers reference the decomposed region, and report the warning,
+  // though the first step towards that is to handle DeadCode if the initializer is CXXConstructExpr.
+  auto [a, b] = getMytuple(); // no-warning
 }
 
 int deconstruct_tuple_types_no_warning() {

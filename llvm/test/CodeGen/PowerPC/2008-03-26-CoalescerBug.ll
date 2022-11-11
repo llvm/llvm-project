@@ -4,7 +4,7 @@
 ; CHECK: blr
 define i32 @t(i64 %byteStart, i32 %activeIndex) nounwind  {
 entry:
-	%tmp50 = load i32, i32* null, align 4		; <i32> [#uses=1]
+	%tmp50 = load i32, ptr null, align 4		; <i32> [#uses=1]
 	%tmp5051 = zext i32 %tmp50 to i64		; <i64> [#uses=3]
 	%tmp53 = udiv i64 %byteStart, %tmp5051		; <i64> [#uses=1]
 	%tmp5354 = trunc i64 %tmp53 to i32		; <i32> [#uses=1]

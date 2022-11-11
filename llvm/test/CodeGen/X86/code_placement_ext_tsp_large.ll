@@ -69,7 +69,7 @@ define void @func_large() !prof !0 {
 ;
 ; CHECK-LABEL: Applying ext-tsp layout
 ; CHECK:   original  layout score: 9171074274.27
-; CHECK:   optimized layout score: 10756755324.57
+; CHECK:   optimized layout score: 10844307310.87
 ; CHECK: b0
 ; CHECK: b2
 ; CHECK: b3
@@ -113,7 +113,7 @@ define void @func_large() !prof !0 {
 ; CHECK3: b9
 
 b0:
-  %0 = load i32, i32* @yydebug, align 4
+  %0 = load i32, ptr @yydebug, align 4
   %cmp = icmp ne i32 %0, 0
   call void @a()
   call void @a()

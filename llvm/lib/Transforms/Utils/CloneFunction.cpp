@@ -46,7 +46,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
 
-  bool hasCalls = false, hasDynamicAllocas = false;
+  bool hasCalls = false, hasDynamicAllocas = false, hasMemProfMetadata = false;
   Module *TheModule = F ? F->getParent() : nullptr;
 
   // Loop over all instructions, and copy them over.
@@ -60,7 +60,10 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     NewBB->getInstList().push_back(NewInst);
     VMap[&I] = NewInst; // Add instruction map to value.
 
-    hasCalls |= (isa<CallInst>(I) && !I.isDebugOrPseudoInst());
+    if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
+      hasCalls = true;
+      hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_memprof);
+    }
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
       if (!AI->isStaticAlloca()) {
         hasDynamicAllocas = true;
@@ -70,6 +73,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
 
   if (CodeInfo) {
     CodeInfo->ContainsCalls |= hasCalls;
+    CodeInfo->ContainsMemProfMetadata |= hasMemProfMetadata;
     CodeInfo->ContainsDynamicAllocas |= hasDynamicAllocas;
   }
   return NewBB;
@@ -206,9 +210,20 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     };
 
     // Avoid cloning types, compile units, and (other) subprograms.
-    for (DISubprogram *ISP : DIFinder->subprograms())
-      if (ISP != SPClonedWithinModule)
+    SmallPtrSet<const DISubprogram *, 16> MappedToSelfSPs;
+    for (DISubprogram *ISP : DIFinder->subprograms()) {
+      if (ISP != SPClonedWithinModule) {
         mapToSelfIfNew(ISP);
+        MappedToSelfSPs.insert(ISP);
+      }
+    }
+
+    // If a subprogram isn't going to be cloned skip its lexical blocks as well.
+    for (DIScope *S : DIFinder->scopes()) {
+      auto *LScope = dyn_cast<DILocalScope>(S);
+      if (LScope && MappedToSelfSPs.count(LScope->getSubprogram()))
+        mapToSelfIfNew(S);
+    }
 
     for (DICompileUnit *CU : DIFinder->compile_units())
       mapToSelfIfNew(CU);
@@ -460,6 +475,7 @@ void PruningFunctionCloner::CloneBlock(
   }
 
   bool hasCalls = false, hasDynamicAllocas = false, hasStaticAllocas = false;
+  bool hasMemProfMetadata = false;
 
   // Loop over all instructions, and copy them over, DCE'ing as we go.  This
   // loop doesn't include the terminator.
@@ -504,7 +520,10 @@ void PruningFunctionCloner::CloneBlock(
       NewInst->setName(II->getName() + NameSuffix);
     VMap[&*II] = NewInst; // Add instruction map to value.
     NewBB->getInstList().push_back(NewInst);
-    hasCalls |= (isa<CallInst>(II) && !II->isDebugOrPseudoInst());
+    if (isa<CallInst>(II) && !II->isDebugOrPseudoInst()) {
+      hasCalls = true;
+      hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_memprof);
+    }
 
     if (CodeInfo) {
       CodeInfo->OrigVMap[&*II] = NewInst;
@@ -578,6 +597,7 @@ void PruningFunctionCloner::CloneBlock(
 
   if (CodeInfo) {
     CodeInfo->ContainsCalls |= hasCalls;
+    CodeInfo->ContainsMemProfMetadata |= hasMemProfMetadata;
     CodeInfo->ContainsDynamicAllocas |= hasDynamicAllocas;
     CodeInfo->ContainsDynamicAllocas |=
         hasStaticAllocas && BB != &BB->getParent()->front();
@@ -723,14 +743,14 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     }
 
     // If the loops above have made these phi nodes have 0 or 1 operand,
-    // replace them with undef or the input value.  We must do this for
+    // replace them with poison or the input value.  We must do this for
     // correctness, because 0-operand phis are not valid.
     PN = cast<PHINode>(NewBB->begin());
     if (PN->getNumIncomingValues() == 0) {
       BasicBlock::iterator I = NewBB->begin();
       BasicBlock::const_iterator OldI = OldBB->begin();
       while ((PN = dyn_cast<PHINode>(I++))) {
-        Value *NV = UndefValue::get(PN->getType());
+        Value *NV = PoisonValue::get(PN->getType());
         PN->replaceAllUsesWith(NV);
         assert(VMap[&*OldI] == PN && "VMap mismatch");
         VMap[&*OldI] = NV;
@@ -1030,7 +1050,7 @@ void llvm::cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
   MDBuilder MDB(Context);
 
   for (auto *ScopeList : NoAliasDeclScopes) {
-    for (auto &MDOperand : ScopeList->operands()) {
+    for (const auto &MDOperand : ScopeList->operands()) {
       if (MDNode *MD = dyn_cast<MDNode>(MDOperand)) {
         AliasScopeNode SNANode(MD);
 
@@ -1055,7 +1075,7 @@ void llvm::adaptNoAliasScopes(Instruction *I,
   auto CloneScopeList = [&](const MDNode *ScopeList) -> MDNode * {
     bool NeedsReplacement = false;
     SmallVector<Metadata *, 8> NewScopeList;
-    for (auto &MDOp : ScopeList->operands()) {
+    for (const auto &MDOp : ScopeList->operands()) {
       if (MDNode *MD = dyn_cast<MDNode>(MDOp)) {
         if (auto *NewMD = ClonedScopes.lookup(MD)) {
           NewScopeList.push_back(NewMD);

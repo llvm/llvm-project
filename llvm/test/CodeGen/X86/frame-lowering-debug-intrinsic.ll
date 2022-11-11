@@ -25,7 +25,7 @@ define i64 @fn1WithDebug(i64 %a) !dbg !4 {
 
 %struct.Buffer = type { i8, [63 x i8] }
 
-define void @fn2NoDebug(%struct.Buffer* byval(%struct.Buffer) align 64 %p1) {
+define void @fn2NoDebug(ptr byval(%struct.Buffer) align 64 %p1) {
   ret void
 }
 
@@ -38,8 +38,8 @@ define void @fn2NoDebug(%struct.Buffer* byval(%struct.Buffer) align 64 %p1) {
 ; CHECK-NEXT: .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT: ret
 
-define void @fn2WithDebug(%struct.Buffer* byval(%struct.Buffer) align 64 %p1) !dbg !8 {
-  call void @llvm.dbg.declare(metadata %struct.Buffer* %p1, metadata !9, metadata !6), !dbg !10
+define void @fn2WithDebug(ptr byval(%struct.Buffer) align 64 %p1) !dbg !8 {
+  call void @llvm.dbg.declare(metadata ptr %p1, metadata !9, metadata !6), !dbg !10
   ret void
 }
 

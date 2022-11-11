@@ -37,7 +37,6 @@
 #include "llvm/Support/FileCollector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
@@ -799,7 +798,7 @@ int dsymutil_main(int argc, char **argv) {
           break;
         FileOffset += stat->getSize();
         if (FileOffset > UINT32_MAX) {
-          WithColor::error() << "the univesral binary has a slice with an "
+          WithColor::error() << "the universal binary has a slice with an "
               "offset exceeds 4GB and will produce an invalid Mach-O file.";
           return EXIT_FAILURE;
         }

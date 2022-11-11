@@ -20,7 +20,7 @@ namespace bugprone {
 /// argument to a memory allocation function.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-misplaced-operator-in-strlen-in-alloc.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc.html
 class MisplacedOperatorInStrlenInAllocCheck : public ClangTidyCheck {
 public:
   MisplacedOperatorInStrlenInAllocCheck(StringRef Name, ClangTidyContext *Context)

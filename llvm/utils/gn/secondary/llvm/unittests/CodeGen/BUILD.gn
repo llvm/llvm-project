@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("CodeGenTests") {
   deps = [
@@ -24,9 +24,11 @@ unittest("CodeGenTests") {
     "AsmPrinterDwarfTest.cpp",
     "DIEHashTest.cpp",
     "DIETest.cpp",
+    "DwarfStringPoolEntryRefTest.cpp",
     "InstrRefLDVTest.cpp",
     "LexicalScopesTest.cpp",
     "LowLevelTypeTest.cpp",
+    "MLRegallocDevelopmentFeatures.cpp",
     "MachineInstrBundleIteratorTest.cpp",
     "MachineInstrTest.cpp",
     "MachineOperandTest.cpp",

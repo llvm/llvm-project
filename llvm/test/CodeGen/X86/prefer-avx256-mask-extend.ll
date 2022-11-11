@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+prefer-256-bit | FileCheck %s --check-prefix=AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,-prefer-256-bit | FileCheck %s --check-prefix=AVX512F
 
-define <8 x i16> @testv8i1_sext_v8i16(<8 x i32>* %p) {
+define <8 x i16> @testv8i1_sext_v8i16(ptr %p) {
 ; AVX256-LABEL: testv8i1_sext_v8i16:
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vmovdqa (%rdi), %ymm0
@@ -33,13 +33,13 @@ define <8 x i16> @testv8i1_sext_v8i16(<8 x i32>* %p) {
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-  %in = load <8 x i32>, <8 x i32>* %p
+  %in = load <8 x i32>, ptr %p
   %cmp = icmp eq <8 x i32> %in, zeroinitializer
   %ext = sext <8 x i1> %cmp to <8 x i16>
   ret <8 x i16> %ext
 }
 
-define <16 x i8> @testv16i1_sext_v16i8(<8 x i32>* %p, <8 x i32>* %q) {
+define <16 x i8> @testv16i1_sext_v16i8(ptr %p, ptr %q) {
 ; AVX256-LABEL: testv16i1_sext_v16i8:
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vmovdqa (%rdi), %ymm0
@@ -78,16 +78,16 @@ define <16 x i8> @testv16i1_sext_v16i8(<8 x i32>* %p, <8 x i32>* %q) {
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-  %in = load <8 x i32>, <8 x i32>* %p
+  %in = load <8 x i32>, ptr %p
   %cmp = icmp eq <8 x i32> %in, zeroinitializer
-  %in2 = load <8 x i32>, <8 x i32>* %q
+  %in2 = load <8 x i32>, ptr %q
   %cmp2 = icmp eq <8 x i32> %in2, zeroinitializer
   %concat = shufflevector <8 x i1> %cmp, <8 x i1> %cmp2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %ext = sext <16 x i1> %concat to <16 x i8>
   ret <16 x i8> %ext
 }
 
-define <16 x i16> @testv16i1_sext_v16i16(<8 x i32>* %p, <8 x i32>* %q) {
+define <16 x i16> @testv16i1_sext_v16i16(ptr %p, ptr %q) {
 ; AVX256-LABEL: testv16i1_sext_v16i16:
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vmovdqa (%rdi), %ymm0
@@ -123,16 +123,16 @@ define <16 x i16> @testv16i1_sext_v16i16(<8 x i32>* %p, <8 x i32>* %q) {
 ; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512F-NEXT:    retq
-  %in = load <8 x i32>, <8 x i32>* %p
+  %in = load <8 x i32>, ptr %p
   %cmp = icmp eq <8 x i32> %in, zeroinitializer
-  %in2 = load <8 x i32>, <8 x i32>* %q
+  %in2 = load <8 x i32>, ptr %q
   %cmp2 = icmp eq <8 x i32> %in2, zeroinitializer
   %concat = shufflevector <8 x i1> %cmp, <8 x i1> %cmp2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %ext = sext <16 x i1> %concat to <16 x i16>
   ret <16 x i16> %ext
 }
 
-define <8 x i16> @testv8i1_zext_v8i16(<8 x i32>* %p) {
+define <8 x i16> @testv8i1_zext_v8i16(ptr %p) {
 ; AVX256-LABEL: testv8i1_zext_v8i16:
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vmovdqa (%rdi), %ymm0
@@ -163,13 +163,13 @@ define <8 x i16> @testv8i1_zext_v8i16(<8 x i32>* %p) {
 ; AVX512F-NEXT:    vpsrlw $15, %xmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-  %in = load <8 x i32>, <8 x i32>* %p
+  %in = load <8 x i32>, ptr %p
   %cmp = icmp eq <8 x i32> %in, zeroinitializer
   %ext = zext <8 x i1> %cmp to <8 x i16>
   ret <8 x i16> %ext
 }
 
-define <16 x i8> @testv16i1_zext_v16i8(<8 x i32>* %p, <8 x i32>* %q) {
+define <16 x i8> @testv16i1_zext_v16i8(ptr %p, ptr %q) {
 ; AVX256-LABEL: testv16i1_zext_v16i8:
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vmovdqa (%rdi), %ymm0
@@ -210,16 +210,16 @@ define <16 x i8> @testv16i1_zext_v16i8(<8 x i32>* %p, <8 x i32>* %q) {
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-  %in = load <8 x i32>, <8 x i32>* %p
+  %in = load <8 x i32>, ptr %p
   %cmp = icmp eq <8 x i32> %in, zeroinitializer
-  %in2 = load <8 x i32>, <8 x i32>* %q
+  %in2 = load <8 x i32>, ptr %q
   %cmp2 = icmp eq <8 x i32> %in2, zeroinitializer
   %concat = shufflevector <8 x i1> %cmp, <8 x i1> %cmp2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %ext = zext <16 x i1> %concat to <16 x i8>
   ret <16 x i8> %ext
 }
 
-define <16 x i16> @testv16i1_zext_v16i16(<8 x i32>* %p, <8 x i32>* %q) {
+define <16 x i16> @testv16i1_zext_v16i16(ptr %p, ptr %q) {
 ; AVX256-LABEL: testv16i1_zext_v16i16:
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vmovdqa (%rdi), %ymm0
@@ -258,9 +258,9 @@ define <16 x i16> @testv16i1_zext_v16i16(<8 x i32>* %p, <8 x i32>* %q) {
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512F-NEXT:    vpsrlw $15, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
-  %in = load <8 x i32>, <8 x i32>* %p
+  %in = load <8 x i32>, ptr %p
   %cmp = icmp eq <8 x i32> %in, zeroinitializer
-  %in2 = load <8 x i32>, <8 x i32>* %q
+  %in2 = load <8 x i32>, ptr %q
   %cmp2 = icmp eq <8 x i32> %in2, zeroinitializer
   %concat = shufflevector <8 x i1> %cmp, <8 x i1> %cmp2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %ext = zext <16 x i1> %concat to <16 x i16>

@@ -21,12 +21,13 @@
   static_assert(1, "");
   _Static_assert(1, "");
 
-  static_assert(0, ""); // expected-error {{static_assert failed}}
-  _Static_assert(0, ""); // expected-error {{static_assert failed}}
+  static_assert(0, ""); // expected-error {{static assertion failed}}
+  _Static_assert(0, ""); // expected-error {{static assertion failed}}
 
-  static_assert(a, ""); // expected-error {{static_assert expression is not an integral constant expression}}
+  static_assert(a, ""); // expected-error {{static assertion expression is not an integral constant expression}}
   static_assert(sizeof(a) == 4, "");
-  static_assert(sizeof(a) == 3, ""); // expected-error {{static_assert failed}}
+  static_assert(sizeof(a) == 3, ""); // expected-error {{static assertion failed}} \
+                                     // expected-note {{evaluates to '4 == 3'}}
 }
 
 static_assert(1, "");
@@ -40,7 +41,8 @@ _Static_assert(1, "");
   static_assert(1, "");
   _Static_assert(1, "");
   static_assert(sizeof(b) == 4, "");
-  static_assert(sizeof(b) == 3, ""); // expected-error {{static_assert failed}}
+  static_assert(sizeof(b) == 3, ""); // expected-error {{static assertion failed}} \
+                                     // expected-note {{evaluates to '4 == 3'}}
 }
 
 static_assert(1, "");
@@ -56,7 +58,8 @@ static_assert(1, "");
 @interface B () {
   int b;
   static_assert(sizeof(b) == 4, "");
-  static_assert(sizeof(b) == 3, ""); // expected-error {{static_assert failed}}
+  static_assert(sizeof(b) == 3, ""); // expected-error {{static assertion failed}} \
+                                     // expected-note {{evaluates to '4 == 3'}}
 }
 @end
 
@@ -71,7 +74,7 @@ static_assert(1, "");
   int a;
   static_assert(1, ""); // expected-error {{type name requires a specifier or qualifier}} expected-error{{expected parameter declarator}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   _Static_assert(1, "");
-  _Static_assert(0, ""); // expected-error {{static_assert failed}}
+  _Static_assert(0, ""); // expected-error {{static assertion failed}}
 }
 @end
 #endif

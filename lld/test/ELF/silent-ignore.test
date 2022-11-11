@@ -1,6 +1,5 @@
 RUN: ld.lld --version \
 RUN:   -d \
-RUN:   -dc \
 RUN:   -detect-odr-violations \
 RUN:   -g \
 RUN:   -long-plt \

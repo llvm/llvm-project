@@ -1,0 +1,61 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-jitlink -noexec \
+# RUN: -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
+# RUN: -show-graph -noexec %t 2>&1 | FileCheck %s
+#
+# Check a label symbol with an offset is created as defined symbol.
+#
+# CHECK:   block 0xfff00000 size = 0x00000028, align = 16, alignment-offset = 0
+# CHECK-NEXT: symbols:
+# CHECK-NEXT:   0xfff00000 (block + 0x00000000): size: 0x00000013, linkage: strong, scope: default, live  -   main
+# CHECK-NEXT:   0xfff00013 (block + 0x00000013): size: 0x00000015, linkage: strong, scope: local, live  -   $LN4
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.text$mn'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     4883EC28488D542438E8000000004883C428C34883EC28488D54243033C9E8000000004883C428C3
+  - Name:            '.sect'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     4883EC28488D542438E8000000004883C428C34883EC28488D54243033C9E8000000004883C428C3
+    Relocations:
+      - VirtualAddress:  10
+        SymbolTableIndex: 2
+        Type:            IMAGE_REL_AMD64_REL32
+symbols:
+  - Name:            '.text$mn'
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          53
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        973622814
+      Number:          0
+  - Name:            '$LN4'
+    Value:           19
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_LABEL
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            func
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

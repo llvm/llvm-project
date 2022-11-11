@@ -176,7 +176,7 @@ public:
 
   StringRef getELFTypeName() const {
     uint8_t Type = getELFType();
-    for (auto &EE : ElfSymbolTypes) {
+    for (const auto &EE : ElfSymbolTypes) {
       if (EE.Value == Type) {
         return EE.AltName;
       }
@@ -457,6 +457,8 @@ public:
   elf_symbol_iterator_range getDynamicSymbolIterators() const override;
 
   bool isRelocatableObject() const override;
+
+  void createFakeSections() { EF.createFakeSections(); }
 };
 
 using ELF32LEObjectFile = ELFObjectFile<ELF32LE>;
@@ -770,6 +772,9 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
 
   if (isExportedToOtherDSO(ESym))
     Result |= SymbolRef::SF_Exported;
+
+  if (ESym->getType() == ELF::STT_GNU_IFUNC)
+    Result |= SymbolRef::SF_Indirect;
 
   if (ESym->getVisibility() == ELF::STV_HIDDEN)
     Result |= SymbolRef::SF_Hidden;
@@ -1174,7 +1179,7 @@ uint8_t ELFObjectFile<ELFT>::getBytesInAddress() const {
 
 template <class ELFT>
 StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
-  bool IsLittleEndian = ELFT::TargetEndianness == support::little;
+  constexpr bool IsLittleEndian = ELFT::TargetEndianness == support::little;
   switch (EF.getHeader().e_ident[ELF::EI_CLASS]) {
   case ELF::ELFCLASS32:
     switch (EF.getHeader().e_machine) {

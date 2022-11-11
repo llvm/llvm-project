@@ -355,7 +355,7 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ;
 ; AVX1-LABEL: sad_avx64i8:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vpxor %xmm8, %xmm8, %xmm8
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -382,15 +382,15 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ; AVX1-NEXT:    jne .LBB2_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm8, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm4, %xmm5
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
-; AVX1-NEXT:    vpaddd %xmm8, %xmm8, %xmm7
-; AVX1-NEXT:    vpaddd %xmm8, %xmm8, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm1, %xmm7
+; AVX1-NEXT:    vpaddd %xmm1, %xmm1, %xmm8
+; AVX1-NEXT:    vpaddd %xmm1, %xmm8, %xmm8
+; AVX1-NEXT:    vpaddd %xmm7, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm8, %xmm1
-; AVX1-NEXT:    vpaddd %xmm7, %xmm8, %xmm7
-; AVX1-NEXT:    vpaddd %xmm7, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm5, %xmm4, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm3, %xmm3
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
@@ -1058,47 +1058,19 @@ define dso_local i32 @sad_double_reduction(<16 x i8>* %arg, <16 x i8>* %arg1, <1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: sad_double_reduction:
-; AVX1:       # %bb.0: # %bb
-; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX1-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX1-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: sad_double_reduction:
-; AVX2:       # %bb.0: # %bb
-; AVX2-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX2-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX2-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
-; AVX2-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: sad_double_reduction:
-; AVX512:       # %bb.0: # %bb
-; AVX512-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX512-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX512-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
-; AVX512-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    retq
+; AVX-LABEL: sad_double_reduction:
+; AVX:       # %bb.0: # %bb
+; AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
 bb:
   %tmp = load <16 x i8>, <16 x i8>* %arg, align 1
   %tmp4 = load <16 x i8>, <16 x i8>* %arg1, align 1
@@ -1148,47 +1120,19 @@ define dso_local i32 @sad_double_reduction_abs(<16 x i8>* %arg, <16 x i8>* %arg1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: sad_double_reduction_abs:
-; AVX1:       # %bb.0: # %bb
-; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX1-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX1-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: sad_double_reduction_abs:
-; AVX2:       # %bb.0: # %bb
-; AVX2-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX2-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX2-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
-; AVX2-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: sad_double_reduction_abs:
-; AVX512:       # %bb.0: # %bb
-; AVX512-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX512-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX512-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
-; AVX512-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    retq
+; AVX-LABEL: sad_double_reduction_abs:
+; AVX:       # %bb.0: # %bb
+; AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
 bb:
   %tmp = load <16 x i8>, <16 x i8>* %arg, align 1
   %tmp4 = load <16 x i8>, <16 x i8>* %arg1, align 1

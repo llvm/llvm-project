@@ -20,7 +20,7 @@ namespace objc {
 /// potentially causing issues.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc-dealloc-in-category.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/objc/dealloc-in-category.html
 class DeallocInCategoryCheck final : public ClangTidyCheck {
 public:
   DeallocInCategoryCheck(StringRef Name, ClangTidyContext *Context)

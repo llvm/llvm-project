@@ -92,7 +92,7 @@ struct HVAWithEmptyBase : Float1, Empty, Float2 { float z; };
 // ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z15with_empty_base16HVAWithEmptyBase(%struct.HVAWithEmptyBase %a.coerce)
 void CC with_empty_base(HVAWithEmptyBase a) {}
 
-// FIXME: MSVC doesn't consider this an HVA because of the empty base.
+// WOA64: define dso_local void @"?with_empty_base@@YAXUHVAWithEmptyBase@@@Z"([2 x i64] %{{.*}})
 // X64: define dso_local x86_vectorcallcc void @"\01_Z15with_empty_base16HVAWithEmptyBase@@16"(%struct.HVAWithEmptyBase inreg %a.coerce)
 
 struct HVAWithEmptyBitField : Float1, Float2 {
@@ -172,4 +172,117 @@ void call_copy_haspodbase(HasPodBase *hasPodBase) {
   // WOA64-LABEL: define dso_local void @"?call_copy_haspodbase@pr47611@@YAXPEAUHasPodBase@1@@Z"
   // WOA64: call void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(%"struct.pr47611::HasPodBase"* inreg sret(%"struct.pr47611::HasPodBase") align 8 %{{.*}}, %"struct.pr47611::HasPodBase"* noundef %{{.*}})
 }
-}; // namespace pr47611
+} // namespace pr47611
+
+namespace protected_member {
+struct HFA {
+  double x;
+  double y;
+protected:
+  double z;
+};
+double foo(HFA v) { return v.x + v.y; }
+// WOA64: define dso_local noundef double @"?foo@protected_member@@YANUHFA@1@@Z"([3 x double] %{{.*}})
+}
+namespace private_member {
+struct HFA {
+  double x;
+  double y;
+private:
+  double z;
+};
+double foo(HFA v) { return v.x + v.y; }
+// WOA64: define dso_local noundef double @"?foo@private_member@@YANUHFA@1@@Z"([3 x double] %{{.*}})
+}
+namespace polymorphic {
+struct NonHFA {
+  double x;
+  double y;
+  double z;
+  virtual void f1();
+};
+double foo(NonHFA v) { return v.x + v.y; }
+// WOA64: define dso_local noundef double @"?foo@polymorphic@@YANUNonHFA@1@@Z"(%"struct.polymorphic::NonHFA"* noundef %{{.*}})
+}
+namespace trivial_copy_assignment {
+struct HFA {
+  double x;
+  double y;
+  double z;
+  HFA &operator=(const HFA&) = default;
+};
+double foo(HFA v) { return v.x + v.y; }
+// WOA64: define dso_local noundef double @"?foo@trivial_copy_assignment@@YANUHFA@1@@Z"([3 x double] %{{.*}})
+}
+namespace non_trivial_copy_assignment {
+struct NonHFA {
+  double x;
+  double y;
+  double z;
+  NonHFA &operator=(const NonHFA&);
+};
+double foo(NonHFA v) { return v.x + v.y; }
+// WOA64: define dso_local noundef double @"?foo@non_trivial_copy_assignment@@YANUNonHFA@1@@Z"(%"struct.non_trivial_copy_assignment::NonHFA"* noundef %{{.*}})
+}
+namespace user_provided_ctor {
+struct HFA {
+  double x;
+  double y;
+  double z;
+  HFA(int);
+};
+double foo(HFA v) { return v.x + v.y; }
+// WOA64: define dso_local noundef double @"?foo@user_provided_ctor@@YANUHFA@1@@Z"([3 x double] %{{.*}})
+}
+namespace trivial_dtor {
+struct HFA {
+  double x;
+  double y;
+  double z;
+  ~HFA() = default;
+};
+double foo(HFA v) { return v.x + v.y; }
+// WOA64: define dso_local noundef double @"?foo@trivial_dtor@@YANUHFA@1@@Z"([3 x double] %{{.*}})
+}
+namespace non_trivial_dtor {
+struct NonHFA {
+  double x;
+  double y;
+  double z;
+  ~NonHFA();
+};
+double foo(NonHFA v) { return v.x + v.y; }
+// WOA64: define dso_local noundef double @"?foo@non_trivial_dtor@@YANUNonHFA@1@@Z"(%"struct.non_trivial_dtor::NonHFA"* noundef %{{.*}})
+}
+namespace non_empty_base {
+struct non_empty_base { double d; };
+struct HFA : non_empty_base {
+  double x;
+  double y;
+  double z;
+};
+double foo(HFA v) { return v.x + v.y; }
+// WOA64: define dso_local noundef double @"?foo@non_empty_base@@YANUHFA@1@@Z"([4 x double] %{{.*}})
+}
+namespace empty_field {
+struct empty { };
+struct NonHFA {
+  double x;
+  double y;
+  double z;
+  empty e;
+};
+double foo(NonHFA v) { return v.x + v.y; }
+// WOA64: define dso_local noundef double @"?foo@empty_field@@YANUNonHFA@1@@Z"(%"struct.empty_field::NonHFA"* noundef %{{.*}})
+}
+namespace non_empty_field {
+struct non_empty { double d; };
+struct HFA {
+  double x;
+  double y;
+  double z;
+  non_empty e;
+};
+double foo(HFA v) { return v.x + v.y; }
+// WOA64: define dso_local noundef double @"?foo@non_empty_field@@YANUHFA@1@@Z"([4 x double] %{{.*}})
+}

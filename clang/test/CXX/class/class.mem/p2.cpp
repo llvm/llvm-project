@@ -12,7 +12,7 @@
 
 namespace test0 {
   struct A { // expected-note {{definition of 'test0::A' is not complete until the closing '}'}}
-    A x; // expected-error {{field has incomplete type 'test0::A'}}
+    A x; // expected-error {{field has incomplete type 'A'}}
   };
 }
 

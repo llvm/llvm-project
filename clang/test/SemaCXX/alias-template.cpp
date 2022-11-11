@@ -174,7 +174,7 @@ struct S {
   using T = X[J];
   using U = T<I>;
 };
-static_assert(__is_same(S<3>::U, X[2]), ""); // expected-error {{static_assert failed}}
+static_assert(__is_same(S<3>::U, X[2]), ""); // expected-error {{static assertion failed}}
 }
 
 namespace PR39623 {

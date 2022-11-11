@@ -522,13 +522,13 @@ define void @br_cc_i128_imm(i128 %0) {
 ; CHECK-LABEL: br_cc_i128_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmps.l %s1, %s1, (0)1
-; CHECK-NEXT:    or %s3, 0, (0)1
-; CHECK-NEXT:    cmov.l.gt %s3, (63)0, %s1
+; CHECK-NEXT:    cmps.l %s3, %s1, (0)1
+; CHECK-NEXT:    or %s4, 0, (0)1
+; CHECK-NEXT:    cmov.l.gt %s4, (63)0, %s3
 ; CHECK-NEXT:    cmpu.l %s0, %s0, (58)0
 ; CHECK-NEXT:    cmov.l.gt %s2, (63)0, %s0
-; CHECK-NEXT:    cmov.l.eq %s3, %s2, %s1
-; CHECK-NEXT:    brne.w 0, %s3, .LBB{{[0-9]+}}_2
+; CHECK-NEXT:    cmov.l.eq %s4, %s2, %s1
+; CHECK-NEXT:    brne.w 0, %s4, .LBB{{[0-9]+}}_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
@@ -551,13 +551,13 @@ define void @br_cc_u128_imm(i128 %0) {
 ; CHECK-LABEL: br_cc_u128_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmps.l %s1, %s1, (0)1
-; CHECK-NEXT:    or %s3, 0, (0)1
-; CHECK-NEXT:    cmov.l.ne %s3, (63)0, %s1
+; CHECK-NEXT:    cmps.l %s3, %s1, (0)1
+; CHECK-NEXT:    or %s4, 0, (0)1
+; CHECK-NEXT:    cmov.l.ne %s4, (63)0, %s3
 ; CHECK-NEXT:    cmpu.l %s0, %s0, (58)0
 ; CHECK-NEXT:    cmov.l.gt %s2, (63)0, %s0
-; CHECK-NEXT:    cmov.l.eq %s3, %s2, %s1
-; CHECK-NEXT:    brne.w 0, %s3, .LBB{{[0-9]+}}_2
+; CHECK-NEXT:    cmov.l.eq %s4, %s2, %s1
+; CHECK-NEXT:    brne.w 0, %s4, .LBB{{[0-9]+}}_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
@@ -853,14 +853,15 @@ define void @br_cc_imm_u64(i64 %0) {
 define void @br_cc_imm_i128(i128 %0) {
 ; CHECK-LABEL: br_cc_imm_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmps.l %s1, %s1, (0)0
-; CHECK-NEXT:    or %s2, 0, (0)1
+; CHECK-NEXT:    cmps.l %s2, %s1, (0)0
 ; CHECK-NEXT:    or %s3, 0, (0)1
-; CHECK-NEXT:    cmov.l.lt %s3, (63)0, %s1
+; CHECK-NEXT:    or %s4, 0, (0)1
+; CHECK-NEXT:    cmov.l.lt %s4, (63)0, %s2
 ; CHECK-NEXT:    cmpu.l %s0, %s0, (58)1
-; CHECK-NEXT:    cmov.l.lt %s2, (63)0, %s0
-; CHECK-NEXT:    cmov.l.eq %s3, %s2, %s1
-; CHECK-NEXT:    brne.w 0, %s3, .LBB{{[0-9]+}}_2
+; CHECK-NEXT:    cmov.l.lt %s3, (63)0, %s0
+; CHECK-NEXT:    cmpu.l %s0, %s1, (0)0
+; CHECK-NEXT:    cmov.l.eq %s4, %s3, %s0
+; CHECK-NEXT:    brne.w 0, %s4, .LBB{{[0-9]+}}_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
@@ -882,14 +883,15 @@ define void @br_cc_imm_i128(i128 %0) {
 define void @br_cc_imm_u128(i128 %0) {
 ; CHECK-LABEL: br_cc_imm_u128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmps.l %s1, %s1, (0)0
-; CHECK-NEXT:    or %s2, 0, (0)1
+; CHECK-NEXT:    cmps.l %s2, %s1, (0)0
 ; CHECK-NEXT:    or %s3, 0, (0)1
-; CHECK-NEXT:    cmov.l.ne %s3, (63)0, %s1
+; CHECK-NEXT:    or %s4, 0, (0)1
+; CHECK-NEXT:    cmov.l.ne %s4, (63)0, %s2
 ; CHECK-NEXT:    cmpu.l %s0, %s0, (58)1
-; CHECK-NEXT:    cmov.l.lt %s2, (63)0, %s0
-; CHECK-NEXT:    cmov.l.eq %s3, %s2, %s1
-; CHECK-NEXT:    brne.w 0, %s3, .LBB{{[0-9]+}}_2
+; CHECK-NEXT:    cmov.l.lt %s3, (63)0, %s0
+; CHECK-NEXT:    cmpu.l %s0, %s1, (0)0
+; CHECK-NEXT:    cmov.l.eq %s4, %s3, %s0
+; CHECK-NEXT:    brne.w 0, %s4, .LBB{{[0-9]+}}_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop

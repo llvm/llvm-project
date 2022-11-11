@@ -25,6 +25,5 @@ static void clearModuleData(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceModuleDataDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Module Data...\n";
-  runDeltaPass(Test, clearModuleData);
+  runDeltaPass(Test, clearModuleData, "Reducing Module Data");
 }

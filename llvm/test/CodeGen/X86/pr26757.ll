@@ -4,7 +4,7 @@ target triple = "i386-pc-windows-msvc"
 
 declare void @throw()
 
-define void @test1() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1() personality ptr @__CxxFrameHandler3 {
   %e = alloca i8, align 4
   invoke void @throw()
           to label %.noexc unwind label %catch.dispatch
@@ -13,14 +13,14 @@ define void @test1() personality i32 (...)* @__CxxFrameHandler3 {
   unreachable
 
 catch.object.Exception:
-  %cp = catchpad within %cs [i8* null, i32 0, i8* %e]
+  %cp = catchpad within %cs [ptr null, i32 0, ptr %e]
   catchret from %cp to label %catchhandler
 
 catch.dispatch:
   %cs = catchswitch within none [label %catch.object.Exception] unwind to caller
 
 catchhandler:
-  call void @use(i8* %e)
+  call void @use(ptr %e)
   ret void
 }
 
@@ -29,6 +29,6 @@ catchhandler:
 ; CHECK-NEXT: .long 0
 ; CHECK-NEXT: .long -20
 
-declare void @use(i8*)
+declare void @use(ptr)
 
 declare i32 @__CxxFrameHandler3(...)

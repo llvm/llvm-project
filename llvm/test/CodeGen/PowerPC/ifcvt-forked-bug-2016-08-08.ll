@@ -17,21 +17,21 @@ land.lhs.true:                                    ; preds = %entry
   br i1 undef, label %return, label %if.end4
 
 if.end:                                           ; preds = %entry
-  br i1 icmp ne (i32 (i8*, i8*, i8* (i8*)*, i8*)* @_ZN11__sanitizer19real_pthread_createEPvS0_PFS0_S0_ES0_, i32 (i8*, i8*, i8* (i8*)*, i8*)* null), label %if.end4, label %return
+  br i1 icmp ne (ptr @_ZN11__sanitizer19real_pthread_createEPvS0_PFS0_S0_ES0_, ptr null), label %if.end4, label %return
 
 if.end4:                                          ; preds = %if.end, %land.lhs.true
-  %call5 = tail call i8* @_ZN11__sanitizer21internal_start_threadEPFvPvES0_(void (i8*)* nonnull @_ZN11__sanitizer16BackgroundThreadEPv, i8* null) #7
+  %call5 = tail call ptr @_ZN11__sanitizer21internal_start_threadEPFvPvES0_(ptr nonnull @_ZN11__sanitizer16BackgroundThreadEPv, ptr null) #7
   unreachable
 
 return:                                           ; preds = %if.end, %land.lhs.true
   ret void
 }
 
-declare extern_weak signext i32 @_ZN11__sanitizer19real_pthread_createEPvS0_PFS0_S0_ES0_(i8*, i8*, i8* (i8*)*, i8*) #2
+declare extern_weak signext i32 @_ZN11__sanitizer19real_pthread_createEPvS0_PFS0_S0_ES0_(ptr, ptr, ptr, ptr) #2
 
-declare i8* @_ZN11__sanitizer21internal_start_threadEPFvPvES0_(void (i8*)*, i8*) local_unnamed_addr #2
+declare ptr @_ZN11__sanitizer21internal_start_threadEPFvPvES0_(ptr, ptr) local_unnamed_addr #2
 
-declare hidden void @_ZN11__sanitizer16BackgroundThreadEPv(i8* nocapture readnone) #5
+declare hidden void @_ZN11__sanitizer16BackgroundThreadEPv(ptr nocapture readnone) #5
 
 attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+power8-vector,+vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #7 = { nobuiltin nounwind }

@@ -102,11 +102,11 @@ define i32 @cmpxchg_private_i32(i32 addrspace(5)* %ptr) {
 ; IR-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; IR-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 1, i32 [[TMP1]]
 ; IR-NEXT:    store i32 [[TMP3]], i32 addrspace(5)* [[PTR]], align 4
-; IR-NEXT:    [[TMP4:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP1]], 0
+; IR-NEXT:    [[TMP4:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP1]], 0
 ; IR-NEXT:    [[TMP5:%.*]] = insertvalue { i32, i1 } [[TMP4]], i1 [[TMP2]], 1
 ; IR-NEXT:    [[RESULT_0:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; IR-NEXT:    [[RESULT_1:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; IR-NEXT:    store i1 [[RESULT_1]], i1 addrspace(1)* undef, align 1
+; IR-NEXT:    store i1 [[RESULT_1]], i1 addrspace(1)* poison, align 1
 ; IR-NEXT:    ret i32 [[RESULT_0]]
 ;
 ; GCN-LABEL: cmpxchg_private_i32:
@@ -128,7 +128,7 @@ define i32 @cmpxchg_private_i32(i32 addrspace(5)* %ptr) {
   %result = cmpxchg i32 addrspace(5)* %ptr, i32 0, i32 1 acq_rel monotonic
   %result.0 = extractvalue { i32, i1 } %result, 0
   %result.1 = extractvalue { i32, i1 } %result, 1
-  store i1 %result.1, i1 addrspace(1)* undef
+  store i1 %result.1, i1 addrspace(1)* poison
   ret i32 %result.0
 }
 
@@ -138,11 +138,11 @@ define i64 @cmpxchg_private_i64(i64 addrspace(5)* %ptr) {
 ; IR-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
 ; IR-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 1, i64 [[TMP1]]
 ; IR-NEXT:    store i64 [[TMP3]], i64 addrspace(5)* [[PTR]], align 4
-; IR-NEXT:    [[TMP4:%.*]] = insertvalue { i64, i1 } undef, i64 [[TMP1]], 0
+; IR-NEXT:    [[TMP4:%.*]] = insertvalue { i64, i1 } poison, i64 [[TMP1]], 0
 ; IR-NEXT:    [[TMP5:%.*]] = insertvalue { i64, i1 } [[TMP4]], i1 [[TMP2]], 1
 ; IR-NEXT:    [[RESULT_0:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; IR-NEXT:    [[RESULT_1:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
-; IR-NEXT:    store i1 [[RESULT_1]], i1 addrspace(1)* undef, align 1
+; IR-NEXT:    store i1 [[RESULT_1]], i1 addrspace(1)* poison, align 1
 ; IR-NEXT:    ret i64 [[RESULT_0]]
 ;
 ; GCN-LABEL: cmpxchg_private_i64:
@@ -168,7 +168,7 @@ define i64 @cmpxchg_private_i64(i64 addrspace(5)* %ptr) {
   %result = cmpxchg i64 addrspace(5)* %ptr, i64 0, i64 1 acq_rel monotonic
   %result.0 = extractvalue { i64, i1 } %result, 0
   %result.1 = extractvalue { i64, i1 } %result, 1
-  store i1 %result.1, i1 addrspace(1)* undef
+  store i1 %result.1, i1 addrspace(1)* poison
   ret i64 %result.0
 }
 
@@ -503,7 +503,7 @@ define amdgpu_kernel void @alloca_promote_cmpxchg_private(i32 addrspace(1)* %out
 ; IR-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IR-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 1, i32 [[TMP0]]
 ; IR-NEXT:    store i32 [[TMP2]], i32 addrspace(5)* [[GEP3]], align 4
-; IR-NEXT:    [[TMP3:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP0]], 0
+; IR-NEXT:    [[TMP3:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP0]], 0
 ; IR-NEXT:    [[TMP4:%.*]] = insertvalue { i32, i1 } [[TMP3]], i1 [[TMP1]], 1
 ; IR-NEXT:    [[VAL:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; IR-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[OUT:%.*]], align 4

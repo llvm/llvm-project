@@ -9,7 +9,7 @@
 %0 = type <{ double }>
 %1 = type <{ double }>
 
-define void @acc_regalloc(i32* %arg, [0 x %0]* %arg1, [0 x %1]* %arg2) local_unnamed_addr {
+define void @acc_regalloc(ptr %arg, ptr %arg1, ptr %arg2) local_unnamed_addr {
 ; CHECK-LABEL: acc_regalloc:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    lwz r3, 0(r3)
@@ -203,38 +203,32 @@ define void @acc_regalloc(i32* %arg, [0 x %0]* %arg1, [0 x %1]* %arg2) local_unn
 ; TRACKLIVE-NEXT:    stxv vs12, 48(0)
 ; TRACKLIVE-NEXT:    b .LBB0_1
 bb:
-  %i = load i32, i32* %arg, align 4
+  %i = load i32, ptr %arg, align 4
   %i3 = sext i32 %i to i64
   %i4 = shl nsw i64 %i3, 3
-  %i5 = bitcast [0 x %0]* %arg1 to i8*
-  %i6 = getelementptr i8, i8* %i5, i64 undef
-  %i7 = getelementptr [0 x %1], [0 x %1]* %arg2, i64 0, i64 -8
-  %i8 = getelementptr i8, i8* %i6, i64 undef
+  %i6 = getelementptr i8, ptr %arg1, i64 undef
+  %i7 = getelementptr [0 x %1], ptr %arg2, i64 0, i64 -8
+  %i8 = getelementptr i8, ptr %i6, i64 undef
   br label %bb9
 
 bb9:                                              ; preds = %bb95, %bb
   %i10 = phi i64 [ 1, %bb ], [ 0, %bb95 ]
-  %i11 = getelementptr %1, %1* null, i64 2
-  %i12 = bitcast %1* %i11 to <2 x double>*
-  %i13 = load <2 x double>, <2 x double>* %i12, align 1
+  %i11 = getelementptr %1, ptr null, i64 2
+  %i13 = load <2 x double>, ptr %i11, align 1
   %i14 = add nuw nsw i64 %i10, 2
-  %i15 = getelementptr inbounds %1, %1* %i7, i64 undef
-  %i16 = bitcast %1* %i15 to <2 x double>*
-  %i17 = load <2 x double>, <2 x double>* %i16, align 1
-  %i18 = load <2 x double>, <2 x double>* null, align 1
-  %i19 = getelementptr %1, %1* %i15, i64 6
-  %i20 = bitcast %1* %i19 to <2 x double>*
-  %i21 = load <2 x double>, <2 x double>* %i20, align 1
-  %i22 = load i64, i64* undef, align 8
+  %i15 = getelementptr inbounds %1, ptr %i7, i64 undef
+  %i17 = load <2 x double>, ptr %i15, align 1
+  %i18 = load <2 x double>, ptr null, align 1
+  %i19 = getelementptr %1, ptr %i15, i64 6
+  %i21 = load <2 x double>, ptr %i19, align 1
+  %i22 = load i64, ptr undef, align 8
   %i23 = insertelement <2 x i64> poison, i64 %i22, i32 0
   %i24 = bitcast <2 x i64> %i23 to <2 x double>
   %i25 = shufflevector <2 x double> %i24, <2 x double> undef, <2 x i32> zeroinitializer
   %i26 = mul i64 %i14, %i4
-  %i27 = getelementptr i8, i8* null, i64 %i26
-  %i28 = getelementptr inbounds i8, i8* %i27, i64 0
-  %i29 = getelementptr i8, i8* %i28, i64 16
-  %i30 = bitcast i8* %i29 to i64*
-  %i31 = load i64, i64* %i30, align 8
+  %i27 = getelementptr i8, ptr null, i64 %i26
+  %i29 = getelementptr i8, ptr %i27, i64 16
+  %i31 = load i64, ptr %i29, align 8
   %i32 = insertelement <2 x i64> poison, i64 %i31, i32 0
   %i33 = bitcast <2 x i64> %i32 to <2 x double>
   %i34 = shufflevector <2 x double> %i33, <2 x double> undef, <2 x i32> zeroinitializer
@@ -311,18 +305,14 @@ bb95:                                             ; preds = %bb82
   %i101 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %i100, 2
   %i102 = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble.acc(<512 x i1> %i94)
   %i103 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %i102, 3
-  %i104 = getelementptr inbounds i8, i8* %i8, i64 undef
-  %i105 = bitcast i8* %i104 to <16 x i8>*
-  store <16 x i8> %i97, <16 x i8>* %i105, align 1
-  %i106 = getelementptr i8, i8* %i104, i64 32
-  %i107 = bitcast i8* %i106 to <16 x i8>*
-  store <16 x i8> %i101, <16 x i8>* %i107, align 1
-  %i108 = getelementptr i8, i8* null, i64 16
-  %i109 = bitcast i8* %i108 to <16 x i8>*
-  store <16 x i8> %i99, <16 x i8>* %i109, align 1
-  %i110 = getelementptr i8, i8* null, i64 48
-  %i111 = bitcast i8* %i110 to <16 x i8>*
-  store <16 x i8> %i103, <16 x i8>* %i111, align 1
+  %i104 = getelementptr inbounds i8, ptr %i8, i64 undef
+  store <16 x i8> %i97, ptr %i104, align 1
+  %i106 = getelementptr i8, ptr %i104, i64 32
+  store <16 x i8> %i101, ptr %i106, align 1
+  %i108 = getelementptr i8, ptr null, i64 16
+  store <16 x i8> %i99, ptr %i108, align 1
+  %i110 = getelementptr i8, ptr null, i64 48
+  store <16 x i8> %i103, ptr %i110, align 1
   br label %bb9
 }
 

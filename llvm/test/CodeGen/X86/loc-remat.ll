@@ -6,18 +6,18 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @main() !dbg !4 {
 entry:
-  %0 = load volatile i32, i32* @x, align 4, !dbg !9, !tbaa !10
+  %0 = load volatile i32, ptr @x, align 4, !dbg !9, !tbaa !10
   %add = add nsw i32 %0, 24, !dbg !9
-  store volatile i32 %add, i32* @x, align 4, !dbg !9, !tbaa !10
-  %1 = load volatile i32, i32* @x, align 4, !dbg !14, !tbaa !10
+  store volatile i32 %add, ptr @x, align 4, !dbg !9, !tbaa !10
+  %1 = load volatile i32, ptr @x, align 4, !dbg !14, !tbaa !10
   %add1 = add nsw i32 %1, 2, !dbg !14
-  store volatile i32 %add1, i32* @x, align 4, !dbg !14, !tbaa !10
-  %2 = load volatile i32, i32* @x, align 4, !dbg !15, !tbaa !10
+  store volatile i32 %add1, ptr @x, align 4, !dbg !14, !tbaa !10
+  %2 = load volatile i32, ptr @x, align 4, !dbg !15, !tbaa !10
   %add2 = add nsw i32 %2, 3, !dbg !15
-  store volatile i32 %add2, i32* @x, align 4, !dbg !15, !tbaa !10
-  %3 = load volatile i32, i32* @x, align 4, !dbg !16, !tbaa !10
+  store volatile i32 %add2, ptr @x, align 4, !dbg !15, !tbaa !10
+  %3 = load volatile i32, ptr @x, align 4, !dbg !16, !tbaa !10
   %add3 = add nsw i32 %3, 4, !dbg !16
-  store volatile i32 %add3, i32* @x, align 4, !dbg !16, !tbaa !10
+  store volatile i32 %add3, ptr @x, align 4, !dbg !16, !tbaa !10
   tail call void @exit(i32 24), !dbg !17
   unreachable, !dbg !17
 }

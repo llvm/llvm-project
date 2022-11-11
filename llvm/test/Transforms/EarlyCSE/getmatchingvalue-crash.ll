@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -aa -memoryssa -early-cse-memssa -verify -S < %s | FileCheck %s
+; RUN: opt -passes='early-cse<memssa>' -S < %s | FileCheck %s
 
 ; Check that this doesn't crash. The crash only happens with expensive checks,
 ; but there doesn't seem to be a REQUIRES for that.

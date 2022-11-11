@@ -13,8 +13,6 @@ import lldbsuite.test.lldbutil as lldbutil
 class InlinedBreakpointsTestCase(TestBase):
     """Bug fixed: rdar://problem/8464339"""
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_with_run_command(self):
         """Test 'b basic_types.cpp:176' does break (where int.cpp includes basic_type.cpp)."""
         self.build()

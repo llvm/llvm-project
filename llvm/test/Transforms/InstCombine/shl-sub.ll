@@ -180,8 +180,8 @@ define <3 x i64> @shl_sub_i64_vec_undef_bad2(<3 x i64> %x) {
 
 define i32 @shl_const_op1_sub_const_op0(i32 %x) {
 ; CHECK-LABEL: @shl_const_op1_sub_const_op0(
-; CHECK-NEXT:    [[S_NEG:%.*]] = mul i32 [[X:%.*]], -8
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[S_NEG]], 336
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = sub i32 336, [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = sub i32 42, %x
@@ -191,8 +191,8 @@ define i32 @shl_const_op1_sub_const_op0(i32 %x) {
 
 define <2 x i32> @shl_const_op1_sub_const_op0_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @shl_const_op1_sub_const_op0_splat(
-; CHECK-NEXT:    [[S_NEG:%.*]] = mul <2 x i32> [[X:%.*]], <i32 -8, i32 -8>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[S_NEG]], <i32 336, i32 336>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[X:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i32> <i32 336, i32 336>, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = sub <2 x i32> <i32 42, i32 42>, %x

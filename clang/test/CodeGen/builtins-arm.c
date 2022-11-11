@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -Wall -Wno-unused-but-set-variable -Werror -triple thumbv7-eabi -target-cpu cortex-a8 -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN: %clang_cc1 -Wall -Wno-unused-but-set-variable -Werror -triple thumbv7-eabi -target-cpu cortex-a8 -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s
 
 #include <stdint.h>
 
@@ -92,67 +92,67 @@ unsigned rbit(unsigned a) {
 
 void prefetch(int i) {
   __builtin_arm_prefetch(&i, 0, 1);
-  // CHECK: call {{.*}} @llvm.prefetch.p0i8(i8* %{{.*}}, i32 0, i32 3, i32 1)
+  // CHECK: call {{.*}} @llvm.prefetch.p0(ptr %{{.*}}, i32 0, i32 3, i32 1)
 
   __builtin_arm_prefetch(&i, 1, 1);
-  // CHECK: call {{.*}} @llvm.prefetch.p0i8(i8* %{{.*}}, i32 1, i32 3, i32 1)
+  // CHECK: call {{.*}} @llvm.prefetch.p0(ptr %{{.*}}, i32 1, i32 3, i32 1)
 
   __builtin_arm_prefetch(&i, 1, 0);
-  // CHECK: call {{.*}} @llvm.prefetch.p0i8(i8* %{{.*}}, i32 1, i32 3, i32 0)
+  // CHECK: call {{.*}} @llvm.prefetch.p0(ptr %{{.*}}, i32 1, i32 3, i32 0)
 }
 
 void ldc(const void *i) {
-  // CHECK: define{{.*}} void @ldc(i8* noundef %i)
-  // CHECK: call void @llvm.arm.ldc(i32 1, i32 2, i8* %i)
+  // CHECK: define{{.*}} void @ldc(ptr noundef %i)
+  // CHECK: call void @llvm.arm.ldc(i32 1, i32 2, ptr %i)
   // CHECK-NEXT: ret void
   __builtin_arm_ldc(1, 2, i);
 }
 
 void ldcl(const void *i) {
-  // CHECK: define{{.*}} void @ldcl(i8* noundef %i)
-  // CHECK: call void @llvm.arm.ldcl(i32 1, i32 2, i8* %i)
+  // CHECK: define{{.*}} void @ldcl(ptr noundef %i)
+  // CHECK: call void @llvm.arm.ldcl(i32 1, i32 2, ptr %i)
   // CHECK-NEXT: ret void
   __builtin_arm_ldcl(1, 2, i);
 }
 
 void ldc2(const void *i) {
-  // CHECK: define{{.*}} void @ldc2(i8* noundef %i)
-  // CHECK: call void @llvm.arm.ldc2(i32 1, i32 2, i8* %i)
+  // CHECK: define{{.*}} void @ldc2(ptr noundef %i)
+  // CHECK: call void @llvm.arm.ldc2(i32 1, i32 2, ptr %i)
   // CHECK-NEXT: ret void
   __builtin_arm_ldc2(1, 2, i);
 }
 
 void ldc2l(const void *i) {
-  // CHECK: define{{.*}} void @ldc2l(i8* noundef %i)
-  // CHECK: call void @llvm.arm.ldc2l(i32 1, i32 2, i8* %i)
+  // CHECK: define{{.*}} void @ldc2l(ptr noundef %i)
+  // CHECK: call void @llvm.arm.ldc2l(i32 1, i32 2, ptr %i)
   // CHECK-NEXT: ret void
   __builtin_arm_ldc2l(1, 2, i);
 }
 
 void stc(void *i) {
-  // CHECK: define{{.*}} void @stc(i8* noundef %i)
-  // CHECK: call void @llvm.arm.stc(i32 1, i32 2, i8* %i)
+  // CHECK: define{{.*}} void @stc(ptr noundef %i)
+  // CHECK: call void @llvm.arm.stc(i32 1, i32 2, ptr %i)
   // CHECK-NEXT: ret void
   __builtin_arm_stc(1, 2, i);
 }
 
 void stcl(void *i) {
-  // CHECK: define{{.*}} void @stcl(i8* noundef %i)
-  // CHECK: call void @llvm.arm.stcl(i32 1, i32 2, i8* %i)
+  // CHECK: define{{.*}} void @stcl(ptr noundef %i)
+  // CHECK: call void @llvm.arm.stcl(i32 1, i32 2, ptr %i)
   // CHECK-NEXT: ret void
   __builtin_arm_stcl(1, 2, i);
 }
 
 void stc2(void *i) {
-  // CHECK: define{{.*}} void @stc2(i8* noundef %i)
-  // CHECK: call void @llvm.arm.stc2(i32 1, i32 2, i8* %i)
+  // CHECK: define{{.*}} void @stc2(ptr noundef %i)
+  // CHECK: call void @llvm.arm.stc2(i32 1, i32 2, ptr %i)
   // CHECK-NEXT: ret void
   __builtin_arm_stc2(1, 2, i);
 }
 
 void stc2l(void *i) {
-  // CHECK: define{{.*}} void @stc2l(i8* noundef %i)
-  // CHECK: call void @llvm.arm.stc2l(i32 1, i32 2, i8* %i)
+  // CHECK: define{{.*}} void @stc2l(ptr noundef %i)
+  // CHECK: call void @llvm.arm.stc2l(i32 1, i32 2, ptr %i)
   // CHECK-NEXT: ret void
   __builtin_arm_stc2l(1, 2, i);
 }
@@ -235,8 +235,8 @@ unsigned long long rsr64(void) {
 
 void *rsrp(void) {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i32 @llvm.read_volatile_register.i32(metadata ![[M2:.*]])
-  // CHECK-NEXT: [[V1:[%A-Za-z0-9.]+]] = inttoptr i32 [[V0]] to i8*
-  // CHECK-NEXT: ret i8* [[V1]]
+  // CHECK-NEXT: [[V1:[%A-Za-z0-9.]+]] = inttoptr i32 [[V0]] to ptr
+  // CHECK-NEXT: ret ptr [[V1]]
   return __builtin_arm_rsrp("sysreg");
 }
 
@@ -251,7 +251,7 @@ void wsr64(unsigned long long v) {
 }
 
 void wsrp(void *v) {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = ptrtoint i8* %v to i32
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = ptrtoint ptr %v to i32
   // CHECK-NEXT: call void @llvm.write_register.i32(metadata ![[M2]], i32 [[V0]])
   __builtin_arm_wsrp("sysreg", v);
 }

@@ -216,27 +216,28 @@ private:
 std::string escapeString(StringRef value);
 
 namespace detail {
-template <typename> struct stringifier {
-  template <typename T> static std::string apply(T &&t) {
+template <typename>
+struct stringifier {
+  template <typename T>
+  static std::string apply(T &&t) {
     return std::string(std::forward<T>(t));
   }
 };
-template <> struct stringifier<Twine> {
-  static std::string apply(const Twine &twine) {
-    return twine.str();
-  }
+template <>
+struct stringifier<Twine> {
+  static std::string apply(const Twine &twine) { return twine.str(); }
 };
 template <typename OptionalT>
 struct stringifier<Optional<OptionalT>> {
   static std::string apply(Optional<OptionalT> optional) {
-    return optional.hasValue() ? stringifier<OptionalT>::apply(*optional)
-                               : std::string();
+    return optional ? stringifier<OptionalT>::apply(*optional) : std::string();
   }
 };
 } // namespace detail
 
 /// Generically convert a value to a std::string.
-template <typename T> std::string stringify(T &&t) {
+template <typename T>
+std::string stringify(T &&t) {
   return detail::stringifier<std::remove_reference_t<std::remove_const_t<T>>>::
       apply(std::forward<T>(t));
 }

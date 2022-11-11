@@ -23,6 +23,57 @@
 
 typedef void *omp_interop_t;
 
+struct S {
+  omp_interop_t o1;
+  omp_interop_t o2;
+  omp_interop_t o3;
+  static omp_interop_t so;
+  void foo();
+  S();
+  ~S();
+};
+omp_interop_t S::so;
+
+struct T {
+  static void static_member_func();
+  static omp_interop_t to;
+};
+omp_interop_t T::to;
+
+void T::static_member_func() {
+  omp_interop_t o1;
+  //PRINT: #pragma omp interop init(target : o1)
+  #pragma omp interop init(target:o1)
+
+  //PRINT: #pragma omp interop init(target : to)
+  #pragma omp interop init(target: to)
+
+  //PRINT: #pragma omp interop init(target : T::to)
+  #pragma omp interop init(target: T::to)
+
+  //PRINT: #pragma omp interop init(target : S::so)
+  #pragma omp interop init(target: S::so)
+}
+
+
+S::S() {
+  //PRINT: #pragma omp interop init(target : this->o1)
+  #pragma omp interop init(target:o1)
+  //PRINT: #pragma omp interop use(this->o1) init(target : this->o2)
+  #pragma omp interop use(o1) init(target:o2)
+  //PRINT: #pragma omp interop use(this->o2) init(target : this->o3)
+  #pragma omp interop use(o2) init(target:o3)
+}
+S::~S() {
+  //PRINT: #pragma omp interop destroy(this->o1) destroy(this->o2) destroy(this->o3)
+  #pragma omp interop destroy(o1) destroy(o2) destroy(o3)
+}
+
+void S::foo() {
+  //PRINT: #pragma omp interop init(target : so)
+  #pragma omp interop init(target:so)
+}
+
 //PRINT-LABEL: void foo1(
 //DUMP-LABEL:  FunctionDecl {{.*}} foo1
 void foo1(int *ap, int dev) {
@@ -196,6 +247,9 @@ void foo1(int *ap, int dev) {
   //DUMP: OMPUseClause
   //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'J'
   #pragma omp interop destroy(I) use(J)
+
+  //PRINT: #pragma omp interop init(target : S::so)
+  #pragma omp interop init(target: S::so)
 }
 
 //DUMP: FunctionTemplateDecl{{.*}}fooTemp
@@ -274,6 +328,7 @@ void bar()
   fooTemp<3>();
   omp_interop_t Ivar;
   barTemp(Ivar);
+  S s;
 }
 
 #endif // HEADER

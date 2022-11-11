@@ -28,6 +28,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp> class allocator;
 
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION)
+// These specializations shouldn't be marked _LIBCPP_DEPRECATED_IN_CXX17.
+// Specializing allocator<void> is deprecated, but not using it.
 template <>
 class _LIBCPP_TEMPLATE_VIS allocator<void>
 {
@@ -93,14 +95,14 @@ public:
     typedef true_type   propagate_on_container_move_assignment;
     typedef true_type   is_always_equal;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     allocator() _NOEXCEPT = default;
 
     template <class _Up>
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     allocator(const allocator<_Up>&) _NOEXCEPT { }
 
-    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     _Tp* allocate(size_t __n) {
         if (__n > allocator_traits<allocator>::max_size(*this))
             __throw_bad_array_new_length();
@@ -118,7 +120,7 @@ public:
     }
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     void deallocate(_Tp* __p, size_t __n) _NOEXCEPT {
         if (__libcpp_is_constant_evaluated()) {
             ::operator delete(__p);
@@ -182,14 +184,14 @@ public:
     typedef true_type   propagate_on_container_move_assignment;
     typedef true_type   is_always_equal;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     allocator() _NOEXCEPT = default;
 
     template <class _Up>
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     allocator(const allocator<_Up>&) _NOEXCEPT { }
 
-    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     const _Tp* allocate(size_t __n) {
         if (__n > allocator_traits<allocator>::max_size(*this))
             __throw_bad_array_new_length();
@@ -207,7 +209,7 @@ public:
     }
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     void deallocate(const _Tp* __p, size_t __n) {
         if (__libcpp_is_constant_evaluated()) {
             ::operator delete(const_cast<_Tp*>(__p));
@@ -256,11 +258,11 @@ public:
 };
 
 template <class _Tp, class _Up>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 bool operator==(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {return true;}
 
 template <class _Tp, class _Up>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 bool operator!=(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {return false;}
 
 _LIBCPP_END_NAMESPACE_STD

@@ -6,7 +6,9 @@
 ; for the 'release' mode.
 ;
 ; REQUIRES: have_tf_api
-; RUN: rm -rf %t && mkdir %t
-; RUN: %python %S/../../../../lib/Analysis/models/gen-inline-oz-test-model.py %t
+; RUN: rm -rf %t
+; RUN: rm -rf %t_savedmodel
+; RUN: %python %S/../../../../lib/Analysis/models/gen-inline-oz-test-model.py %t_savedmodel
+; RUN: %python %S/../../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t
 ; RUN: opt -passes=scc-oz-module-inliner -enable-ml-inliner=default -S < %S/Inputs/test-module.ll 2>&1 | FileCheck %S/Inputs/test-module.ll --check-prefix=DEFAULT
 ; RUN: opt -passes=scc-oz-module-inliner -enable-ml-inliner=development -ml-inliner-model-under-training=%t -S < %S/Inputs/test-module.ll 2>&1 | FileCheck %S/Inputs/test-module.ll --check-prefix=CHECK

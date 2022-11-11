@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -w -S -o - -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm %s \
 // RUN:   -fmath-errno | FileCheck %s -check-prefix=F80
-// RUN: %clang_cc1 -no-opaque-pointers -triple ppc64le-unknown-unknown -w -S -o - -emit-llvm %s \
+// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -w -S -o - -emit-llvm %s \
 // RUN:   -fmath-errno | FileCheck %s -check-prefix=PPC
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -mlong-double-128 -w -S \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -mlong-double-128 -w -S \
 // RUN:   -o - -emit-llvm %s -fmath-errno | FileCheck %s -check-prefix=X86F128
-// RUN: %clang_cc1 -no-opaque-pointers -triple ppc64le-unknown-unknown -mabi=ieeelongdouble -w -S \
+// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -mabi=ieeelongdouble -w -S \
 // RUN:   -o - -emit-llvm %s -fmath-errno | FileCheck %s -check-prefix=PPCF128
 
 void bar(long double);
@@ -34,22 +34,22 @@ void foo(long double f, long double *l, int *i, const char *c) {
   // PPCF128: call fp128 @llvm.fabs.f128(fp128 %{{.+}})
   __builtin_fabsl(f);
 
-  // F80: call x86_fp80 @frexpl(x86_fp80 noundef %{{.+}}, i32* noundef %{{.+}})
-  // PPC: call ppc_fp128 @frexpl(ppc_fp128 noundef %{{.+}}, i32* noundef %{{.+}})
-  // X86F128: call fp128 @frexpl(fp128 noundef %{{.+}}, i32* noundef %{{.+}})
-  // PPCF128: call fp128 @frexpf128(fp128 noundef %{{.+}}, i32* noundef %{{.+}})
+  // F80: call x86_fp80 @frexpl(x86_fp80 noundef %{{.+}}, ptr noundef %{{.+}})
+  // PPC: call ppc_fp128 @frexpl(ppc_fp128 noundef %{{.+}}, ptr noundef %{{.+}})
+  // X86F128: call fp128 @frexpl(fp128 noundef %{{.+}}, ptr noundef %{{.+}})
+  // PPCF128: call fp128 @frexpf128(fp128 noundef %{{.+}}, ptr noundef %{{.+}})
   __builtin_frexpl(f,i);
 
-  // F80: store x86_fp80 0xK7FFF8000000000000000, x86_fp80*
-  // PPC: store ppc_fp128 0xM7FF00000000000000000000000000000, ppc_fp128*
-  // X86F128: store fp128 0xL00000000000000007FFF000000000000, fp128*
-  // PPCF128: store fp128 0xL00000000000000007FFF000000000000, fp128*
+  // F80: store x86_fp80 0xK7FFF8000000000000000, ptr
+  // PPC: store ppc_fp128 0xM7FF00000000000000000000000000000, ptr
+  // X86F128: store fp128 0xL00000000000000007FFF000000000000, ptr
+  // PPCF128: store fp128 0xL00000000000000007FFF000000000000, ptr
   *l = __builtin_huge_vall();
 
-  // F80: store x86_fp80 0xK7FFF8000000000000000, x86_fp80*
-  // PPC: store ppc_fp128 0xM7FF00000000000000000000000000000, ppc_fp128*
-  // X86F128: store fp128 0xL00000000000000007FFF000000000000, fp128*
-  // PPCF128: store fp128 0xL00000000000000007FFF000000000000, fp128*
+  // F80: store x86_fp80 0xK7FFF8000000000000000, ptr
+  // PPC: store ppc_fp128 0xM7FF00000000000000000000000000000, ptr
+  // X86F128: store fp128 0xL00000000000000007FFF000000000000, ptr
+  // PPCF128: store fp128 0xL00000000000000007FFF000000000000, ptr
   *l = __builtin_infl();
 
   // F80: call x86_fp80 @ldexpl(x86_fp80 noundef %{{.+}}, i32 noundef %{{.+}})
@@ -58,22 +58,22 @@ void foo(long double f, long double *l, int *i, const char *c) {
   // PPCF128: call fp128 @ldexpf128(fp128 noundef %{{.+}}, {{(signext)?.+}})
   __builtin_ldexpl(f,f);
 
-  // F80: call x86_fp80 @modfl(x86_fp80 noundef %{{.+}}, x86_fp80* noundef %{{.+}})
-  // PPC: call ppc_fp128 @modfl(ppc_fp128 noundef %{{.+}}, ppc_fp128* noundef %{{.+}})
-  // X86F128: call fp128 @modfl(fp128 noundef %{{.+}}, fp128* noundef %{{.+}})
-  // PPCF128: call fp128 @modff128(fp128 noundef %{{.+}}, fp128* noundef %{{.+}})
+  // F80: call x86_fp80 @modfl(x86_fp80 noundef %{{.+}}, ptr noundef %{{.+}})
+  // PPC: call ppc_fp128 @modfl(ppc_fp128 noundef %{{.+}}, ptr noundef %{{.+}})
+  // X86F128: call fp128 @modfl(fp128 noundef %{{.+}}, ptr noundef %{{.+}})
+  // PPCF128: call fp128 @modff128(fp128 noundef %{{.+}}, ptr noundef %{{.+}})
   __builtin_modfl(f,l);
 
-  // F80: call x86_fp80 @nanl(i8* noundef %{{.+}})
-  // PPC: call ppc_fp128 @nanl(i8* noundef %{{.+}})
-  // X86F128: call fp128 @nanl(i8* noundef %{{.+}})
-  // PPCF128: call fp128 @nanf128(i8* noundef %{{.+}})
+  // F80: call x86_fp80 @nanl(ptr noundef %{{.+}})
+  // PPC: call ppc_fp128 @nanl(ptr noundef %{{.+}})
+  // X86F128: call fp128 @nanl(ptr noundef %{{.+}})
+  // PPCF128: call fp128 @nanf128(ptr noundef %{{.+}})
   __builtin_nanl(c);
 
-  // F80: call x86_fp80 @nansl(i8* noundef %{{.+}})
-  // PPC: call ppc_fp128 @nansl(i8* noundef %{{.+}})
-  // X86F128: call fp128 @nansl(i8* noundef %{{.+}})
-  // PPCF128: call fp128 @nansf128(i8* noundef %{{.+}})
+  // F80: call x86_fp80 @nansl(ptr noundef %{{.+}})
+  // PPC: call ppc_fp128 @nansl(ptr noundef %{{.+}})
+  // X86F128: call fp128 @nansl(ptr noundef %{{.+}})
+  // PPCF128: call fp128 @nansf128(ptr noundef %{{.+}})
   __builtin_nansl(c);
 
   // F80: call x86_fp80 @powl(x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}})
@@ -316,10 +316,10 @@ void foo(long double f, long double *l, int *i, const char *c) {
   // PPCF128: call fp128 @remainderf128(fp128 noundef %{{.+}}, fp128 noundef %{{.+}})
   __builtin_remainderl(f,f);
 
-  // F80: call x86_fp80 @remquol(x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}}, i32* noundef %{{.+}})
-  // PPC: call ppc_fp128 @remquol(ppc_fp128 noundef %{{.+}}, ppc_fp128 noundef %{{.+}}, i32* noundef %{{.+}})
-  // X86F128: call fp128 @remquol(fp128 noundef %{{.+}}, fp128 noundef %{{.+}}, i32* noundef %{{.+}})
-  // PPCF128: call fp128 @remquof128(fp128 noundef %{{.+}}, fp128 noundef %{{.+}}, i32* noundef %{{.+}})
+  // F80: call x86_fp80 @remquol(x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}}, ptr noundef %{{.+}})
+  // PPC: call ppc_fp128 @remquol(ppc_fp128 noundef %{{.+}}, ppc_fp128 noundef %{{.+}}, ptr noundef %{{.+}})
+  // X86F128: call fp128 @remquol(fp128 noundef %{{.+}}, fp128 noundef %{{.+}}, ptr noundef %{{.+}})
+  // PPCF128: call fp128 @remquof128(fp128 noundef %{{.+}}, fp128 noundef %{{.+}}, ptr noundef %{{.+}})
   __builtin_remquol(f,f,i);
 
   // F80: call x86_fp80 @scalblnl(x86_fp80 noundef %{{.+}}, i64 noundef %{{.+}})

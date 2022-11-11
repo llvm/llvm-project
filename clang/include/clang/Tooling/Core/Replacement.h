@@ -259,7 +259,7 @@ public:
 
   /// Merges \p Replaces into the current replacements. \p Replaces
   /// refers to code after applying the current replacements.
-  LLVM_NODISCARD Replacements merge(const Replacements &Replaces) const;
+  [[nodiscard]] Replacements merge(const Replacements &Replaces) const;
 
   // Returns the affected ranges in the changed code.
   std::vector<Range> getAffectedRanges() const;
@@ -301,7 +301,7 @@ private:
   // applied.
   Replacements getCanonicalReplacements() const;
 
-  // If `R` and all existing replacements are order-indepedent, then merge it
+  // If `R` and all existing replacements are order-independent, then merge it
   // with `Replaces` and returns the merged replacements; otherwise, returns an
   // error.
   llvm::Expected<Replacements>

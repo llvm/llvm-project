@@ -109,8 +109,7 @@ parseTargetID(const llvm::Triple &T, llvm::StringRef TargetID,
   if (!OptionalProcessor)
     return llvm::None;
 
-  llvm::StringRef Processor =
-      getCanonicalProcessorName(T, OptionalProcessor.getValue());
+  llvm::StringRef Processor = getCanonicalProcessorName(T, *OptionalProcessor);
   if (Processor.empty())
     return llvm::None;
 
@@ -150,8 +149,7 @@ getConflictTargetIDCombination(const std::set<llvm::StringRef> &TargetIDs) {
   llvm::StringMap<Info> FeatureMap;
   for (auto &&ID : TargetIDs) {
     llvm::StringMap<bool> Features;
-    llvm::StringRef Proc =
-        parseTargetIDWithFormatCheckingOnly(ID, &Features).getValue();
+    llvm::StringRef Proc = *parseTargetIDWithFormatCheckingOnly(ID, &Features);
     auto Loc = FeatureMap.find(Proc);
     if (Loc == FeatureMap.end())
       FeatureMap[Proc] = Info{ID, Features};
@@ -164,6 +162,27 @@ getConflictTargetIDCombination(const std::set<llvm::StringRef> &TargetIDs) {
     }
   }
   return llvm::None;
+}
+
+bool isCompatibleTargetID(llvm::StringRef Provided, llvm::StringRef Requested) {
+  llvm::StringMap<bool> ProvidedFeatures, RequestedFeatures;
+  llvm::StringRef ProvidedProc =
+      *parseTargetIDWithFormatCheckingOnly(Provided, &ProvidedFeatures);
+  llvm::StringRef RequestedProc =
+      *parseTargetIDWithFormatCheckingOnly(Requested, &RequestedFeatures);
+  if (ProvidedProc != RequestedProc)
+    return false;
+  for (const auto &F : ProvidedFeatures) {
+    auto Loc = RequestedFeatures.find(F.first());
+    // The default (unspecified) value of a feature is 'All', which can match
+    // either 'On' or 'Off'.
+    if (Loc == RequestedFeatures.end())
+      return false;
+    // If a feature is specified, it must have exact match.
+    if (Loc->second != F.second)
+      return false;
+  }
+  return true;
 }
 
 } // namespace clang

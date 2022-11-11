@@ -9,16 +9,53 @@
 //===----------------------------------------------------------------------===//
 /// Define scheduler resources associated with def operands.
 
+defvar SchedMxList = ["UpperBound", "M1", "M2", "M4", "M8", "MF2", "MF4", "MF8"];
+// Used for widening and narrowing instructions as it doesn't contain M8.
+defvar SchedMxListW = ["UpperBound", "MF8", "MF4", "MF2", "M1", "M2", "M4"];
+
+// Creates SchedWrite for each (name, LMUL) pair for LMUL in lmuls argument
+multiclass LMULSchedWrites<string name, list<string> lmuls = SchedMxList> {
+  foreach mx = lmuls in {
+    def name # "_" # mx : SchedWrite;
+  }
+}
+
+// Creates SchedRead for each (name, LMUL) pair for LMUL in lmuls argument
+multiclass LMULSchedReads<string name, list<string> lmuls = SchedMxList> {
+  foreach mx = lmuls in {
+    def name # "_" # mx : SchedRead;
+  }
+}
+
+// Creates WriteRes for each (name, LMUL, resources) tuple for LMUL
+// in lmuls argument
+multiclass LMULWriteRes<string name, list<ProcResourceKind> resources,
+                        list<string> lmuls = SchedMxList> {
+  foreach mx = lmuls in {
+    def : WriteRes<!cast<SchedWrite>(name # "_" # mx), resources>;
+  }
+}
+
+// Creates ReadAdvance for each (name, LMUL, val) tuple for LMUL
+// in lmuls argument
+multiclass LMULReadAdvance<string name, int val, list<string> lmuls = SchedMxList> {
+  foreach mx = lmuls in {
+    def : ReadAdvance<!cast<SchedRead>(name # "_" # mx), val>;
+  }
+}
+
+// 3.6 Vector Byte Length vlenb
+def WriteRdVLENB      : SchedWrite;
+
+// 6. Configuration-Setting Instructions
+def WriteVSETVLI      : SchedWrite;
+def WriteVSETIVLI     : SchedWrite;
+def WriteVSETVL       : SchedWrite;
+
 // 7. Vector Loads and Stores
 // 7.4. Vector Unit-Stride Instructions
-def WriteVLDE8        : SchedWrite;
-def WriteVLDE16       : SchedWrite;
-def WriteVLDE32       : SchedWrite;
-def WriteVLDE64       : SchedWrite;
-def WriteVSTE8        : SchedWrite;
-def WriteVSTE16       : SchedWrite;
-def WriteVSTE32       : SchedWrite;
-def WriteVSTE64       : SchedWrite;
+def WriteVLDE         : SchedWrite;
+def WriteVSTE         : SchedWrite;
 // 7.4.1. Vector Unit-Strided Mask
 def WriteVLDM         : SchedWrite;
 def WriteVSTM         : SchedWrite;
@@ -49,27 +86,26 @@ def WriteVSTOX16      : SchedWrite;
 def WriteVSTOX32      : SchedWrite;
 def WriteVSTOX64      : SchedWrite;
 // 7.7. Vector Unit-stride Fault-Only-First Loads
-def WriteVLDFF8       : SchedWrite;
-def WriteVLDFF16      : SchedWrite;
-def WriteVLDFF32      : SchedWrite;
-def WriteVLDFF64      : SchedWrite;
+def WriteVLDFF        : SchedWrite;
+// 7.8. Vector Segment Instructions
+foreach nf=2-8 in {
+  foreach eew = [8, 16, 32, 64] in {
+    def WriteVLSEG # nf # e # eew : SchedWrite;
+    def WriteVSSEG # nf # e # eew : SchedWrite;
+    def WriteVLSEGFF # nf # e # eew : SchedWrite;
+    def WriteVLSSEG # nf # e # eew : SchedWrite;
+    def WriteVSSSEG # nf # e # eew : SchedWrite;
+    def WriteVLUXSEG # nf # e # eew : SchedWrite;
+    def WriteVLOXSEG # nf # e # eew : SchedWrite;
+    def WriteVSUXSEG # nf # e # eew : SchedWrite;
+    def WriteVSOXSEG # nf # e # eew : SchedWrite;
+  }
+}
 // 7.9. Vector Whole Register Instructions
-def WriteVLD1R8       : SchedWrite;
-def WriteVLD1R16      : SchedWrite;
-def WriteVLD1R32      : SchedWrite;
-def WriteVLD1R64      : SchedWrite;
-def WriteVLD2R8       : SchedWrite;
-def WriteVLD2R16      : SchedWrite;
-def WriteVLD2R32      : SchedWrite;
-def WriteVLD2R64      : SchedWrite;
-def WriteVLD4R8       : SchedWrite;
-def WriteVLD4R16      : SchedWrite;
-def WriteVLD4R32      : SchedWrite;
-def WriteVLD4R64      : SchedWrite;
-def WriteVLD8R8       : SchedWrite;
-def WriteVLD8R16      : SchedWrite;
-def WriteVLD8R32      : SchedWrite;
-def WriteVLD8R64      : SchedWrite;
+def WriteVLD1R        : SchedWrite;
+def WriteVLD2R        : SchedWrite;
+def WriteVLD4R        : SchedWrite;
+def WriteVLD8R        : SchedWrite;
 def WriteVST1R        : SchedWrite;
 def WriteVST2R        : SchedWrite;
 def WriteVST4R        : SchedWrite;
@@ -78,55 +114,55 @@ def WriteVST8R        : SchedWrite;
 // 11. Vector Integer Arithmetic Instructions
 // 11.1. Vector Single-Width Integer Add and Subtract
 // 11.5. Vector Bitwise Logical Instructions
-def WriteVIALUV       : SchedWrite;
-def WriteVIALUX       : SchedWrite;
-def WriteVIALUI       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIALUV">;
+defm "" : LMULSchedWrites<"WriteVIALUX">;
+defm "" : LMULSchedWrites<"WriteVIALUI">;
 // 11.2. Vector Widening Integer Add/Subtract
-def WriteVIWALUV      : SchedWrite;
-def WriteVIWALUX      : SchedWrite;
-def WriteVIWALUI      : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIWALUV", SchedMxListW>;
+defm "" : LMULSchedWrites<"WriteVIWALUX", SchedMxListW>;
+defm "" : LMULSchedWrites<"WriteVIWALUI", SchedMxListW>;
 // 11.3. Vector Integer Extension
-def WriteVExtV        : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVExtV">;
 // 11.4. Vector Integer Arithmetic with Carry or Borrow Instructions
-def WriteVICALUV      : SchedWrite;
-def WriteVICALUX      : SchedWrite;
-def WriteVICALUI      : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVICALUV">;
+defm "" : LMULSchedWrites<"WriteVICALUX">;
+defm "" : LMULSchedWrites<"WriteVICALUI">;
 // 11.6. Vector Single-Width Bit Shift Instructions
-def WriteVShiftV      : SchedWrite;
-def WriteVShiftX      : SchedWrite;
-def WriteVShiftI      : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVShiftV">;
+defm "" : LMULSchedWrites<"WriteVShiftX">;
+defm "" : LMULSchedWrites<"WriteVShiftI">;
 // 11.7. Vector Narrowing Integer Right Shift Instructions
-def WriteVNShiftV     : SchedWrite;
-def WriteVNShiftX     : SchedWrite;
-def WriteVNShiftI     : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVNShiftV", SchedMxListW>;
+defm "" : LMULSchedWrites<"WriteVNShiftX", SchedMxListW>;
+defm "" : LMULSchedWrites<"WriteVNShiftI", SchedMxListW>;
 // 11.8. Vector Integer Comparison Instructions
 // 11.9. Vector Integer Min/Max Instructions
-def WriteVICmpV       : SchedWrite;
-def WriteVICmpX       : SchedWrite;
-def WriteVICmpI       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVICmpV">;
+defm "" : LMULSchedWrites<"WriteVICmpX">;
+defm "" : LMULSchedWrites<"WriteVICmpI">;
 // 11.10. Vector Single-Width Integer Multiply Instructions
-def WriteVIMulV       : SchedWrite;
-def WriteVIMulX       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIMulV">;
+defm "" : LMULSchedWrites<"WriteVIMulX">;
 // 11.11. Vector Integer Divide Instructions
-def WriteVIDivV       : SchedWrite;
-def WriteVIDivX       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIDivV">;
+defm "" : LMULSchedWrites<"WriteVIDivX">;
 // 11.12. Vector Widening Integer Multiply Instructions
-def WriteVIWMulV      : SchedWrite;
-def WriteVIWMulX      : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIWMulV", SchedMxListW>;
+defm "" : LMULSchedWrites<"WriteVIWMulX", SchedMxListW>;
 // 11.13. Vector Single-Width Integer Multiply-Add Instructions
-def WriteVIMulAddV    : SchedWrite;
-def WriteVIMulAddX    : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIMulAddV">;
+defm "" : LMULSchedWrites<"WriteVIMulAddX">;
 // 11.14. Vector Widening Integer Multiply-Add Instructions
-def WriteVIWMulAddV   : SchedWrite;
-def WriteVIWMulAddX   : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIWMulAddV", SchedMxListW>;
+defm "" : LMULSchedWrites<"WriteVIWMulAddX", SchedMxListW>;
 // 11.15. Vector Integer Merge Instructions
-def WriteVIMergeV     : SchedWrite;
-def WriteVIMergeX     : SchedWrite;
-def WriteVIMergeI     : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIMergeV">;
+defm "" : LMULSchedWrites<"WriteVIMergeX">;
+defm "" : LMULSchedWrites<"WriteVIMergeI">;
 // 11.16. Vector Integer Move Instructions
-def WriteVIMovV       : SchedWrite;
-def WriteVIMovX       : SchedWrite;
-def WriteVIMovI       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIMovV">;
+defm "" : LMULSchedWrites<"WriteVIMovX">;
+defm "" : LMULSchedWrites<"WriteVIMovI">;
 
 // 12. Vector Fixed-Point Arithmetic Instructions
 // 12.1. Vector Single-Width Saturating Add and Subtract
@@ -190,7 +226,6 @@ def WriteVFMovV       : SchedWrite;
 // 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
 def WriteVFCvtIToFV   : SchedWrite;
 def WriteVFCvtFToIV   : SchedWrite;
-def WriteVFCvtFToFV   : SchedWrite;
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
 def WriteVFWCvtIToFV  : SchedWrite;
 def WriteVFWCvtFToIV  : SchedWrite;
@@ -255,14 +290,15 @@ def WriteVMov8V       : SchedWrite;
 //===----------------------------------------------------------------------===//
 /// Define scheduler resources associated with use operands.
 
+// 6. Configuration-Setting Instructions
+def ReadVSETVLI       : SchedRead;
+def ReadVSETVL        : SchedRead;
+
 // 7. Vector Loads and Stores
 def ReadVLDX          : SchedRead;
 def ReadVSTX          : SchedRead;
 // 7.4. Vector Unit-Stride Instructions
-def ReadVSTE8V        : SchedRead;
-def ReadVSTE16V       : SchedRead;
-def ReadVSTE32V       : SchedRead;
-def ReadVSTE64V       : SchedRead;
+def ReadVSTEV        : SchedRead;
 // 7.4.1. Vector Unit-Strided Mask
 def ReadVSTM          : SchedRead;
 // 7.5. Vector Strided Instructions
@@ -302,47 +338,47 @@ def ReadVST8R         : SchedRead;
 // 11. Vector Integer Arithmetic Instructions
 // 11.1. Vector Single-Width Integer Add and Subtract
 // 11.5. Vector Bitwise Logical Instructions
-def ReadVIALUV        : SchedRead;
-def ReadVIALUX        : SchedRead;
+defm "" : LMULSchedReads<"ReadVIALUV">;
+defm "" : LMULSchedReads<"ReadVIALUX">;
 // 11.2. Vector Widening Integer Add/Subtract
-def ReadVIWALUV       : SchedRead;
-def ReadVIWALUX       : SchedRead;
+defm "" : LMULSchedReads<"ReadVIWALUV", SchedMxListW>;
+defm "" : LMULSchedReads<"ReadVIWALUX", SchedMxListW>;
 // 11.3. Vector Integer Extension
-def ReadVExtV         : SchedRead;
+defm "" : LMULSchedReads<"ReadVExtV">;
 // 11.4. Vector Integer Arithmetic with Carry or Borrow Instructions
-def ReadVIALUCV       : SchedRead;
-def ReadVIALUCX       : SchedRead;
+defm "" : LMULSchedReads<"ReadVICALUV">;
+defm "" : LMULSchedReads<"ReadVICALUX">;
 // 11.6. Vector Single-Width Bit Shift Instructions
-def ReadVShiftV       : SchedRead;
-def ReadVShiftX       : SchedRead;
+defm "" : LMULSchedReads<"ReadVShiftV">;
+defm "" : LMULSchedReads<"ReadVShiftX">;
 // 11.7. Vector Narrowing Integer Right Shift Instructions
-def ReadVNShiftV      : SchedRead;
-def ReadVNShiftX      : SchedRead;
+defm "" : LMULSchedReads<"ReadVNShiftV", SchedMxListW>;
+defm "" : LMULSchedReads<"ReadVNShiftX", SchedMxListW>;
 // 11.8. Vector Integer Comparison Instructions
 // 11.9. Vector Integer Min/Max Instructions
-def ReadVICmpV        : SchedRead;
-def ReadVICmpX        : SchedRead;
+defm "" : LMULSchedReads<"ReadVICmpV">;
+defm "" : LMULSchedReads<"ReadVICmpX">;
 // 11.10. Vector Single-Width Integer Multiply Instructions
-def ReadVIMulV        : SchedRead;
-def ReadVIMulX        : SchedRead;
+defm "" : LMULSchedReads<"ReadVIMulV">;
+defm "" : LMULSchedReads<"ReadVIMulX">;
 // 11.11. Vector Integer Divide Instructions
-def ReadVIDivV        : SchedRead;
-def ReadVIDivX        : SchedRead;
+defm "" : LMULSchedReads<"ReadVIDivV">;
+defm "" : LMULSchedReads<"ReadVIDivX">;
 // 11.12. Vector Widening Integer Multiply Instructions
-def ReadVIWMulV       : SchedRead;
-def ReadVIWMulX       : SchedRead;
+defm "" : LMULSchedReads<"ReadVIWMulV", SchedMxListW>;
+defm "" : LMULSchedReads<"ReadVIWMulX", SchedMxListW>;
 // 11.13. Vector Single-Width Integer Multiply-Add Instructions
-def ReadVIMulAddV     : SchedRead;
-def ReadVIMulAddX     : SchedRead;
+defm "" : LMULSchedReads<"ReadVIMulAddV">;
+defm "" : LMULSchedReads<"ReadVIMulAddX">;
 // 11.14. Vector Widening Integer Multiply-Add Instructions
-def ReadVIWMulAddV    : SchedRead;
-def ReadVIWMulAddX    : SchedRead;
+defm "" : LMULSchedReads<"ReadVIWMulAddV", SchedMxListW>;
+defm "" : LMULSchedReads<"ReadVIWMulAddX", SchedMxListW>;
 // 11.15. Vector Integer Merge Instructions
-def ReadVIMergeV      : SchedRead;
-def ReadVIMergeX      : SchedRead;
+defm "" : LMULSchedReads<"ReadVIMergeV">;
+defm "" : LMULSchedReads<"ReadVIMergeX">;
 // 11.16. Vector Integer Move Instructions
-def ReadVIMovV        : SchedRead;
-def ReadVIMovX        : SchedRead;
+defm "" : LMULSchedReads<"ReadVIMovV">;
+defm "" : LMULSchedReads<"ReadVIMovX">;
 
 // 12. Vector Fixed-Point Arithmetic Instructions
 // 12.1. Vector Single-Width Saturating Add and Subtract
@@ -479,15 +515,17 @@ def ReadVMask         : SchedRead;
 multiclass UnsupportedSchedV {
 let Unsupported = true in {
 
+// 3.6 Vector Byte Length vlenb
+def : WriteRes<WriteRdVLENB, []>;
+
+// 6. Configuration-Setting Instructions
+def : WriteRes<WriteVSETVLI, []>;
+def : WriteRes<WriteVSETIVLI, []>;
+def : WriteRes<WriteVSETVL, []>;
+
 // 7. Vector Loads and Stores
-def : WriteRes<WriteVLDE8, []>;
-def : WriteRes<WriteVLDE16, []>;
-def : WriteRes<WriteVLDE32, []>;
-def : WriteRes<WriteVLDE64, []>;
-def : WriteRes<WriteVSTE8, []>;
-def : WriteRes<WriteVSTE16, []>;
-def : WriteRes<WriteVSTE32, []>;
-def : WriteRes<WriteVSTE64, []>;
+def : WriteRes<WriteVLDE, []>;
+def : WriteRes<WriteVSTE, []>;
 def : WriteRes<WriteVLDM, []>;
 def : WriteRes<WriteVSTM, []>;
 def : WriteRes<WriteVLDS8, []>;
@@ -514,67 +552,66 @@ def : WriteRes<WriteVSTOX8, []>;
 def : WriteRes<WriteVSTOX16, []>;
 def : WriteRes<WriteVSTOX32, []>;
 def : WriteRes<WriteVSTOX64, []>;
-def : WriteRes<WriteVLDFF8, []>;
-def : WriteRes<WriteVLDFF16, []>;
-def : WriteRes<WriteVLDFF32, []>;
-def : WriteRes<WriteVLDFF64, []>;
-def : WriteRes<WriteVLD1R8, []>;
-def : WriteRes<WriteVLD1R16, []>;
-def : WriteRes<WriteVLD1R32, []>;
-def : WriteRes<WriteVLD1R64, []>;
-def : WriteRes<WriteVLD2R8, []>;
-def : WriteRes<WriteVLD2R16, []>;
-def : WriteRes<WriteVLD2R32, []>;
-def : WriteRes<WriteVLD2R64, []>;
-def : WriteRes<WriteVLD4R8, []>;
-def : WriteRes<WriteVLD4R16, []>;
-def : WriteRes<WriteVLD4R32, []>;
-def : WriteRes<WriteVLD4R64, []>;
-def : WriteRes<WriteVLD8R8, []>;
-def : WriteRes<WriteVLD8R16, []>;
-def : WriteRes<WriteVLD8R32, []>;
-def : WriteRes<WriteVLD8R64, []>;
+def : WriteRes<WriteVLDFF, []>;
+def : WriteRes<WriteVLD1R, []>;
+def : WriteRes<WriteVLD2R, []>;
+def : WriteRes<WriteVLD4R, []>;
+def : WriteRes<WriteVLD8R, []>;
 def : WriteRes<WriteVST1R, []>;
 def : WriteRes<WriteVST2R, []>;
 def : WriteRes<WriteVST4R, []>;
 def : WriteRes<WriteVST8R, []>;
+// Vector Segment Loads and Stores
+foreach nf=2-8 in {
+  foreach eew = [8, 16, 32, 64] in {
+    def : WriteRes <!cast<SchedWrite>("WriteVLSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVLSEGFF" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVSSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVLSSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVSSSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVLUXSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVLOXSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVSUXSEG" # nf # "e" # eew), []>;
+    def : WriteRes <!cast<SchedWrite>("WriteVSOXSEG" # nf # "e" # eew), []>;
+  }
+}
 
-// 12. Vector Integer Arithmetic Instructions
-def : WriteRes<WriteVIALUV, []>;
-def : WriteRes<WriteVIALUX, []>;
-def : WriteRes<WriteVIALUI, []>;
-def : WriteRes<WriteVIWALUV, []>;
-def : WriteRes<WriteVIWALUX, []>;
-def : WriteRes<WriteVIWALUI, []>;
-def : WriteRes<WriteVExtV, []>;
-def : WriteRes<WriteVICALUV, []>;
-def : WriteRes<WriteVICALUX, []>;
-def : WriteRes<WriteVICALUI, []>;
-def : WriteRes<WriteVShiftV, []>;
-def : WriteRes<WriteVShiftX, []>;
-def : WriteRes<WriteVShiftI, []>;
-def : WriteRes<WriteVNShiftV, []>;
-def : WriteRes<WriteVNShiftX, []>;
-def : WriteRes<WriteVNShiftI, []>;
-def : WriteRes<WriteVICmpV, []>;
-def : WriteRes<WriteVICmpX, []>;
-def : WriteRes<WriteVICmpI, []>;
-def : WriteRes<WriteVIMulV, []>;
-def : WriteRes<WriteVIMulX, []>;
-def : WriteRes<WriteVIDivV, []>;
-def : WriteRes<WriteVIDivX, []>;
-def : WriteRes<WriteVIWMulV, []>;
-def : WriteRes<WriteVIWMulX, []>;
-def : WriteRes<WriteVIMulAddV, []>;
-def : WriteRes<WriteVIMulAddX, []>;
-def : WriteRes<WriteVIWMulAddV, []>;
-def : WriteRes<WriteVIWMulAddX, []>;
-def : WriteRes<WriteVIMergeV, []>;
-def : WriteRes<WriteVIMergeX, []>;
-def : WriteRes<WriteVIMergeI, []>;
-def : WriteRes<WriteVIMovV, []>;
-def : WriteRes<WriteVIMovX, []>;
-def : WriteRes<WriteVIMovI, []>;
+// 11. Vector Integer Arithmetic Instructions
+defm "" : LMULWriteRes<"WriteVIALUV", []>;
+defm "" : LMULWriteRes<"WriteVIALUX", []>;
+defm "" : LMULWriteRes<"WriteVIALUI", []>;
+defm "" : LMULWriteRes<"WriteVIWALUV", [], SchedMxListW>;
+defm "" : LMULWriteRes<"WriteVIWALUX", [], SchedMxListW>;
+defm "" : LMULWriteRes<"WriteVIWALUI", [], SchedMxListW>;
+defm "" : LMULWriteRes<"WriteVExtV", []>;
+defm "" : LMULWriteRes<"WriteVICALUV", []>;
+defm "" : LMULWriteRes<"WriteVICALUX", []>;
+defm "" : LMULWriteRes<"WriteVICALUI", []>;
+defm "" : LMULWriteRes<"WriteVShiftV", []>;
+defm "" : LMULWriteRes<"WriteVShiftX", []>;
+defm "" : LMULWriteRes<"WriteVShiftI", []>;
+defm "" : LMULWriteRes<"WriteVNShiftV", [], SchedMxListW>;
+defm "" : LMULWriteRes<"WriteVNShiftX", [], SchedMxListW>;
+defm "" : LMULWriteRes<"WriteVNShiftI", [], SchedMxListW>;
+defm "" : LMULWriteRes<"WriteVICmpV", []>;
+defm "" : LMULWriteRes<"WriteVICmpX", []>;
+defm "" : LMULWriteRes<"WriteVICmpI", []>;
+defm "" : LMULWriteRes<"WriteVIMulV", []>;
+defm "" : LMULWriteRes<"WriteVIMulX", []>;
+defm "" : LMULWriteRes<"WriteVIDivV", []>;
+defm "" : LMULWriteRes<"WriteVIDivX", []>;
+defm "" : LMULWriteRes<"WriteVIWMulV", [], SchedMxListW>;
+defm "" : LMULWriteRes<"WriteVIWMulX", [], SchedMxListW>;
+defm "" : LMULWriteRes<"WriteVIMulAddV", []>;
+defm "" : LMULWriteRes<"WriteVIMulAddX", []>;
+defm "" : LMULWriteRes<"WriteVIWMulAddV", [], SchedMxListW>;
+defm "" : LMULWriteRes<"WriteVIWMulAddX", [], SchedMxListW>;
+defm "" : LMULWriteRes<"WriteVIMergeV", []>;
+defm "" : LMULWriteRes<"WriteVIMergeX", []>;
+defm "" : LMULWriteRes<"WriteVIMergeI", []>;
+defm "" : LMULWriteRes<"WriteVIMovV", []>;
+defm "" : LMULWriteRes<"WriteVIMovX", []>;
+defm "" : LMULWriteRes<"WriteVIMovI", []>;
 
 // 13. Vector Fixed-Point Arithmetic Instructions
 def : WriteRes<WriteVSALUV, []>;
@@ -617,7 +654,6 @@ def : WriteRes<WriteVFMergeV, []>;
 def : WriteRes<WriteVFMovV, []>;
 def : WriteRes<WriteVFCvtIToFV, []>;
 def : WriteRes<WriteVFCvtFToIV, []>;
-def : WriteRes<WriteVFCvtFToFV, []>;
 def : WriteRes<WriteVFWCvtIToFV, []>;
 def : WriteRes<WriteVFWCvtFToIV, []>;
 def : WriteRes<WriteVFWCvtFToFV, []>;
@@ -659,13 +695,14 @@ def : WriteRes<WriteVMov2V, []>;
 def : WriteRes<WriteVMov4V, []>;
 def : WriteRes<WriteVMov8V, []>;
 
+// 6. Configuration-Setting Instructions
+def : ReadAdvance<ReadVSETVLI, 0>;
+def : ReadAdvance<ReadVSETVL, 0>;
+
 // 7. Vector Loads and Stores
 def : ReadAdvance<ReadVLDX, 0>;
 def : ReadAdvance<ReadVSTX, 0>;
-def : ReadAdvance<ReadVSTE8V, 0>;
-def : ReadAdvance<ReadVSTE16V, 0>;
-def : ReadAdvance<ReadVSTE32V, 0>;
-def : ReadAdvance<ReadVSTE64V, 0>;
+def : ReadAdvance<ReadVSTEV, 0>;
 def : ReadAdvance<ReadVSTM, 0>;
 def : ReadAdvance<ReadVLDSX, 0>;
 def : ReadAdvance<ReadVSTSX, 0>;
@@ -698,34 +735,34 @@ def : ReadAdvance<ReadVST2R, 0>;
 def : ReadAdvance<ReadVST4R, 0>;
 def : ReadAdvance<ReadVST8R, 0>;
 
-// 12. Vector Integer Arithmetic Instructions
-def : ReadAdvance<ReadVIALUV, 0>;
-def : ReadAdvance<ReadVIALUX, 0>;
-def : ReadAdvance<ReadVIWALUV, 0>;
-def : ReadAdvance<ReadVIWALUX, 0>;
-def : ReadAdvance<ReadVExtV, 0>;
-def : ReadAdvance<ReadVIALUCV, 0>;
-def : ReadAdvance<ReadVIALUCX, 0>;
-def : ReadAdvance<ReadVShiftV, 0>;
-def : ReadAdvance<ReadVShiftX, 0>;
-def : ReadAdvance<ReadVNShiftV, 0>;
-def : ReadAdvance<ReadVNShiftX, 0>;
-def : ReadAdvance<ReadVICmpV, 0>;
-def : ReadAdvance<ReadVICmpX, 0>;
-def : ReadAdvance<ReadVIMulV, 0>;
-def : ReadAdvance<ReadVIMulX, 0>;
-def : ReadAdvance<ReadVIDivV, 0>;
-def : ReadAdvance<ReadVIDivX, 0>;
-def : ReadAdvance<ReadVIWMulV, 0>;
-def : ReadAdvance<ReadVIWMulX, 0>;
-def : ReadAdvance<ReadVIMulAddV, 0>;
-def : ReadAdvance<ReadVIMulAddX, 0>;
-def : ReadAdvance<ReadVIWMulAddV, 0>;
-def : ReadAdvance<ReadVIWMulAddX, 0>;
-def : ReadAdvance<ReadVIMergeV, 0>;
-def : ReadAdvance<ReadVIMergeX, 0>;
-def : ReadAdvance<ReadVIMovV, 0>;
-def : ReadAdvance<ReadVIMovX, 0>;
+// 11. Vector Integer Arithmetic Instructions
+defm "" : LMULReadAdvance<"ReadVIALUV", 0>;
+defm "" : LMULReadAdvance<"ReadVIALUX", 0>;
+defm "" : LMULReadAdvance<"ReadVIWALUV", 0, SchedMxListW>;
+defm "" : LMULReadAdvance<"ReadVIWALUX", 0, SchedMxListW>;
+defm "" : LMULReadAdvance<"ReadVExtV", 0>;
+defm "" : LMULReadAdvance<"ReadVICALUV", 0>;
+defm "" : LMULReadAdvance<"ReadVICALUX", 0>;
+defm "" : LMULReadAdvance<"ReadVShiftV", 0>;
+defm "" : LMULReadAdvance<"ReadVShiftX", 0>;
+defm "" : LMULReadAdvance<"ReadVNShiftV", 0, SchedMxListW>;
+defm "" : LMULReadAdvance<"ReadVNShiftX", 0, SchedMxListW>;
+defm "" : LMULReadAdvance<"ReadVICmpV", 0>;
+defm "" : LMULReadAdvance<"ReadVICmpX", 0>;
+defm "" : LMULReadAdvance<"ReadVIMulV", 0>;
+defm "" : LMULReadAdvance<"ReadVIMulX", 0>;
+defm "" : LMULReadAdvance<"ReadVIDivV", 0>;
+defm "" : LMULReadAdvance<"ReadVIDivX", 0>;
+defm "" : LMULReadAdvance<"ReadVIWMulV", 0, SchedMxListW>;
+defm "" : LMULReadAdvance<"ReadVIWMulX", 0, SchedMxListW>;
+defm "" : LMULReadAdvance<"ReadVIMulAddV", 0>;
+defm "" : LMULReadAdvance<"ReadVIMulAddX", 0>;
+defm "" : LMULReadAdvance<"ReadVIWMulAddV", 0, SchedMxListW>;
+defm "" : LMULReadAdvance<"ReadVIWMulAddX", 0, SchedMxListW>;
+defm "" : LMULReadAdvance<"ReadVIMergeV", 0>;
+defm "" : LMULReadAdvance<"ReadVIMergeX", 0>;
+defm "" : LMULReadAdvance<"ReadVIMovV", 0>;
+defm "" : LMULReadAdvance<"ReadVIMovX", 0>;
 
 // 13. Vector Fixed-Point Arithmetic Instructions
 def : ReadAdvance<ReadVSALUV, 0>;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;
@@ -165,7 +165,7 @@ namespace test2 {
     i<float(*)()>(baz);
   }
 
-  // CHECK: store float {{.*}}, float* @_ZZN5test21gIPFfvEEEvT_DTclfL0p_EEE8variable,
+  // CHECK: store float {{.*}}, ptr @_ZZN5test21gIPFfvEEEvT_DTclfL0p_EEE8variable,
 }
 
 namespace test3 {

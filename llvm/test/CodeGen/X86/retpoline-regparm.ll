@@ -5,7 +5,7 @@
 ; with -mregparm=3, so we need to support it.  TCO should fail because we need
 ; to restore EDI.
 
-define void @call_edi(void (i32, i32, i32)* %fp) #0 {
+define void @call_edi(ptr %fp) #0 {
 entry:
   tail call void %fp(i32 inreg 0, i32 inreg 0, i32 inreg 0)
   ret void
@@ -22,7 +22,7 @@ entry:
 ; CHECK: popl %edi
 ; CHECK: retl
 
-define void @edi_external(void (i32, i32, i32)* %fp) #1 {
+define void @edi_external(ptr %fp) #1 {
 entry:
   tail call void %fp(i32 inreg 0, i32 inreg 0, i32 inreg 0)
   ret void

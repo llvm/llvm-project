@@ -13,6 +13,7 @@
 #include "bolt/Passes/AsmDump.h"
 #include "bolt/Passes/CMOVConversion.h"
 #include "bolt/Passes/FrameOptimizer.h"
+#include "bolt/Passes/Hugify.h"
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/IndirectCallPromotion.h"
 #include "bolt/Passes/Inliner.h"
@@ -31,6 +32,7 @@
 #include "bolt/Passes/TailDuplication.h"
 #include "bolt/Passes/ThreeWayBranch.h"
 #include "bolt/Passes/ValidateInternalCalls.h"
+#include "bolt/Passes/ValidateMemRefs.h"
 #include "bolt/Passes/VeneerElimination.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -268,7 +270,7 @@ void BinaryFunctionPassManager::runPasses() {
                        TimerGroupDesc, TimeOpts);
 
     callWithDynoStats([this, &Pass] { Pass->runOnFunctions(BC); }, BFs,
-                      Pass->getName(), opts::DynoStatsAll);
+                      Pass->getName(), opts::DynoStatsAll, BC.isAArch64());
 
     if (opts::VerifyCFG &&
         !std::accumulate(
@@ -307,13 +309,15 @@ void BinaryFunctionPassManager::runPasses() {
 void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
-  const DynoStats InitialDynoStats = getDynoStats(BC.getBinaryFunctions());
+  const DynoStats InitialDynoStats =
+      getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
 
   Manager.registerPass(std::make_unique<AsmDumpPass>(),
                        opts::AsmDump.getNumOccurrences());
 
-  if (opts::Instrument)
-    Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
+  if (BC.isAArch64())
+    Manager.registerPass(
+        std::make_unique<VeneerElimination>(PrintVeneerElimination));
 
   // Here we manage dependencies/order manually, since passes are run in the
   // order they're registered.
@@ -326,6 +330,13 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
 
+  Manager.registerPass(std::make_unique<ValidateMemRefs>(NeverPrint));
+
+  if (opts::Instrument)
+    Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
+  else if (opts::Hugify)
+    Manager.registerPass(std::make_unique<HugePage>(NeverPrint));
+
   Manager.registerPass(std::make_unique<ShortenInstructions>(NeverPrint));
 
   Manager.registerPass(std::make_unique<RemoveNops>(NeverPrint));
@@ -337,10 +348,6 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
                        opts::ICF);
-
-  if (BC.isAArch64())
-    Manager.registerPass(
-        std::make_unique<VeneerElimination>(PrintVeneerElimination));
 
   Manager.registerPass(
       std::make_unique<SpecializeMemcpy1>(NeverPrint, opts::SpecializeMemcpy1),

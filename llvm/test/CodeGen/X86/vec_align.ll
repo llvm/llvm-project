@@ -25,15 +25,15 @@ define %f4 @test2() nounwind {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movaps _G, %xmm0
 ; CHECK-NEXT:    retl
-	%Wp = getelementptr { float,float,float,float}, { float,float,float,float}* @G, i32 0, i32 0
-	%Xp = getelementptr { float,float,float,float}, { float,float,float,float}* @G, i32 0, i32 1
-	%Yp = getelementptr { float,float,float,float}, { float,float,float,float}* @G, i32 0, i32 2
-	%Zp = getelementptr { float,float,float,float}, { float,float,float,float}* @G, i32 0, i32 3
+	%Wp = getelementptr { float,float,float,float}, ptr @G, i32 0, i32 0
+	%Xp = getelementptr { float,float,float,float}, ptr @G, i32 0, i32 1
+	%Yp = getelementptr { float,float,float,float}, ptr @G, i32 0, i32 2
+	%Zp = getelementptr { float,float,float,float}, ptr @G, i32 0, i32 3
 
-	%W = load float, float* %Wp
-	%X = load float, float* %Xp
-	%Y = load float, float* %Yp
-	%Z = load float, float* %Zp
+	%W = load float, ptr %Wp
+	%X = load float, ptr %Xp
+	%Y = load float, ptr %Yp
+	%Z = load float, ptr %Zp
 
         %tmp = insertelement %f4 undef, float %W, i32 0
         %tmp2 = insertelement %f4 %tmp, float %X, i32 1

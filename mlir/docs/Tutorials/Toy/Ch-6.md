@@ -95,7 +95,7 @@ multiple stages by relying on
   mlir::RewritePatternSet patterns(&getContext());
   mlir::populateAffineToStdConversionPatterns(patterns, &getContext());
   mlir::cf::populateSCFToControlFlowConversionPatterns(patterns, &getContext());
-  mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
+  mlir::arith::populateArithToLLVMConversionPatterns(typeConverter,
                                                           patterns);
   mlir::populateFuncToLLVMConversionPatterns(typeConverter, patterns);
   mlir::cf::populateControlFlowToLLVMConversionPatterns(patterns, &getContext());
@@ -141,7 +141,7 @@ llvm.func @main() {
   ...
 
 ^bb16:
-  %221 = llvm.extractvalue %25[0 : index] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
+  %221 = llvm.extractvalue %25[0] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
   %222 = llvm.mlir.constant(0 : index) : i64
   %223 = llvm.mlir.constant(2 : index) : i64
   %224 = llvm.mul %214, %223 : i64
@@ -158,13 +158,13 @@ llvm.func @main() {
   ...
 
 ^bb18:
-  %235 = llvm.extractvalue %65[0 : index] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
+  %235 = llvm.extractvalue %65[0] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
   %236 = llvm.bitcast %235 : !llvm<"double*"> to !llvm<"i8*">
   llvm.call @free(%236) : (!llvm<"i8*">) -> ()
-  %237 = llvm.extractvalue %45[0 : index] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
+  %237 = llvm.extractvalue %45[0] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
   %238 = llvm.bitcast %237 : !llvm<"double*"> to !llvm<"i8*">
   llvm.call @free(%238) : (!llvm<"i8*">) -> ()
-  %239 = llvm.extractvalue %25[0 : index] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
+  %239 = llvm.extractvalue %25[0] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
   %240 = llvm.bitcast %239 : !llvm<"double*"> to !llvm<"i8*">
   llvm.call @free(%240) : (!llvm<"i8*">) -> ()
   llvm.return

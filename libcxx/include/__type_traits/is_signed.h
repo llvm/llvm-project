@@ -18,7 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_signed)
+#if __has_builtin(__is_signed)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_signed : _BoolConstant<__is_signed(_Tp)> { };
@@ -28,7 +28,7 @@ template <class _Tp>
 inline constexpr bool is_signed_v = __is_signed(_Tp);
 #endif
 
-#else // __has_keyword(__is_signed)
+#else // __has_builtin(__is_signed)
 
 template <class _Tp, bool = is_integral<_Tp>::value>
 struct __libcpp_is_signed_impl : public _BoolConstant<(_Tp(-1) < _Tp(0))> {};
@@ -48,7 +48,7 @@ template <class _Tp>
 inline constexpr bool is_signed_v = is_signed<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_signed)
+#endif // __has_builtin(__is_signed)
 
 _LIBCPP_END_NAMESPACE_STD
 

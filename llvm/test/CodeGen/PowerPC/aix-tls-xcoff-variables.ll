@@ -66,7 +66,7 @@
 ; SYMS-NEXT: Symbols [
 ; SYMS-NEXT:   Symbol {
 ; SYMS-NEXT:     Index: 0
-; SYMS-NEXT:     Name: .file
+; SYMS-NEXT:     Name: <stdin>
 ; SYMS-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYMS-NEXT:     Section: N_DEBUG
 ; SYMS-NEXT:     Source Language ID: TB_C (0x0)
@@ -128,7 +128,7 @@
 ; SYMS-NEXT:       SectionLen: 0
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
-; SYMS-NEXT:       SymbolAlignmentLog2: 2
+; SYMS-NEXT:       SymbolAlignmentLog2: 5
 ; SYMS-NEXT:       SymbolType: XTY_SD (0x1)
 ; SYMS-NEXT:       StorageMappingClass: XMC_PR (0x0)
 ; SYMS-NEXT:       StabInfoIndex: 0x0
@@ -641,5 +641,5 @@
 @tls_global_long_long_internal_zero_initialized = internal thread_local global i64 0, align 8
 @tls_global_long_long_weak_val_initialized = weak thread_local global i64 1, align 8
 @tls_global_long_long_weak_zero_initialized = weak thread_local global i64 0, align 8
-@tls_global_alias_int_external_val_initialized = thread_local alias i32, i32* @tls_global_int_external_val_initialized
+@tls_global_alias_int_external_val_initialized = thread_local alias i32, ptr @tls_global_int_external_val_initialized
 @const_ivar = constant i32 6, align 4

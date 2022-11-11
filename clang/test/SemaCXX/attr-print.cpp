@@ -43,3 +43,6 @@ class __multiple_inheritance MultipleInheritance;
 
 // CHECK: class __virtual_inheritance VirtualInheritance;
 class __virtual_inheritance VirtualInheritance;
+
+// CHECK: typedef double *aligned_double __attribute__((align_value(64)));
+typedef double * __attribute__((align_value(64))) aligned_double;

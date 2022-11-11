@@ -15,7 +15,7 @@
 //
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch-common-submodule/cdb_pch.json > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_pch.json
+// RUN:   -module-files-dir %t/build > %t/result_pch.json
 // RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-PCH
 //
 // CHECK-PCH:      {
@@ -24,11 +24,6 @@
 // CHECK-PCH-NEXT:       "clang-module-deps": [],
 // CHECK-PCH-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-PCH-NEXT:       "command-line": [
-// CHECK-PCH-NEXT:         "-cc1"
-// CHECK-PCH:              "-emit-module"
-// CHECK-PCH:              "-fmodules"
-// CHECK-PCH:              "-fmodule-name=ModCommon"
-// CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "context-hash": "[[HASH_MOD_COMMON:.*]]",
 // CHECK-PCH-NEXT:       "file-deps": [
@@ -41,7 +36,7 @@
 // CHECK-PCH-NEXT:   ],
 // CHECK-PCH-NEXT:   "translation-units": [
 // CHECK-PCH-NEXT:     {
-// CHECK-PCH-NEXT:       "clang-context-hash": "[[HASH_PCH:.*]]",
+// CHECK-PCH:            "clang-context-hash": "[[HASH_PCH:.*]]",
 // CHECK-PCH-NEXT:       "clang-module-deps": [
 // CHECK-PCH-NEXT:         {
 // CHECK-PCH-NEXT:           "context-hash": "[[HASH_MOD_COMMON]]",
@@ -49,17 +44,12 @@
 // CHECK-PCH-NEXT:         }
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "command-line": [
-// CHECK-PCH:              "-fno-implicit-modules"
-// CHECK-PCH-NEXT:         "-fno-implicit-module-maps"
-// CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON]]/ModCommon-{{.*}}.pcm"
-// CHECK-PCH-NEXT:       ],
-// CHECK-PCH-NEXT:       "file-deps": [
+// CHECK-PCH:            ],
+// CHECK-PCH:            "file-deps": [
 // CHECK-PCH-NEXT:         "[[PREFIX]]/pch.h"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "input-file": "[[PREFIX]]/pch.h"
 // CHECK-PCH-NEXT:     }
-// CHECK-PCH-NEXT:   ]
-// CHECK-PCH-NEXT: }
 
 // Explicitly build the PCH:
 //
@@ -73,7 +63,7 @@
 //
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch-common-submodule/cdb_tu.json > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_tu.json
+// RUN:   -module-files-dir %t/build > %t/result_tu.json
 // RUN: cat %t/result_tu.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU
 //
 // CHECK-TU:      {
@@ -82,12 +72,6 @@
 // CHECK-TU-NEXT:       "clang-module-deps": [],
 // CHECK-TU-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-TU-NEXT:       "command-line": [
-// CHECK-TU-NEXT:         "-cc1"
-// CHECK-TU:              "-emit-module"
-// CHECK-TU:              "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON:.*]]/ModCommon-{{.*}}.pcm"
-// CHECK-TU:              "-fmodules"
-// CHECK-TU:              "-fmodule-name=ModTU"
-// CHECK-TU:              "-fno-implicit-modules"
 // CHECK-TU:            ],
 // CHECK-TU-NEXT:       "context-hash": "[[HASH_MOD_TU:.*]]",
 // CHECK-TU-NEXT:       "file-deps": [
@@ -99,7 +83,7 @@
 // CHECK-TU-NEXT:   ],
 // CHECK-TU-NEXT:   "translation-units": [
 // CHECK-TU-NEXT:     {
-// CHECK-TU-NEXT:       "clang-context-hash": "[[HASH_TU:.*]]",
+// CHECK-TU:            "clang-context-hash": "[[HASH_TU:.*]]",
 // CHECK-TU-NEXT:       "clang-module-deps": [
 // CHECK-TU-NEXT:         {
 // CHECK-TU-NEXT:           "context-hash": "[[HASH_MOD_TU]]"
@@ -107,18 +91,13 @@
 // CHECK-TU-NEXT:         }
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "command-line": [
-// CHECK-TU:              "-fno-implicit-modules",
-// CHECK-TU-NEXT:         "-fno-implicit-module-maps",
-// CHECK-TU-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_TU:.*]]/ModTU-{{.*}}.pcm"
-// CHECK-TU-NEXT:       ],
-// CHECK-TU-NEXT:       "file-deps": [
+// CHECK-TU:            ],
+// CHECK-TU:            "file-deps": [
 // CHECK-TU-NEXT:         "[[PREFIX]]/tu.c",
 // CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.gch"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-TU-NEXT:     }
-// CHECK-TU-NEXT:   ]
-// CHECK-TU-NEXT: }
 
 // Explicitly build the TU:
 //

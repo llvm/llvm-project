@@ -257,7 +257,6 @@ public:
 ///
 class LLVM_LIBRARY_VISIBILITY SplitEditor {
   SplitAnalysis &SA;
-  AAResults &AA;
   LiveIntervals &LIS;
   VirtRegMap &VRM;
   MachineRegisterInfo &MRI;
@@ -436,9 +435,9 @@ private:
 public:
   /// Create a new SplitEditor for editing the LiveInterval analyzed by SA.
   /// Newly created intervals will be appended to newIntervals.
-  SplitEditor(SplitAnalysis &SA, AAResults &AA, LiveIntervals &LIS,
-              VirtRegMap &VRM, MachineDominatorTree &MDT,
-              MachineBlockFrequencyInfo &MBFI, VirtRegAuxInfo &VRAI);
+  SplitEditor(SplitAnalysis &SA, LiveIntervals &LIS, VirtRegMap &VRM,
+              MachineDominatorTree &MDT, MachineBlockFrequencyInfo &MBFI,
+              VirtRegAuxInfo &VRAI);
 
   /// reset - Prepare for a new split.
   void reset(LiveRangeEdit&, ComplementSpillMode = SM_Partition);

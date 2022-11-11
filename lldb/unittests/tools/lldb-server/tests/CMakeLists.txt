@@ -7,6 +7,7 @@ add_lldb_unittest(LLDBServerTests
   LINK_LIBS
     lldbHost
     lldbCore
+    lldbHostHelpers
     lldbInterpreter
     lldbTarget
     lldbPluginPlatformLinux

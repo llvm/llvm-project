@@ -39,17 +39,17 @@ end module m
 !contains
 !function f(x)
 !real(4),intent(in)::x
-!procedure(used_int),pointer::f
 !abstract interface
 !subroutine used_int(x,p)
 !real(4),intent(out)::x
-!procedure(inner_int)::p
 !interface
 !subroutine inner_int(x)
 !real(4),intent(out)::x
 !end
 !end interface
+!procedure(inner_int)::p
 !end
 !end interface
+!procedure(used_int),pointer::f
 !end
 !end

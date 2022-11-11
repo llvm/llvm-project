@@ -508,8 +508,8 @@ void use(char16 c) {
   E e;
   c &Value;   // expected-error{{cannot convert between scalar type 'PR45780::E' and vector type 'char16'}}
   c == Value; // expected-error{{cannot convert between scalar type 'PR45780::E' and vector type 'char16'}}
-  e | c;      // expected-error{{cannot convert between scalar type 'PR45780::E' and vector type 'char16'}}
-  e != c;     // expected-error{{cannot convert between scalar type 'PR45780::E' and vector type 'char16'}}
+  e | c;      // expected-error{{cannot convert between scalar type 'E' and vector type 'char16'}}
+  e != c;     // expected-error{{cannot convert between scalar type 'E' and vector type 'char16'}}
 }
 
 } // namespace PR45780

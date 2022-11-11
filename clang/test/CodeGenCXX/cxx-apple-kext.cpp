@@ -1,6 +1,6 @@
-// RUN: %clangxx -Xclang -no-opaque-pointers -target x86_64-apple-darwin10 %s -flto -S -o - |\
+// RUN: %clangxx -target x86_64-apple-darwin10 %s -flto -S -o - |\
 // RUN:   FileCheck --check-prefix=CHECK-NO-KEXT %s
-// RUN: %clangxx -Xclang -no-opaque-pointers -target x86_64-apple-darwin10 %s -fapple-kext -flto -S -o - |\
+// RUN: %clangxx -target x86_64-apple-darwin10 %s -fapple-kext -flto -S -o - |\
 // RUN:   FileCheck --check-prefix=CHECK-KEXT %s
 
 // CHECK-NO-KEXT-NOT: _GLOBAL__D_a
@@ -15,7 +15,7 @@
 // CHECK-KEXT-NOT: declare i32 @__cxa_atexit
 // CHECK-KEXT: @is_freestanding ={{.*}} global
 // CHECK-KEXT: _GLOBAL__D_a
-// CHECK-KEXT: call void @_ZN3fooD1Ev(%class.foo* @a)
+// CHECK-KEXT: call void @_ZN3fooD1Ev(ptr @a)
 
 class foo {
 public:

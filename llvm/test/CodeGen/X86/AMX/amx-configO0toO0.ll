@@ -644,8 +644,8 @@ define dso_local void @test_api(i32 %cond, i16 signext %row, i16 signext %col) #
 ; AVX512-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; AVX512-NEXT:    movl $64, %r8d
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; AVX512-NEXT:    tileloadd (%rdi,%r8), %tmm0
 ; AVX512-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; AVX512-NEXT:    movq %rbp, %rsp
@@ -656,7 +656,7 @@ define dso_local void @test_api(i32 %cond, i16 signext %row, i16 signext %col) #
 entry:
   %m.addr.i85 = alloca i16, align 2
   %n.addr.i86 = alloca i16, align 2
-  %base.addr.i87 = alloca i8*, align 8
+  %base.addr.i87 = alloca ptr, align 8
   %stride.addr.i88 = alloca i64, align 8
   %tile.addr.i = alloca <256 x i32>, align 64
   %indirect-arg-temp.i5284 = alloca <256 x i32>, align 1024
@@ -671,55 +671,55 @@ entry:
   %indirect-arg-temp.i78 = alloca <256 x i32>, align 1024
   %m.addr.i74 = alloca i16, align 2
   %n.addr.i75 = alloca i16, align 2
-  %base.addr.i76 = alloca i8*, align 8
+  %base.addr.i76 = alloca ptr, align 8
   %stride.addr.i77 = alloca i64, align 8
   %m.addr.i70 = alloca i16, align 2
   %n.addr.i71 = alloca i16, align 2
-  %base.addr.i72 = alloca i8*, align 8
+  %base.addr.i72 = alloca ptr, align 8
   %stride.addr.i73 = alloca i64, align 8
   %m.addr.i66 = alloca i16, align 2
   %n.addr.i67 = alloca i16, align 2
-  %base.addr.i68 = alloca i8*, align 8
+  %base.addr.i68 = alloca ptr, align 8
   %stride.addr.i69 = alloca i64, align 8
   %m.addr.i62 = alloca i16, align 2
   %n.addr.i63 = alloca i16, align 2
-  %base.addr.i64 = alloca i8*, align 8
+  %base.addr.i64 = alloca ptr, align 8
   %stride.addr.i65 = alloca i64, align 8
   %m.addr.i58 = alloca i16, align 2
   %n.addr.i59 = alloca i16, align 2
-  %base.addr.i60 = alloca i8*, align 8
+  %base.addr.i60 = alloca ptr, align 8
   %stride.addr.i61 = alloca i64, align 8
   %m.addr.i = alloca i16, align 2
   %n.addr.i = alloca i16, align 2
-  %base.addr.i56 = alloca i8*, align 8
+  %base.addr.i56 = alloca ptr, align 8
   %stride.addr.i57 = alloca i64, align 8
-  %base.addr.i50 = alloca i8*, align 8
+  %base.addr.i50 = alloca ptr, align 8
   %stride.addr.i51 = alloca i64, align 8
   %indirect-arg-temp.i52 = alloca <256 x i32>, align 1024
   %c49 = alloca %struct.__tile1024i_str, align 64
-  %dst.addr.i44 = alloca %struct.__tile1024i_str*, align 8
+  %dst.addr.i44 = alloca ptr, align 8
   %indirect-arg-temp.i = alloca <256 x i32>, align 1024
   %indirect-arg-temp4.i = alloca <256 x i32>, align 1024
   %indirect-arg-temp5.i = alloca <256 x i32>, align 1024
   %b43 = alloca %struct.__tile1024i_str, align 64
   %a42 = alloca %struct.__tile1024i_str, align 64
-  %dst.addr.i35 = alloca %struct.__tile1024i_str*, align 8
-  %base.addr.i36 = alloca i8*, align 8
+  %dst.addr.i35 = alloca ptr, align 8
+  %base.addr.i36 = alloca ptr, align 8
   %stride.addr.i37 = alloca i64, align 8
-  %dst.addr.i28 = alloca %struct.__tile1024i_str*, align 8
-  %base.addr.i29 = alloca i8*, align 8
+  %dst.addr.i28 = alloca ptr, align 8
+  %base.addr.i29 = alloca ptr, align 8
   %stride.addr.i30 = alloca i64, align 8
-  %dst.addr.i21 = alloca %struct.__tile1024i_str*, align 8
-  %base.addr.i22 = alloca i8*, align 8
+  %dst.addr.i21 = alloca ptr, align 8
+  %base.addr.i22 = alloca ptr, align 8
   %stride.addr.i23 = alloca i64, align 8
-  %dst.addr.i14 = alloca %struct.__tile1024i_str*, align 8
-  %base.addr.i15 = alloca i8*, align 8
+  %dst.addr.i14 = alloca ptr, align 8
+  %base.addr.i15 = alloca ptr, align 8
   %stride.addr.i16 = alloca i64, align 8
-  %dst.addr.i7 = alloca %struct.__tile1024i_str*, align 8
-  %base.addr.i8 = alloca i8*, align 8
+  %dst.addr.i7 = alloca ptr, align 8
+  %base.addr.i8 = alloca ptr, align 8
   %stride.addr.i9 = alloca i64, align 8
-  %dst.addr.i = alloca %struct.__tile1024i_str*, align 8
-  %base.addr.i = alloca i8*, align 8
+  %dst.addr.i = alloca ptr, align 8
+  %base.addr.i = alloca ptr, align 8
   %stride.addr.i = alloca i64, align 8
   %cond.addr = alloca i32, align 4
   %row.addr = alloca i16, align 2
@@ -727,279 +727,251 @@ entry:
   %a = alloca %struct.__tile1024i_str, align 64
   %b = alloca %struct.__tile1024i_str, align 64
   %c = alloca %struct.__tile1024i_str, align 64
-  store i32 %cond, i32* %cond.addr, align 4
-  store i16 %row, i16* %row.addr, align 2
-  store i16 %col, i16* %col.addr, align 2
-  %0 = bitcast %struct.__tile1024i_str* %a to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 64 %0, i8 0, i64 1088, i1 false)
-  %row1 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %a, i32 0, i32 0
-  %1 = load i16, i16* %row.addr, align 2
-  store i16 %1, i16* %row1, align 64
-  %col2 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %a, i32 0, i32 1
-  store i16 8, i16* %col2, align 2
-  %2 = bitcast %struct.__tile1024i_str* %b to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 64 %2, i8 0, i64 1088, i1 false)
-  %row3 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %b, i32 0, i32 0
-  store i16 8, i16* %row3, align 64
-  %col4 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %b, i32 0, i32 1
-  %3 = load i16, i16* %col.addr, align 2
-  store i16 %3, i16* %col4, align 2
-  %4 = bitcast %struct.__tile1024i_str* %c to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 64 %4, i8 0, i64 1088, i1 false)
-  %row5 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %c, i32 0, i32 0
-  %5 = load i16, i16* %row.addr, align 2
-  store i16 %5, i16* %row5, align 64
-  %col6 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %c, i32 0, i32 1
-  %6 = load i16, i16* %col.addr, align 2
-  store i16 %6, i16* %col6, align 2
-  %7 = load i32, i32* %cond.addr, align 4
-  %tobool = icmp ne i32 %7, 0
+  store i32 %cond, ptr %cond.addr, align 4
+  store i16 %row, ptr %row.addr, align 2
+  store i16 %col, ptr %col.addr, align 2
+  call void @llvm.memset.p0.i64(ptr align 64 %a, i8 0, i64 1088, i1 false)
+  %0 = load i16, ptr %row.addr, align 2
+  store i16 %0, ptr %a, align 64
+  %col2 = getelementptr inbounds %struct.__tile1024i_str, ptr %a, i32 0, i32 1
+  store i16 8, ptr %col2, align 2
+  call void @llvm.memset.p0.i64(ptr align 64 %b, i8 0, i64 1088, i1 false)
+  store i16 8, ptr %b, align 64
+  %col4 = getelementptr inbounds %struct.__tile1024i_str, ptr %b, i32 0, i32 1
+  %1 = load i16, ptr %col.addr, align 2
+  store i16 %1, ptr %col4, align 2
+  call void @llvm.memset.p0.i64(ptr align 64 %c, i8 0, i64 1088, i1 false)
+  %2 = load i16, ptr %row.addr, align 2
+  store i16 %2, ptr %c, align 64
+  %col6 = getelementptr inbounds %struct.__tile1024i_str, ptr %c, i32 0, i32 1
+  %3 = load i16, ptr %col.addr, align 2
+  store i16 %3, ptr %col6, align 2
+  %4 = load i32, ptr %cond.addr, align 4
+  %tobool = icmp ne i32 %4, 0
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store %struct.__tile1024i_str* %a, %struct.__tile1024i_str** %dst.addr.i35, align 8
-  store i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i8** %base.addr.i36, align 8
-  store i64 32, i64* %stride.addr.i37, align 8
-  %8 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i35, align 8
-  %row.i38 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %8, i32 0, i32 0
-  %9 = load i16, i16* %row.i38, align 64
-  %10 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i35, align 8
-  %col.i39 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %10, i32 0, i32 1
-  %11 = load i16, i16* %col.i39, align 2
-  %12 = load i8*, i8** %base.addr.i36, align 8
-  %13 = load i64, i64* %stride.addr.i37, align 8
-  store i16 %9, i16* %m.addr.i, align 2
-  store i16 %11, i16* %n.addr.i, align 2
-  store i8* %12, i8** %base.addr.i56, align 8
-  store i64 %13, i64* %stride.addr.i57, align 8
-  %14 = load i16, i16* %m.addr.i, align 2
-  %15 = load i16, i16* %n.addr.i, align 2
-  %16 = load i8*, i8** %base.addr.i56, align 8
-  %17 = load i64, i64* %stride.addr.i57, align 8
-  %18 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %14, i16 %15, i8* %16, i64 %17) #2
-  %19 = bitcast x86_amx %18 to <256 x i32>
-  %20 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i35, align 8
-  %tile.i41 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %20, i32 0, i32 3
-  store <256 x i32> %19, <256 x i32>* %tile.i41, align 64
-  store %struct.__tile1024i_str* %b, %struct.__tile1024i_str** %dst.addr.i28, align 8
-  store i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i8** %base.addr.i29, align 8
-  store i64 32, i64* %stride.addr.i30, align 8
-  %21 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i28, align 8
-  %row.i31 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %21, i32 0, i32 0
-  %22 = load i16, i16* %row.i31, align 64
-  %23 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i28, align 8
-  %col.i32 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %23, i32 0, i32 1
-  %24 = load i16, i16* %col.i32, align 2
-  %25 = load i8*, i8** %base.addr.i29, align 8
-  %26 = load i64, i64* %stride.addr.i30, align 8
-  store i16 %22, i16* %m.addr.i58, align 2
-  store i16 %24, i16* %n.addr.i59, align 2
-  store i8* %25, i8** %base.addr.i60, align 8
-  store i64 %26, i64* %stride.addr.i61, align 8
-  %27 = load i16, i16* %m.addr.i58, align 2
-  %28 = load i16, i16* %n.addr.i59, align 2
-  %29 = load i8*, i8** %base.addr.i60, align 8
-  %30 = load i64, i64* %stride.addr.i61, align 8
-  %31 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %27, i16 %28, i8* %29, i64 %30) #2
-  %32 = bitcast x86_amx %31 to <256 x i32>
-  %33 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i28, align 8
-  %tile.i34 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %33, i32 0, i32 3
-  store <256 x i32> %32, <256 x i32>* %tile.i34, align 64
-  store %struct.__tile1024i_str* %c, %struct.__tile1024i_str** %dst.addr.i21, align 8
-  store i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i8** %base.addr.i22, align 8
-  store i64 32, i64* %stride.addr.i23, align 8
-  %34 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i21, align 8
-  %row.i24 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %34, i32 0, i32 0
-  %35 = load i16, i16* %row.i24, align 64
-  %36 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i21, align 8
-  %col.i25 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %36, i32 0, i32 1
-  %37 = load i16, i16* %col.i25, align 2
-  %38 = load i8*, i8** %base.addr.i22, align 8
-  %39 = load i64, i64* %stride.addr.i23, align 8
-  store i16 %35, i16* %m.addr.i62, align 2
-  store i16 %37, i16* %n.addr.i63, align 2
-  store i8* %38, i8** %base.addr.i64, align 8
-  store i64 %39, i64* %stride.addr.i65, align 8
-  %40 = load i16, i16* %m.addr.i62, align 2
-  %41 = load i16, i16* %n.addr.i63, align 2
-  %42 = load i8*, i8** %base.addr.i64, align 8
-  %43 = load i64, i64* %stride.addr.i65, align 8
-  %44 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %40, i16 %41, i8* %42, i64 %43) #2
-  %45 = bitcast x86_amx %44 to <256 x i32>
-  %46 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i21, align 8
-  %tile.i27 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %46, i32 0, i32 3
-  store <256 x i32> %45, <256 x i32>* %tile.i27, align 64
+  store ptr %a, ptr %dst.addr.i35, align 8
+  store ptr @buf, ptr %base.addr.i36, align 8
+  store i64 32, ptr %stride.addr.i37, align 8
+  %5 = load ptr, ptr %dst.addr.i35, align 8
+  %6 = load i16, ptr %5, align 64
+  %7 = load ptr, ptr %dst.addr.i35, align 8
+  %col.i39 = getelementptr inbounds %struct.__tile1024i_str, ptr %7, i32 0, i32 1
+  %8 = load i16, ptr %col.i39, align 2
+  %9 = load ptr, ptr %base.addr.i36, align 8
+  %10 = load i64, ptr %stride.addr.i37, align 8
+  store i16 %6, ptr %m.addr.i, align 2
+  store i16 %8, ptr %n.addr.i, align 2
+  store ptr %9, ptr %base.addr.i56, align 8
+  store i64 %10, ptr %stride.addr.i57, align 8
+  %11 = load i16, ptr %m.addr.i, align 2
+  %12 = load i16, ptr %n.addr.i, align 2
+  %13 = load ptr, ptr %base.addr.i56, align 8
+  %14 = load i64, ptr %stride.addr.i57, align 8
+  %15 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %11, i16 %12, ptr %13, i64 %14) #2
+  %16 = bitcast x86_amx %15 to <256 x i32>
+  %17 = load ptr, ptr %dst.addr.i35, align 8
+  %tile.i41 = getelementptr inbounds %struct.__tile1024i_str, ptr %17, i32 0, i32 3
+  store <256 x i32> %16, ptr %tile.i41, align 64
+  store ptr %b, ptr %dst.addr.i28, align 8
+  store ptr @buf, ptr %base.addr.i29, align 8
+  store i64 32, ptr %stride.addr.i30, align 8
+  %18 = load ptr, ptr %dst.addr.i28, align 8
+  %19 = load i16, ptr %18, align 64
+  %20 = load ptr, ptr %dst.addr.i28, align 8
+  %col.i32 = getelementptr inbounds %struct.__tile1024i_str, ptr %20, i32 0, i32 1
+  %21 = load i16, ptr %col.i32, align 2
+  %22 = load ptr, ptr %base.addr.i29, align 8
+  %23 = load i64, ptr %stride.addr.i30, align 8
+  store i16 %19, ptr %m.addr.i58, align 2
+  store i16 %21, ptr %n.addr.i59, align 2
+  store ptr %22, ptr %base.addr.i60, align 8
+  store i64 %23, ptr %stride.addr.i61, align 8
+  %24 = load i16, ptr %m.addr.i58, align 2
+  %25 = load i16, ptr %n.addr.i59, align 2
+  %26 = load ptr, ptr %base.addr.i60, align 8
+  %27 = load i64, ptr %stride.addr.i61, align 8
+  %28 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %24, i16 %25, ptr %26, i64 %27) #2
+  %29 = bitcast x86_amx %28 to <256 x i32>
+  %30 = load ptr, ptr %dst.addr.i28, align 8
+  %tile.i34 = getelementptr inbounds %struct.__tile1024i_str, ptr %30, i32 0, i32 3
+  store <256 x i32> %29, ptr %tile.i34, align 64
+  store ptr %c, ptr %dst.addr.i21, align 8
+  store ptr @buf, ptr %base.addr.i22, align 8
+  store i64 32, ptr %stride.addr.i23, align 8
+  %31 = load ptr, ptr %dst.addr.i21, align 8
+  %32 = load i16, ptr %31, align 64
+  %33 = load ptr, ptr %dst.addr.i21, align 8
+  %col.i25 = getelementptr inbounds %struct.__tile1024i_str, ptr %33, i32 0, i32 1
+  %34 = load i16, ptr %col.i25, align 2
+  %35 = load ptr, ptr %base.addr.i22, align 8
+  %36 = load i64, ptr %stride.addr.i23, align 8
+  store i16 %32, ptr %m.addr.i62, align 2
+  store i16 %34, ptr %n.addr.i63, align 2
+  store ptr %35, ptr %base.addr.i64, align 8
+  store i64 %36, ptr %stride.addr.i65, align 8
+  %37 = load i16, ptr %m.addr.i62, align 2
+  %38 = load i16, ptr %n.addr.i63, align 2
+  %39 = load ptr, ptr %base.addr.i64, align 8
+  %40 = load i64, ptr %stride.addr.i65, align 8
+  %41 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %37, i16 %38, ptr %39, i64 %40) #2
+  %42 = bitcast x86_amx %41 to <256 x i32>
+  %43 = load ptr, ptr %dst.addr.i21, align 8
+  %tile.i27 = getelementptr inbounds %struct.__tile1024i_str, ptr %43, i32 0, i32 3
+  store <256 x i32> %42, ptr %tile.i27, align 64
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  store %struct.__tile1024i_str* %a, %struct.__tile1024i_str** %dst.addr.i14, align 8
-  store i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i8** %base.addr.i15, align 8
-  store i64 32, i64* %stride.addr.i16, align 8
-  %47 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i14, align 8
-  %row.i17 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %47, i32 0, i32 0
-  %48 = load i16, i16* %row.i17, align 64
-  %49 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i14, align 8
-  %col.i18 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %49, i32 0, i32 1
-  %50 = load i16, i16* %col.i18, align 2
-  %51 = load i8*, i8** %base.addr.i15, align 8
-  %52 = load i64, i64* %stride.addr.i16, align 8
-  store i16 %48, i16* %m.addr.i66, align 2
-  store i16 %50, i16* %n.addr.i67, align 2
-  store i8* %51, i8** %base.addr.i68, align 8
-  store i64 %52, i64* %stride.addr.i69, align 8
-  %53 = load i16, i16* %m.addr.i66, align 2
-  %54 = load i16, i16* %n.addr.i67, align 2
-  %55 = load i8*, i8** %base.addr.i68, align 8
-  %56 = load i64, i64* %stride.addr.i69, align 8
-  %57 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %53, i16 %54, i8* %55, i64 %56) #2
-  %58 = bitcast x86_amx %57 to <256 x i32>
-  %59 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i14, align 8
-  %tile.i20 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %59, i32 0, i32 3
-  store <256 x i32> %58, <256 x i32>* %tile.i20, align 64
-  store %struct.__tile1024i_str* %b, %struct.__tile1024i_str** %dst.addr.i7, align 8
-  store i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i8** %base.addr.i8, align 8
-  store i64 32, i64* %stride.addr.i9, align 8
-  %60 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i7, align 8
-  %row.i10 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %60, i32 0, i32 0
-  %61 = load i16, i16* %row.i10, align 64
-  %62 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i7, align 8
-  %col.i11 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %62, i32 0, i32 1
-  %63 = load i16, i16* %col.i11, align 2
-  %64 = load i8*, i8** %base.addr.i8, align 8
-  %65 = load i64, i64* %stride.addr.i9, align 8
-  store i16 %61, i16* %m.addr.i70, align 2
-  store i16 %63, i16* %n.addr.i71, align 2
-  store i8* %64, i8** %base.addr.i72, align 8
-  store i64 %65, i64* %stride.addr.i73, align 8
-  %66 = load i16, i16* %m.addr.i70, align 2
-  %67 = load i16, i16* %n.addr.i71, align 2
-  %68 = load i8*, i8** %base.addr.i72, align 8
-  %69 = load i64, i64* %stride.addr.i73, align 8
-  %70 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %66, i16 %67, i8* %68, i64 %69) #2
-  %71 = bitcast x86_amx %70 to <256 x i32>
-  %72 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i7, align 8
-  %tile.i13 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %72, i32 0, i32 3
-  store <256 x i32> %71, <256 x i32>* %tile.i13, align 64
-  store %struct.__tile1024i_str* %c, %struct.__tile1024i_str** %dst.addr.i, align 8
-  store i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i8** %base.addr.i, align 8
-  store i64 32, i64* %stride.addr.i, align 8
-  %73 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i, align 8
-  %row.i = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %73, i32 0, i32 0
-  %74 = load i16, i16* %row.i, align 64
-  %75 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i, align 8
-  %col.i = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %75, i32 0, i32 1
-  %76 = load i16, i16* %col.i, align 2
-  %77 = load i8*, i8** %base.addr.i, align 8
-  %78 = load i64, i64* %stride.addr.i, align 8
-  store i16 %74, i16* %m.addr.i74, align 2
-  store i16 %76, i16* %n.addr.i75, align 2
-  store i8* %77, i8** %base.addr.i76, align 8
-  store i64 %78, i64* %stride.addr.i77, align 8
-  %79 = load i16, i16* %m.addr.i74, align 2
-  %80 = load i16, i16* %n.addr.i75, align 2
-  %81 = load i8*, i8** %base.addr.i76, align 8
-  %82 = load i64, i64* %stride.addr.i77, align 8
-  %83 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %79, i16 %80, i8* %81, i64 %82) #2
-  %84 = bitcast x86_amx %83 to <256 x i32>
-  %85 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i, align 8
-  %tile.i = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %85, i32 0, i32 3
-  store <256 x i32> %84, <256 x i32>* %tile.i, align 64
+  store ptr %a, ptr %dst.addr.i14, align 8
+  store ptr @buf2, ptr %base.addr.i15, align 8
+  store i64 32, ptr %stride.addr.i16, align 8
+  %44 = load ptr, ptr %dst.addr.i14, align 8
+  %45 = load i16, ptr %44, align 64
+  %46 = load ptr, ptr %dst.addr.i14, align 8
+  %col.i18 = getelementptr inbounds %struct.__tile1024i_str, ptr %46, i32 0, i32 1
+  %47 = load i16, ptr %col.i18, align 2
+  %48 = load ptr, ptr %base.addr.i15, align 8
+  %49 = load i64, ptr %stride.addr.i16, align 8
+  store i16 %45, ptr %m.addr.i66, align 2
+  store i16 %47, ptr %n.addr.i67, align 2
+  store ptr %48, ptr %base.addr.i68, align 8
+  store i64 %49, ptr %stride.addr.i69, align 8
+  %50 = load i16, ptr %m.addr.i66, align 2
+  %51 = load i16, ptr %n.addr.i67, align 2
+  %52 = load ptr, ptr %base.addr.i68, align 8
+  %53 = load i64, ptr %stride.addr.i69, align 8
+  %54 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %50, i16 %51, ptr %52, i64 %53) #2
+  %55 = bitcast x86_amx %54 to <256 x i32>
+  %56 = load ptr, ptr %dst.addr.i14, align 8
+  %tile.i20 = getelementptr inbounds %struct.__tile1024i_str, ptr %56, i32 0, i32 3
+  store <256 x i32> %55, ptr %tile.i20, align 64
+  store ptr %b, ptr %dst.addr.i7, align 8
+  store ptr @buf2, ptr %base.addr.i8, align 8
+  store i64 32, ptr %stride.addr.i9, align 8
+  %57 = load ptr, ptr %dst.addr.i7, align 8
+  %58 = load i16, ptr %57, align 64
+  %59 = load ptr, ptr %dst.addr.i7, align 8
+  %col.i11 = getelementptr inbounds %struct.__tile1024i_str, ptr %59, i32 0, i32 1
+  %60 = load i16, ptr %col.i11, align 2
+  %61 = load ptr, ptr %base.addr.i8, align 8
+  %62 = load i64, ptr %stride.addr.i9, align 8
+  store i16 %58, ptr %m.addr.i70, align 2
+  store i16 %60, ptr %n.addr.i71, align 2
+  store ptr %61, ptr %base.addr.i72, align 8
+  store i64 %62, ptr %stride.addr.i73, align 8
+  %63 = load i16, ptr %m.addr.i70, align 2
+  %64 = load i16, ptr %n.addr.i71, align 2
+  %65 = load ptr, ptr %base.addr.i72, align 8
+  %66 = load i64, ptr %stride.addr.i73, align 8
+  %67 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %63, i16 %64, ptr %65, i64 %66) #2
+  %68 = bitcast x86_amx %67 to <256 x i32>
+  %69 = load ptr, ptr %dst.addr.i7, align 8
+  %tile.i13 = getelementptr inbounds %struct.__tile1024i_str, ptr %69, i32 0, i32 3
+  store <256 x i32> %68, ptr %tile.i13, align 64
+  store ptr %c, ptr %dst.addr.i, align 8
+  store ptr @buf2, ptr %base.addr.i, align 8
+  store i64 32, ptr %stride.addr.i, align 8
+  %70 = load ptr, ptr %dst.addr.i, align 8
+  %71 = load i16, ptr %70, align 64
+  %72 = load ptr, ptr %dst.addr.i, align 8
+  %col.i = getelementptr inbounds %struct.__tile1024i_str, ptr %72, i32 0, i32 1
+  %73 = load i16, ptr %col.i, align 2
+  %74 = load ptr, ptr %base.addr.i, align 8
+  %75 = load i64, ptr %stride.addr.i, align 8
+  store i16 %71, ptr %m.addr.i74, align 2
+  store i16 %73, ptr %n.addr.i75, align 2
+  store ptr %74, ptr %base.addr.i76, align 8
+  store i64 %75, ptr %stride.addr.i77, align 8
+  %76 = load i16, ptr %m.addr.i74, align 2
+  %77 = load i16, ptr %n.addr.i75, align 2
+  %78 = load ptr, ptr %base.addr.i76, align 8
+  %79 = load i64, ptr %stride.addr.i77, align 8
+  %80 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %76, i16 %77, ptr %78, i64 %79) #2
+  %81 = bitcast x86_amx %80 to <256 x i32>
+  %82 = load ptr, ptr %dst.addr.i, align 8
+  %tile.i = getelementptr inbounds %struct.__tile1024i_str, ptr %82, i32 0, i32 3
+  store <256 x i32> %81, ptr %tile.i, align 64
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %86 = bitcast %struct.__tile1024i_str* %b43 to i8*
-  %87 = bitcast %struct.__tile1024i_str* %b to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %86, i8* align 1 %87, i64 1088, i1 false) #2
-  %88 = bitcast %struct.__tile1024i_str* %a42 to i8*
-  %89 = bitcast %struct.__tile1024i_str* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %88, i8* align 1 %89, i64 1088, i1 false) #2
-  store %struct.__tile1024i_str* %c, %struct.__tile1024i_str** %dst.addr.i44, align 8
-  %row.i45 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %a42, i32 0, i32 0
-  %90 = load i16, i16* %row.i45, align 64
-  %col.i46 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %b43, i32 0, i32 1
-  %91 = load i16, i16* %col.i46, align 2
-  %col1.i = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %a42, i32 0, i32 1
-  %92 = load i16, i16* %col1.i, align 2
-  %93 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i44, align 8
-  %tile.i47 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %93, i32 0, i32 3
-  %94 = load <256 x i32>, <256 x i32>* %tile.i47, align 64
-  %tile2.i = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %a42, i32 0, i32 3
-  %95 = load <256 x i32>, <256 x i32>* %tile2.i, align 64
-  %tile3.i = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %b43, i32 0, i32 3
-  %96 = load <256 x i32>, <256 x i32>* %tile3.i, align 64
-  store <256 x i32> %94, <256 x i32>* %indirect-arg-temp.i, align 1024
-  store <256 x i32> %95, <256 x i32>* %indirect-arg-temp4.i, align 1024
-  store <256 x i32> %96, <256 x i32>* %indirect-arg-temp5.i, align 1024
-  %97 = bitcast <256 x i32>* %indirect-arg-temp5.i80 to i8*
-  %98 = bitcast <256 x i32>* %indirect-arg-temp5.i to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %97, i8* align 1 %98, i64 1024, i1 false) #2
-  %99 = bitcast <256 x i32>* %indirect-arg-temp4.i79 to i8*
-  %100 = bitcast <256 x i32>* %indirect-arg-temp4.i to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %99, i8* align 1 %100, i64 1024, i1 false) #2
-  %101 = bitcast <256 x i32>* %indirect-arg-temp.i78 to i8*
-  %102 = bitcast <256 x i32>* %indirect-arg-temp.i to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %101, i8* align 1 %102, i64 1024, i1 false) #2
-  %dst.i = load <256 x i32>, <256 x i32>* %indirect-arg-temp.i78, align 1024
-  %src1.i = load <256 x i32>, <256 x i32>* %indirect-arg-temp4.i79, align 1024
-  %src2.i = load <256 x i32>, <256 x i32>* %indirect-arg-temp5.i80, align 1024
-  store i16 %90, i16* %m.addr.i81, align 2
-  store i16 %91, i16* %n.addr.i82, align 2
-  store i16 %92, i16* %k.addr.i, align 2
-  store <256 x i32> %dst.i, <256 x i32>* %dst.addr.i83, align 64
-  store <256 x i32> %src1.i, <256 x i32>* %src1.addr.i, align 64
-  store <256 x i32> %src2.i, <256 x i32>* %src2.addr.i, align 64
-  %103 = load i16, i16* %m.addr.i81, align 2
-  %104 = load i16, i16* %n.addr.i82, align 2
-  %105 = load i16, i16* %k.addr.i, align 2
-  %106 = load <256 x i32>, <256 x i32>* %dst.addr.i83, align 64
-  %107 = bitcast <256 x i32> %106 to x86_amx
-  %108 = load <256 x i32>, <256 x i32>* %src1.addr.i, align 64
-  %109 = bitcast <256 x i32> %108 to x86_amx
-  %110 = load <256 x i32>, <256 x i32>* %src2.addr.i, align 64
-  %111 = bitcast <256 x i32> %110 to x86_amx
-  %112 = call x86_amx @llvm.x86.tdpbssd.internal(i16 %103, i16 %104, i16 %105, x86_amx %107, x86_amx %109, x86_amx %111) #2
-  %113 = bitcast x86_amx %112 to <256 x i32>
-  %114 = load %struct.__tile1024i_str*, %struct.__tile1024i_str** %dst.addr.i44, align 8
-  %tile6.i = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %114, i32 0, i32 3
-  store <256 x i32> %113, <256 x i32>* %tile6.i, align 64
-  %115 = bitcast %struct.__tile1024i_str* %c49 to i8*
-  %116 = bitcast %struct.__tile1024i_str* %c to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %115, i8* align 1 %116, i64 1088, i1 false) #2
-  store i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i8** %base.addr.i50, align 8
-  store i64 32, i64* %stride.addr.i51, align 8
-  %row.i53 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %c49, i32 0, i32 0
-  %117 = load i16, i16* %row.i53, align 64
-  %col.i54 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %c49, i32 0, i32 1
-  %118 = load i16, i16* %col.i54, align 2
-  %119 = load i8*, i8** %base.addr.i50, align 8
-  %120 = load i64, i64* %stride.addr.i51, align 8
-  %tile.i55 = getelementptr inbounds %struct.__tile1024i_str, %struct.__tile1024i_str* %c49, i32 0, i32 3
-  %121 = load <256 x i32>, <256 x i32>* %tile.i55, align 64
-  store <256 x i32> %121, <256 x i32>* %indirect-arg-temp.i52, align 1024
-  %122 = bitcast <256 x i32>* %indirect-arg-temp.i5284 to i8*
-  %123 = bitcast <256 x i32>* %indirect-arg-temp.i52 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %122, i8* align 1 %123, i64 1024, i1 false) #2
-  %tile.i89 = load <256 x i32>, <256 x i32>* %indirect-arg-temp.i5284, align 1024
-  store i16 %117, i16* %m.addr.i85, align 2
-  store i16 %118, i16* %n.addr.i86, align 2
-  store i8* %119, i8** %base.addr.i87, align 8
-  store i64 %120, i64* %stride.addr.i88, align 8
-  store <256 x i32> %tile.i89, <256 x i32>* %tile.addr.i, align 64
-  %124 = load i16, i16* %m.addr.i85, align 2
-  %125 = load i16, i16* %n.addr.i86, align 2
-  %126 = load i8*, i8** %base.addr.i87, align 8
-  %127 = load i64, i64* %stride.addr.i88, align 8
-  %128 = load <256 x i32>, <256 x i32>* %tile.addr.i, align 64
-  %129 = bitcast <256 x i32> %128 to x86_amx
-  call void @llvm.x86.tilestored64.internal(i16 %124, i16 %125, i8* %126, i64 %127, x86_amx %129) #2
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %b43, ptr align 1 %b, i64 1088, i1 false) #2
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %a42, ptr align 1 %a, i64 1088, i1 false) #2
+  store ptr %c, ptr %dst.addr.i44, align 8
+  %83 = load i16, ptr %a42, align 64
+  %col.i46 = getelementptr inbounds %struct.__tile1024i_str, ptr %b43, i32 0, i32 1
+  %84 = load i16, ptr %col.i46, align 2
+  %col1.i = getelementptr inbounds %struct.__tile1024i_str, ptr %a42, i32 0, i32 1
+  %85 = load i16, ptr %col1.i, align 2
+  %86 = load ptr, ptr %dst.addr.i44, align 8
+  %tile.i47 = getelementptr inbounds %struct.__tile1024i_str, ptr %86, i32 0, i32 3
+  %87 = load <256 x i32>, ptr %tile.i47, align 64
+  %tile2.i = getelementptr inbounds %struct.__tile1024i_str, ptr %a42, i32 0, i32 3
+  %88 = load <256 x i32>, ptr %tile2.i, align 64
+  %tile3.i = getelementptr inbounds %struct.__tile1024i_str, ptr %b43, i32 0, i32 3
+  %89 = load <256 x i32>, ptr %tile3.i, align 64
+  store <256 x i32> %87, ptr %indirect-arg-temp.i, align 1024
+  store <256 x i32> %88, ptr %indirect-arg-temp4.i, align 1024
+  store <256 x i32> %89, ptr %indirect-arg-temp5.i, align 1024
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %indirect-arg-temp5.i80, ptr align 1 %indirect-arg-temp5.i, i64 1024, i1 false) #2
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %indirect-arg-temp4.i79, ptr align 1 %indirect-arg-temp4.i, i64 1024, i1 false) #2
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %indirect-arg-temp.i78, ptr align 1 %indirect-arg-temp.i, i64 1024, i1 false) #2
+  %dst.i = load <256 x i32>, ptr %indirect-arg-temp.i78, align 1024
+  %src1.i = load <256 x i32>, ptr %indirect-arg-temp4.i79, align 1024
+  %src2.i = load <256 x i32>, ptr %indirect-arg-temp5.i80, align 1024
+  store i16 %83, ptr %m.addr.i81, align 2
+  store i16 %84, ptr %n.addr.i82, align 2
+  store i16 %85, ptr %k.addr.i, align 2
+  store <256 x i32> %dst.i, ptr %dst.addr.i83, align 64
+  store <256 x i32> %src1.i, ptr %src1.addr.i, align 64
+  store <256 x i32> %src2.i, ptr %src2.addr.i, align 64
+  %90 = load i16, ptr %m.addr.i81, align 2
+  %91 = load i16, ptr %n.addr.i82, align 2
+  %92 = load i16, ptr %k.addr.i, align 2
+  %93 = load <256 x i32>, ptr %dst.addr.i83, align 64
+  %94 = bitcast <256 x i32> %93 to x86_amx
+  %95 = load <256 x i32>, ptr %src1.addr.i, align 64
+  %96 = bitcast <256 x i32> %95 to x86_amx
+  %97 = load <256 x i32>, ptr %src2.addr.i, align 64
+  %98 = bitcast <256 x i32> %97 to x86_amx
+  %99 = call x86_amx @llvm.x86.tdpbssd.internal(i16 %90, i16 %91, i16 %92, x86_amx %94, x86_amx %96, x86_amx %98) #2
+  %100 = bitcast x86_amx %99 to <256 x i32>
+  %101 = load ptr, ptr %dst.addr.i44, align 8
+  %tile6.i = getelementptr inbounds %struct.__tile1024i_str, ptr %101, i32 0, i32 3
+  store <256 x i32> %100, ptr %tile6.i, align 64
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %c49, ptr align 1 %c, i64 1088, i1 false) #2
+  store ptr @buf, ptr %base.addr.i50, align 8
+  store i64 32, ptr %stride.addr.i51, align 8
+  %102 = load i16, ptr %c49, align 64
+  %col.i54 = getelementptr inbounds %struct.__tile1024i_str, ptr %c49, i32 0, i32 1
+  %103 = load i16, ptr %col.i54, align 2
+  %104 = load ptr, ptr %base.addr.i50, align 8
+  %105 = load i64, ptr %stride.addr.i51, align 8
+  %tile.i55 = getelementptr inbounds %struct.__tile1024i_str, ptr %c49, i32 0, i32 3
+  %106 = load <256 x i32>, ptr %tile.i55, align 64
+  store <256 x i32> %106, ptr %indirect-arg-temp.i52, align 1024
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %indirect-arg-temp.i5284, ptr align 1 %indirect-arg-temp.i52, i64 1024, i1 false) #2
+  %tile.i89 = load <256 x i32>, ptr %indirect-arg-temp.i5284, align 1024
+  store i16 %102, ptr %m.addr.i85, align 2
+  store i16 %103, ptr %n.addr.i86, align 2
+  store ptr %104, ptr %base.addr.i87, align 8
+  store i64 %105, ptr %stride.addr.i88, align 8
+  store <256 x i32> %tile.i89, ptr %tile.addr.i, align 64
+  %107 = load i16, ptr %m.addr.i85, align 2
+  %108 = load i16, ptr %n.addr.i86, align 2
+  %109 = load ptr, ptr %base.addr.i87, align 8
+  %110 = load i64, ptr %stride.addr.i88, align 8
+  %111 = load <256 x i32>, ptr %tile.addr.i, align 64
+  %112 = bitcast <256 x i32> %111 to x86_amx
+  call void @llvm.x86.tilestored64.internal(i16 %107, i16 %108, ptr %109, i64 %110, x86_amx %112) #2
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
-declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
+declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, ptr, i64) #2
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx) #2
-declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx) #2
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #3
+declare void @llvm.x86.tilestored64.internal(i16, i16, ptr, i64, x86_amx) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #3
 
 attributes #0 = { noinline nounwind optnone }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn writeonly }

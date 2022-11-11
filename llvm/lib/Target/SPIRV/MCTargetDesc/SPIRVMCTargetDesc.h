@@ -44,6 +44,7 @@ std::unique_ptr<MCObjectTargetWriter> createSPIRVObjectTargetWriter();
 
 // Defines symbolic names for the SPIR-V instructions.
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "SPIRVGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

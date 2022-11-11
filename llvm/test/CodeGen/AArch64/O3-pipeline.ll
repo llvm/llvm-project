@@ -15,9 +15,11 @@
 ; CHECK-NEXT: Create Garbage Collector Module Metadata
 ; CHECK-NEXT: Machine Branch Probability Analysis
 ; CHECK-NEXT: Default Regalloc Eviction Advisor
+; CHECK-NEXT: Default Regalloc Priority Advisor
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Expand large div/rem
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:     SVE intrinsics optimizations
 ; CHECK-NEXT:       FunctionPass Manager
@@ -33,9 +35,20 @@
 ; CHECK-NEXT:       Scalar Evolution Analysis
 ; CHECK-NEXT:       Loop Data Prefetch
 ; CHECK-NEXT:       Falkor HW Prefetch Fix
-; CHECK-NEXT:       Module Verifier
+; CHECK-NEXT:       Split GEPs to a variadic base and a constant offset for better CSE
+; CHECK-NEXT:       Early CSE
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
+; CHECK-NEXT:       Function Alias Analysis Results
+; CHECK-NEXT:       Memory SSA
 ; CHECK-NEXT:       Canonicalize natural loops
+; CHECK-NEXT:       LCSSA Verifier
+; CHECK-NEXT:       Loop-Closed SSA Form Pass
+; CHECK-NEXT:       Scalar Evolution Analysis
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Loop Pass Manager
+; CHECK-NEXT:         Loop Invariant Code Motion
+; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Loop Pass Manager
 ; CHECK-NEXT:         Canonicalize Freeze Instructions in Loops
 ; CHECK-NEXT:         Induction Variable Users
@@ -79,8 +92,10 @@
 ; CHECK-NEXT:       Interleaved Load Combine Pass
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Interleaved Access Pass
-; CHECK-NEXT:       Type Promotion
+; CHECK-NEXT:       SME ABI Pass
+; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Type Promotion
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
@@ -185,6 +200,7 @@
 ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       AArch64 pseudo instruction expansion pass
 ; CHECK-NEXT:       AArch64 load / store optimization pass
+; CHECK-NEXT:       Insert KCFI indirect call checks
 ; CHECK-NEXT:       AArch64 speculation hardening pass
 ; CHECK-NEXT:       AArch64 Indirect Thunks
 ; CHECK-NEXT:       AArch64 sls hardening pass

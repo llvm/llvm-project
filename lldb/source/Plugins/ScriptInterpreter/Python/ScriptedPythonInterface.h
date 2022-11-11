@@ -25,7 +25,7 @@ class ScriptInterpreterPythonImpl;
 class ScriptedPythonInterface : virtual public ScriptedInterface {
 public:
   ScriptedPythonInterface(ScriptInterpreterPythonImpl &interpreter);
-  virtual ~ScriptedPythonInterface() = default;
+  ~ScriptedPythonInterface() override = default;
 
 protected:
   template <typename T = StructuredData::ObjectSP>

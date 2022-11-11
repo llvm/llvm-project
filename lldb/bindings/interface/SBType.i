@@ -229,7 +229,7 @@ public:
       function returns ``0``.
     * C++: Same as in C.
     * Objective-C: Same as in C. For Objective-C classes this always returns
-      `0`` as the actual size depends on runtime information.
+      ``0`` as the actual size depends on runtime information.
     ") GetByteSize;
     uint64_t
     GetByteSize();
@@ -506,7 +506,7 @@ public:
 
     Language-specific behaviour:
 
-    * C: Returns a constant-size array `T[size]` for any non-void type.
+    * C: Returns a constant-size array ``T[size]`` for any non-void type.
     * C++: Same as in C.
     * Objective-C: Same as in C.
 
@@ -537,8 +537,8 @@ public:
     "Returns the `BasicType` value that is most appropriate to this type.
 
     Returns `eBasicTypeInvalid` if no appropriate `BasicType` was found or this
-    type is invalid. See the `BasicType` documentation for the language-specific m
-    aning of each `BasicType` value.
+    type is invalid. See the `BasicType` documentation for the language-specific
+    meaning of each `BasicType` value.
 
     **Overload behaviour:** When called with a `BasicType` parameter, the
     following behaviour applies:
@@ -731,8 +731,8 @@ public:
 
     * C: Always returns ``0``.
     * C++: If this type is a class template instantiation then this returns the
-      number of template parameters that were used in this instantiation. This i
-      cludes both explicit and implicit template parameters.
+      number of template parameters that were used in this instantiation. This
+      includes both explicit and implicit template parameters.
     * Objective-C: Always returns ``0``.
     ") GetNumberOfTemplateArguments;
     uint32_t

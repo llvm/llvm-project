@@ -15,6 +15,7 @@ static_library("Syntax") {
     "Mutations.cpp",
     "Nodes.cpp",
     "Synthesis.cpp",
+    "TokenBufferTokenManager.cpp",
     "Tokens.cpp",
     "Tree.cpp",
   ]

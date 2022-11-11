@@ -18,7 +18,7 @@ namespace cert {
 /// Checks whether a thrown object is nothrow copy constructible.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert-err60-cpp.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cert/err60-cpp.html
 class ThrownExceptionTypeCheck : public ClangTidyCheck {
 public:
   ThrownExceptionTypeCheck(StringRef Name, ClangTidyContext *Context)

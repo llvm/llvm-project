@@ -19,6 +19,6 @@ for.cond.cleanup:
   ret void
 
 while.cond:
-  %cmp.i202 = icmp eq i8* undef, undef
+  %cmp.i202 = icmp eq ptr undef, undef
   br i1 %cmp.i202, label %while.cond.preheader, label %while.cond
 }

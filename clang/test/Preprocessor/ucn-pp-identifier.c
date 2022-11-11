@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 %s -fsyntax-only -std=c99 -pedantic -verify -Wundef
-// RUN: %clang_cc1 %s -fsyntax-only -x c++ -pedantic -verify -Wundef
+// RUN: %clang_cc1 %s -fsyntax-only -std=c99 -pedantic -verify=expected,ext -Wundef
+// RUN: %clang_cc1 %s -fsyntax-only -x c++ -pedantic -verify=expected,ext -Wundef
+// RUN: %clang_cc1 %s -fsyntax-only -x c++ -std=c++2b -pedantic -ftrigraphs -verify=expected,cxx2b -Wundef -Wpre-c++2b-compat
+// RUN: %clang_cc1 %s -fsyntax-only -x c++ -pedantic -verify=expected,ext -Wundef -ftrigraphs -DTRIGRAPHS=1
 // RUN: not %clang_cc1 %s -fsyntax-only -std=c99 -pedantic -Wundef 2>&1 | FileCheck -strict-whitespace %s
 
 #define \u00FC
@@ -16,7 +18,7 @@
 #error "This should never happen"
 #endif
 
-#if a\u{FD}() //expected-warning {{Clang extension}}
+#if a\u{FD}() // ext-warning {{extension}} cxx2b-warning {{before C++2b}}
 #error "This should never happen"
 #endif
 
@@ -29,9 +31,15 @@
 
 // Make sure we reject disallowed UCNs
 #define \ufffe // expected-error {{macro name must be an identifier}}
-#define \U10000000  // expected-error {{macro name must be an identifier}}
-#define \u0061  // expected-error {{character 'a' cannot be specified by a universal character name}} expected-error {{macro name must be an identifier}}
-#define \u{fffe} // expected-error {{macro name must be an identifier}} expected-warning {{Clang extension}}
+#define \U10000000      // expected-error {{macro name must be an identifier}}
+#define \u0061          // expected-error {{character 'a' cannot be specified by a universal character name}} expected-error {{macro name must be an identifier}}
+#define \u{fffe}        // expected-error {{macro name must be an identifier}} \
+                        // ext-warning {{extension}} cxx2b-warning {{before C++2b}}
+#define \N{ALERT}       // expected-error {{universal character name refers to a control character}} \
+                   // expected-error {{macro name must be an identifier}} \
+                   // ext-warning {{extension}} cxx2b-warning {{before C++2b}}
+#define \N{WASTEBASKET} // expected-error {{macro name must be an identifier}} \
+                        // ext-warning {{extension}} cxx2b-warning {{before C++2b}}
 
 #define a\u0024
 
@@ -113,3 +121,20 @@ C 1
 #define \u{123456789}  // expected-error {{hex escape sequence out of range}} expected-error {{macro name must be an identifier}}
 #define \u{            // expected-warning {{incomplete delimited universal character name; treating as '\' 'u' '{' identifier}} expected-error {{macro name must be an identifier}}
 #define \u{fgh}        // expected-warning {{incomplete delimited universal character name; treating as '\' 'u' '{' identifier}} expected-error {{macro name must be an identifier}}
+#define \N{            // expected-warning {{incomplete delimited universal character name; treating as '\' 'N' '{' identifier}} expected-error {{macro name must be an identifier}}
+#define \N{}           // expected-warning {{empty delimited universal character name; treating as '\' 'N' '{' '}'}} expected-error {{macro name must be an identifier}}
+#define \N{NOTATHING}  // expected-error {{'NOTATHING' is not a valid Unicode character name}} \
+                       // expected-error {{macro name must be an identifier}}
+#define \NN            // expected-warning {{incomplete universal character name; treating as '\' followed by identifier}} expected-error {{macro name must be an identifier}}
+#define \N{GREEK_SMALL-LETTERALPHA}  // expected-error {{'GREEK_SMALL-LETTERALPHA' is not a valid Unicode character name}} \
+                                     // expected-note {{characters names in Unicode escape sequences are sensitive to case and whitespaces}}
+
+#define CONCAT(A, B) A##B
+int CONCAT(\N{GREEK, CAPITALLETTERALPHA}); // expected-error{{expected}} \
+                                           // expected-warning {{incomplete delimited universal character name}}
+
+#ifdef TRIGRAPHS
+int \N??<GREEK CAPITAL LETTER ALPHA??> = 0; // expected-warning{{extension}} cxx2b-warning {{before C++2b}} \
+                                            // expected-warning 2{{trigraph converted}}
+
+#endif

@@ -26,11 +26,11 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
 
   LogicalResult matchAndRewrite(tosa::DepthwiseConv2DOp op,
                                 PatternRewriter &rewriter) const override {
-    Value input = op.input();
-    Value weight = op.weight();
+    Value input = op.getInput();
+    Value weight = op.getWeight();
     ShapedType inputType = input.getType().cast<ShapedType>();
     ShapedType weightType = weight.getType().cast<ShapedType>();
-    ShapedType resultType = op.output().getType().cast<ShapedType>();
+    ShapedType resultType = op.getOutput().getType().cast<ShapedType>();
     Type inputEType = inputType.getElementType();
 
     if (!(inputType.hasStaticShape() && weightType.hasStaticShape() &&
@@ -39,12 +39,12 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     }
 
     // Quantization information needs to still be performed.
-    if (op.quantization_info() || !inputEType.isa<FloatType>()) {
+    if (op.getQuantizationInfo() || !inputEType.isa<FloatType>()) {
       return failure();
     }
 
     // Stride must be 1 for this optimization.
-    for (Attribute stride : op.stride().getValue()) {
+    for (Attribute stride : op.getStride().getValue()) {
       if (!stride.cast<IntegerAttr>().getValue().isOne()) {
         return failure();
       }
@@ -95,7 +95,7 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
             .getResult();
 
     // Reshape output to [N, H, W, C * M].
-    auto outputShape = op.output().getType().cast<ShapedType>().getShape();
+    auto outputShape = op.getOutput().getType().cast<ShapedType>().getShape();
     auto outputShapeType = RankedTensorType::get(
         outputShape,
         input.getType().dyn_cast<RankedTensorType>().getElementType());
@@ -106,7 +106,7 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     // Add in the bias.
     rewriter
         .replaceOpWithNewOp<tosa::AddOp>(op, outputShapeType, outputValue,
-                                         op.bias())
+                                         op.getBias())
         .getResult();
     return success();
   }

@@ -1,7 +1,6 @@
 """Test for the JITLoaderGDB interface"""
 
 
-import unittest2
 import os
 import lldb
 from lldbsuite.test import lldbutil
@@ -10,8 +9,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class JITLoaderGDBTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipTestIfFn(
         lambda: "Skipped because the test crashes the test runner",
@@ -33,7 +30,7 @@ class JITLoaderGDBTestCase(TestBase):
 
         # The inferior will now pass bogus values over the interface. Make sure
         # we don't crash.
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
     def gen_log_file(self):
@@ -69,7 +66,7 @@ class JITLoaderGDBTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
         self.assertTrue(os.path.exists(logfile))
@@ -97,7 +94,7 @@ class JITLoaderGDBTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
         self.assertTrue(os.path.exists(logfile))

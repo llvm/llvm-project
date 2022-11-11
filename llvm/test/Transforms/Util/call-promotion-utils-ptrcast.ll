@@ -2,44 +2,44 @@
 
 ; Test that CallPromotionUtils will promote calls which require pointer casts.
 
-@foo = common global i64 (i64)* null, align 8
+@foo = common global ptr null, align 8
 
 ; Check ptrcast arguments.
-define i64 @func1(i8* %a) {
+define i64 @func1(ptr %a) {
   ret i64 undef
 }
 
 ; Check ptrcast return.
-define i8* @func2(i64 %a) {
-  ret i8* undef
+define ptr @func2(i64 %a) {
+  ret ptr undef
 }
 
 ; Check ptrcast arguments and return.
-define i8* @func3(i8 *%a) {
-  ret i8* undef
+define ptr @func3(ptr %a) {
+  ret ptr undef
 }
 
 ; Check mixed ptrcast and bitcast.
-define i8* @func4(double %f) {
-  ret i8* undef
+define ptr @func4(double %f) {
+  ret ptr undef
 }
 
 define i64 @bar() {
-  %tmp = load i64 (i64)*, i64 (i64)** @foo, align 8
+  %tmp = load ptr, ptr @foo, align 8
 
 ; CHECK: [[ARG:%[0-9]+]] = bitcast i64 1 to double
-; CHECK-NEXT: [[RET:%[0-9]+]] = call i8* @func4(double [[ARG]])
-; CHECK-NEXT: ptrtoint i8* [[RET]] to i64
+; CHECK-NEXT: [[RET:%[0-9]+]] = call ptr @func4(double [[ARG]])
+; CHECK-NEXT: ptrtoint ptr [[RET]] to i64
 
-; CHECK: [[RET:%[0-9]+]] = call i8* @func2(i64 1)
-; CHECK-NEXT: ptrtoint i8* [[RET]] to i64
+; CHECK: [[RET:%[0-9]+]] = call ptr @func2(i64 1)
+; CHECK-NEXT: ptrtoint ptr [[RET]] to i64
 
-; CHECK: [[ARG:%[0-9]+]] = inttoptr i64 1 to i8*
-; CHECK-NEXT: [[RET:%[0-9]+]] = call i8* @func3(i8* [[ARG]])
-; CHECK-NEXT: ptrtoint i8* [[RET]] to i64
+; CHECK: [[ARG:%[0-9]+]] = inttoptr i64 1 to ptr
+; CHECK-NEXT: [[RET:%[0-9]+]] = call ptr @func3(ptr [[ARG]])
+; CHECK-NEXT: ptrtoint ptr [[RET]] to i64
 
-; CHECK: [[ARG:%[0-9]+]] = inttoptr i64 1 to i8*
-; CHECK-NEXT: call i64 @func1(i8* [[ARG]])
+; CHECK: [[ARG:%[0-9]+]] = inttoptr i64 1 to ptr
+; CHECK-NEXT: call i64 @func1(ptr [[ARG]])
 ; CHECK-NOT: ptrtoint
 ; CHECK-NOT: bitcast
 

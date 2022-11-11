@@ -69,10 +69,8 @@ and from the command line.
  This option controls the behavior when using more than one prefix as specified
  by :option:`--check-prefix` or :option:`--check-prefixes`, and some of these
  prefixes are missing in the test file. If true, this is allowed, if false,
- FileCheck will report an error, listing the missing prefixes.
-
- It is currently, temporarily, true by default, and will be subsequently
- switched to false.
+ FileCheck will report an error, listing the missing prefixes. The default value
+ is false.
 
 .. option:: --input-file filename
 

@@ -19,7 +19,7 @@ namespace cert {
 /// in copy constructors and copy assignment operators.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert-oop58-cpp.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cert/oop58-cpp.html
 class MutatingCopyCheck : public ClangTidyCheck {
 public:
   MutatingCopyCheck(StringRef Name, ClangTidyContext *Context)

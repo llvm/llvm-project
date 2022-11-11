@@ -259,6 +259,16 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div4, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div8, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_gep, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_indir, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_load1, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_load2, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_load4, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_load8, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_load16, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_store1, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_store2, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_store4, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_store8, void){}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_store16, void){}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_8bit_counters_init,
                              char* start, char* end) {
   __sancov::SingletonCounterCoverage::Cov8bitCountersInit(start, end);

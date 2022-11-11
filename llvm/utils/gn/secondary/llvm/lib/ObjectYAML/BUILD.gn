@@ -26,6 +26,8 @@ static_library("ObjectYAML") {
     "MinidumpEmitter.cpp",
     "MinidumpYAML.cpp",
     "ObjectYAML.cpp",
+    "OffloadEmitter.cpp",
+    "OffloadYAML.cpp",
     "WasmEmitter.cpp",
     "WasmYAML.cpp",
     "XCOFFEmitter.cpp",

@@ -4,7 +4,7 @@
 
 ; Verify upgrading of the old form of the rdtscp intrinsic.
 
-define i64 @test_builtin_rdtscp(i8* %A) {
+define i64 @test_builtin_rdtscp(ptr %A) {
 ; X86-LABEL: test_builtin_rdtscp:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -24,8 +24,8 @@ define i64 @test_builtin_rdtscp(i8* %A) {
 ; X64-NEXT:    orq %rdx, %rax
 ; X64-NEXT:    movl %ecx, (%rdi)
 ; X64-NEXT:    retq
-  %1 = tail call i64 @llvm.x86.rdtscp(i8* %A)
+  %1 = tail call i64 @llvm.x86.rdtscp(ptr %A)
   ret i64 %1
 }
 
-declare i64 @llvm.x86.rdtscp(i8*)
+declare i64 @llvm.x86.rdtscp(ptr)

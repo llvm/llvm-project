@@ -1,4 +1,4 @@
-; RUN: opt < %s -instrprof -debug-info-correlate -S > %t.ll
+; RUN: opt < %s -passes=instrprof -debug-info-correlate -S > %t.ll
 ; RUN: FileCheck < %t.ll --implicit-check-not "{{__llvm_prf_data|__llvm_prf_names}}" %s
 ; RUN: %llc_dwarf -O0 -filetype=obj < %t.ll | llvm-dwarfdump - | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s --check-prefix CHECK-DWARF
 
@@ -19,11 +19,11 @@
 ; CHECK:      ![[COUNTERS]] = !{!"Num Counters", i32 2}
 
 define void @_Z3foov() !dbg !12 {
-  call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 12345678, i32 2, i32 0)
+  call void @llvm.instrprof.increment(ptr @__profn_foo, i64 12345678, i32 2, i32 0)
   ret void
 }
 
-declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
+declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7, !8, !9, !10}

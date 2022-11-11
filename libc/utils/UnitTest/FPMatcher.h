@@ -21,12 +21,12 @@ namespace fputil {
 namespace testing {
 
 template <typename ValType, typename StreamType>
-cpp::EnableIfType<cpp::IsFloatingPointType<ValType>::Value, void>
+cpp::enable_if_t<cpp::is_floating_point_v<ValType>, void>
 describeValue(const char *label, ValType value, StreamType &stream);
 
 template <typename T, __llvm_libc::testing::TestCondition Condition>
 class FPMatcher : public __llvm_libc::testing::Matcher<T> {
-  static_assert(__llvm_libc::cpp::IsFloatingPointType<T>::Value,
+  static_assert(__llvm_libc::cpp::is_floating_point_v<T>,
                 "FPMatcher can only be used with floating point values.");
   static_assert(Condition == __llvm_libc::testing::Cond_EQ ||
                     Condition == __llvm_libc::testing::Cond_NE,
@@ -72,7 +72,7 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
   using UIntType = typename FPBits::UIntType;                                  \
   const T zero = T(FPBits::zero());                                            \
   const T neg_zero = T(FPBits::neg_zero());                                    \
-  const T aNaN = T(FPBits::build_nan(1));                                      \
+  const T aNaN = T(FPBits::build_quiet_nan(1));                                \
   const T inf = T(FPBits::inf());                                              \
   const T neg_inf = T(FPBits::neg_inf());
 

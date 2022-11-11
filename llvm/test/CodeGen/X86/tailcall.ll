@@ -21,24 +21,24 @@ entry:
   ret i32 %tmp11
 }
 
-declare fastcc i8* @alias_callee()
+declare fastcc ptr @alias_callee()
 
-define fastcc noalias i8* @noalias_caller() nounwind {
+define fastcc noalias ptr @noalias_caller() nounwind {
 ; CHECK-LABEL: noalias_caller:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    jmp alias_callee@PLT # TAILCALL
-  %p = tail call fastcc i8* @alias_callee()
-  ret i8* %p
+  %p = tail call fastcc ptr @alias_callee()
+  ret ptr %p
 }
 
-declare fastcc noalias i8* @noalias_callee()
+declare fastcc noalias ptr @noalias_callee()
 
-define dso_local fastcc i8* @alias_caller() nounwind {
+define dso_local fastcc ptr @alias_caller() nounwind {
 ; CHECK-LABEL: alias_caller:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    jmp noalias_callee@PLT # TAILCALL
-  %p = tail call fastcc noalias i8* @noalias_callee()
-  ret i8* %p
+  %p = tail call fastcc noalias ptr @noalias_callee()
+  ret ptr %p
 }
 
 declare fastcc i32 @i32_callee()

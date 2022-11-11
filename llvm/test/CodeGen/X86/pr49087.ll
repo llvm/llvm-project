@@ -2,11 +2,11 @@
 ; REQUIRES: asserts
 ; XFAIL: *
 
-define i32 @test_01(i32* %p, i64 %len, i32 %x) {
+define i32 @test_01(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_01
 
 entry:
-  %scevgep = getelementptr i32, i32* %p, i64 -1
+  %scevgep = getelementptr i32, ptr %p, i64 -1
   br label %loop
 
 loop:                                             ; preds = %backedge, %entry
@@ -16,8 +16,8 @@ loop:                                             ; preds = %backedge, %entry
   br i1 %cond_1, label %exit, label %backedge
 
 backedge:                                         ; preds = %loop
-  %scevgep1 = getelementptr i32, i32* %scevgep, i64 %iv
-  %loaded = load atomic i32, i32* %scevgep1 unordered, align 4
+  %scevgep1 = getelementptr i32, ptr %scevgep, i64 %iv
+  %loaded = load atomic i32, ptr %scevgep1 unordered, align 4
   %cond_2 = icmp eq i32 %loaded, %x
   br i1 %cond_2, label %failure, label %loop
 

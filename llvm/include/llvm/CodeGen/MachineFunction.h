@@ -1030,7 +1030,8 @@ public:
   /// the function.
   MachineInstr::ExtraInfo *createMIExtraInfo(
       ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
-      MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr);
+      MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr,
+      MDNode *PCSections = nullptr, uint32_t CFIType = 0);
 
   /// Allocate a string and populate it with the given external symbol name.
   const char *createExternalSymbolName(StringRef Name);
@@ -1055,7 +1056,7 @@ public:
     return FrameInstructions;
   }
 
-  LLVM_NODISCARD unsigned addFrameInst(const MCCFIInstruction &Inst);
+  [[nodiscard]] unsigned addFrameInst(const MCCFIInstruction &Inst);
 
   /// Returns a reference to a list of symbols immediately following calls to
   /// _setjmp in the function. Used to construct the longjmp target table used

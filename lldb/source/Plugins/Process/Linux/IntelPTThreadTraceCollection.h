@@ -27,7 +27,8 @@ public:
   bool TracesThread(lldb::tid_t tid) const;
 
   /// \return
-  ///   The total sum of the trace buffer sizes used by this collection.
+  ///   The total sum of the intel pt trace buffer sizes used by this
+  ///   collection.
   size_t GetTotalBufferSize() const;
 
   /// Execute the provided callback on each thread that is being traced.
@@ -59,8 +60,12 @@ public:
 
   size_t GetTracedThreadsCount() const;
 
+  /// \copydoc IntelPTProcessTrace::TryGetBinaryData()
+  llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+  TryGetBinaryData(const TraceGetBinaryDataRequest &request);
+
 private:
-  llvm::DenseMap<lldb::tid_t, IntelPTSingleBufferTraceUP> m_thread_traces;
+  llvm::DenseMap<lldb::tid_t, IntelPTSingleBufferTrace> m_thread_traces;
   /// Total actual thread buffer size in bytes
   size_t m_total_buffer_size = 0;
 };

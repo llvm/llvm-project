@@ -53,8 +53,6 @@ class MyResponder(MockGDBServerResponder):
 
 class TestQemuAarch64TargetXml(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")

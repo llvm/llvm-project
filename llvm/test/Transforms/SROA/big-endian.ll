@@ -15,14 +15,12 @@ entry:
   %b = alloca [3 x i8]
 ; CHECK-NOT: alloca
 
-  %a0ptr = getelementptr [3 x i8], [3 x i8]* %a, i64 0, i32 0
-  store i8 0, i8* %a0ptr
-  %a1ptr = getelementptr [3 x i8], [3 x i8]* %a, i64 0, i32 1
-  store i8 0, i8* %a1ptr
-  %a2ptr = getelementptr [3 x i8], [3 x i8]* %a, i64 0, i32 2
-  store i8 0, i8* %a2ptr
-  %aiptr = bitcast [3 x i8]* %a to i24*
-  %ai = load i24, i24* %aiptr
+  store i8 0, ptr %a
+  %a1ptr = getelementptr [3 x i8], ptr %a, i64 0, i32 1
+  store i8 0, ptr %a1ptr
+  %a2ptr = getelementptr [3 x i8], ptr %a, i64 0, i32 2
+  store i8 0, ptr %a2ptr
+  %ai = load i24, ptr %a
 ; CHECK-NOT: store
 ; CHECK-NOT: load
 ; CHECK:      %[[ext2:.*]] = zext i8 0 to i24
@@ -37,14 +35,12 @@ entry:
 ; CHECK-NEXT: %[[mask0:.*]] = and i24 %[[insert1]], 65535
 ; CHECK-NEXT: %[[insert0:.*]] = or i24 %[[mask0]], %[[shift0]]
 
-  %biptr = bitcast [3 x i8]* %b to i24*
-  store i24 %ai, i24* %biptr
-  %b0ptr = getelementptr [3 x i8], [3 x i8]* %b, i64 0, i32 0
-  %b0 = load i8, i8* %b0ptr
-  %b1ptr = getelementptr [3 x i8], [3 x i8]* %b, i64 0, i32 1
-  %b1 = load i8, i8* %b1ptr
-  %b2ptr = getelementptr [3 x i8], [3 x i8]* %b, i64 0, i32 2
-  %b2 = load i8, i8* %b2ptr
+  store i24 %ai, ptr %b
+  %b0 = load i8, ptr %b
+  %b1ptr = getelementptr [3 x i8], ptr %b, i64 0, i32 1
+  %b1 = load i8, ptr %b1ptr
+  %b2ptr = getelementptr [3 x i8], ptr %b, i64 0, i32 2
+  %b2 = load i8, ptr %b2ptr
 ; CHECK-NOT: store
 ; CHECK-NOT: load
 ; CHECK:      %[[shift0:.*]] = lshr i24 %[[insert0]], 16
@@ -71,24 +67,20 @@ entry:
   %a = alloca [7 x i8]
 ; CHECK-NOT: alloca
 
-  %a0ptr = getelementptr [7 x i8], [7 x i8]* %a, i64 0, i32 0
-  %a1ptr = getelementptr [7 x i8], [7 x i8]* %a, i64 0, i32 1
-  %a2ptr = getelementptr [7 x i8], [7 x i8]* %a, i64 0, i32 2
-  %a3ptr = getelementptr [7 x i8], [7 x i8]* %a, i64 0, i32 3
+  %a1ptr = getelementptr [7 x i8], ptr %a, i64 0, i32 1
+  %a2ptr = getelementptr [7 x i8], ptr %a, i64 0, i32 2
+  %a3ptr = getelementptr [7 x i8], ptr %a, i64 0, i32 3
 
 ; CHECK-NOT: store
 ; CHECK-NOT: load
 
-  %a0i16ptr = bitcast i8* %a0ptr to i16*
-  store i16 1, i16* %a0i16ptr
+  store i16 1, ptr %a
 
-  store i8 1, i8* %a2ptr
+  store i8 1, ptr %a2ptr
 
-  %a3i24ptr = bitcast i8* %a3ptr to i24*
-  store i24 1, i24* %a3i24ptr
+  store i24 1, ptr %a3ptr
 
-  %a2i40ptr = bitcast i8* %a2ptr to i40*
-  store i40 1, i40* %a2i40ptr
+  store i40 1, ptr %a2ptr
 
 ; the alloca is splitted into multiple slices
 ; Here, i8 1 is for %a[6]
@@ -115,8 +107,7 @@ entry:
 ; CHECK-NOT: store
 ; CHECK-NOT: load
 
-  %aiptr = bitcast [7 x i8]* %a to i56*
-  %ai = load i56, i56* %aiptr
+  %ai = load i56, ptr %a
   %ret = zext i56 %ai to i64
   ret i64 %ret
 ; Here, i16 1 is for %a[0] to %a[1]
@@ -141,25 +132,24 @@ define i64 @PR14132(i1 %flag) {
 entry:
   %a = alloca i64, align 8
   %b = alloca i8, align 8
-  %ptr = alloca i64*, align 8
+  %ptr = alloca ptr, align 8
 ; CHECK-NOT: alloca
 
-  %ptr.cast = bitcast i64** %ptr to i8**
-  store i64 0, i64* %a
-  store i8 1, i8* %b
-  store i64* %a, i64** %ptr
+  store i64 0, ptr %a
+  store i8 1, ptr %b
+  store ptr %a, ptr %ptr
   br i1 %flag, label %if.then, label %if.end
 
 if.then:
-  store i8* %b, i8** %ptr.cast
+  store ptr %b, ptr %ptr
   br label %if.end
 ; CHECK-NOT: store
 ; CHECK: %[[ext:.*]] = zext i8 1 to i64
 ; CHECK: %[[shift:.*]] = shl i64 %[[ext]], 56
 
 if.end:
-  %tmp = load i64*, i64** %ptr
-  %result = load i64, i64* %tmp
+  %tmp = load ptr, ptr %ptr
+  %result = load i64, ptr %tmp
 ; CHECK-NOT: load
 ; CHECK: %[[result:.*]] = phi i64 [ %[[shift]], %if.then ], [ 0, %entry ]
 
@@ -191,11 +181,9 @@ entry:
   %a = alloca { i32, i24 }, align 4
 ; CHECK-NOT: alloca
 
-  %tmp0 = bitcast { i32, i24 }* %a to i64*
-  store i64 34494054408, i64* %tmp0
-  %tmp1 = load i64, i64* %tmp0, align 4
-  %tmp2 = bitcast { i32, i24 }* %a to i32*
-  %tmp3 = load i32, i32* %tmp2, align 4
+  store i64 34494054408, ptr %a
+  %tmp1 = load i64, ptr %a, align 4
+  %tmp3 = load i32, ptr %a, align 4
 ; CHECK: %[[HI_EXT:.*]] = zext i32 134316040 to i64
 ; CHECK: %[[HI_INPUT:.*]] = and i64 undef, -4294967296
 ; CHECK: %[[HI_MERGE:.*]] = or i64 %[[HI_INPUT]], %[[HI_EXT]]
@@ -223,18 +211,14 @@ entry:
   %a2 = alloca i64, align 4
 ; CHECK-NOT: alloca
 
-  store i64 34494054408, i64* %a2
-  %tmp0 = bitcast { i32, i24 }* %a to i8*
-  %tmp1 = bitcast i64* %a2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %tmp0, i8* align 4 %tmp1, i64 8, i1 false)
+  store i64 34494054408, ptr %a2
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %a2, i64 8, i1 false)
 ; CHECK: %[[LO_SHR:.*]] = lshr i64 34494054408, 32
 ; CHECK: %[[LO_START:.*]] = trunc i64 %[[LO_SHR]] to i32
 ; CHECK: %[[HI_START:.*]] = trunc i64 34494054408 to i32
 
-  %tmp2 = bitcast { i32, i24 }* %a to i64*
-  %tmp3 = load i64, i64* %tmp2, align 4
-  %tmp4 = bitcast { i32, i24 }* %a to i32*
-  %tmp5 = load i32, i32* %tmp4, align 4
+  %tmp3 = load i64, ptr %a, align 4
+  %tmp5 = load i32, ptr %a, align 4
 ; CHECK: %[[HI_EXT:.*]] = zext i32 %[[HI_START]] to i64
 ; CHECK: %[[HI_INPUT:.*]] = and i64 undef, -4294967296
 ; CHECK: %[[HI_MERGE:.*]] = or i64 %[[HI_INPUT]], %[[HI_EXT]]
@@ -249,4 +233,4 @@ entry:
 ; CHECK: ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)

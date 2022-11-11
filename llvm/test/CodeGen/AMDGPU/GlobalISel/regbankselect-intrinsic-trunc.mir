@@ -10,9 +10,11 @@ body: |
   bb.0:
     liveins: $sgpr0
     ; CHECK-LABEL: name: intrinsic_trunc_s
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[INTRINSIC_TRUNC:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_TRUNC [[COPY1]]
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_TRUNC [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_INTRINSIC_TRUNC %0
 ...
@@ -25,8 +27,10 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: intrinsic_trunc_v
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[INTRINSIC_TRUNC:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_TRUNC [[COPY]]
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_TRUNC [[COPY]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_INTRINSIC_TRUNC %0
 ...

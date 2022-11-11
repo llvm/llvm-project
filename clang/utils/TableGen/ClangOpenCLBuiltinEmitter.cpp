@@ -1082,7 +1082,7 @@ void OpenCLBuiltinFileEmitterBase::expandTypesInSignature(
         // If the type requires an extension, add a TypeExtMap entry mapping
         // the full type name to the extension.
         StringRef Ext =
-            Arg->getValueAsDef("Extension")->getValueAsString("ExtName");
+            Type->getValueAsDef("Extension")->getValueAsString("ExtName");
         if (!Ext.empty() && TypeExtMap.find(FullType) == TypeExtMap.end()) {
           TypeExtMap.insert({FullType, Ext});
         }

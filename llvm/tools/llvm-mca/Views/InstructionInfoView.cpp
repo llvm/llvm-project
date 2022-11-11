@@ -70,8 +70,8 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     else if (IIVDEntry.Latency < 100)
       TempStream << ' ';
 
-    if (IIVDEntry.RThroughput.hasValue()) {
-      double RT = IIVDEntry.RThroughput.getValue();
+    if (IIVDEntry.RThroughput) {
+      double RT = IIVDEntry.RThroughput.value();
       TempStream << format("%.2f", RT) << ' ';
       if (RT < 10.0)
         TempStream << "  ";
@@ -152,7 +152,7 @@ InstructionInfoView::toJSON(const InstructionInfoViewData &IIVD) const {
                    {"mayLoad", IIVD.mayLoad},
                    {"mayStore", IIVD.mayStore},
                    {"hasUnmodeledSideEffects", IIVD.hasUnmodeledSideEffects}});
-  JO.try_emplace("RThroughput", IIVD.RThroughput.getValueOr(0.0));
+  JO.try_emplace("RThroughput", IIVD.RThroughput.value_or(0.0));
   return JO;
 }
 

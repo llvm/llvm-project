@@ -175,7 +175,7 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
   DataBufferSP buffer =
       std::make_shared<DataBufferHeap>(stream.GetData(), stream.GetSize());
   DataExtractor extractor(buffer, byte_order, address_size, byte_size);
-  DWARFExpression result(module, extractor, nullptr);
+  DWARFExpression result(extractor);
   result.SetRegisterKind(register_kind);
 
   return result;

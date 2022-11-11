@@ -143,20 +143,20 @@
 
 // ================== Check that a bogus architecture gives an error
 // RUN: %clang -target arm -march=armbogusv6 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS %s
-// CHECK-BOGUS: error: {{.*}} does not support '-march=armbogusv6' 
+// CHECK-BOGUS: error: unsupported argument 'armbogusv6' to option '-march='
 // RUN: %clang -target arm---eabihf -march=armbogusv7 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-HF %s
-// CHECK-BOGUS-HF: error: {{.*}} does not support '-march=armbogusv7' 
+// CHECK-BOGUS-HF: error: unsupported argument 'armbogusv7' to option '-march='
 // RUN: %clang -target arm -march=armv6bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS2 %s
-// CHECK-BOGUS2: error: {{.*}} does not support '-march=armv6bogus'
+// CHECK-BOGUS2: error: unsupported argument 'armv6bogus' to option '-march='
 // RUN: %clang -target arm -march=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS3 %s
-// CHECK-BOGUS3: error: {{.*}} does not support '-march=bogus'
+// CHECK-BOGUS3: error: unsupported argument 'bogus' to option '-march='
 
 // ================== Check that a bogus CPU gives an error
 // RUN: %clang -target arm -mcpu=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-CPU %s
 // RUN: %clang -target armv8-apple-darwin -arch arm64 -mcpu=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-CPU %s
-// CHECK-BOGUS-CPU: error: {{.*}} does not support '-mcpu=bogus'
+// CHECK-BOGUS-CPU: error: unsupported argument 'bogus' to option '-mcpu='
 // RUN: %clang -target armv8-apple-darwin -arch arm64 -mtune=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-TUNE %s
-// CHECK-BOGUS-TUNE: error: {{.*}} does not support '-mtune=bogus'
+// CHECK-BOGUS-TUNE: error: unsupported argument 'bogus' to option '-mtune='
 
 // ================== Check default Architecture on each ARM11 CPU
 // RUN: %clang -target arm-linux-gnueabi -mcpu=arm1136j-s -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV6 %s
@@ -331,7 +331,7 @@
 //
 // RUN: %clang -target arm -mcpu=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8A %s
 // RUN: %clang -target arm -mcpu=exynos-m3 -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8A %s
-// CHECK-CPUV8A: "-cc1"{{.*}} "-triple" "armv8-
+// CHECK-CPUV8A: "-cc1"{{.*}} "-triple" "armv8a-
 
 // RUN: %clang -target arm -mcpu=cortex-a55 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV82A %s
 // RUN: %clang -target arm -mcpu=cortex-a75 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV82A %s
@@ -365,7 +365,7 @@
 //
 // RUN: %clang -target armeb -mcpu=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A %s
 // RUN: %clang -target arm -mcpu=exynos-m3 -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A %s
-// CHECK-BE-CPUV8A: "-cc1"{{.*}} "-triple" "armebv8-
+// CHECK-BE-CPUV8A: "-cc1"{{.*}} "-triple" "armebv8a-
 
 // RUN: %clang -target armeb -mcpu=cortex-a55 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A %s
 // RUN: %clang -target armeb -mcpu=cortex-a75 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A %s
@@ -402,7 +402,7 @@
 //
 // RUN: %clang -target arm -mcpu=exynos-m3 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8A-THUMB %s
 // RUN: %clang -target arm -mcpu=exynos-m3 -mlittle-endian -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8A-THUMB %s
-// CHECK-CPUV8A-THUMB: "-cc1"{{.*}} "-triple" "thumbv8-
+// CHECK-CPUV8A-THUMB: "-cc1"{{.*}} "-triple" "thumbv8a-
 
 // RUN: %clang -target arm -mcpu=cortex-a55 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV82A-THUMB %s
 // RUN: %clang -target arm -mcpu=cortex-a75 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV82A-THUMB %s
@@ -436,7 +436,7 @@
 //
 // RUN: %clang -target armeb -mcpu=exynos-m3 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A-THUMB %s
 // RUN: %clang -target arm -mcpu=exynos-m3 -mbig-endian -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A-THUMB %s
-// CHECK-BE-CPUV8A-THUMB: "-cc1"{{.*}} "-triple" "thumbebv8-
+// CHECK-BE-CPUV8A-THUMB: "-cc1"{{.*}} "-triple" "thumbebv8a-
 
 // RUN: %clang -target armeb -mcpu=cortex-a55 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A-THUMB %s
 // RUN: %clang -target armeb -mcpu=cortex-a75 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A-THUMB %s
@@ -458,7 +458,7 @@
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a73 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A73 %s
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a73 -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A73-MFPU %s
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a73 -mfloat-abi=soft -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A73-SOFT %s
-// CHECK-CORTEX-A73: "-cc1"{{.*}} "-triple" "armv8-{{.*}} "-target-cpu" "cortex-a73"
+// CHECK-CORTEX-A73: "-cc1"{{.*}} "-triple" "armv8a-{{.*}} "-target-cpu" "cortex-a73"
 // CHECK-CORTEX-A73-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
 // CHECK-CORTEX-A73-MFPU: "-target-feature" "+sha2"
 // CHECK-CORTEX-A73-MFPU: "-target-feature" "+aes"
@@ -558,6 +558,9 @@
 
 // RUN: %clang -target arm -mcpu=cortex-m55 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-M55 %s
 // CHECK-CORTEX-M55:  "-cc1"{{.*}} "-triple" "thumbv8.1m.main-{{.*}} "-target-cpu" "cortex-m55"
+
+// RUN: %clang -target arm -mcpu=cortex-m85 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-M85 %s
+// CHECK-CORTEX-M85:  "-cc1"{{.*}} "-triple" "thumbv8.1m.main-{{.*}} "-target-cpu" "cortex-m85"
 
 // RUN: %clang -target arm -mcpu=neoverse-n2 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEOVERSE-N2 %s
 // CHECK-NEOVERSE-N2: "-cc1"{{.*}} "-triple" "armv8.5a-{{.*}}" "-target-cpu" "neoverse-n2"

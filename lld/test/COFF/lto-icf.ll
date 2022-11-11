@@ -7,7 +7,6 @@
 ; RUN: llvm-readobj --coff-exports %t.dll | FileCheck %s
 
 ; CHECK: Export {
-; CHECK: Export {
 ; CHECK:   RVA: 0x[[RVA:.*]]
 ; CHECK: Export {
 ; CHECK:   RVA: 0x[[RVA]]

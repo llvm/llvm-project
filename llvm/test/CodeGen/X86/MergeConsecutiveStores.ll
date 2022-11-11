@@ -452,30 +452,30 @@ block4:                                       ; preds = %4, %.lr.ph
 define void @MergeLoadStoreBaseIndexOffset(i64* %a, i8* %b, i8* %c, i32 %n) {
 ; BWON-LABEL: MergeLoadStoreBaseIndexOffset:
 ; BWON:       # %bb.0:
-; BWON-NEXT:    movl %ecx, %r8d
+; BWON-NEXT:    movl %ecx, %eax
 ; BWON-NEXT:    xorl %ecx, %ecx
 ; BWON-NEXT:    .p2align 4, 0x90
 ; BWON-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
-; BWON-NEXT:    movq (%rdi,%rcx,8), %rax
-; BWON-NEXT:    movzwl (%rdx,%rax), %eax
-; BWON-NEXT:    movw %ax, (%rsi,%rcx,2)
+; BWON-NEXT:    movq (%rdi,%rcx,8), %r8
+; BWON-NEXT:    movzwl (%rdx,%r8), %r8d
+; BWON-NEXT:    movw %r8w, (%rsi,%rcx,2)
 ; BWON-NEXT:    incq %rcx
-; BWON-NEXT:    cmpl %ecx, %r8d
+; BWON-NEXT:    cmpl %ecx, %eax
 ; BWON-NEXT:    jne .LBB9_1
 ; BWON-NEXT:  # %bb.2:
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: MergeLoadStoreBaseIndexOffset:
 ; BWOFF:       # %bb.0:
-; BWOFF-NEXT:    movl %ecx, %r8d
+; BWOFF-NEXT:    movl %ecx, %eax
 ; BWOFF-NEXT:    xorl %ecx, %ecx
 ; BWOFF-NEXT:    .p2align 4, 0x90
 ; BWOFF-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
-; BWOFF-NEXT:    movq (%rdi,%rcx,8), %rax
-; BWOFF-NEXT:    movw (%rdx,%rax), %ax
-; BWOFF-NEXT:    movw %ax, (%rsi,%rcx,2)
+; BWOFF-NEXT:    movq (%rdi,%rcx,8), %r8
+; BWOFF-NEXT:    movw (%rdx,%r8), %r8w
+; BWOFF-NEXT:    movw %r8w, (%rsi,%rcx,2)
 ; BWOFF-NEXT:    incq %rcx
-; BWOFF-NEXT:    cmpl %ecx, %r8d
+; BWOFF-NEXT:    cmpl %ecx, %eax
 ; BWOFF-NEXT:    jne .LBB9_1
 ; BWOFF-NEXT:  # %bb.2:
 ; BWOFF-NEXT:    retq
@@ -509,30 +509,30 @@ define void @MergeLoadStoreBaseIndexOffset(i64* %a, i8* %b, i8* %c, i32 %n) {
 define void @MergeLoadStoreBaseIndexOffsetComplicated(i8* %a, i8* %b, i8* %c, i64 %n) {
 ; BWON-LABEL: MergeLoadStoreBaseIndexOffsetComplicated:
 ; BWON:       # %bb.0:
-; BWON-NEXT:    xorl %r8d, %r8d
+; BWON-NEXT:    xorl %eax, %eax
 ; BWON-NEXT:    .p2align 4, 0x90
 ; BWON-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
-; BWON-NEXT:    movsbq (%rsi), %rax
-; BWON-NEXT:    movzwl (%rdx,%rax), %eax
-; BWON-NEXT:    movw %ax, (%rdi,%r8)
+; BWON-NEXT:    movsbq (%rsi), %r8
+; BWON-NEXT:    movzwl (%rdx,%r8), %r8d
+; BWON-NEXT:    movw %r8w, (%rdi,%rax)
 ; BWON-NEXT:    incq %rsi
-; BWON-NEXT:    addq $2, %r8
-; BWON-NEXT:    cmpq %rcx, %r8
+; BWON-NEXT:    addq $2, %rax
+; BWON-NEXT:    cmpq %rcx, %rax
 ; BWON-NEXT:    jl .LBB10_1
 ; BWON-NEXT:  # %bb.2:
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: MergeLoadStoreBaseIndexOffsetComplicated:
 ; BWOFF:       # %bb.0:
-; BWOFF-NEXT:    xorl %r8d, %r8d
+; BWOFF-NEXT:    xorl %eax, %eax
 ; BWOFF-NEXT:    .p2align 4, 0x90
 ; BWOFF-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
-; BWOFF-NEXT:    movsbq (%rsi), %rax
-; BWOFF-NEXT:    movw (%rdx,%rax), %ax
-; BWOFF-NEXT:    movw %ax, (%rdi,%r8)
+; BWOFF-NEXT:    movsbq (%rsi), %r8
+; BWOFF-NEXT:    movw (%rdx,%r8), %r8w
+; BWOFF-NEXT:    movw %r8w, (%rdi,%rax)
 ; BWOFF-NEXT:    incq %rsi
-; BWOFF-NEXT:    addq $2, %r8
-; BWOFF-NEXT:    cmpq %rcx, %r8
+; BWOFF-NEXT:    addq $2, %rax
+; BWOFF-NEXT:    cmpq %rcx, %rax
 ; BWOFF-NEXT:    jl .LBB10_1
 ; BWOFF-NEXT:  # %bb.2:
 ; BWOFF-NEXT:    retq
@@ -568,30 +568,30 @@ define void @MergeLoadStoreBaseIndexOffsetComplicated(i8* %a, i8* %b, i8* %c, i6
 define void @MergeLoadStoreBaseIndexOffsetSext(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; BWON-LABEL: MergeLoadStoreBaseIndexOffsetSext:
 ; BWON:       # %bb.0:
-; BWON-NEXT:    movl %ecx, %r8d
+; BWON-NEXT:    movl %ecx, %eax
 ; BWON-NEXT:    xorl %ecx, %ecx
 ; BWON-NEXT:    .p2align 4, 0x90
 ; BWON-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
-; BWON-NEXT:    movsbq (%rdi,%rcx), %rax
-; BWON-NEXT:    movzwl (%rdx,%rax), %eax
-; BWON-NEXT:    movw %ax, (%rsi,%rcx,2)
+; BWON-NEXT:    movsbq (%rdi,%rcx), %r8
+; BWON-NEXT:    movzwl (%rdx,%r8), %r8d
+; BWON-NEXT:    movw %r8w, (%rsi,%rcx,2)
 ; BWON-NEXT:    incq %rcx
-; BWON-NEXT:    cmpl %ecx, %r8d
+; BWON-NEXT:    cmpl %ecx, %eax
 ; BWON-NEXT:    jne .LBB11_1
 ; BWON-NEXT:  # %bb.2:
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: MergeLoadStoreBaseIndexOffsetSext:
 ; BWOFF:       # %bb.0:
-; BWOFF-NEXT:    movl %ecx, %r8d
+; BWOFF-NEXT:    movl %ecx, %eax
 ; BWOFF-NEXT:    xorl %ecx, %ecx
 ; BWOFF-NEXT:    .p2align 4, 0x90
 ; BWOFF-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
-; BWOFF-NEXT:    movsbq (%rdi,%rcx), %rax
-; BWOFF-NEXT:    movw (%rdx,%rax), %ax
-; BWOFF-NEXT:    movw %ax, (%rsi,%rcx,2)
+; BWOFF-NEXT:    movsbq (%rdi,%rcx), %r8
+; BWOFF-NEXT:    movw (%rdx,%r8), %r8w
+; BWOFF-NEXT:    movw %r8w, (%rsi,%rcx,2)
 ; BWOFF-NEXT:    incq %rcx
-; BWOFF-NEXT:    cmpl %ecx, %r8d
+; BWOFF-NEXT:    cmpl %ecx, %eax
 ; BWOFF-NEXT:    jne .LBB11_1
 ; BWOFF-NEXT:  # %bb.2:
 ; BWOFF-NEXT:    retq
@@ -626,38 +626,38 @@ define void @MergeLoadStoreBaseIndexOffsetSext(i8* %a, i8* %b, i8* %c, i32 %n) {
 define void @loadStoreBaseIndexOffsetSextNoSex(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; BWON-LABEL: loadStoreBaseIndexOffsetSextNoSex:
 ; BWON:       # %bb.0:
-; BWON-NEXT:    movl %ecx, %r8d
+; BWON-NEXT:    movl %ecx, %eax
 ; BWON-NEXT:    xorl %ecx, %ecx
 ; BWON-NEXT:    .p2align 4, 0x90
 ; BWON-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
-; BWON-NEXT:    movsbq (%rdi,%rcx), %rax
-; BWON-NEXT:    movzbl (%rdx,%rax), %r9d
-; BWON-NEXT:    incl %eax
-; BWON-NEXT:    movsbq %al, %rax
-; BWON-NEXT:    movzbl (%rdx,%rax), %eax
+; BWON-NEXT:    movsbq (%rdi,%rcx), %r8
+; BWON-NEXT:    movzbl (%rdx,%r8), %r9d
+; BWON-NEXT:    incl %r8d
+; BWON-NEXT:    movsbq %r8b, %r8
+; BWON-NEXT:    movzbl (%rdx,%r8), %r8d
 ; BWON-NEXT:    movb %r9b, (%rsi,%rcx,2)
-; BWON-NEXT:    movb %al, 1(%rsi,%rcx,2)
+; BWON-NEXT:    movb %r8b, 1(%rsi,%rcx,2)
 ; BWON-NEXT:    incq %rcx
-; BWON-NEXT:    cmpl %ecx, %r8d
+; BWON-NEXT:    cmpl %ecx, %eax
 ; BWON-NEXT:    jne .LBB12_1
 ; BWON-NEXT:  # %bb.2:
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: loadStoreBaseIndexOffsetSextNoSex:
 ; BWOFF:       # %bb.0:
-; BWOFF-NEXT:    movl %ecx, %r8d
+; BWOFF-NEXT:    movl %ecx, %eax
 ; BWOFF-NEXT:    xorl %ecx, %ecx
 ; BWOFF-NEXT:    .p2align 4, 0x90
 ; BWOFF-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
-; BWOFF-NEXT:    movsbq (%rdi,%rcx), %rax
-; BWOFF-NEXT:    movb (%rdx,%rax), %r9b
-; BWOFF-NEXT:    incl %eax
-; BWOFF-NEXT:    movsbq %al, %rax
-; BWOFF-NEXT:    movb (%rdx,%rax), %al
+; BWOFF-NEXT:    movsbq (%rdi,%rcx), %r8
+; BWOFF-NEXT:    movb (%rdx,%r8), %r9b
+; BWOFF-NEXT:    incl %r8d
+; BWOFF-NEXT:    movsbq %r8b, %r8
+; BWOFF-NEXT:    movb (%rdx,%r8), %r8b
 ; BWOFF-NEXT:    movb %r9b, (%rsi,%rcx,2)
-; BWOFF-NEXT:    movb %al, 1(%rsi,%rcx,2)
+; BWOFF-NEXT:    movb %r8b, 1(%rsi,%rcx,2)
 ; BWOFF-NEXT:    incq %rcx
-; BWOFF-NEXT:    cmpl %ecx, %r8d
+; BWOFF-NEXT:    cmpl %ecx, %eax
 ; BWOFF-NEXT:    jne .LBB12_1
 ; BWOFF-NEXT:  # %bb.2:
 ; BWOFF-NEXT:    retq
@@ -921,11 +921,12 @@ define void @merge_heterogeneous(%struct.C* nocapture %p, %struct.C* nocapture %
 }
 
 define i32 @merge_store_load_store_seq(i32* %buff) {
-entry:
 ; CHECK-LABEL: merge_store_load_store_seq:
-; CHECK:      movl 4(%rdi), %eax
-; CHECK-NEXT: movq $0, (%rdi)
-; CHECK-NEXT: retq
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl 4(%rdi), %eax
+; CHECK-NEXT:    movq $0, (%rdi)
+; CHECK-NEXT:    retq
+entry:
 
   store i32 0, i32* %buff, align 4
   %arrayidx1 = getelementptr inbounds i32, i32* %buff, i64 1
@@ -935,12 +936,13 @@ entry:
 }
 
 define i32 @merge_store_alias(i32* %buff, i32* %other) {
-entry:
 ; CHECK-LABEL: merge_store_alias:
-; CHECK:  movl $0, (%rdi)
-; CHECK-NEXT:  movl (%rsi), %eax
-; CHECK-NEXT:  movl $0, 4(%rdi)
-; CHECK-NEXT:  retq
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl $0, (%rdi)
+; CHECK-NEXT:    movl (%rsi), %eax
+; CHECK-NEXT:    movl $0, 4(%rdi)
+; CHECK-NEXT:    retq
+entry:
 
   store i32 0, i32* %buff, align 4
   %arrayidx1 = getelementptr inbounds i32, i32* %buff, i64 1

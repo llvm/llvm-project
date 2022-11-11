@@ -1301,6 +1301,13 @@ TEST_F(InMemoryFileSystemTest, AddHardLinkToADirectory) {
   EXPECT_FALSE(FS.addHardLink(Link, Dir));
 }
 
+TEST_F(InMemoryFileSystemTest, AddHardLinkToASymlink) {
+  EXPECT_TRUE(FS.addFile("/file", 0, MemoryBuffer::getMemBuffer("content")));
+  EXPECT_TRUE(FS.addSymbolicLink("/symlink", "/file", 0));
+  EXPECT_TRUE(FS.addHardLink("/hardlink", "/symlink"));
+  EXPECT_EQ((*FS.getBufferForFile("/hardlink"))->getBuffer(), "content");
+}
+
 TEST_F(InMemoryFileSystemTest, AddHardLinkFromADirectory) {
   StringRef Dir = "path/to/dummy/dir";
   StringRef Target = "path/to/dummy/dir/target";
@@ -1349,6 +1356,85 @@ TEST_F(InMemoryFileSystemTest, UniqueID) {
   EXPECT_EQ(FS.status("/a/b")->getUniqueID(),
             FS2.status("/a/b")->getUniqueID());
   EXPECT_EQ(FS.status("/a")->getUniqueID(), FS2.status("/a")->getUniqueID());
+}
+
+TEST_F(InMemoryFileSystemTest, AddSymlinkToAFile) {
+  EXPECT_TRUE(
+      FS.addFile("/some/file", 0, MemoryBuffer::getMemBuffer("contents")));
+  EXPECT_TRUE(FS.addSymbolicLink("/other/file/link", "/some/file", 0));
+  ErrorOr<vfs::Status> Stat = FS.status("/some/file");
+  EXPECT_TRUE(Stat->isRegularFile());
+}
+
+TEST_F(InMemoryFileSystemTest, AddSymlinkToADirectory) {
+  EXPECT_TRUE(FS.addSymbolicLink("/link", "/target", 0));
+  EXPECT_TRUE(
+      FS.addFile("/target/foo.h", 0, MemoryBuffer::getMemBuffer("foo")));
+  ErrorOr<vfs::Status> Stat = FS.status("/link/foo.h");
+  EXPECT_TRUE(Stat);
+  EXPECT_EQ((*Stat).getName(), "/link/foo.h");
+  EXPECT_TRUE(Stat->isRegularFile());
+}
+
+TEST_F(InMemoryFileSystemTest, AddSymlinkToASymlink) {
+  EXPECT_TRUE(FS.addSymbolicLink("/first", "/second", 0));
+  EXPECT_TRUE(FS.addSymbolicLink("/second", "/third", 0));
+  EXPECT_TRUE(FS.addFile("/third", 0, MemoryBuffer::getMemBuffer("")));
+  ErrorOr<vfs::Status> Stat = FS.status("/first");
+  EXPECT_TRUE(Stat);
+  EXPECT_EQ((*Stat).getName(), "/first");
+  // Follow-through symlinks by default. This matches RealFileSystem's
+  // semantics.
+  EXPECT_TRUE(Stat->isRegularFile());
+  Stat = FS.status("/second");
+  EXPECT_TRUE(Stat);
+  EXPECT_EQ((*Stat).getName(), "/second");
+  EXPECT_TRUE(Stat->isRegularFile());
+  Stat = FS.status("/third");
+  EXPECT_TRUE(Stat);
+  EXPECT_EQ((*Stat).getName(), "/third");
+  EXPECT_TRUE(Stat->isRegularFile());
+}
+
+TEST_F(InMemoryFileSystemTest, AddRecursiveSymlink) {
+  EXPECT_TRUE(FS.addSymbolicLink("/link-a", "/link-b", 0));
+  EXPECT_TRUE(FS.addSymbolicLink("/link-b", "/link-a", 0));
+  ErrorOr<vfs::Status> Stat = FS.status("/link-a/foo");
+  EXPECT_FALSE(Stat);
+  EXPECT_EQ(Stat.getError(), errc::no_such_file_or_directory);
+}
+
+TEST_F(InMemoryFileSystemTest, DirectoryIteratorWithSymlinkToAFile) {
+  std::error_code EC;
+
+  EXPECT_TRUE(FS.addFile("/file", 0, MemoryBuffer::getMemBuffer("")));
+  EXPECT_TRUE(FS.addSymbolicLink("/symlink", "/file", 0));
+
+  vfs::directory_iterator I = FS.dir_begin("/", EC), E;
+  ASSERT_FALSE(EC);
+
+  std::vector<std::string> Nodes;
+  for (; !EC && I != E; I.increment(EC))
+    Nodes.push_back(getPosixPath(std::string(I->path())));
+
+  EXPECT_THAT(Nodes, testing::UnorderedElementsAre("/file", "/file"));
+}
+
+TEST_F(InMemoryFileSystemTest, RecursiveDirectoryIteratorWithSymlinkToADir) {
+  std::error_code EC;
+
+  EXPECT_TRUE(FS.addFile("/dir/file", 0, MemoryBuffer::getMemBuffer("")));
+  EXPECT_TRUE(FS.addSymbolicLink("/dir_symlink", "/dir", 0));
+
+  vfs::recursive_directory_iterator I(FS, "/", EC), E;
+  ASSERT_FALSE(EC);
+
+  std::vector<std::string> Nodes;
+  for (; !EC && I != E; I.increment(EC))
+    Nodes.push_back(getPosixPath(std::string(I->path())));
+
+  EXPECT_THAT(Nodes, testing::UnorderedElementsAre("/dir", "/dir/file", "/dir",
+                                                   "/dir/file"));
 }
 
 // NOTE: in the tests below, we use '//root/' as our root directory, since it is

@@ -4,7 +4,7 @@
 ; This test comes from PR27136
 ; We should hoist loop constant invariant
 
-define zeroext i1 @search(i32 %needle, i32* nocapture readonly %haystack, i32 %count) {
+define zeroext i1 @search(i32 %needle, ptr nocapture readonly %haystack, i32 %count) {
 ; CHECK-LABEL: search:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testl %edx, %edx
@@ -44,8 +44,8 @@ for.cond:                                         ; preds = %for.body
 
 for.body:                                         ; preds = %for.body.preheader, %for.cond
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.cond ]
-  %arrayidx = getelementptr inbounds i32, i32* %haystack, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %haystack, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp eq i32 %1, %needle
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   br i1 %cmp1, label %cleanup.loopexit, label %for.cond

@@ -6,9 +6,6 @@
 
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangPrintFunctionNames%pluginext -plugin print-fns %s 2>&1 | FileCheck %s
 
-!-------------------------------------------------
-! EXPECTED OUTPUT: Names printed and counts != 0
-!-------------------------------------------------
 ! CHECK: Function: external_func1
 ! CHECK-NEXT: Function: external_func2
 ! CHECK-NEXT: Subroutine: external_subr
@@ -18,9 +15,6 @@
 ! CHECK-NEXT: ==== Functions: 3 ====
 ! CHECK-NEXT: ==== Subroutines: 2 ====
 
-!--------------------------
-! INPUT
-!--------------------------
 function external_func1()
 end function
 

@@ -14,17 +14,17 @@
 ; RUN: echo '!!1 2 3' >> %t2
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 | FileCheck %s -check-prefix=LINUX-SECTIONS2
 
-@_ZTIi = external constant i8*
+@_ZTIi = external constant ptr
 
-define i32 @main() uwtable optsize ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @main() uwtable optsize ssp personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z1fv() optsize
           to label %try.cont unwind label %lpad1
 
 lpad1:
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
-          catch i8* bitcast (i8** @_ZTIi to i8*)
+          catch ptr @_ZTIi
   br label %eh.resume1
 
 try.cont:
@@ -33,16 +33,16 @@ try.cont:
   ret i32 0
 
 lpad2:
-  %2 = landingpad { i8*, i32 }
+  %2 = landingpad { ptr, i32 }
           cleanup
-          catch i8* bitcast (i8** @_ZTIi to i8*)
+          catch ptr @_ZTIi
   br label %eh.resume2
 
 eh.resume1:
-  resume { i8*, i32 } %0
+  resume { ptr, i32 } %0
 
 eh.resume2:
-  resume { i8*, i32 } %2
+  resume { ptr, i32 } %2
 }
 
 declare void @_Z1fv() optsize

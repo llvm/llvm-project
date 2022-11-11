@@ -4,8 +4,6 @@ from lldbsuite.test.decorators import *
 
 class InvalidArgsExpressionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_invalid_lang(self):
         self.expect("expression -l foo --", error=True,

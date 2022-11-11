@@ -25,7 +25,7 @@ namespace not_bool {
 
   enum E {};
   E operator==(Y, Z); // expected-note {{here}}
-  bool h = z == y; // expected-warning {{ISO C++20 requires return type of selected 'operator==' function for rewritten '==' comparison to be 'bool', not 'not_bool::E'}}
+  bool h = z == y; // expected-warning {{ISO C++20 requires return type of selected 'operator==' function for rewritten '==' comparison to be 'bool', not 'E'}}
 }
 
 struct X { bool equal; };

@@ -5,8 +5,8 @@ define i64 @addimm_mulimm_accept_00(i64 %a) {
 ; CHECK-LABEL: addimm_mulimm_accept_00:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #37
-; CHECK-NEXT:    mul x8, x0, x8
-; CHECK-NEXT:    add x0, x8, #1147
+; CHECK-NEXT:    mov x9, #1147
+; CHECK-NEXT:    madd x0, x0, x8, x9
 ; CHECK-NEXT:    ret
   %tmp0 = add i64 %a, 31
   %tmp1 = mul i64 %tmp0, 37
@@ -17,8 +17,8 @@ define i64 @addimm_mulimm_accept_01(i64 %a) {
 ; CHECK-LABEL: addimm_mulimm_accept_01:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #37
-; CHECK-NEXT:    mul x8, x0, x8
-; CHECK-NEXT:    sub x0, x8, #1147
+; CHECK-NEXT:    mov x9, #-1147
+; CHECK-NEXT:    madd x0, x0, x8, x9
 ; CHECK-NEXT:    ret
   %tmp0 = add i64 %a, -31
   %tmp1 = mul i64 %tmp0, 37
@@ -29,8 +29,8 @@ define signext i32 @addimm_mulimm_accept_02(i32 signext %a) {
 ; CHECK-LABEL: addimm_mulimm_accept_02:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #37
-; CHECK-NEXT:    mul w8, w0, w8
-; CHECK-NEXT:    add w0, w8, #1147
+; CHECK-NEXT:    mov w9, #1147
+; CHECK-NEXT:    madd w0, w0, w8, w9
 ; CHECK-NEXT:    ret
   %tmp0 = add i32 %a, 31
   %tmp1 = mul i32 %tmp0, 37
@@ -41,8 +41,8 @@ define signext i32 @addimm_mulimm_accept_03(i32 signext %a) {
 ; CHECK-LABEL: addimm_mulimm_accept_03:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #37
-; CHECK-NEXT:    mul w8, w0, w8
-; CHECK-NEXT:    sub w0, w8, #1147
+; CHECK-NEXT:    mov w9, #-1147
+; CHECK-NEXT:    madd w0, w0, w8, w9
 ; CHECK-NEXT:    ret
   %tmp0 = add i32 %a, -31
   %tmp1 = mul i32 %tmp0, 37

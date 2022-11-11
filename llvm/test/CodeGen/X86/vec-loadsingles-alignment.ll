@@ -10,14 +10,14 @@ define dso_local i32 @subb() nounwind ssp {
 ; CHECK-LABEL: subb:
 ; CHECK:  vmovups e(%rip), %ymm
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @e, i64 0, i64 7), align 4
-  %1 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @e, i64 0, i64 6), align 8
-  %2 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @e, i64 0, i64 5), align 4
-  %3 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @e, i64 0, i64 4), align 16
-  %4 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @e, i64 0, i64 3), align 4
-  %5 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @e, i64 0, i64 2), align 8
-  %6 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @e, i64 0, i64 1), align 4
-  %7 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @e, i64 0, i64 0), align 16
+  %0 = load i32, ptr getelementptr inbounds ([8 x i32], ptr @e, i64 0, i64 7), align 4
+  %1 = load i32, ptr getelementptr inbounds ([8 x i32], ptr @e, i64 0, i64 6), align 8
+  %2 = load i32, ptr getelementptr inbounds ([8 x i32], ptr @e, i64 0, i64 5), align 4
+  %3 = load i32, ptr getelementptr inbounds ([8 x i32], ptr @e, i64 0, i64 4), align 16
+  %4 = load i32, ptr getelementptr inbounds ([8 x i32], ptr @e, i64 0, i64 3), align 4
+  %5 = load i32, ptr getelementptr inbounds ([8 x i32], ptr @e, i64 0, i64 2), align 8
+  %6 = load i32, ptr getelementptr inbounds ([8 x i32], ptr @e, i64 0, i64 1), align 4
+  %7 = load i32, ptr @e, align 16
   %vecinit.i = insertelement <8 x i32> undef, i32 %7, i32 0
   %vecinit1.i = insertelement <8 x i32> %vecinit.i, i32 %6, i32 1
   %vecinit2.i = insertelement <8 x i32> %vecinit1.i, i32 %5, i32 2
@@ -27,9 +27,9 @@ entry:
   %vecinit6.i = insertelement <8 x i32> %vecinit5.i, i32 %1, i32 6
   %vecinit7.i = insertelement <8 x i32> %vecinit6.i, i32 %0, i32 7
   %8 = bitcast <8 x i32> %vecinit7.i to <32 x i8>
-  tail call void @llvm.x86.avx.storeu.dq.256(i8* bitcast ([8 x i32]* @d to i8*), <32 x i8> %8)
+  tail call void @llvm.x86.avx.storeu.dq.256(ptr @d, <32 x i8> %8)
   ret i32 0
 }
 
-declare void @llvm.x86.avx.storeu.dq.256(i8*, <32 x i8>) nounwind
+declare void @llvm.x86.avx.storeu.dq.256(ptr, <32 x i8>) nounwind
 

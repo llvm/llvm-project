@@ -1952,7 +1952,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     if (discardLTOSymbol(IDVal))
       return false;
 
-    getTargetParser().doBeforeLabelEmit(Sym);
+    getTargetParser().doBeforeLabelEmit(Sym, IDLoc);
 
     // Emit the label.
     if (!getTargetParser().isParsingMSInlineAsm())
@@ -5904,10 +5904,16 @@ bool AsmParser::parseDirectivePseudoProbe() {
     InlineStack.push_back(Site);
   }
 
+  // Parse function entry name
+  StringRef FnName;
+  if (parseIdentifier(FnName))
+    return Error(getLexer().getLoc(), "unexpected token in '.pseudoprobe' directive");
+  MCSymbol *FnSym = getContext().lookupSymbol(FnName);
+
   if (parseEOL())
     return true;
 
-  getStreamer().emitPseudoProbe(Guid, Index, Type, Attr, InlineStack);
+  getStreamer().emitPseudoProbe(Guid, Index, Type, Attr, InlineStack, FnSym);
   return false;
 }
 
@@ -6256,7 +6262,7 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
           ? LabelVal.upper()
           : LabelVal);
 
-  getTargetParser().doBeforeLabelEmit(Sym);
+  getTargetParser().doBeforeLabelEmit(Sym, LabelLoc);
 
   // Emit the label.
   Out.emitLabel(Sym, LabelLoc);

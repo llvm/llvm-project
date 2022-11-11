@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 $_Z3fooi = comdat any
 
-@g2 = local_unnamed_addr global i32 (i32)* null, align 8
+@g2 = local_unnamed_addr global ptr null, align 8
 
 define i32 @_Z3bari(i32 %i) {
 entry:
@@ -18,7 +18,7 @@ entry:
 
 define void @_Z4m2f1v() {
 entry:
-  store i32 (i32)* @_Z3fooi, i32 (i32)** @g2, align 8
+  store ptr @_Z3fooi, ptr @g2, align 8
   ret void
 }
 

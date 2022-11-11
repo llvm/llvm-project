@@ -385,7 +385,11 @@ class DerefClass{
 public:
   int *x;
   DerefClass() {}
-  ~DerefClass() {*x = 1;}
+  ~DerefClass() {
+    int i = 0;
+    x = &i;
+    *x = 1;
+  }
 };
 
 void testDoubleDeleteClassInstance() {

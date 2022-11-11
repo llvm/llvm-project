@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <memory>
 //
@@ -165,6 +164,19 @@ int main(int, char**) {
     std::ranges::uninitialized_move(range, out);
     assert(iter_moves == 3);
     iter_moves = 0;
+  }
+
+  // Move-only iterators are supported.
+  {
+    using MoveOnlyIter = cpp20_input_iterator<const int*>;
+    static_assert(!std::is_copy_constructible_v<MoveOnlyIter>);
+
+    constexpr int N = 3;
+    int buffer[N] = {1, 2, 3};
+
+    MoveOnlyIter in(buffer);
+    Buffer<int, N> out;
+    std::ranges::uninitialized_move_n(std::move(in), N, out.begin(), out.end());
   }
 
   return 0;

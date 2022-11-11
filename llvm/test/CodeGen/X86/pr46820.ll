@@ -7,7 +7,7 @@
 ; the proper concat_vectors for this because the two v4f32s don't add up to
 ; v16f32 and require padding.
 
-define <23 x float> @load23(<23 x float>* %p) {
+define <23 x float> @load23(ptr %p) {
 ; CHECK-LABEL: load23:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -20,13 +20,13 @@ define <23 x float> @load23(<23 x float>* %p) {
 ; CHECK-NEXT:    vmovaps %zmm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %t0 = load <23 x float>, <23 x float>* %p, align 16
+  %t0 = load <23 x float>, ptr %p, align 16
   ret <23 x float> %t0
 }
 
 ; Same test as above with minimal alignment just to demonstrate the different
 ; codegen.
-define <23 x float> @load23_align_1(<23 x float>* %p) {
+define <23 x float> @load23_align_1(ptr %p) {
 ; CHECK-LABEL: load23_align_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -40,6 +40,6 @@ define <23 x float> @load23_align_1(<23 x float>* %p) {
 ; CHECK-NEXT:    vmovaps %zmm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %t0 = load <23 x float>, <23 x float>* %p, align 1
+  %t0 = load <23 x float>, ptr %p, align 1
   ret <23 x float> %t0
 }

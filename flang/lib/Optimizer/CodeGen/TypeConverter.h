@@ -65,6 +65,8 @@ public:
       return llvm::None;
     });
     addConversion(
+        [&](fir::ClassType classTy) { return convertBoxType(classTy); });
+    addConversion(
         [&](fir::CharacterType charTy) { return convertCharType(charTy); });
     addConversion(
         [&](fir::ComplexType cmplx) { return convertComplexType(cmplx); });
@@ -116,7 +118,7 @@ public:
       for (auto mem : tuple.getTypes()) {
         // Prevent fir.box from degenerating to a pointer to a descriptor in the
         // context of a tuple type.
-        if (auto box = mem.dyn_cast<fir::BoxType>())
+        if (auto box = mem.dyn_cast<fir::BaseBoxType>())
           members.push_back(convertBoxTypeAsStruct(box));
         else
           members.push_back(convertType(mem).cast<mlir::Type>());
@@ -175,7 +177,7 @@ public:
     for (auto mem : derived.getTypeList()) {
       // Prevent fir.box from degenerating to a pointer to a descriptor in the
       // context of a record type.
-      if (auto box = mem.second.dyn_cast<fir::BoxType>())
+      if (auto box = mem.second.dyn_cast<fir::BaseBoxType>())
         members.push_back(convertBoxTypeAsStruct(box));
       else
         members.push_back(convertType(mem.second).cast<mlir::Type>());
@@ -199,7 +201,7 @@ public:
 
   // This corresponds to the descriptor as defined in ISO_Fortran_binding.h and
   // the addendum defined in descriptor.h.
-  mlir::Type convertBoxType(BoxType box, int rank = unknownRank()) {
+  mlir::Type convertBoxType(BaseBoxType box, int rank = unknownRank()) {
     // (base_addr*, elem_len, version, rank, type, attribute, f18Addendum, [dim]
     llvm::SmallVector<mlir::Type> dataDescFields;
     mlir::Type ele = box.getEleTy();
@@ -267,7 +269,7 @@ public:
 
   /// Convert fir.box type to the corresponding llvm struct type instead of a
   /// pointer to this struct type.
-  mlir::Type convertBoxTypeAsStruct(BoxType box) {
+  mlir::Type convertBoxTypeAsStruct(BaseBoxType box) {
     return convertBoxType(box)
         .cast<mlir::LLVM::LLVMPointerType>()
         .getElementType();
@@ -316,9 +318,9 @@ public:
     // degenerate the array and do not want a the type to become `T**` but
     // merely `T*`.
     if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>()) {
-      if (!seqTy.hasConstantShape() ||
+      if (seqTy.hasDynamicExtents() ||
           characterWithDynamicLen(seqTy.getEleTy())) {
-        if (seqTy.hasConstantInterior())
+        if (seqTy.getConstantRows() > 0)
           return convertType(seqTy);
         eleTy = seqTy.getEleTy();
       }
@@ -329,7 +331,7 @@ public:
     // the same as a fir.box at the LLVM level.
     // The distinction is kept in fir to denote when a descriptor is expected
     // to be mutable (fir.ref<fir.box>) and when it is not (fir.box).
-    if (eleTy.isa<fir::BoxType>())
+    if (eleTy.isa<fir::BaseBoxType>())
       return convertType(eleTy);
 
     return mlir::LLVM::LLVMPointerType::get(convertType(eleTy));
@@ -356,7 +358,7 @@ public:
         if (--i == 0)
           break;
       }
-      if (seq.hasConstantShape())
+      if (!seq.hasDynamicExtents())
         return baseTy;
     }
     return mlir::LLVM::LLVMPointerType::get(baseTy);

@@ -179,42 +179,42 @@ define <8 x i16> @variable_sra4(<8 x i16> %x, <8 x i16> %y) {
   ret <8 x i16> %k
 }
 
-define <16 x i32> @variable_sra01_load(<16 x i32> %x, <16 x i32>* %y) {
+define <16 x i32> @variable_sra01_load(<16 x i32> %x, ptr %y) {
 ; CHECK-LABEL: variable_sra01_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsravd (%rdi), %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %y1 = load <16 x i32>, <16 x i32>* %y
+  %y1 = load <16 x i32>, ptr %y
   %k = ashr <16 x i32> %x, %y1
   ret <16 x i32> %k
 }
 
-define <16 x i32> @variable_shl1_load(<16 x i32> %x, <16 x i32>* %y) {
+define <16 x i32> @variable_shl1_load(<16 x i32> %x, ptr %y) {
 ; CHECK-LABEL: variable_shl1_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllvd (%rdi), %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %y1 = load <16 x i32>, <16 x i32>* %y
+  %y1 = load <16 x i32>, ptr %y
   %k = shl <16 x i32> %x, %y1
   ret <16 x i32> %k
 }
 
-define <16 x i32> @variable_srl0_load(<16 x i32> %x, <16 x i32>* %y) {
+define <16 x i32> @variable_srl0_load(<16 x i32> %x, ptr %y) {
 ; CHECK-LABEL: variable_srl0_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsrlvd (%rdi), %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %y1 = load <16 x i32>, <16 x i32>* %y
+  %y1 = load <16 x i32>, ptr %y
   %k = lshr <16 x i32> %x, %y1
   ret <16 x i32> %k
 }
 
-define <8 x i64> @variable_srl3_load(<8 x i64> %x, <8 x i64>* %y) {
+define <8 x i64> @variable_srl3_load(<8 x i64> %x, ptr %y) {
 ; CHECK-LABEL: variable_srl3_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsrlvq (%rdi), %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %y1 = load <8 x i64>, <8 x i64>* %y
+  %y1 = load <8 x i64>, ptr %y
   %k = lshr <8 x i64> %x, %y1
   ret <8 x i64> %k
 }

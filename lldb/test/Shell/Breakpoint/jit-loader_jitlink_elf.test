@@ -1,4 +1,6 @@
 # REQUIRES: target-x86_64
+# https://github.com/llvm/llvm-project/issues/56085
+# XFAIL: system-freebsd
 # XFAIL: system-windows
 
 # JITLink is the Orc-specific JIT linker implementation.

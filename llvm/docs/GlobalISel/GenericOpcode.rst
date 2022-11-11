@@ -684,6 +684,10 @@ Only G_LOAD is valid if the result is a vector type. If the result is larger
 than the memory size, the high elements are undefined (i.e. this is not a
 per-element, vector anyextload)
 
+Unlike in SelectionDAG, atomic loads are expressed with the same
+opcodes as regular loads. G_LOAD, G_SEXTLOAD and G_ZEXTLOAD may all
+have atomic memory operands.
+
 G_INDEXED_LOAD
 ^^^^^^^^^^^^^^
 
@@ -727,7 +731,10 @@ G_ATOMIC_CMPXCHG
 Generic atomic cmpxchg. Expects a MachineMemOperand in addition to explicit
 operands.
 
-G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND, G_ATOMICRMW_NAND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MAX, G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD, G_ATOMICRMW_FSUB
+G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
+G_ATOMICRMW_NAND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MAX,
+G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
+G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX, G_ATOMICRMW_FMIN
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Generic atomicrmw. Expects a MachineMemOperand in addition to explicit

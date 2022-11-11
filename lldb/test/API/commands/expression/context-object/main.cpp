@@ -31,6 +31,9 @@ int main()
   cpp_namespace::CppStruct cpp_struct = cpp_namespace::GetCppStruct();
   cpp_struct.function();
 
+  cpp_namespace::CppStruct &cpp_struct_ref = cpp_struct;
+  cpp_struct_ref.function();
+
   int field = 4444;
 
   cpp_namespace::CppUnion cpp_union;

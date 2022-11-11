@@ -3,7 +3,7 @@
 
 define internal i32 @arc_compare() {
 entry:
-  %0 = load i64, i64* undef, align 8
+  %0 = load i64, ptr undef, align 8
   br i1 undef, label %return, label %if.end
 
 if.end:                                           ; preds = %entry

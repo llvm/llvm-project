@@ -6,12 +6,11 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 @null = private constant [1 x i8] zeroinitializer
 
-declare i8 @strstr(i8*, i8*)
+declare i8 @strstr(ptr, ptr)
 
-define i8 @test_no_simplify1(i8* %str) {
+define i8 @test_no_simplify1(ptr %str) {
 ; CHECK-LABEL: @test_no_simplify1(
-  %pat = getelementptr inbounds [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  %ret = call i8 @strstr(i8* %str, i8* %pat)
+  %ret = call i8 @strstr(ptr %str, ptr @null)
 ; CHECK-NEXT: call i8 @strstr
   ret i8 %ret
 ; CHECK-NEXT: ret i8 %ret
