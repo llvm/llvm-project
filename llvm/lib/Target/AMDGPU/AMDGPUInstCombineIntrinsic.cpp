@@ -444,14 +444,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), false));
     }
 
-    if (Mask == fcNan) {
+    if (Mask == fcNan && !II.isStrictFP()) {
       // Equivalent of isnan. Replace with standard fcmp.
       Value *FCmp = IC.Builder.CreateFCmpUNO(Src0, Src0);
       FCmp->takeName(&II);
       return IC.replaceInstUsesWith(II, FCmp);
     }
 
-    if (Mask == fcZero) {
+    if (Mask == fcZero && !II.isStrictFP()) {
       // Equivalent of == 0.
       Value *FCmp =
           IC.Builder.CreateFCmpOEQ(Src0, ConstantFP::get(Src0->getType(), 0.0));

@@ -2805,7 +2805,7 @@ static bool tryBitfieldInsertOpFromOrAndImm(SDNode *N, SelectionDAG *CurDAG) {
 
 static bool isWorthFoldingIntoOrrWithShift(SDValue Dst, SelectionDAG *CurDAG,
                                            SDValue &ShiftedOperand,
-                                           uint64_t &ShiftAmount) {
+                                           uint64_t &EncodedShiftImm) {
   // Avoid folding Dst into ORR-with-shift if Dst has other uses than ORR.
   if (!Dst.hasOneUse())
     return false;
@@ -2852,7 +2852,8 @@ static bool isWorthFoldingIntoOrrWithShift(SDValue Dst, SelectionDAG *CurDAG,
             CurDAG->getTargetConstant(
                 SrlImm + NumTrailingZeroInShiftedMask + MaskWidth - 1, DL, VT));
         ShiftedOperand = SDValue(UBFMNode, 0);
-        ShiftAmount = NumTrailingZeroInShiftedMask;
+        EncodedShiftImm = AArch64_AM::getShifterImm(
+            AArch64_AM::LSL, NumTrailingZeroInShiftedMask);
         return true;
       }
     }
@@ -2861,14 +2862,14 @@ static bool isWorthFoldingIntoOrrWithShift(SDValue Dst, SelectionDAG *CurDAG,
 
   if (isOpcWithIntImmediate(Dst.getNode(), ISD::SHL, ShlImm)) {
     ShiftedOperand = Dst.getOperand(0);
-    ShiftAmount = ShlImm;
+    EncodedShiftImm = AArch64_AM::getShifterImm(AArch64_AM::LSL, ShlImm);
     return true;
   }
 
   uint64_t SrlImm;
   if (isOpcWithIntImmediate(Dst.getNode(), ISD::SRL, SrlImm)) {
     ShiftedOperand = Dst.getOperand(0);
-    ShiftAmount = AArch64_AM::getShifterImm(AArch64_AM::LSR, SrlImm);
+    EncodedShiftImm = AArch64_AM::getShifterImm(AArch64_AM::LSR, SrlImm);
     return true;
   }
   return false;
@@ -2899,12 +2900,12 @@ static bool tryOrrWithShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
       // smaller latency than BFM on many AArch64 processors (and for the rest
       // ORR is at least as good as BFM).
       SDValue ShiftedOperand;
-      uint64_t ShiftAmount;
+      uint64_t EncodedShiftImm;
       if (isWorthFoldingIntoOrrWithShift(Dst, CurDAG, ShiftedOperand,
-                                         ShiftAmount)) {
+                                         EncodedShiftImm)) {
         unsigned OrrOpc = (VT == MVT::i32) ? AArch64::ORRWrs : AArch64::ORRXrs;
         SDValue Ops[] = {OrOpd0, ShiftedOperand,
-                         CurDAG->getTargetConstant(ShiftAmount, DL, VT)};
+                         CurDAG->getTargetConstant(EncodedShiftImm, DL, VT)};
         CurDAG->SelectNodeTo(N, OrrOpc, VT, Ops);
         return true;
       }
@@ -2918,7 +2919,10 @@ static bool tryOrrWithShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
   if (isOpcWithIntImmediate(OrOpd0.getNode(), ISD::SHL, ShlImm) &&
       OrOpd0.getOperand(0) == Src && OrOpd0.hasOneUse()) {
     unsigned OrrOpc = (VT == MVT::i32) ? AArch64::ORRWrs : AArch64::ORRXrs;
-    SDValue Ops[] = {Dst, Src, CurDAG->getTargetConstant(ShlImm, DL, VT)};
+    SDValue Ops[] = {
+        Dst, Src,
+        CurDAG->getTargetConstant(
+            AArch64_AM::getShifterImm(AArch64_AM::LSL, ShlImm), DL, VT)};
     CurDAG->SelectNodeTo(N, OrrOpc, VT, Ops);
     return true;
   }

@@ -1,4 +1,10 @@
-// RUN: mlir-opt %s --sparse-compiler | \
+// RUN: mlir-opt %s --sparse-compiler=enable-runtime-library=true | \
+// RUN: mlir-cpu-runner \
+// RUN:  -e entry -entry-point-result=void  \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: FileCheck %s
+
+// RUN: mlir-opt %s --sparse-compiler="enable-runtime-library=false enable-buffer-initialization=true"| \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
@@ -36,7 +42,7 @@ module {
   // Driver method to call and verify kernel.
   func.func @entry() {
     %c0 = arith.constant 0 : index
-    %f1 = arith.constant -1.0 : f32
+    %f0 = arith.constant 0.0 : f32
 
     // Setup very sparse matrices.
     %ta = arith.constant sparse<
@@ -58,10 +64,10 @@ module {
     //
     // Verify results. Only two entries stored in result!
     //
-    // CHECK: ( 14, 20, -1, -1 )
+    // CHECK: ( 14, 20, 0, 0 )
     //
     %val = sparse_tensor.values %0 : tensor<32x16xf32, #DCSR> to memref<?xf32>
-    %vv = vector.transfer_read %val[%c0], %f1: memref<?xf32>, vector<4xf32>
+    %vv = vector.transfer_read %val[%c0], %f0: memref<?xf32>, vector<4xf32>
     vector.print %vv : vector<4xf32>
 
     // Release the resources.
