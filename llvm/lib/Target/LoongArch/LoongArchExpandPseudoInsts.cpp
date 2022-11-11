@@ -254,7 +254,6 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
   const MachineOperand &Func = MI.getOperand(0);
   MachineInstrBuilder CALL;
 
-  // TODO: CodeModel::Medium
   switch (MF->getTarget().getCodeModel()) {
   default:
     report_fatal_error("Unsupported code model");
@@ -262,6 +261,25 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
   case CodeModel::Small: // Default CodeModel.
     CALL = BuildMI(MBB, MBBI, DL, TII->get(LoongArch::BL)).add(Func);
     break;
+  case CodeModel::Medium: {
+    // pcalau12i  $ra, %pc_hi20(func)
+    // jirl       $ra, $ra, %pc_lo12(func)
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), LoongArch::R1);
+    CALL = BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PseudoJIRL_CALL))
+               .addReg(LoongArch::R1);
+    if (Func.isSymbol()) {
+      const char *FnName = Func.getSymbolName();
+      MIB.addExternalSymbol(FnName, LoongArchII::MO_PCREL_HI);
+      CALL.addExternalSymbol(FnName, LoongArchII::MO_PCREL_LO);
+      break;
+    }
+    assert(Func.isGlobal() && "Expected a GlobalValue at this time");
+    const GlobalValue *GV = Func.getGlobal();
+    MIB.addGlobalAddress(GV, 0, LoongArchII::MO_PCREL_HI);
+    CALL.addGlobalAddress(GV, 0, LoongArchII::MO_PCREL_LO);
+    break;
+  }
   }
 
   // Transfer implicit operands.
