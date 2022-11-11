@@ -1,6 +1,8 @@
 // RUN: %gdb-compile 2>&1 | tee %t.compile
 // RUN: %gdb-test -x %S/ompd_parallel.cmd %t 2>&1 | tee %t.out | FileCheck %s
 
+// REQUIRES: determinism
+
 #include <omp.h>
 #include <stdio.h>
 
