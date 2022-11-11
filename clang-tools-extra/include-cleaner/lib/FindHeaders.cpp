@@ -18,6 +18,7 @@ llvm::SmallVector<Header> findHeaders(const SymbolLocation &Loc,
   llvm::SmallVector<Header> Results;
   switch (Loc.kind()) {
   case SymbolLocation::Physical: {
+    // FIXME: Handle macro locations.
     // FIXME: Handle non self-contained files.
     FileID FID = SM.getFileID(Loc.physical());
     const auto *FE = SM.getFileEntryForID(FID);
