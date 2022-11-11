@@ -17,20 +17,11 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang::include_cleaner {
-namespace {
-llvm::SmallVector<Header>
-toHeader(llvm::ArrayRef<tooling::stdlib::Header> Headers) {
-  llvm::SmallVector<Header> Result;
-  llvm::for_each(Headers, [&](tooling::stdlib::Header H) {
-    Result.emplace_back(Header(H));
-  });
-  return Result;
-}
-} // namespace
 
 void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
               llvm::ArrayRef<SymbolReference> MacroRefs,
-              const SourceManager &SM, UsedSymbolCB CB) {
+              const PragmaIncludes &PI, const SourceManager &SM,
+              UsedSymbolCB CB) {
   tooling::stdlib::Recognizer Recognizer;
   for (auto *Root : ASTRoots) {
     auto &SM = Root->getASTContext().getSourceManager();
@@ -38,23 +29,52 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
       if (auto SS = Recognizer(&ND)) {
         // FIXME: Also report forward decls from main-file, so that the caller
         // can decide to insert/ignore a header.
-        return CB({Loc, Symbol(*SS), RT}, toHeader(SS->headers()));
+        return CB({Loc, Symbol(*SS), RT}, findIncludeHeaders({*SS}, SM, PI));
       }
       // FIXME: Extract locations from redecls.
-      // FIXME: Handle IWYU pragmas, non self-contained files.
-      // FIXME: Handle macro locations.
-      if (auto *FE = SM.getFileEntryForID(SM.getFileID(ND.getLocation())))
-        return CB({Loc, Symbol(ND), RT}, {Header(FE)});
+      return CB({Loc, Symbol(ND), RT},
+                findIncludeHeaders({ND.getLocation()}, SM, PI));
     });
   }
   for (const SymbolReference &MacroRef : MacroRefs) {
     assert(MacroRef.Target.kind() == Symbol::Macro);
-    // FIXME: Handle IWYU pragmas, non self-contained files.
     // FIXME: Handle macro locations.
-    if (auto *FE = SM.getFileEntryForID(
-            SM.getFileID(MacroRef.Target.macro().Definition)))
-      CB(MacroRef, {Header(FE)});
+    return CB(MacroRef,
+              findIncludeHeaders(MacroRef.Target.macro().Definition, SM, PI));
   }
+}
+
+llvm::SmallVector<Header> findIncludeHeaders(const SymbolLocation &SLoc,
+                                             const SourceManager &SM,
+                                             const PragmaIncludes &PI) {
+  llvm::SmallVector<Header> Results;
+  if (auto *Loc = std::get_if<SourceLocation>(&SLoc)) {
+    // FIXME: Handle non self-contained files.
+    FileID FID = SM.getFileID(*Loc);
+    const auto *FE = SM.getFileEntryForID(FID);
+    if (!FE)
+      return {};
+
+    // We treat the spelling header in the IWYU pragma as the final public
+    // header.
+    // FIXME: look for exporters if the public header is exported by another
+    // header.
+    llvm::StringRef VerbatimSpelling = PI.getPublic(FE);
+    if (!VerbatimSpelling.empty())
+      return {{VerbatimSpelling}};
+
+    Results = {{FE}};
+    // FIXME: compute transitive exporter headers.
+    for (const auto *Export : PI.getExporters(FE, SM.getFileManager()))
+      Results.push_back(Export);
+    return Results;
+  }
+  if (auto *Sym = std::get_if<tooling::stdlib::Symbol>(&SLoc)) {
+    for (const auto &H : Sym->headers())
+      Results.push_back(H);
+    return Results;
+  }
+  llvm_unreachable("unhandled SymbolLocation kind!");
 }
 
 } // namespace clang::include_cleaner

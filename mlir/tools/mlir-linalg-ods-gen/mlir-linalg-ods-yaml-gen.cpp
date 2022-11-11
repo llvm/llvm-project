@@ -553,7 +553,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
 
     let extraClassDeclaration = structuredOpsBaseDecls # [{{
       // Auto-generated.
-      SmallVector<StringRef> getIteratorTypesArray();
+      SmallVector<utils::IteratorType> getIteratorTypesArray();
       ArrayAttr getIndexingMaps();
       static void regionBuilder(ImplicitLocOpBuilder &b,
                                 Block &block, ArrayRef<NamedAttribute> attrs);
@@ -597,8 +597,8 @@ static const char structuredOpBuilderFormat[] = R"FMT(
 // {1}: Comma interleaved iterator type names.
 static const char structuredOpIteratorTypesFormat[] =
     R"FMT(
-SmallVector<StringRef> {0}::getIteratorTypesArray() {{
-  return SmallVector<StringRef>{{ {1} };
+SmallVector<utils::IteratorType> {0}::getIteratorTypesArray() {{
+  return SmallVector<utils::IteratorType>{{ {1} };
 }
 )FMT";
 
@@ -607,9 +607,9 @@ SmallVector<StringRef> {0}::getIteratorTypesArray() {{
 // {0}: Class name
 static const char rankPolyStructuredOpIteratorTypesFormat[] =
     R"FMT(
-SmallVector<StringRef> {0}::getIteratorTypesArray() {{
+SmallVector<utils::IteratorType> {0}::getIteratorTypesArray() {{
   int64_t rank = getRank(getDpsInitOperand(0));
-  return SmallVector<StringRef>(rank, getParallelIteratorTypeName());
+  return SmallVector<utils::IteratorType>(rank, utils::IteratorType::parallel);
 }
 )FMT";
 
@@ -812,10 +812,10 @@ generateNamedGenericOpDefns(LinalgOpConfig &opConfig,
                           [&](LinalgIteratorTypeDef it) {
                             switch (it) {
                             case LinalgIteratorTypeDef::parallel:
-                              ss << "getParallelIteratorTypeName()";
+                              ss << "utils::IteratorType::parallel";
                               break;
                             case LinalgIteratorTypeDef::reduction:
-                              ss << "getReductionIteratorTypeName()";
+                              ss << "utils::IteratorType::reduction";
                               break;
                             }
                           });
