@@ -1114,7 +1114,7 @@ LogicalResult ForeachThreadOp::verify() {
     if (body->getArgument(i + getRank()).getType() != getOutputs()[i].getType())
       return emitOpError("type mismatch between ")
              << i << "-th output and corresponding block argument";
-  if (getMapping().has_value())
+  if (getMapping()->getValue())
     for (auto map : getMapping().value()) {
       if (!isa<DeviceMappingAttrInterface>(map))
         return emitOpError()
