@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 #include <omp.h>
-#include <pthread.h>
+#include "omp_testsuite.h"
 #include "omp_my_sleep.h"
 
 /*
