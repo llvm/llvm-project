@@ -54,4 +54,16 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolReference &R) {
                    /*Width=*/CHAR_BIT * sizeof(SourceLocation::UIntTy));
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, RefType T) {
+  switch (T) {
+  case RefType::Explicit:
+    return OS << "explicit";
+  case RefType::Implicit:
+    return OS << "implicit";
+  case RefType::Ambiguous:
+    return OS << "ambiguous";
+  }
+  llvm_unreachable("Unexpected RefType");
+}
+
 } // namespace clang::include_cleaner
