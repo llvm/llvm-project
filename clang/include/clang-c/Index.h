@@ -2081,6 +2081,23 @@ enum CXCursorKind {
 };
 
 /**
+ * Describes the kind of result generated.
+ */
+enum CXCompletionResultKind {
+  /** Refers to a declaration. */
+  CXCompletionResult_Declaration = 0,
+
+  /** Refers to a keyword or symbol. */
+  CXCompletionResult_Keyword = 1,
+
+  /** Refers to a macro. */
+  CXCompletionResult_Macro = 2,
+
+  /** Refers to a precomputed pattern. */
+  CXCompletionResult_Pattern = 3
+};
+
+/**
  * A cursor representing some element in the abstract syntax tree for
  * a translation unit.
  *
@@ -4588,6 +4605,8 @@ CINDEX_LINKAGE void clang_disposeTokens(CXTranslationUnit TU, CXToken *Tokens,
  */
 
 /* for debug/testing */
+CINDEX_LINKAGE CXString
+clang_getCompletionResultKindSpelling(enum CXCompletionResultKind Kind);
 CINDEX_LINKAGE CXString clang_getCursorKindSpelling(enum CXCursorKind Kind);
 CINDEX_LINKAGE void clang_getDefinitionSpellingAndExtent(
     CXCursor, const char **startBuf, const char **endBuf, unsigned *startLine,
@@ -4632,11 +4651,16 @@ typedef void *CXCompletionString;
  */
 typedef struct {
   /**
+   * The kind of this completion result.
+   * Useful to distinguish between declarations and keywords.
+   */
+  enum CXCompletionResultKind ResultKind;
+
+  /**
    * The kind of entity that this completion refers to.
    *
-   * The cursor kind will be a macro, keyword, or a declaration (one of the
-   * *Decl cursor kinds), describing the entity that the completion is
-   * referring to.
+   * The cursor kind will be a macro or a declaration (one of the *Decl cursor
+   * kinds), describing the entity that the completion is referring to.
    *
    * \todo In the future, we would like to provide a full cursor, to allow
    * the client to extract additional information from declaration.
