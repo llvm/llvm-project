@@ -5322,9 +5322,19 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
     return nullptr;
 
-  // fsub nnan x, x ==> 0.0
-  if (FMF.noNaNs() && Op0 == Op1)
-    return Constant::getNullValue(Op0->getType());
+  if (FMF.noNaNs()) {
+    // fsub nnan x, x ==> 0.0
+    if (Op0 == Op1)
+      return Constant::getNullValue(Op0->getType());
+
+    // With nnan: {+/-}Inf - X --> {+/-}Inf
+    if (match(Op0, m_Inf()))
+      return Op0;
+
+    // With nnan: X - {+/-}Inf --> {-/+}Inf
+    if (match(Op1, m_Inf()))
+      return foldConstant(Instruction::FNeg, Op1, Q);
+  }
 
   // Y - (Y - X) --> X
   // (X + Y) - Y --> X

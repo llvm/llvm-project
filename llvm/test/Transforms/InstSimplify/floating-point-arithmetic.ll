@@ -861,17 +861,17 @@ define double @fadd_inf_op0(double %x) {
 
 define double @fsub_nnan_inf_op0(double %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op0(
-; CHECK-NEXT:    [[R:%.*]] = fsub nnan double 0x7FF0000000000000, [[X:%.*]]
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    ret double 0x7FF0000000000000
 ;
   %r = fsub nnan double 0x7ff0000000000000, %x
   ret double %r
 }
 
+; flip sign
+
 define double @fsub_nnan_inf_op1(double %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op1(
-; CHECK-NEXT:    [[R:%.*]] = fsub nnan double [[X:%.*]], 0x7FF0000000000000
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    ret double 0xFFF0000000000000
 ;
   %r = fsub nnan double %x, 0x7ff0000000000000
   ret double %r
@@ -879,21 +879,23 @@ define double @fsub_nnan_inf_op1(double %x) {
 
 define <2 x double> @fsub_nnan_neginf_op0(<2 x double> %x) {
 ; CHECK-LABEL: @fsub_nnan_neginf_op0(
-; CHECK-NEXT:    [[R:%.*]] = fsub nnan <2 x double> <double 0xFFF0000000000000, double poison>, [[X:%.*]]
-; CHECK-NEXT:    ret <2 x double> [[R]]
+; CHECK-NEXT:    ret <2 x double> <double 0xFFF0000000000000, double poison>
 ;
   %r = fsub nnan <2 x double> <double 0xfff0000000000000, double poison>, %x
   ret <2 x double> %r
 }
 
+; flip sign
+
 define double @fsub_nnan_neginf_op1(double %x) {
 ; CHECK-LABEL: @fsub_nnan_neginf_op1(
-; CHECK-NEXT:    [[R:%.*]] = fsub nnan double [[X:%.*]], 0xFFF0000000000000
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    ret double 0x7FF0000000000000
 ;
   %r = fsub nnan double %x, 0xfff0000000000000
   ret double %r
 }
+
+; negative test - requires nnan
 
 define double @fsub_inf_op0(double %x) {
 ; CHECK-LABEL: @fsub_inf_op0(
