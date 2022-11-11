@@ -59,15 +59,16 @@ static void flattenOperands(ValueRange operands,
   // ==>
   // memref ..., c, memref ...
   for (auto operand : operands) {
-    if (auto tuple = getTuple(operand);
-        tuple && getSparseTensorEncoding(tuple->getResultTypes()[0]))
+    if (getSparseTensorEncoding(operand.getType())) {
+      auto tuple = getTuple(operand);
       // An unrealized_conversion_cast will be inserted by type converter to
       // inter-mix the gap between 1:N conversion between sparse tensors and
       // fields. In this case, take the operands in the cast and replace the
       // sparse tensor output with the flattened type array.
       flattened.append(tuple.getOperands().begin(), tuple.getOperands().end());
-    else
+    } else {
       flattened.push_back(operand);
+    }
   }
 }
 
