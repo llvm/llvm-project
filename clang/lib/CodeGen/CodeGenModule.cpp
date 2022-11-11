@@ -7609,51 +7609,53 @@ CodeGenModule::getNoLoopCompatibleSchedStatus(const OMPLoopDirective &LD) {
 }
 
 CodeGenModule::NoLoopXteamErr
+CodeGenModule::getNoLoopCompatibleOrderStatus(const OMPLoopDirective &LD) {
+  for (const auto *C : LD.getClausesOfKind<OMPOrderClause>()) {
+    if (C->getKind() != OMPC_ORDER_concurrent)
+      return NxNonConcurrentOrder;
+  }
+  return NxSuccess;
+}
+
+CodeGenModule::NoLoopXteamErr
 CodeGenModule::getNoLoopCombinedClausesStatus(const OMPExecutableDirective &D) {
-  if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
-      D.hasClausesOfKind<OMPDependClause>() ||
-      D.hasClausesOfKind<OMPDeviceClause>() ||
-      D.hasClausesOfKind<OMPIfClause>() ||
-      D.hasClausesOfKind<OMPInReductionClause>() ||
-      D.hasClausesOfKind<OMPDefaultClause>() ||
+  if (D.hasClausesOfKind<OMPInReductionClause>() ||
       D.hasClausesOfKind<OMPNumTeamsClause>() ||
       D.hasClausesOfKind<OMPReductionClause>() ||
-      D.hasClausesOfKind<OMPSharedClause>() ||
       D.hasClausesOfKind<OMPDistScheduleClause>() ||
       D.hasClausesOfKind<OMPLastprivateClause>() ||
-      D.hasClausesOfKind<OMPOrderClause>() || // concurrent would be ok
       D.hasClausesOfKind<OMPCopyinClause>() ||
-      D.hasClausesOfKind<OMPProcBindClause>() ||
       D.hasClausesOfKind<OMPOrderedClause>())
     return NxUnsupportedTargetClause;
   if (!isa<OMPLoopDirective>(D))
     return NxNotLoopDirective;
-  return getNoLoopCompatibleSchedStatus(cast<OMPLoopDirective>(D));
+  const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
+  NoLoopXteamErr NxStatus = NxSuccess;
+  if ((NxStatus = getNoLoopCompatibleOrderStatus(LD)))
+    return NxStatus;
+  return getNoLoopCompatibleSchedStatus(LD);
 }
 
 CodeGenModule::NoLoopXteamErr CodeGenModule::getXteamRedCombinedClausesStatus(
     const OMPExecutableDirective &D) {
-  if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
-      D.hasClausesOfKind<OMPDependClause>() ||
-      D.hasClausesOfKind<OMPDeviceClause>() ||
-      D.hasClausesOfKind<OMPIfClause>() ||
+  if (D.hasClausesOfKind<OMPDependClause>() ||
       D.hasClausesOfKind<OMPInReductionClause>() ||
       D.hasClausesOfKind<OMPNowaitClause>() ||
       D.hasClausesOfKind<OMPThreadLimitClause>() ||
       D.hasClausesOfKind<OMPNumThreadsClause>() ||
-      D.hasClausesOfKind<OMPDefaultClause>() ||
       D.hasClausesOfKind<OMPNumTeamsClause>() ||
-      D.hasClausesOfKind<OMPSharedClause>() ||
       D.hasClausesOfKind<OMPDistScheduleClause>() ||
       D.hasClausesOfKind<OMPLastprivateClause>() ||
-      D.hasClausesOfKind<OMPOrderClause>() || // concurrent would be ok
       D.hasClausesOfKind<OMPCopyinClause>() ||
-      D.hasClausesOfKind<OMPProcBindClause>() ||
       D.hasClausesOfKind<OMPOrderedClause>())
     return NxUnsupportedTargetClause;
   if (!isa<OMPLoopDirective>(D))
     return NxNotLoopDirective;
-  return getNoLoopCompatibleSchedStatus(cast<OMPLoopDirective>(D));
+  const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
+  NoLoopXteamErr NxStatus = NxSuccess;
+  if ((NxStatus = getNoLoopCompatibleOrderStatus(LD)))
+    return NxStatus;
+  return getNoLoopCompatibleSchedStatus(LD);
 }
 
 /// Given a directive, collect metadata for the reduction variables for Xteam
@@ -7715,11 +7717,7 @@ CodeGenModule::NoLoopXteamErr CodeGenModule::checkAndSetNoLoopTargetConstruct(
     return NxUnsupportedDirective;
 
   auto disableNoLoopTarget = [this](const OMPExecutableDirective &D) {
-    if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
-        D.hasClausesOfKind<OMPDependClause>() ||
-        D.hasClausesOfKind<OMPDeviceClause>() ||
-        D.hasClausesOfKind<OMPInReductionClause>() ||
-        D.hasClausesOfKind<OMPThreadLimitClause>())
+    if (D.hasClausesOfKind<OMPInReductionClause>())
       return NxUnsupportedTargetClause;
     return NxSuccess;
   };

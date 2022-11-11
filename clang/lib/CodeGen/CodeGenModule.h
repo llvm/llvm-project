@@ -319,6 +319,7 @@ public:
     NxUnsupportedLoopStep,
     NxGuidedOrRuntimeSched,
     NxNonUnitStaticChunk,
+    NxNonConcurrentOrder,
     NxUnsupportedRedType,
     NxUnsupportedRedIntSize,
     NxNotScalarRed,
@@ -1617,6 +1618,9 @@ public:
 
   /// Given the schedule clause, can No-Loop code be generated?
   NoLoopXteamErr getNoLoopCompatibleSchedStatus(const OMPLoopDirective &LD);
+
+  /// Given the order clause, can No-Loop code be generated?
+  NoLoopXteamErr getNoLoopCompatibleOrderStatus(const OMPLoopDirective &LD);
 
   /// Helper functions for generating a NoLoop kernel
   /// For a captured statement, get the single For statement, if it exists,
