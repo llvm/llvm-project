@@ -26,6 +26,7 @@ add_mlir_library(MLIRTransforms
   MLIRCopyOpInterface
   MLIRLoopLikeInterface
   MLIRPass
+  MLIRSideEffectInterfaces
   MLIRSupport
   MLIRTransformUtils
   )

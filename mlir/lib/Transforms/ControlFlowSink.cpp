@@ -19,7 +19,6 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/ControlFlowSinkUtils.h"
-#include "mlir/Transforms/SideEffectUtils.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONTROLFLOWSINK
