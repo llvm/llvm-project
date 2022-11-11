@@ -59,6 +59,7 @@ class VOP3Interp<string OpName, VOPProfile P, list<dag> pattern = []> :
 }
 
 def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
+  let Src0Mod = FPVRegInputMods;
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    Attr:$attr, AttrChan:$attrchan,
                    clampmod0:$clamp, omod0:$omod);
@@ -107,6 +108,9 @@ class VOP3_INTERP16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
 
   let HasOMod = !ne(DstVT.Value, f16.Value);
   let HasHigh = 1;
+
+  let Src0Mod = FPVRegInputMods;
+  let Src2Mod = FPVRegInputMods;
 
   let Outs64 = (outs DstRC.RegClass:$vdst);
   let Ins64 = getInterp16Ins<HasSrc2, HasOMod, Src0Mod, Src2Mod>.ret;
