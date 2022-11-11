@@ -1701,9 +1701,7 @@ CallInst *CodeExtractor::emitReplacerCall(
   for (Value *output : outputs) {
     if (StructValues.contains(output))
       continue;
-    
-    
-    
+
     AllocaInst *alloca = new AllocaInst(
         output->getType(), DL.getAllocaAddrSpace(), nullptr,
         output->getName() + ".loc", &*AllocaBlock->getFirstInsertionPt());

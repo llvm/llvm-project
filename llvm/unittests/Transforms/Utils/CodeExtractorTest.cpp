@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CodeExtractor.h"
-#include "llvm/AsmParser/Parser.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -32,13 +32,11 @@ BasicBlock *getBlockByName(Function *F, StringRef name) {
 }
 
 Instruction *getInstByName(Function *F, StringRef Name) {
-    for (Instruction &I : instructions(F))
-        if (I.getName() == Name)
-            return &I;
-    return nullptr;
+  for (Instruction &I : instructions(F))
+    if (I.getName() == Name)
+      return &I;
+  return nullptr;
 }
-
-
 
 TEST(CodeExtractor, ExitStub) {
   LLVMContext Ctx;
@@ -577,9 +575,9 @@ TEST(CodeExtractor, PartialAggregateArgs) {
 }
 
 TEST(CodeExtractor, AllocaBlock) {
-    LLVMContext Ctx;
-    SMDiagnostic Err;
-    std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
     define i32 @foo(i32 %x, i32 %y, i32 %z) {
     entry:
       br label %allocas    
@@ -596,34 +594,35 @@ TEST(CodeExtractor, AllocaBlock) {
       ret i32 %r
     }
   )invalid",
-        Err, Ctx));
+                                                Err, Ctx));
 
-    Function *Func = M->getFunction("foo");
-    SmallVector<BasicBlock *, 3> Candidates{getBlockByName(Func, "body")};
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 3> Candidates{getBlockByName(Func, "body")};
 
-    BasicBlock *AllocaBlock = getBlockByName(Func, "allocas");
-    CodeExtractor CE(Candidates,nullptr,true,nullptr,nullptr,nullptr,false,false,AllocaBlock );
-    CE.excludeArgFromAggregate(Func->getArg(0));
-    CE.excludeArgFromAggregate(getInstByName(Func, "w"));
-    EXPECT_TRUE(CE.isEligible());
+  BasicBlock *AllocaBlock = getBlockByName(Func, "allocas");
+  CodeExtractor CE(Candidates, nullptr, true, nullptr, nullptr, nullptr, false,
+                   false, AllocaBlock);
+  CE.excludeArgFromAggregate(Func->getArg(0));
+  CE.excludeArgFromAggregate(getInstByName(Func, "w"));
+  EXPECT_TRUE(CE.isEligible());
 
-    CodeExtractorAnalysisCache CEAC(*Func);
-    SetVector<Value *> Inputs, Outputs;
-    Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
-    EXPECT_TRUE(Outlined);
-    EXPECT_FALSE(verifyFunction(*Outlined));
-    EXPECT_FALSE(verifyFunction(*Func));
+  CodeExtractorAnalysisCache CEAC(*Func);
+  SetVector<Value *> Inputs, Outputs;
+  Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
+  EXPECT_TRUE(Outlined);
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
 
-    // The only added allocas may be in the dedicated alloca block. There should be one alloca for the struct, and another one for the reload value.
-    int NumAllocas = 0;
-    for (Instruction &I: instructions(Func)) {
-        if (!isa<AllocaInst>(I)) continue ;
-        EXPECT_EQ( I.getParent() ,AllocaBlock);
-        NumAllocas += 1;
-    }
-    EXPECT_EQ(NumAllocas, 2);
+  // The only added allocas may be in the dedicated alloca block. There should
+  // be one alloca for the struct, and another one for the reload value.
+  int NumAllocas = 0;
+  for (Instruction &I : instructions(Func)) {
+    if (!isa<AllocaInst>(I))
+      continue;
+    EXPECT_EQ(I.getParent(), AllocaBlock);
+    NumAllocas += 1;
+  }
+  EXPECT_EQ(NumAllocas, 2);
 }
-
-
 
 } // end anonymous namespace
