@@ -21,8 +21,8 @@ entry:
   %3 = tail call <128 x i1> @llvm.hexagon.V6.pred.scalar2.128B(i32 %.sroa.speculated.i13.i.i) #3
   %4 = tail call <128 x i1> @llvm.hexagon.V6.pred.and.128B(<128 x i1> undef, <128 x i1> %3) #3
   tail call void @llvm.hexagon.V6.vS32b.qpred.ai.128B(<128 x i1> %4, i8* nonnull undef, <32 x i32> undef) #3
-  ret void
-}
+  unreachable
+                  }
 
 attributes #0 = { nounwind writeonly }
 attributes #1 = { nounwind readnone }
