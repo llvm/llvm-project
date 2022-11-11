@@ -42,7 +42,7 @@ public:
   uint64_t encodedOffset() { return _rawBits >> 16; }
 
   const char *encodingName() {
-    uint8_t flags = _rawBits & 0b1111;
+    auto flags = _flags();
     bool canBeUTF8 = flags & Flags::CanBeUTF8;
     bool canBeUTF16 = flags & Flags::CanBeUTF16;
     if (canBeUTF8 && canBeUTF16)
@@ -56,6 +56,18 @@ public:
   }
 
   uint8_t transcodedOffset() { return (_rawBits >> 14) & 0b11; }
+
+  bool matchesEncoding(StringIndex other) {
+    // Either both are valid utf8 indexes, or valid utf16 indexes.
+    return (_utfFlags() & other._utfFlags()) != 0;
+  }
+
+private:
+  uint8_t _flags() const { return _rawBits & 0b1111; }
+
+  uint8_t _utfFlags() const {
+    return _flags() & (Flags::CanBeUTF8 | Flags::CanBeUTF16);
+  }
 };
 
 }; // namespace swift

@@ -425,6 +425,14 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   bool (*staticstring_summary_provider)(ValueObject &, Stream &,
                                         const TypeSummaryOptions &) =
       lldb_private::formatters::swift::StaticString_SummaryProvider;
+  {
+    TypeSummaryImpl::Flags substring_summary_flags = summary_flags;
+    substring_summary_flags.SetDontShowChildren(false);
+    AddCXXSummary(swift_category_sp,
+                  lldb_private::formatters::swift::Substring_SummaryProvider,
+                  "Swift.Substring summary provider",
+                  ConstString("Swift.Substring"), substring_summary_flags);
+  }
   AddCXXSummary(swift_category_sp, staticstring_summary_provider,
                 "Swift.StaticString summary provider",
                 ConstString("Swift.StaticString"), summary_flags);
