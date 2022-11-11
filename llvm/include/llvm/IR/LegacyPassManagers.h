@@ -156,6 +156,8 @@ private:
 /// PMTopLevelManager manages LastUser info and collects common APIs used by
 /// top level pass managers.
 class PMTopLevelManager {
+    llvm::DenseMap<std::pair<AnalysisID, Function*>,Pass*> AnalysisImpls;
+
 protected:
   explicit PMTopLevelManager(PMDataManager *PMDM);
 
