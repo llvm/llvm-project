@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(test-dynamic-pipeline{op-name=inner_mod1, dynamic-pipeline=func.func(cse,canonicalize)})'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD1-ONLY --check-prefix=CHECK
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(test-dynamic-pipeline{op-name=inner_mod2, dynamic-pipeline=func.func(cse,canonicalize)})'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD2 --check-prefix=MOD2-ONLY --check-prefix=CHECK
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(test-dynamic-pipeline{op-name=inner_mod1,inner_mod2, dynamic-pipeline=func.func(cse,canonicalize)})'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD2 --check-prefix=CHECK
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(test-dynamic-pipeline{dynamic-pipeline=func.func(cse,canonicalize)})'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD2 --check-prefix=CHECK
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-dynamic-pipeline{op-name=inner_mod1, dynamic-pipeline=func.func(cse,canonicalize)}))'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD1-ONLY --check-prefix=CHECK
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-dynamic-pipeline{op-name=inner_mod2, dynamic-pipeline=func.func(cse,canonicalize)}))'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD2 --check-prefix=MOD2-ONLY --check-prefix=CHECK
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-dynamic-pipeline{op-name=inner_mod1,inner_mod2, dynamic-pipeline=func.func(cse,canonicalize)}))'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD2 --check-prefix=CHECK
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-dynamic-pipeline{dynamic-pipeline=func.func(cse,canonicalize)}))'  --mlir-disable-threading  -mlir-print-ir-before-all 2>&1 | FileCheck %s --check-prefix=MOD1 --check-prefix=MOD2 --check-prefix=CHECK
 
 
 func.func @f() {

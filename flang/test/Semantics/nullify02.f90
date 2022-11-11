@@ -16,16 +16,20 @@ Integer :: pi
 Procedure(Real) :: prp
 
 Allocate(x(3))
-!ERROR: component in NULLIFY statement must have the POINTER attribute
+!ERROR: 'p' may not appear in NULLIFY
+!BECAUSE: 'p' is not a pointer
 Nullify(x(2)%p)
 
-!ERROR: name in NULLIFY statement must have the POINTER attribute
+!ERROR: 'pi' may not appear in NULLIFY
+!BECAUSE: 'pi' is not a pointer
 Nullify(pi)
 
-!ERROR: name in NULLIFY statement must be a variable or procedure pointer
+!ERROR: 'prp' may not appear in NULLIFY
+!BECAUSE: 'prp' is not a pointer
 Nullify(prp)
 
-!ERROR: name in NULLIFY statement must be a variable or procedure pointer
+!ERROR: 'maxvalue' may not appear in NULLIFY
+!BECAUSE: 'maxvalue' is not a pointer
 Nullify(maxvalue)
 
 End Program
@@ -45,7 +49,8 @@ contains
     integer, pointer :: ptrFun
     real :: realVar
     nullify(ptrFun)
-    !ERROR: name in NULLIFY statement must have the POINTER attribute
+    !ERROR: 'realvar' may not appear in NULLIFY
+    !BECAUSE: 'realvar' is not a pointer
     nullify(realVar)
   end function
 end module

@@ -351,24 +351,27 @@ public:
     }
   }
 
-  bool compareEquivalent(QualType Type, const Value &Val1,
-                         const Environment &Env1, const Value &Val2,
-                         const Environment &Env2) override {
+  ComparisonResult compare(QualType Type, const Value &Val1,
+                           const Environment &Env1, const Value &Val2,
+                           const Environment &Env2) override {
     const auto *Decl = Type->getAsCXXRecordDecl();
     if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
         Decl->getName() != "SpecialBool")
-      return false;
+      return ComparisonResult::Unknown;
 
     auto *IsSet1 = cast_or_null<BoolValue>(Val1.getProperty("is_set"));
-    if (IsSet1 == nullptr)
-      return true;
-
     auto *IsSet2 = cast_or_null<BoolValue>(Val2.getProperty("is_set"));
+    if (IsSet1 == nullptr)
+      return IsSet2 == nullptr ? ComparisonResult::Same
+                               : ComparisonResult::Different;
+
     if (IsSet2 == nullptr)
-      return false;
+      return ComparisonResult::Different;
 
     return Env1.flowConditionImplies(*IsSet1) ==
-           Env2.flowConditionImplies(*IsSet2);
+                   Env2.flowConditionImplies(*IsSet2)
+               ? ComparisonResult::Same
+               : ComparisonResult::Different;
   }
 
   // Always returns `true` to accept the `MergedVal`.
@@ -509,18 +512,19 @@ public:
     }
   }
 
-  bool compareEquivalent(QualType Type, const Value &Val1,
-                         const Environment &Env1, const Value &Val2,
-                         const Environment &Env2) override {
+  ComparisonResult compare(QualType Type, const Value &Val1,
+                           const Environment &Env1, const Value &Val2,
+                           const Environment &Env2) override {
     // Nothing to say about a value that does not model an `OptionalInt`.
     if (!Type->isRecordType() ||
         Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
-      return false;
+      return ComparisonResult::Unknown;
 
     auto *Prop1 = Val1.getProperty("has_value");
     auto *Prop2 = Val2.getProperty("has_value");
     assert(Prop1 != nullptr && Prop2 != nullptr);
-    return areEquivalentValues(*Prop1, *Prop2);
+    return areEquivalentValues(*Prop1, *Prop2) ? ComparisonResult::Same
+                                               : ComparisonResult::Different;
   }
 
   bool merge(QualType Type, const Value &Val1, const Environment &Env1,
@@ -1182,12 +1186,12 @@ public:
     }
   }
 
-  bool compareEquivalent(QualType Type, const Value &Val1,
-                         const Environment &Env1, const Value &Val2,
-                         const Environment &Env2) override {
+  ComparisonResult compare(QualType Type, const Value &Val1,
+                           const Environment &Env1, const Value &Val2,
+                           const Environment &Env2) override {
     // Changes to a sound approximation, which allows us to test whether we can
     // (soundly) converge for some loops.
-    return false;
+    return ComparisonResult::Unknown;
   }
 };
 

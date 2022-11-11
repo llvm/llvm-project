@@ -688,6 +688,9 @@ def OpGroupUMax: OpGroup<"UMax", 270>;
 def OpGroupSMax: OpGroup<"SMax", 271>;
 
 // TODO: 3.42.22. Device-Side Enqueue Instructions
+def OpEnqueueKernel: Op<292, (outs ID:$res), (ins TYPE:$type, ID:$queue, ID:$flags, ID:$NDR, ID:$nevents, ID:$wevents,
+                                              ID:$revent, ID:$invoke, ID:$param, ID:$psize, ID:$palign, variable_ops),
+                  "$res = OpEnqueueKernel $type $queue $flags $NDR $nevents $wevents $revent $invoke $param $psize $palign">;
 def OpRetainEvent: Op<297, (outs), (ins ID:$event), "OpRetainEvent $event">;
 def OpReleaseEvent: Op<298, (outs), (ins ID:$event), "OpReleaseEvent $event">;
 def OpCreateUserEvent: Op<299, (outs ID:$res), (ins TYPE:$type),

@@ -15,41 +15,45 @@
 #ifndef FLANG_LOWER_LOWERINGOPTIONS_H
 #define FLANG_LOWER_LOWERINGOPTIONS_H
 
+#include "flang/Common/MathOptionsBase.h"
+
 namespace Fortran::lower {
 
-class LoweringOptions {
-  /// If true, lower transpose without a runtime call.
-  unsigned optimizeTranspose : 1;
+class LoweringOptionsBase {
+public:
+#define LOWERINGOPT(Name, Bits, Default) unsigned Name : Bits;
+#define ENUM_LOWERINGOPT(Name, Type, Bits, Default)
+#include "flang/Lower/LoweringOptions.def"
 
-  /// If true, enable polymorphic type lowering feature. Off by default.
-  unsigned polymorphicTypeImpl : 1;
+protected:
+#define LOWERINGOPT(Name, Bits, Default)
+#define ENUM_LOWERINGOPT(Name, Type, Bits, Default) unsigned Name : Bits;
+#include "flang/Lower/LoweringOptions.def"
+};
 
-  /// If true, lower to High level FIR before lowering to FIR.
-  /// Off by default until fully ready.
-  unsigned lowerToHighLevelFIR : 1;
+class LoweringOptions : public LoweringOptionsBase {
 
 public:
-  LoweringOptions()
-      : optimizeTranspose(true), polymorphicTypeImpl(false),
-        lowerToHighLevelFIR(false) {}
+#define LOWERINGOPT(Name, Bits, Default)
+#define ENUM_LOWERINGOPT(Name, Type, Bits, Default)                            \
+  Type get##Name() const { return static_cast<Type>(Name); }                   \
+  LoweringOptions &set##Name(Type Value) {                                     \
+    Name = static_cast<unsigned>(Value);                                       \
+    return *this;                                                              \
+  }
+#include "flang/Lower/LoweringOptions.def"
 
-  bool getOptimizeTranspose() const { return optimizeTranspose; }
-  LoweringOptions &setOptimizeTranspose(bool v) {
-    optimizeTranspose = v;
-    return *this;
+  LoweringOptions();
+
+  const Fortran::common::MathOptionsBase &getMathOptions() const {
+    return MathOptions;
   }
 
-  bool isPolymorphicTypeImplEnabled() const { return polymorphicTypeImpl; }
-  LoweringOptions &setPolymorphicTypeImpl(bool v) {
-    polymorphicTypeImpl = v;
-    return *this;
-  }
+  Fortran::common::MathOptionsBase &getMathOptions() { return MathOptions; }
 
-  bool getLowerToHighLevelFIR() const { return lowerToHighLevelFIR; }
-  LoweringOptions &setLowerToHighLevelFIR(bool v) {
-    lowerToHighLevelFIR = v;
-    return *this;
-  }
+private:
+  /// Options for handling/optimizing mathematical computations.
+  Fortran::common::MathOptionsBase MathOptions;
 };
 
 } // namespace Fortran::lower

@@ -5205,6 +5205,8 @@ def err_function_template_partial_spec : Error<
 def err_template_recursion_depth_exceeded : Error<
   "recursive template instantiation exceeded maximum depth of %0">,
   DefaultFatal, NoSFINAE;
+def err_constraint_depends_on_self : Error<
+  "satisfaction of constraint '%0' depends on itself">, NoSFINAE;
 def note_template_recursion_depth : Note<
   "use -ftemplate-depth=N to increase recursive template instantiation depth">;
 
@@ -8212,6 +8214,9 @@ def err_typecheck_convert_incompatible_function_pointer : Error<
 def ext_typecheck_convert_incompatible_function_pointer : ExtWarn<
   err_typecheck_convert_incompatible_function_pointer.Text>,
   InGroup<IncompatibleFunctionPointerTypes>, DefaultError;
+def warn_typecheck_convert_incompatible_function_pointer_strict : Warning<
+  err_typecheck_convert_incompatible_function_pointer.Text>,
+  InGroup<DiagGroup<"incompatible-function-pointer-types-strict">>, DefaultIgnore;
 def ext_typecheck_convert_discards_qualifiers : ExtWarn<
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
   "|%diff{passing $ to parameter of type $|"
@@ -11205,6 +11210,8 @@ def err_private_module_fragment_not_module_interface : Error<
   "private module fragment in module implementation unit">;
 def note_not_module_interface_add_export : Note<
   "add 'export' here if this is intended to be a module interface unit">;
+def err_invalid_module_name : Error<
+  "%0 is %select{an invalid|a reserved}1 name for a module">;
 
 def ext_equivalent_internal_linkage_decl_in_modules : ExtWarn<
   "ambiguous use of internal linkage declaration %0 defined in multiple modules">,
@@ -11722,4 +11729,8 @@ def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;
 def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
+
+// LoongArch-specific Diagnostics
+def err_loongarch_builtin_requires_la64 : Error<
+  "this builtin requires target: loongarch64">;
 } // end of sema component.

@@ -2198,6 +2198,7 @@ Value *llvm::simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
   return ::simplifyAndInst(Op0, Op1, Q, RecursionLimit);
 }
 
+// TODO: Many of these folds could use LogicalAnd/LogicalOr.
 static Value *simplifyOrLogic(Value *X, Value *Y) {
   assert(X->getType() == Y->getType() && "Expected same type for 'or' ops");
   Type *Ty = X->getType();
@@ -2261,6 +2262,14 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
             m_c_And(m_CombineAnd(m_Value(NotA), m_NotForbidUndef(m_Value(A))),
                     m_Value(B))) &&
       match(Y, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
+    return NotA;
+  // The same is true of Logical And
+  // TODO: This could share the logic of the version above if there was a
+  // version of LogicalAnd that allowed more than just i1 types.
+  if (match(X, m_c_LogicalAnd(
+                   m_CombineAnd(m_Value(NotA), m_NotForbidUndef(m_Value(A))),
+                   m_Value(B))) &&
+      match(Y, m_Not(m_c_LogicalOr(m_Specific(A), m_Specific(B)))))
     return NotA;
 
   // ~(A ^ B) | (A & B) --> ~(A ^ B)
@@ -5236,14 +5245,18 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
     return nullptr;
 
-  // With nnan: -X + X --> 0.0 (and commuted variant)
-  // We don't have to explicitly exclude infinities (ninf): INF + -INF == NaN.
-  // Negative zeros are allowed because we always end up with positive zero:
-  // X = -0.0: (-0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
-  // X = -0.0: ( 0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
-  // X =  0.0: (-0.0 - ( 0.0)) + ( 0.0) == (-0.0) + ( 0.0) == 0.0
-  // X =  0.0: ( 0.0 - ( 0.0)) + ( 0.0) == ( 0.0) + ( 0.0) == 0.0
   if (FMF.noNaNs()) {
+    // With nnan: X + {+/-}Inf --> {+/-}Inf
+    if (match(Op1, m_Inf()))
+      return Op1;
+
+    // With nnan: -X + X --> 0.0 (and commuted variant)
+    // We don't have to explicitly exclude infinities (ninf): INF + -INF == NaN.
+    // Negative zeros are allowed because we always end up with positive zero:
+    // X = -0.0: (-0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
+    // X = -0.0: ( 0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
+    // X =  0.0: (-0.0 - ( 0.0)) + ( 0.0) == (-0.0) + ( 0.0) == 0.0
+    // X =  0.0: ( 0.0 - ( 0.0)) + ( 0.0) == ( 0.0) + ( 0.0) == 0.0
     if (match(Op0, m_FSub(m_AnyZeroFP(), m_Specific(Op1))) ||
         match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0))))
       return ConstantFP::getNullValue(Op0->getType());
@@ -5452,6 +5465,10 @@ simplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     if (match(Op0, m_FNegNSZ(m_Specific(Op1))) ||
         match(Op1, m_FNegNSZ(m_Specific(Op0))))
       return ConstantFP::get(Op0->getType(), -1.0);
+
+    // nnan ninf X / [-]0.0 -> poison
+    if (FMF.noInfs() && match(Op1, m_AnyZeroFP()))
+      return PoisonValue::get(Op1->getType());
   }
 
   return nullptr;

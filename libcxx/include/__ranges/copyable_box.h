@@ -10,11 +10,13 @@
 #ifndef _LIBCPP___RANGES_COPYABLE_BOX_H
 #define _LIBCPP___RANGES_COPYABLE_BOX_H
 
+#include <__concepts/constructible.h>
+#include <__concepts/copyable.h>
+#include <__concepts/movable.h>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__utility/move.h>
-#include <concepts>
 #include <optional>
 #include <type_traits>
 

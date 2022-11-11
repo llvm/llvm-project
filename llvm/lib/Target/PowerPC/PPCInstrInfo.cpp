@@ -613,7 +613,7 @@ void PPCInstrInfo::finalizeInsInstrs(
 }
 
 bool PPCInstrInfo::shouldReduceRegisterPressure(
-    MachineBasicBlock *MBB, RegisterClassInfo *RegClassInfo) const {
+    const MachineBasicBlock *MBB, const RegisterClassInfo *RegClassInfo) const {
 
   if (!EnableFMARegPressureReduction)
     return false;
@@ -635,10 +635,11 @@ bool PPCInstrInfo::shouldReduceRegisterPressure(
     return false;
 
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  MachineFunction *MF = MBB->getParent();
-  MachineRegisterInfo *MRI = &MF->getRegInfo();
+  const MachineFunction *MF = MBB->getParent();
+  const MachineRegisterInfo *MRI = &MF->getRegInfo();
 
-  auto GetMBBPressure = [&](MachineBasicBlock *MBB) -> std::vector<unsigned> {
+  auto GetMBBPressure =
+      [&](const MachineBasicBlock *MBB) -> std::vector<unsigned> {
     RegionPressure Pressure;
     RegPressureTracker RPTracker(Pressure);
 
@@ -646,10 +647,7 @@ bool PPCInstrInfo::shouldReduceRegisterPressure(
     RPTracker.init(MBB->getParent(), RegClassInfo, nullptr, MBB, MBB->end(),
                    /*TrackLaneMasks*/ false, /*TrackUntiedDefs=*/true);
 
-    for (MachineBasicBlock::iterator MII = MBB->instr_end(),
-                                     MIE = MBB->instr_begin();
-         MII != MIE; --MII) {
-      MachineInstr &MI = *std::prev(MII);
+    for (const auto &MI : reverse(*MBB)) {
       if (MI.isDebugValue() || MI.isDebugLabel())
         continue;
       RegisterOperands RegOpers;

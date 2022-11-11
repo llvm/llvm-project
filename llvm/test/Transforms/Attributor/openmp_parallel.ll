@@ -69,7 +69,7 @@ define internal void @.omp_outlined.(i32* noalias nocapture readonly %.global_ti
 ; TUNIT-NEXT:    br label [[OMP_PRECOND_THEN:%.*]]
 ; TUNIT:       omp.precond.then:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[TMP0]])
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[TMP0]]) #[[ATTR3:[0-9]+]]
 ; TUNIT-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
 ; TUNIT-NEXT:    [[TMP1:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
 ; TUNIT-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[TMP1]])
@@ -129,7 +129,7 @@ define internal void @.omp_outlined.(i32* noalias nocapture readonly %.global_ti
 ; CGSCC-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 ; CGSCC:       omp.precond.then:
 ; CGSCC-NEXT:    [[TMP1:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[TMP1]])
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[TMP1]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
 ; CGSCC-NEXT:    [[TMP2:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
 ; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[TMP2]])
@@ -264,7 +264,8 @@ attributes #2 = { nounwind }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind uwtable }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { alwaysinline nofree norecurse nounwind uwtable }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { memory(readwrite) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{!2}

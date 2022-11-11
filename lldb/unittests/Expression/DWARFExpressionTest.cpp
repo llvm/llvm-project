@@ -8,6 +8,7 @@
 
 #include "lldb/Expression/DWARFExpression.h"
 #include "Plugins/Platform/Linux/PlatformLinux.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "lldb/Core/Debugger.h"
@@ -400,4 +401,116 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit4, DW_OP_deref, DW_OP_stack_value}, {}, {}, &exe_ctx),
       llvm::HasValue(GetScalar(32, 0x07060504, false)));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
+  // Set up a wasm target
+  ArchSpec arch("wasm32-unknown-unknown-wasm");
+  lldb::PlatformSP host_platform_sp =
+      platform_linux::PlatformLinux::CreateInstance(true, &arch);
+  ASSERT_TRUE(host_platform_sp);
+  Platform::SetHostPlatform(host_platform_sp);
+  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  lldb::TargetSP target_sp;
+  lldb::PlatformSP platform_sp;
+  debugger_sp->GetTargetList().CreateTarget(*debugger_sp, "", arch,
+                                            lldb_private::eLoadDependentsNo,
+                                            platform_sp, target_sp);
+
+  ExecutionContext exe_ctx(target_sp, false);
+  // DW_OP_addr takes a single operand of address size width:
+  uint8_t expr[] = {DW_OP_addr, 0x40, 0x0, 0x0, 0x0};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 4);
+  Value result;
+  Status status;
+  ASSERT_TRUE(DWARFExpression::Evaluate(
+      &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor,
+      /*unit*/ nullptr, lldb::eRegisterKindLLDB,
+      /*initial_value_ptr*/ nullptr,
+      /*object_address_ptr*/ nullptr, result, &status))
+      << status.ToError();
+
+  ASSERT_EQ(result.GetValueType(), Value::ValueType::LoadAddress);
+}
+
+TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr_index) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_addr_base
+              Form:            DW_FORM_sec_offset
+
+  debug_info:
+    - Version:         5
+      AddrSize:        4
+      UnitType:        DW_UT_compile
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x8 # Offset of the first Address past the header
+        - AbbrCode:        0x0
+
+  debug_addr:
+    - Version: 5
+      AddressSize: 4
+      Entries:
+        - Address: 0x1234
+        - Address: 0x5678
+)";
+
+  // Can't use DWARFExpressionTester from above because subsystems overlap with
+  // the fixture.
+  SubsystemRAII<ObjectFileELF, SymbolFileDWARF> subsystems;
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(file->moduleSpec());
+  auto *dwarf_cu = llvm::cast<SymbolFileDWARF>(module_sp->GetSymbolFile())
+                       ->DebugInfo()
+                       .GetUnitAtIndex(0);
+  ASSERT_TRUE(dwarf_cu);
+  dwarf_cu->ExtractDIEsIfNeeded();
+
+  // Set up a wasm target
+  ArchSpec arch("wasm32-unknown-unknown-wasm");
+  lldb::PlatformSP host_platform_sp =
+      platform_linux::PlatformLinux::CreateInstance(true, &arch);
+  ASSERT_TRUE(host_platform_sp);
+  Platform::SetHostPlatform(host_platform_sp);
+  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  lldb::TargetSP target_sp;
+  lldb::PlatformSP platform_sp;
+  debugger_sp->GetTargetList().CreateTarget(*debugger_sp, "", arch,
+                                            lldb_private::eLoadDependentsNo,
+                                            platform_sp, target_sp);
+
+  ExecutionContext exe_ctx(target_sp, false);
+  // DW_OP_addrx takes a single leb128 operand, the index in the addr table:
+  uint8_t expr[] = {DW_OP_addrx, 0x01};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 4);
+  Value result;
+  Status status;
+  ASSERT_TRUE(DWARFExpression::Evaluate(
+      &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor, dwarf_cu,
+      lldb::eRegisterKindLLDB,
+      /*initial_value_ptr*/ nullptr,
+      /*object_address_ptr*/ nullptr, result, &status))
+      << status.ToError();
+
+  ASSERT_EQ(result.GetValueType(), Value::ValueType::LoadAddress);
+  ASSERT_EQ(result.GetScalar().UInt(), 0x5678u);
 }

@@ -252,3 +252,21 @@ body: |
     %7:_(<5 x s32>) = G_BUILD_VECTOR %3, %4, %5, %6, %2
     $vgpr5_vgpr6_vgpr7_vgpr8_vgpr9= COPY %7
 ...
+
+---
+name: value_finder_look_through_copy
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; GFX9-LABEL: name: value_finder_look_through_copy
+    ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: $vgpr2_vgpr3 = COPY [[COPY]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0(<2 x s32>)
+    %3:_(s32) = COPY %1
+    %4:_(<2 x s32>) = G_BUILD_VECTOR %3, %2
+    $vgpr2_vgpr3= COPY %4
+...

@@ -286,6 +286,7 @@ module LLVM_intrinsic_gen {
   module IR_PatternMatch { header "IR/PatternMatch.h" export * }
   module IR_SafepointIRVerifier { header "IR/SafepointIRVerifier.h" export * }
   module IR_Statepoint { header "IR/Statepoint.h" export * }
+  module IR_DebugInfo { header "IR/DebugInfo.h" export * }
 
   export *
 }
@@ -419,6 +420,7 @@ module LLVM_Utils {
     textual header "Support/RISCVTargetParser.def"
     textual header "Support/TargetOpcodes.def"
     textual header "Support/X86TargetParser.def"
+    textual header "Support/LoongArchTargetParser.def"
   }
 
   // This part of the module is usable from both C and C++ code.

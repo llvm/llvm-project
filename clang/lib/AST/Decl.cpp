@@ -188,8 +188,7 @@ static bool usesTypeVisibility(const NamedDecl *D) {
 /// Does the given declaration have member specialization information,
 /// and if so, is it an explicit specialization?
 template <class T>
-static std::enable_if_t<!std::is_base_of<RedeclarableTemplateDecl, T>::value,
-                        bool>
+static std::enable_if_t<!std::is_base_of_v<RedeclarableTemplateDecl, T>, bool>
 isExplicitMemberSpecialization(const T *D) {
   if (const MemberSpecializationInfo *member =
         D->getMemberSpecializationInfo()) {

@@ -10,13 +10,16 @@
 #ifndef _LIBCPP___RANGES_RANGE_ADAPTOR_H
 #define _LIBCPP___RANGES_RANGE_ADAPTOR_H
 
+#include <__concepts/constructible.h>
+#include <__concepts/derived_from.h>
+#include <__concepts/invocable.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__functional/compose.h>
 #include <__functional/invoke.h>
 #include <__ranges/concepts.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -2,7 +2,7 @@
   character(kind=1,len=50) internal_file
   character(kind=1,len=100) msg
   character(20) sign
-  character, parameter :: const_internal_file = "(I6)"
+  character, parameter :: const_internal_file*(*) = "(I6)"
   integer*1 stat1, id1
   integer*2 stat2
   integer*4 stat4
@@ -69,7 +69,8 @@
   !ERROR: If NML appears, a data list must not appear
   write(10, nnn, rec=40, fmt=1) 'Ok'
 
-  !ERROR: Internal file variable 'const_internal_file' must be definable
+  !ERROR: Internal file variable 'const_internal_file' is not definable
+  !BECAUSE: '"(I6)"' is not a variable or pointer
   write(const_internal_file, fmt=*)
 
   !ERROR: If UNIT=* appears, POS must not appear
@@ -127,7 +128,8 @@
   !ERROR: ID kind (1) is smaller than default INTEGER kind (4)
   write(id=id1, unit=10, asynchronous='Yes') 'Ok'
 
-  !ERROR: ID variable 'const_id' must be definable
+  !ERROR: ID variable 'const_id' is not definable
+  !BECAUSE: '66666_4' is not a variable or pointer
   write(10, *, asynchronous='yes', id=const_id, iostat=stat2) 'Ok'
 
   write(*, '(X)')

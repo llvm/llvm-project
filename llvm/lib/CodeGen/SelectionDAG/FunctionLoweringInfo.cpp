@@ -119,10 +119,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       }
     }
   }
-  if (Personality == EHPersonality::Wasm_CXX) {
-    WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
-    calculateWasmEHInfo(&fn, EHInfo);
-  }
 
   // Initialize the mapping of values to registers.  This is only set up for
   // instruction values that are used outside of the block that defines
@@ -323,10 +319,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       const auto *BB = CME.Handler.get<const BasicBlock *>();
       CME.Handler = MBBMap[BB];
     }
-  }
-
-  else if (Personality == EHPersonality::Wasm_CXX) {
+  } else if (Personality == EHPersonality::Wasm_CXX) {
     WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
+    calculateWasmEHInfo(&fn, EHInfo);
+
     // Map all BB references in the Wasm EH data to MBBs.
     DenseMap<BBOrMBB, BBOrMBB> SrcToUnwindDest;
     for (auto &KV : EHInfo.SrcToUnwindDest) {
@@ -369,8 +365,7 @@ void FunctionLoweringInfo::clear() {
 
 /// CreateReg - Allocate a single virtual register for the given type.
 Register FunctionLoweringInfo::CreateReg(MVT VT, bool isDivergent) {
-  return RegInfo->createVirtualRegister(
-      MF->getSubtarget().getTargetLowering()->getRegClassFor(VT, isDivergent));
+  return RegInfo->createVirtualRegister(TLI->getRegClassFor(VT, isDivergent));
 }
 
 /// CreateRegs - Allocate the appropriate number of virtual registers of
@@ -381,8 +376,6 @@ Register FunctionLoweringInfo::CreateReg(MVT VT, bool isDivergent) {
 /// will assign registers for each member or element.
 ///
 Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
-  const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-
   SmallVector<EVT, 4> ValueVTs;
   ComputeValueVTs(*TLI, MF->getDataLayout(), Ty, ValueVTs);
 

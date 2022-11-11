@@ -423,48 +423,7 @@ private:
   Value cast(Type toType, Value operand, bool isUnsignedCast) {
     OpBuilder builder = getBuilder();
     auto loc = operand.getLoc();
-
-    if (operand.getType() == toType)
-      return operand;
-    if (auto toIntType = toType.dyn_cast<IntegerType>()) {
-      // If operand is floating point, cast directly to the int type.
-      if (operand.getType().isa<FloatType>()) {
-        if (isUnsignedCast)
-          return builder.create<arith::FPToUIOp>(loc, toType, operand);
-        return builder.create<arith::FPToSIOp>(loc, toType, operand);
-      }
-      // Cast index operands directly to the int type.
-      if (operand.getType().isIndex())
-        return builder.create<arith::IndexCastOp>(loc, toType, operand);
-      if (auto fromIntType = operand.getType().dyn_cast<IntegerType>()) {
-        // Either extend or truncate.
-        if (toIntType.getWidth() > fromIntType.getWidth()) {
-          if (isUnsignedCast)
-            return builder.create<arith::ExtUIOp>(loc, toType, operand);
-          return builder.create<arith::ExtSIOp>(loc, toType, operand);
-        }
-        if (toIntType.getWidth() < fromIntType.getWidth())
-          return builder.create<arith::TruncIOp>(loc, toType, operand);
-      }
-    } else if (auto toFloatType = toType.dyn_cast<FloatType>()) {
-      // If operand is integer, cast directly to the float type.
-      // Note that it is unclear how to cast from BF16<->FP16.
-      if (operand.getType().isa<IntegerType>()) {
-        if (isUnsignedCast)
-          return builder.create<arith::UIToFPOp>(loc, toFloatType, operand);
-        return builder.create<arith::SIToFPOp>(loc, toFloatType, operand);
-      }
-      if (auto fromFloatType = operand.getType().dyn_cast<FloatType>()) {
-        if (toFloatType.getWidth() > fromFloatType.getWidth())
-          return builder.create<arith::ExtFOp>(loc, toFloatType, operand);
-        if (toFloatType.getWidth() < fromFloatType.getWidth())
-          return builder.create<arith::TruncFOp>(loc, toFloatType, operand);
-      }
-    }
-
-    emitWarning(operand.getLoc()) << "could not cast operand of type "
-                                  << operand.getType() << " to " << toType;
-    return operand;
+    return convertScalarToDtype(builder, loc, operand, toType, isUnsignedCast);
   }
 
   bool isComplex(Value value) { return value.getType().isa<ComplexType>(); }
@@ -662,7 +621,7 @@ void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 static void buildGenericRegion(
-    OpBuilder &builder, OperationState &result, ValueRange inputs,
+    OpBuilder &builder, Location loc, Region &region, ValueRange inputs,
     ValueRange outputs,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
   SmallVector<Type, 4> blockArgTypes;
@@ -675,10 +634,9 @@ static void buildGenericRegion(
   }
 
   OpBuilder::InsertionGuard guard(builder);
-  auto &region = *result.regions.front();
   Block *bodyBlock =
       builder.createBlock(&region, region.end(), blockArgTypes, blockArgLocs);
-  bodyBuild(builder, result.location, bodyBlock->getArguments());
+  bodyBuild(builder, loc, bodyBlock->getArguments());
 }
 
 void GenericOp::getAsmBlockArgumentNames(Region &region,
@@ -699,7 +657,8 @@ void GenericOp::build(
         iteratorTypes, doc, libraryCall);
   result.addAttributes(attributes);
   if (bodyBuild)
-    buildGenericRegion(builder, result, inputs, outputs, bodyBuild);
+    buildGenericRegion(builder, result.location, *result.regions.front(),
+                       inputs, outputs, bodyBuild);
 }
 
 void GenericOp::build(
@@ -836,8 +795,8 @@ ParseResult GenericOp::parse(OpAsmParser &parser, OperationState &result) {
 static void getGenericEffectsImpl(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects,
-    ValueRange results, OpOperandVector inputOperands,
-    OpOperandVector outputOperands) {
+    ValueRange results, const OpOperandVector &inputOperands,
+    const OpOperandVector &outputOperands) {
   for (auto *operand : inputOperands) {
     if (!operand->get().getType().isa<MemRefType>())
       continue;
@@ -935,10 +894,9 @@ struct DeduplicateAndRemoveDeadOperandsAndResults
     // Create the new op with the body being empty.
     Location loc = genericOp.getLoc();
     SmallVector<Type> newResultTypes;
-    if (genericOp.hasTensorSemantics()) {
-      newResultTypes = llvm::to_vector(llvm::map_range(
-          newOutputOperands, [](Value v) { return v.getType(); }));
-    }
+    for (Value v : newOutputOperands)
+      if (v.getType().isa<TensorType>())
+        newResultTypes.push_back(v.getType());
     auto newOp = rewriter.create<GenericOp>(
         loc, newResultTypes, newInputOperands, newOutputOperands,
         rewriter.getAffineMapArrayAttr(newIndexingMaps),
@@ -1347,7 +1305,8 @@ void MapOp::build(
     result.addTypes(initType);
 
   if (bodyBuild)
-    buildGenericRegion(builder, result, inputs, /*outputs=*/{}, bodyBuild);
+    buildGenericRegion(builder, result.location, *result.regions.front(),
+                       inputs, /*outputs=*/{}, bodyBuild);
 }
 
 ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1472,7 +1431,8 @@ void ReduceOp::build(
   }
 
   if (bodyBuild)
-    buildGenericRegion(builder, result, inputs, inits, bodyBuild);
+    buildGenericRegion(builder, result.location, *result.regions.front(),
+                       inputs, inits, bodyBuild);
 }
 
 SmallVector<StringRef> ReduceOp::getIteratorTypesArray() {
@@ -1649,13 +1609,13 @@ LogicalResult ReduceOp::verify() {
 // TransposeOp
 //===----------------------------------------------------------------------===//
 
-std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
-                   mlir::ArrayRef<mlir::NamedAttribute>)>
-TransposeOp::getRegionBuilder() {
-  return [](mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
-            mlir::ArrayRef<mlir::NamedAttribute>) {
-    b.create<linalg::YieldOp>(block.getArguments().front());
-  };
+static void buildIdentityRegion(OpBuilder &builder, Location loc,
+                                Region &region, ValueRange inputs,
+                                ValueRange outputs) {
+  buildGenericRegion(builder, loc, region, inputs, outputs,
+                     [](OpBuilder &b, Location loc, ValueRange args) {
+                       b.create<linalg::YieldOp>(loc, args[0]);
+                     });
 }
 
 void TransposeOp::build(::mlir::OpBuilder &builder,
@@ -1672,11 +1632,8 @@ void TransposeOp::build(::mlir::OpBuilder &builder,
   if (initType.isa<RankedTensorType>())
     result.addTypes(initType);
 
-  (void)result.addRegion();
-  buildGenericRegion(builder, result, input, init,
-                     [&](OpBuilder &b, Location loc, ValueRange args) {
-                       b.create<linalg::YieldOp>(loc, args[0]);
-                     });
+  buildIdentityRegion(builder, result.location, *result.addRegion(), input,
+                      init);
 }
 
 void TransposeOp::build(::mlir::OpBuilder &builder,
@@ -1694,13 +1651,10 @@ ParseResult TransposeOp::parse(OpAsmParser &parser, OperationState &result) {
           })))
     return failure();
 
-  (void)result.addRegion();
   OpBuilder builder(parser.getContext());
-  buildGenericRegion(builder, result, /*inputs=*/result.operands,
-                     /*outputs=*/{},
-                     [&](OpBuilder &b, Location loc, ValueRange args) {
-                       b.create<linalg::YieldOp>(loc, args[0]);
-                     });
+  buildIdentityRegion(builder, result.location, *result.addRegion(),
+                      /*inputs=*/result.operands,
+                      /*outputs=*/{});
   return success();
 }
 
@@ -1773,6 +1727,144 @@ ArrayAttr TransposeOp::getIndexingMaps() {
 }
 
 void TransposeOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getGenericEffectsImpl(effects, getOperation()->getResults(),
+                        getDpsInputOperands(), getDpsInitOperands());
+}
+
+//===----------------------------------------------------------------------===//
+// BroadcastOp
+//===----------------------------------------------------------------------===//
+
+void BroadcastOp::build(::mlir::OpBuilder &builder,
+                        ::mlir::OperationState &result, Value input, Value init,
+                        DenseI64ArrayAttr dimensions,
+                        ArrayRef<NamedAttribute> attributes) {
+  result.addOperands(input);
+  result.addOperands(init);
+  result.addAttribute(getDimensionsAttrName(result.name), dimensions);
+  result.addAttributes(attributes);
+
+  // Add output types for `RankedTensorType` output arguments.
+  Type initType = init.getType();
+  if (initType.isa<RankedTensorType>())
+    result.addTypes(initType);
+
+  buildIdentityRegion(builder, result.location, *result.addRegion(), input,
+                      init);
+}
+
+void BroadcastOp::build(::mlir::OpBuilder &builder,
+                        ::mlir::OperationState &result, Value input, Value init,
+                        ArrayRef<int64_t> dimensions,
+                        ArrayRef<NamedAttribute> attributes) {
+  build(builder, result, input, init, builder.getDenseI64ArrayAttr(dimensions),
+        attributes);
+}
+
+ParseResult BroadcastOp::parse(OpAsmParser &parser, OperationState &result) {
+  if (failed(parseDstStyleOp(
+          parser, result, [&](OpAsmParser &parser, NamedAttrList &attributes) {
+            return parseDenseI64ArrayAttr(parser, attributes, "dimensions");
+          })))
+    return failure();
+
+  OpBuilder builder(parser.getContext());
+  buildIdentityRegion(builder, result.location, *result.addRegion(),
+                      /*inputs=*/result.operands,
+                      /*outputs=*/{});
+  return success();
+}
+
+void BroadcastOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  if (!getResults().empty())
+    setNameFn(getResults().front(), "broadcasted");
+}
+
+void BroadcastOp::print(OpAsmPrinter &p) {
+  p.increaseIndent();
+  printCommonStructuredOpPartsWithNewLine(
+      p, SmallVector<Value>(getDpsInputOperands()),
+      SmallVector<Value>(getDpsInitOperands()));
+  p.printNewline();
+
+  printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
+  p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
+  p.decreaseIndent();
+}
+
+LogicalResult BroadcastOp::verify() {
+  ArrayRef<int64_t> dimensionsRef = getDimensions();
+
+  if (!llvm::is_sorted(dimensionsRef))
+    return emitOpError() << "dimensions should be in sorted order, implicit "
+                            "transpose is not supported";
+
+  auto inputType = getInput().getType();
+  auto initType = getInit().getType();
+
+  int64_t inputRank = inputType.getRank();
+  int64_t initRank = initType.getRank();
+
+  auto inputShape = inputType.getShape();
+  auto initShape = initType.getShape();
+
+  if ((size_t)inputRank != dimensionsRef.size())
+    return emitOpError()
+           << "input rank does match the number of dimensions. expected: "
+           << inputRank << ", got: " << dimensionsRef.size();
+
+  // Mapping from init dims to input dims.
+  const int64_t kUnmappedDim = -1;
+  SmallVector<int64_t> reverseDimMap(initRank, kUnmappedDim);
+
+  for (const auto &[idx, dim] : llvm::enumerate(dimensionsRef)) {
+    if (dim < 0 || dim >= initRank)
+      return emitOpError() << "dimension " << idx
+                           << " is out of range. expected range: [0, "
+                           << initRank - 1 << "], got: " << dim;
+
+    reverseDimMap[dim] = idx;
+  }
+
+  for (const auto &[idx, inputDimIdx] : llvm::enumerate(reverseDimMap)) {
+    if (inputDimIdx == kUnmappedDim) {
+      // This dimensions is being added. Should be statically known.
+      if (ShapedType::isDynamic(initShape[idx]))
+        return emitOpError()
+               << "init dim " << idx
+               << " can't be dynamic, because it's not matched to input";
+    } else {
+      // This dimensions is mapped from the input. Init and input dims should
+      // match.
+      if (inputShape[inputDimIdx] != initShape[idx])
+        return emitOpError()
+               << "input dim " << inputDimIdx << " should match init dim "
+               << idx << ". input: " << inputShape[inputDimIdx]
+               << ", init: " << initShape[idx];
+    }
+  }
+
+  return success();
+}
+
+SmallVector<StringRef> BroadcastOp::getIteratorTypesArray() {
+  int64_t rank = getInit().getType().getRank();
+  return SmallVector<StringRef>(rank, getParallelIteratorTypeName());
+}
+
+ArrayAttr BroadcastOp::getIndexingMaps() {
+  Builder builder(getContext());
+  int64_t rank = getInit().getType().getRank();
+  return builder.getAffineMapArrayAttr(
+      {builder.getMultiDimIdentityMap(rank).getSubMap(
+           llvm::to_vector_of<unsigned>(getDimensions())),
+       builder.getMultiDimIdentityMap(rank)});
+}
+
+void BroadcastOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   getGenericEffectsImpl(effects, getOperation()->getResults(),

@@ -865,7 +865,7 @@ the configuration (without a prefix: ``Auto``).
   Alignment options
 
   * ``TrailingCommentsAlignmentKinds Kind``
-    Specifies the way to align trailing comments
+    Specifies the way to align trailing comments.
 
     Possible values:
 
@@ -903,8 +903,9 @@ the configuration (without a prefix: ``Auto``).
         int abcd; // comment
 
 
-  * ``unsigned OverEmptyLines`` How many empty lines to apply alignment
-    With ``MaxEmptyLinesToKeep`` is 2 and ``OverEmptyLines`` is 2,
+  * ``unsigned OverEmptyLines`` How many empty lines to apply alignment.
+    When both ``MaxEmptyLinesToKeep`` and ``OverEmptyLines`` are set to 2,
+    it formats like below.
 
     .. code-block:: c++
 
@@ -915,7 +916,8 @@ the configuration (without a prefix: ``Auto``).
 
       int abcdef; // aligned
 
-    And with ``MaxEmptyLinesToKeep`` is 2 and ``OverEmptyLines`` is 1,
+    When ``MaxEmptyLinesToKeep`` is set to 2 and ``OverEmptyLines`` is set
+    to 1, it formats like below.
 
     .. code-block:: c++
 
@@ -2315,6 +2317,40 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**BreakBeforeInlineASMColon** (``BreakBeforeInlineASMColonStyle``) :versionbadge:`clang-format 16`
+  The inline ASM colon style to use.
+
+  Possible values:
+
+  * ``BBIAS_Never`` (in configuration: ``Never``)
+    No break before inline ASM colon.
+
+    .. code-block:: c++
+
+       asm volatile("string", : : val);
+
+  * ``BBIAS_OnlyMultiline`` (in configuration: ``OnlyMultiline``)
+    Break before inline ASM colon if the line length is longer than column
+    limit.
+
+    .. code-block:: c++
+
+       asm volatile("string", : : val);
+       asm("cmoveq %1, %2, %[result]"
+           : [result] "=r"(result)
+           : "r"(test), "r"(new), "[result]"(old));
+
+  * ``BBIAS_Always`` (in configuration: ``Always``)
+    Always break before inline ASM colon.
+
+    .. code-block:: c++
+
+       asm volatile("string",
+                    :
+                    : val);
+
+
+
 **BreakBeforeTernaryOperators** (``Boolean``) :versionbadge:`clang-format 3.7`
   If ``true``, ternary operators will be placed after line breaks.
 
@@ -3581,8 +3617,7 @@ the configuration (without a prefix: ``Auto``).
   (counted relative to leading non-whitespace column).
 
 **PenaltyReturnTypeOnItsOwnLine** (``Unsigned``) :versionbadge:`clang-format 3.7`
-  Penalty for putting the return type of a function onto its own
-  line.
+  Penalty for putting the return type of a function onto its own line.
 
 **PointerAlignment** (``PointerAlignmentStyle``) :versionbadge:`clang-format 3.7`
   Pointer and reference alignment style.

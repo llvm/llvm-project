@@ -1383,11 +1383,11 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     uint64_t pagezeroSize = args::getHex(args, OPT_pagezero_size, 0);
 
     // ld64 does something really weird. It attempts to realign the value to the
-    // page size, but assumes the the page size is 4K. This doesn't work with
-    // most of Apple's ARM64 devices, which use a page size of 16K. This means
-    // that it will first 4K align it by rounding down, then round up to 16K.
-    // This probably only happened because no one using this arg with anything
-    // other then 0, so no one checked if it did what is what it says it does.
+    // page size, but assumes the page size is 4K. This doesn't work with most
+    // of Apple's ARM64 devices, which use a page size of 16K. This means that
+    // it will first 4K align it by rounding down, then round up to 16K.  This
+    // probably only happened because no one using this arg with anything other
+    // then 0, so no one checked if it did what is what it says it does.
 
     // So we are not copying this weird behavior and doing the it in a logical
     // way, by always rounding down to page size.

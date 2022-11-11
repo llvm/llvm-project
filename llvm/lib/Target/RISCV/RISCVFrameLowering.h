@@ -73,12 +73,6 @@ public:
   bool isSupportedStackID(TargetStackID::Value ID) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
 
-  bool isStackIdSafeForLocalArea(unsigned StackId) const override {
-    // We don't support putting RISCV Vector objects into the pre-allocated
-    // local frame block at the moment.
-    return StackId != TargetStackID::ScalableVector;
-  }
-
 protected:
   const RISCVSubtarget &STI;
 

@@ -512,9 +512,9 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
 }
 
 template <typename ELFT>
-template <typename RelocHandlerMethod>
+template <typename RelocHandlerFunction>
 Error ELFLinkGraphBuilder<ELFT>::forEachRelaRelocation(
-    const typename ELFT::Shdr &RelSect, RelocHandlerMethod &&Func,
+    const typename ELFT::Shdr &RelSect, RelocHandlerFunction &&Func,
     bool ProcessDebugSections) {
   // Only look into sections that store relocation entries.
   if (RelSect.sh_type != ELF::SHT_RELA)
@@ -559,9 +559,9 @@ Error ELFLinkGraphBuilder<ELFT>::forEachRelaRelocation(
 }
 
 template <typename ELFT>
-template <typename RelocHandlerMethod>
+template <typename RelocHandlerFunction>
 Error ELFLinkGraphBuilder<ELFT>::forEachRelRelocation(
-    const typename ELFT::Shdr &RelSect, RelocHandlerMethod &&Func,
+    const typename ELFT::Shdr &RelSect, RelocHandlerFunction &&Func,
     bool ProcessDebugSections) {
   // Only look into sections that store relocation entries.
   if (RelSect.sh_type != ELF::SHT_REL)

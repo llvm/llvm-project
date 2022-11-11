@@ -34,6 +34,8 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -46,6 +48,7 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
@@ -53,6 +56,11 @@
 #include <memory>
 
 using namespace Fortran::frontend;
+
+// Declare plugin extension function declarations.
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
 
 //===----------------------------------------------------------------------===//
 // Custom BeginSourceFileAction
@@ -77,6 +85,16 @@ bool PrescanAndSemaDebugAction::beginSourceFileAction() {
   // compiler workflows!
   return runPrescan() && runParse() && (runSemanticChecks() || true) &&
          (generateRtTypeTables() || true);
+}
+
+static void setMLIRDataLayout(mlir::ModuleOp &mlirModule,
+                              const llvm::DataLayout &dl) {
+  mlir::MLIRContext *context = mlirModule.getContext();
+  mlirModule->setAttr(
+      mlir::LLVM::LLVMDialect::getDataLayoutAttrName(),
+      mlir::StringAttr::get(context, dl.getStringRepresentation()));
+  mlir::DataLayoutSpecInterface dlSpec = mlir::translateDataLayout(dl, context);
+  mlirModule->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
 }
 
 bool CodeGenAction::beginSourceFileAction() {
@@ -123,6 +141,9 @@ bool CodeGenAction::beginSourceFileAction() {
     }
 
     mlirModule = std::make_unique<mlir::ModuleOp>(module.release());
+    setUpTargetMachine();
+    const llvm::DataLayout &dl = tm->createDataLayout();
+    setMLIRDataLayout(*mlirModule, dl);
     return true;
   }
 
@@ -152,10 +173,15 @@ bool CodeGenAction::beginSourceFileAction() {
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults);
 
+  // Fetch module from lb, so we can set
+  mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
+  setUpTargetMachine();
+  const llvm::DataLayout &dl = tm->createDataLayout();
+  setMLIRDataLayout(*mlirModule, dl);
+
   // Create a parse tree and lower it to FIR
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
   lb.lower(parseTree, ci.getInvocation().getSemanticsContext());
-  mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
 
   // run the default passes.
   mlir::PassManager pm(mlirCtx.get(), mlir::OpPassManager::Nesting::Implicit);
@@ -565,13 +591,7 @@ getCGOptLevel(const Fortran::frontend::CodeGenOptions &opts) {
 void CodeGenAction::setUpTargetMachine() {
   CompilerInstance &ci = this->getInstance();
 
-  // Set the triple based on the CompilerInvocation set-up
   const std::string &theTriple = ci.getInvocation().getTargetOpts().triple;
-  if (llvmModule->getTargetTriple() != theTriple) {
-    ci.getDiagnostics().Report(clang::diag::warn_fe_override_module)
-        << theTriple;
-    llvmModule->setTargetTriple(theTriple);
-  }
 
   // Create `Target`
   std::string error;
@@ -661,6 +681,7 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   auto opts = getInstance().getInvocation().getCodeGenOpts();
+  auto &diags = getInstance().getDiagnostics();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
   // Create the analysis managers.
@@ -676,6 +697,21 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::StandardInstrumentations si(opts.DebugPassManager);
   si.registerCallbacks(pic, &fam);
   llvm::PassBuilder pb(tm.get(), pto, pgoOpt, &pic);
+
+  // Attempt to load pass plugins and register their callbacks with PB.
+  for (auto &pluginFile : opts.LLVMPassPlugins) {
+    auto passPlugin = llvm::PassPlugin::Load(pluginFile);
+    if (passPlugin) {
+      passPlugin->registerPassBuilderCallbacks(pb);
+    } else {
+      diags.Report(clang::diag::err_fe_unable_to_load_plugin)
+          << pluginFile << passPlugin.takeError();
+    }
+  }
+  // Register static plugin extensions.
+#define HANDLE_EXTENSION(Ext)                                                  \
+  get##Ext##PluginInfo().RegisterPassBuilderCallbacks(pb);
+#include "llvm/Support/Extension.def"
 
   // Register all the basic analyses with the managers.
   pb.registerModuleAnalyses(mam);
@@ -735,6 +771,22 @@ void CodeGenAction::executeAction() {
   if (!llvmModule)
     generateLLVMIR();
 
+  // Set the triple based on the targetmachine (this comes compiler invocation
+  // and the command-line target option if specified, or the default if not
+  // given on the command-line).
+  setUpTargetMachine();
+  const std::string &theTriple = tm->getTargetTriple().str();
+
+  if (llvmModule->getTargetTriple() != theTriple) {
+    ci.getDiagnostics().Report(clang::diag::warn_fe_override_module)
+        << theTriple;
+  }
+  // Always set the triple and data layout, to make sure they match and are set.
+  // Note that this overwrites any datalayout stored in the LLVM-IR. This avoids
+  // an assert for incompatible data layout when the code-generation happens.
+  llvmModule->setTargetTriple(theTriple);
+  llvmModule->setDataLayout(tm->createDataLayout());
+
   // Run LLVM's middle-end (i.e. the optimizer).
   runOptimizationPipeline(*os);
 
@@ -743,9 +795,6 @@ void CodeGenAction::executeAction() {
                       /*AssemblyAnnotationWriter=*/nullptr);
     return;
   }
-
-  setUpTargetMachine();
-  llvmModule->setDataLayout(tm->createDataLayout());
 
   if (action == BackendActionTy::Backend_EmitBC) {
     // This action has effectively been completed in runOptimizationPipeline.

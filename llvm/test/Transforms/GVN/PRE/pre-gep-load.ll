@@ -95,14 +95,13 @@ define void @test_shortcut_safe(i1 %tst, i32 %p1, i32* %a) {
 ; CHECK-LABEL: @test_shortcut_safe(
 ; CHECK-NEXT:    br i1 [[TST:%.*]], label [[SEXT1:%.*]], label [[PRE_DEST:%.*]]
 ; CHECK:       pre.dest:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = sext i32 [[P1:%.*]] to i64
 ; CHECK-NEXT:    br label [[SEXT_USE:%.*]]
 ; CHECK:       sext1:
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[P1]] to i64
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[P1:%.*]] to i64
 ; CHECK-NEXT:    br label [[SEXT_USE]]
 ; CHECK:       sext.use:
-; CHECK-NEXT:    [[IDXPROM2_PRE_PHI:%.*]] = phi i64 [ [[IDXPROM]], [[SEXT1]] ], [ [[DOTPRE]], [[PRE_DEST]] ]
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM2_PRE_PHI]]
+; CHECK-NEXT:    [[IDXPROM2:%.*]] = sext i32 [[P1]] to i64
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM2]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    tail call void @g(i32 [[VAL]])
 ; CHECK-NEXT:    br label [[PRE_DEST]]

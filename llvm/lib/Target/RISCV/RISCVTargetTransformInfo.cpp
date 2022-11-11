@@ -153,7 +153,9 @@ Optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
 
 Optional<unsigned> RISCVTTIImpl::getVScaleForTuning() const {
   if (ST->hasVInstructions())
-    return ST->getRealMinVLen() / RISCV::RVVBitsPerBlock;
+    if (unsigned MinVLen = ST->getRealMinVLen();
+        MinVLen >= RISCV::RVVBitsPerBlock)
+      return MinVLen / RISCV::RVVBitsPerBlock;
   return BaseT::getVScaleForTuning();
 }
 
@@ -169,7 +171,10 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
         ST->useRVVForFixedLengthVectors() ? LMUL * ST->getRealMinVLen() : 0);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(
-        ST->hasVInstructions() ? LMUL * RISCV::RVVBitsPerBlock : 0);
+        (ST->hasVInstructions() &&
+         ST->getRealMinVLen() >= RISCV::RVVBitsPerBlock)
+            ? LMUL * RISCV::RVVBitsPerBlock
+            : 0);
   }
 
   llvm_unreachable("Unsupported register kind");
@@ -227,7 +232,8 @@ InstructionCost
 RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                     unsigned AddressSpace,
                                     TTI::TargetCostKind CostKind) {
-  if (!isa<ScalableVectorType>(Src))
+  if (!isLegalMaskedLoadStore(Src, Alignment) ||
+      CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                         CostKind);
 
@@ -522,6 +528,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     unsigned Cost = 1; // vid
     auto LT = getTypeLegalizationCost(RetTy);
     return Cost + (LT.first - 1);
+  }
+  case Intrinsic::vp_rint: {
+    // RISC-V target uses at least 5 instructions to lower rounding intrinsics.
+    unsigned Cost = 5;
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
+      return Cost * LT.first;
+    break;
   }
   }
 

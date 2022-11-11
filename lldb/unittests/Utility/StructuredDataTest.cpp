@@ -31,6 +31,73 @@ TEST(StructuredDataTest, StringDump) {
   }
 }
 
+TEST(StructuredDataTest, GetDescriptionEmpty) {
+  Status status;
+  auto object_sp = StructuredData::ParseJSON("{}");
+  ASSERT_NE(nullptr, object_sp);
+
+  StreamString S;
+  object_sp->GetDescription(S);
+  EXPECT_EQ(0u, S.GetSize());
+}
+
+TEST(StructuredDataTest, GetDescriptionBasic) {
+  Status status;
+  std::string input = GetInputFilePath("StructuredData-basic.json");
+  auto object_sp = StructuredData::ParseJSONFromFile(FileSpec(input), status);
+  ASSERT_NE(nullptr, object_sp);
+
+  const std::string expected = "[0]: 1\n"
+                               "[1]: 2\n"
+                               "[2]: 3";
+
+  StreamString S;
+  object_sp->GetDescription(S);
+  EXPECT_EQ(expected, S.GetString());
+}
+
+TEST(StructuredDataTest, GetDescriptionNested) {
+  Status status;
+  std::string input = GetInputFilePath("StructuredData-nested.json");
+  auto object_sp = StructuredData::ParseJSONFromFile(FileSpec(input), status);
+  ASSERT_NE(nullptr, object_sp);
+
+  const std::string expected = "my_dict:\n"
+                               "  [0]:\n"
+                               "    three: 3\n"
+                               "    two: 2\n"
+                               "  [1]:\n"
+                               "    four:\n"
+                               "      val: 4\n"
+                               "  [2]: 1";
+
+  StreamString S;
+  object_sp->GetDescription(S);
+  EXPECT_EQ(expected, S.GetString());
+}
+
+TEST(StructuredDataTest, GetDescriptionFull) {
+  Status status;
+  std::string input = GetInputFilePath("StructuredData-full.json");
+  auto object_sp = StructuredData::ParseJSONFromFile(FileSpec(input), status);
+  ASSERT_NE(nullptr, object_sp);
+
+  const std::string expected = "Array:\n"
+                               "  [0]: 3.140000\n"
+                               "  [1]:\n"
+                               "    key: val\n"
+                               "Dictionary:\n"
+                               "  FalseBool: False\n"
+                               "Integer: 1\n"
+                               "Null: NULL\n"
+                               "String: value\n"
+                               "TrueBool: True";
+
+  StreamString S;
+  object_sp->GetDescription(S);
+  EXPECT_EQ(expected, S.GetString());
+}
+
 TEST(StructuredDataTest, ParseJSONFromFile) {
   Status status;
   auto object_sp = StructuredData::ParseJSONFromFile(

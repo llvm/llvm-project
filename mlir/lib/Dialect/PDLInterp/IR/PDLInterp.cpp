@@ -238,6 +238,40 @@ static Type getGetValueTypeOpValueType(Type type) {
 }
 
 //===----------------------------------------------------------------------===//
+// pdl::CreateRangeOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseRangeType(OpAsmParser &p, TypeRange argumentTypes,
+                                  Type &resultType) {
+  // If arguments were provided, infer the result type from the argument list.
+  if (!argumentTypes.empty()) {
+    resultType =
+        pdl::RangeType::get(pdl::getRangeElementTypeOrSelf(argumentTypes[0]));
+    return success();
+  }
+  // Otherwise, parse the type as a trailing type.
+  return p.parseColonType(resultType);
+}
+
+static void printRangeType(OpAsmPrinter &p, CreateRangeOp op,
+                           TypeRange argumentTypes, Type resultType) {
+  if (argumentTypes.empty())
+    p << ": " << resultType;
+}
+
+LogicalResult CreateRangeOp::verify() {
+  Type elementType = getType().getElementType();
+  for (Type operandType : getOperandTypes()) {
+    Type operandElementType = pdl::getRangeElementTypeOrSelf(operandType);
+    if (operandElementType != elementType) {
+      return emitOpError("expected operand to have element type ")
+             << elementType << ", but got " << operandElementType;
+    }
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // pdl_interp::SwitchAttributeOp
 //===----------------------------------------------------------------------===//
 

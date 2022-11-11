@@ -93,10 +93,12 @@ void CodeGen::generate(const ast::Module &astModule, ModuleOp module) {
   os << "} // end namespace\n\n";
 
   // Emit function to add the generated matchers to the pattern list.
-  os << "static void LLVM_ATTRIBUTE_UNUSED populateGeneratedPDLLPatterns("
-        "::mlir::RewritePatternSet &patterns) {\n";
+  os << "template <typename... ConfigsT>\n"
+        "static void LLVM_ATTRIBUTE_UNUSED populateGeneratedPDLLPatterns("
+        "::mlir::RewritePatternSet &patterns, ConfigsT &&...configs) {\n";
   for (const auto &name : patternNames)
-    os << "  patterns.add<" << name << ">(patterns.getContext());\n";
+    os << "  patterns.add<" << name
+       << ">(patterns.getContext(), configs...);\n";
   os << "}\n";
 }
 
@@ -104,14 +106,15 @@ void CodeGen::generate(pdl::PatternOp pattern, StringRef patternName,
                        StringSet<> &nativeFunctions) {
   const char *patternClassStartStr = R"(
 struct {0} : ::mlir::PDLPatternModule {{
-  {0}(::mlir::MLIRContext *context)
+  template <typename... ConfigsT>
+  {0}(::mlir::MLIRContext *context, ConfigsT &&...configs)
     : ::mlir::PDLPatternModule(::mlir::parseSourceString<::mlir::ModuleOp>(
 )";
   os << llvm::formatv(patternClassStartStr, patternName);
 
   os << "R\"mlir(";
   pattern->print(os, OpPrintingFlags().enableDebugInfo());
-  os << "\n    )mlir\", context)) {\n";
+  os << "\n    )mlir\", context), std::forward<ConfigsT>(configs)...) {\n";
 
   // Register any native functions used within the pattern.
   StringSet<> registeredNativeFunctions;

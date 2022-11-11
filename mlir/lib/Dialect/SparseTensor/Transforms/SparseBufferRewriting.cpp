@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -32,8 +33,8 @@ static constexpr uint64_t loIdx = 0;
 static constexpr uint64_t hiIdx = 1;
 static constexpr uint64_t xStartIdx = 2;
 
-static constexpr const char kMaySwapFuncNamePrefix[] = "_sparse_may_swap_";
 static constexpr const char kLessThanFuncNamePrefix[] = "_sparse_less_than_";
+static constexpr const char kCompareEqFuncNamePrefix[] = "_sparse_compare_eq_";
 static constexpr const char kPartitionFuncNamePrefix[] = "_sparse_partition_";
 static constexpr const char kBinarySearchFuncNamePrefix[] =
     "_sparse_binary_search_";
@@ -89,11 +90,10 @@ getMangledSortHelperFunc(OpBuilder &builder, func::FuncOp insertPoint,
   return result;
 }
 
-/// Creates a function for swapping the values in index i and j for all the
+/// Creates a code block for swapping the values in index i and j for all the
 /// buffers.
 //
-// The generate IR corresponds to this C like algorithm:
-//   if (i != j) {
+// The generated IR corresponds to this C like algorithm:
 //     swap(x0[i], x0[j]);
 //     swap(x1[i], x1[j]);
 //     ...
@@ -101,36 +101,90 @@ getMangledSortHelperFunc(OpBuilder &builder, func::FuncOp insertPoint,
 //     swap(y0[i], y0[j]);
 //     ...
 //     swap(yn[i], yn[j]);
-//   }
-static void createMaySwapFunc(OpBuilder &builder, ModuleOp unused,
-                              func::FuncOp func, size_t dim) {
-  OpBuilder::InsertionGuard insertionGuard(builder);
-
-  Block *entryBlock = func.addEntryBlock();
-  builder.setInsertionPointToStart(entryBlock);
-
-  Location loc = func.getLoc();
-  ValueRange args = entryBlock->getArguments();
+static void createSwap(OpBuilder &builder, Location loc, ValueRange args) {
   Value i = args[0];
   Value j = args[1];
-  Value cond =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, i, j);
-  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, cond, /*else=*/false);
-
-  // If i!=j swap values in the buffers.
-  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   for (auto arg : args.drop_front(xStartIdx)) {
     Value vi = builder.create<memref::LoadOp>(loc, arg, i);
     Value vj = builder.create<memref::LoadOp>(loc, arg, j);
     builder.create<memref::StoreOp>(loc, vj, arg, i);
     builder.create<memref::StoreOp>(loc, vi, arg, j);
   }
-
-  builder.setInsertionPointAfter(ifOp);
-  builder.create<func::ReturnOp>(loc);
 }
 
-/// Generates an if-statement to compare x[i] and x[j].
+/// Creates a function to compare all the (xs[i], xs[j]) pairs. The method to
+/// compare each pair is create via `compareBuilder`.
+static void createCompareFuncImplementation(
+    OpBuilder &builder, ModuleOp unused, func::FuncOp func, size_t dim,
+    function_ref<scf::IfOp(OpBuilder &, Location, Value, Value, Value, bool)>
+        compareBuilder) {
+  OpBuilder::InsertionGuard insertionGuard(builder);
+
+  Block *entryBlock = func.addEntryBlock();
+  builder.setInsertionPointToStart(entryBlock);
+  Location loc = func.getLoc();
+  ValueRange args = entryBlock->getArguments();
+
+  scf::IfOp topIfOp;
+  for (const auto &item : llvm::enumerate(args.slice(xStartIdx, dim))) {
+    scf::IfOp ifOp = compareBuilder(builder, loc, args[0], args[1],
+                                    item.value(), (item.index() == dim - 1));
+    if (item.index() == 0) {
+      topIfOp = ifOp;
+    } else {
+      OpBuilder::InsertionGuard insertionGuard(builder);
+      builder.setInsertionPointAfter(ifOp);
+      builder.create<scf::YieldOp>(loc, ifOp.getResult(0));
+    }
+  }
+
+  builder.setInsertionPointAfter(topIfOp);
+  builder.create<func::ReturnOp>(loc, topIfOp.getResult(0));
+}
+
+/// Generates an if-statement to compare whether x[i] is equal to x[j].
+static scf::IfOp createEqCompare(OpBuilder &builder, Location loc, Value i,
+                                 Value j, Value x, bool isLastDim) {
+  Value f = constantI1(builder, loc, false);
+  Value t = constantI1(builder, loc, true);
+  Value vi = builder.create<memref::LoadOp>(loc, x, i);
+  Value vj = builder.create<memref::LoadOp>(loc, x, j);
+
+  Value cond =
+      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, vi, vj);
+  scf::IfOp ifOp =
+      builder.create<scf::IfOp>(loc, f.getType(), cond, /*else=*/true);
+
+  // x[1] != x[j]:
+  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  builder.create<scf::YieldOp>(loc, f);
+
+  // x[i] == x[j]:
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  if (isLastDim == 1) {
+    // Finish checking all dimensions.
+    builder.create<scf::YieldOp>(loc, t);
+  }
+
+  return ifOp;
+}
+
+/// Creates a function to compare whether xs[i] is equal to xs[j].
+//
+// The generate IR corresponds to this C like algorithm:
+//   if (x0[i] != x0[j])
+//     return false;
+//   else
+//     if (x1[i] != x1[j])
+//       return false;
+//     else if (x2[2] != x2[j]))
+//       and so on ...
+static void createEqCompareFunc(OpBuilder &builder, ModuleOp unused,
+                                func::FuncOp func, size_t dim) {
+  createCompareFuncImplementation(builder, unused, func, dim, createEqCompare);
+}
+
+/// Generates an if-statement to compare whether x[i] is less than x[j].
 static scf::IfOp createLessThanCompare(OpBuilder &builder, Location loc,
                                        Value i, Value j, Value x,
                                        bool isLastDim) {
@@ -171,8 +225,7 @@ static scf::IfOp createLessThanCompare(OpBuilder &builder, Location loc,
   return ifOp;
 }
 
-/// Creates a function to compare the xs values in index i and j for all the
-/// dimensions. The function returns true iff xs[i] < xs[j].
+/// Creates a function to compare whether xs[i] is less than xs[j].
 //
 // The generate IR corresponds to this C like algorithm:
 //   if (x0[i] < x0[j])
@@ -186,29 +239,8 @@ static scf::IfOp createLessThanCompare(OpBuilder &builder, Location loc,
 //       and so on ...
 static void createLessThanFunc(OpBuilder &builder, ModuleOp unused,
                                func::FuncOp func, size_t dim) {
-  OpBuilder::InsertionGuard insertionGuard(builder);
-
-  Block *entryBlock = func.addEntryBlock();
-  builder.setInsertionPointToStart(entryBlock);
-  Location loc = func.getLoc();
-  ValueRange args = entryBlock->getArguments();
-
-  scf::IfOp topIfOp;
-  for (const auto &item : llvm::enumerate(args.slice(xStartIdx, dim))) {
-    scf::IfOp ifOp =
-        createLessThanCompare(builder, loc, args[0], args[1], item.value(),
-                              (item.index() == dim - 1));
-    if (item.index() == 0) {
-      topIfOp = ifOp;
-    } else {
-      OpBuilder::InsertionGuard insertionGuard(builder);
-      builder.setInsertionPointAfter(ifOp);
-      builder.create<scf::YieldOp>(loc, ifOp.getResult(0));
-    }
-  }
-
-  builder.setInsertionPointAfter(topIfOp);
-  builder.create<func::ReturnOp>(loc, topIfOp.getResult(0));
+  createCompareFuncImplementation(builder, unused, func, dim,
+                                  createLessThanCompare);
 }
 
 /// Creates a function to use a binary search to find the insertion point for
@@ -284,46 +316,33 @@ static void createBinarySearchFunc(OpBuilder &builder, ModuleOp module,
   builder.create<func::ReturnOp>(loc, whileOp.getResult(0));
 }
 
-/// Creates a function to perform quick sort partition on the values in the
-/// range of index [lo, hi), assuming lo < hi.
-//
-// The generated IR corresponds to this C like algorithm:
-// int partition(lo, hi, data) {
-//   pivot = data[hi - 1];
-//   i = (lo – 1)  // RHS of the pivot found so far.
-//   for (j = lo; j < hi - 1; j++){
-//     if (data[j] < pivot){
-//       i++;
-//       swap data[i] and data[j]
-//     }
-//   }
-//   i++
-//   swap data[i] and data[hi-1])
-//   return i
-// }
-static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
-                                func::FuncOp func, size_t dim) {
-  OpBuilder::InsertionGuard insertionGuard(builder);
-
-  Block *entryBlock = func.addEntryBlock();
-  builder.setInsertionPointToStart(entryBlock);
-
-  MLIRContext *context = module.getContext();
+/// Creates code to advance i in a loop based on xs[p] as follows:
+///   while (xs[i] < xs[p]) i += step (step > 0)
+/// or
+///   while (xs[i] > xs[p]) i += step (step < 0)
+/// The routine returns i as well as a boolean value to indicate whether
+/// xs[i] == xs[p].
+static std::pair<Value, Value>
+createScanLoop(OpBuilder &builder, ModuleOp module, func::FuncOp func,
+               ValueRange xs, Value i, Value p, size_t dim, int step) {
   Location loc = func.getLoc();
-  ValueRange args = entryBlock->getArguments();
-  Value lo = args[loIdx];
-  Value c1 = constantIndex(builder, loc, 1);
-  Value i = builder.create<arith::SubIOp>(loc, lo, c1);
-  Value him1 = builder.create<arith::SubIOp>(loc, args[hiIdx], c1);
-  scf::ForOp forOp =
-      builder.create<scf::ForOp>(loc, lo, him1, c1, ValueRange{i});
+  scf::WhileOp whileOp =
+      builder.create<scf::WhileOp>(loc, TypeRange{i.getType()}, ValueRange{i});
 
-  // Start the for-stmt body.
-  builder.setInsertionPointToStart(forOp.getBody());
-  Value j = forOp.getInductionVar();
-  SmallVector<Value, 6> compareOperands{j, him1};
-  ValueRange xs = args.slice(xStartIdx, dim);
+  Block *before =
+      builder.createBlock(&whileOp.getBefore(), {}, {i.getType()}, {loc});
+  builder.setInsertionPointToEnd(before);
+  SmallVector<Value, 6> compareOperands;
+  if (step > 0) {
+    compareOperands.push_back(before->getArgument(0));
+    compareOperands.push_back(p);
+  } else {
+    assert(step < 0);
+    compareOperands.push_back(p);
+    compareOperands.push_back(before->getArgument(0));
+  }
   compareOperands.append(xs.begin(), xs.end());
+  MLIRContext *context = module.getContext();
   Type i1Type = IntegerType::get(context, 1, IntegerType::Signless);
   FlatSymbolRefAttr lessThanFunc =
       getMangledSortHelperFunc(builder, func, {i1Type}, kLessThanFuncNamePrefix,
@@ -332,36 +351,156 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
                    .create<func::CallOp>(loc, lessThanFunc, TypeRange{i1Type},
                                          compareOperands)
                    .getResult(0);
-  scf::IfOp ifOp =
-      builder.create<scf::IfOp>(loc, i.getType(), cond, /*else=*/true);
+  builder.create<scf::ConditionOp>(loc, cond, before->getArguments());
 
-  // The if-stmt true branch: i++; swap(data[i], data[j]); yield i.
+  Block *after =
+      builder.createBlock(&whileOp.getAfter(), {}, {i.getType()}, {loc});
+  builder.setInsertionPointToEnd(after);
+  Value cs = constantIndex(builder, loc, step);
+  i = builder.create<arith::AddIOp>(loc, after->getArgument(0), cs);
+  builder.create<scf::YieldOp>(loc, ValueRange{i});
+  i = whileOp.getResult(0);
+
+  builder.setInsertionPointAfter(whileOp);
+  compareOperands[0] = i;
+  compareOperands[1] = p;
+  FlatSymbolRefAttr compareEqFunc = getMangledSortHelperFunc(
+      builder, func, {i1Type}, kCompareEqFuncNamePrefix, dim, compareOperands,
+      createEqCompareFunc);
+  Value compareEq =
+      builder
+          .create<func::CallOp>(loc, compareEqFunc, TypeRange{i1Type},
+                                compareOperands)
+          .getResult(0);
+
+  return std::make_pair(whileOp.getResult(0), compareEq);
+}
+
+/// Creates a function to perform quick sort partition on the values in the
+/// range of index [lo, hi), assuming lo < hi.
+//
+// The generated IR corresponds to this C like algorithm:
+// int partition(lo, hi, xs) {
+//   p = (lo+hi)/2  // pivot index
+//   i = lo
+//   j = hi-1
+//   while (i < j) do {
+//     while (xs[i] < xs[p]) i ++;
+//     i_eq = (xs[i] == xs[p]);
+//     while (xs[j] > xs[p]) j --;
+//     j_eq = (xs[j] == xs[p]);
+//     if (i < j) {
+//       swap(xs[i], xs[j])
+//       if (i == p) {
+//         p = j;
+//       } else if (j == p) {
+//         p = i;
+//       }
+//       if (i_eq && j_eq) {
+//         ++i;
+//         --j;
+//       }
+//     }
+//   }
+//   return p
+//   }
+static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
+                                func::FuncOp func, size_t dim) {
+  OpBuilder::InsertionGuard insertionGuard(builder);
+
+  Block *entryBlock = func.addEntryBlock();
+  builder.setInsertionPointToStart(entryBlock);
+
+  Location loc = func.getLoc();
+  ValueRange args = entryBlock->getArguments();
+  Value lo = args[loIdx];
+  Value hi = args[hiIdx];
+  Value sum = builder.create<arith::AddIOp>(loc, lo, hi);
+  Value c1 = constantIndex(builder, loc, 1);
+  Value p = builder.create<arith::ShRUIOp>(loc, sum, c1);
+
+  Value i = lo;
+  Value j = builder.create<arith::SubIOp>(loc, hi, c1);
+  SmallVector<Value, 4> operands{i, j, p};
+  SmallVector<Type, 4> types{i.getType(), j.getType(), p.getType()};
+  scf::WhileOp whileOp = builder.create<scf::WhileOp>(loc, types, operands);
+
+  // The before-region of the WhileOp.
+  Block *before =
+      builder.createBlock(&whileOp.getBefore(), {}, types, {loc, loc, loc});
+  builder.setInsertionPointToEnd(before);
+  Value cond = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                             before->getArgument(0),
+                                             before->getArgument(1));
+  builder.create<scf::ConditionOp>(loc, cond, before->getArguments());
+
+  // The after-region of the WhileOp.
+  Block *after =
+      builder.createBlock(&whileOp.getAfter(), {}, types, {loc, loc, loc});
+  builder.setInsertionPointToEnd(after);
+  i = after->getArgument(0);
+  j = after->getArgument(1);
+  p = after->getArgument(2);
+
+  auto [iresult, iCompareEq] = createScanLoop(
+      builder, module, func, args.slice(xStartIdx, dim), i, p, dim, 1);
+  i = iresult;
+  auto [jresult, jCompareEq] = createScanLoop(
+      builder, module, func, args.slice(xStartIdx, dim), j, p, dim, -1);
+  j = jresult;
+
+  // If i < j:
+  cond = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, i, j);
+  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, types, cond, /*else=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  Value i1 =
-      builder.create<arith::AddIOp>(loc, forOp.getRegionIterArgs().front(), c1);
-  SmallVector<Value, 6> swapOperands{i1, j};
+  SmallVector<Value, 6> swapOperands{i, j};
   swapOperands.append(args.begin() + xStartIdx, args.end());
-  FlatSymbolRefAttr swapFunc = getMangledSortHelperFunc(
-      builder, func, TypeRange(), kMaySwapFuncNamePrefix, dim, swapOperands,
-      createMaySwapFunc);
-  builder.create<func::CallOp>(loc, swapFunc, TypeRange(), swapOperands);
-  builder.create<scf::YieldOp>(loc, i1);
+  createSwap(builder, loc, swapOperands);
+  // If the pivot is moved, update p with the new pivot.
+  Value icond =
+      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, i, p);
+  scf::IfOp ifOpI = builder.create<scf::IfOp>(loc, TypeRange{p.getType()},
+                                              icond, /*else=*/true);
+  builder.setInsertionPointToStart(&ifOpI.getThenRegion().front());
+  builder.create<scf::YieldOp>(loc, ValueRange{j});
+  builder.setInsertionPointToStart(&ifOpI.getElseRegion().front());
+  Value jcond =
+      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, j, p);
+  scf::IfOp ifOpJ = builder.create<scf::IfOp>(loc, TypeRange{p.getType()},
+                                              jcond, /*else=*/true);
+  builder.setInsertionPointToStart(&ifOpJ.getThenRegion().front());
+  builder.create<scf::YieldOp>(loc, ValueRange{i});
+  builder.setInsertionPointToStart(&ifOpJ.getElseRegion().front());
+  builder.create<scf::YieldOp>(loc, ValueRange{p});
+  builder.setInsertionPointAfter(ifOpJ);
+  builder.create<scf::YieldOp>(loc, ifOpJ.getResults());
+  builder.setInsertionPointAfter(ifOpI);
+  Value compareEqIJ =
+      builder.create<arith::AndIOp>(loc, iCompareEq, jCompareEq);
+  scf::IfOp ifOp2 = builder.create<scf::IfOp>(
+      loc, TypeRange{i.getType(), j.getType()}, compareEqIJ, /*else=*/true);
+  builder.setInsertionPointToStart(&ifOp2.getThenRegion().front());
+  Value i2 = builder.create<arith::AddIOp>(loc, i, c1);
+  Value j2 = builder.create<arith::SubIOp>(loc, j, c1);
+  builder.create<scf::YieldOp>(loc, ValueRange{i2, j2});
+  builder.setInsertionPointToStart(&ifOp2.getElseRegion().front());
+  builder.create<scf::YieldOp>(loc, ValueRange{i, j});
+  builder.setInsertionPointAfter(ifOp2);
+  builder.create<scf::YieldOp>(
+      loc,
+      ValueRange{ifOp2.getResult(0), ifOp2.getResult(1), ifOpI.getResult(0)});
 
-  // The if-stmt false branch: yield i.
+  // False branch for if i < j:
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  builder.create<scf::YieldOp>(loc, forOp.getRegionIterArgs().front());
+  builder.create<scf::YieldOp>(loc, ValueRange{i, j, p});
 
-  // After the if-stmt, yield the updated i value to end the for-stmt body.
+  // Return for the whileOp.
   builder.setInsertionPointAfter(ifOp);
-  builder.create<scf::YieldOp>(loc, ifOp.getResult(0));
+  builder.create<scf::YieldOp>(loc, ifOp.getResults());
 
-  // After the for-stmt: i++; swap(data[i], data[him1]); return i.
-  builder.setInsertionPointAfter(forOp);
-  i1 = builder.create<arith::AddIOp>(loc, forOp.getResult(0), c1);
-  swapOperands[0] = i1;
-  swapOperands[1] = him1;
-  builder.create<func::CallOp>(loc, swapFunc, TypeRange(), swapOperands);
-  builder.create<func::ReturnOp>(loc, i1);
+  // Return for the function.
+  builder.setInsertionPointAfter(whileOp);
+  builder.create<func::ReturnOp>(loc, whileOp.getResult(2));
 }
 
 /// Creates a function to perform quick sort on the value in the range of
@@ -496,15 +635,21 @@ namespace {
 struct PushBackRewriter : OpRewritePattern<PushBackOp> {
 public:
   using OpRewritePattern<PushBackOp>::OpRewritePattern;
+  PushBackRewriter(MLIRContext *context, bool enableInit)
+      : OpRewritePattern(context), enableBufferInitialization(enableInit) {}
   LogicalResult matchAndRewrite(PushBackOp op,
                                 PatternRewriter &rewriter) const override {
-    // Rewrite push_back(buffer, value) to:
-    // if (size(buffer) >= capacity(buffer))
-    //    new_capacity = capacity(buffer)*2
+    // Rewrite push_back(buffer, value, n) to:
+    // new_size = size(buffer) + n
+    // if (new_size > capacity(buffer))
+    //    while new_size > new_capacity
+    //      new_capacity = new_capacity*2
     //    new_buffer = realloc(buffer, new_capacity)
     // buffer = new_buffer
-    // store(buffer, value)
-    // size(buffer)++
+    // subBuffer = subviewof(buffer)
+    // linalg.fill subBuffer value
+    //
+    // size(buffer) += n
     //
     // The capacity check is skipped when the attribute inbounds is presented.
     Location loc = op->getLoc();
@@ -516,20 +661,62 @@ public:
     Value size = rewriter.create<memref::LoadOp>(loc, bufferSizes, idx);
     Value value = op.getValue();
 
+    Value n = op.getN() ? op.getN() : constantIndex(rewriter, loc, 1);
+    Value newSize = rewriter.create<arith::AddIOp>(loc, size, n);
+    auto nValue = dyn_cast_or_null<arith::ConstantIndexOp>(n.getDefiningOp());
+    bool nIsOne = (nValue && nValue.value() == 1);
+
     if (!op.getInbounds()) {
       Value cond = rewriter.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::uge, size, capacity);
+          loc, arith::CmpIPredicate::ugt, newSize, capacity);
 
+      Value c2 = constantIndex(rewriter, loc, 2);
       auto bufferType =
           MemRefType::get({ShapedType::kDynamicSize}, value.getType());
       scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, bufferType, cond,
                                                   /*else=*/true);
       // True branch.
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      Value c2 = constantIndex(rewriter, loc, 2);
-      capacity = rewriter.create<arith::MulIOp>(loc, capacity, c2);
+      if (nIsOne) {
+        capacity = rewriter.create<arith::MulIOp>(loc, capacity, c2);
+      } else {
+        // Use a do-while loop to calculate the new capacity as follows:
+        //   do { new_capacity *= 2 } while (size > new_capacity)
+        scf::WhileOp whileOp =
+            rewriter.create<scf::WhileOp>(loc, capacity.getType(), capacity);
+
+        // The before-region of the WhileOp.
+        Block *before = rewriter.createBlock(&whileOp.getBefore(), {},
+                                             {capacity.getType()}, {loc});
+        rewriter.setInsertionPointToEnd(before);
+
+        capacity =
+            rewriter.create<arith::MulIOp>(loc, before->getArgument(0), c2);
+        cond = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt,
+                                              newSize, capacity);
+        rewriter.create<scf::ConditionOp>(loc, cond, ValueRange{capacity});
+        // The after-region of the WhileOp.
+        Block *after = rewriter.createBlock(&whileOp.getAfter(), {},
+                                            {capacity.getType()}, {loc});
+        rewriter.setInsertionPointToEnd(after);
+        rewriter.create<scf::YieldOp>(loc, after->getArguments());
+
+        rewriter.setInsertionPointAfter(whileOp);
+        capacity = whileOp.getResult(0);
+      }
+
       Value newBuffer =
           rewriter.create<memref::ReallocOp>(loc, bufferType, buffer, capacity);
+      if (enableBufferInitialization) {
+        Value fillSize = rewriter.create<arith::SubIOp>(loc, capacity, newSize);
+        Value fillValue = rewriter.create<arith::ConstantOp>(
+            loc, value.getType(), rewriter.getZeroAttr(value.getType()));
+        Value subBuffer = rewriter.create<memref::SubViewOp>(
+            loc, newBuffer, /*offset=*/ValueRange{newSize},
+            /*size=*/ValueRange{fillSize},
+            /*step=*/ValueRange{constantIndex(rewriter, loc, 1)});
+        rewriter.create<linalg::FillOp>(loc, fillValue, subBuffer);
+      }
       rewriter.create<scf::YieldOp>(loc, newBuffer);
 
       // False branch.
@@ -542,16 +729,23 @@ public:
     }
 
     // Add the value to the end of the buffer.
-    rewriter.create<memref::StoreOp>(loc, value, buffer, size);
+    if (nIsOne) {
+      rewriter.create<memref::StoreOp>(loc, value, buffer, size);
+    } else {
+      Value subBuffer = rewriter.create<memref::SubViewOp>(
+          loc, buffer, /*offset=*/ValueRange{size}, /*size=*/ValueRange{n},
+          /*step=*/ValueRange{constantIndex(rewriter, loc, 1)});
+      rewriter.create<linalg::FillOp>(loc, value, subBuffer);
+    }
 
-    // Increment the size of the buffer by 1.
-    Value c1 = constantIndex(rewriter, loc, 1);
-    size = rewriter.create<arith::AddIOp>(loc, size, c1);
-    rewriter.create<memref::StoreOp>(loc, size, bufferSizes, idx);
-
+    // Update the buffer size.
+    rewriter.create<memref::StoreOp>(loc, newSize, bufferSizes, idx);
     rewriter.replaceOp(op, buffer);
     return success();
   }
+
+private:
+  bool enableBufferInitialization;
 };
 
 /// Sparse rewriting rule for the sort operator.
@@ -598,6 +792,9 @@ public:
 // Methods that add patterns described in this file to a pattern list.
 //===---------------------------------------------------------------------===//
 
-void mlir::populateSparseBufferRewriting(RewritePatternSet &patterns) {
-  patterns.add<PushBackRewriter, SortRewriter>(patterns.getContext());
+void mlir::populateSparseBufferRewriting(RewritePatternSet &patterns,
+                                         bool enableBufferInitialization) {
+  patterns.add<PushBackRewriter>(patterns.getContext(),
+                                 enableBufferInitialization);
+  patterns.add<SortRewriter>(patterns.getContext());
 }

@@ -145,6 +145,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_FunctionTypeLParen);
   EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
   EXPECT_TOKEN(Tokens[12], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("if (Foo * Bar / Test)");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("if (Class* obj {getObj()})");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("if (Foo* Bar = getObj())");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -1122,6 +1134,35 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   EXPECT_TOKEN(Tokens[5], tok::question, TT_ConditionalExpr);
   EXPECT_TOKEN(Tokens[7], tok::colon, TT_ConditionalExpr);
   EXPECT_TOKEN(Tokens[9], tok::colon, TT_GotoLabelColon);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
+  auto Tokens = annotate("Class::Class() : BaseClass(), Member() {}");
+
+  // The TT_Unknown is clearly not binding for the future, please adapt if those
+  // tokens get annotated.
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_CtorInitializerColon);
+  EXPECT_TOKEN(Tokens[6], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[9], tok::comma, TT_CtorInitializerComma);
+  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[11], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[12], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
+
+  Tokens = annotate("Class::Class() : BaseClass{}, Member{} {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_CtorInitializerColon);
+  EXPECT_TOKEN(Tokens[6], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_Unknown);
+  EXPECT_TOKEN(Tokens[8], tok::r_brace, TT_Unknown);
+  EXPECT_TOKEN(Tokens[9], tok::comma, TT_CtorInitializerComma);
+  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_Unknown);
+  EXPECT_TOKEN(Tokens[12], tok::r_brace, TT_Unknown);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
 }
 
 } // namespace

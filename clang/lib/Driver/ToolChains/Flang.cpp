@@ -51,15 +51,15 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
                    options::OPT_I, options::OPT_cpp, options::OPT_nocpp});
 }
 
-void Flang::forwardOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
+void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   Args.AddAllArgs(CmdArgs,
                   {options::OPT_module_dir, options::OPT_fdebug_module_writer,
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
                    options::OPT_std_EQ, options::OPT_W_Joined,
-                   options::OPT_fconvert_EQ});
+                   options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ});
 }
 
-void Flang::AddPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
+void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   // ParsePICArgs parses -fPIC/-fPIE and their variants and returns a tuple of
   // (RelocationModel, PICLevel, IsPIE).
   llvm::Reloc::Model RelocationModel;
@@ -78,6 +78,104 @@ void Flang::AddPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
     if (IsPIE)
       CmdArgs.push_back("-pic-is-pie");
   }
+}
+
+static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  StringRef FPContract;
+  bool HonorINFs = true;
+  bool HonorNaNs = true;
+  bool ApproxFunc = false;
+  bool SignedZeros = true;
+  bool AssociativeMath = false;
+  bool ReciprocalMath = false;
+
+  if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
+    const StringRef Val = A->getValue();
+    if (Val == "fast" || Val == "off") {
+      FPContract = Val;
+    } else if (Val == "on") {
+      // Warn instead of error because users might have makefiles written for
+      // gfortran (which accepts -ffp-contract=on)
+      D.Diag(diag::warn_drv_unsupported_option_for_flang)
+          << Val << A->getOption().getName() << "off";
+      FPContract = "off";
+    } else
+      // Clang's "fast-honor-pragmas" option is not supported because it is
+      // non-standard
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Val;
+  }
+
+  for (const Arg *A : Args) {
+    auto optId = A->getOption().getID();
+    switch (optId) {
+    // if this isn't an FP option, skip the claim below
+    default:
+      continue;
+
+    case options::OPT_fhonor_infinities:
+      HonorINFs = true;
+      break;
+    case options::OPT_fno_honor_infinities:
+      HonorINFs = false;
+      break;
+    case options::OPT_fhonor_nans:
+      HonorNaNs = true;
+      break;
+    case options::OPT_fno_honor_nans:
+      HonorNaNs = false;
+      break;
+    case options::OPT_fapprox_func:
+      ApproxFunc = true;
+      break;
+    case options::OPT_fno_approx_func:
+      ApproxFunc = false;
+      break;
+    case options::OPT_fsigned_zeros:
+      SignedZeros = true;
+      break;
+    case options::OPT_fno_signed_zeros:
+      SignedZeros = false;
+      break;
+    case options::OPT_fassociative_math:
+      AssociativeMath = true;
+      break;
+    case options::OPT_fno_associative_math:
+      AssociativeMath = false;
+      break;
+    case options::OPT_freciprocal_math:
+      ReciprocalMath = true;
+      break;
+    case options::OPT_fno_reciprocal_math:
+      ReciprocalMath = false;
+      break;
+    }
+
+    // If we handled this option claim it
+    A->claim();
+  }
+
+  if (!FPContract.empty())
+    CmdArgs.push_back(Args.MakeArgString("-ffp-contract=" + FPContract));
+
+  if (!HonorINFs)
+    CmdArgs.push_back("-menable-no-infs");
+
+  if (!HonorNaNs)
+    CmdArgs.push_back("-menable-no-nans");
+
+  if (ApproxFunc)
+    CmdArgs.push_back("-fapprox-func");
+
+  if (!SignedZeros)
+    CmdArgs.push_back("-fno-signed-zeros");
+
+  if (AssociativeMath && !SignedZeros)
+    CmdArgs.push_back("-mreassociate");
+
+  if (ReciprocalMath)
+    CmdArgs.push_back("-freciprocal-math");
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
@@ -140,10 +238,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fcolor-diagnostics");
 
   // -fPIC and related options.
-  AddPicOptions(Args, CmdArgs);
+  addPicOptions(Args, CmdArgs);
 
-  // Handle options which are simply forwarded to -fc1.
-  forwardOptions(Args, CmdArgs);
+  // Floating point related options
+  addFloatingPointOptions(D, Args, CmdArgs);
+
+  // Add other compile options
+  addOtherOptions(Args, CmdArgs);
 
   // Forward -Xflang arguments to -fc1
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);

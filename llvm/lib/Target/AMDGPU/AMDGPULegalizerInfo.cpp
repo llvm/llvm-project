@@ -5035,7 +5035,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   // s16 -> <2 x s16>, and <3 x s16> -> <4 x s16>,
   LLT RoundedTy;
 
-  // S32 vector to to cover all data, plus TFE result element.
+  // S32 vector to cover all data, plus TFE result element.
   LLT TFETy;
 
   // Register type to use for each loaded component. Will be S32 or V2S16.

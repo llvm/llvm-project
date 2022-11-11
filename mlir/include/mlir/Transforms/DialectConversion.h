@@ -507,6 +507,9 @@ void populateFunctionOpInterfaceTypeConversionPattern(
                                                    patterns, converter);
 }
 
+void populateAnyFunctionOpInterfaceTypeConversionPattern(
+    RewritePatternSet &patterns, TypeConverter &converter);
+
 //===----------------------------------------------------------------------===//
 // Conversion PatternRewriter
 //===----------------------------------------------------------------------===//
@@ -570,6 +573,11 @@ public:
   //===--------------------------------------------------------------------===//
   // PatternRewriter Hooks
   //===--------------------------------------------------------------------===//
+
+  /// Indicate that the conversion rewriter can recover from rewrite failure.
+  /// Recovery is supported via rollback, allowing for continued processing of
+  /// patterns even if a failure is encountered during the rewrite step.
+  bool canRecoverFromRewriteFailure() const override { return true; }
 
   /// PatternRewriter hook for replacing the results of an operation when the
   /// given functor returns true.
@@ -887,6 +895,35 @@ private:
   /// The current context this target applies to.
   MLIRContext &ctx;
 };
+
+//===----------------------------------------------------------------------===//
+// PDL Configuration
+//===----------------------------------------------------------------------===//
+
+/// A PDL configuration that is used to supported dialect conversion
+/// functionality.
+class PDLConversionConfig final
+    : public PDLPatternConfigBase<PDLConversionConfig> {
+public:
+  PDLConversionConfig(TypeConverter *converter) : converter(converter) {}
+  ~PDLConversionConfig() final = default;
+
+  /// Return the type converter used by this configuration, which may be nullptr
+  /// if no type conversions are expected.
+  TypeConverter *getTypeConverter() const { return converter; }
+
+  /// Hooks that are invoked at the beginning and end of a rewrite of a matched
+  /// pattern.
+  void notifyRewriteBegin(PatternRewriter &rewriter) final;
+  void notifyRewriteEnd(PatternRewriter &rewriter) final;
+
+private:
+  /// An optional type converter to use for the pattern.
+  TypeConverter *converter;
+};
+
+/// Register the dialect conversion PDL functions with the given pattern set.
+void registerConversionPDLFunctions(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 // Op Conversion Entry Points

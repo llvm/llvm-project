@@ -306,6 +306,10 @@ END_REGISTER_VP(vp_roundeven, VP_FROUNDEVEN)
 BEGIN_REGISTER_VP(vp_roundtozero, 1, 2, VP_FROUNDTOZERO, -1)
 END_REGISTER_VP(vp_roundtozero, VP_FROUNDTOZERO)
 
+// llvm.vp.rint(x,mask,vlen)
+BEGIN_REGISTER_VP(vp_rint, 1, 2, VP_FRINT, -1)
+END_REGISTER_VP(vp_rint, VP_FRINT)
+
 ///// } Floating-Point Arithmetic
 
 ///// Type Casts {

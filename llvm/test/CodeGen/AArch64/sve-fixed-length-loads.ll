@@ -19,37 +19,37 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ; Don't use SVE for 64-bit vectors.
-define <2 x float> @load_v2f32(<2 x float>* %a) #0 {
+define <2 x float> @load_v2f32(ptr %a) #0 {
 ; CHECK-LABEL: load_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ret
-  %load = load <2 x float>, <2 x float>* %a
+  %load = load <2 x float>, ptr %a
   ret <2 x float> %load
 }
 
 ; Don't use SVE for 128-bit vectors.
-define <4 x float> @load_v4f32(<4 x float>* %a) #0 {
+define <4 x float> @load_v4f32(ptr %a) #0 {
 ; CHECK-LABEL: load_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
-  %load = load <4 x float>, <4 x float>* %a
+  %load = load <4 x float>, ptr %a
   ret <4 x float> %load
 }
 
-define <8 x float> @load_v8f32(<8 x float>* %a) #0 {
+define <8 x float> @load_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: load_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
 ; CHECK-NEXT:    ret
-  %load = load <8 x float>, <8 x float>* %a
+  %load = load <8 x float>, ptr %a
   ret <8 x float> %load
 }
 
-define <16 x float> @load_v16f32(<16 x float>* %a) #0 {
+define <16 x float> @load_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: load_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x9, #8
@@ -80,11 +80,11 @@ define <16 x float> @load_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x8]
 ; VBITS_GE_2048-NEXT:    ret
-  %load = load <16 x float>, <16 x float>* %a
+  %load = load <16 x float>, ptr %a
   ret <16 x float> %load
 }
 
-define <32 x float> @load_v32f32(<32 x float>* %a) #0 {
+define <32 x float> @load_v32f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: load_v32f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x9, #16
@@ -124,11 +124,11 @@ define <32 x float> @load_v32f32(<32 x float>* %a) #0 {
 ; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x8]
 ; VBITS_GE_2048-NEXT:    ret
-  %load = load <32 x float>, <32 x float>* %a
+  %load = load <32 x float>, ptr %a
   ret <32 x float> %load
 }
 
-define <64 x float> @load_v64f32(<64 x float>* %a) #0 {
+define <64 x float> @load_v64f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: load_v64f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x9, #8
@@ -189,7 +189,7 @@ define <64 x float> @load_v64f32(<64 x float>* %a) #0 {
 ; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x8]
 ; VBITS_GE_2048-NEXT:    ret
-  %load = load <64 x float>, <64 x float>* %a
+  %load = load <64 x float>, ptr %a
   ret <64 x float> %load
 }
 

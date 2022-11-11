@@ -30,7 +30,7 @@ static cl::opt<bool>
 
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     : M(m), VMContext(M.getContext()), CUNode(CU), DeclareFn(nullptr),
-      ValueFn(nullptr), LabelFn(nullptr), AddrFn(nullptr),
+      ValueFn(nullptr), LabelFn(nullptr), AddrFn(nullptr), AssignFn(nullptr),
       AllowUnresolvedNodes(AllowUnresolvedNodes) {
   if (CUNode) {
     if (const auto &ETs = CUNode->getEnumTypes())
@@ -84,7 +84,9 @@ void DIBuilder::finalize() {
   }
 
   if (!AllEnumTypes.empty())
-    CUNode->replaceEnumTypes(MDTuple::get(VMContext, AllEnumTypes));
+    CUNode->replaceEnumTypes(MDTuple::get(
+        VMContext, SmallVector<Metadata *, 16>(AllEnumTypes.begin(),
+                                               AllEnumTypes.end())));
 
   SmallVector<Metadata *, 16> RetainValues;
   // Declarations and definitions of the same type may be retained. Some
@@ -556,7 +558,7 @@ DICompositeType *DIBuilder::createEnumerationType(
       getNonCompileUnitScope(Scope), UnderlyingType, SizeInBits, AlignInBits, 0,
       IsScoped ? DINode::FlagEnumClass : DINode::FlagZero, Elements, 0, nullptr,
       nullptr, UniqueIdentifier);
-  AllEnumTypes.push_back(CTy);
+  AllEnumTypes.emplace_back(CTy);
   trackIfUnresolved(CTy);
   return CTy;
 }
@@ -956,6 +958,36 @@ Instruction *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
   // the terminator. Otherwise, put it at the end of the block.
   Instruction *InsertBefore = InsertAtEnd->getTerminator();
   return insertDeclare(Storage, VarInfo, Expr, DL, InsertAtEnd, InsertBefore);
+}
+
+DbgAssignIntrinsic *
+DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
+                           DILocalVariable *SrcVar, DIExpression *ValExpr,
+                           Value *Addr, DIExpression *AddrExpr,
+                           const DILocation *DL) {
+  LLVMContext &Ctx = LinkedInstr->getContext();
+  Module *M = LinkedInstr->getModule();
+  if (!AssignFn)
+    AssignFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_assign);
+
+  auto *Link = LinkedInstr->getMetadata(LLVMContext::MD_DIAssignID);
+  assert(Link && "Linked instruction must have DIAssign metadata attached");
+
+  std::array<Value *, 6> Args = {
+      MetadataAsValue::get(Ctx, ValueAsMetadata::get(Val)),
+      MetadataAsValue::get(Ctx, SrcVar),
+      MetadataAsValue::get(Ctx, ValExpr),
+      MetadataAsValue::get(Ctx, Link),
+      MetadataAsValue::get(Ctx, ValueAsMetadata::get(Addr)),
+      MetadataAsValue::get(Ctx, AddrExpr),
+  };
+
+  IRBuilder<> B(Ctx);
+  B.SetCurrentDebugLocation(DL);
+
+  auto *DVI = cast<DbgAssignIntrinsic>(B.CreateCall(AssignFn, Args));
+  DVI->insertAfter(LinkedInstr);
+  return DVI;
 }
 
 Instruction *DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,

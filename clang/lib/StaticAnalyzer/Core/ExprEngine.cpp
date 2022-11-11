@@ -912,9 +912,9 @@ static void printStateTraitWithLocationContextJson(
 
   // Try to do as much compile time checking as possible.
   // FIXME: check for invocable instead of function?
-  static_assert(std::is_function<std::remove_pointer_t<Printer>>::value,
+  static_assert(std::is_function_v<std::remove_pointer_t<Printer>>,
                 "Printer is not a function!");
-  static_assert(std::is_convertible<Printer, RequiredType>::value,
+  static_assert(std::is_convertible_v<Printer, RequiredType>,
                 "Printer doesn't have the required type!");
 
   if (LCtx && !State->get<Trait>().isEmpty()) {
@@ -1241,6 +1241,7 @@ ExprEngine::prepareStateForArrayDestruction(const ProgramStateRef State,
                                             const QualType &ElementTy,
                                             const LocationContext *LCtx,
                                             SVal *ElementCountVal) {
+  assert(Region != nullptr && "Not-null region expected");	
 
   QualType Ty = ElementTy.getDesugaredType(getContext());
   while (const auto *NTy = dyn_cast<ArrayType>(Ty))
@@ -1420,31 +1421,32 @@ void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
   const MemRegion *ArgR = ArgVal.getAsRegion();
 
   if (DE->isArrayForm()) {
-    SVal ElementCount;
-    std::tie(State, Idx) =
-        prepareStateForArrayDestruction(State, ArgR, DTy, LCtx, &ElementCount);
-
     CallOpts.IsArrayCtorOrDtor = true;
     // Yes, it may even be a multi-dimensional array.
     while (const auto *AT = getContext().getAsArrayType(DTy))
       DTy = AT->getElementType();
 
-    // If we're about to destruct a 0 length array, don't run any of the
-    // destructors.
-    if (ElementCount.isConstant() &&
-        ElementCount.getAsInteger()->getLimitedValue() == 0) {
+    if (ArgR) {
+      SVal ElementCount;
+      std::tie(State, Idx) = prepareStateForArrayDestruction(
+          State, ArgR, DTy, LCtx, &ElementCount);
 
-      static SimpleProgramPointTag PT(
-          "ExprEngine", "Skipping 0 length array delete destruction");
-      PostImplicitCall PP(getDtorDecl(DTy), DE->getBeginLoc(), LCtx, &PT);
-      NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-      Bldr.generateNode(PP, Pred->getState(), Pred);
-      return;
-    }
+      // If we're about to destruct a 0 length array, don't run any of the
+      // destructors.
+      if (ElementCount.isConstant() &&
+          ElementCount.getAsInteger()->getLimitedValue() == 0) {
 
-    if (ArgR)
+        static SimpleProgramPointTag PT(
+            "ExprEngine", "Skipping 0 length array delete destruction");
+        PostImplicitCall PP(getDtorDecl(DTy), DE->getBeginLoc(), LCtx, &PT);
+        NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+        Bldr.generateNode(PP, Pred->getState(), Pred);
+        return;
+      }
+
       ArgR = State->getLValue(DTy, svalBuilder.makeArrayIndex(Idx), ArgVal)
                  .getAsRegion();
+    }
   }
 
   NodeBuilder Bldr(Pred, Dst, getBuilderContext());
@@ -1744,6 +1746,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTaskyieldDirectiveClass:
     case Stmt::OMPBarrierDirectiveClass:
     case Stmt::OMPTaskwaitDirectiveClass:
+    case Stmt::OMPErrorDirectiveClass:
     case Stmt::OMPTaskgroupDirectiveClass:
     case Stmt::OMPFlushDirectiveClass:
     case Stmt::OMPDepobjDirectiveClass:

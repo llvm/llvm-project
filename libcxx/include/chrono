@@ -728,4 +728,8 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #  pragma GCC system_header
 #endif
 
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <concepts>
+#endif
+
 #endif // _LIBCPP_CHRONO

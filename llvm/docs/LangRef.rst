@@ -886,8 +886,9 @@ Syntax::
               [, partition "name"]
 
 The linkage must be one of ``private``, ``internal``, ``linkonce``, ``weak``,
-``linkonce_odr``, ``weak_odr``, ``external``. Note that some system linkers
-might not correctly handle dropping a weak symbol that is aliased.
+``linkonce_odr``, ``weak_odr``, ``external``, ``available_externally``. Note
+that some system linkers might not correctly handle dropping a weak symbol that
+is aliased.
 
 Aliases that are not ``unnamed_addr`` are guaranteed to have the same address as
 the aliasee expression. ``unnamed_addr`` ones are only guaranteed to point
@@ -906,8 +907,10 @@ some can only be checked when producing an object file:
   intermediate alias being overridden cannot be represented in an
   object file.
 
-* No global value in the expression can be a declaration, since that
-  would require a relocation, which is not possible.
+* If the alias has the ``available_externally`` linkage, the aliasee must be an
+  ``available_externally`` global value; otherwise the aliasee can be an
+  expression but no global value in the expression can be a declaration, since
+  that would require a relocation, which is not possible.
 
 * If either the alias or the aliasee may be replaced by a symbol outside the
   module at link time or runtime, any optimization cannot replace the alias with
@@ -1414,6 +1417,30 @@ Currently, only the following parameter attributes are defined:
     same address may be returned), for a free-like function the
     pointer will always be invalidated.
 
+``readnone``
+    This attribute indicates that the function does not dereference that
+    pointer argument, even though it may read or write the memory that the
+    pointer points to if accessed through other pointers.
+
+    If a function reads from or writes to a readnone pointer argument, the
+    behavior is undefined.
+
+``readonly``
+    This attribute indicates that the function does not write through this
+    pointer argument, even though it may write to the memory that the pointer
+    points to.
+
+    If a function writes to a readonly pointer argument, the behavior is
+    undefined.
+
+``writeonly``
+    This attribute indicates that the function may write to, but does not read
+    through this pointer argument (even though it may read from the memory that
+    the pointer points to).
+
+    If a function reads from a writeonly pointer argument, the behavior is
+    undefined.
+
 .. _gc:
 
 Garbage Collector Strategy Names
@@ -1701,22 +1728,6 @@ example:
     the profile information. By marking a function ``hot``, users can work
     around the cases where the training input does not have good coverage
     on all the hot functions.
-``inaccessiblememonly``
-    This attribute indicates that the function may only access memory that
-    is not accessible by the module being compiled before return from the
-    function. This is a weaker form of ``readnone``. If the function reads
-    or writes other memory, the behavior is undefined.
-
-    For clarity, note that such functions are allowed to return new memory
-    which is ``noalias`` with respect to memory already accessible from
-    the module.  That is, a function can be both ``inaccessiblememonly`` and
-    have a ``noalias`` return which introduces a new, potentially initialized,
-    allocation.
-``inaccessiblemem_or_argmemonly``
-    This attribute indicates that the function may only access memory that is
-    either not accessible by the module being compiled, or is pointed to
-    by its pointer arguments. This is a weaker form of  ``argmemonly``. If the
-    function reads or writes other memory, the behavior is undefined.
 ``inlinehint``
     This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in
@@ -1974,45 +1985,6 @@ example:
     function that has a ``"probe-stack"`` attribute is inlined into a
     function that has no ``"probe-stack"`` attribute at all, the resulting
     function has the ``"probe-stack"`` attribute of the callee.
-``readnone``
-    On a function, this attribute indicates that the function computes its
-    result (or decides to unwind an exception) based strictly on its arguments,
-    without dereferencing any pointer arguments or otherwise accessing
-    any mutable state (e.g. memory, control registers, etc) visible outside the
-    ``readnone`` function. It does not write through any pointer arguments
-    (including ``byval`` arguments) and never changes any state visible to
-    callers. This means while it cannot unwind exceptions by calling the ``C++``
-    exception throwing methods (since they write to memory), there may be
-    non-``C++`` mechanisms that throw exceptions without writing to LLVM visible
-    memory.
-
-    On an argument, this attribute indicates that the function does not
-    dereference that pointer argument, even though it may read or write the
-    memory that the pointer points to if accessed through other pointers.
-
-    If a readnone function reads or writes memory visible outside the function,
-    or has other side-effects, the behavior is undefined. If a
-    function reads from or writes to a readnone pointer argument, the behavior
-    is undefined.
-``readonly``
-    On a function, this attribute indicates that the function does not write
-    through any pointer arguments (including ``byval`` arguments) or otherwise
-    modify any state (e.g. memory, control registers, etc) visible outside the
-    ``readonly`` function. It may dereference pointer arguments and read
-    state that may be set in the caller. A readonly function always
-    returns the same value (or unwinds an exception identically) when
-    called with the same set of arguments and global state.  This means while it
-    cannot unwind exceptions by calling the ``C++`` exception throwing methods
-    (since they write to memory), there may be non-``C++`` mechanisms that throw
-    exceptions without writing to LLVM visible memory.
-
-    On an argument, this attribute indicates that the function does not write
-    through this pointer argument, even though it may write to the memory that
-    the pointer points to.
-
-    If a readonly function writes memory visible outside the function, or has
-    other side-effects, the behavior is undefined. If a function writes to a
-    readonly pointer argument, the behavior is undefined.
 ``"stack-probe-size"``
     This attribute controls the behavior of stack probes: either
     the ``"probe-stack"`` attribute, or ABI-required stack probes, if any.
@@ -2030,29 +2002,6 @@ example:
     of the callee.
 ``"no-stack-arg-probe"``
     This attribute disables ABI-required stack probes, if any.
-``writeonly``
-    On a function, this attribute indicates that the function may write to but
-    does not read from memory visible outside the ``writeonly`` function.
-
-    On an argument, this attribute indicates that the function may write to but
-    does not read through this pointer argument (even though it may read from
-    the memory that the pointer points to).
-
-    If a writeonly function reads memory visible outside the function or has
-    other side-effects, the behavior is undefined. If a function reads
-    from a writeonly pointer argument, the behavior is undefined.
-``argmemonly``
-    This attribute indicates that the only memory accesses inside function are
-    loads and stores from objects pointed to by its pointer-typed arguments,
-    with arbitrary offsets. Or in other words, all memory operations in the
-    function can refer to memory only using pointers based on its function
-    arguments.
-
-    Note that ``argmemonly`` can be used together with ``readonly`` attribute
-    in order to specify that function reads only from its arguments.
-
-    If an argmemonly function reads or writes memory other than the pointer
-    arguments, or has other side-effects, the behavior is undefined.
 ``returns_twice``
     This attribute indicates that this function can return twice. The C
     ``setjmp`` is an example of such a function. The compiler disables
@@ -3117,6 +3066,11 @@ operation may modify the memory at that address. A volatile operation
 may not modify any other memory accessible by the module being compiled.
 A volatile operation may not call any code in the current module.
 
+In general (without target specific context), the address space of a
+volatile operation may not be changed. Different address spaces may
+have different trapping behavior when dereferencing an invalid
+pointer.
+
 The compiler may assume execution will continue after a volatile operation,
 so operations which modify memory or may have undefined behavior can be
 hoisted past a volatile operation.
@@ -3633,11 +3587,21 @@ Pointer Type
 The pointer type ``ptr`` is used to specify memory locations. Pointers are
 commonly used to reference objects in memory.
 
-Pointer types may have an optional address space attribute defining the
-numbered address space where the pointed-to object resides. The default
-address space is number zero. The semantics of non-zero address spaces
-are target-specific. For example, ``ptr addrspace(5)`` is a pointer
-to address space 5.
+Pointer types may have an optional address space attribute defining
+the numbered address space where the pointed-to object resides. For
+example, ``ptr addrspace(5)`` is a pointer to address space 5.
+
+The default address space is number zero.
+
+The semantics of non-zero address spaces are target-specific. Memory
+access through a non-dereferenceable pointer is undefined behavior in
+any address space. Pointers with the bit-value 0 are only assumed to
+be non-dereferenceable in address space 0, unless the function is
+marked with the ``null_pointer_is_valid`` attribute.
+
+If an object can be proven accessible through a pointer with a
+different address space, the access may be modified to use that
+address space. Exceptions apply if the operation is ``volatile``.
 
 Prior to LLVM 15, pointer types also specified a pointee type, such as
 ``i8*``, ``[4 x i32]*`` or ``i32 (i32*)*``. In LLVM 15, such "typed
@@ -11309,9 +11273,19 @@ The '``addrspacecast``' instruction converts the pointer value
 ``ptrval`` to type ``pty2``. It can be a *no-op cast* or a complex
 value modification, depending on the target and the address space
 pair. Pointer conversions within the same address space must be
-performed with the ``bitcast`` instruction. Note that if the address space
-conversion is legal then both result and operand refer to the same memory
-location.
+performed with the ``bitcast`` instruction. Note that if the address
+space conversion produces a dereferenceable result then both result
+and operand refer to the same memory location. The conversion must
+have no side effects, and must not capture the value of the pointer.
+
+If the source is :ref:`poison <poisonvalues>`, the result is
+:ref:`poison <poisonvalues>`.
+
+If the source is not :ref:`poison <poisonvalues>`, and both source and
+destination are :ref:`integral pointers <nointptrtype>`, and the
+result pointer is dereferenceable, the cast is assumed to be
+reversible (i.e. casting the result back to the original address space
+should yield the original bit pattern).
 
 Example:
 """"""""
@@ -14893,6 +14867,8 @@ Semantics:
 
 This function returns the same values as the libm ``trunc`` functions
 would, and handles error conditions in the same way.
+
+.. _int_rint:
 
 '``llvm.rint.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -21812,6 +21788,53 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = call <4 x float> @llvm.floor.v4f32(<4 x float> %a)
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
+
+.. _int_vp_rint:
+
+'``llvm.vp.rint.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x float>  @llvm.vp.rint.v16f32 (<16 x float> <op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x float>  @llvm.vp.rint.nxv4f32 (<vscale x 4 x float> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x double>  @llvm.vp.rint.v256f64 (<256 x double> <op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point rint of a vector of floating-point values.
+
+
+Arguments:
+""""""""""
+
+The first operand and the result have the same vector of floating-point type.
+The second operand is the vector mask and has the same number of elements as the
+result vector type. The third operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.rint``' intrinsic performs floating-point rint
+(:ref:`rint <int_rint>`) of the first vector operand on each enabled lane.
+The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x float> @llvm.vp.rint.v4f32(<4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x float> @llvm.rint.v4f32(<4 x float> %a)
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 .. _int_vp_round:

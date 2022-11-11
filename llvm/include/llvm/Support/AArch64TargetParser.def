@@ -129,6 +129,7 @@ AARCH64_ARCH_EXT_NAME("sve2-sm4",     AArch64::AEK_SVE2SM4,     "+sve2-sm4",    
 AARCH64_ARCH_EXT_NAME("sve2-sha3",    AArch64::AEK_SVE2SHA3,    "+sve2-sha3",    "-sve2-sha3")
 AARCH64_ARCH_EXT_NAME("sve2-bitperm", AArch64::AEK_SVE2BITPERM, "+sve2-bitperm", "-sve2-bitperm")
 AARCH64_ARCH_EXT_NAME("sve2p1",       AArch64::AEK_SVE2p1,      "+sve2p1",       "-sve2p1")
+AARCH64_ARCH_EXT_NAME("b16b16",       AArch64::AEK_B16B16,      "+b16b16",       "-b16b16")
 AARCH64_ARCH_EXT_NAME("rcpc",         AArch64::AEK_RCPC,        "+rcpc",         "-rcpc")
 AARCH64_ARCH_EXT_NAME("rng",          AArch64::AEK_RAND,        "+rand",         "-rand")
 AARCH64_ARCH_EXT_NAME("memtag",       AArch64::AEK_MTE,         "+mte",          "-mte")
@@ -148,6 +149,7 @@ AARCH64_ARCH_EXT_NAME("sme",          AArch64::AEK_SME,         "+sme",         
 AARCH64_ARCH_EXT_NAME("sme-f64f64",   AArch64::AEK_SMEF64F64,   "+sme-f64f64",   "-sme-f64f64")
 AARCH64_ARCH_EXT_NAME("sme-i16i64",   AArch64::AEK_SMEI16I64,   "+sme-i16i64",   "-sme-i16i64")
 AARCH64_ARCH_EXT_NAME("sme2",         AArch64::AEK_SME2,        "+sme2",         "-sme2")
+AARCH64_ARCH_EXT_NAME("sme2p1",       AArch64::AEK_SME2p1,      "+sme2p1",       "-sme2p1")
 AARCH64_ARCH_EXT_NAME("hbc",          AArch64::AEK_HBC,         "+hbc",          "-hbc")
 AARCH64_ARCH_EXT_NAME("mops",         AArch64::AEK_MOPS,        "+mops",         "-mops")
 AARCH64_ARCH_EXT_NAME("pmuv3",        AArch64::AEK_PERFMON,     "+perfmon",      "-perfmon")
@@ -204,6 +206,12 @@ AARCH64_CPU_NAME("cortex-a710", ARMV9A, FK_NEON_FP_ARMV8, false,
                   AArch64::AEK_SB | AArch64::AEK_I8MM | AArch64::AEK_FP16FML |
                   AArch64::AEK_SVE | AArch64::AEK_SVE2 | AArch64::AEK_SVE2BITPERM |
                   AArch64::AEK_BF16))
+AARCH64_CPU_NAME("cortex-a715", ARMV9A, FK_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_SB | AArch64::AEK_SSBS | AArch64::AEK_MTE |
+                  AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_PAUTH |
+                  AArch64::AEK_I8MM | AArch64::AEK_PREDRES | AArch64::AEK_PERFMON |
+                  AArch64::AEK_PROFILE | AArch64::AEK_SVE | AArch64::AEK_SVE2BITPERM |
+                  AArch64::AEK_BF16 | AArch64::AEK_FLAGM))
 AARCH64_CPU_NAME("cortex-r82", ARMV8R, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_LSE))
 AARCH64_CPU_NAME("cortex-x1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
@@ -217,6 +225,12 @@ AARCH64_CPU_NAME("cortex-x2", ARMV9A, FK_NEON_FP_ARMV8, false,
                   AArch64::AEK_PAUTH | AArch64::AEK_SSBS | AArch64::AEK_SB |
                   AArch64::AEK_SVE | AArch64::AEK_SVE2 | AArch64::AEK_SVE2BITPERM |
                   AArch64::AEK_FP16FML))
+AARCH64_CPU_NAME("cortex-x3", ARMV9A, FK_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_SVE | AArch64::AEK_PERFMON | AArch64::AEK_PROFILE |
+                  AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_MTE |
+                  AArch64::AEK_SVE2BITPERM | AArch64::AEK_SB | AArch64::AEK_PAUTH |
+                  AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_PREDRES |
+                  AArch64::AEK_FLAGM | AArch64::AEK_SSBS))
 AARCH64_CPU_NAME("neoverse-e1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
                   AArch64::AEK_RCPC | AArch64::AEK_SSBS))

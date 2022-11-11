@@ -14,36 +14,36 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @subvector_v8i16(<8 x i16> *%in, <8 x i16>* %out) vscale_range(2,0) #0 {
+define void @subvector_v8i16(ptr %in, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: subvector_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <8 x i16>, <8 x i16>* %in
+  %a = load <8 x i16>, ptr %in
   br label %bb1
 
 bb1:
-  store <8 x i16> %a, <8 x i16>* %out
+  store <8 x i16> %a, ptr %out
   ret void
 }
 
-define void @subvector_v16i16(<16 x i16> *%in, <16 x i16>* %out) vscale_range(2,0) #0 {
+define void @subvector_v16i16(ptr %in, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: subvector_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <16 x i16>, <16 x i16>* %in
+  %a = load <16 x i16>, ptr %in
   br label %bb1
 
 bb1:
-  store <16 x i16> %a, <16 x i16>* %out
+  store <16 x i16> %a, ptr %out
   ret void
 }
 
-define void @subvector_v32i16(<32 x i16> *%in, <32 x i16>* %out) #0 {
+define void @subvector_v32i16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: subvector_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -60,45 +60,45 @@ define void @subvector_v32i16(<32 x i16> *%in, <32 x i16>* %out) #0 {
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <32 x i16>, <32 x i16>* %in
+  %a = load <32 x i16>, ptr %in
   br label %bb1
 
 bb1:
-  store <32 x i16> %a, <32 x i16>* %out
+  store <32 x i16> %a, ptr %out
   ret void
 }
 
-define void @subvector_v64i16(<64 x i16> *%in, <64 x i16>* %out) vscale_range(8,0) #0 {
+define void @subvector_v64i16(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK-LABEL: subvector_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <64 x i16>, <64 x i16>* %in
+  %a = load <64 x i16>, ptr %in
   br label %bb1
 
 bb1:
-  store <64 x i16> %a, <64 x i16>* %out
+  store <64 x i16> %a, ptr %out
   ret void
 }
 
-define void @subvector_v8i32(<8 x i32> *%in, <8 x i32>* %out) vscale_range(2,0) #0 {
+define void @subvector_v8i32(ptr %in, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: subvector_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <8 x i32>, <8 x i32>* %in
+  %a = load <8 x i32>, ptr %in
   br label %bb1
 
 bb1:
-  store <8 x i32> %a, <8 x i32>* %out
+  store <8 x i32> %a, ptr %out
   ret void
 }
 
-define void @subvector_v16i32(<16 x i32> *%in, <16 x i32>* %out) #0 {
+define void @subvector_v16i32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: subvector_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -115,46 +115,46 @@ define void @subvector_v16i32(<16 x i32> *%in, <16 x i32>* %out) #0 {
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <16 x i32>, <16 x i32>* %in
+  %a = load <16 x i32>, ptr %in
   br label %bb1
 
 bb1:
-  store <16 x i32> %a, <16 x i32>* %out
+  store <16 x i32> %a, ptr %out
   ret void
 }
 
-define void @subvector_v32i32(<32 x i32> *%in, <32 x i32>* %out) vscale_range(8,0) #0 {
+define void @subvector_v32i32(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK-LABEL: subvector_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <32 x i32>, <32 x i32>* %in
+  %a = load <32 x i32>, ptr %in
   br label %bb1
 
 bb1:
-  store <32 x i32> %a, <32 x i32>* %out
+  store <32 x i32> %a, ptr %out
   ret void
 }
 
-define void @subvector_v64i32(<64 x i32> *%in, <64 x i32>* %out) vscale_range(16,0) #0 {
+define void @subvector_v64i32(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK-LABEL: subvector_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <64 x i32>, <64 x i32>* %in
+  %a = load <64 x i32>, ptr %in
   br label %bb1
 
 bb1:
-  store <64 x i32> %a, <64 x i32>* %out
+  store <64 x i32> %a, ptr %out
   ret void
 }
 
 
-define void @subvector_v8i64(<8 x i64> *%in, <8 x i64>* %out) vscale_range(2,0) #0 {
+define void @subvector_v8i64(ptr %in, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: subvector_v8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #4
@@ -164,74 +164,74 @@ define void @subvector_v8i64(<8 x i64> *%in, <8 x i64>* %out) vscale_range(2,0) 
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <8 x i64>, <8 x i64>* %in
+  %a = load <8 x i64>, ptr %in
   br label %bb1
 
 bb1:
-  store <8 x i64> %a, <8 x i64>* %out
+  store <8 x i64> %a, ptr %out
   ret void
 }
 
-define void @subvector_v16i64(<16 x i64> *%in, <16 x i64>* %out) vscale_range(8,0) #0 {
+define void @subvector_v16i64(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK-LABEL: subvector_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <16 x i64>, <16 x i64>* %in
+  %a = load <16 x i64>, ptr %in
   br label %bb1
 
 bb1:
-  store <16 x i64> %a, <16 x i64>* %out
+  store <16 x i64> %a, ptr %out
   ret void
 }
 
-define void @subvector_v32i64(<32 x i64> *%in, <32 x i64>* %out) vscale_range(16,0) #0 {
+define void @subvector_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK-LABEL: subvector_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <32 x i64>, <32 x i64>* %in
+  %a = load <32 x i64>, ptr %in
   br label %bb1
 
 bb1:
-  store <32 x i64> %a, <32 x i64>* %out
+  store <32 x i64> %a, ptr %out
   ret void
 }
 
-define void @subvector_v8f16(<8 x half> *%in, <8 x half>* %out) vscale_range(2,0) #0 {
+define void @subvector_v8f16(ptr %in, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: subvector_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <8 x half>, <8 x half>* %in
+  %a = load <8 x half>, ptr %in
   br label %bb1
 
 bb1:
-  store <8 x half> %a, <8 x half>* %out
+  store <8 x half> %a, ptr %out
   ret void
 }
 
-define void @subvector_v16f16(<16 x half> *%in, <16 x half>* %out) vscale_range(2,0) #0 {
+define void @subvector_v16f16(ptr %in, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: subvector_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <16 x half>, <16 x half>* %in
+  %a = load <16 x half>, ptr %in
   br label %bb1
 
 bb1:
-  store <16 x half> %a, <16 x half>* %out
+  store <16 x half> %a, ptr %out
   ret void
 }
 
-define void @subvector_v32f16(<32 x half> *%in, <32 x half>* %out) #0 {
+define void @subvector_v32f16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: subvector_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -248,45 +248,45 @@ define void @subvector_v32f16(<32 x half> *%in, <32 x half>* %out) #0 {
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <32 x half>, <32 x half>* %in
+  %a = load <32 x half>, ptr %in
   br label %bb1
 
 bb1:
-  store <32 x half> %a, <32 x half>* %out
+  store <32 x half> %a, ptr %out
   ret void
 }
 
-define void @subvector_v64f16(<64 x half> *%in, <64 x half>* %out) vscale_range(8,0) #0 {
+define void @subvector_v64f16(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK-LABEL: subvector_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <64 x half>, <64 x half>* %in
+  %a = load <64 x half>, ptr %in
   br label %bb1
 
 bb1:
-  store <64 x half> %a, <64 x half>* %out
+  store <64 x half> %a, ptr %out
   ret void
 }
 
-define void @subvector_v8f32(<8 x float> *%in, <8 x float>* %out) vscale_range(2,0) #0 {
+define void @subvector_v8f32(ptr %in, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: subvector_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <8 x float>, <8 x float>* %in
+  %a = load <8 x float>, ptr %in
   br label %bb1
 
 bb1:
-  store <8 x float> %a, <8 x float>* %out
+  store <8 x float> %a, ptr %out
   ret void
 }
 
-define void @subvector_v16f32(<16 x float> *%in, <16 x float>* %out) #0 {
+define void @subvector_v16f32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: subvector_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -303,44 +303,44 @@ define void @subvector_v16f32(<16 x float> *%in, <16 x float>* %out) #0 {
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <16 x float>, <16 x float>* %in
+  %a = load <16 x float>, ptr %in
   br label %bb1
 
 bb1:
-  store <16 x float> %a, <16 x float>* %out
+  store <16 x float> %a, ptr %out
   ret void
 }
 
-define void @subvector_v32f32(<32 x float> *%in, <32 x float>* %out) vscale_range(8,0) #0 {
+define void @subvector_v32f32(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK-LABEL: subvector_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <32 x float>, <32 x float>* %in
+  %a = load <32 x float>, ptr %in
   br label %bb1
 
 bb1:
-  store <32 x float> %a, <32 x float>* %out
+  store <32 x float> %a, ptr %out
   ret void
 }
 
-define void @subvector_v64f32(<64 x float> *%in, <64 x float>* %out) vscale_range(16,0) #0 {
+define void @subvector_v64f32(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK-LABEL: subvector_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <64 x float>, <64 x float>* %in
+  %a = load <64 x float>, ptr %in
   br label %bb1
 
 bb1:
-  store <64 x float> %a, <64 x float>* %out
+  store <64 x float> %a, ptr %out
   ret void
 }
-define void @subvector_v8f64(<8 x double> *%in, <8 x double>* %out) #0 {
+define void @subvector_v8f64(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: subvector_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -357,45 +357,45 @@ define void @subvector_v8f64(<8 x double> *%in, <8 x double>* %out) #0 {
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <8 x double>, <8 x double>* %in
+  %a = load <8 x double>, ptr %in
   br label %bb1
 
 bb1:
-  store <8 x double> %a, <8 x double>* %out
+  store <8 x double> %a, ptr %out
   ret void
 }
 
-define void @subvector_v16f64(<16 x double> *%in, <16 x double>* %out) vscale_range(8,0) #0 {
+define void @subvector_v16f64(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK-LABEL: subvector_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <16 x double>, <16 x double>* %in
+  %a = load <16 x double>, ptr %in
   br label %bb1
 
 bb1:
-  store <16 x double> %a, <16 x double>* %out
+  store <16 x double> %a, ptr %out
   ret void
 }
 
-define void @subvector_v32f64(<32 x double> *%in, <32 x double>* %out) vscale_range(16,0) #0 {
+define void @subvector_v32f64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK-LABEL: subvector_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <32 x double>, <32 x double>* %in
+  %a = load <32 x double>, ptr %in
   br label %bb1
 
 bb1:
-  store <32 x double> %a, <32 x double>* %out
+  store <32 x double> %a, ptr %out
   ret void
 }
 
-define <8 x i1> @no_warn_dropped_scalable(<8 x i32>* %in) #0 {
+define <8 x i1> @no_warn_dropped_scalable(ptr %in) #0 {
 ; CHECK-LABEL: no_warn_dropped_scalable:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -406,7 +406,7 @@ define <8 x i1> @no_warn_dropped_scalable(<8 x i32>* %in) #0 {
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-  %a = load <8 x i32>, <8 x i32>* %in
+  %a = load <8 x i32>, ptr %in
   br label %bb1
 
 bb1:
@@ -418,7 +418,7 @@ bb1:
 ; combines remove redundant subvector operations. This test ensures it's not
 ; performed when the input idiom is the result of operation legalisation. When
 ; not prevented the test triggers infinite combine->legalise->combine->...
-define void @no_subvector_binop_hang(<8 x i32>* %in, <8 x i32>* %out, i1 %cond) #0 {
+define void @no_subvector_binop_hang(ptr %in, ptr %out, i1 %cond) #0 {
 ; CHECK-LABEL: no_subvector_binop_hang:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -430,13 +430,13 @@ define void @no_subvector_binop_hang(<8 x i32>* %in, <8 x i32>* %out, i1 %cond) 
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:  .LBB23_2: // %bb.2
 ; CHECK-NEXT:    ret
-  %a = load <8 x i32>, <8 x i32>* %in
-  %b = load <8 x i32>, <8 x i32>* %out
+  %a = load <8 x i32>, ptr %in
+  %b = load <8 x i32>, ptr %out
   br i1 %cond, label %bb.1, label %bb.2
 
 bb.1:
   %or = or <8 x i32> %a, %b
-  store <8 x i32> %or, <8 x i32>* %out
+  store <8 x i32> %or, ptr %out
   br label %bb.2
 
 bb.2:

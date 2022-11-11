@@ -497,27 +497,29 @@ void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 void EmptyOp::build(OpBuilder &builder, OperationState &result,
-                    ArrayRef<int64_t> staticShape, Type elementType) {
+                    ArrayRef<int64_t> staticShape, Type elementType,
+                    Attribute encoding) {
   assert(all_of(staticShape,
                 [](int64_t sz) { return !ShapedType::isDynamic(sz); }) &&
          "expected only static sizes");
-  build(builder, result, staticShape, elementType, {});
+  build(builder, result, staticShape, elementType, ValueRange{}, encoding);
 }
 
 void EmptyOp::build(OpBuilder &builder, OperationState &result,
                     ArrayRef<int64_t> staticShape, Type elementType,
-                    ValueRange dynamicSizes) {
-  auto tensorType = RankedTensorType::get(staticShape, elementType);
+                    ValueRange dynamicSizes, Attribute encoding) {
+  auto tensorType = RankedTensorType::get(staticShape, elementType, encoding);
   build(builder, result, tensorType, dynamicSizes);
 }
 
 void EmptyOp::build(OpBuilder &builder, OperationState &result,
-                    ArrayRef<OpFoldResult> sizes, Type elementType) {
+                    ArrayRef<OpFoldResult> sizes, Type elementType,
+                    Attribute encoding) {
   SmallVector<int64_t> staticShape;
   SmallVector<Value> dynamicSizes;
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticShape,
                              ShapedType::kDynamicSize);
-  build(builder, result, staticShape, elementType, dynamicSizes);
+  build(builder, result, staticShape, elementType, dynamicSizes, encoding);
 }
 
 LogicalResult EmptyOp::verify() {

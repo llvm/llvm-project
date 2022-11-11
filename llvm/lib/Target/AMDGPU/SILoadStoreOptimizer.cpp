@@ -412,8 +412,8 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
     }
     if (TII.isMIMG(Opc)) {
       // Ignore instructions encoded without vaddr.
-      if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr) == -1 &&
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0) == -1)
+      if (!AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
+          !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr0))
         return UNKNOWN;
       // Ignore BVH instructions
       if (AMDGPU::getMIMGBaseOpcode(Opc)->BVH)
@@ -1385,7 +1385,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSMemLoadImmPair(
     New.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset));
   // For convenience, when SGPR_IMM buffer loads are merged into a
   // zero-offset load, we generate its SGPR variant.
-  if (AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::offset) != -1)
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::offset))
     New.addImm(MergedOffset);
   New.addImm(CI.CPol).addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 

@@ -22,7 +22,7 @@ class Value;
 /// (the builder, %addr, %loaded, %new_val, ordering,
 ///  /* OUT */ %success, /* OUT */ %new_loaded)
 using CreateCmpXchgInstFun =
-    function_ref<void(IRBuilder<> &, Value *, Value *, Value *, Align,
+    function_ref<void(IRBuilderBase &, Value *, Value *, Value *, Align,
                       AtomicOrdering, SyncScope::ID, Value *&, Value *&)>;
 
 /// Expand an atomic RMW instruction into a loop utilizing

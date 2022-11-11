@@ -1049,30 +1049,80 @@ llvm.func @llvm_noalias(%arg0: !llvm.ptr<f32> {llvm.noalias}) {
   llvm.return
 }
 
+// CHECK-LABEL: declare void @llvm_noalias_decl(ptr noalias)
+llvm.func @llvm_noalias_decl(!llvm.ptr<f32> {llvm.noalias})
+
+// CHECK-LABEL: define void @byrefattr(ptr byref(i32) %
+llvm.func @byrefattr(%arg0: !llvm.ptr<i32> {llvm.byref = i32}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @byrefattr_decl(ptr byref(i32))
+llvm.func @byrefattr_decl(!llvm.ptr<i32> {llvm.byref = i32})
+
 // CHECK-LABEL: define void @byvalattr(ptr byval(i32) %
 llvm.func @byvalattr(%arg0: !llvm.ptr<i32> {llvm.byval = i32}) {
   llvm.return
 }
+
+// CHECK-LABEL: declare void @byvalattr_decl(ptr byval(i32))
+llvm.func @byvalattr_decl(!llvm.ptr<i32> {llvm.byval = i32})
 
 // CHECK-LABEL: define void @sretattr(ptr sret(i32) %
 llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret = i32}) {
   llvm.return
 }
 
+// CHECK-LABEL: declare void @sretattr_decl(ptr sret(i32))
+llvm.func @sretattr_decl(!llvm.ptr<i32> {llvm.sret = i32})
+
 // CHECK-LABEL: define void @nestattr(ptr nest %
 llvm.func @nestattr(%arg0: !llvm.ptr<i32> {llvm.nest}) {
   llvm.return
 }
+
+// CHECK-LABEL: declare void @nestattr_decl(ptr nest)
+llvm.func @nestattr_decl(!llvm.ptr<i32> {llvm.nest})
 
 // CHECK-LABEL: define void @noundefattr(i32 noundef %
 llvm.func @noundefattr(%arg0: i32 {llvm.noundef}) {
   llvm.return
 }
 
+// CHECK-LABEL: declare void @noundefattr_decl(i32 noundef)
+llvm.func @noundefattr_decl(i32 {llvm.noundef})
+
 // CHECK-LABEL: define void @llvm_align(ptr align 4 {{%*.}})
 llvm.func @llvm_align(%arg0: !llvm.ptr<f32> {llvm.align = 4}) {
   llvm.return
 }
+
+// CHECK-LABEL: declare void @llvm_align_decl(ptr align 4)
+llvm.func @llvm_align_decl(!llvm.ptr<f32> {llvm.align = 4})
+
+// CHECK-LABEL: define void @inallocaattr(ptr inalloca(i32) %
+llvm.func @inallocaattr(%arg0: !llvm.ptr<i32> {llvm.inalloca = i32}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @inallocaattr_decl(ptr inalloca(i32))
+llvm.func @inallocaattr_decl(!llvm.ptr<i32> {llvm.inalloca = i32})
+
+// CHECK-LABEL: define void @signextattr(i1 signext %
+llvm.func @signextattr(%arg0: i1 {llvm.signext}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @signextattr_decl(i1 signext)
+llvm.func @signextattr_decl(i1 {llvm.signext})
+
+// CHECK-LABEL: define void @zeroextattr(i1 zeroext %
+llvm.func @zeroextattr(%arg0: i1 {llvm.zeroext}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @zeroextattr_decl(i1 zeroext)
+llvm.func @zeroextattr_decl(i1 {llvm.zeroext})
 
 // CHECK-LABEL: @llvm_varargs(...)
 llvm.func @llvm_varargs(...)
@@ -1680,6 +1730,17 @@ llvm.func @fastmathFlags(%arg0: f32) {
   %14 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32) -> (f32)
   %15 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<reassoc>} : (f32) -> (f32)
   %16 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> (f32)
+
+// CHECK: call fast float @llvm.copysign.f32(float {{.*}}, float {{.*}})
+  %17 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+// CHECK: call afn float @llvm.copysign.f32(float {{.*}}, float {{.*}})
+  %18 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
+
+// CHECK: call fast float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
+  %exp = llvm.mlir.constant(1 : i32) : i32
+  %19 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<fast>} : (f32, i32) -> f32
+// CHECK: call afn float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
+  %20 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<afn>} : (f32, i32) -> f32
   llvm.return
 }
 
@@ -1948,5 +2009,5 @@ llvm.func @vararg_function(%arg0: i32, ...) {
 // Function attributes: readnone
 
 // CHECK: declare void @readnone_function() #[[ATTR:[0-9]+]]
-// CHECK: attributes #[[ATTR]] = { readnone }
+// CHECK: attributes #[[ATTR]] = { memory(none) }
 llvm.func @readnone_function() attributes {llvm.readnone}

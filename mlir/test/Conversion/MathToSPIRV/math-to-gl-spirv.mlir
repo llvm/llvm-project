@@ -20,20 +20,22 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
   %4 = math.log1p %arg0 : f32
+  // CHECK: spirv.GL.RoundEven %{{.*}}: f32
+  %5 = math.roundeven %arg0 : f32
   // CHECK: spirv.GL.InverseSqrt %{{.*}}: f32
-  %5 = math.rsqrt %arg0 : f32
+  %6 = math.rsqrt %arg0 : f32
   // CHECK: spirv.GL.Sqrt %{{.*}}: f32
-  %6 = math.sqrt %arg0 : f32
+  %7 = math.sqrt %arg0 : f32
   // CHECK: spirv.GL.Tanh %{{.*}}: f32
-  %7 = math.tanh %arg0 : f32
+  %8 = math.tanh %arg0 : f32
   // CHECK: spirv.GL.Sin %{{.*}}: f32
-  %8 = math.sin %arg0 : f32
+  %9 = math.sin %arg0 : f32
   // CHECK: spirv.GL.FAbs %{{.*}}: f32
-  %9 = math.absf %arg0 : f32
+  %10 = math.absf %arg0 : f32
   // CHECK: spirv.GL.Ceil %{{.*}}: f32
-  %10 = math.ceil %arg0 : f32
+  %11 = math.ceil %arg0 : f32
   // CHECK: spirv.GL.Floor %{{.*}}: f32
-  %11 = math.floor %arg0 : f32
+  %12 = math.floor %arg0 : f32
   return
 }
 
@@ -53,14 +55,16 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
   %4 = math.log1p %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.RoundEven %{{.*}}: vector<3xf32>
+  %5 = math.roundeven %arg0 : vector<3xf32>
   // CHECK: spirv.GL.InverseSqrt %{{.*}}: vector<3xf32>
-  %5 = math.rsqrt %arg0 : vector<3xf32>
+  %6 = math.rsqrt %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Sqrt %{{.*}}: vector<3xf32>
-  %6 = math.sqrt %arg0 : vector<3xf32>
+  %7 = math.sqrt %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Tanh %{{.*}}: vector<3xf32>
-  %7 = math.tanh %arg0 : vector<3xf32>
+  %8 = math.tanh %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Sin %{{.*}}: vector<3xf32>
-  %8 = math.sin %arg0 : vector<3xf32>
+  %9 = math.sin %arg0 : vector<3xf32>
   return
 }
 
@@ -144,7 +148,7 @@ func.func @powf_scalar(%lhs: f32, %rhs: f32) -> f32 {
 // CHECK-LABEL: @powf_vector
 func.func @powf_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) -> vector<4xf32> {
   // CHECK: spirv.FOrdLessThan
-  // CHEKC: spirv.GL.FAbs
+  // CHECK: spirv.GL.FAbs
   // CHECK: spirv.GL.Pow %{{.*}}: vector<4xf32>
   // CHECK: spirv.FNegate
   // CHECK: spirv.Select

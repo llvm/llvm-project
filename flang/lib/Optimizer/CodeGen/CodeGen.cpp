@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Semantics/runtime-type-info.h"
+#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
 #include "mlir/Conversion/ComplexToStandard/ComplexToStandard.h"
@@ -699,8 +700,11 @@ struct CallOpConversion : public FIROpConversion<fir::CallOp> {
     llvm::SmallVector<mlir::Type> resultTys;
     for (auto r : call.getResults())
       resultTys.push_back(convertType(r.getType()));
+    // Convert arith::FastMathFlagsAttr to LLVM::FastMathFlagsAttr.
+    mlir::arith::AttrConvertFastMathToLLVM<fir::CallOp, mlir::LLVM::CallOp>
+        attrConvert(call);
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-        call, resultTys, adaptor.getOperands(), call->getAttrs());
+        call, resultTys, adaptor.getOperands(), attrConvert.getAttrs());
     return mlir::success();
   }
 };
@@ -915,12 +919,17 @@ struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
       return emitError(loc) << "no binding tables found";
 
     // Get derived type information.
-    auto declaredType = llvm::TypeSwitch<mlir::Type, mlir::Type>(
-                            dispatch.getObject().getType().getEleTy())
-                            .Case<fir::PointerType, fir::HeapType>(
-                                [](auto p) { return p.getEleTy(); })
-                            .Default([](mlir::Type t) { return t; });
-
+    auto declaredType =
+        llvm::TypeSwitch<mlir::Type, mlir::Type>(
+            dispatch.getObject().getType().getEleTy())
+            .Case<fir::PointerType, fir::HeapType, fir::SequenceType>(
+                [](auto p) {
+                  if (auto seq =
+                          p.getEleTy().template dyn_cast<fir::SequenceType>())
+                    return seq.getEleTy();
+                  return p.getEleTy();
+                })
+            .Default([](mlir::Type t) { return t; });
     assert(declaredType.isa<fir::RecordType>() && "expecting fir.type");
     auto recordType = declaredType.dyn_cast<fir::RecordType>();
     std::string typeDescName =
@@ -3116,7 +3125,7 @@ struct StoreOpConversion : public FIROpConversion<fir::StoreOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::StoreOp store, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    if (store.getValue().getType().isa<fir::BoxType>()) {
+    if (store.getValue().getType().isa<fir::BaseBoxType>()) {
       // fir.box value is actually in memory, load it first before storing it.
       mlir::Location loc = store.getLoc();
       mlir::Type boxPtrTy = adaptor.getOperands()[0].getType();

@@ -84,6 +84,7 @@ private:
   void printImpl(const DeclRefExpr *expr);
   void printImpl(const MemberAccessExpr *expr);
   void printImpl(const OperationExpr *expr);
+  void printImpl(const RangeExpr *expr);
   void printImpl(const TupleExpr *expr);
   void printImpl(const TypeExpr *expr);
 
@@ -169,8 +170,8 @@ void NodePrinter::print(const Node *node) {
 
           // Expressions.
           const AttributeExpr, const CallExpr, const DeclRefExpr,
-          const MemberAccessExpr, const OperationExpr, const TupleExpr,
-          const TypeExpr,
+          const MemberAccessExpr, const OperationExpr, const RangeExpr,
+          const TupleExpr, const TypeExpr,
 
           // Decls.
           const AttrConstraintDecl, const OpConstraintDecl,
@@ -252,6 +253,14 @@ void NodePrinter::printImpl(const OperationExpr *expr) {
   printChildren("Operands", expr->getOperands());
   printChildren("Result Types", expr->getResultTypes());
   printChildren("Attributes", expr->getAttributes());
+}
+
+void NodePrinter::printImpl(const RangeExpr *expr) {
+  os << "RangeExpr " << expr << " Type<";
+  print(expr->getType());
+  os << ">\n";
+
+  printChildren(expr->getElements());
 }
 
 void NodePrinter::printImpl(const TupleExpr *expr) {

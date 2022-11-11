@@ -15,17 +15,17 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    .cfi_def_cfa 22, 0
 ; CHECK-NEXT:    st.w $zero, $fp, -16
 ; CHECK-NEXT:    st.w $zero, $fp, -12
-; CHECK-NEXT:    beqz $zero, .LBB0_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    beqz $zero, .LBB0_3
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    ld.w $a0, $fp, -16
 ; CHECK-NEXT:    beqz $a0, .LBB0_4
-; CHECK-NEXT:  .LBB0_5:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    st.w $a0, $fp, -24
-; CHECK-NEXT:    b .LBB0_6
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:    b .LBB0_5
+; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    ori $a0, $zero, 2
 ; CHECK-NEXT:    st.w $a0, $fp, -20
 ; CHECK-NEXT:    ori $a0, $zero, 1
@@ -35,7 +35,7 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    ori $a0, $zero, 4
 ; CHECK-NEXT:    st.w $a0, $fp, -28
 ; CHECK-NEXT:    ld.w $a0, $fp, -16
-; CHECK-NEXT:    bnez $a0, .LBB0_5
+; CHECK-NEXT:    bnez $a0, .LBB0_2
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    ori $a0, $zero, 2
 ; CHECK-NEXT:    st.w $a0, $fp, -20
@@ -45,7 +45,7 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    ori $a0, $zero, 4
 ; CHECK-NEXT:    st.w $a0, $fp, -28
-; CHECK-NEXT:  .LBB0_6:
+; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; CHECK-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload

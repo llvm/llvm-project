@@ -34,7 +34,7 @@ struct Plus1FunctionRef {
 
   using FuncT = int (&)(int);
 
-  FuncT operator()() const { return *plus1; }
+  FuncT operator()() const { return (FuncT)*plus1; }
 };
 
 struct Plus1FunctionPtr {

@@ -21,6 +21,15 @@ func.func @empty(%sz: index) -> tensor<5x?x6xf32> {
   return %0 : tensor<5x?x6xf32>
 }
 
+// CHECK-LABEL: func @empty_with_encoding(
+//  CHECK-SAME:             %[[sz:.*]]: index
+func.func @empty_with_encoding(%sz: index) -> tensor<5x?x6xf32, "foo"> {
+  // CHECK: tensor.empty(%[[sz]]) : tensor<5x?x6xf32, "foo">
+  %0 = tensor.empty(%sz) : tensor<5x?x6xf32, "foo">
+  return %0 : tensor<5x?x6xf32, "foo">
+}
+
+
 // CHECK-LABEL:   func @extract(
 // CHECK-SAME:                  %[[TENSOR:.*]]: tensor<?x?x?xf32>,
 // CHECK-SAME:                  %[[INDEX:.*]]: index) {

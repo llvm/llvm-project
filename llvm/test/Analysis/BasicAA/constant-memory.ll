@@ -6,18 +6,16 @@ declare void @dummy()
 
 declare void @foo(ptr)
 
-; FIXME: This could be NoModRef
 ; CHECK-LABEL: Function: basic
-; CHECK: Just Ref: Ptr: i32* @c	<->  call void @dummy()
+; CHECK: NoModRef: Ptr: i32* @c	<->  call void @dummy()
 define void @basic(ptr %p) {
   call void @dummy()
   load i32, ptr @c
   ret void
 }
 
-; FIXME: This could be NoModRef
 ; CHECK-LABEL: Function: recphi
-; CHECK: Just Ref: Ptr: i32* %p	<->  call void @dummy()
+; CHECK: NoModRef: Ptr: i32* %p	<->  call void @dummy()
 define void @recphi() {
 entry:
   br label %loop
@@ -34,20 +32,20 @@ exit:
   ret void
 }
 
-; Tests that readonly noalias doesn't imply !Mod yet.
+; Tests that readonly noalias implies !Mod.
 ;
 ; CHECK-LABEL: Function: readonly_noalias
-; CHECK: Both ModRef: Ptr: i32* %p <->  call void @foo(ptr %p)
+; CHECK: Just Ref: Ptr: i32* %p <->  call void @foo(ptr %p)
 define void @readonly_noalias(ptr readonly noalias %p) {
     call void @foo(ptr %p)
     load i32, ptr %p
     ret void
 }
 
-; Tests that readnone noalias doesn't imply !Mod yet.
+; Tests that readnone noalias implies !Mod.
 ;
 ; CHECK-LABEL: Function: readnone_noalias
-; CHECK: Both ModRef: Ptr: i32* %p <->  call void @foo(ptr %p)
+; CHECK: Just Ref: Ptr: i32* %p <->  call void @foo(ptr %p)
 define void @readnone_noalias(ptr readnone noalias %p) {
     call void @foo(ptr %p)
     load i32, ptr %p

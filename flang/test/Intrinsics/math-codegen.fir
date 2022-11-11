@@ -4,13 +4,13 @@
 //--- abs_fast.fir
 // RUN: fir-opt %t/abs_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/abs_fast.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.fabs"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.fabs({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.fabs"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.fabs({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 // CHECK: @_QPtest_real16
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.fabs"({{%[A-Za-z0-9._]+}}) : (f128) -> f128
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.fabs({{%[A-Za-z0-9._]+}}) : (f128) -> f128
 
 // CHECK: @_QPtest_complex4
 // CHECK: {{%[A-Za-z0-9._]+}} = llvm.call @hypotf({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, f32) -> f32
@@ -76,13 +76,13 @@ func.func private @hypot(f64, f64) -> f64
 //--- abs_relaxed.fir
 // RUN: fir-opt %t/abs_relaxed.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/abs_relaxed.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.fabs"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.fabs({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.fabs"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.fabs({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 // CHECK: @_QPtest_real16
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.fabs"({{%[A-Za-z0-9._]+}}) : (f128) -> f128
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.fabs({{%[A-Za-z0-9._]+}}) : (f128) -> f128
 
 // CHECK: @_QPtest_complex4
 // CHECK: {{%[A-Za-z0-9._]+}} = llvm.call @hypotf({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, f32) -> f32
@@ -304,15 +304,15 @@ func.func private @llvm.trunc.f64(f64) -> f64
 //--- anint_fast.fir
 // RUN: fir-opt %t/anint_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/anint_fast.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
   %1 = fir.load %arg0 : !fir.ref<f32>
-  %2 = "llvm.intr.round"(%1) : (f32) -> f32
+  %2 = llvm.intr.round(%1) : (f32) -> f32
   fir.store %2 to %0 : !fir.ref<f32>
   %3 = fir.load %0 : !fir.ref<f32>
   return %3 : f32
@@ -320,7 +320,7 @@ func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
 func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
   %0 = fir.alloca f64 {bindc_name = "test_real8", uniq_name = "_QFtest_real8Etest_real8"}
   %1 = fir.load %arg0 : !fir.ref<f64>
-  %2 = "llvm.intr.round"(%1) : (f64) -> f64
+  %2 = llvm.intr.round(%1) : (f64) -> f64
   fir.store %2 to %0 : !fir.ref<f64>
   %3 = fir.load %0 : !fir.ref<f64>
   return %3 : f64
@@ -329,15 +329,15 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 //--- anint_relaxed.fir
 // RUN: fir-opt %t/anint_relaxed.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/anint_relaxed.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
   %1 = fir.load %arg0 : !fir.ref<f32>
-  %2 = "llvm.intr.round"(%1) : (f32) -> f32
+  %2 = llvm.intr.round(%1) : (f32) -> f32
   fir.store %2 to %0 : !fir.ref<f32>
   %3 = fir.load %0 : !fir.ref<f32>
   return %3 : f32
@@ -345,7 +345,7 @@ func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
 func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
   %0 = fir.alloca f64 {bindc_name = "test_real8", uniq_name = "_QFtest_real8Etest_real8"}
   %1 = fir.load %arg0 : !fir.ref<f64>
-  %2 = "llvm.intr.round"(%1) : (f64) -> f64
+  %2 = llvm.intr.round(%1) : (f64) -> f64
   fir.store %2 to %0 : !fir.ref<f64>
   %3 = fir.load %0 : !fir.ref<f64>
   return %3 : f64
@@ -541,10 +541,10 @@ func.func private @atan2(f64, f64) -> f64
 //--- ceiling_fast.fir
 // RUN: fir-opt %t/ceiling_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/ceiling_fast.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.ceil"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.ceil({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.ceil"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.ceil({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -570,10 +570,10 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 //--- ceiling_relaxed.fir
 // RUN: fir-opt %t/ceiling_relaxed.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/ceiling_relaxed.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.ceil"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.ceil({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.ceil"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.ceil({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -630,10 +630,10 @@ func.func private @ceil(f64) -> f64
 //--- cos_fast.fir
 // RUN: fir-opt %t/cos_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/cos_fast.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.cos"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.cos({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.cos"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.cos({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -655,10 +655,10 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 //--- cos_relaxed.fir
 // RUN: fir-opt %t/cos_relaxed.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/cos_relaxed.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.cos"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.cos({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.cos"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.cos({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -865,10 +865,10 @@ func.func private @erf(f64) -> f64
 //--- exp_fast.fir
 // RUN: fir-opt %t/exp_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/exp_fast.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.exp"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.exp({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.exp"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.exp({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -890,10 +890,10 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 //--- exp_relaxed.fir
 // RUN: fir-opt %t/exp_relaxed.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/exp_relaxed.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.exp"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.exp({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.exp"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.exp({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -942,10 +942,10 @@ func.func private @exp(f64) -> f64
 //--- floor_fast.fir
 // RUN: fir-opt %t/floor_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/floor_fast.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.floor"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.floor({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.floor"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.floor({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -971,10 +971,10 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 //--- floor_relaxed.fir
 // RUN: fir-opt %t/floor_relaxed.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/floor_relaxed.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.floor"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.floor({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.floor"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.floor({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -1031,10 +1031,10 @@ func.func private @floor(f64) -> f64
 //--- log_fast.fir
 // RUN: fir-opt %t/log_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/log_fast.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.log"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.log({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.log"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.log({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -1056,10 +1056,10 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 //--- log_relaxed.fir
 // RUN: fir-opt %t/log_relaxed.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/log_relaxed.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.log"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.log({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.log"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.log({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -1108,10 +1108,10 @@ func.func private @log(f64) -> f64
 //--- log10_fast.fir
 // RUN: fir-opt %t/log10_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/log10_fast.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.log10"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.log10({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.log10"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.log10({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -1133,10 +1133,10 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 //--- log10_relaxed.fir
 // RUN: fir-opt %t/log10_relaxed.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/log10_relaxed.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.log10"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.log10({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.log10"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.log10({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -1310,13 +1310,13 @@ func.func private @llvm.lround.i64.f64(f64) -> i64
 // CHECK: @_QPtest_real4
 // CHECK: [[STOI:%[A-Za-z0-9._]+]] = llvm.sext {{%[A-Za-z0-9._]+}} : i16 to i32
 // CHECK: {{%[A-Za-z0-9._]+}} = llvm.call @llvm.powi.f32.i32({{%[A-Za-z0-9._]+}}, [[STOI]]) : (f32, i32) -> f32
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.pow"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.pow({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, f32) -> f32
 // CHECK: {{%[A-Za-z0-9._]+}} = llvm.call @llvm.powi.f32.i32({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, i32) -> f32
 
 // CHECK: @_QPtest_real8
 // CHECK: [[STOI:%[A-Za-z0-9._]+]] = llvm.sext {{%[A-Za-z0-9._]+}} : i16 to i32
 // CHECK: {{%[A-Za-z0-9._]+}} = llvm.call @llvm.powi.f64.i32({{%[A-Za-z0-9._]+}}, [[STOI]]) : (f64, i32) -> f64
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.pow"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.pow({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, f64) -> f64
 // CHECK: {{%[A-Za-z0-9._]+}} = llvm.call @llvm.powi.f64.i32({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, i32) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<f32> {fir.bindc_name = "y"}, %arg2: !fir.ref<i16> {fir.bindc_name = "s"}, %arg3: !fir.ref<i32> {fir.bindc_name = "i"}) -> f32 {
@@ -1363,13 +1363,13 @@ func.func private @llvm.powi.f64.i32(f64, i32) -> f64
 // CHECK: @_QPtest_real4
 // CHECK: [[STOI:%[A-Za-z0-9._]+]] = llvm.sext {{%[A-Za-z0-9._]+}} : i16 to i32
 // CHECK: {{%[A-Za-z0-9._]+}} = llvm.call @llvm.powi.f32.i32({{%[A-Za-z0-9._]+}}, [[STOI]]) : (f32, i32) -> f32
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.pow"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.pow({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, f32) -> f32
 // CHECK: {{%[A-Za-z0-9._]+}} = llvm.call @llvm.powi.f32.i32({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, i32) -> f32
 
 // CHECK: @_QPtest_real8
 // CHECK: [[STOI:%[A-Za-z0-9._]+]] = llvm.sext {{%[A-Za-z0-9._]+}} : i16 to i32
 // CHECK: {{%[A-Za-z0-9._]+}} = llvm.call @llvm.powi.f64.i32({{%[A-Za-z0-9._]+}}, [[STOI]]) : (f64, i32) -> f64
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.pow"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.pow({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, f64) -> f64
 // CHECK: {{%[A-Za-z0-9._]+}} = llvm.call @llvm.powi.f64.i32({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, i32) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<f32> {fir.bindc_name = "y"}, %arg2: !fir.ref<i16> {fir.bindc_name = "s"}, %arg3: !fir.ref<i32> {fir.bindc_name = "i"}) -> f32 {
@@ -1482,16 +1482,16 @@ func.func @_QPtest_int4(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}, %arg1: !fir
 //--- sign_fast.fir
 // RUN: fir-opt %t/sign_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/sign_fast.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.copysign"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.copysign({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.copysign"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.copysign({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, f64) -> f64
 
 // CHECK: @_QPtest_real10
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.copysign"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f80, f80) -> f80
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.copysign({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f80, f80) -> f80
 
 // CHECK: @_QPtest_real16
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.copysign"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f128, f128) -> f128
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.copysign({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f128, f128) -> f128
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<f32> {fir.bindc_name = "y"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -1533,16 +1533,16 @@ func.func @_QPtest_real16(%arg0: !fir.ref<f128> {fir.bindc_name = "x"}, %arg1: !
 //--- sign_relaxed.fir
 // RUN: fir-opt %t/sign_relaxed.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/sign_relaxed.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.copysign"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.copysign({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.copysign"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.copysign({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, f64) -> f64
 
 // CHECK: @_QPtest_real10
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.copysign"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f80, f80) -> f80
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.copysign({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f80, f80) -> f80
 
 // CHECK: @_QPtest_real16
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.copysign"({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f128, f128) -> f128
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.copysign({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f128, f128) -> f128
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<f32> {fir.bindc_name = "y"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -1639,10 +1639,10 @@ func.func private @llvm.copysign.f128(f128, f128) -> f128
 //--- sin_fast.fir
 // RUN: fir-opt %t/sin_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/sin_fast.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.sin"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.sin({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.sin"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.sin({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
@@ -1664,10 +1664,10 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 //--- sin_relaxed.fir
 // RUN: fir-opt %t/sin_relaxed.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/sin_relaxed.fir
 // CHECK: @_QPtest_real4
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.sin"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.sin({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 // CHECK: @_QPtest_real8
-// CHECK: {{%[A-Za-z0-9._]+}} = "llvm.intr.sin"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+// CHECK: {{%[A-Za-z0-9._]+}} = llvm.intr.sin({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}

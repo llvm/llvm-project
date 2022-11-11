@@ -130,9 +130,11 @@ public:
 
 /// Sets up sparse tensor conversion rules.
 void populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
-                                         RewritePatternSet &patterns);
+                                         RewritePatternSet &patterns,
+                                         bool enableBufferInitialization);
 
-std::unique_ptr<Pass> createSparseTensorCodegenPass();
+std::unique_ptr<Pass>
+createSparseTensorCodegenPass(bool enableBufferInitialization = false);
 
 //===----------------------------------------------------------------------===//
 // The SparseTensorRewriting pass.
@@ -153,8 +155,10 @@ std::unique_ptr<Pass> createSparseTensorRewritePass(bool enableRT,
 std::unique_ptr<Pass> createDenseBufferizationPass(
     const bufferization::OneShotBufferizationOptions &options);
 
-void populateSparseBufferRewriting(RewritePatternSet &patterns);
-std::unique_ptr<Pass> createSparseBufferRewritePass();
+void populateSparseBufferRewriting(RewritePatternSet &patterns,
+                                   bool enableBufferInitialization);
+std::unique_ptr<Pass>
+createSparseBufferRewritePass(bool enableBufferInitialization = false);
 
 //===----------------------------------------------------------------------===//
 // Registration.

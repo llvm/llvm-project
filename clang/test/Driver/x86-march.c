@@ -88,6 +88,14 @@
 // RUN:   | FileCheck %s -check-prefix=alderlake
 // alderlake: "-target-cpu" "alderlake"
 //
+// RUN: %clang --target=x86_64 -c -### %s -march=raptorlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=raptorlake
+// raptorlake: "-target-cpu" "raptorlake"
+//
+// RUN: %clang --target=x86_64 -c -### %s -march=meteorlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=meteorlake
+// meteorlake: "-target-cpu" "meteorlake"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=lakemont 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=lakemont
 // lakemont: "-target-cpu" "lakemont"
@@ -111,6 +119,17 @@
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=tremont 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=tremont
 // tremont: "-target-cpu" "tremont"
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=sierraforest 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=sierraforest
+// sierraforest: "-target-cpu" "sierraforest"
+//
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=grandridge 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=grandridge
+// grandridge: "-target-cpu" "grandridge"
+//
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=graniterapids 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=graniterapids
+// graniterapids: "-target-cpu" "graniterapids"
 //
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=sapphirerapids 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=sapphirerapids

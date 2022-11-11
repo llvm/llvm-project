@@ -1,6 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -sccp -split-input-file | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(sccp)" -split-input-file | FileCheck %s --check-prefix=NESTED
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="func.func(sccp)" -split-input-file | FileCheck %s --check-prefix=FUNC
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(builtin.module(sccp))" -split-input-file | FileCheck %s --check-prefix=NESTED
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(sccp))" -split-input-file | FileCheck %s --check-prefix=FUNC
 
 /// Check that a constant is properly propagated through the arguments and
 /// results of a private function.

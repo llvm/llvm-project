@@ -229,7 +229,7 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
                        Variadic<AnyType>:$allocators_vars,
                        UnitAttr:$nowait);
 
-  let regions = (region SizedRegion<1>:$region);
+  let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
     oilist(`allocate` `(`
@@ -385,6 +385,10 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
     Collapsed loops are represented by the simd-loop having a list of indices,
     bounds and steps where the size of the list is equal to the collapse value.
 
+    The `alignment_values` attribute additionally specifies alignment of each
+    corresponding aligned operand. Note that `$aligned_vars` and
+    `alignment_values` should contain the same number of elements.
+
     When an if clause is present and evaluates to false, the preferred number of
     iterations to be executed concurrently is one, regardless of whether
     a simdlen clause is speciﬁed.
@@ -408,6 +412,8 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
   let arguments = (ins Variadic<IntLikeType>:$lowerBound,
              Variadic<IntLikeType>:$upperBound,
              Variadic<IntLikeType>:$step,
+             Variadic<OpenMP_PointerLikeType>:$aligned_vars,
+             OptionalAttr<I64ArrayAttr>:$alignment_values,
              Optional<I1>:$if_expr,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$simdlen,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$safelen,
@@ -416,7 +422,10 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
 
   let regions = (region AnyRegion:$region);
   let assemblyFormat = [{
-    oilist(`if` `(` $if_expr `)`
+    oilist(`aligned` `(`
+              custom<AlignedClause>($aligned_vars, type($aligned_vars),
+                                   $alignment_values) `)`
+          |`if` `(` $if_expr `)`
           |`simdlen` `(` $simdlen  `)`
           |`safelen` `(` $safelen  `)`
     ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,

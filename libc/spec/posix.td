@@ -74,6 +74,8 @@ def FdSet : NamedType<"fd_set">;
 def FdSetPtr : PtrType<FdSet>;
 def RestrictedFdSetPtr : RestrictedPtrType<FdSet>;
 
+def GetoptArgvT : NamedType<"__getoptargv_t">;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -348,6 +350,7 @@ def POSIX : StandardSpec<"POSIX"> {
       SizeTType,
       PidT,
       UidT,
+      GetoptArgvT,
     ],
     [], // Enumerations
     [
@@ -581,9 +584,30 @@ def POSIX : StandardSpec<"POSIX"> {
           RetValSpec<SSizeTType>,
           [ArgSpec<IntType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>]
         >,
+        FunctionSpec<
+          "getopt",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<GetoptArgvT>, ArgSpec<ConstCharPtr>]
+        >,
     ],
     [
         ObjectSpec<"environ", "char **">,
+        ObjectSpec<
+          "optarg",
+          "char *"
+        >,
+        ObjectSpec<
+          "optind",
+          "int"
+        >,
+        ObjectSpec<
+          "opterr",
+          "int"
+        >,
+        ObjectSpec<
+          "optopt",
+          "int"
+        >,
     ]
   >;
 
@@ -985,6 +1009,11 @@ def POSIX : StandardSpec<"POSIX"> {
           FunctionSpec<
               "funlockfile",
               RetValSpec<VoidType>,
+              [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "getc_unlocked",
+              RetValSpec<IntType>,
               [ArgSpec<FILEPtr>]
           >,
       ]

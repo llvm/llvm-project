@@ -10,9 +10,9 @@
 // CHECK: call void asm sideeffect "foo7", {{.*}} [[NOATTRS]]
 // CHECK: call i32 asm "foo8", {{.*}} [[READNONE]]
 
-// CHECK: attributes [[READNONE]] = { nounwind readnone }
+// CHECK: attributes [[READNONE]] = { nounwind memory(none) }
 // CHECK: attributes [[NOATTRS]] = { nounwind }
-// CHECK: attributes [[READONLY]] = { nounwind readonly }
+// CHECK: attributes [[READONLY]] = { nounwind memory(read) }
 
 int g0, g1;
 

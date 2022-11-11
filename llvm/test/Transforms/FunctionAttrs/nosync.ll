@@ -6,7 +6,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Base case, empty function
 define void @test1() {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret void
 ;
@@ -15,7 +15,7 @@ define void @test1() {
 
 ; Show the bottom up walk
 define void @test2() {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    call void @test1()
 ; CHECK-NEXT:    ret void
@@ -38,7 +38,7 @@ define void @test3() convergent {
 }
 
 define i32 @test4(i32 %a, i32 %b) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[A]]
@@ -49,7 +49,7 @@ define i32 @test4(i32 %a, i32 %b) {
 
 ; negative case - explicit sync
 define void @test5(ptr %p) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    store atomic i8 0, ptr [[P:%.*]] seq_cst, align 1
 ; CHECK-NEXT:    ret void
@@ -60,7 +60,7 @@ define void @test5(ptr %p) {
 
 ; negative case - explicit sync
 define i8 @test6(ptr %p) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[V:%.*]] = load atomic i8, ptr [[P:%.*]] seq_cst, align 1
 ; CHECK-NEXT:    ret i8 [[V]]
@@ -71,7 +71,7 @@ define i8 @test6(ptr %p) {
 
 ; negative case - explicit sync
 define void @test7(ptr %p) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P:%.*]], i8 0 seq_cst, align 1
 ; CHECK-NEXT:    ret void
@@ -104,7 +104,7 @@ define void @test9(ptr %p) {
 
 ; atomic load with monotonic ordering
 define i32 @load_monotonic(ptr nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind willreturn uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: @load_monotonic(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr [[TMP0:%.*]] monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -115,7 +115,7 @@ define i32 @load_monotonic(ptr nocapture readonly %0) norecurse nounwind uwtable
 
 ; atomic store with monotonic ordering.
 define void @store_monotonic(ptr nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind willreturn uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: @store_monotonic(
 ; CHECK-NEXT:    store atomic i32 10, ptr [[TMP0:%.*]] monotonic, align 4
 ; CHECK-NEXT:    ret void
@@ -127,7 +127,7 @@ define void @store_monotonic(ptr nocapture %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; atomic load with acquire ordering.
 define i32 @load_acquire(ptr nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind willreturn uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: @load_acquire(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr [[TMP0:%.*]] acquire, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -137,7 +137,7 @@ define i32 @load_acquire(ptr nocapture readonly %0) norecurse nounwind uwtable {
 }
 
 define i32 @load_unordered(ptr nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind readonly willreturn uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; CHECK-LABEL: @load_unordered(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr [[TMP0:%.*]] unordered, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -148,7 +148,7 @@ define i32 @load_unordered(ptr nocapture readonly %0) norecurse nounwind uwtable
 
 ; atomic store with unordered ordering.
 define void @store_unordered(ptr nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind willreturn writeonly uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) uwtable
 ; CHECK-LABEL: @store_unordered(
 ; CHECK-NEXT:    store atomic i32 10, ptr [[TMP0:%.*]] unordered, align 4
 ; CHECK-NEXT:    ret void
@@ -161,7 +161,7 @@ define void @store_unordered(ptr nocapture %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; atomic load with release ordering
 define void @load_release(ptr nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly nofree norecurse nounwind uwtable
+; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) uwtable
 ; CHECK-LABEL: @load_release(
 ; CHECK-NEXT:    store atomic volatile i32 10, ptr [[TMP0:%.*]] release, align 4
 ; CHECK-NEXT:    ret void
@@ -172,7 +172,7 @@ define void @load_release(ptr nocapture %0) norecurse nounwind uwtable {
 
 ; negative volatile, relaxed atomic
 define void @load_volatile_release(ptr nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly nofree norecurse nounwind uwtable
+; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) uwtable
 ; CHECK-LABEL: @load_volatile_release(
 ; CHECK-NEXT:    store atomic volatile i32 10, ptr [[TMP0:%.*]] release, align 4
 ; CHECK-NEXT:    ret void
@@ -183,7 +183,7 @@ define void @load_volatile_release(ptr nocapture %0) norecurse nounwind uwtable 
 
 ; volatile store.
 define void @volatile_store(ptr %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly nofree norecurse nounwind uwtable
+; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) uwtable
 ; CHECK-LABEL: @volatile_store(
 ; CHECK-NEXT:    store volatile i32 14, ptr [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -195,7 +195,7 @@ define void @volatile_store(ptr %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; volatile load.
 define i32 @volatile_load(ptr %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly mustprogress nofree norecurse nounwind willreturn uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) uwtable
 ; CHECK-LABEL: @volatile_load(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load volatile i32, ptr [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -237,7 +237,7 @@ declare void @llvm.memset(ptr %dest, i8 %val, i32 %len, i1 %isvolatile)
 
 ; negative, checking volatile intrinsics.
 define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: @memcpy_volatile(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], i32 8, i1 true)
 ; CHECK-NEXT:    ret i32 4
@@ -248,7 +248,7 @@ define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
 
 ; positive, non-volatile intrinsic.
 define i32 @memset_non_volatile(ptr %ptr1, i8 %val) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: @memset_non_volatile(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr [[PTR1:%.*]], i8 [[VAL:%.*]], i32 8, i1 false)
 ; CHECK-NEXT:    ret i32 4
@@ -271,7 +271,7 @@ declare void @readnone_test() convergent readnone
 
 ; negative. Convergent
 define void @convergent_readnone(){
-; CHECK: Function Attrs: nofree nosync readnone
+; CHECK: Function Attrs: nofree nosync memory(none)
 ; CHECK-LABEL: @convergent_readnone(
 ; CHECK-NEXT:    call void @readnone_test()
 ; CHECK-NEXT:    ret void
@@ -299,7 +299,7 @@ define void @i_totally_sync() {
 declare float @llvm.cos(float %val) readnone
 
 define float @cos_test(float %x) {
-; CHECK: Function Attrs: mustprogress nofree nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @cos_test(
 ; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[C]]

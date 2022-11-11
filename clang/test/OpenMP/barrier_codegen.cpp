@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
 // CLANGCG:            declare i32 @__kmpc_global_thread_num(ptr)
 // IRBUILDER:          ; Function Attrs: nounwind
 // IRBUILDER-NEXT:     declare i32 @__kmpc_global_thread_num(ptr) #
-// IRBUILDER_OPT:      ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
+// IRBUILDER_OPT:      ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 // IRBUILDER_OPT-NEXT: declare i32 @__kmpc_global_thread_num(ptr nocapture nofree readonly) #
 
 // CHECK: define {{.+}} [[TMAIN_INT]](

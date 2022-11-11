@@ -68,6 +68,7 @@
 # CHECK-NEXT:            "dependentName",
 # CHECK-NEXT:            "defaultLibrary",
 # CHECK-NEXT:            "usedAsMutableReference",
+# CHECK-NEXT:            "usedAsMutablePointer",
 # CHECK-NEXT:            "constructorOrDestructor",
 # CHECK-NEXT:            "functionScope",
 # CHECK-NEXT:            "classScope",

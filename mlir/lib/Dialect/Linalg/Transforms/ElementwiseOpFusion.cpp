@@ -1744,8 +1744,14 @@ struct FoldFillWithGenericOp : public OpRewritePattern<GenericOp> {
       if (!fillOp)
         continue;
       fillFound = true;
+      Value fillVal = fillOp.value();
+      auto resultType =
+          fillOp.result().getType().cast<RankedTensorType>().getElementType();
+      Value convertedVal =
+          convertScalarToDtype(rewriter, fillOp.getLoc(), fillVal, resultType,
+                               /*isUnsignedCast =*/false);
       payload.getArgument(opOperand->getOperandNumber())
-          .replaceAllUsesWith(fillOp.value());
+          .replaceAllUsesWith(convertedVal);
     }
     return success(fillFound);
   }

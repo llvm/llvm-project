@@ -28,6 +28,17 @@ def testCapsule():
     assert pm1 is not None  # And does not crash.
 run(testCapsule)
 
+# CHECK-LABEL: TEST: testConstruct
+@run
+def testConstruct():
+  with Context():
+    # CHECK: pm1: 'any()'
+    # CHECK: pm2: 'builtin.module()'
+    pm1 = PassManager()
+    pm2 = PassManager("builtin.module")
+    log(f"pm1: '{pm1}'")
+    log(f"pm2: '{pm2}'")
+
 
 # Verify successful round-trip.
 # CHECK-LABEL: TEST: testParseSuccess
@@ -44,7 +55,7 @@ def testParseSuccess():
 
     # A registered pass should parse successfully.
     pm = PassManager.parse("builtin.module(func.func(print-op-stats{json=false}))")
-    # CHECK: Roundtrip: builtin.module(builtin.module(func.func(print-op-stats{json=false})))
+    # CHECK: Roundtrip: builtin.module(func.func(print-op-stats{json=false}))
     log("Roundtrip: ", pm)
 run(testParseSuccess)
 
@@ -53,7 +64,7 @@ run(testParseSuccess)
 def testParseFail():
   with Context():
     try:
-      pm = PassManager.parse("unknown-pass")
+      pm = PassManager.parse("any(unknown-pass)")
     except ValueError as e:
       #      CHECK: ValueError exception: MLIR Textual PassPipeline Parser:1:1: error:
       # CHECK-SAME: 'unknown-pass' does not refer to a registered pass or pass pipeline
@@ -63,6 +74,20 @@ def testParseFail():
     else:
       log("Exception not produced")
 run(testParseFail)
+
+# Check that adding to a pass manager works
+# CHECK-LABEL: TEST: testAdd
+@run
+def testAdd():
+  pm = PassManager("any", Context())
+  # CHECK: pm: 'any()'
+  log(f"pm: '{pm}'")
+  # CHECK: pm: 'any(cse)'
+  pm.add("cse")
+  log(f"pm: '{pm}'")
+  # CHECK: pm: 'any(cse,cse)'
+  pm.add("cse")
+  log(f"pm: '{pm}'")
 
 
 # Verify failure on incorrect level of nesting.
@@ -83,7 +108,7 @@ run(testInvalidNesting)
 # CHECK-LABEL: TEST: testRun
 def testRunPipeline():
   with Context():
-    pm = PassManager.parse("print-op-stats{json=false}")
+    pm = PassManager.parse("builtin.module(print-op-stats{json=false})")
     module = Module.parse(r"""func.func @successfulParse() { return }""")
     pm.run(module)
 # CHECK: Operations encountered:

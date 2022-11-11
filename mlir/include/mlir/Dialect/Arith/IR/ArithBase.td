@@ -121,4 +121,9 @@ def FastMathFlags : I32BitEnumAttr<
   let printBitEnumPrimaryGroups = 1;
 }
 
+def Arith_FastMathAttr :
+    EnumAttr<Arith_Dialect, FastMathFlags, "fastmath"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 #endif // ARITH_BASE

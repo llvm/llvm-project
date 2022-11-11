@@ -258,6 +258,9 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case GNUABIN32: return "gnuabin32";
   case GNUEABI: return "gnueabi";
   case GNUEABIHF: return "gnueabihf";
+  case GNUF32: return "gnuf32";
+  case GNUF64: return "gnuf64";
+  case GNUSF: return "gnusf";
   case GNUX32: return "gnux32";
   case GNUILP32: return "gnu_ilp32";
   case Itanium: return "itanium";
@@ -598,6 +601,9 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("gnuabi64", Triple::GNUABI64)
       .StartsWith("gnueabihf", Triple::GNUEABIHF)
       .StartsWith("gnueabi", Triple::GNUEABI)
+      .StartsWith("gnuf32", Triple::GNUF32)
+      .StartsWith("gnuf64", Triple::GNUF64)
+      .StartsWith("gnusf", Triple::GNUSF)
       .StartsWith("gnux32", Triple::GNUX32)
       .StartsWith("gnu_ilp32", Triple::GNUILP32)
       .StartsWith("code16", Triple::CODE16)
@@ -1855,75 +1861,6 @@ VersionTuple Triple::getMinimumSupportedOSVersion() const {
     break;
   }
   return VersionTuple();
-}
-
-StringRef Triple::getARMCPUForArch(StringRef MArch) const {
-  if (MArch.empty())
-    MArch = getArchName();
-  MArch = ARM::getCanonicalArchName(MArch);
-
-  // Some defaults are forced.
-  switch (getOS()) {
-  case llvm::Triple::FreeBSD:
-  case llvm::Triple::NetBSD:
-  case llvm::Triple::OpenBSD:
-    if (!MArch.empty() && MArch == "v6")
-      return "arm1176jzf-s";
-    if (!MArch.empty() && MArch == "v7")
-      return "cortex-a8";
-    break;
-  case llvm::Triple::Win32:
-    // FIXME: this is invalid for WindowsCE
-    if (ARM::parseArchVersion(MArch) <= 7)
-      return "cortex-a9";
-    break;
-  case llvm::Triple::IOS:
-  case llvm::Triple::MacOSX:
-  case llvm::Triple::TvOS:
-  case llvm::Triple::WatchOS:
-  case llvm::Triple::DriverKit:
-    if (MArch == "v7k")
-      return "cortex-a7";
-    break;
-  default:
-    break;
-  }
-
-  if (MArch.empty())
-    return StringRef();
-
-  StringRef CPU = ARM::getDefaultCPU(MArch);
-  if (!CPU.empty() && !CPU.equals("invalid"))
-    return CPU;
-
-  // If no specific architecture version is requested, return the minimum CPU
-  // required by the OS and environment.
-  switch (getOS()) {
-  case llvm::Triple::NetBSD:
-    switch (getEnvironment()) {
-    case llvm::Triple::EABI:
-    case llvm::Triple::EABIHF:
-    case llvm::Triple::GNUEABI:
-    case llvm::Triple::GNUEABIHF:
-      return "arm926ej-s";
-    default:
-      return "strongarm";
-    }
-  case llvm::Triple::NaCl:
-  case llvm::Triple::OpenBSD:
-    return "cortex-a8";
-  default:
-    switch (getEnvironment()) {
-    case llvm::Triple::EABIHF:
-    case llvm::Triple::GNUEABIHF:
-    case llvm::Triple::MuslEABIHF:
-      return "arm1176jzf-s";
-    default:
-      return "arm7tdmi";
-    }
-  }
-
-  llvm_unreachable("invalid arch name");
 }
 
 VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,

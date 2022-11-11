@@ -56,11 +56,14 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
   py::class_<PyPassManager>(m, "PassManager", py::module_local())
-      .def(py::init<>([](DefaultingPyMlirContext context) {
-             MlirPassManager passManager =
-                 mlirPassManagerCreate(context->get());
+      .def(py::init<>([](const std::string &anchorOp,
+                         DefaultingPyMlirContext context) {
+             MlirPassManager passManager = mlirPassManagerCreateOnOperation(
+                 context->get(),
+                 mlirStringRefCreate(anchorOp.data(), anchorOp.size()));
              return new PyPassManager(passManager);
            }),
+           py::arg("anchor_op") = py::str("any"),
            py::arg("context") = py::none(),
            "Create a new PassManager for the current (or provided) Context.")
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
@@ -85,7 +88,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           [](const std::string &pipeline, DefaultingPyMlirContext context) {
             MlirPassManager passManager = mlirPassManagerCreate(context->get());
             PyPrintAccumulator errorMsg;
-            MlirLogicalResult status = mlirOpPassManagerAddPipeline(
+            MlirLogicalResult status = mlirParsePassPipeline(
                 mlirPassManagerGetAsOpPassManager(passManager),
                 mlirStringRefCreate(pipeline.data(), pipeline.size()),
                 errorMsg.getCallback(), errorMsg.getUserData());
@@ -97,6 +100,20 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           "Parse a textual pass-pipeline and return a top-level PassManager "
           "that can be applied on a Module. Throw a ValueError if the pipeline "
           "can't be parsed")
+      .def(
+          "add",
+          [](PyPassManager &passManager, const std::string &pipeline) {
+            PyPrintAccumulator errorMsg;
+            MlirLogicalResult status = mlirOpPassManagerAddPipeline(
+                mlirPassManagerGetAsOpPassManager(passManager.get()),
+                mlirStringRefCreate(pipeline.data(), pipeline.size()),
+                errorMsg.getCallback(), errorMsg.getUserData());
+            if (mlirLogicalResultIsFailure(status))
+              throw SetPyError(PyExc_ValueError, std::string(errorMsg.join()));
+          },
+          py::arg("pipeline"),
+          "Add textual pipeline elements to the pass manager. Throws a "
+          "ValueError if the pipeline can't be parsed.")
       .def(
           "run",
           [](PyPassManager &passManager, PyModule &module) {

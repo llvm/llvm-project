@@ -169,7 +169,8 @@ enum {
   LLVMDICommonBlockMetadataKind,
   LLVMDIStringTypeMetadataKind,
   LLVMDIGenericSubrangeMetadataKind,
-  LLVMDIArgListMetadataKind
+  LLVMDIArgListMetadataKind,
+  LLVMDIAssignIDMetadataKind,
 };
 typedef unsigned LLVMMetadataKind;
 

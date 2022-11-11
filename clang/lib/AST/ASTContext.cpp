@@ -6520,7 +6520,7 @@ bool ASTContext::FriendsDifferByConstraints(const FunctionDecl *X,
   if (!X->getFriendObjectKind() || !Y->getFriendObjectKind())
     return false;
 
-  // If the the two functions share lexical declaration context, they are not in
+  // If the two functions share lexical declaration context, they are not in
   // separate instantations, and thus in the same scope.
   if (X->getLexicalDeclContext() == Y->getLexicalDeclContext())
     return false;
@@ -12280,16 +12280,14 @@ static Decl *getCommonDecl(Decl *X, Decl *Y) {
   llvm_unreachable("Corrupt redecls chain");
 }
 
-template <class T,
-          std::enable_if_t<std::is_base_of<Decl, T>::value, bool> = true>
+template <class T, std::enable_if_t<std::is_base_of_v<Decl, T>, bool> = true>
 T *getCommonDecl(T *X, T *Y) {
   return cast_or_null<T>(
       getCommonDecl(const_cast<Decl *>(cast_or_null<Decl>(X)),
                     const_cast<Decl *>(cast_or_null<Decl>(Y))));
 }
 
-template <class T,
-          std::enable_if_t<std::is_base_of<Decl, T>::value, bool> = true>
+template <class T, std::enable_if_t<std::is_base_of_v<Decl, T>, bool> = true>
 T *getCommonDeclChecked(T *X, T *Y) {
   return cast<T>(getCommonDecl(const_cast<Decl *>(cast<Decl>(X)),
                                const_cast<Decl *>(cast<Decl>(Y))));

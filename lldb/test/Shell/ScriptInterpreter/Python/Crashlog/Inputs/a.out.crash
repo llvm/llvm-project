@@ -29,7 +29,7 @@ Terminating Process:   exc handler [21606]
 
 Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 0   a.out                         	@foo@ foo + 16 (test.c:3)
-1   a.out                         	@bar@ bar + 9 (test.c:6)
+1   a.out                         	@bar@
 2   a.out                         	@main@ main + 20 (test.c:8)
 3   libdyld.dylib                 	0x1000000 start + 1
 
@@ -47,3 +47,4 @@ Trap Number:     14
 
 Binary Images:
        0x100000000 -        0x200000000 +a.out (0) <@UUID@> @EXEC@
+               0x0 - 0xffffffffffffffff ??? (*) <00000000-0000-0000-0000-000000000000> ???

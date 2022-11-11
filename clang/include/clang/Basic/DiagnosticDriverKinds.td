@@ -19,7 +19,7 @@ def err_drv_unsupported_opt_for_target : Error<
 def err_drv_unsupported_opt_for_language_mode : Error<
   "unsupported option '%0' for language mode '%1'">;
 def err_drv_unsupported_option_argument : Error<
-  "unsupported argument '%1' to option '-%0'">;
+  "unsupported argument '%1' to option '%0'">;
 def err_drv_unknown_stdin_type : Error<
   "-E or -x required when input is from standard input">;
 def err_drv_unknown_stdin_type_clang_cl : Error<
@@ -109,6 +109,9 @@ def warn_drv_unsupported_option_for_offload_arch_req_feature : Warning<
   InGroup<OptionIgnored>;
 def warn_drv_unsupported_option_for_target : Warning<
   "ignoring '%0' option as it is not currently supported for target '%1'">,
+  InGroup<OptionIgnored>;
+def warn_drv_unsupported_option_for_flang : Warning<
+  "the argument '%0' is not supported for option '%1'. Mapping to '%1%2'">,
   InGroup<OptionIgnored>;
 
 def err_drv_invalid_thread_model_for_target : Error<
@@ -214,14 +217,14 @@ def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
   "malformed sanitizer coverage ignorelist: '%0'">;
 def err_drv_duplicate_config : Error<
   "no more than one option '--config' is allowed">;
-def err_drv_config_file_not_exist : Error<
-  "configuration file '%0' does not exist">;
+def err_drv_cannot_open_config_file : Error<
+  "configuration file '%0' cannot be opened: %1">;
 def err_drv_config_file_not_found : Error<
   "configuration file '%0' cannot be found">;
 def note_drv_config_file_searched_in : Note<
   "was searched for in the directory: %0">;
 def err_drv_cannot_read_config_file : Error<
-  "cannot read configuration file '%0'">;
+  "cannot read configuration file '%0': %1">;
 def err_drv_nested_config_file: Error<
   "option '--config' is not allowed inside configuration file">;
 def err_drv_arg_requires_bitcode_input: Error<
@@ -688,4 +691,7 @@ def warn_drv_sarif_format_unstable : Warning<
 
 def err_drv_riscv_unsupported_with_linker_relaxation : Error<
   "%0 is unsupported with RISC-V linker relaxation (-mrelax)">;
+
+def err_drv_loongarch_invalid_mfpu_EQ : Error<
+  "invalid argument '%0' to -mfpu=; must be one of: 64, 32, none, 0 (alias for none)">;
 }

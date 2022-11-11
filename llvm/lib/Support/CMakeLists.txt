@@ -59,9 +59,7 @@ elseif( CMAKE_HOST_UNIX )
   if( LLVM_ENABLE_TERMINFO )
     set(imported_libs ${imported_libs} Terminfo::terminfo)
   endif()
-  if( LLVM_ENABLE_THREADS AND (HAVE_LIBATOMIC OR HAVE_CXX_LIBATOMICS64) )
-    set(system_libs ${system_libs} atomic)
-  endif()
+  set(system_libs ${system_libs} ${LLVM_ATOMIC_LIB})
   set(system_libs ${system_libs} ${LLVM_PTHREAD_LIB})
   if( UNIX AND NOT (BEOS OR HAIKU) )
     set(system_libs ${system_libs} m)
@@ -172,6 +170,7 @@ add_llvm_component_library(LLVMSupport
   FileUtilities.cpp
   FileOutputBuffer.cpp
   FoldingSet.cpp
+  Format.cpp
   FormattedStream.cpp
   FormatVariadic.cpp
   GlobPattern.cpp
@@ -188,6 +187,7 @@ add_llvm_component_library(LLVMSupport
   LineIterator.cpp
   Locale.cpp
   LockFileManager.cpp
+  LoongArchTargetParser.cpp
   LowLevelType.cpp
   ManagedStatic.cpp
   MathExtras.cpp

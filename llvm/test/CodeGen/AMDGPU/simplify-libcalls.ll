@@ -791,5 +791,5 @@ entry:
 ; GCN-PRELINK: declare float @_Z11native_sqrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY]]
 
 ; GCN-PRELINK: attributes #[[$NOUNWIND]] = { nounwind }
-; GCN-PRELINK: attributes #[[$NOUNWIND_READONLY]] = { nofree nounwind readonly }
+; GCN-PRELINK: attributes #[[$NOUNWIND_READONLY]] = { nofree nounwind memory(read) }
 attributes #0 = { nounwind }

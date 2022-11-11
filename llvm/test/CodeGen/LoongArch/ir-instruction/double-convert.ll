@@ -242,16 +242,9 @@ define double @convert_u32_to_double(i32 %a) nounwind {
 ;
 ; LA64-LABEL: convert_u32_to_double:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI12_0)
-; LA64-NEXT:    addi.d $a1, $a1, %pc_lo12(.LCPI12_0)
-; LA64-NEXT:    fld.d $fa0, $a1, 0
-; LA64-NEXT:    lu52i.d $a1, $zero, 1107
-; LA64-NEXT:    movgr2fr.d $fa1, $a1
-; LA64-NEXT:    fsub.d $fa0, $fa1, $fa0
-; LA64-NEXT:    lu12i.w $a1, 275200
-; LA64-NEXT:    bstrins.d $a0, $a1, 63, 32
-; LA64-NEXT:    movgr2fr.d $fa1, $a0
-; LA64-NEXT:    fadd.d $fa0, $fa1, $fa0
+; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    movgr2fr.d $fa0, $a0
+; LA64-NEXT:    ffint.d.l $fa0, $fa0
 ; LA64-NEXT:    ret
   %1 = uitofp i32 %a to double
   ret double %1
