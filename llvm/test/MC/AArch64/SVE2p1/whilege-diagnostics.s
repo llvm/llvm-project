@@ -30,7 +30,7 @@ whilege pn7.b, x0, x0, vlx2
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 whilege { p0.b, p2.b }, x13, x8
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: whilege { p0.b, p2.b }, x13, x8
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

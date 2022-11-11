@@ -52,7 +52,7 @@ fmls za.d[w8, 0, vgx2], {z0.d-z3.d}, z0.d
 // Invalid vector list.
 
 fmls za.d[w8, 0], {z0.d,z2.d}, {z0.d,z2.d}
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: fmls za.d[w8, 0], {z0.d,z2.d}, {z0.d,z2.d}
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

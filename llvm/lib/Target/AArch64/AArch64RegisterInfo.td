@@ -1274,6 +1274,108 @@ let EncoderMethod = "EncodeRegAsMultipleOf<4>",
   }
 } // end let EncoderMethod/DecoderMethod
 
+// SME2 strided multi-vector operands
+
+// ZStridedPairs
+//
+// A group of two Z vectors with strided numbering consisting of:
+//   Zn+0.T and Zn+8.T
+// where n is in the range 0 to 7 and 16 to 23 inclusive, and T is one of B, H,
+// S, or D.
+
+// Z0_Z8, Z1_Z9, Z2_Z10, Z3_Z11, Z4_Z12, Z5_Z13, Z6_Z14, Z7_Z15
+def ZStridedPairsLo : RegisterTuples<[zsub0, zsub1], [
+  (trunc (rotl ZPR, 0), 8), (trunc (rotl ZPR, 8), 8)
+]>;
+
+// Z16_Z24, Z17_Z25, Z18_Z26, Z19_Z27, Z20_Z28, Z21_Z29, Z22_Z30, Z23_Z31
+def ZStridedPairsHi : RegisterTuples<[zsub0, zsub1], [
+  (trunc (rotl ZPR, 16), 8), (trunc (rotl ZPR, 24), 8)
+]>;
+
+// ZStridedQuads
+//
+// A group of four Z vectors with strided numbering consisting of:
+//   Zn+0.T, Zn+4.T, Zn+8.T and Zn+12.T
+// where n is in the range 0 to 3 and 16 to 19 inclusive, and T is one of B, H,
+// S, or D.
+
+// Z0_Z4_Z8_Z12, Z1_Z5_Z9_Z13, Z2_Z6_Z10_Z14, Z3_Z7_Z11_Z15
+def ZStridedQuadsLo : RegisterTuples<[zsub0, zsub1, zsub2, zsub3], [
+  (trunc (rotl ZPR, 0), 4), (trunc (rotl ZPR, 4), 4),
+  (trunc (rotl ZPR, 8), 4), (trunc (rotl ZPR, 12), 4)
+]>;
+// Z16_Z20_Z24_Z28, Z17_Z21_Z25_Z29, Z18_Z22_Z26_Z30, Z19_Z23_Z27_Z31
+def ZStridedQuadsHi : RegisterTuples<[zsub0, zsub1, zsub2, zsub3], [
+  (trunc (rotl ZPR, 16), 4), (trunc (rotl ZPR, 20), 4),
+  (trunc (rotl ZPR, 24), 4), (trunc (rotl ZPR, 28), 4)
+]>;
+
+def ZPR2Strided : RegisterClass<"AArch64", [untyped], 256,
+                                (add ZStridedPairsLo, ZStridedPairsHi)>  {
+  let Size = 256;
+}
+def ZPR4Strided : RegisterClass<"AArch64", [untyped], 512,
+                                (add ZStridedQuadsLo, ZStridedQuadsHi)>  {
+  let Size = 512;
+}
+
+
+class ZPRVectorListStrided<int ElementWidth, int NumRegs, int Stride>
+    : ZPRVectorList<ElementWidth, NumRegs> {
+  let Name = "SVEVectorListStrided" # NumRegs # "x" # ElementWidth;
+  let DiagnosticType = "Invalid" # Name;
+  let PredicateMethod = "isTypedVectorListStrided<RegKind::SVEDataVector, "
+                        # NumRegs # "," # Stride # "," # ElementWidth # ">";
+  let RenderMethod = "addStridedVectorListOperands<" # NumRegs # ">";
+}
+
+let EncoderMethod = "EncodeZPR2StridedRegisterClass",
+    DecoderMethod = "DecodeZPR2StridedRegisterClass" in {
+  def ZZ_b_strided
+      : RegisterOperand<ZPR2Strided, "printTypedVectorList<0, 'b'>"> {
+    let ParserMatchClass = ZPRVectorListStrided<8, 2, 8>;
+  }
+
+  def ZZ_h_strided
+      : RegisterOperand<ZPR2Strided, "printTypedVectorList<0, 'h'>"> {
+    let ParserMatchClass = ZPRVectorListStrided<16, 2, 8>;
+  }
+
+  def ZZ_s_strided
+      : RegisterOperand<ZPR2Strided, "printTypedVectorList<0,'s'>"> {
+    let ParserMatchClass = ZPRVectorListStrided<32, 2, 8>;
+  }
+
+  def ZZ_d_strided
+      : RegisterOperand<ZPR2Strided, "printTypedVectorList<0,'d'>"> {
+    let ParserMatchClass = ZPRVectorListStrided<64, 2, 8>;
+  }
+}
+
+let EncoderMethod = "EncodeZPR4StridedRegisterClass",
+    DecoderMethod = "DecodeZPR4StridedRegisterClass" in {
+  def ZZZZ_b_strided
+      : RegisterOperand<ZPR4Strided, "printTypedVectorList<0,'b'>"> {
+    let ParserMatchClass = ZPRVectorListStrided<8, 4, 4>;
+  }
+
+  def ZZZZ_h_strided
+      : RegisterOperand<ZPR4Strided, "printTypedVectorList<0,'h'>"> {
+    let ParserMatchClass = ZPRVectorListStrided<16, 4, 4>;
+  }
+
+  def ZZZZ_s_strided
+      : RegisterOperand<ZPR4Strided, "printTypedVectorList<0,'s'>"> {
+    let ParserMatchClass = ZPRVectorListStrided<32, 4, 4>;
+  }
+
+  def ZZZZ_d_strided
+      : RegisterOperand<ZPR4Strided, "printTypedVectorList<0,'d'>"> {
+    let ParserMatchClass = ZPRVectorListStrided<64, 4, 4>;
+  }
+}
+
 class ZPRExtendAsmOperand<string ShiftExtend, int RegWidth, int Scale,
                           bit ScaleAlwaysSame = 0b0> : AsmOperandClass {
   let Name = "ZPRExtend" # ShiftExtend # RegWidth # Scale

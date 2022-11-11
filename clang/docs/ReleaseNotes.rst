@@ -176,6 +176,11 @@ code bases.
       g(42);
     }
 
+- Clang's resource dir used to include the full clang version. It will now
+  include only the major version. The new resource directory is
+  ``$prefix/lib/clang/$CLANG_MAJOR_VERSION`` and can be queried using
+  ``clang -print-resource-dir``, just like before.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
