@@ -4168,6 +4168,15 @@ defm FNMUL  : TwoOperandFPDataNeg<0b1000, "fnmul", any_fmul>;
 }
 defm FSUB   : TwoOperandFPData<0b0011, "fsub", any_fsub>;
 
+// Match reassociated forms of FNMUL.
+def : Pat<(fmul (fneg FPR16:$a), (f16 FPR16:$b)),
+          (FNMULHrr FPR16:$a, FPR16:$b)>,
+          Requires<[HasFullFP16]>;
+def : Pat<(fmul (fneg FPR32:$a), (f32 FPR32:$b)),
+          (FNMULSrr FPR32:$a, FPR32:$b)>;
+def : Pat<(fmul (fneg FPR64:$a), (f64 FPR64:$b)),
+          (FNMULDrr FPR64:$a, FPR64:$b)>;
+
 def : Pat<(v1f64 (fmaximum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMAXDrr FPR64:$Rn, FPR64:$Rm)>;
 def : Pat<(v1f64 (fminimum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
