@@ -332,8 +332,8 @@ RecordedPP::RecordedIncludes::match(Header H) const {
     for (unsigned I : BySpelling.lookup(H.standard().name().trim("<>")))
       Result.push_back(&All[I]);
     break;
-  case Header::VerbatimSpelling:
-    for (unsigned I : BySpelling.lookup(H.verbatimSpelling().trim("\"<>")))
+  case Header::Verbatim:
+    for (unsigned I : BySpelling.lookup(H.verbatim().trim("\"<>")))
       Result.push_back(&All[I]);
     break;
   }
