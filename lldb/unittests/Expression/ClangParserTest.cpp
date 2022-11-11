@@ -38,10 +38,11 @@ TEST_F(ClangHostTest, ComputeClangResourceDirectory) {
 #if !defined(_WIN32)
   std::string path_to_liblldb = "/foo/bar/lib/";
   std::string path_to_clang_dir =
-      "/foo/bar/" LLDB_INSTALL_LIBDIR_BASENAME "/clang/" CLANG_VERSION_STRING;
+      "/foo/bar/" LLDB_INSTALL_LIBDIR_BASENAME "/clang/" CLANG_VERSION_MAJOR_STRING;
 #else
   std::string path_to_liblldb = "C:\\foo\\bar\\lib";
-  std::string path_to_clang_dir = "C:\\foo\\bar\\lib\\clang\\" CLANG_VERSION_STRING;
+  std::string path_to_clang_dir =
+      "C:\\foo\\bar\\lib\\clang\\" CLANG_VERSION_MAJOR_STRING;
 #endif
   EXPECT_EQ(ComputeClangResourceDir(path_to_liblldb), path_to_clang_dir);
 

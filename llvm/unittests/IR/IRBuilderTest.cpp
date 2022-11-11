@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
@@ -20,6 +21,8 @@
 #include "llvm/IR/Verifier.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+#include <type_traits>
 
 using namespace llvm;
 using ::testing::UnorderedElementsAre;
@@ -1155,5 +1158,31 @@ TEST_F(IRBuilderTest, NoFolderNames) {
   auto *Add =
       Builder.CreateAdd(Builder.getInt32(1), Builder.getInt32(2), "add");
   EXPECT_EQ(Add->getName(), "add");
+}
+
+TEST_F(IRBuilderTest, CTAD) {
+  struct TestInserter : public IRBuilderDefaultInserter {
+    TestInserter() = default;
+  };
+  InstSimplifyFolder Folder(M->getDataLayout());
+
+  IRBuilder Builder1(Ctx, Folder, TestInserter());
+  static_assert(std::is_same_v<decltype(Builder1),
+                               IRBuilder<InstSimplifyFolder, TestInserter>>);
+  IRBuilder Builder2(Ctx);
+  static_assert(std::is_same_v<decltype(Builder2), IRBuilder<>>);
+  IRBuilder Builder3(BB, Folder);
+  static_assert(
+      std::is_same_v<decltype(Builder3), IRBuilder<InstSimplifyFolder>>);
+  IRBuilder Builder4(BB);
+  static_assert(std::is_same_v<decltype(Builder4), IRBuilder<>>);
+  // The block BB is empty, so don't test this one.
+  // IRBuilder Builder5(BB->getTerminator());
+  // static_assert(std::is_same_v<decltype(Builder5), IRBuilder<>>);
+  IRBuilder Builder6(BB, BB->end(), Folder);
+  static_assert(
+      std::is_same_v<decltype(Builder6), IRBuilder<InstSimplifyFolder>>);
+  IRBuilder Builder7(BB, BB->end());
+  static_assert(std::is_same_v<decltype(Builder7), IRBuilder<>>);
 }
 }

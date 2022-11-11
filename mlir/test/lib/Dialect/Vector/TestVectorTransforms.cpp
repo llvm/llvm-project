@@ -759,6 +759,21 @@ struct TestVectorDistribution
         return AffineMap::get(val.getContext());
       return AffineMap::get(vecRank, 0, builder.getAffineDimExpr(vecRank - 1));
     };
+    auto shuffleFn = [](Location loc, OpBuilder &builder, Value val,
+                        Value srcIdx, int64_t warpSz) {
+      assert((val.getType().isF32() || val.getType().isInteger(32)) &&
+             "unsupported shuffle type");
+      Type i32Type = builder.getIntegerType(32);
+      Value srcIdxI32 =
+          builder.create<arith::IndexCastOp>(loc, i32Type, srcIdx);
+      Value warpSzI32 = builder.create<arith::ConstantOp>(
+          loc, builder.getIntegerAttr(i32Type, warpSz));
+      Value result = builder
+                         .create<gpu::ShuffleOp>(loc, val, srcIdxI32, warpSzI32,
+                                                 gpu::ShuffleMode::IDX)
+                         .getResult(0);
+      return result;
+    };
     if (distributeTransferWriteOps) {
       RewritePatternSet patterns(ctx);
       populateDistributeTransferWriteOpPatterns(patterns, distributionFn);
@@ -766,8 +781,8 @@ struct TestVectorDistribution
     }
     if (propagateDistribution) {
       RewritePatternSet patterns(ctx);
-      vector::populatePropagateWarpVectorDistributionPatterns(patterns,
-                                                              distributionFn);
+      vector::populatePropagateWarpVectorDistributionPatterns(
+          patterns, distributionFn, shuffleFn);
       vector::populateDistributeReduction(patterns, warpReduction);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     }

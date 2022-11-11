@@ -86,7 +86,7 @@ ld4d { z0.d, z1.d, z2.d, z3.b }, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld4d { z0.d, z1.d, z3.d, z5.d }, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must have the same sequential stride
 // CHECK-NEXT: ld4d { z0.d, z1.d, z3.d, z5.d }, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

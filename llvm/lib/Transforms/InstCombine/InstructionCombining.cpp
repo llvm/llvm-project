@@ -2009,6 +2009,7 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   // optimizations below.
   if (ShouldCanonicalizeSwap && Src->hasOneUse() &&
       Src->getPointerOperandType() == GEP.getPointerOperandType() &&
+      Src->getPointerOperandType() == GEP.getType() &&
       Src->getType()->isVectorTy() == GEP.getType()->isVectorTy() &&
       !isa<GlobalValue>(Src->getPointerOperand())) {
     // When swapping, GEP with all constant indices are more prioritized than

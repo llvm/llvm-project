@@ -118,12 +118,22 @@ static llvm::Optional<StringRef> parseIWYUPragma(const char *Text) {
 class PragmaIncludes::RecordPragma : public PPCallbacks, public CommentHandler {
 public:
   RecordPragma(const CompilerInstance &CI, PragmaIncludes *Out)
-      : SM(CI.getSourceManager()), Out(Out) {}
+      : SM(CI.getSourceManager()), Out(Out), UniqueStrings(Arena) {}
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
                    FileID PrevFID) override {
     InMainFile = SM.isWrittenInMainFile(Loc);
+  }
+
+  void EndOfMainFile() override {
+    for (auto &It : Out->IWYUExportBy) {
+      llvm::sort(It.getSecond());
+      It.getSecond().erase(
+          std::unique(It.getSecond().begin(), It.getSecond().end()),
+          It.getSecond().end());
+    }
+    Out->Arena = std::move(Arena);
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -134,12 +144,33 @@ public:
                           llvm::StringRef /*RelativePath*/,
                           const clang::Module * /*Imported*/,
                           SrcMgr::CharacteristicKind FileKind) override {
-    if (!InMainFile)
-      return;
-    int HashLine =
-        SM.getLineNumber(SM.getMainFileID(), SM.getFileOffset(HashLoc));
-    if (LastPragmaKeepInMainFileLine == HashLine)
+    FileID HashFID = SM.getFileID(HashLoc);
+    int HashLine = SM.getLineNumber(HashFID, SM.getFileOffset(HashLoc));
+    checkForExport(HashFID, HashLine, File ? &File->getFileEntry() : nullptr);
+
+    if (InMainFile && LastPragmaKeepInMainFileLine == HashLine)
       Out->ShouldKeep.insert(HashLine);
+  }
+
+  void checkForExport(FileID IncludingFile, int HashLine,
+                      const FileEntry *IncludedHeader) {
+    if (ExportStack.empty())
+      return;
+    auto &Top = ExportStack.back();
+    if (Top.SeenAtFile != IncludingFile)
+      return;
+    // Make sure current include is covered by the export pragma.
+    if ((Top.Block && HashLine > Top.SeenAtLine) ||
+        Top.SeenAtLine == HashLine) {
+      if (IncludedHeader)
+        Out->IWYUExportBy[IncludedHeader->getUniqueID()].push_back(
+            Top.FullPath);
+      // main-file #include with export pragma should never be removed.
+      if (Top.SeenAtFile == SM.getMainFileID())
+        Out->ShouldKeep.insert(HashLine);
+    }
+    if (!Top.Block) // Pop immediately for single-line export pragma.
+      ExportStack.pop_back();
   }
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
@@ -153,10 +184,31 @@ public:
       if (auto *FE = SM.getFileEntryForID(SM.getFileID(Range.getBegin())))
         Out->IWYUPublic.insert(
             {FE->getLastRef().getUniqueID(),
-             Pragma->startswith("<") || Pragma->startswith("\"")
-                 ? Pragma->str()
-                 : ("\"" + *Pragma + "\"").str()});
+             save(Pragma->startswith("<") || Pragma->startswith("\"")
+                      ? (*Pragma)
+                      : ("\"" + *Pragma + "\"").str())});
       return false;
+    }
+    FileID CommentFID = SM.getFileID(Range.getBegin());
+    int CommentLine = SM.getLineNumber(SM.getFileID(Range.getBegin()),
+                                       SM.getFileOffset(Range.getBegin()));
+    // Record export pragma.
+    if (Pragma->startswith("export")) {
+      ExportStack.push_back(
+          {CommentLine, CommentFID,
+           save(SM.getFileEntryForID(CommentFID)->tryGetRealPathName()),
+           false});
+    } else if (Pragma->startswith("begin_exports")) {
+      ExportStack.push_back(
+          {CommentLine, CommentFID,
+           save(SM.getFileEntryForID(CommentFID)->tryGetRealPathName()), true});
+    } else if (Pragma->startswith("end_exports")) {
+      // FIXME: be robust on unmatching cases. We should only pop the stack if
+      // the begin_exports and end_exports is in the same file.
+      if (!ExportStack.empty()) {
+        assert(ExportStack.back().Block);
+        ExportStack.pop_back();
+      }
     }
 
     if (InMainFile) {
@@ -176,18 +228,35 @@ public:
       // This code stores the last location of "IWYU pragma: keep" (or export)
       // comment in the main file, so that when next InclusionDirective is
       // called, it will know that the next inclusion is behind the IWYU pragma.
-      LastPragmaKeepInMainFileLine = SM.getLineNumber(
-          SM.getMainFileID(), SM.getFileOffset(Range.getBegin()));
+      LastPragmaKeepInMainFileLine = CommentLine;
     }
     return false;
   }
 
 private:
+  StringRef save(llvm::StringRef S) { return UniqueStrings.save(S); }
+
   bool InMainFile = false;
   const SourceManager &SM;
   PragmaIncludes *Out;
+  llvm::BumpPtrAllocator Arena;
+  /// Intern table for strings. Contents are on the arena.
+  llvm::StringSaver UniqueStrings;
   // Track the last line "IWYU pragma: keep" was seen in the main file, 1-based.
   int LastPragmaKeepInMainFileLine = -1;
+  struct ExportPragma {
+    // The line number where we saw the begin_exports or export pragma.
+    int SeenAtLine = 0; // 1-based line number.
+    // The file where we saw the pragma.
+    FileID SeenAtFile;
+    // FullPath of the file SeenAtFile.
+    StringRef FullPath;
+    // true if it is a block begin/end_exports pragma; false if it is a
+    // single-line export pragma.
+    bool Block = false;
+  };
+  // A stack for tracking all open begin_exports or single-line export.
+  std::vector<ExportPragma> ExportStack;
 };
 
 void PragmaIncludes::record(const CompilerInstance &CI) {
@@ -201,6 +270,21 @@ llvm::StringRef PragmaIncludes::getPublic(const FileEntry *F) const {
   if (It == IWYUPublic.end())
     return "";
   return It->getSecond();
+}
+
+llvm::SmallVector<const FileEntry *>
+PragmaIncludes::getExporters(const FileEntry *File, FileManager &FM) const {
+  auto It = IWYUExportBy.find(File->getUniqueID());
+  if (It == IWYUExportBy.end())
+    return {};
+
+  llvm::SmallVector<const FileEntry *> Results;
+  for (auto Export : It->getSecond()) {
+    // FIMXE: log the failing cases?
+    if (auto FE = expectedToOptional(FM.getFileRef(Export)))
+      Results.push_back(*FE);
+  }
+  return Results;
 }
 
 std::unique_ptr<ASTConsumer> RecordedAST::record() {
