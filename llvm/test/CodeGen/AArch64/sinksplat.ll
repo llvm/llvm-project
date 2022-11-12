@@ -371,8 +371,7 @@ define <4 x i32> @smull_splat_and_extract(<4 x i16> %x, <8 x i16> %l, ptr %y, i1
 ; CHECK-NEXT:    smull v0.4s, v1.4h, v2.h[3]
 ; CHECK-NEXT:    tbz w1, #0, .LBB11_2
 ; CHECK-NEXT:  // %bb.1: // %l1
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    smlal v0.4s, v1.4h, v2.h[3]
+; CHECK-NEXT:    smlal2 v0.4s, v1.8h, v2.h[3]
 ; CHECK-NEXT:  .LBB11_2: // %l2
 ; CHECK-NEXT:    ret
 entry:
@@ -399,8 +398,7 @@ define <4 x i32> @umull_splat_and_extract(<4 x i16> %x, <8 x i16> %l, ptr %y, i1
 ; CHECK-NEXT:    umull v0.4s, v1.4h, v2.h[3]
 ; CHECK-NEXT:    tbz w1, #0, .LBB12_2
 ; CHECK-NEXT:  // %bb.1: // %l1
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    umlal v0.4s, v1.4h, v2.h[3]
+; CHECK-NEXT:    umlal2 v0.4s, v1.8h, v2.h[3]
 ; CHECK-NEXT:  .LBB12_2: // %l2
 ; CHECK-NEXT:    ret
 entry:
