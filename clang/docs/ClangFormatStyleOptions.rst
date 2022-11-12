@@ -2696,16 +2696,19 @@ the configuration (without a prefix: ``Auto``).
 
 **FixNamespaceComments** (``Boolean``) :versionbadge:`clang-format 5`
   If ``true``, clang-format adds missing namespace end comments for
-  short namespaces and fixes invalid existing ones. Short ones are
-  controlled by "ShortNamespaceLines".
+  namespaces and fixes invalid existing ones. This doesn't affect short
+  namespaces, which are controlled by ``ShortNamespaceLines``.
 
   .. code-block:: c++
 
      true:                                  false:
-     namespace a {                  vs.     namespace a {
-     foo();                                 foo();
-     bar();                                 bar();
+     namespace longNamespace {      vs.     namespace longNamespace {
+     void foo();                            void foo();
+     void bar();                            void bar();
      } // namespace a                       }
+     namespace shortNamespace {             namespace shortNamespace {
+     void baz();                            void baz();
+     }                                      }
 
 **ForEachMacros** (``List of Strings``) :versionbadge:`clang-format 3.7`
   A vector of macros that should be interpreted as foreach loops
