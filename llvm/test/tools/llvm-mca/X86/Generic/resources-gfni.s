@@ -19,10 +19,10 @@ gf2p8mulb           (%rax), %xmm1
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.50                        gf2p8affineinvqb	$0, %xmm0, %xmm1
-# CHECK-NEXT:  2      7     0.50    *                   gf2p8affineinvqb	$0, (%rax), %xmm1
-# CHECK-NEXT:  1      1     0.50                        gf2p8affineqb	$0, %xmm0, %xmm1
-# CHECK-NEXT:  2      7     0.50    *                   gf2p8affineqb	$0, (%rax), %xmm1
+# CHECK-NEXT:  1      5     1.00                        gf2p8affineinvqb	$0, %xmm0, %xmm1
+# CHECK-NEXT:  2      11    1.00    *                   gf2p8affineinvqb	$0, (%rax), %xmm1
+# CHECK-NEXT:  1      5     1.00                        gf2p8affineqb	$0, %xmm0, %xmm1
+# CHECK-NEXT:  2      11    1.00    *                   gf2p8affineqb	$0, (%rax), %xmm1
 # CHECK-NEXT:  1      1     0.50                        gf2p8mulb	%xmm0, %xmm1
 # CHECK-NEXT:  2      7     0.50    *                   gf2p8mulb	(%rax), %xmm1
 
@@ -38,13 +38,13 @@ gf2p8mulb           (%rax), %xmm1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -      -      -     3.00    -     3.00   1.50   1.50
+# CHECK-NEXT:  -      -     4.00   1.00    -     1.00   1.50   1.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     gf2p8affineinvqb	$0, %xmm0, %xmm1
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   gf2p8affineinvqb	$0, (%rax), %xmm1
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     gf2p8affineqb	$0, %xmm0, %xmm1
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   gf2p8affineqb	$0, (%rax), %xmm1
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     gf2p8affineinvqb	$0, %xmm0, %xmm1
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   gf2p8affineinvqb	$0, (%rax), %xmm1
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     gf2p8affineqb	$0, %xmm0, %xmm1
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   gf2p8affineqb	$0, (%rax), %xmm1
 # CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     gf2p8mulb	%xmm0, %xmm1
 # CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   gf2p8mulb	(%rax), %xmm1

@@ -64,8 +64,8 @@ vgf2p8mulb          (%rax), %ymm1, %ymm2 {z}{k1}
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.50                        vgf2p8affineinvqb	$0, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      7     0.50    *                   vgf2p8affineinvqb	$0, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      5     1.00                        vgf2p8affineinvqb	$0, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineinvqb	$0, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineinvqb	$0, (%rax){1to2}, %xmm1, %xmm2
 # CHECK-NEXT:  1      5     1.00                        vgf2p8affineinvqb	$0, %xmm0, %xmm1, %xmm2 {%k1}
 # CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineinvqb	$0, (%rax), %xmm1, %xmm2 {%k1}
@@ -73,8 +73,8 @@ vgf2p8mulb          (%rax), %ymm1, %ymm2 {z}{k1}
 # CHECK-NEXT:  1      5     1.00                        vgf2p8affineinvqb	$0, %xmm0, %xmm1, %xmm2 {%k1} {z}
 # CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineinvqb	$0, (%rax), %xmm1, %xmm2 {%k1} {z}
 # CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineinvqb	$0, (%rax){1to2}, %xmm1, %xmm2 {%k1} {z}
-# CHECK-NEXT:  1      1     0.50                        vgf2p8affineinvqb	$0, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      7     0.50    *                   vgf2p8affineinvqb	$0, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      5     1.00                        vgf2p8affineinvqb	$0, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineinvqb	$0, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      12    1.00    *                   vgf2p8affineinvqb	$0, (%rax){1to4}, %ymm1, %ymm2
 # CHECK-NEXT:  1      5     1.00                        vgf2p8affineinvqb	$0, %ymm0, %ymm1, %ymm2 {%k1}
 # CHECK-NEXT:  2      12    1.00    *                   vgf2p8affineinvqb	$0, (%rax), %ymm1, %ymm2 {%k1}
@@ -82,20 +82,20 @@ vgf2p8mulb          (%rax), %ymm1, %ymm2 {z}{k1}
 # CHECK-NEXT:  1      5     1.00                        vgf2p8affineinvqb	$0, %ymm0, %ymm1, %ymm2 {%k1} {z}
 # CHECK-NEXT:  2      12    1.00    *                   vgf2p8affineinvqb	$0, (%rax), %ymm1, %ymm2 {%k1} {z}
 # CHECK-NEXT:  2      12    1.00    *                   vgf2p8affineinvqb	$0, (%rax){1to4}, %ymm1, %ymm2 {%k1} {z}
-# CHECK-NEXT:  1      1     0.50                        vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      7     0.50    *                   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      5     1.00                        vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineqb	$0, (%rax){1to2}, %xmm1, %xmm2
-# CHECK-NEXT:  1      1     0.50                        vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      7     0.50    *                   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      5     1.00                        vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineqb	$0, (%rax){1to2}, %xmm1, %xmm2
 # CHECK-NEXT:  1      5     1.00                        vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2 {%k1} {z}
 # CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2 {%k1} {z}
 # CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineqb	$0, (%rax){1to2}, %xmm1, %xmm2 {%k1} {z}
-# CHECK-NEXT:  1      1     0.50                        vgf2p8affineqb	$0, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      7     0.50    *                   vgf2p8affineqb	$0, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      5     1.00                        vgf2p8affineqb	$0, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineqb	$0, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      12    1.00    *                   vgf2p8affineqb	$0, (%rax){1to4}, %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.50                        vgf2p8affineqb	$0, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      7     0.50    *                   vgf2p8affineqb	$0, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      5     1.00                        vgf2p8affineqb	$0, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      11    1.00    *                   vgf2p8affineqb	$0, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      12    1.00    *                   vgf2p8affineqb	$0, (%rax){1to4}, %ymm1, %ymm2
 # CHECK-NEXT:  1      5     1.00                        vgf2p8affineqb	$0, %ymm0, %ymm1, %ymm2 {%k1} {z}
 # CHECK-NEXT:  2      12    1.00    *                   vgf2p8affineqb	$0, (%rax), %ymm1, %ymm2 {%k1} {z}
@@ -125,12 +125,12 @@ vgf2p8mulb          (%rax), %ymm1, %ymm2 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -      -     24.00  12.00   -     12.00  15.00  15.00
+# CHECK-NEXT:  -      -     36.00  6.00    -     6.00   15.00  15.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vgf2p8affineinvqb	$0, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vgf2p8affineinvqb	$0, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineinvqb	$0, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineinvqb	$0, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineinvqb	$0, (%rax){1to2}, %xmm1, %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineinvqb	$0, %xmm0, %xmm1, %xmm2 {%k1}
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineinvqb	$0, (%rax), %xmm1, %xmm2 {%k1}
@@ -138,8 +138,8 @@ vgf2p8mulb          (%rax), %ymm1, %ymm2 {z}{k1}
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineinvqb	$0, %xmm0, %xmm1, %xmm2 {%k1} {z}
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineinvqb	$0, (%rax), %xmm1, %xmm2 {%k1} {z}
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineinvqb	$0, (%rax){1to2}, %xmm1, %xmm2 {%k1} {z}
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vgf2p8affineinvqb	$0, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vgf2p8affineinvqb	$0, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineinvqb	$0, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineinvqb	$0, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineinvqb	$0, (%rax){1to4}, %ymm1, %ymm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineinvqb	$0, %ymm0, %ymm1, %ymm2 {%k1}
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineinvqb	$0, (%rax), %ymm1, %ymm2 {%k1}
@@ -147,20 +147,20 @@ vgf2p8mulb          (%rax), %ymm1, %ymm2 {z}{k1}
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineinvqb	$0, %ymm0, %ymm1, %ymm2 {%k1} {z}
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineinvqb	$0, (%rax), %ymm1, %ymm2 {%k1} {z}
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineinvqb	$0, (%rax){1to4}, %ymm1, %ymm2 {%k1} {z}
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineqb	$0, (%rax){1to2}, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineqb	$0, (%rax){1to2}, %xmm1, %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2 {%k1} {z}
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2 {%k1} {z}
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineqb	$0, (%rax){1to2}, %xmm1, %xmm2 {%k1} {z}
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vgf2p8affineqb	$0, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vgf2p8affineqb	$0, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineqb	$0, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineqb	$0, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineqb	$0, (%rax){1to4}, %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vgf2p8affineqb	$0, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vgf2p8affineqb	$0, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineqb	$0, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineqb	$0, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineqb	$0, (%rax){1to4}, %ymm1, %ymm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vgf2p8affineqb	$0, %ymm0, %ymm1, %ymm2 {%k1} {z}
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vgf2p8affineqb	$0, (%rax), %ymm1, %ymm2 {%k1} {z}
