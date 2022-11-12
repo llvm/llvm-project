@@ -71,6 +71,38 @@ static bool isKeywordWithCondition(const FormatToken &Tok) {
                      tok::kw_constexpr, tok::kw_catch);
 }
 
+/// Returns \c true if the token starts a C++ attribute, \c false otherwise.
+static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
+  if (!IsCpp || !Tok.startsSequence(tok::l_square, tok::l_square))
+    return false;
+  // The first square bracket is part of an ObjC array literal
+  if (Tok.Previous && Tok.Previous->is(tok::at))
+    return false;
+  const FormatToken *AttrTok = Tok.Next->Next;
+  if (!AttrTok)
+    return false;
+  // C++17 '[[using ns: foo, bar(baz, blech)]]'
+  // We assume nobody will name an ObjC variable 'using'.
+  if (AttrTok->startsSequence(tok::kw_using, tok::identifier, tok::colon))
+    return true;
+  if (AttrTok->isNot(tok::identifier))
+    return false;
+  while (AttrTok && !AttrTok->startsSequence(tok::r_square, tok::r_square)) {
+    // ObjC message send. We assume nobody will use : in a C++11 attribute
+    // specifier parameter, although this is technically valid:
+    // [[foo(:)]].
+    if (AttrTok->is(tok::colon) ||
+        AttrTok->startsSequence(tok::identifier, tok::identifier) ||
+        AttrTok->startsSequence(tok::r_paren, tok::identifier)) {
+      return false;
+    }
+    if (AttrTok->is(tok::ellipsis))
+      return true;
+    AttrTok = AttrTok->Next;
+  }
+  return AttrTok && AttrTok->startsSequence(tok::r_square, tok::r_square);
+}
+
 /// A parser that gathers additional information about tokens.
 ///
 /// The \c TokenAnnotator tries to match parenthesis and square brakets and
@@ -538,34 +570,7 @@ private:
   }
 
   bool isCpp11AttributeSpecifier(const FormatToken &Tok) {
-    if (!Style.isCpp() || !Tok.startsSequence(tok::l_square, tok::l_square))
-      return false;
-    // The first square bracket is part of an ObjC array literal
-    if (Tok.Previous && Tok.Previous->is(tok::at))
-      return false;
-    const FormatToken *AttrTok = Tok.Next->Next;
-    if (!AttrTok)
-      return false;
-    // C++17 '[[using ns: foo, bar(baz, blech)]]'
-    // We assume nobody will name an ObjC variable 'using'.
-    if (AttrTok->startsSequence(tok::kw_using, tok::identifier, tok::colon))
-      return true;
-    if (AttrTok->isNot(tok::identifier))
-      return false;
-    while (AttrTok && !AttrTok->startsSequence(tok::r_square, tok::r_square)) {
-      // ObjC message send. We assume nobody will use : in a C++11 attribute
-      // specifier parameter, although this is technically valid:
-      // [[foo(:)]].
-      if (AttrTok->is(tok::colon) ||
-          AttrTok->startsSequence(tok::identifier, tok::identifier) ||
-          AttrTok->startsSequence(tok::r_paren, tok::identifier)) {
-        return false;
-      }
-      if (AttrTok->is(tok::ellipsis))
-        return true;
-      AttrTok = AttrTok->Next;
-    }
-    return AttrTok && AttrTok->startsSequence(tok::r_square, tok::r_square);
+    return isCppAttribute(Style.isCpp(), Tok);
   }
 
   bool parseSquare() {
@@ -2844,6 +2849,8 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
         }
         if (!Next->is(tok::identifier))
           return false;
+      } else if (isCppAttribute(IsCpp, *Next)) {
+        Next = Next->MatchingParen;
       } else if (Next->is(tok::l_paren)) {
         break;
       } else {
