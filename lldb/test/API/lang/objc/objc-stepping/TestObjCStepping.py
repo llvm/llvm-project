@@ -154,8 +154,8 @@ class TestObjCStepping(TestBase):
             print("className is %s, newClassName is %s" % (className, newClassName))
             print(mySource_isa)
 
-        self.assertTrue(
-            newClassName != className,
+        self.assertNotEqual(
+            newClassName, className,
             "The isa did indeed change, swizzled!")
 
         # Now step in, that should leave us in the Source randomMethod:
