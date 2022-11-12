@@ -19,6 +19,13 @@ Many of the examples below are written assuming specific CMake Generators.
 Unless otherwise explicitly called out these commands should work with any CMake
 generator.
 
+Many of the build configurations mentioned on this documentation page can be
+utilized by using a CMake cache. A CMake cache is essentially a configuration
+file that sets the necessary flags for a specific build configuration. The caches
+for Clang are located in :code:`/clang/cmake/caches` within the monorepo. They
+can be passed to CMake using the :code:`-C` flag as demonstrated in the examples
+below along with additional configuration flags.
+
 Bootstrap Builds
 ================
 
@@ -110,11 +117,34 @@ performance counters (.profraw files). After generating all the profraw files
 you use llvm-profdata to merge the files into a single profdata file that you
 can feed into the LLVM_PROFDATA_FILE option.
 
-Our PGO.cmake cache automates that whole process. You can use it by running:
+Our PGO.cmake cache automates that whole process. You can use it for
+configuration with CMake with the following command:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake <path to source>
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake \
+      <path to source>/llvm
+
+There are several additional options that the cache file also accepts to modify
+the build, particularly the PGO_INSTRUMENT_LTO option. Setting this option to
+Thin or Full will enable ThinLTO or full LTO respectively, further enhancing
+the performance gains from a PGO build by enabling interprocedural
+optimizations. For example, to run a CMake configuration for a PGO build
+that also enables ThinTLO, use the following command:
+
+.. code-block:: console
+
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake \
+      -DPGO_INSTRUMENT_LTO=Thin \
+      <path to source>/llvm
+
+After configuration, building the stage2-instrumented-generate-profdata target
+will automatically build the stage1 compiler, build the instrumented compiler
+with the stage1 compiler, and then run the instrumented compiler against the
+perf training data:
+
+.. code-block:: console
+
   $ ninja stage2-instrumented-generate-profdata
 
 If you let that run for a few hours or so, it will place a profdata file in your
