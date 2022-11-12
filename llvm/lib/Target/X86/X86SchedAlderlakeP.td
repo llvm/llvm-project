@@ -590,12 +590,12 @@ def ADLPWriteResGroup8 : SchedWriteRes<[ADLPPort01_05, ADLPPort02_03_11]> {
   let Latency = 10;
   let NumMicroOps = 2;
 }
-def : InstRW<[ADLPWriteResGroup8, ReadAfterVecLd], (instregex "^(V?)(ADD|SUB)SSrm_Int$")>;
+def : InstRW<[ADLPWriteResGroup8, ReadAfterVecLd], (instregex "^(V?)(ADD|SUB)SSrm(_Int)?$")>;
 
 def ADLPWriteResGroup9 : SchedWriteRes<[ADLPPort01_05]> {
   let Latency = 3;
 }
-def : InstRW<[ADLPWriteResGroup9], (instregex "^(V?)(ADD|SUB)SSrr_Int$")>;
+def : InstRW<[ADLPWriteResGroup9], (instregex "^(V?)(ADD|SUB)SSrr(_Int)?$")>;
 
 def ADLPWriteResGroup10 : SchedWriteRes<[ADLPPort02_03, ADLPPort05]> {
   let ResourceCycles = [1, 2];
@@ -777,26 +777,26 @@ def ADLPWriteResGroup35 : SchedWriteRes<[ADLPPort00, ADLPPort00_01, ADLPPort02_0
   let Latency = 26;
   let NumMicroOps = 3;
 }
-def : InstRW<[ADLPWriteResGroup35], (instregex "^(V?)CVT(T?)SD2SIrm_Int$")>;
+def : InstRW<[ADLPWriteResGroup35], (instregex "^(V?)CVT(T?)SD2SIrm(_Int)?$")>;
 
 def ADLPWriteResGroup36 : SchedWriteRes<[ADLPPort00_01, ADLPPort02_03_11, ADLPPort05]> {
   let Latency = 12;
   let NumMicroOps = 3;
 }
-def : InstRW<[ADLPWriteResGroup36, ReadAfterVecLd], (instregex "^(V?)CVTSI642SSrm_Int$")>;
+def : InstRW<[ADLPWriteResGroup36, ReadAfterVecLd], (instregex "^(V?)CVTSI642SSrm(_Int)?$")>;
 
 def ADLPWriteResGroup37 : SchedWriteRes<[ADLPPort00_01, ADLPPort05]> {
   let ResourceCycles = [1, 2];
   let Latency = 8;
   let NumMicroOps = 3;
 }
-def : InstRW<[ADLPWriteResGroup37, ReadDefault, ReadInt2Fpu], (instregex "^(V?)CVTSI642SSrr_Int$")>;
+def : InstRW<[ADLPWriteResGroup37, ReadDefault, ReadInt2Fpu], (instregex "^(V?)CVTSI642SSrr(_Int)?$")>;
 
 def ADLPWriteResGroup38 : SchedWriteRes<[ADLPPort00, ADLPPort00_01, ADLPPort05]> {
   let Latency = 8;
   let NumMicroOps = 3;
 }
-def : InstRW<[ADLPWriteResGroup38], (instregex "^(V?)CVT(T?)SS2SI64rr_Int$")>;
+def : InstRW<[ADLPWriteResGroup38], (instregex "^(V?)CVT(T?)SS2SI64rr(_Int)?$")>;
 
 def ADLPWriteResGroup39 : SchedWriteRes<[ADLPPort00_01_05_06_10, ADLPPort00_06]> {
   let Latency = 2;
@@ -829,12 +829,12 @@ def ADLPWriteResGroup43 : SchedWriteRes<[ADLPPort00, ADLPPort02_03_11]> {
   let Latency = 18;
   let NumMicroOps = 2;
 }
-def : InstRW<[ADLPWriteResGroup43, ReadAfterVecLd], (instregex "^(V?)DIVSSrm_Int$")>;
+def : InstRW<[ADLPWriteResGroup43, ReadAfterVecLd], (instregex "^(V?)DIVSSrm(_Int)?$")>;
 
 def ADLPWriteResGroup44 : SchedWriteRes<[ADLPPort00]> {
   let Latency = 11;
 }
-def : InstRW<[ADLPWriteResGroup44], (instregex "^(V?)DIVSSrr_Int$")>;
+def : InstRW<[ADLPWriteResGroup44], (instregex "^(V?)DIVSSrr(_Int)?$")>;
 
 def ADLPWriteResGroup45 : SchedWriteRes<[ADLPPort00, ADLPPort02_03]> {
   let Latency = 22;
@@ -1568,7 +1568,7 @@ def : InstRW<[ADLPWriteResGroup154], (instrs MOVSX64rm32)>;
 def ADLPWriteResGroup155 : SchedWriteRes<[ADLPPort00_01]> {
   let Latency = 4;
 }
-def : InstRW<[ADLPWriteResGroup155], (instregex "^(V?)MULSSrr_Int$")>;
+def : InstRW<[ADLPWriteResGroup155], (instregex "^(V?)MULSSrr(_Int)?$")>;
 
 def ADLPWriteResGroup156 : SchedWriteRes<[ADLPPort00, ADLPPort02_03]> {
   let Latency = 11;
