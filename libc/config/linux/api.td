@@ -295,7 +295,7 @@ def SysResourceAPI : PublicAPI<"sys/resource.h"> {
 def SysStatAPI : PublicAPI<"sys/stat.h"> {
   let Types = ["mode_t", "dev_t", "ino_t", "nlink_t", "uid_t", "gid_t", "off_t",
                "struct timespec", "struct timeval", "blksize_t", "blkcnt_t",
-	       "struct stat"];
+               "struct stat"];
 }
 
 def SysWaitAPI : PublicAPI<"sys/wait.h"> {
