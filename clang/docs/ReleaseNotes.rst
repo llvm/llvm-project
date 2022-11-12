@@ -760,6 +760,7 @@ Floating Point Support in Clang
 - The driver option ``-menable-unsafe-fp-math`` has been removed. To enable
   unsafe floating-point optimizations use ``-funsafe-math-optimizations`` or
   ``-ffast-math`` instead.
+- Add ``__builtin_elementwise_sin`` and ``__builtin_elementwise_cos`` builtins for floating point types only.
 
 Internal API Changes
 --------------------

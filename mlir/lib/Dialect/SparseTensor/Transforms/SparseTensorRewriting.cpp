@@ -620,7 +620,6 @@ private:
     Value src = op.getSource();
     RankedTensorType srcTp = src.getType().cast<RankedTensorType>();
     RankedTensorType dstTp = op.getType().cast<RankedTensorType>();
-    SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
     SparseTensorEncodingAttr encDst = getSparseTensorEncoding(dstTp);
 
     SmallVector<Value, 4> srcSizes;
@@ -640,17 +639,15 @@ private:
           loc, src, tmpCoo,
           [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
               ValueRange reduc) {
-            SmallVector<Value, 4> indices;
-            for (int64_t i = 0, e = srcTp.getRank(); i < e; i++) {
-              uint64_t dim = toStoredDim(encSrc, i);
-              indices.push_back(args[dim]);
-            }
-            auto t = builder.create<InsertOp>(loc, v, reduc.front(), indices);
+            // The resulting COO tensor has identity ordering.
+            auto t = builder.create<InsertOp>(loc, v, reduc.front(),
+                                              args.slice(0, srcTp.getRank()));
             builder.create<sparse_tensor::YieldOp>(loc, t);
           });
       src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
     }
 
+    SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
     // Sort the COO tensor so that its elements are ordered via increasing
     // indices for the storage ordering of the dst tensor.
     auto dynShape = {ShapedType::kDynamicSize};
@@ -666,12 +663,7 @@ private:
     }
 
     // Retrieve NNZ.
-    auto ptrTp =
-        MemRefType::get(dynShape, getPointerOverheadType(rewriter, encSrc));
-    Value p0 =
-        rewriter.create<ToIndicesOp>(loc, ptrTp, src, rewriter.getIndexAttr(0));
-    Value c1 = constantIndex(rewriter, loc, 1);
-    Value nnz = rewriter.create<memref::LoadOp>(loc, p0, c1);
+    Value nnz = rewriter.create<NumberOfEntriesOp>(loc, src);
     nnz =
         rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), nnz);
 
@@ -687,14 +679,14 @@ private:
     getDynamicSizes(dstTp, srcSizes, dynDstSizes);
     Value dst =
         rewriter.create<AllocTensorOp>(loc, dstTp, dynDstSizes).getResult();
+    SmallVector<Value, 4> indices(srcTp.getRank(), Value());
     auto foreachOp = rewriter.create<ForeachOp>(
         loc, src, dst,
         [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
             ValueRange reduc) {
-          SmallVector<Value, 4> indices;
           for (int64_t i = 0, e = srcTp.getRank(); i < e; i++) {
             uint64_t dim = toStoredDim(encDst, i);
-            indices.push_back(args[dim]);
+            indices[dim] = args[i];
           }
           auto t = builder.create<InsertOp>(loc, v, reduc.front(), indices);
           builder.create<sparse_tensor::YieldOp>(loc, t);

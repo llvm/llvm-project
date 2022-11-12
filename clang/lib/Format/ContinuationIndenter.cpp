@@ -352,8 +352,12 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
     return LambdaBodyLength > getColumnLimit(State);
   }
-  if (Current.MustBreakBefore || Current.is(TT_InlineASMColon))
+  if (Current.MustBreakBefore ||
+      (Current.is(TT_InlineASMColon) &&
+       (Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_Always ||
+        Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_OnlyMultiline))) {
     return true;
+  }
   if (CurrentState.BreakBeforeClosingBrace &&
       Current.closesBlockOrBlockTypeList(Style)) {
     return true;

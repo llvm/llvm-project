@@ -1,5 +1,4 @@
 add_mlir_dialect_library(MLIRBufferizationTransforms
-  AllocTensorElimination.cpp
   Bufferize.cpp
   BufferDeallocation.cpp
   BufferOptimizations.cpp
@@ -7,6 +6,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   BufferUtils.cpp
   BufferViewFlowAnalysis.cpp
   DropEquivalentBufferResults.cpp
+  EmptyTensorElimination.cpp
   EmptyTensorToAllocTensor.cpp
   FuncBufferizableOpInterfaceImpl.cpp
   OneShotAnalysis.cpp

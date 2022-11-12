@@ -90,6 +90,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTTZ, MVT::i32, Custom);
     setOperationAction(ISD::CTLZ, MVT::i32, Custom);
     setOperationAction(ISD::INTRINSIC_VOID, MVT::i32, Custom);
+    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i32, Custom);
     if (Subtarget.hasBasicF() && !Subtarget.hasBasicD())
       setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
     if (Subtarget.hasBasicF())
@@ -114,6 +115,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
   } else {
     setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
+    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
   }
 
   static const ISD::CondCode FPCCToExpand[] = {
@@ -210,6 +212,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerGlobalTLSAddress(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return lowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::INTRINSIC_W_CHAIN:
+    return lowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID:
     return lowerINTRINSIC_VOID(Op, DAG);
   case ISD::BlockAddress:
@@ -556,6 +560,22 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
 }
 
+SDValue
+LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
+                                                SelectionDAG &DAG) const {
+
+  switch (Op.getConstantOperandVal(1)) {
+  default:
+    return Op;
+  case Intrinsic::loongarch_crc_w_d_w: {
+    DAG.getContext()->emitError(
+        "llvm.loongarch.crc.w.d.w requires target: loongarch64");
+    return DAG.getMergeValues(
+        {DAG.getUNDEF(Op.getValueType()), Op.getOperand(0)}, SDLoc(Op));
+  }
+  }
+}
+
 SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -855,6 +875,25 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     Results.push_back(customLegalizeToWOp(N, DAG, 1));
+    break;
+  }
+  case ISD::INTRINSIC_W_CHAIN: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+
+    switch (N->getConstantOperandVal(1)) {
+    default:
+      llvm_unreachable("Unexpected Intrinsic.");
+    case Intrinsic::loongarch_crc_w_d_w: {
+      Results.push_back(DAG.getNode(
+          ISD::TRUNCATE, DL, N->getValueType(0),
+          DAG.getNode(
+              LoongArchISD::CRC_W_D_W, DL, MVT::i64, N->getOperand(2),
+              DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(3)))));
+      Results.push_back(N->getOperand(0));
+      break;
+    }
+    }
     break;
   }
   }
@@ -1312,6 +1351,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(CLZ_W)
     NODE_NAME_CASE(CTZ_W)
     NODE_NAME_CASE(DBAR)
+    NODE_NAME_CASE(CRC_W_D_W)
   }
 #undef NODE_NAME_CASE
   return nullptr;

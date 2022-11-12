@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -eliminate-alloc-tensors -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs" -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -eliminate-empty-tensors -empty-tensor-to-alloc-tensor -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs" -canonicalize -split-input-file | FileCheck %s
 
 //      CHECK: func @buffer_forwarding_conflict(
 // CHECK-SAME:   %[[FUNC_ARG:[0-9a-zA-Z]*]]: memref<?xf32>
@@ -16,10 +16,10 @@ func.func @buffer_forwarding_conflict(
   //     CHECK: %[[DIM:.*]] = memref.dim %[[FUNC_ARG]]
   // This allocs the whole dim to allow for a full clone of t.
   //     CHECK: %[[ALLOC:.*]] = memref.alloc(%[[DIM]])
-  // alloc_tensor itself does not alloc but forwards to the **second**
-  // insert_slice. AllocTensorOp replaces the alloc_tensor with an out-of-place
+  // tensor.empty itself does not alloc but forwards to the **second**
+  // insert_slice. The pass replaces the tensor.empty with an out-of-place
   // extract_slice.
-  %a = bufferization.alloc_tensor(%sz) : tensor<?xf32>
+  %a = tensor.empty(%sz) : tensor<?xf32>
   %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
 
   //     CHECK: memref.copy %[[FUNC_ARG]], %[[ALLOC]] : memref<?xf32> to memref<?xf32>
@@ -46,11 +46,11 @@ func.func @buffer_forwarding_no_conflict(
 {
   %f0 = arith.constant 0.0: f32
 
-  // alloc_tensor itself does not alloc but forwards to the insert_slice.
-  // AllocTensorOpElimination replaces the alloc_tensor with an inplace
+  // tensor.empty itself does not alloc but forwards to the insert_slice.
+  // EmptyTensorOpElimination replaces the tensor.empty with an inplace
   // extract_slice.
   // CHECK: %[[T_SUBVIEW:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
-  %a = bufferization.alloc_tensor(%sz) : tensor<?xf32>
+  %a = tensor.empty(%sz) : tensor<?xf32>
 
   // CHECK: linalg.fill ins({{.*}} : f32) outs(%[[T_SUBVIEW]] : memref<?xf32
   %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
@@ -71,7 +71,7 @@ func.func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tens
   %c5 = arith.constant 5 : index
 
   // CHECK-NOT: memref.alloc
-  %blank = bufferization.alloc_tensor() : tensor<5xf32>
+  %blank = tensor.empty() : tensor<5xf32>
 
   // CHECK: scf.for %[[iv:.*]] = %{{.*}} to %[[sz]] step %{{.*}} {
   %r = scf.for %iv = %c0 to %sz step %c5 iter_args(%bb = %t) -> (tensor<?xf32>) {
@@ -102,7 +102,7 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
 
   // CHECK-NOT: memref.alloc
   // CHECK: %[[subview:.*]] = memref.subview %[[t]][%[[idx]]] [5] [1]
-  %blank = bufferization.alloc_tensor() : tensor<5xf32>
+  %blank = tensor.empty() : tensor<5xf32>
 
   // CHECK: scf.for %[[iv:.*]] = %{{.*}} to %[[sz]] step %{{.*}} {
   %r = scf.for %iv = %c0 to %sz step %c5 iter_args(%bb = %t) -> (tensor<?xf32>) {
@@ -122,14 +122,14 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
 
 // -----
 
-// AllocTensorElimination does currently not apply to chains where the type is
+// EmptyTensorElimination does currently not apply to chains where the type is
 // changing. This test just ensures that we do not crash or generate IR that
 // does not verify.
 
 // CHECK-LABEL: func @shape_mismatch
 func.func @shape_mismatch(%t: tensor<5x6x128xf32>) -> tensor<5x6x128xf32> {
   %cst = arith.constant 8.0 : f32
-  %0 = bufferization.alloc_tensor() : tensor<128xf32>
+  %0 = tensor.empty() : tensor<128xf32>
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<128xf32>) -> tensor<128xf32>
   %2 = tensor.expand_shape %1 [[0, 1, 2]]
       : tensor<128xf32> into tensor<1x1x128xf32>

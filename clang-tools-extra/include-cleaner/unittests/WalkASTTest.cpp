@@ -14,9 +14,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Testing/Support/Annotations.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
 #include <unordered_map>
@@ -25,20 +24,6 @@
 
 namespace clang::include_cleaner {
 namespace {
-using testing::Pair;
-using testing::UnorderedElementsAre;
-
-llvm::StringLiteral to_string(RefType RT) {
-  switch (RT) {
-  case RefType::Explicit:
-    return "explicit";
-  case RefType::Implicit:
-    return "implicit";
-  case RefType::Ambiguous:
-    return "ambiguous";
-  }
-  llvm_unreachable("Unexpected RefType");
-}
 
 // Specifies a test of which symbols are referenced by a piece of code.
 // If `// c++-header` is present, treats referencing code as a header file.
@@ -100,14 +85,14 @@ void testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode) {
         DiagnosticsEngine::Note, Message, {}, {});
   };
   for (auto RT : {RefType::Explicit, RefType::Implicit, RefType::Ambiguous}) {
-    auto RTStr = to_string(RT);
+    auto RTStr = llvm::to_string(RT);
     for (auto Expected : Target.points(RTStr))
       if (!llvm::is_contained(ReferencedOffsets[RT], Expected))
-        DiagnosePoint(("location not marked used with type " + RTStr).str(),
+        DiagnosePoint("location not marked used with type " + RTStr,
                       Expected);
     for (auto Actual : ReferencedOffsets[RT])
       if (!llvm::is_contained(Target.points(RTStr), Actual))
-        DiagnosePoint(("location unexpectedly used with type " + RTStr).str(),
+        DiagnosePoint("location unexpectedly used with type " + RTStr,
                       Actual);
   }
 

@@ -2787,7 +2787,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // If one wasn't given by the user, don't pass it here.
   StringRef FPContract;
   StringRef LastSeenFfpContractOption;
-  bool SeenFfastMathOption = false;
+  bool SeenUnsafeMathModeOption = false;
   if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
       !JA.isOffloading(Action::OFK_HIP))
     FPContract = "on";
@@ -3003,6 +3003,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ApproxFunc = true;
       TrappingMath = false;
       FPExceptionBehavior = "";
+      FPContract = "fast";
+      SeenUnsafeMathModeOption = true;
       break;
     case options::OPT_fno_unsafe_math_optimizations:
       AssociativeMath = false;
@@ -3015,6 +3017,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       // The target may have opted to flush by default, so force IEEE.
       DenormalFPMath = llvm::DenormalMode::getIEEE();
       DenormalFP32Math = llvm::DenormalMode::getIEEE();
+      if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
+          !JA.isOffloading(Action::OFK_HIP)) {
+        if (LastSeenFfpContractOption != "") {
+          FPContract = LastSeenFfpContractOption;
+        } else if (SeenUnsafeMathModeOption)
+          FPContract = "on";
+      }
       break;
 
     case options::OPT_Ofast:
@@ -3034,7 +3043,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       RoundingFPMath = false;
       // If fast-math is set then set the fp-contract mode to fast.
       FPContract = "fast";
-      SeenFfastMathOption = true;
+      SeenUnsafeMathModeOption = true;
       break;
     case options::OPT_fno_fast_math:
       HonorINFs = true;
@@ -3054,7 +3063,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
           !JA.isOffloading(Action::OFK_HIP)) {
         if (LastSeenFfpContractOption != "") {
           FPContract = LastSeenFfpContractOption;
-        } else if (SeenFfastMathOption)
+        } else if (SeenUnsafeMathModeOption)
           FPContract = "on";
       }
       break;
@@ -3095,8 +3104,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (MathErrno)
     CmdArgs.push_back("-fmath-errno");
 
-  if (!MathErrno && AssociativeMath && ReciprocalMath && !SignedZeros &&
-      ApproxFunc && !TrappingMath)
+ if (AssociativeMath && ReciprocalMath && !SignedZeros && ApproxFunc &&
+     !TrappingMath)
     CmdArgs.push_back("-funsafe-math-optimizations");
 
   if (!SignedZeros)
@@ -7216,29 +7225,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (SplitLTOUnit)
     CmdArgs.push_back("-fsplit-lto-unit");
 
-  A = Args.getLastArg(options::OPT_fglobal_isel, options::OPT_fno_global_isel);
-  // If a configuration is fully supported, we don't issue any warnings or
-  // remarks.
-  bool IsFullySupported = getToolChain().getTriple().isOSDarwin() &&
-                          Triple.getArch() == llvm::Triple::aarch64;
-  if (IsFullySupported) {
-    if (A && A->getOption().matches(options::OPT_fno_global_isel)) {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-global-isel=0");
-    } else {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-global-isel=1");
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-global-isel-abort=0");
-    }
-  } else if (A) {
+  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
+                               options::OPT_fno_global_isel)) {
     CmdArgs.push_back("-mllvm");
     if (A->getOption().matches(options::OPT_fglobal_isel)) {
       CmdArgs.push_back("-global-isel=1");
 
       // GISel is on by default on AArch64 -O0, so don't bother adding
       // the fallback remarks for it. Other combinations will add a warning of
-      // some kind, unless we're on Darwin.
+      // some kind.
       bool IsArchSupported = Triple.getArch() == llvm::Triple::aarch64;
       bool IsOptLevelSupported = false;
 

@@ -26,7 +26,7 @@ module {
   // CHECK-NEXT:     tensor.parallel_insert_slice %[[RES]] into %[[C_BLK]]{{.*}} :
   // CHECK-SAME:       tensor<?x?xf32> into tensor<?x?xf32>
   // CHECK-NEXT:   }
-  // CHECK-NEXT: } {thread_dim_mapping = [1, 0]}
+  // CHECK-NEXT: } {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
     %0 = linalg.matmul ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>)
                       outs(%C : tensor<?x?xf32>) -> (tensor<?x?xf32>)
     return %0 : tensor<?x?xf32>
@@ -35,7 +35,7 @@ module {
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 20] (mapped to dims [1, 0])
+    %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
   }
 }
 
@@ -177,7 +177,7 @@ module {
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-    %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [2] (mapped to dims [0])
+    %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [2] ( mapping = [#gpu.thread<x>])
   }
 }
 // CHECK-DAG: #[[$map0:.+]] = affine_map<(d0) -> (d0 * 2)>

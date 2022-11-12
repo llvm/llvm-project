@@ -1518,27 +1518,14 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
 }
 
 namespace {
-struct IteratorType {
-  IteratorType(StringRef strRef) : strRef(strRef) {}
-  bool isOfType(Attribute attr) const {
-    auto sAttr = attr.dyn_cast<StringAttr>();
-    return sAttr && sAttr.getValue() == strRef;
-  }
-  StringRef strRef;
-};
-struct Par : public IteratorType {
-  Par() : IteratorType(getParallelIteratorTypeName()) {}
-};
-struct Red : public IteratorType {
-  Red() : IteratorType(getReductionIteratorTypeName()) {}
-};
 
 /// Generate a vector implementation for matmat, matvec and tmatvec.
 /// This unrolls outer-products along the reduction dimension.
 struct UnrolledOuterProductGenerator
-    : public StructuredGenerator<vector::ContractionOp> {
+    : public StructuredGenerator<vector::ContractionOp, vector::IteratorType> {
   UnrolledOuterProductGenerator(OpBuilder &builder, vector::ContractionOp op)
-      : StructuredGenerator<vector::ContractionOp>(builder, op),
+      : StructuredGenerator<vector::ContractionOp, vector::IteratorType>(
+            builder, op),
         kind(op.getKind()), lhs(op.getLhs()), rhs(op.getRhs()),
         res(op.getAcc()), lhsType(op.getLhsType()) {}
 
@@ -2503,6 +2490,14 @@ struct BubbleUpBitCastForStridedSliceInsert
     if (rank != insertOp.getDestVectorType().getRank())
       return failure();
 
+    // Requires that shape of insert op src is castable to dstType.
+    unsigned sourceWidth = castSrcType.getElementType().getIntOrFloatBitWidth();
+    unsigned destinationWidth =
+        castDstType.getElementType().getIntOrFloatBitWidth();
+    unsigned numElements = destinationWidth / sourceWidth;
+    if (insertOp.getSourceVectorType().getNumElements() % numElements != 0)
+      return failure();
+
     ArrayAttr newOffsets = insertOp.getOffsets();
     assert(newOffsets.size() == rank);
     SmallVector<int64_t, 4> offsets = getIntValueVector(newOffsets);
@@ -2719,8 +2714,10 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
     } else {
       MemRefLayoutAttrInterface updatedLayout;
       if (auto strided = layout.dyn_cast<StridedLayoutAttr>()) {
-        auto strides = llvm::to_vector(strided.getStrides().drop_back(dimsToDrop));
-        updatedLayout = StridedLayoutAttr::get(strided.getContext(), strided.getOffset(), strides);
+        auto strides =
+            llvm::to_vector(strided.getStrides().drop_back(dimsToDrop));
+        updatedLayout = StridedLayoutAttr::get(strided.getContext(),
+                                               strided.getOffset(), strides);
       } else {
         AffineMap map = srcType.getLayout().getAffineMap();
         int numSymbols = map.getNumSymbols();

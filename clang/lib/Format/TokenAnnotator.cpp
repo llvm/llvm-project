@@ -4443,6 +4443,11 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     }
   }
 
+  if (Line.startsWith(tok::kw_asm) && Right.is(TT_InlineASMColon) &&
+      Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_Always) {
+    return true;
+  }
+
   // If the last token before a '}', ']', or ')' is a comma or a trailing
   // comment, the intention is to insert a line break after it in order to make
   // shuffling around entries easier. Import statements, especially in

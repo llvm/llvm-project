@@ -13,6 +13,7 @@ include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
+include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
@@ -792,7 +793,7 @@ def TileToForeachThreadOp :
     a valid tiling specification (i.e. that only tiles parallel dimensions, 
     e.g. in the Linalg case).
 
-    If non-empty, the `thread_dim_mapping` is added as an attribute to the
+    If non-empty, the `mapping` is added as an attribute to the
     resulting `scf.foreach_thread`.
 
     #### Return modes
@@ -832,7 +833,7 @@ def TileToForeachThreadOp :
                    Variadic<PDL_Operation>:$tile_sizes,
                    DefaultValuedAttr<I64ArrayAttr, "{}">:$static_num_threads,
                    DefaultValuedAttr<I64ArrayAttr, "{}">:$static_tile_sizes,
-                   OptionalAttr<I64ArrayAttr>:$thread_dim_mapping);
+                   OptionalAttr<DeviceMappingArrayAttr>:$mapping);
   let results = (outs PDL_Operation:$foreach_thread_op,
                       PDL_Operation:$tiled_op);
 
@@ -841,22 +842,22 @@ def TileToForeachThreadOp :
                    "ArrayRef<int64_t>":$staticTileSizes,
                    CArg<"::mlir::transform::TileSizesSpec", 
                         "::mlir::transform::TileSizesSpec()">,
-                   CArg<"ArrayRef<int64_t>", "{}">:$threadDimMapping)>,
+                   CArg<"ArrayRef<int64_t>", "{}">:$mapping)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedTileSizes,
                    CArg<"::mlir::transform::TileSizesSpec", 
                         "::mlir::transform::TileSizesSpec()">,
-                   CArg<"ArrayRef<int64_t>", "{}">:$threadDimMapping)>,
+                   CArg<"ArrayRef<int64_t>", "{}">:$mapping)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$staticNumThreads,
                    CArg<"::mlir::transform::NumThreadsSpec", 
                         "::mlir::transform::NumThreadsSpec()">,
-                   CArg<"ArrayRef<int64_t>", "{}">:$threadDimMapping)>,
+                   CArg<"ArrayRef<int64_t>", "{}">:$mapping)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedNumThreads,
                    CArg<"::mlir::transform::NumThreadsSpec", 
                         "::mlir::transform::NumThreadsSpec()">,
-                   CArg<"ArrayRef<int64_t>", "{}">:$threadDimMapping)>,
+                   CArg<"ArrayRef<int64_t>", "{}">:$mapping)>,
   ];
 
   let assemblyFormat = [{
@@ -867,7 +868,7 @@ def TileToForeachThreadOp :
          `tile_sizes` custom<DynamicIndexList>($tile_sizes,
                                                $static_tile_sizes,
                                                "ShapedType::kDynamicSize"))
-    (`(` `mapped` `to` `dims` $thread_dim_mapping^ `)`)? attr-dict
+    (`(` `mapping` `=` $mapping^ `)`)? attr-dict
   }];
   let hasVerifier = 1;
 
