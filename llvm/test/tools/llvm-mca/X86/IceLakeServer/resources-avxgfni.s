@@ -19,10 +19,10 @@ vgf2p8mulb          (%rax), %xmm1, %xmm2
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.50                        vgf2p8affineinvqb	$0, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      7     0.50    *                   vgf2p8affineinvqb	$0, (%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     0.50                        vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      7     0.50    *                   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      5     0.50                        vgf2p8affineinvqb	$0, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  2      11    0.50    *                   vgf2p8affineinvqb	$0, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      5     0.50                        vgf2p8affineqb	$0, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  2      11    0.50    *                   vgf2p8affineqb	$0, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.50                        vgf2p8mulb	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   vgf2p8mulb	(%rax), %xmm1, %xmm2
 
