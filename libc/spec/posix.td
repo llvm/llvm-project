@@ -728,17 +728,17 @@ def POSIX : StandardSpec<"POSIX"> {
     [], // Macros
     [
         ModeTType,
-	DevT,
-	InoT,
-	UidT,
-	GidT,
-	StructTimeSpec,
-	StructTimeVal,
-	BlkSizeT,
-	BlkCntT,
-	OffTType,
-	NLinkT,
-	StatType,
+        DevT,
+        InoT,
+        UidT,
+        GidT,
+        StructTimeSpec,
+        StructTimeVal,
+        BlkSizeT,
+        BlkCntT,
+        OffTType,
+        NLinkT,
+        StatType,
     ], // Types
     [], // Enumerations
     [
@@ -1093,10 +1093,7 @@ def POSIX : StandardSpec<"POSIX"> {
           FunctionSpec<
               "nanosleep",
               RetValSpec<IntType>,
-              [
-	      	   ArgSpec<StructTimeSpecPtr>,
-	      	   ArgSpec<StructTimeSpecPtr>,
-	      ]
+              [ArgSpec<StructTimeSpecPtr>, ArgSpec<StructTimeSpecPtr>]
           >,
       ]
   >;
