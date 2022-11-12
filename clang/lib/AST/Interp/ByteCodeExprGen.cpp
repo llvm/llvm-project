@@ -107,7 +107,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
         });
   }
 
-  case CK_UncheckedDerivedToBase: {
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase: {
     if (!this->visit(SubExpr))
       return false;
 
@@ -361,13 +362,34 @@ bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
   return this->visit(E->getSubExpr());
 }
 
+static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
+                             UnaryExprOrTypeTrait Kind) {
+  bool AlignOfReturnsPreferred =
+      ASTCtx.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver7;
+
+  // C++ [expr.alignof]p3:
+  //     When alignof is applied to a reference type, the result is the
+  //     alignment of the referenced type.
+  if (const auto *Ref = T->getAs<ReferenceType>())
+    T = Ref->getPointeeType();
+
+  // __alignof is defined to return the preferred alignment.
+  // Before 8, clang returned the preferred alignment for alignof and
+  // _Alignof as well.
+  if (Kind == UETT_PreferredAlignOf || AlignOfReturnsPreferred)
+    return ASTCtx.toCharUnitsFromBits(ASTCtx.getPreferredTypeAlign(T));
+
+  return ASTCtx.getTypeAlignInChars(T);
+}
+
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *E) {
+  UnaryExprOrTypeTrait Kind = E->getKind();
+  ASTContext &ASTCtx = Ctx.getASTContext();
 
-  if (E->getKind() == UETT_SizeOf) {
+  if (Kind == UETT_SizeOf) {
     QualType ArgType = E->getTypeOfArgument();
-
     CharUnits Size;
     if (ArgType->isVoidType() || ArgType->isFunctionType())
       Size = CharUnits::One();
@@ -375,7 +397,37 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       if (ArgType->isDependentType() || !ArgType->isConstantSizeType())
         return false;
 
-      Size = Ctx.getASTContext().getTypeSizeInChars(ArgType);
+      Size = ASTCtx.getTypeSizeInChars(ArgType);
+    }
+
+    return this->emitConst(Size.getQuantity(), E);
+  }
+
+  if (Kind == UETT_AlignOf || Kind == UETT_PreferredAlignOf) {
+    CharUnits Size;
+
+    if (E->isArgumentType()) {
+      QualType ArgType = E->getTypeOfArgument();
+
+      Size = AlignOfType(ArgType, ASTCtx, Kind);
+    } else {
+      // Argument is an expression, not a type.
+      const Expr *Arg = E->getArgumentExpr()->IgnoreParens();
+
+      // The kinds of expressions that we have special-case logic here for
+      // should be kept up to date with the special checks for those
+      // expressions in Sema.
+
+      // alignof decl is always accepted, even if it doesn't make sense: we
+      // default to 1 in those cases.
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg))
+        Size = ASTCtx.getDeclAlign(DRE->getDecl(),
+                                   /*RefAsPointee*/ true);
+      else if (const auto *ME = dyn_cast<MemberExpr>(Arg))
+        Size = ASTCtx.getDeclAlign(ME->getMemberDecl(),
+                                   /*RefAsPointee*/ true);
+      else
+        Size = AlignOfType(Arg->getType(), ASTCtx, Kind);
     }
 
     return this->emitConst(Size.getQuantity(), E);

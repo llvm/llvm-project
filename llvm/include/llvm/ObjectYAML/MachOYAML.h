@@ -130,6 +130,7 @@ struct LinkEditData {
   std::vector<yaml::Hex32> IndirectSymbols;
   std::vector<yaml::Hex64> FunctionStarts;
   std::vector<DataInCodeEntry> DataInCode;
+  std::vector<yaml::Hex8> ChainedFixups;
 
   bool isEmpty() const;
 };

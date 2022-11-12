@@ -25,6 +25,7 @@
 
 namespace mlir {
 namespace linalg {
+class IteratorTypeAttr;
 class LinalgOp;
 
 namespace detail {

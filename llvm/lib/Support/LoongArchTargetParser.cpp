@@ -29,10 +29,9 @@ const ArchInfo AllArchs[] = {
 };
 
 LoongArch::ArchKind LoongArch::parseArch(StringRef Arch) {
-  for (const auto A : AllArchs) {
+  for (const auto A : AllArchs)
     if (A.Name == Arch)
       return A.Kind;
-  }
 
   return LoongArch::ArchKind::AK_INVALID;
 }
@@ -41,11 +40,9 @@ bool LoongArch::getArchFeatures(StringRef Arch,
                                 std::vector<StringRef> &Features) {
   for (const auto A : AllArchs) {
     if (A.Name == Arch) {
-      for (const auto F : AllFeatures) {
-        if ((A.Features & F.Kind) == F.Kind && F.Kind != FK_INVALID) {
+      for (const auto F : AllFeatures)
+        if ((A.Features & F.Kind) == F.Kind && F.Kind != FK_INVALID)
           Features.push_back(F.Name);
-        }
-      }
       return true;
     }
   }

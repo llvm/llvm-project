@@ -532,3 +532,15 @@ flang-new -fpass-plugin=/path/to/plugin.so <file.f90>
 
 This option is available in both the compiler driver and the frontend driver.
 Note that LLVM plugins are not officially supported on Windows.
+
+## LLVM Pass Extensions
+
+Pass extensions are similar to plugins, except that they can also be linked
+statically. Setting `-DLLVM_${NAME}_LINK_INTO_TOOLS` to `ON` in the cmake
+command turns the project into a statically linked extension. An example would
+be Polly, e.g., using `-DLLVM_POLLY_LINK_INTO_TOOLS=ON` would link Polly passes
+into `flang-new` as built-in middle-end passes.
+
+See the
+[`WritingAnLLVMNewPMPass`](https://llvm.org/docs/WritingAnLLVMNewPMPass.html#id9)
+documentation for more details.
