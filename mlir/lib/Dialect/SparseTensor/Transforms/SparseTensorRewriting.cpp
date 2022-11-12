@@ -791,7 +791,7 @@ public:
     SmallVector<Value, 4> args;
     // Remap coordinates.
     for (int64_t i = 0; i < rank; i++) {
-      Value actual = coords[toOrigDim(enc, i)];
+      Value actual = coords[toStoredDim(enc, i)];
       args.push_back(actual);
     }
     // Remap value.

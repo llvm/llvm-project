@@ -1682,6 +1682,15 @@ bool AArch64InstructionSelector::tryOptCompareBranchFedByICmp(
       I.eraseFromParent();
       return true;
     }
+
+    // Inversely, if we have a signed greater-than-or-equal comparison to zero,
+    // we can test if the msb is zero.
+    if (C == 0 && Pred == CmpInst::ICMP_SGE) {
+      uint64_t Bit = MRI.getType(LHS).getSizeInBits() - 1;
+      emitTestBit(LHS, Bit, /*IsNegative = */ false, DestMBB, MIB);
+      I.eraseFromParent();
+      return true;
+    }
   }
 
   // Attempt to handle commutative condition codes. Right now, that's only
