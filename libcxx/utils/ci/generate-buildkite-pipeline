@@ -12,7 +12,15 @@
 #
 
 if git diff --name-only HEAD~1 | grep -q -E "^libcxx/|^libcxxabi/|^libunwind/|^runtimes/|^cmake/"; then
-  cat libcxx/utils/ci/buildkite-pipeline.yml
-elif git diff --name-only HEAD~1 | grep -q -E "^clang/"; then
+  LIBCXX_CHANGED=true
+fi
+
+if git diff --name-only HEAD~1 | grep -q -E "^clang/"; then
+  CLANG_CHANGED=true
+fi
+
+if [[ "${CLANG_CHANGED}" == "true" && "${LIBCXX_CHANGED}" != "true" ]]; then
   cat libcxx/utils/ci/buildkite-pipeline-clang.yml
+else
+  cat libcxx/utils/ci/buildkite-pipeline.yml
 fi
