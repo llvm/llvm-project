@@ -110,8 +110,7 @@ performance counters (.profraw files). After generating all the profraw files
 you use llvm-profdata to merge the files into a single profdata file that you
 can feed into the LLVM_PROFDATA_FILE option.
 
-Our PGO.cmake cache script automates that whole process. You can use it by
-running:
+Our PGO.cmake cache automates that whole process. You can use it by running:
 
 .. code-block:: console
 
@@ -125,7 +124,7 @@ and you *must* have compiler-rt in your build tree.
 This process uses any source files under the perf-training directory as training
 data as long as the source files are marked up with LIT-style RUN lines.
 
-After it finishes you can use “find . -name clang.profdata” to find it, but it
+After it finishes you can use :code:`find . -name clang.profdata` to find it, but it
 should be at a path something like:
 
 .. code-block:: console
@@ -135,22 +134,22 @@ should be at a path something like:
 You can feed that file into the LLVM_PROFDATA_FILE option when you build your
 optimized compiler.
 
-The PGO came cache has a slightly different stage naming scheme than other
-multi-stage builds. It generates three stages; stage1, stage2-instrumented, and
+The PGO cache has a slightly different stage naming scheme than other
+multi-stage builds. It generates three stages: stage1, stage2-instrumented, and
 stage2. Both of the stage2 builds are built using the stage1 compiler.
 
-The PGO came cache generates the following additional targets:
+The PGO cache generates the following additional targets:
 
 **stage2-instrumented**
-  Builds a stage1 x86 compiler, runtime, and required tools (llvm-config,
+  Builds a stage1 compiler, runtime, and required tools (llvm-config,
   llvm-profdata) then uses that compiler to build an instrumented stage2 compiler.
 
 **stage2-instrumented-generate-profdata**
-  Depends on "stage2-instrumented" and will use the instrumented compiler to
+  Depends on stage2-instrumented and will use the instrumented compiler to
   generate profdata based on the training files in clang/utils/perf-training
 
 **stage2**
-  Depends of "stage2-instrumented-generate-profdata" and will use the stage1
+  Depends on stage2-instrumented-generate-profdata and will use the stage1
   compiler with the stage2 profdata to build a PGO-optimized compiler.
 
 **stage2-check-llvm**
@@ -163,7 +162,7 @@ The PGO came cache generates the following additional targets:
   Depends on stage2 and runs check-all using the stage2 compiler.
 
 **stage2-test-suite**
-  Depends on stage2 and runs the test-suite using the stage3 compiler (requires
+  Depends on stage2 and runs the test-suite using the stage2 compiler (requires
   in-tree test-suite).
 
 3-Stage Non-Determinism
