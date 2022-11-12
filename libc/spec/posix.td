@@ -45,6 +45,9 @@ def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 def StructTimeSpec : NamedType<"struct timespec">;
 def StructTimeSpecPtr : PtrType<StructTimeSpec>;
 
+def StructTimeVal : NamedType<"struct timeval">;
+def StructTimeValPtr : PtrType<StructTimeVal>;
+
 def ExecArgvT : NamedType<"__exec_argv_t">;
 def ExecEnvpT : NamedType<"__exec_envp_t">;
 
@@ -723,7 +726,20 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysStat = HeaderSpec<
     "sys/stat.h",
     [], // Macros
-    [ModeTType, DevT, InoT, UidT, GidT, StructTimeSpec, BlkSizeT, BlkCntT, OffTType, NLinkT, StatType], // Types
+    [
+        ModeTType,
+	DevT,
+	InoT,
+	UidT,
+	GidT,
+	StructTimeSpec,
+	StructTimeVal,
+	BlkSizeT,
+	BlkCntT,
+	OffTType,
+	NLinkT,
+	StatType,
+    ], // Types
     [], // Enumerations
     [
         FunctionSpec<
@@ -1061,21 +1077,26 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec Time = HeaderSpec<
       "time.h",
       [], // Macros
-      [ClockIdT, StructTimeSpec], // Types
+      [ClockIdT, StructTimeSpec, StructTimeVal], // Types
       [], // Enumerations
       [
+          FunctionSpec<
+              "clock_gettime",
+              RetValSpec<IntType>,
+              [ArgSpec<ClockIdT>, ArgSpec<StructTimeSpecPtr>]
+          >,
+          FunctionSpec<
+              "gettimeofday",
+              RetValSpec<IntType>,
+              [ArgSpec<StructTimeValPtr>, ArgSpec<VoidPtr>]
+          >,
           FunctionSpec<
               "nanosleep",
               RetValSpec<IntType>,
               [
-	      	      ArgSpec<StructTimeSpecPtr>,
-	      	      ArgSpec<StructTimeSpecPtr>,
-	            ]
-          >,
-          FunctionSpec<
-              "clock_gettime",
-              RetValSpec<IntType>,
-              [ArgSpec<ClockIdT>,ArgSpec<StructTimeSpecPtr>]
+	      	   ArgSpec<StructTimeSpecPtr>,
+	      	   ArgSpec<StructTimeSpecPtr>,
+	      ]
           >,
       ]
   >;
