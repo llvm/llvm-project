@@ -396,3 +396,157 @@ define double @v_uint_to_fp_i8_to_f64(i8 %in) {
   %fp = uitofp i8 %in to double
   ret double %fp
 }
+
+define amdgpu_kernel void @s_select_uint_to_fp_i1_vals_f64(double addrspace(1)* %out, i32 %in) {
+; SI-LABEL: s_select_uint_to_fp_i1_vals_f64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dword s2, s[4:5], 0x2
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; SI-NEXT:    v_mov_b32_e32 v0, 0
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_cmp_eq_u32 s2, 0
+; SI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
+; SI-NEXT:    v_mov_b32_e32 v3, s1
+; SI-NEXT:    v_mov_b32_e32 v1, s2
+; SI-NEXT:    v_mov_b32_e32 v2, s0
+; SI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_select_uint_to_fp_i1_vals_f64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x8
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_cmp_eq_u32 s2, 0
+; VI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
+; VI-NEXT:    v_mov_b32_e32 v3, s1
+; VI-NEXT:    v_mov_b32_e32 v1, s2
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    s_endpgm
+  %cmp = icmp eq i32 %in, 0
+  %select = select i1 %cmp, double 1.0, double 0.0
+  store double %select, double addrspace(1)* %out, align 8
+  ret void
+}
+
+define void @v_select_uint_to_fp_i1_vals_f64(double addrspace(1)* %out, i32 %in) {
+; GCN-LABEL: v_select_uint_to_fp_i1_vals_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v4, 0x3ff00000
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
+; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; GCN-NEXT:    flat_store_dwordx2 v[0:1], v[3:4]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = icmp eq i32 %in, 0
+  %select = select i1 %cmp, double 1.0, double 0.0
+  store double %select, double addrspace(1)* %out, align 8
+  ret void
+}
+
+define amdgpu_kernel void @s_select_uint_to_fp_i1_vals_i64(i64 addrspace(1)* %out, i32 %in) {
+; SI-LABEL: s_select_uint_to_fp_i1_vals_i64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dword s2, s[4:5], 0x2
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; SI-NEXT:    v_mov_b32_e32 v0, 0
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_cmp_eq_u32 s2, 0
+; SI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
+; SI-NEXT:    v_mov_b32_e32 v3, s1
+; SI-NEXT:    v_mov_b32_e32 v1, s2
+; SI-NEXT:    v_mov_b32_e32 v2, s0
+; SI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_select_uint_to_fp_i1_vals_i64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x8
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_cmp_eq_u32 s2, 0
+; VI-NEXT:    s_cselect_b32 s2, 0x3ff00000, 0
+; VI-NEXT:    v_mov_b32_e32 v3, s1
+; VI-NEXT:    v_mov_b32_e32 v1, s2
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    s_endpgm
+  %cmp = icmp eq i32 %in, 0
+  %select = select i1 %cmp, i64 u0x3ff0000000000000, i64 0
+  store i64 %select, i64 addrspace(1)* %out, align 8
+  ret void
+}
+
+define void @v_select_uint_to_fp_i1_vals_i64(i64 addrspace(1)* %out, i32 %in) {
+; GCN-LABEL: v_select_uint_to_fp_i1_vals_i64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v4, 0x3ff00000
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
+; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; GCN-NEXT:    flat_store_dwordx2 v[0:1], v[3:4]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = icmp eq i32 %in, 0
+  %select = select i1 %cmp, i64 u0x3ff0000000000000, i64 0
+  store i64 %select, i64 addrspace(1)* %out, align 8
+  ret void
+}
+
+; TODO: This should swap the selected order / invert the compare and do it.
+define amdgpu_kernel void @s_swap_select_uint_to_fp_i1_vals_f64(double addrspace(1)* %out, i32 %in) {
+; SI-LABEL: s_swap_select_uint_to_fp_i1_vals_f64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dword s2, s[4:5], 0x2
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; SI-NEXT:    v_mov_b32_e32 v0, 0
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_cmp_eq_u32 s2, 0
+; SI-NEXT:    s_cselect_b32 s2, 0, 0x3ff00000
+; SI-NEXT:    v_mov_b32_e32 v3, s1
+; SI-NEXT:    v_mov_b32_e32 v1, s2
+; SI-NEXT:    v_mov_b32_e32 v2, s0
+; SI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_swap_select_uint_to_fp_i1_vals_f64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x8
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_cmp_eq_u32 s2, 0
+; VI-NEXT:    s_cselect_b32 s2, 0, 0x3ff00000
+; VI-NEXT:    v_mov_b32_e32 v3, s1
+; VI-NEXT:    v_mov_b32_e32 v1, s2
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    s_endpgm
+  %cmp = icmp eq i32 %in, 0
+  %select = select i1 %cmp, double 0.0, double 1.0
+  store double %select, double addrspace(1)* %out, align 8
+  ret void
+}
+
+define void @v_swap_select_uint_to_fp_i1_vals_f64(double addrspace(1)* %out, i32 %in) {
+; GCN-LABEL: v_swap_select_uint_to_fp_i1_vals_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v4, 0x3ff00000
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
+; GCN-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
+; GCN-NEXT:    flat_store_dwordx2 v[0:1], v[3:4]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = icmp eq i32 %in, 0
+  %select = select i1 %cmp, double 0.0, double 1.0
+  store double %select, double addrspace(1)* %out, align 8
+  ret void
+}
