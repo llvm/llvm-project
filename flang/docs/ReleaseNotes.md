@@ -27,6 +27,9 @@ page](https://llvm.org/releases/).
 * Flang now supports loading LLVM pass plugins with the `-fpass-plugin` option
   which is also available in clang. The option mimics the behavior of the
   corresponding option in clang and has the same capabilities and limitations.
+* Flang also supports statically linked LLVM pass extensions. Projects can be
+  linked statically into `flang-new` if the cmake command includes
+  `-DLLVM_${NAME}_LINK_INTO_TOOLS=ON`. This behavior is also similar to clang.
 
 ## Bug Fixes
 

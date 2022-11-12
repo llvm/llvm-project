@@ -5403,6 +5403,22 @@ CXString clang_getCursorDisplayName(CXCursor C) {
   return clang_getCursorSpelling(C);
 }
 
+CXString
+clang_getCompletionResultKindSpelling(enum CXCompletionResultKind Kind) {
+  switch (Kind) {
+  case CXCompletionResult_Declaration:
+    return cxstring::createRef("Declaration");
+  case CXCompletionResult_Keyword:
+    return cxstring::createRef("Keyword");
+  case CXCompletionResult_Macro:
+    return cxstring::createRef("Macro");
+  case CXCompletionResult_Pattern:
+    return cxstring::createRef("Pattern");
+  }
+
+  llvm_unreachable("Unhandled CXCompletionResultKind");
+}
+
 CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
   switch (Kind) {
   case CXCursor_FunctionDecl:

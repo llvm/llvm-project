@@ -2805,7 +2805,7 @@ static bool tryBitfieldInsertOpFromOrAndImm(SDNode *N, SelectionDAG *CurDAG) {
 
 static bool isWorthFoldingIntoOrrWithShift(SDValue Dst, SelectionDAG *CurDAG,
                                            SDValue &ShiftedOperand,
-                                           uint64_t &ShiftAmount) {
+                                           uint64_t &EncodedShiftImm) {
   // Avoid folding Dst into ORR-with-shift if Dst has other uses than ORR.
   if (!Dst.hasOneUse())
     return false;
@@ -2852,7 +2852,8 @@ static bool isWorthFoldingIntoOrrWithShift(SDValue Dst, SelectionDAG *CurDAG,
             CurDAG->getTargetConstant(
                 SrlImm + NumTrailingZeroInShiftedMask + MaskWidth - 1, DL, VT));
         ShiftedOperand = SDValue(UBFMNode, 0);
-        ShiftAmount = NumTrailingZeroInShiftedMask;
+        EncodedShiftImm = AArch64_AM::getShifterImm(
+            AArch64_AM::LSL, NumTrailingZeroInShiftedMask);
         return true;
       }
     }
@@ -2861,23 +2862,30 @@ static bool isWorthFoldingIntoOrrWithShift(SDValue Dst, SelectionDAG *CurDAG,
 
   if (isOpcWithIntImmediate(Dst.getNode(), ISD::SHL, ShlImm)) {
     ShiftedOperand = Dst.getOperand(0);
-    ShiftAmount = ShlImm;
+    EncodedShiftImm = AArch64_AM::getShifterImm(AArch64_AM::LSL, ShlImm);
     return true;
   }
 
   uint64_t SrlImm;
   if (isOpcWithIntImmediate(Dst.getNode(), ISD::SRL, SrlImm)) {
     ShiftedOperand = Dst.getOperand(0);
-    ShiftAmount = AArch64_AM::getShifterImm(AArch64_AM::LSR, SrlImm);
+    EncodedShiftImm = AArch64_AM::getShifterImm(AArch64_AM::LSR, SrlImm);
     return true;
   }
   return false;
 }
 
+// Given an 'ISD::OR' node that is going to be selected as BFM, analyze
+// the operands and select it to AArch64::ORR with shifted registers if
+// that's more efficient. Returns true iff selection to AArch64::ORR happens.
 static bool tryOrrWithShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
                             SDValue Src, SDValue Dst, SelectionDAG *CurDAG,
                             const bool BiggerPattern) {
   EVT VT = N->getValueType(0);
+  assert(N->getOpcode() == ISD::OR && "Expect N to be an OR node");
+  assert(((N->getOperand(0) == OrOpd0 && N->getOperand(1) == OrOpd1) ||
+          (N->getOperand(1) == OrOpd0 && N->getOperand(0) == OrOpd1)) &&
+         "Expect OrOpd0 and OrOpd1 to be operands of ISD::OR");
   assert((VT == MVT::i32 || VT == MVT::i64) &&
          "Expect result type to be i32 or i64 since N is combinable to BFM");
   SDLoc DL(N);
@@ -2886,6 +2894,7 @@ static bool tryOrrWithShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
   if (OrOpd1 != Dst)
     return false;
 
+  const unsigned OrrOpc = (VT == MVT::i32) ? AArch64::ORRWrs : AArch64::ORRXrs;
   // For "BFM Rd, Rn, #immr, #imms", it's known that BFM simplifies away fewer
   // nodes from Rn (or inserts additional shift node) if BiggerPattern is true.
   if (BiggerPattern) {
@@ -2899,12 +2908,11 @@ static bool tryOrrWithShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
       // smaller latency than BFM on many AArch64 processors (and for the rest
       // ORR is at least as good as BFM).
       SDValue ShiftedOperand;
-      uint64_t ShiftAmount;
+      uint64_t EncodedShiftImm;
       if (isWorthFoldingIntoOrrWithShift(Dst, CurDAG, ShiftedOperand,
-                                         ShiftAmount)) {
-        unsigned OrrOpc = (VT == MVT::i32) ? AArch64::ORRWrs : AArch64::ORRXrs;
+                                         EncodedShiftImm)) {
         SDValue Ops[] = {OrOpd0, ShiftedOperand,
-                         CurDAG->getTargetConstant(ShiftAmount, DL, VT)};
+                         CurDAG->getTargetConstant(EncodedShiftImm, DL, VT)};
         CurDAG->SelectNodeTo(N, OrrOpc, VT, Ops);
         return true;
       }
@@ -2915,12 +2923,56 @@ static bool tryOrrWithShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
   assert((!BiggerPattern) && "BiggerPattern should be handled above");
 
   uint64_t ShlImm;
-  if (isOpcWithIntImmediate(OrOpd0.getNode(), ISD::SHL, ShlImm) &&
-      OrOpd0.getOperand(0) == Src && OrOpd0.hasOneUse()) {
-    unsigned OrrOpc = (VT == MVT::i32) ? AArch64::ORRWrs : AArch64::ORRXrs;
-    SDValue Ops[] = {Dst, Src, CurDAG->getTargetConstant(ShlImm, DL, VT)};
-    CurDAG->SelectNodeTo(N, OrrOpc, VT, Ops);
-    return true;
+  if (isOpcWithIntImmediate(OrOpd0.getNode(), ISD::SHL, ShlImm)) {
+    if (OrOpd0.getOperand(0) == Src && OrOpd0.hasOneUse()) {
+      SDValue Ops[] = {
+          Dst, Src,
+          CurDAG->getTargetConstant(
+              AArch64_AM::getShifterImm(AArch64_AM::LSL, ShlImm), DL, VT)};
+      CurDAG->SelectNodeTo(N, OrrOpc, VT, Ops);
+      return true;
+    }
+
+    // Select the following pattern to left-shifted operand rather than BFI.
+    // %val1 = op ..
+    // %val2 = shl %val1, #imm
+    // %res = or %val1, %val2
+    //
+    // If N is selected to be BFI, we know that
+    // 1) OrOpd0 would be the operand from which extract bits (i.e., folded into
+    // BFI) 2) OrOpd1 would be the destination operand (i.e., preserved)
+    //
+    // Instead of selecting N to BFI, fold OrOpd0 as a left shift directly.
+    if (OrOpd0.getOperand(0) == OrOpd1) {
+      SDValue Ops[] = {
+          OrOpd1, OrOpd1,
+          CurDAG->getTargetConstant(
+              AArch64_AM::getShifterImm(AArch64_AM::LSL, ShlImm), DL, VT)};
+      CurDAG->SelectNodeTo(N, OrrOpc, VT, Ops);
+      return true;
+    }
+  }
+
+  uint64_t SrlImm;
+  if (isOpcWithIntImmediate(OrOpd0.getNode(), ISD::SRL, SrlImm)) {
+    // Select the following pattern to right-shifted operand rather than BFXIL.
+    // %val1 = op ..
+    // %val2 = lshr %val1, #imm
+    // %res = or %val1, %val2
+    //
+    // If N is selected to be BFXIL, we know that
+    // 1) OrOpd0 would be the operand from which extract bits (i.e., folded into
+    // BFXIL) 2) OrOpd1 would be the destination operand (i.e., preserved)
+    //
+    // Instead of selecting N to BFXIL, fold OrOpd0 as a right shift directly.
+    if (OrOpd0.getOperand(0) == OrOpd1) {
+      SDValue Ops[] = {
+          OrOpd1, OrOpd1,
+          CurDAG->getTargetConstant(
+              AArch64_AM::getShifterImm(AArch64_AM::LSR, SrlImm), DL, VT)};
+      CurDAG->SelectNodeTo(N, OrrOpc, VT, Ops);
+      return true;
+    }
   }
 
   return false;

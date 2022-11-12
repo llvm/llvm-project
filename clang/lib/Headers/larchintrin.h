@@ -14,6 +14,14 @@
 extern "C" {
 #endif
 
+#if __loongarch_grlen == 64
+extern __inline int
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __crc_w_d_w(long int _1, int _2) {
+  return (int)__builtin_loongarch_crc_w_d_w((long int)_1, (int)_2);
+}
+#endif
+
 #define __dbar(/*ui15*/ _1) __builtin_loongarch_dbar((_1))
 
 #ifdef __cplusplus

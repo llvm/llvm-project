@@ -696,3 +696,181 @@ func.func @speculate_memref_dim_known_rank_known_dim_inbounds(
 
   return
 }
+
+// -----
+
+func.func @no_speculate_divui(
+// CHECK-LABEL: @no_speculate_divui(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divui
+    %val = arith.divui %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi(
+// CHECK-LABEL: @no_speculate_divsi(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divsi
+    %val = arith.divsi %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivui(
+// CHECK-LABEL: @no_speculate_ceildivui(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivui
+    %val = arith.ceildivui %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi(
+// CHECK-LABEL: @no_speculate_ceildivsi(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivsi
+    %val = arith.ceildivsi %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divui_const(%num: i32, %lb: index, %ub: index, %step: index) {
+// CHECK-LABEL: @no_speculate_divui_const(
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divui
+    %val = arith.divui %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @speculate_divui_const(
+// CHECK-LABEL: @speculate_divui_const(
+    %num: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+// CHECK: arith.divui
+// CHECK: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = arith.divui %num, %c5 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivui_const(%num: i32, %lb: index, %ub: index, %step: index) {
+// CHECK-LABEL: @no_speculate_ceildivui_const(
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivui
+    %val = arith.ceildivui %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @speculate_ceildivui_const(
+// CHECK-LABEL: @speculate_ceildivui_const(
+    %num: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+// CHECK: arith.ceildivui
+// CHECK: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = arith.ceildivui %num, %c5 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi_const0(
+// CHECK-LABEL: @no_speculate_divsi_const0(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divsi
+    %val = arith.divsi %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi_const_minus1(
+// CHECK-LABEL: @no_speculate_divsi_const_minus1(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %cm1 = arith.constant -1 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divsi
+    %val = arith.divsi %num, %cm1 : i32
+  }
+
+  return
+}
+
+func.func @speculate_divsi_const(
+// CHECK-LABEL: @speculate_divsi_const(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.divsi
+// CHECK: scf.for
+    %val = arith.divsi %num, %c5 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi_const0(
+// CHECK-LABEL: @no_speculate_ceildivsi_const0(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivsi
+    %val = arith.ceildivsi %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi_const_minus1(
+// CHECK-LABEL: @no_speculate_ceildivsi_const_minus1(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %cm1 = arith.constant -1 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivsi
+    %val = arith.ceildivsi %num, %cm1 : i32
+  }
+
+  return
+}
+
+func.func @speculate_ceildivsi_const(
+// CHECK-LABEL: @speculate_ceildivsi_const(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.ceildivsi
+// CHECK: scf.for
+    %val = arith.ceildivsi %num, %c5 : i32
+  }
+
+  return
+}

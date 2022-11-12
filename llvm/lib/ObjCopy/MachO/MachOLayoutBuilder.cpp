@@ -235,39 +235,38 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
          "Incorrect tail offset");
   Offset = std::max(Offset, HeaderSize + O.Header.SizeOfCmds);
 
-  // The order of LINKEDIT elements is as follows:
-  // rebase info, binding info, weak binding info, lazy binding info, export
-  // trie, data-in-code, symbol table, indirect symbol table, symbol table
-  // strings, dylib codesign drs, code signature.
   uint64_t NListSize = Is64Bit ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
   uint64_t StartOfLinkEdit = Offset;
-  uint64_t StartOfRebaseInfo = StartOfLinkEdit;
-  uint64_t StartOfBindingInfo = StartOfRebaseInfo + O.Rebases.Opcodes.size();
-  uint64_t StartOfWeakBindingInfo = StartOfBindingInfo + O.Binds.Opcodes.size();
-  uint64_t StartOfLazyBindingInfo =
-      StartOfWeakBindingInfo + O.WeakBinds.Opcodes.size();
-  uint64_t StartOfExportTrie =
-      StartOfLazyBindingInfo + O.LazyBinds.Opcodes.size();
-  uint64_t StartOfFunctionStarts = StartOfExportTrie + O.Exports.Trie.size();
-  uint64_t StartOfDyldExportsTrie =
-      StartOfFunctionStarts + O.FunctionStarts.Data.size();
-  uint64_t StartOfChainedFixups =
-      StartOfDyldExportsTrie + O.ExportsTrie.Data.size();
-  uint64_t StartOfDataInCode =
-      StartOfChainedFixups + O.ChainedFixups.Data.size();
+
+  // The order of LINKEDIT elements is as follows:
+  // rebase info, binding info, weak binding info, lazy binding info, export
+  // trie, chained fixups, dyld exports trie, function starts, data-in-code,
+  // symbol table, indirect symbol table, symbol table strings,
+  // dylib codesign drs, and code signature.
+  auto updateOffset = [&Offset](size_t Size) {
+    uint64_t PreviousOffset = Offset;
+    Offset += Size;
+    return PreviousOffset;
+  };
+
+  uint64_t StartOfRebaseInfo = updateOffset(O.Rebases.Opcodes.size());
+  uint64_t StartOfBindingInfo = updateOffset(O.Binds.Opcodes.size());
+  uint64_t StartOfWeakBindingInfo = updateOffset(O.WeakBinds.Opcodes.size());
+  uint64_t StartOfLazyBindingInfo = updateOffset(O.LazyBinds.Opcodes.size());
+  uint64_t StartOfExportTrie = updateOffset(O.Exports.Trie.size());
+  uint64_t StartOfChainedFixups = updateOffset(O.ChainedFixups.Data.size());
+  uint64_t StartOfDyldExportsTrie = updateOffset(O.ExportsTrie.Data.size());
+  uint64_t StartOfFunctionStarts = updateOffset(O.FunctionStarts.Data.size());
+  uint64_t StartOfDataInCode = updateOffset(O.DataInCode.Data.size());
   uint64_t StartOfLinkerOptimizationHint =
-      StartOfDataInCode + O.DataInCode.Data.size();
-  uint64_t StartOfSymbols =
-      StartOfLinkerOptimizationHint + O.LinkerOptimizationHint.Data.size();
+      updateOffset(O.LinkerOptimizationHint.Data.size());
+  uint64_t StartOfSymbols = updateOffset(NListSize * O.SymTable.Symbols.size());
   uint64_t StartOfIndirectSymbols =
-      StartOfSymbols + NListSize * O.SymTable.Symbols.size();
-  uint64_t StartOfSymbolStrings =
-      StartOfIndirectSymbols +
-      sizeof(uint32_t) * O.IndirectSymTable.Symbols.size();
-  uint64_t StartOfDylibCodeSignDRs =
-      StartOfSymbolStrings + StrTableBuilder.getSize();
-  uint64_t StartOfCodeSignature =
-      StartOfDylibCodeSignDRs + O.DylibCodeSignDRs.Data.size();
+      updateOffset(sizeof(uint32_t) * O.IndirectSymTable.Symbols.size());
+  uint64_t StartOfSymbolStrings = updateOffset(StrTableBuilder.getSize());
+  uint64_t StartOfDylibCodeSignDRs = updateOffset(O.DylibCodeSignDRs.Data.size());
+
+  uint64_t StartOfCodeSignature = Offset;
   uint32_t CodeSignatureSize = 0;
   if (O.CodeSignatureCommandIndex) {
     StartOfCodeSignature = alignTo(StartOfCodeSignature, 16);

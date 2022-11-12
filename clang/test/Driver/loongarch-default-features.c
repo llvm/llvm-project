@@ -4,7 +4,6 @@
 // LA32-NOT: "target-features"=
 // LA64: "target-features"="+64bit,+d,+f"
 
-/// Dummy function
 int foo(void) {
-  return  3;
+  return 3;
 }

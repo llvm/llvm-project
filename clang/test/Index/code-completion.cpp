@@ -82,8 +82,8 @@ void test_template_alias() {
 // CHECK-OVERLOAD-NEXT: Objective-C interface
 
 // RUN: c-index-test -code-completion-at=%s:37:10 %s | FileCheck -check-prefix=CHECK-EXPR %s
-// CHECK-EXPR: NotImplemented:{TypedText int} (50)
-// CHECK-EXPR: NotImplemented:{TypedText long} (50)
+// CHECK-EXPR: Keyword:{TypedText int} (50)
+// CHECK-EXPR: Keyword:{TypedText long} (50)
 // CHECK-EXPR: FieldDecl:{ResultType double}{TypedText member} (17)
 // CHECK-EXPR: FieldDecl:{ResultType int}{Text X::}{TypedText member} (9)
 // CHECK-EXPR: FieldDecl:{ResultType float}{Text Y::}{TypedText member} (18)
