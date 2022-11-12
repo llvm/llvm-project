@@ -628,10 +628,9 @@ BackendConsumer::StackSizeDiagHandler(const llvm::DiagnosticInfoStackSize &D) {
   if (!Loc)
     return false;
 
-  // FIXME: Shouldn't need to truncate to uint32_t
   Diags.Report(*Loc, diag::warn_fe_frame_larger_than)
-      << static_cast<uint32_t>(D.getStackSize())
-      << static_cast<uint32_t>(D.getStackLimit())
+      << D.getStackSize()
+      << D.getStackLimit()
       << llvm::demangle(D.getFunction().getName().str());
   return true;
 }

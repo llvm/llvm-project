@@ -280,6 +280,7 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   // Keep track of the function section.
   MCSection *Section = nullptr;
 
+  // Catchpad unwind destination info for wasm EH.
   // Keeps track of Wasm exception handling related data. This will be null for
   // functions that aren't using a wasm EH personality.
   WasmEHFuncInfo *WasmEHInfo = nullptr;
