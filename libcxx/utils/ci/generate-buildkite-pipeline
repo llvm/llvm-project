@@ -7,4 +7,12 @@
 #
 #===----------------------------------------------------------------------===##
 
-cat libcxx/utils/ci/buildkite-pipeline.yml
+#
+# This script generates the appropriate libc++ CI pipeline based on which project(s) were changed.
+#
+
+if git diff --name-only HEAD~1 | grep -q -E "^libcxx/|^libcxxabi/|^libunwind/|^runtimes/|^cmake/"; then
+  cat libcxx/utils/ci/buildkite-pipeline.yml
+elif git diff --name-only HEAD~1 | grep -q -E "^clang/"; then
+  cat libcxx/utils/ci/buildkite-pipeline-clang.yml
+fi
