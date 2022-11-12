@@ -63,8 +63,8 @@ public:
   bool selectZExti32(SDValue N, SDValue &Val);
 
   bool selectSHXADDOp(SDValue N, unsigned ShAmt, SDValue &Val);
-  template <unsigned Width> bool selectSHXADDOp(SDValue N, SDValue &Val) {
-    return selectSHXADDOp(N, Width, Val);
+  template <unsigned ShAmt> bool selectSHXADDOp(SDValue N, SDValue &Val) {
+    return selectSHXADDOp(N, ShAmt, Val);
   }
 
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits) const;
