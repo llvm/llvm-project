@@ -44,7 +44,7 @@ class MiniDumpTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         expected_modules = [
             {
-                'filename' : r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug/fizzbuzz.exe",
+                'filename' : r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug\fizzbuzz.exe",
                 'uuid' : '0F45B791-9A96-46F9-BF8F-2D6076EA421A-00000011',
             },
             {
