@@ -154,7 +154,7 @@
 
 #if KMP_DEBUG
 
-#if KMP_OS_WINDOWS && _DEBUG
+#if KMP_OS_WINDOWS && _DEBUG && !defined(__MINGW32__)
 // KMP_DEBUG != _DEBUG. MS debug RTL is available only if _DEBUG is defined.
 
 // Windows* OS has native memory debugging capabilities. Enable them.

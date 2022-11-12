@@ -172,6 +172,8 @@ void addAsyncDependency(Operation *op, Value token);
 
 #include "mlir/Dialect/GPU/IR/GPUOpInterfaces.h.inc"
 
+#include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/GPU/IR/GPUOpsAttributes.h.inc"
 

@@ -3060,12 +3060,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_ceil:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::ceil, "elt.ceil"));
+  case Builtin::BI__builtin_elementwise_cos:
+    return RValue::get(
+        emitUnaryBuiltin(*this, E, llvm::Intrinsic::cos, "elt.cos"));
   case Builtin::BI__builtin_elementwise_floor:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::floor, "elt.floor"));
   case Builtin::BI__builtin_elementwise_roundeven:
     return RValue::get(emitUnaryBuiltin(*this, E, llvm::Intrinsic::roundeven,
                                         "elt.roundeven"));
+  case Builtin::BI__builtin_elementwise_sin:
+    return RValue::get(
+        emitUnaryBuiltin(*this, E, llvm::Intrinsic::sin, "elt.sin"));
+
   case Builtin::BI__builtin_elementwise_trunc:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::trunc, "elt.trunc"));
@@ -19637,6 +19644,9 @@ Value *CodeGenFunction::EmitLoongArchBuiltinExpr(unsigned BuiltinID,
     llvm_unreachable("unexpected builtin ID.");
   case LoongArch::BI__builtin_loongarch_dbar:
     ID = Intrinsic::loongarch_dbar;
+    break;
+  case LoongArch::BI__builtin_loongarch_crc_w_d_w:
+    ID = Intrinsic::loongarch_crc_w_d_w;
     break;
     // TODO: Support more Intrinsics.
   }

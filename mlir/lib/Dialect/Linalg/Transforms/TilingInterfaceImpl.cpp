@@ -88,10 +88,7 @@ struct LinalgOpTilingInterface
   /// Return the loop iterator type.
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     LinalgOpTy concreteOp = cast<LinalgOpTy>(op);
-    return llvm::to_vector(llvm::map_range(
-        concreteOp.getIteratorTypesArray(), [](StringRef iteratorType) {
-          return utils::symbolizeIteratorType(iteratorType).value();
-        }));
+    return concreteOp.getIteratorTypesArray();
   }
 
   /// Return the iteration domain range.
@@ -339,8 +336,9 @@ struct LinalgOpPartialReductionInterface
 
     // Step3. create a generic op where the reduction dimension is replaced by a
     // parallel dimension of the size of reduction.
-    SmallVector<StringRef> newIteratorTypes = linalgOp.getIteratorTypesArray();
-    newIteratorTypes[reductionDims[0]] = getParallelIteratorTypeName();
+    SmallVector<utils::IteratorType> newIteratorTypes =
+        linalgOp.getIteratorTypesArray();
+    newIteratorTypes[reductionDims[0]] = utils::IteratorType::parallel;
     SmallVector<AffineMap> newMaps = linalgOp.getIndexingMapsArray();
     newMaps.back() = AffineMap::get(newMaps.back().getNumDims(), 0, outputExpr,
                                     linalgOp.getContext());
@@ -366,14 +364,14 @@ struct LinalgOpPartialReductionInterface
     int64_t intermRank =
         partialReduce[0].getType().cast<ShapedType>().getRank();
     AffineMap inputMap = b.getMultiDimIdentityMap(intermRank);
-    SmallVector<StringRef> reductionIteratorTypes;
+    SmallVector<utils::IteratorType> reductionIteratorTypes;
     SmallVector<AffineExpr> exprs;
     for (int64_t i : llvm::seq<int64_t>(0, intermRank)) {
       if (dimToMerge == i) {
-        reductionIteratorTypes.push_back(getReductionIteratorTypeName());
+        reductionIteratorTypes.push_back(utils::IteratorType::reduction);
       } else {
         exprs.push_back(b.getAffineDimExpr(i));
-        reductionIteratorTypes.push_back(getParallelIteratorTypeName());
+        reductionIteratorTypes.push_back(utils::IteratorType::parallel);
       }
     }
     AffineMap outputMap =

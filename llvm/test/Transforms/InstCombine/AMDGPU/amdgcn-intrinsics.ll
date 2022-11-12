@@ -529,12 +529,30 @@ define i1 @test_class_isnan_f32(float %x) nounwind {
   ret i1 %val
 }
 
+define i1 @test_class_isnan_f32_strict(float %x) nounwind {
+; CHECK-LABEL: @test_class_isnan_f32_strict(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.amdgcn.class.f32(float [[X:%.*]], i32 3) #[[ATTR15:[0-9]+]]
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 3) strictfp
+  ret i1 %val
+}
+
 define i1 @test_class_is_p0_n0_f32(float %x) nounwind {
 ; CHECK-LABEL: @test_class_is_p0_n0_f32(
 ; CHECK-NEXT:    [[VAL:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 96)
+  ret i1 %val
+}
+
+define i1 @test_class_is_p0_n0_f32_strict(float %x) nounwind {
+; CHECK-LABEL: @test_class_is_p0_n0_f32_strict(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.amdgcn.class.f32(float [[X:%.*]], i32 96) #[[ATTR15]]
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 96) strictfp
   ret i1 %val
 }
 
@@ -1662,7 +1680,7 @@ define i64 @icmp_constant_inputs_false() {
 
 define i64 @icmp_constant_inputs_true() {
 ; CHECK-LABEL: @icmp_constant_inputs_true(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0:![0-9]+]]) #[[ATTR15:[0-9]+]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0:![0-9]+]]) #[[ATTR16:[0-9]+]]
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 9, i32 8, i32 34)
@@ -2369,7 +2387,7 @@ define i64 @fcmp_constant_inputs_false() {
 
 define i64 @fcmp_constant_inputs_true() {
 ; CHECK-LABEL: @fcmp_constant_inputs_true(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR15]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR16]]
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float 2.0, float 4.0, i32 4)
@@ -2411,7 +2429,7 @@ define i64 @ballot_zero_64() {
 
 define i64 @ballot_one_64() {
 ; CHECK-LABEL: @ballot_one_64(
-; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR15]]
+; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR16]]
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %b = call i64 @llvm.amdgcn.ballot.i64(i1 1)
@@ -2437,7 +2455,7 @@ define i32 @ballot_zero_32() {
 
 define i32 @ballot_one_32() {
 ; CHECK-LABEL: @ballot_one_32(
-; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.read_register.i32(metadata [[META1:![0-9]+]]) #[[ATTR15]]
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.read_register.i32(metadata [[META1:![0-9]+]]) #[[ATTR16]]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %b = call i32 @llvm.amdgcn.ballot.i32(i1 1)

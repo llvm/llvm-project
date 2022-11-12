@@ -66,6 +66,13 @@ public:
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
+
+  bool
+  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+                 StringRef CPU,
+                 const std::vector<std::string> &FeaturesVec) const override;
+
+  bool hasFeature(StringRef Feature) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY LoongArch32TargetInfo

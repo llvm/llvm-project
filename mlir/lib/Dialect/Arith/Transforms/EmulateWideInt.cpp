@@ -325,6 +325,81 @@ struct ConvertBitwiseBinary final : OpConversionPattern<BinaryOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertCmpI
+//===----------------------------------------------------------------------===//
+
+/// Returns the matching unsigned version of the given predicate `pred`, or the
+/// same predicate if `pred` is not a signed.
+static arith::CmpIPredicate toUnsignedPredicate(arith::CmpIPredicate pred) {
+  using P = arith::CmpIPredicate;
+  switch (pred) {
+  case P::sge:
+    return P::uge;
+  case P::sgt:
+    return P::ugt;
+  case P::sle:
+    return P::ule;
+  case P::slt:
+    return P::ult;
+  default:
+    return pred;
+  }
+}
+
+struct ConvertCmpI final : OpConversionPattern<arith::CmpIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto inputTy = getTypeConverter()
+                       ->convertType(op.getLhs().getType())
+                       .dyn_cast_or_null<VectorType>();
+    if (!inputTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {0}", op.getType()));
+
+    arith::CmpIPredicate highPred = adaptor.getPredicate();
+    arith::CmpIPredicate lowPred = toUnsignedPredicate(highPred);
+
+    auto [lhsElem0, lhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getLhs());
+    auto [rhsElem0, rhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getRhs());
+
+    Value lowCmp =
+        rewriter.create<arith::CmpIOp>(loc, lowPred, lhsElem0, rhsElem0);
+    Value highCmp =
+        rewriter.create<arith::CmpIOp>(loc, highPred, lhsElem1, rhsElem1);
+
+    Value cmpResult{};
+    switch (highPred) {
+    case arith::CmpIPredicate::eq: {
+      cmpResult = rewriter.create<arith::AndIOp>(loc, lowCmp, highCmp);
+      break;
+    }
+    case arith::CmpIPredicate::ne: {
+      cmpResult = rewriter.create<arith::OrIOp>(loc, lowCmp, highCmp);
+      break;
+    }
+    default: {
+      // Handle inequality checks.
+      Value highEq = rewriter.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::eq, lhsElem1, rhsElem1);
+      cmpResult =
+          rewriter.create<arith::SelectOp>(loc, highEq, lowCmp, highCmp);
+      break;
+    }
+    }
+
+    assert(cmpResult && "Unhandled case");
+    rewriter.replaceOp(op, dropTrailingX1Dim(rewriter, loc, cmpResult));
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertMulI
 //===----------------------------------------------------------------------===//
 
@@ -863,7 +938,7 @@ void arith::populateArithWideIntEmulationPatterns(
   // Populate `arith.*` conversion patterns.
   patterns.add<
       // Misc ops.
-      ConvertConstant, ConvertVectorPrint, ConvertSelect,
+      ConvertConstant, ConvertCmpI, ConvertSelect, ConvertVectorPrint,
       // Binary ops.
       ConvertAddI, ConvertMulI, ConvertShLI, ConvertShRUI,
       // Bitwise binary ops.

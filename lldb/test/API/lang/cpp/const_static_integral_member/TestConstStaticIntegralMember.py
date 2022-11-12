@@ -58,7 +58,7 @@ class TestCase(TestBase):
         # Test an unscoped enum.
         self.expect_expr("A::enum_val", result_value="enum_case2")
         # Test an unscoped enum with bool as the underlying type.
-        self.expect_expr("A::enum_bool_val", result_value="enum_bool_case2")
+        self.expect_expr("A::enum_bool_val", result_value="enum_bool_case1")
 
         # Test a scoped enum.
         self.expect_expr("A::scoped_enum_val", result_value="scoped_enum_case2")
