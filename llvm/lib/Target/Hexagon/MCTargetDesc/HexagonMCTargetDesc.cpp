@@ -297,7 +297,8 @@ llvm::MCInstrInfo *llvm::createHexagonMCInstrInfo() {
 
 static MCRegisterInfo *createHexagonMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitHexagonMCRegisterInfo(X, Hexagon::R31);
+  InitHexagonMCRegisterInfo(X, Hexagon::R31, /*DwarfFlavour=*/0,
+                            /*EHFlavour=*/0, /*PC=*/Hexagon::PC);
   return X;
 }
 
