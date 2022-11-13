@@ -2117,16 +2117,16 @@ bool RISCVDAGToDAGISel::selectSExti32(SDValue N, SDValue &Val) {
   return false;
 }
 
-bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
+bool RISCVDAGToDAGISel::selectZExtBits(SDValue N, unsigned Bits, SDValue &Val) {
   if (N.getOpcode() == ISD::AND) {
     auto *C = dyn_cast<ConstantSDNode>(N.getOperand(1));
-    if (C && C->getZExtValue() == UINT64_C(0xFFFFFFFF)) {
+    if (C && C->getZExtValue() == maskTrailingOnes<uint64_t>(Bits)) {
       Val = N.getOperand(0);
       return true;
     }
   }
   MVT VT = N.getSimpleValueType();
-  APInt Mask = APInt::getHighBitsSet(VT.getSizeInBits(), 32);
+  APInt Mask = APInt::getBitsSetFrom(VT.getSizeInBits(), Bits);
   if (CurDAG->MaskedValueIsZero(N, Mask)) {
     Val = N;
     return true;

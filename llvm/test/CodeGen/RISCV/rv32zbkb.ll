@@ -23,6 +23,24 @@ define i32 @pack_i32(i32 %a, i32 %b) nounwind {
   ret i32 %or
 }
 
+define i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
+; RV32I-LABEL: pack_i32_2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 16
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBKB-LABEL: pack_i32_2:
+; RV32ZBKB:       # %bb.0:
+; RV32ZBKB-NEXT:    pack a0, a0, a1
+; RV32ZBKB-NEXT:    ret
+  %zexta = zext i16 %a to i32
+  %zextb = zext i16 %b to i32
+  %shl1 = shl i32 %zextb, 16
+  %or = or i32 %shl1, %zexta
+  ret i32 %or
+}
+
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet any matching bit manipulation instructions on RV32.
 ; This test is presented here in case future expansions of the Bitmanip
@@ -36,6 +54,17 @@ define i64 @pack_i64(i64 %a, i64 %b) nounwind {
   %shl = and i64 %a, 4294967295
   %shl1 = shl i64 %b, 32
   %or = or i64 %shl1, %shl
+  ret i64 %or
+}
+
+define i64 @pack_i64_2(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: pack_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %zexta = zext i32 %a to i64
+  %zextb = zext i32 %b to i64
+  %shl1 = shl i64 %zextb, 32
+  %or = or i64 %shl1, %zexta
   ret i64 %or
 }
 
