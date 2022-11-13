@@ -2528,7 +2528,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS,
 // DecodeStatus'.)
 static void emitCheck(formatted_raw_ostream &OS) {
   OS << "static bool Check(DecodeStatus &Out, DecodeStatus In) {\n"
-     << "  Out = static_cast<DecodeStatus>(Out & In);"
+     << "  Out = static_cast<DecodeStatus>(Out & In);\n"
      << "  return Out != MCDisassembler::Fail;\n"
      << "}\n\n";
 }
@@ -2685,7 +2685,6 @@ void DecoderEmitter::run(raw_ostream &o) {
 
     // Print the table to the output stream.
     emitTable(OS, TableInfo.Table, 0, FC.getBitWidth(), Opc.first.first);
-    OS.flush();
   }
 
   // For variable instruction, we emit a instruction length table
