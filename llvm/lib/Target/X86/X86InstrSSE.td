@@ -8055,7 +8055,8 @@ let Predicates = [HasAVX2] in {
 
 multiclass GF2P8MULB_rm<string OpcodeStr, ValueType OpVT,
                         RegisterClass RC, PatFrag MemOpFrag,
-                        X86MemOperand X86MemOp, bit Is2Addr = 0> {
+                        X86MemOperand X86MemOp, X86FoldableSchedWrite sched,
+                        bit Is2Addr = 0> {
   let ExeDomain = SSEPackedInt,
       AsmString = !if(Is2Addr,
         OpcodeStr#"\t{$src2, $dst|$dst, $src2}",
@@ -8063,31 +8064,32 @@ multiclass GF2P8MULB_rm<string OpcodeStr, ValueType OpVT,
     let isCommutable = 1 in
     def rr : PDI<0xCF, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2), "",
                  [(set RC:$dst, (OpVT (X86GF2P8mulb RC:$src1, RC:$src2)))]>,
-             Sched<[SchedWriteVecALU.XMM]>, T8PD;
+             Sched<[sched]>, T8PD;
 
     def rm : PDI<0xCF, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, X86MemOp:$src2), "",
                  [(set RC:$dst, (OpVT (X86GF2P8mulb RC:$src1,
                                  (MemOpFrag addr:$src2))))]>,
-             Sched<[SchedWriteVecALU.XMM.Folded, SchedWriteVecALU.XMM.ReadAfterFold]>, T8PD;
+             Sched<[sched.Folded, sched.ReadAfterFold]>, T8PD;
   }
 }
 
 multiclass GF2P8AFFINE_rmi<bits<8> Op, string OpStr, ValueType OpVT,
                            SDNode OpNode, RegisterClass RC, PatFrag MemOpFrag,
-                           X86MemOperand X86MemOp, bit Is2Addr = 0> {
+                           X86MemOperand X86MemOp, X86FoldableSchedWrite sched,
+                           bit Is2Addr = 0> {
   let AsmString = !if(Is2Addr,
       OpStr#"\t{$src3, $src2, $dst|$dst, $src2, $src3}",
       OpStr#"\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}") in {
   def rri : Ii8<Op, MRMSrcReg, (outs RC:$dst),
               (ins RC:$src1, RC:$src2, u8imm:$src3), "",
               [(set RC:$dst, (OpVT (OpNode RC:$src1, RC:$src2, timm:$src3)))],
-              SSEPackedInt>, Sched<[SchedWriteVecIMul.XMM]>;
+              SSEPackedInt>, Sched<[sched]>;
   def rmi : Ii8<Op, MRMSrcMem, (outs RC:$dst),
               (ins RC:$src1, X86MemOp:$src2, u8imm:$src3), "",
               [(set RC:$dst, (OpVT (OpNode RC:$src1,
                                     (MemOpFrag addr:$src2),
                               timm:$src3)))], SSEPackedInt>,
-              Sched<[SchedWriteVecIMul.XMM.Folded, SchedWriteVecIMul.XMM.ReadAfterFold]>;
+              Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -8095,12 +8097,14 @@ multiclass GF2P8AFFINE_common<bits<8> Op, string OpStr, SDNode OpNode> {
   let Constraints = "$src1 = $dst",
       Predicates  = [HasGFNI, UseSSE2] in
   defm NAME         : GF2P8AFFINE_rmi<Op, OpStr, v16i8, OpNode,
-                                      VR128, load, i128mem, 1>;
+                                      VR128, load, i128mem, SchedWriteVecIMul.XMM, 1>;
   let Predicates  = [HasGFNI, HasAVX, NoVLX] in {
     defm V#NAME    : GF2P8AFFINE_rmi<Op, "v"#OpStr, v16i8, OpNode, VR128,
-                                      load, i128mem>, VEX_4V, VEX_W;
+                                     load, i128mem, SchedWriteVecIMul.XMM>,
+                                     VEX_4V, VEX_W;
     defm V#NAME#Y : GF2P8AFFINE_rmi<Op, "v"#OpStr, v32i8, OpNode, VR256,
-                                      load, i256mem>, VEX_4V, VEX_L, VEX_W;
+                                     load, i256mem, SchedWriteVecIMul.YMM>,
+                                     VEX_4V, VEX_L, VEX_W;
   }
 }
 
@@ -8108,12 +8112,12 @@ multiclass GF2P8AFFINE_common<bits<8> Op, string OpStr, SDNode OpNode> {
 let Constraints = "$src1 = $dst",
     Predicates  = [HasGFNI, UseSSE2] in
 defm GF2P8MULB      : GF2P8MULB_rm<"gf2p8mulb", v16i8, VR128, memop,
-                                    i128mem, 1>;
+                                    i128mem, SchedWriteVecALU.XMM, 1>;
 let Predicates  = [HasGFNI, HasAVX, NoVLX] in {
   defm VGF2P8MULB   : GF2P8MULB_rm<"vgf2p8mulb", v16i8, VR128, load,
-                                   i128mem>, VEX_4V;
+                                   i128mem, SchedWriteVecALU.XMM>, VEX_4V;
   defm VGF2P8MULBY  : GF2P8MULB_rm<"vgf2p8mulb", v32i8, VR256, load,
-                                   i256mem>, VEX_4V, VEX_L;
+                                   i256mem, SchedWriteVecALU.YMM>, VEX_4V, VEX_L;
 }
 // GF2P8AFFINEINVQB, GF2P8AFFINEQB
 let isCommutable = 0 in {
