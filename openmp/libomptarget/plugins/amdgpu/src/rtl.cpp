@@ -545,7 +545,7 @@ private:
 
 /// Class containing all the device information
 class RTLDeviceInfoTy : HSALifetime {
-  enum : uint8_t { NUM_QUEUES_PER_DEVICE = 4 };
+  enum : uint8_t { NUM_QUEUES_PER_DEVICE = 1 };
   std::vector<std::list<FuncOrGblEntryTy>> FuncGblEntries;
 
   struct QueueDeleter {
