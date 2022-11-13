@@ -393,11 +393,6 @@ bool HexagonRegisterInfo::shouldCoalesce(MachineInstr *MI,
 }
 
 
-unsigned HexagonRegisterInfo::getRARegister() const {
-  return Hexagon::R31;
-}
-
-
 Register HexagonRegisterInfo::getFrameRegister(const MachineFunction
                                                &MF) const {
   const HexagonFrameLowering *TFI = getFrameLowering(MF);
