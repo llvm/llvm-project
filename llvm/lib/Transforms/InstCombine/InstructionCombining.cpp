@@ -882,8 +882,6 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   }
 
   Instruction::BinaryOps Opcode = I.getOpcode();
-  SimplifyQuery Q = SQ.getWithInstruction(&I);
-
   Value *Cond, *True = nullptr, *False = nullptr;
 
   // Special-case for add/negate combination. Replace the zero in the negation
@@ -910,8 +908,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (LHSIsSelect && RHSIsSelect && A == D) {
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
-    True = simplifyBinOp(Opcode, B, E, FMF, Q);
-    False = simplifyBinOp(Opcode, C, F, FMF, Q);
+    True = simplifyBinOp(Opcode, B, E, FMF, SQ);
+    False = simplifyBinOp(Opcode, C, F, FMF, SQ);
 
     if (LHS->hasOneUse() && RHS->hasOneUse()) {
       if (False && !True)
@@ -919,18 +917,24 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
       else if (True && !False)
         False = Builder.CreateBinOp(Opcode, C, F);
     }
-  } else if (LHSIsSelect && LHS->hasOneUse()) {
+  } else if (LHSIsSelect) {
     // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
     Cond = A;
-    True = simplifyBinOp(Opcode, B, RHS, FMF, Q);
-    False = simplifyBinOp(Opcode, C, RHS, FMF, Q);
+    True = simplifyBinOp(Opcode, B, RHS, FMF, SQ);
+    False = simplifyBinOp(Opcode, C, RHS, FMF, SQ);
+    if (!LHS->hasOneUse() &&
+        (!True || !False || !isa<Constant>(True) || !isa<Constant>(False)))
+      return nullptr;
     if (Value *NewSel = foldAddNegate(B, C, RHS))
       return NewSel;
-  } else if (RHSIsSelect && RHS->hasOneUse()) {
+  } else if (RHSIsSelect) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
-    True = simplifyBinOp(Opcode, LHS, E, FMF, Q);
-    False = simplifyBinOp(Opcode, LHS, F, FMF, Q);
+    True = simplifyBinOp(Opcode, LHS, E, FMF, SQ);
+    False = simplifyBinOp(Opcode, LHS, F, FMF, SQ);
+    if (!RHS->hasOneUse() &&
+        (!True || !False || !isa<Constant>(True) || !isa<Constant>(False)))
+      return nullptr;
     if (Value *NewSel = foldAddNegate(E, F, LHS))
       return NewSel;
   }
