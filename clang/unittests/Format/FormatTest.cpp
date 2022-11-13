@@ -2132,6 +2132,10 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   verifyFormat("int *a = f1();", Style);
   verifyFormat("int &b = f2();", Style);
   verifyFormat("int &&c = f3();", Style);
+  verifyFormat("int f3() { return sizeof(Foo &); }", Style);
+  verifyFormat("int f4() { return sizeof(Foo &&); }", Style);
+  verifyFormat("void f5() { int f6(Foo &, Bar &); }", Style);
+  verifyFormat("void f5() { int f6(Foo &&, Bar &&); }", Style);
   verifyFormat("for (auto a = 0, b = 0; const auto &c : {1, 2, 3})", Style);
   verifyFormat("for (auto a = 0, b = 0; const int &c : {1, 2, 3})", Style);
   verifyFormat("for (auto a = 0, b = 0; const Foo &c : {1, 2, 3})", Style);
@@ -2171,6 +2175,10 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   verifyFormat("int* a = f1();", Style);
   verifyFormat("int& b = f2();", Style);
   verifyFormat("int&& c = f3();", Style);
+  verifyFormat("int f3() { return sizeof(Foo&); }", Style);
+  verifyFormat("int f4() { return sizeof(Foo&&); }", Style);
+  verifyFormat("void f5() { int f6(Foo&, Bar&); }", Style);
+  verifyFormat("void f5() { int f6(Foo&&, Bar&&); }", Style);
   verifyFormat("for (auto a = 0, b = 0; const auto& c : {1, 2, 3})", Style);
   verifyFormat("for (auto a = 0, b = 0; const int& c : {1, 2, 3})", Style);
   verifyFormat("for (auto a = 0, b = 0; const Foo& c : {1, 2, 3})", Style);
@@ -2211,6 +2219,10 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   verifyFormat("int *a = f1();", Style);
   verifyFormat("int& b = f2();", Style);
   verifyFormat("int&& c = f3();", Style);
+  verifyFormat("int f3() { return sizeof(Foo&); }", Style);
+  verifyFormat("int f4() { return sizeof(Foo&&); }", Style);
+  verifyFormat("void f5() { int f6(Foo&, Bar&); }", Style);
+  verifyFormat("void f5() { int f6(Foo&&, Bar&&); }", Style);
   verifyFormat("for (auto a = 0, b = 0; const Foo *c : {1, 2, 3})", Style);
   verifyFormat("for (int a = 0, b = 0; const Foo *c : {1, 2, 3})", Style);
   verifyFormat("for (int a = 0, b++; const Foo *c : {1, 2, 3})", Style);
@@ -2232,6 +2244,10 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   verifyFormat("int* a = f1();", Style);
   verifyFormat("int & b = f2();", Style);
   verifyFormat("int && c = f3();", Style);
+  verifyFormat("int f3() { return sizeof(Foo &); }", Style);
+  verifyFormat("int f4() { return sizeof(Foo &&); }", Style);
+  verifyFormat("void f5() { int f6(Foo &, Bar &); }", Style);
+  verifyFormat("void f5() { int f6(Foo &&, Bar &&); }", Style);
   verifyFormat("for (auto a = 0, b = 0; const auto & c : {1, 2, 3})", Style);
   verifyFormat("for (auto a = 0, b = 0; const int & c : {1, 2, 3})", Style);
   verifyFormat("for (auto a = 0, b = 0; const Foo & c : {1, 2, 3})", Style);
@@ -2268,6 +2284,10 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   verifyFormat("int * a = f1();", Style);
   verifyFormat("int &b = f2();", Style);
   verifyFormat("int &&c = f3();", Style);
+  verifyFormat("int f3() { return sizeof(Foo &); }", Style);
+  verifyFormat("int f4() { return sizeof(Foo &&); }", Style);
+  verifyFormat("void f5() { int f6(Foo &, Bar &); }", Style);
+  verifyFormat("void f5() { int f6(Foo &&, Bar &&); }", Style);
   verifyFormat("for (auto a = 0, b = 0; const Foo * c : {1, 2, 3})", Style);
   verifyFormat("for (int a = 0, b = 0; const Foo * c : {1, 2, 3})", Style);
   verifyFormat("for (int a = 0, b++; const Foo * c : {1, 2, 3})", Style);
@@ -9034,7 +9054,7 @@ TEST_F(FormatTest, AlignsStringLiterals) {
       "    \"looooooooooooooooooooooooooooooooooooooooooooooooong literal\");");
   verifyFormat("someFunction(\"Always break between multi-line\"\n"
                "             \" string literals\",\n"
-               "             and, other, parameters);");
+               "             also, other, parameters);");
   EXPECT_EQ("fun + \"1243\" /* comment */\n"
             "      \"5678\";",
             format("fun + \"1243\" /* comment */\n"

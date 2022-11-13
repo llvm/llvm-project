@@ -157,6 +157,24 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   Tokens = annotate("if (Foo* Bar = getObj())");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("int f3() { return sizeof(Foo&); }");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("int f4() { return sizeof(Foo&&); }");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::ampamp, TT_PointerOrReference);
+
+  Tokens = annotate("void f5() { int f6(Foo&, Bar&); }");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[12], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("void f7() { int f8(Foo&&, Bar&&); }");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::ampamp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[12], tok::ampamp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -1045,6 +1063,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
                     "A(T) noexcept;");
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
+  auto Tokens = annotate("void f [[noreturn]] ();");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+
+  Tokens = annotate("void f [[noreturn]] () {}");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {

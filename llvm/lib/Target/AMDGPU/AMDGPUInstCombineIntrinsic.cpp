@@ -379,6 +379,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_sqrt:
   case Intrinsic::amdgcn_rsq: {
     Value *Src = II.getArgOperand(0);
 

@@ -252,9 +252,9 @@ def Shifted32OnesMask : PatLeaf<(imm), [{
          Imm == UINT64_C(0xFFFFFFFF) << TrailingZeros;
 }], TrailingZeros>;
 
-def sh1add_op : ComplexPattern<XLenVT, 1, "selectSH1ADDOp", [], [], 6>;
-def sh2add_op : ComplexPattern<XLenVT, 1, "selectSH2ADDOp", [], [], 6>;
-def sh3add_op : ComplexPattern<XLenVT, 1, "selectSH3ADDOp", [], [], 6>;
+def sh1add_op : ComplexPattern<XLenVT, 1, "selectSHXADDOp<1>", [], [], 6>;
+def sh2add_op : ComplexPattern<XLenVT, 1, "selectSHXADDOp<2>", [], [], 6>;
+def sh3add_op : ComplexPattern<XLenVT, 1, "selectSHXADDOp<3>", [], [], 6>;
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates

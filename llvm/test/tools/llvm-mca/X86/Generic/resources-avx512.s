@@ -207,6 +207,16 @@ vcvtps2pd         %ymm16, %zmm19 {z}{k1}
 vcvtps2pd         (%rax), %zmm19 {z}{k1}
 vcvtps2pd         (%rax){1to8}, %zmm19 {z}{k1}
 
+vcvtsd2usi        %xmm0, %ecx
+vcvtsd2usi        %xmm0, %rcx
+vcvtsd2usi        (%rax), %ecx
+vcvtsd2usi        (%rax), %rcx
+
+vcvtss2usi        %xmm0, %ecx
+vcvtss2usi        %xmm0, %rcx
+vcvtss2usi        (%rax), %ecx
+vcvtss2usi        (%rax), %rcx
+
 vcvtps2udq        %zmm16, %zmm19
 vcvtps2udq        (%rax), %zmm19
 vcvtps2udq        (%rax){1to16}, %zmm19
@@ -227,6 +237,16 @@ vcvttps2udq       %zmm16, %zmm19 {z}{k1}
 vcvttps2udq       (%rax), %zmm19 {z}{k1}
 vcvttps2udq       (%rax){1to16}, %zmm19 {z}{k1}
 
+vcvttsd2usi       %xmm0, %ecx
+vcvttsd2usi       %xmm0, %rcx
+vcvttsd2usi       (%rax), %ecx
+vcvttsd2usi       (%rax), %rcx
+
+vcvttss2usi       %xmm0, %ecx
+vcvttss2usi       %xmm0, %rcx
+vcvttss2usi       (%rax), %ecx
+vcvttss2usi       (%rax), %rcx
+
 vcvtudq2pd        %ymm16, %zmm19
 vcvtudq2pd        (%rax), %zmm19
 vcvtudq2pd        (%rax){1to8}, %zmm19
@@ -246,6 +266,16 @@ vcvtudq2ps        (%rax){1to16}, %zmm19 {k1}
 vcvtudq2ps        %zmm16, %zmm19 {z}{k1}
 vcvtudq2ps        (%rax), %zmm19 {z}{k1}
 vcvtudq2ps        (%rax){1to16}, %zmm19 {z}{k1}
+
+vcvtusi2sdl       %ecx, %xmm0, %xmm2
+vcvtusi2sdq       %rcx, %xmm0, %xmm2
+vcvtusi2sdl       (%rax), %xmm0, %xmm2
+vcvtusi2sdq       (%rax), %xmm0, %xmm2
+
+vcvtusi2ssl       %ecx, %xmm0, %xmm2
+vcvtusi2ssq       %rcx, %xmm0, %xmm2
+vcvtusi2ssl       (%rax), %xmm0, %xmm2
+vcvtusi2ssq       (%rax), %xmm0, %xmm2
 
 vdivpd            %zmm16, %zmm17, %zmm19
 vdivpd            (%rax), %zmm17, %zmm19
@@ -1164,6 +1194,14 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  2      2     1.00                        vcvtps2pd	%ymm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      7     1.00    *                   vcvtps2pd	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      7     1.00    *                   vcvtps2pd	(%rax){1to8}, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      5     1.00                        vcvtsd2usi	%xmm0, %ecx
+# CHECK-NEXT:  2      5     1.00                        vcvtsd2usi	%xmm0, %rcx
+# CHECK-NEXT:  3      10    1.00    *                   vcvtsd2usi	(%rax), %ecx
+# CHECK-NEXT:  3      10    1.00    *                   vcvtsd2usi	(%rax), %rcx
+# CHECK-NEXT:  2      5     1.00                        vcvtss2usi	%xmm0, %ecx
+# CHECK-NEXT:  2      5     1.00                        vcvtss2usi	%xmm0, %rcx
+# CHECK-NEXT:  3      10    1.00    *                   vcvtss2usi	(%rax), %ecx
+# CHECK-NEXT:  3      10    1.00    *                   vcvtss2usi	(%rax), %rcx
 # CHECK-NEXT:  1      3     1.00                        vcvtps2udq	%zmm16, %zmm19
 # CHECK-NEXT:  2      10    1.00    *                   vcvtps2udq	(%rax), %zmm19
 # CHECK-NEXT:  2      10    1.00    *                   vcvtps2udq	(%rax){1to16}, %zmm19
@@ -1182,6 +1220,14 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      3     1.00                        vcvttps2udq	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vcvttps2udq	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vcvttps2udq	(%rax){1to16}, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      5     1.00                        vcvttsd2usi	%xmm0, %ecx
+# CHECK-NEXT:  2      5     1.00                        vcvttsd2usi	%xmm0, %rcx
+# CHECK-NEXT:  3      10    1.00    *                   vcvttsd2usi	(%rax), %ecx
+# CHECK-NEXT:  3      10    1.00    *                   vcvttsd2usi	(%rax), %rcx
+# CHECK-NEXT:  2      5     1.00                        vcvttss2usi	%xmm0, %ecx
+# CHECK-NEXT:  2      5     1.00                        vcvttss2usi	%xmm0, %rcx
+# CHECK-NEXT:  3      10    1.00    *                   vcvttss2usi	(%rax), %ecx
+# CHECK-NEXT:  3      10    1.00    *                   vcvttss2usi	(%rax), %rcx
 # CHECK-NEXT:  2      4     1.00                        vcvtudq2pd	%ymm16, %zmm19
 # CHECK-NEXT:  3      10    1.00    *                   vcvtudq2pd	(%rax), %zmm19
 # CHECK-NEXT:  3      10    1.00    *                   vcvtudq2pd	(%rax){1to8}, %zmm19
@@ -1200,6 +1246,14 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      3     1.00                        vcvtudq2ps	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vcvtudq2ps	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vcvtudq2ps	(%rax){1to16}, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      4     1.00                        vcvtusi2sd	%ecx, %xmm0, %xmm2
+# CHECK-NEXT:  2      4     1.00                        vcvtusi2sd	%rcx, %xmm0, %xmm2
+# CHECK-NEXT:  2      9     1.00    *                   vcvtusi2sdl	(%rax), %xmm0, %xmm2
+# CHECK-NEXT:  2      9     1.00    *                   vcvtusi2sdq	(%rax), %xmm0, %xmm2
+# CHECK-NEXT:  3      5     2.00                        vcvtusi2ss	%ecx, %xmm0, %xmm2
+# CHECK-NEXT:  3      5     2.00                        vcvtusi2ss	%rcx, %xmm0, %xmm2
+# CHECK-NEXT:  3      10    1.00    *                   vcvtusi2ssl	(%rax), %xmm0, %xmm2
+# CHECK-NEXT:  3      10    1.00    *                   vcvtusi2ssq	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  3      45    44.00                       vdivpd	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  4      52    44.00   *                   vdivpd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  4      52    44.00   *                   vdivpd	(%rax){1to8}, %zmm17, %zmm19
@@ -1857,7 +1911,7 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     1506.00 153.67 282.67 16.00 513.67 275.50 275.50
+# CHECK-NEXT:  -     1506.00 169.67 306.67 16.00 521.67 281.50 281.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -2041,6 +2095,14 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     1.00    -      -     1.00    -      -     vcvtps2pd	%ymm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vcvtps2pd	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vcvtps2pd	(%rax){1to8}, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -     vcvtsd2usi	%xmm0, %ecx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -     vcvtsd2usi	%xmm0, %rcx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   vcvtsd2usi	(%rax), %ecx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   vcvtsd2usi	(%rax), %rcx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -     vcvtss2usi	%xmm0, %ecx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -     vcvtss2usi	%xmm0, %rcx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   vcvtss2usi	(%rax), %ecx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   vcvtss2usi	(%rax), %rcx
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vcvtps2udq	%zmm16, %zmm19
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcvtps2udq	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcvtps2udq	(%rax){1to16}, %zmm19
@@ -2059,6 +2121,14 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vcvttps2udq	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcvttps2udq	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcvttps2udq	(%rax){1to16}, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -     vcvttsd2usi	%xmm0, %ecx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -     vcvttsd2usi	%xmm0, %rcx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   vcvttsd2usi	(%rax), %ecx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   vcvttsd2usi	(%rax), %rcx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -     vcvttss2usi	%xmm0, %ecx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -     vcvttss2usi	%xmm0, %rcx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   vcvttss2usi	(%rax), %ecx
+# CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   vcvttss2usi	(%rax), %rcx
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     vcvtudq2pd	%ymm16, %zmm19
 # CHECK-NEXT:  -      -      -     1.00    -     1.00   0.50   0.50   vcvtudq2pd	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -     1.00    -     1.00   0.50   0.50   vcvtudq2pd	(%rax){1to8}, %zmm19
@@ -2077,6 +2147,14 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vcvtudq2ps	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcvtudq2ps	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcvtudq2ps	(%rax){1to16}, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     vcvtusi2sd	%ecx, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     vcvtusi2sd	%rcx, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcvtusi2sdl	(%rax), %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcvtusi2sdq	(%rax), %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -     2.00    -      -     vcvtusi2ss	%ecx, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -     2.00    -      -     vcvtusi2ss	%rcx, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -     1.00   0.50   0.50   vcvtusi2ssl	(%rax), %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -     1.00   0.50   0.50   vcvtusi2ssq	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  -     44.00  2.50    -      -     0.50    -      -     vdivpd	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  -     44.00  2.50    -      -     0.50   0.50   0.50   vdivpd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -     44.00  2.50    -      -     0.50   0.50   0.50   vdivpd	(%rax){1to8}, %zmm17, %zmm19
