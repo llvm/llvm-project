@@ -58,7 +58,7 @@ HexagonRegisterInfo::HexagonRegisterInfo(unsigned HwMode)
                              0/*PC*/, HwMode) {}
 
 
-bool HexagonRegisterInfo::isEHReturnCalleeSaveReg(unsigned R) const {
+bool HexagonRegisterInfo::isEHReturnCalleeSaveReg(Register R) const {
   return R == Hexagon::R0 || R == Hexagon::R1 || R == Hexagon::R2 ||
          R == Hexagon::R3 || R == Hexagon::D0 || R == Hexagon::D1;
 }
@@ -386,8 +386,8 @@ bool HexagonRegisterInfo::shouldCoalesce(MachineInstr *MI,
   // If one register is large (HvxWR) and the other is small (HvxVR), then
   // coalescing is ok if the large is already live across a function call,
   // or if the small one is not.
-  unsigned SmallReg = SmallSrc ? SrcReg : DstReg;
-  unsigned LargeReg = SmallSrc ? DstReg : SrcReg;
+  Register SmallReg = SmallSrc ? SrcReg : DstReg;
+  Register LargeReg = SmallSrc ? DstReg : SrcReg;
   return  any_of(LIS.getInterval(LargeReg), HasCall) ||
          !any_of(LIS.getInterval(SmallReg), HasCall);
 }
@@ -402,12 +402,12 @@ Register HexagonRegisterInfo::getFrameRegister(const MachineFunction
 }
 
 
-unsigned HexagonRegisterInfo::getFrameRegister() const {
+Register HexagonRegisterInfo::getFrameRegister() const {
   return Hexagon::R30;
 }
 
 
-unsigned HexagonRegisterInfo::getStackRegister() const {
+Register HexagonRegisterInfo::getStackRegister() const {
   return Hexagon::R29;
 }
 
@@ -447,7 +447,7 @@ HexagonRegisterInfo::getPointerRegClass(const MachineFunction &MF,
   return &Hexagon::IntRegsRegClass;
 }
 
-unsigned HexagonRegisterInfo::getFirstCallerSavedNonParamReg() const {
+Register HexagonRegisterInfo::getFirstCallerSavedNonParamReg() const {
   return Hexagon::R6;
 }
 
