@@ -118,6 +118,9 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
       case RISCV::SEXT_B:
       case RISCV::SEXT_H:
       case RISCV::ZEXT_H_RV64:
+      case RISCV::PACK:
+      case RISCV::PACKH:
+      case RISCV::PACKW:
         break;
 
       // these overwrite higher input bits, otherwise the lower word of output
