@@ -345,7 +345,7 @@ public:
 
   /// HexagonInstrInfo specifics.
 
-  unsigned createVR(MachineFunction *MF, MVT VT) const;
+  Register createVR(MachineFunction *MF, MVT VT) const;
   MachineInstr *findLoopInstr(MachineBasicBlock *BB, unsigned EndLoopOp,
                               MachineBasicBlock *TargetBB,
                               SmallPtrSet<MachineBasicBlock *, 8> &Visited) const;
@@ -429,7 +429,7 @@ public:
                      const MachineInstr &ConsMI) const;
   bool producesStall(const MachineInstr &MI,
                      MachineBasicBlock::const_instr_iterator MII) const;
-  bool predCanBeUsedAsDotNew(const MachineInstr &MI, unsigned PredReg) const;
+  bool predCanBeUsedAsDotNew(const MachineInstr &MI, Register PredReg) const;
   bool PredOpcodeHasJMP_c(unsigned Opcode) const;
   bool predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const;
 
@@ -463,7 +463,7 @@ public:
   unsigned getMemAccessSize(const MachineInstr &MI) const;
   int getMinValue(const MachineInstr &MI) const;
   short getNonExtOpcode(const MachineInstr &MI) const;
-  bool getPredReg(ArrayRef<MachineOperand> Cond, unsigned &PredReg,
+  bool getPredReg(ArrayRef<MachineOperand> Cond, Register &PredReg,
                   unsigned &PredRegPos, unsigned &PredRegFlags) const;
   short getPseudoInstrPair(const MachineInstr &MI) const;
   short getRegForm(const MachineInstr &MI) const;
