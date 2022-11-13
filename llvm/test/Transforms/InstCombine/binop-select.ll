@@ -188,11 +188,13 @@ define i32 @and_sel_op0(i1 %b) {
   ret i32 %r
 }
 
+; extra use is ok
+
 define i32 @and_sel_op0_use(i1 %b) {
 ; CHECK-LABEL: @and_sel_op0_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 25, i32 0
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[S]], 1
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[B]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 25, i32 0
@@ -212,12 +214,14 @@ define i32 @mul_sel_op0(i1 %b, i32 %x) {
   ret i32 %r
 }
 
+; extra use is ok
+
 define i32 @mul_sel_op0_use(i1 %b, i32 %x) {
 ; CHECK-LABEL: @mul_sel_op0_use(
 ; CHECK-NEXT:    [[D:%.*]] = udiv exact i32 42, [[X:%.*]]
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 0, i32 [[D]]
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = mul i32 [[S]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B]], i32 0, i32 42
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %d = udiv exact i32 42, %x
@@ -238,11 +242,14 @@ define i32 @sub_sel_op1(i1 %b) {
   ret i32 %r
 }
 
+; extra use is ok (extra instruction caused by select canonicalization to zext (!b))
+
 define i32 @sub_sel_op1_use(i1 %b) {
 ; CHECK-LABEL: @sub_sel_op1_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 42, i32 41
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = sub nsw i32 42, [[S]]
+; CHECK-NEXT:    [[NOT_B:%.*]] = xor i1 [[B]], true
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NOT_B]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 42, i32 41
@@ -261,11 +268,13 @@ define float @fadd_sel_op0(i1 %b, float %x) {
   ret float %r
 }
 
+; extra use is ok
+
 define float @fadd_sel_op0_use(i1 %b, float %x) {
 ; CHECK-LABEL: @fadd_sel_op0_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], float 0xFFF0000000000000, float 0x7FF0000000000000
 ; CHECK-NEXT:    call void @use_f32(float [[S]])
-; CHECK-NEXT:    [[R:%.*]] = fadd nnan float [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select nnan i1 [[B]], float 0xFFF0000000000000, float 0x7FF0000000000000
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = select i1 %b, float 0xFFF0000000000000, float 0x7FF0000000000000
@@ -284,13 +293,13 @@ define <2 x half> @fmul_sel_op1(i1 %b, <2 x half> %p) {
   ret <2 x half> %r
 }
 
+; extra use is ok - poison allows simplifying
+
 define <2 x half> @fmul_sel_op1_use(i1 %b, <2 x half> %p) {
 ; CHECK-LABEL: @fmul_sel_op1_use(
-; CHECK-NEXT:    [[X:%.*]] = fadd <2 x half> [[P:%.*]], <half 0xH3C00, half 0xH4000>
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x half> zeroinitializer, <2 x half> <half 0xHFFFF, half 0xHFFFF>
 ; CHECK-NEXT:    call void @use_v2f16(<2 x half> [[S]])
-; CHECK-NEXT:    [[R:%.*]] = fmul nnan nsz <2 x half> [[X]], [[S]]
-; CHECK-NEXT:    ret <2 x half> [[R]]
+; CHECK-NEXT:    ret <2 x half> zeroinitializer
 ;
   %x = fadd <2 x half> %p, <half 1.0, half 2.0> ; thwart complexity-based canonicalization
   %s = select i1 %b, <2 x half> zeroinitializer, <2 x half> <half 0xHffff, half 0xHffff>
@@ -308,6 +317,8 @@ define i32 @ashr_sel_op1(i1 %b) {
   %r = ashr i32 -2, %s
   ret i32 %r
 }
+
+; TODO: SimplifySelectsFeedingBinaryOp() is not called for shifts; previous test reduced some other way.
 
 define i32 @ashr_sel_op1_use(i1 %b) {
 ; CHECK-LABEL: @ashr_sel_op1_use(
