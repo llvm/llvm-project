@@ -198,6 +198,7 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
       case RISCV::XORI:
 
       case RISCV::ANDN:
+      case RISCV::BREV8:
       case RISCV::CLMUL:
       case RISCV::ORC_B:
       case RISCV::ORN:
