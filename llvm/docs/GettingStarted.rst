@@ -156,6 +156,7 @@ Sub-Project  Required Sub-Directories Required CMake Options
 ============ ======================== ======================
 llvm         llvm, cmake, third-party LLVM_INSTALL_UTILS=ON
 clang        clang, cmake             CLANG_INCLUDE_TESTS=ON (Required for check-clang only)
+lld          lld, cmake
 ============ ======================== ======================
 
 

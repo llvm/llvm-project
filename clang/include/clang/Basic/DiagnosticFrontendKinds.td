@@ -86,9 +86,9 @@ def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
 def warn_fe_backend_unsupported : Warning<"%0">, BackendInfo;
 
 def err_fe_backend_error_attr :
-  Error<"call to %0 declared with 'error' attribute: %1">, BackendInfo;
+  Error<"call to '%0' declared with 'error' attribute: %1">, BackendInfo;
 def warn_fe_backend_warning_attr :
-  Warning<"call to %0 declared with 'warning' attribute: %1">, BackendInfo,
+  Warning<"call to '%0' declared with 'warning' attribute: %1">, BackendInfo,
   InGroup<BackendWarningAttributes>;
 
 def err_fe_invalid_code_complete_file : Error<
