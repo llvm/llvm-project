@@ -1144,6 +1144,8 @@ def ZnWriteCVTPD2PSr: SchedWriteRes<[ZnFPU3]> {
 }
 def ZnWriteCVTPD2PSYr: SchedWriteRes<[ZnFPU3]> {
   let Latency = 5;
+  let NumMicroOps = 2;
+  let ResourceCycles = [2];
 }
 
 // CVTPD2PS.
@@ -1154,10 +1156,8 @@ def : SchedAlias<WriteCvtPD2PSY, ZnWriteCVTPD2PSYr>;
 // z,z.
 defm : X86WriteResUnsupported<WriteCvtPD2PSZ>;
 
-def ZnWriteCVTPD2PSLd: SchedWriteRes<[ZnAGU,ZnFPU03]> {
+def ZnWriteCVTPD2PSLd: SchedWriteRes<[ZnAGU,ZnFPU3]> {
   let Latency = 11;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,2];
 }
 // x,m128.
 def : SchedAlias<WriteCvtPD2PSLd, ZnWriteCVTPD2PSLd>;
@@ -1165,6 +1165,8 @@ def : SchedAlias<WriteCvtPD2PSLd, ZnWriteCVTPD2PSLd>;
 // x,m256.
 def ZnWriteCVTPD2PSYLd : SchedWriteRes<[ZnAGU, ZnFPU3]> {
   let Latency = 11;
+  let NumMicroOps = 2;
+  let ResourceCycles = [1,2];
 }
 def : SchedAlias<WriteCvtPD2PSYLd, ZnWriteCVTPD2PSYLd>;
 // z,m512
