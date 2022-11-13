@@ -102,7 +102,7 @@ class BreakpointCommandTestCase(TestBase):
         self.runCmd("settings clear target.source-map")
         for path in invalid_paths:
             bkpt = target.BreakpointCreateByLocation(path, 2)
-            self.assertTrue(bkpt.GetNumLocations() == 0,
+            self.assertEqual(bkpt.GetNumLocations(), 0,
                 'Incorrectly resolved a breakpoint using full path "%s" with '
                 'debug info that has relative path with matching suffix' % (path))
 

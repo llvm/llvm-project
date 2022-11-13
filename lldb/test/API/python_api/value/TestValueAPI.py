@@ -158,10 +158,10 @@ class ValueAPITestCase(TestBase):
         self.assertFalse(lldb.value(frame0.FindVariable('bogus')))
         self.assertTrue(lldb.value(frame0.FindVariable('uinthex')))
 
-        self.assertTrue(int(lldb.value(frame0.FindVariable('uinthex')))
-                        == 3768803088, 'uinthex == 3768803088')
-        self.assertTrue(int(lldb.value(frame0.FindVariable('sinthex')))
-                        == -526164208, 'sinthex == -526164208')
+        self.assertEqual(int(lldb.value(frame0.FindVariable('uinthex'))),
+                         3768803088, 'uinthex == 3768803088')
+        self.assertEqual(int(lldb.value(frame0.FindVariable('sinthex'))),
+                         -526164208, 'sinthex == -526164208')
 
         # Check value_iter works correctly.
         for v in [
@@ -177,11 +177,9 @@ class ValueAPITestCase(TestBase):
             frame0.FindVariable('sinthex').GetValueAsUnsigned(), 3768803088,
             'unsigned sinthex == 3768803088')
 
-        self.assertTrue(
-            frame0.FindVariable('uinthex').GetValueAsSigned() == -
-            526164208,
+        self.assertEqual(
+            frame0.FindVariable('uinthex').GetValueAsSigned(), -526164208,
             'signed uinthex == -526164208')
-        self.assertTrue(
-            frame0.FindVariable('sinthex').GetValueAsSigned() == -
-            526164208,
+        self.assertEqual(
+            frame0.FindVariable('sinthex').GetValueAsSigned(), -526164208,
             'signed sinthex == -526164208')
