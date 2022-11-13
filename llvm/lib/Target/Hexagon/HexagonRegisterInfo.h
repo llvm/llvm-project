@@ -61,7 +61,6 @@ public:
         const TargetRegisterClass *NewRC, LiveIntervals &LIS) const override;
 
   // Debug information queries.
-  unsigned getRARegister() const;
   Register getFrameRegister(const MachineFunction &MF) const override;
   unsigned getFrameRegister() const;
   unsigned getStackRegister() const;
