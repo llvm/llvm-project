@@ -106,6 +106,7 @@ add_gen_header(
     .llvm-libc-types.clockid_t
     .llvm-libc-types.struct_tm
     .llvm-libc-types.struct_timespec
+    .llvm-libc-types.struct_timeval
 )
 
 add_gen_header(

@@ -66,6 +66,64 @@ body:             |
 
 ...
 ---
+name:            tbnzx_sge
+alignment:       4
+legalized:       true
+regBankSelected: true
+body:             |
+  ; CHECK-LABEL: name: tbnzx_sge
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
+  ; CHECK-NEXT:   TBZX %copy, 63, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  bb.0:
+    successors: %bb.0, %bb.1
+    liveins: $x0
+    %copy:gpr(s64) = COPY $x0
+    %zero:gpr(s64) = G_CONSTANT i64 0
+    %cmp:gpr(s32) = G_ICMP intpred(sge), %copy(s64), %zero
+    G_BRCOND %cmp, %bb.1
+    G_BR %bb.0
+  bb.1:
+    RET_ReallyLR
+
+...
+---
+name:            tbnzw_sge
+alignment:       4
+legalized:       true
+regBankSelected: true
+body:             |
+  ; CHECK-LABEL: name: tbnzw_sge
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:gpr32 = COPY $w0
+  ; CHECK-NEXT:   TBZW %copy, 31, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  bb.0:
+    successors: %bb.0, %bb.1
+    liveins: $x0
+    %copy:gpr(s32) = COPY $w0
+    %zero:gpr(s32) = G_CONSTANT i32 0
+    %cmp:gpr(s32) = G_ICMP intpred(sge), %copy(s32), %zero
+    G_BRCOND %cmp, %bb.1
+    G_BR %bb.0
+  bb.1:
+    RET_ReallyLR
+
+...
+---
 name:            no_tbnz_not_zero
 alignment:       4
 legalized:       true

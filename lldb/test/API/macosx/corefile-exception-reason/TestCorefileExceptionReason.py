@@ -39,4 +39,4 @@ class TestCorefileExceptionReason(TestBase):
             self.runCmd("bt")
             self.runCmd("fr v")
 
-        self.assertTrue(thread.GetStopDescription(256) == "ESR_EC_DABORT_EL0 (fault address: 0x0)")
+        self.assertEqual(thread.GetStopDescription(256), "ESR_EC_DABORT_EL0 (fault address: 0x0)")
