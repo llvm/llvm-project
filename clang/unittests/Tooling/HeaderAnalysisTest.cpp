@@ -50,15 +50,12 @@ TEST(HeaderAnalysisTest, IsSelfContained) {
   const auto &SM = AST.sourceManager();
   auto &FM = SM.getFileManager();
   auto &HI = AST.preprocessor().getHeaderSearchInfo();
-  auto getFileID = [&](llvm::StringRef FileName) {
-    return SM.translateFile(FM.getFile(FileName).get());
-  };
-  EXPECT_TRUE(isSelfContainedHeader(getFileID("headerguard.h"), SM, HI));
-  EXPECT_TRUE(isSelfContainedHeader(getFileID("pragmaonce.h"), SM, HI));
-  EXPECT_TRUE(isSelfContainedHeader(getFileID("imported.h"), SM, HI));
+  EXPECT_TRUE(isSelfContainedHeader(FM.getFile("headerguard.h").get(), SM, HI));
+  EXPECT_TRUE(isSelfContainedHeader(FM.getFile("pragmaonce.h").get(), SM, HI));
+  EXPECT_TRUE(isSelfContainedHeader(FM.getFile("imported.h").get(), SM, HI));
 
-  EXPECT_FALSE(isSelfContainedHeader(getFileID("unguarded.h"), SM, HI));
-  EXPECT_FALSE(isSelfContainedHeader(getFileID("bad.h"), SM, HI));
+  EXPECT_FALSE(isSelfContainedHeader(FM.getFile("unguarded.h").get(), SM, HI));
+  EXPECT_FALSE(isSelfContainedHeader(FM.getFile("bad.h").get(), SM, HI));
 }
 
 } // namespace
