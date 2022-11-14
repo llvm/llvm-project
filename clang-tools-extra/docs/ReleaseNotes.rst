@@ -171,6 +171,11 @@ Changes in existing checks
   :doc:`readability-simplify-boolean-expr <clang-tidy/checks/readability/simplify-boolean-expr>`
   when using a C++23 ``if consteval`` statement.
 
+- Change the behavior of :doc:`readability-const-return-type
+  <clang-tidy/checks/readability/const-return-type>` to not
+  warn about `const` return types in overridden functions since the derived
+  class cannot always choose to change the function signature.
+
 - Improved :doc:`misc-redundant-expression <clang-tidy/checks/misc/redundant-expression>`
   check.
 
