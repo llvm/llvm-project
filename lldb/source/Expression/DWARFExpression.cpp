@@ -887,10 +887,12 @@ bool DWARFExpression::Evaluate(
 
   Process *process = nullptr;
   StackFrame *frame = nullptr;
+  Target *target = nullptr;
 
   if (exe_ctx) {
     process = exe_ctx->GetProcessPtr();
     frame = exe_ctx->GetFramePtr();
+    target = exe_ctx->GetTargetPtr();
   }
   if (reg_ctx == nullptr && frame)
     reg_ctx = frame->GetRegisterContext().get();
@@ -949,9 +951,8 @@ bool DWARFExpression::Evaluate(
       stack.back().SetValueType(Value::ValueType::FileAddress);
       // Convert the file address to a load address, so subsequent
       // DWARF operators can operate on it.
-      if (frame)
-        stack.back().ConvertToLoadAddress(module_sp.get(),
-                                          frame->CalculateTarget().get());
+      if (target)
+        stack.back().ConvertToLoadAddress(module_sp.get(), target);
       break;
 
     // The DW_OP_addr_sect_offset4 is used for any location expressions in
