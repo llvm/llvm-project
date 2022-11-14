@@ -648,9 +648,8 @@ let Predicates = [HasStdExtZbkb, IsRV64] in {
 def : Pat<(i64 (or (and GPR:$rs1, 0x00000000FFFFFFFF), (shl GPR:$rs2, (i64 32)))),
           (PACK GPR:$rs1, GPR:$rs2)>;
 
-def : Pat<(i64 (sext_inreg (or (shl GPR:$rs2, (i64 16)),
+def : Pat<(binop_allwusers<or> (shl GPR:$rs2, (i64 16)),
                                (zexti16 GPR:$rs1)),
-                           i32)),
           (PACKW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i64 (or (sext_inreg (shl GPR:$rs2, (i64 16)), i32),
                    (zexti16 GPR:$rs1))),

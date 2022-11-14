@@ -2528,6 +2528,7 @@ bool RISCVDAGToDAGISel::doPeepholeSExtW(SDNode *N) {
   case RISCV::SUBW:
   case RISCV::MULW:
   case RISCV::SLLIW:
+  case RISCV::PACKW:
     // Result is already sign extended just remove the sext.w.
     // NOTE: We only handle the nodes that are selected with hasAllWUsers.
     ReplaceUses(N, N0.getNode());
