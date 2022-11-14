@@ -215,6 +215,10 @@ END_REGISTER_VP(vp_umin, VP_UMIN)
 BEGIN_REGISTER_VP(vp_umax, 2, 3, VP_UMAX, -1)
 VP_PROPERTY_BINARYOP
 END_REGISTER_VP(vp_umax, VP_UMAX)
+
+// llvm.vp.bswap(x,mask,vlen)
+BEGIN_REGISTER_VP(vp_bswap, 1, 2, VP_BSWAP, -1)
+END_REGISTER_VP(vp_bswap, VP_BSWAP)
 ///// } Integer Arithmetic
 
 ///// Floating-Point Arithmetic {
