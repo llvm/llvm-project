@@ -1066,7 +1066,7 @@ def ICXWriteResGroup57 : SchedWriteRes<[ICXPort1,ICXPort6,ICXPort0156]> {
 }
 def: InstRW<[ICXWriteResGroup57], (instregex "LAR(16|32|64)rr")>;
 
-def ICXWriteResGroup61 : SchedWriteRes<[ICXPort5,ICXPort015]> {
+def ICXWriteResGroup61 : SchedWriteRes<[ICXPort5,ICXPort01]> {
   let Latency = 5;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
@@ -1111,7 +1111,7 @@ def ICXWriteResGroup63 : SchedWriteRes<[ICXPort1,ICXPort6,ICXPort06]> {
 }
 def: InstRW<[ICXWriteResGroup63], (instregex "STR(16|32|64)r")>;
 
-def ICXWriteResGroup65 : SchedWriteRes<[ICXPort4,ICXPort237,ICXPort015]> {
+def ICXWriteResGroup65 : SchedWriteRes<[ICXPort4,ICXPort237,ICXPort01]> {
   let Latency = 5;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
@@ -1242,7 +1242,7 @@ def ICXWriteResGroup81 : SchedWriteRes<[ICXPort23,ICXPort0156]> {
 def: InstRW<[ICXWriteResGroup81], (instrs POP16r, POP32r, POP64r)>;
 def: InstRW<[ICXWriteResGroup81], (instregex "POP(16|32|64)rmr")>;
 
-def ICXWriteResGroup82 : SchedWriteRes<[ICXPort5,ICXPort015]> {
+def ICXWriteResGroup82 : SchedWriteRes<[ICXPort5,ICXPort01]> {
   let Latency = 6;
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
@@ -1319,7 +1319,7 @@ def: InstRW<[ICXWriteResGroup92], (instregex "VMOV(SD|SS)Zrm(b?)",
                                              "(V?)PACK(U|S)S(DW|WB)(Z128)?rm",
                                              "(V?)UNPCK(L|H)(PD|PS)(Z128)?rm")>;
 
-def ICXWriteResGroup93 : SchedWriteRes<[ICXPort5,ICXPort015]> {
+def ICXWriteResGroup93 : SchedWriteRes<[ICXPort5,ICXPort01]> {
   let Latency = 7;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
@@ -1422,7 +1422,7 @@ def ICXWriteResGroup99 : SchedWriteRes<[ICXPort23,ICXPort0156]> {
 def: InstRW<[ICXWriteResGroup99], (instrs LEAVE, LEAVE64,
                                           SCASB, SCASL, SCASQ, SCASW)>;
 
-def ICXWriteResGroup100 : SchedWriteRes<[ICXPort0,ICXPort5,ICXPort015]> {
+def ICXWriteResGroup100 : SchedWriteRes<[ICXPort0,ICXPort5,ICXPort01]> {
   let Latency = 7;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
@@ -1746,7 +1746,7 @@ def: InstRW<[ICXWriteResGroup136_2], (instregex "VCMP(PD|PS)Z128rm(b?)i",
                                                 "VPTESTNMQZ128rm(b?)",
                                                 "VPTESTNMWZ128rm(b?)")>;
 
-def ICXWriteResGroup137 : SchedWriteRes<[ICXPort23,ICXPort015]> {
+def ICXWriteResGroup137 : SchedWriteRes<[ICXPort23,ICXPort01]> {
   let Latency = 9;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
@@ -1813,7 +1813,7 @@ def: InstRW<[ICXWriteResGroup148_2], (instregex "VCMPPD(Z|Z256)rm(b?)i",
                                                 "VPTESTNM(B|D|Q|W)Z256rm(b?)",
                                                 "VPTESTNM(B|D|Q|W)Zrm(b?)")>;
 
-def ICXWriteResGroup149 : SchedWriteRes<[ICXPort23,ICXPort015]> {
+def ICXWriteResGroup149 : SchedWriteRes<[ICXPort23,ICXPort01]> {
   let Latency = 10;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
@@ -1878,7 +1878,7 @@ def ICXWriteResGroup160 : SchedWriteRes<[ICXPort0,ICXPort23]> {
 }
 def: InstRW<[ICXWriteResGroup160], (instregex "MUL_F(32|64)m")>;
 
-def ICXWriteResGroup161 : SchedWriteRes<[ICXPort23,ICXPort015]> {
+def ICXWriteResGroup161 : SchedWriteRes<[ICXPort23,ICXPort01]> {
   let Latency = 11;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
@@ -1919,7 +1919,7 @@ def ICXWriteResGroup164 : SchedWriteRes<[ICXPort0,ICXPort5,ICXPort23]> {
 }
 def: InstRW<[ICXWriteResGroup164], (instregex "(V?)CVTDQ2PDrm")>;
 
-def ICXWriteResGroup166 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort015]> {
+def ICXWriteResGroup166 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort01]> {
   let Latency = 11;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
@@ -1979,7 +1979,7 @@ def ICXWriteResGroup175 : SchedWriteRes<[ICXPort5,ICXPort23]> {
 }
 def: InstRW<[ICXWriteResGroup175], (instregex "VPERMWZ128rm(b?)")>;
 
-def ICXWriteResGroup176 : SchedWriteRes<[ICXPort0,ICXPort23,ICXPort015]> {
+def ICXWriteResGroup176 : SchedWriteRes<[ICXPort0,ICXPort23,ICXPort01]> {
   let Latency = 12;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
@@ -1987,7 +1987,7 @@ def ICXWriteResGroup176 : SchedWriteRes<[ICXPort0,ICXPort23,ICXPort015]> {
 def: InstRW<[ICXWriteResGroup176], (instregex "VCVT(T?)SD2USIZrm(b?)",
                                               "VCVT(T?)SS2USI64Zrm(b?)")>;
 
-def ICXWriteResGroup177 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort015]> {
+def ICXWriteResGroup177 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort01]> {
   let Latency = 12;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
@@ -2026,7 +2026,7 @@ def ICXWriteResGroup187 : SchedWriteRes<[ICXPort0,ICXPort5,ICXPort23]> {
 }
 def: InstRW<[ICXWriteResGroup187], (instregex "MUL_FI(16|32)m")>;
 
-def ICXWriteResGroup188 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort015]> {
+def ICXWriteResGroup188 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort01]> {
   let Latency = 14;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
