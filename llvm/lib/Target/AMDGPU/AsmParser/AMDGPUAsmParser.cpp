@@ -1690,6 +1690,7 @@ private:
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
   bool validateExeczVcczOperands(const OperandVector &Operands);
+  bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   Optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
@@ -4595,6 +4596,21 @@ bool AMDGPUAsmParser::validateExeczVcczOperands(const OperandVector &Operands) {
   return true;
 }
 
+bool AMDGPUAsmParser::validateTFE(const MCInst &Inst,
+                                  const OperandVector &Operands) {
+  const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
+  if (Desc.mayStore() &&
+      (Desc.TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))) {
+    SMLoc Loc = getImmLoc(AMDGPUOperand::ImmTyTFE, Operands);
+    if (Loc != getInstLoc(Operands)) {
+      Error(Loc, "TFE modifier has no meaning for store instructions");
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
@@ -4708,6 +4724,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateExeczVcczOperands(Operands)) {
+    return false;
+  }
+  if (!validateTFE(Inst, Operands)) {
     return false;
   }
 

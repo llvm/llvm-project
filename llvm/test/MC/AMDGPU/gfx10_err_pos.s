@@ -1349,3 +1349,11 @@ v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PRESERV
 // CHECK: error: not a valid operand.
 // CHECK-NEXT:{{^}}v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
 // CHECK-NEXT:{{^}}                           ^
+
+//==============================================================================
+// TFE modifier has no meaning for store instructions
+
+buffer_store_dword v[1:2], off, s[12:15], s4 tfe
+// CHECK: error: TFE modifier has no meaning for store instructions
+// CHECK-NEXT:{{^}}buffer_store_dword v[1:2], off, s[12:15], s4 tfe
+// CHECK-NEXT:{{^}}                                             ^
