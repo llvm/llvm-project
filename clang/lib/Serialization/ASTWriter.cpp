@@ -1511,12 +1511,14 @@ namespace  {
 
 /// An input file.
 struct InputFileEntry {
-  const FileEntry *File;
+  FileEntryRef File;
   bool IsSystemFile;
   bool IsTransient;
   bool BufferOverridden;
   bool IsTopLevelModuleMap;
   uint32_t ContentHash[2];
+
+  InputFileEntry(FileEntryRef File) : File(File) {}
 };
 
 } // namespace
@@ -1573,8 +1575,7 @@ void ASTWriter::WriteInputFiles(
       continue;
     }
 
-    InputFileEntry Entry;
-    Entry.File = Cache->OrigEntry;
+    InputFileEntry Entry(*Cache->OrigEntry);
     Entry.IsSystemFile = isSystem(File.getFileCharacteristic());
     Entry.IsTransient = Cache->IsTransient;
     Entry.BufferOverridden = Cache->BufferOverridden;
@@ -1589,9 +1590,8 @@ void ASTWriter::WriteInputFiles(
       if (MemBuff)
         ContentHash = hash_value(MemBuff->getBuffer());
       else
-        // FIXME: The path should be taken from the FileEntryRef.
         PP->Diag(SourceLocation(), diag::err_module_unable_to_hash_content)
-            << Entry.File->getName();
+            << Entry.File.getName();
     }
     auto CH = llvm::APInt(64, ContentHash);
     Entry.ContentHash[0] =
@@ -1631,14 +1631,13 @@ void ASTWriter::WriteInputFiles(
       RecordData::value_type Record[] = {
           INPUT_FILE,
           InputFileOffsets.size(),
-          (uint64_t)Entry.File->getSize(),
+          (uint64_t)Entry.File.getSize(),
           (uint64_t)getTimestampForOutput(Entry.File),
           Entry.BufferOverridden,
           Entry.IsTransient,
           Entry.IsTopLevelModuleMap};
 
-      // FIXME: The path should be taken from the FileEntryRef.
-      EmitRecordWithPath(IFAbbrevCode, Record, Entry.File->getName());
+      EmitRecordWithPath(IFAbbrevCode, Record, Entry.File.getName());
     }
 
     // Emit content hash for this file.
