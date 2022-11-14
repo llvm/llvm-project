@@ -845,6 +845,10 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   // induction variable satisfies some constraint.
 
   const SCEVAddRecExpr *IndVarBase = cast<SCEVAddRecExpr>(LeftSCEV);
+  if (IndVarBase->getLoop() != &L) {
+    FailureReason = "LHS in cmp is not an AddRec for this loop";
+    return None;
+  }
   if (!IndVarBase->isAffine()) {
     FailureReason = "LHS in icmp not induction variable";
     return None;
