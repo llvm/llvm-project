@@ -1061,7 +1061,7 @@ def fir_BoxTypeCodeOp : fir_SimpleOneResultOp<"box_typecode", [NoMemoryEffect]>
     Returns the descriptor type code of an entity of `box` type.
 
     ```mlir
-      %1 = fir.box_type %0 : (!fir.box<T>) -> i32
+      %1 = fir.box_typecode %0 : (!fir.box<T>) -> i32
     ```
   }];
 
