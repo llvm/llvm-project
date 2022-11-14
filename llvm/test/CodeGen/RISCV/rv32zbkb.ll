@@ -105,23 +105,6 @@ define i64 @pack_i64_3(ptr %0, ptr %1) {
   ret i64 %8
 }
 
-; As we are not matching directly i64 code patterns on RV32 some i64 patterns
-; don't have yet any matching bit manipulation instructions on RV32.
-; This test is presented here in case future expansions of the Bitmanip
-; extensions introduce instructions suitable for this pattern.
-
-define i64 @packu_i64(i64 %a, i64 %b) nounwind {
-; CHECK-LABEL: packu_i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    mv a1, a3
-; CHECK-NEXT:    ret
-  %shr = lshr i64 %a, 32
-  %shr1 = and i64 %b, -4294967296
-  %or = or i64 %shr1, %shr
-  ret i64 %or
-}
-
 define i32 @packh_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: packh_i32:
 ; RV32I:       # %bb.0:
