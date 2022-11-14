@@ -41,6 +41,28 @@ define signext i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
   ret i32 %or
 }
 
+; Test case where we don't have a sign_extend_inreg after the or.
+define signext i32 @pack_i32_3(i16 zeroext %0, i16 zeroext %1, i32 signext %2) {
+; RV64I-LABEL: pack_i32_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 16
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a2
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: pack_i32_3:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    packw a0, a1, a0
+; RV64ZBKB-NEXT:    addw a0, a0, a2
+; RV64ZBKB-NEXT:    ret
+  %4 = zext i16 %0 to i32
+  %5 = shl nuw i32 %4, 16
+  %6 = zext i16 %1 to i32
+  %7 = or i32 %5, %6
+  %8 = add i32 %7, %2
+  ret i32 %8
+}
+
 define i64 @pack_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: pack_i64:
 ; RV64I:       # %bb.0:
