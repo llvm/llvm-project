@@ -1857,6 +1857,31 @@ void CheckHelper::Check(const Scope &scope) {
     if (scope.kind() == Scope::Kind::BlockData) {
       CheckBlockData(scope);
     }
+    if (auto name{scope.GetName()}) {
+      auto iter{scope.find(*name)};
+      if (iter != scope.end()) {
+        const char *kind{nullptr};
+        switch (scope.kind()) {
+        case Scope::Kind::Module:
+          kind = scope.symbol()->get<ModuleDetails>().isSubmodule()
+              ? "submodule"
+              : "module";
+          break;
+        case Scope::Kind::MainProgram:
+          kind = "main program";
+          break;
+        case Scope::Kind::BlockData:
+          kind = "BLOCK DATA subprogram";
+          break;
+        default:;
+        }
+        if (kind) {
+          messages_.Say(iter->second->name(),
+              "Name '%s' declared in a %s should not have the same name as the %s"_port_en_US,
+              *name, kind, kind);
+        }
+      }
+    }
     CheckGenericOps(scope);
   }
 }
