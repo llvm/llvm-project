@@ -1462,15 +1462,6 @@ private:
                                            StringRef FirstSeparator,
                                            StringRef Separator);
 
-  /// Gets (if variable with the given name already exist) or creates
-  /// internal global variable with the specified Name. The created variable has
-  /// linkage CommonLinkage by default and is initialized by null value.
-  /// \param Ty Type of the global variable. If it is exist already the type
-  /// must be the same.
-  /// \param Name Name of the variable.
-  Constant *getOrCreateOMPInternalVariable(Type *Ty, const Twine &Name,
-                                           unsigned AddressSpace = 0);
-
   /// Returns corresponding lock object for the specified critical region
   /// name. If the lock object does not exist it is created, otherwise the
   /// reference to the existing copy is returned.
@@ -1726,6 +1717,15 @@ public:
   void
   loadOffloadInfoMetadata(Module &M,
                           OffloadEntriesInfoManager &OffloadEntriesInfoManager);
+
+  /// Gets (if variable with the given name already exist) or creates
+  /// internal global variable with the specified Name. The created variable has
+  /// linkage CommonLinkage by default and is initialized by null value.
+  /// \param Ty Type of the global variable. If it is exist already the type
+  /// must be the same.
+  /// \param Name Name of the variable.
+  GlobalVariable *getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
+                                              unsigned AddressSpace = 0);
 };
 
 /// Data structure to contain the information needed to uniquely identify
