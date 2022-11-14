@@ -2338,8 +2338,7 @@ public:
   /// Visit all the top-level module maps loaded when building the given module
   /// file.
   void visitTopLevelModuleMaps(serialization::ModuleFile &MF,
-                               llvm::function_ref<
-                                   void(const FileEntry *)> Visitor);
+                               llvm::function_ref<void(FileEntryRef)> Visitor);
 
   bool isProcessingUpdateRecords() { return ProcessingUpdateRecords; }
 };

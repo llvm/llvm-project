@@ -237,7 +237,7 @@ private:
       llvm::function_ref<void(CompilerInvocation &)> Optimize) const;
 
   /// Collect module map files for given modules.
-  llvm::StringSet<>
+  llvm::DenseSet<const FileEntry *>
   collectModuleMapFiles(ArrayRef<ModuleID> ClangModuleDeps) const;
 
   /// Add module map files to the invocation, if needed.
