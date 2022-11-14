@@ -2631,8 +2631,8 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
                     *targetProcDesignator, context);
                 targetName = targetProcDesignator->GetName();
               } else if (targetSymbol) {
-                // proc that's not a call
                 if (IsProcedure(*targetSymbol)) {
+                  // proc that's not a call
                   targetProc = characteristics::Procedure::Characterize(
                       *targetSymbol, context);
                 }
@@ -2693,6 +2693,11 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
                   for (SymbolRef ref : symbols) {
                     msg = AttachDeclaration(msg, *ref);
                   }
+                } else if (HasVectorSubscript(*targetExpr) ||
+                    ExtractCoarrayRef(*targetExpr)) {
+                  context.messages().Say(targetArg->sourceLocation(),
+                      "TARGET= argument '%s' may not have a vector subscript or coindexing"_err_en_US,
+                      targetExpr->AsFortran());
                 }
                 if (const auto pointerType{pointerArg->GetType()}) {
                   if (const auto targetType{targetArg->GetType()}) {
