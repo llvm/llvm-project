@@ -127,7 +127,6 @@ public:
     assert(size == permSize && "size mismatch");
     for (uint64_t i = 0; i < permSize; ++i)
       out[i] = values[perm[i]];
-    return out;
   }
 
 private:
