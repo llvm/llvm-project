@@ -26,7 +26,7 @@ body: |
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
     ; GFX7-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; GFX7-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
-    ; GFX7-NEXT: [[BUFFER_LOAD_DWORDX3_ADDR64_:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, implicit $exec :: (load (<3 x s32>), align 4, addrspace 1)
+    ; GFX7-NEXT: [[BUFFER_LOAD_DWORDX3_ADDR64_:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (load (<3 x s32>), align 4, addrspace 1)
     ; GFX7-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUFFER_LOAD_DWORDX3_ADDR64_]]
     ; GFX7-FLAT-LABEL: name: load_global_v3s32
     ; GFX7-FLAT: liveins: $vgpr0_vgpr1
