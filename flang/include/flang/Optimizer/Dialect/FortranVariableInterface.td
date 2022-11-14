@@ -74,7 +74,10 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     /// Get the sequence type or scalar value type corresponding to this
     /// variable.
     mlir::Type getElementOrSequenceType() {
-      return fir::unwrapPassByRefType(fir::unwrapRefType(getBase().getType()));
+      mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getBase().getType()));
+      if (auto boxCharType = type.dyn_cast<fir::BoxCharType>())
+        return boxCharType.getEleTy();
+      return type;
     }
 
     /// Get the scalar value type corresponding to this variable.
@@ -135,27 +138,22 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Is this variable represented as a fir.box or fir.class address ?
     bool isBoxAddress() {
-      mlir::Type type = getBase().getType();
-      return fir::isa_ref_type(type) &&
-         fir::unwrapRefType(type).isa<fir::BaseBoxType>();
+      return fir::isBoxAddress(getBase().getType());
     }
 
     /// Is this variable represented as the value or address of a fir.box or
     /// fir.class ?
     bool isBox() {
-      return fir::unwrapRefType(getBase().getType()).isa<fir::BaseBoxType>();
+      return fir::isBoxAddressOrValue(getBase().getType());
     }
 
-    /// Interface verifier imlementation.
-    mlir::LogicalResult verifyImpl();
+    /// Interface verifier imlementation for declare operations
+    mlir::LogicalResult verifyDeclareLikeOpImpl(mlir::Value memRef);
 
   }];
 
   let cppNamespace = "fir";
 
-  let verify = [{
-    return ::mlir::cast<::fir::FortranVariableOpInterface>($_op).verifyImpl();
-  }];
 }
 
 #endif  // FORTRANVARIABLEINTERFACE
