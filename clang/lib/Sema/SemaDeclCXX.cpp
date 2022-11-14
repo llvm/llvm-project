@@ -4691,10 +4691,10 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
 }
 
 // Create a static_cast\<T&&>(expr).
-static Expr *CastForMoving(Sema &SemaRef, Expr *E, QualType T = QualType()) {
-  if (T.isNull()) T = E->getType();
-  QualType TargetType = SemaRef.BuildReferenceType(
-      T, /*SpelledAsLValue*/false, SourceLocation(), DeclarationName());
+static Expr *CastForMoving(Sema &SemaRef, Expr *E) {
+  QualType TargetType =
+      SemaRef.BuildReferenceType(E->getType(), /*SpelledAsLValue*/ false,
+                                 SourceLocation(), DeclarationName());
   SourceLocation ExprLoc = E->getBeginLoc();
   TypeSourceInfo *TargetLoc = SemaRef.Context.getTrivialTypeSourceInfo(
       TargetType, ExprLoc);
