@@ -9815,6 +9815,7 @@ td_library(
     srcs = [
         "include/mlir/Dialect/Bufferization/IR/BufferizationBase.td",
         "include/mlir/Dialect/Bufferization/IR/BufferizationOps.td",
+        "include/mlir/Dialect/Bufferization/IR/BufferizationEnums.td",
     ],
     includes = ["include"],
     deps = [
@@ -9850,6 +9851,24 @@ gentbl_cc_library(
     deps = [":BufferizationOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "BufferizationEnumsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/Bufferization/IR/BufferizationEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/Bufferization/IR/BufferizationEnums.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Bufferization/IR/BufferizationEnums.td",
+    deps = [":BufferizationOpsTdFiles"],
+)
+
 td_library(
     name = "BufferizationTransformOpsTdFiles",
     srcs = [
@@ -9859,6 +9878,7 @@ td_library(
     deps = [
         ":PDLDialectTdFiles",
         ":TransformDialectTdFiles",
+        ":BufferizationOpsTdFiles",
     ],
 )
 
@@ -9946,6 +9966,7 @@ cc_library(
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationBaseIncGen",
         ":BufferizationOpsIncGen",
+        ":BufferizationEnumsIncGen",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
         ":DestinationStyleOpInterface",
