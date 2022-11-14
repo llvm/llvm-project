@@ -199,3 +199,26 @@ define zeroext i16 @packh_i16(i8 zeroext %a, i8 zeroext %b) nounwind {
   %or = or i16 %shl, %zext
   ret i16 %or
 }
+
+define zeroext i16 @packh_i16_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2) {
+; RV64I-LABEL: packh_i16_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: packh_i16_2:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    add a0, a1, a0
+; RV64ZBKB-NEXT:    packh a0, a2, a0
+; RV64ZBKB-NEXT:    ret
+  %4 = add i8 %1, %0
+  %5 = zext i8 %4 to i16
+  %6 = shl i16 %5, 8
+  %7 = zext i8 %2 to i16
+  %8 = or i16 %6, %7
+  ret i16 %8
+}
