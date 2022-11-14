@@ -2036,9 +2036,9 @@ void BinaryContext::renameSection(BinarySection &Section,
   deregisterSectionName(Section);
 
   Section.Name = NewName.str();
-  Section.setOutputName(NewName);
+  Section.setOutputName(Section.Name);
 
-  NameToSection.insert(std::make_pair(NewName.str(), &Section));
+  NameToSection.insert(std::make_pair(Section.Name, &Section));
 
   // Reinsert with the new name.
   Sections.insert(&Section);
