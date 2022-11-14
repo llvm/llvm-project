@@ -194,6 +194,11 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   if (MF.getSubtarget<HexagonSubtarget>().hasReservedR19())
     Reserved.set(Hexagon::R19);
 
+  Register AP =
+      MF.getInfo<HexagonMachineFunctionInfo>()->getStackAlignBaseReg();
+  if (AP.isValid())
+    Reserved.set(AP);
+
   for (int x = Reserved.find_first(); x >= 0; x = Reserved.find_next(x))
     markSuperRegs(Reserved, x);
 
