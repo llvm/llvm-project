@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/FileUtilities.h"
-#include "mlir/Support/LLVM.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/LLVM.h"
 
 using namespace mlir;
 
