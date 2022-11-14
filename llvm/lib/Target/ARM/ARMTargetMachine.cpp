@@ -426,8 +426,12 @@ void ARMPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
   // Run the parallel DSP pass.
-  if (getOptLevel() == CodeGenOpt::Aggressive) 
+  if (getOptLevel() == CodeGenOpt::Aggressive)
     addPass(createARMParallelDSPPass());
+
+  // Match complex arithmetic patterns
+  if (TM->getOptLevel() >= CodeGenOpt::Default)
+    addPass(createComplexDeinterleavingPass(TM));
 
   // Match interleaved memory accesses to ldN/stN intrinsics.
   if (TM->getOptLevel() != CodeGenOpt::None)

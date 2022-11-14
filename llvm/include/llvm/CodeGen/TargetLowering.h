@@ -27,6 +27,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LowLevelType.h"
@@ -3101,6 +3102,26 @@ public:
   /// from min(max(fptoi)) saturation patterns.
   virtual bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const {
     return isOperationLegalOrCustom(Op, VT);
+  }
+
+  /// Does this target support complex deinterleaving
+  virtual bool isComplexDeinterleavingSupported() const { return false; }
+
+  /// Does this target support complex deinterleaving with the given operation
+  /// and type
+  virtual bool isComplexDeinterleavingOperationSupported(
+      ComplexDeinterleavingOperation Operation, Type *Ty) const {
+    return false;
+  }
+
+  /// Create the IR node for the given complex deinterleaving operation.
+  /// If one cannot be created using all the given inputs, nullptr should be
+  /// returned.
+  virtual Value *createComplexDeinterleavingIR(
+      Instruction *I, ComplexDeinterleavingOperation OperationType,
+      ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
+      Value *Accumulator = nullptr) const {
+    return nullptr;
   }
 
   //===--------------------------------------------------------------------===//
