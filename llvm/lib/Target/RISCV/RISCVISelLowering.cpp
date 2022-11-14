@@ -1847,17 +1847,32 @@ static SDValue getAllOnesMask(MVT VecVT, SDValue VL, SDLoc DL,
   return DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
 }
 
+static SDValue getVLOp(uint64_t NumElts, SDLoc DL, SelectionDAG &DAG,
+                       const RISCVSubtarget &Subtarget) {
+  return DAG.getConstant(NumElts, DL, Subtarget.getXLenVT());
+}
+
+static std::pair<SDValue, SDValue>
+getDefaultVLOps(uint64_t NumElts, MVT ContainerVT, SDLoc DL, SelectionDAG &DAG,
+                const RISCVSubtarget &Subtarget) {
+  assert(ContainerVT.isScalableVector() && "Expecting scalable container type");
+  SDValue VL = getVLOp(NumElts, DL, DAG, Subtarget);
+  SDValue Mask = getAllOnesMask(ContainerVT, VL, DL, DAG);
+  return {Mask, VL};
+}
+
 // Gets the two common "VL" operands: an all-ones mask and the vector length.
 // VecVT is a vector type, either fixed-length or scalable, and ContainerVT is
 // the vector type that it is contained in.
 static std::pair<SDValue, SDValue>
 getDefaultVLOps(MVT VecVT, MVT ContainerVT, SDLoc DL, SelectionDAG &DAG,
                 const RISCVSubtarget &Subtarget) {
+  if (VecVT.isFixedLengthVector())
+    return getDefaultVLOps(VecVT.getVectorNumElements(), ContainerVT, DL, DAG,
+                           Subtarget);
   assert(ContainerVT.isScalableVector() && "Expecting scalable container type");
   MVT XLenVT = Subtarget.getXLenVT();
-  SDValue VL = VecVT.isFixedLengthVector()
-                   ? DAG.getConstant(VecVT.getVectorNumElements(), DL, XLenVT)
-                   : DAG.getRegister(RISCV::X0, XLenVT);
+  SDValue VL = DAG.getRegister(RISCV::X0, XLenVT);
   SDValue Mask = getAllOnesMask(ContainerVT, VL, DL, DAG);
   return {Mask, VL};
 }
@@ -5115,8 +5130,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   // If the index is 0, the vector is already in the right position.
   if (!isNullConstant(Idx)) {
     // Use a VL of 1 to avoid processing more elements than we need.
-    SDValue VL = DAG.getConstant(1, DL, XLenVT);
-    SDValue Mask = getAllOnesMask(ContainerVT, VL, DL, DAG);
+    auto [Mask, VL] = getDefaultVLOps(1, ContainerVT, DL, DAG, Subtarget);
     Vec = DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
                       DAG.getUNDEF(ContainerVT), Vec, Idx, Mask, VL);
   }
@@ -5486,7 +5500,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MVT VT = Op->getSimpleValueType(0);
     MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
-    SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+    SDValue VL = getVLOp(VT.getVectorNumElements(), DL, DAG, Subtarget);
     SDValue IntID = DAG.getTargetConstant(VlsegInts[NF - 2], DL, XLenVT);
     auto *Load = cast<MemIntrinsicSDNode>(Op);
     SmallVector<EVT, 9> ContainerVTs(NF, ContainerVT);
@@ -5932,7 +5946,7 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     // Set the vector length to only the number of elements we care about. Note
     // that for slideup this includes the offset.
     SDValue VL =
-        DAG.getConstant(OrigIdx + SubVecVT.getVectorNumElements(), DL, XLenVT);
+        getVLOp(OrigIdx + SubVecVT.getVectorNumElements(), DL, DAG, Subtarget);
     SDValue SlideupAmt = DAG.getConstant(OrigIdx, DL, XLenVT);
     SDValue Slideup = DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, ContainerVT, Vec,
                                   SubVec, SlideupAmt, Mask, VL);
@@ -6078,7 +6092,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
         getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget).first;
     // Set the vector length to only the number of elements we care about. This
     // avoids sliding down elements we're going to discard straight away.
-    SDValue VL = DAG.getConstant(SubVecVT.getVectorNumElements(), DL, XLenVT);
+    SDValue VL = getVLOp(SubVecVT.getVectorNumElements(), DL, DAG, Subtarget);
     SDValue SlidedownAmt = DAG.getConstant(OrigIdx, DL, XLenVT);
     SDValue Slidedown =
         DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
@@ -6220,7 +6234,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   // Calculate VLMAX-1 for the desired SEW.
   unsigned MinElts = VecVT.getVectorMinNumElements();
   SDValue VLMax = DAG.getNode(ISD::VSCALE, DL, XLenVT,
-                              DAG.getConstant(MinElts, DL, XLenVT));
+                              getVLOp(MinElts, DL, DAG, Subtarget));
   SDValue VLMinus1 =
       DAG.getNode(ISD::SUB, DL, XLenVT, VLMax, DAG.getConstant(1, DL, XLenVT));
 
@@ -6252,7 +6266,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
 
   unsigned MinElts = VecVT.getVectorMinNumElements();
   SDValue VLMax = DAG.getNode(ISD::VSCALE, DL, XLenVT,
-                              DAG.getConstant(MinElts, DL, XLenVT));
+                              getVLOp(MinElts, DL, DAG, Subtarget));
 
   int64_t ImmValue = cast<ConstantSDNode>(Op.getOperand(2))->getSExtValue();
   SDValue DownOffset, UpOffset;
@@ -6292,7 +6306,7 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
   MVT XLenVT = Subtarget.getXLenVT();
   MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
-  SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+  SDValue VL = getVLOp(VT.getVectorNumElements(), DL, DAG, Subtarget);
 
   bool IsMaskOp = VT.getVectorElementType() == MVT::i1;
   SDValue IntID = DAG.getTargetConstant(
@@ -6336,7 +6350,7 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
 
   MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
-  SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+  SDValue VL = getVLOp(VT.getVectorNumElements(), DL, DAG, Subtarget);
 
   SDValue NewValue =
       convertToScalableVector(ContainerVT, StoreVal, DAG, Subtarget);
@@ -6482,11 +6496,9 @@ RISCVTargetLowering::lowerFixedLengthVectorSetccToRVV(SDValue Op,
       convertToScalableVector(ContainerVT, Op.getOperand(1), DAG, Subtarget);
 
   SDLoc DL(Op);
-  SDValue VL =
-      DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
-
+  auto [Mask, VL] = getDefaultVLOps(VT.getVectorNumElements(), ContainerVT, DL,
+                                    DAG, Subtarget);
   MVT MaskVT = getMaskTypeFor(ContainerVT);
-  SDValue Mask = getAllOnesMask(ContainerVT, VL, DL, DAG);
 
   SDValue Cmp =
       DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT,
@@ -7720,8 +7732,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     MVT XLenVT = Subtarget.getXLenVT();
 
     // Use a VL of 1 to avoid processing more elements than we need.
-    SDValue VL = DAG.getConstant(1, DL, XLenVT);
-    SDValue Mask = getAllOnesMask(ContainerVT, VL, DL, DAG);
+    auto [Mask, VL] = getDefaultVLOps(1, ContainerVT, DL, DAG, Subtarget);
 
     // Unless the index is known to be 0, we must slide the vector down to get
     // the desired element into index 0.
@@ -7783,8 +7794,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
       // To extract the upper XLEN bits of the vector element, shift the first
       // element right by 32 bits and re-extract the lower XLEN bits.
-      SDValue VL = DAG.getConstant(1, DL, XLenVT);
-      SDValue Mask = getAllOnesMask(VecVT, VL, DL, DAG);
+      auto [Mask, VL] = getDefaultVLOps(1, VecVT, DL, DAG, Subtarget);
 
       SDValue ThirtyTwoV =
           DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, DAG.getUNDEF(VecVT),
