@@ -220,13 +220,9 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
 
 // This function returns true if the machine instruction always outputs a value
 // where bits 63:32 match bit 31.
-// Alternatively, if the instruction can be converted to W variant
-// (e.g. ADD->ADDW) and all of its uses only use the lower word of its output,
-// then return true and add the instr to FixableDef to be convereted later
 // TODO: Allocate a bit in TSFlags for the W instructions?
 // TODO: Add other W instructions.
-static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
-                               SmallPtrSetImpl<MachineInstr *> &FixableDef) {
+static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI) {
   switch (MI.getOpcode()) {
   case RISCV::LUI:
   case RISCV::LW:
@@ -286,13 +282,8 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
     return MI.getOperand(2).getImm() > 32;
   // The LI pattern ADDI rd, X0, imm is sign extended.
   case RISCV::ADDI:
-    if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0)
+    return MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0;
       return true;
-    if (hasAllWUsers(MI, MRI)) {
-      // transform to ADDIW
-      FixableDef.insert(&MI);
-      return true;
-    }
     return false;
   // An ANDI with an 11 bit immediate will zero bits 63:11.
   case RISCV::ANDI:
@@ -304,23 +295,6 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
   case RISCV::COPY:
     return MI.getOperand(1).getReg() == RISCV::X0;
 
-  // With these opcode, we can "fix" them with the W-version
-  // if we know all users of the result only rely on bits 31:0
-  case RISCV::SLLI:
-    // SLLIW reads the lowest 5 bits, while SLLI reads lowest 6 bits
-    if (MI.getOperand(2).getImm() >= 32)
-      return false;
-    [[fallthrough]];
-  case RISCV::ADD:
-  case RISCV::LD:
-  case RISCV::LWU:
-  case RISCV::MUL:
-  case RISCV::SUB:
-    if (hasAllWUsers(MI, MRI)) {
-      FixableDef.insert(&MI);
-      return true;
-    }
-    break;
   }
 
   return false;
@@ -342,7 +316,7 @@ static bool isSignExtendedW(MachineInstr &OrigMI, MachineRegisterInfo &MRI,
       continue;
 
     // If this is a sign extending operation we don't need to look any further.
-    if (isSignExtendingOpW(*MI, MRI, FixableDef))
+    if (isSignExtendingOpW(*MI, MRI))
       continue;
 
     // Is this an instruction that propagates sign extend?
@@ -444,6 +418,25 @@ static bool isSignExtendedW(MachineInstr &OrigMI, MachineRegisterInfo &MRI,
 
       break;
     }
+
+    // With these opcode, we can "fix" them with the W-version
+    // if we know all users of the result only rely on bits 31:0
+    case RISCV::SLLI:
+      // SLLIW reads the lowest 5 bits, while SLLI reads lowest 6 bits
+      if (MI->getOperand(2).getImm() >= 32)
+        return false;
+      [[fallthrough]];
+    case RISCV::ADDI:
+    case RISCV::ADD:
+    case RISCV::LD:
+    case RISCV::LWU:
+    case RISCV::MUL:
+    case RISCV::SUB:
+      if (hasAllWUsers(*MI, MRI)) {
+        FixableDef.insert(MI);
+        break;
+      }
+      return false;
     }
   }
 
