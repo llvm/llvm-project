@@ -306,19 +306,16 @@ class ScriptedThread(metaclass=ABCMeta):
         """ Get the list of stack frames for the scripted thread.
 
         ```
-        class ScriptedStackFrame:
-            def __init__(idx, cfa, pc, symbol_ctx):
-                self.idx = idx
-                self.cfa = cfa
-                self.pc = pc
-                self.symbol_ctx = symbol_ctx
+        scripted_frame = {
+            idx = 0,
+            pc = 0xbadc0ffee
+        }
         ```
 
         Returns:
-            List[ScriptedFrame]: A list of `ScriptedStackFrame`
-                containing for each entry, the frame index, the canonical
-                frame address, the program counter value for that frame
-                and a symbol context.
+            List[scripted_frame]: A list of `scripted_frame` dictionaries
+                containing at least for each entry, the frame index and
+                the program counter value for that frame.
                 The list can be empty.
         """
         return self.frames
