@@ -212,7 +212,7 @@ define zeroext i16 @packh_i16_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2) {
 ;
 ; RV64ZBKB-LABEL: packh_i16_2:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    add a0, a1, a0
+; RV64ZBKB-NEXT:    addw a0, a1, a0
 ; RV64ZBKB-NEXT:    packh a0, a2, a0
 ; RV64ZBKB-NEXT:    ret
   %4 = add i8 %1, %0
@@ -221,4 +221,48 @@ define zeroext i16 @packh_i16_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2) {
   %7 = zext i8 %2 to i16
   %8 = or i16 %6, %7
   ret i16 %8
+}
+
+define i64 @pack_i64_allWUsers(i32 signext %0, i32 signext %1, i32 signext %2) {
+; RV64I-LABEL: pack_i64_allWUsers:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addw a0, a1, a0
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    slli a1, a2, 32
+; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: pack_i64_allWUsers:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    addw a0, a1, a0
+; RV64ZBKB-NEXT:    pack a0, a2, a0
+; RV64ZBKB-NEXT:    ret
+  %4 = add i32 %1, %0
+  %5 = zext i32 %4 to i64
+  %6 = shl i64 %5, 32
+  %7 = zext i32 %2 to i64
+  %8 = or i64 %6, %7
+  ret i64 %8
+}
+
+define signext i32 @pack_i32_allWUsers(i16 zeroext %0, i16 zeroext %1, i16 zeroext %2) {
+; RV64I-LABEL: pack_i32_allWUsers:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addw a0, a1, a0
+; RV64I-NEXT:    slliw a0, a0, 16
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: pack_i32_allWUsers:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    addw a0, a1, a0
+; RV64ZBKB-NEXT:    packw a0, a2, a0
+; RV64ZBKB-NEXT:    ret
+  %4 = add i16 %1, %0
+  %5 = zext i16 %4 to i32
+  %6 = shl i32 %5, 16
+  %7 = zext i16 %2 to i32
+  %8 = or i32 %6, %7
+  ret i32 %8
 }

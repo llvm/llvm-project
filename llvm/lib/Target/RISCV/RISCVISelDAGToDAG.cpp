@@ -2323,6 +2323,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
       break;
     }
     case RISCV::SEXT_B:
+    case RISCV::PACKH:
       if (Bits < 8)
         return false;
       break;
@@ -2330,7 +2331,12 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
     case RISCV::FMV_H_X:
     case RISCV::ZEXT_H_RV32:
     case RISCV::ZEXT_H_RV64:
+    case RISCV::PACKW:
       if (Bits < 16)
+        return false;
+      break;
+    case RISCV::PACK:
+      if (Bits < (Subtarget->getXLen() / 2))
         return false;
       break;
     case RISCV::ADD_UW:
