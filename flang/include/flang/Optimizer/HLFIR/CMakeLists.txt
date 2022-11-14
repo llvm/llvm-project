@@ -10,4 +10,7 @@ set(LLVM_TARGET_DEFINITIONS HLFIROps.td)
 mlir_tablegen(HLFIROps.h.inc -gen-op-decls)
 mlir_tablegen(HLFIROps.cpp.inc -gen-op-defs)
 
+set(LLVM_TARGET_DEFINITIONS Passes.td)
+mlir_tablegen(Passes.h.inc -gen-pass-decls -name HLFIR)
+
 add_public_tablegen_target(HLFIROpsIncGen)
