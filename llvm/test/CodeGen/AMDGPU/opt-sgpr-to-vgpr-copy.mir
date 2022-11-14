@@ -115,7 +115,7 @@ body:             |
   ; GCN-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_3]], %subreg.sub0, killed [[S_MOV_B32_2]], %subreg.sub1
   ; GCN-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub1_sub2_sub3_sub4_sub5, killed [[REG_SEQUENCE3]], %subreg.sub1_sub2_sub3_sub4_sub5_sub6
   ; GCN-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_1]], [[V_LSHL_B64_e64_]], killed [[REG_SEQUENCE4]], 0, 0, 0, 0, 0, implicit $exec
+  ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_1]], [[V_LSHL_B64_e64_]], killed [[REG_SEQUENCE4]], 0, 0, 0, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.bb2:
   ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -158,7 +158,7 @@ body:             |
     %28 = REG_SEQUENCE %6, 17, killed %27, 18
     %29 = V_MOV_B32_e32 0, implicit $exec
     %30 = COPY %24
-    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
     SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -257,7 +257,7 @@ body:             |
   ; GCN-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub1_sub2_sub3_sub4_sub5, killed [[REG_SEQUENCE4]], %subreg.sub1_sub2_sub3_sub4_sub5_sub6
   ; GCN-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_LSHL_B64_]]
-  ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_2]], killed [[COPY3]], killed [[REG_SEQUENCE5]], 0, 0, 0, 0, 0, implicit $exec
+  ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_2]], killed [[COPY3]], killed [[REG_SEQUENCE5]], 0, 0, 0, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.bb2:
   ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -308,7 +308,7 @@ body:             |
     %37 = REG_SEQUENCE %6, 17, killed %36, 18
     %38 = V_MOV_B32_e32 0, implicit $exec
     %39 = COPY %33
-    BUFFER_STORE_DWORD_ADDR64 killed %38, killed %39, killed %37, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %38, killed %39, killed %37, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
     SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -389,7 +389,7 @@ body:             |
   ; GCN-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; GCN-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub1_sub2_sub3_sub4_sub5, killed [[REG_SEQUENCE2]], %subreg.sub1_sub2_sub3_sub4_sub5_sub6
   ; GCN-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_1]], [[V_LSHL_B64_e64_]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, 0, implicit $exec
+  ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_1]], [[V_LSHL_B64_e64_]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.bb2:
   ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -432,7 +432,7 @@ body:             |
     %28 = REG_SEQUENCE %6, 17, killed %27, 18
     %29 = V_MOV_B32_e32 0, implicit $exec
     %30 = COPY %24
-    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
     SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec

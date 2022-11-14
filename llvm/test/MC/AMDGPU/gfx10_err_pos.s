@@ -830,10 +830,10 @@ v_div_fmas_f32 v5, s3, s4, v3
 //==============================================================================
 // invalid operand for instruction
 
-buffer_load_dword v5, off, s[8:11], s3 tfe lds
+buffer_load_dword v[5:6], off, s[8:11], s3 tfe lds
 // CHECK: error: invalid operand for instruction
-// CHECK-NEXT:{{^}}buffer_load_dword v5, off, s[8:11], s3 tfe lds
-// CHECK-NEXT:{{^}}                                           ^
+// CHECK-NEXT:{{^}}buffer_load_dword v[5:6], off, s[8:11], s3 tfe lds
+// CHECK-NEXT:{{^}}                                               ^
 
 exp mrt0 0x12345678, v0, v0, v0
 // CHECK: error: invalid operand for instruction
