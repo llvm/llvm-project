@@ -227,7 +227,7 @@ struct Z {
 // CHECK-SPELLING: 69:3 CXXConstructor=A:69:3 (default constructor) Extent=[69:3 - 69:6] Spelling=A ([69:3 - 69:4])
 // CHECK-SPELLING: 70:11 CXXDestructor=~A:70:11 (virtual) Extent=[70:3 - 70:15] Spelling=~A ([70:11 - 70:13])
 // CHECK-SPELLING: 73:6 CXXMethod=operator=:73:6 (copy-assignment operator) Extent=[73:3 - 73:25] Spelling=operator= ([73:6 - 73:15])
-// CHECK-SPELLING: 74:6 CXXMethod=operator=:74:6 (noexcept) Extent=[74:3 - 74:29] Spelling=operator= ([74:6 - 74:15])
+// CHECK-SPELLING: 74:6 CXXMethod=operator=:74:6 (move-assignment operator) (noexcept) Extent=[74:3 - 74:29] Spelling=operator= ([74:6 - 74:15])
 // CHECK-SPELLING: 77:8 CXXMethod=operator+:77:8 (const) Extent=[77:3 - 77:25] Spelling=operator+ ([77:8 - 77:17])
 // CHECK-SPELLING: 78:8 CXXMethod=operator-:78:8 (const) Extent=[78:3 - 78:25] Spelling=operator- ([78:8 - 78:17])
 // CHECK-SPELLING: 79:8 CXXMethod=operator~:79:8 (const) Extent=[79:3 - 79:25] Spelling=operator~ ([79:8 - 79:17])
