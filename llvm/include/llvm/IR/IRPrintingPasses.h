@@ -58,13 +58,11 @@ class PrintModulePass : public PassInfoMixin<PrintModulePass> {
   raw_ostream &OS;
   std::string Banner;
   bool ShouldPreserveUseListOrder;
-  bool EmitSummaryIndex;
 
 public:
   PrintModulePass();
   PrintModulePass(raw_ostream &OS, const std::string &Banner = "",
-                  bool ShouldPreserveUseListOrder = false,
-                  bool EmitSummaryIndex = false);
+                  bool ShouldPreserveUseListOrder = false);
 
   PreservedAnalyses run(Module &M, AnalysisManager<Module> &);
   static bool isRequired() { return true; }
