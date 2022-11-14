@@ -70,6 +70,10 @@ public:
                                          ~static_cast<uintptr_t>(1));
   }
 
+  /// Runs the given callback under the session lock, passing in the associated
+  /// ResourceKey. This is the safe way to associate resources with trackers.
+  template <typename Func> Error withResourceKeyDo(Func &&F);
+
   /// Remove all resources associated with this key.
   Error remove();
 
@@ -530,8 +534,11 @@ public:
   ///        emitted or notified of an error.
   ~MaterializationResponsibility();
 
-  /// Returns the ResourceTracker for this instance.
-  template <typename Func> Error withResourceKeyDo(Func &&F) const;
+  /// Runs the given callback under the session lock, passing in the associated
+  /// ResourceKey. This is the safe way to associate resources with trackers.
+  template <typename Func> Error withResourceKeyDo(Func &&F) const {
+    return RT->withResourceKeyDo(std::forward<Func>(F));
+  }
 
   /// Returns the target JITDylib that these symbols are being materialized
   ///        into.
@@ -1770,19 +1777,18 @@ private:
       JITDispatchHandlers;
 };
 
+template <typename Func> Error ResourceTracker::withResourceKeyDo(Func &&F) {
+  return getJITDylib().getExecutionSession().runSessionLocked([&]() -> Error {
+    if (isDefunct())
+      return make_error<ResourceTrackerDefunct>(this);
+    F(getKeyUnsafe());
+    return Error::success();
+  });
+}
+
 inline ExecutionSession &
 MaterializationResponsibility::getExecutionSession() const {
   return JD.getExecutionSession();
-}
-
-template <typename Func>
-Error MaterializationResponsibility::withResourceKeyDo(Func &&F) const {
-  return JD.getExecutionSession().runSessionLocked([&]() -> Error {
-    if (RT->isDefunct())
-      return make_error<ResourceTrackerDefunct>(RT);
-    F(RT->getKeyUnsafe());
-    return Error::success();
-  });
 }
 
 template <typename GeneratorT>
