@@ -85,7 +85,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
       return fir::unwrapSequenceType(getElementOrSequenceType());
     }
 
-    /// Is the variable an array ?
+    /// Is the variable an array?
     bool isArray() {
       return getElementOrSequenceType().isa<fir::SequenceType>();
     }
@@ -101,26 +101,33 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
       return 0;
     }
 
-    /// Is this variable a Fortran pointer ?
+    /// Is this variable a Fortran pointer?
     bool isPointer() {
       auto attrs = getFortranAttrs();
       return attrs && bitEnumContainsAny(*attrs,
                         fir::FortranVariableFlagsEnum::pointer);
     }
 
-    /// Is this variable a Fortran allocatable ?
+    /// Is this variable a Fortran allocatable?
     bool isAllocatable() {
       auto attrs = getFortranAttrs();
       return attrs && bitEnumContainsAny(*attrs,
                         fir::FortranVariableFlagsEnum::allocatable);
     }
 
-    /// Is this a Fortran character variable ?
+    /// Is this variable a Fortran optional?
+    bool isOptional() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::optional);
+    }
+
+    /// Is this a Fortran character variable?
     bool isCharacter() {
       return getElementType().isa<fir::CharacterType>();
     }
 
-    /// Is this a Fortran character variable with an explicit length ?
+    /// Is this a Fortran character variable with an explicit length?
     bool hasExplicitCharLen() {
       return isCharacter() && !getExplicitTypeParams().empty();
     }
@@ -131,23 +138,23 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
       return getExplicitTypeParams()[0];
     }
 
-    /// Is this variable represented as a fir.box or fir.class value ?
+    /// Is this variable represented as a fir.box or fir.class value?
     bool isBoxValue() {
       return getBase().getType().isa<fir::BaseBoxType>();
     }
 
-    /// Is this variable represented as a fir.box or fir.class address ?
+    /// Is this variable represented as a fir.box or fir.class address?
     bool isBoxAddress() {
       return fir::isBoxAddress(getBase().getType());
     }
 
     /// Is this variable represented as the value or address of a fir.box or
-    /// fir.class ?
+    /// fir.class?
     bool isBox() {
       return fir::isBoxAddressOrValue(getBase().getType());
     }
 
-    /// Interface verifier imlementation for declare operations
+    /// Interface verifier imlementation for declare operations.
     mlir::LogicalResult verifyDeclareLikeOpImpl(mlir::Value memRef);
 
   }];
