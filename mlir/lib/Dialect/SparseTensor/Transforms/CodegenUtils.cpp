@@ -577,10 +577,10 @@ void SparseTensorLoopEmitter::exitCoIterationLoop(
   }
 
   // Reduction value from users.
-  for (unsigned i = 0, e = reduc.size(); i < e; i++) {
-    operands.push_back(reduc[i]);
+  for (auto &i : reduc) {
+    operands.push_back(i);
     // In place update reduction variable.
-    reduc[i] = whileOp->getResult(o++);
+    i = whileOp->getResult(o++);
   }
 
   // An (optional) universal index.
