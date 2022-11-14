@@ -2512,10 +2512,7 @@ static void print_completion_result(CXTranslationUnit translation_unit,
                                     unsigned index,
                                     FILE *file) {
   CXCompletionResult *completion_result = completion_results->Results + index;
-  CXString ks =
-      completion_result->CursorKind == CXCursor_NotImplemented
-          ? clang_getCompletionResultKindSpelling(completion_result->ResultKind)
-          : clang_getCursorKindSpelling(completion_result->CursorKind);
+  CXString ks = clang_getCursorKindSpelling(completion_result->CursorKind);
   unsigned annotationCount;
   enum CXCursorKind ParentKind;
   CXString ParentName;
