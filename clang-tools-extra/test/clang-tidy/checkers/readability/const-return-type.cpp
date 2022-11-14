@@ -279,12 +279,21 @@ public:
   // CHECK-NOT-FIXES: virtual int getC() = 0;
 };
 
-class PVDerive : public PVBase {
+class NVDerive : public PVBase {
 public:
-  const int getC() { return 1; }
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const int' is 'const'-qualified at the top level, which may reduce code readability without improving const correctness
-  // CHECK-NOT-FIXES: int getC() { return 1; }
+  // Don't warn about overridden methods, because it may be impossible to make
+  // them non-const as the user may not be able to change the base class.
+  const int getC() override { return 1; }
 };
+
+class NVDeriveOutOfLine : public PVBase {
+public:
+  // Don't warn about overridden methods, because it may be impossible to make
+  // them non-const as one may not be able to change the base class
+  const int getC();
+};
+
+const int NVDeriveOutOfLine::getC() { return 1; }
 
 // Don't warn about const auto types, because it may be impossible to make them non-const
 // without a significant semantics change. Since `auto` drops cv-qualifiers,

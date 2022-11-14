@@ -114,7 +114,9 @@ void ConstReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       functionDecl(
           returns(allOf(isConstQualified(), unless(NonLocalConstType))),
-          anyOf(isDefinition(), cxxMethodDecl(isPure())))
+          anyOf(isDefinition(), cxxMethodDecl(isPure())),
+          // Overridden functions are not actionable.
+          unless(cxxMethodDecl(isOverride())))
           .bind("func"),
       this);
 }
