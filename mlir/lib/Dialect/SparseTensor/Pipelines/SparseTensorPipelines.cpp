@@ -32,8 +32,7 @@ getBufferizationOptions(bool analysisOnly) {
   // TODO(springerm): To spot memory leaks more easily, returning dense allocs
   // should be disallowed.
   options.allowReturnAllocs = true;
-  options.functionBoundaryTypeConversion =
-      BufferizationOptions::LayoutMapOption::IdentityLayoutMap;
+  options.functionBoundaryTypeConversion = LayoutMapOption::IdentityLayoutMap;
   options.unknownTypeConverterFn = [](Value value, unsigned memorySpace,
                                       const BufferizationOptions &options) {
     return getMemRefTypeWithStaticIdentityLayout(

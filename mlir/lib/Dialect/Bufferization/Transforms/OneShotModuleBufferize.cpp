@@ -423,7 +423,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
       return failure();
     // Change buffer return types to more precise layout maps.
     if (options.functionBoundaryTypeConversion ==
-        BufferizationOptions::LayoutMapOption::InferLayoutMap)
+        LayoutMapOption::InferLayoutMap)
       foldMemRefCasts(funcOp);
   }
 
