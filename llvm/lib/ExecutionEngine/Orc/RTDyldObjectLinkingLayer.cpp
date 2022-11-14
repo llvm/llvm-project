@@ -350,7 +350,8 @@ void RTDyldObjectLinkingLayer::onObjEmit(
   }
 }
 
-Error RTDyldObjectLinkingLayer::handleRemoveResources(ResourceKey K) {
+Error RTDyldObjectLinkingLayer::handleRemoveResources(JITDylib &JD,
+                                                      ResourceKey K) {
 
   std::vector<MemoryManagerUP> MemMgrsToRemove;
 
@@ -374,7 +375,8 @@ Error RTDyldObjectLinkingLayer::handleRemoveResources(ResourceKey K) {
   return Error::success();
 }
 
-void RTDyldObjectLinkingLayer::handleTransferResources(ResourceKey DstKey,
+void RTDyldObjectLinkingLayer::handleTransferResources(JITDylib &JD,
+                                                       ResourceKey DstKey,
                                                        ResourceKey SrcKey) {
   auto I = MemMgrs.find(SrcKey);
   if (I != MemMgrs.end()) {
