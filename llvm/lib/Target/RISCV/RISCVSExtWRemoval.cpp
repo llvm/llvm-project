@@ -250,6 +250,7 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
   case RISCV::CLZW:
   case RISCV::CTZW:
   case RISCV::CPOPW:
+  case RISCV::PACKW:
   case RISCV::FCVT_W_H:
   case RISCV::FCVT_WU_H:
   case RISCV::FCVT_W_S:
@@ -276,6 +277,7 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
   case RISCV::CLZ:
   case RISCV::CPOP:
   case RISCV::CTZ:
+  case RISCV::PACKH:
     return true;
   // shifting right sufficiently makes the value 32-bit sign-extended
   case RISCV::SRAI:
