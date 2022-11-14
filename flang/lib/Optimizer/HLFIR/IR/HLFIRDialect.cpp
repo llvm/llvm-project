@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -30,6 +31,10 @@ void hlfir::hlfirDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
 #include "flang/Optimizer/HLFIR/HLFIRTypes.cpp.inc"
+      >();
+  addOperations<
+#define GET_OP_LIST
+#include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"
       >();
 }
 
@@ -69,4 +74,14 @@ void hlfir::ExprType::print(mlir::AsmPrinter &printer) const {
   if (isPolymorphic())
     printer << '?';
   printer << '>';
+}
+
+bool hlfir::isFortranVariableType(mlir::Type type) {
+  return llvm::TypeSwitch<mlir::Type, bool>(type)
+      .Case<fir::ReferenceType, fir::PointerType, fir::HeapType>([](auto p) {
+        mlir::Type eleType = p.getEleTy();
+        return eleType.isa<fir::BaseBoxType>() || !fir::hasDynamicSize(eleType);
+      })
+      .Case<fir::BaseBoxType, fir::BoxCharType>([](auto) { return true; })
+      .Default([](mlir::Type) { return false; });
 }

@@ -2931,6 +2931,8 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
      attr-dict `:` functional-type(operands, results)
   }];
+
+  let hasVerifier = 1;
 }
 
 #endif
