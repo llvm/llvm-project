@@ -15,6 +15,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Tooling/Inclusions/HeaderAnalysis.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include <cstring>
@@ -121,12 +122,10 @@ public:
         // isSelfContainedHeader only returns true once the full header-guard
         // structure has been seen, i.e. when exiting the *outer* copy of the
         // file. So last result wins.
-        if (isSelfContainedHeader(FE, PrevFID, SM, HeaderInfo))
-          Out->NonSelfContained.erase(
-              *Out->getID(SM.getFileEntryForID(PrevFID)));
+        if (tooling::isSelfContainedHeader(FE, SM, HeaderInfo))
+          Out->NonSelfContained.erase(*Out->getID(FE));
         else
-          Out->NonSelfContained.insert(
-              *Out->getID(SM.getFileEntryForID(PrevFID)));
+          Out->NonSelfContained.insert(*Out->getID(FE));
       }
       break;
     }
