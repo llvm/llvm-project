@@ -182,6 +182,18 @@ class UniformBinFrag<SDPatternOperator Op> : PatFrag <
   let GISelPredicateCode = [{return true;}];
 }
 
+class UniformTernaryFrag<SDPatternOperator Op> : PatFrag <
+  (ops node:$src0, node:$src1, node:$src2),
+  (Op $src0, $src1, $src2),
+  [{ return !N->isDivergent(); }]> {
+  // This check is unnecessary as it's captured by the result register
+  // bank constraint.
+  //
+  // FIXME: Should add a way for the emitter to recognize this is a
+  // trivially true predicate to eliminate the check.
+  let GISelPredicateCode = [{return true;}];
+}
+
 class DivergentBinFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0, node:$src1),
   (Op $src0, $src1),
@@ -1024,7 +1036,7 @@ class SOPC_Base <RegisterOperand rc0, RegisterOperand rc1,
 class SOPC_Helper <RegisterOperand rc, ValueType vt,
                     string opName, SDPatternOperator cond> : SOPC_Base <
   rc, rc, opName,
-  [(set SCC, (si_setcc_uniform vt:$src0, vt:$src1, cond))] > {
+  [(set SCC, (UniformTernaryFrag<setcc> vt:$src0, vt:$src1, cond))] > {
 }
 
 class SOPC_CMP_32<string opName,
