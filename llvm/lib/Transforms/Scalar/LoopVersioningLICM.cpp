@@ -147,38 +147,20 @@ struct LoopVersioningLICM {
   // LoopAccessInfo will take place only when it's necessary.
   LoopVersioningLICM(AliasAnalysis *AA, ScalarEvolution *SE,
                      OptimizationRemarkEmitter *ORE,
-                     LoopAccessInfoManager &LAIs)
-      : AA(AA), SE(SE), LAIs(LAIs), LoopDepthThreshold(LVLoopDepthThreshold),
+                     LoopAccessInfoManager &LAIs,
+                     Loop *CurLoop)
+      : AA(AA), SE(SE), LAIs(LAIs), CurLoop(CurLoop), AST(*AA),
+        LoopDepthThreshold(LVLoopDepthThreshold),
         InvariantThreshold(LVInvarThreshold), ORE(ORE) {}
 
-  bool runOnLoop(Loop *L, LoopInfo *LI, DominatorTree *DT);
-
-  void reset() {
-    AA = nullptr;
-    SE = nullptr;
-    CurLoop = nullptr;
-    LoadAndStoreCounter = 0;
-    InvariantCounter = 0;
-    IsReadOnlyLoop = true;
-    ORE = nullptr;
-    CurAST.reset();
-  }
-
-  class AutoResetter {
-  public:
-    AutoResetter(LoopVersioningLICM &LVLICM) : LVLICM(LVLICM) {}
-    ~AutoResetter() { LVLICM.reset(); }
-
-  private:
-    LoopVersioningLICM &LVLICM;
-  };
+  bool run(LoopInfo *LI, DominatorTree *DT);
 
 private:
   // Current AliasAnalysis information
-  AliasAnalysis *AA = nullptr;
+  AliasAnalysis *AA;
 
   // Current ScalarEvolution
-  ScalarEvolution *SE = nullptr;
+  ScalarEvolution *SE;
 
   // Current Loop's LoopAccessInfo
   const LoopAccessInfo *LAI = nullptr;
@@ -187,10 +169,10 @@ private:
   LoopAccessInfoManager &LAIs;
 
   // The current loop we are working on.
-  Loop *CurLoop = nullptr;
+  Loop *CurLoop;
 
   // AliasSet information for the current loop.
-  std::unique_ptr<AliasSetTracker> CurAST;
+  AliasSetTracker AST;
 
   // Maximum loop nest threshold
   unsigned LoopDepthThreshold;
@@ -289,7 +271,7 @@ bool LoopVersioningLICM::legalLoopMemoryAccesses() {
   //
   // Iterate over alias tracker sets, and confirm AliasSets doesn't have any
   // must alias set.
-  for (const auto &I : *CurAST) {
+  for (const auto &I : AST) {
     const AliasSet &AS = I;
     // Skip Forward Alias Sets, as this should be ignored as part of
     // the AliasSetTracker object.
@@ -585,26 +567,19 @@ bool LoopVersioningLICMLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &LAIs = getAnalysis<LoopAccessLegacyAnalysis>().getLAIs();
 
-  return LoopVersioningLICM(AA, SE, ORE, LAIs).runOnLoop(L, LI, DT);
+  return LoopVersioningLICM(AA, SE, ORE, LAIs, L).run(LI, DT);
 }
 
-bool LoopVersioningLICM::runOnLoop(Loop *L, LoopInfo *LI, DominatorTree *DT) {
-  // This will automatically release all resources hold by the current
-  // LoopVersioningLICM object.
-  AutoResetter Resetter(*this);
-
+bool LoopVersioningLICM::run(LoopInfo *LI, DominatorTree *DT) {
   // Do not do the transformation if disabled by metadata.
-  if (hasLICMVersioningTransformation(L) & TM_Disable)
+  if (hasLICMVersioningTransformation(CurLoop) & TM_Disable)
     return false;
 
-  // Set Current Loop
-  CurLoop = L;
-  CurAST.reset(new AliasSetTracker(*AA));
-
   // Loop over the body of this loop, construct AST.
-  for (auto *Block : L->getBlocks()) {
-    if (LI->getLoopFor(Block) == L) // Ignore blocks in subloop.
-      CurAST->add(*Block);          // Incorporate the specified basic block
+  for (auto *Block : CurLoop->getBlocks()) {
+    // Ignore blocks in subloops.
+    if (LI->getLoopFor(Block) == CurLoop)
+      AST.add(*Block); // Incorporate the specified basic block
   }
 
   bool Changed = false;
@@ -668,7 +643,7 @@ PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
   OptimizationRemarkEmitter ORE(F);
 
   LoopAccessInfoManager LAIs(*SE, *AA, *DT, *LI, nullptr);
-  if (!LoopVersioningLICM(AA, SE, &ORE, LAIs).runOnLoop(&L, LI, DT))
+  if (!LoopVersioningLICM(AA, SE, &ORE, LAIs, &L).run(LI, DT))
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();
 }
