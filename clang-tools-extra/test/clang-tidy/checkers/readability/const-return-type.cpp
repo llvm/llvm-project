@@ -196,13 +196,22 @@ const /* comment */ /* another comment*/ int p16() { return 0; }
 // Test cases where the `const` token lexically is hidden behind some form of
 // indirection.
 
+// Regression tests involving macros, which are ignored by default because
+// IgnoreMacros defaults to true.
+#define CONCAT(a, b) a##b
+CONCAT(cons, t) int n22(){}
+
 #define CONSTINT const int
-CONSTINT p18() {}
-// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const int' is 'const'-qu
+CONSTINT n23() {}
 
 #define CONST const
-CONST int p19() {}
-// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const int' is 'const'-qu
+CONST int n24() {}
+
+#define CREATE_FUNCTION()                    \
+const int n_inside_macro() { \
+  return 1; \
+}
+CREATE_FUNCTION();
 
 using ty = const int;
 ty p21() {}
