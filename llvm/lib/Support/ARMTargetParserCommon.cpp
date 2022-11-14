@@ -103,3 +103,30 @@ StringRef ARM::getCanonicalArchName(StringRef Arch) {
   // Arch will either be a 'v' name (v7a) or a marketing name (xscale).
   return A;
 }
+
+ARM::ISAKind ARM::parseArchISA(StringRef Arch) {
+  return StringSwitch<ISAKind>(Arch)
+      .StartsWith("aarch64", ISAKind::AARCH64)
+      .StartsWith("arm64", ISAKind::AARCH64)
+      .StartsWith("thumb", ISAKind::THUMB)
+      .StartsWith("arm", ISAKind::ARM)
+      .Default(ISAKind::INVALID);
+}
+
+ARM::EndianKind ARM::parseArchEndian(StringRef Arch) {
+  if (Arch.startswith("armeb") || Arch.startswith("thumbeb") ||
+      Arch.startswith("aarch64_be"))
+    return EndianKind::BIG;
+
+  if (Arch.startswith("arm") || Arch.startswith("thumb")) {
+    if (Arch.endswith("eb"))
+      return EndianKind::BIG;
+    else
+      return EndianKind::LITTLE;
+  }
+
+  if (Arch.startswith("aarch64") || Arch.startswith("aarch64_32"))
+    return EndianKind::LITTLE;
+
+  return EndianKind::INVALID;
+}
