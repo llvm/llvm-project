@@ -132,7 +132,7 @@ public:
 template <typename... Args> struct validate_format_parameters;
 template <typename Arg, typename... Args>
 struct validate_format_parameters<Arg, Args...> {
-  static_assert(std::is_scalar<Arg>::value,
+  static_assert(std::is_scalar_v<Arg>,
                 "format can't be used with non fundamental / non pointer type");
   validate_format_parameters() { validate_format_parameters<Args...>(); }
 };
