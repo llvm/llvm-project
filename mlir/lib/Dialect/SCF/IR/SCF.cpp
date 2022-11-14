@@ -1114,12 +1114,15 @@ LogicalResult ForeachThreadOp::verify() {
     if (body->getArgument(i + getRank()).getType() != getOutputs()[i].getType())
       return emitOpError("type mismatch between ")
              << i << "-th output and corresponding block argument";
-   if (getMapping().has_value())
+  if (getMapping().has_value() && !getMapping()->empty()) {
+    if (static_cast<int64_t>(getMapping()->size()) != getRank())
+      return emitOpError() << "mapping attribute size must match op rank";
     for (auto map : getMapping()->getValue()) {
       if (!isa<DeviceMappingAttrInterface>(map))
         return emitOpError()
                << getMappingAttrName() << " is not device mapping attribute";
     }
+  }
 
   return success();
 }
@@ -1294,59 +1297,21 @@ PerformConcurrentlyOp ForeachThreadOp::getTerminator() {
   return cast<PerformConcurrentlyOp>(getBody()->getTerminator());
 }
 
-template <typename T>
-static FailureOr<SmallVector<T>> permute(const SmallVector<T> &vals,
-                                         ArrayRef<int64_t> perm) {
-  if (vals.size() != perm.size())
-    return failure();
-  SmallVector<T> result(vals.size());
-  SmallVector<bool> seen(vals.size());
-  for (auto [idx, val] : llvm::zip(perm, vals)) {
-    // Already seen, invalid mapping.
-    if (seen[idx])
-      return failure();
-    result[idx] = val;
-    seen[idx] = true;
-  }
-  // Some not seen, invalid mapping.
-  if (!llvm::all_of(seen, [](bool b) { return b; }))
-    return failure();
-  return result;
-}
-
-/// Helper to get apply the `mapping` permutation of a
-/// `foreachThreadOp` to `values`.
-template <typename T>
-static FailureOr<SmallVector<T>>
-getValuesPermutedByThreadMapping(scf::ForeachThreadOp foreachThreadOp,
-                                 const SmallVector<T> &values,
-                                 ArrayRef<int64_t> mapping) {
-  // Apply mapping permutation if specified.
-  FailureOr<SmallVector<T>> maybePermuted = permute(values, mapping);
-  if (failed(maybePermuted))
-    return foreachThreadOp->emitError("invalid permutation");
-  return *maybePermuted;
-  return values;
-}
-
-/// Return the thread indices in the order specified by the mapping
-/// attribute. Return failure is mapping is not a valid permutation.
-FailureOr<SmallVector<Value>>
-ForeachThreadOp::getPermutedThreadIndices(ArrayRef<int64_t> mapping) {
-  SmallVector<Value> threadCountValues = this->getThreadIndices();
-  threadCountValues.resize(3, Value());
-  return getValuesPermutedByThreadMapping(*this, threadCountValues, mapping);
-}
-
-/// Return the number of threads in the order specified by the
-/// mapping attribute.
-/// Return failure is mapping is not a valid permutation.
-FailureOr<SmallVector<OpFoldResult>>
-ForeachThreadOp::getPermutedNumThreads(OpBuilder &b,
-                                       ArrayRef<int64_t> mapping) {
-  SmallVector<OpFoldResult> threadCountValues = this->getNumThreads();
-  threadCountValues.resize(3, b.getIndexAttr(1));
-  return getValuesPermutedByThreadMapping(*this, threadCountValues, mapping);
+/// Helper to sort `values` according to matching `keys`.
+SmallVector<Value> ForeachThreadOp::getValuesSortedByKey(
+    ArrayRef<Attribute> keys, ValueRange values,
+    llvm::function_ref<bool(Attribute, Attribute)> compare) {
+  if (keys.empty())
+    return values;
+  assert(keys.size() == values.size() && "unexpected mismatching sizes");
+  auto indices = llvm::to_vector(llvm::seq<int64_t>(0, values.size()));
+  std::sort(indices.begin(), indices.end(),
+            [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
+  SmallVector<Value> res;
+  res.reserve(values.size());
+  for (int64_t i = 0, e = indices.size(); i < e; ++i)
+    res.push_back(values[indices[i]]);
+  return res;
 }
 
 ForeachThreadOp mlir::scf::getForeachThreadOpThreadIndexOwner(Value val) {
