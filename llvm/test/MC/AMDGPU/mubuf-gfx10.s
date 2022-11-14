@@ -9,6 +9,9 @@ buffer_load_sbyte off, s[8:11], s3 glc slc lds dlc
 buffer_load_sbyte v5, off, s[8:11], s3 glc slc dlc
 // GFX10: buffer_load_sbyte v5, off, s[8:11], s3 glc slc dlc ; encoding: [0x00,0xc0,0x24,0xe0,0x00,0x05,0x42,0x03]
 
+buffer_load_sbyte v[5:6], off, s[8:11], s3 glc slc dlc tfe
+// GFX10: buffer_load_sbyte v[5:6], off, s[8:11], s3 glc slc dlc tfe ; encoding: [0x00,0xc0,0x24,0xe0,0x00,0x05,0xc2,0x03]
+
 buffer_atomic_fcmpswap v[0:1], off, s[0:3], s0 offset:4095
 // GFX10: buffer_atomic_fcmpswap v[0:1], off, s[0:3], s0 offset:4095 ; encoding: [0xff,0x0f,0xf8,0xe0,0x00,0x00,0x00,0x00]
 

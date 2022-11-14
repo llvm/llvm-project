@@ -9,6 +9,10 @@ buffer_load_ubyte_d16_hi v1, off, s[4:7], s1
 // GFX9: buffer_load_ubyte_d16_hi v1, off, s[4:7], s1 ; encoding: [0x00,0x00,0x84,0xe0,0x00,0x01,0x01,0x01]
 // VI-ERR: error: instruction not supported on this GPU
 
+buffer_load_ubyte_d16_hi v[1:2], off, s[4:7], s1 tfe
+// GFX9: buffer_load_ubyte_d16_hi v[1:2], off, s[4:7], s1 tfe ; encoding: [0x00,0x00,0x84,0xe0,0x00,0x01,0x81,0x01]
+// VI-ERR: error: instruction not supported on this GPU
+
 buffer_load_sbyte_d16 v1, off, s[4:7], s1
 // GFX9: buffer_load_sbyte_d16 v1, off, s[4:7], s1 ; encoding: [0x00,0x00,0x88,0xe0,0x00,0x01,0x01,0x01]
 // VI-ERR: error: instruction not supported on this GPU
@@ -31,6 +35,10 @@ buffer_store_byte_d16_hi v1, off, s[4:7], s1
 
 buffer_store_short_d16_hi v1, off, s[4:7], s1
 // GFX9: buffer_store_short_d16_hi v1, off, s[4:7], s1 ; encoding: [0x00,0x00,0x6c,0xe0,0x00,0x01,0x01,0x01]
+// VI-ERR: error: instruction not supported on this GPU
+
+buffer_store_short_d16_hi v[1:2], off, s[4:7], s1 tfe
+// GFX9: buffer_store_short_d16_hi v[1:2], off, s[4:7], s1 tfe ; encoding: [0x00,0x00,0x6c,0xe0,0x00,0x01,0x81,0x01]
 // VI-ERR: error: instruction not supported on this GPU
 
 buffer_load_format_d16_hi_x v5, off, s[8:11], s3
@@ -67,6 +75,10 @@ buffer_store_format_d16_hi_x v255, off, s[12:15], s4 offset:4095
 
 buffer_store_format_d16_hi_x v1, v0, s[12:15], s4 idxen offset:4095
 // GFX9: buffer_store_format_d16_hi_x v1, v0, s[12:15], s4 idxen offset:4095 ; encoding: [0xff,0x2f,0x9c,0xe0,0x00,0x01,0x03,0x04]
+// VI-ERR: error: instruction not supported on this GPU
+
+buffer_store_format_d16_hi_x v[1:2], v0, s[12:15], s4 idxen offset:4095 tfe
+// GFX9: buffer_store_format_d16_hi_x v[1:2], v0, s[12:15], s4 idxen offset:4095 tfe ; encoding: [0xff,0x2f,0x9c,0xe0,0x00,0x01,0x83,0x04]
 // VI-ERR: error: instruction not supported on this GPU
 
 buffer_store_format_d16_hi_x v1, v0, s[12:15], s4 offen offset:4095
