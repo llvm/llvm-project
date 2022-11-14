@@ -651,6 +651,11 @@ public:
                                 DominatorTree *DT) {
     return AA.callCapturesBefore(I, MemLoc, DT, AAQI);
   }
+
+  /// Assume that values may come from different cycle iterations.
+  void enableCrossIterationMode() {
+    AAQI.MayBeCrossIteration = true;
+  }
 };
 
 /// Temporary typedef for legacy code that uses a generic \c AliasAnalysis
