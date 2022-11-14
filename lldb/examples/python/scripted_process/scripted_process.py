@@ -116,17 +116,17 @@ class ScriptedProcess(metaclass=ABCMeta):
         """ Get the list of loaded images for the scripted process.
 
         ```
-        class ScriptedProcessImage:
-            def __init__(file_spec, uuid, load_address):
-              self.file_spec = file_spec
-              self.uuid = uuid
-              self.load_address = load_address
+        scripted_image = {
+            uuid = "c6ea2b64-f77c-3d27-9528-74f507b9078b",
+            path = "/usr/lib/dyld"
+            load_addr = 0xbadc0ffee
+        }
         ```
 
         Returns:
-            List[ScriptedProcessImage]: A list of `ScriptedProcessImage`
-                containing for each entry, the name of the library, a UUID,
-                an `lldb.SBFileSpec` and a load address.
+            List[scripted_image]: A list of `scripted_image` dictionaries
+                containing for each entry the library UUID or its file path
+                and its load address.
                 None if the list is empty.
         """
         return self.loaded_images
