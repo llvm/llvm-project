@@ -31,9 +31,9 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
-static constexpr uint64_t DimSizesIdx = 0;
-static constexpr uint64_t MemSizesIdx = 1;
-static constexpr uint64_t FieldsIdx = 2;
+static constexpr uint64_t dimSizesIdx = 0;
+static constexpr uint64_t memSizesIdx = 1;
+static constexpr uint64_t fieldsIdx = 2;
 
 //===----------------------------------------------------------------------===//
 // Helper methods.
@@ -130,7 +130,7 @@ static Optional<Value> sizeFromTensorAtDim(OpBuilder &builder, Location loc,
   auto tuple = getTuple(adaptedValue);
   Value idx = constantIndex(builder, loc, toStoredDim(tensorTp, dim));
   return builder
-      .create<memref::LoadOp>(loc, tuple.getInputs()[DimSizesIdx], idx)
+      .create<memref::LoadOp>(loc, tuple.getInputs()[dimSizesIdx], idx)
       .getResult();
 }
 
@@ -142,14 +142,14 @@ Value sizeAtStoredDim(OpBuilder &builder, Location loc, RankedTensorType rtp,
   auto shape = rtp.getShape();
   if (!ShapedType::isDynamic(shape[dim]))
     return constantIndex(builder, loc, shape[dim]);
-  return genLoad(builder, loc, fields[DimSizesIdx],
+  return genLoad(builder, loc, fields[dimSizesIdx],
                  constantIndex(builder, loc, d));
 }
 
 /// Translates field index to memSizes index.
 static unsigned getMemSizesIndex(unsigned field) {
-  assert(FieldsIdx <= field);
-  return field - FieldsIdx;
+  assert(fieldsIdx <= field);
+  return field - fieldsIdx;
 }
 
 /// Creates a pushback op for given field and updates the fields array
@@ -157,10 +157,10 @@ static unsigned getMemSizesIndex(unsigned field) {
 static void createPushback(OpBuilder &builder, Location loc,
                            SmallVectorImpl<Value> &fields, unsigned field,
                            Value value, Value repeat = Value()) {
-  assert(FieldsIdx <= field && field < fields.size());
+  assert(fieldsIdx <= field && field < fields.size());
   Type etp = fields[field].getType().cast<ShapedType>().getElementType();
   fields[field] = builder.create<PushBackOp>(
-      loc, fields[field].getType(), fields[MemSizesIdx], fields[field],
+      loc, fields[field].getType(), fields[memSizesIdx], fields[field],
       toType(builder, loc, value, etp), APInt(64, getMemSizesIndex(field)),
       repeat);
 }
@@ -169,7 +169,7 @@ static void createPushback(OpBuilder &builder, Location loc,
 static unsigned getFieldIndex(Type type, unsigned ptrDim, unsigned idxDim) {
   assert(getSparseTensorEncoding(type));
   RankedTensorType rType = type.cast<RankedTensorType>();
-  unsigned field = FieldsIdx; // start past header
+  unsigned field = fieldsIdx; // start past header
   for (unsigned r = 0, rank = rType.getShape().size(); r < rank; r++) {
     if (isCompressedDim(rType, r)) {
       if (r == ptrDim)
@@ -365,7 +365,7 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
       loc, ValueRange{constantZero(builder, loc, indexType)},
       ValueRange{memSizes}); // zero memSizes
   Value ptrZero = constantZero(builder, loc, ptrType);
-  for (unsigned r = 0, field = FieldsIdx; r < rank; r++) {
+  for (unsigned r = 0, field = fieldsIdx; r < rank; r++) {
     unsigned ro = toOrigDim(rtp, r);
     genStore(builder, loc, sizes[ro], dimSizes, constantIndex(builder, loc, r));
     if (isCompressedDim(rtp, r)) {
@@ -375,7 +375,7 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
       field += 1;
     }
   }
-  allocSchemeForRank(builder, loc, rtp, fields, FieldsIdx, /*rank=*/0);
+  allocSchemeForRank(builder, loc, rtp, fields, fieldsIdx, /*rank=*/0);
 }
 
 /// Helper method that generates block specific to compressed case:
@@ -411,7 +411,7 @@ static Value genCompressed(OpBuilder &builder, Location loc,
   Value plo = genLoad(builder, loc, fields[field], pos);
   Value phi = genLoad(builder, loc, fields[field], pp1);
   Value psz = constantIndex(builder, loc, getMemSizesIndex(field + 1));
-  Value msz = genLoad(builder, loc, fields[MemSizesIdx], psz);
+  Value msz = genLoad(builder, loc, fields[memSizesIdx], psz);
   Value phim1 = builder.create<arith::SubIOp>(
       loc, toType(builder, loc, phi, indexType), one);
   // Conditional expression.
@@ -483,7 +483,7 @@ static void genInsert(OpBuilder &builder, Location loc, RankedTensorType rtp,
                       SmallVectorImpl<Value> &indices, Value value) {
   unsigned rank = rtp.getShape().size();
   assert(rank == indices.size());
-  unsigned field = FieldsIdx; // start past header
+  unsigned field = fieldsIdx; // start past header
   Value pos = constantZero(builder, loc, builder.getIndexType());
   // Generate code for every dimension.
   for (unsigned d = 0; d < rank; d++) {
@@ -527,7 +527,7 @@ static void genInsert(OpBuilder &builder, Location loc, RankedTensorType rtp,
 static void genEndInsert(OpBuilder &builder, Location loc, RankedTensorType rtp,
                          SmallVectorImpl<Value> &fields) {
   unsigned rank = rtp.getShape().size();
-  unsigned field = FieldsIdx; // start past header
+  unsigned field = fieldsIdx; // start past header
   for (unsigned d = 0; d < rank; d++) {
     if (isCompressedDim(rtp, d)) {
       // Compressed dimensions need a pointer cleanup for all entries
@@ -540,7 +540,7 @@ static void genEndInsert(OpBuilder &builder, Location loc, RankedTensorType rtp,
         Type indexType = builder.getIndexType();
         Type ptrType = ptrWidth ? builder.getIntegerType(ptrWidth) : indexType;
         Value mz = constantIndex(builder, loc, getMemSizesIndex(field));
-        Value hi = genLoad(builder, loc, fields[MemSizesIdx], mz);
+        Value hi = genLoad(builder, loc, fields[memSizesIdx], mz);
         Value zero = constantIndex(builder, loc, 0);
         Value one = constantIndex(builder, loc, 1);
         SmallVector<Value, 1> inits;
@@ -1001,7 +1001,7 @@ public:
     unsigned lastField = fields.size() - 1;
     Value field =
         constantIndex(rewriter, op.getLoc(), getMemSizesIndex(lastField));
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, fields[MemSizesIdx], field);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, fields[memSizesIdx], field);
     return success();
   }
 };
