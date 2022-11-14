@@ -343,7 +343,7 @@ static bool isSignExtendedW(MachineInstr &OrigMI, MachineRegisterInfo &MRI,
     if (isSignExtendingOpW(*MI, MRI, FixableDef))
       continue;
 
-    // Is this an instruction that propagates sign extend.
+    // Is this an instruction that propagates sign extend?
     switch (MI->getOpcode()) {
     default:
       // Unknown opcode, give up.
@@ -357,8 +357,8 @@ static bool isSignExtendedW(MachineInstr &OrigMI, MachineRegisterInfo &MRI,
       // it is sign extended.
       if (MI->getParent() == &MF->front()) {
         Register VReg = MI->getOperand(0).getReg();
-        if (MF->getRegInfo().isLiveIn(VReg))
-          return RVFI->isSExt32Register(VReg);
+        if (MF->getRegInfo().isLiveIn(VReg) && RVFI->isSExt32Register(VReg))
+          continue;
       }
 
       // TODO: Handle returns from calls?

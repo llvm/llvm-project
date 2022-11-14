@@ -1020,7 +1020,7 @@ bb7:                                              ; preds = %bb2
   ret i32 %i7
 }
 
-; FIXME: This test removes a sext.w without converting a slli to slliw.
+; This test previously removed a sext.w without converting a slli to slliw.
 define signext i32 @bug(i32 signext %x) {
 ; CHECK-LABEL: bug:
 ; CHECK:       # %bb.0: # %entry
@@ -1063,7 +1063,7 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:    srliw a2, a0, 30
 ; CHECK-NEXT:    bnez a2, .LBB18_7
 ; CHECK-NEXT:  .LBB18_12:
-; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    slliw a0, a0, 2
 ; CHECK-NEXT:    beqz a2, .LBB18_8
 ; CHECK-NEXT:    j .LBB18_9
 ;
