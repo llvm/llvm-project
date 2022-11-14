@@ -262,6 +262,22 @@ public:
   /// assumption is disproven.
   SmallVector<AAQueryInfo::LocPair, 4> AssumptionBasedResults;
 
+  /// Tracks whether the accesses may be on different cycle iterations.
+  ///
+  /// When interpret "Value" pointer equality as value equality we need to make
+  /// sure that the "Value" is not part of a cycle. Otherwise, two uses could
+  /// come from different "iterations" of a cycle and see different values for
+  /// the same "Value" pointer.
+  ///
+  /// The following example shows the problem:
+  ///   %p = phi(%alloca1, %addr2)
+  ///   %l = load %ptr
+  ///   %addr1 = gep, %alloca2, 0, %l
+  ///   %addr2 = gep  %alloca2, 0, (%l + 1)
+  ///      alias(%p, %addr1) -> MayAlias !
+  ///   store %l, ...
+  bool MayBeCrossIteration = false;
+
   AAQueryInfo(AAResults &AAR, CaptureInfo *CI) : AAR(AAR), CI(CI) {}
 };
 
