@@ -15,7 +15,6 @@ class ScriptedProcess(metaclass=ABCMeta):
     """
 
     memory_regions = None
-    stack_memory_dump = None
     loaded_images = None
     threads = None
     metadata = None
