@@ -195,6 +195,53 @@ The PGO cache generates the following additional targets:
   Depends on stage2 and runs the test-suite using the stage2 compiler (requires
   in-tree test-suite).
 
+BOLT
+====
+
+`BOLT <https://github.com/llvm/llvm-project/blob/main/bolt/README.md>`_
+(Binary Optimization and Layout Tool) is a tool that optimizes binaries
+post-link by profiling them at runtime and then using that information to
+optimize the layout of the final binary among other optimizations performed
+at the binary level. There are also CMake caches available to build
+LLVM/Clang with BOLT.
+
+To configure a single-stage build that builds LLVM/Clang and then optimizes
+it with BOLT, use the following CMake configuration:
+
+.. code-block:: console
+
+  $ cmake <path to source>/llvm -C <path to source>/clang/cmake/caches/BOLT.cmake
+
+Then, build the BOLT-optimized binary by running the following ninja command:
+
+.. code-block:: console
+
+  $ ninja clang++-bolt
+
+If you're seeing errors in the build process, try building with a recent
+version of Clang/LLVM by setting the CMAKE_C_COMPILER and
+CMAKE_CXX_COMPILER flags to the appropriate values.
+
+It is also possible to use BOLT on top of PGO and (Thin)LTO for an even more
+significant runtime speedup. To configure a three stage PGO build with ThinLTO
+that optimizes the resulting binary with BOLT, use the following CMake
+configuration command:
+
+.. code-block:: console
+
+  $ cmake -G Ninja <path to source>/llvm \
+      -C <path to source>/clang/cmake/caches/BOLT-PGO.cmake \
+      -DBOOTSTRAP_LLVM_ENABLE_LLD=ON \
+      -DBOOTSTRAP_BOOTSTRAP_LLVM_ENABLE_LLD=ON \
+      -DPGO_INSTRUMENT_LTO=Thin
+
+Then, to build the final optimized binary, build the stage2-clang++-bolt
+target:
+
+.. code-block:: console
+
+  $ ninja stage2-clang++-bolt
+
 3-Stage Non-Determinism
 =======================
 
