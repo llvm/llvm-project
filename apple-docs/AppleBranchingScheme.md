@@ -1,15 +1,23 @@
 # Apple's branching scheme for llvm-project
 
-There are currently three namespaces for branches on
-[github.com/apple/llvm-project](https://github.com/apple/llvm-project):
+This document explains the various important branches in
+[apple/llvm-project](https://github.com/apple/llvm-project),
+how they relate to one another, and how they correspond to branches in the
+[apple/swift](https://github.com/apple/swift) repository.
 
- 1. `llvm.org/*`, for forwarded branches from
-    [github.com/llvm](https://github.com/llvm/llvm-project);
- 2. `apple/*`, for standalone downstream content; and
- 3. `swift/*`, for downstream content that depends on
-    [Swift](https://github.com/apple/swift).
+These are the most important branches to know about:
 
-## Forwarded branches from [github.com/llvm](https://github.com/llvm/llvm-project)
+- [next](https://github.com/apple/llvm-project/tree/next)
+  is aligned with Swift's
+  [next](https://github.com/apple/swift/tree/next) branch.
+- The current `stable` branch (check
+  [update-checkout-config.json](https://github.com/apple/swift/blob/main/utils/update_checkout/update-checkout-config.json)
+  for up-to-date info) is aligned with Swift's
+  [main](https://github.com/apple/swift/tree/main) branch.
+- `swift/*` branches are aligned with the corresponding Swift branch without
+  the `swift/` prefix.
+
+## Upstream branches
 
 The `llvm.org/*` branches are forwarded, unchanged, from
 [github.com/llvm/llvm-project](https://github.com/llvm/llvm-project).  These
@@ -17,22 +25,19 @@ are read-only, exact copies of the upstream LLVM project's branches.  They are
 forwarded here as a convenience for easy reference, to avoid the need for extra
 remotes.
 
-- [llvm.org/master](https://github.com/apple/llvm-project/tree/llvm.org/master)
+- [llvm.org/main](https://github.com/apple/llvm-project/tree/llvm.org/main)
   is the most important branch here, matching the LLVM project's
-  [master](https://github.com/llvm/llvm-project/tree/master) branch.
+  [main](https://github.com/llvm/llvm-project/tree/main) branch.
 
-## Downstream branches that are standalone
+## Downstream branches
 
-The `apple/*` branches have downstream content, besides what is in the LLVM
-project.  This content includes some patches that have not yet been fully
-upstreamed to the LLVM project, including some special support for Swift.
-Critically, however, none of these branches *depend on* the
-[github.com/apple/swift](https://github.com/apple/swift) repository.
+Downstream branches contain changes on top of what is in the LLVM project.
+This includes some patches that have not yet been upstreamed to the LLVM
+project, including some special support for Swift.
 
-Today there are a few non-trivial differences from LLVM, but we are
-actively working on either upstreaming or reverting those differences. The goal
-is to fully eliminate all differences between `apple/main` and
-`llvm.org/master`.
+We are actively working on either upstreaming or reverting many of those
+differences. The goal is to fully eliminate all *non-Swift* differences between
+`next` and `llvm.org/main`.
 
 Any LLVM development that does not depend on the Swift repository should happen
 upstream. The only changes that are allowed to be submitted without going
@@ -41,43 +46,20 @@ content or that are needed because of the existing differences (e.g., resolving
 merge conflicts or fixing build errors).
 
 - [next](https://github.com/apple/llvm-project/tree/next) is
-  directly downstream of
-  [llvm.org/master](https://github.com/apple/llvm-project/tree/llvm.org/master).
+  downstream of
+  [llvm.org/main](https://github.com/apple/llvm-project/tree/llvm.org/main).
   There is a gated automerger that does testing before merging in.  Most
   changes to this branch should be redirected to <https://reviews.llvm.org/>
-  (see also <http://llvm.org/docs/Contributing.html>).
+  (see also <http://llvm.org/docs/Contributing.html>).  Changes made to a
+  stabilization branch are cherry-picked here.
 - `stable/*`: These branches are periodic stabilization branches, where
-  fixes are cherry-picked from LLVM.  At time of writing:
-    - [stable/20210726](https://github.com/apple/llvm-project/tree/stable/20210726)
-      is the current stabilization branch for Swift's main branch
-      (https://github.com/apple/swift/tree/main)
-      (see below).
+  fixes are made or manually cherry-picked from `llvm.org/main`.
+- `swift/release/*`: These are Swift release branches, where fixed are cherry-
+  picked from a stabilization branch during release convergence.
 
-## Downstream branches that depend on [Swift](https://github.com/apple/swift)
+## Historical trivia
 
-The `swift/*` branches are downstream of `apple/*`, and include content that
-depends on [Swift](https://github.com/apple/swift).  The naming scheme is
-`swift/<swift-branch>`, where `<swift-branch>` is the aligned Swift branch.
-
-The branches are automerged from a branch in the `apple/*` namespace.  They are
-expected to have zero differences outside the `lldb/` and `apple-llvm-config/`
-directories. Any changes outside of these directories should be submitted in
-the upstream LLVM repository.
-
-These are the most important branches:
-
-- [swift/next](https://github.com/apple/llvm-project/tree/swift/next)
-  is downstream of
-  [apple/main](https://github.com/apple/llvm-project/tree/apple/main) and
-  aligned with Swift's
-  [next](https://github.com/apple/swift/tree/next) branch.
-- [swift/main](https://github.com/apple/llvm-project/tree/swift/main) is
-  downstream of a stabilization branch in `apple/stable/*`
-  ([apple/stable/20210107](https://github.com/apple/llvm-project/tree/apple/stable/20210107),
-  as of time of writing) and aligned with Swift's
-  [main](https://github.com/apple/swift/tree/main) branch.
-
-## Historical trivia: mappings to branches from before the monorepo transition
+### Mappings to branches from before the monorepo transition
 
 Before the LLVM project's monorepo transition, Apple maintained downstream
 forks of various split repositories.  Here is a mapping from a few of the new
@@ -110,3 +92,11 @@ branches in the llvm-project monorepo to their original split repositories.
   [apple/stable/20190104](https://github.com/apple/llvm-project/tree/apple/stable/20190104).
 - [swift/main](https://github.com/apple/llvm-project/tree/swift/main) was
   generated from the `stable` branch from all six split repos.
+
+### Branching scheme prior to July 2021 change
+
+Prior to July 2021, the `apple:llvm-project` repository maintained two sets
+of downstream branches: one set that did not include any content that _depended
+on_ Swift, and another set that included all downstream changes.  See
+[this forum thread](https://forums.swift.org/t/simplifying-the-apple-llvm-project-branches/50287)
+explaining the change.
