@@ -795,7 +795,7 @@ defm V_CVT_PKACCUM_U8_F32 : VOP2Inst <"v_cvt_pkaccum_u8_f32", VOP_NO_EXT<VOP_I32
 
 class DivergentBinOp<SDPatternOperator Op, VOP_Pseudo Inst> :
   GCNPat<
-      (getDivergentFrag<Op>.ret Inst.Pfl.Src0VT:$src0, Inst.Pfl.Src1VT:$src1),
+      (DivergentBinFrag<Op> Inst.Pfl.Src0VT:$src0, Inst.Pfl.Src1VT:$src1),
       !if(!cast<Commutable_REV>(Inst).IsOrig,
         (Inst $src0, $src1),
         (Inst $src1, $src0)
@@ -804,7 +804,7 @@ class DivergentBinOp<SDPatternOperator Op, VOP_Pseudo Inst> :
 
 class DivergentClampingBinOp<SDPatternOperator Op, VOP_Pseudo Inst> :
   GCNPat<
-      (getDivergentFrag<Op>.ret Inst.Pfl.Src0VT:$src0, Inst.Pfl.Src1VT:$src1),
+      (DivergentBinFrag<Op> Inst.Pfl.Src0VT:$src0, Inst.Pfl.Src1VT:$src1),
       !if(!cast<Commutable_REV>(Inst).IsOrig,
         (Inst $src0, $src1, 0),
         (Inst $src1, $src0, 0)
@@ -830,7 +830,7 @@ def : DivergentBinOp<sube, V_SUBB_U32_e32>;
 
 class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst> :
   GCNPat<
-      (getDivergentFrag<Op>.ret i64:$src0, i64:$src1),
+      (DivergentBinFrag<Op> i64:$src0, i64:$src1),
       (REG_SEQUENCE VReg_64,
         (Inst
           (i32 (EXTRACT_SUBREG $src0, sub0)),
