@@ -92,16 +92,32 @@ TEST(JSONCompilationDatabase, GetAllFiles) {
   expected_files.push_back(std::string(PathStorage.str()));
   llvm::sys::path::native("//net/file1", PathStorage);
   expected_files.push_back(std::string(PathStorage.str()));
+  llvm::sys::path::native("//net/dir/file3", PathStorage);
+  expected_files.push_back(std::string(PathStorage.str()));
   EXPECT_EQ(expected_files,
-            getAllFiles("[{\"directory\":\"//net/dir\","
-                        "\"command\":\"command\","
-                        "\"file\":\"file1\"},"
-                        " {\"directory\":\"//net/dir\","
-                        "\"command\":\"command\","
-                        "\"file\":\"../file1\"},"
-                        " {\"directory\":\"//net/dir\","
-                        "\"command\":\"command\","
-                        "\"file\":\"file2\"}]",
+            getAllFiles(R"json(
+            [
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "file1"
+              },
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "../file1"
+              },
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "file2"
+              },
+              {
+                "directory": "//net/dir",
+                "command": "command",
+                "file": "//net/dir/foo/../file3"
+              }
+            ])json",
                         ErrorMessage, JSONCommandLineSyntax::Gnu))
       << ErrorMessage;
 }
