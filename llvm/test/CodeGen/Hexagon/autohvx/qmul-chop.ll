@@ -39,5 +39,5 @@ declare <128 x i32> @llvm.smin.v128i32(<128 x i32>, <128 x i32>) #1
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
 declare <128 x i32> @llvm.smax.v128i32(<128 x i32>, <128 x i32>) #1
 
-attributes #0 = { "target-features"="+hvxv68,+hvx-length128b,+hvx-qfloat,-hvx-ieee-fp" }
+attributes #0 = { "target-features"="+v68,+hvxv68,+hvx-length128b,+hvx-qfloat,-hvx-ieee-fp" }
 attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
