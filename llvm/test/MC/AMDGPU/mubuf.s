@@ -222,26 +222,6 @@ buffer_store_dword v1, off, s[4:7], s1 offset:4 slc
 // SICI: buffer_store_dword v1, off, s[4:7], s1 offset:4 slc ; encoding: [0x04,0x00,0x70,0xe0,0x00,0x01,0x41,0x01]
 // VI:   buffer_store_dword v1, off, s[4:7], s1 offset:4 slc ; encoding: [0x04,0x00,0x72,0xe0,0x00,0x01,0x01,0x01]
 
-buffer_store_dword v[1:2], off, s[4:7], s1 offset:4 tfe
-// SICI: buffer_store_dword v[1:2], off, s[4:7], s1 offset:4 tfe ; encoding: [0x04,0x00,0x70,0xe0,0x00,0x01,0x81,0x01]
-// VI:   buffer_store_dword v[1:2], off, s[4:7], s1 offset:4 tfe ; encoding: [0x04,0x00,0x70,0xe0,0x00,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], off, s[4:7], s1 glc tfe
-// SICI: buffer_store_dword v[1:2], off, s[4:7], s1 glc tfe ; encoding: [0x00,0x40,0x70,0xe0,0x00,0x01,0x81,0x01]
-// VI:   buffer_store_dword v[1:2], off, s[4:7], s1 glc tfe ; encoding: [0x00,0x40,0x70,0xe0,0x00,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], off, s[4:7], s1 offset:4 glc slc tfe
-// SICI: buffer_store_dword v[1:2], off, s[4:7], s1 offset:4 glc slc tfe ; encoding: [0x04,0x40,0x70,0xe0,0x00,0x01,0xc1,0x01]
-// VI:   buffer_store_dword v[1:2], off, s[4:7], s1 offset:4 glc slc tfe ; encoding: [0x04,0x40,0x72,0xe0,0x00,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], off, ttmp[4:7], ttmp1 offset:4 glc slc tfe
-// SICI: buffer_store_dword v[1:2], off, ttmp[4:7], ttmp1 offset:4 glc slc tfe ; encoding: [0x04,0x40,0x70,0xe0,0x00,0x01,0xdd,0x71]
-// VI:   buffer_store_dword v[1:2], off, ttmp[4:7], ttmp1 offset:4 glc slc tfe ; encoding: [0x04,0x40,0x72,0xe0,0x00,0x01,0x9d,0x71]
-
-buffer_store_dwordx2 v[1:3], off, ttmp[4:7], ttmp1 offset:4 glc slc tfe
-// SICI: buffer_store_dwordx2 v[1:3], off, ttmp[4:7], ttmp1 offset:4 glc slc tfe ; encoding: [0x04,0x40,0x74,0xe0,0x00,0x01,0xdd,0x71]
-// VI:   buffer_store_dwordx2 v[1:3], off, ttmp[4:7], ttmp1 offset:4 glc slc tfe ; encoding: [0x04,0x40,0x76,0xe0,0x00,0x01,0x9d,0x71]
-
 //===----------------------------------------------------------------------===//
 // store - vgpr offset
 //===----------------------------------------------------------------------===//
@@ -261,26 +241,6 @@ buffer_store_dword v1, v2, s[4:7], s1 offen offset:4 glc
 buffer_store_dword v1, v2, s[4:7], s1 offen offset:4 slc
 // SICI: buffer_store_dword v1, v2, s[4:7], s1 offen offset:4 slc ; encoding: [0x04,0x10,0x70,0xe0,0x02,0x01,0x41,0x01]
 // VI:   buffer_store_dword v1, v2, s[4:7], s1 offen offset:4 slc ; encoding: [0x04,0x10,0x72,0xe0,0x02,0x01,0x01,0x01]
-
-buffer_store_dword v[1:2], v2, s[4:7], s1 offen offset:4 tfe
-// SICI: buffer_store_dword v[1:2], v2, s[4:7], s1 offen offset:4 tfe ; encoding: [0x04,0x10,0x70,0xe0,0x02,0x01,0x81,0x01]
-// VI:   buffer_store_dword v[1:2], v2, s[4:7], s1 offen offset:4 tfe ; encoding: [0x04,0x10,0x70,0xe0,0x02,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], v2, s[4:7], s1 offen glc tfe
-// SICI: buffer_store_dword v[1:2], v2, s[4:7], s1 offen glc tfe ; encoding: [0x00,0x50,0x70,0xe0,0x02,0x01,0x81,0x01]
-// VI:   buffer_store_dword v[1:2], v2, s[4:7], s1 offen glc tfe ; encoding: [0x00,0x50,0x70,0xe0,0x02,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], v2, s[4:7], s1 offen offset:4 glc slc tfe
-// SICI: buffer_store_dword v[1:2], v2, s[4:7], s1 offen offset:4 glc slc tfe ; encoding: [0x04,0x50,0x70,0xe0,0x02,0x01,0xc1,0x01]
-// VI:   buffer_store_dword v[1:2], v2, s[4:7], s1 offen offset:4 glc slc tfe ; encoding: [0x04,0x50,0x72,0xe0,0x02,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], v2, ttmp[4:7], ttmp1 offen offset:4 glc slc tfe
-// SICI: buffer_store_dword v[1:2], v2, ttmp[4:7], ttmp1 offen offset:4 glc slc tfe ; encoding: [0x04,0x50,0x70,0xe0,0x02,0x01,0xdd,0x71]
-// VI:   buffer_store_dword v[1:2], v2, ttmp[4:7], ttmp1 offen offset:4 glc slc tfe ; encoding: [0x04,0x50,0x72,0xe0,0x02,0x01,0x9d,0x71]
-
-buffer_store_dwordx3 v[1:4], v2, ttmp[4:7], ttmp1 offen offset:4 glc slc tfe
-// SICI: buffer_store_dwordx3 v[1:4], v2, ttmp[4:7], ttmp1 offen offset:4 glc slc tfe ; encoding: [0x04,0x50,0x7c,0xe0,0x02,0x01,0xdd,0x71]
-// VI:   buffer_store_dwordx3 v[1:4], v2, ttmp[4:7], ttmp1 offen offset:4 glc slc tfe ; encoding: [0x04,0x50,0x7a,0xe0,0x02,0x01,0x9d,0x71]
 
 //===----------------------------------------------------------------------===//
 // store - vgpr index
@@ -302,22 +262,6 @@ buffer_store_dword v1, v2, s[4:7], s1 idxen offset:4 slc
 // SICI: buffer_store_dword v1, v2, s[4:7], s1 idxen offset:4 slc ; encoding: [0x04,0x20,0x70,0xe0,0x02,0x01,0x41,0x01]
 // VI:   buffer_store_dword v1, v2, s[4:7], s1 idxen offset:4 slc ; encoding: [0x04,0x20,0x72,0xe0,0x02,0x01,0x01,0x01]
 
-buffer_store_dword v[1:2], v2, s[4:7], s1 idxen offset:4 tfe
-// SICI: buffer_store_dword v[1:2], v2, s[4:7], s1 idxen offset:4 tfe ; encoding: [0x04,0x20,0x70,0xe0,0x02,0x01,0x81,0x01]
-// VI:   buffer_store_dword v[1:2], v2, s[4:7], s1 idxen offset:4 tfe ; encoding: [0x04,0x20,0x70,0xe0,0x02,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], v2, s[4:7], s1 idxen glc tfe
-// SICI: buffer_store_dword v[1:2], v2, s[4:7], s1 idxen glc tfe ; encoding: [0x00,0x60,0x70,0xe0,0x02,0x01,0x81,0x01]
-// VI:   buffer_store_dword v[1:2], v2, s[4:7], s1 idxen glc tfe ; encoding: [0x00,0x60,0x70,0xe0,0x02,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], v2, s[4:7], s1 idxen offset:4 glc slc tfe
-// SICI: buffer_store_dword v[1:2], v2, s[4:7], s1 idxen offset:4 glc slc tfe ; encoding: [0x04,0x60,0x70,0xe0,0x02,0x01,0xc1,0x01]
-// VI:   buffer_store_dword v[1:2], v2, s[4:7], s1 idxen offset:4 glc slc tfe ; encoding: [0x04,0x60,0x72,0xe0,0x02,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], v2, ttmp[4:7], ttmp1 idxen offset:4 glc slc tfe
-// SICI: buffer_store_dword v[1:2], v2, ttmp[4:7], ttmp1 idxen offset:4 glc slc tfe ; encoding: [0x04,0x60,0x70,0xe0,0x02,0x01,0xdd,0x71]
-// VI:   buffer_store_dword v[1:2], v2, ttmp[4:7], ttmp1 idxen offset:4 glc slc tfe ; encoding: [0x04,0x60,0x72,0xe0,0x02,0x01,0x9d,0x71]
-
 //===----------------------------------------------------------------------===//
 // store - vgpr index and offset
 //===----------------------------------------------------------------------===//
@@ -338,22 +282,6 @@ buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 slc
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 slc ; encoding: [0x04,0x30,0x70,0xe0,0x02,0x01,0x41,0x01]
 // VI:   buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 slc ; encoding: [0x04,0x30,0x72,0xe0,0x02,0x01,0x01,0x01]
 
-buffer_store_dword v[1:2], v[2:3], s[4:7], s1 idxen offen offset:4 tfe
-// SICI: buffer_store_dword v[1:2], v[2:3], s[4:7], s1 idxen offen offset:4 tfe ; encoding: [0x04,0x30,0x70,0xe0,0x02,0x01,0x81,0x01]
-// VI:   buffer_store_dword v[1:2], v[2:3], s[4:7], s1 idxen offen offset:4 tfe ; encoding: [0x04,0x30,0x70,0xe0,0x02,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], v[2:3], s[4:7], s1 idxen offen glc tfe
-// SICI: buffer_store_dword v[1:2], v[2:3], s[4:7], s1 idxen offen glc tfe ; encoding: [0x00,0x70,0x70,0xe0,0x02,0x01,0x81,0x01]
-// VI:   buffer_store_dword v[1:2], v[2:3], s[4:7], s1 idxen offen glc tfe ; encoding: [0x00,0x70,0x70,0xe0,0x02,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], v[2:3], s[4:7], s1 idxen offen offset:4 glc slc tfe
-// SICI: buffer_store_dword v[1:2], v[2:3], s[4:7], s1 idxen offen offset:4 glc slc tfe ; encoding: [0x04,0x70,0x70,0xe0,0x02,0x01,0xc1,0x01]
-// VI:   buffer_store_dword v[1:2], v[2:3], s[4:7], s1 idxen offen offset:4 glc slc tfe ; encoding: [0x04,0x70,0x72,0xe0,0x02,0x01,0x81,0x01]
-
-buffer_store_dword v[1:2], v[2:3], ttmp[4:7], ttmp1 idxen offen offset:4 glc slc tfe
-// SICI: buffer_store_dword v[1:2], v[2:3], ttmp[4:7], ttmp1 idxen offen offset:4 glc slc tfe ; encoding: [0x04,0x70,0x70,0xe0,0x02,0x01,0xdd,0x71]
-// VI:   buffer_store_dword v[1:2], v[2:3], ttmp[4:7], ttmp1 idxen offen offset:4 glc slc tfe ; encoding: [0x04,0x70,0x72,0xe0,0x02,0x01,0x9d,0x71]
-
 //===----------------------------------------------------------------------===//
 // store - addr64
 //===----------------------------------------------------------------------===//
@@ -372,22 +300,6 @@ buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc
 
 buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 slc
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 slc ; encoding: [0x04,0x80,0x70,0xe0,0x02,0x01,0x41,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
-
-buffer_store_dword v[1:2], v[2:3], s[4:7], s1 addr64 offset:4 tfe
-// SICI: buffer_store_dword v[1:2], v[2:3], s[4:7], s1 addr64 offset:4 tfe ; encoding: [0x04,0x80,0x70,0xe0,0x02,0x01,0x81,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
-
-buffer_store_dword v[1:2], v[2:3], s[4:7], s1 addr64 glc tfe
-// SICI: buffer_store_dword v[1:2], v[2:3], s[4:7], s1 addr64 glc tfe ; encoding: [0x00,0xc0,0x70,0xe0,0x02,0x01,0x81,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
-
-buffer_store_dword v[1:2], v[2:3], s[4:7], s1 addr64 offset:4 glc slc tfe
-// SICI: buffer_store_dword v[1:2], v[2:3], s[4:7], s1 addr64 offset:4 glc slc tfe ; encoding: [0x04,0xc0,0x70,0xe0,0x02,0x01,0xc1,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
-
-buffer_store_dword v[1:2], v[2:3], ttmp[4:7], ttmp1 addr64 offset:4 glc slc tfe
-// SICI: buffer_store_dword v[1:2], v[2:3], ttmp[4:7], ttmp1 addr64 offset:4 glc slc tfe ; encoding: [0x04,0xc0,0x70,0xe0,0x02,0x01,0xdd,0x71]
 // NOVI: error: operands are not valid for this GPU or mode
 
 //===----------------------------------------------------------------------===//
@@ -882,3 +794,6 @@ buffer_load_dword off, s[8:11], s3
 
 buffer_load_dword off, s[8:11], s3 offset:1
 // NOSICIVI: error: too few operands for instruction
+
+buffer_store_dword v[1:2], off, s[4:7], s1 tfe
+// NOSICIVI: error: TFE modifier has no meaning for store instructions

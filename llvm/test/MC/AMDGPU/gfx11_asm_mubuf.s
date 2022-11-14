@@ -2410,9 +2410,6 @@ buffer_store_d16_hi_format_x v1, off, s[12:15], s4 offset:4095 dlc
 buffer_store_d16_hi_format_x v1, off, s[12:15], s4 offset:4095 glc slc dlc
 //  GFX11: encoding: [0xff,0x7f,0x9c,0xe0,0x00,0x01,0x03,0x04]
 
-buffer_store_d16_hi_format_x v[1:2], off, s[12:15], s4 offset:4095 glc slc dlc tfe
-//  GFX11: encoding: [0xff,0x7f,0x9c,0xe0,0x00,0x01,0x23,0x04]
-
 buffer_store_format_x v1, off, s[12:15], s4 offset:4095
 //  GFX11: encoding: [0xff,0x0f,0x10,0xe0,0x00,0x01,0x03,0x04]
 
