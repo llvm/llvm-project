@@ -1326,7 +1326,7 @@ void transform::TileToForeachThreadOp::build(OpBuilder &builder,
                                              Value target,
                                              ArrayRef<int64_t> staticTileSizes,
                                              transform::TileSizesSpec,
-                                             ArrayRef<int64_t> mapping) {
+                                             ArrayAttr mapping) {
   return build(builder, result, target,
                getAsOpFoldResult(builder.getI64ArrayAttr(staticTileSizes)),
                TileSizesSpec(), mapping);
@@ -1335,7 +1335,7 @@ void transform::TileToForeachThreadOp::build(OpBuilder &builder,
 void transform::TileToForeachThreadOp::build(
     OpBuilder &builder, OperationState &result, Value target,
     ArrayRef<OpFoldResult> mixedTileSizes, transform::TileSizesSpec,
-    ArrayRef<int64_t> mapping) {
+    ArrayAttr mapping) {
   SmallVector<int64_t> staticTileSizes;
   SmallVector<Value> dynamicTileSizes;
   dispatchIndexOpFoldResults(mixedTileSizes, dynamicTileSizes, staticTileSizes,
@@ -1346,12 +1346,9 @@ void transform::TileToForeachThreadOp::build(
   MLIRContext *ctx = builder.getContext();
   auto operationType = pdl::OperationType::get(ctx);
   auto staticTileSizesAttr = builder.getI64ArrayAttr(staticTileSizes);
-  ArrayAttr mappingAttr;
-  if (!mapping.empty())
-    mappingAttr = builder.getI64ArrayAttr(mapping);
   build(builder, result, TypeRange{operationType, operationType}, target,
         /*numThreads=*/ValueRange{}, dynamicTileSizes,
-        /*staticNumThreads=*/ArrayAttr(), staticTileSizesAttr, mappingAttr);
+        /*staticNumThreads=*/ArrayAttr(), staticTileSizesAttr, mapping);
 }
 
 void transform::TileToForeachThreadOp::build(OpBuilder &builder,
@@ -1359,7 +1356,7 @@ void transform::TileToForeachThreadOp::build(OpBuilder &builder,
                                              Value target,
                                              ArrayRef<int64_t> staticNumThreads,
                                              transform::NumThreadsSpec,
-                                             ArrayRef<int64_t> mapping) {
+                                             ArrayAttr mapping) {
   return build(builder, result, target,
                getAsOpFoldResult(builder.getI64ArrayAttr(staticNumThreads)),
                NumThreadsSpec(), mapping);
@@ -1368,7 +1365,7 @@ void transform::TileToForeachThreadOp::build(OpBuilder &builder,
 void transform::TileToForeachThreadOp::build(
     OpBuilder &builder, OperationState &result, Value target,
     ArrayRef<OpFoldResult> mixedNumThreads, transform::NumThreadsSpec,
-    ArrayRef<int64_t> mapping) {
+    ArrayAttr mapping) {
   SmallVector<int64_t> staticNumThreads;
   SmallVector<Value> dynamicNumThreads;
   dispatchIndexOpFoldResults(mixedNumThreads, dynamicNumThreads,
@@ -1379,12 +1376,9 @@ void transform::TileToForeachThreadOp::build(
   MLIRContext *ctx = builder.getContext();
   auto operationType = pdl::OperationType::get(ctx);
   auto staticNumThreadsAttr = builder.getI64ArrayAttr(staticNumThreads);
-  ArrayAttr mappingAttr;
-  if (!mapping.empty())
-    mappingAttr = builder.getI64ArrayAttr(mapping);
   build(builder, result, TypeRange{operationType, operationType}, target,
         dynamicNumThreads, /*tileSizes=*/ValueRange{}, staticNumThreadsAttr,
-        /*staticTileSizes=*/ArrayAttr(), mappingAttr);
+        /*staticTileSizes=*/ArrayAttr(), mapping);
 }
 
 DiagnosedSilenceableFailure transform::tileToForeachThreadOpImpl(
