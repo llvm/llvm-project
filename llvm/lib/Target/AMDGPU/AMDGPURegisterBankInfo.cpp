@@ -2447,17 +2447,21 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     int Amt = MI.getOperand(2).getImm();
     if (Amt <= 32) {
+      // Downstream users have expectations for the high bit behavior, so freeze
+      // incoming undefined bits.
       if (Amt == 32) {
         // The low bits are unchanged.
-        B.buildCopy(DstRegs[0], SrcRegs[0]);
+        B.buildFreeze(DstRegs[0], SrcRegs[0]);
       } else {
+        auto Freeze = B.buildFreeze(S32, SrcRegs[0]);
         // Extend in the low bits and propagate the sign bit to the high half.
-        B.buildSExtInReg(DstRegs[0], SrcRegs[0], Amt);
+        B.buildSExtInReg(DstRegs[0], Freeze, Amt);
       }
 
       B.buildAShr(DstRegs[1], DstRegs[0], B.buildConstant(S32, 31));
     } else {
       // The low bits are unchanged, and extend in the high bits.
+      // No freeze required
       B.buildCopy(DstRegs[0], SrcRegs[0]);
       B.buildSExtInReg(DstRegs[1], DstRegs[0], Amt - 32);
     }
