@@ -189,3 +189,22 @@ define i64 @packh_i64_2(i64 %a, i64 %b) nounwind {
   %or = or i64 %shl, %and
   ret i64 %or
 }
+
+
+define zeroext i16 @packh_i16(i8 zeroext %a, i8 zeroext %b) nounwind {
+; RV32I-LABEL: packh_i16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 8
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBKB-LABEL: packh_i16:
+; RV32ZBKB:       # %bb.0:
+; RV32ZBKB-NEXT:    packh a0, a0, a1
+; RV32ZBKB-NEXT:    ret
+  %zext = zext i8 %a to i16
+  %zext1 = zext i8 %b to i16
+  %shl = shl i16 %zext1, 8
+  %or = or i16 %shl, %zext
+  ret i16 %or
+}

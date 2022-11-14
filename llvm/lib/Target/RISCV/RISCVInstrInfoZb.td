@@ -633,10 +633,10 @@ def : Pat<(i64 (bswap GPR:$rs1)), (REV8_RV64 GPR:$rs1)>;
 
 let Predicates = [HasStdExtZbkb] in {
 def : Pat<(or (and (shl GPR:$rs2, (XLenVT 8)), 0xFFFF),
-              (and GPR:$rs1, 0x00FF)),
+              (zexti8 GPR:$rs1)),
           (PACKH GPR:$rs1, GPR:$rs2)>;
-def : Pat<(or (shl (and GPR:$rs2, 0x00FF), (XLenVT 8)),
-              (and GPR:$rs1, 0x00FF)),
+def : Pat<(or (shl (zexti8 GPR:$rs2), (XLenVT 8)),
+              (zexti8 GPR:$rs1)),
           (PACKH GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbkb]
 
