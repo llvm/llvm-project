@@ -50,6 +50,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Yk/BlockDisambiguate.h"
 #include "llvm/Transforms/Yk/ControlPoint.h"
+#include "llvm/Transforms/Yk/ShadowStack.h"
 #include "llvm/Transforms/Yk/Stackmaps.h"
 #include <cassert>
 #include <string>
@@ -274,6 +275,10 @@ static cl::opt<bool>
 static cl::opt<bool> YkPatchCtrlPoint("yk-patch-control-point", cl::init(false),
                                       cl::NotHidden,
                                       cl::desc("Patch yk_mt_control_point()"));
+
+static cl::opt<bool>
+    YkShadowStack("yk-shadow-stack", cl::init(false), cl::NotHidden,
+                  cl::desc("Use a shadow stack for stack values."));
 
 static cl::opt<bool>
     YkInsertStackMaps("yk-insert-stackmaps", cl::init(false), cl::NotHidden,
@@ -1134,6 +1139,9 @@ bool TargetPassConfig::addISelPasses() {
   if (YkBlockDisambiguate)
     addPass(createYkBlockDisambiguatePass());
 
+  if (YkShadowStack) {
+    addPass(createYkShadowStackPass());
+  }
   // We insert the yk control point pass as late as possible. It has to run
   // before instruction selection (or the machine IR won't reflect our
   // patching), but after other passes which mutate the IR (e.g.
@@ -1145,11 +1153,13 @@ bool TargetPassConfig::addISelPasses() {
   // point could be changed, e.g. the control point's struct argument could be
   // decomposed into scalar arguments. The JIT runtime relies on the interface
   // *not* being changed.
-  if (YkPatchCtrlPoint)
+  if (YkPatchCtrlPoint) {
     addPass(createYkControlPointPass());
+  }
 
-  if (YkInsertStackMaps)
+  if (YkInsertStackMaps) {
     addPass(createYkStackmapsPass());
+  }
 
   addISelPrepare();
   return addCoreISelPasses();
