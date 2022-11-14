@@ -76,7 +76,6 @@ add_llvm_component_library(LLVMCore
   intrinsics_gen
 
   LINK_COMPONENTS
-  Analysis
   BinaryFormat
   Remarks
   Support
