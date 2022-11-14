@@ -419,7 +419,8 @@ public:
   }
 
   fir::ExtendedValue
-  translateToExtendedValue(mlir::Location loc, hlfir::FortranEntity entity,
+  translateToExtendedValue(mlir::Location loc,
+                           hlfir::EntityWithAttributes entity,
                            Fortran::lower::StatementContext &context) {
     auto [exv, exvCleanup] =
         hlfir::translateToExtendedValue(loc, getFirOpBuilder(), entity);
@@ -434,8 +435,9 @@ public:
               mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
     if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
-      hlfir::FortranEntity loweredExpr = Fortran::lower::convertExprToHLFIR(
-          loc, *this, expr, localSymbols, context);
+      hlfir::EntityWithAttributes loweredExpr =
+          Fortran::lower::convertExprToHLFIR(loc, *this, expr, localSymbols,
+                                             context);
       if (fir::FortranVariableOpInterface variable =
               loweredExpr.getIfVariable())
         if (!variable.isBox())
@@ -453,8 +455,9 @@ public:
                mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
     if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
-      hlfir::FortranEntity loweredExpr = Fortran::lower::convertExprToHLFIR(
-          loc, *this, expr, localSymbols, context);
+      hlfir::EntityWithAttributes loweredExpr =
+          Fortran::lower::convertExprToHLFIR(loc, *this, expr, localSymbols,
+                                             context);
       fir::ExtendedValue exv =
           translateToExtendedValue(loc, loweredExpr, context);
       // Load scalar references to integer, logical, real, or complex value
@@ -488,8 +491,9 @@ public:
   genExprBox(mlir::Location loc, const Fortran::lower::SomeExpr &expr,
              Fortran::lower::StatementContext &stmtCtx) override final {
     if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
-      hlfir::FortranEntity loweredExpr = Fortran::lower::convertExprToHLFIR(
-          loc, *this, expr, localSymbols, stmtCtx);
+      hlfir::EntityWithAttributes loweredExpr =
+          Fortran::lower::convertExprToHLFIR(loc, *this, expr, localSymbols,
+                                             stmtCtx);
       if (fir::FortranVariableOpInterface variable =
               loweredExpr.getIfVariable())
         if (variable.isBoxValue() || !variable.isBoxAddress()) {
