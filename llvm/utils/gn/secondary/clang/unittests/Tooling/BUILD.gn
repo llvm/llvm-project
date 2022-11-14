@@ -32,6 +32,7 @@ unittest("ToolingTests") {
     "DiagnosticsYamlTest.cpp",
     "ExecutionTest.cpp",
     "FixItTest.cpp",
+    "HeaderAnalysisTest.cpp",
     "HeaderIncludesTest.cpp",
     "LexicallyOrderedRecursiveASTVisitorTest.cpp",
     "LookupTest.cpp",

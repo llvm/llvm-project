@@ -229,6 +229,14 @@ def TestAttrSelfTypeParameterFormat
   let assemblyFormat = "`<` $a `>`";
 }
 
+def TestAttrSelfTypeParameterStructFormat
+    : Test_Attr<"TestAttrSelfTypeParameterStructFormat", [TypedAttrInterface]> {
+  let parameters = (ins "int":$a, AttributeSelfTypeParameter<"">:$type);
+
+  let mnemonic = "attr_self_type_struct_format";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 // Test overridding attribute builders with a custom builder.
 def TestOverrideBuilderAttr : Test_Attr<"TestOverrideBuilder"> {
   let mnemonic = "override_builder";

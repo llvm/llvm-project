@@ -151,11 +151,11 @@ typedef A *MyObjectRef;
 // CHECK-CC8: ObjCInstanceMethodDecl:{ResultType void *}{Informative first:}{TypedText second3:}{Text (float)y3}{HorizontalSpace  }{TypedText third:}{Text (double)z} (35)
 // CHECK-CC8: ObjCInstanceMethodDecl:{ResultType int}{Informative first:}{TypedText second:}{Text (float)y}{HorizontalSpace  }{TypedText third:}{Text (double)z} (8)
 // RUN: env CINDEXTEST_CODE_COMPLETE_PATTERNS=1 c-index-test -code-completion-at=%s:52:19 %s | FileCheck -check-prefix=CHECK-CC9 %s
-// CHECK-CC9: Pattern:{TypedText x} (40)
-// CHECK-CC9: Pattern:{TypedText xx} (40)
-// CHECK-CC9: Pattern:{TypedText xxx} (40)
+// CHECK-CC9: NotImplemented:{TypedText x} (40)
+// CHECK-CC9: NotImplemented:{TypedText xx} (40)
+// CHECK-CC9: NotImplemented:{TypedText xxx} (40)
 // RUN: env CINDEXTEST_CODE_COMPLETE_PATTERNS=1 c-index-test -code-completion-at=%s:52:36 %s | FileCheck -check-prefix=CHECK-CCA %s
-// CHECK-CCA: Pattern:{TypedText y2} (40)
+// CHECK-CCA: NotImplemented:{TypedText y2} (40)
 // RUN: c-index-test -code-completion-at=%s:56:3 %s | FileCheck -check-prefix=CHECK-CCB %s
 // CHECK-CCB: ObjCInstanceMethodDecl:{LeftParen (}{Text int}{RightParen )}{TypedText first:}{LeftParen (}{Text int}{RightParen )}{Text x}{HorizontalSpace  }{TypedText second2:}{LeftParen (}{Text float}{RightParen )}{Text y}{HorizontalSpace  }{TypedText third:}{LeftParen (}{Text double}{RightParen )}{Text z} (40)
 // RUN: c-index-test -code-completion-at=%s:56:8 %s | FileCheck -check-prefix=CHECK-CCC %s
@@ -171,46 +171,46 @@ typedef A *MyObjectRef;
 // RUN: c-index-test -code-completion-at=%s:60:4 %s | FileCheck -check-prefix=CHECK-CCF %s
 // CHECK-CCF: ObjCInterfaceDecl:{TypedText A} (50)
 // CHECK-CCF: ObjCInterfaceDecl:{TypedText B} (50)
-// CHECK-CCF: Keyword:{TypedText bycopy} (40)
-// CHECK-CCF: Keyword:{TypedText byref} (40)
-// CHECK-CCF: Keyword:{TypedText in} (40)
-// CHECK-CCF: Keyword:{TypedText inout} (40)
-// CHECK-CCF: Keyword:{TypedText nonnull} (40)
-// CHECK-CCF: Keyword:{TypedText nullable} (40)
-// CHECK-CCF: Keyword:{TypedText oneway} (40)
-// CHECK-CCF: Keyword:{TypedText out} (40)
-// CHECK-CCF: Keyword:{TypedText unsigned} (50)
-// CHECK-CCF: Keyword:{TypedText void} (50)
-// CHECK-CCF: Keyword:{TypedText volatile} (50)
+// CHECK-CCF: NotImplemented:{TypedText bycopy} (40)
+// CHECK-CCF: NotImplemented:{TypedText byref} (40)
+// CHECK-CCF: NotImplemented:{TypedText in} (40)
+// CHECK-CCF: NotImplemented:{TypedText inout} (40)
+// CHECK-CCF: NotImplemented:{TypedText nonnull} (40)
+// CHECK-CCF: NotImplemented:{TypedText nullable} (40)
+// CHECK-CCF: NotImplemented:{TypedText oneway} (40)
+// CHECK-CCF: NotImplemented:{TypedText out} (40)
+// CHECK-CCF: NotImplemented:{TypedText unsigned} (50)
+// CHECK-CCF: NotImplemented:{TypedText void} (50)
+// CHECK-CCF: NotImplemented:{TypedText volatile} (50)
 // RUN: c-index-test -code-completion-at=%s:60:11 %s | FileCheck -check-prefix=CHECK-CCG %s
 // CHECK-CCG: ObjCInterfaceDecl:{TypedText A} (50)
 // CHECK-CCG: ObjCInterfaceDecl:{TypedText B} (50)
-// CHECK-CCG-NOT: Keyword:{TypedText bycopy} (40)
-// CHECK-CCG-NOT: Keyword:{TypedText byref} (40)
-// CHECK-CCG: Keyword:{TypedText in} (40)
-// CHECK-CCG: Keyword:{TypedText inout} (40)
-// CHECK-CCG-NOT: Keyword:{TypedText oneway} (40)
-// CHECK-CCG: Keyword:{TypedText out} (40)
-// CHECK-CCG: Keyword:{TypedText unsigned} (50)
-// CHECK-CCG: Keyword:{TypedText void} (50)
-// CHECK-CCG: Keyword:{TypedText volatile} (50)
+// CHECK-CCG-NOT: NotImplemented:{TypedText bycopy} (40)
+// CHECK-CCG-NOT: NotImplemented:{TypedText byref} (40)
+// CHECK-CCG: NotImplemented:{TypedText in} (40)
+// CHECK-CCG: NotImplemented:{TypedText inout} (40)
+// CHECK-CCG-NOT: NotImplemented:{TypedText oneway} (40)
+// CHECK-CCG: NotImplemented:{TypedText out} (40)
+// CHECK-CCG: NotImplemented:{TypedText unsigned} (50)
+// CHECK-CCG: NotImplemented:{TypedText void} (50)
+// CHECK-CCG: NotImplemented:{TypedText volatile} (50)
 // RUN: c-index-test -code-completion-at=%s:60:24 %s | FileCheck -check-prefix=CHECK-CCF %s
 // RUN: c-index-test -code-completion-at=%s:60:27 %s | FileCheck -check-prefix=CHECK-CCH %s
 // CHECK-CCH: ObjCInterfaceDecl:{TypedText A} (50)
 // CHECK-CCH: ObjCInterfaceDecl:{TypedText B} (50)
-// CHECK-CCH: Keyword:{TypedText bycopy} (40)
-// CHECK-CCH: Keyword:{TypedText byref} (40)
-// CHECK-CCH-NOT: Keyword:{TypedText in} (40)
-// CHECK-CCH: Keyword:{TypedText inout} (40)
-// CHECK-CCH: Keyword:{TypedText oneway} (40)
-// CHECK-CCH: Keyword:{TypedText out} (40)
-// CHECK-CCH: Keyword:{TypedText unsigned} (50)
-// CHECK-CCH: Keyword:{TypedText void} (50)
-// CHECK-CCH: Keyword:{TypedText volatile} (50)
+// CHECK-CCH: NotImplemented:{TypedText bycopy} (40)
+// CHECK-CCH: NotImplemented:{TypedText byref} (40)
+// CHECK-CCH-NOT: NotImplemented:{TypedText in} (40)
+// CHECK-CCH: NotImplemented:{TypedText inout} (40)
+// CHECK-CCH: NotImplemented:{TypedText oneway} (40)
+// CHECK-CCH: NotImplemented:{TypedText out} (40)
+// CHECK-CCH: NotImplemented:{TypedText unsigned} (50)
+// CHECK-CCH: NotImplemented:{TypedText void} (50)
+// CHECK-CCH: NotImplemented:{TypedText volatile} (50)
 
 // IBAction completion
 // RUN: c-index-test -code-completion-at=%s:5:4 %s | FileCheck -check-prefix=CHECK-IBACTION %s
-// CHECK-IBACTION: Pattern:{TypedText IBAction}{RightParen )}{Placeholder selector}{Colon :}{LeftParen (}{Text id}{RightParen )}{Text sender} (40)
+// CHECK-IBACTION: NotImplemented:{TypedText IBAction}{RightParen )}{Placeholder selector}{Colon :}{LeftParen (}{Text id}{RightParen )}{Text sender} (40)
 
 // <rdar://problem/8939352>
 // RUN: c-index-test -code-completion-at=%s:68:9 %s | FileCheck -check-prefix=CHECK-8939352 %s
@@ -252,7 +252,7 @@ typedef A *MyObjectRef;
 @end
 
 // RUN: c-index-test -code-completion-at=%s:250:1 %s | FileCheck -check-prefix=CHECK-COMP-NO-PREFIX %s
-// CHECK-COMP-NO-PREFIX: Keyword:{TypedText @end} (40)
+// CHECK-COMP-NO-PREFIX: NotImplemented:{TypedText @end} (40)
 // CHECK-COMP-NO-PREFIX: ObjCClassMethodDecl:{Text +}{HorizontalSpace  }{LeftParen (}{Text int}{RightParen )}{TypedText aClassMethod:}{LeftParen (}{Text int}{RightParen )}{Text x} (40)
 // CHECK-COMP-NO-PREFIX: ObjCInstanceMethodDecl:{Text -}{HorizontalSpace  }{LeftParen (}{Text void}{RightParen )}{TypedText aMethod} (40)
 // CHECK-COMP-NO-PREFIX: ObjCInterfaceDecl:{TypedText I1}

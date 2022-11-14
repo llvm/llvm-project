@@ -1127,7 +1127,7 @@ vzeroupper
 # CHECK-NEXT:  1      3     1.00                        vcvtpd2dq	%ymm0, %xmm2
 # CHECK-NEXT:  2      10    1.00    *                   vcvtpd2dqy	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        vcvtpd2ps	%xmm0, %xmm2
-# CHECK-NEXT:  2      10    0.50    *                   vcvtpd2psx	(%rax), %xmm2
+# CHECK-NEXT:  1      10    1.00    *                   vcvtpd2psx	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        vcvtpd2ps	%ymm0, %xmm2
 # CHECK-NEXT:  1      10    1.00    *                   vcvtpd2psy	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        vcvtps2dq	%xmm0, %xmm2
@@ -1143,7 +1143,7 @@ vzeroupper
 # CHECK-NEXT:  1      11    1.00    *                   vcvtsd2si	(%rax), %ecx
 # CHECK-NEXT:  1      11    1.00    *                   vcvtsd2si	(%rax), %rcx
 # CHECK-NEXT:  1      3     1.00                        vcvtsd2ss	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      10    0.50    *                   vcvtsd2ss	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      10    1.00    *                   vcvtsd2ss	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      3     1.00                        vcvtsi2sd	%ecx, %xmm0, %xmm2
 # CHECK-NEXT:  1      3     1.00                        vcvtsi2sd	%rcx, %xmm0, %xmm2
 # CHECK-NEXT:  1      12    1.00    *                   vcvtsi2sdl	(%rax), %xmm0, %xmm2
@@ -1739,7 +1739,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 117.00 117.00 117.00 0.25   0.25   0.25   0.25    -     127.58 192.58 196.75 304.08  -
+# CHECK-NEXT: 117.00 117.00 117.00 0.25   0.25   0.25   0.25    -     126.58 192.58 196.75 305.08  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -1840,7 +1840,7 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50   1.00    -     vcvtpd2dq	%ymm0, %xmm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50   1.00    -     vcvtpd2dqy	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     vcvtpd2ps	%xmm0, %xmm2
-# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     0.50    -      -     0.50    -     vcvtpd2psx	(%rax), %xmm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -     1.00    -     vcvtpd2psx	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     vcvtpd2ps	%ymm0, %xmm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -     1.00    -     vcvtpd2psy	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50   1.00    -     vcvtps2dq	%xmm0, %xmm2
@@ -1856,7 +1856,7 @@ vzeroupper
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -     1.00   1.00    -     vcvtsd2si	(%rax), %ecx
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -     1.00   1.00    -     vcvtsd2si	(%rax), %rcx
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     vcvtsd2ss	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     0.50    -      -     0.50    -     vcvtsd2ss	(%rax), %xmm1, %xmm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -     1.00    -     vcvtsd2ss	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.33   0.33    -     1.33    -     vcvtsi2sd	%ecx, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.33   0.33    -     1.33    -     vcvtsi2sd	%rcx, %xmm0, %xmm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -     1.00    -     vcvtsi2sdl	(%rax), %xmm0, %xmm2
