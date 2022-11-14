@@ -223,7 +223,7 @@ struct Decomposition {
 } // namespace
 
 static Decomposition decompose(Value *V,
-                               SmallVector<PreconditionTy, 4> &Preconditions,
+                               SmallVectorImpl<PreconditionTy> &Preconditions,
                                bool IsSigned, const DataLayout &DL);
 
 static bool canUseSExt(ConstantInt *CI) {
@@ -231,9 +231,10 @@ static bool canUseSExt(ConstantInt *CI) {
   return Val.sgt(MinSignedConstraintValue) && Val.slt(MaxConstraintValue);
 }
 
-static Decomposition decomposeGEP(GetElementPtrInst &GEP,
-                                  SmallVector<PreconditionTy, 4> &Preconditions,
-                                  bool IsSigned, const DataLayout &DL) {
+static Decomposition
+decomposeGEP(GetElementPtrInst &GEP,
+             SmallVectorImpl<PreconditionTy> &Preconditions, bool IsSigned,
+             const DataLayout &DL) {
   // Do not reason about pointers where the index size is larger than 64 bits,
   // as the coefficients used to encode constraints are 64 bit integers.
   if (DL.getIndexTypeSizeInBits(GEP.getPointerOperand()->getType()) > 64)
@@ -313,7 +314,7 @@ static Decomposition decomposeGEP(GetElementPtrInst &GEP,
 // pair is the constant-factor and X must be nullptr. If the expression cannot
 // be decomposed, returns an empty vector.
 static Decomposition decompose(Value *V,
-                               SmallVector<PreconditionTy, 4> &Preconditions,
+                               SmallVectorImpl<PreconditionTy> &Preconditions,
                                bool IsSigned, const DataLayout &DL) {
 
   auto MergeResults = [&Preconditions, IsSigned, &DL](Value *A, Value *B,
