@@ -130,12 +130,17 @@ cleanup:
 define i8* @nosuspend(i8* %buffer, i32 %n) {
 ; CHECK-LABEL: @nosuspend(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[A]], align 4
+; CHECK-NEXT:    call void @use_var_ptr(i32* nonnull [[A]])
+; CHECK-NEXT:    [[AL:%.*]] = load i32, i32* [[A]], align 4
+; CHECK-NEXT:    call void @use_var(i32 [[AL]])
+; CHECK-NEXT:    ret i8* null
 ;
 ; CORO-LABEL: @nosuspend(
 ; CORO-NEXT:  entry:
 ; CORO-NEXT:    [[FRAMEPTR:%.*]] = bitcast i8* undef to %nosuspend.Frame*
-; CORO-NEXT:    [[A:%.*]] = getelementptr inbounds [[NOSUSPEND_FRAME:%.*]], %nosuspend.Frame* [[FRAMEPTR]], i32 0, i32 0
+; CORO-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CORO-NEXT:    store i32 [[N:%.*]], i32* [[A]], align 4
 ; CORO-NEXT:    call void @use_var_ptr(i32* [[A]])
 ; CORO-NEXT:    [[AL:%.*]] = load i32, i32* [[A]], align 4
