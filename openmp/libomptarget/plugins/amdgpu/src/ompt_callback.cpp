@@ -16,8 +16,9 @@
 
 #include <atomic>
 #include <mutex>
-#include <vector>
 #include <string.h>
+#include <sys/time.h>
+// #include <vector>
 
 //****************************************************************************
 // local includes
@@ -39,7 +40,7 @@
   macro(ompt_set_trace_ompt) macro(ompt_start_trace) macro(ompt_flush_trace)   \
       macro(ompt_stop_trace) macro(ompt_advance_buffer_cursor)                 \
           macro(ompt_get_record_ompt) macro(ompt_get_device_time)              \
-              macro(ompt_get_record_type)
+              macro(ompt_get_record_type) macro(ompt_translate_time)
 
 #define fnptr_to_ptr(x) ((void *)(uint64_t)x)
 
@@ -64,6 +65,9 @@ static std::mutex get_record_type_mutex;
 //****************************************************************************
 
 ompt_device_callbacks_t ompt_device_callbacks;
+
+static double HostToDeviceRate = .0;
+static double HostToDeviceSlope = .0;
 
 typedef ompt_set_result_t (*libomptarget_ompt_set_trace_ompt_t)(
     ompt_device_t *device, unsigned int enable, unsigned int etype);
@@ -278,6 +282,17 @@ ompt_get_device_time(ompt_device_t *device) {
   return devrtl_ompt_get_device_time(device);
 }
 
+// Translates a device time to a meaningful timepoint in host time
+OMPT_API_ROUTINE double ompt_translate_time(ompt_device_t *device,
+                                            ompt_device_time_t device_time) {
+  // We do not need to account for clock-skew / drift. So simple linear
+  // translation using the host to device rate we obtained.
+  double TranslatedTime = device_time * HostToDeviceRate;
+  DP("OMPT: Translate time: %f\n", TranslatedTime);
+
+  return TranslatedTime;
+}
+
 // End of runtime entry-points for trace records
 
 //****************************************************************************
@@ -317,9 +332,34 @@ ompt_device_callbacks_t::lookup(const char *interface_function_name) {
   return (ompt_interface_fn_t)0;
 }
 
+/// @brief Helper to get the host time
+/// @return  CLOCK_REALTIME seconds as double
+static double getTimeOfDay() {
+  double TimeVal = .0;
+  struct timeval tval;
+  int rc = gettimeofday(&tval, NULL);
+  if (rc) {
+    // XXX: Error case: What to do?
+  } else {
+    TimeVal = static_cast<double>(tval.tv_sec) +
+              1.0E-06 * static_cast<double>(tval.tv_usec);
+  }
+  return TimeVal;
+}
+
 static int ompt_device_init(ompt_function_lookup_t lookup,
                             int initial_device_num, ompt_data_t *tool_data) {
   DP("OMPT: Enter ompt_device_init\n");
+  ompt_device_t *dev = NULL; // TODO: Pass actual device
+
+  // At init we capture two time points for host and device to calculate the
+  // "average time" of those two times.
+  // libomp uses the CLOCK_REALTIME (via gettimeofday) to get
+  // the value for omp_get_wtime. So we use the same clock here to calculate
+  // the rate and convert device time to omp_get_wtime via translate_time.
+  double host_ref_a = getTimeOfDay();
+  uint64_t device_ref_a =
+      devrtl_ompt_get_device_time(dev) + 1; // +1 to erase potential div by zero
 
   ompt_enabled = true;
 
@@ -330,6 +370,17 @@ static int ompt_device_init(ompt_function_lookup_t lookup,
      fnptr_to_ptr(LIBOMPTARGET_GET_TARGET_OPID));
 
   ompt_device_callbacks.register_callbacks(lookup);
+
+  double host_ref_b = getTimeOfDay();
+  uint64_t device_ref_b =
+      devrtl_ompt_get_device_time(dev) + 1; // +1 to erase potential div by zero
+
+  // Multiply with .5 to reduce value range and potential risk of potential
+  // overflow
+  double host_avg = host_ref_b * 0.5 + host_ref_a * 0.5;
+  uint64_t device_avg = device_ref_b * 0.5 + device_ref_a * 0.5;
+  HostToDeviceRate = host_avg / device_avg;
+  DP("OMPT: Translate time HostToDeviceSlope: %f\n", HostToDeviceSlope);
 
   DP("OMPT: Exit ompt_device_init\n");
 
