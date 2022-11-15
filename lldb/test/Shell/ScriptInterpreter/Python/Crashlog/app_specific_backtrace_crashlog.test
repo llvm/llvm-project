@@ -3,7 +3,7 @@
 # RUN: mkdir -p %t.dir
 # RUN: yaml2obj %S/Inputs/application_specific_info/asi.yaml > %t.dir/asi
 # RUN: %lldb -o 'command script import lldb.macosx.crashlog' \
-# RUN: -o 'crashlog -a -i -t %t.dir/asi %S/Inputs/application_specific_info/asi.ips' \
+# RUN: -o 'crashlog -a -i -t %t.dir/asi %S/Inputs/application_specific_info/asi.txt' \
 # RUN: -o "thread list" -o "bt all" 2>&1 | FileCheck %s
 
 # CHECK: "crashlog" {{.*}} commands have been installed, use the "--help" options on these commands
@@ -44,7 +44,7 @@
 # CHECK-NEXT:     frame #3: 0x00000001a0b46af3{{.*}}
 # CHECK-NEXT:     frame #4: 0x00000001a09a12a3{{.*}}
 # CHECK-NEXT:     frame #5: 0x00000001047e3ecf asi`main{{.*}}
-# CHECK-NEXT:     frame #6: 0x00000001a05d3e4f dyld`start{{.*}}
+# CHECK-NEXT:     frame #6: 0x00000001a05d3e4f
 
 
 # CHECK: (lldb) thread list
