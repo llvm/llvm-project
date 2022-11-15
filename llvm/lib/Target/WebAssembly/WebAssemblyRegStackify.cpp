@@ -336,12 +336,17 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
   // instruction in which the current value is used, we cannot
   // stackify. Stackifying in this case would require that def moving below the
   // current def in the stack, which cannot be achieved, even with locals.
+  // Also ensure we don't sink the def past any other prior uses.
   for (const auto &SubsequentDef : drop_begin(DefI->defs())) {
-    for (const auto &PriorUse : UseI->uses()) {
-      if (&PriorUse == Use)
-        break;
-      if (PriorUse.isReg() && SubsequentDef.getReg() == PriorUse.getReg())
-        return false;
+    auto I = std::next(MachineBasicBlock::const_iterator(DefI));
+    auto E = std::next(MachineBasicBlock::const_iterator(UseI));
+    for (; I != E; ++I) {
+      for (const auto &PriorUse : I->uses()) {
+        if (&PriorUse == Use)
+          break;
+        if (PriorUse.isReg() && SubsequentDef.getReg() == PriorUse.getReg())
+          return false;
+      }
     }
   }
 
