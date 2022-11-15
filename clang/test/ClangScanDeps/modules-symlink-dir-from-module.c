@@ -19,38 +19,11 @@
 // CHECK: "modules": [
 // CHECK:   {
 // CHECK:     "command-line": [
+// CHECK-NOT: ]
 // CHECK:       "-fmodule-map-file=[[PREFIX]]/include/module/module.modulemap"
 // CHECK:     ]
 // CHECK:     "name": "Foo"
 // CHECK:   }
-// CHECK:   {
-// CHECK:     "command-line": [
-// FIXME: canonicalize this path
-// CHECK:       "-fmodule-map-file=[[PREFIX]]/include/symlink-to-module/module.modulemap"
-// CHECK:     ]
-// CHECK:     "name": "Foo_Private"
-// CHECK:   }
-// CHECK:   {
-// CHECK:     "command-line": [
-// CHECK:       "[[PREFIX]]/include/module/module.modulemap"
-// CHECK:     ]
-// CHECK:     "name": "Mod"
-// CHECK:   }
-// CHECK:   {
-// CHECK:     "command-line": [
-// FIXME: canonicalize this path
-// CHECK:       "-fmodule-map-file=[[PREFIX]]/include/symlink-to-module/module.modulemap"
-// CHECK:     ]
-// CHECK:     "name": "Other"
-// CHECK:   }
-// CHECK:   {
-// CHECK:     "command-line": [
-// FIXME: canonicalize this path
-// CHECK:       "-fmodule-map-file=[[PREFIX]]/include/symlink-to-module/module.modulemap"
-// CHECK:     ]
-// CHECK:     "name": "Test"
-// CHECK:   }
-// CHECK: ]
 
 //--- cdb.json.in
 [{
