@@ -105,6 +105,17 @@ ParsedModuleAndIndex parseAssemblyFileWithIndexNoUpgradeDebugInfo(
 std::unique_ptr<ModuleSummaryIndex>
 parseSummaryIndexAssemblyFile(StringRef Filename, SMDiagnostic &Err);
 
+/// The function is a secondary interface to the LLVM Assembly Parser. It parses
+/// an ASCII string that (presumably) contains LLVM Assembly code for a module
+/// summary. It returns a a ModuleSummaryIndex with the corresponding features.
+/// Note that this does not verify that the generated Index is valid, so you
+/// should run the verifier after parsing the file to check that it is okay.
+/// Parse LLVM Assembly from a string
+/// \param AsmString The string containing assembly
+/// \param Err Error result info.
+std::unique_ptr<ModuleSummaryIndex>
+parseSummaryIndexAssemblyString(StringRef AsmString, SMDiagnostic &Err);
+
 /// parseAssemblyFile and parseAssemblyString are wrappers around this function.
 /// Parse LLVM Assembly from a MemoryBuffer.
 /// \param F The MemoryBuffer containing assembly
