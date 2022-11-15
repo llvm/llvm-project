@@ -78,6 +78,10 @@ enum NodeType : unsigned {
   // named RISC-V instructions.
   CLZW,
   CTZW,
+
+  // RV64IZbb absolute value for i32. Expanded to (max (negw X), X) during isel.
+  ABSW,
+
   // FPR<->GPR transfer operations when the FPR is smaller than XLEN, needed as
   // XLEN is the only legal integer width.
   //

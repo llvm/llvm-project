@@ -187,7 +187,7 @@ define i32 @neg_abs32_multiuse(i32 %x, i32* %y) {
 ; RV64ZBB-LABEL: neg_abs32_multiuse:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    sext.w a0, a0
-; RV64ZBB-NEXT:    neg a2, a0
+; RV64ZBB-NEXT:    negw a2, a0
 ; RV64ZBB-NEXT:    max a2, a0, a2
 ; RV64ZBB-NEXT:    negw a0, a2
 ; RV64ZBB-NEXT:    sw a2, 0(a1)

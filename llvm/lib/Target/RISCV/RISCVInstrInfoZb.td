@@ -37,6 +37,7 @@ def riscv_brev8  : SDNode<"RISCVISD::BREV8",  SDTIntUnaryOp>;
 def riscv_orc_b  : SDNode<"RISCVISD::ORC_B",  SDTIntUnaryOp>;
 def riscv_zip    : SDNode<"RISCVISD::ZIP",    SDTIntUnaryOp>;
 def riscv_unzip  : SDNode<"RISCVISD::UNZIP",  SDTIntUnaryOp>;
+def riscv_absw   : SDNode<"RISCVISD::ABSW",   SDTIntUnaryOp>;
 
 def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
   let Name = "UImmLog2XLenHalf";
@@ -609,6 +610,9 @@ let Predicates = [HasStdExtZbb, IsRV64] in {
 def : PatGpr<riscv_clzw, CLZW>;
 def : PatGpr<riscv_ctzw, CTZW>;
 def : Pat<(i64 (ctpop (i64 (zexti32 (i64 GPR:$rs1))))), (CPOPW GPR:$rs1)>;
+
+def : Pat<(i64 (riscv_absw GPR:$rs1)),
+          (MAX GPR:$rs1, (SUBW X0, GPR:$rs1))>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbb] in {
