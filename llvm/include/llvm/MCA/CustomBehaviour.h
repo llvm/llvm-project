@@ -18,7 +18,6 @@
 #ifndef LLVM_MCA_CUSTOMBEHAVIOUR_H
 #define LLVM_MCA_CUSTOMBEHAVIOUR_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -113,61 +112,6 @@ public:
   /// Return a vector of Views that will be added after all other Views.
   virtual std::vector<std::unique_ptr<View>>
   getEndViews(llvm::MCInstPrinter &IP, llvm::ArrayRef<llvm::MCInst> Insts);
-};
-
-class Instrument {
-  /// The description of Instrument kind
-  const StringRef Desc;
-
-  /// The instrumentation data
-  const StringRef Data;
-
-public:
-  Instrument(StringRef Desc, StringRef Data) : Desc(Desc), Data(Data) {}
-
-  Instrument() = default;
-
-  virtual ~Instrument() = default;
-
-  StringRef getDesc() const { return Desc; }
-  StringRef getData() const { return Data; }
-};
-
-using SharedInstrument = std::shared_ptr<Instrument>;
-
-/// This class allows targets to optionally customize the logic that resolves
-/// scheduling class IDs. Targets can use information encoded in Instrument
-/// objects to make more informed scheduling decisions.
-class InstrumentManager {
-protected:
-  const MCSubtargetInfo &STI;
-  const MCInstrInfo &MCII;
-
-public:
-  InstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
-      : STI(STI), MCII(MCII) {}
-
-  virtual ~InstrumentManager() = default;
-
-  /// Returns true if llvm-mca should ignore instruments.
-  virtual bool shouldIgnoreInstruments() const { return true; }
-
-  // Returns true if this supports processing Instrument with
-  // Instrument.Desc equal to Type
-  virtual bool supportsInstrumentType(StringRef Type) const { return false; }
-
-  /// Allocate an Instrument, and return a shared pointer to it.
-  virtual SharedInstrument createInstrument(StringRef Desc, StringRef Data);
-
-  /// Given an MCInst and a vector of Instrument, a target can
-  /// return a SchedClassID. This can be used by a subtarget to return a
-  /// PseudoInstruction SchedClassID instead of the one that belongs to the
-  /// BaseInstruction This can be useful when a BaseInstruction does not convey
-  /// the correct scheduling information without additional data. By default,
-  /// it returns the SchedClassID that belongs to MCI.
-  virtual unsigned
-  getSchedClassID(const MCInstrInfo &MCII, const MCInst &MCI,
-                  const SmallVector<SharedInstrument> &IVec) const;
 };
 
 } // namespace mca
