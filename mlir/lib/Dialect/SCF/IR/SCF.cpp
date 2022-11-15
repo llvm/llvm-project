@@ -2669,6 +2669,34 @@ LogicalResult ReduceReturnOp::verify() {
 // WhileOp
 //===----------------------------------------------------------------------===//
 
+void WhileOp::build(::mlir::OpBuilder &odsBuilder,
+                    ::mlir::OperationState &odsState, TypeRange resultTypes,
+                    ValueRange operands, BodyBuilderFn beforeBuilder,
+                    BodyBuilderFn afterBuilder) {
+  assert(beforeBuilder && "the builder callback for 'before' must be present");
+  assert(afterBuilder && "the builder callback for 'after' must be present");
+
+  odsState.addOperands(operands);
+  odsState.addTypes(resultTypes);
+
+  OpBuilder::InsertionGuard guard(odsBuilder);
+
+  SmallVector<Location, 4> blockArgLocs;
+  for (Value operand : operands) {
+    blockArgLocs.push_back(operand.getLoc());
+  }
+
+  Region *beforeRegion = odsState.addRegion();
+  Block *beforeBlock = odsBuilder.createBlock(beforeRegion, /*insertPt=*/{},
+                                              resultTypes, blockArgLocs);
+  beforeBuilder(odsBuilder, odsState.location, beforeBlock->getArguments());
+
+  Region *afterRegion = odsState.addRegion();
+  Block *afterBlock = odsBuilder.createBlock(afterRegion, /*insertPt=*/{},
+                                             resultTypes, blockArgLocs);
+  afterBuilder(odsBuilder, odsState.location, afterBlock->getArguments());
+}
+
 OperandRange WhileOp::getSuccessorEntryOperands(Optional<unsigned> index) {
   assert(index && *index == 0 &&
          "WhileOp is expected to branch only to the first region");
