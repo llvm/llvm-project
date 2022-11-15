@@ -14,6 +14,12 @@ set(LIBC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # The top-level directory in which libc is being built.
 set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
+# For a runtimes build we need to manually include tablgen and LLVM directories.
+if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
+  include(TableGen)
+  set(LLVM_LIBC_INCLUDE_DIRS ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include)
+endif()
+
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
 
