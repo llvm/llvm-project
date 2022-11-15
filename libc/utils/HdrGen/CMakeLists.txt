@@ -12,7 +12,7 @@ add_tablegen(libc-hdrgen LIBC
   PublicAPICommand.h
 )
 
-target_include_directories(libc-hdrgen PRIVATE ${LIBC_SOURCE_DIR})
+target_include_directories(libc-hdrgen PRIVATE ${LIBC_SOURCE_DIR} ${LLVM_LIBC_INCLUDE_DIRS})
 target_link_libraries(libc-hdrgen PRIVATE LibcTableGenUtil)
 
 add_subdirectory(PrototypeTestGen)
