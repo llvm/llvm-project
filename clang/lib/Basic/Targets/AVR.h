@@ -176,7 +176,7 @@ protected:
   StringRef ABI;
   StringRef DefineName;
   StringRef Arch;
-  int NumFlashBanks;
+  int NumFlashBanks = 0;
 };
 
 } // namespace targets
