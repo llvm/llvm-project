@@ -324,7 +324,7 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
   unsigned rank = shape.size();
   Value heuristic = constantIndex(builder, loc, 16);
   // Build original sizes.
-  SmallVector<Value, 8> sizes;
+  SmallVector<Value> sizes;
   for (unsigned r = 0, o = 0; r < rank; r++) {
     if (ShapedType::isDynamic(shape[r]))
       sizes.push_back(dynSizes[o++]);
@@ -403,7 +403,7 @@ static Value genCompressed(OpBuilder &builder, Location loc,
                            SmallVectorImpl<Value> &indices, Value value,
                            Value pos, unsigned field, unsigned d) {
   unsigned rank = rtp.getShape().size();
-  SmallVector<Type, 4> types;
+  SmallVector<Type> types;
   Type indexType = builder.getIndexType();
   Type boolType = builder.getIntegerType(1);
   Value one = constantIndex(builder, loc, 1);
@@ -543,7 +543,7 @@ static void genEndInsert(OpBuilder &builder, Location loc, RankedTensorType rtp,
         Value hi = genLoad(builder, loc, fields[memSizesIdx], mz);
         Value zero = constantIndex(builder, loc, 0);
         Value one = constantIndex(builder, loc, 1);
-        SmallVector<Value, 1> inits;
+        SmallVector<Value, 1> inits;  // only one
         inits.push_back(genLoad(builder, loc, fields[field], zero));
         scf::ForOp loop = createFor(builder, loc, hi, inits, one);
         Value i = loop.getInductionVar();
@@ -584,7 +584,7 @@ public:
   LogicalResult
   matchAndRewrite(func::ReturnOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    SmallVector<Value, 8> flattened;
+    SmallVector<Value> flattened;
     flattenOperands(adaptor.getOperands(), flattened);
     // Create a return with the flattened value extracted from sparse tensors.
     rewriter.replaceOpWithNewOp<func::ReturnOp>(op, flattened);
@@ -606,23 +606,23 @@ public:
     // ==>
     //  memref..., f, memref = call @foo(...) replace with
     //  cast(memref...)->sparse_tensor, f, cast(memref...)->sparse_tensor
-    SmallVector<Type, 8> finalRetTy;
+    SmallVector<Type> finalRetTy;
     if (failed(typeConverter->convertTypes(op.getResultTypes(), finalRetTy)))
       return failure();
 
     // (1) Genereates new call with flattened return value.
-    SmallVector<Value, 8> flattened;
+    SmallVector<Value> flattened;
     flattenOperands(adaptor.getOperands(), flattened);
     auto newCall = rewriter.create<func::CallOp>(loc, op.getCallee(),
                                                  finalRetTy, flattened);
     // (2) Create cast operation for sparse tensor returns.
-    SmallVector<Value, 4> castedRet;
+    SmallVector<Value> castedRet;
     // Tracks the offset of current return value (of the orignal call)
     // relative to the new call (after sparse tensor flattening);
     unsigned retOffset = 0;
     // Temporal buffer to hold the flattened list of type for
     // a sparse tensor.
-    SmallVector<Type, 8> sparseFlat;
+    SmallVector<Type> sparseFlat;
     for (auto ret : op.getResults()) {
       assert(retOffset < newCall.getNumResults());
       auto retType = ret.getType();
@@ -713,7 +713,7 @@ public:
 
     // Construct allocation for each field.
     Location loc = op.getLoc();
-    SmallVector<Value, 8> fields;
+    SmallVector<Value> fields;
     createAllocFields(rewriter, loc, resType, adaptor.getOperands(),
                       enableBufferInitialization, fields);
     // Replace operation with resulting memrefs.
@@ -760,7 +760,7 @@ public:
         op.getTensor().getType().cast<RankedTensorType>();
     auto tuple = getTuple(adaptor.getTensor());
     // Prepare fields.
-    SmallVector<Value, 8> fields(tuple.getInputs());
+    SmallVector<Value> fields(tuple.getInputs());
     // Generate optional insertion finalization code.
     if (op.getHasInserts())
       genEndInsert(rewriter, op.getLoc(), srcType, fields);
@@ -839,8 +839,8 @@ public:
     Value added = adaptor.getAdded();
     Value count = adaptor.getCount();
     // Prepare fields and indices.
-    SmallVector<Value, 8> fields(tuple.getInputs());
-    SmallVector<Value, 8> indices(adaptor.getIndices());
+    SmallVector<Value> fields(tuple.getInputs());
+    SmallVector<Value> indices(adaptor.getIndices());
     // If the innermost dimension is ordered, we need to sort the indices
     // in the "added" array prior to applying the compression.
     unsigned rank = dstType.getShape().size();
@@ -897,8 +897,8 @@ public:
         op.getTensor().getType().cast<RankedTensorType>();
     auto tuple = getTuple(adaptor.getTensor());
     // Prepare fields and indices.
-    SmallVector<Value, 8> fields(tuple.getInputs());
-    SmallVector<Value, 8> indices(adaptor.getIndices());
+    SmallVector<Value> fields(tuple.getInputs());
+    SmallVector<Value> indices(adaptor.getIndices());
     // Generate insertion.
     Value value = adaptor.getValue();
     genInsert(rewriter, op->getLoc(), dstType, fields, indices, value);

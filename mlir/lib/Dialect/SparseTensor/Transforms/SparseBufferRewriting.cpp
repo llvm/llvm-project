@@ -331,7 +331,7 @@ static void createBinarySearchFunc(OpBuilder &builder, ModuleOp module,
   Location loc = func.getLoc();
   ValueRange args = entryBlock->getArguments();
   Value p = args[hiIdx];
-  SmallVector<Type, 2> types(2, p.getType());
+  SmallVector<Type, 2> types(2, p.getType());  // only two
   scf::WhileOp whileOp = builder.create<scf::WhileOp>(
       loc, types, SmallVector<Value, 2>{args[loIdx], args[hiIdx]});
 
@@ -357,7 +357,7 @@ static void createBinarySearchFunc(OpBuilder &builder, ModuleOp module,
   Value midp1 = builder.create<arith::AddIOp>(loc, mid, c1);
 
   // Compare xs[p] < xs[mid].
-  SmallVector<Value, 6> compareOperands{p, mid};
+  SmallVector<Value> compareOperands{p, mid};
   uint64_t numXBuffers = isCoo ? 1 : nx;
   compareOperands.append(args.begin() + xStartIdx,
                          args.begin() + xStartIdx + numXBuffers);
@@ -400,7 +400,7 @@ createScanLoop(OpBuilder &builder, ModuleOp module, func::FuncOp func,
   Block *before =
       builder.createBlock(&whileOp.getBefore(), {}, {i.getType()}, {loc});
   builder.setInsertionPointToEnd(before);
-  SmallVector<Value, 6> compareOperands;
+  SmallVector<Value> compareOperands;
   if (step > 0) {
     compareOperands.push_back(before->getArgument(0));
     compareOperands.push_back(p);
@@ -490,8 +490,8 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
 
   Value i = lo;
   Value j = builder.create<arith::SubIOp>(loc, hi, c1);
-  SmallVector<Value, 4> operands{i, j, p};
-  SmallVector<Type, 4> types{i.getType(), j.getType(), p.getType()};
+  SmallVector<Value> operands{i, j, p};
+  SmallVector<Type> types{i.getType(), j.getType(), p.getType()};
   scf::WhileOp whileOp = builder.create<scf::WhileOp>(loc, types, operands);
 
   // The before-region of the WhileOp.
@@ -525,7 +525,7 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
   cond = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, i, j);
   scf::IfOp ifOp = builder.create<scf::IfOp>(loc, types, cond, /*else=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  SmallVector<Value, 6> swapOperands{i, j};
+  SmallVector<Value> swapOperands{i, j};
   swapOperands.append(args.begin() + xStartIdx, args.end());
   createSwap(builder, loc, swapOperands, nx, ny, isCoo);
   // If the pivot is moved, update p with the new pivot.
@@ -610,11 +610,11 @@ static void createSortNonstableFunc(OpBuilder &builder, ModuleOp module,
   auto p = builder.create<func::CallOp>(
       loc, partitionFunc, TypeRange{IndexType::get(context)}, ValueRange(args));
 
-  SmallVector<Value, 6> lowOperands{lo, p.getResult(0)};
+  SmallVector<Value> lowOperands{lo, p.getResult(0)};
   lowOperands.append(args.begin() + xStartIdx, args.end());
   builder.create<func::CallOp>(loc, func, lowOperands);
 
-  SmallVector<Value, 6> highOperands{
+  SmallVector<Value> highOperands{
       builder.create<arith::AddIOp>(loc, p.getResult(0),
                                     constantIndex(builder, loc, 1)),
       hi};
@@ -660,7 +660,7 @@ static void createSortStableFunc(OpBuilder &builder, ModuleOp module,
   Value i = forOpI.getInductionVar();
 
   // Binary search to find the insertion point p.
-  SmallVector<Value, 6> operands{lo, i};
+  SmallVector<Value> operands{lo, i};
   operands.append(args.begin() + xStartIdx, args.end());
   FlatSymbolRefAttr searchFunc = getMangledSortHelperFunc(
       builder, func, {IndexType::get(context)}, kBinarySearchFuncNamePrefix, nx,
@@ -672,7 +672,7 @@ static void createSortStableFunc(OpBuilder &builder, ModuleOp module,
 
   // Move the value at data[i] to a temporary location.
   operands[0] = operands[1] = i;
-  SmallVector<Value, 6> d;
+  SmallVector<Value> d;
   forEachIJPairInAllBuffers(
       builder, loc, operands, nx, ny, isCoo,
       [&](uint64_t unused, Value i, Value unused2, Value buffer) {
@@ -715,7 +715,7 @@ LogicalResult matchAndRewriteSortOp(OpTy op, ValueRange xys, uint64_t nx,
                                     uint64_t ny, bool isCoo,
                                     PatternRewriter &rewriter) {
   Location loc = op.getLoc();
-  SmallVector<Value, 6> operands{constantIndex(rewriter, loc, 0), op.getN()};
+  SmallVector<Value> operands{constantIndex(rewriter, loc, 0), op.getN()};
 
   // Convert `values` to have dynamic shape and append them to `operands`.
   for (Value v : xys) {
@@ -869,7 +869,7 @@ public:
 
   LogicalResult matchAndRewrite(SortOp op,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<Value, 6> xys(op.getXs());
+    SmallVector<Value> xys(op.getXs());
     xys.append(op.getYs().begin(), op.getYs().end());
     return matchAndRewriteSortOp(op, xys, op.getXs().size(), /*ny=*/0,
                                  /*isCoo=*/false, rewriter);
@@ -883,7 +883,7 @@ public:
 
   LogicalResult matchAndRewrite(SortCooOp op,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<Value, 6> xys;
+    SmallVector<Value> xys;
     xys.push_back(op.getXy());
     xys.append(op.getYs().begin(), op.getYs().end());
     uint64_t nx = 1;
