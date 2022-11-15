@@ -248,6 +248,9 @@ Bug Fixes
   not satisfied in the event of an instantiation failures in a requires expression's
   parameter list. We previously handled this correctly in a constraint evaluation
   context, but not in a requires clause evaluated as a boolean.
+- GNU attributes being applied prior to standard attributes would be handled
+  improperly, which was corrected to match the behaviour exhibited by GCC.
+  `Issue 58229 <https://github.com/llvm/llvm-project/issues/58229>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
