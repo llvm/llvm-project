@@ -20,17 +20,17 @@ define void @test() {
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v4, ptr %out4, align 4
-; AVX1:  LV: Found an estimated cost of 17 for VF 2 For instruction: store float %v4, ptr %out4, align 4
-; AVX1:  LV: Found an estimated cost of 38 for VF 4 For instruction: store float %v4, ptr %out4, align 4
-; AVX1:  LV: Found an estimated cost of 80 for VF 8 For instruction: store float %v4, ptr %out4, align 4
-; AVX1:  LV: Found an estimated cost of 160 for VF 16 For instruction: store float %v4, ptr %out4, align 4
+; AVX1:  LV: Found an estimated cost of 16 for VF 2 For instruction: store float %v4, ptr %out4, align 4
+; AVX1:  LV: Found an estimated cost of 36 for VF 4 For instruction: store float %v4, ptr %out4, align 4
+; AVX1:  LV: Found an estimated cost of 75 for VF 8 For instruction: store float %v4, ptr %out4, align 4
+; AVX1:  LV: Found an estimated cost of 150 for VF 16 For instruction: store float %v4, ptr %out4, align 4
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v4, ptr %out4, align 4
-; AVX2:  LV: Found an estimated cost of 17 for VF 2 For instruction: store float %v4, ptr %out4, align 4
-; AVX2:  LV: Found an estimated cost of 38 for VF 4 For instruction: store float %v4, ptr %out4, align 4
-; AVX2:  LV: Found an estimated cost of 80 for VF 8 For instruction: store float %v4, ptr %out4, align 4
-; AVX2:  LV: Found an estimated cost of 160 for VF 16 For instruction: store float %v4, ptr %out4, align 4
+; AVX2:  LV: Found an estimated cost of 16 for VF 2 For instruction: store float %v4, ptr %out4, align 4
+; AVX2:  LV: Found an estimated cost of 36 for VF 4 For instruction: store float %v4, ptr %out4, align 4
+; AVX2:  LV: Found an estimated cost of 75 for VF 8 For instruction: store float %v4, ptr %out4, align 4
+; AVX2:  LV: Found an estimated cost of 150 for VF 16 For instruction: store float %v4, ptr %out4, align 4
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v4, ptr %out4, align 4
