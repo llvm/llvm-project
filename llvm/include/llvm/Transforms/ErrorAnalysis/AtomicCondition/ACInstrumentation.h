@@ -69,6 +69,10 @@ public:
                                        BasicBlock::iterator *InstructionIterator,
                                        long int *NumInstrumentedInstructions);
 
+  Value *instrumentPhiNodeForAF(Value *OriginalPHI,
+                                BasicBlock::iterator *InstructionIterator,
+                                long *NumInstrumentedInstructions);
+
   void instrumentBasicBlock(BasicBlock *BB,
                             long int *NumInstrumentedInstructions);
   void instrumentMainFunction(Function *F);
@@ -84,6 +88,7 @@ public:
 
   // Categorized by operations
   static bool canHaveGraphNode(const Instruction *Inst);
+  static bool isPhiNode(const Instruction *Inst);
   static bool isMemoryLoadOperation(const Instruction *Inst);
   static bool isIntegerToFloatCastOperation(const Instruction *Inst);
   static bool isUnaryOperation(const Instruction *Inst);

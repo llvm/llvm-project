@@ -245,7 +245,7 @@ void fAFCreateAFTable(AFTable **AddressToAllocateAt) {
 int AFItemCounter;
 int AFComponentCounter;
 AFTable *AFs;
-AFTable *AnalysisResult;
+AFProduct **Paths;
 
 /*----------------------------------------------------------------------------*/
 /* Utility Functions                                                          */
@@ -266,25 +266,43 @@ int min(int a, int b) {
   return (a > b)? b : a;
 }
 
-ACItem **fAFFlattenAFComponentsPath(AFProduct *ProductObject) {
-  ACItem **ProductPath;
-  ACItem **ProductPathWalker;
-  AFProduct **ProductObjectWalker = &ProductObject;
+AFProduct **fAFFlattenAFComponentsPath(AFProduct *ProductObject) {
+  AFProduct *ProductObjectWalker = ProductObject;
+  AFProduct **ProductPath;
 
   if((ProductPath =
-           (ACItem **)malloc(sizeof(ACItem*) * ProductObject->Height)) == NULL) {
-    printf("#fAF: Not enough memory for AFItem pointers!");
+           (AFProduct **)malloc(sizeof(AFProduct*) * ProductObject->Height)) == NULL) {
+    printf("#fAF: Not enough memory for AFProduct pointers!");
     exit(EXIT_FAILURE);
   }
-  ProductPathWalker = &ProductPath[0];
+  ProductPath[0] = &*ProductObject;
 
-  while((*ProductObjectWalker) != NULL) {
-    *ProductPathWalker = (*ProductObjectWalker)->Factor;
-    ProductPathWalker++;
-    *ProductObjectWalker = (*ProductObjectWalker)->ProductTail;
+  for (int I = 1; I < ProductObject->Height; ++I) {
+    ProductPath[I] = &*(ProductObjectWalker->ProductTail);
+    ProductObjectWalker = ProductObjectWalker->ProductTail;
   }
-  
+
   return ProductPath;
+}
+
+AFProduct **fAFFlattenAllComponentPaths() {
+  if((Paths =
+           (AFProduct **)malloc(sizeof(AFProduct*) * AFComponentCounter)) == NULL) {
+    printf("#fAF: Not enough memory for AFProduct pointers!");
+    exit(EXIT_FAILURE);
+  }
+
+  for (uint64_t I = 0; I < AFs->ListLength; ++I) {
+    for (int J = 0; J < AFs->AFItems[I]->NumAFComponents; ++J) {
+      AFProduct *ProductObjectWalker = &*(AFs->AFItems[I]->Components[J]);
+      Paths[ProductObjectWalker->ItemId] = &*ProductObjectWalker;
+      for (int K = 1; K < AFs->AFItems[I]->Components[J]->Height; ++K) {
+        Paths[ProductObjectWalker->ProductTail->ItemId] = &*(ProductObjectWalker->ProductTail);
+        ProductObjectWalker = ProductObjectWalker->ProductTail;
+      }
+    }
+  }
+  return Paths;
 }
 
 int fAFisMemoryOpInstruction(char *InstructionString) {
@@ -294,17 +312,17 @@ int fAFisMemoryOpInstruction(char *InstructionString) {
   return 0;
 }
 
-//int fAFDoubleAFComparator(const void *a, const void *b) {
-//  double AF1 = (*(AFItem **)a)->AF;
-//  double AF2 = (*(AFItem **)b)->AF;
-//
-//  if(AF2 > AF1)
-//    return 1;
-//  else if(AF2 == AF1)
-//    return 0;
-//  else
-//    return -1;
-//}
+int fAFComparator(const void *a, const void *b) {
+  double AF1 = (*(AFProduct **)a)->AF;
+  double AF2 = (*(AFProduct **)b)->AF;
+
+  if(AF2 > AF1)
+    return 1;
+  else if(AF2 == AF1)
+    return 0;
+  else
+    return -1;
+}
 
 /*----------------------------------------------------------------------------*/
 /* Memory Allocators                                                          */
@@ -324,17 +342,6 @@ void fAFInitialize() {
     exit(EXIT_FAILURE);
   }
   AFs->ListLength = 0;
-
-  // Allocating Memory to the Result table itself
-  fAFCreateAFTable(&AnalysisResult);
-
-  // Allocating Memory for the AFItem Pointers
-  if((AnalysisResult->AFItems =
-           (AFItem **)malloc(sizeof(AFItem*) * AF_ITEM_LIST_SIZE)) == NULL) {
-    printf("#fAF: Not enough memory for AFItem pointers!");
-    exit(EXIT_FAILURE);
-  }
-  AnalysisResult->ListLength = 0;
 
   return ;
 }
@@ -361,7 +368,7 @@ void fAFInitialize() {
 //  Add AFItem to the AFTable
 //  Return the AFItem
 AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands) {
-//#if FAF_DEBUG
+#if FAF_DEBUG>=2
   printf("\nCreating AFItem\n");
   printf("\tACId: %d\n", (*AC)->ItemId);
   printf("\tRootNode: %s\n", (*AC)->ResultVar);
@@ -374,7 +381,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
   }
 
   printf("\n");
-//#endif
+#endif
 
   // Computing the number of Components/AFPaths that contribute to the Relative
   // Error of this instruction.
@@ -384,7 +391,6 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
       TotalAFComponents+=(*AFItemWRTOperands[I])->NumAFComponents;
     else
       TotalAFComponents+=1;
-    printf("TotalComponents:%d\n", TotalAFComponents);
   }
 
 
@@ -449,7 +455,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
   AFs->AFItems[AFs->ListLength] = NewAFItem;
   AFs->ListLength++;
 
-#if FAF_DEBUG
+#if FAF_DEBUG>=2
   printf("\nAFItem Created\n");
   printf("\tAFId: %d\n", AFs->AFItems[AFs->ListLength-1]->ItemId);
   printf("\tNumComponents: %d\n", AFs->AFItems[AFs->ListLength-1]->NumAFComponents);
@@ -836,7 +842,7 @@ void fAFStoreAFs() {
   int I = 0;
   while ((uint64_t)I < AFs->ListLength) {
     for (int J = 0; J < AFs->AFItems[I]->NumAFComponents; ++J) {
-      ACItem **ProductPath= fAFFlattenAFComponentsPath(AFs->AFItems[I]->Components[J]);
+      AFProduct **ProductPath= fAFFlattenAFComponentsPath(AFs->AFItems[I]->Components[J]);
       if (fprintf(FP,
                   "\t\t{\n"
                   "\t\t\t\"ProductItemId\": %d,\n"
@@ -853,7 +859,8 @@ void fAFStoreAFs() {
                       -1,
                   AFs->AFItems[I]->Components[J]->Input,
                   AFs->AFItems[I]->Components[J]->AF) > 0) {
-        fprintf(FP, "\t\t\t\"Path\": [%d", ProductPath[0]->ItemId);
+
+        fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
         for (int K = 1; K < AFs->AFItems[I]->Components[J]->Height; ++K)
           fprintf(FP, ", %d", ProductPath[K]->ItemId);
 
