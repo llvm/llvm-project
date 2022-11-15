@@ -39,6 +39,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -2482,6 +2483,43 @@ private:
   void genAssignment(const Fortran::evaluate::Assignment &assign) {
     Fortran::lower::StatementContext stmtCtx;
     mlir::Location loc = toLocation();
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
+      if (explicitIterationSpace() || !implicitIterSpace.empty())
+        TODO(loc, "HLFIR assignment inside FORALL or WHERE");
+      auto &builder = getFirOpBuilder();
+      std::visit(
+          Fortran::common::visitors{
+              // [1] Plain old assignment.
+              [&](const Fortran::evaluate::Assignment::Intrinsic &) {
+                if (Fortran::lower::isWholeAllocatable(assign.lhs))
+                  TODO(loc, "HLFIR assignment to whole allocatable");
+                hlfir::EntityWithAttributes rhs =
+                    Fortran::lower::convertExprToHLFIR(loc, *this, assign.rhs,
+                                                       localSymbols, stmtCtx);
+                hlfir::EntityWithAttributes lhs =
+                    Fortran::lower::convertExprToHLFIR(loc, *this, assign.lhs,
+                                                       localSymbols, stmtCtx);
+                builder.create<hlfir::AssignOp>(loc, rhs, lhs);
+              },
+              // [2] User defined assignment. If the context is a scalar
+              // expression then call the procedure.
+              [&](const Fortran::evaluate::ProcedureRef &procRef) {
+                TODO(loc, "HLFIR user defined assignment");
+              },
+              // [3] Pointer assignment with possibly empty bounds-spec. R1035:
+              // a bounds-spec is a lower bound value.
+              [&](const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
+                TODO(loc, "HLFIR pointer assignment");
+              },
+              // [4] Pointer assignment with bounds-remapping. R1036: a
+              // bounds-remapping is a pair, lower bound and upper bound.
+              [&](const Fortran::evaluate::Assignment::BoundsRemapping) {
+                TODO(loc, "HLFIR pointer assignment with bounds remapping");
+              },
+          },
+          assign.u);
+      return;
+    }
     if (explicitIterationSpace()) {
       Fortran::lower::createArrayLoads(*this, explicitIterSpace, localSymbols);
       explicitIterSpace.genLoopNest();
