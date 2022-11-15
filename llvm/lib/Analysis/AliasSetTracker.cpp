@@ -216,11 +216,10 @@ AliasResult AliasSet::aliasesPointer(const Value *Ptr, LocationSize Size,
 
   // Check the unknown instructions...
   if (!UnknownInsts.empty()) {
-    for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i)
-      if (auto *Inst = getUnknownInst(i))
-        if (isModOrRefSet(
-                AA.getModRefInfo(Inst, MemoryLocation(Ptr, Size, AAInfo))))
-          return AliasResult::MayAlias;
+    for (Instruction *Inst : UnknownInsts)
+      if (isModOrRefSet(
+              AA.getModRefInfo(Inst, MemoryLocation(Ptr, Size, AAInfo))))
+        return AliasResult::MayAlias;
   }
 
   return AliasResult::NoAlias;
@@ -235,14 +234,12 @@ bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
   if (!Inst->mayReadOrWriteMemory())
     return false;
 
-  for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i) {
-    if (auto *UnknownInst = getUnknownInst(i)) {
-      const auto *C1 = dyn_cast<CallBase>(UnknownInst);
-      const auto *C2 = dyn_cast<CallBase>(Inst);
-      if (!C1 || !C2 || isModOrRefSet(AA.getModRefInfo(C1, C2)) ||
-          isModOrRefSet(AA.getModRefInfo(C2, C1)))
-        return true;
-    }
+  for (Instruction *UnknownInst : UnknownInsts) {
+    const auto *C1 = dyn_cast<CallBase>(UnknownInst);
+    const auto *C2 = dyn_cast<CallBase>(Inst);
+    if (!C1 || !C2 || isModOrRefSet(AA.getModRefInfo(C1, C2)) ||
+        isModOrRefSet(AA.getModRefInfo(C2, C1)))
+      return true;
   }
 
   for (iterator I = begin(), E = end(); I != E; ++I)
@@ -497,9 +494,8 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
       continue; // Ignore forwarding alias sets
 
     // If there are any call sites in the alias set, add them to this AST.
-    for (unsigned i = 0, e = AS.UnknownInsts.size(); i != e; ++i)
-      if (auto *Inst = AS.getUnknownInst(i))
-        add(Inst);
+    for (Instruction *Inst : AS.UnknownInsts)
+      add(Inst);
 
     // Loop over all of the pointers in this alias set.
     for (AliasSet::iterator ASI = AS.begin(), E = AS.end(); ASI != E; ++ASI)
@@ -592,15 +588,14 @@ void AliasSet::print(raw_ostream &OS) const {
     }
   }
   if (!UnknownInsts.empty()) {
+    ListSeparator LS;
     OS << "\n    " << UnknownInsts.size() << " Unknown instructions: ";
-    for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i) {
-      if (i) OS << ", ";
-      if (auto *I = getUnknownInst(i)) {
-        if (I->hasName())
-          I->printAsOperand(OS);
-        else
-          I->print(OS);
-      }
+    for (Instruction *I : UnknownInsts) {
+      OS << LS;
+      if (I->hasName())
+        I->printAsOperand(OS);
+      else
+        I->print(OS);
     }
   }
   OS << "\n";
