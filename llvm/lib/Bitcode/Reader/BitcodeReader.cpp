@@ -883,10 +883,8 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   // they are recorded in the summary index being built.
   // We save a GUID which refers to the same global as the ValueInfo, but
   // ignoring the linkage, i.e. for values other than local linkage they are
-  // identical (this is the second tuple member).
-  // The third tuple member is the real GUID of the ValueInfo.
-  DenseMap<unsigned,
-           std::tuple<ValueInfo, GlobalValue::GUID, GlobalValue::GUID>>
+  // identical.
+  DenseMap<unsigned, std::tuple<ValueInfo, GlobalValue::GUID>>
       ValueIdToValueInfoMap;
 
   /// Map populated during module path string table parsing, from the
@@ -906,19 +904,10 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// this module by the client.
   unsigned ModuleId;
 
-  /// Callback to ask whether a symbol is the prevailing copy when invoked
-  /// during combined index building.
-  std::function<bool(GlobalValue::GUID)> IsPrevailing;
-
-  /// Saves the stack ids from the STACK_IDS record to consult when adding stack
-  /// ids from the lists in the callsite and alloc entries to the index.
-  std::vector<uint64_t> StackIds;
-
 public:
-  ModuleSummaryIndexBitcodeReader(
-      BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
-      StringRef ModulePath, unsigned ModuleId,
-      std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
+  ModuleSummaryIndexBitcodeReader(BitstreamCursor Stream, StringRef Strtab,
+                                  ModuleSummaryIndex &TheIndex,
+                                  StringRef ModulePath, unsigned ModuleId);
 
   Error parseModule();
 
@@ -942,8 +931,7 @@ private:
   std::vector<FunctionSummary::ParamAccess>
   parseParamAccesses(ArrayRef<uint64_t> Record);
 
-  template <bool AllowNullValueInfo = false>
-  std::tuple<ValueInfo, GlobalValue::GUID, GlobalValue::GUID>
+  std::tuple<ValueInfo, GlobalValue::GUID>
   getValueInfoFromValueId(unsigned ValueId);
 
   void addThisModule();
@@ -6655,10 +6643,9 @@ std::vector<StructType *> BitcodeReader::getIdentifiedStructTypes() const {
 
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
     BitstreamCursor Cursor, StringRef Strtab, ModuleSummaryIndex &TheIndex,
-    StringRef ModulePath, unsigned ModuleId,
-    std::function<bool(GlobalValue::GUID)> IsPrevailing)
+    StringRef ModulePath, unsigned ModuleId)
     : BitcodeReaderBase(std::move(Cursor), Strtab), TheIndex(TheIndex),
-      ModulePath(ModulePath), ModuleId(ModuleId), IsPrevailing(IsPrevailing) {}
+      ModulePath(ModulePath), ModuleId(ModuleId) {}
 
 void ModuleSummaryIndexBitcodeReader::addThisModule() {
   TheIndex.addModule(ModulePath, ModuleId);
@@ -6669,15 +6656,10 @@ ModuleSummaryIndexBitcodeReader::getThisModule() {
   return TheIndex.getModule(ModulePath);
 }
 
-template <bool AllowNullValueInfo>
-std::tuple<ValueInfo, GlobalValue::GUID, GlobalValue::GUID>
+std::tuple<ValueInfo, GlobalValue::GUID>
 ModuleSummaryIndexBitcodeReader::getValueInfoFromValueId(unsigned ValueId) {
   auto VGI = ValueIdToValueInfoMap[ValueId];
-  // We can have a null value info for memprof callsite info records in
-  // distributed ThinLTO index files when the callee function summary is not
-  // included in the index. The bitcode writer records 0 in that case,
-  // and the caller of this helper will set AllowNullValueInfo to true.
-  assert(AllowNullValueInfo || std::get<0>(VGI));
+  assert(std::get<0>(VGI));
   return VGI;
 }
 
@@ -6700,7 +6682,7 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
   ValueIdToValueInfoMap[ValueID] = std::make_tuple(
       TheIndex.getOrInsertValueInfo(
           ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName)),
-      OriginalNameID, ValueGUID);
+      OriginalNameID);
 }
 
 // Specialized value symbol table parser used when reading module index
@@ -6788,8 +6770,8 @@ Error ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       GlobalValue::GUID RefGUID = Record[1];
       // The "original name", which is the second value of the pair will be
       // overriden later by a FS_COMBINED_ORIGINAL_NAME in the combined index.
-      ValueIdToValueInfoMap[ValueID] = std::make_tuple(
-          TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
+      ValueIdToValueInfoMap[ValueID] =
+          std::make_tuple(TheIndex.getOrInsertValueInfo(RefGUID), RefGUID);
       break;
     }
     }
@@ -7134,9 +7116,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       PendingTypeCheckedLoadConstVCalls;
   std::vector<FunctionSummary::ParamAccess> PendingParamAccesses;
 
-  std::vector<CallsiteInfo> PendingCallsites;
-  std::vector<AllocInfo> PendingAllocs;
-
   while (true) {
     Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
     if (!MaybeEntry)
@@ -7175,8 +7154,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_VALUE_GUID: { // [valueid, refguid]
       uint64_t ValueID = Record[0];
       GlobalValue::GUID RefGUID = Record[1];
-      ValueIdToValueInfoMap[ValueID] = std::make_tuple(
-          TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
+      ValueIdToValueInfoMap[ValueID] =
+          std::make_tuple(TheIndex.getOrInsertValueInfo(RefGUID), RefGUID);
       break;
     }
     // FS_PERMODULE: [valueid, flags, instcount, fflags, numrefs,
@@ -7228,13 +7207,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, HasRelBF);
       setSpecialRefs(Refs, NumRORefs, NumWORefs);
-      auto VIAndOriginalGUID = getValueInfoFromValueId(ValueID);
-      // In order to save memory, only record the memprof summaries if this is
-      // the prevailing copy of a symbol.
-      if (IsPrevailing && !IsPrevailing(std::get<2>(VIAndOriginalGUID))) {
-        PendingCallsites.clear();
-        PendingAllocs.clear();
-      }
       auto FS = std::make_unique<FunctionSummary>(
           Flags, InstCount, getDecodedFFlags(RawFunFlags), /*EntryCount=*/0,
           std::move(Refs), std::move(Calls), std::move(PendingTypeTests),
@@ -7242,8 +7214,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
           std::move(PendingTypeCheckedLoadConstVCalls),
-          std::move(PendingParamAccesses), std::move(PendingCallsites),
-          std::move(PendingAllocs));
+          std::move(PendingParamAccesses));
+      auto VIAndOriginalGUID = getValueInfoFromValueId(ValueID);
       FS->setModulePath(getThisModule()->first());
       FS->setOriginalName(std::get<1>(VIAndOriginalGUID));
       TheIndex.addGlobalValueSummary(std::get<0>(VIAndOriginalGUID),
@@ -7386,8 +7358,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
           std::move(PendingTypeCheckedLoadConstVCalls),
-          std::move(PendingParamAccesses), std::move(PendingCallsites),
-          std::move(PendingAllocs));
+          std::move(PendingParamAccesses));
       LastSeenSummary = FS.get();
       LastSeenGUID = VI.getGUID();
       FS->setModulePath(ModuleIdMap[ModuleId]);
@@ -7511,95 +7482,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
     case bitc::FS_PARAM_ACCESS: {
       PendingParamAccesses = parseParamAccesses(Record);
-      break;
-    }
-
-    case bitc::FS_STACK_IDS: { // [n x stackid]
-      // Save stack ids in the reader to consult when adding stack ids from the
-      // lists in the stack node and alloc node entries.
-      StackIds = ArrayRef<uint64_t>(Record);
-      break;
-    }
-
-    case bitc::FS_PERMODULE_CALLSITE_INFO: {
-      unsigned ValueID = Record[0];
-      SmallVector<unsigned> StackIdList;
-      for (auto R = Record.begin() + 1; R != Record.end(); R++) {
-        assert(*R < StackIds.size());
-        StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[*R]));
-      }
-      ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
-      PendingCallsites.push_back(CallsiteInfo({VI, std::move(StackIdList)}));
-      break;
-    }
-
-    case bitc::FS_COMBINED_CALLSITE_INFO: {
-      auto RecordIter = Record.begin();
-      unsigned ValueID = *RecordIter++;
-      unsigned NumStackIds = *RecordIter++;
-      unsigned NumVersions = *RecordIter++;
-      assert(Record.size() == 3 + NumStackIds + NumVersions);
-      SmallVector<unsigned> StackIdList;
-      for (unsigned J = 0; J < NumStackIds; J++) {
-        assert(*RecordIter < StackIds.size());
-        StackIdList.push_back(
-            TheIndex.addOrGetStackIdIndex(StackIds[*RecordIter++]));
-      }
-      SmallVector<unsigned> Versions;
-      for (unsigned J = 0; J < NumVersions; J++)
-        Versions.push_back(*RecordIter++);
-      ValueInfo VI = std::get<0>(
-          getValueInfoFromValueId</*AllowNullValueInfo*/ true>(ValueID));
-      PendingCallsites.push_back(
-          CallsiteInfo({VI, std::move(Versions), std::move(StackIdList)}));
-      break;
-    }
-
-    case bitc::FS_PERMODULE_ALLOC_INFO: {
-      unsigned I = 0;
-      std::vector<MIBInfo> MIBs;
-      while (I < Record.size()) {
-        assert(Record.size() - I >= 2);
-        AllocationType AllocType = (AllocationType)Record[I++];
-        unsigned NumStackEntries = Record[I++];
-        assert(Record.size() - I >= NumStackEntries);
-        SmallVector<unsigned> StackIdList;
-        for (unsigned J = 0; J < NumStackEntries; J++) {
-          assert(Record[I] < StackIds.size());
-          StackIdList.push_back(
-              TheIndex.addOrGetStackIdIndex(StackIds[Record[I++]]));
-        }
-        MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
-      }
-      PendingAllocs.push_back(AllocInfo(std::move(MIBs)));
-      break;
-    }
-
-    case bitc::FS_COMBINED_ALLOC_INFO: {
-      unsigned I = 0;
-      std::vector<MIBInfo> MIBs;
-      unsigned NumMIBs = Record[I++];
-      unsigned NumVersions = Record[I++];
-      unsigned MIBsRead = 0;
-      while (MIBsRead++ < NumMIBs) {
-        assert(Record.size() - I >= 2);
-        AllocationType AllocType = (AllocationType)Record[I++];
-        unsigned NumStackEntries = Record[I++];
-        assert(Record.size() - I >= NumStackEntries);
-        SmallVector<unsigned> StackIdList;
-        for (unsigned J = 0; J < NumStackEntries; J++) {
-          assert(Record[I] < StackIds.size());
-          StackIdList.push_back(
-              TheIndex.addOrGetStackIdIndex(StackIds[Record[I++]]));
-        }
-        MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
-      }
-      assert(Record.size() - I >= NumVersions);
-      SmallVector<uint8_t> Versions;
-      for (unsigned J = 0; J < NumVersions; J++)
-        Versions.push_back(Record[I++]);
-      PendingAllocs.push_back(
-          AllocInfo(std::move(Versions), std::move(MIBs)));
       break;
     }
     }
@@ -7921,15 +7803,14 @@ BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
 // We don't use ModuleIdentifier here because the client may need to control the
 // module path used in the combined summary (e.g. when reading summaries for
 // regular LTO modules).
-Error BitcodeModule::readSummary(
-    ModuleSummaryIndex &CombinedIndex, StringRef ModulePath, uint64_t ModuleId,
-    std::function<bool(GlobalValue::GUID)> IsPrevailing) {
+Error BitcodeModule::readSummary(ModuleSummaryIndex &CombinedIndex,
+                                 StringRef ModulePath, uint64_t ModuleId) {
   BitstreamCursor Stream(Buffer);
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
     return JumpFailed;
 
   ModuleSummaryIndexBitcodeReader R(std::move(Stream), Strtab, CombinedIndex,
-                                    ModulePath, ModuleId, IsPrevailing);
+                                    ModulePath, ModuleId);
   return R.parseModule();
 }
 

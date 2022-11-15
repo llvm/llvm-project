@@ -234,8 +234,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           std::move(FSum.TypeCheckedLoadVCalls),
           std::move(FSum.TypeTestAssumeConstVCalls),
           std::move(FSum.TypeCheckedLoadConstVCalls),
-          ArrayRef<FunctionSummary::ParamAccess>{}, ArrayRef<CallsiteInfo>{},
-          ArrayRef<AllocInfo>{}));
+          ArrayRef<FunctionSummary::ParamAccess>{}));
     }
   }
   static void output(IO &io, GlobalValueSummaryMapTy &V) {
