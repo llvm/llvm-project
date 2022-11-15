@@ -100,8 +100,8 @@ bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
   if (!ptr_sp)
     return false;
 
-  TypeSystemClang *ast_ctx = llvm::dyn_cast_or_null<TypeSystemClang>(
-      valobj_sp->GetCompilerType().GetTypeSystem());
+  auto ts = valobj_sp->GetCompilerType().GetTypeSystem();
+  auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
   if (!ast_ctx)
     return false;
 

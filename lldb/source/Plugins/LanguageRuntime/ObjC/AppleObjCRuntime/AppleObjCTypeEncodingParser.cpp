@@ -24,10 +24,12 @@ using namespace lldb_private;
 AppleObjCTypeEncodingParser::AppleObjCTypeEncodingParser(
     ObjCLanguageRuntime &runtime)
     : ObjCLanguageRuntime::EncodingToType(), m_runtime(runtime) {
-  if (!m_scratch_ast_ctx_up)
-    m_scratch_ast_ctx_up = std::make_unique<TypeSystemClang>(
-        "AppleObjCTypeEncodingParser ASTContext",
-        runtime.GetProcess()->GetTarget().GetArchitecture().GetTriple());
+  if (m_scratch_ast_ctx_sp)
+    return;
+
+  m_scratch_ast_ctx_sp = std::make_shared<TypeSystemClang>(
+      "AppleObjCTypeEncodingParser ASTContext",
+      runtime.GetProcess()->GetTarget().GetArchitecture().GetTriple());
 }
 
 std::string AppleObjCTypeEncodingParser::ReadStructName(StringLexer &type) {
@@ -155,7 +157,8 @@ clang::QualType AppleObjCTypeEncodingParser::BuildArray(
   if (!type.NextIf(_C_ARY_E))
     return clang::QualType();
   CompilerType array_type(ast_ctx.CreateArrayType(
-      CompilerType(&ast_ctx, element_type.getAsOpaquePtr()), size, false));
+      CompilerType(ast_ctx.weak_from_this(), element_type.getAsOpaquePtr()),
+      size, false));
   return ClangUtil::GetQualType(array_type);
 }
 

@@ -880,8 +880,8 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
       max_register_value_bit_width += 128;
     std::vector<uint32_t> aggregate_field_offsets;
     std::vector<CompilerType> aggregate_compiler_types;
-    if (return_compiler_type.GetTypeSystem()->CanPassInRegisters(
-          return_compiler_type) &&
+    auto ts = return_compiler_type.GetTypeSystem();
+    if (ts && ts->CanPassInRegisters(return_compiler_type) &&
       *bit_width <= max_register_value_bit_width &&
       FlattenAggregateType(thread, exe_ctx, return_compiler_type,
                           0, aggregate_field_offsets,

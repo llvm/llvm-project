@@ -809,8 +809,7 @@ private:
     // case 3: get from GPRs
 
     // first, check if this is a packed struct or not
-    TypeSystemClang *ast =
-        llvm::dyn_cast<TypeSystemClang>(m_type.GetTypeSystem());
+    auto ast = m_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
     if (ast) {
       clang::RecordDecl *record_decl = TypeSystemClang::GetAsRecordDecl(m_type);
 

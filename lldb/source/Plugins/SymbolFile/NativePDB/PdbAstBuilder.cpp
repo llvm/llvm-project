@@ -1428,7 +1428,7 @@ CompilerDecl PdbAstBuilder::ToCompilerDecl(clang::Decl &decl) {
 }
 
 CompilerType PdbAstBuilder::ToCompilerType(clang::QualType qt) {
-  return {&m_clang, qt.getAsOpaquePtr()};
+  return {m_clang.weak_from_this(), qt.getAsOpaquePtr()};
 }
 
 CompilerDeclContext

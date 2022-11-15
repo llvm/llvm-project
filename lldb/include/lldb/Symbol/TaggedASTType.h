@@ -20,7 +20,8 @@ public:
   TaggedASTType(const CompilerType &compiler_type)
       : CompilerType(compiler_type) {}
 
-  TaggedASTType(lldb::opaque_compiler_type_t type, TypeSystem *type_system)
+  TaggedASTType(lldb::opaque_compiler_type_t type,
+                lldb::TypeSystemWP type_system)
       : CompilerType(type_system, type) {}
 
   TaggedASTType(const TaggedASTType<C> &tw) : CompilerType(tw) {}

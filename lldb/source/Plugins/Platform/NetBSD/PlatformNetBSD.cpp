@@ -206,9 +206,12 @@ MmapArgList PlatformNetBSD::GetMmapArgumentList(const ArchSpec &arch,
 }
 
 CompilerType PlatformNetBSD::GetSiginfoType(const llvm::Triple &triple) {
-  if (!m_type_system_up)
-    m_type_system_up.reset(new TypeSystemClang("siginfo", triple));
-  TypeSystemClang *ast = m_type_system_up.get();
+  {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    if (!m_type_system)
+      m_type_system = std::make_shared<TypeSystemClang>("siginfo", triple);
+  }
+  TypeSystemClang *ast = m_type_system.get();
 
   // generic types
   CompilerType int_type = ast->GetBasicType(eBasicTypeInt);

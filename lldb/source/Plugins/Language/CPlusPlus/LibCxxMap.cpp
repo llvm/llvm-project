@@ -249,7 +249,7 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
   static ConstString g_tree_("__tree_");
   static ConstString g_pair3("__pair3_");
 
-  if (m_element_type.GetOpaqueQualType() && m_element_type.GetTypeSystem())
+  if (m_element_type.IsValid())
     return true;
   m_element_type.Clear();
   ValueObjectSP deref;
@@ -295,8 +295,7 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
       UINT32_MAX) {
     m_skip_size = bit_offset / 8u;
   } else {
-    TypeSystemClang *ast_ctx =
-        llvm::dyn_cast_or_null<TypeSystemClang>(node_type.GetTypeSystem());
+    auto ast_ctx = node_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
     if (!ast_ctx)
       return;
     CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(

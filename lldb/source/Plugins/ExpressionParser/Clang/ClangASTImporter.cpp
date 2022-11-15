@@ -33,8 +33,7 @@ CompilerType ClangASTImporter::CopyType(TypeSystemClang &dst_ast,
                                         const CompilerType &src_type) {
   clang::ASTContext &dst_clang_ast = dst_ast.getASTContext();
 
-  TypeSystemClang *src_ast =
-      llvm::dyn_cast_or_null<TypeSystemClang>(src_type.GetTypeSystem());
+  auto src_ast = src_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
   if (!src_ast)
     return CompilerType();
 
@@ -59,7 +58,7 @@ CompilerType ClangASTImporter::CopyType(TypeSystemClang &dst_ast,
   lldb::opaque_compiler_type_t dst_clang_type = ret_or_error->getAsOpaquePtr();
 
   if (dst_clang_type)
-    return CompilerType(&dst_ast, dst_clang_type);
+    return CompilerType(dst_ast.weak_from_this(), dst_clang_type);
   return CompilerType();
 }
 
@@ -305,8 +304,9 @@ CompilerType ClangASTImporter::DeportType(TypeSystemClang &dst,
                                           const CompilerType &src_type) {
   Log *log = GetLog(LLDBLog::Expressions);
 
-  TypeSystemClang *src_ctxt =
-      llvm::cast<TypeSystemClang>(src_type.GetTypeSystem());
+  auto src_ctxt = src_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  if (!src_ctxt)
+    return {};
 
   LLDB_LOG(log,
            "    [ClangASTImporter] DeportType called on ({0}Type*){1} "

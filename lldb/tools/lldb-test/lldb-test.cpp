@@ -658,13 +658,13 @@ Error opts::symbols::dumpAST(lldb_private::Module &Module) {
   if (!symfile)
     return make_string_error("Module has no symbol file.");
 
-  llvm::Expected<TypeSystem &> type_system_or_err =
+  auto type_system_or_err =
       symfile->GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!type_system_or_err)
     return make_string_error("Can't retrieve TypeSystemClang");
 
-  auto *clang_ast_ctx =
-      llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
+  auto ts = *type_system_or_err;
+  auto *clang_ast_ctx = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang_ast_ctx)
     return make_string_error("Retrieved TypeSystem was not a TypeSystemClang");
 
@@ -686,13 +686,12 @@ Error opts::symbols::dumpEntireClangAST(lldb_private::Module &Module) {
   if (!symfile)
     return make_string_error("Module has no symbol file.");
 
-  llvm::Expected<TypeSystem &> type_system_or_err =
+  auto type_system_or_err =
       symfile->GetTypeSystemForLanguage(eLanguageTypeObjC_plus_plus);
   if (!type_system_or_err)
     return make_string_error("Can't retrieve TypeSystemClang");
-
-  auto *clang_ast_ctx =
-      llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
+  auto ts = *type_system_or_err;
+  auto *clang_ast_ctx = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang_ast_ctx)
     return make_string_error("Retrieved TypeSystem was not a TypeSystemClang");
 
