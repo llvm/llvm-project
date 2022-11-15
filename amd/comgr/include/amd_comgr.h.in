@@ -636,7 +636,7 @@ amd_comgr_set_data_from_file_slice(
 /**
  * @brief Set the name associated with a data object.
  *
- * When compiling, the fle name of an include directive is used to
+ * When compiling, the full name of an include directive is used to
  * reference the contents of the include data object with the same
  * name. The name may also be used for other data objects in log and
  * diagnostic output.
