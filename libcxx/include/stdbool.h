@@ -24,7 +24,9 @@ Macros:
 #  pragma GCC system_header
 #endif
 
-#include_next <stdbool.h>
+#if __has_include_next(<stdbool.h>)
+#  include_next <stdbool.h>
+#endif
 
 #ifdef __cplusplus
 #undef bool
