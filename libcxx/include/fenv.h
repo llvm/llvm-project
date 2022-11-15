@@ -56,9 +56,7 @@ int feupdateenv(const fenv_t* envp);
 #  pragma GCC system_header
 #endif
 
-#if __has_include_next(<fenv.h>)
-#  include_next <fenv.h>
-#endif
+#include_next <fenv.h>
 
 #ifdef __cplusplus
 

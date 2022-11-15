@@ -120,8 +120,6 @@ Macros:
 #   define __STDC_CONSTANT_MACROS
 #endif
 
-#if __has_include_next(<stdint.h>)
-#  include_next <stdint.h>
-#endif
+#include_next <stdint.h>
 
 #endif // _LIBCPP_STDINT_H

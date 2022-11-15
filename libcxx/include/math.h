@@ -297,9 +297,7 @@ long double    truncl(long double x);
 #  pragma GCC system_header
 #endif
 
-#  if __has_include_next(<math.h>)
-#    include_next <math.h>
-#  endif
+#include_next <math.h>
 
 #ifdef __cplusplus
 

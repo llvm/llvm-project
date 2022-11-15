@@ -76,9 +76,7 @@ Macros:
 #  pragma GCC system_header
 #endif
 
-#if __has_include_next(<float.h>)
-#  include_next <float.h>
-#endif
+#include_next <float.h>
 
 #ifdef __cplusplus
 
