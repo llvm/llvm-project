@@ -8682,6 +8682,8 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
   FunctionSummary::TypeIdInfo TypeIdInfo;
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;
   std::vector<ValueInfo> Refs;
+  std::vector<CallsiteInfo> Callsites;
+  std::vector<AllocInfo> Allocs;
   // Default is all-zeros (conservative values).
   FunctionSummary::FFlags FFlags = {};
   if (parseToken(lltok::colon, "expected ':' here") ||
@@ -8716,6 +8718,14 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
       if (parseOptionalParamAccesses(ParamAccesses))
         return true;
       break;
+    case lltok::kw_allocs:
+      if (parseOptionalAllocs(Allocs))
+        return true;
+      break;
+    case lltok::kw_callsites:
+      if (parseOptionalCallsites(Callsites))
+        return true;
+      break;
     default:
       return error(Lex.getLoc(), "expected optional function summary field");
     }
@@ -8731,7 +8741,7 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
       std::move(TypeIdInfo.TypeCheckedLoadVCalls),
       std::move(TypeIdInfo.TypeTestAssumeConstVCalls),
       std::move(TypeIdInfo.TypeCheckedLoadConstVCalls),
-      std::move(ParamAccesses));
+      std::move(ParamAccesses), std::move(Callsites), std::move(Allocs));
 
   FS->setModulePath(ModulePath);
 
@@ -9681,5 +9691,222 @@ bool LLParser::parseGVReference(ValueInfo &VI, unsigned &GVId) {
     VI.setReadOnly();
   if (WriteOnly)
     VI.setWriteOnly();
+  return false;
+}
+
+/// OptionalAllocs
+///   := 'allocs' ':' '(' Alloc [',' Alloc]* ')'
+/// Alloc ::= '(' 'versions' ':' '(' Version [',' Version]* ')'
+///              ',' MemProfs ')'
+/// Version ::= UInt32
+bool LLParser::parseOptionalAllocs(std::vector<AllocInfo> &Allocs) {
+  assert(Lex.getKind() == lltok::kw_allocs);
+  Lex.Lex();
+
+  if (parseToken(lltok::colon, "expected ':' in allocs") ||
+      parseToken(lltok::lparen, "expected '(' in allocs"))
+    return true;
+
+  // parse each alloc
+  do {
+    if (parseToken(lltok::lparen, "expected '(' in alloc") ||
+        parseToken(lltok::kw_versions, "expected 'versions' in alloc") ||
+        parseToken(lltok::colon, "expected ':'") ||
+        parseToken(lltok::lparen, "expected '(' in versions"))
+      return true;
+
+    SmallVector<uint8_t> Versions;
+    do {
+      uint8_t V = 0;
+      if (parseAllocType(V))
+        return true;
+      Versions.push_back(V);
+    } while (EatIfPresent(lltok::comma));
+
+    if (parseToken(lltok::rparen, "expected ')' in versions") ||
+        parseToken(lltok::comma, "expected ',' in alloc"))
+      return true;
+
+    std::vector<MIBInfo> MIBs;
+    if (parseMemProfs(MIBs))
+      return true;
+
+    Allocs.push_back({Versions, MIBs});
+
+    if (parseToken(lltok::rparen, "expected ')' in alloc"))
+      return true;
+  } while (EatIfPresent(lltok::comma));
+
+  if (parseToken(lltok::rparen, "expected ')' in allocs"))
+    return true;
+
+  return false;
+}
+
+/// MemProfs
+///   := 'memProf' ':' '(' MemProf [',' MemProf]* ')'
+/// MemProf ::= '(' 'type' ':' AllocType
+///              ',' 'stackIds' ':' '(' StackId [',' StackId]* ')' ')'
+/// StackId ::= UInt64
+bool LLParser::parseMemProfs(std::vector<MIBInfo> &MIBs) {
+  assert(Lex.getKind() == lltok::kw_memProf);
+  Lex.Lex();
+
+  if (parseToken(lltok::colon, "expected ':' in memprof") ||
+      parseToken(lltok::lparen, "expected '(' in memprof"))
+    return true;
+
+  // parse each MIB
+  do {
+    if (parseToken(lltok::lparen, "expected '(' in memprof") ||
+        parseToken(lltok::kw_type, "expected 'type' in memprof") ||
+        parseToken(lltok::colon, "expected ':'"))
+      return true;
+
+    uint8_t AllocType;
+    if (parseAllocType(AllocType))
+      return true;
+
+    if (parseToken(lltok::comma, "expected ',' in memprof") ||
+        parseToken(lltok::kw_stackIds, "expected 'stackIds' in memprof") ||
+        parseToken(lltok::colon, "expected ':'") ||
+        parseToken(lltok::lparen, "expected '(' in stackIds"))
+      return true;
+
+    SmallVector<unsigned> StackIdIndices;
+    do {
+      uint64_t StackId = 0;
+      if (parseUInt64(StackId))
+        return true;
+      StackIdIndices.push_back(Index->addOrGetStackIdIndex(StackId));
+    } while (EatIfPresent(lltok::comma));
+
+    if (parseToken(lltok::rparen, "expected ')' in stackIds"))
+      return true;
+
+    MIBs.push_back({(AllocationType)AllocType, StackIdIndices});
+
+    if (parseToken(lltok::rparen, "expected ')' in memprof"))
+      return true;
+  } while (EatIfPresent(lltok::comma));
+
+  if (parseToken(lltok::rparen, "expected ')' in memprof"))
+    return true;
+
+  return false;
+}
+
+/// AllocType
+///   := ('none'|'notcold'|'cold'|'notcoldandcold')
+bool LLParser::parseAllocType(uint8_t &AllocType) {
+  switch (Lex.getKind()) {
+  case lltok::kw_none:
+    AllocType = (uint8_t)AllocationType::None;
+    break;
+  case lltok::kw_notcold:
+    AllocType = (uint8_t)AllocationType::NotCold;
+    break;
+  case lltok::kw_cold:
+    AllocType = (uint8_t)AllocationType::Cold;
+    break;
+  case lltok::kw_notcoldandcold:
+    AllocType =
+        (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold;
+    break;
+  default:
+    return error(Lex.getLoc(), "invalid alloc type");
+  }
+  Lex.Lex();
+  return false;
+}
+
+/// OptionalCallsites
+///   := 'callsites' ':' '(' Callsite [',' Callsite]* ')'
+/// Callsite ::= '(' 'callee' ':' GVReference
+///              ',' 'clones' ':' '(' Version [',' Version]* ')'
+///              ',' 'stackIds' ':' '(' StackId [',' StackId]* ')' ')'
+/// Version ::= UInt32
+/// StackId ::= UInt64
+bool LLParser::parseOptionalCallsites(std::vector<CallsiteInfo> &Callsites) {
+  assert(Lex.getKind() == lltok::kw_callsites);
+  Lex.Lex();
+
+  if (parseToken(lltok::colon, "expected ':' in callsites") ||
+      parseToken(lltok::lparen, "expected '(' in callsites"))
+    return true;
+
+  IdToIndexMapType IdToIndexMap;
+  // parse each callsite
+  do {
+    if (parseToken(lltok::lparen, "expected '(' in callsite") ||
+        parseToken(lltok::kw_callee, "expected 'callee' in callsite") ||
+        parseToken(lltok::colon, "expected ':'"))
+      return true;
+
+    ValueInfo VI;
+    unsigned GVId = 0;
+    LocTy Loc = Lex.getLoc();
+    if (!EatIfPresent(lltok::kw_null)) {
+      if (parseGVReference(VI, GVId))
+        return true;
+    }
+
+    if (parseToken(lltok::comma, "expected ',' in callsite") ||
+        parseToken(lltok::kw_clones, "expected 'clones' in callsite") ||
+        parseToken(lltok::colon, "expected ':'") ||
+        parseToken(lltok::lparen, "expected '(' in clones"))
+      return true;
+
+    SmallVector<unsigned> Clones;
+    do {
+      unsigned V = 0;
+      if (parseUInt32(V))
+        return true;
+      Clones.push_back(V);
+    } while (EatIfPresent(lltok::comma));
+
+    if (parseToken(lltok::rparen, "expected ')' in clones") ||
+        parseToken(lltok::comma, "expected ',' in callsite") ||
+        parseToken(lltok::kw_stackIds, "expected 'stackIds' in callsite") ||
+        parseToken(lltok::colon, "expected ':'") ||
+        parseToken(lltok::lparen, "expected '(' in stackIds"))
+      return true;
+
+    SmallVector<unsigned> StackIdIndices;
+    do {
+      uint64_t StackId = 0;
+      if (parseUInt64(StackId))
+        return true;
+      StackIdIndices.push_back(Index->addOrGetStackIdIndex(StackId));
+    } while (EatIfPresent(lltok::comma));
+
+    if (parseToken(lltok::rparen, "expected ')' in stackIds"))
+      return true;
+
+    // Keep track of the Callsites array index needing a forward reference.
+    // We will save the location of the ValueInfo needing an update, but
+    // can only do so once the SmallVector is finalized.
+    if (VI.getRef() == FwdVIRef)
+      IdToIndexMap[GVId].push_back(std::make_pair(Callsites.size(), Loc));
+    Callsites.push_back({VI, Clones, StackIdIndices});
+
+    if (parseToken(lltok::rparen, "expected ')' in callsite"))
+      return true;
+  } while (EatIfPresent(lltok::comma));
+
+  // Now that the Callsites vector is finalized, it is safe to save the
+  // locations of any forward GV references that need updating later.
+  for (auto I : IdToIndexMap) {
+    auto &Infos = ForwardRefValueInfos[I.first];
+    for (auto P : I.second) {
+      assert(Callsites[P.first].Callee.getRef() == FwdVIRef &&
+             "Forward referenced ValueInfo expected to be empty");
+      Infos.emplace_back(&Callsites[P.first].Callee, P.second);
+    }
+  }
+
+  if (parseToken(lltok::rparen, "expected ')' in callsites"))
+    return true;
+
   return false;
 }
