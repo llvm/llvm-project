@@ -3197,20 +3197,16 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
   // "notcoldandcold" implies there are multiple contexts which reach this site,
   // some of which are cold and some of which are not, and that need to
   // disambiguate via cloning or other context identification.
-  auto AllocTypeName = [](uint8_t Type) {
+  auto AllocTypeName = [](uint8_t Type) -> const char * {
     switch (Type) {
     case (uint8_t)AllocationType::None:
       return "none";
-      break;
     case (uint8_t)AllocationType::NotCold:
       return "notcold";
-      break;
     case (uint8_t)AllocationType::Cold:
       return "cold";
-      break;
     case (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold:
       return "notcoldandcold";
-      break;
     }
     llvm_unreachable("Unexpected alloc type");
   };
