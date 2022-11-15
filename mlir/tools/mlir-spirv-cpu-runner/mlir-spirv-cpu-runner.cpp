@@ -74,7 +74,8 @@ convertMLIRModule(Operation *op, llvm::LLVMContext &context) {
   return mainModule;
 }
 
-static LogicalResult runMLIRPasses(Operation *module) {
+static LogicalResult runMLIRPasses(Operation *module,
+                                   JitRunnerOptions &options) {
   PassManager passManager(module->getContext(),
                           module->getName().getStringRef());
   applyPassManagerCLOptions(passManager);

@@ -41,26 +41,28 @@ inline bool isFortranValue(mlir::Value value) {
 /// original source or can be legally defined: temporaries created to store
 /// expression values are considered to be variables, and so are PARAMETERs
 /// global constant address.
-inline bool isFortranVariable(mlir::Value value) {
+inline bool isFortranVariableWithAttributes(mlir::Value value) {
   return value.getDefiningOp<fir::FortranVariableOpInterface>();
 }
 
-/// Is this a Fortran variable or expression value?
-inline bool isFortranEntity(mlir::Value value) {
-  return isFortranValue(value) || isFortranVariable(value);
+/// Is this a Fortran expression value, or a Fortran variable for which the
+/// defining op carrying the Fortran attributes is visible?
+inline bool isFortranEntityWithAttributes(mlir::Value value) {
+  return isFortranValue(value) || isFortranVariableWithAttributes(value);
 }
 
 /// Wrapper over an mlir::Value that can be viewed as a Fortran entity.
 /// This provides some Fortran specific helpers as well as a guarantee
 /// in the compiler source that a certain mlir::Value must be a Fortran
-/// entity.
-class FortranEntity : public mlir::Value {
+/// entity, and if it is a variable, its defining operation carrying its
+/// Fortran attributes must be visible.
+class EntityWithAttributes : public mlir::Value {
 public:
-  explicit FortranEntity(mlir::Value value) : mlir::Value(value) {
-    assert(isFortranEntity(value) &&
+  explicit EntityWithAttributes(mlir::Value value) : mlir::Value(value) {
+    assert(isFortranEntityWithAttributes(value) &&
            "must be a value representing a Fortran value or variable");
   }
-  FortranEntity(fir::FortranVariableOpInterface variable)
+  EntityWithAttributes(fir::FortranVariableOpInterface variable)
       : mlir::Value(variable.getBase()) {}
   bool isValue() const { return isFortranValue(*this); }
   bool isVariable() const { return !isValue(); }
@@ -70,7 +72,7 @@ public:
   mlir::Value getBase() const { return *this; }
 };
 
-/// Functions to translate hlfir::FortranEntity to fir::ExtendedValue.
+/// Functions to translate hlfir::EntityWithAttributes to fir::ExtendedValue.
 /// For Fortran arrays, character, and derived type values, this require
 /// allocating a storage since these can only be represented in memory in FIR.
 /// In that case, a cleanup function is provided to generate the finalization
@@ -78,7 +80,7 @@ public:
 using CleanupFunction = std::function<void()>;
 std::pair<fir::ExtendedValue, llvm::Optional<CleanupFunction>>
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         FortranEntity entity);
+                         EntityWithAttributes entity);
 
 /// Function to translate FortranVariableOpInterface to fir::ExtendedValue.
 /// It does not generate any IR, and is a simple packaging operation.
@@ -86,9 +88,10 @@ fir::ExtendedValue
 translateToExtendedValue(fir::FortranVariableOpInterface fortranVariable);
 
 /// Generate declaration for a fir::ExtendedValue in memory.
-FortranEntity genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
-                         const fir::ExtendedValue &exv, llvm::StringRef name,
-                         fir::FortranVariableFlagsAttr flags);
+EntityWithAttributes genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
+                                const fir::ExtendedValue &exv,
+                                llvm::StringRef name,
+                                fir::FortranVariableFlagsAttr flags);
 
 } // namespace hlfir
 

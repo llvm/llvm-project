@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_CACHEPRUNING_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <chrono>
 
 namespace llvm {
@@ -70,11 +71,16 @@ Expected<CachePruningPolicy> parseCachePruningPolicy(StringRef PolicyStr);
 /// Peform pruning using the supplied policy, returns true if pruning
 /// occurred, i.e. if Policy.Interval was expired.
 ///
+/// Check whether cache pruning happens using the supplied policy, adds a
+/// ThinLTO warning if cache_size_bytes or cache_size_files is too small for the
+/// current link job. The warning recommends the user to consider adjusting
+/// --thinlto-cache-policy.
+///
 /// As a safeguard against data loss if the user specifies the wrong directory
 /// as their cache directory, this function will ignore files not matching the
 /// pattern "llvmcache-*".
-bool pruneCache(StringRef Path, CachePruningPolicy Policy);
-
+bool pruneCache(StringRef Path, CachePruningPolicy Policy,
+                const std::vector<std::unique_ptr<MemoryBuffer>> &Files = {});
 } // namespace llvm
 
 #endif

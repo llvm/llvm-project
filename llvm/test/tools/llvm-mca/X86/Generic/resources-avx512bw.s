@@ -20,6 +20,13 @@ kshiftrq          $2, %k1, %k2
 kunpckdq          %k0, %k1, %k2
 kunpckwd          %k0, %k1, %k2
 
+vdbpsadbw         $0, %zmm16, %zmm17, %zmm19
+vdbpsadbw         $0, (%rax), %zmm17, %zmm19
+vdbpsadbw         $0, %zmm16, %zmm17, %zmm19 {k1}
+vdbpsadbw         $0, (%rax), %zmm17, %zmm19 {k1}
+vdbpsadbw         $0, %zmm16, %zmm17, %zmm19 {z}{k1}
+vdbpsadbw         $0, (%rax), %zmm17, %zmm19 {z}{k1}
+
 vmovdqu8          %zmm16, %zmm19
 vmovdqu8          (%rax), %zmm19
 vmovdqu8          %zmm16, (%rax)
@@ -298,6 +305,12 @@ vpmovw2m          %zmm0, %k0
 # CHECK-NEXT:  1      1     1.00                        kshiftrq	$2, %k1, %k2
 # CHECK-NEXT:  1      1     1.00                        kunpckdq	%k0, %k1, %k2
 # CHECK-NEXT:  1      1     1.00                        kunpckwd	%k0, %k1, %k2
+# CHECK-NEXT:  1      5     1.00                        vdbpsadbw	$0, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  2      12    1.00    *                   vdbpsadbw	$0, (%rax), %zmm17, %zmm19
+# CHECK-NEXT:  1      5     1.00                        vdbpsadbw	$0, %zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  2      12    1.00    *                   vdbpsadbw	$0, (%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  1      5     1.00                        vdbpsadbw	$0, %zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      12    1.00    *                   vdbpsadbw	$0, (%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      1     0.50                        vmovdqu8	%zmm16, %zmm19
 # CHECK-NEXT:  1      7     0.50    *                   vmovdqu8	(%rax), %zmm19
 # CHECK-NEXT:  1      1     1.00           *            vmovdqu8	%zmm16, (%rax)
@@ -521,7 +534,7 @@ vpmovw2m          %zmm0, %k0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -      -     14.00  47.00  4.00   157.00 52.50  52.50
+# CHECK-NEXT:  -      -     20.00  47.00  4.00   157.00 54.00  54.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -543,6 +556,12 @@ vpmovw2m          %zmm0, %k0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     kshiftrq	$2, %k1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     kunpckdq	%k0, %k1, %k2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     kunpckwd	%k0, %k1, %k2
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vdbpsadbw	$0, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vdbpsadbw	$0, (%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vdbpsadbw	$0, %zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vdbpsadbw	$0, (%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vdbpsadbw	$0, %zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vdbpsadbw	$0, (%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -      -     0.50    -      -     vmovdqu8	%zmm16, %zmm19
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vmovdqu8	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -     1.00    -     0.50   0.50   vmovdqu8	%zmm16, (%rax)

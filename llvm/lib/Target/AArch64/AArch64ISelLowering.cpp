@@ -129,6 +129,12 @@ EnableCombineMGatherIntrinsics("aarch64-enable-mgather-combine", cl::Hidden,
                                          "gather intrinsics"),
                                 cl::init(true));
 
+// All of the XOR, OR and CMP use ALU ports, and data dependency will become the
+// bottleneck after this transform on high end CPU. So this max leaf node
+// limitation is guard cmp+ccmp will be profitable.
+static cl::opt<unsigned> MaxXors("aarch64-max-xors", cl::init(16), cl::Hidden,
+                                 cl::desc("Maximum of xors"));
+
 /// Value type used for condition codes.
 static const MVT MVT_CC = MVT::i32;
 
@@ -8551,6 +8557,77 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
                      DAG.getNode(ISD::BITREVERSE, DL, VST, REVB));
 }
 
+// Check whether the continuous comparison sequence.
+static bool
+isOrXorChain(SDValue N, unsigned &Num,
+             SmallVector<std::pair<SDValue, SDValue>, 16> &WorkList) {
+  if (Num == MaxXors)
+    return false;
+
+  // The leaf node must be XOR
+  if (N->getOpcode() == ISD::XOR) {
+    WorkList.push_back(std::make_pair(N->getOperand(0), N->getOperand(1)));
+    Num++;
+    return true;
+  }
+
+  // All the non-leaf nodes must be OR.
+  if (N->getOpcode() != ISD::OR || !N->hasOneUse())
+    return false;
+
+  if (isOrXorChain(N->getOperand(0), Num, WorkList) &&
+      isOrXorChain(N->getOperand(1), Num, WorkList))
+    return true;
+  return false;
+}
+
+// Transform chains of ORs and XORs, which usually outlined by memcmp/bmp.
+static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SmallVector<std::pair<SDValue, SDValue>, 16> WorkList;
+
+  // Only handle integer compares.
+  if (N->getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  // Try to express conjunction "cmp 0 (or (xor A0 A1) (xor B0 B1))" as:
+  // sub A0, A1; ccmp B0, B1, 0, eq; cmp inv(Cond) flag
+  unsigned NumXors = 0;
+  if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) && isNullConstant(RHS) &&
+      LHS->getOpcode() == ISD::OR && LHS->hasOneUse() &&
+      isOrXorChain(LHS, NumXors, WorkList)) {
+    SDValue CCVal = DAG.getConstant(AArch64CC::EQ, DL, MVT_CC);
+    EVT TstVT = LHS->getValueType(0);
+    SDValue XOR0, XOR1;
+    std::tie(XOR0, XOR1) = WorkList[0];
+    SDValue Cmp = DAG.getNode(AArch64ISD::SUBS, DL,
+                              DAG.getVTList(TstVT, MVT::i32), XOR0, XOR1);
+    SDValue Overflow = Cmp.getValue(1);
+    SDValue CCmp;
+    for (unsigned I = 1; I < WorkList.size(); I++) {
+      std::tie(XOR0, XOR1) = WorkList[I];
+      SDValue NZCVOp = DAG.getConstant(0, DL, MVT::i32);
+      CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, XOR0, XOR1, NZCVOp,
+                         CCVal, Overflow);
+      Overflow = CCmp;
+    }
+
+    // Exit early by inverting the condition, which help reduce indentations.
+    SDValue TVal = DAG.getConstant(1, DL, VT);
+    SDValue FVal = DAG.getConstant(0, DL, VT);
+    AArch64CC::CondCode CC = changeIntCCToAArch64CC(Cond);
+    AArch64CC::CondCode InvCC = AArch64CC::getInvertedCondCode(CC);
+    return DAG.getNode(AArch64ISD::CSEL, DL, VT, FVal, TVal,
+                       DAG.getConstant(InvCC, DL, MVT::i32), CCmp);
+  }
+
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
   if (Op.getValueType().isVector())
@@ -8585,6 +8662,11 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
       return IsStrict ? DAG.getMergeValues({LHS, Chain}, dl) : LHS;
     }
   }
+
+  // Address some cases folded And in the stage of `Optimized type-legalized
+  // selection`
+  if (SDValue V = performOrXorChainCombine(Op.getNode(), DAG))
+    return V;
 
   if (LHS.getValueType().isInteger()) {
     SDValue CCVal;
@@ -19625,34 +19707,10 @@ static SDValue performSETCCCombine(SDNode *N,
     }
   }
 
-  // Try to express conjunction "cmp 0 (or (xor A0 A1) (xor B0 B1))" as:
-  // cmp A0, A0; ccmp A0, B1, 0, eq; cmp inv(Cond) flag
-  if (!DCI.isBeforeLegalize() && VT.isScalarInteger() &&
-      (Cond == ISD::SETEQ || Cond == ISD::SETNE) && isNullConstant(RHS) &&
-      LHS->getOpcode() == ISD::OR &&
-      (LHS.getOperand(0)->getOpcode() == ISD::XOR &&
-       LHS.getOperand(1)->getOpcode() == ISD::XOR) &&
-      LHS.hasOneUse() && LHS.getOperand(0)->hasOneUse() &&
-      LHS.getOperand(1)->hasOneUse()) {
-    SDValue XOR0 = LHS.getOperand(0);
-    SDValue XOR1 = LHS.getOperand(1);
-    SDValue CCVal = DAG.getConstant(AArch64CC::EQ, DL, MVT_CC);
-    EVT TstVT = LHS->getValueType(0);
-    SDValue Cmp =
-        DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(TstVT, MVT::i32),
-                    XOR0.getOperand(0), XOR0.getOperand(1));
-    SDValue Overflow = Cmp.getValue(1);
-    SDValue NZCVOp = DAG.getConstant(0, DL, MVT::i32);
-    SDValue CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, XOR1.getOperand(0),
-                               XOR1.getOperand(1), NZCVOp, CCVal, Overflow);
-    // Invert CSEL's operands.
-    SDValue TVal = DAG.getConstant(1, DL, VT);
-    SDValue FVal = DAG.getConstant(0, DL, VT);
-    AArch64CC::CondCode CC = changeIntCCToAArch64CC(Cond);
-    AArch64CC::CondCode InvCC = AArch64CC::getInvertedCondCode(CC);
-    return DAG.getNode(AArch64ISD::CSEL, DL, VT, FVal, TVal,
-                       DAG.getConstant(InvCC, DL, MVT::i32), CCmp);
-  }
+  // Try to perform the memcmp when the result is tested for [in]equality with 0
+  if (!DCI.isBeforeLegalize())
+    if (SDValue V = performOrXorChainCombine(N, DAG))
+      return V;
 
   return SDValue();
 }

@@ -1946,10 +1946,9 @@ void AssignmentTrackingPass::runOnFunction(Function &F) {
       // Assert that the alloca that DDI uses is now linked to a dbg.assign
       // describing the same variable (i.e. check that this dbg.declare
       // has been replaced by a dbg.assign).
-      assert(std::find_if(Markers.begin(), Markers.end(),
-                          [DDI](DbgAssignIntrinsic *DAI) {
-                            return DebugVariable(DAI) == DebugVariable(DDI);
-                          }) != Markers.end());
+      assert(llvm::any_of(Markers, [DDI](DbgAssignIntrinsic *DAI) {
+        return DebugVariable(DAI) == DebugVariable(DDI);
+      }));
       // Delete DDI because the variable location is now tracked using
       // assignment tracking.
       DDI->eraseFromParent();

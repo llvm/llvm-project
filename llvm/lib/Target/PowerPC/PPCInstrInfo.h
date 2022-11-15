@@ -254,8 +254,8 @@ class PPCInstrInfo : public PPCGenInstrInfo {
                                  bool &IsFwdFeederRegKilled,
                                  bool &SeenIntermediateUse) const;
   unsigned getSpillTarget() const;
-  const unsigned *getStoreOpcodesForSpillArray() const;
-  const unsigned *getLoadOpcodesForSpillArray() const;
+  ArrayRef<unsigned> getStoreOpcodesForSpillArray() const;
+  ArrayRef<unsigned> getLoadOpcodesForSpillArray() const;
   unsigned getSpillIndex(const TargetRegisterClass *RC) const;
   int16_t getFMAOpIdxInfo(unsigned Opcode) const;
   void reassociateFMA(MachineInstr &Root, MachineCombinerPattern Pattern,
