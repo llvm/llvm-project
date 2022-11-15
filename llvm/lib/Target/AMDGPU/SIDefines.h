@@ -333,10 +333,14 @@ enum TH {
   NT = 1,     // non-temporal
   HT = 2,     // high-temporal
   LU = 3,     // last use
+  RT_WB = 3,  // regular (CU, SE), high-temporal with write-back (MALL)
   NT_RT = 4,  // non-temporal (CU, SE), regular (MALL)
   RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
   NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
+  NT_WB = 7,  // non-temporal (CU, SE), high-temporal with write-back (MALL)
   BYPASS = 3, // only to be used with scope = 3
+
+  RESERVED = 7, // unused value for load insts
 
   // Bits of TH for atomics
   ATOMIC_RETURN = 1,  // Returning vs non-returning

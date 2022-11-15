@@ -6304,7 +6304,8 @@ AMDGPUAsmParser::parseTH(OperandVector &Operands) {
 
     if (Value == "TH_DEFAULT")
       TH = 0;
-    else if (Value == "TH_STORE_LU") {
+    else if (Value == "TH_STORE_LU" || Value == "TH_LOAD_RT_WB" ||
+             Value == "TH_LOAD_NT_WB") {
       Error(StringLoc, "invalid th value");
       return MatchOperand_ParseFail;
     }
@@ -6340,9 +6341,11 @@ AMDGPUAsmParser::parseTH(OperandVector &Operands) {
                  .Case("NT", AMDGPU::TH::NT)
                  .Case("HT", AMDGPU::TH::HT)
                  .Case("LU", AMDGPU::TH::LU)
+                 .Case("RT_WB", AMDGPU::TH::RT_WB)
                  .Case("NT_RT", AMDGPU::TH::NT_RT)
                  .Case("RT_NT", AMDGPU::TH::RT_NT)
                  .Case("NT_HT", AMDGPU::TH::NT_HT)
+                 .Case("NT_WB", AMDGPU::TH::NT_WB)
                  .Case("BYPASS", AMDGPU::TH::BYPASS)
                  .Default(0xffffffff);
     }

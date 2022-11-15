@@ -273,32 +273,39 @@ void AMDGPUInstPrinter::printTH(const MCInst *MI, unsigned OpNo,
     else
       O << formatHex(Imm);
   } else {
-    // This will default to printing load variants when neither MayStore nor
-    // MayLoad flag is present which is the case with instructons like
-    // image_get_resinfo.
-    O << (IsStore ? "TH_STORE_" : "TH_LOAD_");
-    switch (Imm) {
-    case AMDGPU::TH::NT:
-      O << "NT";
-      break;
-    case AMDGPU::TH::HT:
-      O << "HT";
-      break;
-    case AMDGPU::TH::BYPASS: // or LU
-      O << (IsStore || Scope == AMDGPU::Scope::SCOPE_SYS ? "BYPASS" : "LU");
-      break;
-    case AMDGPU::TH::NT_RT:
-      O << "NT_RT";
-      break;
-    case AMDGPU::TH::RT_NT:
-      O << "RT_NT";
-      break;
-    case AMDGPU::TH::NT_HT:
-      O << "NT_HT";
-      break;
-    default:
+    if (!IsStore && Imm == AMDGPU::TH::RESERVED)
       O << formatHex(Imm);
-      break;
+    else {
+      // This will default to printing load variants when neither MayStore nor
+      // MayLoad flag is present which is the case with instructons like
+      // image_get_resinfo.
+      O << (IsStore ? "TH_STORE_" : "TH_LOAD_");
+      switch (Imm) {
+      case AMDGPU::TH::NT:
+        O << "NT";
+        break;
+      case AMDGPU::TH::HT:
+        O << "HT";
+        break;
+      case AMDGPU::TH::BYPASS: // or LU or RT_WB
+        O << (Scope == AMDGPU::Scope::SCOPE_SYS ? "BYPASS"
+                                                : (IsStore ? "RT_WB" : "LU"));
+        break;
+      case AMDGPU::TH::NT_RT:
+        O << "NT_RT";
+        break;
+      case AMDGPU::TH::RT_NT:
+        O << "RT_NT";
+        break;
+      case AMDGPU::TH::NT_HT:
+        O << "NT_HT";
+        break;
+      case AMDGPU::TH::NT_WB:
+        O << "NT_WB";
+        break;
+      default:
+        llvm_unreachable("unexpected th value");
+      }
     }
   }
 }
