@@ -133,8 +133,9 @@ void populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
                                          RewritePatternSet &patterns,
                                          bool enableBufferInitialization);
 
+std::unique_ptr<Pass> createSparseTensorCodegenPass();
 std::unique_ptr<Pass>
-createSparseTensorCodegenPass(bool enableBufferInitialization = false);
+createSparseTensorCodegenPass(bool enableBufferInitialization);
 
 //===----------------------------------------------------------------------===//
 // The SparseTensorRewriting pass.
@@ -157,8 +158,10 @@ std::unique_ptr<Pass> createDenseBufferizationPass(
 
 void populateSparseBufferRewriting(RewritePatternSet &patterns,
                                    bool enableBufferInitialization);
+
+std::unique_ptr<Pass> createSparseBufferRewritePass();
 std::unique_ptr<Pass>
-createSparseBufferRewritePass(bool enableBufferInitialization = false);
+createSparseBufferRewritePass(bool enableBufferInitialization);
 
 //===----------------------------------------------------------------------===//
 // Registration.
