@@ -456,9 +456,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
               ValueRange reduc) {
             SmallVector<Value, 4> indices;
             for (int64_t i = 0; i < rank; i++) {
-              uint64_t dim =
-                  toStoredDim(getSparseTensorEncoding(input.getType()), i);
-              Value idx = args[dim];
+              Value idx = args[i];
               if (i == static_cast<int64_t>(conDim))
                 // transform coordinates on matching dim
                 idx = builder.create<arith::AddIOp>(loc, idx, offset);
