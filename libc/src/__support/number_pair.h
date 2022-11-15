@@ -11,7 +11,7 @@
 
 #include "CPP/type_traits.h"
 
-#include <stdint.h>
+#include <stddef.h>
 
 namespace __llvm_libc {
 
