@@ -92,7 +92,10 @@ public:
   }
 
   constexpr bool has_value() const noexcept { return hasVal; }
+// Workaround to avoid deprecation warnings: rdar://102362022
+#ifndef SWIFT_LLVM_SUPPORT_IS_AVAILABLE
   LLVM_DEPRECATED("Use has_value instead.", "has_value")
+#endif
   constexpr bool hasValue() const noexcept {
     return hasVal;
   }
@@ -311,18 +314,28 @@ public:
   constexpr const T *getPointer() const { return &Storage.value(); }
   T *getPointer() { return &Storage.value(); }
   constexpr const T &value() const & { return Storage.value(); }
+// Workaround to avoid deprecation warnings: rdar://102362022
+#ifndef SWIFT_LLVM_SUPPORT_IS_AVAILABLE
   LLVM_DEPRECATED("Use value instead.", "value")
+#endif
   constexpr const T &getValue() const & {
     return Storage.value();
   }
   T &value() & { return Storage.value(); }
-  LLVM_DEPRECATED("Use value instead.", "value") T &getValue() & {
+// Workaround to avoid deprecation warnings: rdar://102362022
+#ifndef SWIFT_LLVM_SUPPORT_IS_AVAILABLE
+  LLVM_DEPRECATED("Use value instead.", "value")
+#endif
+  T &getValue() & {
     return Storage.value();
   }
 
   constexpr explicit operator bool() const { return has_value(); }
   constexpr bool has_value() const { return Storage.has_value(); }
+// Workaround to avoid deprecation warnings: rdar://102362022
+#ifndef SWIFT_LLVM_SUPPORT_IS_AVAILABLE
   LLVM_DEPRECATED("Use has_value instead.", "has_value")
+#endif
   constexpr bool hasValue() const {
     return Storage.has_value();
   }
@@ -335,7 +348,10 @@ public:
     return has_value() ? value() : std::forward<U>(alt);
   }
   template <typename U>
+// Workaround to avoid deprecation warnings: rdar://102362022
+#ifndef SWIFT_LLVM_SUPPORT_IS_AVAILABLE
   LLVM_DEPRECATED("Use value_or instead.", "value_or")
+#endif
   constexpr T getValueOr(U &&alt) const & {
     return has_value() ? value() : std::forward<U>(alt);
   }
@@ -356,7 +372,11 @@ public:
   }
 
   T &&value() && { return std::move(Storage.value()); }
-  LLVM_DEPRECATED("Use value instead.", "value") T &&getValue() && {
+// Workaround to avoid deprecation warnings: rdar://102362022
+#ifndef SWIFT_LLVM_SUPPORT_IS_AVAILABLE
+  LLVM_DEPRECATED("Use value instead.", "value")
+#endif
+  T &&getValue() && {
     return std::move(Storage.value());
   }
   T &&operator*() && { return std::move(Storage.value()); }
@@ -365,7 +385,10 @@ public:
     return has_value() ? std::move(value()) : std::forward<U>(alt);
   }
   template <typename U>
+// Workaround to avoid deprecation warnings: rdar://102362022
+#ifndef SWIFT_LLVM_SUPPORT_IS_AVAILABLE
   LLVM_DEPRECATED("Use value_or instead.", "value_or")
+#endif
   T getValueOr(U &&alt) && {
     return has_value() ? std::move(value()) : std::forward<U>(alt);
   }
@@ -379,7 +402,10 @@ public:
     return None;
   }
   template <class Function>
+// Workaround to avoid deprecation warnings: rdar://102362022
+#ifndef SWIFT_LLVM_SUPPORT_IS_AVAILABLE
   LLVM_DEPRECATED("Use transform instead.", "transform")
+#endif
   auto map(const Function &F)
       && -> Optional<decltype(F(std::move(*this).value()))> {
     if (*this)
