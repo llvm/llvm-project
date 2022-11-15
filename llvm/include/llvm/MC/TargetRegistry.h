@@ -60,7 +60,6 @@ class TargetOptions;
 namespace mca {
 class CustomBehaviour;
 class InstrPostProcess;
-class InstrumentManager;
 struct SourceMgr;
 } // namespace mca
 
@@ -134,9 +133,6 @@ mca::CustomBehaviour *createCustomBehaviour(const MCSubtargetInfo &STI,
 
 mca::InstrPostProcess *createInstrPostProcess(const MCSubtargetInfo &STI,
                                               const MCInstrInfo &MCII);
-
-mca::InstrumentManager *createInstrumentManager(const MCSubtargetInfo &STI,
-                                                const MCInstrInfo &MCII);
 
 /// Target - Wrapper for Target specific information.
 ///
@@ -249,10 +245,6 @@ public:
       mca::InstrPostProcess *(*)(const MCSubtargetInfo &STI,
                                  const MCInstrInfo &MCII);
 
-  using InstrumentManagerCtorTy =
-      mca::InstrumentManager *(*)(const MCSubtargetInfo &STI,
-                                  const MCInstrInfo &MCII);
-
 private:
   /// Next - The next registered target in the linked list, maintained by the
   /// TargetRegistry.
@@ -361,10 +353,6 @@ private:
   /// InstrPostProcessCtorFn - Construction function for this target's
   /// InstrPostProcess, if registered (default = nullptr).
   InstrPostProcessCtorTy InstrPostProcessCtorFn = nullptr;
-
-  /// InstrumentManagerCtorFn - Construction function for this target's
-  /// InstrumentManager, if registered (default = nullptr).
-  InstrumentManagerCtorTy InstrumentManagerCtorFn = nullptr;
 
 public:
   Target() = default;
@@ -715,17 +703,6 @@ public:
                                                 const MCInstrInfo &MCII) const {
     if (InstrPostProcessCtorFn)
       return InstrPostProcessCtorFn(STI, MCII);
-    return nullptr;
-  }
-
-  /// createInstrumentManager - Create a target specific
-  /// InstrumentManager. This class is used by llvm-mca and requires
-  /// backend functionality.
-  mca::InstrumentManager *
-  createInstrumentManager(const MCSubtargetInfo &STI,
-                          const MCInstrInfo &MCII) const {
-    if (InstrumentManagerCtorFn)
-      return InstrumentManagerCtorFn(STI, MCII);
     return nullptr;
   }
 
@@ -1099,21 +1076,6 @@ struct TargetRegistry {
   static void RegisterInstrPostProcess(Target &T,
                                        Target::InstrPostProcessCtorTy Fn) {
     T.InstrPostProcessCtorFn = Fn;
-  }
-
-  /// RegisterInstrumentManager - Register an InstrumentManager
-  /// implementation for the given target.
-  ///
-  /// Clients are responsible for ensuring that registration doesn't occur
-  /// while another thread is attempting to access the registry. Typically
-  /// this is done by initializing all targets at program startup.
-  ///
-  /// @param T - The target being registered.
-  /// @param Fn - A function to construct an InstrumentManager for the
-  /// target.
-  static void RegisterInstrumentManager(Target &T,
-                                        Target::InstrumentManagerCtorTy Fn) {
-    T.InstrumentManagerCtorFn = Fn;
   }
 
   /// @}
