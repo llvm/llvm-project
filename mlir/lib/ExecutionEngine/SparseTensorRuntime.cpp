@@ -293,8 +293,9 @@ void *_mlir_ciface_newSparseTensor( // NOLINT
   assert(dim2lvlRef && dim2lvlRef->strides[0] == 1);
   const uint64_t dimRank = dimSizesRef->sizes[0];
   const uint64_t lvlRank = lvlSizesRef->sizes[0];
-  assert(dim2lvlRef->sizes[0] == dimRank);
-  assert(lvlTypesRef->sizes[0] == lvlRank && lvl2dimRef->sizes[0] == lvlRank);
+  assert(dim2lvlRef->sizes[0] == (int64_t)dimRank);
+  assert(lvlTypesRef->sizes[0] == (int64_t)lvlRank &&
+         lvl2dimRef->sizes[0] == (int64_t)lvlRank);
   const index_type *dimSizes = dimSizesRef->data + dimSizesRef->offset;
   const index_type *lvlSizes = lvlSizesRef->data + lvlSizesRef->offset;
   const DimLevelType *lvlTypes = lvlTypesRef->data + lvlTypesRef->offset;
@@ -465,7 +466,7 @@ MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSEINDICES)
     assert(lvlCOO &&vref &&dimIndRef &&dim2lvlRef);                            \
     assert(dimIndRef->strides[0] == 1 && dim2lvlRef->strides[0] == 1);         \
     const uint64_t rank = dimIndRef->sizes[0];                                 \
-    assert(dim2lvlRef->sizes[0] == rank);                                      \
+    assert(dim2lvlRef->sizes[0] == (int64_t)rank);                             \
     const index_type *dimInd = dimIndRef->data + dimIndRef->offset;            \
     const index_type *dim2lvl = dim2lvlRef->data + dim2lvlRef->offset;         \
     std::vector<index_type> lvlInd(rank);                                      \
