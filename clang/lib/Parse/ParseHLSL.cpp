@@ -77,9 +77,11 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
 
   while (Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
     // FIXME: support attribute on constants inside cbuffer/tbuffer.
-    ParsedAttributes Attrs(AttrFactory);
+    ParsedAttributes DeclAttrs(AttrFactory);
+    ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
 
-    DeclGroupPtrTy Result = ParseExternalDeclaration(Attrs);
+    DeclGroupPtrTy Result =
+        ParseExternalDeclaration(DeclAttrs, EmptyDeclSpecAttrs);
     if (!validateDeclsInsideHLSLBuffer(Result, IdentifierLoc, IsCBuffer,
                                        *this)) {
       T.skipToEnd();
