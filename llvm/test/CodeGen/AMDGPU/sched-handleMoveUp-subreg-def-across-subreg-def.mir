@@ -26,7 +26,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN undef %2:vgpr_32, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr101, 0, 0, 0, 0, implicit $exec :: (load (s32), addrspace 5)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN undef %2:vgpr_32, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr101, 0, 0, 0, implicit $exec :: (load (s32), addrspace 5)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sgpr_64 = S_LOAD_DWORDX2_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 5329
   ; CHECK-NEXT:   undef %5.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
@@ -82,7 +82,7 @@ body:             |
     liveins: $sgpr4_sgpr5
 
     %0:sgpr_64(p4) = COPY $sgpr4_sgpr5
-    %1:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN undef %2:vgpr_32, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr101, 0, 0, 0, 0, implicit $exec :: (load (s32), addrspace 5)
+    %1:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN undef %2:vgpr_32, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr101, 0, 0, 0, implicit $exec :: (load (s32), addrspace 5)
     %3:sgpr_64 = S_LOAD_DWORDX2_IMM %0(p4), 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
     %4:sreg_32_xm0 = S_MOV_B32 5329
     undef %5.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec

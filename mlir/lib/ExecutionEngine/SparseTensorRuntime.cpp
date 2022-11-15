@@ -53,8 +53,10 @@
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
 #include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 #include "mlir/ExecutionEngine/SparseTensor/File.h"
+#include "mlir/ExecutionEngine/SparseTensor/PermutationRef.h"
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
 
+#include <cstring>
 #include <numeric>
 
 using namespace mlir::sparse_tensor;
@@ -106,46 +108,59 @@ private:
   const typename SparseTensorCOO<V>::const_iterator end;
 };
 
+// TODO: When using this library from MLIR, the `toMLIRSparseTensor`/
+// `IMPL_CONVERTTOMLIRSPARSETENSOR` and `fromMLIRSparseTensor`/
+// `IMPL_CONVERTFROMMLIRSPARSETENSOR` constructs will be codegened away;
+// therefore, these functions are only used by PyTACO, one place in the
+// Python integration tests, and possibly by out-of-tree projects.
+// This is notable because neither function can be easily generalized
+// to handle non-permutations.  In particular, while we could adjust
+// the functions to take all the arguments they'd need, that would just
+// push the problem into client code.  So if we want to generalize these
+// functions to support non-permutations, we'll need to figure out how
+// to do so without putting undue burden on clients.
+
 /// Initializes sparse tensor from an external COO-flavored format.
+/// The `rank` argument is both dimension-rank and level-rank, and the
+/// `dim2lvl` argument must be a permutation.
 /// Used by `IMPL_CONVERTTOMLIRSPARSETENSOR`.
+//
 // TODO: generalize beyond 64-bit indices.
 template <typename V>
 static SparseTensorStorage<uint64_t, uint64_t, V> *
-toMLIRSparseTensor(uint64_t rank, uint64_t nse, const uint64_t *shape,
-                   const V *values, const uint64_t *indices,
-                   const uint64_t *perm, const DimLevelType *sparsity) {
+toMLIRSparseTensor(uint64_t rank, uint64_t nse, const uint64_t *dimSizes,
+                   const V *values, const uint64_t *dimIndices,
+                   const uint64_t *dim2lvl, const DimLevelType *lvlTypes) {
 #ifndef NDEBUG
-  // Verify that perm is a permutation of 0..(rank-1).
-  std::vector<bool> seen(rank, false);
-  for (uint64_t i = 0; i < rank; ++i) {
-    const uint64_t j = perm[i];
-    if (j >= rank || seen[j])
-      MLIR_SPARSETENSOR_FATAL("Not a permutation of 0..%" PRIu64 "\n", rank);
-    seen[j] = true;
-  }
-
   // Verify that the sparsity values are supported.
   // TODO: update this check to match what we actually support.
   for (uint64_t i = 0; i < rank; ++i)
-    if (sparsity[i] != DimLevelType::Dense &&
-        sparsity[i] != DimLevelType::Compressed)
-      MLIR_SPARSETENSOR_FATAL("unsupported dimension level type: %d\n",
-                              static_cast<uint8_t>(sparsity[i]));
+    if (lvlTypes[i] != DimLevelType::Dense &&
+        lvlTypes[i] != DimLevelType::Compressed)
+      MLIR_SPARSETENSOR_FATAL("unsupported level type: %d\n",
+                              static_cast<uint8_t>(lvlTypes[i]));
 #endif
-
+  // Verify that `dim2lvl` is a permutation of `[0..(rank-1)]`.
+  // NOTE: The construction of `lvlSizes` and `lvl2dim` don't generalize
+  // to arbitrary `dim2lvl` mappings.  Whereas constructing `lvlInd` from
+  // `dimInd` does (though the details would have to be updated, just
+  // like for `IMPL_ADDELT`).
+  detail::PermutationRef d2l(rank, dim2lvl);
   // Convert external format to internal COO.
-  auto *coo = SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm, nse);
-  std::vector<uint64_t> idx(rank);
-  for (uint64_t i = 0, base = 0; i < nse; i++) {
-    for (uint64_t r = 0; r < rank; r++)
-      idx[perm[r]] = indices[base + r];
-    coo->add(idx, values[i]);
-    base += rank;
+  auto lvlSizes = d2l.pushforward(rank, dimSizes);
+  auto *lvlCOO = new SparseTensorCOO<V>(lvlSizes, nse);
+  std::vector<uint64_t> lvlInd(rank);
+  const uint64_t *dimInd = dimIndices;
+  for (uint64_t i = 0; i < nse; ++i) {
+    d2l.pushforward(rank, dimInd, lvlInd.data());
+    lvlCOO->add(lvlInd, values[i]);
+    dimInd += rank;
   }
   // Return sparse tensor storage format as opaque pointer.
-  auto *tensor = SparseTensorStorage<uint64_t, uint64_t, V>::newSparseTensor(
-      rank, shape, perm, sparsity, coo);
-  delete coo;
+  auto lvl2dim = d2l.inverse();
+  auto *tensor = SparseTensorStorage<uint64_t, uint64_t, V>::newFromCOO(
+      rank, dimSizes, rank, lvlTypes, lvl2dim.data(), *lvlCOO);
+  delete lvlCOO;
   return tensor;
 }
 
@@ -164,30 +179,34 @@ fromMLIRSparseTensor(const SparseTensorStorage<uint64_t, uint64_t, V> *tensor,
                      uint64_t *pRank, uint64_t *pNse, uint64_t **pShape,
                      V **pValues, uint64_t **pIndices) {
   assert(tensor && "Received nullptr for tensor");
-  uint64_t rank = tensor->getRank();
-  std::vector<uint64_t> perm(rank);
-  std::iota(perm.begin(), perm.end(), 0);
-  SparseTensorCOO<V> *coo = tensor->toCOO(perm.data());
+  uint64_t dimRank = tensor->getDimRank();
+  const auto &dimSizes = tensor->getDimSizes();
+  std::vector<uint64_t> identityPerm(dimRank);
+  std::iota(identityPerm.begin(), identityPerm.end(), 0);
+  SparseTensorCOO<V> *coo =
+      tensor->toCOO(dimRank, dimSizes.data(), dimRank, identityPerm.data());
 
   const std::vector<Element<V>> &elements = coo->getElements();
   uint64_t nse = elements.size();
 
-  uint64_t *shape = new uint64_t[rank];
-  for (uint64_t i = 0; i < rank; i++)
-    shape[i] = coo->getDimSizes()[i];
+  const auto &cooSizes = coo->getDimSizes();
+  assert(cooSizes.size() == dimRank && "Rank mismatch");
+  uint64_t *shape = new uint64_t[dimRank];
+  std::memcpy((void *)shape, (void *)cooSizes.data(),
+              sizeof(uint64_t) * dimRank);
 
   V *values = new V[nse];
-  uint64_t *indices = new uint64_t[rank * nse];
+  uint64_t *indices = new uint64_t[dimRank * nse];
 
-  for (uint64_t i = 0, base = 0; i < nse; i++) {
+  for (uint64_t i = 0, base = 0; i < nse; ++i) {
     values[i] = elements[i].value;
-    for (uint64_t j = 0; j < rank; j++)
-      indices[base + j] = elements[i].indices[j];
-    base += rank;
+    for (uint64_t d = 0; d < dimRank; ++d)
+      indices[base + d] = elements[i].indices[d];
+    base += dimRank;
   }
 
   delete coo;
-  *pRank = rank;
+  *pRank = dimRank;
   *pNse = nse;
   *pShape = shape;
   *pValues = values;
@@ -207,36 +226,44 @@ extern "C" {
 
 #define CASE(p, i, v, P, I, V)                                                 \
   if (ptrTp == (p) && indTp == (i) && valTp == (v)) {                          \
-    SparseTensorCOO<V> *coo = nullptr;                                         \
-    if (action <= Action::kFromCOO) {                                          \
-      if (action == Action::kFromFile) {                                       \
-        char *filename = static_cast<char *>(ptr);                             \
-        coo = openSparseTensorCOO<V>(filename, rank, shape, perm, v);          \
-      } else if (action == Action::kFromCOO) {                                 \
-        coo = static_cast<SparseTensorCOO<V> *>(ptr);                          \
-      } else {                                                                 \
-        assert(action == Action::kEmpty);                                      \
-      }                                                                        \
-      auto *tensor = SparseTensorStorage<P, I, V>::newSparseTensor(            \
-          rank, shape, perm, sparsity, coo);                                   \
-      if (action == Action::kFromFile)                                         \
-        delete coo;                                                            \
-      return tensor;                                                           \
+    switch (action) {                                                          \
+    case Action::kEmpty:                                                       \
+      return SparseTensorStorage<P, I, V>::newEmpty(                           \
+          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, lvl2dim);            \
+    case Action::kFromFile: {                                                  \
+      char *filename = static_cast<char *>(ptr);                               \
+      return openSparseTensor<P, I, V>(dimRank, dimSizes, lvlRank, lvlTypes,   \
+                                       lvl2dim, dim2lvl, filename, v);         \
     }                                                                          \
-    if (action == Action::kSparseToSparse) {                                   \
-      auto *tensor = static_cast<SparseTensorStorageBase *>(ptr);              \
-      return SparseTensorStorage<P, I, V>::newSparseTensor(rank, shape, perm,  \
-                                                           sparsity, tensor);  \
+    case Action::kFromCOO: {                                                   \
+      assert(ptr && "Received nullptr for SparseTensorCOO object");            \
+      auto &coo = *static_cast<SparseTensorCOO<V> *>(ptr);                     \
+      return SparseTensorStorage<P, I, V>::newFromCOO(                         \
+          dimRank, dimSizes, lvlRank, lvlTypes, lvl2dim, coo);                 \
     }                                                                          \
-    if (action == Action::kEmptyCOO)                                           \
-      return SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm);        \
-    coo = static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);       \
-    if (action == Action::kToIterator) {                                       \
+    case Action::kSparseToSparse: {                                            \
+      assert(ptr && "Received nullptr for SparseTensorStorage object");        \
+      auto &tensor = *static_cast<SparseTensorStorageBase *>(ptr);             \
+      return SparseTensorStorage<P, I, V>::newFromSparseTensor(                \
+          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, lvl2dim, dimRank,    \
+          dim2lvl, tensor);                                                    \
+    }                                                                          \
+    case Action::kEmptyCOO:                                                    \
+      return new SparseTensorCOO<V>(lvlRank, lvlSizes);                        \
+    case Action::kToCOO: {                                                     \
+      assert(ptr && "Received nullptr for SparseTensorStorage object");        \
+      auto &tensor = *static_cast<SparseTensorStorage<P, I, V> *>(ptr);        \
+      return tensor.toCOO(lvlRank, lvlSizes, dimRank, dim2lvl);                \
+    }                                                                          \
+    case Action::kToIterator: {                                                \
+      assert(ptr && "Received nullptr for SparseTensorStorage object");        \
+      auto &tensor = *static_cast<SparseTensorStorage<P, I, V> *>(ptr);        \
+      auto *coo = tensor.toCOO(lvlRank, lvlSizes, dimRank, dim2lvl);           \
       return new SparseTensorIterator<V>(coo);                                 \
-    } else {                                                                   \
-      assert(action == Action::kToCOO);                                        \
     }                                                                          \
-    return coo;                                                                \
+    }                                                                          \
+    MLIR_SPARSETENSOR_FATAL("unknown action: %d\n",                            \
+                            static_cast<uint32_t>(action));                    \
   }
 
 #define CASE_SECSAME(p, v, P, V) CASE(p, p, v, P, P, V)
@@ -247,20 +274,32 @@ extern "C" {
 static_assert(std::is_same<index_type, uint64_t>::value,
               "Expected index_type == uint64_t");
 
-void *
-_mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
-                             StridedMemRefType<index_type, 1> *sref,
-                             StridedMemRefType<index_type, 1> *pref,
-                             OverheadType ptrTp, OverheadType indTp,
-                             PrimaryType valTp, Action action, void *ptr) {
-  assert(aref && sref && pref);
-  assert(aref->strides[0] == 1 && sref->strides[0] == 1 &&
-         pref->strides[0] == 1);
-  assert(aref->sizes[0] == sref->sizes[0] && sref->sizes[0] == pref->sizes[0]);
-  const DimLevelType *sparsity = aref->data + aref->offset;
-  const index_type *shape = sref->data + sref->offset;
-  const index_type *perm = pref->data + pref->offset;
-  uint64_t rank = aref->sizes[0];
+// TODO: this swiss-army-knife should be split up into separate functions
+// for each action, since the various actions don't agree on (1) whether
+// the first two arguments are "sizes" vs "shapes", (2) whether the "lvl"
+// arguments are actually storage-levels vs target tensor-dimensions,
+// (3) whether all the arguments are actually used/required.
+void *_mlir_ciface_newSparseTensor( // NOLINT
+    StridedMemRefType<index_type, 1> *dimSizesRef,
+    StridedMemRefType<index_type, 1> *lvlSizesRef,
+    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
+    StridedMemRefType<index_type, 1> *lvl2dimRef,
+    StridedMemRefType<index_type, 1> *dim2lvlRef, OverheadType ptrTp,
+    OverheadType indTp, PrimaryType valTp, Action action, void *ptr) {
+  assert(dimSizesRef && dimSizesRef->strides[0] == 1);
+  assert(lvlSizesRef && lvlSizesRef->strides[0] == 1);
+  assert(lvlTypesRef && lvlTypesRef->strides[0] == 1);
+  assert(lvl2dimRef && lvl2dimRef->strides[0] == 1);
+  assert(dim2lvlRef && dim2lvlRef->strides[0] == 1);
+  const uint64_t dimRank = dimSizesRef->sizes[0];
+  const uint64_t lvlRank = lvlSizesRef->sizes[0];
+  assert(dim2lvlRef->sizes[0] == dimRank);
+  assert(lvlTypesRef->sizes[0] == lvlRank && lvl2dimRef->sizes[0] == lvlRank);
+  const index_type *dimSizes = dimSizesRef->data + dimSizesRef->offset;
+  const index_type *lvlSizes = lvlSizesRef->data + lvlSizesRef->offset;
+  const DimLevelType *lvlTypes = lvlTypesRef->data + lvlTypesRef->offset;
+  const index_type *lvl2dim = lvl2dimRef->data + lvl2dimRef->offset;
+  const index_type *dim2lvl = dim2lvlRef->data + dim2lvlRef->offset;
 
   // Rewrite kIndex to kU64, to avoid introducing a bunch of new cases.
   // This is safe because of the static_assert above.
@@ -415,22 +454,26 @@ MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSEINDICES)
 #undef IMPL_SPARSEINDICES
 #undef IMPL_GETOVERHEAD
 
+// TODO: while this API design will work for arbitrary dim2lvl mappings,
+// we should probably move the `dimInd`-to-`lvlInd` computation into codegen
+// (since that could enable optimizations to remove the intermediate memref).
 #define IMPL_ADDELT(VNAME, V)                                                  \
-  void *_mlir_ciface_addElt##VNAME(void *coo, StridedMemRefType<V, 0> *vref,   \
-                                   StridedMemRefType<index_type, 1> *iref,     \
-                                   StridedMemRefType<index_type, 1> *pref) {   \
-    assert(coo &&vref &&iref &&pref);                                          \
-    assert(iref->strides[0] == 1 && pref->strides[0] == 1);                    \
-    assert(iref->sizes[0] == pref->sizes[0]);                                  \
-    const index_type *indx = iref->data + iref->offset;                        \
-    const index_type *perm = pref->data + pref->offset;                        \
-    uint64_t isize = iref->sizes[0];                                           \
-    std::vector<index_type> indices(isize);                                    \
-    for (uint64_t r = 0; r < isize; r++)                                       \
-      indices[perm[r]] = indx[r];                                              \
+  void *_mlir_ciface_addElt##VNAME(                                            \
+      void *lvlCOO, StridedMemRefType<V, 0> *vref,                             \
+      StridedMemRefType<index_type, 1> *dimIndRef,                             \
+      StridedMemRefType<index_type, 1> *dim2lvlRef) {                          \
+    assert(lvlCOO &&vref &&dimIndRef &&dim2lvlRef);                            \
+    assert(dimIndRef->strides[0] == 1 && dim2lvlRef->strides[0] == 1);         \
+    const uint64_t rank = dimIndRef->sizes[0];                                 \
+    assert(dim2lvlRef->sizes[0] == rank);                                      \
+    const index_type *dimInd = dimIndRef->data + dimIndRef->offset;            \
+    const index_type *dim2lvl = dim2lvlRef->data + dim2lvlRef->offset;         \
+    std::vector<index_type> lvlInd(rank);                                      \
+    for (uint64_t d = 0; d < rank; ++d)                                        \
+      lvlInd[dim2lvl[d]] = dimInd[d];                                          \
     V *value = vref->data + vref->offset;                                      \
-    static_cast<SparseTensorCOO<V> *>(coo)->add(indices, *value);              \
-    return coo;                                                                \
+    static_cast<SparseTensorCOO<V> *>(lvlCOO)->add(lvlInd, *value);            \
+    return lvlCOO;                                                             \
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_ADDELT)
 #undef IMPL_ADDELT
@@ -498,8 +541,8 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_EXPINSERT)
 //
 //===----------------------------------------------------------------------===//
 
-index_type sparseDimSize(void *tensor, index_type d) {
-  return static_cast<SparseTensorStorageBase *>(tensor)->getDimSize(d);
+index_type sparseLvlSize(void *tensor, index_type x) {
+  return static_cast<SparseTensorStorageBase *>(tensor)->getLvlSize(x);
 }
 
 void endInsert(void *tensor) {

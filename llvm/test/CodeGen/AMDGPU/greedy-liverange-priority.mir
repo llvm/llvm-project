@@ -68,7 +68,7 @@ body: |
     %25.sub1:sgpr_256 = COPY %25.sub0
     %25.sub2:sgpr_256 = COPY %25.sub0
     %25.sub3:sgpr_256 = COPY %25.sub0
-    %19:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN %10, %25.sub0_sub1_sub2_sub3, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32))
+    %19:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN %10, %25.sub0_sub1_sub2_sub3, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32))
     %36:vreg_64 = DS_READ2_B32_gfx9 %10, 0, 2, 0, implicit $exec :: (load (s32)), (load (s32))
     %30:vgpr_32 = V_LSHLREV_B32_e32 2, %36.sub0, implicit $exec
     %3:vgpr_32 = V_ADD_U32_e32 %30, %6, implicit $exec

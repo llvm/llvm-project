@@ -239,6 +239,7 @@ def MyCombinerHelper: GICombinerHelper<"GenMyCombinerHelper", [
 // CODE-NEXT:        if (!RuleConfig->isRuleDisabled(0)) {
 // CODE-NEXT:          if (1
 // CODE-NEXT:) {
+// CODE-NEXT:            LLVM_DEBUG(dbgs() << "Applying rule 'Rule0'\n");
 // CODE-NEXT:            APPLY
 // CODE-NEXT:            return true;
 // CODE-NEXT:          }
@@ -259,6 +260,7 @@ def MyCombinerHelper: GICombinerHelper<"GenMyCombinerHelper", [
 // CODE-NEXT:               Subtarget->hasFoo()
 // CODE-NEXT:               )
 // CODE-NEXT:) {
+// CODE-NEXT:            LLVM_DEBUG(dbgs() << "Applying rule 'Rule5'\n");
 // CODE-NEXT:            APPLY
 // CODE-NEXT:            return true;
 // CODE-NEXT:          }
@@ -280,6 +282,7 @@ def MyCombinerHelper: GICombinerHelper<"GenMyCombinerHelper", [
 // CODE-NEXT:             Subtarget->hasFoo()
 // CODE-NEXT:             )
 // CODE-NEXT:      ) {
+// CODE-NEXT:          LLVM_DEBUG(dbgs() << "Applying rule 'Rule5'\n");
 // CODE-NEXT:          APPLY
 // CODE-NEXT:          return true;
 // CODE-NEXT:        }
@@ -305,6 +308,7 @@ def MyCombinerHelper: GICombinerHelper<"GenMyCombinerHelper", [
 // CODE-NEXT:            Subtarget->getAnswerToUniverse() == 42 && Subtarget->getAnswerToLife() == 42
 // CODE-NEXT:          )
 // CODE-NEXT:      ) {
+// CODE-NEXT:     LLVM_DEBUG(dbgs() << "Applying rule 'Rule6'\n");
 // CODE-NEXT:     APPLY
 // CODE-NEXT:     return true;
 // CODE-NEXT:   }

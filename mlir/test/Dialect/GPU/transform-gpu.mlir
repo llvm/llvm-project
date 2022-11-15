@@ -24,7 +24,7 @@ func.func @saxpy2dblock(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.block<x>, #gpu.block<y>, #gpu.block<z>]}
+     }  { mapping = [#gpu.block<x>, #gpu.block<y>]}
     gpu.terminator
   }
   return %y : !type
@@ -73,12 +73,12 @@ func.func @saxpy2d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : !g
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z>]}
+     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>]}
      scf.foreach_thread (%i) in (%c12) {
         %7 = memref.load %t[%i] : !type1d
         %8 = arith.addf %alpha, %7 : f32
         memref.store %8, %t[%i] : !type1d
-     }  {mapping = [#gpu.thread<x>, #gpu.thread<y>, #gpu.thread<z>] }
+     }  {mapping = [#gpu.thread<x>] }
     gpu.terminator
   }
   return %y : !type
@@ -118,8 +118,8 @@ func.func @saxpy4d(%x: !type4d, %y: !type4d, %alpha : f32) -> !type4d {
       %5 = memref.load %y[%i, %j, %k, %l] : !type4d
       %6 = math.fma %alpha, %4, %5 : f32
       memref.store %6, %y[%i, %j, %k, %l] : !type4d
-    }  { mapping = [#gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z>] }
-  }  { mapping = [#gpu.block<x>, #gpu.block<y>, #gpu.block<z>] }
+    }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+  }  { mapping = [#gpu.block<x>, #gpu.block<y>] }
   return %y : !type4d
 }
 
@@ -151,7 +151,7 @@ func.func @saxpy2d_no_barrier(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %
         %5 = memref.load %y[%i, %j] : !type
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z>] }
+     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
     gpu.terminator
   }
   return %y : !type

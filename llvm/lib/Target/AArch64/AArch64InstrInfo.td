@@ -144,12 +144,15 @@ def HasSME           : Predicate<"Subtarget->hasSME()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME), "sme">;
 def HasSMEF64F64     : Predicate<"Subtarget->hasSMEF64F64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEF64F64), "sme-f64f64">;
+def HasSMEF16F16     : Predicate<"Subtarget->hasSMEF16F16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF16F16), "sme-f16f16">;
 def HasSMEI16I64     : Predicate<"Subtarget->hasSMEI16I64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEI16I64), "sme-i16i64">;
 def HasSME2          : Predicate<"Subtarget->hasSME2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2), "sme2">;
 def HasSME2p1        : Predicate<"Subtarget->hasSME2p1()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p1), "sme2p1">;
+
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorSME
@@ -4167,6 +4170,15 @@ defm FMUL   : TwoOperandFPData<0b0000, "fmul", any_fmul>;
 defm FNMUL  : TwoOperandFPDataNeg<0b1000, "fnmul", any_fmul>;
 }
 defm FSUB   : TwoOperandFPData<0b0011, "fsub", any_fsub>;
+
+// Match reassociated forms of FNMUL.
+def : Pat<(fmul (fneg FPR16:$a), (f16 FPR16:$b)),
+          (FNMULHrr FPR16:$a, FPR16:$b)>,
+          Requires<[HasFullFP16]>;
+def : Pat<(fmul (fneg FPR32:$a), (f32 FPR32:$b)),
+          (FNMULSrr FPR32:$a, FPR32:$b)>;
+def : Pat<(fmul (fneg FPR64:$a), (f64 FPR64:$b)),
+          (FNMULDrr FPR64:$a, FPR64:$b)>;
 
 def : Pat<(v1f64 (fmaximum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMAXDrr FPR64:$Rn, FPR64:$Rm)>;

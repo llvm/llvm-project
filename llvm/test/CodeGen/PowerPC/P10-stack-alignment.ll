@@ -157,10 +157,10 @@ define dso_local void @test_Array() nounwind {
 ; CHECK-LE-LABEL: test_Array:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    mflr r0
-; CHECK-LE-NEXT:    std r0, 16(r1)
 ; CHECK-LE-NEXT:    stdu r1, -176(r1)
 ; CHECK-LE-NEXT:    addis r4, r2, Arr1@toc@ha
 ; CHECK-LE-NEXT:    li r3, 0
+; CHECK-LE-NEXT:    std r0, 192(r1)
 ; CHECK-LE-NEXT:    li r6, 65
 ; CHECK-LE-NEXT:    addi r5, r1, 46
 ; CHECK-LE-NEXT:    addi r4, r4, Arr1@toc@l
@@ -190,11 +190,11 @@ define dso_local void @test_Array() nounwind {
 ; CHECK-BE-LABEL: test_Array:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    mflr r0
-; CHECK-BE-NEXT:    std r0, 16(r1)
 ; CHECK-BE-NEXT:    stdu r1, -256(r1)
 ; CHECK-BE-NEXT:    addis r5, r2, Arr1@toc@ha
 ; CHECK-BE-NEXT:    li r3, 0
 ; CHECK-BE-NEXT:    addi r5, r5, Arr1@toc@l
+; CHECK-BE-NEXT:    std r0, 272(r1)
 ; CHECK-BE-NEXT:    addi r4, r1, 126
 ; CHECK-BE-NEXT:    li r6, 65
 ; CHECK-BE-NEXT:    stw r3, 124(r1)

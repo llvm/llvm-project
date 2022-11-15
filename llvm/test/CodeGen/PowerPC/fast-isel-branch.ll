@@ -8,8 +8,8 @@ define signext i32 @bar() #0 {
 ; ELF64-LABEL: bar:
 ; ELF64:       # %bb.0: # %entry
 ; ELF64-NEXT:    mflr 0
-; ELF64-NEXT:    std 0, 16(1)
 ; ELF64-NEXT:    stdu 1, -48(1)
+; ELF64-NEXT:    std 0, 64(1)
 ; ELF64-NEXT:    .cfi_def_cfa_offset 48
 ; ELF64-NEXT:    .cfi_offset lr, 16
 ; ELF64-NEXT:    li 3, 0
@@ -44,8 +44,8 @@ define signext i32 @bar() #0 {
 ; AIX64-LABEL: bar:
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mflr 0
-; AIX64-NEXT:    std 0, 16(1)
 ; AIX64-NEXT:    stdu 1, -128(1)
+; AIX64-NEXT:    std 0, 144(1)
 ; AIX64-NEXT:    li 3, 0
 ; AIX64-NEXT:    stw 3, 124(1)
 ; AIX64-NEXT:    li 3, 0
@@ -53,7 +53,7 @@ define signext i32 @bar() #0 {
 ; AIX64-NEXT:  L..BB0_1: # %for.cond
 ; AIX64-NEXT:    #
 ; AIX64-NEXT:    lwz 3, 120(1)
-; AIX64-NEXT:    ld 4, L..C0(2)
+; AIX64-NEXT:    ld 4, L..C0(2) # @x
 ; AIX64-NEXT:    lwz 4, 0(4)
 ; AIX64-NEXT:    cmpw 3, 4
 ; AIX64-NEXT:    bge 0, L..BB0_4

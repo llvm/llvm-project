@@ -84,8 +84,8 @@ define void @cse_nomerge(ptr %f1, ptr %f2, double %f3) #0 {
 ; CHECK-NEXT:    .cfi_offset f31, -8
 ; CHECK-NEXT:    std 30, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -64(1)
+; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    fmr 31, 1
 ; CHECK-NEXT:    mr 30, 4
 ; CHECK-NEXT:    mffs 0
@@ -121,8 +121,8 @@ define void @cse_nomerge_readonly(ptr %f1, ptr %f2, double %f3) #0 {
 ; CHECK-NEXT:    .cfi_offset f31, -8
 ; CHECK-NEXT:    std 30, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -64(1)
+; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    fmr 31, 1
 ; CHECK-NEXT:    mr 30, 4
 ; CHECK-NEXT:    mffs 0

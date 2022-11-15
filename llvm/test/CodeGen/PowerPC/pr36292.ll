@@ -10,8 +10,8 @@ define void @test() nounwind comdat {
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -64(1)
+; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    ld 29, 0(3)
 ; CHECK-NEXT:    ld 30, 32(1)
 ; CHECK-NEXT:    cmpld 30, 29

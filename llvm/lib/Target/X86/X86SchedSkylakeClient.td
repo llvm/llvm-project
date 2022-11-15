@@ -689,8 +689,7 @@ def SKLWriteResGroup10 : SchedWriteRes<[SKLPort0156]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKLWriteResGroup10], (instrs CBW, CWDE, CDQE,
-                                          CMC, STC,
+def: InstRW<[SKLWriteResGroup10], (instrs STC,
                                           SGDT64m,
                                           SIDT64m,
                                           SMSW16m,

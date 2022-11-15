@@ -2,9 +2,9 @@
 
 define i32 @_Z4funci(i32 %a) ssp {
 ; CHECK:       mflr 0
-; CHECK-NEXT:  stw 0, 4(1)
 ; CHECK-NEXT:  stwu 1, -32(1)
 ; CHECK-NEXT:  stw 31, 28(1)
+; CHECK-NEXT:  stw 0, 36(1)
 ; CHECK:  mr 31, 1
 entry:
   %a_addr = alloca i32                            ; <ptr> [#uses=2]
