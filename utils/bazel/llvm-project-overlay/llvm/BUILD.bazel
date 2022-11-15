@@ -1140,7 +1140,6 @@ cc_library(
         "lib/Transforms/AggressiveInstCombine/*.h",
     ]),
     hdrs = [
-        "include/llvm-c/Transforms/AggressiveInstCombine.h",
         "include/llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h",
     ],
     copts = llvm_copts,
