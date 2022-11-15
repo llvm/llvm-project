@@ -23,12 +23,13 @@ using namespace lldb_private;
 using namespace llvm;
 
 struct TestTypeSystemSwiftTypeRef : public testing::Test {
-  TypeSystemSwiftTypeRef m_swift_ts;
+  std::shared_ptr<TypeSystemSwiftTypeRef> m_swift_ts;
 
-  TestTypeSystemSwiftTypeRef() : m_swift_ts() {}
+  TestTypeSystemSwiftTypeRef()
+      : m_swift_ts(std::make_shared<TypeSystemSwiftTypeRef>()) {}
   CompilerType GetCompilerType(std::string mangled_name) {
     ConstString internalized(mangled_name);
-    return m_swift_ts.GetTypeFromMangledTypename(internalized);
+    return m_swift_ts->GetTypeFromMangledTypename(internalized);
   }
 };
 
@@ -364,7 +365,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Defined) {
     CompilerType int_type = GetCompilerType(b.Mangle(int_node));
     ASSERT_TRUE(int_type.IsDefined());
     // It's technically not possible to construct such a CompilerType.
-    ASSERT_FALSE(m_swift_ts.IsDefined(nullptr));
+    ASSERT_FALSE(m_swift_ts->IsDefined(nullptr));
   }
 }
 
@@ -453,11 +454,11 @@ TEST_F(TestTypeSystemSwiftTypeRef, Tuple) {
     auto int_element = makeElement(b.IntType());
     auto float_element = makeElement(b.FloatType());
     auto int_float_tuple =
-        m_swift_ts.CreateTupleType({int_element, float_element});
+        m_swift_ts->CreateTupleType({int_element, float_element});
     ASSERT_EQ(int_float_tuple.GetMangledTypeName(),
               "$ss0016BuiltinInt_gCJAcV_s0019BuiltinFPIEEE_CJEEdVtD");
     auto float_int_tuple =
-        m_swift_ts.CreateTupleType({float_element, int_element});
+        m_swift_ts->CreateTupleType({float_element, int_element});
     ASSERT_EQ(float_int_tuple.GetMangledTypeName(),
               "$ss0019BuiltinFPIEEE_CJEEdV_s0016BuiltinInt_gCJAcVtD");
   }
@@ -466,11 +467,11 @@ TEST_F(TestTypeSystemSwiftTypeRef, Tuple) {
     auto int_element = makeElement(b.IntType(), "i");
     auto float_element = makeElement(b.FloatType(), "f");
     auto int_float_tuple =
-        m_swift_ts.CreateTupleType({int_element, float_element});
+        m_swift_ts->CreateTupleType({int_element, float_element});
     ASSERT_EQ(int_float_tuple.GetMangledTypeName(),
               "$ss0016BuiltinInt_gCJAcV1i_s0019BuiltinFPIEEE_CJEEdV1ftD");
     auto float_int_tuple =
-        m_swift_ts.CreateTupleType({float_element, int_element});
+        m_swift_ts->CreateTupleType({float_element, int_element});
     ASSERT_EQ(float_int_tuple.GetMangledTypeName(),
               "$ss0019BuiltinFPIEEE_CJEEdV1f_s0016BuiltinInt_gCJAcV1itD");
   }
@@ -484,12 +485,12 @@ TEST_F(TestTypeSystemSwiftTypeRef, Tuple) {
                       b.Node(Node::Kind::TupleElementName, "z"), b.IntType())));
     CompilerType t = GetCompilerType(b.Mangle(n));
     lldb::opaque_compiler_type_t o = t.GetOpaqueQualType();
-    ASSERT_EQ(m_swift_ts.GetTupleElement(o, 0)->element_name.GetStringRef(), "x");
-    ASSERT_EQ(m_swift_ts.GetTupleElement(o, 1)->element_name.GetStringRef(), "1");
-    ASSERT_EQ(m_swift_ts.GetTupleElement(o, 2)->element_name.GetStringRef(), "z");
+    ASSERT_EQ(m_swift_ts->GetTupleElement(o, 0)->element_name.GetStringRef(), "x");
+    ASSERT_EQ(m_swift_ts->GetTupleElement(o, 1)->element_name.GetStringRef(), "1");
+    ASSERT_EQ(m_swift_ts->GetTupleElement(o, 2)->element_name.GetStringRef(), "z");
     CompilerType int_type =
         GetCompilerType(b.Mangle(b.GlobalTypeMangling(b.IntType())));
-    ASSERT_EQ(m_swift_ts.GetTupleElement(o, 2)->element_type, int_type);
+    ASSERT_EQ(m_swift_ts->GetTupleElement(o, 2)->element_type, int_type);
   }
 }
 
@@ -568,7 +569,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, TypeClass) {
 }
 
 TEST_F(TestTypeSystemSwiftTypeRef, MangledTypeName) {
-  ASSERT_EQ(m_swift_ts.GetErrorType().GetMangledTypeName(), "$ss5Error_pD");
+  ASSERT_EQ(m_swift_ts->GetErrorType().GetMangledTypeName(), "$ss5Error_pD");
 }
 
 TEST_F(TestTypeSystemSwiftTypeRef, ImportedType) {
@@ -578,7 +579,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, ImportedType) {
   {
     NodePointer node = b.GlobalTypeMangling(b.IntType());
     CompilerType type = GetCompilerType(b.Mangle(node));
-    ASSERT_FALSE(m_swift_ts.IsImportedType(type.GetOpaqueQualType(), nullptr));
+    ASSERT_FALSE(m_swift_ts->IsImportedType(type.GetOpaqueQualType(), nullptr));
   }
   {
     NodePointer node = b.GlobalType(
@@ -586,12 +587,12 @@ TEST_F(TestTypeSystemSwiftTypeRef, ImportedType) {
                b.Node(Node::Kind::Module, swift::MANGLING_MODULE_OBJC),
                b.Node(Node::Kind::Identifier, "NSDecimal")));
     CompilerType type = GetCompilerType(b.Mangle(node));
-    ASSERT_TRUE(m_swift_ts.IsImportedType(type.GetOpaqueQualType(), nullptr));
+    ASSERT_TRUE(m_swift_ts->IsImportedType(type.GetOpaqueQualType(), nullptr));
   }
 }
 
 TEST_F(TestTypeSystemSwiftTypeRef, RawPointer) {
-  ASSERT_EQ(m_swift_ts.GetRawPointerType().GetMangledTypeName(), "$sBpD");
+  ASSERT_EQ(m_swift_ts->GetRawPointerType().GetMangledTypeName(), "$sBpD");
 }
 
 TEST_F(TestTypeSystemSwiftTypeRef, GetNumTemplateArguments) {
@@ -671,7 +672,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GetInstanceType) {
 
     CompilerType t = GetCompilerType(b.Mangle(n));
     CompilerType instance_type =
-        m_swift_ts.GetInstanceType(t.GetOpaqueQualType());
+        m_swift_ts->GetInstanceType(t.GetOpaqueQualType());
     ASSERT_EQ(instance_type.GetMangledTypeName(), "$sSSD");
   };
   {
@@ -681,7 +682,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GetInstanceType) {
 
     CompilerType t = GetCompilerType(b.Mangle(n));
     CompilerType instance_type =
-        m_swift_ts.GetInstanceType(t.GetOpaqueQualType());
+        m_swift_ts->GetInstanceType(t.GetOpaqueQualType());
     ASSERT_EQ(instance_type.GetMangledTypeName(), "$sSSD");
   };
 };
@@ -772,14 +773,14 @@ TEST_F(TestTypeSystemSwiftTypeRef, GetGenericArgumentType) {
     lldb::opaque_compiler_type_t opaque = t.GetOpaqueQualType();
 
     // Check if the first element is an URL
-    CompilerType first = m_swift_ts.GetGenericArgumentType(opaque, 0);
+    CompilerType first = m_swift_ts->GetGenericArgumentType(opaque, 0);
     ASSERT_EQ(first.GetMangledTypeName(), "$s10Foundation3URLVD");
     // Check if the second element is an Int
-    CompilerType second = m_swift_ts.GetGenericArgumentType(opaque, 1);
+    CompilerType second = m_swift_ts->GetGenericArgumentType(opaque, 1);
     ASSERT_EQ(second.GetMangledTypeName(), "$sSiD");
     // Check that the third element is invalid, and that getting it doesn't
     // crash
-    CompilerType invalid = m_swift_ts.GetGenericArgumentType(opaque, 2);
+    CompilerType invalid = m_swift_ts->GetGenericArgumentType(opaque, 2);
     ASSERT_FALSE(invalid.IsValid());
   }
 }
@@ -806,7 +807,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, IsTupleType) {
                                     b.Node(Node::Kind::Identifier, "Int"))))));
     CompilerType t = GetCompilerType(b.Mangle(n));
     lldb::opaque_compiler_type_t opaque = t.GetOpaqueQualType();
-    ASSERT_TRUE(m_swift_ts.IsTupleType(opaque));
+    ASSERT_TRUE(m_swift_ts->IsTupleType(opaque));
   }
   {
     // Test with some non-tuple type
@@ -815,6 +816,6 @@ TEST_F(TestTypeSystemSwiftTypeRef, IsTupleType) {
                                         b.Node(Node::Kind::Identifier, "Int")));
     CompilerType t = GetCompilerType(b.Mangle(n));
     lldb::opaque_compiler_type_t opaque = t.GetOpaqueQualType();
-    ASSERT_FALSE(m_swift_ts.IsTupleType(opaque));
+    ASSERT_FALSE(m_swift_ts->IsTupleType(opaque));
   }
 }

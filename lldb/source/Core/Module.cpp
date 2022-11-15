@@ -1645,8 +1645,8 @@ bool Module::SetArchitecture(const ArchSpec &new_arch) {
       return true;
     }
 #ifdef LLDB_ENABLE_SWIFT
-    if (auto *ts =
-            llvm::dyn_cast_or_null<TypeSystemSwift>(&*type_system_or_err))
+    if (auto ts =
+            llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get()))
       ts->SetTriple(new_arch.GetTriple());
 #endif // LLDB_ENABLE_SWIFT
     return true;
@@ -1773,14 +1773,10 @@ void Module::ClearModuleDependentCaches() {
   }
 
 #ifdef LLDB_ENABLE_SWIFT
-  if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(&*type_system_or_err))
+  if (auto *ts =
+          llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get()))
     ts->ClearModuleDependentCaches();
 #endif // LLDB_ENABLE_SWIFT
-}
-
-void Module::ForEachTypeSystem(
-    std::function<bool(TypeSystem *)> const &callback) {
-  m_type_system_map.ForEach(callback);
 }
 
 std::vector<DataBufferSP>

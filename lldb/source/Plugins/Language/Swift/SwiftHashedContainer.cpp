@@ -365,8 +365,7 @@ HashedCollectionConfig::CreateNativeHandler(
   }
   
   if (typeName.startswith(m_nativeStorage_demangledPrefix.GetStringRef())) {
-    auto *type_system =
-        llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
+    auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!type_system)
       return nullptr;
 
@@ -383,8 +382,7 @@ HashedCollectionConfig::CreateNativeHandler(
   // is some valid storage class instance, and attempt to get
   // key/value types from value_sp.
   type = value_sp->GetCompilerType();
-  auto *type_system =
-      llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
+  auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!type_system)
     return nullptr;
   CompilerType key_type = type_system->GetGenericArgumentType(type.GetOpaqueQualType(), 0);
@@ -451,8 +449,8 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
   if (value_type) {
     auto value_type_stride = value_type.GetByteStride(m_process);
     m_value_stride = value_type_stride ? *value_type_stride : 0;
-    if (TypeSystemSwift *type_system =
-            llvm::dyn_cast_or_null<TypeSystemSwift>(key_type.GetTypeSystem())) {
+    if (auto type_system =
+            key_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>()) {
       auto *runtime = SwiftLanguageRuntime::Get(m_process);
       if (!runtime)
         return;

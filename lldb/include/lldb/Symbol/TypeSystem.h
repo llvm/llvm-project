@@ -582,7 +582,7 @@ public:
                            bool can_create);
 
   // BEGIN SWIFT
-  llvm::Expected<TypeSystem &>
+  llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language, Target *target,
                            bool can_create, const char *compiler_options);
 

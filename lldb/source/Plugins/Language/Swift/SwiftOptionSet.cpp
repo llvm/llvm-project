@@ -29,14 +29,14 @@ using namespace lldb_private::formatters;
 using namespace lldb_private::formatters::swift;
 
 /// If this is a Clang enum wrapped in a Swift type, return the clang::EnumDecl.
-static std::pair<clang::EnumDecl *, TypeSystemClang *>
+static std::pair<clang::EnumDecl *, std::shared_ptr<TypeSystemClang>>
 GetAsEnumDecl(CompilerType swift_type) {
   swift_type = swift_type.GetCanonicalType();
   if (!swift_type)
     return {nullptr, nullptr};
 
-  TypeSystemSwift *swift_ast_ctx =
-      llvm::dyn_cast_or_null<TypeSystemSwift>(swift_type.GetTypeSystem());
+  auto swift_ast_ctx =
+      swift_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!swift_ast_ctx)
     return {nullptr, nullptr};
 
@@ -48,7 +48,7 @@ GetAsEnumDecl(CompilerType swift_type) {
   if (!clang_type.IsValid())
     return {nullptr, nullptr};
 
-  auto *clang_ts = llvm::dyn_cast<TypeSystemClang>(clang_type.GetTypeSystem());
+  auto clang_ts = clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
   if (!clang_ts)
     return {nullptr, nullptr};
 
@@ -88,15 +88,19 @@ void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
   // fully work, ClangImporter's ImportName class needs to be made
   // standalone and provided with a callback to read the APINote
   // information.
-  auto *ts = llvm::cast<TypeSystemSwift>(m_type.GetTypeSystem());
-  if (auto *trts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts)) {
+  auto ts = m_type.GetTypeSystem();
+  if (auto trts =
+          ts.dyn_cast_or_null<TypeSystemSwiftTypeRef>()) {
     m_type = trts->ReconstructType(m_type);
-    ts = llvm::cast<SwiftASTContext>(m_type.GetTypeSystem());
+    ts = m_type.GetTypeSystem();
     decl_ts = GetAsEnumDecl(m_type);
     enum_decl = decl_ts.first;
     if (!enum_decl)
       return;
   }
+  auto swift_ts = ts.dyn_cast_or_null<SwiftASTContext>();
+  if (!swift_ts)
+    return;
 
   auto iter = enum_decl->enumerator_begin(), end = enum_decl->enumerator_end();
   for (; iter != end; ++iter) {
@@ -110,7 +114,7 @@ void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
         case_init_val = case_init_val.zext(64);
       if (case_init_val.getBitWidth() > 64)
         continue;
-      ConstString case_name(ts->GetSwiftName(case_decl, *decl_ts.second));
+      ConstString case_name(swift_ts->GetSwiftName(case_decl, *decl_ts.second));
       m_cases->push_back({case_init_val, case_name});
     }
   }

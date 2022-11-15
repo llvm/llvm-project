@@ -9853,8 +9853,8 @@ void TypeSystemClang::RequireCompleteType(CompilerType type) {
   lldbassert(started && "Unable to start a class type definition.");
   TypeSystemClang::CompleteTagDeclarationDefinition(type);
   const clang::TagDecl *td = ClangUtil::GetAsTagDecl(type);
-  auto &ts = llvm::cast<TypeSystemClang>(*type.GetTypeSystem());
-  ts.GetMetadata(td)->SetIsForcefullyCompleted();
+  if (auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>())
+    ts->GetMetadata(td)->SetIsForcefullyCompleted();
 }
 
 namespace {

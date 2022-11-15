@@ -815,6 +815,8 @@ public:
   llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language);
 
+  /// Call \p callback for each \p TypeSystem in this \p Module.
+  /// Return true from callback to keep iterating, false to stop iterating.
   void ForEachTypeSystem(llvm::function_ref<bool(lldb::TypeSystemSP)> callback);
 
   // Special error functions that can do printf style formatting that will
@@ -909,10 +911,6 @@ public:
   void SetTypeSystemMap(const TypeSystemMap &type_system_map) {
     m_type_system_map = type_system_map;
   }
-
-  /// Call \p callback for each \p TypeSystem in this \p Module.
-  /// Return true from callback to keep iterating, false to stop iterating.
-  void ForEachTypeSystem(std::function<bool(TypeSystem *)> const &callback);
 
   std::vector<lldb::DataBufferSP> GetASTData(lldb::LanguageType language);
 

@@ -218,8 +218,9 @@ bool ValueObjectVariable::UpdateValue() {
 
 #ifdef LLDB_ENABLE_SWIFT
       if (auto type = variable->GetType())
-        if (llvm::dyn_cast_or_null<TypeSystemSwift>(
-                type->GetForwardCompilerType().GetTypeSystem()) &&
+        if (type->GetForwardCompilerType()
+                .GetTypeSystem()
+                .dyn_cast_or_null<TypeSystemSwift>() &&
             TypePayloadSwift(type->GetPayload()).IsFixedValueBuffer())
           if (auto process_sp = GetProcessSP())
             if (auto runtime = process_sp->GetLanguageRuntime(
@@ -235,7 +236,7 @@ bool ValueObjectVariable::UpdateValue() {
                   m_value.GetScalar() = deref_addr;
                 }
               }
-            }
+          }
 #endif // LLDB_ENABLE_SWIFT
 
       switch (value_type) {

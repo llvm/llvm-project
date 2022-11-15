@@ -324,7 +324,7 @@ CompilerType::GetDisplayTypeName(const SymbolContext *sc) const {
 ConstString CompilerType::GetMangledTypeName() const {
   if (IsValid()) {
     if (auto type_system_sp = GetTypeSystem())
-      return m_type_system->GetMangledTypeName(m_type);
+      return type_system_sp->GetMangledTypeName(m_type);
   }
   return ConstString();
 }
@@ -561,7 +561,8 @@ CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
 llvm::Optional<uint64_t>
 CompilerType::GetByteStride(ExecutionContextScope *exe_scope) const {
   if (IsValid())
-    return m_type_system->GetByteStride(m_type, exe_scope);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetByteStride(m_type, exe_scope);
   return {};
 }
 
@@ -614,7 +615,7 @@ void CompilerType::ForEachEnumerator(
 uint32_t CompilerType::GetNumFields(ExecutionContext *exe_ctx) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return m_type_system->GetNumFields(m_type, exe_ctx);
+      return type_system_sp->GetNumFields(m_type, exe_ctx);
   return 0;
 }
 
@@ -809,8 +810,8 @@ CompilerType::GetIndexOfChildWithName(const char *name,
                                       bool omit_empty_base_classes) const {
   if (IsValid() && name && name[0]) {
     if (auto type_system_sp = GetTypeSystem())
-      return m_type_system_sp->GetIndexOfChildWithName(m_type, name, exe_ctx,
-                                                       omit_empty_base_classes);
+      return type_system_sp->GetIndexOfChildWithName(m_type, name, exe_ctx,
+                                                     omit_empty_base_classes);
   }
   return UINT32_MAX;
 }
@@ -865,7 +866,7 @@ void CompilerType::DumpTypeDescription(lldb::DescriptionLevel level,
 
 void CompilerType::DumpTypeDescription(Stream *s, lldb::DescriptionLevel level,
                                        ExecutionContextScope *exe_scope) const {
-  if (IsValid()) {
+  if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       type_system_sp->DumpTypeDescription(m_type, level, exe_scope);
 }

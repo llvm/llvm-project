@@ -57,8 +57,8 @@ TEST_F(TestSwiftASTContext, IsNonTriviallyManagedReferenceType) {
 #ifndef NDEBUG
   // The mock constructor is only available in asserts mode.
   SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy;
-  SwiftASTContextTester context;
-  CompilerType t(&context, nullptr);
+  auto context = std::make_shared<SwiftASTContextTester>();
+  CompilerType t(context->weak_from_this(), nullptr);
   EXPECT_FALSE(SwiftASTContext::IsNonTriviallyManagedReferenceType(t, strategy,
                                                                    nullptr));
 #endif

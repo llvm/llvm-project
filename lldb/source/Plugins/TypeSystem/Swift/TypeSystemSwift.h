@@ -199,9 +199,6 @@ public:
                            bool &is_complex) override;
   bool IsIntegerType(lldb::opaque_compiler_type_t type,
                      bool &is_signed) override;
-  bool IsBooleanType(lldb::opaque_compiler_type_t type) override {
-    return false;
-  }
   bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override {
     return false;
   }

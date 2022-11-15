@@ -969,8 +969,8 @@ SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Copy(ValueObject &object,
       frame_sp 
           = m_process.GetThreadList().GetSelectedThread()->GetSelectedFrame();
 
-  auto *swift_ast_ctx =
-      llvm::dyn_cast_or_null<TypeSystemSwift>(static_type.GetTypeSystem());
+  auto swift_ast_ctx =
+      static_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (swift_ast_ctx) {
     SwiftScratchContextLock lock(GetSwiftExeCtx(object));
     static_type = BindGenericTypeParameters(*frame_sp, static_type);
@@ -1108,7 +1108,7 @@ static bool IsSwiftResultVariable(ConstString name) {
 
 static bool IsSwiftReferenceType(ValueObject &object) {
   CompilerType object_type(object.GetCompilerType());
-  if (llvm::dyn_cast_or_null<TypeSystemSwift>(object_type.GetTypeSystem())) {
+  if (object_type.GetTypeSystem().isa_and_nonnull<TypeSystemSwift>()) {
     Flags type_flags(object_type.GetTypeInfo());
     if (type_flags.AllSet(eTypeIsClass | eTypeHasValue |
                           eTypeInstanceIsPointer))
@@ -1330,7 +1330,7 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
     return error_valobj_sp;
 
   auto *ast_context =
-      llvm::dyn_cast_or_null<TypeSystemSwift>(&*type_system_or_err);
+      llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get());
   if (!ast_context)
     return error_valobj_sp;
 
@@ -1451,7 +1451,7 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
   }
 
   auto *ast_context = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-      &*type_system_or_err);
+      type_system_or_err->get());
   if (ast_context && !ast_context->HasFatalErrors()) {
     std::string module_name = "$__lldb_module_for_";
     module_name.append(&name.GetCString()[1]);
@@ -1817,9 +1817,14 @@ void SwiftLanguageRuntimeImpl::WillStartExecutingUserExpression(
     return;
   }
 
+  auto ts = *type_system_or_err;
+  if (!ts) {
+    LLDB_LOG(log, "type system no longer live");
+    return;
+  }    
   ConstString BoolName("bool");
   llvm::Optional<uint64_t> bool_size =
-      type_system_or_err->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+      ts->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
   if (!bool_size)
     return;
 
@@ -1887,9 +1892,14 @@ void SwiftLanguageRuntimeImpl::DidFinishExecutingUserExpression(
     return;
   }
 
+  auto ts = *type_system_or_err;
+  if (!ts) {
+    LLDB_LOG(log, "type system no longer live");
+    return;
+  }    
   ConstString BoolName("bool");
   llvm::Optional<uint64_t> bool_size =
-      type_system_or_err->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+      ts->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
   if (!bool_size)
     return;
 

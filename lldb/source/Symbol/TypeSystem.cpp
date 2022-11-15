@@ -164,7 +164,7 @@ Status TypeSystem::IsCompatible() {
 }
 
 ConstString TypeSystem::GetMangledTypeName(void *type) {
-  return GetTypeName(type);
+  return GetTypeName(type, false);
 }
 
 ConstString TypeSystem::DeclGetMangledName(void *opaque_decl) {
@@ -330,7 +330,7 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
 }
 
 // BEGIN SWIFT
-llvm::Expected<TypeSystem &>
+llvm::Expected<TypeSystemSP>
 TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
                                         Target *target, bool can_create,
                                         const char *compiler_options) {

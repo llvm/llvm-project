@@ -338,8 +338,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
         swift_runtime->GetMetadataPromise(argmetadata_ptr, valobj));
     if (promise_sp)
       if (CompilerType type = promise_sp->FulfillTypePromise())
-        if (TypeSystemSwift *type_system =
-                llvm::dyn_cast<TypeSystemSwift>(type.GetTypeSystem()))
+        if (auto type_system =
+                type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>())
           argument_type =
               type_system->GetGenericArgumentType(type.GetOpaqueQualType(), 0);
 

@@ -668,7 +668,10 @@ lldb::SBError SBModule::IsTypeSystemCompatible(lldb::LanguageType language) {
       llvm::consumeError(type_system_or_err.takeError());
       return sb_error;
     }
-    sb_error.SetError(type_system_or_err->IsCompatible());
+    if (auto ts = *type_system_or_err)
+      sb_error.SetError(ts->IsCompatible());
+    else
+      sb_error.SetErrorString("type system no longer live");
   } else {
     sb_error.SetErrorString("invalid module");
   }
