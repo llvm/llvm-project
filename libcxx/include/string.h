@@ -57,9 +57,7 @@ size_t strlen(const char* s);
 #  pragma GCC system_header
 #endif
 
-#if __has_include_next(<string.h>)
-#  include_next <string.h>
-#endif
+#include_next <string.h>
 
 // MSVCRT, GNU libc and its derivates may already have the correct prototype in
 // <string.h>. This macro can be defined by users if their C library provides
