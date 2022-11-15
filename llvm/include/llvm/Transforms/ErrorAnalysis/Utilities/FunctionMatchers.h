@@ -23,6 +23,7 @@ bool isTanhFunction(const string FunctionName);
 bool isExpFunction(const string FunctionName);
 bool isLogFunction(const string FunctionName);
 bool isSqrtFunction(const string FunctionName);
+bool isFMAFuncton(const string FunctionName);
 bool isPrintFunction(const string FunctionName);
 
 } // namespace atomiccondition

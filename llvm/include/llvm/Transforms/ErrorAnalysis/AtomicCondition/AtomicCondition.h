@@ -38,7 +38,8 @@ enum Func {
   Exp,
   Log,
   Sqrt,
-  Neg
+  Neg,
+  FMA,
 };
 
 
@@ -83,6 +84,10 @@ int ACItemCounter;
 // ---------------------------------------------------------------------------
 // ---------------------------- Utility Functions ----------------------------
 // ---------------------------------------------------------------------------
+int fACIsTernaryOperation(enum Func F) {
+  return (F == 17);
+}
+
 int fACIsBinaryOperation(enum Func F) {
   return (F == 0 ||
           F == 1 ||
@@ -116,6 +121,8 @@ int fACFuncHasXNumOperands(enum Func F) {
     return 1;
   if (fACIsBinaryOperation(F))
     return 2;
+  if (fACIsTernaryOperation(F))
+    return 3;
   return 0;
 }
 
@@ -463,6 +470,60 @@ char *fACDumpAtomicConditionString(char **OperandNames, double *OperandValues,
   case 16:
     strcat(ACstring, "(1.0)");
     break;
+  case 17:
+    // Appending Numerator
+    if(WRT==0 || WRT == 1) {
+      strcat(ACstring, "(");
+      strcat(ACstring, "(");
+      if (strlen(OperandNames[0]) != 0)
+        strcat(ACstring, OperandNames[0]);
+      else
+        fACAppendDoubleToString(ACstring, OperandValues[0]);
+
+      strcat(ACstring, "*");
+
+      if (strlen(OperandNames[1]) != 0)
+        strcat(ACstring, OperandNames[1]);
+      else
+        fACAppendDoubleToString(ACstring, OperandValues[1]);
+      strcat(ACstring, ")");
+    }
+    else if(WRT==2) {
+      if (strlen(OperandNames[2]) != 0) {
+        strcat(ACstring, "(");
+        strcat(ACstring, OperandNames[2]);
+      }
+      else
+        fACAppendDoubleToString(ACstring, OperandValues[2]);
+    }
+
+    strcat(ACstring, "/");
+
+    // Appending Denominator
+    strcat(ACstring, "(");
+    strcat(ACstring, "(");
+    if (strlen(OperandNames[0]) != 0)
+      strcat(ACstring, OperandNames[0]);
+    else
+      fACAppendDoubleToString(ACstring, OperandValues[0]);
+
+    strcat(ACstring, "*");
+
+    if (strlen(OperandNames[1]) != 0)
+      strcat(ACstring, OperandNames[1]);
+    else
+      fACAppendDoubleToString(ACstring, OperandValues[1]);
+    strcat(ACstring, ")");
+
+    strcat(ACstring, "+");
+
+    if (strlen(OperandNames[2]) != 0)
+      strcat(ACstring, OperandNames[2]);
+    else
+      fACAppendDoubleToString(ACstring, OperandValues[2]);
+    strcat(ACstring, ")");
+    strcat(ACstring, ")");
+    break;
   default:
     printf("No such operation %d\n", F);
     exit(1);
@@ -793,6 +854,18 @@ ACItem **fACComputeAC(const char *ResultVar,
     //    printf("AC of -x | x=%f is %f.\n", OperandValues[0], Item.ACWRTOperands[0]);
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
+    break;
+  case 17:
+    Item.ACWRTOperands[0] = fabs(OperandValues[0]*OperandValues[1] / ((OperandValues[0]*OperandValues[1])+OperandValues[2]));
+    Item.ACWRTOperands[1] = fabs(OperandValues[0]*OperandValues[1] / ((OperandValues[0]*OperandValues[1])+OperandValues[2]));
+    Item.ACWRTOperands[2] = fabs(OperandValues[2] / ((OperandValues[0]*OperandValues[1])+OperandValues[2]));
+    //    printf("AC of xy+z | x=%lf, y=%lf z=%lf WRT x is %lf.\n", OperandValues[0], OperandValues[1], OperandValues[2], Item.ACWRTOperands[0]);
+    //    printf("AC of xy+z | x=%lf, y=%lf z=%lf WRT y is %lf.\n", OperandValues[0], OperandValues[1], OperandValues[2], Item.ACWRTOperands[1]);
+    //    printf("AC of xy+z | x=%lf, y=%lf z=%lf WRT z is %lf.\n", OperandValues[0], OperandValues[1], OperandValues[2], Item.ACWRTOperands[2]);
+
+    Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
+    Item.ACStrings[1] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 1);
+    Item.ACStrings[2] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 2);
     break;
   default:
     printf("No such operation\n");

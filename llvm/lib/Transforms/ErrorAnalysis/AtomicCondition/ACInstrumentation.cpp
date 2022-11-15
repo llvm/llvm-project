@@ -1352,6 +1352,8 @@ int ACInstrumentation::getFunctionEnum(Instruction *Inst) {
       return Func::Log;
     if(isSqrtFunction(FunctionName))
       return Func::Sqrt;
+    if(isFMAFuncton(FunctionName))
+      return Func::FMA;
     return -1;
   default:
     //    errs() << BaseInstruction << " is not a Binary Instruction.\n";
