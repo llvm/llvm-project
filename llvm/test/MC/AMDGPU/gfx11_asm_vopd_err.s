@@ -267,3 +267,47 @@ v_dual_fmamk_f32    v6, v1, 0xaf123456, v3       :: v_dual_fmac_f32       v5, v2
 // GFX11: error: src2 operands must use different VGPR banks
 // GFX11-NEXT:{{^}}v_dual_fmamk_f32    v6, v1, 0xaf123456, v3       :: v_dual_fmac_f32       v5, v2, v3
 // GFX11-NEXT:{{^}}                                                                          ^
+
+//===----------------------------------------------------------------------===//
+// Check invalid VOPD syntax.
+//===----------------------------------------------------------------------===//
+
+v_dual_fmamk_f32    v6, v1, 0xaf123456, v2       : : v_dual_fmac_f32       v5, v2, v3
+// GFX11: error: unknown token in expression
+// GFX11-NEXT:{{^}}v_dual_fmamk_f32    v6, v1, 0xaf123456, v2       : : v_dual_fmac_f32       v5, v2, v3
+// GFX11-NEXT:{{^}}                                                 ^
+
+v_dual_fmamk_f32    v6, v1, 0xaf123456, v3
+// GFX11: error: too few operands for instruction
+// GFX11-NEXT:{{^}}v_dual_fmamk_f32    v6, v1, 0xaf123456, v3
+// GFX11-NEXT:{{^}}^
+
+v_dual_fmamk_f32    v6, v1, 0xaf123456, v2       :: v_dual_fmac_f32
+// GFX11: error: too few operands for instruction
+// GFX11-NEXT:{{^}}v_dual_fmamk_f32    v6, v1, 0xaf123456, v2       :: v_dual_fmac_f32
+// GFX11-NEXT:{{^}}^
+
+v_dual_add_f32      v255, v4 :: v_add_f32 v6, v1, v3
+// GFX11: error: invalid operand for instruction
+// GFX11-NEXT:{{^}}v_dual_add_f32      v255, v4 :: v_add_f32 v6, v1, v3
+// GFX11-NEXT:{{^}}                             ^
+
+v_dual_fmamk_f32    v6, v1, 0xaf123456, v3 ::
+// GFX11: error: expected a VOPDY instruction after ::
+// GFX11-NEXT:{{^}}v_dual_fmamk_f32    v6, v1, 0xaf123456, v3 ::
+// GFX11-NEXT:{{^}}                                             ^
+
+v_add_f32           v6, v1, v3 ::
+// GFX11: error: expected a VOPDY instruction after ::
+// GFX11-NEXT:{{^}}v_add_f32           v6, v1, v3 ::
+// GFX11-NEXT:{{^}}                                 ^
+
+v_dual_add_f32      v255::
+// GFX11: error: expected a VOPDY instruction after ::
+// GFX11-NEXT:{{^}}v_dual_add_f32      v255::
+// GFX11-NEXT:{{^}}                          ^
+
+v_dual_add_f32      v255, v4, v2 :: v_add_f32 v6, v1, v3
+// GFX11: error: invalid VOPDY instruction
+// GFX11-NEXT:{{^}}v_dual_add_f32      v255, v4, v2 :: v_add_f32 v6, v1, v3
+// GFX11-NEXT:{{^}}                                    ^

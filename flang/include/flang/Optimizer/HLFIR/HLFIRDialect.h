@@ -16,6 +16,11 @@
 
 #include "mlir/IR/Dialect.h"
 
+namespace hlfir {
+/// Is this a type that can be used for an HLFIR variable ?
+bool isFortranVariableType(mlir::Type);
+} // namespace hlfir
+
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h.inc"
 
 #define GET_TYPEDEF_CLASSES

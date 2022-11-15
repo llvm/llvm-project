@@ -409,7 +409,7 @@ defm : ICXWriteResPair<WriteMPSADZ,  [ICXPort5], 4, [2], 2, 7>;
 defm : ICXWriteResPair<WritePSADBW,  [ICXPort5], 3, [1], 1, 5>; // Vector PSADBW.
 defm : ICXWriteResPair<WritePSADBWX, [ICXPort5], 3, [1], 1, 6>;
 defm : ICXWriteResPair<WritePSADBWY, [ICXPort5], 3, [1], 1, 7>;
-defm : ICXWriteResPair<WritePSADBWZ, [ICXPort5], 3, [1], 1, 7>;
+defm : ICXWriteResPair<WritePSADBWZ, [ICXPort5], 3, [1], 1, 7>; // TODO: 512-bit ops require ports 0/1 to be joined.
 defm : ICXWriteResPair<WritePHMINPOS, [ICXPort0], 4, [1], 1, 6>; // Vector PHMINPOS.
 
 // Vector integer shifts.
@@ -846,11 +846,9 @@ def ICXWriteResGroup32 : SchedWriteRes<[ICXPort5]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[ICXWriteResGroup32], (instrs VPSADBWZrr)>; // TODO: 512-bit ops require ports 0/1 to be joined.
 def: InstRW<[ICXWriteResGroup32], (instregex "(ADD|SUB|SUBR)_(FPrST0|FST0r|FrST0)",
                                              "VALIGND(Z|Z128|Z256)rri",
                                              "VALIGNQ(Z|Z128|Z256)rri",
-                                             "VDBPSADBWZrri", // TODO: 512-bit ops require ports 0/1 to be joined.
                                              "VPBROADCAST(B|W)rr",
                                              "VP(MAX|MIN)(S|U)Q(Z|Z128|Z256)rr")>;
 

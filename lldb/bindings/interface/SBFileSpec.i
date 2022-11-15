@@ -88,7 +88,7 @@ public:
             spec_dir = self.GetDirectory()
             spec_file = self.GetFilename()
             if spec_dir and spec_file:
-                return os.path.join(spec_dir, spec_file)
+                return '%s/%s' % (spec_dir, spec_file)
             elif spec_dir:
                 return spec_dir
             elif spec_file:

@@ -782,3 +782,46 @@ define i1 @bit_extract_cmp(i64 %x) {
   %r = fcmp oeq float %e, 0.0
   ret i1 %r
 }
+
+define i32 @extelt_select_const_operand_vector(i1 %c) {
+; ANY-LABEL: @extelt_select_const_operand_vector(
+; ANY-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <3 x i32> <i32 poison, i32 poison, i32 4>, <3 x i32> <i32 poison, i32 poison, i32 7>
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i32> [[S]], i64 2
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %s = select i1 %c, <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
+  %r = extractelement <3 x i32> %s, i32 2
+  ret i32 %r
+}
+
+define i32 @extelt_select_const_operand_extractelt_use(i1 %c) {
+; ANY-LABEL: @extelt_select_const_operand_extractelt_use(
+; ANY-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <3 x i32> <i32 poison, i32 poison, i32 4>, <3 x i32> <i32 poison, i32 poison, i32 7>
+; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i32> [[S]], i64 2
+; ANY-NEXT:    [[M:%.*]] = shl i32 [[E]], 1
+; ANY-NEXT:    [[M_2:%.*]] = shl i32 [[E]], 2
+; ANY-NEXT:    [[R:%.*]] = mul i32 [[M]], [[M_2]]
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %s = select i1 %c, <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
+  %e = extractelement <3 x i32> %s, i32 2
+  %m = mul i32 %e, 2
+  %m.2 = mul i32 %e, 4
+  %r = mul i32 %m, %m.2
+  ret i32 %r
+}
+
+define i32 @extelt_select_const_operand_select_use(i1 %c) {
+; ANY-LABEL: @extelt_select_const_operand_select_use(
+; ANY-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <3 x i32> <i32 poison, i32 3, i32 4>, <3 x i32> <i32 poison, i32 6, i32 7>
+; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i32> [[S]], i64 2
+; ANY-NEXT:    [[E_2:%.*]] = extractelement <3 x i32> [[S]], i64 1
+; ANY-NEXT:    [[R:%.*]] = mul i32 [[E]], [[E_2]]
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %s = select i1 %c, <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
+  %e = extractelement <3 x i32> %s, i32 2
+  %e.2 = extractelement <3 x i32> %s, i32 1
+  %r = mul i32 %e, %e.2
+  ret i32 %r
+}

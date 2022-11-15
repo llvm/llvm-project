@@ -69,32 +69,60 @@ in FIR. A more problematic point is that it does not allow generating debug
 information for the variables from FIR, since the bounds and type parameters
 information is not tightly linked to the base mlir::Value.
 
-The proposal is to add a fir.declare operation that would anchor the
-fir::ExtendedValue information in the IR regardless of the mlir::Value used for
-the variable (bare memory reference, or fir.box). This operation will have a
-"fir.def = uniq_mangled_variable_name" that will allow linking it to the Fortran
-source variable, and will take all the bounds and type parameters as operands.
-All the high-level operations referring to variables will have a "fir.ref =
-uniq_mangled_variable_name" that will allow retrieving back the related
-dominating fir.declare and all the variable information. In most of the cases,
-the fir.declare should simply be the defining operation of the operand mlir
-value.
+The proposal is to add a hlfir.declare operation that would anchor the
+fir::ExtendedValue information in the IR. A variable will be represented by a
+single SSA value with a memory type (fir.ref<T>, fir.ptr<T>, fir.heap<T>,
+fir.box<T>, fir.boxchar or fir.ref<fir.box<T>>). Not all memory types will be
+allowed for a variable: it should allow retrieving all the shape, type
+parameters, and dynamic type information without requiring to look-up for any
+defining operations. For instance, `fir.ref<fir.array<?xf32>>` will not be
+allowed as an HLFIR variable, and fir.box<fir.array<?xf32>> will be used
+instead. However, `fir.ref<fir.array<100xf32>>` will be allowed to represent an
+array whose lower bounds are all ones (if the lower bounds are different than
+one, a fir.box will still be needed).  The hlfir.declare operation will be
+responsible for producing the SSA value with the right memory type given the
+variable specifications. One notable point is that, except for the POINTER and
+ALLOCATABLE attributes that are retrievable from the SSA value type, other
+Fortran attributes (OPTIONAL, TARGET, VOLATILE...) will not be retrievable from
+the SSA value alone, and it will be required to access the defining
+hlfir.declare to get the full picture.
 
-The fir.declare operation will allow:
+This means that semantically relevant attributes will need to be set by
+lowering on operations using variables when that is relevant (for instance when
+using an OPTIONAL variable in an intrinsic where it is allowed to be absent).
+Then, the optimizations passes will be allowed to look for the defining
+hlfir.declare, but not to assume that it must be visible.  For instance, simple
+contiguity of fir.box can be deduced in certain case from the hlfir.declare,
+and if the hlfir.declare cannot be found, transformation passes will have to
+assume that the variable may be non-contiguous.
+
+In practice, it is expected that the passes will be able to leverage
+hlfir.declare in most cases, but that guaranteeing that it will always be the
+case would constraint the IR and optimizations too much.  The goal is also to
+remove the fir.box usages when possible while lowering to FIR, to avoid
+needlessly creating runtime descriptors for variables that do not really
+require it.
+
+The hlfir.declare operation and restrained memory types will allow:
 - Pushing higher-level Fortran concepts into FIR operations (like array
   assignments or transformational intrinsics).
-- Generating debug information for the variables based on the fir.declare
+- Generating debug information for the variables based on the hlfir.declare
   operation.
 - Generic Fortran aliasing analysis (currently implemented only around array
   assignments with the fir.array_load concept).
 
+The hlfir.declare will have a sibling fir.declare operation in FIR that will
+allow keeping variable information until debug info is generated. The main
+difference is that the fir.declare will simply return its first operand,
+making its codegen a no-op, while hlfir.declare might change the type of
+its first operand to return an HLFIR variable compatible type.
 The fir.declare op is the only operation described by this change that will be
-added to FIR and not HLFIR. The rational for this is that it is intended to
-survive until LLVM dialect codegeneration so that debug info generation can use
-them and alias information can take advantage of them even on FIR. 
+added to FIR. The rational for this is that it is intended to survive until
+LLVM dialect codegeneration so that debug info generation can use them and
+alias information can take advantage of them even on FIR. 
 
 Note that Fortran variables are not necessarily named objects, they can also be
-the result of function references returning POINTERs. fir.declare will also
+the result of function references returning POINTERs. hlfir.declare will also
 accept such variables to be described in the IR (a unique name will be built
 from the caller scope name and the function name.). In general, fir.declare
 will allow to view every memory storage as a variable, and this will be used to
@@ -242,18 +270,22 @@ not later materialized in memory.
 It is nonetheless not intended that such abstract types be used as block
 arguments to avoid introducing allocations and descriptor manipulations.
 
-#### fir.declare operation
+#### hlfir.declare operation
 
 Motivation: represent variables, linking together a memory storage, shape,
 length parameters, attributes and the variable name.
 
 Syntax:
 ```
-%var = fir.declare %base [shape %extent1, %extent2, ...] [lbs %lb1, %lb2, ...] [typeparams %l1, ...] {fir.def = mangled_variable_name, attributes} : [(....) ->] T
+%var = hlfir.declare %base [shape %extent1, %extent2, ...] [lbs %lb1, %lb2, ...] [typeparams %l1, ...] {fir.def = mangled_variable_name, attributes} : [(....) ->] T1, T2
 ```
 
-%var will have the same type as %base. When no debug info is generated, the
-operation can be replaced by %base when lowering to LLVM.
+%var#0 will have a FIR memory type that is allowed for HLFIR variables. %var#1
+will have the same type as %base, it is intended to be used when lowering HLFIR
+to FIR in order to avoid creating unnecessary fir.box (that would become
+runtime descriptors). When an HLFIR operation has access to the defining
+hlfir.declare of its variable operands, the operation codegen will be allowed
+to replace the %var#0 reference by the simpler %var#1 reference.
 
 - Extents should only be provided if %base is not a fir.box and the entity is an
   array.
@@ -268,29 +300,43 @@ operation can be replaced by %base when lowering to LLVM.
   They will also indicate when an entity is part of an equivalence by giving the
   equivalence name (fir.equiv = mangled_equivalence_name).
 
-fir.declare will be used for all Fortran variables, except the ones created via
+hlfir.declare will be used for all Fortran variables, except the ones created via
 the ASSOCIATE construct that will use hlfir.associate described below.
 
-fir.declare will also be used when creating compiler created temporaries, in
+hlfir.declare will also be used when creating compiler created temporaries, in
 which case the fir.tmp attribute will be given.
 
 Examples:
 
-| FORTRAN                                 | FIR                                                                                                     |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| REAL :: X                                 | %mem = fir.alloca f32 <br> %x = fir.declare %mem {fir.def = "\_QPfooEx"} : fir.ref<f32>                                                                                                     |
-| REAL, TARGET :: X(10)                     | %mem = fir.alloca f32 <br> %nval = fir.load %n <br> %x = fir.declare %mem {fir.def = "\_QPfooEx", fir.target} : fir.ref<fir.array<10xf32>>                                                  |
-| REAL :: X(N)                              | %mem = // … alloc or dummy argument <br> %nval = fir.load %n : i64 <br> %x = fir.declare %mem shape %nval {fir.def = "\_QPfooEx"} : (i64) -> fir.ref<fir.array<?xf32>>                      |
-| REAL :: X(0:)                             | %mem = // … dummy argument <br> %c0 = arith.constant 0 : index <br> %x = fir.declare %mem lbs %c0 {fir.def = "\_QPfooEx"} : (index) -> fir.box<fir.array<?xf32>>                            |
-| <br>REAL, POINTER :: X(:)                 | %mem = // … dummy argument, or local, or global <br> %x = fir.declare %mem {fir.def = "\_QPfooEx", fir.ptr} :  fir.ref<fir.box<fir.ptr<fir.array<?xf32>>>>                                  |
-| REAL, ALLOCATABLE :: X(:)                 | %mem = // … dummy argument, or local, or global <br> %x = fir.declare %mem {fir.def = "\_QPfooEx", fir.alloc} :  fir.ref<fir.box<fir.heap<fir.array<?xf32>>>>                               |
-| CHARACTER(10) :: C                        | %mem = //  … dummy argument, or local, or global <br> %c = fir.declare %mem lbs %c0 {fir.def = "\_QPfooEc"} :  fir.ref<fir.char<10>>                                                        |
-| CHARACTER(\*) :: C                        | %unbox = fir.unbox %bochar (fir.boxchar<1>) -> (fir.ref<fir.char<?>>, index) <br> %c = fir.declare %unbox#0 typeparams %unbox#1 {fir.def = "\_QPfooEc"} : (index) ->  fir.ref<fir.char<?>>  |
-| CHARACTER(\*), OPTIONAL, ALLOCATABLE :: C | %mem = // … dummy argument <br> %c = fir.declare %mem {fir.def = "\_QPfooEc", fir.alloc, fir.optional, fir.assumed\_len\_alloc} :  fir.ref<fir.box<fir.heap<fir.char<?>>>>                  |
-| TYPE(T) :: X                              | %mem = //  … dummy argument, or local, or global <br> %x = fir.declare %mem {fir.def = "\_QPfooEx"} : fir.ref<fir.type<t{...}>>                                                             |
-| TYPE(T(L)) :: X                           | %mem = //  … dummy argument, or local, or global <br> %lval = fir.load %l <br> %x = fir.declare %mem typeparams %lval {fir.def = "\_QPfooEx"} : fir.box<fir.type<t{...}>>                   |
-| CLASS(\*), POINTER :: X                   | %mem = //  … dummy argument, or local, or global <br> %x = fir.declare %mem {fir.def = "\_QPfooEx", fir.ptr} : fir.class<fir.ptr<None>>                                                     |
-| REAL :: X(..)                             | %mem = //  … dummy argument <br> %x = fir.declare %mem {fir.def = "\_QPfooEx"} : fir.box<fir.array<..xf32>>                                                                                 |
+| FORTRAN                                   | HLFIR                                                                                                                                                                                                                    |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| REAL :: X                                 | %mem = fir.alloca f32 <br> %x = hlfir.declare %mem {fir.def = "\_QPfooEx"} : fir.ref<f32>, fir.ref<f32>                                                                                                                  |
+| REAL, TARGET :: X(10)                     | %mem = fir.alloca f32 <br> %nval = fir.load %n <br> %x = hlfir.declare %mem {fir.def = "\_QPfooEx", fir.target} : fir.ref<fir.array<10xf32>>, fir.ref<fir.array<10xf32>>                                                 |
+| REAL :: X(N)                              | %mem = // … alloc or dummy argument <br> %nval = fir.load %n : i64 <br> %x = hlfir.declare %mem shape %nval {fir.def = "\_QPfooEx"} : (i64) -> fir.box<fir.array<?xf32>>, fir.ref<fir.array<?xf32>>                      |
+| REAL :: X(0:)                             | %mem = // … dummy argument <br> %c0 = arith.constant 0 : index <br> %x = hlfir.declare %mem lbs %c0 {fir.def = "\_QPfooEx"} : (index) -> fir.box<fir.array<?xf32>>, fir.box<fir.array<?xf32>>                            |
+| <br>REAL, POINTER :: X(:)                 | %mem = // … dummy argument, or local, or global <br> %x = hlfir.declare %mem {fir.def = "\_QPfooEx", fir.ptr} :  fir.ref<fir.box<fir.ptr<fir.array<?xf32>>>>, fir.ref<fir.box<fir.ptr<fir.array<?xf32>>>>                |
+| REAL, ALLOCATABLE :: X(:)                 | %mem = // … dummy argument, or local, or global <br> %x = hlfir.declare %mem {fir.def = "\_QPfooEx", fir.alloc} :  fir.ref<fir.box<fir.heap<fir.array<?xf32>>>>, fir.ref<fir.box<fir.heap<fir.array<?xf32>>>>            |
+| CHARACTER(10) :: C                        | %mem = //  … dummy argument, or local, or global <br> %c = hlfir.declare %mem lbs %c0 {fir.def = "\_QPfooEc"} :  fir.ref<fir.char<10>>, fir.ref<fir.char<10>>                                                            |
+| CHARACTER(\*) :: C                        | %unbox = fir.unbox %bochar (fir.boxchar<1>) -> (fir.ref<fir.char<?>>, index) <br> %c = hlfir.declare %unbox#0 typeparams %unbox#1 {fir.def = "\_QPfooEc"} : (index) ->  fir.boxchar<1>, fir.ref<fir.char<?>>             |
+| CHARACTER(\*), OPTIONAL, ALLOCATABLE :: C | %mem = // … dummy argument <br> %c = hlfir.declare %mem {fir.def = "\_QPfooEc", fir.alloc, fir.optional, fir.assumed\_len\_alloc} :  fir.ref<fir.box<fir.heap<fir.char<?>>>>, fir.ref<fir.box<fir.heap<fir.char<?>>>>    |
+| TYPE(T) :: X                              | %mem = //  … dummy argument, or local, or global <br> %x = hlfir.declare %mem {fir.def = "\_QPfooEx"} : fir.ref<fir.type<t{...}>>, fir.ref<fir.type<t{...}>>                                                             |
+| TYPE(T(L)) :: X                           | %mem = //  … dummy argument, or local, or global <br> %lval = fir.load %l <br> %x = hlfir.declare %mem typeparams %lval {fir.def = "\_QPfooEx"} : fir.box<fir.type<t{...}>>, fir.box<fir.type<t{...}>>                   |
+| CLASS(\*), POINTER :: X                   | %mem = //  … dummy argument, or local, or global <br> %x = hlfir.declare %mem {fir.def = "\_QPfooEx", fir.ptr} : fir.class<fir.ptr<None>>  fir.class<fir.ptr<None>>                                                      |
+| REAL :: X(..)                             | %mem = //  … dummy argument <br> %x = hlfir.declare %mem {fir.def = "\_QPfooEx"} : fir.box<fir.array<..xf32>>, fir.box<fir.array<..xf32>>                                                                                |
+
+#### fir.declare operation
+
+Motivation: keep variable information available in FIR, at least with
+the intent to be able to produce debug information.
+
+Syntax:
+```
+%var = fir.declare %base [shape %extent1, %extent2, ...] [lbs %lb1, %lb2, ...] [typeparams %l1, ...] {fir.def = mangled_variable_name, attributes} : [(....) ->] T
+```
+
+%var will have the same type as %base. When no debug info is generated, the
+operation can be replaced by %base when lowering to LLVM. Otherwise, the
+operation is similar to hlfir.declare and will be produced from it.
 
 #### hlfir.associate operation
 
@@ -304,7 +350,7 @@ Syntax:
 
 hlfir.associate is used to represent the following associations:
 - Dummy/Actual association on the caller side (the callee side uses
-  fir.declare).
+  hlfir.declare).
 - Host association in block constructs when VOLATILE/ASYNC attributes are added
   locally
 - ASSOCIATE construct (both from variable and expressions).
@@ -332,7 +378,7 @@ variable with a copy-in.
 
 Syntax:
 ```
-hlfir.end_association %var [%original_variable] {fir.ref = var_mangled_name, attributes}
+hlfir.end_association %var [%original_variable] {attributes}
 ```
 
 
@@ -361,7 +407,7 @@ retain this information even after local variables are inlined.
 
 Syntax:
 ```
-hlfir.finalize %var {fir.ref = var_mangled_name, attributes}
+hlfir.finalize %var {attributes}
 ```
 
 The attributes can be:
@@ -370,11 +416,11 @@ The attributes can be:
     variable type in FIR).
 
 Note that finalization will not free the local variable storage if it was
-allocated on the heap. If lowering created the storage passed to fir.declare via
-a fir.allocmem, lowering should insert a fir.freemem after the hlfir.finalize.
-This could help making fir.allocmem to fir.alloca promotion simpler, and also
-because finalization may be run without the intent to deallocate the variable
-storage (like on INTENT(OUT) dummies).
+allocated on the heap. If lowering created the storage passed to hlfir.declare
+via a fir.allocmem, lowering should insert a fir.freemem after the
+hlfir.finalize.  This could help making fir.allocmem to fir.alloca promotion
+simpler, and also because finalization may be run without the intent to
+deallocate the variable storage (like on INTENT(OUT) dummies).
 
 
 #### hlfir.designate
@@ -388,7 +434,7 @@ parts.
 
 Syntax:
 ```
-%var = hlfir.designate %base [“component”,] [(%i, %k:l%:%m)] [substr ub, lb] [imag|real] [shape extent1, extent2, ....] [lbs lb1, lb2, .....] [typeparams %l1, ...] {fir.ref = base_mangled_name, fir.def = mangled_name, attributes}
+%var = hlfir.designate %base [“component”,] [(%i, %k:l%:%m)] [substr ub, lb] [imag|real] [shape extent1, extent2, ....] [lbs lb1, lb2, .....] [typeparams %l1, ...] {attributes}
 ```
 
 hlfir.designate is intended to encode a single part-ref (as defined by the
@@ -548,8 +594,8 @@ Illustration: “A + B” represented with a hlfir.elemental.
 
 ```
 %add = hlfir.elemental (%i:index, %j:index) shape %shape (!fir.shape<2>) -> !hlfir.expr<?x?xf32> {
-  %belt = hlfir.designate %b, %i, %j {fir.ref = _QPfooEb, fir.def = _QPfooEb.des001}: (!fir.ref<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
-  %celt = hlfir.designate %c, %i, %j {fir.ref = _QPfooEa, fir.def = _QPfooEa.des002} : (!fir.ref<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+  %belt = hlfir.designate %b, %i, %j : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+  %celt = hlfir.designate %c, %i, %j : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
   %bval = fir.load %belt : (!fir.ref<f32>) -> f32
   %cval = fir.load %celt : (!fir.ref<f32>) -> f32
   %add = arith.addf %bval, %cval : f32
@@ -840,59 +886,6 @@ The translation of hlfir.forall will happen by:
       no further temporary is needed. Insert code to finalize the temp after its
       usage.
 
-### Tagging variable uses in high-level operations (fir.ref attribute)
-
-All operations defined above that accept "variables" (i.e: memory addresses or
-box values that were produced by fir.declare, hlfir.associate, or
-hlfir.designate) must have a fir.ref = mangled_name_attribute that matches the
-fir.def on the operation that created them (it will be added automatically by
-the operation builder). That is to ensure optimization passes do not merge
-seemingly identical operations using variables with different properties, and
-also to ensure that the matching defining operation can always be retrieved to
-get all the variable properties (shape, bounds, type parameters and
-attributes).
-
-Two other alternatives have been considered and rejected:
-- Using MLIR symbols. This has been rejected because MLIR symbols are mainly
-  intended to deal with globals and functions that may refer to each other
-  before being defined. Their processing is not as light as normal values, and
-  would require to turn every FIR operation with a region into an MLIR symbol
-  table. This would especially be annoying given fir.designator also produce
-  variables with their own properties, which would imply creating a lot of MLIR
-  symbols. All the operations that both accept variable and expression operands
-  would also either need to be more complex in order to both accept SSA values
-  or MLIR symbol operands (or some fir.as_expr %var operation should be added to
-  turn a variable into an expression). Given all variable definitions will
-  dominates their uses, it seems more adequate to use an SSA model with named
-  attributes. Using SSA values also makes the transition and mix with
-  lower-level FIR operations smoother: a variable SSA usage can simply be
-  replaced by lower-level FIR operations using the same SSA value.
-- Another alternative could be making all operations defining variables return
-  fir.box, and repeating the variable attributes (fir.target...) on all
-  operations using the variable. This would allow the link between the variable
-  definition and usage to become broken (variable could travel as block
-  arguments). But this would risk littering the codegen with fir.box
-  manipulations (creating, writing and reading to descriptors) that may lead to
-  poor performance. Maintaining all the attributes on the operations would also
-  be more cumbersome than only maintaining the variable name in the fir.ref
-  attribute.
-
-Lower-level operations (the current FIR operations), do not require this strong
-link between a memory address and the variable definition, and it will not be
-necessary to add fir.ref attributes to those. During alias analysis on FIR using
-lower-level operations (like loads and stores), any memory reference that cannot
-be resolved to a Fortran variable or some unrelated temporary allocation is
-considered as potentially overlapping.
-
-The variable definition will be guaranteed to have a unique name after lowering,
-and some care might have to be taken when later duplicating regions that define
-variables in a way that could lead a variable usage to have two dominating
-definitions with the same name (this could for instance happen after inlining
-two calls to the same procedure inside the same region). Inlining will need to
-take care of those conflicts. This could be done by randomizing the inlined
-variable name attributes (like by adding a counter index that is incremented
-after each call inlining).
-
 ## New HLFIR Transformation Passes
 
 ### Mandatory Passes (translation towards lower-level representation)
@@ -996,9 +989,9 @@ Lowering output:
 
 ```HLFIR
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>) {
-  %a = fir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>
-  %b = fir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>
-  hlfir.assign %b to %a {fir.ref = "_QPfooEb,_QPfooEa"}: !fir.box<!fir.array<?xf32>>
+  %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
+  %b = hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
+  hlfir.assign %b#0 to %a#0 : !fir.box<!fir.array<?xf32>>
   return
 }
 ```
@@ -1010,20 +1003,20 @@ HLFIR array assignment lowering pass:
 
 ```HFLIR
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>) {
-  %a = fir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>
-  %b = fir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>
+  %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
+  %b = hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
 
-  %ashape = hlfir.shape_of %a {fir.ref = "_QPfooEa"}
-  %bshape = hlfir.shape_of %b {fir.ref = "_QPfooEb"}
+  %ashape = hlfir.shape_of %a#0
+  %bshape = hlfir.shape_of %b#0
   %shape = hlfir.shape_meet %ashape, %bshape
   %extent = hlfir.get_extent %shape, 0
 
   %c1 = arith.constant 1 : index
 
   fir.do_loop %i = %c1 to %extent step %c1 unordered {
-    %belt = hlfir.designate %b, %i {fir.ref = "_QPfooEb", "fir.def=_QPfooEb.des001"}
-    %aelt = hlfir.designate %a, %i {fir.ref = "_QPfooEa", "fir.def=_QPfooEa.des002"}
-    hlfir.assign %belt to %aelt {fir.ref = "_QPfooEb.des001,_QPfooEa.des002"}: fir.ref<f32>, fir.ref<f32>
+    %belt = hlfir.designate %b#0, %i
+    %aelt = hlfir.designate %a#0, %i
+    hlfir.assign %belt to %aelt : fir.ref<f32>, fir.ref<f32>
   }
   return
 }
@@ -1039,10 +1032,10 @@ HLFIR variable operations to memory translation pass:
     was obtained from any of the source shape, so hlfir.shape_meet is a no-op,
     selecting the first shape (a conformity runtime check could be inserted
     under debug options).
--   fir.declare are kept (they are no-ops) so that it will be possible to
-    generate debug information for LLVM.
+-   hlfir.declare are translated into fir.declare that are no-ops and will allow
+    generating debug information for LLVM.
 
-This pass would wrap operations defining variables (fir.declare/hlfir.designate)
+This pass would wrap operations defining variables (hlfir.declare/hlfir.designate)
 as fir::ExtendedValue, and use all the current helpers operating on it
 (e.g.: fir::factory::genScalarAssignment).
 
@@ -1063,7 +1056,7 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1:
 }
 ```
 
-This reaches the current FIR level (except fir.declare_op that can be kept until
+This reaches the current FIR level (except fir.declare that can be kept until
 LLVM codegen and dropped on the floor if there is no debug information
 generated).
 
@@ -1082,19 +1075,19 @@ Lowering output:
 
 ```HLFIR
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
-  %a = fir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>
-  %b =  fir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>
-  %p = fir.declare %arg2 {fir.def = "_QPfooEp", fir.ptr} : !fir.box<!fir.ptr<!fir.array<?xf32>>>
-  %c =  fir.declare %arg3 {fir.def = "_QPfooEc"} : !fir.ref<!fir.array<100xf32>>
-  %bshape = hlfir.shape_of %b {fir.ref = "_QPfooEb"}
-  %pshape = hlfir.shape_of %p {fir.ref = "_QPfooEp"}
+  %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
+  %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
+  %p = hlfir.declare %arg2 {fir.def = "_QPfooEp", fir.ptr} : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  %c =  hlfir.declare %arg3 {fir.def = "_QPfooEc"} : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
+  %bshape = hlfir.shape_of %b#0
+  %pshape = hlfir.shape_of %p#0
   %shape1 = hlfir.shape_meet %bshape, %pshape
   %mul = hlfir.elemental(%i:index) %shape1 {
-    %belt = hlfir.designate %b, %i {fir.ref = "_QPfooEb", fir.def= "_QPfooEb.des001"}
-    %p_lb = hlfir.get_lbound %p, 1 {fir.ref = "_QPfooEp"}
+    %belt = hlfir.designate %b#0, %i
+    %p_lb = hlfir.get_lbound %p#0, 1
     %i_zero = arith.subi %i, %c1
     %i_p = arith.addi %i_zero,  %p_lb
-    %pelt = hlfir.designate %p, %i_p {fir.ref = "_QPfooEp", fir.def= "_QPfooEp.des002"}
+    %pelt = hlfir.designate %p#0, %i_p
     %bval = fir.load %belt : f32
     %pval = fir.load %pelt : f32
     %mulres = arith.mulf %bval, %pval : f32
@@ -1104,12 +1097,12 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array
   %shape2 = hlfir.shape_meet %cshape, %shape1
   %add =  hlfir.elemental(%i:index) %shape2 {
     %mulval = hlfir.apply %mul, %i : f32
-    %celt = hlfir.designate %c, %i {fir.ref = "_QPfooEc", fir.def= "_QPfooEc.des003"}
+    %celt = hlfir.designate %c#0, %i
     %cval = fir.load %celt
     %add_res = arith.addf %mulval, %cval
     fir.result %add_res
   }
-  hlfir.assign %add to %a {fir.ref = "_QPfooEa"} : hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>
+  hlfir.assign %add to %a#0 : hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>
   return
 }
 ```
@@ -1120,30 +1113,30 @@ second one at the hlfir.apply.
 
 ```HLFIR
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
-  %a = fir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>
-  %b =  fir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>
-  %p = fir.declare %arg2 {fir.def = "_QPfooEa", fir.ptr} : !fir.box<!fir.ptr<!fir.array<?xf32>>>
-  %c =  fir.declare %arg3 {fir.def = "_QPfooEp"} : !fir.ref<!fir.array<100xf32>>
-  %bshape = hlfir.shape_of %b {fir.ref = "_QPfooEb"}
-  %pshape = hlfir.shape_of %p {fir.ref = "_QPfooEp"}
+  %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
+  %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
+  %p = hlfir.declare %arg2 {fir.def = "_QPfooEp", fir.ptr} : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  %c =  hlfir.declare %arg3 {fir.def = "_QPfooEc"} : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
+  %bshape = hlfir.shape_of %b#0
+  %pshape = hlfir.shape_of %p#0
   %shape1 = hlfir.shape_meet %bshape, %pshape
   %cshape = hlfir.shape_of %c
   %shape2 = hlfir.shape_meet %cshape, %shape1
   %add =  hlfir.elemental(%i:index) %shape2 {
-    %belt = hlfir.designate %b, %i {fir.ref = "_QPfooEb", fir.def= "_QPfooEb.des001"}
-    %p_lb = hlfir.get_lbound %p, 1 {fir.ref = "_QPfooEp"}
+    %belt = hlfir.designate %b#0, %i
+    %p_lb = hlfir.get_lbound %p#0, 1
     %i_zero = arith.subi %i, %c1
     %i_p = arith.addi %i_zero,  %p_lb
-    %pelt = hlfir.designate %p, %i_p {fir.ref = "_QPfooEp", fir.def= "_QPfooEp.des002"}
+    %pelt = hlfir.designate %p#0, %i_p
     %bval = fir.load %belt : f32
     %pval = fir.load %pelt : f32
     %mulval = arith.mulf %bval, %pval : f32
-    %celt = hlfir.designate %c, %i {fir.ref = "_QPfooEc", fir.def= "_QPfooEc.des003"}
+    %celt = hlfir.designate %c#0, %i
     %cval = fir.load %celt
     %add_res = arith.addf %mulval, %cval
     fir.result %add_res
   }
-  hlfir.assign %add to %a {fir.ref = "_QPfooEa"} : hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>
+  hlfir.assign %add to %a#0 : hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>
   return
 }
 ```
@@ -1165,35 +1158,35 @@ Note that the alias analysis could have already occurred without inlining the
 
 ```HLFIR
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
-  %a = fir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>
-  %b =  fir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>
-  %p = fir.declare %arg2 {fir.def = "_QPfooEp", fir.ptr} : !fir.box<!fir.ptr<!fir.array<?xf32>>>
-  %c =  fir.declare %arg3 {fir.def = "_QPfooEc"} : !fir.ref<!fir.array<100xf32>>
-  %bshape = hlfir.shape_of %b {fir.ref = "_QPfooEb"}
-  %pshape = hlfir.shape_of %p {fir.ref = "_QPfooEp"}
+  %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
+  %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
+  %p = hlfir.declare %arg2 {fir.def = "_QPfooEp", fir.ptr} : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  %c =  hlfir.declare %arg3 {fir.def = "_QPfooEc"} : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
+  %bshape = hlfir.shape_of %b#0
+  %pshape = hlfir.shape_of %p#0
   %shape1 = hlfir.shape_meet %bshape, %pshape
   %cshape = hlfir.shape_of %c
   %shape2 = hlfir.shape_meet %cshape, %shape1
   %add =  hlfir.elemental(%i:index) %shape2 {
-    %belt = hlfir.designate %b, %i {fir.ref = "_QPfooEb", fir.def= "_QPfooEb.des001"}
-    %p_lb = hlfir.get_lbound %p, 1 {fir.ref = "_QPfooEp"}
+    %belt = hlfir.designate %b#0, %i
+    %p_lb = hlfir.get_lbound %p#0, 1
     %i_zero = arith.subi %i, %c1
-    %i_p = arith.addi %i_zero,  %p_lb
-    %pelt = hlfir.designate %p, %i_p {fir.ref = "_QPfooEp", fir.def= "_QPfooEp.des002"}
+    %i_p = arith.addi %i_zero, %p_lb
+    %pelt = hlfir.designate %p#0, %i_p
     %bval = fir.load %belt : f32
     %pval = fir.load %pelt : f32
     %mulval = arith.mulf %bval, %pval : f32
-    %celt = hlfir.designate %c, %i {fir.ref = "_QPfooEc", fir.def= "_QPfooEc.des003"}
+    %celt = hlfir.designate %c#0, %i
     %cval = fir.load %celt
     %add_res = arith.addf %mulval, %cval
     fir.result %add_res
   }
   %extent = hlfir.get_extent %shape2, 0: (fir.shape<1>) -> index
   %tempstorage = fir.allocmem %extent : fir.heap<fir.array<?xf32>>
-  %temp = fir.declare %tempstorage, shape %extent {fir.def = QPfoo.temp001} : (index) -> fir.heap<fir.array<?xf32>>
-  hlfir.assign %add to %temp : no_overlap {fir.ref = "QPfoo.temp001"} : hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>
-  hlfir.assign %temp to %a : no_overlap {fir.ref = " QPfoo.temp001,_QPfooEa"} : hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>
-  hlfir.finalize %temp {fir.ref = "QPfoo.temp001"}
+  %temp = hlfir.declare %tempstorage, shape %extent {fir.def = QPfoo.temp001} : (index) -> fir.box<fir.array<?xf32>>, fir.heap<fir.array<?xf32>>
+  hlfir.assign %add to %temp#0 no_overlap : hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>>
+  hlfir.assign %temp to %a#0 : no_overlap  : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
+  hlfir.finalize %temp#0
   fir.freemem %tempstorage
   return
 }
@@ -1204,39 +1197,39 @@ attribute, and inline the hlfir.elemental into the first loop nest.
 
 ```HLFIR
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
-  %a = fir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>
-  %b =  fir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>
-  %p = fir.declare %arg2 {fir.def = "_QPfooEp", fir.ptr} : !fir.box<!fir.ptr<!fir.array<?xf32>>>
-  %c =  fir.declare %arg3 {fir.def = "_QPfooEc"} : !fir.ref<!fir.array<100xf32>>
-  %bshape = hlfir.shape_of %b {fir.ref = "_QPfooEb"}
-  %pshape = hlfir.shape_of %p {fir.ref = "_QPfooEp"}
+  %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
+  %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
+  %p = hlfir.declare %arg2 {fir.def = "_QPfooEp", fir.ptr} : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  %c =  hlfir.declare %arg3 {fir.def = "_QPfooEc"} : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
+  %bshape = hlfir.shape_of %b#0
+  %pshape = hlfir.shape_of %p#0
   %shape1 = hlfir.shape_meet %bshape, %pshape
   %cshape = hlfir.shape_of %c
   %shape2 = hlfir.shape_meet %cshape, %shape1
   %extent = hlfir.get_extent %shape2, 0: (fir.shape<1>) -> index
   %tempstorage = fir.allocmem %extent : fir.heap<fir.array<?xf32>>
-  %temp = fir.declare %tempstorage, shape %extent (index) fir.def = QPfoo.temp001} : fir.heap<fir.array<?xf32>>
+  %temp = hlfir.declare %tempstorage, shape %extent {fir.def = QPfoo.temp001} : (index) -> fir.box<fir.array<?xf32>>, fir.heap<fir.array<?xf32>>
   fir.do_loop %i = %c1 to %shape2 step %c1 unordered {
-    %belt = hlfir.designate %b, %i {fir.ref = "_QPfooEb", fir.def= "_QPfooEb.des001"}
-    %p_lb = hlfir.get_lbound %p, 1 {fir.ref = "_QPfooEp"}
+    %belt = hlfir.designate %b#0, %i
+    %p_lb = hlfir.get_lbound %p#0, 1
     %i_zero = arith.subi %i, %c1
     %i_p = arith.addi %i_zero,  %p_lb
-    %pelt = hlfir.designate %p, %i_p {fir.ref = "_QPfooEp", fir.def= "_QPfooEp.des002"}
+    %pelt = hlfir.designate %p#0, %i_p
     %bval = fir.load %belt : f32
     %pval = fir.load %pelt : f32
     %mulval = arith.mulf %bval, %pval : f32
-    %celt = hlfir.designate %c, %i {fir.ref = "_QPfooEc", fir.def= "_QPfooEc.des003"}
+    %celt = hlfir.designate %c#0, %i
     %cval = fir.load %celt
     %add_res = arith.addf %mulval, %cval
-    %tempelt = hlfir.designate %temp, %i {fir.ref = "_QPfoo.temp001", fir.def="_QPfoo.temp001.des004"}
-    hlfir.assign %add_res to %tempelt {fir.ref = "_QPfoo.temp001.des004"}: f32, fir.ref<f32>
+    %tempelt = hlfir.designate %temp#0, %i
+    hlfir.assign %add_res to %tempelt : f32, fir.ref<f32>
   }
   fir.do_loop %i = %c1 to %shape2 step %c1 unordered {
-    %aelt = hlfir.designate %a, %i {fir.ref = "_QPfooEa", fir.def= "_QPfooEa.des005"}
-    %tempelt = hlfir.designate %temp, %i {fir.ref = "_QPfoo.temp001", fir.def="_QPfoo.temp001.des006"}
-    hlfir.assign %add_res to %tempelt {fir.ref = "_QPfoo.temp001.des005,_QPfooEa.des005"}: f32, fir.ref<f32>
+    %aelt = hlfir.designate %a#0, %i
+    %tempelt = hlfir.designate %temp#0, %i
+    hlfir.assign %add_res to %tempelt : f32, fir.ref<f32>
   }
-  hlfir.finalize %temp {fir.ref = "QPfoo.temp001"}
+  hlfir.finalize %temp#0
   fir.freemem %tempstorage
   return
 }
@@ -1255,14 +1248,14 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array
   %extent = %c100
   // updated fir.alloca
   %tempstorage = fir.alloca %extent : fir.ref<fir.array<100xf32>>
-  %temp = fir.declare %tempstorage {fir.def = "_QPfoo.temp001"} : fir.ref<fir.array<100xf32>>
+  %temp = hlfir.declare %tempstorage, shape %extent {fir.def = QPfoo.temp001} : (index) -> fir.box<fir.array<?xf32>>, fir.heap<fir.array<?xf32>>
   fir.do_loop %i = %c1 to %c100 step %c1 unordered {
     // ...
   }
   fir.do_loop %i = %c1 to %c100 step %c1 unordered {
     // ...
   }
-  hlfir.finalize %temp {fir.ref = "QPfoo.temp001"}
+  hlfir.finalize %temp#0
   // deleted fir.freemem %tempstorage
   return
 }
@@ -1295,15 +1288,15 @@ Lowering of vector subscripted entities would happen as follow:
 
 ```HFLFIR
 func.func @_QPfoo(%arg0: !fir.ref<!fir.array<?xf32>>, %arg1: !fir.ref<!fir.array<?xf32>>, %arg2: !fir.box<<!fir.array<?xi32>>) {
-  %a = fir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.ref<!fir.array<?xf32>>
-  %b = fir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.ref<!fir.array<?xf32>>
-  %v = fir.declare %arg2 {fir.def = "_QPfooEv"} : !fir.box<!fir.array<?xi32>>
+  %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>
+  %b = hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>
+  %v = hlfir.declare %arg2 {fir.def = "_QPfooEv"} : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>
   %vshape = hlfir.shape_of %v : fir.shape<1>
   %bsection =  hlfir.elemental(%i:index) %vshape : (fir.shape<1>) -> hlfir.expr<?xf32> {
-    %v_elt = hlfir.designate %v, %i {fir.ref = "_QPfooEv", fir.def="_QPfooEv.des001"} : (!fir.box<!fir.array<?xi32>>, index) -> fir.ref<i32>
+    %v_elt = hlfir.designate %v#0, %i : (!fir.box<!fir.array<?xi32>>, index) -> fir.ref<i32>
     %v_val = fir.load %v_elt : fir.ref<i32>
     %cast = fir.convert %v_val : (i32) -> index
-    %b_elt = hlfir.designate %b, %v_val {fir.ref = "_QPfooEb", fir.def="_QPfooEb.des002"} : (!fir.ref<!fir.array<?xf32>>, index) -> fir.ref<f32>
+    %b_elt = hlfir.designate %b#0, %v_val : (!fir.ref<!fir.array<?xf32>>, index) -> fir.ref<f32>
     %b_val = fir.load %b_elt : fir.ref<f32>
     fir.result %b_elt
   }
@@ -1311,11 +1304,11 @@ func.func @_QPfoo(%arg0: !fir.ref<!fir.array<?xf32>>, %arg1: !fir.ref<!fir.array
   %c1 = arith.constant 1 : index
   hlfir.forall (%i from %c1 to %extent step %c1) {
     %b_section_val = hlfir.apply %bsection, %i : (hlfir.expr<?xf32>, index) -> f32
-    %v_elt = hlfir.designate %v, %i {fir.ref = "_QPfooEv", fir.def="_QPfooEv.des003"} : (!fir.box<!fir.array<?xi32>>, index) -> fir.ref<i32>
+    %v_elt = hlfir.designate %v#0, %i : (!fir.box<!fir.array<?xi32>>, index) -> fir.ref<i32>
     %v_val = fir.load %v_elt : fir.ref<i32>
     %cast = fir.convert %v_val : (i32) -> index
-    %a_elt = hlfir.designate %a, %v_val {fir.ref = "_QPfooEa", fir.def="_QPfooEa.des004"} : (!fir.ref<!fir.array<?xf32>>, index) -> fir.ref<f32>
-    hlfir.assign %b_section_val to %a_elt {fir.ref="_QPfooEa.des004"} : f32, fir.ref<f32>
+    %a_elt = hlfir.designate %a#0, %v_val : (!fir.ref<!fir.array<?xf32>>, index) -> fir.ref<f32>
+    hlfir.assign %b_section_val to %a_elt  : f32, fir.ref<f32>
   }
   return
 }
@@ -1336,6 +1329,49 @@ This has been rejected because this would imply a whole new set of
 infrastructure and data structures while FIR is already using MLIR
 infrastructure, so enriching FIR seems a smoother approach and will benefit from
 the MLIR infrastructure experience that was gained.
+
+## Using symbols for HLFIR variables
+
+### Using attributes as pseudo variable symbols 
+
+Instead of restricting the memory types an HLFIR variable can have, it was
+force the defining operation of HLFIR variable SSA values to always be
+retrievable. The idea was to add a fir.ref attribute that would repeat the name
+of the HLFIR variable. Using such an attribute would prevent MLIR from merging
+two operations using different variables when merging IR blocks. (which is the
+main reason why the defining op may become inaccessible). The advantage of
+forcing the defining operation to be retrievable is that it allowed all Fortran
+information of variables (like attributes) to always be accessible in HLFIR
+when looking at their uses, and avoids requiring the introduction of fir.box
+usages for simply contiguous variables. The big drawback is that this implies
+naming all HLFIR variables, and there are many more of them than there are
+Fortran named variables. Naming designators with unique names was not very
+natural, and would make designator CSE harder. It also made inlining harder,
+because inlining HLFIR code without any fir.def/fir.ref attributes renaming
+would break the name uniqueness, which could lead to some operations using
+different variables to be merged, and to break the assumption that parent
+operations must be visible. Renaming would be possible, but would increase
+complexity and risks. Besides, inlining may not be the only transformation
+doing code motion, and whose complexity would be increased by the naming
+constraints.
+
+
+### Using MLIR symbols for variables
+
+Using MLIR symbols for HLFIR variables has been rejected because MLIR symbols
+are mainly intended to deal with globals and functions that may refer to each
+other before being defined. Their processing is not as light as normal values,
+and would require to turn every FIR operation with a region into an MLIR symbol
+table. This would especially be annoying since fir.designator also produces
+variables with their own properties, which would imply creating a lot of MLIR
+symbols. All the operations that both accept variable and expression operands
+would also either need to be more complex in order to both accept SSA values or
+MLIR symbol operands (or some fir.as_expr %var operation should be added to
+turn a variable into an expression). Given all variable definitions will
+dominate their uses, it seems better to use an SSA model with named attributes.
+Using SSA values also makes the transition and mixture with lower-level FIR
+operations smoother: a variable SSA usage can simply be replaced by lower-level
+FIR operations using the same SSA value.
 
 ## Using some existing MLIR dialects for the high-level Fortran.
 

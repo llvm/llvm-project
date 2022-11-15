@@ -762,8 +762,9 @@ Attribute and type assembly formats have the following directives:
 
 ###### `params` Directive
 
-This directive is used to refer to all parameters of an attribute or type. When
-used as a top-level directive, `params` generates a parser and printer for a
+This directive is used to refer to all parameters of an attribute or type, except
+for the attribute self type (which is handled separately from normal parameters).
+When used as a top-level directive, `params` generates a parser and printer for a
 comma-separated list of the parameters. For example:
 
 ```tablegen
