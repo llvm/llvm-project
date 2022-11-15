@@ -33,11 +33,21 @@ public:
 
   virtual ~ExpressionVariable() = default;
 
-  llvm::Expected<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
+  llvm::Expected<uint64_t> GetByteSize() { 
+    return GetValueObject()->GetByteSize(); 
+  
+  }
 
   ConstString GetName() { return m_frozen_sp->GetName(); }
 
-  lldb::ValueObjectSP GetValueObject() { return m_frozen_sp; }
+  lldb::ValueObjectSP GetValueObject() {
+    lldb::ValueObjectSP dyn_sp = 
+        m_frozen_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
+    if (dyn_sp && dyn_sp->UpdateValueIfNeeded())
+      return dyn_sp;
+    else
+      return m_frozen_sp; 
+  }
 
   uint8_t *GetValueBytes();
 
@@ -52,7 +62,7 @@ public:
         Value::ContextType::RegisterInfo, const_cast<RegisterInfo *>(reg_info));
   }
 
-  CompilerType GetCompilerType() { return m_frozen_sp->GetCompilerType(); }
+  CompilerType GetCompilerType() { return GetValueObject()->GetCompilerType(); }
 
   void SetCompilerType(const CompilerType &compiler_type) {
     m_frozen_sp->GetValue().SetCompilerType(compiler_type);
@@ -60,22 +70,32 @@ public:
 
   void SetName(ConstString name) { m_frozen_sp->SetName(name); }
 
-  // this function is used to copy the address-of m_live_sp into m_frozen_sp
-  // this is necessary because the results of certain cast and pointer-
+  // This function is used to copy the address-of m_live_sp into m_frozen_sp.
+  // This is necessary because the results of certain cast and pointer-
   // arithmetic operations (such as those described in bugzilla issues 11588
   // and 11618) generate frozen objects that do not have a valid address-of,
   // which can be troublesome when using synthetic children providers.
   // Transferring the address-of the live object solves these issues and
-  // provides the expected user-level behavior
-  void TransferAddress(bool force = false) {
-    if (m_live_sp.get() == nullptr)
-      return;
+  // provides the expected user-level behavior.
+  // The other job we do in TransferAddress is adjust the value in the live
+  // address slot in the target for the "offset to top" in multiply inherited
+  // class hierarchies.
+  void TransferAddress(bool force = false);
 
-    if (m_frozen_sp.get() == nullptr)
-      return;
-
-    if (force || (m_frozen_sp->GetLiveAddress() == LLDB_INVALID_ADDRESS))
-      m_frozen_sp->SetLiveAddress(m_live_sp->GetLiveAddress());
+  // When we build an expression variable we know whether we're going to use the
+  // static or dynamic result.  If we present the dynamic value once, we should
+  // use the dynamic value in future references to the variable, so we record
+  // that fact here.
+  void PreserveDynamicOption(lldb::DynamicValueType dyn_type) {
+    m_dyn_option = dyn_type;
+  }
+  // We don't try to get the dynamic value of the live object when we fetch
+  // it here.  The live object describes the container of the value in the
+  // target, but it's type is of the object for convenience.  So it can't 
+  // produce the dynamic value.  Instead, we use TransferAddress to adjust the
+  // value held by the LiveObject.
+  lldb::ValueObjectSP GetLiveObject() {
+    return m_live_sp;
   }
 
   enum Flags {
@@ -110,6 +130,14 @@ public:
   /// These members should be private.
   /// @{
   /// A value object whose value's data lives in host (lldb's) memory.
+  /// The m_frozen_sp holds the data & type of the expression variable or result
+  /// in the host.  The m_frozen_sp also can present a dynamic value if one is
+  /// available.
+  /// The m_frozen_sp manages the copy of this value in m_frozen_sp that we 
+  /// insert in the target so that it can be referred to in future expressions.
+  /// We don't actually use the contents of the live_sp to create the value in
+  /// the target, that comes from the frozen sp.  The live_sp is mostly to track
+  /// the target-side of the value.
   lldb::ValueObjectSP m_frozen_sp;
   /// The ValueObject counterpart to m_frozen_sp that tracks the value in
   /// inferior memory. This object may not always exist; its presence depends on
@@ -119,6 +147,9 @@ public:
   /// track.
   lldb::ValueObjectSP m_live_sp;
   /// @}
+
+  //LLVMCastKind m_kind;
+  lldb::DynamicValueType m_dyn_option = lldb::eNoDynamicValues;
 };
 
 /// \class ExpressionVariableList ExpressionVariable.h

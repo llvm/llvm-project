@@ -65,7 +65,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
                               ExecutionContext &exe_ctx,
                               const EvaluateExpressionOptions &options,
                               lldb::UserExpressionSP &shared_ptr_to_me,
-                              lldb::ExpressionVariableSP &result) {
+                              lldb::ExpressionVariableSP &result_sp) {
   // The expression log is quite verbose, and if you're just tracking the
   // execution of the expression, it's quite convenient to have these logs come
   // out with the STEP log as well.
@@ -250,8 +250,13 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
     }
   }
 
-  if (FinalizeJITExecution(diagnostic_manager, exe_ctx, result,
+  if (FinalizeJITExecution(diagnostic_manager, exe_ctx, result_sp,
                            function_stack_bottom, function_stack_top)) {
+//    if (result_sp) {
+//      // This is a bit of a hack, replace with a real API.  Trying to force 
+//      // fetching all the dynamic info at this point.
+//      result_sp->GetValueObject();
+//    }
     return lldb::eExpressionCompleted;
   }
 
@@ -289,8 +294,14 @@ bool LLVMUserExpression::FinalizeJITExecution(
   result =
       GetResultAfterDematerialization(exe_ctx.GetBestExecutionContextScope());
 
-  if (result)
+  if (result) {
+    EvaluateExpressionOptions *options = GetOptions();
+    // TransferAddress also does the offset_to_top calculation, so record the
+    // dynamic option before we do that.
+    if (options)
+      result->PreserveDynamicOption(options->GetUseDynamic());
     result->TransferAddress();
+  }
 
   m_dematerializer_sp.reset();
 
