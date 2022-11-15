@@ -543,8 +543,10 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
                        "Unable to construct void type from TypeSystemClang");
       } else {
-        CompilerType void_compiler_type =
-            type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid);
+        CompilerType void_compiler_type;
+        auto ts = *type_system_or_err;
+        if (ts)
+          void_compiler_type = ts->GetBasicTypeFromAST(eBasicTypeVoid);
         switch (m_encoding_uid_type) {
         case eEncodingIsUID:
           m_compiler_type = void_compiler_type;
@@ -730,11 +732,14 @@ ModuleSP Type::GetModule() {
 
 ModuleSP Type::GetExeModule() {
   if (m_compiler_type) {
-    SymbolFile *symbol_file = m_compiler_type.GetTypeSystem()->GetSymbolFile();
+    auto ts = m_compiler_type.GetTypeSystem();
+    if (!ts)
+      return {};
+    SymbolFile *symbol_file = ts->GetSymbolFile();
     if (symbol_file)
       return symbol_file->GetObjectFile()->GetModule();
   }
-  return ModuleSP();
+  return {};
 }
 
 TypeAndOrName::TypeAndOrName(TypeSP &in_type_sp) {
@@ -1042,7 +1047,7 @@ CompilerType TypeImpl::GetCompilerType(bool prefer_dynamic) {
   return CompilerType();
 }
 
-TypeSystem *TypeImpl::GetTypeSystem(bool prefer_dynamic) {
+CompilerType::TypeSystemSPWrapper TypeImpl::GetTypeSystem(bool prefer_dynamic) {
   ModuleSP module_sp;
   if (CheckModule(module_sp)) {
     if (prefer_dynamic) {
@@ -1051,7 +1056,7 @@ TypeSystem *TypeImpl::GetTypeSystem(bool prefer_dynamic) {
     }
     return m_static_type.GetTypeSystem();
   }
-  return nullptr;
+  return {};
 }
 
 bool TypeImpl::GetDescription(lldb_private::Stream &strm,

@@ -87,12 +87,12 @@ ClangPersistentVariables::GetCompilerTypeFromPersistentDecl(
 void ClangPersistentVariables::RegisterPersistentDecl(ConstString name,
                                                       clang::NamedDecl *decl,
                                                       TypeSystemClang *ctx) {
-  PersistentDecl p = {decl, ctx};
+  PersistentDecl p = {decl, ctx->weak_from_this()};
   m_persistent_decls.insert(std::make_pair(name.GetCString(), p));
 
   if (clang::EnumDecl *enum_decl = llvm::dyn_cast<clang::EnumDecl>(decl)) {
     for (clang::EnumConstantDecl *enumerator_decl : enum_decl->enumerators()) {
-      p = {enumerator_decl, ctx};
+      p = {enumerator_decl, ctx->weak_from_this()};
       m_persistent_decls.insert(std::make_pair(
           ConstString(enumerator_decl->getNameAsString()).GetCString(), p));
     }
