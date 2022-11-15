@@ -406,15 +406,6 @@ enum Kind {
   kw_byte,
   kw_bit,
   kw_varFlags,
-  // The following are used by MemProf summary info.
-  kw_callsites,
-  kw_clones,
-  kw_stackIds,
-  kw_allocs,
-  kw_versions,
-  kw_memProf,
-  kw_notcold,
-  kw_notcoldandcold,
 
   // GV's with __attribute__((no_sanitize("address"))), or things in
   // -fsanitize-ignorelist when built with ASan.
