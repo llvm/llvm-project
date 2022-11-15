@@ -372,7 +372,9 @@ public:
           builder.create<sparse_tensor::YieldOp>(loc, t);
         });
     auto t = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
-    rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp, t);
+    auto converted = rewriter.create<ConvertOp>(loc, dstTp, t).getResult();
+    rewriter.create<DeallocTensorOp>(loc, t);
+    rewriter.replaceOp(op, converted);
     return success();
   }
 };
