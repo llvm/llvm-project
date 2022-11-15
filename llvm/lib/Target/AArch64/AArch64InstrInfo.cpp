@@ -1319,11 +1319,6 @@ bool AArch64InstrInfo::optimizePTestInstr(
       return false;
 
     // Fallthough to simply remove the PTEST.
-  } else if ((Mask == Pred) && (PredIsPTestLike || PredIsWhileLike)) {
-    // For PTEST(PG, PG), PTEST is redundant when PG is the result of an
-    // instruction that sets the flags as PTEST would.
-
-    // Fallthough to simply remove the PTEST.
   } else if (PredIsPTestLike) {
     // For PTEST(PG, PTEST_LIKE(PG, ...)), the PTEST is redundant since the
     // flags are set based on the same mask 'PG', but PTEST_LIKE must operate
