@@ -4551,8 +4551,10 @@ bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
     // doesn't happen.
     LHSPtrAdd->moveBefore(&MI);
     Register RHSReg = MI.getOffsetReg();
+    // set VReg will cause type mismatch if it comes from extend/trunc
+    auto NewCst = B.buildConstant(MRI.getType(RHSReg), LHSCstOff->Value);
     Observer.changingInstr(MI);
-    MI.getOperand(2).setReg(LHSCstOff->VReg);
+    MI.getOperand(2).setReg(NewCst.getReg(0));
     Observer.changedInstr(MI);
     Observer.changingInstr(*LHSPtrAdd);
     LHSPtrAdd->getOperand(2).setReg(RHSReg);

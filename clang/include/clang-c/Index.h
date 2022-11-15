@@ -2081,23 +2081,6 @@ enum CXCursorKind {
 };
 
 /**
- * Describes the kind of result generated.
- */
-enum CXCompletionResultKind {
-  /** Refers to a declaration. */
-  CXCompletionResult_Declaration = 0,
-
-  /** Refers to a keyword or symbol. */
-  CXCompletionResult_Keyword = 1,
-
-  /** Refers to a macro. */
-  CXCompletionResult_Macro = 2,
-
-  /** Refers to a precomputed pattern. */
-  CXCompletionResult_Pattern = 3
-};
-
-/**
  * A cursor representing some element in the abstract syntax tree for
  * a translation unit.
  *
@@ -4330,6 +4313,31 @@ CINDEX_LINKAGE unsigned clang_CXXMethod_isVirtual(CXCursor C);
 CINDEX_LINKAGE unsigned clang_CXXMethod_isCopyAssignmentOperator(CXCursor C);
 
 /**
+ * Determine if a C++ member function is a move-assignment operator,
+ * returning 1 if such is the case and 0 otherwise.
+ *
+ * > A move-assignment operator `X::operator=` is a non-static,
+ * > non-template member function of _class_ `X` with exactly one
+ * > parameter of type `X&&`, `const X&&`, `volatile X&&` or `const
+ * > volatile X&&`.
+ *
+ * That is, for example, the `operator=` in:
+ *
+ *    class Foo {
+ *        bool operator=(const volatile Foo&&);
+ *    };
+ *
+ * Is a move-assignment operator, while the `operator=` in:
+ *
+ *    class Bar {
+ *        bool operator=(const int&&);
+ *    };
+ *
+ * Is not.
+ */
+CINDEX_LINKAGE unsigned clang_CXXMethod_isMoveAssignmentOperator(CXCursor C);
+
+/**
  * Determine if a C++ record is abstract, i.e. whether a class or struct
  * has a pure virtual member function.
  */
@@ -4605,8 +4613,6 @@ CINDEX_LINKAGE void clang_disposeTokens(CXTranslationUnit TU, CXToken *Tokens,
  */
 
 /* for debug/testing */
-CINDEX_LINKAGE CXString
-clang_getCompletionResultKindSpelling(enum CXCompletionResultKind Kind);
 CINDEX_LINKAGE CXString clang_getCursorKindSpelling(enum CXCursorKind Kind);
 CINDEX_LINKAGE void clang_getDefinitionSpellingAndExtent(
     CXCursor, const char **startBuf, const char **endBuf, unsigned *startLine,
@@ -4651,16 +4657,11 @@ typedef void *CXCompletionString;
  */
 typedef struct {
   /**
-   * The kind of this completion result.
-   * Useful to distinguish between declarations and keywords.
-   */
-  enum CXCompletionResultKind ResultKind;
-
-  /**
    * The kind of entity that this completion refers to.
    *
-   * The cursor kind will be a macro or a declaration (one of the *Decl cursor
-   * kinds), describing the entity that the completion is referring to.
+   * The cursor kind will be a macro, keyword, or a declaration (one of the
+   * *Decl cursor kinds), describing the entity that the completion is
+   * referring to.
    *
    * \todo In the future, we would like to provide a full cursor, to allow
    * the client to extract additional information from declaration.

@@ -17,174 +17,84 @@ tablegen("IntrinsicEnums") {
   td_file = "Intrinsics.td"
 }
 
-tablegen("IntrinsicsAArch64") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsAArch64.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=aarch64",
-  ]
-  td_file = "Intrinsics.td"
+template("gen_arch_intrinsics") {
+  tablegen(target_name) {
+    visibility = [ ":public_tablegen" ]
+    output_name = "$target_name.h"
+    args = [
+      "-gen-intrinsic-enums",
+      "-intrinsic-prefix=${invoker.intrinsic_prefix}",
+    ]
+    td_file = "Intrinsics.td"
+  }
 }
 
-tablegen("IntrinsicsAMDGPU") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsAMDGPU.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=amdgcn",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsAArch64") {
+  intrinsic_prefix = "aarch64"
 }
 
-tablegen("IntrinsicsARM") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsARM.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=arm",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsAMDGPU") {
+  intrinsic_prefix = "amdgcn"
 }
 
-tablegen("IntrinsicsBPF") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsBPF.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=bpf",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsARM") {
+  intrinsic_prefix = "arm"
 }
 
-tablegen("IntrinsicsDirectX") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsDirectX.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=dx",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsBPF") {
+  intrinsic_prefix = "bpf"
 }
 
-tablegen("IntrinsicsHexagon") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsHexagon.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=hexagon",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsDirectX") {
+  intrinsic_prefix = "dx"
 }
 
-tablegen("IntrinsicsLoongArch") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsLoongArch.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=loongarch",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsHexagon") {
+  intrinsic_prefix = "hexagon"
 }
 
-tablegen("IntrinsicsMips") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsMips.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=mips",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsLoongArch") {
+  intrinsic_prefix = "loongarch"
 }
 
-tablegen("IntrinsicsNVPTX") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsNVPTX.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=nvvm",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsMips") {
+  intrinsic_prefix = "mips"
 }
 
-tablegen("IntrinsicsPowerPC") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsPowerPC.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=ppc",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsNVPTX") {
+  intrinsic_prefix = "nvvm"
 }
 
-tablegen("IntrinsicsR600") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsR600.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=r600",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsPowerPC") {
+  intrinsic_prefix = "ppc"
 }
 
-tablegen("IntrinsicsRISCV") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsRISCV.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=riscv",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsR600") {
+  intrinsic_prefix = "r600"
 }
 
-tablegen("IntrinsicsS390") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsS390.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=s390",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsRISCV") {
+  intrinsic_prefix = "riscv"
 }
 
-tablegen("IntrinsicsVE") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsVE.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=ve",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsS390") {
+  intrinsic_prefix = "s390"
 }
 
-tablegen("IntrinsicsWebAssembly") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsWebAssembly.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=wasm",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsVE") {
+  intrinsic_prefix = "ve"
 }
 
-tablegen("IntrinsicsX86") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsX86.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=x86",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsWebAssembly") {
+  intrinsic_prefix = "wasm"
 }
 
-tablegen("IntrinsicsXCore") {
-  visibility = [ ":public_tablegen" ]
-  output_name = "IntrinsicsXCore.h"
-  args = [
-    "-gen-intrinsic-enums",
-    "-intrinsic-prefix=xcore",
-  ]
-  td_file = "Intrinsics.td"
+gen_arch_intrinsics("IntrinsicsX86") {
+  intrinsic_prefix = "x86"
+}
+
+gen_arch_intrinsics("IntrinsicsXCore") {
+  intrinsic_prefix = "xcore"
 }
 
 # Groups all tablegen() calls that create .inc files that are included in

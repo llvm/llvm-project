@@ -637,11 +637,7 @@ let SubtargetPredicate = isGFX12Plus in {
   def S_SUB_U64 : SOP2_64<"s_sub_u64">;
 } // End SubtargetPredicate = isGFX12Plus
 
-// This pattern is restricted to certain subtargets (practically GFX8Plus)
-// because isel sometimes produces an sreg_64 copy to SCC as a by-product
-// of this pattern, and only for subtargets with hasScalarCompareEq64
-// is it possible to map such copy to a single instruction (S_CMP_LG_U64).
-class SelectPat<SDPatternOperator select> : PatFrag <
+def SelectPat : PatFrag <
   (ops node:$src1, node:$src2),
   (select SCC, $src1, $src2),
   [{ return !N->isDivergent(); }]
@@ -650,7 +646,7 @@ class SelectPat<SDPatternOperator select> : PatFrag <
 let Uses = [SCC] in {
   let AddedComplexity = 20 in {
     def S_CSELECT_B32 : SOP2_32 <"s_cselect_b32",
-      [(set i32:$sdst, (SelectPat<select> i32:$src0, i32:$src1))]
+      [(set i32:$sdst, (SelectPat i32:$src0, i32:$src1))]
     >;
   }
 

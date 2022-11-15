@@ -70,4 +70,9 @@ def hlfir_ExprType : TypeDef<hlfir_Dialect, "Expr"> {
 
 }
 
+def IsFortranVariablePred
+        : CPred<"::hlfir::isFortranVariableType($_self)">;
+
+def AnyFortranVariableLike : Type<IsFortranVariablePred, "any HLFIR variable type">;
+
 #endif // FORTRAN_DIALECT_HLFIR_OP_BASE
