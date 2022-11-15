@@ -1239,6 +1239,13 @@ Instruction *DIBuilder::insertDef(DILifetime *Lifetime, llvm::Value *Referrer,
     DefFn = getDefIntrin(M);
 
   trackIfUnresolved(Lifetime);
+
+  // Ideally, the intrinsic would be able to handle any type of
+  // pointer. However, SelectionDAGBuilder::visitIntrinsicCall (for dbg_def) and
+  // InstEmitter::EmitDbgDefKill expect the intrinsic to refer directly to the
+  // alloca / argument and have problems handling addrspacecasts
+  Referrer = Referrer->stripPointerCasts();
+
   Value *Args[] = {MetadataAsValue::get(VMContext, Lifetime),
                    getDbgIntrinsicValueImpl(VMContext, Referrer)};
 
