@@ -1325,10 +1325,30 @@ bool AArch64InstrInfo::optimizePTestInstr(
 
     // Fallthough to simply remove the PTEST.
   } else if (PredIsPTestLike) {
-    // For PTEST(PG_1, PTEST_LIKE(PG2, ...)), PTEST is redundant when both
-    // instructions use the same predicate.
+    // For PTEST(PG, PTEST_LIKE(PG, ...)), the PTEST is redundant since the
+    // flags are set based on the same mask 'PG', but PTEST_LIKE must operate
+    // on 8-bit predicates like the PTEST.  Otherwise, for instructions like
+    // compare that also support 16/32/64-bit predicates, the implicit PTEST
+    // performed by the compare could consider fewer lanes for these element
+    // sizes.
+    //
+    // For example, consider
+    //
+    //   ptrue p0.b                    ; P0=1111-1111-1111-1111
+    //   index z0.s, #0, #1            ; Z0=<0,1,2,3>
+    //   index z1.s, #1, #1            ; Z1=<1,2,3,4>
+    //   cmphi p1.s, p0/z, z1.s, z0.s  ; P1=0001-0001-0001-0001
+    //                                 ;       ^ last active
+    //   ptest p0, p1.b                ; P1=0001-0001-0001-0001
+    //                                 ;     ^ last active
+    //
+    // where the compare generates a canonical all active 32-bit predicate
+    // (equivalent to 'ptrue p1.s, all'). The implicit PTEST sets the last
+    // active flag, whereas the PTEST instruction with the same mask doesn't.
     auto PTestLikeMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
-    if (Mask != PTestLikeMask)
+    uint64_t PredElementSize = getElementSizeForOpcode(PredOpcode);
+    if ((Mask != PTestLikeMask) ||
+        (PredElementSize != AArch64::ElementSizeB))
       return false;
 
     // Fallthough to simply remove the PTEST.

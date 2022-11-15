@@ -6,6 +6,7 @@ define void @sve_cmplt_setcc(<vscale x 8 x i16>* %out, <vscale x 8 x i16> %in, <
 ; CHECK-LABEL: sve_cmplt_setcc:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmplt p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    b.eq .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
@@ -29,6 +30,7 @@ define void @sve_cmplt_setcc_inverted(<vscale x 8 x i16>* %out, <vscale x 8 x i1
 ; CHECK-LABEL: sve_cmplt_setcc_inverted:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmplt p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    b.ne .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
