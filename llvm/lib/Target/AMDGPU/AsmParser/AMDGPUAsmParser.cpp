@@ -4784,6 +4784,17 @@ bool AMDGPUAsmParser::checkUnsupportedInstruction(StringRef Mnemo,
   return Error(IDLoc, "invalid instruction" + Suggestion);
 }
 
+static bool isInvalidVOPDY(const OperandVector &Operands,
+                           uint64_t InvalidOprIdx) {
+  assert(InvalidOprIdx < Operands.size());
+  const auto &Op = ((AMDGPUOperand &)*Operands[InvalidOprIdx]);
+  if (Op.isToken() && InvalidOprIdx > 1) {
+    const auto &PrevOp = ((AMDGPUOperand &)*Operands[InvalidOprIdx - 1]);
+    return PrevOp.isToken() && PrevOp.getToken() == "::";
+  }
+  return false;
+}
+
 bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
@@ -4844,6 +4855,9 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       ErrorLoc = ((AMDGPUOperand &)*Operands[ErrorInfo]).getStartLoc();
       if (ErrorLoc == SMLoc())
         ErrorLoc = IDLoc;
+
+      if (isInvalidVOPDY(Operands, ErrorInfo))
+        return Error(ErrorLoc, "invalid VOPDY instruction");
     }
     return Error(ErrorLoc, "invalid operand for instruction");
   }
@@ -8460,12 +8474,13 @@ OperandMatchResultTy AMDGPUAsmParser::parseVOPD(OperandVector &Operands) {
     lex();
     lex();
     Operands.push_back(AMDGPUOperand::CreateToken(this, "::", S));
+    SMLoc OpYLoc = getLoc();
     StringRef OpYName;
     if (isToken(AsmToken::Identifier) && !Parser.parseIdentifier(OpYName)) {
-      Operands.push_back(AMDGPUOperand::CreateToken(this, OpYName, S));
+      Operands.push_back(AMDGPUOperand::CreateToken(this, OpYName, OpYLoc));
       return MatchOperand_Success;
     }
-    Error(S, "invalid VOPD :: usage");
+    Error(OpYLoc, "expected a VOPDY instruction after ::");
     return MatchOperand_ParseFail;
   }
   return MatchOperand_NoMatch;

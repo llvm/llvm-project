@@ -650,6 +650,23 @@ struct BoxTypeDescOpConversion : public FIROpConversion<fir::BoxTypeDescOp> {
   }
 };
 
+/// Lower `fir.box_typecode` to a sequence of operations to extract the type
+/// code in the boxed value.
+struct BoxTypeCodeOpConversion : public FIROpConversion<fir::BoxTypeCodeOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxTypeCodeOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Value box = adaptor.getOperands()[0];
+    auto loc = box.getLoc();
+    auto ty = convertType(op.getType());
+    auto typeCode = getValueFromBox(loc, box, ty, rewriter, kTypePosInBox);
+    rewriter.replaceOp(op, typeCode);
+    return mlir::success();
+  }
+};
+
 /// Lower `fir.string_lit` to LLVM IR dialect operation.
 struct StringLitOpConversion : public FIROpConversion<fir::StringLitOp> {
   using FIROpConversion::FIROpConversion;
@@ -3584,24 +3601,24 @@ public:
         AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
         BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
         BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
-        BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeDescOpConversion,
-        CallOpConversion, CmpcOpConversion, ConstcOpConversion,
-        ConvertOpConversion, CoordinateOpConversion, DispatchOpConversion,
-        DispatchTableOpConversion, DTEntryOpConversion, DivcOpConversion,
-        EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
-        ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
-        FreeMemOpConversion, GenTypeDescOpConversion, GlobalLenOpConversion,
-        GlobalOpConversion, HasValueOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, IsPresentOpConversion,
-        LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
-        NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
-        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
-        ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
-        SliceOpConversion, StoreOpConversion, StringLitOpConversion,
-        SubcOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
-        UndefOpConversion, UnreachableOpConversion, XArrayCoorOpConversion,
-        XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(
-        typeConverter, options, bindingTables);
+        BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeCodeOpConversion,
+        BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
+        ConstcOpConversion, ConvertOpConversion, CoordinateOpConversion,
+        DispatchOpConversion, DispatchTableOpConversion, DTEntryOpConversion,
+        DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
+        EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
+        FirEndOpConversion, FreeMemOpConversion, GenTypeDescOpConversion,
+        GlobalLenOpConversion, GlobalOpConversion, HasValueOpConversion,
+        InsertOnRangeOpConversion, InsertValueOpConversion,
+        IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
+        MulcOpConversion, NegcOpConversion, NoReassocOpConversion,
+        SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+        SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
+        ShiftOpConversion, SliceOpConversion, StoreOpConversion,
+        StringLitOpConversion, SubcOpConversion, UnboxCharOpConversion,
+        UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+        XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
+        ZeroOpConversion>(typeConverter, options, bindingTables);
     mlir::populateFuncToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, pattern);

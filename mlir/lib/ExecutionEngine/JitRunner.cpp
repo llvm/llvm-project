@@ -364,8 +364,9 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
     return 1;
   }
 
+  JitRunnerOptions runnerOptions{options.mainFuncName, options.mainFuncType};
   if (config.mlirTransformer)
-    if (failed(config.mlirTransformer(m.get())))
+    if (failed(config.mlirTransformer(m.get(), runnerOptions)))
       return EXIT_FAILURE;
 
   auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();

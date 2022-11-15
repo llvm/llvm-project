@@ -3577,6 +3577,12 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
   return eleTy;
 }
 
+mlir::LogicalResult fir::DeclareOp::verify() {
+  auto fortranVar =
+      mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());
+  return fortranVar.verifyDeclareLikeOpImpl(getMemref());
+}
+
 // Tablegen operators
 
 #define GET_OP_CLASSES

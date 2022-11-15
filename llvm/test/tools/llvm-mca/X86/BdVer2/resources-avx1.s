@@ -1337,7 +1337,7 @@ vzeroupper
 # CHECK-NEXT:  2      2     1.00                        vmovups	%ymm0, %ymm2
 # CHECK-NEXT:  8      1     1.00           *            vmovups	%ymm0, (%rax)
 # CHECK-NEXT:  2      5     1.50    *                   vmovups	(%rax), %ymm2
-# CHECK-NEXT:  10     8     4.00                        vmpsadbw	$1, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  8      8     4.00                        vmpsadbw	$1, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  8      14    4.00    *                   vmpsadbw	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      5     1.00                        vmulpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      10    1.50    *                   vmulpd	(%rax), %xmm1, %xmm2
