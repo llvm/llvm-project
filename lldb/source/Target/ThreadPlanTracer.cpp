@@ -110,10 +110,10 @@ TypeFromUser ThreadPlanAssemblyTracer::GetIntPointerType() {
         LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
                        "Unable to get integer pointer type from TypeSystem");
       } else {
-        m_intptr_type = TypeFromUser(
-            type_system_or_err->GetBuiltinTypeForEncodingAndBitSize(
-                eEncodingUint,
-                target_sp->GetArchitecture().GetAddressByteSize() * 8));
+        if (auto ts = *type_system_or_err)
+          m_intptr_type = TypeFromUser(ts->GetBuiltinTypeForEncodingAndBitSize(
+              eEncodingUint,
+              target_sp->GetArchitecture().GetAddressByteSize() * 8));
       }
     }
   }
