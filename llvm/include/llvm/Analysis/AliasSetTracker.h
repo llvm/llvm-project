@@ -143,10 +143,7 @@ class AliasSet : public ilist_node<AliasSet> {
   AliasSet *Forward = nullptr;
 
   /// All instructions without a specific address in this alias set.
-  /// In rare cases this vector can have a null'ed out WeakVH
-  /// instances (can happen if some other loop pass deletes an
-  /// instruction in this list).
-  std::vector<WeakVH> UnknownInsts;
+  std::vector<AssertingVH<Instruction>> UnknownInsts;
 
   /// Number of nodes pointing to this AliasSet plus the number of AliasSets
   /// forwarding to it.
@@ -189,11 +186,6 @@ class AliasSet : public ilist_node<AliasSet> {
     assert(RefCount >= 1 && "Invalid reference count detected!");
     if (--RefCount == 0)
       removeFromTracker(AST);
-  }
-
-  Instruction *getUnknownInst(unsigned i) const {
-    assert(i < UnknownInsts.size());
-    return cast_or_null<Instruction>(UnknownInsts[i]);
   }
 
 public:
@@ -296,18 +288,6 @@ private:
                   const AAMDNodes &AAInfo, bool KnownMustAlias = false,
                   bool SkipSizeUpdate = false);
   void addUnknownInst(Instruction *I, AAResults &AA);
-
-  void removeUnknownInst(AliasSetTracker &AST, Instruction *I) {
-    bool WasEmpty = UnknownInsts.empty();
-    for (size_t i = 0, e = UnknownInsts.size(); i != e; ++i)
-      if (UnknownInsts[i] == I) {
-        UnknownInsts[i] = UnknownInsts.back();
-        UnknownInsts.pop_back();
-        --i; --e;  // Revisit the moved entry.
-      }
-    if (!WasEmpty && UnknownInsts.empty())
-      dropRef(AST);
-  }
 
 public:
   /// If the specified pointer "may" (or must) alias one of the members in the
