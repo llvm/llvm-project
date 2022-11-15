@@ -111,6 +111,23 @@ define i1 @cmp8_ptest_any_px(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vsc
 }
 
 ;
+; Same as above except PG = incorrectly sized PTRUE
+;
+define i1 @cmp8_ptest_any_px_bad_ptrue(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cmp8_ptest_any_px_bad_ptrue:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    cmpge p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %1)
+  %3 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpge.nxv16i8(<vscale x 16 x i1> %2, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  %4 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> %2, <vscale x 16 x i1> %3)
+  ret i1 %4
+}
+
+;
 ; PTEST_FIRST(PG, CMP32(PG, A, B)). Can't remove PTEST since PTEST.B vs CMP.S.
 ;
 define i1 @cmp32_ptest_first_px(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
@@ -158,6 +175,24 @@ define i1 @cmp32_ptest_any_px(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <vs
   %3 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %2)
   %4 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %3)
   ret i1 %4
+}
+
+;
+; Same as above except PG = incorrectly sized PTRUE
+;
+define i1 @cmp32_ptest_any_px_bad_ptrue(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cmp32_ptest_any_px_bad_ptrue:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    cmpge p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1> %2, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+  %4 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %3)
+  %5 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> %1, <vscale x 16 x i1> %4)
+  ret i1 %5
 }
 
 ; ==============================================================================
