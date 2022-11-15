@@ -31,13 +31,14 @@ public:
   // Application
   //===--------------------------------------------------------------------===//
 
-  /// Replace the elements within the given operation. By default this includes
-  /// the attributes within the operation. If `replaceLocs` is true, this also
-  /// updates its location, the locations of any nested block arguments. If
-  /// `replaceTypes` is true, this also updates the result types of the
-  /// operation, and the types of any nested block arguments.
-  void replaceElementsIn(Operation *op, bool replaceLocs = false,
-                         bool replaceTypes = false);
+  /// Replace the elements within the given operation. If `replaceAttrs` is
+  /// true, this updates the attribute dictionary of the operation. If
+  /// `replaceLocs` is true, this also updates its location, and the locations
+  /// of any nested block arguments. If `replaceTypes` is true, this also
+  /// updates the result types of the operation, and the types of any nested
+  /// block arguments.
+  void replaceElementsIn(Operation *op, bool replaceAttrs = true,
+                         bool replaceLocs = false, bool replaceTypes = false);
 
   /// Replace the given attribute/type, and recursively replace any sub
   /// elements. Returns either the new attribute/type, or nullptr in the case of
