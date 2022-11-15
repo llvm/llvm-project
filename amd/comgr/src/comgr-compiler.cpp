@@ -535,6 +535,14 @@ static bool executeAssembler(AssemblerInvocation &Opts,
 static SmallString<128> getFilePath(DataObject *Object, StringRef Dir) {
   SmallString<128> Path(Dir);
   path::append(Path, Object->Name);
+
+  // Create directories specified in the File Path so that the in-process driver
+  // can successfully execute clang commands that use this file path as an
+  // output argument
+  if (fs::create_directories(path::parent_path(Path))) {
+    return SmallString<128>();
+  }
+
   return Path;
 }
 
