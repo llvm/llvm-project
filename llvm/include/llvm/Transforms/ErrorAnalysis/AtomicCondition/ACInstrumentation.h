@@ -24,7 +24,7 @@ private:
 
   Function *ACStoreFunction;
   Function *AFStoreFunction;
-//  Function *AFPrintTopAmplificationPaths;
+  Function *AFPrintTopAmplificationPaths;
 
   // Instruction to AC/AF Maps
   ValueMap<Value*, Value*> InstructionACMap;

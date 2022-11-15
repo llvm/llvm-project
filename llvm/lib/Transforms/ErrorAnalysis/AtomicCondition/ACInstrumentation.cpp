@@ -34,12 +34,9 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
                                                                      AFInitFunction(nullptr),
                                                                      ACComputingFunction(nullptr),
                                                                      AFComputingFunction(nullptr),
-//                                                                     ACUnaryFunction(nullptr),
-//                                                                     ACBinaryFunction(nullptr),
                                                                      ACStoreFunction(nullptr),
-                                                                     AFStoreFunction(nullptr)
-//                                                                     AFPrintTopAmplificationPaths(nullptr),
-//                                                                     AFAnalysisFunction(nullptr)
+                                                                     AFStoreFunction(nullptr),
+                                                                     AFPrintTopAmplificationPaths(nullptr)
 {
   // Find and configure instrumentation functions
   Module *M = FunctionToInstrument->getParent();
@@ -68,14 +65,6 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
       confFunction(CurrentFunction, &AFComputingFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
-//    else if (CurrentFunction->getName().str().find("fACUnaryDriver") != std::string::npos) {
-//      confFunction(CurrentFunction, &ACUnaryFunction,
-//                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
-//    }
-//    else if (CurrentFunction->getName().str().find("fACBinaryDriver") != std::string::npos) {
-//      confFunction(CurrentFunction, &ACBinaryFunction,
-//                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
-//    }
     else if (CurrentFunction->getName().str().find("fACStoreACs") != std::string::npos) {
       confFunction(CurrentFunction, &ACStoreFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
@@ -85,13 +74,10 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
 //    else if (CurrentFunction->getName().str().find("fAFPrintTopAmplificationPaths") != std::string::npos) {
-//      confFunction(CurrentFunction, &AFPrintTopAmplificationPaths,
-//                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
-//    }
-//    else if (CurrentFunction->getName().str().find("fAFAnalysis") != std::string::npos) {
-//      confFunction(CurrentFunction, &AFAnalysisFunction,
-//                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
-//    }
+    else if (CurrentFunction->getName().str().find("fAFPrintTopFromAllAmplificationPaths") != std::string::npos) {
+      confFunction(CurrentFunction, &AFPrintTopAmplificationPaths,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
   }
   
   Constant *EmptyValue = ConstantDataArray::getString(InstrumentFunction->getContext(),
@@ -982,7 +968,7 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
         InstructionBuilder.SetInsertPoint(CurrentInstruction);
         StoreACTableCallInstruction = InstructionBuilder.CreateCall(ACStoreFunction, ACStoreCallArgsRef);
         StoreAFTableCallInstruction = InstructionBuilder.CreateCall(AFStoreFunction, AFStoreCallArgsRef);
-//        PrintAFPathsCallInstruction = InstructionBuilder.CreateCall(AFPrintTopAmplificationPaths, PrintAFPathsCallArgsRef);
+        PrintAFPathsCallInstruction = InstructionBuilder.CreateCall(AFPrintTopAmplificationPaths, PrintAFPathsCallArgsRef);
       }
     }
   }

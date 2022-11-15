@@ -760,28 +760,55 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
 //  return ;
 //}
 
-//void fAFPrintTopAmplificationPaths() {
-//  // Sorting the two lists according to Amplification Factors
-//  qsort(AnalysisResult->AFItems, AnalysisResult->ListLength,
-//        sizeof(AFItem *), fAFDoubleAFComparator);
-//
-//  // Printing Results
-//  printf("\n");
-//  printf("The top Amplification Paths are:\n");
-//  for (int I = 0; I < min(5, AnalysisResult->ListLength); ++I) {
-//    printf("AF: %f of Node:%d WRT Node:%d through path: [%d",
-//           AnalysisResult->AFItems[I]->AF,
-//           AnalysisResult->AFItems[I]->Node->NodeId,
-//           AnalysisResult->AFItems[I]->WRTNode->NodeId,
-//           AnalysisResult->AFItems[I]->AFPathPointer[0]->NodeId);
-//    for (int J = 1; (uint64_t)J < AnalysisResult->AFItems[I]->AFPathLength; ++J) {
-//      printf(", %d",
-//             AnalysisResult->AFItems[I]->AFPathPointer[J]->NodeId);
-//    }
-//    printf("]\n");
-//  }
-//  printf("\n");
-//}
+void fAFPrintTopAmplificationPaths() {
+  printf("Printing Top Amplification Paths from Last AFItem\n");
+  // Sorting the list according to Amplification Factors
+  qsort(AFs->AFItems[AFs->ListLength-1]->Components, AFs->AFItems[AFs->ListLength-1]->NumAFComponents,
+        sizeof(AFProduct *), fAFComparator);
+
+  // Printing Results
+  printf("\n");
+  printf("The top Amplification Paths are:\n");
+  for (int I = 0; I < min(5, AFs->AFItems[AFs->ListLength-1]->NumAFComponents); ++I) {
+    AFProduct **ProductPath= fAFFlattenAFComponentsPath(AFs->AFItems[AFs->ListLength-1]->Components[I]);
+    printf("AF: %f of Node:%d WRT Input:%s through path: [",
+           AFs->AFItems[AFs->ListLength-1]->Components[I]->AF,
+           AFs->AFItems[AFs->ListLength-1]->Components[I]->ItemId,
+           AFs->AFItems[AFs->ListLength-1]->Components[I]->Input);
+
+    printf("%d", ProductPath[0]->ItemId);
+    for (int K = 1; K < AFs->AFItems[AFs->ListLength-1]->Components[I]->Height; ++K)
+      printf(", %d", ProductPath[K]->ItemId);
+    printf("]\n");
+  }
+  printf("\n");
+  printf("Printed Top Amplification Paths\n");
+}
+
+void fAFPrintTopFromAllAmplificationPaths() {
+  printf("Printing Top Amplification Paths Over ALL Paths\n");
+  fAFFlattenAllComponentPaths();
+  // Sorting the list according to Amplification Factors
+  qsort(Paths, AFComponentCounter,sizeof(AFProduct *), fAFComparator);
+
+  // Printing Results
+  printf("\n");
+  printf("The top Amplification Paths are:\n");
+  for (int I = 0; I < min(20, AFComponentCounter); ++I) {
+    AFProduct **ProductPath= fAFFlattenAFComponentsPath(Paths[I]);
+    printf("AF: %f of Node:%d WRT Input:%s through path: [",
+           Paths[I]->AF,
+           Paths[I]->ItemId,
+           Paths[I]->Input);
+
+    printf("%d", ProductPath[0]->ItemId);
+    for (int K = 1; K < Paths[I]->Height; ++K)
+      printf(", %d", ProductPath[K]->ItemId);
+    printf("]\n");
+  }
+  printf("\n");
+  printf("Printed Top Amplification Paths\n");
+}
 
 void fAFStoreAFs() {
   printf("\nWriting Amplification Factors to file.\n");
