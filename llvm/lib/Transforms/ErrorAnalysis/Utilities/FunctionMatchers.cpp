@@ -96,7 +96,7 @@ bool isLogFunction(const string FunctionName) {
 }
 
 bool isSqrtFunction(const string FunctionName) {
-  if(FunctionName.find("asin") != std::string::npos) {
+  if(FunctionName.find("sqrt") != std::string::npos) {
     return FunctionName.compare("sqrt") == 0 ||
            FunctionName.find("llvm.sqrt.")  != std::string::npos;
   }
