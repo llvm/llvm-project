@@ -1095,7 +1095,7 @@ public:
                                    "no longer live.");
       return;
     }
-      persistent_state = ts.GetPersistentExpressionState();
+      persistent_state = ts->GetPersistentExpressionState();
     }
 
     if (!persistent_state) {

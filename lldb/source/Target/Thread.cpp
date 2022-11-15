@@ -339,7 +339,7 @@ void Thread::FrameSelectedCallback(StackFrame *frame) {
   }
   SymbolContext msc = frame->GetSymbolContext(eSymbolContextModule);
   if (msc.module_sp)
-    msc.module_sp->ForEachTypeSystem([&](TypeSystem *ts) {
+    msc.module_sp->ForEachTypeSystem([&](lldb::TypeSystemSP ts) {
       if (ts)
         ts->DiagnoseWarnings(*GetProcess(), *msc.module_sp);
       return true;

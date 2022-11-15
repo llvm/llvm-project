@@ -197,7 +197,7 @@ CompilerType lldb_private::ToCompilerType(swift::Type qual_type) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "dropped orphaned AST type");
     return {};
   }
-  return {ast_ctx, qual_type.getPointer()};
+  return {ast_ctx->weak_from_this(), qual_type.getPointer()};
 }
 
 TypePayloadSwift::TypePayloadSwift(bool is_fixed_value_buffer) {
@@ -209,12 +209,12 @@ CompilerType SwiftASTContext::GetCompilerType(ConstString mangled_name) {
 }
 
 CompilerType SwiftASTContext::GetCompilerType(swift::TypeBase *swift_type) {
-  return {this, swift_type};
+  return {weak_from_this(), swift_type};
 }
 
 swift::Type TypeSystemSwiftTypeRef::GetSwiftType(CompilerType compiler_type) {
-  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
-      compiler_type.GetTypeSystem());
+  auto ts =
+      compiler_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
   if (!ts)
     return {};
 
@@ -227,7 +227,7 @@ swift::Type TypeSystemSwiftTypeRef::GetSwiftType(CompilerType compiler_type) {
 }
 
 swift::Type SwiftASTContext::GetSwiftType(CompilerType compiler_type) {
-  if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem()))
+  if (compiler_type.GetTypeSystem().isa_and_nonnull<SwiftASTContext>())
     return reinterpret_cast<swift::TypeBase *>(
         compiler_type.GetOpaqueQualType());
   return {};
@@ -236,20 +236,21 @@ swift::Type SwiftASTContext::GetSwiftType(CompilerType compiler_type) {
 swift::Type SwiftASTContext::GetSwiftType(opaque_compiler_type_t opaque_type) {
   assert(opaque_type && *reinterpret_cast<const char *>(opaque_type) != '$' &&
          "wrong type system");
-  return lldb_private::GetSwiftType(CompilerType(this, opaque_type));
+  return lldb_private::GetSwiftType(CompilerType(weak_from_this(), opaque_type));
 }
 
 swift::CanType
 SwiftASTContext::GetCanonicalSwiftType(opaque_compiler_type_t opaque_type) {
   assert(!opaque_type || *reinterpret_cast<const char *>(opaque_type) != '$' &&
          "wrong type system");
-  return lldb_private::GetCanonicalSwiftType(CompilerType(this, opaque_type));
+  return lldb_private::GetCanonicalSwiftType(
+      CompilerType(weak_from_this(), opaque_type));
 }
 
 ConstString SwiftASTContext::GetMangledTypeName(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(
       type, ConstString("<invalid Swift context or opaque type>"));
-  return GetMangledTypeName(GetSwiftType({this, type}).getPointer());
+  return GetMangledTypeName(GetSwiftType({weak_from_this(), type}).getPointer());
 }
 
 typedef lldb_private::ThreadSafeDenseMap<swift::ASTContext *, SwiftASTContext *>
@@ -1687,7 +1688,7 @@ static SwiftASTContext *GetModuleSwiftASTContext(Module &module) {
     llvm::consumeError(type_system_or_err.takeError());
     return {};
   }
-  auto *ts = static_cast<TypeSystemSwift *>(&*type_system_or_err);
+  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get());
   if (!ts)
     return {};
   return ts->GetSwiftASTContext();
@@ -1845,7 +1846,8 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
       llvm::consumeError(type_system_or_err.takeError());
       return;
     }
-    auto ts = llvm::dyn_cast_or_null<TypeSystemSwift>(&*type_system_or_err);
+    auto ts =
+        llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get());
     if (!ts)
       return;
 
@@ -3935,22 +3937,22 @@ CompilerType SwiftASTContext::GetAsClangType(ConstString mangled_name) {
   }
 
   auto *clang_ctx =
-      llvm::dyn_cast_or_null<TypeSystemClang>(&*type_system_or_err);
+      llvm::dyn_cast_or_null<TypeSystemClang>(type_system_or_err->get());
   if (!clang_ctx)
     return {};
   DWARFASTParserClang *clang_ast_parser =
       static_cast<DWARFASTParserClang *>(clang_ctx->GetDWARFParser());
   CompilerType clang_type;
   CompilerType imported_type = GetCompilerType(mangled_name);
-  if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(
-          imported_type.GetTypeSystem()))
+  if (auto ts =
+          imported_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>())
     ts->IsImportedType(imported_type.GetOpaqueQualType(), &clang_type);
 
   // Import the Clang type into the Clang context.
   if (!clang_type)
     return {};
 
-  if (clang_type.GetTypeSystem() != clang_ctx)
+  if (clang_type.GetTypeSystem().GetSharedPointer().get() != clang_ctx)
     clang_type = clang_ast_parser->GetClangASTImporter().CopyType(*clang_ctx,
                                                                   clang_type);
   // Swift doesn't know pointers. Convert top-level
@@ -4035,8 +4037,8 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
     if (!clang_type)
       break;
 
-    auto *clang_ctx =
-        llvm::dyn_cast_or_null<TypeSystemClang>(clang_type.GetTypeSystem());
+    auto clang_ctx =
+        clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
     if (!clang_ctx)
       break;
     auto *interface_decl = TypeSystemClang::GetAsObjCInterfaceDecl(clang_type);
@@ -4065,7 +4067,7 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
     // the mapping isn't bijective.
     if (ast_type == found_type)
       CacheDemangledType(mangled_typename, ast_type);
-    CompilerType result_type = {this, ast_type};//ToCompilerType(ast_type);
+    CompilerType result_type = {weak_from_this(), ast_type};//ToCompilerType(ast_type);
     LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- found %s", mangled_cstr,
                result_type.GetTypeName().GetCString());
     return ast_type;
@@ -4204,8 +4206,8 @@ SwiftASTContext::FindContainedTypeOrDecl(llvm::StringRef name,
         return DeclToType(decl, GetASTContext());
       });
 
-  if (false == name.empty() &&
-      llvm::dyn_cast_or_null<TypeSystemSwift>(container_type.GetTypeSystem())) {
+  if (!name.empty() &&
+      container_type.GetTypeSystem().isa_and_nonnull<TypeSystemSwift>()) {
     swift::Type swift_type = GetSwiftType(container_type);
     if (!swift_type)
       return 0;
@@ -4360,13 +4362,13 @@ CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
   if (m_ast_context_ap.get() == NULL)
     return CompilerType();
 
-  auto *ts = type.GetTypeSystem();
-  SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(ts);
+  auto ts = type.GetTypeSystem();
+  auto swift_ast_ctx = ts.dyn_cast_or_null<SwiftASTContext>();
 
-  if (swift_ast_ctx == nullptr && (!ts || !llvm::isa<TypeSystemSwift>(ts))) {
+  if (!swift_ast_ctx && (!ts || !ts.isa_and_nonnull<TypeSystemSwift>())) {
     error.SetErrorString("Can't import clang type into a Swift ASTContext.");
     return CompilerType();
-  } else if (swift_ast_ctx == this) {
+  } else if (swift_ast_ctx.get() == this) {
     // This is the same AST context, so the type is already imported.
     return type;
   }
@@ -4378,7 +4380,7 @@ CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
   ConstString mangled_name(type.GetMangledTypeName());
   if (!mangled_name)
     return {};
-  if (llvm::isa<TypeSystemSwiftTypeRef>(ts))
+  if (ts.isa_and_nonnull<TypeSystemSwiftTypeRef>())
     return GetTypeSystemSwiftTypeRef().GetTypeFromMangledTypename(mangled_name);
   swift::TypeBase *our_type_base =
       m_mangled_name_to_type_map.lookup(mangled_name.GetCString());
@@ -4904,7 +4906,7 @@ SwiftASTContext::GetFunctionArgumentAtIndex(opaque_compiler_type_t type,
     auto params = func.getParams();
     if (index < params.size()) {
       auto param = params[index];
-      return {this, param.getParameterType().getPointer()};
+      return {weak_from_this(), param.getParameterType().getPointer()};
     }
   }
   return {};
@@ -5044,7 +5046,7 @@ BindGenericTypeParameters(CompilerType type, ExecutionContextScope *exe_scope) {
 bool SwiftASTContext::IsErrorType(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, false);
   ProtocolInfo protocol_info;
-  if (GetProtocolTypeInfo({this, type}, protocol_info))
+  if (GetProtocolTypeInfo({weak_from_this(), type}, protocol_info))
     return protocol_info.m_is_errortype;
   return false;
 }
@@ -5057,7 +5059,7 @@ CompilerType SwiftASTContext::GetReferentType(opaque_compiler_type_t type) {
     return {};
   swift::TypeBase *swift_typebase = swift_type.getPointer();
   if (swift_type && llvm::isa<swift::WeakStorageType>(swift_typebase))
-    return {this, type};
+    return {weak_from_this(), type};
 
   auto ref_type = swift_type->getReferenceStorageReferent();
   return ToCompilerType({ref_type});
@@ -5635,7 +5637,7 @@ CompilerType SwiftASTContext::GetPointeeType(opaque_compiler_type_t type) {
 CompilerType SwiftASTContext::GetPointerType(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
 
-  auto swift_type = GetSwiftType({this, type});
+  auto swift_type = GetSwiftType({weak_from_this(), type});
   auto pointer_type =
       swift_type->wrapInPointer(swift::PointerTypeKind::PTK_UnsafePointer);
   if (pointer_type)
@@ -5647,7 +5649,7 @@ CompilerType SwiftASTContext::GetPointerType(opaque_compiler_type_t type) {
 CompilerType SwiftASTContext::GetTypedefedType(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
 
-  swift::Type swift_type(GetSwiftType({this, type}));
+  swift::Type swift_type(GetSwiftType({weak_from_this(), type}));
   swift::TypeAliasType *name_alias_type =
       swift::dyn_cast<swift::TypeAliasType>(swift_type.getPointer());
   if (name_alias_type) {
@@ -5721,7 +5723,7 @@ SwiftASTContext::GetBitSize(opaque_compiler_type_t type,
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftScratchContextLock(&exe_ctx);
-    CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
+    CompilerType bound_type = BindGenericTypeParameters({weak_from_this(), type}, exe_scope);
 
     // Check that the type has been bound successfully -- and if not,
     // log the event and bail out to avoid an infinite loop.
@@ -5753,7 +5755,7 @@ SwiftASTContext::GetBitSize(opaque_compiler_type_t type,
   if (!exe_scope)
     return {};
   if (auto *runtime = SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-    return runtime->GetBitSize({this, type}, exe_scope);
+    return runtime->GetBitSize({weak_from_this(), type}, exe_scope);
   return {};
 }
 
@@ -5771,7 +5773,7 @@ SwiftASTContext::GetByteStride(opaque_compiler_type_t type,
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftScratchContextLock(&exe_ctx);
-    CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
+    CompilerType bound_type = BindGenericTypeParameters({weak_from_this(), type}, exe_scope);
 
     // Check that the type has been bound successfully -- and if not,
     // log the event and bail out to avoid an infinite loop.
@@ -5796,7 +5798,7 @@ SwiftASTContext::GetByteStride(opaque_compiler_type_t type,
   if (!exe_scope)
     return {};
   if (auto *runtime = SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-    return runtime->GetByteStride({this, type});
+    return runtime->GetByteStride({weak_from_this(), type});
   return {};
 }
 
@@ -5814,7 +5816,7 @@ SwiftASTContext::GetTypeBitAlign(opaque_compiler_type_t type,
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftScratchContextLock(&exe_ctx);
-    CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
+    CompilerType bound_type = BindGenericTypeParameters({weak_from_this(), type}, exe_scope);
 
     // Check that the type has been bound successfully -- and if not,
     // log the event and bail out to avoid an infinite loop.
@@ -5838,7 +5840,7 @@ SwiftASTContext::GetTypeBitAlign(opaque_compiler_type_t type,
   if (!exe_scope)
     return {};
   if (auto *runtime = SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-    return runtime->GetBitAlignment({this, type}, exe_scope);
+    return runtime->GetBitAlignment({weak_from_this(), type}, exe_scope);
   return {};
 }
 
@@ -7318,15 +7320,17 @@ CompilerType
 SwiftASTContext::GetTypeForFormatters(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
 
-  return {this, type};
+  return {weak_from_this(), type};
 }
 
 LazyBool SwiftASTContext::ShouldPrintAsOneLiner(opaque_compiler_type_t type,
                                                 ValueObject *valobj) {
   if (type) {
     CompilerType can_compiler_type(GetCanonicalType(type));
-    auto *ts = llvm::cast<TypeSystemSwift>(can_compiler_type.GetTypeSystem());
-    if (ts->IsImportedType(can_compiler_type.GetOpaqueQualType(), nullptr))
+    auto ts =
+        can_compiler_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+    if (ts &&
+        ts->IsImportedType(can_compiler_type.GetOpaqueQualType(), nullptr))
       return eLazyBoolNo;
   }
   if (valobj) {
@@ -7572,14 +7576,16 @@ bool SwiftASTContext::IsImportedType(opaque_compiler_type_t type,
                 llvm::dyn_cast<clang::ObjCInterfaceDecl>(clang_decl)) {
           *original_type =
               CompilerType(TypeSystemClang::GetASTContext(
-                               &objc_interface_decl->getASTContext()),
+                               &objc_interface_decl->getASTContext())
+                               ->weak_from_this(),
                            clang::QualType::getFromOpaquePtr(
                                objc_interface_decl->getTypeForDecl())
                                .getAsOpaquePtr());
         } else if (const clang::TypeDecl *type_decl =
                        llvm::dyn_cast<clang::TypeDecl>(clang_decl)) {
           *original_type = CompilerType(
-              TypeSystemClang::GetASTContext(&type_decl->getASTContext()),
+              TypeSystemClang::GetASTContext(&type_decl->getASTContext())
+                  ->weak_from_this(),
               clang::QualType::getFromOpaquePtr(type_decl->getTypeForDecl())
                   .getAsOpaquePtr());
         } else {

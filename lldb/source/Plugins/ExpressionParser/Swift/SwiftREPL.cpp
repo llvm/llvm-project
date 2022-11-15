@@ -565,7 +565,7 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
 
     auto *swift_ts =
         llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-            &*type_system_or_err);
+            type_system_or_err->get());
     auto *target_swift_ast =
         llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
             swift_ts->GetSwiftASTContext());

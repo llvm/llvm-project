@@ -96,7 +96,7 @@ static std::string TranslateObjCNameToSwiftName(std::string className,
     return "";
   }
 
-  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(&*type_system_or_err);
+  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get());
   if (!ts)
     return "";
   auto *ctx = ts->GetSwiftASTContext();

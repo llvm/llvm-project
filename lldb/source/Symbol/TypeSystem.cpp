@@ -326,7 +326,7 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
 }
 
 // BEGIN SWIFT
-llvm::Expected<TypeSystem &>
+llvm::Expected<TypeSystemSP>
 TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
                                         Target *target, bool can_create,
                                         const char *compiler_options) {

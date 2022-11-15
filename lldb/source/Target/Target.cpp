@@ -1677,11 +1677,11 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
       m_process_sp->ModulesDidLoad(module_list);
     }
     // Notify all the ASTContext(s).
-    auto notify_callback = [&](TypeSystem *type_system) {
+    auto notify_callback = [&](lldb::TypeSystemSP type_system) {
 #ifdef LLDB_ENABLE_SWIFT
       auto *swift_scratch_ctx =
           llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-              type_system);
+              type_system.get());
       if (!swift_scratch_ctx)
         return true;
       auto *swift_ast_ctx =
@@ -1699,7 +1699,7 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     // it doens't matter in which order we notify the ASTContext(s).
     for (auto &language : m_scratch_typesystem_for_module) {
       TypeSystemSP type_system = language.second;
-      notify_callback(type_system.get());
+      notify_callback(type_system);
     }
 
     module_list.ClearModuleDependentCaches();
@@ -2390,7 +2390,7 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
   if (language == eLanguageTypeSwift) {
     if (auto *swift_scratch_ctx =
             llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-                &*type_system_or_err)) {
+                type_system_or_err->get())) {
       auto *swift_ast_ctx =
           llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
               swift_scratch_ctx->GetSwiftASTContextOrNull());
@@ -2434,7 +2434,7 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
 
           if (auto *new_swift_scratch_ctx =
                   llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-                      &*type_system_or_err)) {
+                      type_system_or_err->get())) {
             auto *new_swift_ast_ctx =
                 new_swift_scratch_ctx->GetSwiftASTContext();
             if (!new_swift_ast_ctx || new_swift_ast_ctx->HasFatalErrors()) {
@@ -2734,7 +2734,7 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
 
     if (auto *global_scratch_ctx =
             llvm::cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-                &*type_system_or_err))
+                type_system_or_err->get()))
       if (auto *swift_ast_ctx =
               llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
                   global_scratch_ctx->GetSwiftASTContext()))
@@ -2758,7 +2758,7 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
     if (type_system_or_err)
       swift_scratch_ctx =
           llvm::cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-              &*type_system_or_err);
+              type_system_or_err->get());
     else
       llvm::consumeError(type_system_or_err.takeError());
   }
