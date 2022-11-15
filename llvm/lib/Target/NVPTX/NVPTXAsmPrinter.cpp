@@ -1365,8 +1365,11 @@ NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
     return "f32";
   case Type::DoubleTyID:
     return "f64";
-  case Type::PointerTyID:
-    if (static_cast<const NVPTXTargetMachine &>(TM).is64Bit())
+  case Type::PointerTyID: {
+    unsigned PtrSize = TM.getPointerSizeInBits(Ty->getPointerAddressSpace());
+    assert((PtrSize == 64 || PtrSize == 32) && "Unexpected pointer size");
+
+    if (PtrSize == 64)
       if (useB4PTR)
         return "b64";
       else
@@ -1375,6 +1378,7 @@ NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
       return "b32";
     else
       return "u32";
+  }
   default:
     break;
   }
