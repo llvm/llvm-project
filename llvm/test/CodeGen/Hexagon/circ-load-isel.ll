@@ -10,7 +10,7 @@ define void @circ2() #0 {
 entry:
   store i32 0, i32* @l, align 4
   %0 = tail call i8* @llvm.hexagon.circ.ldw(i8* undef, i8* undef, i32 150995968, i32 4)
-  unreachable
+  ret void
 }
 
 declare i8* @llvm.hexagon.circ.ldw(i8*, i8*, i32, i32) #1
