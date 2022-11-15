@@ -573,8 +573,22 @@ static void genSparseCOOIterationLoop(
   rewriter.create<scf::ConditionOp>(loc, cond, before->getArguments());
   Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, noTypes);
   rewriter.setInsertionPointToStart(after);
+
+  bool hasDenseDim = llvm::any_of(
+      enc.getDimLevelType(), [](DimLevelType dlt) { return isDenseDLT(dlt); });
+  if (hasDenseDim) {
+    Value elemV = rewriter.create<memref::LoadOp>(loc, elemPtr);
+    Value isZero = genIsNonzero(rewriter, loc, elemV);
+    scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, isZero, /*else*/ false);
+    rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  }
   // Callback here to build loop body.
   bodyBuilder(rewriter, loc, srcIdx, elemPtr);
+
+  // Exit the scope from the IfOp.
+  if (hasDenseDim)
+    rewriter.setInsertionPointToEnd(after);
+
   rewriter.create<scf::YieldOp>(loc);
   // Finish generating loop.
   rewriter.setInsertionPointAfter(whileOp);

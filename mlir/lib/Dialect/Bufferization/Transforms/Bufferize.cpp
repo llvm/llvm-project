@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
@@ -490,7 +491,7 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
     if (opFilter && !opFilter->isOpAllowed(op))
       continue;
     // Ops without any uses and no side effects will fold away.
-    if (op->getUses().empty() && MemoryEffectOpInterface::hasNoEffect(op))
+    if (op->getUses().empty() && isMemoryEffectFree(op))
       continue;
     // ToTensorOps/ToMemrefOps are allowed in the output.
     if (isa<ToTensorOp, ToMemrefOp>(op))

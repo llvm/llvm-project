@@ -952,8 +952,7 @@ SparseTensorStorage<P, I, V> *SparseTensorStorage<P, I, V>::newFromCOO(
   std::vector<uint64_t> dimSizes(dimRank);
   for (uint64_t l = 0; l < lvlRank; ++l) {
     const uint64_t d = lvl2dim[l];
-    const uint64_t sz = dimShape[d];
-    assert((sz == 0 || sz == lvlSizes[l]) &&
+    assert((dimShape[d] == 0 || dimShape[d] == lvlSizes[l]) &&
            "Dimension sizes do not match expected shape");
     dimSizes[d] = lvlSizes[l];
   }

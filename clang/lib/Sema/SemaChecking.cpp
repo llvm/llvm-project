@@ -14660,6 +14660,17 @@ void Sema::CheckForIntOverflow (Expr *E) {
       Exprs.append(Call->arg_begin(), Call->arg_end());
     else if (auto Message = dyn_cast<ObjCMessageExpr>(E))
       Exprs.append(Message->arg_begin(), Message->arg_end());
+    else if (auto Construct = dyn_cast<CXXConstructExpr>(E))
+      Exprs.append(Construct->arg_begin(), Construct->arg_end());
+    else if (auto Array = dyn_cast<ArraySubscriptExpr>(E))
+      Exprs.push_back(Array->getIdx());
+    else if (auto Compound = dyn_cast<CompoundLiteralExpr>(E))
+      Exprs.push_back(Compound->getInitializer());
+    else if (auto New = dyn_cast<CXXNewExpr>(E)) {
+      if (New->isArray())
+        if (auto ArraySize = New->getArraySize())
+          Exprs.push_back(ArraySize.value());
+    }
   } while (!Exprs.empty());
 }
 

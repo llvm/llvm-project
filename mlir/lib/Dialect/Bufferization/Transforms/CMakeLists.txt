@@ -29,6 +29,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRMemRefDialect
   MLIRPass
   MLIRTensorDialect
+  MLIRSideEffectInterfaces
   MLIRTransforms
   MLIRViewLikeInterface
 )

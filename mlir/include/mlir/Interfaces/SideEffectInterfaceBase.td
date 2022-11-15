@@ -94,13 +94,6 @@ class EffectOpInterfaceBase<string name, string baseEffect>
       return effects.empty();
     }
 
-    /// Returns true if the given operation has no effects for this interface.
-    static bool hasNoEffect(Operation *op) {
-      if (auto interface = dyn_cast<}] # name # [{>(op))
-        return interface.hasNoEffect();
-      return op->hasTrait<::mlir::OpTrait::HasRecursiveMemoryEffects>();
-    }
-
     /// Collect all of the effect instances that operate on the provided value
     /// and place them in 'effects'.
     void getEffectsOnValue(::mlir::Value value,
