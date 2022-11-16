@@ -97,12 +97,14 @@ static Value genIndexAndValueForDense(OpBuilder &builder, Location loc,
 SparseTensorLoopEmitter::SparseTensorLoopEmitter(ValueRange tensors,
                                                  StringAttr loopTag,
                                                  bool hasOutput,
-                                                 bool isSparseOut)
+                                                 bool isSparseOut,
+                                                 ArrayRef<unsigned> topSort)
     : loopTag(loopTag), hasOutput(hasOutput), isSparseOut(isSparseOut),
       tensors(tensors.begin(), tensors.end()), dimTypes(tensors.size()),
       pidxs(tensors.size()), coord(tensors.size()), highs(tensors.size()),
       ptrBuffer(tensors.size()), idxBuffer(tensors.size()),
-      valBuffer(tensors.size()), loopStack() {
+      valBuffer(tensors.size()), loopStack(),
+      sparsiferLoopLvlMap(topSort.size(), 0) {
   for (size_t tid = 0, e = tensors.size(); tid < e; tid++) {
     auto t = tensors[tid];
     // a scalar or 0-dimension tensors
@@ -125,6 +127,13 @@ SparseTensorLoopEmitter::SparseTensorLoopEmitter(ValueRange tensors,
     highs[tid].assign(rank, Value());
     ptrBuffer[tid].assign(rank, Value());
     idxBuffer[tid].assign(rank, Value());
+  }
+
+  for (unsigned i = 0, e = topSort.size(); i < e; i++) {
+    // This is an inverse map of the topologically sorted loop index from
+    // sparsifier. This is needed to map the AffineDimExpr back to the loopStack
+    // index used in loop emitter.
+    sparsiferLoopLvlMap[topSort[i]] = i;
   }
 }
 
@@ -214,6 +223,34 @@ void SparseTensorLoopEmitter::enterNewLoopSeq(OpBuilder &builder, Location loc,
   // Prepares for all the tensors used in the current loop sequence.
   for (auto [tid, dim] : llvm::zip(tids, dims))
     prepareLoopOverTensorAtDim(builder, loc, tid, dim);
+}
+
+Value SparseTensorLoopEmitter::genAffine(OpBuilder &builder, AffineExpr a,
+                                         Location loc) {
+  switch (a.getKind()) {
+  case AffineExprKind::DimId: {
+    unsigned idx = a.cast<AffineDimExpr>().getPosition();
+    return loopStack[sparsiferLoopLvlMap[idx]].iv;
+  }
+  case AffineExprKind::Add: {
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    return builder.create<arith::AddIOp>(
+        loc, genAffine(builder, binOp.getLHS(), loc),
+        genAffine(builder, binOp.getRHS(), loc));
+  }
+  case AffineExprKind::Mul: {
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    return builder.create<arith::MulIOp>(
+        loc, genAffine(builder, binOp.getLHS(), loc),
+        genAffine(builder, binOp.getRHS(), loc));
+  }
+  case AffineExprKind::Constant: {
+    int64_t c = a.cast<AffineConstantExpr>().getValue();
+    return constantIndex(builder, loc, c);
+  }
+  default:
+    llvm_unreachable("unexpected affine subscript");
+  }
 }
 
 Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
