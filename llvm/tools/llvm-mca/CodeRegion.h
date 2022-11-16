@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements class CodeRegion and CodeRegions, InstrumentRegion,
-/// AnalysisRegions, and InstrumentRegions.
+/// This file implements class CodeRegion and CodeRegions.
 ///
 /// A CodeRegion describes a region of assembly code guarded by special LLVM-MCA
 /// comment directives.
@@ -26,32 +25,8 @@
 /// description; internally, regions are described by a range of source
 /// locations (SMLoc objects).
 ///
-/// An instruction (a MCInst) is added to a CodeRegion R only if its
-/// location is in range [R.RangeStart, R.RangeEnd].
-///
-/// A InstrumentRegion describes a region of assembly code guarded by
-/// special LLVM-MCA comment directives.
-///
-///   # LLVM-MCA-<INSTRUMENTATION_TYPE> <data>
-///     ...  ## asm
-///
-/// where INSTRUMENTATION_TYPE is a type defined in llvm and expects to use
-/// data.
-///
-/// A comment starting with substring LLVM-MCA-<INSTRUMENTATION_TYPE>
-/// brings data into scope for llvm-mca to use in its analysis for
-/// all following instructions.
-///
-/// If the same INSTRUMENTATION_TYPE is found later in the instruction list,
-/// then the original InstrumentRegion will be automatically ended,
-/// and a new InstrumentRegion will begin.
-///
-/// If there are comments containing the different INSTRUMENTATION_TYPEs,
-/// then both data sets remain available. In contrast with a CodeRegion,
-/// an InstrumentRegion does not need a comment to end the region.
-//
-// An instruction (a MCInst) is added to an InstrumentRegion R only
-// if its location is in range [R.RangeStart, R.RangeEnd].
+/// An instruction (a MCInst) is added to a region R only if its location is in
+/// range [R.RangeStart, R.RangeEnd].
 //
 //===----------------------------------------------------------------------===//
 
@@ -63,7 +38,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
@@ -107,31 +81,9 @@ public:
   llvm::StringRef getDescription() const { return Description; }
 };
 
-/// Alias AnalysisRegion with CodeRegion since CodeRegionGenerator
-/// is absract and AnalysisRegionGenerator operates on AnalysisRegions
-using AnalysisRegion = CodeRegion;
-
-/// A CodeRegion that contains instrumentation that can be used
-/// in analysis of the region.
-class InstrumentRegion : public CodeRegion {
-  /// Instrument for this region.
-  SharedInstrument Instrument;
-
-public:
-  InstrumentRegion(llvm::StringRef Desc, llvm::SMLoc Start, SharedInstrument I)
-      : CodeRegion(Desc, Start), Instrument(I) {}
-
-public:
-  SharedInstrument getInstrument() const { return Instrument; }
-};
-
 class CodeRegionParseError final : public Error {};
 
 class CodeRegions {
-  CodeRegions(const CodeRegions &) = delete;
-  CodeRegions &operator=(const CodeRegions &) = delete;
-
-protected:
   // A source manager. Used by the tool to generate meaningful warnings.
   llvm::SourceMgr &SM;
 
@@ -140,8 +92,11 @@ protected:
   llvm::StringMap<unsigned> ActiveRegions;
   bool FoundErrors;
 
+  CodeRegions(const CodeRegions &) = delete;
+  CodeRegions &operator=(const CodeRegions &) = delete;
+
 public:
-  CodeRegions(llvm::SourceMgr &S) : SM(S), FoundErrors(false) {}
+  CodeRegions(llvm::SourceMgr &S);
 
   typedef std::vector<UniqueCodeRegion>::iterator iterator;
   typedef std::vector<UniqueCodeRegion>::const_iterator const_iterator;
@@ -151,6 +106,8 @@ public:
   const_iterator begin() const { return Regions.cbegin(); }
   const_iterator end() const { return Regions.cend(); }
 
+  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc);
+  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc);
   void addInstruction(const llvm::MCInst &Instruction);
   llvm::SourceMgr &getSourceMgr() const { return SM; }
 
@@ -165,28 +122,6 @@ public:
   }
 
   bool isValid() const { return !FoundErrors; }
-
-  bool isRegionActive(llvm::StringRef Description) const {
-    return ActiveRegions.find(Description) != ActiveRegions.end();
-  }
-};
-
-struct AnalysisRegions : public CodeRegions {
-  AnalysisRegions(llvm::SourceMgr &S);
-
-  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc);
-  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc);
-};
-
-struct InstrumentRegions : public CodeRegions {
-  InstrumentRegions(llvm::SourceMgr &S);
-
-  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc,
-                   SharedInstrument Instrument);
-  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc);
-
-  const SmallVector<SharedInstrument>
-  getActiveInstruments(llvm::SMLoc Loc) const;
 };
 
 } // namespace mca
