@@ -28,7 +28,6 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
               "__assert_fail",
               RetValSpec<NoReturn>,
               [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<UnsignedType>, ArgSpec<ConstCharPtr>]
-
           >,
       ]
   >;
