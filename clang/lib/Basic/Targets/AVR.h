@@ -174,6 +174,8 @@ public:
 protected:
   std::string CPU;
   StringRef ABI;
+  StringRef DefineName;
+  int NumFlashBanks;
 };
 
 } // namespace targets
