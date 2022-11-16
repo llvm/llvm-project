@@ -440,6 +440,15 @@ def RISCVVPseudosTable : GenericTable {
   let PrimaryKeyEarlyOut = true;
 }
 
+def RISCVVInversePseudosTable : GenericTable {
+  let FilterClass = "RISCVVPseudo";
+  let CppTypeName = "PseudoInfo";
+  let Fields = [ "Pseudo", "BaseInstr", "VLMul" ];
+  let PrimaryKey = [ "BaseInstr", "VLMul" ];
+  let PrimaryKeyName = "getBaseInfo";
+  let PrimaryKeyEarlyOut = true;
+}
+
 def RISCVVIntrinsicsTable : GenericTable {
   let FilterClass = "RISCVVIntrinsic";
   let CppTypeName = "RISCVVIntrinsicInfo";
