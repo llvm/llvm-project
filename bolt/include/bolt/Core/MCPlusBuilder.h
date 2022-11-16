@@ -1420,6 +1420,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  virtual bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual int getShortJmpEncodingSize() const {
     llvm_unreachable("not implemented");
   }
