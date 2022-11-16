@@ -31,8 +31,6 @@
 
 
 ; RUN: opt -passes=name-anon-globals -module-summary < %s | llvm-dis | FileCheck %s
-; RUN: opt -passes=name-anon-globals -module-summary -S < %s | FileCheck %s
-; RUN: opt -passes=name-anon-globals -module-summary -S < %s | llvm-as | llvm-dis | FileCheck %s
 ; Check that this round-trips correctly.
 
 ; ModuleID = '<stdin>'
