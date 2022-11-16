@@ -2144,12 +2144,12 @@ def int_amdgcn_ds_bvh_stack_push8_pop2_rtn :
     [ImmArg<ArgIndex<3>>, IntrWillReturn]
   >;
 
-// v16i32 llvm.amdgcn.image.bvh.dual.intersect.ray <node_ptr>, <ray_extent>,
+// v10i32 llvm.amdgcn.image.bvh.dual.intersect.ray <node_ptr>, <ray_extent>,
 //                                                 <instance_mask>, <ray_origin>,
 //                                                 <ray_dir>, <offsets>,
 //                                                 <texture_descr>
 def int_amdgcn_image_bvh_dual_intersect_ray :
-  Intrinsic<[llvm_v16i32_ty],
+  Intrinsic<[llvm_v10i32_ty],
             [llvm_i64_ty, llvm_float_ty, llvm_i8_ty, llvm_v3f32_ty,
              llvm_v3f32_ty, llvm_v2i32_ty, llvm_v4i32_ty],
             [IntrReadMem, IntrWillReturn]>;

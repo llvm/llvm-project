@@ -1424,7 +1424,7 @@ class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
                                 bit A16, bit isDual,
                                 list<RegisterClass> addr_types>
     : VIMAGE_gfx12<op.GFX12, !if(isDual,
-                                 (outs VReg_512:$vdata),
+                                 (outs VReg_320:$vdata),
                                  (outs VReg_128:$vdata)),
                    num_addrs, "GFX12", addr_types> {
   let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$rsrc), (ins NV:$nv),
