@@ -16,7 +16,7 @@ subroutine test_constant_scalar_char()
   print *, "hello"
 ! CHECK:  %[[VAL_5:.*]] = fir.address_of(@[[name:.*]]) : !fir.ref<!fir.char<1,5>>
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 5 : index
-! CHECK:  fir.declare %[[VAL_5]] typeparams %[[VAL_6]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "[[name]]"} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.ref<!fir.char<1,5>>
+! CHECK:  hlfir.declare %[[VAL_5]] typeparams %[[VAL_6]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "[[name]]"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_constant_array()
@@ -25,7 +25,7 @@ subroutine test_constant_array()
 ! CHECK:  %[[VAL_5:.*]] = fir.address_of(@[[name:.*]]) : !fir.ref<!fir.array<3xf32>>
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 3 : index
 ! CHECK:  %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-! CHECK:  fir.declare %[[VAL_5]](%[[VAL_7]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "[[name]]"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<3xf32>>
+! CHECK:  hlfir.declare %[[VAL_5]](%[[VAL_7]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "[[name]]"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_constant_array_char()
@@ -35,7 +35,7 @@ subroutine test_constant_array_char()
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 2 : index
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 3 : index
 ! CHECK:  %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-! CHECK:  fir.declare %[[VAL_5]](%[[VAL_8]]) typeparams %[[VAL_7]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "[[name]]"} : (!fir.ref<!fir.array<2x!fir.char<1,3>>>, !fir.shape<1>, index) -> !fir.ref<!fir.array<2x!fir.char<1,3>>>
+! CHECK:  hlfir.declare %[[VAL_5]](%[[VAL_8]]) typeparams %[[VAL_7]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "[[name]]"} : (!fir.ref<!fir.array<2x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<2x!fir.char<1,3>>>, !fir.ref<!fir.array<2x!fir.char<1,3>>>)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_constant_with_lower_bounds()
@@ -48,5 +48,5 @@ subroutine test_constant_with_lower_bounds()
 ! CHECK:  %[[VAL_15:.*]] = arith.constant -1 : index
 ! CHECK:  %[[VAL_16:.*]] = arith.constant -1 : index
 ! CHECK:  %[[VAL_17:.*]] = fir.shape_shift %[[VAL_15]], %[[VAL_13]], %[[VAL_16]], %[[VAL_14]] : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:  fir.declare %[[VAL_12]](%[[VAL_17]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro[[name]]"} : (!fir.ref<!fir.array<2x2xi32>>, !fir.shapeshift<2>) -> !fir.ref<!fir.array<2x2xi32>>
+! CHECK:  hlfir.declare %[[VAL_12]](%[[VAL_17]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro[[name]]"} : (!fir.ref<!fir.array<2x2xi32>>, !fir.shapeshift<2>) -> (!fir.box<!fir.array<2x2xi32>>, !fir.ref<!fir.array<2x2xi32>>)
 end subroutine

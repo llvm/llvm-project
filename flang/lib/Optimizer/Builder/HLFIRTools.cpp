@@ -12,7 +12,9 @@
 
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 
 // Return explicit extents. If the base is a fir.box, this won't read it to
 // return the extents and will instead return an empty vector.
@@ -68,34 +70,48 @@ getExplicitTypeParams(fir::FortranVariableOpInterface var) {
 
 std::pair<fir::ExtendedValue, llvm::Optional<hlfir::CleanupFunction>>
 hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &,
-                                hlfir::EntityWithAttributes entity) {
-  if (auto variable = entity.getIfVariable())
+                                hlfir::Entity entity) {
+  if (auto variable = entity.getIfVariableInterface())
     return {hlfir::translateToExtendedValue(variable), {}};
+  if (entity.isVariable())
+    TODO(loc, "HLFIR variable to fir::ExtendedValue without a "
+              "FortranVariableOpInterface");
   if (entity.getType().isa<hlfir::ExprType>())
     TODO(loc, "hlfir.expr to fir::ExtendedValue"); // use hlfir.associate
   return {{static_cast<mlir::Value>(entity)}, {}};
 }
 
+mlir::Value hlfir::Entity::getFirBase() const {
+  if (fir::FortranVariableOpInterface variable = getIfVariableInterface())
+    if (auto declareOp =
+            mlir::dyn_cast<hlfir::DeclareOp>(variable.getOperation()))
+      return declareOp.getOriginalBase();
+  return getBase();
+}
+
 fir::ExtendedValue
 hlfir::translateToExtendedValue(fir::FortranVariableOpInterface variable) {
+  /// When going towards FIR, use the original base value to avoid
+  /// introducing descriptors at runtime when they are not required.
+  mlir::Value firBase = Entity{variable}.getFirBase();
   if (variable.isPointer() || variable.isAllocatable())
     TODO(variable->getLoc(), "pointer or allocatable "
                              "FortranVariableOpInterface to extendedValue");
-  if (variable.getBase().getType().isa<fir::BaseBoxType>())
-    return fir::BoxValue(variable.getBase(), getExplicitLbounds(variable),
-                         getExplicitTypeParams(variable),
-                         getExplicitExtents(variable));
+  if (firBase.getType().isa<fir::BaseBoxType>())
+    return fir::BoxValue(firBase, getExplicitLbounds(variable),
+                         getExplicitTypeParams(variable));
+
   if (variable.isCharacter()) {
     if (variable.isArray())
-      return fir::CharArrayBoxValue(
-          variable.getBase(), variable.getExplicitCharLen(),
-          getExplicitExtents(variable), getExplicitLbounds(variable));
-    return fir::CharBoxValue(variable.getBase(), variable.getExplicitCharLen());
+      return fir::CharArrayBoxValue(firBase, variable.getExplicitCharLen(),
+                                    getExplicitExtents(variable),
+                                    getExplicitLbounds(variable));
+    return fir::CharBoxValue(firBase, variable.getExplicitCharLen());
   }
   if (variable.isArray())
-    return fir::ArrayBoxValue(variable.getBase(), getExplicitExtents(variable),
+    return fir::ArrayBoxValue(firBase, getExplicitExtents(variable),
                               getExplicitLbounds(variable));
-  return variable.getBase();
+  return firBase;
 }
 
 hlfir::EntityWithAttributes
@@ -130,8 +146,22 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                          box.nonDeferredLenParams().end());
       },
       [](const auto &) {});
-  auto nameAttr = mlir::StringAttr::get(builder.getContext(), name);
-  auto declareOp = builder.create<fir::DeclareOp>(
-      loc, base.getType(), base, shapeOrShift, lenParams, nameAttr, flags);
+  auto declareOp = builder.create<hlfir::DeclareOp>(
+      loc, base, name, shapeOrShift, lenParams, flags);
   return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
+}
+
+/// If the entity is a variable, load its value (dereference pointers and
+/// allocatables if needed). Do nothing if the entity os already a variable or
+/// if it is not a scalar entity of numerical or logical type.
+hlfir::Entity hlfir::loadTrivialScalar(mlir::Location loc,
+                                       fir::FirOpBuilder &builder,
+                                       Entity entity) {
+  if (entity.isVariable() && entity.isScalar() &&
+      fir::isa_trivial(entity.getFortranElementType())) {
+    if (entity.isMutableBox())
+      TODO(loc, "load pointer/allocatable scalar");
+    return Entity{builder.create<fir::LoadOp>(loc, entity)};
+  }
+  return entity;
 }
