@@ -3444,8 +3444,26 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       unsigned MemBits = VT.getScalarSizeInBits();
       Known.Zero.setBitsFrom(MemBits);
     } else if (const MDNode *Ranges = LD->getRanges()) {
-      if (LD->getExtensionType() == ISD::NON_EXTLOAD)
-        computeKnownBitsFromRangeMetadata(*Ranges, Known);
+      EVT VT = LD->getValueType(0);
+
+      // TODO: Handle for extending loads
+      if (LD->getExtensionType() == ISD::NON_EXTLOAD) {
+        if (VT.isVector()) {
+          // Handle truncation to the first demanded element.
+          // TODO: Figure out which demanded elements are covered
+          if (DemandedElts != 1 || !getDataLayout().isLittleEndian())
+            break;
+
+          // Handle the case where a load has a vector type, but scalar memory
+          // with an attached range.
+          EVT MemVT = LD->getMemoryVT();
+          KnownBits KnownFull(MemVT.getSizeInBits());
+
+          computeKnownBitsFromRangeMetadata(*Ranges, KnownFull);
+          Known = KnownFull.trunc(BitWidth);
+        } else
+          computeKnownBitsFromRangeMetadata(*Ranges, Known);
+      }
     }
     break;
   }
