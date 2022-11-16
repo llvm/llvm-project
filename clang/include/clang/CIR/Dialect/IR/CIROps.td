@@ -481,6 +481,9 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
       mlir::cir::YieldOpKindAttr kattr = mlir::cir::YieldOpKindAttr::get(
         $_builder.getContext(), kind);
       $_state.addAttribute(getKindAttrName($_state.name), kattr);
+    }]>,
+    OpBuilder<(ins "ValueRange":$results), [{
+      $_state.addOperands(results);
     }]>
   ];
 
