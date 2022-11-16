@@ -106,6 +106,14 @@ public:
     return KindOrFunctionPointer == SpecialKind::Builtin;
   }
 
+  static CIRGenCallee forBuiltin(unsigned builtinID,
+                                 const clang::FunctionDecl *builtinDecl) {
+    CIRGenCallee result(SpecialKind::Builtin);
+    result.BuiltinInfo.Decl = builtinDecl;
+    result.BuiltinInfo.ID = builtinID;
+    return result;
+  }
+
   bool isPsuedoDestructor() const {
     return KindOrFunctionPointer == SpecialKind::PsuedoDestructor;
   }

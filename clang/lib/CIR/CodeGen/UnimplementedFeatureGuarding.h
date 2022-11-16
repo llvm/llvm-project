@@ -53,6 +53,7 @@ struct UnimplementedFeature {
   static bool requiresReturnValueCheck() { return false; }
   static bool shouldEmitLifetimeMarkers() { return false; }
   static bool peepholeProtection() { return false; }
+  static bool attributeNoBuiltin() { return false; }
 };
 } // namespace cir
 
