@@ -911,12 +911,9 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
 
   Type *GVTy = ArrayType::get(I.getAllocatedType(), WorkGroupSize);
   GlobalVariable *GV = new GlobalVariable(
-      *Mod, GVTy, false, GlobalValue::InternalLinkage,
-      UndefValue::get(GVTy),
-      Twine(F->getName()) + Twine('.') + I.getName(),
-      nullptr,
-      GlobalVariable::NotThreadLocal,
-      AMDGPUAS::LOCAL_ADDRESS);
+      *Mod, GVTy, false, GlobalValue::InternalLinkage, PoisonValue::get(GVTy),
+      Twine(F->getName()) + Twine('.') + I.getName(), nullptr,
+      GlobalVariable::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   GV->setAlignment(I.getAlign());
 
