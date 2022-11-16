@@ -406,8 +406,7 @@ void NVPTXAsmPrinter::printReturnValStr(const MachineFunction &MF,
 }
 
 // Return true if MBB is the header of a loop marked with
-// llvm.loop.unroll.disable.
-// TODO: consider "#pragma unroll 1" which is equivalent to "#pragma nounroll".
+// llvm.loop.unroll.disable or llvm.loop.unroll.count=1.
 bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
     const MachineBasicBlock &MBB) const {
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfo>();
@@ -428,6 +427,12 @@ bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
               PBB->getTerminator()->getMetadata(LLVMContext::MD_loop)) {
         if (GetUnrollMetadata(LoopID, "llvm.loop.unroll.disable"))
           return true;
+        if (MDNode *UnrollCountMD =
+                GetUnrollMetadata(LoopID, "llvm.loop.unroll.count")) {
+          if (mdconst::extract<ConstantInt>(UnrollCountMD->getOperand(1))
+                  ->getZExtValue() == 1)
+            return true;
+        }
       }
     }
   }
