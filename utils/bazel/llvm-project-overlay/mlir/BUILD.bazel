@@ -8608,10 +8608,27 @@ gentbl_cc_library(
             ],
             "include/mlir/Dialect/Tosa/Transforms/Passes.h.inc",
         ),
+        (
+            [
+                "-gen-enum-decls",
+                "-name=TosaOpt",
+            ],
+            "include/mlir/Dialect/Tosa/Transforms/PassesEnums.h.inc",
+        ),
+        (
+            [
+                "-gen-enum-defs",
+                "-name=TosaOpt",
+            ],
+            "include/mlir/Dialect/Tosa/Transforms/PassesEnums.cpp.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Tosa/Transforms/Passes.td",
-    deps = [":PassBaseTdFiles"],
+    deps = [
+        ":OpBaseTdFiles",
+        ":PassBaseTdFiles",
+    ],
 )
 
 cc_library(
@@ -9854,6 +9871,17 @@ gentbl_cc_library(
     deps = [":BufferizationOpsTdFiles"],
 )
 
+td_library(
+    name = "BufferizationEnumsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Bufferization/IR/BufferizationEnums.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "BufferizationEnumsIncGen",
     strip_include_prefix = "include",
@@ -9869,7 +9897,7 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Bufferization/IR/BufferizationEnums.td",
-    deps = [":BufferizationOpsTdFiles"],
+    deps = [":BufferizationEnumsTdFiles"],
 )
 
 td_library(
@@ -10017,6 +10045,7 @@ cc_library(
         ":Analysis",
         ":ArithDialect",
         ":BufferizationDialect",
+        ":BufferizationEnumsIncGen",
         ":BufferizationPassIncGen",
         ":ControlFlowInterfaces",
         ":FuncDialect",
