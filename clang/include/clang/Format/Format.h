@@ -2121,14 +2121,17 @@ struct FormatStyle {
   bool ExperimentalAutoDetectBinPacking;
 
   /// If ``true``, clang-format adds missing namespace end comments for
-  /// short namespaces and fixes invalid existing ones. Short ones are
-  /// controlled by "ShortNamespaceLines".
+  /// namespaces and fixes invalid existing ones. This doesn't affect short
+  /// namespaces, which are controlled by ``ShortNamespaceLines``.
   /// \code
   ///    true:                                  false:
-  ///    namespace a {                  vs.     namespace a {
-  ///    foo();                                 foo();
-  ///    bar();                                 bar();
+  ///    namespace longNamespace {      vs.     namespace longNamespace {
+  ///    void foo();                            void foo();
+  ///    void bar();                            void bar();
   ///    } // namespace a                       }
+  ///    namespace shortNamespace {             namespace shortNamespace {
+  ///    void baz();                            void baz();
+  ///    }                                      }
   /// \endcode
   /// \version 5
   bool FixNamespaceComments;
