@@ -346,6 +346,12 @@ enum TH {
   ATOMIC_RETURN = 1,  // Returning vs non-returning
   ATOMIC_NT = 2,      // Non-temporal vs regular
   ATOMIC_CASCADE = 4, // Cascading vs regular
+
+  // Helper bits
+  TYPE_LOAD = 8,    // TH_LOAD policy
+  TYPE_STORE = 16,  // TH_STORE policy
+  TYPE_ATOMIC = 32, // TH_ATOMIC policy
+  REAL_BYPASS = 64, // is TH=3 bypass policy or not
 };
 
 } // namespace TH

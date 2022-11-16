@@ -1729,6 +1729,8 @@ private:
   bool validateWaitCnt(const MCInst &Inst, const OperandVector &Operands);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
+  bool validateTHandScopeBits(const MCInst &Inst, const OperandVector &Operands,
+                              const SMLoc &IDLoc);
   bool validateExeczVcczOperands(const OperandVector &Operands);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   Optional<StringRef> validateLdsDirect(const MCInst &Inst);
@@ -4704,6 +4706,55 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateTHandScopeBits(const MCInst &Inst,
+                                             const OperandVector &Operands,
+                                             const SMLoc &IDLoc) {
+  int THPos =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::th);
+  int ScopePos =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::scope);
+  if (THPos == -1 || ScopePos == -1)
+    return true;
+
+  unsigned TH = Inst.getOperand(THPos).getImm();
+  unsigned Scope = Inst.getOperand(ScopePos).getImm();
+
+  if ((TH & 0x7) == 0)
+    return true;
+
+  auto PrintError = [&](StringRef Msg) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyTH, Operands);
+    Error(S, Msg);
+    return false;
+  };
+
+  if ((TH & 0x7) == AMDGPU::TH::BYPASS) {
+    if ((Scope != AMDGPU::Scope::SCOPE_SYS && TH & AMDGPU::TH::REAL_BYPASS) ||
+        (Scope == AMDGPU::Scope::SCOPE_SYS && !(TH & AMDGPU::TH::REAL_BYPASS)))
+      return PrintError("scope and th combination is not valid");
+  }
+
+  const unsigned Opcode = Inst.getOpcode();
+  const MCInstrDesc &TID = MII.get(Opcode);
+
+  bool IsStore = TID.mayStore();
+  bool IsAtomic =
+      TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet);
+
+  if (IsAtomic) {
+    if (!(TH & AMDGPU::TH::TYPE_ATOMIC))
+      return PrintError("invalid th value for atomic instructions");
+  } else if (IsStore) {
+    if (!(TH & AMDGPU::TH::TYPE_STORE))
+      return PrintError("invalid th value for store instructions");
+  } else {
+    if (!(TH & AMDGPU::TH::TYPE_LOAD))
+      return PrintError("invalid th value for load instructions");
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateExeczVcczOperands(const OperandVector &Operands) {
   if (!isGFX11Plus())
     return true;
@@ -4817,6 +4868,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateCoherencyBits(Inst, Operands, IDLoc)) {
+    return false;
+  }
+  if (!validateTHandScopeBits(Inst, Operands, IDLoc)) {
     return false;
   }
 
@@ -6286,81 +6340,75 @@ AMDGPUAsmParser::parseScope(OperandVector &Operands) {
 
 OperandMatchResultTy
 AMDGPUAsmParser::parseTH(OperandVector &Operands) {
-  if (!trySkipId("th", AsmToken::Colon))
-    return MatchOperand_NoMatch;
-
-  SMLoc StringLoc = getLoc();
+  SMLoc S = getLoc();
+  StringRef Value;
+  SMLoc StringLoc;
+  OperandMatchResultTy Res = parseStringWithPrefix("th", Value, StringLoc);
+  if (Res != MatchOperand_Success)
+    return Res;
 
   if (!isGFX12Plus()) {
-    Error(StringLoc, "TH operand is not supported on this GPU");
+    Error(S, "TH operand is not supported on this GPU");
     return MatchOperand_ParseFail;
   }
 
   int64_t TH = 0xffffffff;
-  StringRef Value;
 
-  if (parseId(Value)) {
-    bool IsAtomic = false;
-
-    if (Value == "TH_DEFAULT")
-      TH = 0;
-    else if (Value == "TH_STORE_LU" || Value == "TH_LOAD_RT_WB" ||
-             Value == "TH_LOAD_NT_WB") {
-      Error(StringLoc, "invalid th value");
-      return MatchOperand_ParseFail;
-    }
-    else if (Value.startswith("TH_ATOMIC_")) {
-      Value = Value.drop_front(10);
-      IsAtomic = true;
-    }
-    else if (Value.startswith("TH_LOAD_"))
-      Value = Value.drop_front(8);
-    else if (Value.startswith("TH_STORE_"))
-      Value = Value.drop_front(9);
-    else {
-      Error(StringLoc, "invalid th value");
-      return MatchOperand_ParseFail;
-    }
-
-    if (TH != 0) {
-      if (IsAtomic)
-        TH = StringSwitch<int64_t>(Value)
-                 .Case("RETURN", AMDGPU::TH::ATOMIC_RETURN)
-                 .Case("RT", AMDGPU::TH::RT)
-                 .Case("RT_RETURN", AMDGPU::TH::ATOMIC_RETURN)
-                 .Case("NT", AMDGPU::TH::ATOMIC_NT)
-                 .Case("NT_RETURN",
-                       AMDGPU::TH::ATOMIC_NT | AMDGPU::TH::ATOMIC_RETURN)
-                 .Case("CASCADE_RT", AMDGPU::TH::ATOMIC_CASCADE)
-                 .Case("CASCADE_NT",
-                       AMDGPU::TH::ATOMIC_CASCADE | AMDGPU::TH::ATOMIC_NT)
-                 .Default(0xffffffff);
-      else
-        TH = StringSwitch<int64_t>(Value)
-                 .Case("RT", AMDGPU::TH::RT)
-                 .Case("NT", AMDGPU::TH::NT)
-                 .Case("HT", AMDGPU::TH::HT)
-                 .Case("LU", AMDGPU::TH::LU)
-                 .Case("RT_WB", AMDGPU::TH::RT_WB)
-                 .Case("NT_RT", AMDGPU::TH::NT_RT)
-                 .Case("RT_NT", AMDGPU::TH::RT_NT)
-                 .Case("NT_HT", AMDGPU::TH::NT_HT)
-                 .Case("NT_WB", AMDGPU::TH::NT_WB)
-                 .Case("BYPASS", AMDGPU::TH::BYPASS)
-                 .Default(0xffffffff);
-    }
-
-    if (TH == 0xffffffff) {
-      Error(StringLoc, "invalid th value");
-      return MatchOperand_ParseFail;
-    }
-  } else if (parseExpr(TH)) {
-    if (TH & ~0x7) {
-      Error(StringLoc, "invalid th value");
-      return MatchOperand_ParseFail;
-    }
-  } else
+  if (Value == "TH_DEFAULT")
+    TH = 0;
+  else if (Value == "TH_STORE_LU" || Value == "TH_LOAD_RT_WB" ||
+           Value == "TH_LOAD_NT_WB") {
+    Error(StringLoc, "invalid th value");
     return MatchOperand_ParseFail;
+  } else if (Value.startswith("TH_ATOMIC_")) {
+    Value = Value.drop_front(10);
+    TH = AMDGPU::TH::TYPE_ATOMIC;
+  } else if (Value.startswith("TH_LOAD_")) {
+    Value = Value.drop_front(8);
+    TH = AMDGPU::TH::TYPE_LOAD;
+  } else if (Value.startswith("TH_STORE_")) {
+    Value = Value.drop_front(9);
+    TH = AMDGPU::TH::TYPE_STORE;
+  } else {
+    Error(StringLoc, "invalid th value");
+    return MatchOperand_ParseFail;
+  }
+
+  if (Value == "BYPASS")
+    TH |= AMDGPU::TH::REAL_BYPASS;
+
+  if (TH != 0) {
+    if (TH & AMDGPU::TH::TYPE_ATOMIC)
+      TH |= StringSwitch<int64_t>(Value)
+                .Case("RETURN", AMDGPU::TH::ATOMIC_RETURN)
+                .Case("RT", AMDGPU::TH::RT)
+                .Case("RT_RETURN", AMDGPU::TH::ATOMIC_RETURN)
+                .Case("NT", AMDGPU::TH::ATOMIC_NT)
+                .Case("NT_RETURN",
+                      AMDGPU::TH::ATOMIC_NT | AMDGPU::TH::ATOMIC_RETURN)
+                .Case("CASCADE_RT", AMDGPU::TH::ATOMIC_CASCADE)
+                .Case("CASCADE_NT",
+                      AMDGPU::TH::ATOMIC_CASCADE | AMDGPU::TH::ATOMIC_NT)
+                .Default(0xffffffff);
+    else
+      TH |= StringSwitch<int64_t>(Value)
+                .Case("RT", AMDGPU::TH::RT)
+                .Case("NT", AMDGPU::TH::NT)
+                .Case("HT", AMDGPU::TH::HT)
+                .Case("LU", AMDGPU::TH::LU)
+                .Case("RT_WB", AMDGPU::TH::RT_WB)
+                .Case("NT_RT", AMDGPU::TH::NT_RT)
+                .Case("RT_NT", AMDGPU::TH::RT_NT)
+                .Case("NT_HT", AMDGPU::TH::NT_HT)
+                .Case("NT_WB", AMDGPU::TH::NT_WB)
+                .Case("BYPASS", AMDGPU::TH::BYPASS)
+                .Default(0xffffffff);
+  }
+
+  if (TH == 0xffffffff) {
+    Error(StringLoc, "invalid th value");
+    return MatchOperand_ParseFail;
+  }
 
   Operands.push_back(
       AMDGPUOperand::CreateImm(this, TH, StringLoc, AMDGPUOperand::ImmTyTH));

@@ -241,7 +241,7 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printTH(const MCInst *MI, unsigned OpNo,
                                 const MCSubtargetInfo &STI, raw_ostream &O) {
-  auto Imm = MI->getOperand(OpNo).getImm();
+  auto Imm = MI->getOperand(OpNo).getImm() & 0x7;
 
   // For th = 0 do not print this field
   if (Imm == 0)
@@ -251,7 +251,8 @@ void AMDGPUInstPrinter::printTH(const MCInst *MI, unsigned OpNo,
   const MCInstrDesc &TID = MII.get(Opcode);
 
   bool IsStore = TID.mayStore();
-  bool IsAtomic = TID.mayLoad() && IsStore;
+  bool IsAtomic =
+      TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet);
 
   int ScopeIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::scope);
   assert(ScopeIdx != -1);
