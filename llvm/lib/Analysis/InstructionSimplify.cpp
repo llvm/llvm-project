@@ -5671,6 +5671,7 @@ static bool isIdempotent(Intrinsic::ID ID) {
   case Intrinsic::round:
   case Intrinsic::roundeven:
   case Intrinsic::canonicalize:
+  case Intrinsic::arithmetic_fence:
     return true;
   }
 }
