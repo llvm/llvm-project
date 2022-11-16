@@ -1,8 +1,10 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN %s
 
 # GCN-LABEL: name: hazard_lds_branch_buf
-# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
-# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+# GCN:        bb.1:
+# GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT:   BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            hazard_lds_branch_buf
 body:            |
@@ -17,8 +19,9 @@ body:            |
 ...
 
 # GCN-LABEL: name: hazard_buf_branch_lds
-# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
-# GCN-NEXT: DS_READ_B32
+# GCN:        bb.1:
+# GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT:   DS_READ_B32
 ---
 name:            hazard_buf_branch_lds
 body:            |
@@ -92,8 +95,8 @@ body:            |
 ...
 
 # GCN-LABEL: name: hazard_lds_branch_buf_loop
-# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
-# GCN-NEXT: DS_READ_B32
+# GFX10:    S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN:      DS_READ_B32
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            hazard_lds_branch_buf_loop
@@ -106,9 +109,10 @@ body:            |
 ...
 
 # GCN-LABEL: name: single_hazard_lds_branch_buf
-# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
-# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
-# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+# GCN:        bb.1:
+# GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT:   BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT:   BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            single_hazard_lds_branch_buf
 body:            |
@@ -159,8 +163,10 @@ body:            |
 ...
 
 # GCN-LABEL: name: hazard_lds_branch_vscnt_1_buf
-# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
-# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+# GCN:        bb.1:
+# GCN-NEXT:   S_WAITCNT_VSCNT undef $sgpr_null, 1
+# GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT:   BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            hazard_lds_branch_vscnt_1_buf
 body:            |
@@ -194,8 +200,10 @@ body:            |
 ...
 
 # GCN-LABEL: name: hazard_lds_branch_vscnt_s0_buf
-# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
-# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+# GCN:        bb.1:
+# GCN-NEXT:   S_WAITCNT_VSCNT undef $sgpr0, 0
+# GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT:   BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            hazard_lds_branch_vscnt_s0_buf
 body:            |
@@ -228,8 +236,9 @@ body:            |
 ...
 
 # GCN-LABEL: name: hazard_lds_branch_global
-# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
-# GCN-NEXT: GLOBAL_LOAD_DWORD
+# GCN:        bb.1:
+# GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT:   GLOBAL_LOAD_DWORD
 ---
 name:            hazard_lds_branch_global
 body:            |
@@ -244,8 +253,9 @@ body:            |
 ...
 
 # GCN-LABEL: name: hazard_lds_branch_scratch
-# GCN:      S_WAITCNT_VSCNT undef $sgpr_null, 0
-# GCN-NEXT: SCRATCH_LOAD_DWORD
+# GCN:        bb.1:
+# GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
+# GCN-NEXT:   SCRATCH_LOAD_DWORD
 ---
 name:            hazard_lds_branch_scratch
 body:            |
