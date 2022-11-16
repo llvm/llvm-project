@@ -407,6 +407,14 @@ public:
 
   IsAliased_t isPotentiallyAliased() const { return IsAliased_t(AliasedFlag); }
 
+  RValue asRValue() const {
+    if (isIgnored()) {
+      return RValue::getIgnored();
+    } else {
+      return RValue::getAggregate(getAddress(), isVolatile());
+    }
+  }
+
   /// Get the preferred size to use when storing a value to this slot. This
   /// is the type size unless that might overlap another object, in which
   /// case it's the dsize.

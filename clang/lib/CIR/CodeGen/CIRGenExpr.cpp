@@ -534,8 +534,13 @@ RValue CIRGenFunction::buildAnyExpr(const Expr *E, AggValueSlot aggSlot,
     return RValue::get(buildScalarExpr(E));
   case TEK_Complex:
     assert(0 && "not implemented");
-  case TEK_Aggregate:
-    assert(0 && "not implemented");
+  case TEK_Aggregate: {
+    if (!ignoreResult && aggSlot.isIgnored())
+      aggSlot =
+          CreateAggTemp(E->getType(), getLoc(E->getSourceRange()), "agg-temp");
+    buildAggExpr(E, aggSlot);
+    return aggSlot.asRValue();
+  }
   }
   llvm_unreachable("bad evaluation kind");
 }

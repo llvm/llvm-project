@@ -70,7 +70,7 @@ CIRGenFunctionInfo *CIRGenFunctionInfo::create(
 
 namespace {
 
-/// Encapsulates information about hte way function arguments from
+/// Encapsulates information about the way function arguments from
 /// CIRGenFunctionInfo should be passed to actual CIR function.
 class ClangToCIRArgMapping {
   static const unsigned InvalidIndex = ~0U;
@@ -150,10 +150,15 @@ void ClangToCIRArgMapping::construct(const ASTContext &Context,
       assert(false && "NYI");
     case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
-      assert(!AI.getCoerceToType().dyn_cast<mlir::cir::StructType>() && "NYI");
+      auto STy = AI.getCoerceToType().dyn_cast<mlir::cir::StructType>();
       // FIXME: handle sseregparm someday...
-      // FIXME: handle structs
-      CIRArgs.NumberOfArgs = 1;
+      if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
+        // TODO(cir): we might not want to break it this early, revisit this
+        // once we have a better ABI lowering story.
+        CIRArgs.NumberOfArgs = STy.getMembers().size();
+      } else {
+        CIRArgs.NumberOfArgs = 1;
+      }
       break;
     }
     }
@@ -531,7 +536,10 @@ void CIRGenFunction::buildCallArg(CallArgList &args, const Expr *E,
   // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
   // However, we still have to push an EH-only cleanup in case we unwind before
   // we make it to the call.
-  assert(!type->isRecordType() && "Record type args NYI");
+  if (type->isRecordType() &&
+      type->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee()) {
+    llvm_unreachable("NYI");
+  }
 
   if (HasAggregateEvalKind && isa<ImplicitCastExpr>(E) &&
       cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue) {
@@ -541,12 +549,15 @@ void CIRGenFunction::buildCallArg(CallArgList &args, const Expr *E,
   args.add(buildAnyExprToTemp(E), type);
 }
 
-/// buildAnyExprToTemp - Similar to buildAnyExpr(), however, the result will
-/// always be accessible even if no aggregate location is provided.
+/// Similar to buildAnyExpr(), however, the result will always be accessible
+/// even if no aggregate location is provided.
 RValue CIRGenFunction::buildAnyExprToTemp(const Expr *E) {
   AggValueSlot AggSlot = AggValueSlot::ignored();
 
-  assert(!hasAggregateEvaluationKind(E->getType()) && "aggregate args NYI");
+  if (hasAggregateEvaluationKind(E->getType()))
+    AggSlot =
+        CreateAggTemp(E->getType(), getLoc(E->getSourceRange()), "agg.tmp");
+
   return buildAnyExpr(E, AggSlot);
 }
 

@@ -195,20 +195,37 @@ mlir::Type CIRGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
   return ResultType;
 }
 
-/// isFuncParamTypeConvertible - Return true if the specified type in a function
-/// parameter or result position can be converted to a CIR type at this point.
-/// This boils down to being whether it is complete, as well as whether we've
-/// temporarily deferred expanding the type because we're in a recursive
-/// context.
+/// Return true if the specified type in a function parameter or result position
+/// can be converted to a CIR type at this point. This boils down to being
+/// whether it is complete, as well as whether we've temporarily deferred
+/// expanding the type because we're in a recursive context.
 bool CIRGenTypes::isFuncParamTypeConvertible(clang::QualType Ty) {
   // Some ABIs cannot have their member pointers represented in LLVM IR unless
   // certain circumstances have been reached.
   assert(!Ty->getAs<MemberPointerType>() && "NYI");
 
   // If this isn't a tagged type, we can convert it!
-  auto *TT = Ty->getAs<TagType>();
-  assert(!TT && "Only non-TagTypes implemented atm.");
-  return true;
+  const TagType *TT = Ty->getAs<TagType>();
+  if (!TT)
+    return true;
+
+  // Incomplete types cannot be converted.
+  if (TT->isIncompleteType())
+    return false;
+
+  // If this is an enum, then it is always safe to convert.
+  const RecordType *RT = dyn_cast<RecordType>(TT);
+  if (!RT)
+    return true;
+
+  // Otherwise, we have to be careful.  If it is a struct that we're in the
+  // process of expanding, then we can't convert the function type.  That's ok
+  // though because we must be in a pointer context under the struct, so we can
+  // just convert it to a dummy type.
+  //
+  // We decide this by checking whether ConvertRecordDeclType returns us an
+  // opaque type for a struct that we know is defined.
+  return isSafeToConvert(RT->getDecl(), *this);
 }
 
 /// Code to verify a given function type is complete, i.e. the return type and
@@ -269,10 +286,14 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     case BuiltinType::SveCount:
       llvm_unreachable("NYI");
     case BuiltinType::Void:
+      // TODO(cir): how should we model this?
+      ResultType = ::mlir::IntegerType::get(Builder.getContext(), 8);
+      break;
+
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
     case BuiltinType::ObjCSel:
-      // FIXME: if we emit like LLVM we probably wanna use i8.
+      // TODO(cir): probably same as BuiltinType::Void
       assert(0 && "not implemented");
       break;
 

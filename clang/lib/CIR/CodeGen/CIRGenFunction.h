@@ -1232,6 +1232,17 @@ public:
   Address CreateMemTempWithoutCast(QualType T, CharUnits Align,
                                    mlir::Location Loc,
                                    const Twine &Name = "tmp");
+
+  /// Create a temporary memory object for the given
+  /// aggregate type.
+  AggValueSlot CreateAggTemp(QualType T, mlir::Location Loc,
+                             const Twine &Name = "tmp",
+                             Address *Alloca = nullptr) {
+    return AggValueSlot::forAddr(
+        CreateMemTemp(T, Loc, Name, Alloca), T.getQualifiers(),
+        AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
+        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+  }
 };
 
 } // namespace cir
