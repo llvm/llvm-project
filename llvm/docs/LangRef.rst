@@ -4286,14 +4286,13 @@ of the function containing ``%block`` (usually ``addrspace(0)``).
 Taking the address of the entry block is illegal.
 
 This value only has defined behavior when used as an operand to the
-':ref:`indirectbr <i_indirectbr>`' or ':ref:`callbr <i_callbr>`'instruction, or
-for comparisons against null. Pointer equality tests between labels addresses
-results in undefined behavior --- though, again, comparison against null is ok,
-and no label is equal to the null pointer. This may be passed around as an
-opaque pointer sized value as long as the bits are not inspected. This
-allows ``ptrtoint`` and arithmetic to be performed on these values so
-long as the original value is reconstituted before the ``indirectbr`` or
-``callbr`` instruction.
+':ref:`indirectbr <i_indirectbr>`' or for comparisons against null. Pointer
+equality tests between labels addresses results in undefined behavior ---
+though, again, comparison against null is ok, and no label is equal to the null
+pointer. This may be passed around as an opaque pointer sized value as long as
+the bits are not inspected. This allows ``ptrtoint`` and arithmetic to be
+performed on these values so long as the original value is reconstituted before
+the ``indirectbr`` instruction.
 
 Finally, some targets may provide defined semantics when using the value
 as the operand to an inline assembly, but that is target specific.
