@@ -27,6 +27,7 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -98,6 +99,35 @@ struct CodeGen {
   }
 };
 
+/// A helper class that visits an affine expression and tries to find an
+/// AffineDimExpr to which the corresponding iterator from a GenericOp matches
+/// the desired iterator type.
+class AffineDimFinder : public AffineExprVisitor<AffineDimFinder> {
+public:
+  explicit AffineDimFinder(linalg::GenericOp op)
+      : iterTypes(op.getIteratorTypesArray()) {}
+  void visitDimExpr(AffineDimExpr expr) {
+    if (pickedDim == nullptr || pickIterType == iterTypes[expr.getPosition()]) {
+      pickedDim = expr;
+    }
+  }
+
+  /// Set the desired iterator type that we want to pick.
+  void setPickedIterType(utils::IteratorType iterType) {
+    pickIterType = iterType;
+  }
+
+  /// Get the desired AffineDimExpr.
+  AffineDimExpr getDimExpr() const { return pickedDim.cast<AffineDimExpr>(); }
+
+private:
+  /// The picked AffineDimExpr after visit.
+  AffineExpr pickedDim;
+  /// The iterator type that we want.
+  utils::IteratorType pickIterType;
+  /// The mapping between dim=>iterator type.
+  SmallVector<utils::IteratorType> iterTypes;
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -219,25 +249,45 @@ static bool topSortOptimal(unsigned n,
 /// Helper method to add all constraints from the indices in one affine
 /// expression before all indices in the other affine expression. For
 /// example i0+i1 < i2+i3+1 yields i0<i2, i0<i3, i1<i2, and i1<i3.
+/// The affine expression `a` is empty iff `fidx` have a value, leading to
+/// b = (i0 + i1) < fidx => i0 < fidx, i1 < fidx.
+/// The affine expression `b` is empty iff `tidx` have a value, leading to
+/// tidx < a = (i0 + i1) => tidx < i0, tidx < i1.
 static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
                                std::vector<unsigned> &inDegree, AffineExpr a,
-                               AffineExpr b, unsigned fidx) {
-  switch (a.getKind()) {
-  case AffineExprKind::DimId: {
-    unsigned idx = a.cast<AffineDimExpr>().getPosition();
-    if (b)
-      addAffineOrderings(adjM, inDegree, b, AffineExpr(), idx);
-    else if (!adjM[fidx][idx]) {
-      adjM[fidx][idx] = true;
-      inDegree[idx]++;
+                               AffineExpr b, Optional<unsigned> fidx,
+                               Optional<unsigned> tidx) {
+  if (!a && !b) {
+    // Recursion leaf.
+    assert(fidx && tidx);
+    unsigned f = *fidx, t = *tidx;
+    if (!adjM[f][t]) {
+      adjM[f][t] = true;
+      inDegree[t]++;
     }
+    return;
+  }
+  // Picks an affine expression and expand (recurse into) it.
+  auto toExpand = a ? a : b;
+  switch (toExpand.getKind()) {
+  case AffineExprKind::DimId: {
+    auto idx = toExpand.cast<AffineDimExpr>().getPosition();
+    if (toExpand == a)
+      addAffineOrderings(adjM, inDegree, AffineExpr(), b, idx, tidx);
+    else // toExpand == b
+      addAffineOrderings(adjM, inDegree, a, AffineExpr(), fidx, idx);
     break;
   }
   case AffineExprKind::Add:
   case AffineExprKind::Mul: {
-    auto binOp = a.cast<AffineBinaryOpExpr>();
-    addAffineOrderings(adjM, inDegree, binOp.getLHS(), b, fidx);
-    addAffineOrderings(adjM, inDegree, binOp.getRHS(), b, fidx);
+    auto binOp = toExpand.cast<AffineBinaryOpExpr>();
+    if (toExpand == a) {
+      addAffineOrderings(adjM, inDegree, binOp.getLHS(), b, fidx, tidx);
+      addAffineOrderings(adjM, inDegree, binOp.getRHS(), b, fidx, tidx);
+    } else {
+      addAffineOrderings(adjM, inDegree, a, binOp.getLHS(), fidx, tidx);
+      addAffineOrderings(adjM, inDegree, a, binOp.getRHS(), fidx, tidx);
+    }
     break;
   }
   default:
@@ -245,11 +295,46 @@ static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
   }
 }
 
-/// Computes a topologically sorted iteration graph for the linalg operation.
-/// Ensures all tensors are visited in natural index order. This is essential
-/// for sparse storage formats since these only support access along fixed
-/// dimensions. Even for dense storage formats, however, the natural index
-/// order yields innermost unit-stride access with better spatial locality.
+static void tryLoosenAffineDenseConstraints(linalg::GenericOp op,
+                                            Optional<unsigned> &fldx,
+                                            AffineExpr &fa,
+                                            Optional<unsigned> &tldx,
+                                            AffineExpr &ta) {
+  // We use a heuristic here to only pick one dim expression from each
+  // compound affine expression to establish the order between two dense
+  // dimensions.
+  if (!tldx) {
+    AffineDimFinder finder(op);
+    // NOTE: The ordering can only be loosen when the destination level is
+    // dense (when !tldx), for [dense, sparse] -> (d0 + d1, d2), we still
+    // require both d0 < d2 and d1 < d2 to ensure correct ordering (i.e.,
+    // no ordering like d0->d2->d1).
+    // TODO: this is obviously a sub optimal solution.
+    if (!fldx && !fa.isa<AffineConstantExpr>()) {
+      // Heuristic: we prefer parallel loop for lhs to reduce the chance
+      // we add reduce < parallel ordering.
+      finder.setPickedIterType(utils::IteratorType::parallel);
+      finder.walkPostOrder(fa);
+      fa = finder.getDimExpr();
+      fldx = finder.getDimExpr().getPosition();
+    }
+    if (!ta.isa<AffineConstantExpr>()) {
+      // Heuristic: we prefer reduction loop for rhs to reduce the chance
+      // addint reduce < parallel ordering.
+      finder.setPickedIterType(utils::IteratorType::reduction);
+      finder.walkPostOrder(ta);
+      ta = finder.getDimExpr();
+      tldx = finder.getDimExpr().getPosition();
+    }
+  }
+}
+
+/// Computes a topologically sorted iteration graph for the linalg
+/// operation. Ensures all tensors are visited in natural index order. This
+/// is essential for sparse storage formats since these only support access
+/// along fixed dimensions. Even for dense storage formats, however, the
+/// natural index order yields innermost unit-stride access with better
+/// spatial locality.
 static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
                                   std::vector<unsigned> &topSort, unsigned mask,
                                   OpOperand *skip = nullptr) {
@@ -275,10 +360,25 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
     // by default) puts an ordering constraint on the loop indices. For
     // example, the tensor expresion A_ijk forces the ordering i < j < k
     // on the loop indices if no explicit dimension ordering is given.
-    for (unsigned d = 1, rank = map.getNumResults(); d < rank; d++) {
-      AffineExpr f = map.getResult(toOrigDim(enc, d - 1));
-      AffineExpr t = map.getResult(toOrigDim(enc, d));
-      addAffineOrderings(adjM, inDegree, f, t, 0);
+    for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
+      AffineExpr ta = map.getResult(toOrigDim(enc, d));
+      Optional<unsigned> tldx = merger.getLoopIdx(t.getOperandNumber(), d);
+
+      if (d > 0) {
+        AffineExpr fa = map.getResult(toOrigDim(enc, d - 1));
+        Optional<unsigned> fldx =
+            merger.getLoopIdx(t.getOperandNumber(), d - 1);
+
+        // Applying order constraints on every pair of dimExpr between two
+        // compound affine expressions can sometime too strict:
+        // E.g, for [dense, dense] -> (d0 + d1, d2 + d3).
+        // It is totally fine to have loop sequence d0->d2->d1->d3 instead of
+        // requiring d0 < d2, d1 < d2, d0 < d3, d1 < d3.
+        if (!(mask & SortMask::kIncludeDense))
+          tryLoosenAffineDenseConstraints(op, fldx, fa, tldx, ta);
+
+        addAffineOrderings(adjM, inDegree, fa, ta, fldx, tldx);
+      }
     }
     // Push unrelated loops into sparse iteration space, so these
     // will be skipped more often.
@@ -504,10 +604,6 @@ static Value genSubscript(CodeGen &codegen, OpBuilder &builder,
   auto enc = getSparseTensorEncoding(t->get().getType());
   unsigned rank = map.getNumResults();
   if (enc) {
-    // Note that currently, all sparse subscripts are simple.
-    // TODO: accept affine too?
-    assert(map.getResult(toOrigDim(enc, rank - 1)).getKind() ==
-           AffineExprKind::DimId);
     Value pidx = codegen.loopEmitter.getPidxs()[tensor].back();
     assert(pidx);
     args.push_back(pidx); // position index
@@ -750,8 +846,11 @@ static bool isInvariantAffine(const CodeGen &codegen, AffineExpr a,
   switch (a.getKind()) {
   case AffineExprKind::DimId: {
     unsigned idx = a.cast<AffineDimExpr>().getPosition();
-    if (idx == ldx)
+    if (idx == ldx) {
       atLevel = true;
+      // Must be invariant if we are at the level.
+      return true;
+    }
     return codegen.getLoopIdxValue(idx) != nullptr; // no longer in play?
   }
   case AffineExprKind::Add:
@@ -1090,12 +1189,13 @@ static bool startLoopSeq(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   return false;
 }
 
-static void translateBitsToTidDimPairs(Merger &merger, CodeGen &codegen,
-                                       unsigned li, unsigned idx,
-                                       SmallVectorImpl<size_t> &condTids,
-                                       SmallVectorImpl<size_t> &condDims,
-                                       SmallVectorImpl<size_t> &extraTids,
-                                       SmallVectorImpl<size_t> &extraDims) {
+static void translateBitsToTidDimPairs(
+    Merger &merger, CodeGen &codegen, linalg::GenericOp op, unsigned li,
+    unsigned idx, SmallVectorImpl<size_t> &condTids,
+    SmallVectorImpl<size_t> &condDims, SmallVectorImpl<size_t> &extraTids,
+    SmallVectorImpl<size_t> &extraDims, SmallVectorImpl<size_t> &affineTids,
+    SmallVectorImpl<size_t> &affineDims, SmallVectorImpl<AffineExpr> &exps) {
+
   const BitVector &all = merger.lat(li).bits;
   const BitVector &simple = merger.lat(li).simple;
 
@@ -1123,6 +1223,53 @@ static void translateBitsToTidDimPairs(Merger &merger, CodeGen &codegen,
       // TODO: get rid of extraTids and extraDims.
       extraTids.push_back(tid);
       extraDims.push_back(dim.value());
+    } else {
+      assert(isUndefDLT(dlt));
+      if (tid >= op.getNumDpsInputs())
+        // We only handle affine expression on input tensors (for now).
+        return;
+      OpOperand *operand = &op->getOpOperand(tid);
+      auto enc = getSparseTensorEncoding(operand->get().getType());
+      // Non-annotated dense tensors requires no special handling.
+      if (!enc)
+        return;
+
+      ArrayRef<AffineExpr> affines =
+          op.getMatchingIndexingMap(operand).getResults();
+      assert(affines.size() == enc.getDimLevelType().size());
+      for (unsigned i = 0, e = affines.size(); i < e; i++) {
+        AffineExpr exp = affines[toOrigDim(enc, i)];
+        // Skip simple affine expression and non dense dimensions (which has
+        // it own filter loop).
+        if (exp.isa<AffineDimExpr>() || !isDenseDLT(getDimLevelType(enc, i)))
+          continue;
+
+        // Constant affine expressions on dense level required to be generated
+        // when
+        // 1. The previous level is an (at-level) invariant compound dense
+        // affine (with no corresponding loop idx); or
+        // 2. The previous level is being generated right now.
+        if (exp.isa<AffineConstantExpr>()) {
+          // TODO:  Should we come up with a more adhersive way to handle
+          // constant expression? We now requires two (somehow ad-hoc) code for
+          // it.
+          assert(false && "do not support constant affine");
+        }
+
+        bool atLevel = false;
+        if (isInvariantAffine(codegen, exp, idx, atLevel) && atLevel) {
+          // If the compound affine is invariant and we are right at the
+          // level. We need to generate the address according to the affine
+          // expression. This is also the best place we can do it to avoid
+          // putting it inside inner loops.
+          // NOTE: It assumes that the levels of the input tensor are
+          // initialized in order, another more admissible approach might be
+          // accepting out-of-order access between consecutive dense levels.
+          affineTids.push_back(tid);
+          affineDims.push_back(i);
+          exps.push_back(exp);
+        }
+      }
     }
   });
 
@@ -1146,12 +1293,23 @@ static Operation *startLoop(Merger &merger, CodeGen &codegen,
   // The set of (dense) tensors that is optimized from condition, yet still
   // need extra locals to iterate on them.
   SmallVector<size_t> extraTids, extraDims;
+  // The set of dense tensors with non-trivial affine expression that just
+  // becomes invariant and the address shall now be generated at the current
+  // level.
+  SmallVector<size_t> affineTids, affineDims;
+  SmallVector<AffineExpr> affines;
 
-  translateBitsToTidDimPairs(merger, codegen, li, codegen.topSort[at], condTids,
-                             condDims, extraTids, extraDims);
+  translateBitsToTidDimPairs(merger, codegen, op, li, codegen.topSort[at],
+                             condTids, condDims, extraTids, extraDims,
+                             affineTids, affineDims, affines);
   // Emit the for/while-loop control.
   Operation *loop = genLoop(merger, codegen, builder, op, at, needsUniv,
                             condTids, condDims, extraTids, extraDims);
+
+  for (auto [tid, dim, exp] : llvm::zip(affineTids, affineDims, affines)) {
+    codegen.loopEmitter.genDenseAffineAddressAtCurLevel(builder, op.getLoc(),
+                                                        tid, dim, exp);
+  }
   return loop;
 }
 

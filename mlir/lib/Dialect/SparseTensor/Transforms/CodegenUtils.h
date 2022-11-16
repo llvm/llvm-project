@@ -338,7 +338,6 @@ inline bool isZeroRankedTensorOrScalar(Type type) {
 // loopEmiter.exitCurrentLoop(); // exit i
 //===----------------------------------------------------------------------===//
 
-// TODO: Sparsification should also rely on this class to generate loops.
 class SparseTensorLoopEmitter {
 public:
   /// Optional callback function to setup dense output tensors when
@@ -406,6 +405,10 @@ public:
                                       bool isParallel = false,
                                       ArrayRef<size_t> extraTids = {},
                                       ArrayRef<size_t> extraDims = {});
+
+  void genDenseAffineAddressAtCurLevel(OpBuilder &builder, Location loc,
+                                       size_t tid, size_t dim,
+                                       AffineExpr affine);
 
   /// Emits a co-iteration loop over a set of tensors.
   Operation *enterCoIterationOverTensorsAtDims(
