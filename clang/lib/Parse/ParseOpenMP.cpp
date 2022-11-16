@@ -3237,6 +3237,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_proc_bind:
   case OMPC_atomic_default_mem_order:
   case OMPC_at:
+  case OMPC_severity:
   case OMPC_order:
   case OMPC_bind:
     // OpenMP [2.14.3.1, Restrictions]
@@ -3247,8 +3248,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     // OpenMP [5.0, Requires directive, Restrictions]
     //  At most one atomic_default_mem_order clause can appear
     //  on the directive
-    // OpenMP [5.1, Requires directive, Restrictions]
+    // OpenMP [5.1, error directive, Restrictions]
     //  At most one at clause can appear on the directive
+    //  At most one severity clause can appear on the directive
     // OpenMP 5.1, 2.11.7 loop Construct, Restrictions.
     // At most one bind clause can appear on a loop directive.
     if (!FirstClause && CKind != OMPC_order) {
