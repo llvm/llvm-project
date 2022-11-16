@@ -260,7 +260,7 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
 // Pseudo instructions used by KCFI.
 //===----------------------------------------------------------------------===//
 let
-  Defs = [R10, EFLAGS] in {
+  Defs = [R10, R11, EFLAGS] in {
 def KCFI_CHECK : PseudoI<
   (outs), (ins GR64:$ptr, i32imm:$type), []>, Sched<[]>;
 }
