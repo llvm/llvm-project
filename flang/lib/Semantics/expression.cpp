@@ -3950,7 +3950,8 @@ void ArgumentAnalyzer::AddAssignmentConversion(
       (lhsType.category() == TypeCategory::Derived ||
           lhsType.kind() == rhsType.kind())) {
     // no conversion necessary
-  } else if (auto rhsExpr{evaluate::ConvertToType(lhsType, MoveExpr(1))}) {
+  } else if (auto rhsExpr{evaluate::Fold(context_.GetFoldingContext(),
+                 evaluate::ConvertToType(lhsType, MoveExpr(1)))}) {
     std::optional<parser::CharBlock> source;
     if (actuals_[1]) {
       source = actuals_[1]->sourceLocation();
