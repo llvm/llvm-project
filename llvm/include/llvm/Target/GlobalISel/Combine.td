@@ -131,6 +131,18 @@ def copy_prop : GICombineRule<
          [{ return Helper.matchCombineCopy(*${mi}); }]),
   (apply [{ Helper.applyCombineCopy(*${mi}); }])>;
 
+// idempotent operations
+// Fold (freeze (freeze x)) -> (freeze x).
+// Fold (fabs (fabs x)) -> (fabs x).
+// Fold (fcanonicalize (fcanonicalize x)) -> (fcanonicalize x).
+def idempotent_prop : GICombineRule<
+   (defs root:$mi),
+   (match (wip_match_opcode G_FREEZE, G_FABS, G_FCANONICALIZE):$mi,
+          [{ return MRI.getVRegDef(${mi}->getOperand(1).getReg())->getOpcode() ==
+                    ${mi}->getOpcode(); }]),
+   (apply [{ Helper.replaceSingleDefInstWithOperand(*${mi}, 1); }])>;
+
+
 def extending_loads : GICombineRule<
   (defs root:$root, extending_load_matchdata:$matchinfo),
   (match (wip_match_opcode G_LOAD, G_SEXTLOAD, G_ZEXTLOAD):$root,
@@ -563,15 +575,6 @@ def merge_unmerge : GICombineRule<
   (match (wip_match_opcode G_MERGE_VALUES):$d,
   [{ return Helper.matchCombineMergeUnmerge(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${d}, ${matchinfo}); }])
->;
-
-// Fold (fabs (fabs x)) -> (fabs x).
-def fabs_fabs_fold: GICombineRule<
-  (defs root:$dst, register_matchinfo:$matchinfo),
-  (match (G_FABS $abs, $src),
-         (G_FABS $dst, $abs):$mi,
-         [{ ${matchinfo} = ${abs}.getReg(); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithReg(*${mi}, ${matchinfo}); }])
 >;
 
 // Fold (fabs (fneg x)) -> (fabs x).
@@ -1038,7 +1041,7 @@ def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp,
                                       select_to_logical]>;
 
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
-                                       mul_by_neg_one]>;
+                                       mul_by_neg_one, idempotent_prop]>;
 
 def fma_combines : GICombineGroup<[combine_fadd_fmul_to_fmad_or_fma,
   combine_fadd_fpext_fmul_to_fmad_or_fma, combine_fadd_fma_fmul_to_fmad_or_fma,
@@ -1055,7 +1058,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     width_reduction_combines, select_combines,
     known_bits_simplifications, ext_ext_fold,
     not_cmp_fold, opt_brcond_by_inverting_cond,
-    unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
+    unmerge_merge, unmerge_cst, unmerge_dead_to_trunc,
     unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shl,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
