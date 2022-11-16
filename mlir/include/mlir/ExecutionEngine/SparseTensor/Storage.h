@@ -35,9 +35,9 @@
 
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/ExecutionEngine/Float16bits.h"
+#include "mlir/ExecutionEngine/SparseTensor/ArithmeticUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/Attributes.h"
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
-#include "mlir/ExecutionEngine/SparseTensor/CheckedMul.h"
 #include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 
 namespace mlir {
@@ -509,9 +509,10 @@ private:
   /// the previous position and smaller than `indices[l].capacity()`).
   void appendPointer(uint64_t l, uint64_t pos, uint64_t count = 1) {
     ASSERT_COMPRESSED_LVL(l);
-    assert(pos <= std::numeric_limits<P>::max() &&
-           "Pointer value is too large for the P-type");
-    pointers[l].insert(pointers[l].end(), count, static_cast<P>(pos));
+    // TODO: we'd like to recover the nicer error message:
+    // "Pointer value is too large for the P-type"
+    pointers[l].insert(pointers[l].end(), count,
+                       detail::checkOverflowCast<P>(pos));
   }
 
   /// Appends index `i` to level `l`, in the semantically general sense.
@@ -526,9 +527,9 @@ private:
   void appendIndex(uint64_t l, uint64_t full, uint64_t i) {
     const auto dlt = getLvlType(l); // Avoid redundant bounds checking.
     if (isCompressedDLT(dlt) || isSingletonDLT(dlt)) {
-      assert(i <= std::numeric_limits<I>::max() &&
-             "Index value is too large for the I-type");
-      indices[l].push_back(static_cast<I>(i));
+      // TODO: we'd like to recover the nicer error message:
+      // "Index value is too large for the I-type"
+      indices[l].push_back(detail::checkOverflowCast<I>(i));
     } else { // Dense dimension.
       ASSERT_DENSE_DLT(dlt);
       assert(i >= full && "Index was already filled");
@@ -551,9 +552,9 @@ private:
     // entry has been initialized; thus we must be sure to check `size()`
     // here, instead of `capacity()` as would be ideal.
     assert(pos < indices[l].size() && "Index position is out of bounds");
-    assert(i <= std::numeric_limits<I>::max() &&
-           "Index value is too large for the I-type");
-    indices[l][pos] = static_cast<I>(i);
+    // TODO: we'd like to recover the nicer error message:
+    // "Index value is too large for the I-type"
+    indices[l][pos] = detail::checkOverflowCast<I>(i);
   }
 
   /// Computes the assembled-size associated with the `l`-th level,
