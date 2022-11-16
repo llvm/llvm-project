@@ -251,6 +251,7 @@ module {
     bufferization.dealloc_tensor %s3 : tensor<2x2xf64, #DCSC>
     bufferization.dealloc_tensor %s4 : tensor<2x2xf64, #SortedCOO>
     bufferization.dealloc_tensor %s5 : tensor<2x2xf64, #SortedCOOPerm>
+    bufferization.dealloc_tensor %s6 : tensor<7x8x9xf64, #CCCPerm>
 
     return
   }
