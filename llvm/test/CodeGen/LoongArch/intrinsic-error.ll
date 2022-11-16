@@ -8,10 +8,17 @@ entry:
   ret void
 }
 
-define void @dbar_imm_out_of_range() nounwind {
+define void @dbar_imm_out_of_hi_range() nounwind {
 ; CHECK: argument to '__builtin_loongarch_dbar' out of range
 entry:
   call void @llvm.loongarch.dbar(i32 32769)
+  ret void
+}
+
+define void @dbar_imm_out_of_lo_range() nounwind {
+; CHECK: argument to '__builtin_loongarch_dbar' out of range
+entry:
+  call void @llvm.loongarch.dbar(i32 -1)
   ret void
 }
 
