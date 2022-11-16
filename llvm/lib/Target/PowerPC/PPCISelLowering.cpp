@@ -8334,7 +8334,7 @@ void PPCTargetLowering::spliceIntoChain(SDValue ResChain,
 /// prefer float load to int load plus direct move
 /// when there is no integer use of int load
 bool PPCTargetLowering::directMoveIsProfitable(const SDValue &Op) const {
-  SDNode *Origin = Op.getOperand(0).getNode();
+  SDNode *Origin = Op.getOperand(Op->isStrictFPOpcode() ? 1 : 0).getNode();
   if (Origin->getOpcode() != ISD::LOAD)
     return true;
 
