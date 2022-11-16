@@ -378,8 +378,12 @@ private:
                         SelectionDAG &DAG) const;
   SDValue extractVector(SDValue VecV, SDValue IdxV, const SDLoc &dl,
                         MVT ValTy, MVT ResTy, SelectionDAG &DAG) const;
+  SDValue extractVectorPred(SDValue VecV, SDValue IdxV, const SDLoc &dl,
+                            MVT ValTy, MVT ResTy, SelectionDAG &DAG) const;
   SDValue insertVector(SDValue VecV, SDValue ValV, SDValue IdxV,
                        const SDLoc &dl, MVT ValTy, SelectionDAG &DAG) const;
+  SDValue insertVectorPred(SDValue VecV, SDValue ValV, SDValue IdxV,
+                           const SDLoc &dl, MVT ValTy, SelectionDAG &DAG) const;
   SDValue expandPredicate(SDValue Vec32, const SDLoc &dl,
                           SelectionDAG &DAG) const;
   SDValue contractPredicate(SDValue Vec64, const SDLoc &dl,
