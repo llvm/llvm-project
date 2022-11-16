@@ -202,6 +202,11 @@ public:
     CanBeFlattened = Flatten;
   }
 
+  bool getCanBeFlattened() const {
+    assert(isDirect() && "Invalid kind!");
+    return CanBeFlattened;
+  }
+
   mlir::Type getPaddingType() const {
     return (canHavePaddingType() ? PaddingType : nullptr);
   }
