@@ -264,6 +264,15 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI) {
   case RISCV::SLTI:
   case RISCV::SLTU:
   case RISCV::SLTIU:
+  case RISCV::FEQ_H:
+  case RISCV::FEQ_S:
+  case RISCV::FEQ_D:
+  case RISCV::FLT_H:
+  case RISCV::FLT_S:
+  case RISCV::FLT_D:
+  case RISCV::FLE_H:
+  case RISCV::FLE_S:
+  case RISCV::FLE_D:
   case RISCV::SEXT_B:
   case RISCV::SEXT_H:
   case RISCV::ZEXT_H_RV64:
@@ -283,8 +292,6 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI) {
   // The LI pattern ADDI rd, X0, imm is sign extended.
   case RISCV::ADDI:
     return MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0;
-      return true;
-    return false;
   // An ANDI with an 11 bit immediate will zero bits 63:11.
   case RISCV::ANDI:
     return isUInt<11>(MI.getOperand(2).getImm());
