@@ -309,6 +309,7 @@ declare float @llvm.trunc.f32(float) nounwind readnone
 declare float @llvm.rint.f32(float) nounwind readnone
 declare float @llvm.nearbyint.f32(float) nounwind readnone
 declare float @llvm.canonicalize.f32(float) nounwind readnone
+declare float @llvm.arithmetic.fence.f32(float) nounwind readnone
 
 ; Test idempotent intrinsics
 define float @test_idempotence(float %a) {
@@ -320,13 +321,15 @@ define float @test_idempotence(float %a) {
 ; CHECK-NEXT:    [[E0:%.*]] = call float @llvm.rint.f32(float [[A]])
 ; CHECK-NEXT:    [[F0:%.*]] = call float @llvm.nearbyint.f32(float [[A]])
 ; CHECK-NEXT:    [[G0:%.*]] = call float @llvm.canonicalize.f32(float [[A]])
+; CHECK-NEXT:    [[H0:%.*]] = call float @llvm.arithmetic.fence.f32(float [[A]])
 ; CHECK-NEXT:    [[R0:%.*]] = fadd float [[A0]], [[B0]]
 ; CHECK-NEXT:    [[R1:%.*]] = fadd float [[R0]], [[C0]]
 ; CHECK-NEXT:    [[R2:%.*]] = fadd float [[R1]], [[D0]]
 ; CHECK-NEXT:    [[R3:%.*]] = fadd float [[R2]], [[E0]]
 ; CHECK-NEXT:    [[R4:%.*]] = fadd float [[R3]], [[F0]]
 ; CHECK-NEXT:    [[R5:%.*]] = fadd float [[R4]], [[G0]]
-; CHECK-NEXT:    ret float [[R5]]
+; CHECK-NEXT:    [[R6:%.*]] = fadd float [[R5]], [[H0]]
+; CHECK-NEXT:    ret float [[R6]]
 ;
 
   %a0 = call float @llvm.fabs.f32(float %a)
@@ -350,14 +353,18 @@ define float @test_idempotence(float %a) {
   %g0 = call float @llvm.canonicalize.f32(float %a)
   %g1 = call float @llvm.canonicalize.f32(float %g0)
 
+  %h0 = call float @llvm.arithmetic.fence.f32(float %a)
+  %h1 = call float @llvm.arithmetic.fence.f32(float %h0)
+
   %r0 = fadd float %a1, %b1
   %r1 = fadd float %r0, %c1
   %r2 = fadd float %r1, %d1
   %r3 = fadd float %r2, %e1
   %r4 = fadd float %r3, %f1
   %r5 = fadd float %r4, %g1
+  %r6 = fadd float %r5, %h1
 
-  ret float %r5
+  ret float %r6
 }
 
 define ptr @operator_new() {
@@ -1373,7 +1380,7 @@ declare float @fmaxf(float, float)
 
 define float @nobuiltin_fmax() {
 ; CHECK-LABEL: @nobuiltin_fmax(
-; CHECK-NEXT:    [[M:%.*]] = call float @fmaxf(float 0.000000e+00, float 1.000000e+00) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[M:%.*]] = call float @fmaxf(float 0.000000e+00, float 1.000000e+00) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[M]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
