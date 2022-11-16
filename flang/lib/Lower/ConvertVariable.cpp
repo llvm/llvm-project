@@ -17,6 +17,7 @@
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertExpr.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -25,11 +26,13 @@
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/runtime-type-info.h"
@@ -46,6 +49,13 @@ static mlir::Value genScalarValue(Fortran::lower::AbstractConverter &converter,
                                   Fortran::lower::StatementContext &context) {
   // This does not use the AbstractConverter member function to override the
   // symbol mapping to be used expression lowering.
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    hlfir::EntityWithAttributes loweredExpr =
+        Fortran::lower::convertExprToHLFIR(loc, converter, expr, symMap,
+                                           context);
+    return hlfir::loadTrivialScalar(loc, converter.getFirOpBuilder(),
+                                    loweredExpr);
+  }
   return fir::getBase(Fortran::lower::createSomeExtendedExpression(
       loc, converter, expr, symMap, context));
 }
@@ -1345,7 +1355,7 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     const mlir::Location loc = genLocation(converter, sym);
     mlir::Value shapeOrShift;
     if (!shape.empty() && !lbounds.empty())
-      shapeOrShift = builder.genShape(loc, shape, lbounds);
+      shapeOrShift = builder.genShape(loc, lbounds, shape);
     else if (!shape.empty())
       shapeOrShift = builder.genShape(loc, shape);
     else if (!lbounds.empty())
@@ -1353,13 +1363,11 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     llvm::SmallVector<mlir::Value> lenParams;
     if (len)
       lenParams.emplace_back(len);
-    auto name = mlir::StringAttr::get(builder.getContext(),
-                                      Fortran::lower::mangle::mangleName(sym));
+    auto name = Fortran::lower::mangle::mangleName(sym);
     fir::FortranVariableFlagsAttr attributes =
         translateSymbolAttributes(builder.getContext(), sym);
-    auto newBase = builder.create<fir::DeclareOp>(
-        loc, base.getType(), base, shapeOrShift, lenParams, name, attributes);
-    base = newBase;
+    auto newBase = builder.create<hlfir::DeclareOp>(
+        loc, base, name, shapeOrShift, lenParams, attributes);
     symMap.addVariableDefinition(sym, newBase, force);
     return;
   }
@@ -1390,11 +1398,20 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
 static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
                              Fortran::lower::SymMap &symMap,
                              const Fortran::semantics::Symbol &sym,
-                             const fir::ExtendedValue &exv) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    TODO(genLocation(converter, sym),
-         "generate fir.declare from ExtendedValue");
-  symMap.addSymbol(sym, exv);
+                             const fir::ExtendedValue &exv,
+                             bool force = false) {
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    const mlir::Location loc = genLocation(converter, sym);
+    fir::FortranVariableFlagsAttr attributes =
+        translateSymbolAttributes(builder.getContext(), sym);
+    auto name = Fortran::lower::mangle::mangleName(sym);
+    hlfir::EntityWithAttributes declare =
+        hlfir::genDeclare(loc, builder, exv, name, attributes);
+    symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
+    return;
+  }
+  symMap.addSymbol(sym, exv, force);
 }
 
 /// Map an allocatable or pointer symbol to its FIR address and evaluated
@@ -1419,8 +1436,11 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
                           llvm::ArrayRef<mlir::Value> explicitParams,
                           llvm::ArrayRef<mlir::Value> explicitExtents,
                           bool replace = false) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    TODO(genLocation(converter, sym), "generate fir.declare for box");
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    fir::BoxValue boxValue{box, lbounds, explicitParams, explicitExtents};
+    genDeclareSymbol(converter, symMap, sym, std::move(boxValue), replace);
+    return;
+  }
   symMap.addBoxSymbol(sym, box, lbounds, explicitParams, explicitExtents,
                       replace);
 }

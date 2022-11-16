@@ -14,16 +14,16 @@ define double @caller() {
 ; 32BIT-LABEL: caller:
 ; 32BIT:       # %bb.0: # %entry
 ; 32BIT-NEXT:    mflr 0
-; 32BIT-NEXT:    stw 0, 8(1)
 ; 32BIT-NEXT:    stwu 1, -192(1)
 ; 32BIT-NEXT:    lis 3, 16392
+; 32BIT-NEXT:    stw 0, 200(1)
 ; 32BIT-NEXT:    lis 4, 16384
 ; 32BIT-NEXT:    xxlxor 0, 0, 0
 ; 32BIT-NEXT:    lwz 5, L..C0(2) # %const.0
-; 32BIT-NEXT:    li 6, 512
 ; 32BIT-NEXT:    stw 3, 180(1)
 ; 32BIT-NEXT:    li 3, 0
 ; 32BIT-NEXT:    xxlxor 1, 1, 1
+; 32BIT-NEXT:    li 6, 512
 ; 32BIT-NEXT:    stw 4, 172(1)
 ; 32BIT-NEXT:    lis 4, 16368
 ; 32BIT-NEXT:    xxlxor 2, 2, 2
@@ -82,19 +82,19 @@ define double @caller() {
 ; 64BIT-LABEL: caller:
 ; 64BIT:       # %bb.0: # %entry
 ; 64BIT-NEXT:    mflr 0
-; 64BIT-NEXT:    std 0, 16(1)
 ; 64BIT-NEXT:    stdu 1, -224(1)
 ; 64BIT-NEXT:    li 3, 2049
+; 64BIT-NEXT:    std 0, 240(1)
 ; 64BIT-NEXT:    li 4, 1
 ; 64BIT-NEXT:    xxlxor 0, 0, 0
-; 64BIT-NEXT:    li 5, 0
 ; 64BIT-NEXT:    rldic 3, 3, 51, 1
 ; 64BIT-NEXT:    rldic 4, 4, 62, 1
+; 64BIT-NEXT:    li 5, 0
 ; 64BIT-NEXT:    xxlxor 1, 1, 1
-; 64BIT-NEXT:    li 6, 144
 ; 64BIT-NEXT:    std 3, 216(1)
 ; 64BIT-NEXT:    li 3, 1023
 ; 64BIT-NEXT:    xxlxor 2, 2, 2
+; 64BIT-NEXT:    li 6, 144
 ; 64BIT-NEXT:    rldic 3, 3, 52, 2
 ; 64BIT-NEXT:    std 4, 208(1)
 ; 64BIT-NEXT:    li 4, 160

@@ -12,10 +12,10 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $sgpr5
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: S_WAITCNT 0
-    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, 0, 0, 0, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, 0, 0, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, 0, 0, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, 0, 0, implicit $exec
 ...
 
 # Two tbuffer loads with overlapping outputs. No waitcnt required.
@@ -29,10 +29,10 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $sgpr5
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: S_WAITCNT 0
-    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 125, 0, 0, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr0 = TBUFFER_LOAD_FORMAT_X_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 116, 0, 0, 0, implicit $exec
-    $vgpr0_vgpr1_vgpr2 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 125, 0, 0, 0, implicit $exec
-    $vgpr0 = TBUFFER_LOAD_FORMAT_X_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 116, 0, 0, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 125, 0, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = TBUFFER_LOAD_FORMAT_X_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 116, 0, 0, implicit $exec
+    $vgpr0_vgpr1_vgpr2 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 125, 0, 0, implicit $exec
+    $vgpr0 = TBUFFER_LOAD_FORMAT_X_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 116, 0, 0, implicit $exec
 ...
 
 # Two gathers with overlapping outputs. (Note gathers can't be trimmed because

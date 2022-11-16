@@ -3,7 +3,8 @@
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
-
+//
+// Do the same run, but now with direct IR generation.
 // RUN: mlir-opt %s --sparse-compiler=enable-runtime-library=false | \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
@@ -250,6 +251,7 @@ module {
     bufferization.dealloc_tensor %s3 : tensor<2x2xf64, #DCSC>
     bufferization.dealloc_tensor %s4 : tensor<2x2xf64, #SortedCOO>
     bufferization.dealloc_tensor %s5 : tensor<2x2xf64, #SortedCOOPerm>
+    bufferization.dealloc_tensor %s6 : tensor<7x8x9xf64, #CCCPerm>
 
     return
   }

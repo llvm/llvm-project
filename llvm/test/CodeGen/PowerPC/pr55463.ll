@@ -5,9 +5,9 @@ define void @baz() #0 {
 ; CHECK-LABEL: baz:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stw 0, 4(1)
 ; CHECK-NEXT:    stwu 1, -16(1)
 ; CHECK-NEXT:    # implicit-def: $r3
+; CHECK-NEXT:    stw 0, 20(1)
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb1
 ; CHECK-NEXT:    #
@@ -42,12 +42,12 @@ define void @wombat() #0 {
 ; CHECK-LABEL: wombat:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stw 0, 4(1)
 ; CHECK-NEXT:    stwu 1, -48(1)
 ; CHECK-NEXT:    li 3, .LCPI1_0@l
 ; CHECK-NEXT:    li 5, .LCPI1_1@l
 ; CHECK-NEXT:    lis 4, .LCPI1_0@ha
 ; CHECK-NEXT:    lis 6, .LCPI1_1@ha
+; CHECK-NEXT:    stw 0, 52(1)
 ; CHECK-NEXT:    evstdd 29, 24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    evstdd 30, 32(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    evlddx 30, 4, 3

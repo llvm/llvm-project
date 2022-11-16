@@ -19,13 +19,12 @@
 #  pragma GCC system_header
 #endif
 
-// Catch invalid uses of the legacy _LIBCPP_DEBUG toggle.
-#if defined(_LIBCPP_DEBUG) && _LIBCPP_DEBUG != 0 && !defined(_LIBCPP_ENABLE_DEBUG_MODE)
-#   error "Enabling the debug mode now requires having configured the library with support for the debug mode"
-#endif
-
 #if defined(_LIBCPP_ENABLE_DEBUG_MODE) && !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY)
 # define _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
+#endif
+
+#if defined(_LIBCPP_ENABLE_DEBUG_MODE) && !defined(_LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING)
+# define _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
 #endif
 
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE

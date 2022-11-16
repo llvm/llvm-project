@@ -209,7 +209,7 @@ LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op,
 
   // Some simple use case of operation with memory side-effect are dealt with
   // here. Operations with no side-effect are done after.
-  if (!MemoryEffectOpInterface::hasNoEffect(op)) {
+  if (!isMemoryEffectFree(op)) {
     auto memEffects = dyn_cast<MemoryEffectOpInterface>(op);
     // TODO: Only basic use case for operations with MemoryEffects::Read can be
     // eleminated now. More work needs to be done for more complicated patterns

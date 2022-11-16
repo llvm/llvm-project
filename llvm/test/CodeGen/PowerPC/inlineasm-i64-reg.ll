@@ -73,9 +73,9 @@ entry:
 
 ; CHECK-LABEL: @main
 
-; CHECK-DAG: mr [[REG:[0-9]+]], 3
-; CHECK-DAG: li 0, 1076
-; CHECK:     stw [[REG]],
+; CHECK: mr [[REG:[0-9]+]], 3
+; CHECK: std 0,
+; CHECK: stw [[REG]],
 
 ; CHECK:     #APP
 ; CHECK:     sc

@@ -9,8 +9,8 @@ define dso_local void @main() local_unnamed_addr personality ptr @__gxx_personal
 ; CHECK-P9-LABEL: main:
 ; CHECK-P9:       # %bb.0: # %bb
 ; CHECK-P9-NEXT:    mflr r0
-; CHECK-P9-NEXT:    std r0, 16(r1)
 ; CHECK-P9-NEXT:    stdu r1, -32(r1)
+; CHECK-P9-NEXT:    std r0, 48(r1)
 ; CHECK-P9-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P9-NEXT:    .cfi_offset lr, 16
 ; CHECK-P9-NEXT:    bl malloc

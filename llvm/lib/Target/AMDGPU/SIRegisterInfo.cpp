@@ -1220,7 +1220,6 @@ static bool buildMUBUFOffsetLoadStore(const GCNSubtarget &ST,
           .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::soffset))
           .addImm(Offset)
           .addImm(0) // cpol
-          .addImm(0) // tfe
           .addImm(0) // swz
           .cloneMemRefs(*MI);
 
@@ -1608,8 +1607,7 @@ void SIRegisterInfo::buildSpillLoadStore(
     MIB.addImm(Offset + RegOffset)
        .addImm(0); // cpol
     if (!IsFlat)
-      MIB.addImm(0)  // tfe
-         .addImm(0); // swz
+      MIB.addImm(0); // swz
     MIB.addMemOperand(NewMMO);
 
     if (!IsAGPR && NeedSuperRegDef)

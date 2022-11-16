@@ -1119,9 +1119,9 @@ public:
                    ISD::CondCode Cond, SDValue Chain = SDValue(),
                    bool IsSignaling = false) {
     assert(LHS.getValueType().isVector() == RHS.getValueType().isVector() &&
-           "Cannot compare scalars to vectors");
+           "Vector/scalar operand type mismatch for setcc");
     assert(LHS.getValueType().isVector() == VT.isVector() &&
-           "Cannot compare scalars to vectors");
+           "Vector/scalar result type mismatch for setcc");
     assert(Cond != ISD::SETCC_INVALID &&
            "Cannot create a setCC of an invalid node.");
     if (Chain)
