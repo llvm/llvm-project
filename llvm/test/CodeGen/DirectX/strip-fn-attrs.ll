@@ -1,7 +1,7 @@
 ; RUN: llc %s --filetype=asm -o - | FileCheck %s
 target triple = "dxil-unknown-shadermodel6.7-library"
 
-; CHECK: Function Attrs: nounwind readnone
+; CHECK: Function Attrs: nounwind memory(none)
 ; Function Attrs: norecurse nounwind readnone willreturn
 define dso_local float @fma(float %0, float %1, float %2) local_unnamed_addr #0 {
   %4 = fmul float %0, %1
@@ -9,11 +9,11 @@ define dso_local float @fma(float %0, float %1, float %2) local_unnamed_addr #0 
   ret float %5
 }
 
-; CHECK: Function Attrs: nounwind readnone
+; CHECK: Function Attrs: nounwind memory(none)
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-; CHECK: attributes #0 = { nounwind readnone }
+; CHECK: attributes #0 = { nounwind memory(none) }
 ; CHECK-NOT attributes #
 
 attributes #0 = { norecurse nounwind readnone willreturn }
