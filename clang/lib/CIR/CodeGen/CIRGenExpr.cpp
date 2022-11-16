@@ -1367,6 +1367,39 @@ LValue CIRGenFunction::buildMaterializeTemporaryExpr(
   return makeAddrLValue(Object, M->getType(), AlignmentSource::Decl);
 }
 
+LValue CIRGenFunction::buildOpaqueValueLValue(const OpaqueValueExpr *e) {
+  assert(OpaqueValueMappingData::shouldBindAsLValue(e));
+  return getOrCreateOpaqueLValueMapping(e);
+}
+
+LValue
+CIRGenFunction::getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e) {
+  assert(OpaqueValueMapping::shouldBindAsLValue(e));
+
+  llvm::DenseMap<const OpaqueValueExpr *, LValue>::iterator it =
+      OpaqueLValues.find(e);
+
+  if (it != OpaqueLValues.end())
+    return it->second;
+
+  assert(e->isUnique() && "LValue for a nonunique OVE hasn't been emitted");
+  return buildLValue(e->getSourceExpr());
+}
+
+RValue
+CIRGenFunction::getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e) {
+  assert(!OpaqueValueMapping::shouldBindAsLValue(e));
+
+  llvm::DenseMap<const OpaqueValueExpr *, RValue>::iterator it =
+      OpaqueRValues.find(e);
+
+  if (it != OpaqueRValues.end())
+    return it->second;
+
+  assert(e->isUnique() && "RValue for a nonunique OVE hasn't been emitted");
+  return buildAnyExpr(e->getSourceExpr());
+}
+
 /// Emit code to compute a designator that specifies the location
 /// of the expression.
 /// FIXME: document this function better.
@@ -1432,6 +1465,8 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
   case Expr::CXXStaticCastExprClass:
   case Expr::ImplicitCastExprClass:
     return buildCastLValue(cast<CastExpr>(E));
+  case Expr::OpaqueValueExprClass:
+    return buildOpaqueValueLValue(cast<OpaqueValueExpr>(E));
 
   case Expr::MaterializeTemporaryExprClass:
     return buildMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(E));

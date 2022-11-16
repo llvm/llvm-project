@@ -815,6 +815,8 @@ public:
   mlir::LogicalResult buildBreakStmt(const clang::BreakStmt &S);
   mlir::LogicalResult buildContinueStmt(const clang::ContinueStmt &S);
 
+  LValue buildOpaqueValueLValue(const OpaqueValueExpr *e);
+
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
   /// FIXME: document this function better.
@@ -1099,13 +1101,21 @@ public:
   // TODO: this can also be abstrated into common AST helpers
   bool hasBooleanRepresentation(clang::QualType Ty);
 
-  /// GetAddrOfLocalVar - Return the address of a local variable.
+  /// Return the address of a local variable.
   Address GetAddrOfLocalVar(const clang::VarDecl *VD) {
     auto it = LocalDeclMap.find(VD);
     assert(it != LocalDeclMap.end() &&
            "Invalid argument to GetAddrOfLocalVar(), no decl!");
     return it->second;
   }
+
+  /// Given an opaque value expression, return its LValue mapping if it exists,
+  /// otherwise create one.
+  LValue getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e);
+
+  /// Given an opaque value expression, return its RValue mapping if it exists,
+  /// otherwise create one.
+  RValue getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e);
 
   /// Check if \p E is a C++ "this" pointer wrapped in value-preserving casts.
   static bool isWrappedCXXThis(const clang::Expr *E);
