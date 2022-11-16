@@ -1624,7 +1624,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   const ActualArgument *operandArg{nullptr};
   const IntrinsicDummyArgument *kindDummyArg{nullptr};
   const ActualArgument *kindArg{nullptr};
-  bool hasDimArg{false};
+  std::optional<int> dimArg;
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (d.typePattern.kindCode == KindCode::kindArg) {
@@ -1655,7 +1655,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       } else {
         continue;
       }
-    } else if (d.optionality == Optionality::missing) {
+    }
+    if (d.optionality == Optionality::missing) {
       messages.Say(arg->sourceLocation(), "unexpected '%s=' argument"_err_en_US,
           d.keyword);
       return std::nullopt;
@@ -1764,7 +1765,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       break;
     case KindCode::dimArg:
       CHECK(type->category() == TypeCategory::Integer);
-      hasDimArg = true;
+      dimArg = j;
       argOk = true;
       break;
     case KindCode::same:
@@ -1854,7 +1855,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   int elementalRank{0};
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
-    if (const ActualArgument * arg{actualForDummy[j]}) {
+    if (const ActualArgument *arg{actualForDummy[j]}) {
       bool isAssumedRank{IsAssumedRank(*arg)};
       if (isAssumedRank && d.rank != Rank::anyOrAssumedRank) {
         messages.Say(arg->sourceLocation(),
@@ -1934,7 +1935,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         argOk = rank == knownArg->Rank();
         break;
       case Rank::anyOrAssumedRank:
-        if (!hasDimArg && rank > 0 && !isAssumedRank &&
+        if (!dimArg && rank > 0 && !isAssumedRank &&
             (std::strcmp(name, "shape") == 0 ||
                 std::strcmp(name, "size") == 0 ||
                 std::strcmp(name, "ubound") == 0)) {
@@ -2141,6 +2142,49 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     CHECK(result.kindCode == KindCode::none);
   }
 
+  // Emit warnings when the syntactic presence of a DIM= argument determines
+  // the semantics of the call but the associated actual argument may not be
+  // present at execution time.
+  if (dimArg) {
+    std::optional<int> arrayRank;
+    if (arrayArg) {
+      arrayRank = arrayArg->Rank();
+      if (auto dimVal{ToInt64(actualForDummy[*dimArg])}) {
+        if (*dimVal < 1) {
+          messages.Say(
+              "The value of DIM= (%jd) may not be less than 1"_err_en_US,
+              static_cast<std::intmax_t>(*dimVal));
+        } else if (*dimVal > *arrayRank) {
+          messages.Say(
+              "The value of DIM= (%jd) may not be greater than %d"_err_en_US,
+              static_cast<std::intmax_t>(*dimVal), *arrayRank);
+        }
+      }
+    }
+    switch (rank) {
+    case Rank::dimReduced:
+    case Rank::dimRemovedOrScalar:
+    case Rank::locReduced:
+    case Rank::scalarIfDim:
+      if (dummy[*dimArg].optionality == Optionality::required) {
+        if (const Symbol *whole{
+                UnwrapWholeSymbolOrComponentDataRef(actualForDummy[*dimArg])}) {
+          if (IsOptional(*whole) || IsAllocatableOrPointer(*whole)) {
+            if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
+              messages.Say(
+                  "The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time"_port_en_US);
+            } else {
+              messages.Say(
+                  "The actual argument for DIM= is optional, pointer, or allocatable, and may not be absent during execution; parenthesize to silence this warning"_warn_en_US);
+            }
+          }
+        }
+      }
+      break;
+    default:;
+    }
+  }
+
   // At this point, the call is acceptable.
   // Determine the rank of the function result.
   int resultRank{0};
@@ -2163,11 +2207,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     break;
   case Rank::dimReduced:
     CHECK(arrayArg);
-    resultRank = hasDimArg ? arrayArg->Rank() - 1 : 0;
+    resultRank = dimArg ? arrayArg->Rank() - 1 : 0;
     break;
   case Rank::locReduced:
     CHECK(arrayArg);
-    resultRank = hasDimArg ? arrayArg->Rank() - 1 : 1;
+    resultRank = dimArg ? arrayArg->Rank() - 1 : 1;
     break;
   case Rank::rankPlus1:
     CHECK(knownArg);
@@ -2178,7 +2222,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     resultRank = *shapeArgSize;
     break;
   case Rank::scalarIfDim:
-    resultRank = hasDimArg ? 0 : 1;
+    resultRank = dimArg ? 0 : 1;
     break;
   case Rank::elementalOrBOZ:
   case Rank::shape:
@@ -2197,7 +2241,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // Rearrange the actual arguments into dummy argument order.
   ActualArguments rearranged(dummies);
   for (std::size_t j{0}; j < dummies; ++j) {
-    if (ActualArgument * arg{actualForDummy[j]}) {
+    if (ActualArgument *arg{actualForDummy[j]}) {
       rearranged[j] = std::move(*arg);
     }
   }
@@ -2602,7 +2646,7 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
   bool ok{true};
   if (const auto &pointerArg{call.arguments[0]}) {
     if (const auto *pointerExpr{pointerArg->UnwrapExpr()}) {
-      if (const Symbol * pointerSymbol{GetLastSymbol(*pointerExpr)}) {
+      if (const Symbol *pointerSymbol{GetLastSymbol(*pointerExpr)}) {
         if (!pointerSymbol->attrs().test(semantics::Attr::POINTER)) {
           AttachDeclaration(context.messages().Say(pointerArg->sourceLocation(),
                                 "POINTER= argument of ASSOCIATED() must be a "
@@ -2896,7 +2940,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     ok &= CheckForCoindexedObject(context, call.arguments[3], name, "errmsg");
     if (call.arguments[0] && call.arguments[1]) {
       for (int j{0}; j < 2; ++j) {
-        if (const Symbol * last{GetLastSymbol(call.arguments[j])};
+        if (const Symbol *last{GetLastSymbol(call.arguments[j])};
             last && !IsAllocatable(last->GetUltimate())) {
           context.messages().Say(call.arguments[j]->sourceLocation(),
               "Argument #%d to MOVE_ALLOC must be allocatable"_err_en_US,
@@ -2916,7 +2960,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     const auto &arg{call.arguments[0]};
     if (arg) {
       if (const auto *expr{arg->UnwrapExpr()}) {
-        if (const Symbol * symbol{UnwrapWholeSymbolDataRef(*expr)}) {
+        if (const Symbol *symbol{UnwrapWholeSymbolDataRef(*expr)}) {
           ok = symbol->attrs().test(semantics::Attr::OPTIONAL);
         }
       }
