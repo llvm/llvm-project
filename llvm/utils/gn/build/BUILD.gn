@@ -183,6 +183,12 @@ config("compiler_defaults") {
     cflags += [ "/EHs-c-" ]
     cflags_cc += [ "/std:c++17" ]
 
+    # cl.exe doesn't set __cplusplus correctly by default.
+    # clang-cl gets it right by default, so don't needlessly add the flag there.
+    if (!is_clang) {
+      cflags_cc += [ "/Zc:__cplusplus" ]
+    }
+
     # The MSVC default value (1 MB) is not enough for parsing recursive C++
     # templates in Clang.
     ldflags += [ "/STACK:10000000" ]
