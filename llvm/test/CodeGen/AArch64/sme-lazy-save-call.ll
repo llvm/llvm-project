@@ -17,7 +17,7 @@ define void @test_lazy_save_1_callee() nounwind "aarch64_pstate_za_shared" {
 ; CHECK-NEXT:    sub x9, x9, x8
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    sub x10, x29, #16
-; CHECK-NEXT:    str x9, [x29]
+; CHECK-NEXT:    stur x9, [x29, #-16]
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl private_za_callee
@@ -50,7 +50,7 @@ define void @test_lazy_save_2_callees() nounwind "aarch64_pstate_za_shared" {
 ; CHECK-NEXT:    sub x8, x8, x19
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    sub x20, x29, #16
-; CHECK-NEXT:    str x8, [x29]
+; CHECK-NEXT:    stur x8, [x29, #-16]
 ; CHECK-NEXT:    sturh w19, [x29, #-8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x20
 ; CHECK-NEXT:    bl private_za_callee
@@ -95,7 +95,7 @@ define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_psta
 ; CHECK-NEXT:    sub x9, x9, x8
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    sub x10, x29, #16
-; CHECK-NEXT:    str x9, [x29]
+; CHECK-NEXT:    stur x9, [x29, #-16]
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl cosf
@@ -132,7 +132,7 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_pstate_z
 ; CHECK-NEXT:    sub x9, x9, x8
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    sub x10, x29, #80
-; CHECK-NEXT:    stur x9, [x29, #-64]
+; CHECK-NEXT:    stur x9, [x29, #-80]
 ; CHECK-NEXT:    sturh w8, [x29, #-72]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl __arm_sme_state

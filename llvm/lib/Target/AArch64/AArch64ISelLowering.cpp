@@ -6025,17 +6025,17 @@ AArch64TargetLowering::allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
   SDValue Ops[] = {Chain, NN, DAG.getConstant(1, DL, MVT::i64)};
   SDVTList VTs = DAG.getVTList(MVT::i64, MVT::Other);
   SDValue Buffer = DAG.getNode(ISD::DYNAMIC_STACKALLOC, DL, VTs, Ops);
-  unsigned FI = MFI.CreateVariableSizedObject(Align(1), nullptr);
-  Register Reg = MF.getRegInfo().createVirtualRegister(getRegClassFor(MVT::i64));
-  Chain = DAG.getCopyToReg(Buffer.getValue(1), DL, Reg, Buffer.getValue(0));
+  Chain = Buffer.getValue(1);
+  MFI.CreateVariableSizedObject(Align(1), nullptr);
 
   // Allocate an additional TPIDR2 object on the stack (16 bytes)
   unsigned TPIDR2Obj = MFI.CreateStackObject(16, Align(16), false);
 
   // Store the buffer pointer to the TPIDR2 stack object.
-  MachinePointerInfo MPI = MachinePointerInfo::getStack(MF, FI);
+  MachinePointerInfo MPI = MachinePointerInfo::getStack(MF, TPIDR2Obj);
   SDValue Ptr = DAG.getFrameIndex(
-      FI, DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
+      TPIDR2Obj,
+      DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
   Chain = DAG.getStore(Chain, DL, Buffer, Ptr, MPI);
 
   return TPIDR2Obj;
