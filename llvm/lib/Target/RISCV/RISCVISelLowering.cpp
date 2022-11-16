@@ -294,10 +294,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           MVT::i32, Custom);
   } else {
     setOperationAction({ISD::CTTZ, ISD::CTLZ, ISD::CTPOP}, XLenVT, Expand);
-
-    if (Subtarget.is64Bit())
-      setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
+
+  if (Subtarget.is64Bit())
+    setOperationAction(ISD::ABS, MVT::i32, Custom);
 
   setOperationAction(ISD::SELECT, XLenVT, Custom);
 
@@ -999,7 +999,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtZbkb())
     setTargetDAGCombine(ISD::BITREVERSE);
-  if (Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZbb())
+  if (Subtarget.hasStdExtZfh())
     setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
   if (Subtarget.hasStdExtF())
     setTargetDAGCombine({ISD::ZERO_EXTEND, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
@@ -7616,8 +7616,18 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
 
-    // Expand abs to Y = (sraiw X, 31); subw(xor(X, Y), Y)
+    if (Subtarget.hasStdExtZbb()) {
+      // Emit a special ABSW node that will be expanded to NEGW+MAX at isel.
+      // This allows us to remember that the result is sign extended. Expanding
+      // to NEGW+MAX here requires a Freeze which breaks ComputeNumSignBits.
+      SDValue Src = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64,
+                                N->getOperand(0));
+      SDValue Abs = DAG.getNode(RISCVISD::ABSW, DL, MVT::i64, Src);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Abs));
+      return;
+    }
 
+    // Expand abs to Y = (sraiw X, 31); subw(xor(X, Y), Y)
     SDValue Src = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
 
     // Freeze the source so we can increase it's use count.
@@ -8353,30 +8363,6 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, SelectionDAG &DAG,
       cast<VTSDNode>(N->getOperand(1))->getVT().bitsGE(MVT::i16))
     return DAG.getNode(RISCVISD::FMV_X_SIGNEXTH, SDLoc(N), VT,
                        Src.getOperand(0));
-
-  // Fold (i64 (sext_inreg (abs X), i32)) ->
-  // (i64 (smax (sext_inreg (neg X), i32), X)) if X has more than 32 sign bits.
-  // The (sext_inreg (neg X), i32) will be selected to negw by isel. This
-  // pattern occurs after type legalization of (i32 (abs X)) on RV64 if the user
-  // of the (i32 (abs X)) is a sext or setcc or something else that causes type
-  // legalization to add a sext_inreg after the abs. The (i32 (abs X)) will have
-  // been type legalized to (i64 (abs (sext_inreg X, i32))), but the sext_inreg
-  // may get combined into an earlier operation so we need to use
-  // ComputeNumSignBits.
-  // NOTE: (i64 (sext_inreg (abs X), i32)) can also be created for
-  // (i64 (ashr (shl (abs X), 32), 32)) without any type legalization so
-  // we can't assume that X has 33 sign bits. We must check.
-  if (Subtarget.hasStdExtZbb() && Subtarget.is64Bit() &&
-      Src.getOpcode() == ISD::ABS && Src.hasOneUse() && VT == MVT::i64 &&
-      cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32 &&
-      DAG.ComputeNumSignBits(Src.getOperand(0)) > 32) {
-    SDLoc DL(N);
-    SDValue Freeze = DAG.getFreeze(Src.getOperand(0));
-    SDValue Neg = DAG.getNegative(Freeze, DL, VT);
-    Neg = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Neg,
-                      DAG.getValueType(MVT::i32));
-    return DAG.getNode(ISD::SMAX, DL, MVT::i64, Freeze, Neg);
-  }
 
   return SDValue();
 }
@@ -10237,6 +10223,7 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::REMUW:
   case RISCVISD::ROLW:
   case RISCVISD::RORW:
+  case RISCVISD::ABSW:
   case RISCVISD::FCVT_W_RV64:
   case RISCVISD::FCVT_WU_RV64:
   case RISCVISD::STRICT_FCVT_W_RV64:
@@ -12413,6 +12400,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(RORW)
   NODE_NAME_CASE(CLZW)
   NODE_NAME_CASE(CTZW)
+  NODE_NAME_CASE(ABSW)
   NODE_NAME_CASE(FMV_H_X)
   NODE_NAME_CASE(FMV_X_ANYEXTH)
   NODE_NAME_CASE(FMV_X_SIGNEXTH)
