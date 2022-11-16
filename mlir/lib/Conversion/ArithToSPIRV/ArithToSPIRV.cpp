@@ -17,8 +17,10 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Debug.h"
+#include <cassert>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTARITHTOSPIRV
@@ -115,6 +117,16 @@ struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
 
   LogicalResult
   matchAndRewrite(arith::UIToFPOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Converts arith.extsi to spirv.Select if the type of source is i1 or vector
+/// of i1.
+struct ExtSII1Pattern final : public OpConversionPattern<arith::ExtSIOp> {
+  using OpConversionPattern<arith::ExtSIOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ExtSIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -616,6 +628,42 @@ UIToFPI1Pattern::matchAndRewrite(arith::UIToFPOp op, OpAdaptor adaptor,
 }
 
 //===----------------------------------------------------------------------===//
+// ExtSII1Pattern
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+ExtSII1Pattern::matchAndRewrite(arith::ExtSIOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &rewriter) const {
+  Value operand = adaptor.getIn();
+  if (!isBoolScalarOrVector(operand.getType()))
+    return failure();
+
+  Location loc = op.getLoc();
+  Type dstType = getTypeConverter()->convertType(op.getResult().getType());
+
+  Value allOnes;
+  if (auto intTy = dstType.dyn_cast<IntegerType>()) {
+    unsigned componentBitwidth = intTy.getWidth();
+    allOnes = rewriter.create<spirv::ConstantOp>(
+        loc, intTy,
+        rewriter.getIntegerAttr(intTy, APInt::getAllOnes(componentBitwidth)));
+  } else if (auto vectorTy = dstType.dyn_cast<VectorType>()) {
+    unsigned componentBitwidth = vectorTy.getElementTypeBitWidth();
+    allOnes = rewriter.create<spirv::ConstantOp>(
+        loc, vectorTy,
+        SplatElementsAttr::get(vectorTy, APInt::getAllOnes(componentBitwidth)));
+  } else {
+    return rewriter.notifyMatchFailure(
+        loc, llvm::formatv("unhandled type: {0}", dstType));
+  }
+
+  Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+  rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, dstType, operand, allOnes,
+                                               zero);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ExtUII1Pattern
 //===----------------------------------------------------------------------===//
 
@@ -982,7 +1030,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     spirv::ElementwiseOpPattern<arith::DivFOp, spirv::FDivOp>,
     spirv::ElementwiseOpPattern<arith::RemFOp, spirv::FRemOp>,
     TypeCastingOpPattern<arith::ExtUIOp, spirv::UConvertOp>, ExtUII1Pattern,
-    TypeCastingOpPattern<arith::ExtSIOp, spirv::SConvertOp>,
+    TypeCastingOpPattern<arith::ExtSIOp, spirv::SConvertOp>, ExtSII1Pattern,
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
     TypeCastingOpPattern<arith::TruncIOp, spirv::SConvertOp>, TruncII1Pattern,
     TypeCastingOpPattern<arith::TruncFOp, spirv::FConvertOp>,
