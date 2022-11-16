@@ -269,7 +269,8 @@ static void allocSchemeForRank(OpBuilder &builder, Location loc,
       Value ptrZero = constantZero(builder, loc, ptrType);
       createPushback(builder, loc, fields, field, ptrZero, linear);
       return;
-    } else if (isSingletonDim(rtp, r)) {
+    }
+    if (isSingletonDim(rtp, r)) {
       return; // nothing to do
     } else {
       // Keep compounding the size, but nothing needs to be initialized
