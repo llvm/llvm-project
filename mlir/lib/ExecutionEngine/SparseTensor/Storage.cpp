@@ -12,9 +12,6 @@
 // no benefit).  Though this also helps ensure that we avoid weak-vtables:
 // <https://llvm.org/docs/CodingStandards.html#provide-a-virtual-method-anchor-for-classes-in-headers>
 //
-// (This file also contains the definition of `assertPermutedSizesMatchShape`
-// which is used by `SparseTensorStorage` factories.)
-//
 // This file is part of the lightweight runtime support library for sparse
 // tensor manipulations.  The functionality of the support library is meant
 // to simplify benchmarking, testing, and debugging MLIR code operating on
@@ -27,25 +24,39 @@
 
 using namespace mlir::sparse_tensor;
 
-SparseTensorStorageBase::SparseTensorStorageBase(
-    const std::vector<uint64_t> &dimSizes, const uint64_t *perm,
-    const DimLevelType *sparsity)
-    : dimSizes(dimSizes), rev(getRank()),
-      dimTypes(sparsity, sparsity + getRank()) {
-  assert(perm && "Got nullptr for permutation");
-  assert(sparsity && "Got nullptr for sparsity");
-  const uint64_t rank = getRank();
-  // Validate parameters.
-  assert(rank > 0 && "Trivial shape is unsupported");
-  for (uint64_t r = 0; r < rank; ++r) {
-    assert(dimSizes[r] > 0 && "Dimension size zero has trivial storage");
-    assert((isDenseDim(r) || isCompressedDim(r) || isSingletonDim(r)) &&
-           "Unsupported DimLevelType");
+SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
+    uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
+    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvl2dim)
+    : dimSizes(dimSizes, dimSizes + dimRank),
+      lvlSizes(lvlSizes, lvlSizes + lvlRank),
+      lvlTypes(lvlTypes, lvlTypes + lvlRank),
+      lvl2dim(lvl2dim, lvl2dim + lvlRank) {
+  // TODO: If we do get any nullptrs, I'm pretty sure these assertions
+  // will run too late (i.e., after copying things into vectors above).
+  // But since those fields are const I'm not sure there's any clean way
+  // to assert things before copying...
+  assert(dimSizes && "Got nullptr for dimension sizes");
+  assert(lvlSizes && "Got nullptr for level sizes");
+  assert(lvlTypes && "Got nullptr for level types");
+  assert(lvl2dim && "Got nullptr for level-to-dimension mapping");
+  // Validate dim-indexed parameters.
+  assert(dimRank > 0 && "Trivial shape is unsupported");
+  for (uint64_t d = 0; d < dimRank; ++d)
+    assert(dimSizes[d] > 0 && "Dimension size zero has trivial storage");
+  // Validate level-indexed parameters.
+  assert(lvlRank > 0 && "Trivial shape is unsupported");
+  for (uint64_t l = 0; l < lvlRank; ++l) {
+    assert(lvlSizes[l] > 0 && "Level size zero has trivial storage");
+    const auto dlt = lvlTypes[l]; // Avoid redundant bounds checking.
+    // We use `MLIR_SPARSETENSOR_FATAL` here instead of `assert` so that
+    // when this ctor is successful then all the methods can rely on the
+    // fact that each level-type satisfies one of these options (even
+    // when `NDEBUG` is true), thereby reducing the need to re-assert things.
+    if (!(isDenseDLT(dlt) || isCompressedDLT(dlt) || isSingletonDLT(dlt)))
+      MLIR_SPARSETENSOR_FATAL("unsupported level type: %d\n",
+                              static_cast<uint8_t>(dlt));
   }
-  // Construct the "reverse" (i.e., inverse) permutation.
-  // TODO: should move this computation off to the codegen
-  for (uint64_t r = 0; r < rank; ++r)
-    rev[perm[r]] = r;
 }
 
 // Helper macro for generating error messages when some
@@ -56,7 +67,8 @@ SparseTensorStorageBase::SparseTensorStorageBase(
 
 #define IMPL_NEWENUMERATOR(VNAME, V)                                           \
   void SparseTensorStorageBase::newEnumerator(                                 \
-      SparseTensorEnumeratorBase<V> **, uint64_t, const uint64_t *) const {    \
+      SparseTensorEnumeratorBase<V> **, uint64_t, const uint64_t *, uint64_t,  \
+      const uint64_t *) const {                                                \
     FATAL_PIV("newEnumerator" #VNAME);                                         \
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_NEWENUMERATOR)
@@ -99,19 +111,3 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_EXPINSERT)
 #undef IMPL_EXPINSERT
 
 #undef FATAL_PIV
-
-// TODO: try to unify this with `SparseTensorReader::assertMatchesShape`
-// (which is used by `openSparseTensorCOO`).  It's easy enough to resolve
-// the `std::vector` vs pointer mismatch for `dimSizes`; but it's trickier
-// to resolve the presence/absence of `perm` (without introducing extra
-// overhead), so perhaps the code duplication is unavoidable?
-void mlir::sparse_tensor::detail::assertPermutedSizesMatchShape(
-    const std::vector<uint64_t> &dimSizes, uint64_t rank, const uint64_t *perm,
-    const uint64_t *shape) {
-  assert(perm && "Got nullptr for permutation");
-  assert(shape && "Got nullptr for shape");
-  assert(rank == dimSizes.size() && "Rank mismatch");
-  for (uint64_t d = 0; d < rank; ++d)
-    assert((shape[d] == 0 || shape[d] == dimSizes[perm[d]]) &&
-           "Dimension size mismatch");
-}
