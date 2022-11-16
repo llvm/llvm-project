@@ -3,10 +3,13 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-WGP %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -mattr=+cumode < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-CU %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -mattr=+cumode,+unaligned-access-mode < %s | FileCheck -check-prefixes=GCN,UNALIGNED %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-CU %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -mattr=+cumode < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-CU %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -mattr=+cumode,+unaligned-access-mode < %s | FileCheck -check-prefixes=GCN,UNALIGNED %s
 
 ; GCN-LABEL: test_local_misaligned_v2:
-; GCN-DAG: ds_read2_b32
-; GCN-DAG: ds_write2_b32
+; GCN-DAG: ds_{{read2|load_2addr}}_b32
+; GCN-DAG: ds_{{write2|store_2addr}}_b32
 define amdgpu_kernel void @test_local_misaligned_v2(i32 addrspace(3)* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -22,12 +25,12 @@ bb:
 }
 
 ; GCN-LABEL: test_local_misaligned_v4:
-; ALIGNED-DAG: ds_read2_b32
-; ALIGNED-DAG: ds_read2_b32
-; ALIGNED-DAG: ds_write2_b32
-; ALIGNED-DAG: ds_write2_b32
-; UNALIGNED-DAG: ds_read2_b64
-; UNALIGNED-DAG: ds_write2_b64
+; ALIGNED-DAG: ds_{{read2|load_2addr}}_b32
+; ALIGNED-DAG: ds_{{read2|load_2addr}}_b32
+; ALIGNED-DAG: ds_{{write2|store_2addr}}_b32
+; ALIGNED-DAG: ds_{{write2|store_2addr}}_b32
+; UNALIGNED-DAG: ds_{{read2|load_2addr}}_b64
+; UNALIGNED-DAG: ds_{{write2|store_2addr}}_b64
 define amdgpu_kernel void @test_local_misaligned_v4(i32 addrspace(3)* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -47,12 +50,12 @@ bb:
 }
 
 ; GCN-LABEL: test_local_misaligned_v3:
-; ALIGNED-DAG: ds_read2_b32
-; ALIGNED-DAG: ds_read_b32
-; ALIGNED-DAG: ds_write2_b32
-; ALIGNED-DAG: ds_write_b32
-; UNALIGNED-DAG: ds_read_b96
-; UNALIGNED-DAG: ds_write_b96
+; ALIGNED-DAG: ds_{{read2|load_2addr}}_b32
+; ALIGNED-DAG: ds_{{read|load}}_b32
+; ALIGNED-DAG: ds_{{write2|store_2addr}}_b32
+; ALIGNED-DAG: ds_{{write|store}}_b32
+; UNALIGNED-DAG: ds_{{read|load}}_b96
+; UNALIGNED-DAG: ds_{{write|store}}_b96
 define amdgpu_kernel void @test_local_misaligned_v3(i32 addrspace(3)* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -70,8 +73,8 @@ bb:
 }
 
 ; GCN-LABEL: test_local_aligned_v2:
-; GCN-DAG: ds_read_b64
-; GCN-DAG: ds_write_b64
+; GCN-DAG: ds_{{read|load}}_b64
+; GCN-DAG: ds_{{write|store}}_b64
 define amdgpu_kernel void @test_local_aligned_v2(i32 addrspace(3)* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -87,8 +90,8 @@ bb:
 }
 
 ; GCN-LABEL: test_local_aligned_v3:
-; GCN-DAG: ds_read_b96
-; GCN-DAG: ds_write_b96
+; GCN-DAG: ds_{{read|load}}_b96
+; GCN-DAG: ds_{{write|store}}_b96
 define amdgpu_kernel void @test_local_aligned_v3(i32 addrspace(3)* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -106,14 +109,14 @@ bb:
 }
 
 ; GCN-LABEL: test_local_v4_aligned8:
-; ALIGNED-WGP-DAG: ds_read2_b32
-; ALIGNED-WGP-DAG: ds_read2_b32
-; ALIGNED-WGP-DAG: ds_write2_b32
-; ALIGNED-WGP-DAG: ds_write2_b32
-; ALIGNED-CU-DAG: ds_read2_b64
-; ALIGNED-CU-DAG: ds_write2_b64
-; UNALIGNED-DAG: ds_read2_b64
-; UNALIGNED-DAG: ds_write2_b64
+; ALIGNED-WGP-DAG: ds_{{read2|load_2addr}}_b32
+; ALIGNED-WGP-DAG: ds_{{read2|load_2addr}}_b32
+; ALIGNED-WGP-DAG: ds_{{write2|store_2addr}}_b32
+; ALIGNED-WGP-DAG: ds_{{write2|store_2addr}}_b32
+; ALIGNED-CU-DAG: ds_{{read2|load_2addr}}_b64
+; ALIGNED-CU-DAG: ds_{{write2|store_2addr}}_b64
+; UNALIGNED-DAG: ds_{{read2|load_2addr}}_b64
+; UNALIGNED-DAG: ds_{{write2|store_2addr}}_b64
 define amdgpu_kernel void @test_local_v4_aligned8(i32 addrspace(3)* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()

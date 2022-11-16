@@ -1,24 +1,25 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 ;
 ; Check that PS is wave64
-; GFX10-LABEL: _amdgpu_ps_main:
-; GFX10: s_and_saveexec_b64
+; GCN-LABEL: _amdgpu_ps_main:
+; GCN: s_or_b64 exec, exec
 ;
 ; Check that VS is wave32
-; GFX10-LABEL: _amdgpu_vs_main:
-; GFX10: s_and_saveexec_b32
+; GCN-LABEL: _amdgpu_vs_main:
+; GCN: s_or_b32 exec_lo, exec_lo
 ;
 ; Check that GS is wave32
-; GFX10-LABEL: _amdgpu_gs_main:
-; GFX10: s_and_saveexec_b32
+; GCN-LABEL: _amdgpu_gs_main:
+; GCN: s_or_b32 exec_lo, exec_lo
 ;
 ; Check that HS is wave32
-; GFX10-LABEL: _amdgpu_hs_main:
-; GFX10: s_and_saveexec_b32
+; GCN-LABEL: _amdgpu_hs_main:
+; GCN: s_or_b32 exec_lo, exec_lo
 ;
 ; Check that CS is wave32
-; GFX10-LABEL: _amdgpu_cs_main:
-; GFX10: s_and_saveexec_b32
+; GCN-LABEL: _amdgpu_cs_main:
+; GCN: s_or_b32 exec_lo, exec_lo
 ;
 ; Check that:
 ; PS_W32_EN (bit 15) of SPI_PS_IN_CONTROL (0xa1b6) is 0;
@@ -27,7 +28,7 @@
 ; HS_W32_EN (bit 21) of VGT_SHADER_STAGES_EN (0xa2d5) is 1;
 ; CS_W32_EN (bit 15) of COMPUTE_DISPATCH_INITIATOR (0x2e00) is 1.
 ;
-; GFX10: .amd_amdgpu_pal_metadata{{.*}},0x2e00,0x8000,{{.*}}0xa1b6,0x1,{{.*}},0xa2d5,0xe00000,
+; GCN: .amd_amdgpu_pal_metadata{{.*}},0x2e00,0x8000,{{.*}}0xa1b6,0x1,{{.*}},0xa2d5,0xe00000,
 
 define dllexport amdgpu_ps void @_amdgpu_ps_main(float %arg10) #0 {
 .entry:
