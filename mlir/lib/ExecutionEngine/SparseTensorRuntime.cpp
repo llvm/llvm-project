@@ -192,7 +192,7 @@ fromMLIRSparseTensor(const SparseTensorStorage<uint64_t, uint64_t, V> *tensor,
   const auto &cooSizes = coo->getDimSizes();
   assert(cooSizes.size() == dimRank && "Rank mismatch");
   uint64_t *shape = new uint64_t[dimRank];
-  std::memcpy((void *)shape, (void *)cooSizes.data(),
+  std::memcpy((void *)shape, (const void *)cooSizes.data(),
               sizeof(uint64_t) * dimRank);
 
   V *values = new V[nse];
