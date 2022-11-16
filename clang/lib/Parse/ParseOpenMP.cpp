@@ -1837,9 +1837,21 @@ void Parser::ParseOMPDeclareTargetClauses(
             << getOpenMPClauseName(OMPC_indirect) << 0;
         break;
       }
-      bool IsToOrLinkClause =
+      bool IsToEnterOrLinkClause =
           OMPDeclareTargetDeclAttr::ConvertStrToMapTypeTy(ClauseName, MT);
-      assert((!IsDeviceTypeClause || !IsToOrLinkClause) && "Cannot be both!");
+      assert((!IsDeviceTypeClause || !IsToEnterOrLinkClause) &&
+             "Cannot be both!");
+
+      // Starting with OpenMP 5.2 the `to` clause has been replaced by the
+      // `enter` clause.
+      if (getLangOpts().OpenMP >= 52 && ClauseName == "to") {
+        Diag(Tok, diag::err_omp_declare_target_unexpected_to_clause);
+        break;
+      }
+      if (getLangOpts().OpenMP <= 51 && ClauseName == "enter") {
+        Diag(Tok, diag::err_omp_declare_target_unexpected_enter_clause);
+        break;
+      }
 
       if (!IsDeviceTypeClause && !IsIndirectClause &&
           DTCI.Kind == OMPD_begin_declare_target) {
@@ -1847,16 +1859,18 @@ void Parser::ParseOMPDeclareTargetClauses(
             << ClauseName << (getLangOpts().OpenMP >= 51 ? 3 : 0);
         break;
       }
-      if (!IsDeviceTypeClause && !IsToOrLinkClause && !IsIndirectClause) {
-        Diag(Tok, diag::err_omp_declare_target_unexpected_clause)
+      if (!IsDeviceTypeClause && !IsToEnterOrLinkClause && !IsIndirectClause) {
+        Diag(Tok, getLangOpts().OpenMP >= 52
+                      ? diag::err_omp_declare_target_unexpected_clause_52
+                      : diag::err_omp_declare_target_unexpected_clause)
             << ClauseName
-            << (getLangOpts().OpenMP >= 51   ? 4
-                : getLangOpts().OpenMP >= 50 ? 2
-                                             : 1);
+            << (getLangOpts().OpenMP >= 51
+                    ? 4
+                    : getLangOpts().OpenMP >= 50 ? 2 : 1);
         break;
       }
 
-      if (IsToOrLinkClause || IsIndirectClause)
+      if (IsToEnterOrLinkClause || IsIndirectClause)
         HasToOrLinkOrIndirectClause = true;
 
       if (IsIndirectClause) {
@@ -1920,7 +1934,9 @@ void Parser::ParseOMPDeclareTargetClauses(
     }
     if (!HasIdentifier && Tok.isNot(tok::annot_pragma_openmp_end)) {
       Diag(Tok,
-           diag::err_omp_declare_target_unexpected_clause_after_implicit_to);
+           getLangOpts().OpenMP >= 52
+               ? diag::err_omp_declare_target_wrong_clause_after_implicit_enter
+               : diag::err_omp_declare_target_wrong_clause_after_implicit_to);
       break;
     }
 
@@ -1935,7 +1951,10 @@ void Parser::ParseOMPDeclareTargetClauses(
   // For declare target require at least 'to' or 'link' to be present.
   if (DTCI.Kind == OMPD_declare_target && RequiresToOrLinkOrIndirectClause &&
       !HasToOrLinkOrIndirectClause)
-    Diag(DTCI.Loc, diag::err_omp_declare_target_missing_to_or_link_clause)
+    Diag(DTCI.Loc,
+         getLangOpts().OpenMP >= 52
+             ? diag::err_omp_declare_target_missing_enter_or_link_clause
+             : diag::err_omp_declare_target_missing_to_or_link_clause)
         << (getLangOpts().OpenMP >= 51 ? 1 : 0);
 
   SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
