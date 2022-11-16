@@ -19,7 +19,9 @@ add_definitions("-DTARGET_NAME=PluginInterface")
 # Define the DEBUG_PREFIX.
 add_definitions(-DDEBUG_PREFIX="PluginInterface")
 
-set_property(TARGET PluginInterface PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_target_properties(PluginInterface PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  CXX_VISIBILITY_PRESET protected)
 llvm_update_compile_flags(PluginInterface)
 set(LINK_LLVM_LIBS LLVMSupport)
 if (LLVM_LINK_LLVM_DYLIB)
