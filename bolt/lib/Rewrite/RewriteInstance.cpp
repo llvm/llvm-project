@@ -1882,7 +1882,7 @@ uint32_t getRelocationSymbol(const ELFObjectFileBase *Obj,
 } // anonymous namespace
 
 bool RewriteInstance::analyzeRelocation(
-    const RelocationRef &Rel, uint64_t RType, std::string &SymbolName,
+    const RelocationRef &Rel, uint64_t &RType, std::string &SymbolName,
     bool &IsSectionRelocation, uint64_t &SymbolAddress, int64_t &Addend,
     uint64_t &ExtractedValue, bool &Skip) const {
   Skip = false;
@@ -2554,7 +2554,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   if (ForceRelocation) {
-    std::string Name = Relocation::isGOT(RType) ? "Zero" : SymbolName;
+    std::string Name =
+        Relocation::isGOT(RType) ? "__BOLT_got_zero" : SymbolName;
     ReferencedSymbol = BC->registerNameAtAddress(Name, 0, 0, 0);
     SymbolAddress = 0;
     if (Relocation::isGOT(RType))
