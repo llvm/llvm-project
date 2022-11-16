@@ -3997,6 +3997,9 @@ bool Sema::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
                   diag::err_loongarch_builtin_requires_la64)
              << TheCall->getSourceRange();
     break;
+  case LoongArch::BI__builtin_loongarch_dbar:
+    // Check if immediate is in [0, 32767].
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 32767);
   }
 
   return false;

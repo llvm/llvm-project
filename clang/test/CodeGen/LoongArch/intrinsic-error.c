@@ -6,3 +6,11 @@
 int crc_w_d_w(long int a, int b) {
   return __builtin_loongarch_crc_w_d_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
 }
+
+void dbar_out_of_hi_range() {
+  return __builtin_loongarch_dbar(32768); // expected-error {{argument value 32768 is outside the valid range [0, 32767]}}
+}
+
+void dbar_out_of_lo_range() {
+  return __builtin_loongarch_dbar(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 32767]}}
+}
