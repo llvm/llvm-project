@@ -101,6 +101,34 @@ double3 ceil(double3);
 __attribute__((clang_builtin_alias(__builtin_elementwise_ceil)))
 double4 ceil(double4);
 
-} // namespace hlsl
+// cos builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos))) half cos(half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos)))
+half2 cos(half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos)))
+half3 cos(half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos)))
+half4 cos(half4);
+#endif
 
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos))) float
+cos(float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos)))
+float2 cos(float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos)))
+float3 cos(float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos)))
+float4 cos(float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos))) double
+cos(double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos)))
+double2 cos(double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos)))
+double3 cos(double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_cos)))
+double4 cos(double4);
+
+} // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_
