@@ -1111,7 +1111,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
     return Plan.getOrAddExternalDef(E->getValue());
 
   VPBasicBlock *Preheader = Plan.getEntry()->getEntryBasicBlock();
-  VPValue *Step = new VPExpandSCEVRecipe(Expr, SE);
-  Preheader->appendRecipe(Step->getDefiningRecipe());
+  VPExpandSCEVRecipe *Step = new VPExpandSCEVRecipe(Expr, SE);
+  Preheader->appendRecipe(Step);
   return Step;
 }
