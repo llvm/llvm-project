@@ -17,6 +17,7 @@
 #include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/GlobalDecl.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -149,10 +150,52 @@ LValue CIRGenFunction::buildLValueForFieldInitialization(
   llvm_unreachable("NYI");
 }
 
+// Detect the unusual situation where an inline version is shadowed by a
+// non-inline version. In that case we should pick the external one
+// everywhere. That's GCC behavior too.
+static bool onlyHasInlineBuiltinDeclaration(const FunctionDecl *FD) {
+  for (const FunctionDecl *PD = FD; PD; PD = PD->getPreviousDecl())
+    if (!PD->isInlineBuiltinDeclaration())
+      return false;
+  return true;
+}
+
 static CIRGenCallee buildDirectCallee(CIRGenModule &CGM, GlobalDecl GD) {
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
 
-  assert(!FD->getBuiltinID() && "Builtins NYI");
+  if (auto builtinID = FD->getBuiltinID()) {
+    std::string NoBuiltinFD = ("no-builtin-" + FD->getName()).str();
+    std::string NoBuiltins = "no-builtins";
+
+    auto *A = FD->getAttr<AsmLabelAttr>();
+    StringRef Ident = A ? A->getLabel() : FD->getName();
+    std::string FDInlineName = (Ident + ".inline").str();
+
+    auto &CGF = *CGM.getCurrCIRGenFun();
+    bool IsPredefinedLibFunction =
+        CGM.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
+    bool HasAttributeNoBuiltin = false;
+    assert(!UnimplementedFeature::attributeNoBuiltin() && "NYI");
+    // bool HasAttributeNoBuiltin =
+    //     CGF.CurFn->getAttributes().hasFnAttr(NoBuiltinFD) ||
+    //     CGF.CurFn->getAttributes().hasFnAttr(NoBuiltins);
+
+    // When directing calling an inline builtin, call it through it's mangled
+    // name to make it clear it's not the actual builtin.
+    if (CGF.CurFn.getName() != FDInlineName &&
+        onlyHasInlineBuiltinDeclaration(FD)) {
+      assert(0 && "NYI");
+    }
+
+    // Replaceable builtins provide their own implementation of a builtin. If we
+    // are in an inline builtin implementation, avoid trivial infinite
+    // recursion. Honor __attribute__((no_builtin("foo"))) or
+    // __attribute__((no_builtin)) on the current function unless foo is
+    // not a predefined library function which means we must generate the
+    // builtin no matter what.
+    else if (!IsPredefinedLibFunction || !HasAttributeNoBuiltin)
+      return CIRGenCallee::forBuiltin(builtinID, FD);
+  }
 
   auto CalleePtr = buildFunctionDeclPointer(CGM, GD);
 
