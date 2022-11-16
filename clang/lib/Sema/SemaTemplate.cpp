@@ -1707,6 +1707,18 @@ class ConstraintRefersToContainingTemplateChecker
           Result = true;
   }
 
+  void CheckNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
+    assert(D->getDepth() <= TemplateDepth &&
+           "Nothing should reference a value below the actual template depth, "
+           "depth is likely wrong");
+    if (D->getDepth() != TemplateDepth)
+      Result = true;
+
+    // Necessary because the type of the NTTP might be what refers to the parent
+    // constriant.
+    TransformType(D->getType());
+  }
+
 public:
   using inherited = TreeTransform<ConstraintRefersToContainingTemplateChecker>;
 
@@ -1742,6 +1754,8 @@ public:
     // unreachable should catch future instances/cases.
     if (auto *TD = dyn_cast<TypedefNameDecl>(D))
       TransformType(TD->getUnderlyingType());
+    else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D))
+      CheckNonTypeTemplateParmDecl(NTTPD);
     else if (auto *VD = dyn_cast<ValueDecl>(D))
       TransformType(VD->getType());
     else if (auto *TD = dyn_cast<TemplateDecl>(D))
