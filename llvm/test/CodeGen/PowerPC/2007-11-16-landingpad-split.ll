@@ -10,8 +10,8 @@ define void @Bork(i64 %range.0.0, i64 %range.0.1, i64 %size) personality ptr @__
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 31, -8(1)
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -176(1)
+; CHECK-NEXT:    std 0, 192(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 176
 ; CHECK-NEXT:    .cfi_offset r31, -8
 ; CHECK-NEXT:    .cfi_offset lr, 16

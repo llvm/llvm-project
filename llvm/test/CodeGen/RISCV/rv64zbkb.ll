@@ -102,6 +102,30 @@ define i64 @pack_i64_2(i32 signext %a, i32 signext %b) nounwind {
   ret i64 %or
 }
 
+define i64 @pack_i64_3(ptr %0, ptr %1) {
+; RV64I-LABEL: pack_i64_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    lwu a1, 0(a1)
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: pack_i64_3:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    lw a0, 0(a0)
+; RV64ZBKB-NEXT:    lwu a1, 0(a1)
+; RV64ZBKB-NEXT:    pack a0, a1, a0
+; RV64ZBKB-NEXT:    ret
+  %3 = load i32, ptr %0, align 4
+  %4 = zext i32 %3 to i64
+  %5 = shl i64 %4, 32
+  %6 = load i32, ptr %1, align 4
+  %7 = zext i32 %6 to i64
+  %8 = or i64 %5, %7
+  ret i64 %8
+}
+
 define signext i32 @packh_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: packh_i32:
 ; RV64I:       # %bb.0:

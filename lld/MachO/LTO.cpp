@@ -35,6 +35,8 @@ static lto::Config createConfig() {
   lto::Config c;
   c.Options = initTargetOptionsFromCodeGenFlags();
   c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe;
+  for (StringRef C : config->mllvmOpts)
+    c.MllvmArgs.emplace_back(C.str());
   c.CodeModel = getCodeModelFromCMModel();
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();

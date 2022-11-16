@@ -406,8 +406,7 @@ void NVPTXAsmPrinter::printReturnValStr(const MachineFunction &MF,
 }
 
 // Return true if MBB is the header of a loop marked with
-// llvm.loop.unroll.disable.
-// TODO: consider "#pragma unroll 1" which is equivalent to "#pragma nounroll".
+// llvm.loop.unroll.disable or llvm.loop.unroll.count=1.
 bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
     const MachineBasicBlock &MBB) const {
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfo>();
@@ -428,6 +427,12 @@ bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
               PBB->getTerminator()->getMetadata(LLVMContext::MD_loop)) {
         if (GetUnrollMetadata(LoopID, "llvm.loop.unroll.disable"))
           return true;
+        if (MDNode *UnrollCountMD =
+                GetUnrollMetadata(LoopID, "llvm.loop.unroll.count")) {
+          if (mdconst::extract<ConstantInt>(UnrollCountMD->getOperand(1))
+                  ->getZExtValue() == 1)
+            return true;
+        }
       }
     }
   }
@@ -1360,8 +1365,11 @@ NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
     return "f32";
   case Type::DoubleTyID:
     return "f64";
-  case Type::PointerTyID:
-    if (static_cast<const NVPTXTargetMachine &>(TM).is64Bit())
+  case Type::PointerTyID: {
+    unsigned PtrSize = TM.getPointerSizeInBits(Ty->getPointerAddressSpace());
+    assert((PtrSize == 64 || PtrSize == 32) && "Unexpected pointer size");
+
+    if (PtrSize == 64)
       if (useB4PTR)
         return "b64";
       else
@@ -1370,6 +1378,7 @@ NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
       return "b32";
     else
       return "u32";
+  }
   default:
     break;
   }
@@ -1456,7 +1465,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   bool isKernelFunc = isKernelFunction(*F);
   bool isABI = (STI.getSmVersion() >= 20);
   bool hasImageHandles = STI.hasImageHandles();
-  MVT thePointerTy = TLI->getPointerTy(DL);
 
   if (F->arg_empty()) {
     O << "()\n";
@@ -1529,10 +1537,17 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       }
       // Just a scalar
       auto *PTy = dyn_cast<PointerType>(Ty);
+      unsigned PTySizeInBits = 0;
+      if (PTy) {
+        PTySizeInBits =
+            TLI->getPointerTy(DL, PTy->getAddressSpace()).getSizeInBits();
+        assert(PTySizeInBits && "Invalid pointer size");
+      }
+
       if (isKernelFunc) {
         if (PTy) {
           // Special handling for pointer arguments to kernel
-          O << "\t.param .u" << thePointerTy.getSizeInBits() << " ";
+          O << "\t.param .u" << PTySizeInBits << " ";
 
           if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() !=
               NVPTX::CUDA) {
@@ -1575,9 +1590,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       if (isa<IntegerType>(Ty)) {
         sz = cast<IntegerType>(Ty)->getBitWidth();
         sz = promoteScalarArgumentSize(sz);
-      } else if (isa<PointerType>(Ty))
-        sz = thePointerTy.getSizeInBits();
-      else if (Ty->isHalfTy())
+      } else if (PTy) {
+        assert(PTySizeInBits && "Invalid pointer size");
+        sz = PTySizeInBits;
+      } else if (Ty->isHalfTy())
         // PTX ABI requires all scalar parameters to be at least 32
         // bits in size.  fp16 normally uses .b16 as its storage type
         // in PTX, so its size must be adjusted here, too.

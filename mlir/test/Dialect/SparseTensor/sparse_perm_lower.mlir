@@ -54,9 +54,9 @@
 // CHECK-MIR-DAG:       %[[VAL_2:.*]] = arith.constant 2 : index
 // CHECK-MIR-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK-MIR-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
-// CHECK-MIR-DAG:       %[[VAL_5:.*]] = call @sparseDimSize(%[[VAL_0]], %[[VAL_4]]) : (!llvm.ptr<i8>, index) -> index
-// CHECK-MIR-DAG:       %[[VAL_6:.*]] = call @sparseDimSize(%[[VAL_0]], %[[VAL_3]]) : (!llvm.ptr<i8>, index) -> index
-// CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparseDimSize(%[[VAL_0]], %[[VAL_2]]) : (!llvm.ptr<i8>, index) -> index
+// CHECK-MIR-DAG:       %[[VAL_5:.*]] = call @sparseLvlSize(%[[VAL_0]], %[[VAL_4]]) : (!llvm.ptr<i8>, index) -> index
+// CHECK-MIR-DAG:       %[[VAL_6:.*]] = call @sparseLvlSize(%[[VAL_0]], %[[VAL_3]]) : (!llvm.ptr<i8>, index) -> index
+// CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparseLvlSize(%[[VAL_0]], %[[VAL_2]]) : (!llvm.ptr<i8>, index) -> index
 // CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseValuesF32(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf32>
 // CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<f32>
 // CHECK-MIR:           %[[VAL_11:.*]] = tensor.extract %[[VAL_1]][] : tensor<f32>

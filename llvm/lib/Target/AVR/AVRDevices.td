@@ -184,7 +184,7 @@ def FamilyAVR5 : Family<"avr5",
 
 def FamilyAVR51 : Family<"avr51", [FamilyAVR5, FeatureELPM, FeatureELPMX]>;
 
-def FamilyAVR6 : Family<"avr6", [FamilyAVR51]>;
+def FamilyAVR6 : Family<"avr6", [FamilyAVR51, FeatureEIJMPCALL]>;
 
 def FamilyTiny
     : Family<"avrtiny",

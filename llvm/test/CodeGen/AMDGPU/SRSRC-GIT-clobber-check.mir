@@ -39,7 +39,7 @@ body:             |
 
   bb.1:
     renamable $vgpr0 = V_MOV_B32_e32 1065353216, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN killed renamable $vgpr0, undef renamable $vgpr0, $sgpr100_sgpr101_sgpr102_sgpr103, 0, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 5)
+    BUFFER_STORE_DWORD_OFFEN killed renamable $vgpr0, undef renamable $vgpr0, $sgpr100_sgpr101_sgpr102_sgpr103, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 5)
 
   bb.2:
     S_ENDPGM 0

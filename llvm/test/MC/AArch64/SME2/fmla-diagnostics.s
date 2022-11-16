@@ -44,9 +44,9 @@ fmla     za.s[w7, 0], {z0.s - z1.s}, {z2.s - z3.s}
 // --------------------------------------------------------------------------//
 // Invalid Matrix Operand
 
-fmla za.h[w8, #0], {z0.h-z3.h}, z4.h
+fmla za.b[w8, #0], {z0.b-z3.b}, z4.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid matrix operand, expected suffix .d
-// CHECK-NEXT: fmla za.h[w8, #0], {z0.h-z3.h}, z4.h
+// CHECK-NEXT: fmla za.b[w8, #0], {z0.b-z3.b}, z4.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//

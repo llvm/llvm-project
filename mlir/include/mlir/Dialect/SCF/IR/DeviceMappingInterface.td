@@ -34,6 +34,14 @@ def DeviceMappingAttrInterface : AttrInterface<"DeviceMappingAttrInterface"> {
     of the loops it contains to the GPU's parallelism units such as threads and 
     thread blocks.
   }];
+
+ let methods = [
+    InterfaceMethod<[{
+        Returns mapping as an integer from the attribute.
+      }],
+      "int64_t", "getMappingId", (ins)
+    >
+  ];
 }
 
 def DeviceMappingArrayAttr : 

@@ -687,6 +687,17 @@ class sve_int_ptest<bits<6> opc, string asm, SDPatternOperator op>
   let isCompare = 1;
 }
 
+multiclass sve_int_ptest<bits<6> opc, string asm, SDPatternOperator op,
+                         SDPatternOperator op_any> {
+  def NAME : sve_int_ptest<opc, asm, op>;
+
+  let hasNoSchedulingInfo = 1, isCompare = 1, Defs = [NZCV] in {
+  def _ANY : Pseudo<(outs), (ins PPRAny:$Pg, PPR8:$Pn),
+                    [(op_any (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn))]>,
+             PseudoInstExpansion<(!cast<Instruction>(NAME) PPRAny:$Pg, PPR8:$Pn)>;
+  }
+}
+
 class sve_int_pfirst_next<bits<2> sz8_64, bits<5> opc, string asm,
                           PPRRegOp pprty>
 : I<(outs pprty:$Pdn), (ins PPRAny:$Pg, pprty:$_Pdn),
