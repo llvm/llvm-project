@@ -813,8 +813,8 @@ TEST(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   EXPECT_EQ(&Recipe, BaseR);
 
   VPValue *VPV = &Recipe;
-  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDef()));
-  EXPECT_EQ(&Recipe, dyn_cast<VPRecipeBase>(VPV->getDef()));
+  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
+  EXPECT_EQ(&Recipe, dyn_cast<VPRecipeBase>(VPV->getDefiningRecipe()));
 
   delete Call;
 }
@@ -841,8 +841,8 @@ TEST(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
   EXPECT_EQ(&WidenSelectR, BaseR);
 
   VPValue *VPV = &WidenSelectR;
-  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDef()));
-  EXPECT_EQ(&WidenSelectR, dyn_cast<VPRecipeBase>(VPV->getDef()));
+  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
+  EXPECT_EQ(&WidenSelectR, dyn_cast<VPRecipeBase>(VPV->getDefiningRecipe()));
 
   delete SelectI;
 }
@@ -866,8 +866,8 @@ TEST(VPRecipeTest, CastVPWidenGEPRecipeToVPUserAndVPDef) {
   EXPECT_EQ(&Recipe, BaseR);
 
   VPValue *VPV = &Recipe;
-  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDef()));
-  EXPECT_EQ(&Recipe, dyn_cast<VPRecipeBase>(VPV->getDef()));
+  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
+  EXPECT_EQ(&Recipe, dyn_cast<VPRecipeBase>(VPV->getDefiningRecipe()));
 
   delete GEP;
 }
@@ -945,8 +945,8 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
   EXPECT_EQ(&Recipe, BaseR);
 
   VPValue *VPV = Recipe.getVPSingleValue();
-  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDef()));
-  EXPECT_EQ(&Recipe, dyn_cast<VPRecipeBase>(VPV->getDef()));
+  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
+  EXPECT_EQ(&Recipe, dyn_cast<VPRecipeBase>(VPV->getDefiningRecipe()));
 
   delete Load;
 }
@@ -1207,10 +1207,10 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   EXPECT_EQ(&I3, DoubleValueDefV1Users[1]);
 
   // Now check that we can get the right VPDef for each defined value.
-  EXPECT_EQ(&DoubleValueDef, I1.getOperand(0)->getDef());
-  EXPECT_EQ(&DoubleValueDef, I1.getOperand(1)->getDef());
-  EXPECT_EQ(&DoubleValueDef, I2.getOperand(0)->getDef());
-  EXPECT_EQ(&DoubleValueDef, I3.getOperand(0)->getDef());
+  EXPECT_EQ(&DoubleValueDef, I1.getOperand(0)->getDefiningRecipe());
+  EXPECT_EQ(&DoubleValueDef, I1.getOperand(1)->getDefiningRecipe());
+  EXPECT_EQ(&DoubleValueDef, I2.getOperand(0)->getDefiningRecipe());
+  EXPECT_EQ(&DoubleValueDef, I3.getOperand(0)->getDefiningRecipe());
 }
 
 } // namespace
