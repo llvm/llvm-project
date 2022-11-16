@@ -547,6 +547,10 @@ def HasV8_8aOps : SubtargetFeature<
   "v8.8a", "HasV8_8aOps", "true", "Support ARM v8.8a instructions",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS]>;
 
+def HasV8_9aOps : SubtargetFeature<
+  "v8.9a", "HasV8_9aOps", "true", "Support ARM v8.9a instructions",
+  [HasV8_8aOps]>;
+
 def HasV9_0aOps : SubtargetFeature<
   "v9a", "HasV9_0aOps", "true", "Support ARM v9a instructions",
   [HasV8_5aOps, FeatureMEC, FeatureSVE2]>;
@@ -562,6 +566,10 @@ def HasV9_2aOps : SubtargetFeature<
 def HasV9_3aOps : SubtargetFeature<
   "v9.3a", "HasV9_3aOps", "true", "Support ARM v9.3a instructions",
   [HasV8_8aOps, HasV9_2aOps]>;
+
+def HasV9_4aOps : SubtargetFeature<
+  "v9.4a", "HasV9_4aOps", "true", "Support ARM v9.4a instructions",
+  [HasV8_9aOps, HasV9_3aOps]>;
 
 def HasV8_0rOps : SubtargetFeature<
   "v8r", "HasV8_0rOps", "true", "Support ARM v8r instructions",

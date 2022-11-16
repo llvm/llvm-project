@@ -58,6 +58,12 @@ AARCH64_ARCH("armv8.8-a", ARMV8_8A, "v8.8a",
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 |
               AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM))
+AARCH64_ARCH("armv8.9-a", ARMV8_9A, "v8.9a",
+             (AArch64::AEK_CRC | AArch64::AEK_FP |
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+              AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+              AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 |
+              AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM))
 AARCH64_ARCH("armv9-a",   ARMV9A, "v9a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
@@ -74,6 +80,11 @@ AARCH64_ARCH("armv9.2-a", ARMV9_2A, "v9.2a",
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
 AARCH64_ARCH("armv9.3-a", ARMV9_3A, "v9.3a",
+             (AArch64::AEK_CRC | AArch64::AEK_FP |
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+              AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
+AARCH64_ARCH("armv9.4-a", ARMV9_4A, "v9.4a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |

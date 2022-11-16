@@ -27,6 +27,10 @@ def HasV8_6a         : Predicate<"Subtarget->hasV8_6aOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV8_6aOps), "armv8.6a">;
 def HasV8_7a         : Predicate<"Subtarget->hasV8_7aOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV8_7aOps), "armv8.7a">;
+def HasV8_8a         : Predicate<"Subtarget->hasV8_8aOps()">,
+                                 AssemblerPredicateWithAll<(all_of HasV8_8aOps), "armv8.8a">;
+def HasV8_9a         : Predicate<"Subtarget->hasV8_9aOps()">,
+                                 AssemblerPredicateWithAll<(all_of HasV8_9aOps), "armv8.9a">;
 def HasV9_0a         : Predicate<"Subtarget->hasV9_0aOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV9_0aOps), "armv9-a">;
 def HasV9_1a         : Predicate<"Subtarget->hasV9_1aOps()">,
@@ -35,6 +39,8 @@ def HasV9_2a         : Predicate<"Subtarget->hasV9_2aOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV9_2aOps), "armv9.2a">;
 def HasV9_3a         : Predicate<"Subtarget->hasV9_3aOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV9_3aOps), "armv9.3a">;
+def HasV9_4a         : Predicate<"Subtarget->hasV9_4aOps()">,
+                                 AssemblerPredicateWithAll<(all_of HasV9_4aOps), "armv9.4a">;
 def HasV8_0r         : Predicate<"Subtarget->hasV8_0rOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV8_0rOps), "armv8-r">;
 
