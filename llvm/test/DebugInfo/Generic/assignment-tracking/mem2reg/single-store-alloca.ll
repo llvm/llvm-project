@@ -7,7 +7,7 @@
 
 ; CHECK: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[B:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %a, metadata ![[A:[0-9]+]], {{.*}}, metadata i32* undef
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %a, metadata ![[A:[0-9]+]], {{.*}}, metadata ptr undef
 ; CHECK-NEXT: ret
 
 ; CHECK-DAG: ![[A]] = !DILocalVariable(name: "a",
@@ -26,12 +26,12 @@
 define dso_local noundef i32 @_Z1fi(i32 noundef %a) #0 !dbg !7 {
 entry:
   %a.addr = alloca i32, align 4, !DIAssignID !13
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !12, metadata !DIExpression(), metadata !13, metadata i32* %a.addr, metadata !DIExpression()), !dbg !14
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !12, metadata !DIExpression(), metadata !13, metadata i32* %a.addr, metadata !DIExpression()), !dbg !14
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !22, metadata !DIExpression(), metadata !13, metadata i32* %a.addr, metadata !DIExpression()), !dbg !14
-  store i32 %a, i32* %a.addr, align 4, !DIAssignID !19
-  call void @llvm.dbg.assign(metadata i32 %a, metadata !12, metadata !DIExpression(), metadata !19, metadata i32* %a.addr, metadata !DIExpression()), !dbg !14
-  %0 = load i32, i32* %a.addr, align 4, !dbg !20
+  call void @llvm.dbg.assign(metadata i1 undef, metadata !12, metadata !DIExpression(), metadata !13, metadata ptr %a.addr, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.assign(metadata i1 undef, metadata !12, metadata !DIExpression(), metadata !13, metadata ptr %a.addr, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.assign(metadata i1 undef, metadata !22, metadata !DIExpression(), metadata !13, metadata ptr %a.addr, metadata !DIExpression()), !dbg !14
+  store i32 %a, ptr %a.addr, align 4, !DIAssignID !19
+  call void @llvm.dbg.assign(metadata i32 %a, metadata !12, metadata !DIExpression(), metadata !19, metadata ptr %a.addr, metadata !DIExpression()), !dbg !14
+  %0 = load i32, ptr %a.addr, align 4, !dbg !20
   ret i32 %0, !dbg !21
 }
 

@@ -8,10 +8,10 @@
 
 ; CHECK: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[B:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %a, metadata ![[A:[0-9]+]], {{.*}}, metadata i32* undef
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %a, metadata ![[A:[0-9]+]], {{.*}}, metadata ptr undef
 ; CHECK-NEXT: %add =
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[B]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %add, metadata ![[A]], {{.*}}, metadata i32* undef
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %add, metadata ![[A]], {{.*}}, metadata ptr undef
 
 ; CHECK-DAG: ![[A]] = !DILocalVariable(name: "a",
 ; CHECK-DAG: ![[B]] = !DILocalVariable(name: "b",
@@ -25,15 +25,15 @@
 define dso_local noundef i32 @_Z1fi(i32 noundef %a) !dbg !7 {
 entry:
   %a.addr = alloca i32, align 4, !DIAssignID !13
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !12, metadata !DIExpression(), metadata !13, metadata i32* %a.addr, metadata !DIExpression()), !dbg !14
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !24, metadata !DIExpression(), metadata !13, metadata i32* %a.addr, metadata !DIExpression()), !dbg !14
-  store i32 %a, i32* %a.addr, align 4, !DIAssignID !19
-  call void @llvm.dbg.assign(metadata i32 %a, metadata !12, metadata !DIExpression(), metadata !19, metadata i32* %a.addr, metadata !DIExpression()), !dbg !14
-  %0 = load i32, i32* %a.addr, align 4, !dbg !20
+  call void @llvm.dbg.assign(metadata i1 undef, metadata !12, metadata !DIExpression(), metadata !13, metadata ptr %a.addr, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.assign(metadata i1 undef, metadata !24, metadata !DIExpression(), metadata !13, metadata ptr %a.addr, metadata !DIExpression()), !dbg !14
+  store i32 %a, ptr %a.addr, align 4, !DIAssignID !19
+  call void @llvm.dbg.assign(metadata i32 %a, metadata !12, metadata !DIExpression(), metadata !19, metadata ptr %a.addr, metadata !DIExpression()), !dbg !14
+  %0 = load i32, ptr %a.addr, align 4, !dbg !20
   %add = add nsw i32 %0, 1, !dbg !20
-  store i32 %add, i32* %a.addr, align 4, !dbg !20, !DIAssignID !21
-  call void @llvm.dbg.assign(metadata i32 %add, metadata !12, metadata !DIExpression(), metadata !21, metadata i32* %a.addr, metadata !DIExpression()), !dbg !14
-  %1 = load i32, i32* %a.addr, align 4, !dbg !22
+  store i32 %add, ptr %a.addr, align 4, !dbg !20, !DIAssignID !21
+  call void @llvm.dbg.assign(metadata i32 %add, metadata !12, metadata !DIExpression(), metadata !21, metadata ptr %a.addr, metadata !DIExpression()), !dbg !14
+  %1 = load i32, ptr %a.addr, align 4, !dbg !22
   ret i32 %1, !dbg !23
 }
 
