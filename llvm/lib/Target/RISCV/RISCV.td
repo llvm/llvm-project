@@ -413,6 +413,21 @@ def HasStdExtZawrs : Predicate<"Subtarget->hasStdExtZawrs()">,
                                AssemblerPredicate<(all_of FeatureStdExtZawrs),
                                "'Zawrs' (Wait on Reservation Set)">;
 
+//===----------------------------------------------------------------------===//
+// Vendor extensions
+//===----------------------------------------------------------------------===//
+
+def FeatureVendorXVentanaCondOps
+    : SubtargetFeature<"xventanacondops", "HasVendorXVentanaCondOps", "true",
+                       "'XVentanaCondOps' (Ventana Conditional Ops)">;
+def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()">,
+                                AssemblerPredicate<(all_of FeatureVendorXVentanaCondOps),
+                                "'XVentanaCondOps' (Ventana Conditional Ops)">;
+
+//===----------------------------------------------------------------------===//
+// LLVM specific features and extensions
+//===----------------------------------------------------------------------===//
+
 // Feature32Bit exists to mark CPUs that support RV32 to distinquish them from
 // tuning CPU names.
 def Feature32Bit

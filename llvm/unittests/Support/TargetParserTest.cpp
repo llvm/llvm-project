@@ -12,6 +12,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -949,11 +950,6 @@ TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
       AArch64::getDefaultExtensions(params.CPUName, AK);
   EXPECT_PRED_FORMAT2(AssertSameExtensionFlags<ARM::ISAKind::AARCH64>,
                       params.ExpectedFlags, default_extensions);
-
-  unsigned FPUKind = AArch64::getDefaultFPU(params.CPUName, AK);
-  EXPECT_EQ(params.ExpectedFPU, ARM::getFPUName(FPUKind));
-
-  EXPECT_EQ(params.CPUAttr, AArch64::getCPUAttr(AK));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1404,10 +1400,7 @@ TEST(TargetParserTest, testAArch64CPUArchList) {
 bool testAArch64Arch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
                      unsigned ArchAttr) {
   AArch64::ArchKind AK = AArch64::parseArch(Arch);
-  return (AK != AArch64::ArchKind::INVALID) &&
-         AArch64::getDefaultCPU(Arch).equals(DefaultCPU) &&
-         AArch64::getSubArch(AK).equals(SubArch) &&
-         (AArch64::getArchAttr(AK) == ArchAttr);
+  return AK != AArch64::ArchKind::INVALID;
 }
 
 TEST(TargetParserTest, testAArch64Arch) {
@@ -1598,7 +1591,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SME,     AArch64::AEK_SMEF64F64, AArch64::AEK_SMEI16I64,
       AArch64::AEK_SME2,    AArch64::AEK_HBC,      AArch64::AEK_MOPS,
       AArch64::AEK_PERFMON, AArch64::AEK_SVE2p1,   AArch64::AEK_SME2p1,
-      AArch64::AEK_B16B16};
+      AArch64::AEK_B16B16,  AArch64::AEK_SMEF16F16};
 
   std::vector<StringRef> Features;
 
@@ -1657,6 +1650,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sme"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f64f64"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-i16i64"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-f16f16"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme2p1"));
   EXPECT_TRUE(llvm::is_contained(Features, "+hbc"));
@@ -1739,6 +1733,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sme", "nosme", "+sme", "-sme"},
       {"sme-f64f64", "nosme-f64f64", "+sme-f64f64", "-sme-f64f64"},
       {"sme-i16i64", "nosme-i16i64", "+sme-i16i64", "-sme-i16i64"},
+      {"sme-f16f16", "nosme-f16f16", "+sme-f16f16", "-sme-f16f16"},
       {"sme2", "nosme2", "+sme2", "-sme2"},
       {"sme2p1", "nosme2p1", "+sme2p1", "-sme2p1"},
       {"hbc", "nohbc", "+hbc", "-hbc"},

@@ -8,8 +8,8 @@ define void @print_res() nounwind {
 ; CHECK-LABEL: print_res:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -128(1)
+; CHECK-NEXT:    std 0, 144(1)
 ; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    addi 3, 3, -1
 ; CHECK-NEXT:    clrldi 4, 3, 32

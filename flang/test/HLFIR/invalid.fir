@@ -35,3 +35,38 @@ func.func @bad_array_declare(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
   %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.ref<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
   return
 }
+
+// -----
+func.func @bad_assign_scalar_character(%arg0: !fir.boxchar<1>, %arg1: !fir.char<1,?>) {
+  // expected-error@+1 {{'hlfir.assign' op operand #0 must be any Fortran value or variable type, but got '!fir.char<1,?>'}}
+  hlfir.assign %arg1 to %arg0 : !fir.char<1,?>, !fir.boxchar<1>
+  return
+}
+
+// -----
+func.func @bad_assign_scalar_character_1(%arg0: !fir.boxchar<1>, %arg1: !hlfir.expr<!fir.char<1,?>>) {
+  // expected-error@+1 {{'hlfir.assign' op operand #1 must be any HLFIR variable type, but got '!hlfir.expr<!fir.char<1,?>>'}}
+  hlfir.assign %arg0 to %arg1 : !fir.boxchar<1>, !hlfir.expr<!fir.char<1,?>>
+  return
+}
+
+// -----
+func.func @bad_assign_scalar_integer(%arg0: !fir.ref<i32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.assign' op operand #1 must be any HLFIR variable type, but got 'i32'}}
+  hlfir.assign %arg0 to %arg1 : !fir.ref<i32>, i32
+  return
+}
+
+// -----
+func.func @bad_assign_array(%arg0: !fir.ref<!fir.array<?xi32>>, %arg1: !hlfir.expr<?xi32>) {
+  // expected-error@+1 {{'hlfir.assign' op operand #1 must be any HLFIR variable type, but got '!fir.ref<!fir.array<?xi32>>'}}
+  hlfir.assign %arg1 to %arg0 : !hlfir.expr<?xi32>, !fir.ref<!fir.array<?xi32>>
+  return
+}
+
+// -----
+func.func @bad_assign_array_2(%arg0: !fir.ref<!fir.array<10xi32>>, %arg1: !hlfir.expr<?xi32>) {
+  // expected-error@+1 {{'hlfir.assign' op operand #1 must be any HLFIR variable type, but got '!hlfir.expr<?xi32>'}}
+  hlfir.assign %arg0 to %arg1 : !fir.ref<!fir.array<10xi32>>, !hlfir.expr<?xi32>
+  return
+}

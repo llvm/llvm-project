@@ -95,17 +95,20 @@ void SubElementTypeInterface::walkSubElements(
 /// AttrTypeReplacer
 //===----------------------------------------------------------------------===//
 
-void AttrTypeReplacer::replaceElementsIn(Operation *op, bool replaceLocs,
-                                         bool replaceTypes) {
+void AttrTypeReplacer::replaceElementsIn(Operation *op, bool replaceAttrs,
+                                         bool replaceLocs, bool replaceTypes) {
   // Functor that replaces the given element if the new value is different,
   // otherwise returns nullptr.
   auto replaceIfDifferent = [&](auto element) {
     auto replacement = replace(element);
     return (replacement && replacement != element) ? replacement : nullptr;
   };
-  // Check the attribute dictionary for replacements.
-  if (auto newAttrs = replaceIfDifferent(op->getAttrDictionary()))
-    op->setAttrs(cast<DictionaryAttr>(newAttrs));
+
+  // Update the attribute dictionary.
+  if (replaceAttrs) {
+    if (auto newAttrs = replaceIfDifferent(op->getAttrDictionary()))
+      op->setAttrs(cast<DictionaryAttr>(newAttrs));
+  }
 
   // If we aren't updating locations or types, we're done.
   if (!replaceTypes && !replaceLocs)

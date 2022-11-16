@@ -47,7 +47,6 @@ entry:
 ; ASM-LABEL:     .vec_caller:
 ; ASM32:         # %bb.0:                                # %entry
 ; ASM32-DAG:     mflr 0
-; ASM32-DAG:     stw 0, 8(1)
 ; ASM32-DAG:     stwu 1, -64(1)
 ; ASM32-DAG:     lwz [[REG1:[0-9]+]], L..C0(2)
 ; ASM32-DAG:     lxvw4x 34, 0, [[REG1]]
@@ -73,6 +72,7 @@ entry:
 ; ASM32-DAG:     lxvw4x 44, 0, [[REG11]]
 ; ASM32-DAG:     lwz [[REG12:[0-9]+]], L..C11(2)
 ; ASM32-DAG:     lxvw4x 45, 0, [[REG12]]
+; ASM32-DAG:     stw 0, 72(1)
 ; ASM32-DAG:     bl .vec_callee
 ; ASM32-DAG:     li 3, 0
 ; ASM32-DAG:     addi 1, 1, 64
@@ -81,7 +81,6 @@ entry:
 ; ASM32:         blr
 
 ; ASM64:         # %entry
-; ASM64-DAG:     std 0, 16(1)
 ; ASM64-DAG:     stdu 1, -112(1)
 ; ASM64-DAG:     ld [[REG1:[0-9]+]], L..C0(2)
 ; ASM64-DAG:     lxvw4x 34, 0, [[REG1]]
@@ -107,6 +106,7 @@ entry:
 ; ASM64-DAG:     lxvw4x 44, 0, [[REG11]]
 ; ASM64-DAG:     ld [[REG12:[0-9]+]], L..C11(2)
 ; ASM64-DAG:     lxvw4x 45, 0, [[REG12]]
+; ASM64-DAG:     std 0, 128(1)
 ; ASM64-DAG:     bl .vec_callee
 ; ASM64-DAG:     li 3, 0
 ; ASM64-DAG:     addi 1, 1, 112

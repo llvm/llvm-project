@@ -83,7 +83,6 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
-#include "llvm/Transforms/Scalar/NewGVN.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/Debugify.h"
@@ -101,7 +100,6 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<bool> DebugInfoCorrelate;
-extern cl::opt<bool> RunNewGVN;
 
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
@@ -411,7 +409,12 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.NoInfsFPMath = LangOpts.NoHonorInfs;
   Options.NoNaNsFPMath = LangOpts.NoHonorNaNs;
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
-  Options.UnsafeFPMath = LangOpts.UnsafeFPMath;
+  Options.UnsafeFPMath = LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
+                         LangOpts.NoSignedZero && LangOpts.ApproxFunc &&
+                         (LangOpts.getDefaultFPContractMode() ==
+                              LangOptions::FPModeKind::FPM_Fast ||
+                          LangOpts.getDefaultFPContractMode() ==
+                              LangOptions::FPModeKind::FPM_FastHonorPragmas);
   Options.ApproxFuncFPMath = LangOpts.ApproxFunc;
 
   Options.BBSections =
@@ -676,10 +679,7 @@ static void addSanitizers(const Triple &TargetTriple,
           FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
           FPM.addPass(InstCombinePass());
           FPM.addPass(JumpThreadingPass());
-          if (RunNewGVN)
-            FPM.addPass(NewGVNPass());
-          else
-            FPM.addPass(GVNPass());
+          FPM.addPass(GVNPass());
           FPM.addPass(InstCombinePass());
           MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
         }

@@ -22,6 +22,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -389,7 +390,10 @@ protected:
 
     unsigned : NumExprBits;
 
-    unsigned Semantics : 3; // Provides semantics for APFloat construction
+    static_assert(
+        llvm::APFloat::S_MaxSemantics < 16,
+        "Too many Semantics enum values to fit in bitfield of size 4");
+    unsigned Semantics : 4; // Provides semantics for APFloat construction
     unsigned IsExact : 1;
   };
 

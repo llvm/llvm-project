@@ -41,6 +41,12 @@ inline bool isFortranValue(mlir::Value value) {
 /// original source or can be legally defined: temporaries created to store
 /// expression values are considered to be variables, and so are PARAMETERs
 /// global constant address.
+inline bool isFortranEntity(mlir::Value value) {
+  return isFortranValue(value) || isFortranVariableType(value.getType());
+}
+
+/// Is this a Fortran variable for which the defining op carrying the Fortran
+/// attributes is visible?
 inline bool isFortranVariableWithAttributes(mlir::Value value) {
   return value.getDefiningOp<fir::FortranVariableOpInterface>();
 }
@@ -51,25 +57,78 @@ inline bool isFortranEntityWithAttributes(mlir::Value value) {
   return isFortranValue(value) || isFortranVariableWithAttributes(value);
 }
 
+class Entity : public mlir::Value {
+public:
+  explicit Entity(mlir::Value value) : mlir::Value(value) {
+    assert(isFortranEntity(value) &&
+           "must be a value representing a Fortran value or variable like");
+  }
+  Entity(fir::FortranVariableOpInterface variable)
+      : mlir::Value(variable.getBase()) {}
+  bool isValue() const { return isFortranValue(*this); }
+  bool isVariable() const { return !isValue(); }
+  bool isMutableBox() const {
+    mlir::Type type = fir::dyn_cast_ptrEleTy(getType());
+    return type && type.isa<fir::BaseBoxType>();
+  }
+  bool isArray() const {
+    mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getType()));
+    if (type.isa<fir::SequenceType>())
+      return true;
+    if (auto exprType = type.dyn_cast<hlfir::ExprType>())
+      return exprType.isArray();
+    return false;
+  }
+  bool isScalar() const { return !isArray(); }
+
+  mlir::Type getFortranElementType() const {
+    mlir::Type type = fir::unwrapSequenceType(
+        fir::unwrapPassByRefType(fir::unwrapRefType(getType())));
+    if (auto exprType = type.dyn_cast<hlfir::ExprType>())
+      return exprType.getEleTy();
+    return type;
+  }
+
+  bool hasLengthParameters() const {
+    mlir::Type eleTy = getFortranElementType();
+    return eleTy.isa<fir::CharacterType>() ||
+           fir::isRecordWithTypeParameters(eleTy);
+  }
+
+  fir::FortranVariableOpInterface getIfVariableInterface() const {
+    return this->getDefiningOp<fir::FortranVariableOpInterface>();
+  }
+
+  // Get the entity as an mlir SSA value containing all the shape, type
+  // parameters and dynamic shape information.
+  mlir::Value getBase() const { return *this; }
+
+  // Get the entity as a FIR base. This may not carry the shape and type
+  // parameters information, and even when it is a box with shape information.
+  // it will not contain the local lower bounds of the entity. This should
+  // be used with care when generating FIR code that does not need this
+  // information, or has access to it in other ways. Its advantage is that
+  // it will never be a fir.box for explicit shape arrays, leading to simpler
+  // FIR code generation.
+  mlir::Value getFirBase() const;
+};
+
 /// Wrapper over an mlir::Value that can be viewed as a Fortran entity.
 /// This provides some Fortran specific helpers as well as a guarantee
 /// in the compiler source that a certain mlir::Value must be a Fortran
 /// entity, and if it is a variable, its defining operation carrying its
 /// Fortran attributes must be visible.
-class EntityWithAttributes : public mlir::Value {
+class EntityWithAttributes : public Entity {
 public:
-  explicit EntityWithAttributes(mlir::Value value) : mlir::Value(value) {
+  explicit EntityWithAttributes(mlir::Value value) : Entity(value) {
     assert(isFortranEntityWithAttributes(value) &&
            "must be a value representing a Fortran value or variable");
   }
   EntityWithAttributes(fir::FortranVariableOpInterface variable)
-      : mlir::Value(variable.getBase()) {}
-  bool isValue() const { return isFortranValue(*this); }
-  bool isVariable() const { return !isValue(); }
+      : Entity(variable) {}
   fir::FortranVariableOpInterface getIfVariable() const {
-    return this->getDefiningOp<fir::FortranVariableOpInterface>();
+    return getIfVariableInterface();
   }
-  mlir::Value getBase() const { return *this; }
 };
 
 /// Functions to translate hlfir::EntityWithAttributes to fir::ExtendedValue.
@@ -80,7 +139,7 @@ public:
 using CleanupFunction = std::function<void()>;
 std::pair<fir::ExtendedValue, llvm::Optional<CleanupFunction>>
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         EntityWithAttributes entity);
+                         Entity entity);
 
 /// Function to translate FortranVariableOpInterface to fir::ExtendedValue.
 /// It does not generate any IR, and is a simple packaging operation.
@@ -92,6 +151,12 @@ EntityWithAttributes genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                                 const fir::ExtendedValue &exv,
                                 llvm::StringRef name,
                                 fir::FortranVariableFlagsAttr flags);
+
+/// If the entity is a variable, load its value (dereference pointers and
+/// allocatables if needed). Do nothing if the entity os already a variable or
+/// if it is not a scalar entity of numerical or logical type.
+Entity loadTrivialScalar(mlir::Location loc, fir::FirOpBuilder &builder,
+                         Entity entity);
 
 } // namespace hlfir
 

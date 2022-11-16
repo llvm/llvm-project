@@ -34,6 +34,18 @@ using namespace mlir::gpu;
 #include "mlir/Dialect/GPU/IR/GPUOpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
+// GPU Device Mapping Attributes
+//===----------------------------------------------------------------------===//
+
+int64_t GPUBlockMappingAttr::getMappingId() const {
+  return static_cast<int64_t>(getBlock());
+}
+
+int64_t GPUThreadMappingAttr::getMappingId() const {
+  return static_cast<int64_t>(getThread());
+}
+
+//===----------------------------------------------------------------------===//
 // MMAMatrixType
 //===----------------------------------------------------------------------===//
 
@@ -311,10 +323,10 @@ static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
 
 static bool verifyReduceOpAndType(gpu::AllReduceOperation opName,
                                   Type resType) {
-  return !((opName == gpu::AllReduceOperation::AND ||
-            opName == gpu::AllReduceOperation::OR ||
-            opName == gpu::AllReduceOperation::XOR) &&
-           !resType.isa<IntegerType>());
+  return (opName != gpu::AllReduceOperation::AND &&
+          opName != gpu::AllReduceOperation::OR &&
+          opName != gpu::AllReduceOperation::XOR) ||
+         resType.isa<IntegerType>();
 }
 
 LogicalResult gpu::AllReduceOp::verifyRegions() {

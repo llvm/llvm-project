@@ -15,7 +15,7 @@ define amdgpu_ps float @struct_buffer_load_format_f32__sgpr_rsrc__vgpr_vindex__v
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_BOTHEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
@@ -36,7 +36,7 @@ define amdgpu_ps <2 x float> @struct_buffer_load_format_v2f32__sgpr_rsrc__vgpr_v
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XY_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_XY_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<2 x s32>), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XY_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_XY_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<2 x s32>), align 1, addrspace 4)
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XY_BOTHEN]].sub0
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XY_BOTHEN]].sub1
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY7]]
@@ -60,7 +60,7 @@ define amdgpu_ps <3 x float> @struct_buffer_load_format_v3f32__sgpr_rsrc__vgpr_v
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZ_BOTHEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_FORMAT_XYZ_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<3 x s32>), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZ_BOTHEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_FORMAT_XYZ_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<3 x s32>), align 1, addrspace 4)
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZ_BOTHEN]].sub0
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZ_BOTHEN]].sub1
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZ_BOTHEN]].sub2
@@ -86,7 +86,7 @@ define amdgpu_ps <4 x float> @struct_buffer_load_format_v4f32__sgpr_rsrc__vgpr_v
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZW_BOTHEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZW_BOTHEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 4)
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_BOTHEN]].sub0
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_BOTHEN]].sub1
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_BOTHEN]].sub2
@@ -147,7 +147,7 @@ define amdgpu_ps <4 x float> @struct_buffer_load_format_v4f32__vpr_rsrc__sgpr_vi
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY8]], %subreg.sub1
-  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZW_BOTHEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_BOTHEN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZW_BOTHEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_BOTHEN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 4)
   ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -184,7 +184,7 @@ define amdgpu_ps float @struct_buffer_load_format_f32__sgpr_rsrc__vgpr_vindex__v
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 4095, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 4095, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_BOTHEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %voffset = add i32 %voffset.base, 4095
@@ -206,7 +206,7 @@ define amdgpu_ps float @struct_buffer_load_format_i32__sgpr_rsrc__vgpr_vindex__v
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_BOTHEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call i32 @llvm.amdgcn.struct.buffer.load.format.i32(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)

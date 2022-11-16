@@ -90,6 +90,7 @@ private:
   bool HasStdExtZmmul = false;
   bool HasStdExtZawrs = false;
   bool HasStdExtZtso = false;
+  bool HasVendorXVentanaCondOps = false;
   bool HasRV32 = false;
   bool HasRV64 = false;
   bool IsRV32E = false;
@@ -190,6 +191,7 @@ public:
   bool hasStdExtZawrs() const { return HasStdExtZawrs; }
   bool hasStdExtZmmul() const { return HasStdExtZmmul; }
   bool hasStdExtZtso() const { return HasStdExtZtso; }
+  bool hasVendorXVentanaCondOps() const { return HasVendorXVentanaCondOps; }
   bool is64Bit() const { return HasRV64; }
   bool isRV32E() const { return IsRV32E; }
   bool enableLinkerRelax() const { return EnableLinkerRelax; }

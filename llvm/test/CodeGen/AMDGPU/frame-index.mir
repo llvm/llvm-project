@@ -131,7 +131,7 @@ body:             |
     ; GCN: liveins: $sgpr30_sgpr31
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $vgpr0 = V_MOV_B32_e32 7, implicit $exec
-    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed renamable $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 260, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed renamable $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 260, 0, 0, implicit $exec
     ; GCN-NEXT: $vcc_hi = S_LSHR_B32 $sgpr32, 6, implicit-def $scc
     ; GCN-NEXT: $vcc_hi = S_ADD_I32 killed $vcc_hi, 512, implicit-def $scc
     ; GCN-NEXT: renamable $sgpr4 = S_MUL_I32 killed $vcc_hi, 9
@@ -140,7 +140,7 @@ body:             |
     ; GCN-NEXT: DS_WRITE_B32 undef renamable $vgpr0, killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return killed renamable $sgpr30_sgpr31
     renamable $vgpr0 = V_MOV_B32_e32 7, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN killed renamable $vgpr0, %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 260, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN killed renamable $vgpr0, %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 260, 0, 0, implicit $exec
     renamable $sgpr4 = S_MUL_I32 %stack.1, 9
     renamable $vgpr0 = COPY killed renamable $sgpr4, implicit $exec
     $m0 = S_MOV_B32 -1

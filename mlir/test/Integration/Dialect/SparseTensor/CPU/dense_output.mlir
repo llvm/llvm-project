@@ -4,7 +4,8 @@
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
-
+//
+// Do the same run, but now with direct IR generation.
 // RUN: mlir-opt %s --sparse-compiler=enable-runtime-library=false | \
 // RUN: TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx" \
 // RUN: mlir-cpu-runner \

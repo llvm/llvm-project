@@ -9,47 +9,32 @@ target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 @f = dso_local local_unnamed_addr global ptr @e, align 8
 @d = dso_local local_unnamed_addr global i32 0, align 4
 
-define void @h(i64 %x) #0 {
-; CHECK-LABEL: h:
+; FIXME: This shows a miscompile caused by merging truncated 
+; stores if the store of 0 (sthrl) to 'e' happens before 
+; a 64-bit store (stg) of r0.
+
+define signext i32 @main() {
+; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lgrl %r0, e
 ; CHECK-NEXT:    lgrl %r1, f
-; CHECK-NEXT:    srlg %r0, %r2, 32
-; CHECK-NEXT:    st %r0, 0(%r1)
-; CHECK-NEXT:    lhi %r0, 0
-; CHECK-NEXT:    stg %r2, 0(%r1)
-; CHECK-NEXT:    sthrl %r0, e
-; CHECK-NEXT:    strl %r2, d
+; CHECK-NEXT:    srlg %r2, %r0, 32
+; CHECK-NEXT:    st %r2, 0(%r1)
+; CHECK-NEXT:    lhi %r2, 0
+; CHECK-NEXT:    sthrl %r2, e
+; CHECK-NEXT:    stg %r0, 0(%r1)
+; CHECK-NEXT:    lghi %r2, 0
+; CHECK-NEXT:    strl %r0, d
 ; CHECK-NEXT:    br %r14
-  %xsh = lshr i64 %x, 32
-  %xhi = trunc i64 %xsh to i32
-  %xlo = trunc i64 %x to i32
-  %t0 = load ptr, ptr @f, align 8, !tbaa !4
-  store i32 %xhi, ptr %t0, align 4, !tbaa.struct !8
-  %f4 = getelementptr inbounds i8, ptr %t0, i64 4
-  store i32 %xlo, ptr %f4, align 4, !tbaa.struct !13
-  store i16 0, ptr @e, align 8, !tbaa !14
-  store i32 %xlo, ptr @d, align 4, !tbaa !11
-  ret void
+  %e = load i64, ptr @e, align 8
+  %esh = lshr i64 %e, 32
+  %ehi = trunc i64 %esh to i32
+  %elo = trunc i64 %e to i32
+  %t1 = load ptr, ptr @f, align 8
+  store i32 %ehi, ptr %t1, align 4
+  %f4 = getelementptr inbounds i8, ptr %t1, i64 4
+  store i32 %elo, ptr %f4, align 4
+  store i16 0, ptr @e, align 8
+  store i32 %elo, ptr @d, align 4
+  ret i32 0
 }
-
-attributes #0 = { "frame-pointer"="none" "target-cpu"="arch13" }
-
-!llvm.module.flags = !{!0, !1, !2}
-!llvm.ident = !{!3}
-
-!0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{i32 8, !"PIC Level", i32 2}
-!2 = !{i32 7, !"PIE Level", i32 2}
-!3 = !{!"clang version 16.0.0 (https://github.com/llvm/llvm-project.git fd16ff3a7ef7c03932066ed992a672d7e8abd304)"}
-!4 = !{!5, !5, i64 0}
-!5 = !{!"any pointer", !6, i64 0}
-!6 = !{!"omnipotent char", !7, i64 0}
-!7 = !{!"Simple C/C++ TBAA"}
-!8 = !{i64 0, i64 2, !9, i64 4, i64 4, !11}
-!9 = !{!10, !10, i64 0}
-!10 = !{!"short", !6, i64 0}
-!11 = !{!12, !12, i64 0}
-!12 = !{!"int", !6, i64 0}
-!13 = !{i64 0, i64 4, !11}
-!14 = !{!15, !10, i64 0}
-!15 = !{!"a", !10, i64 0, !12, i64 4}

@@ -2890,7 +2890,7 @@ unsigned AArch64AsmParser::getNumRegsForRegKind(RegKind K) {
   case RegKind::SVEPredicateAsCounter:
     return 16;
   case RegKind::LookupTable:
-   return 512;
+   return 1;
   }
   llvm_unreachable("Unsupported RegKind");
 }
@@ -3552,6 +3552,7 @@ static const struct Extension {
     {"rme", {AArch64::FeatureRME}},
     {"sme", {AArch64::FeatureSME}},
     {"sme-f64f64", {AArch64::FeatureSMEF64F64}},
+    {"sme-f16f16", {AArch64::FeatureSMEF16F16}},
     {"sme-i16i64", {AArch64::FeatureSMEI16I64}},
     {"sme2", {AArch64::FeatureSME2}},
     {"sme2p1", {AArch64::FeatureSME2p1}},

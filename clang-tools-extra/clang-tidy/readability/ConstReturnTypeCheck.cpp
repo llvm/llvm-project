@@ -105,6 +105,10 @@ static CheckResult checkDef(const clang::FunctionDecl *Def,
   return Result;
 }
 
+void ConstReturnTypeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+}
+
 void ConstReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
   // Find all function definitions for which the return types are `const`
   // qualified, ignoring decltype types.
@@ -114,13 +118,20 @@ void ConstReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       functionDecl(
           returns(allOf(isConstQualified(), unless(NonLocalConstType))),
-          anyOf(isDefinition(), cxxMethodDecl(isPure())))
+          anyOf(isDefinition(), cxxMethodDecl(isPure())),
+          // Overridden functions are not actionable.
+          unless(cxxMethodDecl(isOverride())))
           .bind("func"),
       this);
 }
 
 void ConstReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Def = Result.Nodes.getNodeAs<FunctionDecl>("func");
+  // Suppress the check if macros are involved.
+  if (IgnoreMacros &&
+      (Def->getBeginLoc().isMacroID() || Def->getEndLoc().isMacroID()))
+    return;
+
   CheckResult CR = checkDef(Def, Result);
   {
     // Clang only supports one in-flight diagnostic at a time. So, delimit the
