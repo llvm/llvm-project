@@ -2894,7 +2894,7 @@ unsigned AArch64AsmParser::getNumRegsForRegKind(RegKind K) {
   case RegKind::SVEPredicateAsCounter:
     return 16;
   case RegKind::LookupTable:
-   return 512;
+   return 1;
   }
   llvm_unreachable("Unsupported RegKind");
 }
