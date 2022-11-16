@@ -882,8 +882,7 @@ ModuleMap::createPrivateModuleFragmentForInterfaceUnit(Module *Parent,
 }
 
 Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,
-                                                StringRef Name,
-                                                Module *GlobalModule) {
+                                                StringRef Name) {
   assert(LangOpts.CurrentModule == Name && "module name mismatch");
   assert(!Modules[Name] && "redefining existing module");
 
