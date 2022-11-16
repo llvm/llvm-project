@@ -68,5 +68,4 @@ add_llvm_target(RISCVCodeGen
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)
-add_subdirectory(MCA)
 add_subdirectory(TargetInfo)

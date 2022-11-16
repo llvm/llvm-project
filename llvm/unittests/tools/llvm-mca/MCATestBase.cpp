@@ -64,15 +64,12 @@ Error MCATestBase::runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
                                   const mca::PipelineOptions *PO) {
   mca::Context MCA(*MRI, *STI);
 
-  // Default InstrumentManager
-  auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
 
-  const SmallVector<mca::SharedInstrument> Instruments;
   SmallVector<std::unique_ptr<mca::Instruction>> LoweredInsts;
   for (const auto &MCI : Insts) {
     Expected<std::unique_ptr<mca::Instruction>> Inst =
-        IB.createInstruction(MCI, Instruments);
+        IB.createInstruction(MCI);
     if (!Inst) {
       if (auto NewE =
               handleErrors(Inst.takeError(),
