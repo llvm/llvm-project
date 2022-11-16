@@ -120,15 +120,17 @@ class MxSet<int eew> {
                            !eq(eew, 64) : [V_M1, V_M2, V_M4, V_M8]);
 }
 
-class FPR_Info<RegisterClass regclass, string fx, list<LMULInfo> mxlist> {
+class FPR_Info<RegisterClass regclass, string fx, list<LMULInfo> mxlist,
+               list<LMULInfo> mxlistfw> {
   RegisterClass fprclass = regclass;
   string FX = fx;
   list<LMULInfo> MxList = mxlist;
+  list<LMULInfo> MxListFW = mxlistfw;
 }
 
-def SCALAR_F16 : FPR_Info<FPR16, "F16", MxSet<16>.m>;
-def SCALAR_F32 : FPR_Info<FPR32, "F32", MxSet<32>.m>;
-def SCALAR_F64 : FPR_Info<FPR64, "F64", MxSet<64>.m>;
+def SCALAR_F16 : FPR_Info<FPR16, "F16", MxSet<16>.m, [V_MF4, V_MF2, V_M1, V_M2, V_M4]>;
+def SCALAR_F32 : FPR_Info<FPR32, "F32", MxSet<32>.m, [V_MF2, V_M1, V_M2, V_M4]>;
+def SCALAR_F64 : FPR_Info<FPR64, "F64", MxSet<64>.m, []>;
 
 defvar FPList = [SCALAR_F16, SCALAR_F32, SCALAR_F64];
 
@@ -2012,7 +2014,7 @@ multiclass VPseudoBinaryW_VX_LMUL<LMULInfo m> {
 
 multiclass VPseudoBinaryW_VF {
   foreach f = FPListW in
-    foreach m = f.MxList in
+    foreach m = f.MxListFW in
       defm "_V" # f.FX : VPseudoBinary<m.wvrclass, m.vrclass,
                                        f.fprclass, m,
                                        "@earlyclobber $rd">;
@@ -2040,7 +2042,7 @@ multiclass VPseudoBinaryW_WX_LMUL<LMULInfo m> {
 
 multiclass VPseudoBinaryW_WF {
   foreach f = FPListW in
-    foreach m = f.MxList in
+    foreach m = f.MxListFW in
       defm "_W" # f.FX : VPseudoBinary<m.wvrclass, m.wvrclass,
                                        f.fprclass, m>;
 }
@@ -2868,7 +2870,7 @@ multiclass VPseudoTernaryW_VX<LMULInfo m> {
 multiclass VPseudoTernaryW_VF {
   defvar constraint = "@earlyclobber $rd";
   foreach f = FPListW in
-    foreach m = f.MxList in
+    foreach m = f.MxListFW in
       defm "_V" # f.FX : VPseudoTernaryWithPolicy<m.wvrclass, f.fprclass,
                                                   m.vrclass, m, constraint>;
 }
