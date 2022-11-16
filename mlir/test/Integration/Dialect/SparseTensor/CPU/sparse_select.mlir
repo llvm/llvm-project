@@ -1,8 +1,15 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
+// RUN: %{command}
 
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 #CSR = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
@@ -76,7 +83,7 @@ module {
   func.func @dump_vec(%arg0: tensor<?xf64, #SparseVector>) {
     // Dump the values array to verify only sparse contents are stored.
     %c0 = arith.constant 0 : index
-    %d0 = arith.constant -1.0 : f64
+    %d0 = arith.constant 0.0 : f64
     %0 = sparse_tensor.values %arg0 : tensor<?xf64, #SparseVector> to memref<?xf64>
     %1 = vector.transfer_read %0[%c0], %d0: memref<?xf64>, vector<8xf64>
     vector.print %1 : vector<8xf64>
@@ -91,7 +98,7 @@ module {
   func.func @dump_mat(%arg0: tensor<?x?xf64, #CSR>) {
     // Dump the values array to verify only sparse contents are stored.
     %c0 = arith.constant 0 : index
-    %d0 = arith.constant -1.0 : f64
+    %d0 = arith.constant 0.0 : f64
     %0 = sparse_tensor.values %arg0 : tensor<?x?xf64, #CSR> to memref<?xf64>
     %1 = vector.transfer_read %0[%c0], %d0: memref<?xf64>, vector<16xf64>
     vector.print %1 : vector<16xf64>
@@ -124,13 +131,13 @@ module {
     //
     // Verify the results.
     //
-    // CHECK:      ( 1, 2, -4, 0, 5, -1, -1, -1 )
-    // CHECK-NEXT: ( 0, 1, 0, 2, 0, -4, 0, 0, 0, 5, -1, -1, -1, -1, -1, -1 )
-    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1 )
+    // CHECK:      ( 1, 2, -4, 0, 5, 0, 0, 0 )
+    // CHECK-NEXT: ( 0, 1, 0, 2, 0, -4, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0 )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     // CHECK-NEXT: ( ( 0, 0, 0, 1, 0 ), ( 0, 0, 0, 0, 2 ), ( 0, 3, 0, 4, 0 ), ( 0, 0, 0, 5, 6 ), ( 0, 0, 7, 0, 0 ) )
-    // CHECK-NEXT: ( 1, 2, 5, -1, -1, -1, -1, -1 )
-    // CHECK-NEXT: ( 0, 1, 0, 2, 0, 0, 0, 0, 0, 5, -1, -1, -1, -1, -1, -1 )
-    // CHECK-NEXT: ( 1, 2, 4, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 )
+    // CHECK-NEXT: ( 1, 2, 5, 0, 0, 0, 0, 0 )
+    // CHECK-NEXT: ( 0, 1, 0, 2, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0 )
+    // CHECK-NEXT: ( 1, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     // CHECK-NEXT: ( ( 0, 0, 0, 1, 0 ), ( 0, 0, 0, 0, 2 ), ( 0, 0, 0, 4, 0 ), ( 0, 0, 0, 0, 6 ), ( 0, 0, 0, 0, 0 ) )
     //
     call @dump_vec(%sv1) : (tensor<?xf64, #SparseVector>) -> ()
