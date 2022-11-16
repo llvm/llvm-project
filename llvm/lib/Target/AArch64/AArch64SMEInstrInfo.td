@@ -262,17 +262,17 @@ defm FMLS_VG4_M4Z4Z_S : sme2_dot_mla_add_sub_array_vg4_multi<"fmls", 0b011001, M
 defm FMLS_VG2_M2ZZI_S : sme2_multi_vec_array_vg2_index_32b<"fmls", 0b0010, ZZ_s_mul_r, ZPR4b32>;
 defm FMLS_VG4_M4ZZI_S : sme2_multi_vec_array_vg4_index_32b<"fmls", 0b0010, ZZZZ_s_mul_r, ZPR4b32>;
 
-defm ADDA_VG2_M2Z2Z_S : sme2_multivec_accum_add_sub_vg2<"add", 0b0010, MatrixOp32, ZZ_s_mul_r>;
-defm ADDA_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4<"add", 0b0010, MatrixOp32, ZZZZ_s_mul_r>;
+defm ADD_VG2_M2Z_S : sme2_multivec_accum_add_sub_vg2<"add", 0b0010, MatrixOp32, ZZ_s_mul_r>;
+defm ADD_VG4_M4Z_S : sme2_multivec_accum_add_sub_vg4<"add", 0b0010, MatrixOp32, ZZZZ_s_mul_r>;
 
-defm SUBA_VG2_M2Z2Z_S : sme2_multivec_accum_add_sub_vg2<"sub", 0b0011, MatrixOp32, ZZ_s_mul_r>;
-defm SUBA_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4<"sub", 0b0011, MatrixOp32, ZZZZ_s_mul_r>;
+defm SUB_VG2_M2Z_S : sme2_multivec_accum_add_sub_vg2<"sub", 0b0011, MatrixOp32, ZZ_s_mul_r>;
+defm SUB_VG4_M4Z_S : sme2_multivec_accum_add_sub_vg4<"sub", 0b0011, MatrixOp32, ZZZZ_s_mul_r>;
 
-defm FADD_VG2_M2Z2Z_S : sme2_multivec_accum_add_sub_vg2<"fadd", 0b0000, MatrixOp32, ZZ_s_mul_r>;
-defm FADD_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4<"fadd", 0b0000, MatrixOp32, ZZZZ_s_mul_r>;
+defm FADD_VG2_M2Z_S : sme2_multivec_accum_add_sub_vg2<"fadd", 0b0000, MatrixOp32, ZZ_s_mul_r>;
+defm FADD_VG4_M4Z_S : sme2_multivec_accum_add_sub_vg4<"fadd", 0b0000, MatrixOp32, ZZZZ_s_mul_r>;
 
-defm FSUB_VG2_M2Z2Z_S : sme2_multivec_accum_add_sub_vg2<"fsub", 0b0001, MatrixOp32, ZZ_s_mul_r>;
-defm FSUB_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4<"fsub", 0b0001, MatrixOp32, ZZZZ_s_mul_r>;
+defm FSUB_VG2_M2Z_S : sme2_multivec_accum_add_sub_vg2<"fsub", 0b0001, MatrixOp32, ZZ_s_mul_r>;
+defm FSUB_VG4_M4Z_S : sme2_multivec_accum_add_sub_vg4<"fsub", 0b0001, MatrixOp32, ZZZZ_s_mul_r>;
 
 defm SQDMULH_VG2_2ZZ : sme2_int_sve_destructive_vector_vg2_single<"sqdmulh", 0b1000000>;
 defm SQDMULH_VG4_4ZZ : sme2_int_sve_destructive_vector_vg4_single<"sqdmulh", 0b1000000>;
@@ -703,11 +703,11 @@ defm SUB_VG4_M4ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"sub", 0b1111011, 
 defm SUB_VG2_M2Z2Z_D : sme2_dot_mla_add_sub_array_vg2_multi<"sub", 0b111011, MatrixOp64, ZZ_d_mul_r>;
 defm SUB_VG4_M4Z4Z_D : sme2_dot_mla_add_sub_array_vg4_multi<"sub", 0b111011, MatrixOp64, ZZZZ_d_mul_r>;
 
-defm ADDA_VG2_M2Z2Z_D : sme2_multivec_accum_add_sub_vg2<"add", 0b1010, MatrixOp64, ZZ_d_mul_r>;
-defm ADDA_VG4_M4Z4Z_D : sme2_multivec_accum_add_sub_vg4<"add", 0b1010, MatrixOp64, ZZZZ_d_mul_r>;
+defm ADD_VG2_M2Z_D : sme2_multivec_accum_add_sub_vg2<"add", 0b1010, MatrixOp64, ZZ_d_mul_r>;
+defm ADD_VG4_M4Z_D : sme2_multivec_accum_add_sub_vg4<"add", 0b1010, MatrixOp64, ZZZZ_d_mul_r>;
 
-defm SUBA_VG2_M2Z2Z_D : sme2_multivec_accum_add_sub_vg2<"sub", 0b1011, MatrixOp64, ZZ_d_mul_r>;
-defm SUBA_VG4_M4Z4Z_D : sme2_multivec_accum_add_sub_vg4<"sub", 0b1011, MatrixOp64, ZZZZ_d_mul_r>;
+defm SUB_VG2_M2Z_D : sme2_multivec_accum_add_sub_vg2<"sub", 0b1011, MatrixOp64, ZZ_d_mul_r>;
+defm SUB_VG4_M4Z_D : sme2_multivec_accum_add_sub_vg4<"sub", 0b1011, MatrixOp64, ZZZZ_d_mul_r>;
 
 defm SDOT_VG2_M2ZZI_HtoD : sme2_multi_vec_array_vg2_index_64b<"sdot", 0b01, ZZ_h_mul_r, ZPR4b16>;
 defm SDOT_VG4_M4ZZI_HtoD : sme2_multi_vec_array_vg4_index_64b<"sdot", 0b001, ZZZZ_h_mul_r, ZPR4b16>;
@@ -779,11 +779,11 @@ defm FMLS_VG4_M4ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"fmls", 0b1111001
 defm FMLS_VG2_M2Z2Z_D : sme2_dot_mla_add_sub_array_vg2_multi<"fmls", 0b111001, MatrixOp64, ZZ_d_mul_r>;
 defm FMLS_VG4_M4Z4Z_D : sme2_dot_mla_add_sub_array_vg4_multi<"fmls", 0b111001, MatrixOp64, ZZZZ_d_mul_r>;
 
-defm FADD_VG2_M2Z2Z_D : sme2_multivec_accum_add_sub_vg2<"fadd", 0b1000, MatrixOp64, ZZ_d_mul_r>;
-defm FADD_VG4_M4Z4Z_D : sme2_multivec_accum_add_sub_vg4<"fadd", 0b1000, MatrixOp64, ZZZZ_d_mul_r>;
+defm FADD_VG2_M2Z_D : sme2_multivec_accum_add_sub_vg2<"fadd", 0b1000, MatrixOp64, ZZ_d_mul_r>;
+defm FADD_VG4_M4Z_D : sme2_multivec_accum_add_sub_vg4<"fadd", 0b1000, MatrixOp64, ZZZZ_d_mul_r>;
 
-defm FSUB_VG2_M2Z2Z_D : sme2_multivec_accum_add_sub_vg2<"fsub", 0b1001, MatrixOp64, ZZ_d_mul_r>;
-defm FSUB_VG4_M4Z4Z_D : sme2_multivec_accum_add_sub_vg4<"fsub", 0b1001, MatrixOp64, ZZZZ_d_mul_r>;
+defm FSUB_VG2_M2Z_D : sme2_multivec_accum_add_sub_vg2<"fsub", 0b1001, MatrixOp64, ZZ_d_mul_r>;
+defm FSUB_VG4_M4Z_D : sme2_multivec_accum_add_sub_vg4<"fsub", 0b1001, MatrixOp64, ZZZZ_d_mul_r>;
 }
 
 let Predicates = [HasSME2p1] in {
