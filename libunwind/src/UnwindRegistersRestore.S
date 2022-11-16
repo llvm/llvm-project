@@ -1289,6 +1289,88 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_s390x6jumptoEv)
   // Return to PSWA (was loaded into %r1 above)
   br %r1
 
+#elif defined(__loongarch__) && __loongarch_grlen == 64
+
+//
+// void libunwind::Registers_loongarch::jumpto()
+//
+// On entry:
+//  thread_state pointer is in $a0($r4)
+//
+  .p2align 2
+DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind19Registers_loongarch6jumptoEv)
+# if __loongarch_frlen == 64
+  fld.d    $f0, $a0, (8 * 33 + 8 * 0)
+  fld.d    $f1, $a0, (8 * 33 + 8 * 1)
+  fld.d    $f2, $a0, (8 * 33 + 8 * 2)
+  fld.d    $f3, $a0, (8 * 33 + 8 * 3)
+  fld.d    $f4, $a0, (8 * 33 + 8 * 4)
+  fld.d    $f5, $a0, (8 * 33 + 8 * 5)
+  fld.d    $f6, $a0, (8 * 33 + 8 * 6)
+  fld.d    $f7, $a0, (8 * 33 + 8 * 7)
+  fld.d    $f8, $a0, (8 * 33 + 8 * 8)
+  fld.d    $f9, $a0, (8 * 33 + 8 * 9)
+  fld.d    $f10, $a0, (8 * 33 + 8 * 10)
+  fld.d    $f11, $a0, (8 * 33 + 8 * 11)
+  fld.d    $f12, $a0, (8 * 33 + 8 * 12)
+  fld.d    $f13, $a0, (8 * 33 + 8 * 13)
+  fld.d    $f14, $a0, (8 * 33 + 8 * 14)
+  fld.d    $f15, $a0, (8 * 33 + 8 * 15)
+  fld.d    $f16, $a0, (8 * 33 + 8 * 16)
+  fld.d    $f17, $a0, (8 * 33 + 8 * 17)
+  fld.d    $f18, $a0, (8 * 33 + 8 * 18)
+  fld.d    $f19, $a0, (8 * 33 + 8 * 19)
+  fld.d    $f20, $a0, (8 * 33 + 8 * 20)
+  fld.d    $f21, $a0, (8 * 33 + 8 * 21)
+  fld.d    $f22, $a0, (8 * 33 + 8 * 22)
+  fld.d    $f23, $a0, (8 * 33 + 8 * 23)
+  fld.d    $f24, $a0, (8 * 33 + 8 * 24)
+  fld.d    $f25, $a0, (8 * 33 + 8 * 25)
+  fld.d    $f26, $a0, (8 * 33 + 8 * 26)
+  fld.d    $f27, $a0, (8 * 33 + 8 * 27)
+  fld.d    $f28, $a0, (8 * 33 + 8 * 28)
+  fld.d    $f29, $a0, (8 * 33 + 8 * 29)
+  fld.d    $f30, $a0, (8 * 33 + 8 * 30)
+  fld.d    $f31, $a0, (8 * 33 + 8 * 31)
+# endif
+
+  // $r0 is zero
+  ld.d    $r1, $a0, (8 * 1)
+  ld.d    $r2, $a0, (8 * 2)
+  ld.d    $r3, $a0, (8 * 3)
+  // skip $a0 for now
+  ld.d    $r5, $a0, (8 * 5)
+  ld.d    $r6, $a0, (8 * 6)
+  ld.d    $r7, $a0, (8 * 7)
+  ld.d    $r8, $a0, (8 * 8)
+  ld.d    $r9, $a0, (8 * 9)
+  ld.d    $r10, $a0, (8 * 10)
+  ld.d    $r11, $a0, (8 * 11)
+  ld.d    $r12, $a0, (8 * 12)
+  ld.d    $r13, $a0, (8 * 13)
+  ld.d    $r14, $a0, (8 * 14)
+  ld.d    $r15, $a0, (8 * 15)
+  ld.d    $r16, $a0, (8 * 16)
+  ld.d    $r17, $a0, (8 * 17)
+  ld.d    $r18, $a0, (8 * 18)
+  ld.d    $r19, $a0, (8 * 19)
+  ld.d    $r20, $a0, (8 * 20)
+  ld.d    $r21, $a0, (8 * 21)
+  ld.d    $r22, $a0, (8 * 22)
+  ld.d    $r23, $a0, (8 * 23)
+  ld.d    $r24, $a0, (8 * 24)
+  ld.d    $r25, $a0, (8 * 25)
+  ld.d    $r26, $a0, (8 * 26)
+  ld.d    $r27, $a0, (8 * 27)
+  ld.d    $r28, $a0, (8 * 28)
+  ld.d    $r29, $a0, (8 * 29)
+  ld.d    $r30, $a0, (8 * 30)
+  ld.d    $r31, $a0, (8 * 31)
+  ld.d    $r4,  $a0, (8 * 4)   // restore $a0 last
+  ld.d    $r1,  $a0, (8 * 32)  // load new pc into $ra
+
+  jr      $ra
+
 #endif
 
 #endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
