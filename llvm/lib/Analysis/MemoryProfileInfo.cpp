@@ -224,3 +224,21 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
   CI->setMetadata(LLVMContext::MD_memprof, MDNode::get(Ctx, MIBNodes));
   return true;
 }
+
+template <>
+CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::CallStackIterator(
+    const MDNode *N, bool End)
+    : N(N) {
+  if (!N)
+    return;
+  Iter = End ? N->op_end() : N->op_begin();
+}
+
+template <>
+uint64_t
+CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*() {
+  assert(Iter != N->op_end());
+  ConstantInt *StackIdCInt = mdconst::dyn_extract<ConstantInt>(*Iter);
+  assert(StackIdCInt);
+  return StackIdCInt->getZExtValue();
+}
