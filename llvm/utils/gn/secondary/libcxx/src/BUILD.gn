@@ -3,9 +3,6 @@ import("//libcxx/config.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
 declare_args() {
-  # Whether to support libc++ opt-in debug mode via _LIBCPP_DEBUG.
-  libcxx_enable_debug_mode = true
-
   # Build libc++ with definitions for operator new/delete.
   libcxx_enable_new_delete_definitions = true
 
