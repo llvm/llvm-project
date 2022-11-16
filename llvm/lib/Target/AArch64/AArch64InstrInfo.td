@@ -232,6 +232,8 @@ def HasHBC           : Predicate<"Subtarget->hasHBC()">,
                        AssemblerPredicateWithAll<(all_of FeatureHBC), "hbc">;
 def HasMOPS          : Predicate<"Subtarget->hasMOPS()">,
                        AssemblerPredicateWithAll<(all_of FeatureMOPS), "mops">;
+def HasITE           : Predicate<"Subtarget->hasITE()">,
+                       AssemblerPredicateWithAll<(all_of FeatureITE), "ite">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
