@@ -9814,8 +9814,8 @@ td_library(
     name = "BufferizationOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/Bufferization/IR/BufferizationBase.td",
-        "include/mlir/Dialect/Bufferization/IR/BufferizationOps.td",
         "include/mlir/Dialect/Bufferization/IR/BufferizationEnums.td",
+        "include/mlir/Dialect/Bufferization/IR/BufferizationOps.td",
     ],
     includes = ["include"],
     deps = [
@@ -9876,9 +9876,9 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":BufferizationOpsTdFiles",
         ":PDLDialectTdFiles",
         ":TransformDialectTdFiles",
-        ":BufferizationOpsTdFiles",
     ],
 )
 
@@ -9913,6 +9913,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BufferizationDialect",
+        ":BufferizationEnumsIncGen",
         ":BufferizationTransformOpsIncGen",
         ":BufferizationTransforms",
         ":IR",
@@ -9965,8 +9966,8 @@ cc_library(
         ":ArithDialect",
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationBaseIncGen",
-        ":BufferizationOpsIncGen",
         ":BufferizationEnumsIncGen",
+        ":BufferizationOpsIncGen",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
         ":DestinationStyleOpInterface",
