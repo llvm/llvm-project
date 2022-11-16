@@ -997,7 +997,6 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                          ArrayRef<size_t> extraTids,
                          ArrayRef<size_t> extraDims) {
   Location loc = op.getLoc();
-  auto iteratorTypes = op.getIteratorTypesArray();
   bool isSparse = isCompressedDLT(merger.getDimLevelType(tid, idx)) ||
                   isSingletonDLT(merger.getDimLevelType(tid, idx));
   bool isParallel = isParallelFor(codegen, isOuter, isSparse);
@@ -1189,6 +1188,42 @@ static bool startLoopSeq(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   return false;
 }
 
+static void genConstantDenseAddressFromLevel(CodeGen &codegen,
+                                             OpBuilder &builder,
+                                             linalg::GenericOp op, unsigned tid,
+                                             unsigned lvl) {
+  // TODO: Handle affine expression on output tensor.
+  assert(tid < op.getNumDpsInputs());
+
+  OpOperand *input = op.getDpsInputOperands()[tid];
+  ArrayRef<AffineExpr> affines = op.getMatchingIndexingMap(input).getResults();
+  auto enc = getSparseTensorEncoding(input->get().getType());
+  if (enc) {
+    for (unsigned i = lvl, e = affines.size(); i < e; i++) {
+      AffineExpr affine = affines[toOrigDim(enc, i)];
+      if (isDenseDLT(getDimLevelType(enc, i)) &&
+          affine.isa<AffineConstantExpr>()) {
+        codegen.loopEmitter.genDenseAffineAddressAtCurLevel(
+            builder, op.getLoc(), input->getOperandNumber(), i, affine);
+      } else {
+        // Breaks on first non-dense non-constant level.
+        return;
+      }
+    }
+  }
+}
+
+static void genInitConstantDenseAddress(CodeGen &codegen,
+                                        RewriterBase &rewriter,
+                                        linalg::GenericOp op) {
+  // We can generates address for constant affine expression before any loops
+  // starting from the first level as they do not depend on any thing.
+  // E.g., [Dense, Dense, Sparse] -> (1, 2, d0), the addresses for the first two
+  // levels can be determined before loops.
+  for (unsigned tid = 0, e = op.getNumDpsInputs(); tid < e; tid++)
+    genConstantDenseAddressFromLevel(codegen, rewriter, op, tid, 0);
+}
+
 static void translateBitsToTidDimPairs(
     Merger &merger, CodeGen &codegen, linalg::GenericOp op, unsigned li,
     unsigned idx, SmallVectorImpl<size_t> &condTids,
@@ -1244,30 +1279,21 @@ static void translateBitsToTidDimPairs(
         if (exp.isa<AffineDimExpr>() || !isDenseDLT(getDimLevelType(enc, i)))
           continue;
 
-        // Constant affine expressions on dense level required to be generated
-        // when
-        // 1. The previous level is an (at-level) invariant compound dense
-        // affine (with no corresponding loop idx); or
-        // 2. The previous level is being generated right now.
-        if (exp.isa<AffineConstantExpr>()) {
-          // TODO:  Should we come up with a more adhersive way to handle
-          // constant expression? We now requires two (somehow ad-hoc) code for
-          // it.
-          assert(false && "do not support constant affine");
-        }
-
-        bool atLevel = false;
-        if (isInvariantAffine(codegen, exp, idx, atLevel) && atLevel) {
-          // If the compound affine is invariant and we are right at the
-          // level. We need to generate the address according to the affine
-          // expression. This is also the best place we can do it to avoid
-          // putting it inside inner loops.
-          // NOTE: It assumes that the levels of the input tensor are
-          // initialized in order, another more admissible approach might be
-          // accepting out-of-order access between consecutive dense levels.
-          affineTids.push_back(tid);
-          affineDims.push_back(i);
-          exps.push_back(exp);
+        // Constant affine expression are handled in genLoop
+        if (!exp.isa<AffineConstantExpr>()) {
+          bool atLevel = false;
+          if (isInvariantAffine(codegen, exp, idx, atLevel) && atLevel) {
+            // If the compound affine is invariant and we are right at the
+            // level. We need to generate the address according to the affine
+            // expression. This is also the best place we can do it to avoid
+            // putting it inside inner loops.
+            // NOTE: It assumes that the levels of the input tensor are
+            // initialized in order, another more admissible approach might be
+            // accepting out-of-order access between consecutive dense levels.
+            affineTids.push_back(tid);
+            affineDims.push_back(i);
+            exps.push_back(exp);
+          }
         }
       }
     }
@@ -1310,6 +1336,17 @@ static Operation *startLoop(Merger &merger, CodeGen &codegen,
     codegen.loopEmitter.genDenseAffineAddressAtCurLevel(builder, op.getLoc(),
                                                         tid, dim, exp);
   }
+
+  // Until now, we have entered every <tid, dim> pair in {cond, extra,
+  // affine}Tids/Dims. The addresses of the upcoming levels which are dependent
+  // on constant affines expression may now be determined.
+  auto allTids = llvm::concat<size_t>(condTids, extraTids, affineTids);
+  auto allDims = llvm::concat<size_t>(condDims, extraDims, affineDims);
+  for (auto [tid, dim] : llvm::zip(allTids, allDims)) {
+    if (tid != merger.getOutTensorID())
+      genConstantDenseAddressFromLevel(codegen, builder, op, tid, dim + 1);
+  }
+
   return loop;
 }
 
@@ -1437,7 +1474,6 @@ static void genResult(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 /// Sparse rewriting rule for generic Lingalg operation.
 struct GenericOpSparsifier : public OpRewritePattern<linalg::GenericOp> {
 public:
@@ -1505,6 +1541,7 @@ public:
     CodeGen codegen(options, op.getContext(), tensors, numTensors, numLoops,
                     sparseOut, outerParNest, topSort);
     genBuffers(merger, codegen, rewriter, op);
+    genInitConstantDenseAddress(codegen, rewriter, op);
     genStmt(merger, codegen, rewriter, op, exp, 0);
     genResult(merger, codegen, rewriter, op);
     return success();
