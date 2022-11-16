@@ -2890,10 +2890,10 @@ multiclass VPseudoVMAC_VV_VX_AAXA<string Constraint = ""> {
 
     defm "" : VPseudoTernaryV_VV_AAXA_LMUL<m, Constraint>,
               Sched<[WriteVIMulAddV_MX, ReadVIMulAddV_MX, ReadVIMulAddV_MX,
-                ReadVIMulAddV_MX, ReadVMask]>;
+                     ReadVIMulAddV_MX, ReadVMask]>;
     defm "" : VPseudoTernaryV_VX_AAXA<m, Constraint>,
               Sched<[WriteVIMulAddX_MX, ReadVIMulAddV_MX, ReadVIMulAddV_MX,
-                ReadVIMulAddX_MX, ReadVMask]>;
+                     ReadVIMulAddX_MX, ReadVMask]>;
   }
 }
 
@@ -2921,10 +2921,10 @@ multiclass VPseudoVWMAC_VV_VX {
 
     defm "" : VPseudoTernaryW_VV_LMUL<m>,
               Sched<[WriteVIWMulAddV_MX, ReadVIWMulAddV_MX, ReadVIWMulAddV_MX,
-                ReadVIWMulAddV_MX, ReadVMask]>;
+                     ReadVIWMulAddV_MX, ReadVMask]>;
     defm "" : VPseudoTernaryW_VX<m>,
               Sched<[WriteVIWMulAddX_MX, ReadVIWMulAddV_MX, ReadVIWMulAddV_MX,
-                ReadVIWMulAddX_MX, ReadVMask]>;
+                     ReadVIWMulAddX_MX, ReadVMask]>;
   }
 }
 
@@ -2937,7 +2937,7 @@ multiclass VPseudoVWMAC_VX {
 
     defm "" : VPseudoTernaryW_VX<m>,
               Sched<[WriteVIWMulAddX_MX, ReadVIWMulAddV_MX, ReadVIWMulAddV_MX,
-                ReadVIWMulAddX_MX, ReadVMask]>;
+                     ReadVIWMulAddX_MX, ReadVMask]>;
   }
 }
 
