@@ -70,6 +70,7 @@ class TestVSCode_eventStatistic(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @expectedFailureAll(oslist=['linux'], archs=['arm', 'aarch64'])
     def test_initialized_event(self):
         '''
             Initialized Event
