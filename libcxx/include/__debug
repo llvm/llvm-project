@@ -23,6 +23,10 @@
 # define _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
 #endif
 
+#if defined(_LIBCPP_ENABLE_DEBUG_MODE) && !defined(_LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING)
+# define _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
+#endif
+
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
 #   define _LIBCPP_DEBUG_ASSERT(x, m) _LIBCPP_ASSERT(::std::__libcpp_is_constant_evaluated() || (x), m)
 #else
