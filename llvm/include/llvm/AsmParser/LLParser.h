@@ -406,10 +406,6 @@ namespace llvm {
     void addGlobalValueToIndex(std::string Name, GlobalValue::GUID,
                                GlobalValue::LinkageTypes Linkage, unsigned ID,
                                std::unique_ptr<GlobalValueSummary> Summary);
-    bool parseOptionalAllocs(std::vector<AllocInfo> &Allocs);
-    bool parseMemProfs(std::vector<MIBInfo> &MIBs);
-    bool parseAllocType(uint8_t &AllocType);
-    bool parseOptionalCallsites(std::vector<CallsiteInfo> &Callsites);
 
     // Type Parsing.
     bool parseType(Type *&Result, const Twine &Msg, bool AllowVoid = false);
