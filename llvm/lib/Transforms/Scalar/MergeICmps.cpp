@@ -153,7 +153,7 @@ BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
   if (!isDereferenceablePointer(Addr, LoadI->getType(), DL)) {
     LLVM_DEBUG(dbgs() << "not dereferenceable\n");
     // We need to make sure that we can do comparison in any order, so we
-    // require memory to be unconditionnally dereferencable.
+    // require memory to be unconditionally dereferenceable.
     return {};
   }
 
