@@ -166,6 +166,15 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   bit isCVI = 0;
   let TSFlags{59} = isCVI;
 
+  bit isHVXALU = 0;
+  let TSFlags{60} = isHVXALU;
+
+  bit isHVXALU2SRC = 0;
+  let TSFlags{61} = isHVXALU2SRC;
+
+  bit hasUnaryRestriction = 0;
+  let TSFlags{62} = hasUnaryRestriction;
+
   // Fields used for relation models.
   bit isNonTemporal = 0;
   string isNT = ""; // set to "true" for non-temporal vector stores.
