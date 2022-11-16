@@ -1243,8 +1243,8 @@ define i64 @setbf128(fp128 %a, fp128 %b) {
 ; CHECK-PWR8-LABEL: setbf128:
 ; CHECK-PWR8:       # %bb.0:
 ; CHECK-PWR8-NEXT:    mflr r0
-; CHECK-PWR8-NEXT:    std r0, 16(r1)
 ; CHECK-PWR8-NEXT:    stdu r1, -96(r1)
+; CHECK-PWR8-NEXT:    std r0, 112(r1)
 ; CHECK-PWR8-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR8-NEXT:    .cfi_offset r30, -16

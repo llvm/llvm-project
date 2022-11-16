@@ -559,8 +559,8 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P8:       # %bb.0: # %test_entry
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    std r0, 64(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    bl dummy
 ; CHECK-P8-NEXT:    nop
@@ -574,8 +574,8 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P9:       # %bb.0: # %test_entry
 ; CHECK-P9-NEXT:    mflr r0
 ; CHECK-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P9-NEXT:    std r0, 16(r1)
 ; CHECK-P9-NEXT:    stdu r1, -48(r1)
+; CHECK-P9-NEXT:    std r0, 64(r1)
 ; CHECK-P9-NEXT:    mr r30, r3
 ; CHECK-P9-NEXT:    bl dummy
 ; CHECK-P9-NEXT:    nop
@@ -587,8 +587,8 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P9-BE-LABEL: no_crash_elt0_from_RHS:
 ; CHECK-P9-BE:       # %bb.0: # %test_entry
 ; CHECK-P9-BE-NEXT:    mflr r0
-; CHECK-P9-BE-NEXT:    std r0, 16(r1)
 ; CHECK-P9-BE-NEXT:    stdu r1, -128(r1)
+; CHECK-P9-BE-NEXT:    std r0, 144(r1)
 ; CHECK-P9-BE-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
 ; CHECK-P9-BE-NEXT:    mr r30, r3
 ; CHECK-P9-BE-NEXT:    bl dummy
@@ -602,8 +602,8 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-NOVSX:       # %bb.0: # %test_entry
 ; CHECK-NOVSX-NEXT:    mflr r0
 ; CHECK-NOVSX-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NOVSX-NEXT:    std r0, 16(r1)
 ; CHECK-NOVSX-NEXT:    stdu r1, -48(r1)
+; CHECK-NOVSX-NEXT:    std r0, 64(r1)
 ; CHECK-NOVSX-NEXT:    mr r30, r3
 ; CHECK-NOVSX-NEXT:    bl dummy
 ; CHECK-NOVSX-NEXT:    nop
@@ -615,8 +615,8 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P7:       # %bb.0: # %test_entry
 ; CHECK-P7-NEXT:    mflr r0
 ; CHECK-P7-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P7-NEXT:    std r0, 16(r1)
 ; CHECK-P7-NEXT:    stdu r1, -48(r1)
+; CHECK-P7-NEXT:    std r0, 64(r1)
 ; CHECK-P7-NEXT:    mr r30, r3
 ; CHECK-P7-NEXT:    bl dummy
 ; CHECK-P7-NEXT:    nop
@@ -629,8 +629,8 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; P8-AIX-64-LABEL: no_crash_elt0_from_RHS:
 ; P8-AIX-64:       # %bb.0: # %test_entry
 ; P8-AIX-64-NEXT:    mflr r0
-; P8-AIX-64-NEXT:    std r0, 16(r1)
 ; P8-AIX-64-NEXT:    stdu r1, -128(r1)
+; P8-AIX-64-NEXT:    std r0, 144(r1)
 ; P8-AIX-64-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
 ; P8-AIX-64-NEXT:    mr r31, r3
 ; P8-AIX-64-NEXT:    bl .dummy[PR]
@@ -643,8 +643,8 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; P8-AIX-32-LABEL: no_crash_elt0_from_RHS:
 ; P8-AIX-32:       # %bb.0: # %test_entry
 ; P8-AIX-32-NEXT:    mflr r0
-; P8-AIX-32-NEXT:    stw r0, 8(r1)
 ; P8-AIX-32-NEXT:    stwu r1, -64(r1)
+; P8-AIX-32-NEXT:    stw r0, 72(r1)
 ; P8-AIX-32-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
 ; P8-AIX-32-NEXT:    mr r31, r3
 ; P8-AIX-32-NEXT:    bl .dummy[PR]

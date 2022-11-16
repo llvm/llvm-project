@@ -22,11 +22,11 @@ declare signext i32 @do_something(i32 signext)
 
 ; 64BIT-LABEL: .killOne:
 
-; 64BIT:       mflr 0
-; 64BIT-NEXT:  std 0, 16(1)
-; 64BIT-NEXT:  mfcr 12
+; 64BIT:       mfcr 12
 ; 64BIT-NEXT:  stw 12, 8(1)
-; 64BIT:       stdu 1, -112(1)
+; 64BIT-NEXT:  mflr 0
+; 64BIT-NEXT:  stdu 1, -112(1)
+; 64BIT:       std 0, 128(1)
 
 ; 64BIT:       # Clobber CR
 ; 64BIT:       bl .do_something
@@ -40,11 +40,11 @@ declare signext i32 @do_something(i32 signext)
 
 ; 32BIT-LABEL: .killOne:
 
-; 32BIT:       mflr 0
-; 32BIT-NEXT:  stw 0, 8(1)
-; 32BIT-NEXT:  mfcr 12
+; 32BIT:       mfcr 12
 ; 32BIT-NEXT:  stw 12, 4(1)
-; 32BIT:       stwu 1, -64(1)
+; 32BIT-NEXT:  mflr 0
+; 32BIT-NEXT:  stwu 1, -64(1)
+; 32BIT:       stw 0, 72(1)
 
 ; 32BIT:       # Clobber CR
 ; 32BIT:       bl .do_something

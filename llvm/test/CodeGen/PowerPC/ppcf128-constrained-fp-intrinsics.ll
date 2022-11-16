@@ -7,8 +7,8 @@ define ppc_fp128 @test_fadd_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE-LABEL: test_fadd_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl __gcc_qadd
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -19,8 +19,8 @@ define ppc_fp128 @test_fadd_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE9-LABEL: test_fadd_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl __gcc_qadd
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -31,8 +31,8 @@ define ppc_fp128 @test_fadd_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64-LABEL: test_fadd_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl __gcc_qadd
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -52,8 +52,8 @@ define ppc_fp128 @test_fsub_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE-LABEL: test_fsub_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl __gcc_qsub
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -64,8 +64,8 @@ define ppc_fp128 @test_fsub_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE9-LABEL: test_fsub_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl __gcc_qsub
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -76,8 +76,8 @@ define ppc_fp128 @test_fsub_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64-LABEL: test_fsub_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl __gcc_qsub
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -97,8 +97,8 @@ define ppc_fp128 @test_fmul_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE-LABEL: test_fmul_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl __gcc_qmul
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -109,8 +109,8 @@ define ppc_fp128 @test_fmul_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE9-LABEL: test_fmul_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl __gcc_qmul
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -121,8 +121,8 @@ define ppc_fp128 @test_fmul_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64-LABEL: test_fmul_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl __gcc_qmul
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -142,8 +142,8 @@ define ppc_fp128 @test_fdiv_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE-LABEL: test_fdiv_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl __gcc_qdiv
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -154,8 +154,8 @@ define ppc_fp128 @test_fdiv_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE9-LABEL: test_fdiv_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl __gcc_qdiv
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -166,8 +166,8 @@ define ppc_fp128 @test_fdiv_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64-LABEL: test_fdiv_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl __gcc_qdiv
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -187,8 +187,8 @@ define ppc_fp128 @test_frem_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE-LABEL: test_frem_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl fmodl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -199,8 +199,8 @@ define ppc_fp128 @test_frem_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE9-LABEL: test_frem_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl fmodl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -211,8 +211,8 @@ define ppc_fp128 @test_frem_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64-LABEL: test_frem_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl fmodl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -232,8 +232,8 @@ define ppc_fp128 @test_fma_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second, ppc_fp
 ; PC64LE-LABEL: test_fma_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl fmal
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -244,8 +244,8 @@ define ppc_fp128 @test_fma_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second, ppc_fp
 ; PC64LE9-LABEL: test_fma_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl fmal
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -256,8 +256,8 @@ define ppc_fp128 @test_fma_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second, ppc_fp
 ; PC64-LABEL: test_fma_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl fmal
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -278,8 +278,8 @@ define ppc_fp128 @test_sqrt_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_sqrt_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl sqrtl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -290,8 +290,8 @@ define ppc_fp128 @test_sqrt_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_sqrt_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl sqrtl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -302,8 +302,8 @@ define ppc_fp128 @test_sqrt_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_sqrt_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl sqrtl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -322,8 +322,8 @@ define ppc_fp128 @test_pow_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE-LABEL: test_pow_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl powl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -334,8 +334,8 @@ define ppc_fp128 @test_pow_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64LE9-LABEL: test_pow_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl powl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -346,8 +346,8 @@ define ppc_fp128 @test_pow_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 {
 ; PC64-LABEL: test_pow_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl powl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -367,9 +367,9 @@ define ppc_fp128 @test_powi_ppc_fp128(ppc_fp128 %first, i32 %second) #0 {
 ; PC64LE-LABEL: test_powi_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
 ; PC64LE-NEXT:    clrldi 5, 5, 32
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl __powitf2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -380,9 +380,9 @@ define ppc_fp128 @test_powi_ppc_fp128(ppc_fp128 %first, i32 %second) #0 {
 ; PC64LE9-LABEL: test_powi_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
 ; PC64LE9-NEXT:    clrldi 5, 5, 32
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl __powitf2
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -393,9 +393,9 @@ define ppc_fp128 @test_powi_ppc_fp128(ppc_fp128 %first, i32 %second) #0 {
 ; PC64-LABEL: test_powi_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
 ; PC64-NEXT:    clrldi 5, 5, 32
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl __powitf2
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -415,8 +415,8 @@ define ppc_fp128 @test_sin_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_sin_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl sinl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -427,8 +427,8 @@ define ppc_fp128 @test_sin_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_sin_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl sinl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -439,8 +439,8 @@ define ppc_fp128 @test_sin_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_sin_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl sinl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -459,8 +459,8 @@ define ppc_fp128 @test_cos_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_cos_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl cosl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -471,8 +471,8 @@ define ppc_fp128 @test_cos_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_cos_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl cosl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -483,8 +483,8 @@ define ppc_fp128 @test_cos_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_cos_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl cosl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -503,8 +503,8 @@ define ppc_fp128 @test_exp_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_exp_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl expl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -515,8 +515,8 @@ define ppc_fp128 @test_exp_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_exp_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl expl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -527,8 +527,8 @@ define ppc_fp128 @test_exp_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_exp_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl expl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -547,8 +547,8 @@ define ppc_fp128 @test_exp2_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_exp2_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl exp2l
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -559,8 +559,8 @@ define ppc_fp128 @test_exp2_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_exp2_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl exp2l
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -571,8 +571,8 @@ define ppc_fp128 @test_exp2_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_exp2_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl exp2l
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -591,8 +591,8 @@ define ppc_fp128 @test_log_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_log_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl logl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -603,8 +603,8 @@ define ppc_fp128 @test_log_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_log_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl logl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -615,8 +615,8 @@ define ppc_fp128 @test_log_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_log_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl logl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -635,8 +635,8 @@ define ppc_fp128 @test_log2_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_log2_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl log2l
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -647,8 +647,8 @@ define ppc_fp128 @test_log2_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_log2_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl log2l
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -659,8 +659,8 @@ define ppc_fp128 @test_log2_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_log2_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl log2l
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -679,8 +679,8 @@ define ppc_fp128 @test_log10_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_log10_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl log10l
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -691,8 +691,8 @@ define ppc_fp128 @test_log10_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_log10_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl log10l
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -703,8 +703,8 @@ define ppc_fp128 @test_log10_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_log10_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl log10l
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -723,8 +723,8 @@ define ppc_fp128 @test_rint_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_rint_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl rintl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -735,8 +735,8 @@ define ppc_fp128 @test_rint_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_rint_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl rintl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -747,8 +747,8 @@ define ppc_fp128 @test_rint_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_rint_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl rintl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -767,8 +767,8 @@ define ppc_fp128 @test_nearbyint_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_nearbyint_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl nearbyintl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -779,8 +779,8 @@ define ppc_fp128 @test_nearbyint_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_nearbyint_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl nearbyintl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -791,8 +791,8 @@ define ppc_fp128 @test_nearbyint_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_nearbyint_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl nearbyintl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -811,8 +811,8 @@ define ppc_fp128 @test_maxnum_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 
 ; PC64LE-LABEL: test_maxnum_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl fmaxl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -823,8 +823,8 @@ define ppc_fp128 @test_maxnum_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 
 ; PC64LE9-LABEL: test_maxnum_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl fmaxl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -835,8 +835,8 @@ define ppc_fp128 @test_maxnum_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 
 ; PC64-LABEL: test_maxnum_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl fmaxl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -855,8 +855,8 @@ define ppc_fp128 @test_minnum_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 
 ; PC64LE-LABEL: test_minnum_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl fminl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -867,8 +867,8 @@ define ppc_fp128 @test_minnum_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 
 ; PC64LE9-LABEL: test_minnum_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl fminl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -879,8 +879,8 @@ define ppc_fp128 @test_minnum_ppc_fp128(ppc_fp128 %first, ppc_fp128 %second) #0 
 ; PC64-LABEL: test_minnum_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl fminl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -899,8 +899,8 @@ define ppc_fp128 @test_ceil_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_ceil_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl ceill
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -911,8 +911,8 @@ define ppc_fp128 @test_ceil_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_ceil_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl ceill
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -923,8 +923,8 @@ define ppc_fp128 @test_ceil_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_ceil_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl ceill
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -942,8 +942,8 @@ define ppc_fp128 @test_floor_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_floor_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl floorl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -954,8 +954,8 @@ define ppc_fp128 @test_floor_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_floor_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl floorl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -966,8 +966,8 @@ define ppc_fp128 @test_floor_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_floor_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl floorl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -985,8 +985,8 @@ define ppc_fp128 @test_round_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_round_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl roundl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -997,8 +997,8 @@ define ppc_fp128 @test_round_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_round_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl roundl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -1009,8 +1009,8 @@ define ppc_fp128 @test_round_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_round_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl roundl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -1028,8 +1028,8 @@ define ppc_fp128 @test_trunc_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_trunc_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl truncl
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -1040,8 +1040,8 @@ define ppc_fp128 @test_trunc_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_trunc_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl truncl
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -1052,8 +1052,8 @@ define ppc_fp128 @test_trunc_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_trunc_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl truncl
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -1160,8 +1160,8 @@ define i64 @test_fptosi_ppc_i64_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_fptosi_ppc_i64_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl __fixtfdi
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -1172,8 +1172,8 @@ define i64 @test_fptosi_ppc_i64_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_fptosi_ppc_i64_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl __fixtfdi
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -1184,8 +1184,8 @@ define i64 @test_fptosi_ppc_i64_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_fptosi_ppc_i64_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl __fixtfdi
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -1244,8 +1244,8 @@ define i64 @test_fptoui_ppc_i64_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_fptoui_ppc_i64_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl __fixunstfdi
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -1256,8 +1256,8 @@ define i64 @test_fptoui_ppc_i64_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-LABEL: test_fptoui_ppc_i64_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl __fixunstfdi
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -1268,8 +1268,8 @@ define i64 @test_fptoui_ppc_i64_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-LABEL: test_fptoui_ppc_i64_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl __fixunstfdi
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -1288,10 +1288,10 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -48(1)
 ; PC64LE-NEXT:    addis 3, 2, .LCPI31_0@toc@ha
 ; PC64LE-NEXT:    xxlxor 3, 3, 3
+; PC64LE-NEXT:    std 0, 64(1)
 ; PC64LE-NEXT:    lfs 0, .LCPI31_0@toc@l(3)
 ; PC64LE-NEXT:    lis 3, -32768
 ; PC64LE-NEXT:    fcmpo 0, 2, 3
@@ -1326,15 +1326,15 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
 ; PC64LE9-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -48(1)
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI31_0@toc@ha
 ; PC64LE9-NEXT:    xxlxor 3, 3, 3
+; PC64LE9-NEXT:    std 0, 64(1)
 ; PC64LE9-NEXT:    lfs 0, .LCPI31_0@toc@l(3)
 ; PC64LE9-NEXT:    fcmpo 1, 2, 3
 ; PC64LE9-NEXT:    lis 3, -32768
-; PC64LE9-NEXT:    fcmpo 0, 1, 0
 ; PC64LE9-NEXT:    xxlxor 3, 3, 3
+; PC64LE9-NEXT:    fcmpo 0, 1, 0
 ; PC64LE9-NEXT:    crand 20, 2, 4
 ; PC64LE9-NEXT:    crandc 21, 0, 2
 ; PC64LE9-NEXT:    cror 20, 21, 20
@@ -1362,12 +1362,12 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ;
 ; PC64-LABEL: test_fptoui_ppc_i32_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
-; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    mfcr 12
+; PC64-NEXT:    mflr 0
 ; PC64-NEXT:    stw 12, 8(1)
 ; PC64-NEXT:    stdu 1, -128(1)
 ; PC64-NEXT:    addis 3, 2, .LCPI31_0@toc@ha
+; PC64-NEXT:    std 0, 144(1)
 ; PC64-NEXT:    lfs 0, .LCPI31_0@toc@l(3)
 ; PC64-NEXT:    addis 3, 2, .LCPI31_1@toc@ha
 ; PC64-NEXT:    lfs 4, .LCPI31_1@toc@l(3)
@@ -1422,8 +1422,8 @@ define void @test_constrained_libcall_multichain(ptr %firstptr, ptr %result) #0 
 ; PC64LE-NEXT:    stfd 29, -24(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 30, -16(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -80(1)
+; PC64LE-NEXT:    std 0, 96(1)
 ; PC64LE-NEXT:    mr 29, 3
 ; PC64LE-NEXT:    xxlxor 2, 2, 2
 ; PC64LE-NEXT:    li 3, 0
@@ -1473,14 +1473,14 @@ define void @test_constrained_libcall_multichain(ptr %firstptr, ptr %result) #0 
 ; PC64LE9-NEXT:    stfd 29, -24(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 30, -16(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -80(1)
-; PC64LE9-NEXT:    lfs 31, 0(3)
+; PC64LE9-NEXT:    std 0, 96(1)
 ; PC64LE9-NEXT:    mr 29, 3
-; PC64LE9-NEXT:    li 3, 0
 ; PC64LE9-NEXT:    xxlxor 2, 2, 2
-; PC64LE9-NEXT:    xxlxor 4, 4, 4
 ; PC64LE9-NEXT:    mr 30, 4
+; PC64LE9-NEXT:    lfs 31, 0(3)
+; PC64LE9-NEXT:    li 3, 0
+; PC64LE9-NEXT:    xxlxor 4, 4, 4
 ; PC64LE9-NEXT:    std 3, 8(4)
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    fmr 3, 31
@@ -1519,8 +1519,8 @@ define void @test_constrained_libcall_multichain(ptr %firstptr, ptr %result) #0 
 ; PC64-LABEL: test_constrained_libcall_multichain:
 ; PC64:       # %bb.0:
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -176(1)
+; PC64-NEXT:    std 0, 192(1)
 ; PC64-NEXT:    std 29, 120(1) # 8-byte Folded Spill
 ; PC64-NEXT:    mr 29, 3
 ; PC64-NEXT:    li 3, 0
@@ -1643,8 +1643,8 @@ define ppc_fp128 @i64_to_ppcq(i64 %m) #0 {
 ; PC64LE-LABEL: i64_to_ppcq:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl __floatditf
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -1655,8 +1655,8 @@ define ppc_fp128 @i64_to_ppcq(i64 %m) #0 {
 ; PC64LE9-LABEL: i64_to_ppcq:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl __floatditf
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -1667,8 +1667,8 @@ define ppc_fp128 @i64_to_ppcq(i64 %m) #0 {
 ; PC64-LABEL: i64_to_ppcq:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl __floatditf
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -1719,8 +1719,8 @@ define ppc_fp128 @u64_to_ppcq(i64 %m) #0 {
 ; PC64LE-NEXT:    std 30, -32(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 30, -16(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -64(1)
+; PC64LE-NEXT:    std 0, 80(1)
 ; PC64LE-NEXT:    mr 30, 3
 ; PC64LE-NEXT:    bl __floatditf
 ; PC64LE-NEXT:    nop
@@ -1754,8 +1754,8 @@ define ppc_fp128 @u64_to_ppcq(i64 %m) #0 {
 ; PC64LE9-NEXT:    std 30, -32(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 30, -16(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -64(1)
+; PC64LE9-NEXT:    std 0, 80(1)
 ; PC64LE9-NEXT:    mr 30, 3
 ; PC64LE9-NEXT:    bl __floatditf
 ; PC64LE9-NEXT:    nop
@@ -1786,8 +1786,8 @@ define ppc_fp128 @u64_to_ppcq(i64 %m) #0 {
 ; PC64-LABEL: u64_to_ppcq:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -144(1)
+; PC64-NEXT:    std 0, 160(1)
 ; PC64-NEXT:    std 30, 112(1) # 8-byte Folded Spill
 ; PC64-NEXT:    stfd 30, 128(1) # 8-byte Folded Spill
 ; PC64-NEXT:    mr 30, 3
@@ -1827,8 +1827,8 @@ define ppc_fp128 @i128_to_ppcq(i128 %m) #0 {
 ; PC64LE-LABEL: i128_to_ppcq:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    bl __floattitf
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -1839,8 +1839,8 @@ define ppc_fp128 @i128_to_ppcq(i128 %m) #0 {
 ; PC64LE9-LABEL: i128_to_ppcq:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    bl __floattitf
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -1851,8 +1851,8 @@ define ppc_fp128 @i128_to_ppcq(i128 %m) #0 {
 ; PC64-LABEL: i128_to_ppcq:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    bl __floattitf
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -1871,8 +1871,8 @@ define ppc_fp128 @u128_to_ppcq(i128 %m) #0 {
 ; PC64LE-NEXT:    std 30, -32(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 30, -16(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -64(1)
+; PC64LE-NEXT:    std 0, 80(1)
 ; PC64LE-NEXT:    mr 30, 4
 ; PC64LE-NEXT:    bl __floattitf
 ; PC64LE-NEXT:    nop
@@ -1906,8 +1906,8 @@ define ppc_fp128 @u128_to_ppcq(i128 %m) #0 {
 ; PC64LE9-NEXT:    std 30, -32(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 30, -16(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -64(1)
+; PC64LE9-NEXT:    std 0, 80(1)
 ; PC64LE9-NEXT:    mr 30, 4
 ; PC64LE9-NEXT:    bl __floattitf
 ; PC64LE9-NEXT:    nop
@@ -1938,8 +1938,8 @@ define ppc_fp128 @u128_to_ppcq(i128 %m) #0 {
 ; PC64-LABEL: u128_to_ppcq:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -144(1)
+; PC64-NEXT:    std 0, 160(1)
 ; PC64-NEXT:    std 30, 112(1) # 8-byte Folded Spill
 ; PC64-NEXT:    stfd 30, 128(1) # 8-byte Folded Spill
 ; PC64-NEXT:    mr 30, 3
@@ -1979,8 +1979,8 @@ define i1 @ppcq_to_s1(ppc_fp128 %a) {
 ; PC64LE-LABEL: ppcq_to_s1:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    .cfi_def_cfa_offset 32
 ; PC64LE-NEXT:    .cfi_offset lr, 16
 ; PC64LE-NEXT:    bl __gcc_qtou
@@ -1993,8 +1993,8 @@ define i1 @ppcq_to_s1(ppc_fp128 %a) {
 ; PC64LE9-LABEL: ppcq_to_s1:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    .cfi_def_cfa_offset 32
 ; PC64LE9-NEXT:    .cfi_offset lr, 16
 ; PC64LE9-NEXT:    bl __gcc_qtou
@@ -2007,8 +2007,8 @@ define i1 @ppcq_to_s1(ppc_fp128 %a) {
 ; PC64-LABEL: ppcq_to_s1:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    .cfi_def_cfa_offset 112
 ; PC64-NEXT:    .cfi_offset lr, 16
 ; PC64-NEXT:    bl __gcc_qtou
@@ -2026,8 +2026,8 @@ define i1 @ppcq_to_u1(ppc_fp128 %a) {
 ; PC64LE-LABEL: ppcq_to_u1:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 0, 16(1)
 ; PC64LE-NEXT:    stdu 1, -32(1)
+; PC64LE-NEXT:    std 0, 48(1)
 ; PC64LE-NEXT:    .cfi_def_cfa_offset 32
 ; PC64LE-NEXT:    .cfi_offset lr, 16
 ; PC64LE-NEXT:    bl __fixunstfsi
@@ -2040,8 +2040,8 @@ define i1 @ppcq_to_u1(ppc_fp128 %a) {
 ; PC64LE9-LABEL: ppcq_to_u1:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 0, 16(1)
 ; PC64LE9-NEXT:    stdu 1, -32(1)
+; PC64LE9-NEXT:    std 0, 48(1)
 ; PC64LE9-NEXT:    .cfi_def_cfa_offset 32
 ; PC64LE9-NEXT:    .cfi_offset lr, 16
 ; PC64LE9-NEXT:    bl __fixunstfsi
@@ -2054,8 +2054,8 @@ define i1 @ppcq_to_u1(ppc_fp128 %a) {
 ; PC64-LABEL: ppcq_to_u1:
 ; PC64:       # %bb.0: # %entry
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    std 0, 16(1)
 ; PC64-NEXT:    stdu 1, -112(1)
+; PC64-NEXT:    std 0, 128(1)
 ; PC64-NEXT:    .cfi_def_cfa_offset 112
 ; PC64-NEXT:    .cfi_offset lr, 16
 ; PC64-NEXT:    bl __fixunstfsi

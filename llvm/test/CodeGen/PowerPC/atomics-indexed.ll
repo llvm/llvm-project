@@ -69,8 +69,8 @@ define i64 @load_x_i64_unordered(ptr %mem) {
 ; PPC32-LABEL: load_x_i64_unordered:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    mflr r0
-; PPC32-NEXT:    stw r0, 4(r1)
 ; PPC32-NEXT:    stwu r1, -16(r1)
+; PPC32-NEXT:    stw r0, 20(r1)
 ; PPC32-NEXT:    .cfi_def_cfa_offset 16
 ; PPC32-NEXT:    .cfi_offset lr, 4
 ; PPC32-NEXT:    addi r3, r3, -896
@@ -136,8 +136,8 @@ define void @store_x_i64_unordered(ptr %mem) {
 ; PPC32-LABEL: store_x_i64_unordered:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    mflr r0
-; PPC32-NEXT:    stw r0, 4(r1)
 ; PPC32-NEXT:    stwu r1, -16(r1)
+; PPC32-NEXT:    stw r0, 20(r1)
 ; PPC32-NEXT:    .cfi_def_cfa_offset 16
 ; PPC32-NEXT:    .cfi_offset lr, 4
 ; PPC32-NEXT:    addi r3, r3, -896
