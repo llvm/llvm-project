@@ -24,11 +24,13 @@
 #endif
 
 #ifdef __cplusplus
-#  include <ctgmath>
-#else
-#  if __has_include_next(<tgmath.h>)
-#    include_next <tgmath.h>
-#  endif
-#endif
+
+#include <ctgmath>
+
+#else  // __cplusplus
+
+#include_next <tgmath.h>
+
+#endif // __cplusplus
 
 #endif // _LIBCPP_TGMATH_H

@@ -24,9 +24,13 @@
 #endif
 
 #ifdef __cplusplus
-#  include <ccomplex>
-#elif __has_include_next(<complex.h>)
-#  include_next <complex.h>
-#endif
+
+#include <ccomplex>
+
+#else  // __cplusplus
+
+#include_next <complex.h>
+
+#endif // __cplusplus
 
 #endif // _LIBCPP_COMPLEX_H
