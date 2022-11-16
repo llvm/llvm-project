@@ -8941,12 +8941,12 @@ SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
   if (auto *CondC = dyn_cast<ConstantSDNode>(Cond))
     return CondC->isZero() ? F : T;
 
-  // TODO: This should simplify VSELECT with constant condition using something
-  // like this (but check boolean contents to be complete?):
-  //  if (ISD::isBuildVectorAllOnes(Cond.getNode()))
-  //    return T;
-  //  if (ISD::isBuildVectorAllZeros(Cond.getNode()))
-  //    return F;
+  // TODO: This should simplify VSELECT with non-zero constant condition using
+  // something like this (but check boolean contents to be complete?):
+  if (ConstantSDNode *CondC = isConstOrConstSplat(Cond, /*AllowUndefs*/ false,
+                                                  /*AllowTruncation*/ true))
+    if (CondC->isZero())
+      return F;
 
   // select ?, T, T --> T
   if (T == F)

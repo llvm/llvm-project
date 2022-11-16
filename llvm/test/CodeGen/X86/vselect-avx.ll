@@ -266,25 +266,10 @@ define void @blendv_split(ptr %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32> %x, <
 }
 
 ; Regression test for rGea8fb3b60196
-; FIXME: Missing fold vselect(zero, T, F) -> F
 define void @vselect_concat() {
-; AVX1-LABEL: vselect_concat:
-; AVX1:       ## %bb.0: ## %entry
-; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; AVX1-NEXT:    vmovaps %ymm0, (%rax)
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: vselect_concat:
-; AVX2:       ## %bb.0: ## %entry
-; AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; AVX2-NEXT:    vmovaps %ymm0, (%rax)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: vselect_concat:
-; AVX512:       ## %bb.0: ## %entry
-; AVX512-NEXT:    retq
+; AVX-LABEL: vselect_concat:
+; AVX:       ## %bb.0: ## %entry
+; AVX-NEXT:    retq
 entry:
   %0 = load <8 x i32>, ptr undef
   %1 = shufflevector <8 x i32> zeroinitializer, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
