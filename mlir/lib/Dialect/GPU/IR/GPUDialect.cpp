@@ -34,6 +34,18 @@ using namespace mlir::gpu;
 #include "mlir/Dialect/GPU/IR/GPUOpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
+// GPU Device Mapping Attributes
+//===----------------------------------------------------------------------===//
+
+int64_t GPUBlockMappingAttr::getMappingId() const {
+  return static_cast<int64_t>(getBlock());
+}
+
+int64_t GPUThreadMappingAttr::getMappingId() const {
+  return static_cast<int64_t>(getThread());
+}
+
+//===----------------------------------------------------------------------===//
 // MMAMatrixType
 //===----------------------------------------------------------------------===//
 
