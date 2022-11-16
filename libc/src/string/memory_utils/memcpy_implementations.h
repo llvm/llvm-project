@@ -65,18 +65,19 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
                                            CPtr __restrict src, size_t count) {
   // Whether to use rep;movsb exclusively, not at all, or only above a certain
   // threshold.
-  // TODO: Use only a single preprocessor definition to simplify the code.
 #ifndef LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
 #define LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE -1
 #endif
 
-  static constexpr bool kUseOnlyRepMovsb =
-      LLVM_LIBC_IS_DEFINED(LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB);
+#ifdef LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB
+#error LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB is deprecated use LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0 instead.
+#endif // LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB
+
   static constexpr size_t kRepMovsbThreshold =
       LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
-  if constexpr (kUseOnlyRepMovsb)
+  if constexpr (kRepMovsbThreshold == 0)
     return x86::Memcpy::repmovsb(dst, src, count);
-  else if constexpr (kRepMovsbThreshold >= 0) {
+  else if constexpr (kRepMovsbThreshold > 0) {
     if (unlikely(count >= kRepMovsbThreshold))
       return x86::Memcpy::repmovsb(dst, src, count);
     else
