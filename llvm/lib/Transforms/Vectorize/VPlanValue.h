@@ -187,16 +187,19 @@ public:
   VPRecipeBase *getDefiningRecipe();
   const VPRecipeBase *getDefiningRecipe() const;
 
+  /// Returns true if this VPValue is defined by a recipe.
+  bool hasDefiningRecipe() const { return getDefiningRecipe(); }
+
   /// Returns the underlying IR value, if this VPValue is defined outside the
   /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef
   /// inside a VPlan.
   Value *getLiveInIRValue() {
-    assert(!getDefiningRecipe() &&
+    assert(!hasDefiningRecipe() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
   }
   const Value *getLiveInIRValue() const {
-    assert(!getDefiningRecipe() &&
+    assert(!hasDefiningRecipe() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
   }
@@ -204,7 +207,7 @@ public:
   /// Returns true if the VPValue is defined outside any vector regions, i.e. it
   /// is a live-in value.
   /// TODO: Also handle recipes defined in pre-header blocks.
-  bool isDefinedOutsideVectorRegions() const { return !getDefiningRecipe(); }
+  bool isDefinedOutsideVectorRegions() const { return !hasDefiningRecipe(); }
 };
 
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
