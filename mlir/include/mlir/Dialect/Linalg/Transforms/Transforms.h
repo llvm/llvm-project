@@ -48,7 +48,12 @@ void populatePadTensorTilingPatterns(RewritePatternSet &patterns,
 
 /// Populate patterns for splitting a `LinalgOp` with multiple statements within
 /// its payload into multiple `GenericOp` that have a single statement.
-void populateDecomposeLinalgOpsPattern(RewritePatternSet &patterns);
+/// The option `removeDeadArgsAndResults` adds patterns to remove dead arguments
+/// and results from the generated decomposed ops. This is default `true` since
+/// the core decomposition patterns relies on these clean up patterns. It is set
+/// to false only for testing purposes.
+void populateDecomposeLinalgOpsPattern(RewritePatternSet &patterns,
+                                       bool removeDeadArgsAndResults = true);
 
 /// Populate patterns for vectorizing low-D convolution ops. This is a step in
 /// progressive lowering for convolution ops, it assume high-D convolution ops
@@ -75,6 +80,10 @@ using ControlFusionFn = std::function<bool(OpOperand *fusedOperand)>;
 void populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns,
     const ControlFusionFn &controlElementwiseOpFusion);
+
+/// Pattern to remove dead operands and results of `linalg.generic` operations.
+/// This is effectively DCE for a linalg op.
+void populateEraseUnusedOperandsAndResultsPatterns(RewritePatternSet &patterns);
 
 /// Function type to control generic op dimension collapsing. It is expected
 /// to return an array of `ReassociationIndices` representing dimensions that
