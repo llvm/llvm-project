@@ -681,8 +681,8 @@ control the crash diagnostics.
 
   Disable auto-generation of preprocessed source files during a clang crash.
 
-The -fno-crash-diagnostics flag can be helpful for speeding the process
-of generating a delta reduced test case.
+  The -fno-crash-diagnostics flag can be helpful for speeding the process
+  of generating a delta reduced test case.
 
 .. option:: -fcrash-diagnostics-dir=<dir>
 
@@ -849,14 +849,14 @@ Clang options that don't fit neatly into other categories.
   for NMake or Jom. Ignored unless another option causes Clang to emit a
   dependency file.
 
-When Clang emits a dependency file (e.g., you supplied the -M option)
-most filenames can be written to the file without any special formatting.
-Different Make tools will treat different sets of characters as "special"
-and use different conventions for telling the Make tool that the character
-is actually part of the filename. Normally Clang uses backslash to "escape"
-a special character, which is the convention used by GNU Make. The -MV
-option tells Clang to put double-quotes around the entire filename, which
-is the convention used by NMake and Jom.
+  When Clang emits a dependency file (e.g., you supplied the -M option)
+  most filenames can be written to the file without any special formatting.
+  Different Make tools will treat different sets of characters as "special"
+  and use different conventions for telling the Make tool that the character
+  is actually part of the filename. Normally Clang uses backslash to "escape"
+  a special character, which is the convention used by GNU Make. The -MV
+  option tells Clang to put double-quotes around the entire filename, which
+  is the convention used by NMake and Jom.
 
 .. option:: -femit-dwarf-unwind=<value>
 
@@ -870,10 +870,10 @@ is the convention used by NMake and Jom.
   * ``default`` - Use the platform-specific default (``always`` for all
     non-arm64-platforms).
 
-``no-compact-unwind`` is a performance optimization -- Clang will emit smaller
-object files that are more quickly processed by the linker. This may cause
-binary compatibility issues on older x86_64 targets, however, so use it with
-caution.
+  ``no-compact-unwind`` is a performance optimization -- Clang will emit smaller
+  object files that are more quickly processed by the linker. This may cause
+  binary compatibility issues on older x86_64 targets, however, so use it with
+  caution.
 
 .. _configuration-files:
 
@@ -1431,7 +1431,7 @@ floating point semantic models: precise (the default), strict, and fast.
    below to disable any of the individual optimizations in ``-ffast-math``
    will cause ``__FAST_MATH__`` to no longer be set.
 
-  This option implies:
+   This option implies:
 
    * ``-fno-honor-infinities``
 
@@ -1546,8 +1546,8 @@ floating point semantic models: precise (the default), strict, and fast.
 
    Control floating point exception behavior. ``-fno-trapping-math`` allows optimizations that assume that floating point operations cannot generate traps such as divide-by-zero, overflow and underflow.
 
-- The option ``-ftrapping-math`` behaves identically to ``-ffp-exception-behavior=strict``.
-- The option ``-fno-trapping-math`` behaves identically to ``-ffp-exception-behavior=ignore``.   This is the default.
+   - The option ``-ftrapping-math`` behaves identically to ``-ffp-exception-behavior=strict``.
+   - The option ``-fno-trapping-math`` behaves identically to ``-ffp-exception-behavior=ignore``.   This is the default.
 
 .. option:: -ffp-contract=<value>
 
@@ -1630,14 +1630,14 @@ floating point semantic models: precise (the default), strict, and fast.
 
 .. option:: -f[no-]rounding-math
 
-Force floating-point operations to honor the dynamically-set rounding mode by default.
+   Force floating-point operations to honor the dynamically-set rounding mode by default.
 
-The result of a floating-point operation often cannot be exactly represented in the result type and therefore must be rounded.  IEEE 754 describes different rounding modes that control how to perform this rounding, not all of which are supported by all implementations.  C provides interfaces (``fesetround`` and ``fesetenv``) for dynamically controlling the rounding mode, and while it also recommends certain conventions for changing the rounding mode, these conventions are not typically enforced in the ABI.  Since the rounding mode changes the numerical result of operations, the compiler must understand something about it in order to optimize floating point operations.
+   The result of a floating-point operation often cannot be exactly represented in the result type and therefore must be rounded.  IEEE 754 describes different rounding modes that control how to perform this rounding, not all of which are supported by all implementations.  C provides interfaces (``fesetround`` and ``fesetenv``) for dynamically controlling the rounding mode, and while it also recommends certain conventions for changing the rounding mode, these conventions are not typically enforced in the ABI.  Since the rounding mode changes the numerical result of operations, the compiler must understand something about it in order to optimize floating point operations.
 
-Note that floating-point operations performed as part of constant initialization are formally performed prior to the start of the program and are therefore not subject to the current rounding mode.  This includes the initialization of global variables and local ``static`` variables.  Floating-point operations in these contexts will be rounded using ``FE_TONEAREST``.
+   Note that floating-point operations performed as part of constant initialization are formally performed prior to the start of the program and are therefore not subject to the current rounding mode.  This includes the initialization of global variables and local ``static`` variables.  Floating-point operations in these contexts will be rounded using ``FE_TONEAREST``.
 
-- The option ``-fno-rounding-math`` allows the compiler to assume that the rounding mode is set to ``FE_TONEAREST``.  This is the default.
-- The option ``-frounding-math`` forces the compiler to honor the dynamically-set rounding mode.  This prevents optimizations which might affect results if the rounding mode changes or is different from the default; for example, it prevents floating-point operations from being reordered across most calls and prevents constant-folding when the result is not exactly representable.
+   - The option ``-fno-rounding-math`` allows the compiler to assume that the rounding mode is set to ``FE_TONEAREST``.  This is the default.
+   - The option ``-frounding-math`` forces the compiler to honor the dynamically-set rounding mode.  This prevents optimizations which might affect results if the rounding mode changes or is different from the default; for example, it prevents floating-point operations from being reordered across most calls and prevents constant-folding when the result is not exactly representable.
 
 .. option:: -ffp-model=<value>
 
@@ -2497,14 +2497,14 @@ programs using the same instrumentation method as ``-fprofile-generate``.
   To generate the profile data file with the compiler readable format, the
   ``llvm-profdata`` tool can be used with the profile directory as the input:
 
-   .. code-block:: console
+  .. code-block:: console
 
-     $ llvm-profdata merge -output=code.profdata yyy/zzz/
+    $ llvm-profdata merge -output=code.profdata yyy/zzz/
 
- If the user wants to turn off the auto-merging feature, or simply override the
- the profile dumping path specified at command line, the environment variable
- ``LLVM_PROFILE_FILE`` can still be used to override
- the directory and filename for the profile file at runtime.
+  If the user wants to turn off the auto-merging feature, or simply override the
+  the profile dumping path specified at command line, the environment variable
+  ``LLVM_PROFILE_FILE`` can still be used to override
+  the directory and filename for the profile file at runtime.
 
 .. option:: -fcs-profile-generate[=<dirname>]
 
@@ -2835,15 +2835,15 @@ below. If multiple flags are present, the last one is used.
   the debug type information can be spread out over multiple
   compilation units.  Specifically, the optimizations are:
 
-- will not emit type definitions for types that are not needed by a
-  module and could be replaced with a forward declaration.
-- will only emit type info for a dynamic C++ class in the module that
-  contains the vtable for the class.
-- will only emit type info for a C++ class (non-trivial, non-aggregate)
-  in the modules that contain a definition for one of its constructors.
-- will only emit type definitions for types that are the subject of explicit
-  template instantiation declarations in the presence of an explicit
-  instantiation definition for the type.
+  - will not emit type definitions for types that are not needed by a
+    module and could be replaced with a forward declaration.
+  - will only emit type info for a dynamic C++ class in the module that
+    contains the vtable for the class.
+  - will only emit type info for a C++ class (non-trivial, non-aggregate)
+    in the modules that contain a definition for one of its constructors.
+  - will only emit type definitions for types that are the subject of explicit
+    template instantiation declarations in the presence of an explicit
+    instantiation definition for the type.
 
   The **-fstandalone-debug** option turns off these optimizations.
   This is useful when working with 3rd-party libraries that don't come
@@ -3277,10 +3277,10 @@ Some extra options are available to support special OpenCL features.
 
 .. option:: -cl-no-stdinc
 
-Allows to disable all extra types and functions that are not native to the compiler.
-This might reduce the compilation speed marginally but many declarations from the
-OpenCL standard will not be accessible. For example, the following will fail to
-compile.
+   Allows to disable all extra types and functions that are not native to the compiler.
+   This might reduce the compilation speed marginally but many declarations from the
+   OpenCL standard will not be accessible. For example, the following will fail to
+   compile.
 
    .. code-block:: console
 
@@ -3289,36 +3289,36 @@ compile.
      error: use of undeclared identifier 'get_enqueued_local_size'
      error: use of undeclared identifier 'get_local_size'
 
-More information about the standard types and functions is provided in :ref:`the
-section on the OpenCL Header <opencl_header>`.
+   More information about the standard types and functions is provided in :ref:`the
+   section on the OpenCL Header <opencl_header>`.
 
 .. _opencl_cl_ext:
 
 .. option:: -cl-ext
 
-Enables/Disables support of OpenCL extensions and optional features. All OpenCL
-targets set a list of extensions that they support. Clang allows to amend this using
-the ``-cl-ext`` flag with a comma-separated list of extensions prefixed with
-``'+'`` or ``'-'``. The syntax: ``-cl-ext=<(['-'|'+']<extension>[,])+>``,  where
-extensions can be either one of `the OpenCL published extensions
-<https://www.khronos.org/registry/OpenCL>`_
-or any vendor extension. Alternatively, ``'all'`` can be used to enable
-or disable all known extensions.
+   Enables/Disables support of OpenCL extensions and optional features. All OpenCL
+   targets set a list of extensions that they support. Clang allows to amend this using
+   the ``-cl-ext`` flag with a comma-separated list of extensions prefixed with
+   ``'+'`` or ``'-'``. The syntax: ``-cl-ext=<(['-'|'+']<extension>[,])+>``,  where
+   extensions can be either one of `the OpenCL published extensions
+   <https://www.khronos.org/registry/OpenCL>`_
+   or any vendor extension. Alternatively, ``'all'`` can be used to enable
+   or disable all known extensions.
 
-Example disabling double support for the 64-bit SPIR-V target:
+   Example disabling double support for the 64-bit SPIR-V target:
 
    .. code-block:: console
 
      $ clang -c -target spirv64 -cl-ext=-cl_khr_fp64 test.cl
 
-Enabling all extensions except double support in R600 AMD GPU can be done using:
+   Enabling all extensions except double support in R600 AMD GPU can be done using:
 
    .. code-block:: console
 
      $ clang -target r600 -cl-ext=-all,+cl_khr_fp16 test.cl
 
-Note that some generic targets e.g. SPIR/SPIR-V enable all extensions/features in
-clang by default.
+   Note that some generic targets e.g. SPIR/SPIR-V enable all extensions/features in
+   clang by default.
 
 OpenCL Targets
 --------------
