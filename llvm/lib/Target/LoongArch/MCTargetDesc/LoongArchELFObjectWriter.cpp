@@ -24,13 +24,6 @@ public:
 
   ~LoongArchELFObjectWriter() override;
 
-  // Return true if the given relocation must be with a symbol rather than
-  // section plus offset.
-  bool needsRelocateWithSymbol(const MCSymbol &Sym,
-                               unsigned Type) const override {
-    return true;
-  }
-
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
