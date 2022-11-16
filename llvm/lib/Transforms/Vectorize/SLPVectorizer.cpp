@@ -970,7 +970,8 @@ public:
   /// Vectorize the tree but with the list of externally used values \p
   /// ExternallyUsedValues. Values in this MapVector can be replaced but the
   /// generated extractvalue instructions.
-  Value *vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues);
+  Value *vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues,
+                       Instruction *ReductionRoot = nullptr);
 
   /// \returns the cost incurred by unwanted spills and fills, caused by
   /// holding live values over call sites.
@@ -9002,8 +9003,8 @@ struct ShuffledInsertData {
 };
 } // namespace
 
-Value *
-BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
+Value *BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues,
+                              Instruction *ReductionRoot) {
   // All blocks must be scheduled before any instructions are inserted.
   for (auto &BSIter : BlocksSchedules) {
     scheduleBlock(BSIter.second.get());
@@ -9020,7 +9021,8 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
     EntryToLastInstruction.try_emplace(E.get(), LastInst);
   }
 
-  Builder.SetInsertPoint(&F->getEntryBlock().front());
+  Builder.SetInsertPoint(ReductionRoot ? ReductionRoot
+                                       : &F->getEntryBlock().front());
   auto *VectorRoot = vectorizeTree(VectorizableTree[0].get());
 
   // If the vectorized tree can be rewritten in a smaller type, we truncate the
@@ -11944,16 +11946,18 @@ public:
 
         Builder.setFastMathFlags(RdxFMF);
 
-        // Vectorize a tree.
-        Value *VectorizedRoot = V.vectorizeTree(LocalExternallyUsedValues);
-
         // Emit a reduction. If the root is a select (min/max idiom), the insert
         // point is the compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
+        Instruction *InsertPt = RdxRootInst;
         if (IsCmpSelMinMax)
-          Builder.SetInsertPoint(GetCmpForMinMaxReduction(RdxRootInst));
-        else
-          Builder.SetInsertPoint(RdxRootInst);
+          InsertPt = GetCmpForMinMaxReduction(RdxRootInst);
+
+        // Vectorize a tree.
+        Value *VectorizedRoot =
+            V.vectorizeTree(LocalExternallyUsedValues, InsertPt);
+
+        Builder.SetInsertPoint(InsertPt);
 
         // To prevent poison from leaking across what used to be sequential,
         // safe, scalar boolean logic operations, the reduction operand must be
