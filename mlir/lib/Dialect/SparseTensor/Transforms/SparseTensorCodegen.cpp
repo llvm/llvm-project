@@ -1038,13 +1038,13 @@ void mlir::populateSparseTensorCodegenPatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     bool enableBufferInitialization) {
   patterns.add<SparseReturnConverter, SparseCallConverter, SparseDimOpConverter,
-               SparseCastConverter, SparseTensorAllocConverter,
-               SparseTensorDeallocConverter, SparseTensorLoadConverter,
-               SparseExpandConverter, SparseCompressConverter,
-               SparseInsertConverter, SparseToPointersConverter,
-               SparseToIndicesConverter, SparseToValuesConverter,
-               SparseConvertConverter, SparseNumberOfEntriesConverter>(
-      typeConverter, patterns.getContext());
+               SparseCastConverter, SparseTensorDeallocConverter,
+               SparseTensorLoadConverter, SparseExpandConverter,
+               SparseCompressConverter, SparseInsertConverter,
+               SparseToPointersConverter, SparseToIndicesConverter,
+               SparseToValuesConverter, SparseConvertConverter,
+               SparseNumberOfEntriesConverter>(typeConverter,
+                                               patterns.getContext());
   patterns.add<SparseTensorAllocConverter>(typeConverter, patterns.getContext(),
                                            enableBufferInitialization);
 }
