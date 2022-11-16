@@ -89,6 +89,22 @@ define i64 @pack_i64_2(i32 %a, i32 %b) nounwind {
   ret i64 %or
 }
 
+define i64 @pack_i64_3(ptr %0, ptr %1) {
+; CHECK-LABEL: pack_i64_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    lw a0, 0(a1)
+; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:    ret
+  %3 = load i32, ptr %0, align 4
+  %4 = zext i32 %3 to i64
+  %5 = shl i64 %4, 32
+  %6 = load i32, ptr %1, align 4
+  %7 = zext i32 %6 to i64
+  %8 = or i64 %5, %7
+  ret i64 %8
+}
+
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet any matching bit manipulation instructions on RV32.
 ; This test is presented here in case future expansions of the Bitmanip
