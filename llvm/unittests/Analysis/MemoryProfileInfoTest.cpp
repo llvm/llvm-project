@@ -11,7 +11,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -33,15 +32,6 @@ protected:
     if (!Mod)
       Err.print("MemoryProfileInfoTest", errs());
     return Mod;
-  }
-
-  std::unique_ptr<ModuleSummaryIndex> makeLLVMIndex(const char *Summary) {
-    SMDiagnostic Err;
-    std::unique_ptr<ModuleSummaryIndex> Index =
-        parseSummaryIndexAssemblyString(Summary, Err);
-    if (!Index)
-      Err.print("MemoryProfileInfoTest", errs());
-    return Index;
   }
 
   // This looks for a call that has the given value name, which
@@ -369,90 +359,4 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   }
 }
 
-TEST_F(MemoryProfileInfoTest, CallStackTestIR) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = makeLLVMModule(C,
-                                             R"IR(
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
-define ptr @test() {
-entry:
-  %call = call noalias noundef nonnull dereferenceable(10) ptr @_Znam(i64 noundef 10), !memprof !1, !callsite !6
-  ret ptr %call
-}
-declare noundef nonnull ptr @_Znam(i64 noundef)
-!1 = !{!2, !4}
-!2 = !{!3, !"notcold"}
-!3 = !{i64 1, i64 2, i64 3, i64 4}
-!4 = !{!5, !"cold"}
-!5 = !{i64 1, i64 2, i64 3, i64 5}
-!6 = !{i64 1}
-)IR");
-
-  Function *Func = M->getFunction("test");
-  CallBase *Call = findCall(*Func, "call");
-
-  CallStack<MDNode, MDNode::op_iterator> InstCallsite(
-      Call->getMetadata(LLVMContext::MD_callsite));
-
-  MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
-  bool First = true;
-  for (auto &MIBOp : MemProfMD->operands()) {
-    auto *MIBMD = cast<const MDNode>(MIBOp);
-    MDNode *StackNode = getMIBStackNode(MIBMD);
-    CallStack<MDNode, MDNode::op_iterator> StackContext(StackNode);
-    std::vector<uint64_t> StackIds;
-    for (auto ContextIter = StackContext.beginAfterSharedPrefix(InstCallsite);
-         ContextIter != StackContext.end(); ++ContextIter)
-      StackIds.push_back(*ContextIter);
-    if (First)
-      EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef({2UL, 3UL, 4UL}));
-    else
-      EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef({2UL, 3UL, 5UL}));
-    First = false;
-  }
-}
-
-TEST_F(MemoryProfileInfoTest, CallStackTestSummary) {
-  std::unique_ptr<ModuleSummaryIndex> Index = makeLLVMIndex(R"Summary(
-^0 = module: (path: "test.o", hash: (0, 0, 0, 0, 0))
-^1 = gv: (guid: 23, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), insts: 2, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 1, alwaysInline: 0, noUnwind: 0, mayThrow: 0, hasUnknownCall: 0, mustBeUnreachable: 0), allocs: ((versions: (none), memProf: ((type: notcold, stackIds: (1, 2, 3, 4)), (type: cold, stackIds: (1, 2, 3, 5))))))))
-^2 = gv: (guid: 25, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), insts: 22, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 1, returnDoesNotAlias: 0, noInline: 1, alwaysInline: 0, noUnwind: 0, mayThrow: 0, hasUnknownCall: 0, mustBeUnreachable: 0), calls: ((callee: ^1)), callsites: ((callee: ^1, clones: (0), stackIds: (3, 4)), (callee: ^1, clones: (0), stackIds: (3, 5))))))
-)Summary");
-
-  ASSERT_NE(Index, nullptr);
-  auto *CallsiteSummary =
-      cast<FunctionSummary>(Index->getGlobalValueSummary(/*guid=*/25));
-  bool First = true;
-  for (auto &CI : CallsiteSummary->callsites()) {
-    CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator> InstCallsite(
-        &CI);
-    std::vector<uint64_t> StackIds;
-    for (auto StackIdIndex : InstCallsite)
-      StackIds.push_back(Index->getStackIdAtIndex(StackIdIndex));
-    if (First)
-      EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef({3UL, 4UL}));
-    else
-      EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef({3UL, 5UL}));
-    First = false;
-  }
-
-  auto *AllocSummary =
-      cast<FunctionSummary>(Index->getGlobalValueSummary(/*guid=*/23));
-  for (auto &AI : AllocSummary->allocs()) {
-    bool First = true;
-    for (auto &MIB : AI.MIBs) {
-      CallStack<MIBInfo, SmallVector<unsigned>::const_iterator> StackContext(
-          &MIB);
-      std::vector<uint64_t> StackIds;
-      for (auto StackIdIndex : StackContext)
-        StackIds.push_back(Index->getStackIdAtIndex(StackIdIndex));
-      if (First)
-        EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef({1UL, 2UL, 3UL, 4UL}));
-      else
-        EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef({1UL, 2UL, 3UL, 5UL}));
-      First = false;
-    }
-  }
-}
 } // end anonymous namespace

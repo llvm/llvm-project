@@ -16,7 +16,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
-#include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
@@ -118,10 +117,8 @@ typedef llvm::function_ref<Optional<std::string>(StringRef)>
 
     /// Parse the specified bitcode buffer and merge its module summary index
     /// into CombinedIndex.
-    Error
-    readSummary(ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
-                uint64_t ModuleId,
-                std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
+    Error readSummary(ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
+                      uint64_t ModuleId);
   };
 
   struct BitcodeFileContents {
