@@ -170,7 +170,7 @@ body:             |
     liveins: $p0, $z0
 
     ; CHECK-LABEL: name: cmpeq_imm_nxv16i8
-    ; CHECK-NOT: PTEST
+    ; CHECK: PTEST
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv

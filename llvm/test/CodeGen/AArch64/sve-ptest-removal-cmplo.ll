@@ -8,7 +8,9 @@
 define i32 @cmplo_imm_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
 ; CHECK-LABEL: cmplo_imm_nxv16i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    cmplo p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    ptest p1, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmphi.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> %a)
