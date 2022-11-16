@@ -1209,6 +1209,12 @@ llvm::json::Object CreateTerminatedEventObject() {
   return event;
 }
 
+llvm::json::Object CreateInitializedEventObject() {
+  llvm::json::Object event(CreateEventObject("initialized"));
+  addStatistic(event);
+  return event;
+}
+
 std::string JSONToString(const llvm::json::Value &json) {
   std::string data;
   llvm::raw_string_ostream os(data);
