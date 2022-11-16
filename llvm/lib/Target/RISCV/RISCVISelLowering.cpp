@@ -1318,16 +1318,6 @@ bool RISCVTargetLowering::shouldSinkOperands(
         case Intrinsic::fma:
         case Intrinsic::vp_fma:
           return Operand == 0 || Operand == 1;
-        // FIXME: Our patterns can only match vx/vf instructions when the splat
-        // it on the RHS, because TableGen doesn't recognize our VP operations
-        // as commutative.
-        case Intrinsic::vp_add:
-        case Intrinsic::vp_mul:
-        case Intrinsic::vp_and:
-        case Intrinsic::vp_or:
-        case Intrinsic::vp_xor:
-        case Intrinsic::vp_fadd:
-        case Intrinsic::vp_fmul:
         case Intrinsic::vp_shl:
         case Intrinsic::vp_lshr:
         case Intrinsic::vp_ashr:
@@ -1336,8 +1326,15 @@ bool RISCVTargetLowering::shouldSinkOperands(
         case Intrinsic::vp_urem:
         case Intrinsic::vp_srem:
           return Operand == 1;
-        // ... with the exception of vp.sub/vp.fsub/vp.fdiv, which have
-        // explicit patterns for both LHS and RHS (as 'vr' versions).
+        // These intrinsics are commutative.
+        case Intrinsic::vp_add:
+        case Intrinsic::vp_mul:
+        case Intrinsic::vp_and:
+        case Intrinsic::vp_or:
+        case Intrinsic::vp_xor:
+        case Intrinsic::vp_fadd:
+        case Intrinsic::vp_fmul:
+        // These intrinsics have 'vr' versions.
         case Intrinsic::vp_sub:
         case Intrinsic::vp_fsub:
         case Intrinsic::vp_fdiv:
