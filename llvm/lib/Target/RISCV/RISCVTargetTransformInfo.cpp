@@ -563,6 +563,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return Cost * LT.first;
     break;
   }
+  case Intrinsic::vp_nearbyint: {
+    // More one read and one write for fflags than vp_rint.
+    unsigned Cost = 7;
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
+      return Cost * LT.first;
+    break;
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
