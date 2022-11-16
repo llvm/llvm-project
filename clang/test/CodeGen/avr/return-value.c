@@ -33,12 +33,17 @@ struct s04 foo04(int a, int b) {
   return a0;
 }
 
+long long fooi64(void) {
+  return 0xaa5533;
+}
+
 // AVR: %struct.s10 = type { i16, i16, i16, i16, i16 }
 // AVR: %struct.s06 = type { i16, i16, i16 }
 // AVR: %struct.s04 = type { i16, i16 }
 // AVR: define{{.*}} void @foo10(ptr {{.*}}, i16 noundef %a, i16 noundef %b, i16 noundef %c)
 // AVR: define{{.*}} %struct.s06 @foo06(i16 noundef %a, i16 noundef %b, i16 noundef %c)
 // AVR: define{{.*}} %struct.s04 @foo04(i16 noundef %a, i16 noundef %b)
+// AVR: define{{.*}} i64 @fooi64()
 
 // TINY: %struct.s10 = type { i16, i16, i16, i16, i16 }
 // TINY: %struct.s06 = type { i16, i16, i16 }
@@ -46,3 +51,4 @@ struct s04 foo04(int a, int b) {
 // TINY: define{{.*}} void @foo10(ptr {{.*}}, i16 noundef %a, i16 noundef %b, i16 noundef %c)
 // TINY: define{{.*}} void @foo06(ptr {{.*}}, i16 noundef %a, i16 noundef %b, i16 noundef %c)
 // TINY: define{{.*}} %struct.s04 @foo04(i16 noundef %a, i16 noundef %b)
+// TINY: define{{.*}} void @fooi64(ptr {{.*}})
