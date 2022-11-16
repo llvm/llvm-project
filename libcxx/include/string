@@ -813,6 +813,14 @@ private:
         std::__debug_db_insert_c(this);
     }
 
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator __make_iterator(pointer __p) {
+        return iterator(this, __p);
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator __make_const_iterator(const_pointer __p) const {
+        return const_iterator(this, __p);
+    }
+
 public:
   _LIBCPP_TEMPLATE_DATA_VIS static const size_type npos = -1;
 
@@ -1029,16 +1037,16 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     iterator begin() _NOEXCEPT
-        {return iterator(this, __get_pointer());}
+        {return __make_iterator(__get_pointer());}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     const_iterator begin() const _NOEXCEPT
-        {return const_iterator(this, __get_pointer());}
+        {return __make_const_iterator(__get_pointer());}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     iterator end() _NOEXCEPT
-        {return iterator(this, __get_pointer() + size());}
+        {return __make_iterator(__get_pointer() + size());}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     const_iterator end() const _NOEXCEPT
-        {return const_iterator(this, __get_pointer() + size());}
+        {return __make_const_iterator(__get_pointer() + size());}
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     reverse_iterator rbegin() _NOEXCEPT
