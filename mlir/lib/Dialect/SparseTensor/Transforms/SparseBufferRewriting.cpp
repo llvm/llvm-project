@@ -490,8 +490,8 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
 
   Value i = lo;
   Value j = builder.create<arith::SubIOp>(loc, hi, c1);
-  SmallVector<Value> operands{i, j, p};
-  SmallVector<Type> types{i.getType(), j.getType(), p.getType()};
+  SmallVector<Value, 3> operands{i, j, p};  // exactly three
+  SmallVector<Type, 3> types{i.getType(), j.getType(), p.getType()};
   scf::WhileOp whileOp = builder.create<scf::WhileOp>(loc, types, operands);
 
   // The before-region of the WhileOp.

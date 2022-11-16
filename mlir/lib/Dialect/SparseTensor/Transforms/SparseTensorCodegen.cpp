@@ -543,8 +543,8 @@ static void genEndInsert(OpBuilder &builder, Location loc, RankedTensorType rtp,
         Value hi = genLoad(builder, loc, fields[memSizesIdx], mz);
         Value zero = constantIndex(builder, loc, 0);
         Value one = constantIndex(builder, loc, 1);
-        SmallVector<Value, 1> inits;  // only one
-        inits.push_back(genLoad(builder, loc, fields[field], zero));
+        // Vector of only one, but needed by createFor's prototype.
+        SmallVector<Value, 1> inits{genLoad(builder, loc, fields[field], zero)};
         scf::ForOp loop = createFor(builder, loc, hi, inits, one);
         Value i = loop.getInductionVar();
         Value oldv = loop.getRegionIterArg(0);
