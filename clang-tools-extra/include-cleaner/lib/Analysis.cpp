@@ -25,13 +25,14 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   for (auto *Root : ASTRoots) {
     auto &SM = Root->getASTContext().getSourceManager();
     walkAST(*Root, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
+      SymbolReference SymRef{Loc, ND, RT};
       if (auto SS = Recognizer(&ND)) {
         // FIXME: Also report forward decls from main-file, so that the caller
         // can decide to insert/ignore a header.
-        return CB({Loc, Symbol(*SS), RT}, findHeaders(*SS, SM, PI));
+        return CB(SymRef, findHeaders(*SS, SM, PI));
       }
       // FIXME: Extract locations from redecls.
-      return CB({Loc, Symbol(ND), RT}, findHeaders(ND.getLocation(), SM, PI));
+      return CB(SymRef, findHeaders(ND.getLocation(), SM, PI));
     });
   }
   for (const SymbolReference &MacroRef : MacroRefs) {
