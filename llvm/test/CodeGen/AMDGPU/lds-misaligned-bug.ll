@@ -115,17 +115,15 @@ bb:
   ret void
 }
 
-; TODO: Reinstate the test below once v3i32/v3f32 is reinstated.
-
 ; GCN-LABEL: test_flat_misaligned_v3:
-; xVECT-DAG:  flat_load_dwordx3 v
-; xVECT-DAG:  flat_store_dwordx3 v
-; xSPLIT-DAG: flat_load_dword v
-; xSPLIT-DAG: flat_load_dword v
-; xSPLIT-DAG: flat_load_dword v
-; xSPLIT-DAG: flat_store_dword v
-; xSPLIT-DAG: flat_store_dword v
-; xSPLIT-DAG: flat_store_dword v
+; VECT-DAG:  flat_load_dwordx3 v
+; VECT-DAG:  flat_store_dwordx3 v
+; SPLIT-DAG: flat_load_dword v
+; SPLIT-DAG: flat_load_dword v
+; SPLIT-DAG: flat_load_dword v
+; SPLIT-DAG: flat_store_dword v
+; SPLIT-DAG: flat_store_dword v
+; SPLIT-DAG: flat_store_dword v
 define amdgpu_kernel void @test_flat_misaligned_v3(i32* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
