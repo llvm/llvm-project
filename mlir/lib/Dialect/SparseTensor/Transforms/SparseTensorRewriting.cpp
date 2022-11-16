@@ -499,7 +499,10 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
     }
 
     cooBuffer = rewriter.create<LoadOp>(loc, cooBuffer, true);
-    rewriter.replaceOpWithNewOp<ConvertOp>(op, rtp, cooBuffer);
+    Value converted =
+        rewriter.create<ConvertOp>(loc, rtp, cooBuffer).getResult();
+    rewriter.create<DeallocTensorOp>(loc, cooBuffer);
+    rewriter.replaceOp(op, converted);
     return success();
   }
 };
