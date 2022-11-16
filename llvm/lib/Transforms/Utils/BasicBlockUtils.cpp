@@ -24,6 +24,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -372,11 +373,22 @@ static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
                         DVI->getExpression(),
                         DVI->getDebugLoc()->getInlinedAt());
       auto R = VariableSet.insert(Key);
+      // If the variable fragment hasn't been seen before then we don't want
+      // to remove this dbg intrinsic.
+      if (R.second)
+        continue;
+
+      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI)) {
+        // Don't delete dbg.assign intrinsics that are linked to instructions.
+        if (!at::getAssignmentInsts(DAI).empty())
+          continue;
+        // Unlinked dbg.assign intrinsics can be treated like dbg.values.
+      }
+
       // If the same variable fragment is described more than once it is enough
       // to keep the last one (i.e. the first found since we for reverse
       // iteration).
-      if (!R.second)
-        ToBeRemoved.push_back(DVI);
+      ToBeRemoved.push_back(DVI);
       continue;
     }
     // Sequence with consecutive dbg.value instrs ended. Clear the map to
@@ -420,21 +432,89 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
                         NoneType(),
                         DVI->getDebugLoc()->getInlinedAt());
       auto VMI = VariableMap.find(Key);
+      auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
+      // A dbg.assign with no linked instructions can be treated like a
+      // dbg.value (i.e. can be deleted).
+      bool IsDbgValueKind = (!DAI || at::getAssignmentInsts(DAI).empty());
+
       // Update the map if we found a new value/expression describing the
       // variable, or if the variable wasn't mapped already.
       SmallVector<Value *, 4> Values(DVI->getValues());
       if (VMI == VariableMap.end() || VMI->second.first != Values ||
           VMI->second.second != DVI->getExpression()) {
-        VariableMap[Key] = {Values, DVI->getExpression()};
+        // Use a sentinal value (nullptr) for the DIExpression when we see a
+        // linked dbg.assign so that the next debug intrinsic will never match
+        // it (i.e. always treat linked dbg.assigns as if they're unique).
+        if (IsDbgValueKind)
+          VariableMap[Key] = {Values, DVI->getExpression()};
+        else
+          VariableMap[Key] = {Values, nullptr};
         continue;
       }
-      // Found an identical mapping. Remember the instruction for later removal.
+
+      // Don't delete dbg.assign intrinsics that are linked to instructions.
+      if (!IsDbgValueKind)
+        continue;
       ToBeRemoved.push_back(DVI);
     }
   }
 
   for (auto &Instr : ToBeRemoved)
     Instr->eraseFromParent();
+
+  return !ToBeRemoved.empty();
+}
+
+/// Remove redundant undef dbg.assign intrinsic from an entry block using a
+/// forward scan.
+/// Strategy:
+/// ---------------------
+/// Scanning forward, delete dbg.assign intrinsics iff they are undef, not
+/// linked to an intrinsic, and don't share an aggregate variable with a debug
+/// intrinsic that didn't meet the criteria. In other words, undef dbg.assigns
+/// that come before non-undef debug intrinsics for the variable are
+/// deleted. Given:
+///
+///   dbg.assign undef, "x", FragmentX1 (*)
+///   <block of instructions, none being "dbg.value ..., "x", ...">
+///   dbg.value %V, "x", FragmentX2
+///   <block of instructions, none being "dbg.value ..., "x", ...">
+///   dbg.assign undef, "x", FragmentX1
+///
+/// then (only) the instruction marked with (*) can be removed.
+/// Possible improvements:
+/// - Keep track of non-overlapping fragments.
+static bool remomveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
+  assert(BB->isEntryBlock() && "expected entry block");
+  SmallVector<DbgAssignIntrinsic *, 8> ToBeRemoved;
+  DenseSet<DebugVariable> SeenDefForAggregate;
+  // Returns the DebugVariable for DVI with no fragment info.
+  auto GetAggregateVariable = [](DbgValueInst *DVI) {
+    return DebugVariable(DVI->getVariable(), NoneType(),
+                         DVI->getDebugLoc()->getInlinedAt());
+  };
+
+  // Remove undef dbg.assign intrinsics that are encountered before
+  // any non-undef intrinsics from the entry block.
+  for (auto &I : *BB) {
+    DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I);
+    if (!DVI)
+      continue;
+    auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
+    bool IsDbgValueKind = (!DAI || at::getAssignmentInsts(DAI).empty());
+    DebugVariable Aggregate = GetAggregateVariable(DVI);
+    if (!SeenDefForAggregate.contains(Aggregate)) {
+      bool IsUndef = DVI->isUndef() && IsDbgValueKind;
+      if (!IsUndef) {
+        SeenDefForAggregate.insert(Aggregate);
+      } else if (DAI) {
+        ToBeRemoved.push_back(DAI);
+      }
+    }
+  }
+
+  for (DbgAssignIntrinsic *DAI : ToBeRemoved)
+    DAI->eraseFromParent();
 
   return !ToBeRemoved.empty();
 }
@@ -453,6 +533,8 @@ bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB) {
   // getting (2) out of the way, the foward scan will remove (3) since "x"
   // already is described as having the value V1 at (1).
   MadeChanges |= removeRedundantDbgInstrsUsingBackwardScan(BB);
+  if (BB->isEntryBlock() && getEnableAssignmentTracking())
+    MadeChanges |= remomveUndefDbgAssignsFromEntryBlock(BB);
   MadeChanges |= removeRedundantDbgInstrsUsingForwardScan(BB);
 
   if (MadeChanges)
