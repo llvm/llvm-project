@@ -62,6 +62,10 @@ static_library("LLVMRISCVCodeGen") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "GISel/RISCVCallLowering.cpp",
+    "GISel/RISCVInstructionSelector.cpp",
+    "GISel/RISCVLegalizerInfo.cpp",
+    "GISel/RISCVRegisterBankInfo.cpp",
     "RISCVAsmPrinter.cpp",
     "RISCVCallLowering.cpp",
     "RISCVCodeGenPrepare.cpp",
