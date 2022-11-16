@@ -22,8 +22,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
     return OS << S.declaration().getDeclKindName();
   case Symbol::Macro:
     return OS << S.macro().Name;
-  case Symbol::Standard:
-    return OS << S.standard().scope() << S.standard().name();
   }
   llvm_unreachable("Unhandled Symbol kind");
 }
