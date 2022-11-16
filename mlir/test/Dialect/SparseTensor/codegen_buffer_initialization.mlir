@@ -17,7 +17,6 @@
 //       CHECK: linalg.fill ins(%[[C0]] : index) outs(%[[T4]] : memref<16xindex>)
 //       CHECK: %[[T6:.*]] = memref.alloc() : memref<16xf64>
 //       CHECK: %[[T7:.*]] = memref.cast %[[T6]] : memref<16xf64> to memref<?xf64>
-//       CHECK: linalg.fill ins(%{{.*}} : f64) outs(%[[T6]] : memref<16xf64>)
 //       CHECK: linalg.fill ins(%[[C0]] : index) outs(%[[T1]] : memref<3xindex>)
 //       CHECK: memref.store %[[A]], %[[T0]][%[[C0]]] : memref<1xindex>
 //       CHECK: %[[P0:.*]] = sparse_tensor.push_back %[[T1]], %[[T3]]
