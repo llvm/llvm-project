@@ -118,12 +118,32 @@ void LoongArchFrameLowering::determineFrameLayout(MachineFunction &MF) const {
   MFI.setStackSize(FrameSize);
 }
 
+static uint64_t estimateFunctionSizeInBytes(const LoongArchInstrInfo *TII,
+                                            const MachineFunction &MF) {
+  uint64_t FuncSize = 0;
+  for (auto &MBB : MF)
+    for (auto &MI : MBB)
+      FuncSize += TII->getInstSizeInBytes(MI);
+  return FuncSize;
+}
+
 void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   const LoongArchRegisterInfo *RI = STI.getRegisterInfo();
   const TargetRegisterClass &RC = LoongArch::GPRRegClass;
+  const LoongArchInstrInfo *TII = STI.getInstrInfo();
+  LoongArchMachineFunctionInfo *LAFI =
+      MF.getInfo<LoongArchMachineFunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
+  // Far branches beyond 27-bit offset require a spill slot for scratch register.
+  if (!isInt<27>(estimateFunctionSizeInBytes(TII, MF))) {
+    int FI = MFI.CreateStackObject(RI->getSpillSize(RC), RI->getSpillAlign(RC),
+                                   false);
+    RS->addScavengingFrameIndex(FI);
+    if (LAFI->getBranchRelaxationSpillFrameIndex() == -1)
+      LAFI->setBranchRelaxationSpillFrameIndex(FI);
+  }
   // estimateStackSize has been observed to under-estimate the final stack
   // size, so give ourselves wiggle-room by checking for stack size
   // representable an 11-bit signed field rather than 12-bits.
