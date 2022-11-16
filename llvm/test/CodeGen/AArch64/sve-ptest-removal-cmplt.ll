@@ -37,7 +37,8 @@ define i32 @cmplt_wide_nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <v
 define i32 @cmplt_wide_nxv8i16(<vscale x 16 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: cmplt_wide_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmplt p0.h, p0/z, z0.h, z1.d
+; CHECK-NEXT:    cmplt p1.h, p0/z, z0.h, z1.d
+; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %pg)
@@ -51,7 +52,8 @@ define i32 @cmplt_wide_nxv8i16(<vscale x 16 x i1> %pg, <vscale x 8 x i16> %a, <v
 define i32 @cmplt_wide_nxv4i32(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: cmplt_wide_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmplt p0.s, p0/z, z0.s, z1.d
+; CHECK-NEXT:    cmplt p1.s, p0/z, z0.s, z1.d
+; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
