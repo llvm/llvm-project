@@ -95,9 +95,10 @@ static Value genIndexAndValueForDense(OpBuilder &builder, Location loc,
 //===----------------------------------------------------------------------===//
 
 SparseTensorLoopEmitter::SparseTensorLoopEmitter(ValueRange tensors,
+                                                 StringAttr loopTag,
                                                  bool hasOutput,
                                                  bool isSparseOut)
-    : hasOutput(hasOutput), isSparseOut(isSparseOut),
+    : loopTag(loopTag), hasOutput(hasOutput), isSparseOut(isSparseOut),
       tensors(tensors.begin(), tensors.end()), dimTypes(tensors.size()),
       pidxs(tensors.size()), coord(tensors.size()), highs(tensors.size()),
       ptrBuffer(tensors.size()), idxBuffer(tensors.size()),
@@ -284,7 +285,7 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
   // NOTE: we can also prepares for next dim here in advance
   // Push the loop into stack
   loopStack.emplace_back(ArrayRef<size_t>(tid), ArrayRef<size_t>(dim), loop,
-                         coord[tid][dim]);
+                         coord[tid][dim], loopTag);
   // Emit extra locals.
   emitExtraLocalsForTensorsAtDenseDims(builder, loc, extraTids, extraDims);
 
@@ -386,7 +387,7 @@ Operation *SparseTensorLoopEmitter::enterCoIterationOverTensorsAtDims(
     // NOTE: we can also prepares for next dim here in advance
   }
   // Sets up the loop stack.
-  loopStack.emplace_back(tids, dims, whileOp, min);
+  loopStack.emplace_back(tids, dims, whileOp, min, loopTag);
   assert(loopStack.size() == loopSeqStack.size());
 
   // Emits extra locals

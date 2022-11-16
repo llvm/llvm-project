@@ -53,11 +53,15 @@ enum Reduction { kNoReduc, kSum, kProduct, kAnd, kOr, kXor, kCustom };
 
 // Code generation.
 struct CodeGen {
-  CodeGen(SparsificationOptions o, ValueRange tensors, unsigned numTensors,
-          unsigned numLoops, OpOperand *op, unsigned nest,
+  CodeGen(SparsificationOptions o, MLIRContext *context, ValueRange tensors,
+          unsigned numTensors, unsigned numLoops, OpOperand *op, unsigned nest,
           std::vector<unsigned> &ts)
-      : options(o), loopEmitter(tensors, /*hasOutput=*/true,
-                                /*isSparseOut=*/op != nullptr),
+      : options(o),
+        loopEmitter(
+            tensors,
+            StringAttr::get(context, linalg::GenericOp::getOperationName()),
+            /*hasOutput=*/true,
+            /*isSparseOut=*/op != nullptr),
         sparseOut(op), outerParNest(nest), topSort(ts) {
     if (op)
       insChain = op->get();
@@ -670,8 +674,8 @@ static void genTensorStore(Merger &merger, CodeGen &codegen, OpBuilder &builder,
       // Select operation insertion.
       Value insChain = codegen.insChain;
       assert(insChain);
-      scf::IfOp ifOp = builder.create<scf::IfOp>(
-          loc, insChain.getType(), rhs, /*else=*/true);
+      scf::IfOp ifOp = builder.create<scf::IfOp>(loc, insChain.getType(), rhs,
+                                                 /*else=*/true);
       builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
       // Existing value was preserved to be used here.
       assert(merger.exp(exp).val);
@@ -1372,8 +1376,8 @@ public:
       tensors.push_back(t.get());
 
     // Recursively generates code if admissible.
-    CodeGen codegen(options, tensors, numTensors, numLoops, sparseOut,
-                    outerParNest, topSort);
+    CodeGen codegen(options, op.getContext(), tensors, numTensors, numLoops,
+                    sparseOut, outerParNest, topSort);
     genBuffers(merger, codegen, rewriter, op);
     genStmt(merger, codegen, rewriter, op, exp, 0);
     genResult(merger, codegen, rewriter, op);
