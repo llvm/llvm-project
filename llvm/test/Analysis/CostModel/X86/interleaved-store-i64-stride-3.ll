@@ -20,10 +20,10 @@ define void @test() {
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v2, ptr %out2, align 8
-; AVX1:  LV: Found an estimated cost of 17 for VF 2 For instruction: store i64 %v2, ptr %out2, align 8
-; AVX1:  LV: Found an estimated cost of 36 for VF 4 For instruction: store i64 %v2, ptr %out2, align 8
-; AVX1:  LV: Found an estimated cost of 72 for VF 8 For instruction: store i64 %v2, ptr %out2, align 8
-; AVX1:  LV: Found an estimated cost of 144 for VF 16 For instruction: store i64 %v2, ptr %out2, align 8
+; AVX1:  LV: Found an estimated cost of 16 for VF 2 For instruction: store i64 %v2, ptr %out2, align 8
+; AVX1:  LV: Found an estimated cost of 33 for VF 4 For instruction: store i64 %v2, ptr %out2, align 8
+; AVX1:  LV: Found an estimated cost of 66 for VF 8 For instruction: store i64 %v2, ptr %out2, align 8
+; AVX1:  LV: Found an estimated cost of 132 for VF 16 For instruction: store i64 %v2, ptr %out2, align 8
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v2, ptr %out2, align 8
