@@ -562,7 +562,7 @@ endif
 #----------------------------------------------------------------------
 ifeq "$(SWIFT_OBJC_INTEROP)" "1"
         ifeq "$(OS)" "Darwin"
-		SWIFTFLAGS += -framework Foundation -framework CoreGraphics
+		SWIFTFLAGS += -link-objc-runtime -framework Foundation -framework CoreGraphics
 		LDFLAGS += -lswiftObjectiveC -lswiftFoundation -framework Foundation -framework CoreGraphics
         else
                 # CFLAGS_EXTRAS is used via "dotest.py -E" to pass the -I and -L paths
