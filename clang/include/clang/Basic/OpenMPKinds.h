@@ -138,6 +138,13 @@ enum OpenMPAtClauseKind {
   OMPC_AT_unknown
 };
 
+/// OpenMP attributes for 'severity' clause.
+enum OpenMPSeverityClauseKind {
+#define OPENMP_SEVERITY_KIND(Name) OMPC_SEVERITY_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_SEVERITY_unknown
+};
+
 /// OpenMP device type for 'device_type' clause.
 enum OpenMPDeviceType {
 #define OPENMP_DEVICE_TYPE_KIND(Name) \

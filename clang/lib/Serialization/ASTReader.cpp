@@ -9952,6 +9952,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_at:
     C = new (Context) OMPAtClause();
     break;
+  case llvm::omp::OMPC_severity:
+    C = new (Context) OMPSeverityClause();
+    break;
   case llvm::omp::OMPC_private:
     C = OMPPrivateClause::CreateEmpty(Context, Record.readInt());
     break;
@@ -10358,6 +10361,12 @@ void OMPClauseReader::VisitOMPAtClause(OMPAtClause *C) {
   C->setAtKind(static_cast<OpenMPAtClauseKind>(Record.readInt()));
   C->setLParenLoc(Record.readSourceLocation());
   C->setAtKindKwLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPSeverityClause(OMPSeverityClause *C) {
+  C->setSeverityKind(static_cast<OpenMPSeverityClauseKind>(Record.readInt()));
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setSeverityKindKwLoc(Record.readSourceLocation());
 }
 
 void OMPClauseReader::VisitOMPPrivateClause(OMPPrivateClause *C) {

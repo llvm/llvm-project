@@ -2445,6 +2445,8 @@ void OMPClauseEnqueue::VisitOMPAtomicDefaultMemOrderClause(
 
 void OMPClauseEnqueue::VisitOMPAtClause(const OMPAtClause *) {}
 
+void OMPClauseEnqueue::VisitOMPSeverityClause(const OMPSeverityClause *) {}
+
 void OMPClauseEnqueue::VisitOMPDeviceClause(const OMPDeviceClause *C) {
   Visitor->AddStmt(C->getDevice());
 }

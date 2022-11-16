@@ -1642,6 +1642,86 @@ public:
   }
 };
 
+/// This represents 'severity' clause in the '#pragma omp error' directive
+///
+/// \code
+/// #pragma omp error severity(fatal)
+/// \endcode
+/// In this example directive '#pragma omp error' has simple
+/// 'severity' clause with kind 'fatal'.
+class OMPSeverityClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('
+  SourceLocation LParenLoc;
+
+  /// A kind of the 'severity' clause.
+  OpenMPSeverityClauseKind Kind = OMPC_SEVERITY_unknown;
+
+  /// Start location of the kind in source code.
+  SourceLocation KindKwLoc;
+
+  /// Set kind of the clause.
+  ///
+  /// \param K Kind of clause.
+  void setSeverityKind(OpenMPSeverityClauseKind K) { Kind = K; }
+
+  /// Set clause kind location.
+  ///
+  /// \param KLoc Kind location.
+  void setSeverityKindKwLoc(SourceLocation KLoc) { KindKwLoc = KLoc; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build 'severity' clause with argument \a A ('fatal' or 'warning').
+  ///
+  /// \param A Argument of the clause ('fatal' or 'warning').
+  /// \param ALoc Starting location of the argument.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPSeverityClause(OpenMPSeverityClauseKind A, SourceLocation ALoc,
+                    SourceLocation StartLoc, SourceLocation LParenLoc,
+                    SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_severity, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Kind(A), KindKwLoc(ALoc) {}
+
+  /// Build an empty clause.
+  OMPSeverityClause()
+      : OMPClause(llvm::omp::OMPC_severity, SourceLocation(),
+                  SourceLocation()) {}
+
+  /// Returns the locaiton of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns kind of the clause.
+  OpenMPSeverityClauseKind getSeverityKind() const { return Kind; }
+
+  /// Returns location of clause kind.
+  SourceLocation getSeverityKindKwLoc() const { return KindKwLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_severity;
+  }
+};
+
 /// This represents 'schedule' clause in the '#pragma omp ...' directive.
 ///
 /// \code
