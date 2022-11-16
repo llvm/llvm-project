@@ -162,3 +162,35 @@ transform.sequence failures(propagate) {
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [12, 9, 1], syncAfterDistribute = false }
 }
+
+// -----
+
+!type = memref<32x32xf32>
+// CHECK-LABEL: func.func @saxpy2d_singleloop(
+// CHECK-SAME:    %[[ARGX:[0-9a-z]+]]: memref<32x32xf32>
+// CHECK-SAME:    %[[ARGY:[0-9a-z]+]]: memref<32x32xf32>
+func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) -> !type {
+  %c32 = arith.constant 32 : index
+  %one = arith.constant 1 : index
+  %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
+            threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
+  {
+//      CHECK:   %[[TIDX:.*]] = gpu.thread_id  x
+//      CHECK:   memref.load %[[ARGX]][%[[TIDX]], %[[TIDX]]]
+//      CHECK:   memref.load %[[ARGY]][%[[TIDX]], %[[TIDX]]]
+    scf.foreach_thread (%i) in (%c32) {
+        %4 = memref.load %x[%i, %i] : !type
+        %5 = memref.load %y[%i, %i] : !type
+        %6 = arith.mulf %4, %5 : f32
+        memref.store %6, %y[%i, %i] : !type
+     }  { mapping = [#gpu.thread<x>] }
+    gpu.terminator
+  }
+  return %y : !type
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !pdl.operation):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [32]}
+}
