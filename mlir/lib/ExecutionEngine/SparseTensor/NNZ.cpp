@@ -21,27 +21,21 @@
 using namespace mlir::sparse_tensor;
 
 //===----------------------------------------------------------------------===//
-/// Allocate the statistics structure for the desired sizes and
-/// sparsity (in the target tensor's storage-order).  This constructor
-/// does not actually populate the statistics, however; for that see
-/// `initialize`.
-///
-/// Precondition: `dimSizes` must not contain zeros.
-SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &dimSizes,
-                                 const std::vector<DimLevelType> &sparsity)
-    : dimSizes(dimSizes), dimTypes(sparsity), nnz(getRank()) {
-  assert(dimSizes.size() == dimTypes.size() && "Rank mismatch");
+SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &lvlSizes,
+                                 const std::vector<DimLevelType> &lvlTypes)
+    : lvlSizes(lvlSizes), lvlTypes(lvlTypes), nnz(getLvlRank()) {
+  assert(lvlSizes.size() == lvlTypes.size() && "Rank mismatch");
   bool alreadyCompressed = false;
   (void)alreadyCompressed;
-  uint64_t sz = 1; // the product of all `dimSizes` strictly less than `r`.
-  for (uint64_t rank = getRank(), r = 0; r < rank; r++) {
-    const DimLevelType dlt = sparsity[r];
+  uint64_t sz = 1; // the product of all `lvlSizes` strictly less than `l`.
+  for (uint64_t l = 0, lvlrank = getLvlRank(); l < lvlrank; ++l) {
+    const DimLevelType dlt = lvlTypes[l];
     if (isCompressedDLT(dlt)) {
       if (alreadyCompressed)
         MLIR_SPARSETENSOR_FATAL(
-            "Multiple compressed layers not currently supported");
+            "Multiple compressed levels not currently supported");
       alreadyCompressed = true;
-      nnz[r].resize(sz, 0); // Both allocate and zero-initialize.
+      nnz[l].resize(sz, 0); // Both allocate and zero-initialize.
     } else if (isDenseDLT(dlt)) {
       if (alreadyCompressed)
         MLIR_SPARSETENSOR_FATAL(
@@ -52,51 +46,41 @@ SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &dimSizes,
       // when adding support for multiple compressed dimensions or
       // for dense-after-compressed.
     } else {
-      MLIR_SPARSETENSOR_FATAL("unsupported dimension level type: %d\n",
+      MLIR_SPARSETENSOR_FATAL("unsupported level type: %d\n",
                               static_cast<uint8_t>(dlt));
     }
-    sz = detail::checkedMul(sz, dimSizes[r]);
+    sz = detail::checkedMul(sz, lvlSizes[l]);
   }
 }
 
-/// Lexicographically enumerates all indicies for dimensions strictly
-/// less than `stopDim`, and passes their nnz statistic to the callback.
-/// Since our use-case only requires the statistic not the coordinates
-/// themselves, we do not bother to construct those coordinates.
-void SparseTensorNNZ::forallIndices(uint64_t stopDim,
+void SparseTensorNNZ::forallIndices(uint64_t stopLvl,
                                     SparseTensorNNZ::NNZConsumer yield) const {
-  assert(stopDim < getRank() && "Dimension out of bounds");
-  assert(isCompressedDLT(dimTypes[stopDim]) &&
-         "Cannot look up non-compressed dimensions");
-  forallIndices(yield, stopDim, 0, 0);
+  assert(stopLvl < getLvlRank() && "Level out of bounds");
+  assert(isCompressedDLT(lvlTypes[stopLvl]) &&
+         "Cannot look up non-compressed levels");
+  forallIndices(yield, stopLvl, 0, 0);
 }
 
-/// Adds a new element (i.e., increment its statistics).  We use
-/// a method rather than inlining into the lambda in `initialize`,
-/// to avoid spurious templating over `V`.  And this method is private
-/// to avoid needing to re-assert validity of `ind` (which is guaranteed
-/// by `forallElements`).
-void SparseTensorNNZ::add(const std::vector<uint64_t> &ind) {
+void SparseTensorNNZ::add(const std::vector<uint64_t> &lvlInd) {
   uint64_t parentPos = 0;
-  for (uint64_t rank = getRank(), r = 0; r < rank; ++r) {
-    if (isCompressedDLT(dimTypes[r]))
-      nnz[r][parentPos]++;
-    parentPos = parentPos * dimSizes[r] + ind[r];
+  for (uint64_t l = 0, lvlrank = getLvlRank(); l < lvlrank; ++l) {
+    if (isCompressedDLT(lvlTypes[l]))
+      nnz[l][parentPos]++;
+    parentPos = parentPos * lvlSizes[l] + lvlInd[l];
   }
 }
 
-/// Recursive component of the public `forallIndices`.
 void SparseTensorNNZ::forallIndices(SparseTensorNNZ::NNZConsumer yield,
-                                    uint64_t stopDim, uint64_t parentPos,
-                                    uint64_t d) const {
-  assert(d <= stopDim);
-  if (d == stopDim) {
-    assert(parentPos < nnz[d].size() && "Cursor is out of range");
-    yield(nnz[d][parentPos]);
+                                    uint64_t stopLvl, uint64_t parentPos,
+                                    uint64_t l) const {
+  assert(l <= stopLvl);
+  if (l == stopLvl) {
+    assert(parentPos < nnz[l].size() && "Cursor is out of range");
+    yield(nnz[l][parentPos]);
   } else {
-    const uint64_t sz = dimSizes[d];
+    const uint64_t sz = lvlSizes[l];
     const uint64_t pstart = parentPos * sz;
-    for (uint64_t i = 0; i < sz; i++)
-      forallIndices(yield, stopDim, pstart + i, d + 1);
+    for (uint64_t i = 0; i < sz; ++i)
+      forallIndices(yield, stopLvl, pstart + i, l + 1);
   }
 }

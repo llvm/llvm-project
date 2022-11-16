@@ -16,10 +16,10 @@ define dso_local signext i32 @test1(ptr %b) local_unnamed_addr  {
 ; CHECK-PWR9-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR9-NEXT:    .cfi_offset r30, -16
 ; CHECK-PWR9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-PWR9-NEXT:    std r0, 16(r1)
 ; CHECK-PWR9-NEXT:    stdu r1, -48(r1)
 ; CHECK-PWR9-NEXT:    mr r30, r3
 ; CHECK-PWR9-NEXT:    addis r3, r2, a@toc@ha
+; CHECK-PWR9-NEXT:    std r0, 64(r1)
 ; CHECK-PWR9-NEXT:    lwa r3, a@toc@l(r3)
 ; CHECK-PWR9-NEXT:    cmpld r3, r30
 ; CHECK-PWR9-NEXT:    # implicit-def: $r3
@@ -41,8 +41,8 @@ define dso_local signext i32 @test1(ptr %b) local_unnamed_addr  {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -128(r1)
+; CHECK-NEXT:    std r0, 144(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset r30, -16
@@ -95,10 +95,10 @@ define dso_local signext i32 @test2(ptr %p1) local_unnamed_addr  {
 ; CHECK-PWR9-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR9-NEXT:    .cfi_offset r30, -16
 ; CHECK-PWR9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-PWR9-NEXT:    std r0, 16(r1)
 ; CHECK-PWR9-NEXT:    stdu r1, -48(r1)
 ; CHECK-PWR9-NEXT:    mr r30, r3
 ; CHECK-PWR9-NEXT:    li r3, 0
+; CHECK-PWR9-NEXT:    std r0, 64(r1)
 ; CHECK-PWR9-NEXT:    cmpldi r30, 0
 ; CHECK-PWR9-NEXT:    beq cr0, .LBB1_3
 ; CHECK-PWR9-NEXT:  # %bb.1: # %if.end
@@ -122,8 +122,8 @@ define dso_local signext i32 @test2(ptr %p1) local_unnamed_addr  {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -128(r1)
+; CHECK-NEXT:    std r0, 144(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset r30, -16
@@ -181,8 +181,8 @@ define dso_local ptr @test3(ptr nocapture %p1, i8 zeroext %p2) local_unnamed_add
 ; CHECK-PWR9-NEXT:    .cfi_offset r30, -16
 ; CHECK-PWR9-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-PWR9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-PWR9-NEXT:    std r0, 16(r1)
 ; CHECK-PWR9-NEXT:    stdu r1, -64(r1)
+; CHECK-PWR9-NEXT:    std r0, 80(r1)
 ; CHECK-PWR9-NEXT:    ld r30, 0(r3)
 ; CHECK-PWR9-NEXT:    cmpldi r30, 0
 ; CHECK-PWR9-NEXT:    beq cr0, .LBB2_2
@@ -204,8 +204,8 @@ define dso_local ptr @test3(ptr nocapture %p1, i8 zeroext %p2) local_unnamed_add
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -144(r1)
+; CHECK-NEXT:    std r0, 160(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset r29, -24

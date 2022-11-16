@@ -587,6 +587,45 @@ func.func @shrui_vector(%a : vector<3xi64>, %b : vector<3xi64>) -> vector<3xi64>
     return %m : vector<3xi64>
 }
 
+// CHECK-LABEL: func.func @shrsi_scalar
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<2xi32>, [[ARG1:%.+]]: vector<2xi32>) -> vector<2xi32>
+// CHECK-NEXT:    [[HIGH0:%.+]]    = vector.extract [[ARG0]][1] : vector<2xi32>
+// CHECK-NEXT:    [[LOW1:%.+]]     = vector.extract [[ARG1]][0] : vector<2xi32>
+// CHECK-NEXT:    [[CST0:%.+]]     = arith.constant 0 : i32
+// CHECK-NEXT:    [[NEG:%.+]]      = arith.cmpi slt, [[HIGH0]], [[CST0]] : i32
+// CHECK-NEXT:    [[NEGEXT:%.+]]   = arith.extsi [[NEG]] : i1 to i32
+// CHECK:         [[CST64:%.+]]    = arith.constant 64 : i32
+// CHECK-NEXT:    [[SIGNBITS:%.+]] = arith.subi [[CST64]], [[LOW1]] : i32
+// CHECK:         arith.shli
+// CHECK:         arith.shrui
+// CHECK:         arith.shli
+// CHECK:         arith.shli
+// CHECK:         arith.shrui
+// CHECK:         arith.shrui
+// CHECK:         arith.shli
+// CHECK:         arith.shrui
+// CHECK:         return {{%.+}} : vector<2xi32>
+func.func @shrsi_scalar(%a : i64, %b : i64) -> i64 {
+    %c = arith.shrsi %a, %b : i64
+    return %c : i64
+}
+
+// CHECK-LABEL: func.func @shrsi_vector
+// CHECK-SAME:    ({{%.+}}: vector<3x2xi32>, {{%.+}}: vector<3x2xi32>) -> vector<3x2xi32>
+// CHECK:         arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shli {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         arith.shrui {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         return {{%.+}} : vector<3x2xi32>
+func.func @shrsi_vector(%a : vector<3xi64>, %b : vector<3xi64>) -> vector<3xi64> {
+    %m = arith.shrsi %a, %b : vector<3xi64>
+    return %m : vector<3xi64>
+}
+
 // CHECK-LABEL: func @andi_scalar_a_b
 // CHECK-SAME:    ([[ARG0:%.+]]: vector<2xi32>, [[ARG1:%.+]]: vector<2xi32>) -> vector<2xi32>
 // CHECK-NEXT:    [[LOW0:%.+]]   = vector.extract [[ARG0]][0] : vector<2xi32>

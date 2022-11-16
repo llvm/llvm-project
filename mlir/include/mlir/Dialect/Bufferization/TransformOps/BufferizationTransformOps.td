@@ -9,6 +9,7 @@
 #ifndef BUFFERIZATION_TRANSFORM_OPS
 #define BUFFERIZATION_TRANSFORM_OPS
 
+include "mlir/Dialect/Bufferization/IR/BufferizationEnums.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
@@ -42,6 +43,7 @@ def OneShotBufferizeOp
 
   let arguments = (
       ins PDL_Operation:$target,
+      OptionalAttr<LayoutMapOption>:$function_boundary_type_conversion,
       DefaultValuedAttr<BoolAttr, "false">:$allow_return_allocs,
       DefaultValuedAttr<BoolAttr, "false">:$allow_unknown_ops,
       DefaultValuedAttr<BoolAttr, "false">:$bufferize_function_boundaries,
@@ -52,7 +54,10 @@ def OneShotBufferizeOp
 
   let results = (outs);
 
-  let assemblyFormat = "$target attr-dict";
+  let assemblyFormat = [{
+    (`layout` `{` $function_boundary_type_conversion^ `}`)?
+    $target attr-dict
+  }];
 }
 
 #endif // BUFFERIZATION_TRANSFORM_OPS

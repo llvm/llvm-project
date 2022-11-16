@@ -355,8 +355,8 @@ define fp128 @testMixedAggregate_03([4 x i128] %sa.coerce) {
 ; CHECK-P8-LABEL: testMixedAggregate_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -96(r1)
+; CHECK-P8-NEXT:    std r0, 112(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
@@ -596,16 +596,16 @@ define fp128 @sum_float128(i32 signext %count, ...) {
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -64(r1)
 ; CHECK-P8-NEXT:    addis r11, r2, .LCPI17_0@toc@ha
 ; CHECK-P8-NEXT:    cmpwi r3, 0
+; CHECK-P8-NEXT:    std r0, 80(r1)
 ; CHECK-P8-NEXT:    std r4, 104(r1)
 ; CHECK-P8-NEXT:    std r5, 112(r1)
 ; CHECK-P8-NEXT:    std r6, 120(r1)
-; CHECK-P8-NEXT:    std r7, 128(r1)
 ; CHECK-P8-NEXT:    addi r11, r11, .LCPI17_0@toc@l
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r11
+; CHECK-P8-NEXT:    std r7, 128(r1)
 ; CHECK-P8-NEXT:    std r8, 136(r1)
 ; CHECK-P8-NEXT:    std r9, 144(r1)
 ; CHECK-P8-NEXT:    std r10, 152(r1)

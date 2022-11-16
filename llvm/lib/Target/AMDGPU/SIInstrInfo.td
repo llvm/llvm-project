@@ -624,12 +624,6 @@ def atomic_store_64_local_m0 : PatFrag<(ops node:$ptr, node:$val),
 } // End let IsAtomic = 1, AddressSpaces = StoreAddress_local.AddrSpaces
 
 
-def si_setcc_uniform : PatFrag <
-  (ops node:$lhs, node:$rhs, node:$cond),
-  (setcc node:$lhs, node:$rhs, node:$cond), [{
-  return !N->isDivergent();
-}]>;
-
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for a16 loads and stores with 3 components.
 // v3f16/v3i16 is widened to v4f16/v4i16, so we need to match on the memory
@@ -1266,7 +1260,6 @@ def Scope : NamedOperandU32<"Scope", NamedMatchClass<"Scope">>;
 def TH : NamedOperandU32<"TH", NamedMatchClass<"TH">>;
 
 def TFE : NamedOperandBit<"TFE", NamedMatchClass<"TFE">>;
-def TFE_0 : NamedOperandBit_0<"TFE", NamedMatchClass<"TFE">>;
 def SWZ : NamedOperandBit<"SWZ", NamedMatchClass<"SWZ">>;
 def SWZ_0 : NamedOperandBit_0<"SWZ", NamedMatchClass<"SWZ">>;
 def UNorm : NamedOperandBit<"UNorm", NamedMatchClass<"UNorm">>;

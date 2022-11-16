@@ -3866,7 +3866,7 @@ CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   Value *ThreadId = getOrCreateThreadID(Ident);
   Constant *ThreadPrivateCache =
-      getOrCreateOMPInternalVariable(Int8PtrPtr, Name);
+      getOrCreateInternalVariable(Int8PtrPtr, Name.str());
   llvm::Value *Args[] = {Ident, ThreadId, Pointer, Size, ThreadPrivateCache};
 
   Function *Fn =
@@ -3963,18 +3963,10 @@ std::string OpenMPIRBuilder::getNameWithSeparators(ArrayRef<StringRef> Parts,
   return OS.str().str();
 }
 
-Constant *OpenMPIRBuilder::getOrCreateOMPInternalVariable(
-    llvm::Type *Ty, const llvm::Twine &Name, unsigned AddressSpace) {
-  // TODO: Replace the twine arg with stringref to get rid of the conversion
-  // logic. However This is taken from current implementation in clang as is.
-  // Since this method is used in many places exclusively for OMP internal use
-  // we will keep it as is for temporarily until we move all users to the
-  // builder and then, if possible, fix it everywhere in one go.
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Out << Name;
-  StringRef RuntimeName = Out.str();
-  auto &Elem = *InternalVars.try_emplace(RuntimeName, nullptr).first;
+GlobalVariable *
+OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
+                                             unsigned AddressSpace) {
+  auto &Elem = *InternalVars.try_emplace(Name, nullptr).first;
   if (Elem.second) {
     assert(cast<PointerType>(Elem.second->getType())
                ->isOpaqueOrPointeeTypeMatches(Ty) &&
@@ -3984,20 +3976,19 @@ Constant *OpenMPIRBuilder::getOrCreateOMPInternalVariable(
     // variable for possibly changing that to internal or private, or maybe
     // create different versions of the function for different OMP internal
     // variables.
-    Elem.second = new llvm::GlobalVariable(
-        M, Ty, /*IsConstant*/ false, llvm::GlobalValue::CommonLinkage,
-        llvm::Constant::getNullValue(Ty), Elem.first(),
-        /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
-        AddressSpace);
+    Elem.second = new GlobalVariable(
+        M, Ty, /*IsConstant=*/false, GlobalValue::CommonLinkage,
+        Constant::getNullValue(Ty), Elem.first(),
+        /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal, AddressSpace);
   }
 
-  return Elem.second;
+  return cast<GlobalVariable>(&*Elem.second);
 }
 
 Value *OpenMPIRBuilder::getOMPCriticalRegionLock(StringRef CriticalName) {
   std::string Prefix = Twine("gomp_critical_user_", CriticalName).str();
   std::string Name = getNameWithSeparators({Prefix, "var"}, ".", ".");
-  return getOrCreateOMPInternalVariable(KmpCriticalNameTy, Name);
+  return getOrCreateInternalVariable(KmpCriticalNameTy, Name);
 }
 
 GlobalVariable *

@@ -1785,8 +1785,10 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
                        arg->getSpelling());
 
-    for (const Arg *arg : args.filtered(OPT_mllvm))
+    for (const Arg *arg : args.filtered(OPT_mllvm)) {
       parseClangOption(arg->getValue(), arg->getSpelling());
+      config->mllvmOpts.emplace_back(arg->getValue());
+    }
 
     createSyntheticSections();
     createSyntheticSymbols();

@@ -1221,7 +1221,7 @@ class SOPC_Base <RegisterOperand rc0, RegisterOperand rc1,
 class SOPC_Helper <RegisterOperand rc, ValueType vt,
                     string opName, SDPatternOperator cond> : SOPC_Base <
   rc, rc, opName,
-  [(set SCC, (si_setcc_uniform vt:$src0, vt:$src1, cond))] > {
+  [(set SCC, (UniformTernaryFrag<setcc> vt:$src0, vt:$src1, cond))] > {
 }
 
 class SOPC_CMP_32<string opName,

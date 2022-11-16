@@ -18,6 +18,7 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -825,7 +826,7 @@ static LogicalResult hoistOpsBetween(scf::ForOp outer, scf::ForOp inner) {
     }
     // Skip if op has side effects.
     // TODO: loads to immutable memory regions are ok.
-    if (!MemoryEffectOpInterface::hasNoEffect(&op)) {
+    if (!isMemoryEffectFree(&op)) {
       status = failure();
       continue;
     }

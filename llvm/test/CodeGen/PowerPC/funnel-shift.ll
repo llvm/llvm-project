@@ -234,8 +234,8 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_32-LABEL: fshl_i37:
 ; CHECK32_32:       # %bb.0:
 ; CHECK32_32-NEXT:    mflr 0
-; CHECK32_32-NEXT:    stw 0, 4(1)
 ; CHECK32_32-NEXT:    stwu 1, -32(1)
+; CHECK32_32-NEXT:    stw 0, 36(1)
 ; CHECK32_32-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK32_32-NEXT:    .cfi_offset lr, 4
 ; CHECK32_32-NEXT:    .cfi_offset r27, -20
@@ -289,8 +289,8 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_64-LABEL: fshl_i37:
 ; CHECK32_64:       # %bb.0:
 ; CHECK32_64-NEXT:    mflr 0
-; CHECK32_64-NEXT:    stw 0, 4(1)
 ; CHECK32_64-NEXT:    stwu 1, -32(1)
+; CHECK32_64-NEXT:    stw 0, 36(1)
 ; CHECK32_64-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK32_64-NEXT:    .cfi_offset lr, 4
 ; CHECK32_64-NEXT:    .cfi_offset r27, -20
@@ -534,8 +534,8 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_32-LABEL: fshr_i37:
 ; CHECK32_32:       # %bb.0:
 ; CHECK32_32-NEXT:    mflr 0
-; CHECK32_32-NEXT:    stw 0, 4(1)
 ; CHECK32_32-NEXT:    stwu 1, -32(1)
+; CHECK32_32-NEXT:    stw 0, 36(1)
 ; CHECK32_32-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK32_32-NEXT:    .cfi_offset lr, 4
 ; CHECK32_32-NEXT:    .cfi_offset r27, -20
@@ -590,8 +590,8 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_64-LABEL: fshr_i37:
 ; CHECK32_64:       # %bb.0:
 ; CHECK32_64-NEXT:    mflr 0
-; CHECK32_64-NEXT:    stw 0, 4(1)
 ; CHECK32_64-NEXT:    stwu 1, -32(1)
+; CHECK32_64-NEXT:    stw 0, 36(1)
 ; CHECK32_64-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK32_64-NEXT:    .cfi_offset lr, 4
 ; CHECK32_64-NEXT:    .cfi_offset r27, -20

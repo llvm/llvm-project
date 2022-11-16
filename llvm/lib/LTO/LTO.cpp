@@ -911,9 +911,25 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
 Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                       const SymbolResolution *&ResI,
                       const SymbolResolution *ResE) {
+  const SymbolResolution *ResITmp = ResI;
+  for (const InputFile::Symbol &Sym : Syms) {
+    assert(ResITmp != ResE);
+    SymbolResolution Res = *ResITmp++;
+
+    if (!Sym.getIRName().empty()) {
+      auto GUID = GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
+          Sym.getIRName(), GlobalValue::ExternalLinkage, ""));
+      if (Res.Prevailing)
+        ThinLTO.PrevailingModuleForGUID[GUID] = BM.getModuleIdentifier();
+    }
+  }
+
   if (Error Err =
           BM.readSummary(ThinLTO.CombinedIndex, BM.getModuleIdentifier(),
-                         ThinLTO.ModuleMap.size()))
+                         ThinLTO.ModuleMap.size(), [&](GlobalValue::GUID GUID) {
+                           return ThinLTO.PrevailingModuleForGUID[GUID] ==
+                                  BM.getModuleIdentifier();
+                         }))
     return Err;
 
   for (const InputFile::Symbol &Sym : Syms) {
@@ -924,7 +940,8 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
       auto GUID = GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
           Sym.getIRName(), GlobalValue::ExternalLinkage, ""));
       if (Res.Prevailing) {
-        ThinLTO.PrevailingModuleForGUID[GUID] = BM.getModuleIdentifier();
+        assert(ThinLTO.PrevailingModuleForGUID[GUID] ==
+               BM.getModuleIdentifier());
 
         // For linker redefined symbols (via --wrap or --defsym) we want to
         // switch the linkage to `weak` to prevent IPOs from happening.
@@ -1454,6 +1471,7 @@ ThinBackend lto::createWriteIndexesThinBackend(
 
 Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
                       const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
+  ThinLTO.CombinedIndex.releaseTemporaryMemory();
   timeTraceProfilerBegin("ThinLink", StringRef(""));
   auto TimeTraceScopeExit = llvm::make_scope_exit([]() {
     if (llvm::timeTraceProfilerEnabled())

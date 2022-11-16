@@ -12,7 +12,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     $sgpr0 = S_MOV_B32 0
 ...
 # GCN-LABEL: name: vmem_write_exec
@@ -27,7 +27,7 @@ body:             |
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
-    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr0, renamable $vgpr1, renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr0, renamable $vgpr1, renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     $exec_lo = S_MOV_B32 -1
 ...
 # GCN-LABEL: name: vmem_write_sgpr_chain
@@ -46,7 +46,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     $sgpr5 = S_MOV_B32 $sgpr0
     $sgpr6 = S_MOV_B32 $sgpr1
     $sgpr7 = S_MOV_B32 $sgpr2
@@ -64,7 +64,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
 ...
 # GCN-LABEL: name: vmem_snop_write_sgpr
@@ -79,7 +79,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     S_NOP 0
     $sgpr0 = S_MOV_B32 0
 ...
@@ -94,7 +94,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     $vgpr2 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     $sgpr0 = S_MOV_B32 0
 ...
@@ -109,7 +109,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     S_WAITCNT 0
     $sgpr0 = S_MOV_B32 0
 ...
@@ -125,7 +125,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     S_WAITCNT 1
     $sgpr0 = S_MOV_B32 0
 ...
@@ -140,7 +140,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     $exec = S_MOV_B64 7
 ...
 # GCN-LABEL: name: vmem_write_exec_expread
@@ -153,7 +153,7 @@ body:             |
   bb.0:
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $exec_lo, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $exec_lo, 0, 0, 0, implicit $exec
     $exec = S_MOV_B64 7
 ...
 # GCN-LABEL: name: ds_write_m0
@@ -182,7 +182,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
 
   bb.1:
     $sgpr0 = S_MOV_B32 0
@@ -200,7 +200,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -220,7 +220,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     S_BRANCH %bb.2
 
   bb.1:
@@ -248,7 +248,7 @@ body:             |
     $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     S_CBRANCH_SCC0 %bb.2, implicit $scc
     S_BRANCH %bb.1
 
@@ -276,7 +276,7 @@ body:             |
     $sgpr0 = S_MOV_B32 0
 
   bb.1:
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     S_BRANCH %bb.0
 ...
 # GCN-LABEL: name: ds_write_exec

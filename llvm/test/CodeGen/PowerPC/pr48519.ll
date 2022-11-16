@@ -10,10 +10,10 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    li r30, 0
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb3
 ; CHECK-NEXT:    #
@@ -83,9 +83,9 @@ define void @julia__hypot_17() #0 {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    li r30, 3
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB1_1: # %bb1
 ; CHECK-NEXT:    #
@@ -148,12 +148,12 @@ define void @func_48786() #0 {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mfocrf r12, 32
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stw r12, 8(r1)
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    ld r3, 0(r3)
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    std r30, 32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    # implicit-def: $x30
+; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    cmpdi r3, 0
 ; CHECK-NEXT:    crnot 4*cr2+lt, eq
 ; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB2_3
@@ -261,11 +261,11 @@ define void @func_48785(half %arg) #0 {
 ; CHECK-NEXT:    std r29, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    fmr f31, f1
 ; CHECK-NEXT:    li r30, 0
 ; CHECK-NEXT:    li r29, 0
+; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB3_1: # %bb1
 ; CHECK-NEXT:    #
