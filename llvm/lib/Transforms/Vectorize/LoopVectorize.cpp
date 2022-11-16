@@ -1050,8 +1050,8 @@ void InnerLoopVectorizer::collectPoisonGeneratingRecipes(
 
       // Add new definitions to the worklist.
       for (VPValue *operand : CurRec->operands())
-        if (VPDef *OpDef = operand->getDef())
-          Worklist.push_back(cast<VPRecipeBase>(OpDef));
+        if (VPRecipeBase *OpDef = operand->getDefiningRecipe())
+          Worklist.push_back(OpDef);
     }
   });
 
@@ -1064,13 +1064,12 @@ void InnerLoopVectorizer::collectPoisonGeneratingRecipes(
     for (VPRecipeBase &Recipe : *VPBB) {
       if (auto *WidenRec = dyn_cast<VPWidenMemoryInstructionRecipe>(&Recipe)) {
         Instruction &UnderlyingInstr = WidenRec->getIngredient();
-        VPDef *AddrDef = WidenRec->getAddr()->getDef();
+        VPRecipeBase *AddrDef = WidenRec->getAddr()->getDefiningRecipe();
         if (AddrDef && WidenRec->isConsecutive() &&
             Legal->blockNeedsPredication(UnderlyingInstr.getParent()))
-          collectPoisonGeneratingInstrsInBackwardSlice(
-              cast<VPRecipeBase>(AddrDef));
+          collectPoisonGeneratingInstrsInBackwardSlice(AddrDef);
       } else if (auto *InterleaveRec = dyn_cast<VPInterleaveRecipe>(&Recipe)) {
-        VPDef *AddrDef = InterleaveRec->getAddr()->getDef();
+        VPRecipeBase *AddrDef = InterleaveRec->getAddr()->getDefiningRecipe();
         if (AddrDef) {
           // Check if any member of the interleave group needs predication.
           const InterleaveGroup<Instruction> *InterGroup =
@@ -1085,8 +1084,7 @@ void InnerLoopVectorizer::collectPoisonGeneratingRecipes(
           }
 
           if (NeedPredication)
-            collectPoisonGeneratingInstrsInBackwardSlice(
-                cast<VPRecipeBase>(AddrDef));
+            collectPoisonGeneratingInstrsInBackwardSlice(AddrDef);
         }
       }
     }
@@ -8481,11 +8479,12 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
   // value. Avoid hoisting the insert-element which packs the scalar value into
   // a vector value, as that happens iff all users use the vector value.
   for (VPValue *Op : Recipe->operands()) {
-    auto *PredR = dyn_cast_or_null<VPPredInstPHIRecipe>(Op->getDef());
+    auto *PredR =
+        dyn_cast_or_null<VPPredInstPHIRecipe>(Op->getDefiningRecipe());
     if (!PredR)
       continue;
-    auto *RepR =
-        cast_or_null<VPReplicateRecipe>(PredR->getOperand(0)->getDef());
+    auto *RepR = cast_or_null<VPReplicateRecipe>(
+        PredR->getOperand(0)->getDefiningRecipe());
     assert(RepR->isPredicated() &&
            "expected Replicate recipe to be predicated");
     RepR->setAlsoPack(false);
@@ -8911,7 +8910,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
           Plan->addVPValue(Instr, VPV);
           // If the re-used value is a recipe, register the recipe for the
           // instruction, in case the recipe for Instr needs to be recorded.
-          if (auto *R = dyn_cast_or_null<VPRecipeBase>(VPV->getDef()))
+          if (VPRecipeBase *R = VPV->getDefiningRecipe())
             RecipeBuilder.setRecipe(Instr, R);
           continue;
         }
@@ -9055,12 +9054,12 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     if (!RecurPhi)
       continue;
 
-    VPRecipeBase *PrevRecipe = RecurPhi->getBackedgeRecipe();
+    VPRecipeBase *PrevRecipe = &RecurPhi->getBackedgeRecipe();
     // Fixed-order recurrences do not contain cycles, so this loop is guaranteed
     // to terminate.
     while (auto *PrevPhi =
                dyn_cast<VPFirstOrderRecurrencePHIRecipe>(PrevRecipe))
-      PrevRecipe = PrevPhi->getBackedgeRecipe();
+      PrevRecipe = &PrevPhi->getBackedgeRecipe();
     VPBasicBlock *InsertBlock = PrevRecipe->getParent();
     auto *Region = GetReplicateRegion(PrevRecipe);
     if (Region)
@@ -9283,7 +9282,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       VPValue *Cond =
           RecipeBuilder.createBlockInMask(OrigLoop->getHeader(), Plan);
       VPValue *Red = PhiR->getBackedgeValue();
-      assert(cast<VPRecipeBase>(Red->getDef())->getParent() != LatchVPBB &&
+      assert(Red->getDefiningRecipe()->getParent() != LatchVPBB &&
              "reduction recipe must be defined before latch");
       Builder.createNaryOp(Instruction::Select, {Cond, Red, PhiR});
     }
@@ -9657,7 +9656,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
 
   // A store of a loop varying value to a loop invariant address only
   // needs only the last copy of the store.
-  if (isa<StoreInst>(UI) && !getOperand(1)->getDef()) {
+  if (isa<StoreInst>(UI) && !getOperand(1)->getDefiningRecipe()) {
     auto Lane = VPLane::getLastLaneForVF(State.VF);
     State.ILV->scalarizeInstruction(UI, this, VPIteration(State.UF - 1, Lane), IsPredicated,
                                     State);
@@ -9875,8 +9874,8 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part) {
   // Check if there is a scalar value for the selected lane.
   if (!hasScalarValue(Def, {Part, LastLane})) {
     // At the moment, VPWidenIntOrFpInductionRecipes can also be uniform.
-    assert((isa<VPWidenIntOrFpInductionRecipe>(Def->getDef()) ||
-            isa<VPScalarIVStepsRecipe>(Def->getDef())) &&
+    assert((isa<VPWidenIntOrFpInductionRecipe>(Def->getDefiningRecipe()) ||
+            isa<VPScalarIVStepsRecipe>(Def->getDefiningRecipe())) &&
            "unexpected recipe found to be invariant");
     IsUniform = true;
     LastLane = 0;
