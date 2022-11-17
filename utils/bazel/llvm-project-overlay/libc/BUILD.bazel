@@ -1019,6 +1019,7 @@ cc_library(
         "src/string/memory_utils/bzero_implementations.h",
         "src/string/memory_utils/memcmp_implementations.h",
         "src/string/memory_utils/memcpy_implementations.h",
+        "src/string/memory_utils/memmove_implementations.h",
         "src/string/memory_utils/memset_implementations.h",
     ],
     deps = [
@@ -1082,7 +1083,6 @@ libc_function(
     features = no_sanitize_features,
     deps = [
         ":__support_common",
-        ":__support_integer_operations",
         ":string_memory_utils",
     ],
 )
