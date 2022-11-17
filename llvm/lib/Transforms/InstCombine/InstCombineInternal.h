@@ -362,6 +362,9 @@ private:
   Value *foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS, bool IsAnd,
                           bool IsLogicalSelect = false);
 
+  Instruction *foldLogicOfIsFPClass(BinaryOperator &Operator, Value *LHS,
+                                    Value *RHS);
+
   Value *foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS, ICmpInst *RHS,
                                        Instruction *CxtI, bool IsAnd,
                                        bool IsLogical = false);

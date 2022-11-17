@@ -1268,6 +1268,46 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
   return nullptr;
 }
 
+/// or (is_fpclass x, mask0), (is_fpclass x, mask1)
+///     -> is_fpclass x, (mask0 | mask1)
+/// and (is_fpclass x, mask0), (is_fpclass x, mask1)
+///     -> is_fpclass x, (mask0 & mask1)
+/// xor (is_fpclass x, mask0), (is_fpclass x, mask1)
+///     -> is_fpclass x, (mask0 ^ mask1)
+Instruction *InstCombinerImpl::foldLogicOfIsFPClass(BinaryOperator &BO,
+                                                    Value *Op0, Value *Op1) {
+  Value *ClassVal;
+  uint64_t ClassMask0, ClassMask1;
+
+  if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::is_fpclass>(
+                     m_Value(ClassVal), m_ConstantInt(ClassMask0)))) &&
+      match(Op1, m_OneUse(m_Intrinsic<Intrinsic::is_fpclass>(
+                     m_Specific(ClassVal), m_ConstantInt(ClassMask1))))) {
+    unsigned NewClassMask;
+    switch (BO.getOpcode()) {
+    case Instruction::And:
+      NewClassMask = ClassMask0 & ClassMask1;
+      break;
+    case Instruction::Or:
+      NewClassMask = ClassMask0 | ClassMask1;
+      break;
+    case Instruction::Xor:
+      NewClassMask = ClassMask0 ^ ClassMask1;
+      break;
+    default:
+      llvm_unreachable("not a binary logic operator");
+    }
+
+    // TODO: Also check for special fcmps
+    auto *II = cast<IntrinsicInst>(Op0);
+    II->setArgOperand(
+        1, ConstantInt::get(II->getArgOperand(1)->getType(), NewClassMask));
+    return replaceInstUsesWith(BO, II);
+  }
+
+  return nullptr;
+}
+
 /// This a limited reassociation for a special case (see above) where we are
 /// checking if two values are either both NAN (unordered) or not-NAN (ordered).
 /// This could be handled more generally in '-reassociation', but it seems like
@@ -2285,6 +2325,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *Canonicalized = canonicalizeLogicFirst(I, Builder))
     return Canonicalized;
 
+  if (Instruction *Folded = foldLogicOfIsFPClass(I, Op0, Op1))
+    return Folded;
+
   return nullptr;
 }
 
@@ -3265,6 +3308,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *Canonicalized = canonicalizeLogicFirst(I, Builder))
     return Canonicalized;
 
+  if (Instruction *Folded = foldLogicOfIsFPClass(I, Op0, Op1))
+    return Folded;
+
   return nullptr;
 }
 
@@ -4059,6 +4105,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   if (Instruction *Canonicalized = canonicalizeLogicFirst(I, Builder))
     return Canonicalized;
+
+  if (Instruction *Folded = foldLogicOfIsFPClass(I, Op0, Op1))
+    return Folded;
 
   return nullptr;
 }
