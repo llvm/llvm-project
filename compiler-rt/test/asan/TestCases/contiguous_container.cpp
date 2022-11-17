@@ -2,11 +2,11 @@
 //
 // Test __sanitizer_annotate_contiguous_container.
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
 #include <sanitizer/asan_interface.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static constexpr size_t kGranularity = 8;
 
@@ -87,11 +87,9 @@ void TestContainer(size_t capacity, size_t off_begin, size_t off_end,
   delete[] buffer;
 }
 
-__attribute__((noinline))
-void Throw() { throw 1; }
+__attribute__((noinline)) void Throw() { throw 1; }
 
-__attribute__((noinline))
-void ThrowAndCatch() {
+__attribute__((noinline)) void ThrowAndCatch() {
   try {
     Throw();
   } catch (...) {
