@@ -9343,6 +9343,7 @@ cc_library(
         ":InferIntRangeInterface",
         ":MemRefDialect",
         ":Pass",
+        ":Support",
         ":TransformUtils",
         ":Transforms",
         ":VectorDialect",
