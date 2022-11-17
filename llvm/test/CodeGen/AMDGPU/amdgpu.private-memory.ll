@@ -12,8 +12,8 @@
 ; RUN: llc -march=r600 -mcpu=cypress -disable-promote-alloca-to-vector < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
 ; RUN: llc -march=r600 -mcpu=cypress < %s | FileCheck %s -check-prefix=R600-VECT -check-prefix=FUNC
 
-; HSAOPT: @mova_same_clause.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] undef, align 4
-; HSAOPT: @high_alignment.stack = internal unnamed_addr addrspace(3) global [256 x [8 x i32]] undef, align 16
+; HSAOPT: @mova_same_clause.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] poison, align 4
+; HSAOPT: @high_alignment.stack = internal unnamed_addr addrspace(3) global [256 x [8 x i32]] poison, align 16
 
 
 ; FUNC-LABEL: {{^}}mova_same_clause:
