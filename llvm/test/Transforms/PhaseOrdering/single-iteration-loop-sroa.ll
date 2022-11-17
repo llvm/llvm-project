@@ -13,17 +13,17 @@ define i16 @helper(i16 %0, i64 %x) {
 ; CHECK-NEXT:    store i16 [[TMP0:%.*]], ptr [[DATA]], align 2
 ; CHECK-NEXT:    br label [[BB6_I_I:%.*]]
 ; CHECK:       bb6.i.i:
-; CHECK-NEXT:    [[ITER_SROA_0_07_I_I:%.*]] = phi i64 [ [[TMP2:%.*]], [[BB6_I_I]] ], [ 0, [[START:%.*]] ]
+; CHECK-NEXT:    [[ITER_SROA_0_07_I_I:%.*]] = phi i64 [ [[TMP1:%.*]], [[BB6_I_I]] ], [ 0, [[START:%.*]] ]
 ; CHECK-NEXT:    [[_40_I_I:%.*]] = sub nsw i64 0, [[ITER_SROA_0_07_I_I]]
-; CHECK-NEXT:    [[TMP2]] = add nuw nsw i64 [[ITER_SROA_0_07_I_I]], 1
+; CHECK-NEXT:    [[TMP1]] = add nuw nsw i64 [[ITER_SROA_0_07_I_I]], 1
 ; CHECK-NEXT:    [[_34_I_I:%.*]] = getelementptr inbounds [0 x i8], ptr [[DATA]], i64 0, i64 [[ITER_SROA_0_07_I_I]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [0 x i8], ptr [[DATA]], i64 0, i64 [[_40_I_I]]
-; CHECK-NEXT:    [[_39_I_I:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [0 x i8], ptr [[DATA]], i64 0, i64 [[_40_I_I]]
+; CHECK-NEXT:    [[_39_I_I:%.*]] = getelementptr i8, ptr [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP_0_COPYLOAD_I_I_I_I:%.*]] = load i8, ptr [[_34_I_I]], align 1
 ; CHECK-NEXT:    [[TMP2_0_COPYLOAD_I_I_I_I:%.*]] = load i8, ptr [[_39_I_I]], align 1
 ; CHECK-NEXT:    store i8 [[TMP2_0_COPYLOAD_I_I_I_I]], ptr [[_34_I_I]], align 1
 ; CHECK-NEXT:    store i8 [[TMP_0_COPYLOAD_I_I_I_I]], ptr [[_39_I_I]], align 1
-; CHECK-NEXT:    [[EXITCOND_NOT_I_I:%.*]] = icmp eq i64 [[TMP2]], [[X:%.*]]
+; CHECK-NEXT:    [[EXITCOND_NOT_I_I:%.*]] = icmp eq i64 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT_I_I]], label [[EXIT:%.*]], label [[BB6_I_I]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[DOTSROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[DATA]], align 2

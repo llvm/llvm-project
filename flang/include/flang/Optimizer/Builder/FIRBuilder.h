@@ -419,6 +419,9 @@ public:
   /// config.
   void setFastMathFlags(Fortran::common::MathOptionsBase options);
 
+  /// Get current FastMathFlags value.
+  mlir::arith::FastMathFlags getFastMathFlags() const { return fastMathFlags; }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 

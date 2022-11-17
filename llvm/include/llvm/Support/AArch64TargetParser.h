@@ -79,52 +79,37 @@ enum ArchExtKind : uint64_t {
 };
 
 enum class ArchKind {
-#define AARCH64_ARCH(NAME, ID, SUB_ARCH, ARCH_BASE_EXT) ID,
+#define AARCH64_ARCH(NAME, ID, ARCH_FEATURE, ARCH_BASE_EXT) ID,
 #include "AArch64TargetParser.def"
 };
 
 struct ArchNames {
-  const char *NameCStr;
-  size_t NameLength;
-  const char *SubArchCStr;
-  size_t SubArchLength;
+  StringRef Name;
+  StringRef ArchFeature;
   uint64_t ArchBaseExtensions;
   ArchKind ID;
 
-  StringRef getName() const { return StringRef(NameCStr, NameLength); }
-
-  // Sub-Arch name.
-  StringRef getSubArch() const {
-    return getArchFeature().substr(1, SubArchLength);
-  }
-
-  // Arch Feature name.
-  StringRef getArchFeature() const {
-    return StringRef(SubArchCStr, SubArchLength);
-  }
+  // Return ArchFeature without the leading "+".
+  StringRef getSubArch() const { return ArchFeature.substr(1); }
 };
 
 const ArchNames AArch64ARCHNames[] = {
-#define AARCH64_ARCH(NAME, ID, SUB_ARCH, ARCH_BASE_EXT)                        \
-  {NAME,          sizeof(NAME) - 1,     "+" SUB_ARCH, sizeof(SUB_ARCH),        \
-   ARCH_BASE_EXT, AArch64::ArchKind::ID},
+#define AARCH64_ARCH(NAME, ID, ARCH_FEATURE, ARCH_BASE_EXT)                    \
+  {NAME, ARCH_FEATURE, ARCH_BASE_EXT, AArch64::ArchKind::ID},
 #include "AArch64TargetParser.def"
 };
 
 // List of Arch Extension names.
 struct ExtName {
-  const char *NameCStr;
-  size_t NameLength;
+  StringRef Name;
   uint64_t ID;
-  const char *Feature;
-  const char *NegFeature;
-
-  StringRef getName() const { return StringRef(NameCStr, NameLength); }
+  StringRef Feature;
+  StringRef NegFeature;
 };
 
 const ExtName AArch64ARCHExtNames[] = {
 #define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)                   \
-  {NAME, sizeof(NAME) - 1, ID, FEATURE, NEGFEATURE},
+  {NAME, ID, FEATURE, NEGFEATURE},
 #include "AArch64TargetParser.def"
 };
 
@@ -133,37 +118,28 @@ const ExtName AArch64ARCHExtNames[] = {
 // When finding the Arch for a CPU, first-found prevails. Sort them accordingly.
 // When this becomes table-generated, we'd probably need two tables.
 struct CpuNames {
-  const char *NameCStr;
-  size_t NameLength;
+  StringRef Name;
   ArchKind ArchID;
   bool Default; // is $Name the default CPU for $ArchID ?
   uint64_t DefaultExtensions;
-
-  StringRef getName() const { return StringRef(NameCStr, NameLength); }
 };
 
 const CpuNames AArch64CPUNames[] = {
 #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)       \
-  {NAME, sizeof(NAME) - 1, AArch64::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT},
+  {NAME, AArch64::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT},
 #include "AArch64TargetParser.def"
 };
 
 const struct {
-  const char *Alias;
-  size_t AliasLength;
-  const char *Name;
-  size_t NameLength;
-
-  StringRef getAlias() const { return StringRef(Alias, AliasLength); }
-  StringRef getName() const { return StringRef(Name, NameLength); }
+  StringRef Alias;
+  StringRef Name;
 } AArch64CPUAliases[] = {
-#define AARCH64_CPU_ALIAS(ALIAS,NAME)                                          \
-  {ALIAS, sizeof(ALIAS) - 1, NAME, sizeof(NAME) - 1},
+#define AARCH64_CPU_ALIAS(ALIAS, NAME) {ALIAS, NAME},
 #include "AArch64TargetParser.def"
 };
 
 const ArchKind ArchKinds[] = {
-#define AARCH64_ARCH(NAME, ID, SUB_ARCH, ARCH_BASE_EXT) ArchKind::ID,
+#define AARCH64_ARCH(NAME, ID, ARCH_FEATURE, ARCH_BASE_EXT) ArchKind::ID,
 #include "AArch64TargetParser.def"
 };
 

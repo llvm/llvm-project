@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
@@ -567,6 +568,37 @@ struct ConvertExtUI final : OpConversionPattern<arith::ExtUIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertMaxMin
+//===----------------------------------------------------------------------===//
+
+template <typename SourceOp, arith::CmpIPredicate CmpPred>
+struct ConvertMaxMin final : OpConversionPattern<SourceOp> {
+  using OpConversionPattern<SourceOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+
+    Type oldTy = op.getType();
+    auto newTy = this->getTypeConverter()
+                     ->convertType(oldTy)
+                     .template dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {0}", op.getType()));
+
+    // Rewrite Max*I/Min*I as compare and select over original operands. Let
+    // the CmpI and Select emulation patterns handle the final legalization.
+    Value cmp =
+        rewriter.create<arith::CmpIOp>(loc, CmpPred, op.getLhs(), op.getRhs());
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmp, op.getLhs(),
+                                                 op.getRhs());
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertSelect
 //===----------------------------------------------------------------------===//
 
@@ -1005,6 +1037,10 @@ void arith::populateArithWideIntEmulationPatterns(
       ConvertConstant, ConvertCmpI, ConvertSelect, ConvertVectorPrint,
       // Binary ops.
       ConvertAddI, ConvertMulI, ConvertShLI, ConvertShRSI, ConvertShRUI,
+      ConvertMaxMin<arith::MaxUIOp, arith::CmpIPredicate::ugt>,
+      ConvertMaxMin<arith::MaxSIOp, arith::CmpIPredicate::sgt>,
+      ConvertMaxMin<arith::MinUIOp, arith::CmpIPredicate::ult>,
+      ConvertMaxMin<arith::MinSIOp, arith::CmpIPredicate::slt>,
       // Bitwise binary ops.
       ConvertBitwiseBinary<arith::AndIOp>, ConvertBitwiseBinary<arith::OrIOp>,
       ConvertBitwiseBinary<arith::XOrIOp>,

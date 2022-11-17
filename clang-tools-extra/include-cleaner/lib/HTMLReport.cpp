@@ -103,6 +103,7 @@ llvm::StringRef refType(RefType T) {
   case RefType::Ambiguous:
     return "ambiguous";
   }
+  llvm_unreachable("unhandled RefType enum");
 }
 
 class Reporter {

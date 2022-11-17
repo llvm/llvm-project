@@ -415,7 +415,7 @@ SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 }
 
 bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned, Align, MachineMemOperand::Flags, bool *Fast) const {
+    EVT VT, unsigned, Align, MachineMemOperand::Flags, unsigned *Fast) const {
   MVT::SimpleValueType SVT = VT.getSimpleVT().SimpleTy;
 
   if (Subtarget.systemSupportsUnalignedAccess()) {
@@ -424,7 +424,7 @@ bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
     // a hybrid of the two but it's expected that most implementations will
     // handle the majority of cases in hardware.
     if (Fast)
-      *Fast = true;
+      *Fast = 1;
     return true;
   }
 
@@ -432,7 +432,7 @@ bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
   case MVT::i64:
   case MVT::i32:
     if (Fast)
-      *Fast = true;
+      *Fast = 1;
     return true;
   default:
     return false;
