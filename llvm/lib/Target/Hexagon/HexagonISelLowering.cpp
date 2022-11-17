@@ -3040,15 +3040,16 @@ SDValue
 HexagonTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
   MVT Ty = ty(Op);
   const SDLoc &dl(Op);
-  // Lower loads of scalar predicate vectors (v2i1, v4i1, v8i1) to loads of i1
-  // followed by a TYPECAST.
   LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
-  bool DoCast = (Ty == MVT::v2i1 || Ty == MVT::v4i1 || Ty == MVT::v8i1);
-  if (DoCast) {
+  MVT MemTy = LN->getMemoryVT().getSimpleVT();
+  ISD::LoadExtType ET = LN->getExtensionType();
+
+  bool LoadPred = MemTy == MVT::v2i1 || MemTy == MVT::v4i1 || MemTy == MVT::v8i1;
+  if (LoadPred) {
     SDValue NL = DAG.getLoad(
-        LN->getAddressingMode(), LN->getExtensionType(), MVT::i1, dl,
-        LN->getChain(), LN->getBasePtr(), LN->getOffset(), LN->getPointerInfo(),
-        /*MemoryVT*/ MVT::i1, LN->getAlign(), LN->getMemOperand()->getFlags(),
+        LN->getAddressingMode(), ISD::ZEXTLOAD, MVT::i32, dl, LN->getChain(),
+        LN->getBasePtr(), LN->getOffset(), LN->getPointerInfo(),
+        /*MemoryVT*/ MVT::i8, LN->getAlign(), LN->getMemOperand()->getFlags(),
         LN->getAAInfo(), LN->getRanges());
     LN = cast<LoadSDNode>(NL.getNode());
   }
@@ -3060,10 +3061,15 @@ HexagonTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
   // Call LowerUnalignedLoad for all loads, it recognizes loads that
   // don't need extra aligning.
   SDValue LU = LowerUnalignedLoad(SDValue(LN, 0), DAG);
-  if (DoCast) {
-    SDValue TC = DAG.getNode(HexagonISD::TYPECAST, dl, Ty, LU);
+  if (LoadPred) {
+    SDValue TP = getInstr(Hexagon::C2_tfrrp, dl, MemTy, {LU}, DAG);
+    if (ET == ISD::SEXTLOAD) {
+      TP = DAG.getSExtOrTrunc(TP, dl, Ty);
+    } else if (ET != ISD::NON_EXTLOAD) {
+      TP = DAG.getZExtOrTrunc(TP, dl, Ty);
+    }
     SDValue Ch = cast<LoadSDNode>(LU.getNode())->getChain();
-    return DAG.getMergeValues({TC, Ch}, dl);
+    return DAG.getMergeValues({TP, Ch}, dl);
   }
   return LU;
 }
@@ -3075,11 +3081,11 @@ HexagonTargetLowering::LowerStore(SDValue Op, SelectionDAG &DAG) const {
   SDValue Val = SN->getValue();
   MVT Ty = ty(Val);
 
-  bool DoCast = (Ty == MVT::v2i1 || Ty == MVT::v4i1 || Ty == MVT::v8i1);
-  if (DoCast) {
-    SDValue TC = DAG.getNode(HexagonISD::TYPECAST, dl, MVT::i1, Val);
-    SDValue NS = DAG.getStore(SN->getChain(), dl, TC, SN->getBasePtr(),
-                              SN->getMemOperand());
+  if (Ty == MVT::v2i1 || Ty == MVT::v4i1 || Ty == MVT::v8i1) {
+    // Store the exact predicate (all bits).
+    SDValue TR = getInstr(Hexagon::C2_tfrpr, dl, MVT::i32, {Val}, DAG);
+    SDValue NS = DAG.getTruncStore(SN->getChain(), dl, TR, SN->getBasePtr(),
+                                   MVT::i8, SN->getMemOperand());
     if (SN->isIndexed()) {
       NS = DAG.getIndexedStore(NS, dl, SN->getBasePtr(), SN->getOffset(),
                                SN->getAddressingMode());
