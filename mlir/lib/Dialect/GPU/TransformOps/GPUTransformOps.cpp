@@ -246,15 +246,9 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
                                       sourceBlock.getOperations());
 
   // Step 5. RAUW thread indices to thread ops.
-  for (Value blockIdx : foreachThreadOp.getThreadIndices()) {
-    Value val = bvm.lookup(blockIdx);
-    SmallVector<OpOperand *> uses;
-    for (OpOperand &use : blockIdx.getUses())
-      uses.push_back(&use);
-    for (OpOperand *operand : uses) {
-      Operation *op = operand->getOwner();
-      rewriter.updateRootInPlace(op, [&]() { operand->set(val); });
-    }
+  for (Value loopIndex : foreachThreadOp.getThreadIndices()) {
+    Value blockIdx = bvm.lookup(loopIndex);
+    rewriter.replaceAllUsesWith(loopIndex, blockIdx);
   }
 
   // Step 6. Erase old op.
@@ -492,15 +486,9 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
                                       sourceBlock.getOperations());
 
   // Step 6. RAUW thread indices to thread ops.
-  for (Value threadIdx : foreachThreadOp.getThreadIndices()) {
-    Value val = bvm.lookup(threadIdx);
-    SmallVector<OpOperand *> uses;
-    for (OpOperand &use : threadIdx.getUses())
-      uses.push_back(&use);
-    for (OpOperand *operand : uses) {
-      Operation *op = operand->getOwner();
-      rewriter.updateRootInPlace(op, [&]() { operand->set(val); });
-    }
+  for (Value loopIndex : foreachThreadOp.getThreadIndices()) {
+    Value threadIdx = bvm.lookup(loopIndex);
+    rewriter.replaceAllUsesWith(loopIndex, threadIdx);
   }
 
   // Step 7. syncthreads.
