@@ -582,6 +582,8 @@ public:
 
   CIRGenTypes &getTypes() const { return CGM.getTypes(); }
 
+  const TargetInfo &getTarget() const { return CGM.getTarget(); }
+
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
   mlir::Location getLoc(clang::SourceLocation SLoc);
 
@@ -767,6 +769,8 @@ public:
   mlir::LogicalResult buildFunctionBody(const clang::Stmt *Body);
   mlir::LogicalResult buildCoroutineBody(const CoroutineBodyStmt &S);
 
+  RValue buildCoroutineIntrinsic(const CallExpr *E, unsigned int IID);
+
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
   mlir::LogicalResult buildStmt(const clang::Stmt *S, bool useCurrentScope);
@@ -932,6 +936,12 @@ public:
   LValue buildCompoundAssignmentLValue(const clang::CompoundAssignOperator *E);
   LValue buildUnaryOpLValue(const clang::UnaryOperator *E);
   LValue buildStringLiteralLValue(const StringLiteral *E);
+  RValue buildBuiltinExpr(const clang::GlobalDecl GD, unsigned BuiltinID,
+                          const clang::CallExpr *E, ReturnValueSlot ReturnValue,
+                          bool &emitAsCall);
+  mlir::Value buildTargetBuiltinExpr(unsigned BuiltinID,
+                                     const clang::CallExpr *E,
+                                     ReturnValueSlot ReturnValue);
 
   /// Given an expression of pointer type, try to
   /// derive a more accurate bound on the alignment of the pointer.

@@ -106,6 +106,15 @@ public:
     return KindOrFunctionPointer == SpecialKind::Builtin;
   }
 
+  const clang::FunctionDecl *getBuiltinDecl() const {
+    assert(isBuiltin());
+    return BuiltinInfo.Decl;
+  }
+  unsigned getBuiltinID() const {
+    assert(isBuiltin());
+    return BuiltinInfo.ID;
+  }
+
   static CIRGenCallee forBuiltin(unsigned builtinID,
                                  const clang::FunctionDecl *builtinDecl) {
     CIRGenCallee result(SpecialKind::Builtin);
