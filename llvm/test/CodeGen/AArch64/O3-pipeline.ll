@@ -87,6 +87,7 @@
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       AArch64 Stack Tagging
+; CHECK-NEXT:       Complex Deinterleaving Pass
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Memory SSA
 ; CHECK-NEXT:       Interleaved Load Combine Pass
