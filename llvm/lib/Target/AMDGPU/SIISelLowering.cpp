@@ -120,6 +120,18 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v4i64, &AMDGPU::SGPR_256RegClass);
   addRegisterClass(MVT::v4f64, TRI->getVGPRClassForBitWidth(256));
 
+  addRegisterClass(MVT::v9i32, &AMDGPU::SGPR_288RegClass);
+  addRegisterClass(MVT::v9f32, TRI->getVGPRClassForBitWidth(288));
+
+  addRegisterClass(MVT::v10i32, &AMDGPU::SGPR_320RegClass);
+  addRegisterClass(MVT::v10f32, TRI->getVGPRClassForBitWidth(320));
+
+  addRegisterClass(MVT::v11i32, &AMDGPU::SGPR_352RegClass);
+  addRegisterClass(MVT::v11f32, TRI->getVGPRClassForBitWidth(352));
+
+  addRegisterClass(MVT::v12i32, &AMDGPU::SGPR_384RegClass);
+  addRegisterClass(MVT::v12f32, TRI->getVGPRClassForBitWidth(384));
+
   addRegisterClass(MVT::v16i32, &AMDGPU::SGPR_512RegClass);
   addRegisterClass(MVT::v16f32, TRI->getVGPRClassForBitWidth(512));
 
@@ -158,15 +170,17 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // We need to custom lower vector stores from local memory
   setOperationAction(ISD::LOAD,
-                     {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32,
-                      MVT::v6i32, MVT::v7i32, MVT::v8i32, MVT::v16i32, MVT::i1,
-                      MVT::v32i32},
+                     {MVT::v2i32,  MVT::v3i32,  MVT::v4i32,  MVT::v5i32,
+                      MVT::v6i32,  MVT::v7i32,  MVT::v8i32,  MVT::v9i32,
+                      MVT::v10i32, MVT::v11i32, MVT::v12i32, MVT::v16i32,
+                      MVT::i1,     MVT::v32i32},
                      Custom);
 
   setOperationAction(ISD::STORE,
-                     {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32,
-                      MVT::v6i32, MVT::v7i32, MVT::v8i32, MVT::v16i32, MVT::i1,
-                      MVT::v32i32},
+                     {MVT::v2i32,  MVT::v3i32,  MVT::v4i32,  MVT::v5i32,
+                      MVT::v6i32,  MVT::v7i32,  MVT::v8i32,  MVT::v9i32,
+                      MVT::v10i32, MVT::v11i32, MVT::v12i32, MVT::v16i32,
+                      MVT::i1,     MVT::v32i32},
                      Custom);
 
   setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
@@ -209,12 +223,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   AddPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
 
   setOperationAction(ISD::TRUNCATE,
-                     {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32,
-                      MVT::v6i32, MVT::v7i32, MVT::v8i32, MVT::v16i32},
+                     {MVT::v2i32,  MVT::v3i32,  MVT::v4i32,  MVT::v5i32,
+                      MVT::v6i32,  MVT::v7i32,  MVT::v8i32,  MVT::v9i32,
+                      MVT::v10i32, MVT::v11i32, MVT::v12i32, MVT::v16i32},
                      Expand);
   setOperationAction(ISD::FP_ROUND,
-                     {MVT::v2f32, MVT::v3f32, MVT::v4f32, MVT::v5f32,
-                      MVT::v6f32, MVT::v7f32, MVT::v8f32, MVT::v16f32},
+                     {MVT::v2f32,  MVT::v3f32,  MVT::v4f32,  MVT::v5f32,
+                      MVT::v6f32,  MVT::v7f32,  MVT::v8f32,  MVT::v9f32,
+                      MVT::v10f32, MVT::v11f32, MVT::v12f32, MVT::v16f32},
                      Expand);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG,
@@ -240,11 +256,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // We only support LOAD/STORE and vector manipulation ops for vectors
   // with > 4 elements.
   for (MVT VT :
-       {MVT::v8i32,  MVT::v8f32,  MVT::v16i32, MVT::v16f32, MVT::v2i64,
-        MVT::v2f64,  MVT::v4i16,  MVT::v4f16,  MVT::v3i64,  MVT::v3f64,
-        MVT::v6i32,  MVT::v6f32,  MVT::v4i64,  MVT::v4f64,  MVT::v8i64,
-        MVT::v8f64,  MVT::v8i16,  MVT::v8f16,  MVT::v16i16, MVT::v16f16,
-        MVT::v16i64, MVT::v16f64, MVT::v32i32, MVT::v32f32}) {
+       {MVT::v8i32,  MVT::v8f32,  MVT::v9i32,   MVT::v9f32,  MVT::v10i32,
+        MVT::v10f32, MVT::v11i32, MVT::v11f32,  MVT::v12i32, MVT::v12f32,
+        MVT::v16i32, MVT::v16f32, MVT::v2i64,   MVT::v2f64,  MVT::v4i16,
+        MVT::v4f16,  MVT::v3i64,  MVT::v3f64,   MVT::v6i32,  MVT::v6f32,
+        MVT::v4i64,  MVT::v4f64,  MVT::v8i64,   MVT::v8f64,  MVT::v8i16,
+        MVT::v8f16,  MVT::v16i16, MVT::v16f16,  MVT::v16i64, MVT::v16f64,
+        MVT::v32i32, MVT::v32f32}) {
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
       switch (Op) {
       case ISD::LOAD:
@@ -365,8 +383,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // Deal with vec5/6/7 vector operations when widened to vec8.
   setOperationAction(ISD::INSERT_SUBVECTOR,
-                     {MVT::v5i32, MVT::v5f32, MVT::v6i32, MVT::v6f32,
-                      MVT::v7i32, MVT::v7f32, MVT::v8i32, MVT::v8f32},
+                     {MVT::v5i32,  MVT::v5f32,  MVT::v6i32,  MVT::v6f32,
+                      MVT::v7i32,  MVT::v7f32,  MVT::v8i32,  MVT::v8f32,
+                      MVT::v9i32,  MVT::v9f32,  MVT::v10i32, MVT::v10f32,
+                      MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32},
                      Custom);
 
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling,
@@ -4235,6 +4255,10 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::SI_INDIRECT_SRC_V2:
   case AMDGPU::SI_INDIRECT_SRC_V4:
   case AMDGPU::SI_INDIRECT_SRC_V8:
+  case AMDGPU::SI_INDIRECT_SRC_V9:
+  case AMDGPU::SI_INDIRECT_SRC_V10:
+  case AMDGPU::SI_INDIRECT_SRC_V11:
+  case AMDGPU::SI_INDIRECT_SRC_V12:
   case AMDGPU::SI_INDIRECT_SRC_V16:
   case AMDGPU::SI_INDIRECT_SRC_V32:
     return emitIndirectSrc(MI, *BB, *getSubtarget());
@@ -4242,6 +4266,10 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::SI_INDIRECT_DST_V2:
   case AMDGPU::SI_INDIRECT_DST_V4:
   case AMDGPU::SI_INDIRECT_DST_V8:
+  case AMDGPU::SI_INDIRECT_DST_V9:
+  case AMDGPU::SI_INDIRECT_DST_V10:
+  case AMDGPU::SI_INDIRECT_DST_V11:
+  case AMDGPU::SI_INDIRECT_DST_V12:
   case AMDGPU::SI_INDIRECT_DST_V16:
   case AMDGPU::SI_INDIRECT_DST_V32:
     return emitIndirectDst(MI, *BB, *getSubtarget());
@@ -6185,7 +6213,7 @@ static SDValue getBuildDwordsVector(SelectionDAG &DAG, SDLoc DL,
   MVT Type;
   unsigned NumElts = Elts.size();
 
-  if (NumElts <= 8) {
+  if (NumElts <= 12) {
     Type = MVT::getVectorVT(MVT::f32, NumElts);
   } else {
     assert(Elts.size() <= 16);
@@ -7735,7 +7763,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
           AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
                                 IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default
                                             : AMDGPU::MIMGEncGfx10Default,
-                                NumVDataDwords, PowerOf2Ceil(NumVAddrDwords));
+                                NumVDataDwords, NumVAddrDwords);
     }
     assert(Opcode != -1);
 
@@ -7801,13 +7829,13 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     if (!UseNSA) {
       // Build a single vector containing all the operands so far prepared.
-      if (NumVAddrDwords > 8) {
+      if (NumVAddrDwords > 12) {
         SDValue Undef = DAG.getUNDEF(MVT::i32);
         Ops.append(16 - Ops.size(), Undef);
       }
-      assert(Ops.size() == 8 || Ops.size() == 16);
+      assert(Ops.size() >= 8 && Ops.size() <= 12);
       SDValue MergedOps = DAG.getBuildVector(
-          Ops.size() == 16 ? MVT::v16i32 : MVT::v8i32, DL, Ops);
+          MVT::getVectorVT(MVT::i32, Ops.size()), DL, Ops);
       Ops.clear();
       Ops.push_back(MergedOps);
     }
@@ -12466,6 +12494,14 @@ static int getAlignedAGPRClassID(unsigned UnalignedClassID) {
     return AMDGPU::VReg_224_Align2RegClassID;
   case AMDGPU::VReg_256RegClassID:
     return AMDGPU::VReg_256_Align2RegClassID;
+  case AMDGPU::VReg_288RegClassID:
+    return AMDGPU::VReg_288_Align2RegClassID;
+  case AMDGPU::VReg_320RegClassID:
+    return AMDGPU::VReg_320_Align2RegClassID;
+  case AMDGPU::VReg_352RegClassID:
+    return AMDGPU::VReg_352_Align2RegClassID;
+  case AMDGPU::VReg_384RegClassID:
+    return AMDGPU::VReg_384_Align2RegClassID;
   case AMDGPU::VReg_512RegClassID:
     return AMDGPU::VReg_512_Align2RegClassID;
   case AMDGPU::VReg_1024RegClassID:

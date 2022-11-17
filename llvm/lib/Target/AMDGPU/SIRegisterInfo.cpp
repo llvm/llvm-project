@@ -2449,6 +2449,14 @@ getAnyVGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::VReg_224RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::VReg_256RegClass;
+  if (BitWidth <= 288)
+    return &AMDGPU::VReg_288RegClass;
+  if (BitWidth <= 320)
+    return &AMDGPU::VReg_320RegClass;
+  if (BitWidth <= 352)
+    return &AMDGPU::VReg_352RegClass;
+  if (BitWidth <= 384)
+    return &AMDGPU::VReg_384RegClass;
   if (BitWidth <= 512)
     return &AMDGPU::VReg_512RegClass;
   if (BitWidth <= 1024)
@@ -2473,6 +2481,14 @@ getAlignedVGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::VReg_224_Align2RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::VReg_256_Align2RegClass;
+  if (BitWidth <= 288)
+    return &AMDGPU::VReg_288_Align2RegClass;
+  if (BitWidth <= 320)
+    return &AMDGPU::VReg_320_Align2RegClass;
+  if (BitWidth <= 352)
+    return &AMDGPU::VReg_352_Align2RegClass;
+  if (BitWidth <= 384)
+    return &AMDGPU::VReg_384_Align2RegClass;
   if (BitWidth <= 512)
     return &AMDGPU::VReg_512_Align2RegClass;
   if (BitWidth <= 1024)
@@ -2509,6 +2525,14 @@ getAnyAGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AReg_224RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::AReg_256RegClass;
+  if (BitWidth <= 288)
+    return &AMDGPU::AReg_288RegClass;
+  if (BitWidth <= 320)
+    return &AMDGPU::AReg_320RegClass;
+  if (BitWidth <= 352)
+    return &AMDGPU::AReg_352RegClass;
+  if (BitWidth <= 384)
+    return &AMDGPU::AReg_384RegClass;
   if (BitWidth <= 512)
     return &AMDGPU::AReg_512RegClass;
   if (BitWidth <= 1024)
@@ -2533,6 +2557,14 @@ getAlignedAGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AReg_224_Align2RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::AReg_256_Align2RegClass;
+  if (BitWidth <= 288)
+    return &AMDGPU::AReg_288_Align2RegClass;
+  if (BitWidth <= 320)
+    return &AMDGPU::AReg_320_Align2RegClass;
+  if (BitWidth <= 352)
+    return &AMDGPU::AReg_352_Align2RegClass;
+  if (BitWidth <= 384)
+    return &AMDGPU::AReg_384_Align2RegClass;
   if (BitWidth <= 512)
     return &AMDGPU::AReg_512_Align2RegClass;
   if (BitWidth <= 1024)
@@ -2567,6 +2599,14 @@ getAnyVectorSuperClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AV_224RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::AV_256RegClass;
+  if (BitWidth <= 288)
+    return &AMDGPU::AV_288RegClass;
+  if (BitWidth <= 320)
+    return &AMDGPU::AV_320RegClass;
+  if (BitWidth <= 352)
+    return &AMDGPU::AV_352RegClass;
+  if (BitWidth <= 384)
+    return &AMDGPU::AV_384RegClass;
   if (BitWidth <= 512)
     return &AMDGPU::AV_512RegClass;
   if (BitWidth <= 1024)
@@ -2591,6 +2631,14 @@ getAlignedVectorSuperClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AV_224_Align2RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::AV_256_Align2RegClass;
+  if (BitWidth <= 288)
+    return &AMDGPU::AV_288_Align2RegClass;
+  if (BitWidth <= 320)
+    return &AMDGPU::AV_320_Align2RegClass;
+  if (BitWidth <= 352)
+    return &AMDGPU::AV_352_Align2RegClass;
+  if (BitWidth <= 384)
+    return &AMDGPU::AV_384_Align2RegClass;
   if (BitWidth <= 512)
     return &AMDGPU::AV_512_Align2RegClass;
   if (BitWidth <= 1024)
@@ -2630,6 +2678,14 @@ SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::SGPR_224RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::SGPR_256RegClass;
+  if (BitWidth <= 288)
+    return &AMDGPU::SGPR_288RegClass;
+  if (BitWidth <= 320)
+    return &AMDGPU::SGPR_320RegClass;
+  if (BitWidth <= 352)
+    return &AMDGPU::SGPR_352RegClass;
+  if (BitWidth <= 384)
+    return &AMDGPU::SGPR_384RegClass;
   if (BitWidth <= 512)
     return &AMDGPU::SGPR_512RegClass;
   if (BitWidth <= 1024)
@@ -2686,6 +2742,26 @@ SIRegisterInfo::getPhysRegClass(MCRegister Reg) const {
     &AMDGPU::SReg_256RegClass,
     &AMDGPU::AReg_256_Align2RegClass,
     &AMDGPU::AReg_256RegClass,
+    &AMDGPU::VReg_288_Align2RegClass,
+    &AMDGPU::VReg_288RegClass,
+    &AMDGPU::SReg_288RegClass,
+    &AMDGPU::AReg_288_Align2RegClass,
+    &AMDGPU::AReg_288RegClass,
+    &AMDGPU::VReg_320_Align2RegClass,
+    &AMDGPU::VReg_320RegClass,
+    &AMDGPU::SReg_320RegClass,
+    &AMDGPU::AReg_320_Align2RegClass,
+    &AMDGPU::AReg_320RegClass,
+    &AMDGPU::VReg_352_Align2RegClass,
+    &AMDGPU::VReg_352RegClass,
+    &AMDGPU::SReg_352RegClass,
+    &AMDGPU::AReg_352_Align2RegClass,
+    &AMDGPU::AReg_352RegClass,
+    &AMDGPU::VReg_384_Align2RegClass,
+    &AMDGPU::VReg_384RegClass,
+    &AMDGPU::SReg_384RegClass,
+    &AMDGPU::AReg_384_Align2RegClass,
+    &AMDGPU::AReg_384RegClass,
     &AMDGPU::VReg_512_Align2RegClass,
     &AMDGPU::VReg_512RegClass,
     &AMDGPU::SReg_512RegClass,
