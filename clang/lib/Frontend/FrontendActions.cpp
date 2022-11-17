@@ -851,7 +851,8 @@ void DumpModuleInfoAction::ExecuteAction() {
   assert(isCurrentFileAST() && "dumping non-AST?");
   // Set up the output file.
   std::unique_ptr<llvm::raw_fd_ostream> OutFile;
-  StringRef OutputFileName = getCompilerInstance().getFrontendOpts().OutputFile;
+  CompilerInstance &CI = getCompilerInstance();
+  StringRef OutputFileName = CI.getFrontendOpts().OutputFile;
   if (!OutputFileName.empty() && OutputFileName != "-") {
     std::error_code EC;
     OutFile.reset(new llvm::raw_fd_ostream(OutputFileName.str(), EC,
@@ -861,14 +862,14 @@ void DumpModuleInfoAction::ExecuteAction() {
   llvm::raw_ostream &Out = OutputStream ? *OutputStream : llvm::outs();
 
   Out << "Information for module file '" << getCurrentFile() << "':\n";
-  auto &FileMgr = getCompilerInstance().getFileManager();
+  auto &FileMgr = CI.getFileManager();
   auto Buffer = FileMgr.getBufferForFile(getCurrentFile());
   StringRef Magic = (*Buffer)->getMemBufferRef().getBuffer();
   bool IsRaw = (Magic.size() >= 4 && Magic[0] == 'C' && Magic[1] == 'P' &&
                 Magic[2] == 'C' && Magic[3] == 'H');
   Out << "  Module format: " << (IsRaw ? "raw" : "obj") << "\n";
 
-  Preprocessor &PP = getCompilerInstance().getPreprocessor();
+  Preprocessor &PP = CI.getPreprocessor();
   DumpModuleInfoListener Listener(Out);
   HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
@@ -966,7 +967,8 @@ void DumpModuleInfoAction::ExecuteAction() {
   // The reminder of the output is produced from the listener as the AST
   // FileCcontrolBlock is (re-)parsed.
   ASTReader::readASTFileControlBlock(
-      getCurrentFile(), FileMgr, getCompilerInstance().getPCHContainerReader(),
+      getCurrentFile(), FileMgr, CI.getModuleCache(),
+      CI.getPCHContainerReader(),
       /*FindModuleFileExtensions=*/true, Listener,
       HSOpts.ModulesValidateDiagnosticOptions);
 }

@@ -65,7 +65,6 @@ define i32 @interfering_lifetime(ptr %data, i64 %indvars.iv) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV:%.*]]
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp slt i32 [[I1]], 0
-; CHECK-NEXT:    [[I2:%.*]] = tail call i32 @llvm.smax.i32(i32 [[I1]], i32 0)
 ; CHECK-NEXT:    [[I3_SROA_SPECULATE_LOAD_FALSE:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[I3_SROA_SPECULATED:%.*]] = select i1 [[CMP_I_I]], i32 0, i32 [[I3_SROA_SPECULATE_LOAD_FALSE]]
 ; CHECK-NEXT:    ret i32 [[I3_SROA_SPECULATED]]
@@ -76,7 +75,6 @@ define i32 @interfering_lifetime(ptr %data, i64 %indvars.iv) {
   call void @llvm.lifetime.start.p0(i64 4, ptr %min)
   store i32 0, ptr %min, align 4
   %cmp.i.i = icmp slt i32 %i1, 0
-  %i2 = tail call i32 @llvm.smax.i32(i32 %i1, i32 0)
   %__b.__a.i.i = select i1 %cmp.i.i, ptr %min, ptr %arrayidx
   %i3 = load i32, ptr %__b.__a.i.i, align 4
   ret i32 %i3
@@ -117,6 +115,44 @@ define i32 @clamp_load_to_constant_range(ptr %data, i64 %indvars.iv) {
   %i3 = load i32, ptr %__b.__a.i2.i, align 4
   ret i32 %i3
 }
+
+define i32 @non_speculatable_load_of_select(i1 %cond, ptr %data) {
+; CHECK-LABEL: @non_speculatable_load_of_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[MIN]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[MIN]], ptr [[DATA:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[ADDR]], align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %min = alloca i32, align 4
+  store i32 0, ptr %min, align 4
+  %addr = select i1 %cond, ptr %min, ptr %data, !prof !0
+  %r = load i32, ptr %addr, align 4
+  ret i32 %r
+}
+define i32 @non_speculatable_load_of_select_inverted(i1 %cond, ptr %data) {
+; CHECK-LABEL: @non_speculatable_load_of_select_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MAX:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 4095, ptr [[MAX]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[DATA:%.*]], ptr [[MAX]], !prof [[PROF0]]
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[ADDR]], align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %max = alloca i32, align 4
+  store i32 4095, ptr %max, align 4
+  %addr = select i1 %cond, ptr %data, ptr %max, !prof !0
+  %r = load i32, ptr %addr, align 4
+  ret i32 %r
+}
+
+!0  = !{!"branch_weights", i32 1,  i32 99}
+
+; Ensure that the branch metadata is reversed to match the reversals above.
+; CHECK: !0 = {{.*}} i32 1, i32 99}
 
 declare void @llvm.lifetime.start.p0(i64, ptr )
 declare void @llvm.lifetime.end.p0(i64, ptr)
