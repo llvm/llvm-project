@@ -3743,6 +3743,14 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
       Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, NotY);
       return replaceInstUsesWith(I, InvMaxMin);
     }
+
+    if (II->getIntrinsicID() == Intrinsic::is_fpclass) {
+      ConstantInt *ClassMask = cast<ConstantInt>(II->getArgOperand(1));
+      II->setArgOperand(
+          1, ConstantInt::get(ClassMask->getType(),
+                              ~ClassMask->getZExtValue() & fcAllFlags));
+      return replaceInstUsesWith(I, II);
+    }
   }
 
   if (NotOp->hasOneUse()) {
