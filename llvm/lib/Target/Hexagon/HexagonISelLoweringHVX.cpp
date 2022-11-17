@@ -1295,7 +1295,7 @@ HexagonTargetLowering::extractHvxSubvectorReg(SDValue VecV, SDValue IdxV,
 
   SDValue W1Idx = DAG.getConstant(WordIdx+1, dl, MVT::i32);
   SDValue W1 = extractHvxElementReg(WordVec, W1Idx, dl, MVT::i32, DAG);
-  SDValue WW = DAG.getNode(HexagonISD::COMBINE, dl, MVT::i64, {W1, W0});
+  SDValue WW = getCombine(W1, W0, dl, MVT::i64, DAG);
   return DAG.getBitcast(ResTy, WW);
 }
 
@@ -1358,7 +1358,7 @@ HexagonTargetLowering::extractHvxSubvectorPred(SDValue VecV, SDValue IdxV,
   SDValue W0 = DAG.getNode(HexagonISD::VEXTRACTW, dl, MVT::i32, {ShuffV, Zero});
   SDValue W1 = DAG.getNode(HexagonISD::VEXTRACTW, dl, MVT::i32,
                            {ShuffV, DAG.getConstant(4, dl, MVT::i32)});
-  SDValue Vec64 = DAG.getNode(HexagonISD::COMBINE, dl, MVT::v8i8, {W1, W0});
+  SDValue Vec64 = getCombine(W1, W0, dl, MVT::v8i8, DAG);
   return getInstr(Hexagon::A4_vcmpbgtui, dl, ResTy,
                   {Vec64, DAG.getTargetConstant(0, dl, MVT::i32)}, DAG);
 }
@@ -1995,8 +1995,7 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
     SmallVector<SDValue,2> Combines;
     assert(Words.size() % 2 == 0);
     for (unsigned i = 0, e = Words.size(); i < e; i += 2) {
-      SDValue C = DAG.getNode(
-          HexagonISD::COMBINE, dl, MVT::i64, {Words[i+1], Words[i]});
+      SDValue C = getCombine(Words[i+1], Words[i], dl, MVT::i64, DAG);
       Combines.push_back(C);
     }
 

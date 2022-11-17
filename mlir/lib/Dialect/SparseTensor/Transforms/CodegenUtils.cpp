@@ -1024,3 +1024,36 @@ Operation *mlir::sparse_tensor::getTop(Operation *op) {
     ;
   return op;
 }
+
+void sparse_tensor::foreachInSparseConstant(
+    Location loc, RewriterBase &rewriter, SparseElementsAttr attr,
+    function_ref<void(ArrayRef<Value>, Value)> callback) {
+  int64_t rank = attr.getType().getRank();
+  // Foreach on constant.
+  DenseElementsAttr indicesAttr = attr.getIndices();
+  DenseElementsAttr valuesAttr = attr.getValues();
+
+  SmallVector<Value> coords;
+  for (int i = 0, e = valuesAttr.size(); i < e; i++) {
+    coords.clear();
+    for (int j = 0; j < rank; j++) {
+      auto coordAttr = indicesAttr.getValues<IntegerAttr>()[i * rank + j];
+      auto coord =
+          rewriter.create<arith::ConstantIndexOp>(loc, coordAttr.getInt());
+      // Remaps coordinates.
+      coords.push_back(coord);
+    }
+    Value val;
+    if (attr.getElementType().isa<ComplexType>()) {
+      auto valAttr = valuesAttr.getValues<ArrayAttr>()[i];
+      val = rewriter.create<complex::ConstantOp>(loc, attr.getElementType(),
+                                                 valAttr);
+    } else {
+      auto valAttr = valuesAttr.getValues<TypedAttr>()[i];
+      // Remaps value.
+      val = rewriter.create<arith::ConstantOp>(loc, valAttr);
+    }
+    assert(val);
+    callback(coords, val);
+  }
+}

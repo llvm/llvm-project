@@ -365,6 +365,102 @@ func.func @extui_vector(%a : vector<3xi16>) -> vector<3xi64> {
     return %r : vector<3xi64>
 }
 
+// CHECK-LABEL: func @index_cast_int_to_index_scalar
+// CHECK-SAME:    ([[ARG:%.+]]: vector<2xi32>) -> index
+// CHECK-NEXT:    [[EXT:%.+]]  = vector.extract [[ARG]][0] : vector<2xi32>
+// CHECK-NEXT:    [[RES:%.+]]  = arith.index_cast [[EXT]] : i32 to index
+// CHECK-NEXT:    return [[RES]] : index
+func.func @index_cast_int_to_index_scalar(%a : i64) -> index {
+    %r = arith.index_cast %a : i64 to index
+    return %r : index
+}
+
+// CHECK-LABEL: func @index_cast_int_to_index_vector
+// CHECK-SAME:    ([[ARG:%.+]]: vector<3x2xi32>) -> vector<3xindex>
+// CHECK-NEXT:    [[EXT:%.+]]   = vector.extract_strided_slice [[ARG]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[SHAPE:%.+]] = vector.shape_cast [[EXT]] : vector<3x1xi32> to vector<3xi32>
+// CHECK-NEXT:    [[RES:%.+]]   = arith.index_cast [[SHAPE]] : vector<3xi32> to vector<3xindex>
+// CHECK-NEXT:    return [[RES]] : vector<3xindex>
+func.func @index_cast_int_to_index_vector(%a : vector<3xi64>) -> vector<3xindex> {
+    %r = arith.index_cast %a : vector<3xi64> to vector<3xindex>
+    return %r : vector<3xindex>
+}
+
+// CHECK-LABEL: func @index_castui_int_to_index_scalar
+// CHECK-SAME:    ([[ARG:%.+]]: vector<2xi32>) -> index
+// CHECK-NEXT:    [[EXT:%.+]]  = vector.extract [[ARG]][0] : vector<2xi32>
+// CHECK-NEXT:    [[RES:%.+]]  = arith.index_castui [[EXT]] : i32 to index
+// CHECK-NEXT:    return [[RES]] : index
+func.func @index_castui_int_to_index_scalar(%a : i64) -> index {
+    %r = arith.index_castui %a : i64 to index
+    return %r : index
+}
+
+// CHECK-LABEL: func @index_castui_int_to_index_vector
+// CHECK-SAME:    ([[ARG:%.+]]: vector<3x2xi32>) -> vector<3xindex>
+// CHECK-NEXT:    [[EXT:%.+]]   = vector.extract_strided_slice [[ARG]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[SHAPE:%.+]] = vector.shape_cast [[EXT]] : vector<3x1xi32> to vector<3xi32>
+// CHECK-NEXT:    [[RES:%.+]]   = arith.index_castui [[SHAPE]] : vector<3xi32> to vector<3xindex>
+// CHECK-NEXT:    return [[RES]] : vector<3xindex>
+func.func @index_castui_int_to_index_vector(%a : vector<3xi64>) -> vector<3xindex> {
+    %r = arith.index_castui %a : vector<3xi64> to vector<3xindex>
+    return %r : vector<3xindex>
+}
+
+// CHECK-LABEL: func @index_cast_index_to_int_scalar
+// CHECK-SAME:    ([[ARG:%.+]]: index) -> vector<2xi32>
+// CHECK-NEXT:    [[CAST:%.+]]  = arith.index_cast [[ARG]] : index to i32
+// CHECK-NEXT:    [[C0I32:%.+]] = arith.constant 0 : i32
+// CHECK-NEXT:    [[NEG:%.+]]   = arith.cmpi slt, [[CAST]], [[C0I32]] : i32
+// CHECK-NEXT:    [[EXT:%.+]]   = arith.extsi [[NEG]] : i1 to i32
+// CHECK-NEXT:    [[VZ:%.+]]    = arith.constant dense<0> : vector<2xi32>
+// CHECK-NEXT:    [[INS0:%.+]]  = vector.insert [[CAST]], [[VZ]] [0] : i32 into vector<2xi32>
+// CHECK-NEXT:    [[INS1:%.+]]  = vector.insert [[EXT]], [[INS0]] [1] : i32 into vector<2xi32>
+// CHECK-NEXT:    return [[INS1]] : vector<2xi32>
+func.func @index_cast_index_to_int_scalar(%a : index) -> i64 {
+    %r = arith.index_cast %a : index to i64
+    return %r : i64
+}
+
+// CHECK-LABEL: func @index_cast_index_to_int_vector
+// CHECK-SAME:    ([[ARG:%.+]]: vector<3xindex>) -> vector<3x2xi32>
+// CHECK-NEXT:    arith.index_cast [[ARG]] : vector<3xindex> to vector<3xi32>
+// CHECK-NEXT:    vector.shape_cast
+// CHECK-NEXT:    arith.constant dense<0> : vector<3x1xi32>
+// CHECK-NEXT:    arith.cmpi slt
+// CHECK-NEXT:    arith.extsi
+// CHECK-NEXT:    arith.constant dense<0> : vector<3x2xi32>
+// CHECK-NEXT:    vector.insert_strided_slice
+// CHECK-NEXT:    vector.insert_strided_slice
+// CHECK-NEXT:    return {{%.+}} : vector<3x2xi32>
+func.func @index_cast_index_to_int_vector(%a : vector<3xindex>) -> vector<3xi64> {
+    %r = arith.index_cast %a : vector<3xindex> to vector<3xi64>
+    return %r : vector<3xi64>
+}
+
+// CHECK-LABEL: func @index_castui_index_to_int_scalar
+// CHECK-SAME:    ([[ARG:%.+]]: index) -> vector<2xi32>
+// CHECK-NEXT:    [[CAST:%.+]]  = arith.index_castui [[ARG]] : index to i32
+// CHECK-NEXT:    [[VZ:%.+]]    = arith.constant dense<0> : vector<2xi32>
+// CHECK-NEXT:    [[RES:%.+]]   = vector.insert [[CAST]], [[VZ]] [0] : i32 into vector<2xi32>
+// CHECK-NEXT:    return [[RES]] : vector<2xi32>
+func.func @index_castui_index_to_int_scalar(%a : index) -> i64 {
+    %r = arith.index_castui %a : index to i64
+    return %r : i64
+}
+
+// CHECK-LABEL: func @index_castui_index_to_int_vector
+// CHECK-SAME:    ([[ARG:%.+]]: vector<3xindex>) -> vector<3x2xi32>
+// CHECK-NEXT:    [[CAST:%.+]]  = arith.index_castui [[ARG]] : vector<3xindex> to vector<3xi32>
+// CHECK-NEXT:    [[SHAPE:%.+]] = vector.shape_cast [[CAST]] : vector<3xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[CST:%.+]]   = arith.constant dense<0> : vector<3x2xi32>
+// CHECK-NEXT:    [[RES:%.+]]   = vector.insert_strided_slice [[SHAPE]], [[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
+// CHECK-NEXT:    return [[RES]] : vector<3x2xi32>
+func.func @index_castui_index_to_int_vector(%a : vector<3xindex>) -> vector<3xi64> {
+    %r = arith.index_castui %a : vector<3xindex> to vector<3xi64>
+    return %r : vector<3xi64>
+}
+
 // CHECK-LABEL: func @trunci_scalar1
 // CHECK-SAME:    ([[ARG:%.+]]: vector<2xi32>) -> i32
 // CHECK-NEXT:    [[EXT:%.+]] = vector.extract [[ARG]][0] : vector<2xi32>
