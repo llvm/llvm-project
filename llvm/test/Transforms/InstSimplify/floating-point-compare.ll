@@ -185,6 +185,7 @@ declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>)
 declare float @llvm.maximum.f32(float, float)
 declare double @llvm.exp2.f64(double)
 declare float @llvm.fma.f32(float,float,float)
+declare double @llvm.canonicalize.f64(double)
 
 declare void @expect_equal(i1,i1)
 
@@ -1259,5 +1260,26 @@ define i1 @isKnownNeverInfinity_fpext_sitofp(i16 %x) {
   %f = sitofp i16 %x to half
   %e = fpext half %f to double
   %r = fcmp oeq double %e, 0xfff0000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverInfinity_canonicalize(double %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_canonicalize(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf double %x, 1.0
+  %e = call double @llvm.canonicalize.f64(double %a)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_canonicalize(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_canonicalize(
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.canonicalize.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = call double @llvm.canonicalize.f64(double %x)
+  %r = fcmp une double %e, 0x7ff0000000000000
   ret i1 %r
 }
