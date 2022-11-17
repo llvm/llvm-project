@@ -1283,3 +1283,45 @@ define i1 @isNotKnownNeverInfinity_canonicalize(double %x) {
   %r = fcmp une double %e, 0x7ff0000000000000
   ret i1 %r
 }
+
+define i1 @isKnownNeverInfinity_fabs(double %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_fabs(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf double %x, 1.0
+  %e = call double @llvm.fabs.f64(double %a)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_fabs(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_fabs(
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = call double @llvm.fabs.f64(double %x)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverInfinity_fneg(double %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_fneg(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf double %x, 1.0
+  %e = fneg double %a
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_fneg(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_fneg(
+; CHECK-NEXT:    [[E:%.*]] = fneg double [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = fneg double %x
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
