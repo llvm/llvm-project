@@ -54809,10 +54809,11 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
         SelVT = SelVT.getDoubleNumVectorElementsVT(*DAG.getContext());
-        return DAG.getNode(Op0.getOpcode(), DL, VT,
-                           ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
-                           ConcatSubOperand(VT, Ops, 1),
-                           ConcatSubOperand(VT, Ops, 2));
+        if (DAG.getTargetLoweringInfo().isTypeLegal(SelVT))
+          return DAG.getNode(Op0.getOpcode(), DL, VT,
+                             ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
+                             ConcatSubOperand(VT, Ops, 1),
+                             ConcatSubOperand(VT, Ops, 2));
       }
       break;
     }
