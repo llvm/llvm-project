@@ -20,22 +20,15 @@
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_generic.h"
 
-#if defined(__AVX512BW__) || defined(__AVX512F__) || defined(__AVX2__) ||      \
-    defined(__SSE2__)
+#ifdef __SSE2__
 #include <immintrin.h>
-#endif
-
+#else
 // Define fake functions to prevent the compiler from failing on undefined
-// functions in case the CPU extension is not present.
-#ifndef __AVX512BW__
+// functions in case SSE2 is not present.
 #define _mm512_cmpneq_epi8_mask(A, B) 0
-#endif
-#ifndef __AVX2__
-#define _mm256_movemask_epi8(A) 0
-#endif
-#ifndef __SSE2__
 #define _mm_movemask_epi8(A) 0
-#endif
+#define _mm256_movemask_epi8(A) 0
+#endif //  __SSE2__
 
 namespace __llvm_libc::x86 {
 
