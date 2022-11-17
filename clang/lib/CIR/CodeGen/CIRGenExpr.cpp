@@ -603,7 +603,14 @@ RValue CIRGenFunction::buildCallExpr(const clang::CallExpr *E,
 
   CIRGenCallee callee = buildCallee(E->getCallee());
 
-  assert(!callee.isBuiltin() && "builtins NYI");
+  bool emitBuiltinAsCall = false;
+  if (callee.isBuiltin()) {
+    auto rv = buildBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(),
+                               E, ReturnValue, emitBuiltinAsCall);
+    if (!emitBuiltinAsCall)
+      return rv;
+  }
+
   assert(!callee.isPsuedoDestructor() && "NYI");
 
   return buildCall(E->getCallee()->getType(), callee, E, ReturnValue);

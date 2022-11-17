@@ -157,6 +157,12 @@ struct ParamReferenceReplacerRAII {
 };
 } // namespace
 
+// Emit coroutine intrinsic and patch up arguments of the token type.
+RValue CIRGenFunction::buildCoroutineIntrinsic(const CallExpr *E,
+                                               unsigned int IID) {
+  llvm_unreachable("NYI");
+}
+
 static mlir::LogicalResult buildBodyAndFallthrough(CIRGenFunction &CGF,
                                                    const CoroutineBodyStmt &S,
                                                    Stmt *Body) {
