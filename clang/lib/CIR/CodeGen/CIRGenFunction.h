@@ -937,8 +937,8 @@ public:
   LValue buildUnaryOpLValue(const clang::UnaryOperator *E);
   LValue buildStringLiteralLValue(const StringLiteral *E);
   RValue buildBuiltinExpr(const clang::GlobalDecl GD, unsigned BuiltinID,
-                          const clang::CallExpr *E, ReturnValueSlot ReturnValue,
-                          bool &emitAsCall);
+                          const clang::CallExpr *E,
+                          ReturnValueSlot ReturnValue);
   mlir::Value buildTargetBuiltinExpr(unsigned BuiltinID,
                                      const clang::CallExpr *E,
                                      ReturnValueSlot ReturnValue);

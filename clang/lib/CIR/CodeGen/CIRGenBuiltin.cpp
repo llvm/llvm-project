@@ -35,13 +35,8 @@ using namespace llvm;
 
 RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
-                                        ReturnValueSlot ReturnValue,
-                                        bool &emitAsCall) {
+                                        ReturnValueSlot ReturnValue) {
   const FunctionDecl *FD = GD.getDecl()->getAsFunction();
-
-  // This is used as fallback mechanism for re-emitting selected built-ins as
-  // regular function calls.
-  emitAsCall = false;
 
   // See if we can constant fold this builtin.  If so, don't emit it at all.
   // TODO: Extend this handling to all builtin calls that we can constant-fold.
@@ -104,9 +99,15 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_coro_frame:
   case Builtin::BI__builtin_coro_free:
   case Builtin::BI__builtin_coro_size: {
-    // Inform the caller we rather be emitted as regular function calls
-    emitAsCall = true;
-    return RValue::getIgnored();
+    GlobalDecl gd{FD};
+    mlir::Type ty = CGM.getTypes().GetFunctionType(
+        CGM.getTypes().arrangeGlobalDeclaration(GD));
+    const auto *ND = cast<NamedDecl>(GD.getDecl());
+    auto fnOp =
+        CGM.GetOrCreateCIRFunction(ND->getName(), ty, gd, /*ForVTable=*/false,
+                                   /*DontDefer=*/false);
+    return buildCall(E->getCallee()->getType(), CIRGenCallee::forDirect(fnOp),
+                     E, ReturnValue);
   }
   }
 
