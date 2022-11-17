@@ -152,13 +152,13 @@ define void @derived_type() !dbg !3 {
 
 ; // -----
 
-; CHECK: #[[INT:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
-; CHECK: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK: #[[COMP1:.+]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", line = 10, sizeInBits = 128, alignInBits = 32>
-; CHECK: #[[COMP2:.+]] = #llvm.di_composite_type<{{.*}}, file = #[[FILE]], line = 0, scope = #[[FILE]], baseType = #[[INT]], sizeInBits = 0, alignInBits = 0>
-; CHECK: #[[COMP3:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, {{.*}}, elements = #llvm.di_subrange<count = 4 : i64>>
-; CHECK: #[[COMP4:.+]] = #llvm.di_composite_type<{{.*}}, elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
-; CHECK: #llvm.di_subroutine_type<argumentTypes = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]]>
+; CHECK-DAG: #[[INT:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
+; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
+; CHECK-DAG: #[[COMP1:.+]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", line = 10, sizeInBits = 128, alignInBits = 32>
+; CHECK-DAG: #[[COMP2:.+]] = #llvm.di_composite_type<{{.*}}, file = #[[FILE]], line = 0, scope = #[[FILE]], baseType = #[[INT]], sizeInBits = 0, alignInBits = 0>
+; CHECK-DAG: #[[COMP3:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, {{.*}}, elements = #llvm.di_subrange<count = 4 : i64>>
+; CHECK-DAG: #[[COMP4:.+]] = #llvm.di_composite_type<{{.*}}, elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
+; CHECK-DAG: #llvm.di_subroutine_type<argumentTypes = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]]>
 
 define void @composite_type() !dbg !3 {
   ret void
