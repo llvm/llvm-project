@@ -35,6 +35,7 @@
 #include "swift/ASTSectionImporter/ASTSectionImporter.h"
 #include "swift/Basic/DiagnosticOptions.h"
 #include "swift/Basic/Dwarf.h"
+#include "swift/Basic/LLVM.h"
 #include "swift/Basic/LangOptions.h"
 #include "swift/Basic/Located.h"
 #include "swift/Basic/Platform.h"
@@ -6134,7 +6135,7 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   } break;
 
   case swift::TypeKind::Tuple:
-    return cast<swift::TupleType>(swift_can_type)->getNumElements();
+    return swift::cast<swift::TupleType>(swift_can_type)->getNumElements();
 
   case swift::TypeKind::Struct:
   case swift::TypeKind::Class:
@@ -6360,7 +6361,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
     break;
 
   case swift::TypeKind::Tuple: {
-    auto tuple_type = cast<swift::TupleType>(swift_can_type);
+    auto tuple_type = swift::cast<swift::TupleType>(swift_can_type);
     if (idx >= tuple_type->getNumElements())
       break;
 
@@ -6755,7 +6756,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   } break;
 
   case swift::TypeKind::Tuple: {
-    auto tuple_type = cast<swift::TupleType>(swift_can_type);
+    auto tuple_type = swift::cast<swift::TupleType>(swift_can_type);
     if (idx >= tuple_type->getNumElements())
       break;
 
@@ -7957,7 +7958,7 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
       s.PutCString("Serialized Swift AST, ");
     else
       s.PutCString("Clang module, ");
-    swift::LoadedFile *loaded_file = llvm::cast<swift::LoadedFile>(file_unit);
+    swift::LoadedFile *loaded_file = swift::cast<swift::LoadedFile>(file_unit);
     s.Printf("filename = \"%s\"", loaded_file->getFilename().str().c_str());
   } break;
   case swift::FileUnitKind::DWARFModule:
