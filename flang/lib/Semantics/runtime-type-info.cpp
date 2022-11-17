@@ -65,7 +65,6 @@ private:
   evaluate::StructureConstructor PackageIntValue(
       const SomeExpr &genre, std::int64_t = 0) const;
   SomeExpr PackageIntValueExpr(const SomeExpr &genre, std::int64_t = 0) const;
-  std::vector<const Symbol *> CollectBindings(const Scope &dtScope) const;
   std::vector<evaluate::StructureConstructor> DescribeBindings(
       const Scope &dtScope, Scope &);
   void DescribeGeneric(
@@ -941,8 +940,7 @@ SomeExpr RuntimeTableBuilder::PackageIntValueExpr(
   return StructureExpr(PackageIntValue(genre, n));
 }
 
-std::vector<const Symbol *> RuntimeTableBuilder::CollectBindings(
-    const Scope &dtScope) const {
+std::vector<const Symbol *> CollectBindings(const Scope &dtScope) {
   std::vector<const Symbol *> result;
   std::map<SourceName, const Symbol *> localBindings;
   // Collect local bindings
@@ -1148,4 +1146,5 @@ RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(
   }
   return result;
 }
+
 } // namespace Fortran::semantics
