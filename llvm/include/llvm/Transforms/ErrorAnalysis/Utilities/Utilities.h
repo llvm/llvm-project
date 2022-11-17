@@ -5,6 +5,23 @@
 #ifndef LLVM_UTILITIES_H
 #define LLVM_UTILITIES_H
 
+#include "llvm/IR/ValueMap.h"
 
+using namespace llvm;
+
+namespace atomiccondition {
+
+// Instruction finders
+Instruction *getInstructionAfterInitializationCalls(BasicBlock *BB);
+
+Value *createBBNameGlobalString(BasicBlock *BB);
+Value *createRegisterNameGlobalString(Instruction *Inst);
+Value *createInstructionGlobalString(Instruction *Inst);
+Value *createStringRefGlobalString(StringRef StringObj, Instruction *Inst);
+std::string getInstructionAsString(Instruction *Inst);
+bool isInstructionOfInterest(Instruction *Inst);
+int getFunctionEnum(Instruction *Inst);
+
+} // namespace atomiccondition
 
 #endif // LLVM_UTILITIES_H

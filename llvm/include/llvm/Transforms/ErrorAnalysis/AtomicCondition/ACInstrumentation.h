@@ -16,7 +16,6 @@ class ACInstrumentation {
 private:
   Function *FunctionToInstrument;
 
-  Function *ACInitFunction;
   Function *AFInitFunction;
 
   Function *ACComputingFunction;
@@ -36,27 +35,6 @@ public:
   Value *EmptyValuePointer;
 
   ACInstrumentation(Function *F);
-
-//  void instrumentCallsForMemoryLoadOperation(Instruction *BaseInstruction,
-//                                             BasicBlock::iterator *InstructionIterator,
-//                                             long int *NumInstrumentedInstructions);
-//  void instrumentCallsForUnaryOperation(Instruction *BaseInstruction,
-//                                        BasicBlock::iterator *InstructionIterator,
-//                                        long int *NumInstrumentedInstructions);
-//  void instrumentCallsForBinaryOperation(Instruction *BaseInstruction,
-//                                         BasicBlock::iterator *InstructionIterator,
-//                                         long int *NumInstrumentedInstructions);
-//  void instrumentCallsForOtherOperation(Instruction *BaseInstruction,
-//                                        BasicBlock::iterator *InstructionIterator,
-//                                        long int *NumInstrumentedInstructions);
-//  void instrumentCallsForAFAnalysis(Instruction *BaseInstruction,
-//                                    Instruction *LocationToInstrument,
-//                                    BasicBlock::iterator *InstructionIterator,
-//                                    long int *NumInstrumentedInstructions);
-
-//  void instrumentAFAnalysisForPrintsAndReturns(Instruction *BaseInstruction,
-//                                               BasicBlock::iterator *InstructionIterator,
-//                                               long int *NumInstrumentedInstructions);
 
   void instrumentCallsToAnalyzeInstruction(Instruction *BaseInstruction,
                                            BasicBlock::iterator *InstructionIterator,
@@ -85,9 +63,6 @@ public:
                          BasicBlock::iterator *InstructionIterator);
 
   /// Instruction based functions
-  // Instruction finders
-  Instruction *getInstructionAfterInitializationCalls(BasicBlock *BB);
-
   // Categorized by operations
   static bool canHaveGraphNode(const Instruction *Inst);
   static bool isPhiNode(const Instruction *Inst);
@@ -108,14 +83,6 @@ public:
   static bool isUnwantedFunction(const Function *Func);
   static bool isFunctionOfInterest(const Function *Func);
 
-  // Utility Functions
-  Value *createBBNameGlobalString(BasicBlock *BB);
-  Value *createRegisterNameGlobalString(Instruction *Inst);
-  Value *createInstructionGlobalString(Instruction *Inst);
-  Value *createStringRefGlobalString(StringRef StringObj, Instruction *Inst);
-  std::string getInstructionAsString(Instruction *Inst);
-  static bool isInstructionOfInterest(Instruction *Inst);
-  int getFunctionEnum(Instruction *Inst);
 };
 
 } // namespace atomiccondition
