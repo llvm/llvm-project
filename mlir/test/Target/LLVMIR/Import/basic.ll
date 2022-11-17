@@ -55,14 +55,6 @@ if.end:
 ; CHECK-DBG: } loc(#[[UNKNOWNLOC]])
 
 
-; CHECK-LABEL: llvm.func @f6(%arg0: !llvm.ptr<func<void (i16)>>)
-define void @f6(void (i16) *%fn) {
-; CHECK: %[[c:[0-9]+]] = llvm.mlir.constant(0 : i16) : i16
-; CHECK: llvm.call %arg0(%[[c]])
-  call void %fn(i16 0)
-  ret void
-}
-
 @_ZTIi = external dso_local constant i8*
 @_ZTIii= external dso_local constant i8**
 declare void @foo(i8*)
