@@ -182,9 +182,6 @@ void macho::writeMapFile() {
                        info.fileIndex);
           os.write_escaped(info.str) << "\n";
         }
-      } else if (osec == (void *)in.unwindInfo) {
-        os << format("0x%08llX\t0x%08llX\t[  0] compact unwind info\n",
-                     osec->addr, osec->getSize());
       }
       // TODO print other synthetic sections
     }
