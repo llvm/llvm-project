@@ -1116,7 +1116,9 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   Operation *loop =
       genLoopBoundary(codegen, merger, [&](MutableArrayRef<Value> reduc) {
         if (merger.isFilterLoop(idx)) {
-          assert(isSparse);
+          // extraTids/extraDims must be empty because filter loops only
+          // corresponding to the one and only sparse tensor level.
+          assert(isSparse && extraTids.empty() && extraDims.empty());
           OpOperand *t = &op->getOpOperand(tid);
           auto enc = getSparseTensorEncoding(t->get().getType());
           // Retrieves the affine expression for the filter loop.
@@ -1410,7 +1412,8 @@ static void translateBitsToTidDimPairs(
             // expression. This is also the best place we can do it to avoid
             // putting it inside inner loops.
             // NOTE: It assumes that the levels of the input tensor are
-            // initialized in order, another more admissible approach might be
+            // initialized in order (and it is also currently guaranteed by
+            // computeIterationGraph), another more admissible approach might be
             // accepting out-of-order access between consecutive dense levels.
             affineTids.push_back(tid);
             affineDims.push_back(i);

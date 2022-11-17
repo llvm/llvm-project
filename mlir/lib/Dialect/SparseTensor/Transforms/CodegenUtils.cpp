@@ -332,7 +332,68 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
 Operation *SparseTensorLoopEmitter::enterFilterLoopOverTensorAtDim(
     OpBuilder &builder, Location loc, size_t tid, size_t dim, AffineExpr affine,
     MutableArrayRef<Value> reduc) {
-  llvm_unreachable("need to be implemented");
+  assert(!affine.isa<AffineDimExpr>() && !isDenseDLT(dimTypes[tid][dim]));
+  assert(dimTypes[tid].size() > dim);
+  // We can not re-enter the same level.
+  assert(!coord[tid][dim]);
+
+  Value step = constantIndex(builder, loc, 1);
+
+  Value lo = pidxs[tid][dim];
+  Value hi = highs[tid][dim];
+
+  // TODO: We should instead use a whileOp for filter loop to allow early
+  // break when exceeding (for ordered dimensions).
+  // TODO: There are many other potiential opportunities that we might apply in
+  // the future. E.g., we could use binary search to located the pointer index.
+  scf::ForOp forOp = builder.create<scf::ForOp>(loc, lo, hi, step, reduc);
+
+  // In-place update on the reduction variable vector.
+  assert(forOp.getNumRegionIterArgs() == reduc.size());
+  for (int i = 0, e = reduc.size(); i < e; i++)
+    reduc[i] = forOp.getRegionIterArg(i);
+
+  builder.setInsertionPointToStart(forOp.getBody());
+  Value iv = forOp.getInductionVar();
+
+  pidxs[tid][dim] = iv;
+  // Generating a load on the indices array yields the coordinate.
+  Value ptr = idxBuffer[tid][dim];
+  coord[tid][dim] = genIndexLoad(builder, loc, ptr, iv);
+
+  // Generate an if condition to filter out indices that is not equal to the
+  // result of the affine expression.
+  Value expected = genAffine(builder, affine, loc);
+  auto pred = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
+                                            coord[tid][dim], expected);
+  SmallVector<Type> types;
+  for (Value red : reduc) {
+    types.push_back(red.getType());
+  }
+
+  bool hasReduc = !types.empty();
+  scf::IfOp ifOp =
+      builder.create<scf::IfOp>(loc, types, pred, /*else*/ hasReduc);
+  if (hasReduc) {
+    // scf.for (a) -> v
+    //  %s = scf.if (a) -> v
+    //    user-generated code.
+    //  else
+    //    yield a
+    //  yield %s
+    builder.create<scf::YieldOp>(loc, ifOp.getResults());
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    // On mismatch.
+    builder.create<scf::YieldOp>(loc, reduc);
+  }
+  // Set the insert point to matched branch.
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+
+  // NOTE: we can also prepares for next dim here in advance
+  // Push the loop into stack
+  loopStack.emplace_back(ArrayRef<size_t>(tid), ArrayRef<size_t>(dim), forOp,
+                         coord[tid][dim], nullptr);
+  return forOp;
 }
 
 void SparseTensorLoopEmitter::genDenseAffineAddressAtCurLevel(
@@ -520,7 +581,6 @@ void SparseTensorLoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
   if (forOp) {
     if (!reduc.empty()) {
       assert(reduc.size() == forOp.getNumResults());
-      rewriter.setInsertionPointToEnd(forOp.getBody());
       rewriter.create<scf::YieldOp>(loc, reduc);
     }
     // Exit the loop.
