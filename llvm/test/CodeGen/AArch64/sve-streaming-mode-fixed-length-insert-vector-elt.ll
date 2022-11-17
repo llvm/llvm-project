@@ -11,10 +11,15 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @insertelement_v4i8(<4 x i8> %op1) #0 {
 ; CHECK-LABEL: insertelement_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov w8, #3
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    index z2.h, #0, #1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z1.h
+; CHECK-NEXT:    mov z0.h, p0/m, w9
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <4 x i8> %op1, i8 5, i64 3
     ret <4 x i8> %r
@@ -23,10 +28,15 @@ define <4 x i8> @insertelement_v4i8(<4 x i8> %op1) #0 {
 define <8 x i8> @insertelement_v8i8(<8 x i8> %op1) #0 {
 ; CHECK-LABEL: insertelement_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z1.b, w8
+; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z1.b
+; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <8 x i8> %op1, i8 5, i64 7
     ret <8 x i8> %r
@@ -35,8 +45,15 @@ define <8 x i8> @insertelement_v8i8(<8 x i8> %op1) #0 {
 define <16 x i8> @insertelement_v16i8(<16 x i8> %op1) #0 {
 ; CHECK-LABEL: insertelement_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    mov v0.b[15], w8
+; CHECK-NEXT:    mov w8, #15
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z1.b, w8
+; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z1.b
+; CHECK-NEXT:    mov z0.b, p0/m, w9
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <16 x i8> %op1, i8 5, i64 15
     ret <16 x i8> %r
@@ -45,8 +62,15 @@ define <16 x i8> @insertelement_v16i8(<16 x i8> %op1) #0 {
 define <32 x i8> @insertelement_v32i8(<32 x i8> %op1) #0 {
 ; CHECK-LABEL: insertelement_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    mov v1.b[15], w8
+; CHECK-NEXT:    mov w8, #15
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    index z3.b, #0, #1
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z2.b, w8
+; CHECK-NEXT:    cmpeq p0.b, p0/z, z3.b, z2.b
+; CHECK-NEXT:    mov z1.b, p0/m, w9
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
     %r = insertelement <32 x i8> %op1, i8 5, i64 31
     ret <32 x i8> %r
@@ -56,10 +80,15 @@ define <32 x i8> @insertelement_v32i8(<32 x i8> %op1) #0 {
 define <2 x i16> @insertelement_v2i16(<2 x i16> %op1) #0 {
 ; CHECK-LABEL: insertelement_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    index z2.s, #0, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    mov z0.s, p0/m, w9
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <2 x i16> %op1, i16 5, i64 1
     ret <2 x i16> %r
@@ -68,10 +97,15 @@ define <2 x i16> @insertelement_v2i16(<2 x i16> %op1) #0 {
 define <4 x i16> @insertelement_v4i16(<4 x i16> %op1) #0 {
 ; CHECK-LABEL: insertelement_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov w8, #3
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    index z2.h, #0, #1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z1.h
+; CHECK-NEXT:    mov z0.h, p0/m, w9
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <4 x i16> %op1, i16 5, i64 3
     ret <4 x i16> %r
@@ -80,8 +114,15 @@ define <4 x i16> @insertelement_v4i16(<4 x i16> %op1) #0 {
 define <8 x i16> @insertelement_v8i16(<8 x i16> %op1) #0 {
 ; CHECK-LABEL: insertelement_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    mov v0.h[7], w8
+; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    index z2.h, #0, #1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z1.h
+; CHECK-NEXT:    mov z0.h, p0/m, w9
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <8 x i16> %op1, i16 5, i64 7
     ret <8 x i16> %r
@@ -90,8 +131,15 @@ define <8 x i16> @insertelement_v8i16(<8 x i16> %op1) #0 {
 define <16 x i16> @insertelement_v16i16(<16 x i16> %op1) #0 {
 ; CHECK-LABEL: insertelement_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    mov v1.h[7], w8
+; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    index z3.h, #0, #1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    cmpeq p0.h, p0/z, z3.h, z2.h
+; CHECK-NEXT:    mov z1.h, p0/m, w9
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
     %r = insertelement <16 x i16> %op1, i16 5, i64 15
     ret <16 x i16> %r
@@ -101,10 +149,15 @@ define <16 x i16> @insertelement_v16i16(<16 x i16> %op1) #0 {
 define <2 x i32> @insertelement_v2i32(<2 x i32> %op1) #0 {
 ; CHECK-LABEL: insertelement_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    index z2.s, #0, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    mov z0.s, p0/m, w9
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <2 x i32> %op1, i32 5, i64 1
     ret <2 x i32> %r
@@ -113,8 +166,15 @@ define <2 x i32> @insertelement_v2i32(<2 x i32> %op1) #0 {
 define <4 x i32> @insertelement_v4i32(<4 x i32> %op1) #0 {
 ; CHECK-LABEL: insertelement_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    mov v0.s[3], w8
+; CHECK-NEXT:    mov w8, #3
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    index z2.s, #0, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    mov z0.s, p0/m, w9
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <4 x i32> %op1, i32 5, i64 3
     ret <4 x i32> %r
@@ -123,9 +183,15 @@ define <4 x i32> @insertelement_v4i32(<4 x i32> %op1) #0 {
 define <8 x i32> @insertelement_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-LABEL: insertelement_v8i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #3
+; CHECK-NEXT:    index z3.s, #0, #1
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.s, w8
 ; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    mov v1.s[3], w8
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    mov z1.s, p0/m, w8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
     %op1 = load <8 x i32>, <8 x i32>* %a
     %r = insertelement <8 x i32> %op1, i32 5, i64 7
@@ -146,8 +212,15 @@ define <1 x i64> @insertelement_v1i64(<1 x i64> %op1) #0 {
 define <2 x i64> @insertelement_v2i64(<2 x i64> %op1) #0 {
 ; CHECK-LABEL: insertelement_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    index z2.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z2.d, z1.d
+; CHECK-NEXT:    mov z0.d, p0/m, x9
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <2 x i64> %op1, i64 5, i64 1
     ret <2 x i64> %r
@@ -156,9 +229,15 @@ define <2 x i64> @insertelement_v2i64(<2 x i64> %op1) #0 {
 define <4 x i64> @insertelement_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-LABEL: insertelement_v4i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    index z3.d, #0, #1
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.d, x8
 ; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    mov v1.d[1], x8
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z3.d, z2.d
+; CHECK-NEXT:    mov z1.d, p0/m, x8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
     %op1 = load <4 x i64>, <4 x i64>* %a
     %r = insertelement <4 x i64> %op1, i64 5, i64 3
@@ -185,10 +264,15 @@ define <2 x half> @insertelement_v2f16(<2 x half> %op1) #0 {
 define <4 x half> @insertelement_v4f16(<4 x half> %op1) #0 {
 ; CHECK-LABEL: insertelement_v4f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #3
 ; CHECK-NEXT:    fmov h1, #5.00000000
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v0.h[3], v1.h[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    index z3.h, #0, #1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    cmpeq p0.h, p0/z, z3.h, z2.h
+; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <4 x half> %op1, half 5.0, i64 3
     ret <4 x half> %r
@@ -197,8 +281,15 @@ define <4 x half> @insertelement_v4f16(<4 x half> %op1) #0 {
 define <8 x half> @insertelement_v8f16(<8 x half> %op1) #0 {
 ; CHECK-LABEL: insertelement_v8f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #7
 ; CHECK-NEXT:    fmov h1, #5.00000000
-; CHECK-NEXT:    mov v0.h[7], v1.h[0]
+; CHECK-NEXT:    index z3.h, #0, #1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    cmpeq p0.h, p0/z, z3.h, z2.h
+; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <8 x half> %op1, half 5.0, i64 7
     ret <8 x half> %r
@@ -207,10 +298,15 @@ define <8 x half> @insertelement_v8f16(<8 x half> %op1) #0 {
 define <16 x half> @insertelement_v16f16(<16 x half>* %a) #0 {
 ; CHECK-LABEL: insertelement_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov h0, #5.00000000
-; CHECK-NEXT:    ldr q1, [x0, #16]
-; CHECK-NEXT:    mov v1.h[7], v0.h[0]
-; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    fmov h3, #5.00000000
+; CHECK-NEXT:    index z4.h, #0, #1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    cmpeq p0.h, p0/z, z4.h, z2.h
+; CHECK-NEXT:    mov z1.h, p0/m, h3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
     %op1 = load <16 x half>, <16 x half>* %a
     %r = insertelement <16 x half> %op1, half 5.0, i64 15
@@ -221,10 +317,15 @@ define <16 x half> @insertelement_v16f16(<16 x half>* %a) #0 {
 define <2 x float> @insertelement_v2f32(<2 x float> %op1) #0 {
 ; CHECK-LABEL: insertelement_v2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    fmov s1, #5.00000000
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    index z3.s, #0, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z2.s, w8
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    mov z0.s, p0/m, s1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <2 x float> %op1, float 5.0, i64 1
     ret <2 x float> %r
@@ -233,8 +334,15 @@ define <2 x float> @insertelement_v2f32(<2 x float> %op1) #0 {
 define <4 x float> @insertelement_v4f32(<4 x float> %op1) #0 {
 ; CHECK-LABEL: insertelement_v4f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #3
 ; CHECK-NEXT:    fmov s1, #5.00000000
-; CHECK-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NEXT:    index z3.s, #0, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z2.s, w8
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z3.s, z2.s
+; CHECK-NEXT:    mov z0.s, p0/m, s1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <4 x float> %op1, float 5.0, i64 3
     ret <4 x float> %r
@@ -244,8 +352,14 @@ define <8 x float> @insertelement_v8f32(<8 x float>* %a) #0 {
 ; CHECK-LABEL: insertelement_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fmov s2, #5.00000000
-; CHECK-NEXT:    mov v1.s[3], v2.s[0]
+; CHECK-NEXT:    mov w8, #3
+; CHECK-NEXT:    fmov s4, #5.00000000
+; CHECK-NEXT:    index z2.s, #0, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z3.s, w8
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z3.s
+; CHECK-NEXT:    mov z1.s, p0/m, s4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
     %op1 = load <8 x float>, <8 x float>* %a
     %r = insertelement <8 x float> %op1, float 5.0, i64 7
@@ -265,8 +379,15 @@ define <1 x double> @insertelement_v1f64(<1 x double> %op1) #0 {
 define <2 x double> @insertelement_v2f64(<2 x double> %op1) #0 {
 ; CHECK-LABEL: insertelement_v2f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    fmov d1, #5.00000000
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    index z3.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z3.d, z2.d
+; CHECK-NEXT:    mov z0.d, p0/m, d1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <2 x double> %op1, double 5.0, i64 1
     ret <2 x double> %r
@@ -275,10 +396,15 @@ define <2 x double> @insertelement_v2f64(<2 x double> %op1) #0 {
 define <4 x double> @insertelement_v4f64(<4 x double>* %a) #0 {
 ; CHECK-LABEL: insertelement_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, #5.00000000
-; CHECK-NEXT:    ldr q1, [x0, #16]
-; CHECK-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    fmov d3, #5.00000000
+; CHECK-NEXT:    index z4.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z4.d, z2.d
+; CHECK-NEXT:    mov z1.d, p0/m, d3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
     %op1 = load <4 x double>, <4 x double>* %a
     %r = insertelement <4 x double> %op1, double 5.0, i64 3
