@@ -800,7 +800,7 @@ void fAFPrintTopFromAllAmplificationPaths() {
   // Printing Results
   printf("\n");
   printf("The top Amplification Paths are:\n");
-  for (int I = 0; I < min(20, AFComponentCounter); ++I) {
+  for (int I = 0; I < min(10, AFComponentCounter); ++I) {
     AFProduct **ProductPath= fAFFlattenAFComponentsPath(Paths[I]);
     printf("AF: %f of Node:%d WRT Input:%s through path: [",
            Paths[I]->AF,

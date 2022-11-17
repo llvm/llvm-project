@@ -322,8 +322,49 @@ Value *ACInstrumentation::instrumentPhiNodeForAF(Value *OriginalPHI,
   return AFPhi;
 }
 
-void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
-                                             long *NumInstrumentedInstructions) {
+// Instrumenting a Select Instruction for propagating AFItem
+Value *ACInstrumentation::instrumentSelectForAF(
+    Value *OriginalSelInstr, BasicBlock::iterator *InstructionIterator,
+    long *NumInstrumentedInstructions) {
+  assert(isa<Instruction>(*OriginalSelInstr) &&
+         static_cast<Instruction *>(OriginalSelInstr)->getOpcode() ==
+             Instruction::Select);
+
+  IRBuilder<> InstructionBuilder((*InstructionIterator)->getNextNode());
+
+  // Setting the AF Values to propagate for the True and False cases.
+  Value *TrueValue, *FalseValue;
+  if (!(isa<Constant>(
+            static_cast<SelectInst *>(OriginalSelInstr)->getTrueValue()) ||
+        isa<Argument>(
+            static_cast<SelectInst *>(OriginalSelInstr)->getTrueValue())))
+    TrueValue = InstructionAFMap[static_cast<SelectInst *>(OriginalSelInstr)
+                                     ->getTrueValue()];
+  else
+    TrueValue = ConstantPointerNull::get(InstructionBuilder.getPtrTy());
+
+  if (!(isa<Constant>(
+            static_cast<SelectInst *>(OriginalSelInstr)->getFalseValue()) ||
+        isa<Argument>(
+            static_cast<SelectInst *>(OriginalSelInstr)->getFalseValue())))
+    FalseValue = InstructionAFMap[static_cast<SelectInst *>(OriginalSelInstr)
+                                      ->getFalseValue()];
+  else
+    FalseValue = ConstantPointerNull::get(InstructionBuilder.getPtrTy());
+
+  // Instrumenting Select instruction, incrementing instrumented instructions
+  // and incrementing insert pointer.
+  Value *AFSel = InstructionBuilder.CreateSelect(
+      static_cast<SelectInst *>(OriginalSelInstr)->getCondition(), TrueValue,
+      FalseValue);
+  (*NumInstrumentedInstructions)++;
+  (*InstructionIterator)++;
+
+  return AFSel;
+}
+
+void ACInstrumentation::instrumentBasicBlock(
+    BasicBlock *BB, long *NumInstrumentedInstructions) {
   if (ACInstrumentation::isUnwantedFunction(BB->getParent()))
     return;
 

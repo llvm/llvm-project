@@ -70,6 +70,8 @@ public:
                                        long int *NumInstrumentedInstructions);
 
   Value *instrumentPhiNodeForAF(Value *OriginalPHI,
+                                long *NumInstrumentedInstructions);
+  Value *instrumentSelectForAF(Value *OriginalSelInstr,
                                 BasicBlock::iterator *InstructionIterator,
                                 long *NumInstrumentedInstructions);
 
