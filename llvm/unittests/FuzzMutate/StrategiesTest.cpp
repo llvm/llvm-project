@@ -37,24 +37,13 @@ std::unique_ptr<IRMutator> createInjectorMutator() {
   return std::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
 }
 
-std::unique_ptr<IRMutator> createDeleterMutator() {
+template <class Strategy> std::unique_ptr<IRMutator> createMutator() {
   std::vector<TypeGetter> Types{
       Type::getInt1Ty,  Type::getInt8Ty,  Type::getInt16Ty, Type::getInt32Ty,
       Type::getInt64Ty, Type::getFloatTy, Type::getDoubleTy};
 
   std::vector<std::unique_ptr<IRMutationStrategy>> Strategies;
-  Strategies.push_back(std::make_unique<InstDeleterIRStrategy>());
-
-  return std::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
-}
-
-std::unique_ptr<IRMutator> createInstModifierMutator() {
-  std::vector<TypeGetter> Types{
-      Type::getInt1Ty,  Type::getInt8Ty,  Type::getInt16Ty, Type::getInt32Ty,
-      Type::getInt64Ty, Type::getFloatTy, Type::getDoubleTy};
-
-  std::vector<std::unique_ptr<IRMutationStrategy>> Strategies;
-  Strategies.push_back(std::make_unique<InstModificationIRStrategy>());
+  Strategies.push_back(std::make_unique<Strategy>());
 
   return std::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
 }
@@ -113,7 +102,7 @@ TEST(InstDeleterIRStrategyTest, EmptyFunction) {
                      "ret i32 %L6\n"
                      "}\n";
 
-  auto Mutator = createDeleterMutator();
+  auto Mutator = createMutator<InstDeleterIRStrategy>();
   ASSERT_TRUE(Mutator);
 
   IterateOnSource(Source, *Mutator);
@@ -139,7 +128,7 @@ TEST(InstDeleterIRStrategyTest, PhiNodes) {
         ret i32 %a.0\n\
       }";
 
-  auto Mutator = createDeleterMutator();
+  auto Mutator = createMutator<InstDeleterIRStrategy>();
   ASSERT_TRUE(Mutator);
 
   IterateOnSource(Source, *Mutator);
@@ -154,7 +143,7 @@ static void checkModifyNoUnsignedAndNoSignedWrap(StringRef Opc) {
         ret i32 %a\n\
       }");
 
-  auto Mutator = createInstModifierMutator();
+  auto Mutator = createMutator<InstModificationIRStrategy>();
   ASSERT_TRUE(Mutator);
 
   auto M = parseAssembly(Source.data(), Ctx);
@@ -198,7 +187,7 @@ TEST(InstModificationIRStrategyTest, ICmp) {
         ret i1 %a\n\
       }";
 
-  auto Mutator = createInstModifierMutator();
+  auto Mutator = createMutator<InstModificationIRStrategy>();
   ASSERT_TRUE(Mutator);
 
   auto M = parseAssembly(Source.data(), Ctx);
@@ -223,7 +212,7 @@ TEST(InstModificationIRStrategyTest, GEP) {
         ret i32* %gep\n\
       }";
 
-  auto Mutator = createInstModifierMutator();
+  auto Mutator = createMutator<InstModificationIRStrategy>();
   ASSERT_TRUE(Mutator);
 
   auto M = parseAssembly(Source.data(), Ctx);
@@ -238,5 +227,84 @@ TEST(InstModificationIRStrategyTest, GEP) {
   }
 
   EXPECT_TRUE(FoundInbounds);
+}
+
+/// The caller has to guarantee that function argument are used in the SAME
+/// place as the operand.
+void VerfyOperandShuffled(StringRef Source, std::pair<int, int> ShuffleItems) {
+  LLVMContext Ctx;
+  auto Mutator = createMutator<InstModificationIRStrategy>();
+  ASSERT_TRUE(Mutator);
+
+  auto M = parseAssembly(Source.data(), Ctx);
+  auto &F = *M->begin();
+  Instruction *Inst = &*F.begin()->begin();
+  ASSERT_TRUE(M && !verifyModule(*M, &errs()));
+  ASSERT_TRUE(Inst->getOperand(ShuffleItems.first) ==
+              dyn_cast<Value>(F.getArg(ShuffleItems.first)));
+  ASSERT_TRUE(Inst->getOperand(ShuffleItems.second) ==
+              dyn_cast<Value>(F.getArg(ShuffleItems.second)));
+
+  Mutator->mutateModule(*M, 0, Source.size(), Source.size() + 100);
+  EXPECT_TRUE(!verifyModule(*M, &errs()));
+
+  EXPECT_TRUE(Inst->getOperand(ShuffleItems.first) ==
+              dyn_cast<Value>(F.getArg(ShuffleItems.second)));
+  EXPECT_TRUE(Inst->getOperand(ShuffleItems.second) ==
+              dyn_cast<Value>(F.getArg(ShuffleItems.first)));
+}
+
+TEST(InstModificationIRStrategyTest, ShuffleFAdd) {
+  StringRef Source = "\n\
+      define float @test(float %0, float %1) {\n\
+        %add = fadd float %0, %1\n\
+        ret float %add\n\
+      }";
+  VerfyOperandShuffled(Source, {0, 1});
+}
+TEST(InstModificationIRStrategyTest, ShuffleSelect) {
+  StringRef Source = "\n\
+      define float @test(i1 %0, float %1, float %2) {\n\
+        %select = select i1 %0, float %1, float %2\n\
+        ret float %select\n\
+      }";
+  VerfyOperandShuffled(Source, {1, 2});
+}
+
+void VerfyDivDidntShuffle(StringRef Source) {
+  LLVMContext Ctx;
+  auto Mutator = createMutator<InstModificationIRStrategy>();
+  ASSERT_TRUE(Mutator);
+
+  auto M = parseAssembly(Source.data(), Ctx);
+  auto &F = *M->begin();
+  Instruction *Inst = &*F.begin()->begin();
+  ASSERT_TRUE(M && !verifyModule(*M, &errs()));
+
+  EXPECT_TRUE(isa<Constant>(Inst->getOperand(0)));
+  EXPECT_TRUE(Inst->getOperand(1) == dyn_cast<Value>(F.getArg(0)));
+
+  Mutator->mutateModule(*M, Seed, Source.size(), Source.size() + 100);
+  EXPECT_TRUE(!verifyModule(*M, &errs()));
+
+  // Didn't shuffle.
+  EXPECT_TRUE(isa<Constant>(Inst->getOperand(0)));
+  EXPECT_TRUE(Inst->getOperand(1) == dyn_cast<Value>(F.getArg(0)));
+}
+TEST(InstModificationIRStrategyTest, DidntShuffleSDiv) {
+  StringRef Source = "\n\
+      define i32 @test(i32 %0) {\n\
+        %div = sdiv i32 0, %0\n\
+        ret i32 %div\n\
+      }";
+  VerfyDivDidntShuffle(Source);
+}
+TEST(InstModificationIRStrategyTest, DidntShuffleFRem) {
+  StringRef Source = "\n\
+      define <2 x double> @test(<2 x double> %0) {\n\
+        %div = frem <2 x double> <double 0.0, double 0.0>, %0\n\
+        ret <2 x double> %div\n\
+      }";
+  VerfyDivDidntShuffle(Source);
 }
 } // namespace
