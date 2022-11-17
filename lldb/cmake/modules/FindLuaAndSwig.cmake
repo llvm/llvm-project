@@ -26,6 +26,5 @@ else()
                                       LUAANDSWIG_FOUND
                                     REQUIRED_VARS
                                       LUA_LIBRARIES
-                                      LUA_INCLUDE_DIR
-                                      LLDB_ENABLE_SWIG)
+                                      LUA_INCLUDE_DIR)
 endif()
