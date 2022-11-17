@@ -329,6 +329,12 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
   return loop;
 }
 
+Operation *SparseTensorLoopEmitter::enterFilterLoopOverTensorAtDim(
+    OpBuilder &builder, Location loc, size_t tid, size_t dim, AffineExpr affine,
+    MutableArrayRef<Value> reduc) {
+  llvm_unreachable("need to be implemented");
+}
+
 void SparseTensorLoopEmitter::genDenseAffineAddressAtCurLevel(
     OpBuilder &builder, Location loc, size_t tid, size_t dim,
     AffineExpr affine) {
