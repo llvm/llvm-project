@@ -431,6 +431,9 @@ public:
   }
 
   /// Gets loop induction variable at the given level.
+  unsigned getCurrentDepth() const { return loopStack.size(); }
+
+  /// Gets loop induction variable at the given level.
   Value getLoopIV(size_t level) const {
     if (level < loopStack.size())
       return loopStack[level].iv;
