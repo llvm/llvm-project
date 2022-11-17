@@ -493,40 +493,6 @@ template <size_t Bits> struct UInt {
   const uint64_t *data() const { return val; }
 };
 
-template <>
-constexpr UInt<128> UInt<128>::operator*(const UInt<128> &other) const {
-  // temp low covers bits 0-63, middle covers 32-95, high covers 64-127, and
-  // high overflow covers 96-159.
-  uint64_t temp_low = low(val[0]) * low(other[0]);
-  uint64_t temp_middle_1 = low(val[0]) * high(other[0]);
-  uint64_t temp_middle_2 = high(val[0]) * low(other[0]);
-
-  // temp_middle is split out so that overflows can be handled, but since
-  // but since the result will be truncated to 128 bits any overflow from here
-  // on doesn't matter.
-  uint64_t temp_high = low(val[0]) * low(other[1]) +
-                       high(val[0]) * high(other[0]) +
-                       low(val[1]) * low(other[0]);
-
-  uint64_t temp_high_overflow =
-      low(val[0]) * high(other[1]) + high(val[0]) * low(other[1]) +
-      low(val[1]) * high(other[0]) + high(val[1]) * low(other[0]);
-
-  // temp_low_middle has just the high 32 bits of low, as well as any
-  // overflow.
-  uint64_t temp_low_middle =
-      high(temp_low) + low(temp_middle_1) + low(temp_middle_2);
-
-  uint64_t new_low = low(temp_low) + (low(temp_low_middle) << 32);
-  uint64_t new_high = high(temp_low_middle) + high(temp_middle_1) +
-                      high(temp_middle_2) + temp_high +
-                      (low(temp_high_overflow) << 32);
-  UInt<128> result(0);
-  result[0] = new_low;
-  result[1] = new_high;
-  return result;
-}
-
 // Provides limits of UInt<128>.
 template <> class numeric_limits<UInt<128>> {
 public:
