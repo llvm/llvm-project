@@ -130,5 +130,34 @@ double3 cos(double3);
 __attribute__((clang_builtin_alias(__builtin_elementwise_cos)))
 double4 cos(double4);
 
+// sin builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin))) half sin(half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin)))
+half2 sin(half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin)))
+half3 sin(half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin)))
+half4 sin(half4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin))) float
+sin(float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin)))
+float2 sin(float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin)))
+float3 sin(float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin)))
+float4 sin(float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin))) double
+sin(double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin)))
+double2 sin(double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin)))
+double3 sin(double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_sin)))
+double4 sin(double4);
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_
