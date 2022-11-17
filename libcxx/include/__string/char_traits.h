@@ -22,6 +22,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <iosfwd>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
