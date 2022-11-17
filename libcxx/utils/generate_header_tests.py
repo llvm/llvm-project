@@ -113,7 +113,8 @@ def produce(test_file, variables):
 
 def is_header(file):
     """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
-    return not file.is_dir() and not file.name == 'module.modulemap.in'
+    return not file.is_dir() and not file.name == 'module.modulemap.in' and file.name != 'libcxx.imp'
+
 
 def main():
     monorepo_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
