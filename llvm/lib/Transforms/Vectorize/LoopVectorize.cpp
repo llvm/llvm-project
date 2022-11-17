@@ -8483,7 +8483,7 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
         dyn_cast_or_null<VPPredInstPHIRecipe>(Op->getDefiningRecipe());
     if (!PredR)
       continue;
-    auto *RepR = cast_or_null<VPReplicateRecipe>(
+    auto *RepR = cast<VPReplicateRecipe>(
         PredR->getOperand(0)->getDefiningRecipe());
     assert(RepR->isPredicated() &&
            "expected Replicate recipe to be predicated");
