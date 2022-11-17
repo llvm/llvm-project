@@ -1,13 +1,10 @@
-; RUN: opt -debug-only=branch-prob -enable-new-pm=false -branch-prob -jump-threading -S %s 2>&1 | FileCheck %s
-; RUN: opt -debug-only=branch-prob -passes="require<branch-prob>,jump-threading" -S %s 2>&1 | FileCheck %s
-; RUN: opt -debug-only=branch-prob -passes=jump-threading -S %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOBPI
+; RUN: opt -debug-only=branch-prob -jump-threading -S %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Make sure that we clear edge probabilities for bb1 as we fold
 ; the conditional branch in it.
 
 ; CHECK: eraseBlock bb1
-; CHECK-NOBPI-NOT: eraseBlock bb1
 
 define i32 @foo(i32 %arg) !prof !0 {
 ; CHECK-LABEL: @foo
