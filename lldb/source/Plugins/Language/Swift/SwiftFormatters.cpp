@@ -302,8 +302,8 @@ static bool makeStringGutsSummary(
 
   uint8_t discriminator = raw1 >> 56;
 
-  if ((discriminator & 0xB0) == 0xA0) { // 1x10xxxx: Small string
-    uint64_t count = (raw1 >> 56) & 0x0F;
+  if ((discriminator & 0b1011'0000) == 0b1010'0000) { // 1x10xxxx: Small string
+    uint64_t count = (raw1 >> 56) & 0b1111;
     uint64_t maxCount = (ptrSize == 8 ? 15 : 10);
     if (count > maxCount)
       return false;
@@ -328,7 +328,7 @@ static bool makeStringGutsSummary(
   lldb::addr_t objectAddress = (raw1 & 0x0FFFFFFFFFFFFFFF);
   if ((flags & 0x1000) != 0) { // Tail-allocated / biased address
     // Tail-allocation is only for natively stored or literals.
-    if ((discriminator & 0x70) != 0)
+    if ((discriminator & 0b0111'0000) != 0)
       return false;
     uint64_t bias = (ptrSize == 8 ? 32 : 20);
     auto address = objectAddress + bias;
@@ -337,7 +337,7 @@ static bool makeStringGutsSummary(
       address, count, valobj, stream, summary_options, read_options);
   }
 
-  if ((discriminator & 0xF0) == 0x00) { // Shared string
+  if ((discriminator & 0b1111'0000) == 0) { // Shared string
     // FIXME: Verify that there is a __SharedStringStorage instance at `address`.
     // Shared strings must not be tail-allocated or natively stored.
     if ((flags & 0x3000) != 0)
@@ -354,10 +354,10 @@ static bool makeStringGutsSummary(
   }
 
   // Native/shared strings should already have been handled.
-  if ((discriminator & 0x70) == 0)
+  if ((discriminator & 0b0111'0000) == 0)
     return false;
 
-  if ((discriminator & 0xE0) == 0x40) { // 010xxxxx: Bridged
+  if ((discriminator & 0b1110'0000) == 0b0100'0000) { // 010xxxxx: Bridged
     TypeSystemClang *clang_ast_context =
         ScratchTypeSystemClang::GetForTarget(process->GetTarget());
     if (!clang_ast_context)
@@ -377,7 +377,7 @@ static bool makeStringGutsSummary(
     return NSStringSummaryProvider(*nsstring.get(), stream, summary_options);
   }
 
-  if ((discriminator & 0xF8) == 0x18) { // 0001xxxx: Foreign
+  if ((discriminator & 0b1111'1000) == 0b0001'1000) { // 0001xxxx: Foreign
     // Not currently generated: Foreign non-bridged strings are not currently
     // used in Swift.
     return false;
