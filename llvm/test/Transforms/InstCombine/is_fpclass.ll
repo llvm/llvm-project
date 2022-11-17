@@ -397,6 +397,54 @@ define i1 @test_class_is_nan_other_nnan_src(float %x) {
 }
 
 ; --------------------------------------------------------------------
+; llvm.is.fpclass with ninf sources
+; --------------------------------------------------------------------
+
+define i1 @test_class_is_ninf_pinf_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_is_ninf_pinf_ninf_src(
+; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 516)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %ninf = fadd ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 516)
+  ret i1 %class
+}
+
+define i1 @test_class_is_ninf_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_is_ninf_ninf_src(
+; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 4)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %ninf = fadd ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 4)
+  ret i1 %class
+}
+
+define i1 @test_class_is_pinf_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_is_pinf_ninf_src(
+; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 512)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %ninf = fadd ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 512)
+  ret i1 %class
+}
+
+define i1 @test_class_is_ninf_pinf_pnormal_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_is_ninf_pinf_pnormal_ninf_src(
+; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 772)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %ninf = fadd ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 772)
+  ret i1 %class
+}
+
+; --------------------------------------------------------------------
 ; Negation of llvm.is.fpclass
 ; --------------------------------------------------------------------
 
