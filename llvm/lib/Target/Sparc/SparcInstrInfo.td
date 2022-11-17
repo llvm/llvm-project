@@ -241,10 +241,12 @@ SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 
 def SPcmpicc : SDNode<"SPISD::CMPICC", SDTSPcmpicc, [SDNPOutGlue]>;
 def SPcmpfcc : SDNode<"SPISD::CMPFCC", SDTSPcmpfcc, [SDNPOutGlue]>;
+def SPcmpfccv9 : SDNode<"SPISD::CMPFCC_V9", SDTSPcmpfcc, [SDNPOutGlue]>;
 def SPbricc : SDNode<"SPISD::BRICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbpicc : SDNode<"SPISD::BPICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbpxcc : SDNode<"SPISD::BPXCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbrfcc : SDNode<"SPISD::BRFCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
+def SPbrfccv9 : SDNode<"SPISD::BRFCC_V9", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 
 def SPhi    : SDNode<"SPISD::Hi", SDTIntUnaryOp>;
 def SPlo    : SDNode<"SPISD::Lo", SDTIntUnaryOp>;
@@ -962,6 +964,19 @@ let Uses = [FCC0] in {
                              "fb$cond,a $imm22", []>;
 }
 
+// Variants of FBCOND that uses V9 opcode
+let Predicates = [HasV9], Uses = [FCC0], cc = 0,
+    isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in {
+  def FBCOND_V9  : F2_3<0b101, 0, 1, (outs),
+                    (ins bprtarget:$imm19, CCOp:$cond),
+                    "fb$cond %fcc0, $imm19",
+                    [(SPbrfccv9 bb:$imm19, imm:$cond)], IIC_fpu_normal_instr>;
+  def FBCONDA_V9 : F2_3<0b101, 1, 1, (outs),
+                    (ins bprtarget:$imm19, CCOp:$cond),
+                    "fb$cond,a %fcc0, $imm19",
+                    [(SPbrfccv9 bb:$imm19, imm:$cond)], IIC_fpu_normal_instr>;
+}
+
 let Predicates = [HasV9] in
   defm BPF : FPredBranch;
 
@@ -1405,6 +1420,31 @@ let Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
                    (outs), (ins QFPRegs:$rs1, QFPRegs:$rs2),
                    "fcmpq $rs1, $rs2",
                    [(SPcmpfcc f128:$rs1, f128:$rs2)]>,
+                   Requires<[HasHardQuad]>;
+}
+
+// A.13 Floating-Point Compare (SPARC v9)
+// Note that these always write to %fcc0 instead of having its destination
+// allocated automatically.
+// This avoids complications with the scheduler sometimes wanting to spill
+// the contents of an FCC, since SPARC v9 doesn't have facilities to spill
+// an individual FCC.
+
+let Predicates = [HasV9], Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
+  def FCMPS_V9  : F3_3c<2, 0b110101, 0b001010001,
+                   (outs), (ins FPRegs:$rs1, FPRegs:$rs2),
+                   "fcmps %fcc0, $rs1, $rs2",
+                   [(SPcmpfccv9 f32:$rs1, f32:$rs2)],
+                   IIC_fpu_fast_instr>;
+  def FCMPD_V9  : F3_3c<2, 0b110101, 0b001010010,
+                   (outs), (ins DFPRegs:$rs1, DFPRegs:$rs2),
+                   "fcmpd %fcc0, $rs1, $rs2",
+                   [(SPcmpfccv9 f64:$rs1, f64:$rs2)],
+                   IIC_fpu_fast_instr>;
+  def FCMPQ_V9  : F3_3c<2, 0b110101, 0b001010011,
+                   (outs), (ins QFPRegs:$rs1, QFPRegs:$rs2),
+                   "fcmpq %fcc0, $rs1, $rs2",
+                   [(SPcmpfccv9 f128:$rs1, f128:$rs2)]>,
                    Requires<[HasHardQuad]>;
 }
 
