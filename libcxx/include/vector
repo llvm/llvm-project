@@ -297,6 +297,7 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
+#include <__utility/transaction.h>
 #include <climits>
 #include <cstdlib>
 #include <cstring>
@@ -425,18 +426,27 @@ public:
                                     value_type,
                                     typename iterator_traits<_ForwardIterator>::reference>::value>::type* = 0);
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
-    ~vector()
-    {
-      __annotate_delete();
-      std::__debug_db_erase_c(this);
+private:
+  class __destroy_vector {
+    public:
+      _LIBCPP_CONSTEXPR __destroy_vector(vector& __vec) : __vec_(__vec) {}
 
-      if (this->__begin_ != nullptr)
-      {
-        __clear();
-        __alloc_traits::deallocate(__alloc(), this->__begin_, capacity());
+      _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void operator()() {
+          __vec_.__annotate_delete();
+          std::__debug_db_erase_c(std::addressof(__vec_));
+
+          if (__vec_.__begin_ != nullptr) {
+            __vec_.__clear();
+            __alloc_traits::deallocate(__vec_.__alloc(), __vec_.__begin_, __vec_.capacity());
+          }
       }
-    }
+
+    private:
+      vector& __vec_;
+  };
+
+public:
+  _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI ~vector() { __destroy_vector(*this)(); }
 
     _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(const vector& __x);
     _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(const vector& __x, const __type_identity_t<allocator_type>& __a);
@@ -1075,12 +1085,14 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_AFTER_CXX17
 vector<_Tp, _Allocator>::vector(size_type __n)
 {
-    _VSTD::__debug_db_insert_c(this);
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    std::__debug_db_insert_c(this);
     if (__n > 0)
     {
         __vallocate(__n);
         __construct_at_end(__n);
     }
+    __guard.__complete();
 }
 
 #if _LIBCPP_STD_VER > 11
@@ -1089,12 +1101,14 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17
 vector<_Tp, _Allocator>::vector(size_type __n, const allocator_type& __a)
     : __end_cap_(nullptr, __a)
 {
-    _VSTD::__debug_db_insert_c(this);
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    std::__debug_db_insert_c(this);
     if (__n > 0)
     {
         __vallocate(__n);
         __construct_at_end(__n);
     }
+    __guard.__complete();
 }
 #endif
 
@@ -1102,12 +1116,14 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_AFTER_CXX17
 vector<_Tp, _Allocator>::vector(size_type __n, const value_type& __x)
 {
-    _VSTD::__debug_db_insert_c(this);
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    std::__debug_db_insert_c(this);
     if (__n > 0)
     {
         __vallocate(__n);
         __construct_at_end(__n, __x);
     }
+    __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1120,9 +1136,11 @@ vector<_Tp, _Allocator>::vector(_InputIterator __first,
                             typename iterator_traits<_InputIterator>::reference>::value,
                           _InputIterator>::type __last)
 {
-    _VSTD::__debug_db_insert_c(this);
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    std::__debug_db_insert_c(this);
     for (; __first != __last; ++__first)
         emplace_back(*__first);
+    __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1135,9 +1153,11 @@ vector<_Tp, _Allocator>::vector(_InputIterator __first, _InputIterator __last, c
                             typename iterator_traits<_InputIterator>::reference>::value>::type*)
     : __end_cap_(nullptr, __a)
 {
-    _VSTD::__debug_db_insert_c(this);
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    std::__debug_db_insert_c(this);
     for (; __first != __last; ++__first)
         emplace_back(*__first);
+    __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1150,13 +1170,15 @@ vector<_Tp, _Allocator>::vector(_ForwardIterator __first,
                                    typename iterator_traits<_ForwardIterator>::reference>::value,
                                                    _ForwardIterator>::type __last)
 {
-    _VSTD::__debug_db_insert_c(this);
-    size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    std::__debug_db_insert_c(this);
+    size_type __n = static_cast<size_type>(std::distance(__first, __last));
     if (__n > 0)
     {
         __vallocate(__n);
         __construct_at_end(__first, __last, __n);
     }
+    __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1169,13 +1191,15 @@ vector<_Tp, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __las
                                    typename iterator_traits<_ForwardIterator>::reference>::value>::type*)
     : __end_cap_(nullptr, __a)
 {
-    _VSTD::__debug_db_insert_c(this);
-    size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    std::__debug_db_insert_c(this);
+    size_type __n = static_cast<size_type>(std::distance(__first, __last));
     if (__n > 0)
     {
         __vallocate(__n);
         __construct_at_end(__first, __last, __n);
     }
+    __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1183,13 +1207,15 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17
 vector<_Tp, _Allocator>::vector(const vector& __x)
     : __end_cap_(nullptr, __alloc_traits::select_on_container_copy_construction(__x.__alloc()))
 {
-    _VSTD::__debug_db_insert_c(this);
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    std::__debug_db_insert_c(this);
     size_type __n = __x.size();
     if (__n > 0)
     {
         __vallocate(__n);
         __construct_at_end(__x.__begin_, __x.__end_, __n);
     }
+    __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1197,13 +1223,15 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17
 vector<_Tp, _Allocator>::vector(const vector& __x, const __type_identity_t<allocator_type>& __a)
     : __end_cap_(nullptr, __a)
 {
-    _VSTD::__debug_db_insert_c(this);
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    std::__debug_db_insert_c(this);
     size_type __n = __x.size();
     if (__n > 0)
     {
         __vallocate(__n);
         __construct_at_end(__x.__begin_, __x.__end_, __n);
     }
+    __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1243,7 +1271,9 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_
     else
     {
         typedef move_iterator<iterator> _Ip;
+        auto __guard = std::__make_transaction(__destroy_vector(*this));
         assign(_Ip(__x.begin()), _Ip(__x.end()));
+        __guard.__complete();
     }
 }
 
@@ -1254,12 +1284,14 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17
 inline _LIBCPP_INLINE_VISIBILITY
 vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il)
 {
-    _VSTD::__debug_db_insert_c(this);
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    std::__debug_db_insert_c(this);
     if (__il.size() > 0)
     {
         __vallocate(__il.size());
         __construct_at_end(__il.begin(), __il.end(), __il.size());
     }
+    __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1268,12 +1300,14 @@ inline _LIBCPP_INLINE_VISIBILITY
 vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il, const allocator_type& __a)
     : __end_cap_(nullptr, __a)
 {
-    _VSTD::__debug_db_insert_c(this);
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    std::__debug_db_insert_c(this);
     if (__il.size() > 0)
     {
         __vallocate(__il.size());
         __construct_at_end(__il.begin(), __il.end(), __il.size());
     }
+    __guard.__complete();
 }
 
 #endif // _LIBCPP_CXX03_LANG
@@ -2111,8 +2145,26 @@ public:
 #else
         _NOEXCEPT;
 #endif
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 ~vector();
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit vector(size_type __n);
+
+private:
+  class __destroy_vector {
+    public:
+      _LIBCPP_CONSTEXPR __destroy_vector(vector& __vec) : __vec_(__vec) {}
+
+      _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void operator()() {
+        if (__vec_.__begin_ != nullptr)
+            __storage_traits::deallocate(__vec_.__alloc(), __vec_.__begin_, __vec_.__cap());
+        std::__debug_db_invalidate_all(this);
+      }
+
+    private:
+      vector& __vec_;
+  };
+
+public:
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 ~vector() { __destroy_vector(*this)(); }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit vector(size_type __n);
 #if _LIBCPP_STD_VER > 11
     _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit vector(size_type __n, const allocator_type& __a);
 #endif
@@ -2647,12 +2699,14 @@ vector<bool, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __la
       __size_(0),
       __cap_alloc_(0, __default_init_tag())
 {
-    size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    size_type __n = static_cast<size_type>(std::distance(__first, __last));
     if (__n > 0)
     {
         __vallocate(__n);
         __construct_at_end(__first, __last);
     }
+    __guard.__complete();
 }
 
 template <class _Allocator>
@@ -2664,12 +2718,14 @@ vector<bool, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __la
       __size_(0),
       __cap_alloc_(0, static_cast<__storage_allocator>(__a))
 {
-    size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
+    auto __guard = std::__make_transaction(__destroy_vector(*this));
+    size_type __n = static_cast<size_type>(std::distance(__first, __last));
     if (__n > 0)
     {
         __vallocate(__n);
         __construct_at_end(__first, __last);
     }
+    __guard.__complete();
 }
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -2705,15 +2761,6 @@ vector<bool, _Allocator>::vector(initializer_list<value_type> __il, const alloca
 }
 
 #endif // _LIBCPP_CXX03_LANG
-
-template <class _Allocator>
-_LIBCPP_CONSTEXPR_AFTER_CXX17
-vector<bool, _Allocator>::~vector()
-{
-    if (__begin_ != nullptr)
-        __storage_traits::deallocate(__alloc(), __begin_, __cap());
-    std::__debug_db_invalidate_all(this);
-}
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_AFTER_CXX17
