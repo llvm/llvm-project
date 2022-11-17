@@ -72,7 +72,6 @@
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
-#include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
@@ -645,31 +644,6 @@ static OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
   }
 }
 
-static void addKCFIPass(TargetMachine *TM, const Triple &TargetTriple,
-                        const LangOptions &LangOpts, PassBuilder &PB) {
-  // If the back-end supports KCFI operand bundle lowering, skip KCFIPass.
-  if (TargetTriple.getArch() == llvm::Triple::x86_64 ||
-      TargetTriple.isAArch64(64))
-    return;
-
-  // Ensure we lower KCFI operand bundles with -O0.
-  PB.registerOptimizerLastEPCallback(
-      [&, TM](ModulePassManager &MPM, OptimizationLevel Level) {
-        if (Level == OptimizationLevel::O0 &&
-            LangOpts.Sanitize.has(SanitizerKind::KCFI))
-          MPM.addPass(createModuleToFunctionPassAdaptor(KCFIPass(TM)));
-      });
-
-  // When optimizations are requested, run KCIFPass after InstCombine to
-  // avoid unnecessary checks.
-  PB.registerPeepholeEPCallback(
-      [&, TM](FunctionPassManager &FPM, OptimizationLevel Level) {
-        if (Level != OptimizationLevel::O0 &&
-            LangOpts.Sanitize.has(SanitizerKind::KCFI))
-          FPM.addPass(KCFIPass(TM));
-      });
-}
-
 static void addSanitizers(const Triple &TargetTriple,
                           const CodeGenOptions &CodeGenOpts,
                           const LangOptions &LangOpts, PassBuilder &PB) {
@@ -972,10 +946,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already
     // done on PreLink stage.
-    if (!IsThinLTOPostLink) {
+    if (!IsThinLTOPostLink)
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
-      addKCFIPass(TM.get(), TargetTriple, LangOpts, PB);
-    }
 
     if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts, LangOpts))
       PB.registerPipelineStartEPCallback(
