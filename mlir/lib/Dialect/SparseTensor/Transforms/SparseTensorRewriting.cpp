@@ -1021,11 +1021,17 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
 //===---------------------------------------------------------------------===//
 // Methods that add patterns described in this file to a pattern list.
 //===---------------------------------------------------------------------===//
-void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns,
-                                         bool enableRT, bool enableForeach,
-                                         bool enableConvert) {
-  patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd,
-               ReshapeRewriter<tensor::ExpandShapeOp>,
+
+void mlir::populatePreSparsificationRewriting(RewritePatternSet &patterns) {
+  patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd>(
+      patterns.getContext());
+}
+
+void mlir::populatePostSparsificationRewriting(RewritePatternSet &patterns,
+                                               bool enableRT,
+                                               bool enableForeach,
+                                               bool enableConvert) {
+  patterns.add<ReshapeRewriter<tensor::ExpandShapeOp>,
                ReshapeRewriter<tensor::CollapseShapeOp>>(patterns.getContext());
   if (enableForeach)
     patterns.add<ForeachRewriter>(patterns.getContext());
