@@ -5,22 +5,8 @@
 
 @global = external global double, align 8
 
-;
-; Linkage on functions.
-;
-
-; CHECK: llvm.func internal @func_internal
-define internal void @func_internal() {
-  ret void
-}
-
 ; CHECK: llvm.func @fe(i32) -> f32
 declare float @fe(i32)
-
-; CHECK: llvm.func internal spir_funccc @spir_func_internal()
-define internal spir_func void @spir_func_internal() {
-  ret void
-}
 
 ; FIXME: function attributes.
 ; CHECK-LABEL: llvm.func internal @f1(%arg0: i64) -> i32 attributes {dso_local} {
