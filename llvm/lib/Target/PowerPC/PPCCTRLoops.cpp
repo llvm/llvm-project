@@ -114,14 +114,10 @@ bool PPCCTRLoops::isCTRClobber(MachineInstr *MI, bool CheckReads) const {
     // CTR defination inside the callee of a call instruction will not impact
     // the defination of MTCTRloop, so we can use definesRegister() for the
     // check, no need to check the regmask.
-    return (MI->definesRegister(PPC::CTR) &&
-            !MI->registerDefIsDead(PPC::CTR)) ||
-           (MI->definesRegister(PPC::CTR8) &&
-            !MI->registerDefIsDead(PPC::CTR8));
+    return MI->definesRegister(PPC::CTR) || MI->definesRegister(PPC::CTR8);
   }
 
-  if ((MI->modifiesRegister(PPC::CTR) && !MI->registerDefIsDead(PPC::CTR)) ||
-      (MI->modifiesRegister(PPC::CTR8) && !MI->registerDefIsDead(PPC::CTR8)))
+  if (MI->modifiesRegister(PPC::CTR) || MI->modifiesRegister(PPC::CTR8))
     return true;
 
   if (MI->getDesc().isCall())
