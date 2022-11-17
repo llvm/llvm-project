@@ -242,7 +242,8 @@ SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 def SPcmpicc : SDNode<"SPISD::CMPICC", SDTSPcmpicc, [SDNPOutGlue]>;
 def SPcmpfcc : SDNode<"SPISD::CMPFCC", SDTSPcmpfcc, [SDNPOutGlue]>;
 def SPbricc : SDNode<"SPISD::BRICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
-def SPbrxcc : SDNode<"SPISD::BRXCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
+def SPbpicc : SDNode<"SPISD::BPICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
+def SPbpxcc : SDNode<"SPISD::BPXCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbrfcc : SDNode<"SPISD::BRFCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 
 def SPhi    : SDNode<"SPISD::Hi", SDTIntUnaryOp>;
@@ -845,19 +846,27 @@ defm SAVE    : F3_12np<"save"   , 0b111100>;
 defm RESTORE : F3_12np<"restore", 0b111101>;
 
 // Section B.21 - Branch on Integer Condition Codes Instructions, p. 119
+// Section A.7 - Branch on Integer Condition Codes with Prediction (SPARC v9)
 
+let isBranch = 1, isTerminator = 1, hasDelaySlot = 1, isBarrier = 1 in {
 // unconditional branch class.
 class BranchAlways<dag ins, string asmstr, list<dag> pattern>
-  : F2_2<0b010, 0, (outs), ins, asmstr, pattern> {
-  let isBranch     = 1;
-  let isTerminator = 1;
-  let hasDelaySlot = 1;
-  let isBarrier    = 1;
+  : F2_2<0b010, 0, (outs), ins, asmstr, pattern>;
+
+// Same as BranchAlways but uses the new v9 encoding
+class BranchPredictAlways<dag ins, string asmstr, list<dag> pattern>
+  : F2_3<0b001, 0, 1, (outs), ins, asmstr, pattern>;
 }
 
-let cond = 8 in
-  def BA : BranchAlways<(ins brtarget:$imm22), "ba $imm22", [(br bb:$imm22)]>;
+let cond = 8 in {
+  // If we're compiling for v9, prefer BPA rather than BA
+  // TODO: Disallow BA emission when FeatureV8Deprecated isn't enabled
+  let Predicates = [HasV9], cc = 0b00 in
+    def BPA : BranchPredictAlways<(ins bprtarget:$imm19),
+      "ba %icc, $imm19", [(br bb:$imm19)]>;
 
+  def BA : BranchAlways<(ins brtarget:$imm22), "ba $imm22", [(br bb:$imm22)]>;
+}
 
 let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in {
 
@@ -913,7 +922,7 @@ let Uses = [ICC] in {
                          "b$cond,a $imm22", []>;
 
   let Predicates = [HasV9], cc = 0b00 in
-    defm BPI : IPredBranch<"%icc", []>;
+    defm BPI : IPredBranch<"%icc", [(SPbpicc bb:$imm19, imm:$cond)]>;
 }
 
 // Section B.22 - Branch on Floating-point Condition Codes Instructions, p. 121
