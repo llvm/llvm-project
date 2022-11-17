@@ -41,7 +41,7 @@ namespace {
 
 struct TosaValidation : public tosa::impl::TosaValidationBase<TosaValidation> {
 public:
-  explicit TosaValidation() {}
+  explicit TosaValidation() = default;
 
 private:
   void runOnOperation() override;
