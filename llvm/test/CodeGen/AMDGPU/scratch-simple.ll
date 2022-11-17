@@ -72,7 +72,6 @@
 ; GFX10-FLATSCR: v_and_b32_e32 [[CLAMP_IDX:v[0-9]+]], 0x1fc, v0
 ; GFX10-FLATSCR-PAL: v_and_b32_e32 [[CLAMP_IDX:v[0-9]+]], 0x1fc, v0
 ; GFX11-FLATSCR: v_and_b32_e32 [[CLAMP_IDX:v[0-9]+]], 0x1fc, v0
-; GCN-NOT: s_mov_b32 s0
 
 ; MUBUF-DAG: v_add{{_|_nc_}}{{i|u}}32_e32 [[HI_OFF:v[0-9]+]],{{.*}} 0x280, [[CLAMP_IDX]]
 ; MUBUF-DAG: v_add{{_|_nc_}}{{i|u}}32_e32 [[LO_OFF:v[0-9]+]],{{.*}} {{v2|0x80}}, [[CLAMP_IDX]]
@@ -120,7 +119,6 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 
 ; MUBUF-DAG: s_mov_b32 s0, SCRATCH_RSRC_DWORD0
-; GCN-NOT: s_mov_b32 s0
 
 ; FLATSCR-NOT: SCRATCH_RSRC_DWORD
 

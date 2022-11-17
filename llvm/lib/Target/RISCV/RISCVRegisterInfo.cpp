@@ -155,7 +155,7 @@ bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
   return true;
 }
 
-void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
   assert(SPAdj == 0 && "Unexpected non-zero SPAdj value");
@@ -231,7 +231,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       assert(MI.getOperand(0).getReg() == ScratchReg &&
              "Expected to have written ADDI destination register");
       MI.eraseFromParent();
-      return;
+      return true;
     }
 
     Offset = StackOffset::get(0, Offset.getScalable());
@@ -250,7 +250,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       assert(MI.getOperand(0).getReg() == DestReg &&
              "Expected to have written ADDI destination register");
       MI.eraseFromParent();
-      return;
+      return true;
     }
     FrameReg = DestReg;
     FrameRegIsKill = true;
@@ -293,6 +293,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // the length of vint32m2_t.
     MI.getOperand(FIOperandNum + 1).ChangeToRegister(VL, /*isDef=*/false);
   }
+  return false;
 }
 
 Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
