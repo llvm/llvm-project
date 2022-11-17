@@ -63,7 +63,7 @@ static Value genLvlSizeCall(OpBuilder &builder, Location loc,
                             uint64_t lvl) {
   // Generate the call.
   StringRef name = "sparseLvlSize";
-  SmallVector<Value, 2> params{
+  SmallVector<Value, 2> params{  // just two
       src, constantIndex(builder, loc, toStoredDim(enc, lvl))};
   Type iTp = builder.getIndexType();
   return createFuncCall(builder, loc, name, iTp, params, EmitCInterface::Off)
@@ -92,7 +92,7 @@ static Value sizeFromPtrAtDim(OpBuilder &builder, Location loc,
 
 /// Populates given sizes array from type (for static sizes) and from
 /// an already-converted opaque pointer source (for dynamic sizes).
-static void sizesFromPtr(OpBuilder &builder, SmallVector<Value, 4> &sizes,
+static void sizesFromPtr(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                          Location loc, SparseTensorEncodingAttr &enc,
                          ShapedType stp, Value src) {
   for (unsigned i = 0, rank = stp.getRank(); i < rank; i++)
@@ -100,7 +100,7 @@ static void sizesFromPtr(OpBuilder &builder, SmallVector<Value, 4> &sizes,
 }
 
 /// Populates given sizes array from type.
-static void sizesFromType(OpBuilder &builder, SmallVector<Value, 4> &sizes,
+static void sizesFromType(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                           Location loc, ShapedType stp) {
   auto shape = stp.getShape();
   for (unsigned i = 0, rank = stp.getRank(); i < rank; i++) {
@@ -113,7 +113,7 @@ static void sizesFromType(OpBuilder &builder, SmallVector<Value, 4> &sizes,
 /// sizes) and from an already-converted opaque pointer source (for dynamic
 /// sizes).
 static void concatSizesFromInputs(OpBuilder &builder,
-                                  SmallVector<Value, 4> &sizes, Location loc,
+                                  SmallVectorImpl<Value> &sizes, Location loc,
                                   ShapedType dstTp, ValueRange srcs,
                                   unsigned dim) {
   auto dstShape = dstTp.getShape();
@@ -262,7 +262,7 @@ NewCallParams &NewCallParams::genBuffers(SparseTensorEncodingAttr enc,
   const unsigned lvlRank = enc.getDimLevelType().size();
   const unsigned dimRank = stp.getRank();
   // Sparsity annotations.
-  SmallVector<Value, 4> lvlTypes;
+  SmallVector<Value> lvlTypes;
   for (auto dlt : enc.getDimLevelType())
     lvlTypes.push_back(constantDimLevelTypeEncoding(builder, loc, dlt));
   assert(lvlTypes.size() == lvlRank && "Level-rank mismatch");
@@ -276,12 +276,12 @@ NewCallParams &NewCallParams::genBuffers(SparseTensorEncodingAttr enc,
   // For now however, since we're still assuming permutations, we will
   // initialize this parameter alongside the `dim2lvl` and `lvl2dim`
   // parameters below.  We preinitialize `lvlSizes` for code symmetry.
-  SmallVector<Value, 4> lvlSizes(lvlRank);
+  SmallVector<Value> lvlSizes(lvlRank);
   // The dimension-to-level mapping and its inverse.  We must preinitialize
   // `dim2lvl` so that the true branch below can perform random-access
   // `operator[]` assignment.  We preinitialize `lvl2dim` for code symmetry.
-  SmallVector<Value, 4> dim2lvl(dimRank);
-  SmallVector<Value, 4> lvl2dim(lvlRank);
+  SmallVector<Value> dim2lvl(dimRank);
+  SmallVector<Value> lvl2dim(lvlRank);
   auto dimOrder = enc.getDimOrdering();
   if (dimOrder) {
     assert(dimOrder.isPermutation());
@@ -365,11 +365,11 @@ static Value genGetNextCall(OpBuilder &builder, Location loc, Value iter,
 
 /// Converts a pointer to COO (from calls to iter->next()) into a vector of
 /// indices, apply (optional) `offset` on `offsetDim`.
-static SmallVector<Value, 4> loadIndices(OpBuilder &builder, Location loc,
-                                         unsigned rank, Value ind,
-                                         unsigned offsetDim = 0,
-                                         Value offset = Value()) {
-  SmallVector<Value, 4> ivs;
+static SmallVector<Value> loadIndices(OpBuilder &builder, Location loc,
+                                      unsigned rank, Value ind,
+                                      unsigned offsetDim = 0,
+                                      Value offset = Value()) {
+  SmallVector<Value> ivs;
   ivs.reserve(rank);
   for (unsigned i = 0; i < rank; i++) {
     Value idx = constantIndex(builder, loc, i);
@@ -437,14 +437,14 @@ static void translateIndices(Location loc, ConversionPatternRewriter &rewriter,
   unsigned dstRank = dstTp.getRank();
   unsigned srcRank = srcTp.getRank();
 
-  SmallVector<Value, 4> srcIndices;
+  SmallVector<Value> srcIndices;
   for (unsigned i = 0; i < srcRank; i++) {
     Value idx = rewriter.create<memref::LoadOp>(
         loc, srcIdx, constantIndex(rewriter, loc, i));
     srcIndices.push_back(idx);
   }
 
-  SmallVector<Value, 4> dstIndices;
+  SmallVector<Value> dstIndices;
   translateIndicesArray(rewriter, loc, reassociation, srcIndices, srcShape,
                         dstShape, dstIndices);
 
@@ -488,13 +488,13 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
   auto noPerm = SparseTensorEncodingAttr::get(
       op->getContext(), encSrc.getDimLevelType(), AffineMap(), AffineMap(),
       encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
-  SmallVector<Value, 4> srcSizes;
+  SmallVector<Value> srcSizes;
   sizesFromPtr(rewriter, srcSizes, loc, encSrc, srcTp, adaptor.getSrc());
   NewCallParams params(rewriter, loc);
   Value iter = params.genBuffers(noPerm, srcSizes, srcTp)
                    .genNewCall(Action::kToIterator, adaptor.getSrc());
   // Start a new COO for the destination tensor.
-  SmallVector<Value, 4> dstSizes;
+  SmallVector<Value> dstSizes;
   if (dstTp.hasStaticShape()) {
     sizesFromType(rewriter, dstSizes, loc, dstTp);
   } else {
@@ -555,7 +555,7 @@ static void genSparseCOOIterationLoop(
   auto noPerm = SparseTensorEncodingAttr::get(
       rewriter.getContext(), enc.getDimLevelType(), AffineMap(), AffineMap(),
       enc.getPointerBitWidth(), enc.getIndexBitWidth());
-  SmallVector<Value, 4> sizes;
+  SmallVector<Value> sizes;
   sizesFromPtr(rewriter, sizes, loc, noPerm, tensorTp, t);
   Value iter = NewCallParams(rewriter, loc)
                    .genBuffers(noPerm, sizes, tensorTp)
@@ -721,7 +721,7 @@ public:
       return failure();
     // Generate the call to construct tensor from ptr. The sizes are
     // inferred from the result type of the new operator.
-    SmallVector<Value, 4> sizes;
+    SmallVector<Value> sizes;
     ShapedType stp = resType.cast<ShapedType>();
     sizesFromType(rewriter, sizes, loc, stp);
     Value ptr = adaptor.getOperands()[0];
@@ -800,7 +800,7 @@ public:
         rewriter.replaceOp(op, adaptor.getOperands()); // hidden nop cast
         return success();
       }
-      SmallVector<Value, 4> sizes;
+      SmallVector<Value> sizes;
       NewCallParams params(rewriter, loc);
       ShapedType stp = srcType.cast<ShapedType>();
       sizesFromPtr(rewriter, sizes, loc, encSrc, stp, src);
@@ -860,7 +860,7 @@ public:
           op->getContext(),
           SmallVector<DimLevelType>(rank, DimLevelType::Dense), AffineMap(),
           AffineMap(), encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
-      SmallVector<Value, 4> sizes;
+      SmallVector<Value> sizes;
       sizesFromPtr(rewriter, sizes, loc, encSrc, srcTensorTp, src);
       Value iter = NewCallParams(rewriter, loc)
                        .genBuffers(encDst, sizes, dstTensorTp)
@@ -880,7 +880,7 @@ public:
       rewriter.create<scf::ConditionOp>(loc, cond, before->getArguments());
       Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, noTypes);
       rewriter.setInsertionPointToStart(after);
-      SmallVector<Value, 4> ivs = loadIndices(rewriter, loc, rank, ind);
+      SmallVector<Value> ivs = loadIndices(rewriter, loc, rank, ind);
       insertScalarIntoDenseTensor(rewriter, loc, elemPtr, dst, ivs);
       rewriter.create<scf::YieldOp>(loc);
       rewriter.setInsertionPointAfter(whileOp);
@@ -925,7 +925,7 @@ public:
     // loop is generated by genAddElt().
     ShapedType stp = resType.cast<ShapedType>();
     unsigned rank = stp.getRank();
-    SmallVector<Value, 4> sizes;
+    SmallVector<Value> sizes;
     sizesFromSrc(rewriter, sizes, loc, src);
     NewCallParams params(rewriter, loc);
     Value coo =
@@ -1223,7 +1223,7 @@ public:
     // The offset applied to the dimenstion to be concated (starting from 0)
     Value offset = constantIndex(rewriter, loc, 0);
 
-    SmallVector<Value, 4> sizes;
+    SmallVector<Value> sizes;
     NewCallParams params(rewriter, loc);
     concatSizesFromInputs(rewriter, sizes, loc, dstTp, op.getInputs(),
                           concatDim);
@@ -1277,7 +1277,7 @@ public:
               } else {
                 // Case: dense => dense
                 Value val = genValueForDense(builder, loc, adaptedOp, idx);
-                SmallVector<Value, 4> indVec(idx);
+                SmallVector<Value> indVec(idx);
                 // Apply offset.
                 indVec[concatDim] = builder.create<arith::AddIOp>(
                     loc, indVec[concatDim], offset);
@@ -1320,7 +1320,7 @@ public:
     // Convert to default permuted COO.
     Value src = adaptor.getOperands()[0];
     auto encSrc = getSparseTensorEncoding(srcType);
-    SmallVector<Value, 4> sizes;
+    SmallVector<Value> sizes;
     sizesFromPtr(rewriter, sizes, loc, encSrc, srcType, src);
     auto enc = SparseTensorEncodingAttr::get(
         op->getContext(), encSrc.getDimLevelType(), AffineMap(), AffineMap(),

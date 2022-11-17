@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/ARMTargetParserCommon.h"
 #include <vector>
 
 namespace llvm {
@@ -158,13 +159,6 @@ enum class NeonSupportLevel {
   Crypto    ///< Neon with Crypto
 };
 
-// ISA kinds.
-enum class ISAKind { INVALID = 0, ARM, THUMB, AARCH64 };
-
-// Endianness
-// FIXME: BE8 vs. BE32?
-enum class EndianKind { INVALID = 0, LITTLE, BIG };
-
 // v6/v7/v8 Profile
 enum class ProfileKind { INVALID = 0, A, R, M };
 
@@ -226,7 +220,7 @@ template <typename T> struct ArchNames {
   }
 };
 
-static const ArchNames<ArchKind> ARCHNames[] = {
+static const ArchNames<ArchKind> ARMArchNames[] = {
 #define ARM_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU,            \
                  ARCH_BASE_EXT)                                                \
   {NAME,         sizeof(NAME) - 1,                                             \
@@ -287,8 +281,6 @@ unsigned parseFPU(StringRef FPU);
 ArchKind parseArch(StringRef Arch);
 uint64_t parseArchExt(StringRef ArchExt);
 ArchKind parseCPUArch(StringRef CPU);
-ISAKind parseArchISA(StringRef Arch);
-EndianKind parseArchEndian(StringRef Arch);
 ProfileKind parseArchProfile(StringRef Arch);
 unsigned parseArchVersion(StringRef Arch);
 

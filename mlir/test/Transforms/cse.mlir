@@ -322,3 +322,127 @@ func.func @check_cummutative_cse(%a : i32, %b : i32) -> i32 {
   %3 = arith.muli %1, %2 : i32
   return %3 : i32
 }
+
+// Check that an operation with a single region can CSE.
+func.func @cse_single_block_ops(%a : tensor<?x?xf32>, %b : tensor<?x?xf32>)
+  -> (tensor<?x?xf32>, tensor<?x?xf32>) {
+  %0 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32):
+    test.region_yield %arg0 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  %1 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32):
+    test.region_yield %arg0 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  return %0, %1 : tensor<?x?xf32>, tensor<?x?xf32>
+}
+// CHECK-LABEL: func @cse_single_block_ops
+//       CHECK:   %[[OP:.+]] = test.cse_of_single_block_op
+//   CHECK-NOT:   test.cse_of_single_block_op
+//       CHECK:   return %[[OP]], %[[OP]]
+
+// Operations with different number of bbArgs dont CSE.
+func.func @no_cse_varied_bbargs(%a : tensor<?x?xf32>, %b : tensor<?x?xf32>)
+  -> (tensor<?x?xf32>, tensor<?x?xf32>) {
+  %0 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32, %arg1 : f32):
+    test.region_yield %arg0 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  %1 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32):
+    test.region_yield %arg0 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  return %0, %1 : tensor<?x?xf32>, tensor<?x?xf32>
+}
+// CHECK-LABEL: func @no_cse_varied_bbargs
+//       CHECK:   %[[OP0:.+]] = test.cse_of_single_block_op
+//       CHECK:   %[[OP1:.+]] = test.cse_of_single_block_op
+//       CHECK:   return %[[OP0]], %[[OP1]]
+
+// Operations with different regions dont CSE
+func.func @no_cse_region_difference_simple(%a : tensor<?x?xf32>, %b : tensor<?x?xf32>)
+  -> (tensor<?x?xf32>, tensor<?x?xf32>) {
+  %0 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32, %arg1 : f32):
+    test.region_yield %arg0 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  %1 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32, %arg1 : f32):
+    test.region_yield %arg1 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  return %0, %1 : tensor<?x?xf32>, tensor<?x?xf32>
+}
+// CHECK-LABEL: func @no_cse_region_difference_simple
+//       CHECK:   %[[OP0:.+]] = test.cse_of_single_block_op
+//       CHECK:   %[[OP1:.+]] = test.cse_of_single_block_op
+//       CHECK:   return %[[OP0]], %[[OP1]]
+
+// Operation with identical region with multiple statements CSE.
+func.func @cse_single_block_ops_identical_bodies(%a : tensor<?x?xf32>, %b : tensor<?x?xf32>, %c : f32, %d : i1)
+  -> (tensor<?x?xf32>, tensor<?x?xf32>) {
+  %0 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32, %arg1 : f32):
+    %1 = arith.divf %arg0, %arg1 : f32
+    %2 = arith.remf %arg0, %c : f32
+    %3 = arith.select %d, %1, %2 : f32
+    test.region_yield %3 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  %1 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32, %arg1 : f32):
+    %1 = arith.divf %arg0, %arg1 : f32
+    %2 = arith.remf %arg0, %c : f32
+    %3 = arith.select %d, %1, %2 : f32
+    test.region_yield %3 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  return %0, %1 : tensor<?x?xf32>, tensor<?x?xf32>
+}
+// CHECK-LABEL: func @cse_single_block_ops_identical_bodies
+//       CHECK:   %[[OP:.+]] = test.cse_of_single_block_op
+//   CHECK-NOT:   test.cse_of_single_block_op
+//       CHECK:   return %[[OP]], %[[OP]]
+
+// Operation with non-identical regions dont CSE.
+func.func @no_cse_single_block_ops_different_bodies(%a : tensor<?x?xf32>, %b : tensor<?x?xf32>, %c : f32, %d : i1)
+  -> (tensor<?x?xf32>, tensor<?x?xf32>) {
+  %0 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32, %arg1 : f32):
+    %1 = arith.divf %arg0, %arg1 : f32
+    %2 = arith.remf %arg0, %c : f32
+    %3 = arith.select %d, %1, %2 : f32
+    test.region_yield %3 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  %1 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32, %arg1 : f32):
+    %1 = arith.divf %arg0, %arg1 : f32
+    %2 = arith.remf %arg0, %c : f32
+    %3 = arith.select %d, %2, %1 : f32
+    test.region_yield %3 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  return %0, %1 : tensor<?x?xf32>, tensor<?x?xf32>
+}
+// CHECK-LABEL: func @no_cse_single_block_ops_different_bodies
+//       CHECK:   %[[OP0:.+]] = test.cse_of_single_block_op
+//       CHECK:   %[[OP1:.+]] = test.cse_of_single_block_op
+//       CHECK:   return %[[OP0]], %[[OP1]]
+
+// Account for commutative ops within regions during CSE.
+func.func @cse_single_block_with_commutative_ops(%a : tensor<?x?xf32>, %b : tensor<?x?xf32>, %c : f32)
+  -> (tensor<?x?xf32>, tensor<?x?xf32>) {
+  %0 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32, %arg1 : f32):
+    %1 = arith.addf %arg0, %arg1 : f32
+    %2 = arith.mulf %1, %c : f32
+    test.region_yield %2 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  %1 = test.cse_of_single_block_op inputs(%a, %b) {
+    ^bb0(%arg0 : f32, %arg1 : f32):
+    %1 = arith.addf %arg1, %arg0 : f32
+    %2 = arith.mulf %c, %1 : f32
+    test.region_yield %2 : f32
+  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
+  return %0, %1 : tensor<?x?xf32>, tensor<?x?xf32>
+}
+// CHECK-LABEL: func @cse_single_block_with_commutative_ops
+//       CHECK:   %[[OP:.+]] = test.cse_of_single_block_op
+//   CHECK-NOT:   test.cse_of_single_block_op
+//       CHECK:   return %[[OP]], %[[OP]]

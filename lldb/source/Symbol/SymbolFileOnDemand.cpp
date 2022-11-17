@@ -467,7 +467,7 @@ void SymbolFileOnDemand::GetTypes(SymbolContextScope *sc_scope,
   return m_sym_file_impl->GetTypes(sc_scope, type_mask, type_list);
 }
 
-llvm::Expected<TypeSystem &>
+llvm::Expected<lldb::TypeSystemSP>
 SymbolFileOnDemand::GetTypeSystemForLanguage(LanguageType language) {
   if (!m_debug_info_enabled) {
     Log *log = GetLog();

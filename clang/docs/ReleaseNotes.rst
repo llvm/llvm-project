@@ -390,6 +390,11 @@ Improvements to Clang's diagnostics
   suppressed for use of reserved names in a system header.
 - ``-Winteger-overflow`` will diagnose overflow in more cases. This fixes
   `Issue 58944 <https://github.com/llvm/llvm-project/issues/58944>`_.
+- Clang has an internal limit of 2GB of preprocessed source code per
+  compilation, including source reachable through imported AST files such as
+  PCH or modules. When Clang hits this limit, it now produces notes mentioning
+  which header and source files are consuming large amounts of this space.
+  ``#pragma clang __debug sloc_usage`` can also be used to request this report.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

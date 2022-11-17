@@ -15,6 +15,7 @@ unittest("AArch64Tests") {
   ]
   include_dirs = [ "//llvm/lib/Target/AArch64" ]
   sources = [
+    "AArch64InstPrinterTest.cpp",
     "DecomposeStackOffsetTest.cpp",
     "InstSizes.cpp",
     "MatrixRegisterAliasing.cpp",

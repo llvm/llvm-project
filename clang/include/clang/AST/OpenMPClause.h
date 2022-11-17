@@ -1563,6 +1563,85 @@ public:
   }
 };
 
+/// This represents 'at' clause in the '#pragma omp error' directive
+///
+/// \code
+/// #pragma omp error at(compilation)
+/// \endcode
+/// In this example directive '#pragma omp error' has simple
+/// 'at' clause with kind 'complilation'.
+class OMPAtClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('
+  SourceLocation LParenLoc;
+
+  /// A kind of the 'at' clause.
+  OpenMPAtClauseKind Kind = OMPC_AT_unknown;
+
+  /// Start location of the kind in source code.
+  SourceLocation KindKwLoc;
+
+  /// Set kind of the clause.
+  ///
+  /// \param K Kind of clause.
+  void setAtKind(OpenMPAtClauseKind K) { Kind = K; }
+
+  /// Set clause kind location.
+  ///
+  /// \param KLoc Kind location.
+  void setAtKindKwLoc(SourceLocation KLoc) { KindKwLoc = KLoc; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build 'at' clause with argument \a A ('compilation' or 'execution').
+  ///
+  /// \param A Argument of the clause ('compilation' or 'execution').
+  /// \param ALoc Starting location of the argument.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPAtClause(OpenMPAtClauseKind A, SourceLocation ALoc,
+              SourceLocation StartLoc, SourceLocation LParenLoc,
+              SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_at, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        Kind(A), KindKwLoc(ALoc) {}
+
+  /// Build an empty clause.
+  OMPAtClause()
+      : OMPClause(llvm::omp::OMPC_at, SourceLocation(), SourceLocation()) {}
+
+  /// Returns the locaiton of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns kind of the clause.
+  OpenMPAtClauseKind getAtKind() const { return Kind; }
+
+  /// Returns location of clause kind.
+  SourceLocation getAtKindKwLoc() const { return KindKwLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_at;
+  }
+};
+
 /// This represents 'schedule' clause in the '#pragma omp ...' directive.
 ///
 /// \code

@@ -267,7 +267,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
     debug_parse_time += module_stat.debug_parse_time;
     debug_index_time += module_stat.debug_index_time;
     debug_info_size += module_stat.debug_info_size;
-    module->ForEachTypeSystem([&](TypeSystem *ts) {
+    module->ForEachTypeSystem([&](lldb::TypeSystemSP ts) {
       if (auto stats = ts->ReportStatistics())
         module_stat.type_system_stats.insert({ts->GetPluginName(), *stats});
       return true;

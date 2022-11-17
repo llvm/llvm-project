@@ -206,9 +206,9 @@ CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
           LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
                          "Unable to get CompilerType from TypeSystem");
         } else {
-          m_compiler_type =
-              type_system_or_err->GetBuiltinTypeForEncodingAndBitSize(
-                  m_reg_info.encoding, m_reg_info.byte_size * 8);
+          if (auto ts = *type_system_or_err)
+            m_compiler_type = ts->GetBuiltinTypeForEncodingAndBitSize(
+                m_reg_info.encoding, m_reg_info.byte_size * 8);
         }
       }
     }

@@ -5,8 +5,7 @@ define amdgpu_kernel void @sdwa_test_sub() local_unnamed_addr #0 {
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    v_add_u32_e32 v1, 10, v0
 ; GFX9-NEXT:    v_add_u32_e32 v0, 20, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; GFX9-NEXT:    v_sub_co_u32_e32 v0, vcc, v1, v0
+; GFX9-NEXT:    v_sub_co_u32_sdwa v0, vcc, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX9-NEXT:    v_subb_co_u32_e64 v1, s[0:1], 0, 0, vcc
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX9-NEXT:    s_endpgm
@@ -27,16 +26,13 @@ define amdgpu_kernel void @test_sub_co_sdwa(i64 addrspace(1)* %arg, i32 addrspac
 ; GFX9-LABEL: test_sub_co_sdwa:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v2, v1, s[2:3]
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    global_load_dword v4, v2, s[2:3]
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v3, s[0:1]
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v2
+; GFX9-NEXT:    v_sub_co_u32_sdwa v0, vcc, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX9-NEXT:    v_subbrev_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    global_store_dwordx2 v3, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm

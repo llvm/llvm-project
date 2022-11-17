@@ -249,7 +249,7 @@ const EHPersonality &EHPersonality::get(CodeGenFunction &CGF) {
   // For outlined finallys and filters, use the SEH personality in case they
   // contain more SEH. This mostly only affects finallys. Filters could
   // hypothetically use gnu statement expressions to sneak in nested SEH.
-  FD = FD ? FD : CGF.CurSEHParent;
+  FD = FD ? FD : CGF.CurSEHParent.getDecl();
   return get(CGF.CGM, dyn_cast_or_null<FunctionDecl>(FD));
 }
 
@@ -2005,7 +2005,7 @@ void CodeGenFunction::startOutlinedSEHHelper(CodeGenFunction &ParentCGF,
   SmallString<128> Name;
   {
     llvm::raw_svector_ostream OS(Name);
-    const NamedDecl *ParentSEHFn = ParentCGF.CurSEHParent;
+    GlobalDecl ParentSEHFn = ParentCGF.CurSEHParent;
     assert(ParentSEHFn && "No CurSEHParent!");
     MangleContext &Mangler = CGM.getCXXABI().getMangleContext();
     if (IsFilter)

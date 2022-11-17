@@ -283,9 +283,17 @@ std::unique_ptr<Pass> mlir::createSparseTensorConversionPass(
   return std::make_unique<SparseTensorConversionPass>(options);
 }
 
+std::unique_ptr<Pass> mlir::createSparseTensorCodegenPass() {
+  return std::make_unique<SparseTensorCodegenPass>();
+}
+
 std::unique_ptr<Pass>
 mlir::createSparseTensorCodegenPass(bool enableBufferInitialization) {
   return std::make_unique<SparseTensorCodegenPass>(enableBufferInitialization);
+}
+
+std::unique_ptr<Pass> mlir::createSparseBufferRewritePass() {
+  return std::make_unique<SparseBufferRewritePass>();
 }
 
 std::unique_ptr<Pass>

@@ -313,7 +313,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
-    # libc.src.assert.__assert_fail
+    libc.src.assert.__assert_fail
 
     # dirent.h entrypoints
     libc.src.dirent.closedir

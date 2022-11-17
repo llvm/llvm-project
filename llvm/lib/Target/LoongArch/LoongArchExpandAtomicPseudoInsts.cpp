@@ -347,20 +347,23 @@ bool LoongArchExpandAtomicPseudo::expandAtomicMinMaxOp(
   auto LoopHeadMBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
   auto LoopIfBodyMBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
   auto LoopTailMBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto TailMBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
   auto DoneMBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
 
   // Insert new MBBs.
   MF->insert(++MBB.getIterator(), LoopHeadMBB);
   MF->insert(++LoopHeadMBB->getIterator(), LoopIfBodyMBB);
   MF->insert(++LoopIfBodyMBB->getIterator(), LoopTailMBB);
-  MF->insert(++LoopTailMBB->getIterator(), DoneMBB);
+  MF->insert(++LoopTailMBB->getIterator(), TailMBB);
+  MF->insert(++TailMBB->getIterator(), DoneMBB);
 
   // Set up successors and transfer remaining instructions to DoneMBB.
   LoopHeadMBB->addSuccessor(LoopIfBodyMBB);
   LoopHeadMBB->addSuccessor(LoopTailMBB);
   LoopIfBodyMBB->addSuccessor(LoopTailMBB);
   LoopTailMBB->addSuccessor(LoopHeadMBB);
-  LoopTailMBB->addSuccessor(DoneMBB);
+  LoopTailMBB->addSuccessor(TailMBB);
+  TailMBB->addSuccessor(DoneMBB);
   DoneMBB->splice(DoneMBB->end(), &MBB, MI, MBB.end());
   DoneMBB->transferSuccessors(&MBB);
   MBB.addSuccessor(LoopHeadMBB);
@@ -427,7 +430,10 @@ bool LoongArchExpandAtomicPseudo::expandAtomicMinMaxOp(
   BuildMI(LoopTailMBB, DL, TII->get(LoongArch::BEQZ))
       .addReg(Scratch1Reg)
       .addMBB(LoopHeadMBB);
-  BuildMI(LoopTailMBB, DL, TII->get(LoongArch::DBAR)).addImm(0x700);
+
+  // .tail:
+  //   dbar 0x700
+  BuildMI(TailMBB, DL, TII->get(LoongArch::DBAR)).addImm(0x700);
 
   NextMBBI = MBB.end();
   MI.eraseFromParent();
@@ -436,6 +442,7 @@ bool LoongArchExpandAtomicPseudo::expandAtomicMinMaxOp(
   computeAndAddLiveIns(LiveRegs, *LoopHeadMBB);
   computeAndAddLiveIns(LiveRegs, *LoopIfBodyMBB);
   computeAndAddLiveIns(LiveRegs, *LoopTailMBB);
+  computeAndAddLiveIns(LiveRegs, *TailMBB);
   computeAndAddLiveIns(LiveRegs, *DoneMBB);
 
   return true;

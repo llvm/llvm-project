@@ -180,4 +180,5 @@ contains
 
   ! CHECK-LABEL: func.func @assumed_type_dummy_array(
   ! CHECK-SAME: %{{.*}}: !fir.box<!fir.array<?xnone>>
+
 end module

@@ -1,5 +1,4 @@
 // RUN: mlir-opt %s -test-linalg-elementwise-fusion-patterns=fuse-generic-ops -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -test-linalg-elementwise-fusion-patterns=fuse-generic-ops -split-input-file -canonicalize | FileCheck %s --check-prefix=CANONICALIZE
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 #binary2Dpointwise = {
@@ -50,6 +49,7 @@ func.func @test_fusion_limit(
     } -> tensor<?x?xf32>
   return %6 : tensor<?x?xf32>
 }
+
 // CHECK-LABEL: func @test_fusion_limit
 //  CHECK-SAME:   %[[ARG0:[a-zA-z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-z0-9_]+]]: tensor<?x?xf32>
@@ -59,17 +59,5 @@ func.func @test_fusion_limit(
 //  CHECK-SAME:   %[[ARG5:[a-zA-z0-9_]+]]: tensor<?x?xf32>
 //       CHECK:   %[[OP1:.+]] = linalg.generic {{.+}} ins(%[[ARG2]], %[[ARG3]]
 //       CHECK:   %[[OP2:.+]] = linalg.generic {{.+}} ins(%[[ARG4]], %[[ARG5]]
-//       CHECK:   %[[OP3:.+]]:2 = linalg.generic {{.+}} ins(%[[ARG0]], %[[ARG1]], %[[OP1]], %[[OP2]]
-//       CHECK:   return %[[OP3]]#1
-
-// CANONICALIZE-LABEL: func @test_fusion_limit
-//  CANONICALIZE-SAME:   %[[ARG0:[a-zA-z0-9_]+]]: tensor<?x?xf32>
-//  CANONICALIZE-SAME:   %[[ARG1:[a-zA-z0-9_]+]]: tensor<?x?xf32>
-//  CANONICALIZE-SAME:   %[[ARG2:[a-zA-z0-9_]+]]: tensor<?x?xf32>
-//  CANONICALIZE-SAME:   %[[ARG3:[a-zA-z0-9_]+]]: tensor<?x?xf32>
-//  CANONICALIZE-SAME:   %[[ARG4:[a-zA-z0-9_]+]]: tensor<?x?xf32>
-//  CANONICALIZE-SAME:   %[[ARG5:[a-zA-z0-9_]+]]: tensor<?x?xf32>
-//       CANONICALIZE:   %[[OP1:.+]] = linalg.generic {{.+}} ins(%[[ARG2]], %[[ARG3]]
-//       CANONICALIZE:   %[[OP2:.+]] = linalg.generic {{.+}} ins(%[[ARG4]], %[[ARG5]]
-//       CANONICALIZE:   %[[OP3:.+]] = linalg.generic {{.+}} ins(%[[ARG0]], %[[ARG1]], %[[OP1]], %[[OP2]]
-//       CANONICALIZE:   return %[[OP3]]
+//       CHECK:   %[[OP3:.+]] = linalg.generic {{.+}} ins(%[[ARG0]], %[[ARG1]], %[[OP1]], %[[OP2]]
+//       CHECK:   return %[[OP3]]

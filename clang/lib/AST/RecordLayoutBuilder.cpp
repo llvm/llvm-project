@@ -2027,7 +2027,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
 
   // The align if the field is not packed. This is to check if the attribute
   // was unnecessary (-Wpacked).
-  CharUnits UnpackedFieldAlign = FieldAlign; 
+  CharUnits UnpackedFieldAlign = FieldAlign;
   CharUnits PackedFieldAlign = CharUnits::One();
   CharUnits UnpackedFieldOffset = FieldOffset;
   CharUnits OriginalFieldAlign = UnpackedFieldAlign;
@@ -3081,10 +3081,9 @@ void MicrosoftRecordLayoutBuilder::injectVFPtr(const CXXRecordDecl *RD) {
     VBPtrOffset += Offset;
 
   if (UseExternalLayout) {
-    // The class may have no bases or fields, but still have a vfptr
-    // (e.g. it's an interface class). The size was not correctly set before
-    // in this case.
-    if (FieldOffsets.empty() && Bases.empty())
+    // The class may have size 0 and a vfptr (e.g. it's an interface class). The
+    // size was not correctly set before in this case.
+    if (Size.isZero())
       Size += Offset;
     return;
   }

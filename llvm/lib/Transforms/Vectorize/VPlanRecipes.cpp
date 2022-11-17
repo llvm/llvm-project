@@ -723,7 +723,7 @@ bool VPScalarIVStepsRecipe::isCanonical() const {
   if (CanIV->getStartValue() != getStartValue())
     return false;
   auto *StepVPV = getStepValue();
-  if (StepVPV->getDef())
+  if (StepVPV->hasDefiningRecipe())
     return false;
   auto *StepC = dyn_cast_or_null<ConstantInt>(StepVPV->getLiveInIRValue());
   return StepC && StepC->isOne();

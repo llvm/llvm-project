@@ -448,10 +448,10 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64(i64 addrspace(1)* noalias %out,
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x4c
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_mov_b32 s1, 0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_flbit_i32_b64 s0, s[2:3]
-; GFX9-GISEL-NEXT:    s_bfe_u64 s[0:1], s[0:1], 0x200000
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
