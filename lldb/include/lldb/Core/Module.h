@@ -815,6 +815,8 @@ public:
   llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language);
 
+  /// Call \p callback for each \p TypeSystem in this \p Module.
+  /// Return true from callback to keep iterating, false to stop iterating.
   void ForEachTypeSystem(llvm::function_ref<bool(lldb::TypeSystemSP)> callback);
 
   // Special error functions that can do printf style formatting that will
