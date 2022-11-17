@@ -5169,19 +5169,28 @@ namespace {
 
 bool ASTReader::readASTFileControlBlock(
     StringRef Filename, FileManager &FileMgr,
-    const PCHContainerReader &PCHContainerRdr,
-    bool FindModuleFileExtensions,
+    const InMemoryModuleCache &ModuleCache,
+    const PCHContainerReader &PCHContainerRdr, bool FindModuleFileExtensions,
     ASTReaderListener &Listener, bool ValidateDiagnosticOptions) {
   // Open the AST file.
-  // FIXME: This allows use of the VFS; we do not allow use of the
-  // VFS when actually loading a module.
-  auto Buffer = FileMgr.getBufferForFile(Filename);
+  std::unique_ptr<llvm::MemoryBuffer> OwnedBuffer;
+  llvm::MemoryBuffer *Buffer = ModuleCache.lookupPCM(Filename);
   if (!Buffer) {
-    return true;
+    // FIXME: We should add the pcm to the InMemoryModuleCache if it could be
+    // read again later, but we do not have the context here to determine if it
+    // is safe to change the result of InMemoryModuleCache::getPCMState().
+
+    // FIXME: This allows use of the VFS; we do not allow use of the
+    // VFS when actually loading a module.
+    auto BufferOrErr = FileMgr.getBufferForFile(Filename);
+    if (!BufferOrErr)
+      return true;
+    OwnedBuffer = std::move(*BufferOrErr);
+    Buffer = OwnedBuffer.get();
   }
 
   // Initialize the stream
-  StringRef Bytes = PCHContainerRdr.ExtractPCH(**Buffer);
+  StringRef Bytes = PCHContainerRdr.ExtractPCH(*Buffer);
   BitstreamCursor Stream(Bytes);
 
   // Sniff for the signature.
@@ -5434,6 +5443,7 @@ bool ASTReader::readASTFileControlBlock(
 }
 
 bool ASTReader::isAcceptableASTFile(StringRef Filename, FileManager &FileMgr,
+                                    const InMemoryModuleCache &ModuleCache,
                                     const PCHContainerReader &PCHContainerRdr,
                                     const LangOptions &LangOpts,
                                     const TargetOptions &TargetOpts,
@@ -5443,9 +5453,9 @@ bool ASTReader::isAcceptableASTFile(StringRef Filename, FileManager &FileMgr,
   SimplePCHValidator validator(LangOpts, TargetOpts, PPOpts,
                                ExistingModuleCachePath, FileMgr,
                                RequireStrictOptionMatches);
-  return !readASTFileControlBlock(Filename, FileMgr, PCHContainerRdr,
-                                  /*FindModuleFileExtensions=*/false,
-                                  validator,
+  return !readASTFileControlBlock(Filename, FileMgr, ModuleCache,
+                                  PCHContainerRdr,
+                                  /*FindModuleFileExtensions=*/false, validator,
                                   /*ValidateDiagnosticOptions=*/true);
 }
 
