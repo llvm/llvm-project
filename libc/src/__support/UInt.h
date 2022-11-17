@@ -101,22 +101,20 @@ template <size_t Bits> struct UInt {
   // property of unsigned integers:
   //   x + (~x) = 2^(sizeof(x)) - 1.
   constexpr uint64_t add(const UInt<Bits> &x) {
-    uint64_t carry_in = 0;
-    uint64_t carry_out = 0;
+    SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WordCount; ++i) {
-      val[i] = add_with_carry(val[i], x.val[i], carry_in, carry_out);
-      carry_in = carry_out;
+      s = add_with_carry(val[i], x.val[i], s.carry);
+      val[i] = s.sum;
     }
-    return carry_out;
+    return s.carry;
   }
 
   constexpr UInt<Bits> operator+(const UInt<Bits> &other) const {
     UInt<Bits> result;
-    uint64_t carry_in = 0;
-    uint64_t carry_out = 0;
+    SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WordCount; ++i) {
-      result.val[i] = add_with_carry(val[i], other.val[i], carry_in, carry_out);
-      carry_in = carry_out;
+      s = add_with_carry(val[i], other.val[i], s.carry);
+      result.val[i] = s.sum;
     }
     return result;
   }
