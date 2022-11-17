@@ -1051,30 +1051,30 @@ struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
   }
 };
 
-/// Lower `fir.dispatch_table` operation. The dispatch table for a Fortran
-/// derived type.
+/// `fir.disptach_table` operation has no specific CodeGen. The operation is
+/// only used to carry information during FIR to FIR passes.
 struct DispatchTableOpConversion
     : public FIROpConversion<fir::DispatchTableOp> {
   using FIROpConversion::FIROpConversion;
 
   mlir::LogicalResult
-  matchAndRewrite(fir::DispatchTableOp dispTab, OpAdaptor adaptor,
+  matchAndRewrite(fir::DispatchTableOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    TODO(dispTab.getLoc(), "fir.dispatch_table codegen");
-    return mlir::failure();
+    rewriter.eraseOp(op);
+    return mlir::success();
   }
 };
 
-/// Lower `fir.dt_entry` operation. An entry in a dispatch table; binds a
-/// method-name to a function.
+/// `fir.dt_entry` operation has no specific CodeGen. The operation is only used
+/// to carry information during FIR to FIR passes.
 struct DTEntryOpConversion : public FIROpConversion<fir::DTEntryOp> {
   using FIROpConversion::FIROpConversion;
 
   mlir::LogicalResult
-  matchAndRewrite(fir::DTEntryOp dtEnt, OpAdaptor adaptor,
+  matchAndRewrite(fir::DTEntryOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    TODO(dtEnt.getLoc(), "fir.dt_entry codegen");
-    return mlir::failure();
+    rewriter.eraseOp(op);
+    return mlir::success();
   }
 };
 

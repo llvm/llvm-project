@@ -46,11 +46,13 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/iostat.h"
+#include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -193,6 +195,67 @@ private:
   llvm::SmallSetVector<Fortran::semantics::SymbolRef, 64> seen;
 };
 
+class DispatchTableConverter {
+  struct DispatchTableInfo {
+    const Fortran::semantics::DerivedTypeSpec *typeSpec;
+    mlir::Location loc;
+  };
+
+public:
+  void registerTypeSpec(mlir::Location loc,
+                        const Fortran::semantics::DerivedTypeSpec *typeSpec) {
+    assert(typeSpec && "type spec is null");
+    std::string dtName = Fortran::lower::mangle::mangleName(*typeSpec);
+    if (seen.contains(dtName) || dtName.find("__fortran") != std::string::npos)
+      return;
+    seen.insert(dtName);
+    registeredDispatchTableInfo.emplace_back(DispatchTableInfo{typeSpec, loc});
+  }
+
+  void createDispatchTableOps(Fortran::lower::AbstractConverter &converter) {
+    for (const DispatchTableInfo &info : registeredDispatchTableInfo) {
+      std::string dtName = Fortran::lower::mangle::mangleName(*info.typeSpec);
+      const Fortran::semantics::DerivedTypeSpec *parent =
+          Fortran::evaluate::GetParentTypeSpec(*info.typeSpec);
+      fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+      fir::DispatchTableOp dt = builder.createDispatchTableOp(
+          info.loc, dtName,
+          parent ? Fortran::lower::mangle::mangleName(*parent) : "");
+      auto insertPt = builder.saveInsertionPoint();
+
+      std::vector<const Fortran::semantics::Symbol *> bindings =
+          Fortran::semantics::CollectBindings(*info.typeSpec->scope());
+
+      if (!bindings.empty())
+        builder.createBlock(&dt.getRegion());
+
+      for (const Fortran::semantics::Symbol *binding : bindings) {
+        const auto *details =
+            binding->detailsIf<Fortran::semantics::ProcBindingDetails>();
+        std::string bindingName =
+            Fortran::lower::mangle::mangleName(details->symbol());
+        builder.create<fir::DTEntryOp>(
+            info.loc,
+            mlir::StringAttr::get(builder.getContext(),
+                                  binding->name().ToString()),
+            mlir::SymbolRefAttr::get(builder.getContext(), bindingName));
+      }
+      if (!bindings.empty())
+        builder.create<fir::FirEndOp>(info.loc);
+      builder.restoreInsertionPoint(insertPt);
+    }
+    registeredDispatchTableInfo.clear();
+  }
+
+private:
+  /// Store the semantic DerivedTypeSpec that will be required to generate the
+  /// dispatch table.
+  llvm::SmallVector<DispatchTableInfo> registeredDispatchTableInfo;
+
+  /// Track processed type specs to avoid multiple creation.
+  llvm::StringSet<> seen;
+};
+
 using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 8>;
 } // namespace
 
@@ -269,6 +332,10 @@ public:
     /// processed.
     createGlobalOutsideOfFunctionLowering(
         [&]() { runtimeTypeInfoConverter.createTypeInfoGlobals(*this); });
+
+    /// Create the dispatch tables for derived types.
+    createGlobalOutsideOfFunctionLowering(
+        [&]() { dispatchTableConverter.createDispatchTableOps(*this); });
 
     // Create the list of any environment defaults for the runtime to set. The
     // runtime default list is only created if there is a main program to ensure
@@ -743,6 +810,12 @@ public:
       mlir::Location loc,
       Fortran::lower::SymbolRef typeInfoSym) override final {
     runtimeTypeInfoConverter.registerTypeInfoSymbol(*this, loc, typeInfoSym);
+  }
+
+  void registerDispatchTableInfo(
+      mlir::Location loc,
+      const Fortran::semantics::DerivedTypeSpec *typeSpec) override final {
+    dispatchTableConverter.registerTypeSpec(loc, typeSpec);
   }
 
 private:
@@ -3591,6 +3664,7 @@ private:
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
   RuntimeTypeInfoConverter runtimeTypeInfoConverter;
+  DispatchTableConverter dispatchTableConverter;
 
   /// WHERE statement/construct mask expression stack.
   Fortran::lower::ImplicitIterSpace implicitIterSpace;

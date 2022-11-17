@@ -1092,14 +1092,19 @@ void fir::DispatchTableOp::appendTableEntry(mlir::Operation *op) {
 mlir::ParseResult fir::DispatchTableOp::parse(mlir::OpAsmParser &parser,
                                               mlir::OperationState &result) {
   // Parse the name as a symbol reference attribute.
-  mlir::SymbolRefAttr nameAttr;
-  if (parser.parseAttribute(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
-                            result.attributes))
+  mlir::StringAttr nameAttr;
+  if (parser.parseSymbolName(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
+                             result.attributes))
     return mlir::failure();
 
-  // Convert the parsed name attr into a string attr.
-  result.attributes.set(mlir::SymbolTable::getSymbolAttrName(),
-                        nameAttr.getRootReference());
+  if (!failed(parser.parseOptionalKeyword(getExtendsKeyword()))) {
+    mlir::StringAttr parent;
+    if (parser.parseLParen() ||
+        parser.parseAttribute(parent, getParentAttrNameStr(),
+                              result.attributes) ||
+        parser.parseRParen())
+      return mlir::failure();
+  }
 
   // Parse the optional table body.
   mlir::Region *body = result.addRegion();
@@ -1113,11 +1118,11 @@ mlir::ParseResult fir::DispatchTableOp::parse(mlir::OpAsmParser &parser,
 }
 
 void fir::DispatchTableOp::print(mlir::OpAsmPrinter &p) {
-  auto tableName = getOperation()
-                       ->getAttrOfType<mlir::StringAttr>(
-                           mlir::SymbolTable::getSymbolAttrName())
-                       .getValue();
-  p << " @" << tableName;
+  p << ' ';
+  p.printSymbolName(getSymName());
+  if (getParent())
+    p << ' ' << getExtendsKeyword() << '('
+      << (*this)->getAttr(getParentAttrNameStr()) << ')';
 
   mlir::Region &body = getOperation()->getRegion(0);
   if (!body.empty()) {
@@ -1128,10 +1133,27 @@ void fir::DispatchTableOp::print(mlir::OpAsmPrinter &p) {
 }
 
 mlir::LogicalResult fir::DispatchTableOp::verify() {
+  if (getRegion().empty())
+    return mlir::success();
   for (auto &op : getBlock())
     if (!mlir::isa<fir::DTEntryOp, fir::FirEndOp>(op))
       return op.emitOpError("dispatch table must contain dt_entry");
   return mlir::success();
+}
+
+void fir::DispatchTableOp::build(mlir::OpBuilder &builder,
+                                 mlir::OperationState &result,
+                                 llvm::StringRef name, mlir::Type type,
+                                 llvm::StringRef parent,
+                                 llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+  result.addRegion();
+  result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+                      builder.getStringAttr(name));
+  if (!parent.empty())
+    result.addAttribute(getParentAttrNameStr(), builder.getStringAttr(parent));
+  // result.addAttribute(getSymbolAttrNameStr(),
+  //                     mlir::SymbolRefAttr::get(builder.getContext(), name));
+  result.addAttributes(attrs);
 }
 
 //===----------------------------------------------------------------------===//
