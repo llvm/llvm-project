@@ -406,6 +406,11 @@ public:
                                       ArrayRef<size_t> extraTids = {},
                                       ArrayRef<size_t> extraDims = {});
 
+  Operation *enterFilterLoopOverTensorAtDim(OpBuilder &builder, Location loc,
+                                            size_t tid, size_t dim,
+                                            AffineExpr affine,
+                                            MutableArrayRef<Value> reduc = {});
+
   void genDenseAffineAddressAtCurLevel(OpBuilder &builder, Location loc,
                                        size_t tid, size_t dim,
                                        AffineExpr affine);
