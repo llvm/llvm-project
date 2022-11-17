@@ -813,8 +813,8 @@ TEST(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   EXPECT_EQ(&Recipe, BaseR);
 
   VPValue *VPV = &Recipe;
-  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
-  EXPECT_EQ(&Recipe, dyn_cast<VPRecipeBase>(VPV->getDefiningRecipe()));
+  EXPECT_TRUE(VPV->getDefiningRecipe());
+  EXPECT_EQ(&Recipe, VPV->getDefiningRecipe());
 
   delete Call;
 }
@@ -842,7 +842,7 @@ TEST(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
 
   VPValue *VPV = &WidenSelectR;
   EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
-  EXPECT_EQ(&WidenSelectR, dyn_cast<VPRecipeBase>(VPV->getDefiningRecipe()));
+  EXPECT_EQ(&WidenSelectR, VPV->getDefiningRecipe());
 
   delete SelectI;
 }
@@ -867,7 +867,7 @@ TEST(VPRecipeTest, CastVPWidenGEPRecipeToVPUserAndVPDef) {
 
   VPValue *VPV = &Recipe;
   EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
-  EXPECT_EQ(&Recipe, dyn_cast<VPRecipeBase>(VPV->getDefiningRecipe()));
+  EXPECT_EQ(&Recipe, VPV->getDefiningRecipe());
 
   delete GEP;
 }
@@ -946,7 +946,7 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
 
   VPValue *VPV = Recipe.getVPSingleValue();
   EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
-  EXPECT_EQ(&Recipe, dyn_cast<VPRecipeBase>(VPV->getDefiningRecipe()));
+  EXPECT_EQ(&Recipe, VPV->getDefiningRecipe());
 
   delete Load;
 }
