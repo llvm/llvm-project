@@ -866,6 +866,18 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
   }
 
+  // fp_class (ninf x), ninf|pinf|other -> fp_class (ninf x), other
+  if ((Mask & fcInf) && isKnownNeverInfinity(Src0, &getTargetLibraryInfo())) {
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), Mask & ~fcInf));
+    return &II;
+  }
+
+  // fp_class (ninf x), ~(ninf|pinf) -> true
+  if (Mask == (~fcInf & fcAllFlags) &&
+      isKnownNeverInfinity(Src0, &getTargetLibraryInfo())) {
+    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
+  }
+
   return nullptr;
 }
 
