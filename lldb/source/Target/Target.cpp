@@ -2361,7 +2361,8 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
               return a.get() <= b.get();
             });
   scratch_type_systems.erase(
-      std::unique(scratch_type_systems.begin(), scratch_type_systems.end()));
+      std::unique(scratch_type_systems.begin(), scratch_type_systems.end()),
+      scratch_type_systems.end());
   return scratch_type_systems;
 }
 
