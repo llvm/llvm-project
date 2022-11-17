@@ -387,6 +387,8 @@ private:
   SDValue getSplatValue(SDValue Op, SelectionDAG &DAG) const;
   SDValue getVectorShiftByInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue appendUndef(SDValue Val, MVT ResTy, SelectionDAG &DAG) const;
+  SDValue getCombine(SDValue Hi, SDValue Lo, const SDLoc &dl, MVT ResTy,
+                     SelectionDAG &DAG) const;
 
   bool isUndef(SDValue Op) const {
     if (Op.isMachineOpcode())
