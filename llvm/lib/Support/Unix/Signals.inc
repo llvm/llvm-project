@@ -95,6 +95,10 @@ static std::atomic<SignalHandlerFunctionType> InfoSignalFunction = nullptr;
 static std::atomic<SignalHandlerFunctionType> OneShotPipeSignalFunction =
     nullptr;
 
+static const char *BugReportMsg =
+    "PLEASE submit a bug report to " BUG_REPORT_URL
+    " and include the crash backtrace.\n";
+
 namespace {
 /// Signal-safe removal of files.
 /// Inserting and erasing from the list isn't signal-safe, but removal of files
@@ -458,6 +462,16 @@ void llvm::sys::SetOneShotPipeSignalFunction(void (*Handler)()) {
 }
 
 void llvm::sys::DefaultOneShotPipeSignalHandler() {
+  // UNIX03 conformance requires a non-zero exit code and an error message
+  // to stderr when writing to a closed stdout fails.
+  errs() << "error: write on a pipe with no reader\n";
+
+  // Temporary changes to generate stack-trace for SIGPIPE.
+  // BugReportMsg is needed for VSCode to pattern matching crash stack and
+  // report.
+  errs() << BugReportMsg;
+  sys::PrintStackTrace(llvm::errs());
+
   // Send a special return code that drivers can check for, from sysexits.h.
   exit(EX_IOERR);
 }
