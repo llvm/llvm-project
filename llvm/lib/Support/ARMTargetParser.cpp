@@ -29,7 +29,7 @@ static StringRef getHWDivSynonym(StringRef HWDiv) {
 ARM::ArchKind ARM::parseArch(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
   StringRef Syn = getArchSynonym(Arch);
-  for (const auto &A : ARCHNames) {
+  for (const auto &A : ARMArchNames) {
     if (A.getName().endswith(Syn))
       return A.ID;
   }
@@ -211,35 +211,6 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
   return true;
 }
 
-// Little/Big endian
-ARM::EndianKind ARM::parseArchEndian(StringRef Arch) {
-  if (Arch.startswith("armeb") || Arch.startswith("thumbeb") ||
-      Arch.startswith("aarch64_be"))
-    return EndianKind::BIG;
-
-  if (Arch.startswith("arm") || Arch.startswith("thumb")) {
-    if (Arch.endswith("eb"))
-      return EndianKind::BIG;
-    else
-      return EndianKind::LITTLE;
-  }
-
-  if (Arch.startswith("aarch64") || Arch.startswith("aarch64_32"))
-    return EndianKind::LITTLE;
-
-  return EndianKind::INVALID;
-}
-
-// ARM, Thumb, AArch64
-ARM::ISAKind ARM::parseArchISA(StringRef Arch) {
-  return StringSwitch<ISAKind>(Arch)
-      .StartsWith("aarch64", ISAKind::AARCH64)
-      .StartsWith("arm64", ISAKind::AARCH64)
-      .StartsWith("thumb", ISAKind::THUMB)
-      .StartsWith("arm", ISAKind::ARM)
-      .Default(ISAKind::INVALID);
-}
-
 unsigned ARM::parseFPU(StringRef FPU) {
   StringRef Syn = getFPUSynonym(FPU);
   for (const auto &F : FPUNames) {
@@ -292,7 +263,7 @@ ARM::FPURestriction ARM::getFPURestriction(unsigned FPUKind) {
 
 unsigned ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
   if (CPU == "generic")
-    return ARM::ARCHNames[static_cast<unsigned>(AK)].DefaultFPU;
+    return ARM::ARMArchNames[static_cast<unsigned>(AK)].DefaultFPU;
 
   return StringSwitch<unsigned>(CPU)
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
@@ -303,12 +274,12 @@ unsigned ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
 
 uint64_t ARM::getDefaultExtensions(StringRef CPU, ARM::ArchKind AK) {
   if (CPU == "generic")
-    return ARM::ARCHNames[static_cast<unsigned>(AK)].ArchBaseExtensions;
+    return ARM::ARMArchNames[static_cast<unsigned>(AK)].ArchBaseExtensions;
 
   return StringSwitch<uint64_t>(CPU)
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
   .Case(NAME,                                                                  \
-        ARCHNames[static_cast<unsigned>(ArchKind::ID)].ArchBaseExtensions |    \
+        ARMArchNames[static_cast<unsigned>(ArchKind::ID)].ArchBaseExtensions | \
             DEFAULT_EXT)
 #include "llvm/Support/ARMTargetParser.def"
   .Default(ARM::AEK_INVALID);
@@ -350,19 +321,19 @@ bool ARM::getExtensionFeatures(uint64_t Extensions,
 }
 
 StringRef ARM::getArchName(ARM::ArchKind AK) {
-  return ARCHNames[static_cast<unsigned>(AK)].getName();
+  return ARMArchNames[static_cast<unsigned>(AK)].getName();
 }
 
 StringRef ARM::getCPUAttr(ARM::ArchKind AK) {
-  return ARCHNames[static_cast<unsigned>(AK)].getCPUAttr();
+  return ARMArchNames[static_cast<unsigned>(AK)].getCPUAttr();
 }
 
 StringRef ARM::getSubArch(ARM::ArchKind AK) {
-  return ARCHNames[static_cast<unsigned>(AK)].getSubArch();
+  return ARMArchNames[static_cast<unsigned>(AK)].getSubArch();
 }
 
 unsigned ARM::getArchAttr(ARM::ArchKind AK) {
-  return ARCHNames[static_cast<unsigned>(AK)].ArchAttr;
+  return ARMArchNames[static_cast<unsigned>(AK)].ArchAttr;
 }
 
 StringRef ARM::getArchExtName(uint64_t ArchExtKind) {
