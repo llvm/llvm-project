@@ -687,7 +687,7 @@ void request_attach(const llvm::json::Object &request) {
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
   if (error.Success()) {
     SendProcessEvent(Attach);
-    g_vsc.SendJSON(CreateInitializedEventObject());
+    g_vsc.SendJSON(CreateEventObject("initialized"));
   }
 }
 
@@ -1754,7 +1754,7 @@ void request_launch(const llvm::json::Object &request) {
     SendProcessEvent(Attach); // this happens when doing runInTerminal
   else
     SendProcessEvent(Launch);
-  g_vsc.SendJSON(CreateInitializedEventObject());
+  g_vsc.SendJSON(llvm::json::Value(CreateEventObject("initialized")));
 }
 
 // "NextRequest": {
