@@ -22971,7 +22971,10 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   SDValue In = Op.getOperand(IsStrict ? 1 : 0);
   MVT SVT = In.getSimpleValueType();
 
-  if (VT == MVT::f128 || (SVT == MVT::f16 && VT == MVT::f80))
+  // Let f16->f80 get lowered to a libcall, except for darwin, where we should
+  // lower it to an fp_extend via f32 (as only f16<>f32 libcalls are available)
+  if (VT == MVT::f128 || (SVT == MVT::f16 && VT == MVT::f80 &&
+                          !Subtarget.getTargetTriple().isOSDarwin()))
     return SDValue();
 
   if (SVT == MVT::f16) {

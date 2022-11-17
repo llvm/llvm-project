@@ -112,12 +112,15 @@ define x86_fp80 @half_to_fp80() strictfp {
 ;
 ; X32-F16C-LABEL: half_to_fp80:
 ; X32-F16C:       ## %bb.0:
-; X32-F16C-NEXT:    subl $12, %esp
-; X32-F16C-NEXT:    .cfi_def_cfa_offset 16
-; X32-F16C-NEXT:    vpinsrw $0, _a, %xmm0, %xmm0
-; X32-F16C-NEXT:    vpextrw $0, %xmm0, (%esp)
-; X32-F16C-NEXT:    calll ___extendhfxf2
-; X32-F16C-NEXT:    addl $12, %esp
+; X32-F16C-NEXT:    pushl %eax
+; X32-F16C-NEXT:    .cfi_def_cfa_offset 8
+; X32-F16C-NEXT:    movzwl _a, %eax
+; X32-F16C-NEXT:    vmovd %eax, %xmm0
+; X32-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X32-F16C-NEXT:    vmovss %xmm0, (%esp)
+; X32-F16C-NEXT:    flds (%esp)
+; X32-F16C-NEXT:    wait
+; X32-F16C-NEXT:    popl %eax
 ; X32-F16C-NEXT:    retl
 ;
 ; X64-NOF16C-LABEL: half_to_fp80:
@@ -125,17 +128,21 @@ define x86_fp80 @half_to_fp80() strictfp {
 ; X64-NOF16C-NEXT:    pushq %rax
 ; X64-NOF16C-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NOF16C-NEXT:    pinsrw $0, _a(%rip), %xmm0
-; X64-NOF16C-NEXT:    callq ___extendhfxf2
+; X64-NOF16C-NEXT:    callq ___extendhfsf2
+; X64-NOF16C-NEXT:    movd %xmm0, {{[0-9]+}}(%rsp)
+; X64-NOF16C-NEXT:    flds {{[0-9]+}}(%rsp)
+; X64-NOF16C-NEXT:    wait
 ; X64-NOF16C-NEXT:    popq %rax
 ; X64-NOF16C-NEXT:    retq
 ;
 ; X64-F16C-LABEL: half_to_fp80:
 ; X64-F16C:       ## %bb.0:
-; X64-F16C-NEXT:    pushq %rax
-; X64-F16C-NEXT:    .cfi_def_cfa_offset 16
-; X64-F16C-NEXT:    vpinsrw $0, _a(%rip), %xmm0, %xmm0
-; X64-F16C-NEXT:    callq ___extendhfxf2
-; X64-F16C-NEXT:    popq %rax
+; X64-F16C-NEXT:    movzwl _a(%rip), %eax
+; X64-F16C-NEXT:    vmovd %eax, %xmm0
+; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X64-F16C-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp)
+; X64-F16C-NEXT:    flds -{{[0-9]+}}(%rsp)
+; X64-F16C-NEXT:    wait
 ; X64-F16C-NEXT:    retq
   %1 = load half, ptr @a, align 2
   %2 = tail call x86_fp80 @llvm.experimental.constrained.fpext.f80.f16(half %1, metadata !"fpexcept.strict") #0
