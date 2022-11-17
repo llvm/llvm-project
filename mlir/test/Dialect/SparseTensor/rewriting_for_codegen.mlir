@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparse-tensor-rewrite="enable-runtime-library=false enable-convert=false" |\
+// RUN: mlir-opt %s -post-sparsification-rewrite="enable-runtime-library=false enable-convert=false" |\
 // RUN: FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
