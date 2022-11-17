@@ -162,15 +162,6 @@ namespace HexagonII {
 
     isCVIPos = 59,
     isCVIMask = 0x1,
-
-    isHVXALUPos = 60,
-    isHVXALUMask = 0x1,
-
-    isHVXALU2SRCPos = 61,
-    isHVXALU2SRCMask = 0x1,
-
-    hasUnaryRestrictionPos = 62,
-    hasUnaryRestrictionMask = 0x1,
   };
 
   // *** The code above must match HexagonInstrFormat*.td *** //
