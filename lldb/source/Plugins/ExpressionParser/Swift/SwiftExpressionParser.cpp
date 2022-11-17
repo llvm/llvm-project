@@ -44,6 +44,7 @@
 
 #include "llvm-c/Analysis.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -83,6 +84,7 @@
 using namespace lldb_private;
 using llvm::make_error;
 using llvm::StringError;
+using llvm::StringRef;
 using llvm::inconvertibleErrorCode;
 
 SwiftExpressionParser::SwiftExpressionParser(
