@@ -285,6 +285,9 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
   // Transfer implicit operands.
   CALL.copyImplicitOps(MI);
 
+  // Transfer MI flags.
+  CALL.setMIFlags(MI.getFlags());
+
   MI.eraseFromParent();
   return true;
 }
