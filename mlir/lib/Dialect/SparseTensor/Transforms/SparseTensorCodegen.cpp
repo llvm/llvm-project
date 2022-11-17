@@ -272,14 +272,12 @@ static void allocSchemeForRank(OpBuilder &builder, Location loc,
     }
     if (isSingletonDim(rtp, r)) {
       return; // nothing to do
-    } else {
-      // Keep compounding the size, but nothing needs to be initialized
+    }         // Keep compounding the size, but nothing needs to be initialized
       // at this level. We will eventually reach a compressed level or
       // otherwise the values array for the from-here "all-dense" case.
       assert(isDenseDim(rtp, r));
       Value size = sizeAtStoredDim(builder, loc, rtp, fields, r);
       linear = builder.create<arith::MulIOp>(loc, linear, size);
-    }
   }
   // Reached values array so prepare for an insertion.
   Value valZero = constantZero(builder, loc, rtp.getElementType());
