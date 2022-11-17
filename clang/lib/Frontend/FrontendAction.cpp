@@ -778,8 +778,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
            Dir != DirEnd && !EC; Dir.increment(EC)) {
         // Check whether this is an acceptable AST file.
         if (ASTReader::isAcceptableASTFile(
-                Dir->path(), FileMgr, CI.getPCHContainerReader(),
-                CI.getLangOpts(), CI.getTargetOpts(), CI.getPreprocessorOpts(),
+                Dir->path(), FileMgr, CI.getModuleCache(),
+                CI.getPCHContainerReader(), CI.getLangOpts(),
+                CI.getTargetOpts(), CI.getPreprocessorOpts(),
                 SpecificModuleCachePath, /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;
