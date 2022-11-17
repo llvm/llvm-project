@@ -469,9 +469,7 @@ define i1 @test_class_is_not_nan_nnan_src_strict(float %x) {
 
 define i1 @test_class_is_ninf_pinf_ninf_src(float %x) {
 ; CHECK-LABEL: @test_class_is_ninf_pinf_ninf_src(
-; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 516)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ninf = fadd ninf float %x, 1.0
   %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 516)
@@ -480,9 +478,7 @@ define i1 @test_class_is_ninf_pinf_ninf_src(float %x) {
 
 define i1 @test_class_is_ninf_ninf_src(float %x) {
 ; CHECK-LABEL: @test_class_is_ninf_ninf_src(
-; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 4)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ninf = fadd ninf float %x, 1.0
   %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 4)
@@ -491,9 +487,7 @@ define i1 @test_class_is_ninf_ninf_src(float %x) {
 
 define i1 @test_class_is_pinf_ninf_src(float %x) {
 ; CHECK-LABEL: @test_class_is_pinf_ninf_src(
-; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 512)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ninf = fadd ninf float %x, 1.0
   %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 512)
@@ -503,7 +497,7 @@ define i1 @test_class_is_pinf_ninf_src(float %x) {
 define i1 @test_class_is_ninf_pinf_pnormal_ninf_src(float %x) {
 ; CHECK-LABEL: @test_class_is_ninf_pinf_pnormal_ninf_src(
 ; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 772)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 256)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %ninf = fadd ninf float %x, 1.0
@@ -513,9 +507,7 @@ define i1 @test_class_is_ninf_pinf_pnormal_ninf_src(float %x) {
 
 define i1 @test_class_is_not_inf_ninf_src(float %x) {
 ; CHECK-LABEL: @test_class_is_not_inf_ninf_src(
-; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 507)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ninf = fadd ninf float %x, 1.0
   %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 507) ; ~fcInf & fcAllFlags
@@ -524,9 +516,7 @@ define i1 @test_class_is_not_inf_ninf_src(float %x) {
 
 define i1 @test_class_is_not_inf_ninf_src_strict(float %x) {
 ; CHECK-LABEL: @test_class_is_not_inf_ninf_src_strict(
-; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 507) #[[ATTR2]]
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ninf = fadd ninf float %x, 1.0
   %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 507) strictfp ; ~fcInf & fcAllFlags
