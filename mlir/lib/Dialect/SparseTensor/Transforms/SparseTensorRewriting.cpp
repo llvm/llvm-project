@@ -930,9 +930,8 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     SmallString<18> getNextFuncName{"getSparseTensorReaderNext",
                                     primaryTypeFunctionSuffix(eltTp)};
     Value indices = dimSizes; // Reuse the indices memref to store indices.
-    createFuncCall(rewriter, loc, getNextFuncName, {eltTp},
-                   {reader, indices, value}, EmitCInterface::On)
-        .getResult(0);
+    createFuncCall(rewriter, loc, getNextFuncName, {}, {reader, indices, value},
+                   EmitCInterface::On);
     SmallVector<Value> indicesArray;
     for (uint64_t i = 0; i < rank; i++) {
       indicesArray.push_back(rewriter.create<memref::LoadOp>(
