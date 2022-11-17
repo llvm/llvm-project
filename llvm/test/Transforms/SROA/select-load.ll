@@ -62,16 +62,13 @@ declare void @foo_i32(ptr)
 ; Lifetime intrinsics should not prevent dereferenceability inferrence.
 define i32 @interfering_lifetime(ptr %data, i64 %indvars.iv) {
 ; CHECK-LABEL: @interfering_lifetime(
-; CHECK-NEXT:    [[MIN:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV:%.*]]
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[MIN]])
-; CHECK-NEXT:    store i32 0, ptr [[MIN]], align 4
 ; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp slt i32 [[I1]], 0
 ; CHECK-NEXT:    [[I2:%.*]] = tail call i32 @llvm.smax.i32(i32 [[I1]], i32 0)
-; CHECK-NEXT:    [[__B___A_I_I:%.*]] = select i1 [[CMP_I_I]], ptr [[MIN]], ptr [[ARRAYIDX]]
-; CHECK-NEXT:    [[I3:%.*]] = load i32, ptr [[__B___A_I_I]], align 4
-; CHECK-NEXT:    ret i32 [[I3]]
+; CHECK-NEXT:    [[I3_SROA_SPECULATE_LOAD_FALSE:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[I3_SROA_SPECULATED:%.*]] = select i1 [[CMP_I_I]], i32 0, i32 [[I3_SROA_SPECULATE_LOAD_FALSE]]
+; CHECK-NEXT:    ret i32 [[I3_SROA_SPECULATED]]
 ;
   %min = alloca i32, align 4
   %arrayidx = getelementptr inbounds i32, ptr %data, i64 %indvars.iv
