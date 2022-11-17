@@ -379,46 +379,21 @@ void ACInstrumentation::instrumentBasicBlock(
     Instruction *CurrentInstruction = &*I;
 
     // Branch based on kind of Instruction
-    if(isMemoryLoadOperation(&*I)) {
-//      instrumentCallsForMemoryLoadOperation(CurrentInstruction,
-//                                            &I,
-//                                            NumInstrumentedInstructions);
-    }
-//    else if(isIntegerToFloatCastOperation(CurrentInstruction)) {
-//      instrumentCallsForCastOperation(CurrentInstruction,
-//                                      NumInstrumentedInstructions);
-//    }
-//    // isNonACInstrinsicFunction checks whether the intrinsic function is one from
-//    // the list that we do not calculate AC for. Only the CG Node.
-//    else if(CurrentInstruction->getOpcode() == Instruction::Call &&
-//             isNonACInstrinsicFunction(CurrentInstruction)) {
-//      instrumentCallsForNonACIntrinsicFunction(CurrentInstruction,
-//                                               NumInstrumentedInstructions);
-//    }
-    else if(isOtherOperation(&*I)) {
-//      instrumentCallsForOtherOperation(CurrentInstruction,
-//                                       &I,
-//                                       NumInstrumentedInstructions);
-      instrumentCallsToAnalyzeInstruction(CurrentInstruction,
-                                    &I,
-                                    NumInstrumentedInstructions);
-    }
-    else if(isUnaryOperation(&*I)) {
-
-//      instrumentCallsForUnaryOperation(CurrentInstruction,
-//                                       &I,
-//                                       NumInstrumentedInstructions);
-      instrumentCallsToAnalyzeInstruction(CurrentInstruction,
-                                    &I,
-                                    NumInstrumentedInstructions);
-    }
-    else if(isBinaryOperation(&*I)) {
-//      instrumentCallsForBinaryOperation(CurrentInstruction,
-//                                        &I,
-//                                        NumInstrumentedInstructions);
-      instrumentCallsToAnalyzeInstruction(CurrentInstruction,
-                                    &I,
-                                    NumInstrumentedInstructions);
+    if (isOtherOperation(&*I)) {
+      instrumentCallsToAnalyzeInstruction(CurrentInstruction, &I,
+                                          NumInstrumentedInstructions);
+    } else if (isUnaryOperation(&*I)) {
+      instrumentCallsToAnalyzeInstruction(CurrentInstruction, &I,
+                                          NumInstrumentedInstructions);
+    } else if (isBinaryOperation(&*I)) {
+      instrumentCallsToAnalyzeInstruction(CurrentInstruction, &I,
+                                          NumInstrumentedInstructions);
+    } else if ((&*I)->getOpcode() == Instruction::Select) {
+      std::pair<Value *, Value *> InstructionAFPair =
+          std::make_pair(CurrentInstruction,
+                         instrumentSelectForAF(CurrentInstruction, &I,
+                                               NumInstrumentedInstructions));
+      InstructionAFMap.insert(InstructionAFPair);
     }
 //    else if(isNonACFloatPointInstruction(CurrentInstruction)) {
 //      instrumentCallsForNonACFloatPointInstruction(CurrentInstruction,

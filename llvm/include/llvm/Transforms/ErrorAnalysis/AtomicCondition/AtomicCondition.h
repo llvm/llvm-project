@@ -729,13 +729,12 @@ ACItem **fACComputeAC(const char *ResultVar,
                       enum Func F,
                       const char *FileName,
                       int LineNumber) {
-  int NumOperands;
+  int NumOperands = fACFuncHasXNumOperands(F);
 
 #if FAF_DEBUG>=2
   printf("Creating ACItem Record:\n");
   printf("\tFunction       : %d\n", F);
   printf("\tResultVar      : %s\n", ResultVar);
-  NumOperands = fACFuncHasXNumOperands(F);
   for (int I = 0; I < NumOperands; ++I) {
     printf("\tOperand %d Name : %s\n"
            "\tOperand %d Value: %lf\n",
@@ -749,7 +748,7 @@ ACItem **fACComputeAC(const char *ResultVar,
   ACItem Item;
   Item.ItemId = ACItemCounter;
   Item.F = F;
-  Item.NumOperands = fACFuncHasXNumOperands(F);
+  Item.NumOperands = NumOperands;
   Item.ResultVar = ResultVar;
   Item.OperandNames = OperandNames;
   Item.OperandValues = OperandValues;
