@@ -23,6 +23,8 @@ namespace {
 
 using namespace clang;
 using namespace clang::tooling;
+using ::testing::AllOf;
+using ::testing::Contains;
 using ::testing::Each;
 using ::testing::UnorderedElementsAre;
 
@@ -34,6 +36,51 @@ struct CompletionContext {
   // String representation of std::ptrdiff_t on a given platform. This is a hack
   // to properly account for different configurations of clang.
   std::string PtrDiffType;
+};
+
+struct CompletedFunctionDecl {
+  std::string Name;
+  bool IsStatic;
+  bool CanBeCall;
+};
+MATCHER_P(named, name, "") { return arg.Name == name; }
+MATCHER_P(isStatic, value, "") { return arg.IsStatic == value; }
+MATCHER_P(canBeCall, value, "") { return arg.CanBeCall == value; }
+
+class SaveCompletedFunctions : public CodeCompleteConsumer {
+public:
+  SaveCompletedFunctions(std::vector<CompletedFunctionDecl> &CompletedFuncDecls)
+      : CodeCompleteConsumer(/*CodeCompleteOpts=*/{}),
+        CompletedFuncDecls(CompletedFuncDecls),
+        CCTUInfo(std::make_shared<GlobalCodeCompletionAllocator>()) {}
+
+  void ProcessCodeCompleteResults(Sema &S, CodeCompletionContext Context,
+                                  CodeCompletionResult *Results,
+                                  unsigned NumResults) override {
+    for (unsigned I = 0; I < NumResults; ++I) {
+      auto R = Results[I];
+      if (R.Kind == CodeCompletionResult::RK_Declaration) {
+        if (const auto *FD = llvm::dyn_cast<FunctionDecl>(R.getDeclaration())) {
+          CompletedFunctionDecl D;
+          D.Name = FD->getNameAsString();
+          D.CanBeCall = R.FunctionCanBeCall;
+          D.IsStatic = FD->isStatic();
+          CompletedFuncDecls.emplace_back(std::move(D));
+        }
+      }
+    }
+  }
+
+private:
+  CodeCompletionAllocator &getAllocator() override {
+    return CCTUInfo.getAllocator();
+  }
+
+  CodeCompletionTUInfo &getCodeCompletionTUInfo() override { return CCTUInfo; }
+
+  std::vector<CompletedFunctionDecl> &CompletedFuncDecls;
+
+  CodeCompletionTUInfo CCTUInfo;
 };
 
 class VisitedContextFinder : public CodeCompleteConsumer {
@@ -74,19 +121,19 @@ private:
 
 class CodeCompleteAction : public SyntaxOnlyAction {
 public:
-  CodeCompleteAction(ParsedSourceLocation P, CompletionContext &ResultCtx)
-      : CompletePosition(std::move(P)), ResultCtx(ResultCtx) {}
+  CodeCompleteAction(ParsedSourceLocation P, CodeCompleteConsumer *Consumer)
+      : CompletePosition(std::move(P)), Consumer(Consumer) {}
 
   bool BeginInvocation(CompilerInstance &CI) override {
     CI.getFrontendOpts().CodeCompletionAt = CompletePosition;
-    CI.setCodeCompletionConsumer(new VisitedContextFinder(ResultCtx));
+    CI.setCodeCompletionConsumer(Consumer);
     return true;
   }
 
 private:
   // 1-based code complete position <Line, Col>;
   ParsedSourceLocation CompletePosition;
-  CompletionContext &ResultCtx;
+  CodeCompleteConsumer *Consumer;
 };
 
 ParsedSourceLocation offsetToPosition(llvm::StringRef Code, size_t Offset) {
@@ -103,7 +150,7 @@ CompletionContext runCompletion(StringRef Code, size_t Offset) {
   CompletionContext ResultCtx;
   clang::tooling::runToolOnCodeWithArgs(
       std::make_unique<CodeCompleteAction>(offsetToPosition(Code, Offset),
-                                           ResultCtx),
+                                           new VisitedContextFinder(ResultCtx)),
       Code, {"-std=c++11"}, TestCCName);
   return ResultCtx;
 }
@@ -127,6 +174,69 @@ collectPreferredTypes(StringRef AnnotatedCode,
     Types.push_back(Results.PreferredType);
   }
   return Types;
+}
+
+std::vector<CompletedFunctionDecl>
+CollectCompletedFunctions(StringRef Code, std::size_t Point) {
+  std::vector<CompletedFunctionDecl> Result;
+  clang::tooling::runToolOnCodeWithArgs(
+      std::make_unique<CodeCompleteAction>(offsetToPosition(Code, Point),
+                                           new SaveCompletedFunctions(Result)),
+      Code, {"-std=c++11"}, TestCCName);
+  return Result;
+}
+
+TEST(SemaCodeCompleteTest, FunctionCanBeCall) {
+  llvm::Annotations Code(R"cpp(
+    struct Foo {
+      static int staticMethod();
+      int method() const;
+      Foo() {
+        this->$canBeCall^
+        $canBeCall^
+        Foo::$canBeCall^
+      }
+    };
+
+    struct Derived : Foo {
+      Derived() {
+        Foo::$canBeCall^
+      }
+    };
+
+    struct OtherClass {
+      OtherClass() {
+        Foo f;
+        f.$canBeCall^
+        &Foo::$cannotBeCall^
+      }
+    };
+
+    int main() {
+      Foo f;
+      f.$canBeCall^
+      &Foo::$cannotBeCall^
+    }
+    )cpp");
+
+  for (const auto &P : Code.points("canBeCall")) {
+    auto Results = CollectCompletedFunctions(Code.code(), P);
+    EXPECT_THAT(Results, Contains(AllOf(named("method"), isStatic(false),
+                                        canBeCall(true))));
+  }
+
+  for (const auto &P : Code.points("cannotBeCall")) {
+    auto Results = CollectCompletedFunctions(Code.code(), P);
+    EXPECT_THAT(Results, Contains(AllOf(named("method"), isStatic(false),
+                                        canBeCall(false))));
+  }
+
+  // static method can always be a call
+  for (const auto &P : Code.points()) {
+    auto Results = CollectCompletedFunctions(Code.code(), P);
+    EXPECT_THAT(Results, Contains(AllOf(named("staticMethod"), isStatic(true),
+                                        canBeCall(true))));
+  }
 }
 
 TEST(SemaCodeCompleteTest, VisitedNSForValidQualifiedId) {
