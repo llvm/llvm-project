@@ -21,6 +21,8 @@
 #ifndef MLIR_EXECUTIONENGINE_SPARSETENSOR_ARITHMETICUTILS_H
 #define MLIR_EXECUTIONENGINE_SPARSETENSOR_ARITHMETICUTILS_H
 
+#include "mlir/ExecutionEngine/SparseTensor/Attributes.h"
+
 #include <cassert>
 #include <cinttypes>
 #include <limits>
@@ -137,7 +139,7 @@ inline uint64_t checkedMul(uint64_t lhs, uint64_t rhs) {
   // If assertions are enabled and we have the intrinsic, then use it to
   // avoid the expensive division.  If assertions are disabled, then don't
   // bother with intrinsics (to avoid any possible slowdown vs `operator*`).
-#if !defined(NDEBUG) && __has_builtin(__builtin_mul_overflow)
+#if !defined(NDEBUG) && MLIR_SPARSETENSOR_HAS_BUILTIN(__builtin_mul_overflow)
   uint64_t result;
   bool overflowed = __builtin_mul_overflow(lhs, rhs, &result);
   assert(!overflowed && "Integer overflow");
