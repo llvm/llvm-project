@@ -997,6 +997,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZbb())
     setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
 
+  if (Subtarget.hasStdExtZbs() && Subtarget.is64Bit())
+    setTargetDAGCombine(ISD::TRUNCATE);
+
   if (Subtarget.hasStdExtZbkb())
     setTargetDAGCombine(ISD::BITREVERSE);
   if (Subtarget.hasStdExtZfh())
@@ -8259,6 +8262,29 @@ static SDValue combineDeMorganOfBoolean(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::XOR, DL, VT, Logic, DAG.getConstant(1, DL, VT));
 }
 
+static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // Pre-promote (i1 (truncate (srl X, Y))) on RV64 with Zbs without zero
+  // extending X. This is safe since we only need the LSB after the shift and
+  // shift amounts larger than 31 would produce poison. If we wait until
+  // type legalization, we'll create RISCVISD::SRLW and we can't recover it
+  // to use a BEXT instruction.
+  if (Subtarget.is64Bit() && Subtarget.hasStdExtZbs() && VT == MVT::i1 &&
+      N0.getValueType() == MVT::i32 && N0.getOpcode() == ISD::SRL &&
+      !isa<ConstantSDNode>(N0.getOperand(1)) && N0.hasOneUse()) {
+    SDLoc DL(N0);
+    SDValue Op0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N0.getOperand(0));
+    SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N0.getOperand(1));
+    SDValue Srl = DAG.getNode(ISD::SRL, DL, MVT::i64, Op0, Op1);
+    return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Srl);
+  }
+
+  return SDValue();
+}
+
 static SDValue performANDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
@@ -9573,6 +9599,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       }
     }
     return SDValue();
+  case ISD::TRUNCATE:
+    return performTRUNCATECombine(N, DAG, Subtarget);
   case RISCVISD::SELECT_CC: {
     // Transform
     SDValue LHS = N->getOperand(0);
