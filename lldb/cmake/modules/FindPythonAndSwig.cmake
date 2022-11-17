@@ -62,6 +62,5 @@ else()
                                     REQUIRED_VARS
                                       Python3_LIBRARIES
                                       Python3_INCLUDE_DIRS
-                                      Python3_EXECUTABLE
-                                      LLDB_ENABLE_SWIG)
+                                      Python3_EXECUTABLE)
 endif()

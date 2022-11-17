@@ -57,6 +57,16 @@ macro(add_optional_dependency variable description package found)
 endmacro()
 
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 3)
+
+# BEGIN SWIFT MOD
+if (LLDB_ENABLE_SWIG)
+  set(LLDB_ENABLE_STATIC_BINDINGS FALSE)
+else()
+  set(LLDB_ENABLE_STATIC_BINDINGS TRUE)
+endif()
+option(LLDB_USE_STATIC_BINDINGS "Use the static Python bindings." ${LLDB_ENABLE_STATIC_BINDINGS})
+# END SWIFT MOD
+
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
@@ -75,7 +85,6 @@ option(LLDB_SKIP_DSYM "Whether to skip generating a dSYM when installing lldb." 
 
 # BEGIN SWIFT MOD
 option(LLDB_ENABLE_SWIFT_SUPPORT "Enable swift support" ON)
-option(LLDB_USE_STATIC_BINDINGS "Use the static Python bindings." OFF)
 option(LLDB_ENABLE_WERROR "Fail and stop if a warning is triggered." ${LLVM_ENABLE_WERROR})
 if(LLDB_ENABLE_SWIFT_SUPPORT)
   add_definitions( -DLLDB_ENABLE_SWIFT )
