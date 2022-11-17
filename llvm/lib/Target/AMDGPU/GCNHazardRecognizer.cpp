@@ -2814,7 +2814,7 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
       } else {
         const MCInstrDesc &InstDesc = I.getDesc();
         const MCOperandInfo &OpInfo = InstDesc.OpInfo[OpNo];
-        if (TII.isLiteralConstant(Op, OpInfo))
+        if (!TII.isInlineConstant(Op, OpInfo))
           return true;
       }
     }

@@ -1,0 +1,124 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc math.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "exception_status_test",
+    srcs = ["exception_status_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+    ],
+    libc_function_deps = [
+        "//libc:feclearexcept",
+        "//libc:feraiseexcept",
+        "//libc:fetestexcept",
+    ],
+)
+
+libc_test(
+    name = "rounding_mode_test",
+    srcs = ["rounding_mode_test.cpp"],
+    libc_function_deps = [
+        "//libc:fegetround",
+        "//libc:fesetround",
+    ],
+)
+
+libc_test(
+    name = "enabled_exceptions_test",
+    srcs = ["enabled_exceptions_test.cpp"],
+    deps = [
+        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc:__support_common",
+        "//libc:__support_fputil_fenv_impl",
+    ],
+    libc_function_deps = [
+        "//libc:feclearexcept",
+        "//libc:feraiseexcept",
+        "//libc:fetestexcept",
+    ],
+    tags = ["nosan"],
+)
+
+libc_test(
+    name = "feholdexcept_test",
+    srcs = ["feholdexcept_test.cpp"],
+    deps = [
+        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc:__support_common",
+        "//libc:__support_fputil_fenv_impl",
+    ],
+    libc_function_deps = [
+        "//libc:feholdexcept",
+    ],
+    tags = ["nosan"],
+)
+
+libc_test(
+    name = "exception_flags_test",
+    srcs = ["exception_flags_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+    ],
+    libc_function_deps = [
+        "//libc:fegetexceptflag",
+        "//libc:fesetexceptflag",
+    ],
+)
+
+libc_test(
+    name = "feclearexcept_test",
+    srcs = ["feclearexcept_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+    ],
+    libc_function_deps = [
+        "//libc:feclearexcept",
+    ],
+)
+
+libc_test(
+    name = "feenableexcept_test",
+    srcs = ["feenableexcept_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+    ],
+    libc_function_deps = [
+        "//libc:fedisableexcept",
+        "//libc:feenableexcept",
+        "//libc:fegetexcept",
+    ],
+)
+
+libc_test(
+    name = "feupdateenv_test",
+    srcs = ["feupdateenv_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+    ],
+    libc_function_deps = [
+        "//libc:feupdateenv",
+    ],
+)
+
+libc_test(
+    name = "getenv_and_setenv_test",
+    srcs = ["getenv_and_setenv_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+    ],
+    libc_function_deps = [
+        "//libc:fegetenv",
+        "//libc:fegetround",
+        "//libc:fesetenv",
+        "//libc:fesetround",
+    ],
+)

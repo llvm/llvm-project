@@ -90,7 +90,9 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 #  pragma GCC system_header
 #endif
 
-#include_next <stdlib.h>
+#  if __has_include_next(<stdlib.h>)
+#    include_next <stdlib.h>
+#  endif
 
 #ifdef __cplusplus
 extern "C++" {

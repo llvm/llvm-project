@@ -25,7 +25,7 @@
 ! CHECK:           %[[VAL_24:.*]] = fir.array_coor %[[VAL_1]] {{\[}}%[[VAL_13]]] %[[VAL_23]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.slice<1>, index) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:           %[[VAL_25:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 ! CHECK:           %[[VAL_26:.*]] = fir.emboxchar %[[VAL_24]], %[[VAL_25]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:           fir.call @_QPfoo(%[[VAL_21]], %[[VAL_26]], %[[VAL_2]], %[[VAL_14]]) : (!fir.ref<f32>, !fir.boxchar<1>, !fir.ref<i32>, !fir.complex<4>) -> ()
+! CHECK:           fir.call @_QPfoo(%[[VAL_21]], %[[VAL_26]], %[[VAL_2]], %[[VAL_14]]) {{.*}}: (!fir.ref<f32>, !fir.boxchar<1>, !fir.ref<i32>, !fir.complex<4>) -> ()
 ! CHECK:         }
 ! CHECK:         return
 ! CHECK:       }
@@ -58,5 +58,5 @@ subroutine test_elem_sub_no_array_args(i, j)
     end subroutine
   end interface
   call bar(i, j)
-  ! CHECK:         fir.call @_QPbar(%[[VAL_0]], %[[VAL_1]]) : (!fir.ref<i32>, !fir.ref<i32>) -> ()
+  ! CHECK:         fir.call @_QPbar(%[[VAL_0]], %[[VAL_1]]) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
 end subroutine

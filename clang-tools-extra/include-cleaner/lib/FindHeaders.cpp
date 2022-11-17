@@ -14,7 +14,7 @@ namespace clang::include_cleaner {
 
 llvm::SmallVector<Header> findHeaders(const SymbolLocation &Loc,
                                       const SourceManager &SM,
-                                      const PragmaIncludes &PI) {
+                                      const PragmaIncludes *PI) {
   llvm::SmallVector<Header> Results;
   switch (Loc.kind()) {
   case SymbolLocation::Physical: {
@@ -25,18 +25,21 @@ llvm::SmallVector<Header> findHeaders(const SymbolLocation &Loc,
     if (!FE)
       return {};
 
-    // We treat the spelling header in the IWYU pragma as the final public
-    // header.
-    // FIXME: look for exporters if the public header is exported by another
-    // header.
-    llvm::StringRef VerbatimSpelling = PI.getPublic(FE);
-    if (!VerbatimSpelling.empty())
-      return {Header(VerbatimSpelling)};
-
     Results = {Header(FE)};
-    // FIXME: compute transitive exporter headers.
-    for (const auto *Export : PI.getExporters(FE, SM.getFileManager()))
-      Results.push_back(Export);
+    if (PI) {
+      // We treat the spelling header in the IWYU pragma as the final public
+      // header.
+      // FIXME: look for exporters if the public header is exported by another
+      // header.
+      llvm::StringRef VerbatimSpelling = PI->getPublic(FE);
+      if (!VerbatimSpelling.empty())
+        return {Header(VerbatimSpelling)};
+
+      // FIXME: compute transitive exporter headers.
+      for (const auto *Export : PI->getExporters(FE, SM.getFileManager()))
+        Results.push_back(Export);
+    }
+
     return Results;
   }
   case SymbolLocation::Standard: {

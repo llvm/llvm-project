@@ -186,6 +186,7 @@ declare float @llvm.maximum.f32(float, float)
 declare double @llvm.exp2.f64(double)
 declare float @llvm.fma.f32(float,float,float)
 declare double @llvm.canonicalize.f64(double)
+declare double @llvm.copysign.f64(double, double)
 
 declare void @expect_equal(i1,i1)
 
@@ -1322,6 +1323,27 @@ define i1 @isNotKnownNeverInfinity_fneg(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fneg double %x
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverInfinity_copysign(double %x, double %sign) {
+; CHECK-LABEL: @isKnownNeverInfinity_copysign(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf double %x, 1.0
+  %e = call double @llvm.copysign.f64(double %a, double %sign)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_copysign(double %x, double %sign) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_copysign(
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.copysign.f64(double [[X:%.*]], double [[SIGN:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = call double @llvm.copysign.f64(double %x, double %sign)
   %r = fcmp une double %e, 0x7ff0000000000000
   ret i1 %r
 }

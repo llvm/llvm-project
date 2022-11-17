@@ -61,17 +61,17 @@ TEST(FindIncludeHeaders, IWYU) {
                                    /*Line=*/1, /*Col=*/1);
   };
 
-  EXPECT_THAT(findHeaders(SourceLocFromFile("header1.h"), SM, PI),
+  EXPECT_THAT(findHeaders(SourceLocFromFile("header1.h"), SM, &PI),
               UnorderedElementsAre(Header("\"path/public.h\"")));
 
-  EXPECT_THAT(findHeaders(SourceLocFromFile("detail1.h"), SM, PI),
+  EXPECT_THAT(findHeaders(SourceLocFromFile("detail1.h"), SM, &PI),
               UnorderedElementsAre(Header(FM.getFile("header2.h").get()),
                                    Header(FM.getFile("detail1.h").get())));
-  EXPECT_THAT(findHeaders(SourceLocFromFile("detail2.h"), SM, PI),
+  EXPECT_THAT(findHeaders(SourceLocFromFile("detail2.h"), SM, &PI),
               UnorderedElementsAre(Header(FM.getFile("header2.h").get()),
                                    Header(FM.getFile("detail2.h").get())));
 
-  EXPECT_THAT(findHeaders(SourceLocFromFile("normal.h"), SM, PI),
+  EXPECT_THAT(findHeaders(SourceLocFromFile("normal.h"), SM, &PI),
               UnorderedElementsAre(Header(FM.getFile("normal.h").get())));
 }
 

@@ -83,13 +83,13 @@ enum class ArchKind {
 #include "AArch64TargetParser.def"
 };
 
-template <typename T> struct ArchNames {
+struct ArchNames {
   const char *NameCStr;
   size_t NameLength;
   const char *SubArchCStr;
   size_t SubArchLength;
   uint64_t ArchBaseExtensions;
-  T ID;
+  ArchKind ID;
 
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
 
@@ -104,7 +104,7 @@ template <typename T> struct ArchNames {
   }
 };
 
-const ArchNames<ArchKind> AArch64ARCHNames[] = {
+const ArchNames AArch64ARCHNames[] = {
 #define AARCH64_ARCH(NAME, ID, SUB_ARCH, ARCH_BASE_EXT)                        \
   {NAME,          sizeof(NAME) - 1,     "+" SUB_ARCH, sizeof(SUB_ARCH),        \
    ARCH_BASE_EXT, AArch64::ArchKind::ID},
@@ -132,17 +132,17 @@ const ExtName AArch64ARCHExtNames[] = {
 // The same CPU can have multiple arches and can be default on multiple arches.
 // When finding the Arch for a CPU, first-found prevails. Sort them accordingly.
 // When this becomes table-generated, we'd probably need two tables.
-template <typename T> struct CpuNames {
+struct CpuNames {
   const char *NameCStr;
   size_t NameLength;
-  T ArchID;
+  ArchKind ArchID;
   bool Default; // is $Name the default CPU for $ArchID ?
   uint64_t DefaultExtensions;
 
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
 };
 
-const CpuNames<ArchKind> AArch64CPUNames[] = {
+const CpuNames AArch64CPUNames[] = {
 #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)       \
   {NAME, sizeof(NAME) - 1, AArch64::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT},
 #include "AArch64TargetParser.def"
@@ -178,7 +178,6 @@ inline ArchKind &operator--(ArchKind &Kind) {
   return Kind;
 }
 
-// FIXME: These should be moved to TargetTuple once it exists
 bool getExtensionFeatures(uint64_t Extensions,
                           std::vector<StringRef> &Features);
 bool getArchFeatures(ArchKind AK, std::vector<StringRef> &Features);
