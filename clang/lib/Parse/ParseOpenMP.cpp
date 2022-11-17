@@ -475,7 +475,6 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
     T.consumeOpen();
 
     ExprVector Exprs;
-    CommaLocsTy CommaLocs;
 
     SourceLocation LParLoc = T.getOpenLocation();
     auto RunSignatureHelp = [this, OmpPrivParm, LParLoc, &Exprs]() {
@@ -485,7 +484,7 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
       CalledSignatureHelp = true;
       return PreferredType;
     };
-    if (ParseExpressionList(Exprs, CommaLocs, [&] {
+    if (ParseExpressionList(Exprs, [&] {
           PreferredType.enterFunctionArgument(Tok.getLocation(),
                                               RunSignatureHelp);
         })) {
@@ -498,9 +497,6 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
       SourceLocation RLoc = Tok.getLocation();
       if (!T.consumeClose())
         RLoc = T.getCloseLocation();
-
-      assert(!Exprs.empty() && Exprs.size() - 1 == CommaLocs.size() &&
-             "Unexpected number of commas!");
 
       ExprResult Initializer =
           Actions.ActOnParenListExpr(T.getOpenLocation(), RLoc, Exprs);
