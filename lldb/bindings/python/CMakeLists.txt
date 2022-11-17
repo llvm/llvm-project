@@ -189,6 +189,8 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
       COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR} VERBATIM
       COMMENT "Copying Python DLL to LLDB binaries directory.")
   endif()
+
+
 endfunction()
 
 if(${LLDB_USE_STATIC_BINDINGS})
