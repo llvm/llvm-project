@@ -1,0 +1,5 @@
+add_subdirectory(CStructuresTest)
+add_subdirectory(LargeBenchmarks)
+add_subdirectory(LLVMInstructionsTest)
+add_subdirectory(PresentationExamples)
+add_subdirectory(SmallBenchmarks)

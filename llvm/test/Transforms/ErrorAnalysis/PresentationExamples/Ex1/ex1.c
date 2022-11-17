@@ -27,7 +27,7 @@ int main() {
   printf("v2 = %0.18e\n", v2);
   printf("v3 = %0.18e\n", v3);
   printf("v4 = %0.18e\n", v4);
-  fAFfp64markForResult(v4);
+//  fAFfp64markForResult(v4);
 
   return 0;
 }
