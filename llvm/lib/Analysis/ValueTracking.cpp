@@ -3869,6 +3869,7 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
       return true;
     case Instruction::FPTrunc:
     case Instruction::FPExt:
+    case Instruction::FNeg:
       return isKnownNeverNaN(Inst->getOperand(0), TLI, Depth + 1);
     default:
       break;
