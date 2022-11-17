@@ -3785,6 +3785,15 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
     default:
       break;
     }
+
+    if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::canonicalize:
+        return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1);
+      default:
+        break;
+      }
+    }
   }
 
   // try to handle fixed width vector constants
