@@ -120,7 +120,10 @@ define void @f4(<8 x i1>* %a0, i64 %a1) #0 {
 ; CHECK-NEXT:     p0 = vcmpb.eq(r3:2,r5:4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = mux(p0,#0,#1)
+; CHECK-NEXT:     p0 = not(p0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = p0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     memb(r0+#0) = r1
@@ -148,10 +151,13 @@ define void @f5(<4 x i1>* %a0, i32 %a1) #0 {
 ; CHECK-NEXT:     p0 = vcmph.eq(r3:2,r5:4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = mux(p0,#0,#1)
+; CHECK-NEXT:     p0 = not(p0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     memb(r0+#0) = r1
+; CHECK-NEXT:     r2 = p0
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     memb(r0+#0) = r2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
@@ -203,10 +209,10 @@ define void @f6(<2 x i1>* %a0, i16 %a1) #0 {
 ; CHECK-NEXT:     if (!p1) r5 = add(r1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = setbit(r2,#6)
+; CHECK-NEXT:     if (!p1) r6 = add(r3,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (!p1) r6 = add(r3,#0)
+; CHECK-NEXT:     r1 = setbit(r2,#6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r3 = setbit(r4,#4)
@@ -224,13 +230,7 @@ define void @f6(<2 x i1>* %a0, i16 %a1) #0 {
 ; CHECK-NEXT:     r5 |= or(r4,r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = r5
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = mux(p0,#1,#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     memb(r0+#0) = r1
+; CHECK-NEXT:     memb(r0+#0) = r5
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
