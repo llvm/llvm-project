@@ -4392,6 +4392,12 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     }
     if (Data.ExtraModifier == OMPC_MAP_unknown) {
       Data.ExtraModifier = OMPC_MAP_tofrom;
+      if (getLangOpts().OpenMP >= 52) {
+        if (DKind == OMPD_target_enter_data)
+          Data.ExtraModifier = OMPC_MAP_to;
+        else if (DKind == OMPD_target_exit_data)
+          Data.ExtraModifier = OMPC_MAP_from;
+      }
       Data.IsMapTypeImplicit = true;
     }
 
