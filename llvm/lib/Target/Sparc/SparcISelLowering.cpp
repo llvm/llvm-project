@@ -1928,7 +1928,10 @@ const char *SparcTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case SPISD::CMPICC:          return "SPISD::CMPICC";
   case SPISD::CMPFCC:          return "SPISD::CMPFCC";
   case SPISD::BRICC:           return "SPISD::BRICC";
-  case SPISD::BRXCC:           return "SPISD::BRXCC";
+  case SPISD::BPICC:
+    return "SPISD::BPICC";
+  case SPISD::BPXCC:
+    return "SPISD::BPXCC";
   case SPISD::BRFCC:           return "SPISD::BRFCC";
   case SPISD::SELECT_ICC:      return "SPISD::SELECT_ICC";
   case SPISD::SELECT_XCC:      return "SPISD::SELECT_XCC";
@@ -2533,8 +2536,8 @@ static SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG,
 }
 
 static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
-                          const SparcTargetLowering &TLI,
-                          bool hasHardQuad) {
+                          const SparcTargetLowering &TLI, bool hasHardQuad,
+                          bool isV9) {
   SDValue Chain = Op.getOperand(0);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
   SDValue LHS = Op.getOperand(2);
@@ -2552,13 +2555,17 @@ static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
   if (LHS.getValueType().isInteger()) {
     CompareFlag = DAG.getNode(SPISD::CMPICC, dl, MVT::Glue, LHS, RHS);
     if (SPCC == ~0U) SPCC = IntCondCCodeToICC(CC);
-    // 32-bit compares use the icc flags, 64-bit uses the xcc flags.
-    Opc = LHS.getValueType() == MVT::i32 ? SPISD::BRICC : SPISD::BRXCC;
+    if (isV9)
+      // 32-bit compares use the icc flags, 64-bit uses the xcc flags.
+      Opc = LHS.getValueType() == MVT::i32 ? SPISD::BPICC : SPISD::BPXCC;
+    else
+      // Non-v9 targets don't have xcc.
+      Opc = SPISD::BRICC;
   } else {
     if (!hasHardQuad && LHS.getValueType() == MVT::f128) {
       if (SPCC == ~0U) SPCC = FPCondCCodeToFCC(CC);
       CompareFlag = TLI.LowerF128Compare(LHS, RHS, SPCC, dl, DAG);
-      Opc = SPISD::BRICC;
+      Opc = isV9 ? SPISD::BPICC : SPISD::BRICC;
     } else {
       CompareFlag = DAG.getNode(SPISD::CMPFCC, dl, MVT::Glue, LHS, RHS);
       if (SPCC == ~0U) SPCC = FPCondCCodeToFCC(CC);
@@ -3141,8 +3148,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
                                                        hasHardQuad);
   case ISD::UINT_TO_FP:         return LowerUINT_TO_FP(Op, DAG, *this,
                                                        hasHardQuad);
-  case ISD::BR_CC:              return LowerBR_CC(Op, DAG, *this,
-                                                  hasHardQuad);
+  case ISD::BR_CC:
+    return LowerBR_CC(Op, DAG, *this, hasHardQuad, isV9);
   case ISD::SELECT_CC:          return LowerSELECT_CC(Op, DAG, *this,
                                                       hasHardQuad);
   case ISD::VASTART:            return LowerVASTART(Op, DAG, *this);
@@ -3221,6 +3228,8 @@ SparcTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case SP::SELECT_CC_FP_ICC:
   case SP::SELECT_CC_DFP_ICC:
   case SP::SELECT_CC_QFP_ICC:
+    if (Subtarget->isV9())
+      return expandSelectCC(MI, BB, SP::BPICC);
     return expandSelectCC(MI, BB, SP::BCOND);
   case SP::SELECT_CC_Int_XCC:
   case SP::SELECT_CC_FP_XCC:
