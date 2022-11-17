@@ -390,7 +390,6 @@ public:
 
   void addReplacement(StringRef Name, mlir::Operation *Op);
 
-private:
   // TODO: CodeGen also passes an AttributeList here. We'll have to match that
   // in CIR
   mlir::cir::FuncOp
@@ -404,6 +403,7 @@ private:
                                       mlir::FunctionType Ty,
                                       const clang::FunctionDecl *FD);
 
+private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> MangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> Manglings;

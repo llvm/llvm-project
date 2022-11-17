@@ -292,16 +292,18 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   const Decl *TargetDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
 
+  // This is not always tied to a FunctionDecl (e.g. builtins that are xformed
+  // into calls to other functions)
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-  assert(FD && "Only functiondecl supported so far");
+
   // We can only guarantee that a function is called from the correct
   // context/function based on the appropriate target attributes, so only check
   // in hte case where we have both always_inline and target since otherwise we
   // could be making a conditional call after a check for the proper cpu
   // features (and it won't cause code generation issues due to function based
   // code generation).
-  assert(!TargetDecl->hasAttr<AlwaysInlineAttr>() && "NYI");
-  assert(!TargetDecl->hasAttr<TargetAttr>() && "NYI");
+  assert((!TargetDecl || !TargetDecl->hasAttr<AlwaysInlineAttr>()) && "NYI");
+  assert((!TargetDecl || !TargetDecl->hasAttr<TargetAttr>()) && "NYI");
 
   // Some architectures (such as x86-64) have the ABI changed based on
   // attribute-target/features. Give them a chance to diagnose.
@@ -396,7 +398,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   // TODO: Update the largest vector width if any arguments have vector types.
   // TODO: Compute the calling convention and attributes.
-  assert(!FD->hasAttr<StrictFPAttr>() && "NYI");
+  assert((!FD || !FD->hasAttr<StrictFPAttr>()) && "NYI");
 
   // TODO: InNoMergeAttributedStmt
   // assert(!CurCodeDecl->hasAttr<FlattenAttr>() &&
@@ -409,7 +411,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   // TODO: UnusedReturnSizePtr
 
-  assert(!FD->hasAttr<StrictFPAttr>() && "NYI");
+  assert((!FD || !FD->hasAttr<StrictFPAttr>()) && "NYI");
 
   // TODO: alignment attributes
 
@@ -434,11 +436,11 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   assert(!CGM.getLangOpts().ObjCAutoRefCount && "Not supported");
 
-  assert(!TargetDecl->hasAttr<NotTailCalledAttr>() && "NYI");
+  assert((!TargetDecl || !TargetDecl->hasAttr<NotTailCalledAttr>()) && "NYI");
 
   assert(!getDebugInfo() && "No debug info yet");
 
-  assert(!TargetDecl->hasAttr<ErrorAttr>() && "NYI");
+  assert((!TargetDecl || !TargetDecl->hasAttr<ErrorAttr>()) && "NYI");
 
   // 4. Finish the call.
 
