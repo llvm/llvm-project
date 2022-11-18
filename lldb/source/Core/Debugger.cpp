@@ -52,6 +52,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
@@ -147,6 +148,16 @@ static constexpr OptionEnumValueElement g_language_enumerators[] = {
         "default",
         "Select the lldb default as the default scripting language.",
     },
+};
+
+static constexpr OptionEnumValueElement g_dwim_print_verbosities[] = {
+    {eDWIMPrintVerbosityNone, "none",
+     "Use no verbosity when running dwim-print."},
+    {eDWIMPrintVerbosityExpression, "expression",
+     "Use partial verbosity when running dwim-print - display a message when "
+     "`expression` evaluation is used."},
+    {eDWIMPrintVerbosityFull, "full",
+     "Use full verbosity when running dwim-print."},
 };
 
 static constexpr OptionEnumValueElement s_stop_show_column_values[] = {
@@ -518,6 +529,13 @@ uint32_t Debugger::GetTabSize() const {
 bool Debugger::SetTabSize(uint32_t tab_size) {
   const uint32_t idx = ePropertyTabSize;
   return m_collection_sp->SetPropertyAtIndexAsUInt64(nullptr, idx, tab_size);
+}
+
+lldb::DWIMPrintVerbosity Debugger::GetDWIMPrintVerbosity() const {
+  const uint32_t idx = ePropertyDWIMPrintVerbosity;
+  return (lldb::DWIMPrintVerbosity)
+      m_collection_sp->GetPropertyAtIndexAsEnumeration(
+          nullptr, idx, g_debugger_properties[idx].default_uint_value);
 }
 
 #pragma mark Debugger

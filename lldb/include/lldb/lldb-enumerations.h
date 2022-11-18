@@ -1203,6 +1203,16 @@ enum TraceCursorSeekType {
   eTraceCursorSeekTypeEnd
 };
 
+/// Enum to control the verbosity level of `dwim-print` execution.
+enum DWIMPrintVerbosity {
+  /// Run `dwim-print` with no verbosity.
+  eDWIMPrintVerbosityNone,
+  /// Print a message when `dwim-print` uses `expression` evaluation.
+  eDWIMPrintVerbosityExpression,
+  /// Always print a message indicating how `dwim-print` is evaluating its
+  /// expression.
+  eDWIMPrintVerbosityFull,
+};
 
 } // namespace lldb
 
