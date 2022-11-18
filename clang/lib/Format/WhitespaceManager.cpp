@@ -1081,11 +1081,10 @@ void WhitespaceManager::alignTrailingComments() {
 
     if (i + 1 != e && Changes[i + 1].ContinuesPPDirective)
       ChangeMaxColumn -= 2;
-    // If this comment follows an } in column 0, it probably documents the
-    // closing of a namespace and we don't want to align it.
-    bool FollowsRBraceInColumn0 = i > 0 && Changes[i].NewlinesBefore == 0 &&
-                                  Changes[i - 1].Tok->is(tok::r_brace) &&
-                                  Changes[i - 1].StartOfTokenColumn == 0;
+
+    // We don't want to align namespace end comments.
+    bool DontAlignThisComment = i > 0 && Changes[i].NewlinesBefore == 0 &&
+                                Changes[i - 1].Tok->is(TT_NamespaceRBrace);
     bool WasAlignedWithStartOfNextLine = false;
     if (Changes[i].NewlinesBefore >= 1) { // A comment on its own line.
       unsigned CommentColumn = SourceMgr.getSpellingColumnNumber(
@@ -1105,7 +1104,7 @@ void WhitespaceManager::alignTrailingComments() {
       }
     }
     if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Never ||
-        FollowsRBraceInColumn0) {
+        DontAlignThisComment) {
       alignTrailingComments(StartOfSequence, i, MinColumn);
       MinColumn = ChangeMinColumn;
       MaxColumn = ChangeMinColumn;

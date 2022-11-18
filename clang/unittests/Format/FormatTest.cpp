@@ -20316,7 +20316,7 @@ TEST_F(FormatTest, WhitesmithsBraceBreaking) {
                "      int x;\n"
                "      };\n"
                "    } // namespace b\n"
-               "  }   // namespace a",
+               "  } // namespace a",
                WhitesmithsBraceStyle);
 
   verifyFormat("void f()\n"
