@@ -17,6 +17,9 @@ module m
   type :: hasCoarray
     real, allocatable :: co[:]
   end type
+  type :: hasHiddenPtr
+    type(hasPtr), allocatable :: a
+  end type
  contains
   integer pure function purefunc(x)
     integer, intent(in) :: x
@@ -26,14 +29,17 @@ module m
     procedure(purefunc) :: p0
     f00 = p0(1)
   end function
-  pure function test(ptr, in, hpd)
+  pure function test(ptr, in, hpd, hhpd)
     use used
     type(t), pointer :: ptr, ptr2
     type(t), target, intent(in) :: in
     type(t), target :: y, z
     type(hasPtr) :: hp
     type(hasPtr), intent(in) :: hpd
+    type(hasHiddenPtr) :: hhp
+    type(hasHiddenPtr), intent(in) :: hhpd
     type(hasPtr), allocatable :: alloc
+    type(hasHiddenPtr), allocatable :: hpAlloc
     type(hasCoarray), pointer :: hcp
     integer :: n
     common /block/ y
@@ -76,10 +82,14 @@ module m
     n = size([hasPtr(ptr%a)]) ! C1594(4)
     !ERROR: Externally visible object 'in' may not be associated with pointer component 'p' in a pure procedure
     n = size([hasPtr(in%a)]) ! C1594(4)
-    !ERROR: A pure subprogram may not copy the value of 'hpd' because it is an INTENT(IN) dummy argument and has the POINTER component '%p'
+    !ERROR: A pure subprogram may not copy the value of 'hpd' because it is an INTENT(IN) dummy argument and has the POINTER potential subobject component '%p'
     hp = hpd ! C1594(5)
-    !ERROR: A pure subprogram may not copy the value of 'hpd' because it is an INTENT(IN) dummy argument and has the POINTER component '%p'
+    !ERROR: A pure subprogram may not copy the value of 'hpd' because it is an INTENT(IN) dummy argument and has the POINTER potential subobject component '%p'
     allocate(alloc, source=hpd)
+    !ERROR: A pure subprogram may not copy the value of 'hhpd' because it is an INTENT(IN) dummy argument and has the POINTER potential subobject component '%a%p'
+    hhp = hhpd
+    !ERROR: A pure subprogram may not copy the value of 'hhpd' because it is an INTENT(IN) dummy argument and has the POINTER potential subobject component '%a%p'
+    allocate(hpAlloc, source=hhpd)
     !ERROR: Actual procedure argument for dummy argument 'p0=' of a PURE procedure must have an explicit interface
     n = f00(extfunc)
    contains
