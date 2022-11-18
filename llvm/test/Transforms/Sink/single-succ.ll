@@ -4,13 +4,13 @@
 define i32 @single_succ(i1 %b, ptr %a) {
 ; CHECK-LABEL: @single_succ(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i32 42
 ; CHECK:       else:
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[L]]
 ;
 entry:
