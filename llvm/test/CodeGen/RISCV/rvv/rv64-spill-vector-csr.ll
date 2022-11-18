@@ -3,6 +3,9 @@
 ; RUN:    | FileCheck --check-prefix=SPILL-O0 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+d -mattr=+d -O2 < %s \
 ; RUN:    | FileCheck --check-prefix=SPILL-O2 %s
+; RUN: llc -mtriple=riscv64 -mattr=+v,+d -mattr=+d -riscv-v-vector-bits-max=128 -O2 < %s \
+; RUN:    | FileCheck --check-prefix=SPILL-O2-VLEN128 %s
+
 
 @.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 
@@ -78,6 +81,38 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; SPILL-O2-NEXT:    addi sp, sp, 32
 ; SPILL-O2-NEXT:    ret
+;
+; SPILL-O2-VLEN128-LABEL: foo:
+; SPILL-O2-VLEN128:       # %bb.0:
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -32
+; SPILL-O2-VLEN128-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; SPILL-O2-VLEN128-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; SPILL-O2-VLEN128-NEXT:    csrr a1, vlenb
+; SPILL-O2-VLEN128-NEXT:    slli a1, a1, 1
+; SPILL-O2-VLEN128-NEXT:    sub sp, sp, a1
+; SPILL-O2-VLEN128-NEXT:    mv s0, a0
+; SPILL-O2-VLEN128-NEXT:    addi a1, sp, 16
+; SPILL-O2-VLEN128-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; SPILL-O2-VLEN128-NEXT:    vfadd.vv v9, v8, v9
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 32
+; SPILL-O2-VLEN128-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    lui a0, %hi(.L.str)
+; SPILL-O2-VLEN128-NEXT:    addi a0, a0, %lo(.L.str)
+; SPILL-O2-VLEN128-NEXT:    call puts@plt
+; SPILL-O2-VLEN128-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 32
+; SPILL-O2-VLEN128-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
+; SPILL-O2-VLEN128-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    vfadd.vv v8, v9, v8
+; SPILL-O2-VLEN128-NEXT:    csrr a0, vlenb
+; SPILL-O2-VLEN128-NEXT:    slli a0, a0, 1
+; SPILL-O2-VLEN128-NEXT:    add sp, sp, a0
+; SPILL-O2-VLEN128-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; SPILL-O2-VLEN128-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 32
+; SPILL-O2-VLEN128-NEXT:    ret
 {
    %x = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i64 %gvl)
    %call = call signext i32 @puts(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
