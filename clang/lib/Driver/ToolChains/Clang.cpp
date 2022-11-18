@@ -4558,11 +4558,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   InputInfo ExtractAPIPlaceholderInput(Inputs[0].getType(), "extract-api",
                                        "extract-api");
 
-  const InputInfo &Input = [&]() -> const InputInfo & {
-    if (IsExtractAPI)
-      return ExtractAPIPlaceholderInput;
-    return Inputs[0];
-  }();
+  const InputInfo &Input =
+      IsExtractAPI ? ExtractAPIPlaceholderInput : Inputs[0];
 
   InputInfoList ExtractAPIInputs;
   InputInfoList HostOffloadingInputs;
