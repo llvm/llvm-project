@@ -1040,59 +1040,6 @@ static int ComputeGenericWorkgroupSize(CodeGenModule &CGM, int WorkgroupSize) {
   return WorkgroupSizeWithMaster;
 }
 
-int getWorkGroupSizeSPMDHelper(CodeGenModule &CGM,
-                               const OMPExecutableDirective &D) {
-  // Honor block-size provided by command-line option. This logic must be kept
-  // in sync with metadata generation. If this option is not specified on the
-  // command line then the value used will be the 256.
-  int WorkGroupSz = CGM.getLangOpts().OpenMPGPUThreadsPerTeam;
-
-  // Check block-size provided by thread_limit clause. We start with the
-  // maximum thread limit and lower it if user requests a lower thread limit.
-  int ThreadLimit = CGM.getTarget().getGridValue().GV_Max_WG_Size;
-  const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
-  if (ThreadLimitClause) {
-    Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit();
-    clang::Expr::EvalResult Result;
-    if (ThreadLimitExpr->EvaluateAsInt(Result, CGM.getContext())) {
-      int ThreadLimitEval = Result.Val.getInt().getExtValue();
-      if (ThreadLimitEval > 0 && ThreadLimitEval < ThreadLimit)
-        ThreadLimit = ThreadLimitEval;
-    }
-  }
-
-  // If the command line work group size is less than any default or user
-  // specified thread limit then it is honored otherwise the thread limit
-  // determined above will be used.
-  if (WorkGroupSz > ThreadLimit)
-    WorkGroupSz = ThreadLimit;
-
-  // Set the actual number of threads if the user requests a value different
-  // then the default. If the value is greater than the currently computed
-  // thread limit then cap the number of threads to the thread limit.
-  int NumThreads = CGM.getTarget().getGridValue().GV_Default_WG_Size;
-  const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
-  if (NumThreadsClause) {
-    Expr *NumThreadsExpr = NumThreadsClause->getNumThreads();
-    clang::Expr::EvalResult Result;
-    if (NumThreadsExpr->EvaluateAsInt(Result, CGM.getContext())) {
-      NumThreads = Result.Val.getInt().getExtValue();
-      // Cap the number of threads to the current thread limit.
-      if (NumThreads > ThreadLimit)
-        NumThreads = ThreadLimit;
-      // num_threads clause takes precendence over the command line value:
-      WorkGroupSz = NumThreads;
-    }
-  }
-
-  // Sanitize the workgroup size received from the command line. Its default
-  // value is GV_Default_WG_Size.
-  if (WorkGroupSz < 1 || WorkGroupSz > ThreadLimit)
-    WorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
-
-  return WorkGroupSz;
-}
-
 void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
                                           const OMPExecutableDirective &D,
                                           llvm::Function *&OutlinedFn,
@@ -1109,13 +1056,11 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
       isOpenMPParallelDirective(D.getDirectiveKind()) ||
       CGM.isXteamRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt()))) {
     // Call the work group size calculation for SPMD mode loops.
-    compileTimeThreadLimit = getWorkGroupSizeSPMDHelper(CGM, D);
+    compileTimeThreadLimit = CGM.getWorkGroupSizeSPMDHelper(D);
 
-    // Xteam reduction overrides the command-line option and other settings
-    // for now: blocksize hardcoded to 1024.
-    // TODO: remove this restriction.
-    if (CGM.isXteamRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt())))
-      compileTimeThreadLimit = 1024;
+    // Apply Xteam reduction constraints on blocksize.
+    if (CGM.isXteamRedKernel(D))
+      compileTimeThreadLimit = CGM.getXteamRedBlockSize(D);
 
     // Add kernel metadata if ThreadLimit Clause is compile time constant > 0
     if (compileTimeThreadLimit > 0) {
@@ -1286,9 +1231,13 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
     }
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                    CodeGen);
-  } else
+  } else {
     emitNonSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                       CodeGen);
+    DEBUG_WITH_TYPE(
+        NO_LOOP_XTEAM_RED,
+        CGM.emitNxResult("[No-Loop/Xteam]", D, CodeGenModule::NxNonSPMD));
+  }
 
   setPropertyExecutionMode(
       CGM, OutlinedFn->getName(),
@@ -4210,13 +4159,12 @@ CGOpenMPRuntimeGPU::getGPUCompleteBlockSize(CodeGenFunction &CGF,
 
   // Get effects of thread-controlling clauses on the current number of threads
   // and any command line requests:
-  return llvm::ConstantInt::get(CGF.Int32Ty,
-                                getWorkGroupSizeSPMDHelper(CGM, D));
+  return llvm::ConstantInt::get(CGF.Int32Ty, CGM.getWorkGroupSizeSPMDHelper(D));
 }
 
-llvm::Value *CGOpenMPRuntimeGPU::getXteamRedBlockSize(CodeGenFunction &CGF) {
-  // For now, this is hardcoded to 1024
-  return llvm::ConstantInt::get(CGF.Int32Ty, 1024);
+llvm::Value *CGOpenMPRuntimeGPU::getXteamRedBlockSize(CodeGenFunction &CGF,
+                                                      int BlockSize) {
+  return llvm::ConstantInt::get(CGF.Int32Ty, BlockSize);
 }
 
 llvm::Value *CGOpenMPRuntimeGPU::getGPUNumBlocks(CodeGenFunction &CGF) {
@@ -4279,7 +4227,7 @@ CGOpenMPRuntimeGPU::getXteamRedFunctionPtrs(CodeGenFunction &CGF,
 llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
     CodeGenFunction &CGF, llvm::Value *Val, llvm::Value *SumPtr,
     llvm::Value *DTeamVals, llvm::Value *DTeamsDonePtr,
-    llvm::Value *ThreadStartIndex, llvm::Value *NumTeams) {
+    llvm::Value *ThreadStartIndex, llvm::Value *NumTeams, int BlockSize) {
   // TODO handle more types
   llvm::Type *SumType = Val->getType();
   assert(
@@ -4305,29 +4253,85 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
 
   if (SumType->isIntegerTy()) {
     if (SumType->getPrimitiveSizeInBits() == 32) {
-      return CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                OMPRTL___kmpc_xteamr_ui_16x64),
-          Args);
+      if (BlockSize == 256) {
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteamr_ui_4x64),
+            Args);
+      }
+      if (BlockSize == 512) {
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteamr_ui_8x64),
+            Args);
+      }
+      if (BlockSize == 1024) {
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), OMPRTL___kmpc_xteamr_ui_16x64),
+            Args);
+      }
     }
     if (SumType->getPrimitiveSizeInBits() == 64) {
-      return CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                OMPRTL___kmpc_xteamr_ul_16x64),
-          Args);
+      if (BlockSize == 256) {
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteamr_ul_4x64),
+            Args);
+      }
+      if (BlockSize == 512) {
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteamr_ul_8x64),
+            Args);
+      }
+      if (BlockSize == 1024) {
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), OMPRTL___kmpc_xteamr_ul_16x64),
+            Args);
+      }
     }
   }
   if (SumType->isFloatTy()) {
-    return CGF.EmitRuntimeCall(
-        OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                              OMPRTL___kmpc_xteamr_f_16x64),
-        Args);
+    if (BlockSize == 256) {
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_f_4x64),
+          Args);
+    }
+    if (BlockSize == 512) {
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_f_8x64),
+          Args);
+    }
+    if (BlockSize == 1024) {
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_f_16x64),
+          Args);
+    }
   }
   if (SumType->isDoubleTy()) {
-    return CGF.EmitRuntimeCall(
-        OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                              OMPRTL___kmpc_xteamr_d_16x64),
-        Args);
+    if (BlockSize == 256) {
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_d_4x64),
+          Args);
+    }
+    if (BlockSize == 512) {
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_d_8x64),
+          Args);
+    }
+    if (BlockSize == 1024) {
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_d_16x64),
+          Args);
+    }
   }
   llvm_unreachable("No support for other types currently.");
 }

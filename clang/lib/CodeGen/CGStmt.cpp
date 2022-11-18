@@ -86,7 +86,8 @@ CodeGenFunction::EmitXteamRedStartingIndex(const ForStmt &FStmt) {
   llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
 
   // workgroup_size
-  llvm::Value *WorkGroupSize = RT.getXteamRedBlockSize(*this);
+  llvm::Value *WorkGroupSize =
+      RT.getXteamRedBlockSize(*this, CGM.getXteamRedBlockSize(&FStmt));
 
   // workgroup_id
   llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
@@ -138,7 +139,8 @@ void CodeGenFunction::EmitXteamRedInc(const ForStmt &FStmt,
   const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
 
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
-  llvm::Value *BlockSize = RT.getXteamRedBlockSize(*this);
+  llvm::Value *BlockSize =
+      RT.getXteamRedBlockSize(*this, CGM.getXteamRedBlockSize(&FStmt));
   llvm::Value *NumBlocks = CGM.getXteamRedNumTeams(&FStmt);
   assert(NumBlocks && "Number of blocks cannot be null");
   // prod = block_size * num_blocks
@@ -315,7 +317,7 @@ void CodeGenFunction::EmitXteamRedKernel(
   EmitStmt(CapturedForStmt);
 
   // Now emit the calls to xteam_sum, one for each reduction variable
-  EmitXteamRedSum(CapturedForStmt, Args);
+  EmitXteamRedSum(CapturedForStmt, Args, CGM.getXteamRedBlockSize(D));
 
   // Xteam codegen done
   CGM.setCurrentXteamRedStmt(nullptr);
@@ -355,7 +357,8 @@ void CodeGenFunction::EmitXteamLocalAggregator(const ForStmt *FStmt) {
 // Emit __kmpc_xteam_sum(*xteam_red_local_addr, red_var_addr) for each reduction
 // in the helper map for the given For Stmt
 void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt,
-                                      const FunctionArgList &Args) {
+                                      const FunctionArgList &Args,
+                                      int BlockSize) {
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
   const CodeGenModule::XteamRedVarMap &RedVarMap = CGM.getXteamRedVarMap(FStmt);
   llvm::Value *ThreadStartIdx = CGM.getXteamRedThreadStartIndex(FStmt);
@@ -379,7 +382,7 @@ void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt,
     // Pass in OrigRedVarAddr.getPointer to kmpc_xteam_sum
     RT.getXteamRedSum(*this, Builder.CreateLoad(RVI.RedVarAddr),
                       OrigRedVarAddr.getPointer(), DTeamVals, DTeamsDonePtr,
-                      ThreadStartIdx, NumTeams);
+                      ThreadStartIdx, NumTeams, BlockSize);
   }
 }
 

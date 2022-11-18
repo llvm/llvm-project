@@ -301,6 +301,7 @@ public:
 
   enum NoLoopXteamErr {
     NxSuccess,
+    NxNonSPMD,
     NxOptionDisabled,
     NxUnsupportedDirective,
     NxUnsupportedSplitDirective,
@@ -327,7 +328,8 @@ public:
     NxUnsupportedRedOp,
     NxNoRedVar,
     NxMultRedVar,
-    NxUnsupportedRedExpr
+    NxUnsupportedRedExpr,
+    NxUnsupportedXteamRedThreadLimit
   };
 
   /// Top-level and nested OpenMP directives that may use no-loop codegen.
@@ -349,16 +351,15 @@ public:
     size_t ArgPos;
   };
   using XteamRedVarMap = llvm::DenseMap<const VarDecl *, XteamRedVarInfo>;
-  //  using XteamRedKernelInfo = std::pair<NoLoopIntermediateStmts,
-  //  XteamRedVarMap>;
   struct XteamRedKernelInfo {
-    XteamRedKernelInfo(llvm::Value *TSI, llvm::Value *NT,
+    XteamRedKernelInfo(llvm::Value *TSI, llvm::Value *NT, int BlkSz,
                        NoLoopIntermediateStmts Stmts, XteamRedVarMap RVM)
-        : ThreadStartIndex{TSI}, NumTeams{NT}, XteamIntStmts{Stmts},
-          XteamRedVars{RVM} {}
+        : ThreadStartIndex{TSI}, NumTeams{NT}, BlockSize{BlkSz},
+          XteamIntStmts{Stmts}, XteamRedVars{RVM} {}
 
     llvm::Value *ThreadStartIndex;
     llvm::Value *NumTeams;
+    int BlockSize;
     NoLoopIntermediateStmts XteamIntStmts;
     XteamRedVarMap XteamRedVars;
   };
@@ -1622,6 +1623,9 @@ public:
   /// Given the order clause, can No-Loop code be generated?
   NoLoopXteamErr getNoLoopCompatibleOrderStatus(const OMPLoopDirective &LD);
 
+  NoLoopXteamErr
+  getXteamRedCompatibleThreadLimitStatus(const OMPLoopDirective &LD);
+
   /// Helper functions for generating a NoLoop kernel
   /// For a captured statement, get the single For statement, if it exists,
   /// otherwise return nullptr.
@@ -1665,6 +1669,9 @@ public:
   /// return true, otherwise return false. If successful, metadata for the
   /// reduction variables are created for subsequent codegen phases to work on.
   NoLoopXteamErr checkAndSetXteamRedKernel(const OMPExecutableDirective &D);
+
+  /// Compute the block size to be used for a kernel
+  int getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D);
 
   /// Given a ForStmt for which Xteam codegen will be done, return the
   /// intermediate statements for a split directive.
@@ -1715,12 +1722,22 @@ public:
     KernelInfo.NumTeams = NTeams;
   }
 
+  void updateXteamRedKernel(const Stmt *S, int BlkSz) {
+    assert(isXteamRedKernel(S));
+    XteamRedKernels.find(S)->second.BlockSize = BlkSz;
+  }
+
+  // Get the already-computed block size used by Xteam reduction
+  int getXteamRedBlockSize(const ForStmt *FStmt);
+  int getXteamRedBlockSize(const OMPExecutableDirective &D);
+
   /// Erase spec-red related metadata for the input statement
   void resetXteamRedKernel(const Stmt *S) { XteamRedKernels.erase(S); }
   /// Are we generating xteam reduction kernel for the statement
   bool isXteamRedKernel(const Stmt *S) {
     return XteamRedKernels.find(S) != XteamRedKernels.end();
   }
+  bool isXteamRedKernel(const OMPExecutableDirective &D);
 
   void setCurrentXteamRedStmt(const Stmt *S) { CurrentXteamRedStmt = S; }
   const Stmt *getCurrentXteamRedStmt() { return CurrentXteamRedStmt; }
@@ -1923,6 +1940,9 @@ private:
   /// Top level checker for no-loop on the for statement
   NoLoopXteamErr getNoLoopForStmtStatus(const OMPExecutableDirective &,
                                         const Stmt *);
+
+  // Compute the block size used by Xteam reduction
+  int computeXteamRedBlockSize(const OMPExecutableDirective &D);
 
   /// Top level checker for xteam reduction of the loop
   NoLoopXteamErr getXteamRedForStmtStatus(const OMPExecutableDirective &,

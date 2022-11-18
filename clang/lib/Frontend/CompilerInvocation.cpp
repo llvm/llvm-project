@@ -3500,6 +3500,10 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Args, OPT_fopenmp_gpu_threads_per_team_EQ,
                 Twine(Opts.OpenMPGPUThreadsPerTeam), SA);
 
+  if (Opts.OpenMPTargetXteamReductionBlockSize != 1024)
+    GenerateArg(Args, OPT_fopenmp_target_xteam_reduction_blocksize_EQ,
+                Twine(Opts.OpenMPTargetXteamReductionBlockSize), SA);
+
   if (!Opts.OMPTargetTriples.empty()) {
     std::string Targets;
     llvm::raw_string_ostream OS(Targets);
@@ -3907,6 +3911,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.OpenMPGPUThreadsPerTeam =
       getLastArgIntValue(Args, options::OPT_fopenmp_gpu_threads_per_team_EQ,
                          Opts.OpenMPGPUThreadsPerTeam, Diags);
+
+  Opts.OpenMPTargetXteamReductionBlockSize = getLastArgIntValue(
+      Args, options::OPT_fopenmp_target_xteam_reduction_blocksize_EQ,
+      Opts.OpenMPTargetXteamReductionBlockSize, Diags);
 
   // Turn ON at -O3 (and above) and -Ofast
   Opts.OpenMPTargetIgnoreEnvVars =

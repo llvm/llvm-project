@@ -7250,6 +7250,9 @@ void CodeGenModule::emitNxResult(std::string StatusMsg,
   switch (Status) {
   case NxSuccess:
     break;
+  case NxNonSPMD:
+    StatusMsg += "Non-SPMD mode not supported";
+    break;
   case NxOptionDisabled:
     StatusMsg += "Command line option disabled";
     break;
@@ -7304,6 +7307,9 @@ void CodeGenModule::emitNxResult(std::string StatusMsg,
   case NxNonUnitStaticChunk:
     StatusMsg += "Schedule clause with non-unit chunk size";
     break;
+  case NxNonConcurrentOrder:
+    StatusMsg += "Non-concurrent order not supported";
+    break;
   case NxUnsupportedRedType:
     StatusMsg += "Unsupported reduction variable type";
     break;
@@ -7328,6 +7334,9 @@ void CodeGenModule::emitNxResult(std::string StatusMsg,
     break;
   case NxUnsupportedRedExpr:
     StatusMsg += "Unsupported reduction expression found";
+    break;
+  case NxUnsupportedXteamRedThreadLimit:
+    StatusMsg += "Thread Limit less than 256 not supported";
     break;
   }
 
@@ -7556,6 +7565,72 @@ CodeGenModule::getNoLoopForStmtStatus(const OMPExecutableDirective &D,
   return NxSuccess;
 }
 
+int CodeGenModule::getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D) {
+  // Honor block-size provided by command-line option. This logic must be kept
+  // in sync with metadata generation. If this option is not specified on the
+  // command line then the value used will be the 256.
+  int WorkGroupSz = getLangOpts().OpenMPGPUThreadsPerTeam;
+
+  // Cross team reduction blocksize default may be specified separately.
+  if (isXteamRedKernel(D))
+    WorkGroupSz = getLangOpts().OpenMPTargetXteamReductionBlockSize;
+
+  // Check block-size provided by thread_limit clause. We start with the
+  // maximum thread limit and lower it if user requests a lower thread limit.
+  int ThreadLimit = getTarget().getGridValue().GV_Max_WG_Size;
+  const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
+  if (ThreadLimitClause) {
+    Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit();
+    clang::Expr::EvalResult Result;
+    if (ThreadLimitExpr->EvaluateAsInt(Result, getContext())) {
+      int ThreadLimitEval = Result.Val.getInt().getExtValue();
+      if (ThreadLimitEval > 0 && ThreadLimitEval < ThreadLimit)
+        ThreadLimit = ThreadLimitEval;
+    }
+  }
+
+  // If the command line work group size is less than any default or user
+  // specified thread limit then it is honored otherwise the thread limit
+  // determined above will be used.
+  if (WorkGroupSz > ThreadLimit)
+    WorkGroupSz = ThreadLimit;
+
+  // Set the actual number of threads if the user requests a value different
+  // then the default. If the value is greater than the currently computed
+  // thread limit then cap the number of threads to the thread limit.
+  int NumThreads = getTarget().getGridValue().GV_Default_WG_Size;
+  const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
+  if (NumThreadsClause) {
+    Expr *NumThreadsExpr = NumThreadsClause->getNumThreads();
+    clang::Expr::EvalResult Result;
+    if (NumThreadsExpr->EvaluateAsInt(Result, getContext())) {
+      NumThreads = Result.Val.getInt().getExtValue();
+      // Cap the number of threads to the current thread limit.
+      if (NumThreads > ThreadLimit)
+        NumThreads = ThreadLimit;
+      // num_threads clause takes precendence over the command line value:
+      WorkGroupSz = NumThreads;
+    }
+  }
+
+  // Sanitize the workgroup size received from the command line. Its default
+  // value is GV_Default_WG_Size.
+  if (WorkGroupSz < 1 || WorkGroupSz > ThreadLimit)
+    WorkGroupSz = getTarget().getGridValue().GV_Default_WG_Size;
+
+  return WorkGroupSz;
+}
+
+int CodeGenModule::computeXteamRedBlockSize(const OMPExecutableDirective &D) {
+  int InitialBlockSize = getWorkGroupSizeSPMDHelper(D);
+  // We support block sizes 256, 512, and 1024 only for Xteam reduction.
+  if (InitialBlockSize < 512)
+    return 256;
+  if (InitialBlockSize < 1024)
+    return 512;
+  return 1024;
+}
+
 CodeGenModule::NoLoopXteamErr
 CodeGenModule::getXteamRedForStmtStatus(const OMPExecutableDirective &D,
                                         const Stmt *OMPStmt,
@@ -7618,6 +7693,23 @@ CodeGenModule::getNoLoopCompatibleOrderStatus(const OMPLoopDirective &LD) {
 }
 
 CodeGenModule::NoLoopXteamErr
+CodeGenModule::getXteamRedCompatibleThreadLimitStatus(
+    const OMPLoopDirective &LD) {
+  const auto *ThreadLimitClause = LD.getSingleClause<OMPThreadLimitClause>();
+  if (!ThreadLimitClause)
+    return NxSuccess;
+  Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit();
+  clang::Expr::EvalResult Result;
+  if (ThreadLimitExpr->EvaluateAsInt(Result, getContext())) {
+    int ThreadLimitEval = Result.Val.getInt().getExtValue();
+    // We support thread limit >= 256
+    if (ThreadLimitEval > 255)
+      return NxSuccess;
+  }
+  return NxUnsupportedXteamRedThreadLimit;
+}
+
+CodeGenModule::NoLoopXteamErr
 CodeGenModule::getNoLoopCombinedClausesStatus(const OMPExecutableDirective &D) {
   if (D.hasClausesOfKind<OMPInReductionClause>() ||
       D.hasClausesOfKind<OMPNumTeamsClause>() ||
@@ -7641,8 +7733,6 @@ CodeGenModule::NoLoopXteamErr CodeGenModule::getXteamRedCombinedClausesStatus(
   if (D.hasClausesOfKind<OMPDependClause>() ||
       D.hasClausesOfKind<OMPInReductionClause>() ||
       D.hasClausesOfKind<OMPNowaitClause>() ||
-      D.hasClausesOfKind<OMPThreadLimitClause>() ||
-      D.hasClausesOfKind<OMPNumThreadsClause>() ||
       D.hasClausesOfKind<OMPNumTeamsClause>() ||
       D.hasClausesOfKind<OMPDistScheduleClause>() ||
       D.hasClausesOfKind<OMPLastprivateClause>() ||
@@ -7653,6 +7743,8 @@ CodeGenModule::NoLoopXteamErr CodeGenModule::getXteamRedCombinedClausesStatus(
     return NxNotLoopDirective;
   const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
   NoLoopXteamErr NxStatus = NxSuccess;
+  if ((NxStatus = getXteamRedCompatibleThreadLimitStatus(LD)))
+    return NxStatus;
   if ((NxStatus = getNoLoopCompatibleOrderStatus(LD)))
     return NxStatus;
   return getNoLoopCompatibleSchedStatus(LD);
@@ -7852,11 +7944,41 @@ CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   assert(FStmt && "For stmt cannot be null");
   XteamRedKernels.insert(std::make_pair(
       FStmt, XteamRedKernelInfo(/*ThreadStartIndex=*/nullptr,
-                                /*NumTeams=*/nullptr, IntermediateStmts,
+                                /*NumTeams=*/nullptr,
+                                /*BlockSize=*/0, IntermediateStmts,
                                 RedVarMapPair.second)));
+
+  // The blocksize has to be computed after adding this kernel to the metadata
+  // above, since the computation below depends on that metadata. Compute block
+  // size during device compilation only.
+  int BlockSize =
+      getLangOpts().OpenMPIsDevice ? computeXteamRedBlockSize(D) : 0;
+  if (BlockSize > 0)
+    updateXteamRedKernel(FStmt, BlockSize);
 
   // All checks passed
   return NxSuccess;
+}
+
+bool CodeGenModule::isXteamRedKernel(const OMPExecutableDirective &D) {
+  if (!D.hasAssociatedStmt())
+    return false;
+  const ForStmt *FStmt = getSingleForStmt(D.getAssociatedStmt());
+  if (FStmt == nullptr)
+    return false;
+  return isXteamRedKernel(FStmt);
+}
+
+int CodeGenModule::getXteamRedBlockSize(const ForStmt *FStmt) {
+  assert(XteamRedKernels.find(FStmt) != XteamRedKernels.end() &&
+         "Metadata missing for Xteam kernel");
+  return XteamRedKernels.find(FStmt)->second.BlockSize;
+}
+
+int CodeGenModule::getXteamRedBlockSize(const OMPExecutableDirective &D) {
+  assert(isXteamRedKernel(D) && "Expected an Xteam reduction kernel");
+  const ForStmt *FStmt = getSingleForStmt(D.getAssociatedStmt());
+  return getXteamRedBlockSize(FStmt);
 }
 
 void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {

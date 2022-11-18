@@ -6273,6 +6273,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       Args.AddAllArgs(CmdArgs,
                       options::OPT_fopenmp_cuda_teams_reduction_recs_num_EQ);
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_gpu_threads_per_team_EQ);
+      Args.AddAllArgs(CmdArgs,
+                      options::OPT_fopenmp_target_xteam_reduction_blocksize_EQ);
       if (Args.hasFlag(options::OPT_fopenmp_optimistic_collapse,
                        options::OPT_fno_openmp_optimistic_collapse,
                        /*Default=*/false))

@@ -4910,7 +4910,8 @@ private:
   void EmitXteamRedInc(const ForStmt &FStmt, const VarDecl *LoopVar,
                        const Address &NoLoopIvAddr);
   void EmitXteamLocalAggregator(const ForStmt *FStmt);
-  void EmitXteamRedSum(const ForStmt *FStmt, const FunctionArgList &Args);
+  void EmitXteamRedSum(const ForStmt *FStmt, const FunctionArgList &Args,
+                       int BlockSize);
   bool EmitXteamRedStmt(const Stmt *S);
 };
 

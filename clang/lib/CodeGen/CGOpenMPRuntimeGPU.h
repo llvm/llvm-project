@@ -195,7 +195,7 @@ public:
   llvm::Value *getGPUNumBlocks(CodeGenFunction &CGF);
 
   /// Get the number of blocks on the GPU for special reduction
-  llvm::Value *getXteamRedBlockSize(CodeGenFunction &CGF);
+  llvm::Value *getXteamRedBlockSize(CodeGenFunction &CGF, int BlockSize);
 
   std::pair<llvm::Value *, llvm::Value *>
   getXteamRedFunctionPtrs(CodeGenFunction &CGF, llvm::Type *RedVarType);
@@ -205,7 +205,7 @@ public:
                               llvm::Value *SumPtr, llvm::Value *DTeamVals,
                               llvm::Value *DTeamsDonePtr,
                               llvm::Value *ThreadStartIndex,
-                              llvm::Value *NumTeams);
+                              llvm::Value *NumTeams, int BlockSize);
 
   /// Returns whether the current architecture supports fast FP atomics
   bool supportFastFPAtomics() override;

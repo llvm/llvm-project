@@ -1955,7 +1955,20 @@ void getLaunchVals(uint16_t &ThreadsPerGroup, int &NumGroups, int WarpSize,
   // must be kept in sync with CodeGen and DeviceRTL.
   if (ExecutionMode ==
       llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED) {
-    NumGroups = DeviceNumCUs;
+    // Constrain NumGroups to be lower than ThreadsPerGroup. The following only
+    // works for current GPU configs.
+    // TODO remove it in the future
+    if (ThreadsPerGroup > 0)
+      NumGroups = DeviceNumCUs * std::min(2, 1024 / ThreadsPerGroup);
+    else
+      NumGroups = DeviceNumCUs;
+    // Ensure we don't have a large number of teams running if the tripcount is
+    // low.
+    int NumGroupsFromTripCount = 1;
+    if (LoopTripcount > 0)
+      NumGroupsFromTripCount = ((LoopTripcount - 1) / ThreadsPerGroup) + 1;
+    NumGroups = std::min(NumGroups, NumGroupsFromTripCount);
+
     DP("Final %d NumGroups and %d ThreadsPerGroup\n", NumGroups,
       ThreadsPerGroup);
     return;
