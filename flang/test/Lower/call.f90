@@ -13,9 +13,9 @@ subroutine test_nested_calls()
     end function
   end interface
   ! CHECK: %[[result_storage:.*]] = fir.alloca i32 {adapt.valuebyref}
-  ! CHECK: %[[result:.*]] = fir.call @_QPbar() : () -> i32
+  ! CHECK: %[[result:.*]] = fir.call @_QPbar() {{.*}}: () -> i32
   ! CHECK: fir.store %[[result]] to %[[result_storage]] : !fir.ref<i32>
-  ! CHECK: fir.call @_QPfoo(%[[result_storage]]) : (!fir.ref<i32>) -> ()
+  ! CHECK: fir.call @_QPfoo(%[[result_storage]]) {{.*}}: (!fir.ref<i32>) -> ()
   call foo(bar())
 end subroutine
 
@@ -33,7 +33,7 @@ subroutine call_bindc_char()
   print*, int_to_char(40)
 end subroutine
 ! CHECK-LABEL: func.func @_QPcall_bindc_char
-! CHECK: %{{.*}} = fir.call @int_to_char(%{{.*}}) : (i32) -> !fir.char<1>
+! CHECK: %{{.*}} = fir.call @int_to_char(%{{.*}}) {{.*}}: (i32) -> !fir.char<1>
 
 ! Check correct lowering of function body that return char and have the bind(c)
 ! attribute.

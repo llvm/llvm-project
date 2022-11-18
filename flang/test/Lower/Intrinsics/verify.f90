@@ -21,7 +21,7 @@ integer function verify_test(s1, s2)
 ! CHECK: %[[VAL_16:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK: %[[VAL_17:.*]] = fir.convert %[[VAL_7]] : (!fir.box<i1>) -> !fir.box<none>
 ! CHECK: %[[VAL_18:.*]] = fir.convert %[[VAL_12]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
-! CHECK: %[[VAL_19:.*]] = fir.call @_FortranAVerify(%[[VAL_14]], %[[VAL_15]], %[[VAL_16]], %[[VAL_17]], %[[VAL_6]], %[[VAL_18]], %[[VAL_13]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+! CHECK: %[[VAL_19:.*]] = fir.call @_FortranAVerify(%[[VAL_14]], %[[VAL_15]], %[[VAL_16]], %[[VAL_17]], %[[VAL_6]], %[[VAL_18]], %[[VAL_13]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
 ! CHECK: %[[VAL_20:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: %[[VAL_21:.*]] = fir.box_addr %[[VAL_20]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK: %[[VAL_22:.*]] = fir.load %[[VAL_21]] : !fir.heap<i32>
@@ -44,7 +44,7 @@ integer function verify_test2(s1, s2)
 ! CHECK: %[[VAL_7:.*]] = fir.convert %[[VAL_2]]#1 : (index) -> i64
 ! CHECK: %[[VAL_8:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK: %[[VAL_9:.*]] = fir.convert %[[VAL_3]]#1 : (index) -> i64
-! CHECK: %[[VAL_10:.*]] = fir.call @_FortranAVerify1(%[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %[[VAL_9]], %[[VAL_5]]) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
+! CHECK: %[[VAL_10:.*]] = fir.call @_FortranAVerify1(%[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %[[VAL_9]], %[[VAL_5]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
 ! CHECK: %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i64) -> i32
 ! CHECK: fir.store %[[VAL_11]] to %[[VAL_4]] : !fir.ref<i32>
 ! CHECK: %[[VAL_12:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
@@ -78,7 +78,7 @@ subroutine test_optional(string, set, back)
     ! CHECK:  fir.result %[[VAL_34]] : !fir.logical<4>
   ! CHECK:  }
   ! CHECK:  %[[VAL_39:.*]] = fir.convert %[[VAL_31]] : (!fir.logical<4>) -> i1
-  ! CHECK:  fir.call @_FortranAVerify1(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_39]]) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
+  ! CHECK:  fir.call @_FortranAVerify1(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_39]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
 ! CHECK:  }
 ! CHECK:  fir.array_merge_store
 end subroutine

@@ -36,7 +36,7 @@ subroutine test_char_scalar_deferred(c)
   ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
   ! CHECK-DAG: %[[addr_cast:.*]] = fir.convert %[[addr]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr_cast]], %[[len]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) : (!fir.boxchar<1>) -> ()
+  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_char_scalar_explicit_cst(
@@ -49,7 +49,7 @@ subroutine test_char_scalar_explicit_cst(c)
   ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.char<1,10>>>) -> !fir.heap<!fir.char<1,10>>
   ! CHECK-DAG: %[[addr_cast:.*]] = fir.convert %[[addr]] : (!fir.heap<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr_cast]], %c10{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) : (!fir.boxchar<1>) -> ()
+  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_char_scalar_explicit_dynamic(
@@ -71,7 +71,7 @@ subroutine test_char_scalar_explicit_dynamic(c, n)
   ! CHECK-DAG: %[[addr_cast:.*]] = fir.convert %[[addr]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK-DAG: %[[len_cast:.*]] = fir.convert %[[len]] : (i32) -> index
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr_cast]], %[[len_cast]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) : (!fir.boxchar<1>) -> ()
+  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_char_array_deferred(
@@ -86,7 +86,7 @@ subroutine test_char_array_deferred(c)
   ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
   ! [...] address computation
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %{{.*}}, %[[len]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) : (!fir.boxchar<1>) -> ()
+  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_char_array_explicit_cst(
@@ -99,7 +99,7 @@ subroutine test_char_array_explicit_cst(c)
   ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,10>>>
   ! [...] address computation
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %{{.*}}, %c10{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) : (!fir.boxchar<1>) -> ()
+  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_char_array_explicit_dynamic(
@@ -122,7 +122,7 @@ subroutine test_char_array_explicit_dynamic(c, n)
   ! CHECK: fir.coordinate_of
   ! CHECK-DAG: %[[len_cast:.*]] = fir.convert %[[len]] : (i32) -> index
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %{{.*}}, %[[len_cast]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) : (!fir.boxchar<1>) -> ()
+  ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! Check that when reading allocatable length from descriptor, the width is taking
@@ -140,7 +140,7 @@ subroutine test_char_scalar_deferred_k2(c)
   ! CHECK-DAG: %[[len:.*]] = arith.divsi %[[size]], %c2{{.*}} : index
   ! CHECK-DAG: %[[addr_cast:.*]] = fir.convert %[[addr]] : (!fir.heap<!fir.char<2,?>>) -> !fir.ref<!fir.char<2,?>>
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr_cast]], %[[len]] : (!fir.ref<!fir.char<2,?>>, index) -> !fir.boxchar<2>
-  ! CHECK: fir.call @_QPfoo2(%[[boxchar]]) : (!fir.boxchar<2>) -> ()
+  ! CHECK: fir.call @_QPfoo2(%[[boxchar]]) {{.*}}: (!fir.boxchar<2>) -> ()
 end subroutine
 
 ! Check that assumed length character allocatables are reading the length from

@@ -26,7 +26,7 @@ subroutine substring_main
   ! CHECK: %[[a14:.*]] = fir.coordinate_of %[[a13]], %[[a12]] : (!fir.ref<!fir.array<7x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
   ! CHECK: %[[a15:.*]] = fir.convert %[[a14]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK: %[[a16:.*]] = fir.emboxchar %[[a15]], {{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-  ! CHECK: %[[a17:.*]] = fir.call @_QFsubstring_mainPinner(%[[a16]]) : (!fir.boxchar<1>) -> i32
+  ! CHECK: %[[a17:.*]] = fir.call @_QFsubstring_mainPinner(%[[a16]]) {{.*}}: (!fir.boxchar<1>) -> i32
   result = inner(string(1:2)(ival:ival))
   print *, result
 contains
