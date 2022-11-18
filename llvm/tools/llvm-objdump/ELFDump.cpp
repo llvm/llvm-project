@@ -250,6 +250,9 @@ static void printProgramHeaders(const ELFFile<ELFT> &Obj, StringRef FileName) {
     case ELF::PT_OPENBSD_BOOTDATA:
       outs() << "    OPENBSD_BOOTDATA ";
       break;
+    case ELF::PT_OPENBSD_MUTABLE:
+      outs() << "    OPENBSD_MUTABLE ";
+      break;
     case ELF::PT_OPENBSD_RANDOMIZE:
       outs() << "    OPENBSD_RANDOMIZE ";
       break;
