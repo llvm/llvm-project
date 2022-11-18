@@ -56,7 +56,7 @@ subroutine merge_logical_var_and_expr(l1, l2)
 ! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_4]] : (i1) -> !fir.logical<4>
 ! CHECK:  %[[VAL_8:.*]] = arith.select %[[VAL_6]], %[[VAL_3]], %[[VAL_7]] : !fir.logical<4>
 ! CHECK:  fir.store %[[VAL_8]] to %[[VAL_2]] : !fir.ref<!fir.logical<4>>
-! CHECK:  fir.call @_QPbar(%[[VAL_2]]) : (!fir.ref<!fir.logical<4>>) -> ()
+! CHECK:  fir.call @_QPbar(%[[VAL_2]]) {{.*}}: (!fir.ref<!fir.logical<4>>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QPmerge_cst_and_dyn_char(
@@ -76,5 +76,5 @@ subroutine merge_cst_and_dyn_char(dyn, l)
 ! CHECK:  %[[VAL_13:.*]] = arith.select %[[VAL_11]], %[[VAL_2]], %[[VAL_12]] : !fir.ref<!fir.char<1,4>>
 ! CHECK:  %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.char<1,4>>) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_15:.*]] = fir.convert %[[VAL_3]] : (index) -> i64
-! CHECK:  fir.call @_FortranAioOutputAscii(%{{.*}}, %[[VAL_14]], %[[VAL_15]]) : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+! CHECK:  fir.call @_FortranAioOutputAscii(%{{.*}}, %[[VAL_14]], %[[VAL_15]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 end subroutine

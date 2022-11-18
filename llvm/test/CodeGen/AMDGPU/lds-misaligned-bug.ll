@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,SPLIT %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -mattr=+cumode < %s | FileCheck -check-prefixes=GCN,ALIGNED,VECT %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -mattr=+cumode,+unaligned-access-mode < %s | FileCheck -check-prefixes=GCN,UNALIGNED,VECT %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,SPLITGFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,VECT %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -mattr=+cumode < %s | FileCheck -check-prefixes=GCN,ALIGNED,VECT %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -mattr=+cumode,+unaligned-access-mode < %s | FileCheck -check-prefixes=GCN,UNALIGNED,VECT %s
 
@@ -71,12 +71,10 @@ bb:
 ; GCN-LABEL: test_flat_misaligned_v2:
 ; VECT-DAG:  flat_load_{{dwordx2|b64}} v
 ; VECT-DAG:  flat_store_{{dwordx2|b64}} v
-; SPLIT-DAG: flat_load_dword v
-; SPLIT-DAG: flat_load_dword v
-; SPLIT-DAG: flat_store_dword v
-; SPLIT-DAG: flat_store_dword v
-; SPLITGFX11-DAG: flat_load_b64 v
-; SPLITGFX11-DAG: flat_store_b64 v
+; SPLIT-DAG: flat_load_{{dword|b32}} v
+; SPLIT-DAG: flat_load_{{dword|b32}} v
+; SPLIT-DAG: flat_store_{{dword|b32}} v
+; SPLIT-DAG: flat_store_{{dword|b32}} v
 define amdgpu_kernel void @test_flat_misaligned_v2(i32* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -94,16 +92,14 @@ bb:
 ; GCN-LABEL: test_flat_misaligned_v4:
 ; VECT-DAG:  flat_load_{{dwordx4|b128}} v
 ; VECT-DAG:  flat_store_{{dwordx4|b128}} v
-; SPLIT-DAG: flat_load_dword v
-; SPLIT-DAG: flat_load_dword v
-; SPLIT-DAG: flat_load_dword v
-; SPLIT-DAG: flat_load_dword v
-; SPLIT-DAG: flat_store_dword v
-; SPLIT-DAG: flat_store_dword v
-; SPLIT-DAG: flat_store_dword v
-; SPLIT-DAG: flat_store_dword v
-; SPLITGFX11-DAG: flat_load_b128 v
-; SPLITGFX11-DAG: flat_store_b128 v
+; SPLIT-DAG: flat_load_{{dword|b32}} v
+; SPLIT-DAG: flat_load_{{dword|b32}} v
+; SPLIT-DAG: flat_load_{{dword|b32}} v
+; SPLIT-DAG: flat_load_{{dword|b32}} v
+; SPLIT-DAG: flat_store_{{dword|b32}} v
+; SPLIT-DAG: flat_store_{{dword|b32}} v
+; SPLIT-DAG: flat_store_{{dword|b32}} v
+; SPLIT-DAG: flat_store_{{dword|b32}} v
 define amdgpu_kernel void @test_flat_misaligned_v4(i32* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -122,17 +118,15 @@ bb:
   ret void
 }
 
-; TODO: Reinstate the test below once v3i32/v3f32 is reinstated.
-
 ; GCN-LABEL: test_flat_misaligned_v3:
-; xVECT-DAG:  flat_load_dwordx3 v
-; xVECT-DAG:  flat_store_dwordx3 v
-; xSPLIT-DAG: flat_load_dword v
-; xSPLIT-DAG: flat_load_dword v
-; xSPLIT-DAG: flat_load_dword v
-; xSPLIT-DAG: flat_store_dword v
-; xSPLIT-DAG: flat_store_dword v
-; xSPLIT-DAG: flat_store_dword v
+; VECT-DAG:  flat_load_{{dwordx3|b96}} v
+; VECT-DAG:  flat_store_{{dwordx3|b96}} v
+; SPLIT-DAG: flat_load_{{dword|b32}} v
+; SPLIT-DAG: flat_load_{{dword|b32}} v
+; SPLIT-DAG: flat_load_{{dword|b32}} v
+; SPLIT-DAG: flat_store_{{dword|b32}} v
+; SPLIT-DAG: flat_store_{{dword|b32}} v
+; SPLIT-DAG: flat_store_{{dword|b32}} v
 define amdgpu_kernel void @test_flat_misaligned_v3(i32* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -249,10 +243,10 @@ bb:
 ; GCN-LABEL: test_flat_v4_aligned8:
 ; VECT-DAG:  flat_load_{{dwordx4|b128}} v
 ; VECT-DAG:  flat_store_{{dwordx4|b128}} v
-; SPLIT-DAG: flat_load_dwordx2 v
-; SPLIT-DAG: flat_load_dwordx2 v
-; SPLIT-DAG: flat_store_dwordx2 v
-; SPLIT-DAG: flat_store_dwordx2 v
+; SPLIT-DAG: flat_load_{{dwordx2|b64}} v
+; SPLIT-DAG: flat_load_{{dwordx2|b64}} v
+; SPLIT-DAG: flat_store_{{dwordx2|b64}} v
+; SPLIT-DAG: flat_store_{{dwordx2|b64}} v
 define amdgpu_kernel void @test_flat_v4_aligned8(i32* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()

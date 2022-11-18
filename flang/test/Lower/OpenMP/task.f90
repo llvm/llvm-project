@@ -4,7 +4,7 @@
 subroutine omp_task_simple
   !CHECK: omp.task {
   !$omp task
-  !CHECK: fir.call @_QPfoo() : () -> ()
+  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
   call foo()
   !CHECK: omp.terminator
   !$omp end task
@@ -19,7 +19,7 @@ subroutine omp_task_if(bar)
   logical, intent(inout) :: bar
   !CHECK: omp.task if(%{{.+}}) {
   !$omp task if(bar)
-  !CHECK: fir.call @_QPfoo() : () -> ()
+  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
   call foo()
   !CHECK: omp.terminator
   !$omp end task
@@ -34,7 +34,7 @@ subroutine omp_task_final(bar)
   logical, intent(inout) :: bar
   !CHECK: omp.task final(%{{.+}}) {
   !$omp task final(bar)
-  !CHECK: fir.call @_QPfoo() : () -> ()
+  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
   call foo()
   !CHECK: omp.terminator
   !$omp end task
@@ -48,7 +48,7 @@ end subroutine omp_task_final
 subroutine omp_task_untied()
   !CHECK: omp.task untied {
   !$omp task untied
-  !CHECK: fir.call @_QPfoo() : () -> ()
+  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
   call foo()
   !CHECK: omp.terminator
   !$omp end task
@@ -62,7 +62,7 @@ end subroutine omp_task_untied
 subroutine omp_task_mergeable()
   !CHECK: omp.task mergeable {
   !$omp task mergeable
-  !CHECK: fir.call @_QPfoo() : () -> ()
+  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
   call foo()
   !CHECK: omp.terminator
   !$omp end task
@@ -77,7 +77,7 @@ subroutine omp_task_priority(bar)
   integer, intent(inout) :: bar
   !CHECK: omp.task priority(%{{.+}}) {
   !$omp task priority(bar)
-  !CHECK: fir.call @_QPfoo() : () -> ()
+  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
   call foo()
   !CHECK: omp.terminator
   !$omp end task
@@ -113,7 +113,7 @@ subroutine task_private
   integer :: int_var
   type(mytype) :: mytype_var
 
-  !CHECK: fir.call @_QPbar(%[[int_var]], %[[mytype_var]]) : (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
+  !CHECK: fir.call @_QPbar(%[[int_var]], %[[mytype_var]]) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
   call bar(int_var, mytype_var)
 
   !CHECK: omp.task {
@@ -121,7 +121,7 @@ subroutine task_private
   !CHECK: %[[int_var_private:.+]] = fir.alloca i32
   !CHECK: %[[mytype_var_private:.+]] = fir.alloca !fir.type<_QFtask_privateTmytype{x:i32}>
 
-  !CHECK: fir.call @_QPbar(%[[int_var_private]], %[[mytype_var_private]]) : (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
+  !CHECK: fir.call @_QPbar(%[[int_var_private]], %[[mytype_var_private]]) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
   call bar(int_var, mytype_var)
   !CHECK: omp.terminator
   !$omp end task
@@ -141,7 +141,7 @@ subroutine task_firstprivate
   integer :: int_var
   type(mytype) :: mytype_var
 
-  !CHECK: fir.call @_QPbaz(%[[int_var]], %[[mytype_var]]) : (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> ()
+  !CHECK: fir.call @_QPbaz(%[[int_var]], %[[mytype_var]]) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> ()
   call baz(int_var, mytype_var)
 
   !CHECK: omp.task {
@@ -152,7 +152,7 @@ subroutine task_firstprivate
   !CHECK: %[[mytype_var_firstprivate:.+]] = fir.alloca !fir.type<_QFtask_firstprivateTmytype{x:i32}>
   !CHECK: %[[mytype_var_load:.+]] = fir.load %[[mytype_var]] : !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>
   !CHECK: fir.store %[[mytype_var_load]] to %[[mytype_var_firstprivate]]
-  !CHECK: fir.call @_QPbaz(%[[int_var_firstprivate]], %[[mytype_var_firstprivate]]) : (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> ()
+  !CHECK: fir.call @_QPbaz(%[[int_var_firstprivate]], %[[mytype_var_firstprivate]]) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> ()
   call baz(int_var, mytype_var)
   !CHECK: omp.terminator
   !$omp end task

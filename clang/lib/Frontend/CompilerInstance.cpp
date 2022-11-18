@@ -252,7 +252,8 @@ static void collectIncludePCH(CompilerInstance &CI,
     // used here since we're not interested in validating the PCH at this time,
     // but only to check whether this is a file containing an AST.
     if (!ASTReader::readASTFileControlBlock(
-            Dir->path(), FileMgr, CI.getPCHContainerReader(),
+            Dir->path(), FileMgr, CI.getModuleCache(),
+            CI.getPCHContainerReader(),
             /*FindModuleFileExtensions=*/false, Validator,
             /*ValidateDiagnosticOptions=*/false))
       MDC->addFile(Dir->path());

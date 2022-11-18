@@ -47,9 +47,44 @@ using TranslateFromMLIRFunction =
 using TranslateFunction = std::function<LogicalResult(
     llvm::SourceMgr &sourceMgr, llvm::raw_ostream &output, MLIRContext *)>;
 
+/// This class contains all of the components necessary for performing a
+/// translation.
+class Translation {
+public:
+  Translation() = default;
+  Translation(TranslateFunction function, StringRef description,
+              Optional<llvm::Align> inputAlignment)
+      : function(std::move(function)), description(description),
+        inputAlignment(inputAlignment) {}
+
+  /// Return the description of this translation.
+  StringRef getDescription() const { return description; }
+
+  /// Return the optional alignment desired for the input of the translation.
+  Optional<llvm::Align> getInputAlignment() const { return inputAlignment; }
+
+  /// Invoke the translation function with the given input and output streams.
+  LogicalResult operator()(llvm::SourceMgr &sourceMgr,
+                           llvm::raw_ostream &output,
+                           MLIRContext *context) const {
+    return function(sourceMgr, output, context);
+  }
+
+private:
+  /// The underlying translation function.
+  TranslateFunction function;
+
+  /// The description of the translation.
+  StringRef description;
+
+  /// An optional alignment desired for the input of the translation.
+  Optional<llvm::Align> inputAlignment;
+};
+
 /// Use Translate[ToMLIR|FromMLIR]Registration as an initializer that
 /// registers a function and associates it with name. This requires that a
-/// translation has not been registered to a given name.
+/// translation has not been registered to a given name. `inputAlign` is an
+/// optional expected alignment for the input data.
 ///
 /// Usage:
 ///
@@ -62,10 +97,14 @@ using TranslateFunction = std::function<LogicalResult(
 ///
 /// \{
 struct TranslateToMLIRRegistration {
-  TranslateToMLIRRegistration(llvm::StringRef name, llvm::StringRef description,
-                              const TranslateSourceMgrToMLIRFunction &function);
-  TranslateToMLIRRegistration(llvm::StringRef name, llvm::StringRef description,
-                              const TranslateStringRefToMLIRFunction &function);
+  TranslateToMLIRRegistration(
+      llvm::StringRef name, llvm::StringRef description,
+      const TranslateSourceMgrToMLIRFunction &function,
+      Optional<llvm::Align> inputAlignment = llvm::None);
+  TranslateToMLIRRegistration(
+      llvm::StringRef name, llvm::StringRef description,
+      const TranslateStringRefToMLIRFunction &function,
+      Optional<llvm::Align> inputAlignment = llvm::None);
 };
 
 struct TranslateFromMLIRRegistration {
@@ -99,7 +138,7 @@ struct TranslateRegistration {
 /// \}
 
 /// A command line parser for translation functions.
-struct TranslationParser : public llvm::cl::parser<const TranslateFunction *> {
+struct TranslationParser : public llvm::cl::parser<const Translation *> {
   TranslationParser(llvm::cl::Option &opt);
 
   void printOptionInfo(const llvm::cl::Option &o,

@@ -424,8 +424,8 @@ void WebAssembly::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 void WebAssembly::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
 
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
-      DriverArgs.hasArg(options::OPT_nostdincxx))
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc, options::OPT_nostdinc,
+                        options::OPT_nostdincxx))
     return;
 
   switch (GetCXXStdlibType(DriverArgs)) {

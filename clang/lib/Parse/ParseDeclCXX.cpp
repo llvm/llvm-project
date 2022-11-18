@@ -4487,8 +4487,6 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       Diag(Tok.getLocation(), diag::err_expected) << tok::colon;
   }
 
-  llvm::SmallDenseMap<IdentifierInfo *, SourceLocation, 4> SeenAttrs;
-
   bool AttrParsed = false;
   while (!Tok.isOneOf(tok::r_square, tok::semi, tok::eof)) {
     if (AttrParsed) {

@@ -20,7 +20,7 @@ subroutine is_finite_test(x, y)
 
   ! CHECK:   %[[V_19:[0-9]+]] = fir.load %arg0 : !fir.ref<f32>
   ! CHECK:   %[[V_20:[0-9]+]] = fir.load %arg0 : !fir.ref<f32>
-  ! CHECK:   %[[V_21:[0-9]+]] = arith.addf %[[V_19]], %[[V_20]] : f32
+  ! CHECK:   %[[V_21:[0-9]+]] = arith.addf %[[V_19]], %[[V_20]] {{.*}}: f32
   ! CHECK:   %[[V_22:[0-9]+]] = arith.bitcast %[[V_21]] : f32 to i32
   ! CHECK:   %[[V_23:[0-9]+]] = arith.subi %c32{{.*}}, %c8{{.*}} : i32
   ! CHECK:   %[[V_24:[0-9]+]] = arith.shrui %c-1{{.*}}, %[[V_23]] : i32
@@ -48,7 +48,7 @@ subroutine is_finite_test(x, y)
 
   ! CHECK:   %[[V_53:[0-9]+]] = fir.load %arg1 : !fir.ref<f64>
   ! CHECK:   %[[V_54:[0-9]+]] = fir.load %arg1 : !fir.ref<f64>
-  ! CHECK:   %[[V_55:[0-9]+]] = arith.addf %[[V_53]], %[[V_54]] : f64
+  ! CHECK:   %[[V_55:[0-9]+]] = arith.addf %[[V_53]], %[[V_54]] {{.*}}: f64
   ! CHECK:   %[[V_56:[0-9]+]] = arith.bitcast %[[V_55]] : f64 to i64
   ! CHECK:   %[[V_57:[0-9]+]] = arith.subi %c64{{.*}}, %c11{{.*}} : i64
   ! CHECK:   %[[V_58:[0-9]+]] = arith.shrui %c-1{{.*}}, %[[V_57]] : i64

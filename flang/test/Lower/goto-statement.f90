@@ -8,7 +8,7 @@ end subroutine
 ! CHECK-LABEL: sub1
 ! CHECK:   cf.br ^[[BB1:.*]]
 ! CHECK: ^[[BB1]]:
-! CHECK:   {{.*}} fir.call @_FortranAStopStatement({{.*}}, {{.*}}, {{.*}}) : (i32, i1, i1) -> none
+! CHECK:   {{.*}} fir.call @_FortranAStopStatement({{.*}}, {{.*}}, {{.*}}) {{.*}}: (i32, i1, i1) -> none
 ! CHECK: }
 
 ! Test multiple goto statements
@@ -25,7 +25,7 @@ end subroutine
 ! CHECK: ^[[BB2]]:
 ! CHECK:   cf.br ^[[BB3:.*]]
 ! CHECK: ^[[BB3]]:
-! CHECK:   {{.*}} fir.call @_FortranAStopStatement({{.*}}, {{.*}}, {{.*}}) : (i32, i1, i1) -> none
+! CHECK:   {{.*}} fir.call @_FortranAStopStatement({{.*}}, {{.*}}, {{.*}}) {{.*}}: (i32, i1, i1) -> none
 ! CHECK: }
 
 ! Test goto which branches to a previous label
@@ -36,10 +36,10 @@ pause
 3 goto 2
 end subroutine
 ! CHECK: sub3
-! CHECK:   {{.*}} fir.call @_FortranAPauseStatement() : () -> none
+! CHECK:   {{.*}} fir.call @_FortranAPauseStatement() {{.*}}: () -> none
 ! CHECK:   cf.br ^[[BB2:.*]]
 ! CHECK: ^[[BB1:.*]]: //
-! CHECK:   {{.*}} fir.call @_FortranAStopStatement({{.*}}, {{.*}}, {{.*}}) : (i32, i1, i1) -> none
+! CHECK:   {{.*}} fir.call @_FortranAStopStatement({{.*}}, {{.*}}, {{.*}}) {{.*}}: (i32, i1, i1) -> none
 ! CHECK: ^[[BB2]]:
 ! CHECK:   cf.br ^[[BB1]]
 ! CHECK: }
@@ -55,7 +55,7 @@ pause
 pause
 end subroutine
 ! CHECK-LABEL: sub4
-! CHECK:   {{.*}} fir.call @_FortranAPauseStatement() : () -> none
+! CHECK:   {{.*}} fir.call @_FortranAPauseStatement() {{.*}}: () -> none
 ! CHECK-NEXT:   cf.br ^[[BB1:.*]]
 ! CHECK-NEXT: ^[[BB1]]:
 ! CHECK-NEXT:   cf.br ^[[BB2:.*]]

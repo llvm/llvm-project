@@ -2804,25 +2804,29 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
     ```
   }];
 
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$parent
+  );
+
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
-  let regions = (region SizedRegion<1>:$region);
+  let regions = (region AnyRegion:$region);
 
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs),
-    [{
-      $_state.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
-                           $_builder.getStringAttr(name));
-      $_state.addAttributes(attrs);
-    }]>
+      "llvm::StringRef":$parent,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>
   ];
 
   let extraClassDeclaration = [{
     /// Append a dispatch table entry to the table.
     void appendTableEntry(mlir::Operation *op);
+
+    static constexpr llvm::StringRef getParentAttrNameStr() { return "parent"; }
+    static constexpr llvm::StringRef getExtendsKeyword() { return "extends"; }
 
     mlir::Block &getBlock() {
       return getRegion().front();

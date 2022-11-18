@@ -1871,8 +1871,24 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
       defaultDialect = iface->getDefaultDialect();
   } else {
     Optional<Dialect::ParseOpHook> dialectHook;
-    if (Dialect *dialect = opNameInfo->getDialect())
-      dialectHook = dialect->getParseOperationHook(opName);
+    Dialect *dialect = opNameInfo->getDialect();
+    if (!dialect) {
+      InFlightDiagnostic diag =
+          emitError(opLoc) << "Dialect `" << opNameInfo->getDialectNamespace()
+                           << "' not found for custom op '" << originalOpName
+                           << "' ";
+      if (originalOpName != opName)
+        diag << " (tried '" << opName << "' as well)";
+      auto &note = diag.attachNote();
+      note << "Registered dialects: ";
+      llvm::interleaveComma(getContext()->getAvailableDialects(), note,
+                            [&](StringRef dialect) { note << dialect; });
+      note << " ; for more info on dialect registration see "
+              "https://mlir.llvm.org/getting_started/Faq/"
+              "#registered-loaded-dependent-whats-up-with-dialects-management";
+      return nullptr;
+    }
+    dialectHook = dialect->getParseOperationHook(opName);
     if (!dialectHook) {
       InFlightDiagnostic diag =
           emitError(opLoc) << "custom op '" << originalOpName << "' is unknown";

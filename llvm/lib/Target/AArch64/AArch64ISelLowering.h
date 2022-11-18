@@ -537,12 +537,12 @@ public:
   bool allowsMisalignedMemoryAccesses(
       EVT VT, unsigned AddrSpace = 0, Align Alignment = Align(1),
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
-      bool *Fast = nullptr) const override;
+      unsigned *Fast = nullptr) const override;
   /// LLT variant.
   bool allowsMisalignedMemoryAccesses(LLT Ty, unsigned AddrSpace,
                                       Align Alignment,
                                       MachineMemOperand::Flags Flags,
-                                      bool *Fast = nullptr) const override;
+                                      unsigned *Fast = nullptr) const override;
 
   /// Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
@@ -811,6 +811,15 @@ public:
   bool preferIncOfAddToSubOfNot(EVT VT) const override;
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
+
+  bool isComplexDeinterleavingSupported() const override;
+  bool isComplexDeinterleavingOperationSupported(
+      ComplexDeinterleavingOperation Operation, Type *Ty) const override;
+
+  Value *createComplexDeinterleavingIR(
+      Instruction *I, ComplexDeinterleavingOperation OperationType,
+      ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
+      Value *Accumulator = nullptr) const override;
 
   bool hasBitPreservingFPLogic(EVT VT) const override {
     // FIXME: Is this always true? It should be true for vectors at least.

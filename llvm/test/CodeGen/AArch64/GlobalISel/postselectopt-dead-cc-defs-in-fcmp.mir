@@ -21,9 +21,9 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[COPY3:%[0-9]+]]:fpr32 = COPY $s1
     ; CHECK: [[COPY4:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def dead $nzcv
+    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def dead $nzcv, implicit $fpcr
     ; CHECK: [[SUBWrr:%[0-9]+]]:gpr32 = SUBWrr [[COPY1]], [[COPY4]]
-    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def $nzcv
+    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def $nzcv, implicit $fpcr
     ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32common = UBFMWri [[SUBWrr]], 1, 31
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[UBFMWri]], [[MOVi32imm]], 8, implicit $nzcv
@@ -34,9 +34,9 @@ body:             |
     %3:fpr32 = COPY $s0
     %4:fpr32 = COPY $s1
     %26:gpr32 = COPY $wzr
-    FCMPSrr %3, %4, implicit-def $nzcv
+    FCMPSrr %3, %4, implicit-def $nzcv, implicit $fpcr
     %12:gpr32 = SUBSWrr %2, %26, implicit-def $nzcv
-    FCMPSrr %3, %4, implicit-def $nzcv
+    FCMPSrr %3, %4, implicit-def $nzcv, implicit $fpcr
     %14:gpr32common = UBFMWri %12, 1, 31
     %60:gpr32 = MOVi32imm 1
     %16:gpr32 = CSELWr %14, %60, 8, implicit $nzcv
@@ -65,9 +65,9 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY3:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK: [[COPY4:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: FCMPDrr [[COPY2]], [[COPY3]], implicit-def dead $nzcv
+    ; CHECK: FCMPDrr [[COPY2]], [[COPY3]], implicit-def dead $nzcv, implicit $fpcr
     ; CHECK: [[SUBWrr:%[0-9]+]]:gpr32 = SUBWrr [[COPY1]], [[COPY4]]
-    ; CHECK: FCMPDrr [[COPY2]], [[COPY3]], implicit-def $nzcv
+    ; CHECK: FCMPDrr [[COPY2]], [[COPY3]], implicit-def $nzcv, implicit $fpcr
     ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32common = UBFMWri [[SUBWrr]], 1, 31
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[UBFMWri]], [[MOVi32imm]], 8, implicit $nzcv
@@ -78,9 +78,9 @@ body:             |
     %3:fpr64 = COPY $d0
     %4:fpr64 = COPY $d1
     %26:gpr32 = COPY $wzr
-    FCMPDrr %3, %4, implicit-def $nzcv
+    FCMPDrr %3, %4, implicit-def $nzcv, implicit $fpcr
     %12:gpr32 = SUBSWrr %2, %26, implicit-def $nzcv
-    FCMPDrr %3, %4, implicit-def $nzcv
+    FCMPDrr %3, %4, implicit-def $nzcv, implicit $fpcr
     %14:gpr32common = UBFMWri %12, 1, 31
     %60:gpr32 = MOVi32imm 1
     %16:gpr32 = CSELWr %14, %60, 8, implicit $nzcv
@@ -109,11 +109,11 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[COPY3:%[0-9]+]]:fpr32 = COPY $s1
     ; CHECK: [[COPY4:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def dead $nzcv
+    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def dead $nzcv, implicit $fpcr
     ; CHECK: [[SUBWrr:%[0-9]+]]:gpr32 = SUBWrr [[COPY1]], [[COPY4]]
-    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def dead $nzcv
+    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def dead $nzcv, implicit $fpcr
     ; CHECK: [[SUBWrr1:%[0-9]+]]:gpr32 = SUBWrr [[COPY1]], [[COPY4]]
-    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def $nzcv
+    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def $nzcv, implicit $fpcr
     ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32common = UBFMWri [[SUBWrr1]], 1, 31
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[UBFMWri]], [[MOVi32imm]], 8, implicit $nzcv
@@ -124,11 +124,11 @@ body:             |
     %3:fpr32 = COPY $s0
     %4:fpr32 = COPY $s1
     %26:gpr32 = COPY $wzr
-    FCMPSrr %3, %4, implicit-def $nzcv
+    FCMPSrr %3, %4, implicit-def $nzcv, implicit $fpcr
     %12:gpr32 = SUBSWrr %2, %26, implicit-def $nzcv
-    FCMPSrr %3, %4, implicit-def $nzcv
+    FCMPSrr %3, %4, implicit-def $nzcv, implicit $fpcr
     %12:gpr32 = SUBSWrr %2, %26, implicit-def $nzcv
-    FCMPSrr %3, %4, implicit-def $nzcv
+    FCMPSrr %3, %4, implicit-def $nzcv, implicit $fpcr
     %14:gpr32common = UBFMWri %12, 1, 31
     %60:gpr32 = MOVi32imm 1
     %16:gpr32 = CSELWr %14, %60, 8, implicit $nzcv
@@ -158,7 +158,7 @@ body:             |
     ; CHECK: [[COPY3:%[0-9]+]]:fpr32 = COPY $s1
     ; CHECK: [[COPY4:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY1]], [[COPY4]], implicit-def dead $nzcv
-    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def $nzcv
+    ; CHECK: FCMPSrr [[COPY2]], [[COPY3]], implicit-def $nzcv, implicit $fpcr
     ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32common = UBFMWri [[SUBSWrr]], 1, 31
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[UBFMWri]], [[MOVi32imm]], 8, implicit $nzcv
@@ -171,7 +171,7 @@ body:             |
     %4:fpr32 = COPY $s1
     %26:gpr32 = COPY $wzr
     %12:gpr32 = SUBSWrr %2, %26, implicit-def $nzcv
-    FCMPSrr %3, %4, implicit-def $nzcv
+    FCMPSrr %3, %4, implicit-def $nzcv, implicit $fpcr
     %14:gpr32common = UBFMWri %12, 1, 31
     %60:gpr32 = MOVi32imm 1
     %16:gpr32 = CSELWr %14, %60, 8, implicit $nzcv

@@ -685,7 +685,7 @@ bool AMDGPUTargetLowering::isLoadBitCastBeneficial(EVT LoadTy, EVT CastTy,
   if ((LScalarSize >= CastScalarSize) && (CastScalarSize < 32))
     return false;
 
-  bool Fast = false;
+  unsigned Fast = 0;
   return allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
                                         CastTy, MMO, &Fast) &&
          Fast;
@@ -2905,7 +2905,7 @@ SDValue AMDGPUTargetLowering::performLoadCombine(SDNode *N,
   unsigned Size = VT.getStoreSize();
   Align Alignment = LN->getAlign();
   if (Alignment < Size && isTypeLegal(VT)) {
-    bool IsFast;
+    unsigned IsFast;
     unsigned AS = LN->getAddressSpace();
 
     // Expand unaligned loads earlier than legalization. Due to visitation order
@@ -2958,7 +2958,7 @@ SDValue AMDGPUTargetLowering::performStoreCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   Align Alignment = SN->getAlign();
   if (Alignment < Size && isTypeLegal(VT)) {
-    bool IsFast;
+    unsigned IsFast;
     unsigned AS = SN->getAddressSpace();
 
     // Expand unaligned stores earlier than legalization. Due to visitation

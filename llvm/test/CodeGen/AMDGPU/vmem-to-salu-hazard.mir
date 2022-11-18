@@ -130,9 +130,9 @@ body:             |
     $sgpr0 = S_MOV_B32 0
 ...
 # GCN-LABEL: name: vmem_write_exec_impread
-# GCN:      BUFFER_LOAD_DWORD_OFFEN
-# GFX10:    S_WAITCNT_DEPCTR 65507
-# GCN-NEXT: S_MOV_B64
+# GCN:        BUFFER_LOAD_DWORD_OFFEN
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:   S_MOV_B64
 ---
 name:            vmem_write_exec_impread
 body:             |
@@ -171,9 +171,10 @@ body:             |
     $m0 = S_MOV_B32 7
 ...
 # GCN-LABEL: name: vmem_write_sgpr_fall_through
-# GCN:      BUFFER_LOAD_DWORD_OFFEN
-# GFX10:    S_WAITCNT_DEPCTR 65507
-# GCN:      S_MOV_B32
+# GCN:        BUFFER_LOAD_DWORD_OFFEN
+# GCN:        bb.1:
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_fall_through
 body:             |
@@ -188,10 +189,11 @@ body:             |
     $sgpr0 = S_MOV_B32 0
 ...
 # GCN-LABEL: name: vmem_write_sgpr_branch
-# GCN:      BUFFER_LOAD_DWORD_OFFEN
-# GCN-NEXT: S_BRANCH
-# GFX10:    S_WAITCNT_DEPCTR 65507
-# GCN:      S_MOV_B32
+# GCN:        BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT:   S_BRANCH
+# GCN:        bb.1:
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:   S_MOV_B32
 ---
 name:            vmem_write_sgpr_branch
 body:             |

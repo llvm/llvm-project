@@ -1585,11 +1585,11 @@ int foobar() {
 // CHECK1-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
 // CHECK1-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]]
 // CHECK1:       init.check:
+// CHECK1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK1-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB1]], ptr @_ZN2STI2S4E2stE, ptr @.__kmpc_global_ctor_..9, ptr null, ptr @.__kmpc_global_dtor_..10)
 // CHECK1-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]]
-// CHECK1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // CHECK1-NEXT:    br label [[INIT_END]]
 // CHECK1:       init.end:
 // CHECK1-NEXT:    ret void
@@ -2214,11 +2214,11 @@ int foobar() {
 // CHECK2-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
 // CHECK2-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]]
 // CHECK2:       init.check:
+// CHECK2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // CHECK2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK2-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB1]], ptr @_ZN2STI2S4E2stE, ptr @.__kmpc_global_ctor_..9, ptr null, ptr @.__kmpc_global_dtor_..10)
 // CHECK2-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]]
-// CHECK2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // CHECK2-NEXT:    br label [[INIT_END]]
 // CHECK2:       init.end:
 // CHECK2-NEXT:    ret void
@@ -2697,9 +2697,9 @@ int foobar() {
 // SIMD1-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
 // SIMD1-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]]
 // SIMD1:       init.check:
+// SIMD1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // SIMD1-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // SIMD1-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]]
-// SIMD1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // SIMD1-NEXT:    br label [[INIT_END]]
 // SIMD1:       init.end:
 // SIMD1-NEXT:    ret void
@@ -3167,9 +3167,9 @@ int foobar() {
 // SIMD2-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBG234]]
 // SIMD2-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !dbg [[DBG234]]
 // SIMD2:       init.check:
+// SIMD2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG234]]
 // SIMD2-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG235:![0-9]+]]
 // SIMD2-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG234]]
-// SIMD2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG234]]
 // SIMD2-NEXT:    br label [[INIT_END]], !dbg [[DBG234]]
 // SIMD2:       init.end:
 // SIMD2-NEXT:    ret void, !dbg [[DBG237:![0-9]+]]
@@ -3767,9 +3767,9 @@ int foobar() {
 // CHECK-TLS1-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
 // CHECK-TLS1-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]]
 // CHECK-TLS1:       init.check:
+// CHECK-TLS1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // CHECK-TLS1-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // CHECK-TLS1-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]]
-// CHECK-TLS1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // CHECK-TLS1-NEXT:    br label [[INIT_END]]
 // CHECK-TLS1:       init.end:
 // CHECK-TLS1-NEXT:    ret void
@@ -4302,9 +4302,9 @@ int foobar() {
 // CHECK-TLS2-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
 // CHECK-TLS2-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]]
 // CHECK-TLS2:       init.check:
+// CHECK-TLS2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // CHECK-TLS2-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR4]]
-// CHECK-TLS2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // CHECK-TLS2-NEXT:    br label [[INIT_END]]
 // CHECK-TLS2:       init.end:
 // CHECK-TLS2-NEXT:    ret void
@@ -4846,9 +4846,9 @@ int foobar() {
 // CHECK-TLS3-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBG291]]
 // CHECK-TLS3-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !dbg [[DBG291]]
 // CHECK-TLS3:       init.check:
+// CHECK-TLS3-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG291]]
 // CHECK-TLS3-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG292:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG291]]
-// CHECK-TLS3-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG291]]
 // CHECK-TLS3-NEXT:    br label [[INIT_END]], !dbg [[DBG291]]
 // CHECK-TLS3:       init.end:
 // CHECK-TLS3-NEXT:    ret void, !dbg [[DBG294:![0-9]+]]
@@ -5408,9 +5408,9 @@ int foobar() {
 // CHECK-TLS4-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBG291]]
 // CHECK-TLS4-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !dbg [[DBG291]]
 // CHECK-TLS4:       init.check:
+// CHECK-TLS4-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG291]]
 // CHECK-TLS4-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG292:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR5]], !dbg [[DBG291]]
-// CHECK-TLS4-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG291]]
 // CHECK-TLS4-NEXT:    br label [[INIT_END]], !dbg [[DBG291]]
 // CHECK-TLS4:       init.end:
 // CHECK-TLS4-NEXT:    ret void, !dbg [[DBG294:![0-9]+]]
@@ -5810,9 +5810,9 @@ int foobar() {
 // SIMD3-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
 // SIMD3-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]]
 // SIMD3:       init.check:
+// SIMD3-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // SIMD3-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // SIMD3-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]]
-// SIMD3-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // SIMD3-NEXT:    br label [[INIT_END]]
 // SIMD3:       init.end:
 // SIMD3-NEXT:    ret void
@@ -6280,9 +6280,9 @@ int foobar() {
 // SIMD4-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBG234]]
 // SIMD4-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !dbg [[DBG234]]
 // SIMD4:       init.check:
+// SIMD4-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG234]]
 // SIMD4-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG235:![0-9]+]]
 // SIMD4-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG234]]
-// SIMD4-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG234]]
 // SIMD4-NEXT:    br label [[INIT_END]], !dbg [[DBG234]]
 // SIMD4:       init.end:
 // SIMD4-NEXT:    ret void, !dbg [[DBG237:![0-9]+]]
@@ -7076,11 +7076,11 @@ int foobar() {
 // DEBUG1-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBG334]]
 // DEBUG1-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !dbg [[DBG334]]
 // DEBUG1:       init.check:
+// DEBUG1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG334]]
 // DEBUG1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB41:[0-9]+]]), !dbg [[DBG334]]
 // DEBUG1-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB41]], ptr @_ZN2STI2S4E2stE, ptr @.__kmpc_global_ctor_..9, ptr null, ptr @.__kmpc_global_dtor_..10), !dbg [[DBG334]]
 // DEBUG1-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG335:![0-9]+]]
 // DEBUG1-NEXT:    [[TMP2:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR4]], !dbg [[DBG334]]
-// DEBUG1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG334]]
 // DEBUG1-NEXT:    br label [[INIT_END]], !dbg [[DBG334]]
 // DEBUG1:       init.end:
 // DEBUG1-NEXT:    ret void, !dbg [[DBG337:![0-9]+]]
@@ -7719,11 +7719,11 @@ int foobar() {
 // DEBUG2-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBG285]]
 // DEBUG2-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !dbg [[DBG285]]
 // DEBUG2:       init.check:
+// DEBUG2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG285]]
 // DEBUG2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB41:[0-9]+]]), !dbg [[DBG285]]
 // DEBUG2-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB41]], ptr @_ZN2STI2S4E2stE, ptr @.__kmpc_global_ctor_..8, ptr null, ptr @.__kmpc_global_dtor_..9), !dbg [[DBG285]]
 // DEBUG2-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG286:![0-9]+]]
 // DEBUG2-NEXT:    [[TMP2:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR4]], !dbg [[DBG285]]
-// DEBUG2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG285]]
 // DEBUG2-NEXT:    br label [[INIT_END]], !dbg [[DBG285]]
 // DEBUG2:       init.end:
 // DEBUG2-NEXT:    ret void, !dbg [[DBG288:![0-9]+]]

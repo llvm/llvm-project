@@ -411,6 +411,8 @@ struct CodeCompletionBuilder {
       bool IsPattern = C.SemaResult->Kind == CodeCompletionResult::RK_Pattern;
       getSignature(*SemaCCS, &S.Signature, &S.SnippetSuffix,
                    &Completion.RequiredQualifier, IsPattern);
+      if (!C.SemaResult->FunctionCanBeCall)
+        S.SnippetSuffix.clear();
       S.ReturnType = getReturnType(*SemaCCS);
     } else if (C.IndexResult) {
       S.Signature = std::string(C.IndexResult->Signature);

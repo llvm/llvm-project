@@ -369,7 +369,13 @@ class DebugCommunication(object):
     def wait_for_exited(self):
         event_dict = self.wait_for_event('exited')
         if event_dict is None:
-            raise ValueError("didn't get stopped event")
+            raise ValueError("didn't get exited event")
+        return event_dict
+
+    def wait_for_terminated(self):
+        event_dict = self.wait_for_event('terminated')
+        if event_dict is None:
+            raise ValueError("didn't get terminated event")
         return event_dict
 
     def get_initialize_value(self, key):

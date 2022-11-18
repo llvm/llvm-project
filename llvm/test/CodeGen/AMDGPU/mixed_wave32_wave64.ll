@@ -1,30 +1,25 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX11 %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 ;
 ; Check that PS is wave64
 ; GCN-LABEL: _amdgpu_ps_main:
-; GFX10: s_and_saveexec_b64
-; GFX11: s_mov_b64 s[{{[0-9]+:[0-9]+}}], exec
+; GCN: s_or_b64 exec, exec
 ;
 ; Check that VS is wave32
 ; GCN-LABEL: _amdgpu_vs_main:
-; GFX10: s_and_saveexec_b32
-; GFX11: s_mov_b32 s{{[0-9]+}}, exec
+; GCN: s_or_b32 exec_lo, exec_lo
 ;
 ; Check that GS is wave32
 ; GCN-LABEL: _amdgpu_gs_main:
-; GFX10: s_and_saveexec_b32
-; GFX11: s_mov_b32 s{{[0-9]+}}, exec
+; GCN: s_or_b32 exec_lo, exec_lo
 ;
 ; Check that HS is wave32
 ; GCN-LABEL: _amdgpu_hs_main:
-; GFX10: s_and_saveexec_b32
-; GFX11: s_mov_b32 s{{[0-9]+}}, exec
+; GCN: s_or_b32 exec_lo, exec_lo
 ;
 ; Check that CS is wave32
 ; GCN-LABEL: _amdgpu_cs_main:
-; GFX10: s_and_saveexec_b32
-; GFX11: s_mov_b32 s{{[0-9]+}}, exec
+; GCN: s_or_b32 exec_lo, exec_lo
 ;
 ; Check that:
 ; PS_W32_EN (bit 15) of SPI_PS_IN_CONTROL (0xa1b6) is 0;

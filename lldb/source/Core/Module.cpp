@@ -364,13 +364,13 @@ void Module::SetUUID(const lldb_private::UUID &uuid) {
   }
 }
 
-llvm::Expected<TypeSystem &>
+llvm::Expected<TypeSystemSP>
 Module::GetTypeSystemForLanguage(LanguageType language) {
   return m_type_system_map.GetTypeSystemForLanguage(language, this, true);
 }
 
 void Module::ForEachTypeSystem(
-    llvm::function_ref<bool(TypeSystem *)> callback) {
+    llvm::function_ref<bool(lldb::TypeSystemSP)> callback) {
   m_type_system_map.ForEach(callback);
 }
 

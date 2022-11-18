@@ -309,6 +309,14 @@ void RewriterBase::mergeBlocks(Block *source, Block *dest,
   source->erase();
 }
 
+/// Find uses of `from` and replace it with `to`
+void RewriterBase::replaceAllUsesWith(Value from, Value to) {
+  for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
+    Operation *op = operand.getOwner();
+    updateRootInPlace(op, [&]() { operand.set(to); });
+  }
+}
+
 // Merge the operations of block 'source' before the operation 'op'. Source
 // block should not have existing predecessors or successors.
 void RewriterBase::mergeBlockBefore(Block *source, Operation *op,

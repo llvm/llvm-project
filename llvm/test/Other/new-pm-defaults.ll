@@ -254,6 +254,7 @@
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: LoopUnrollPass
 ; CHECK-O-NEXT: Running pass: WarnMissedTransformationsPass
+; CHECK-O-NEXT: Running pass: SROAPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass

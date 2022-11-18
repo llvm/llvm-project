@@ -45,7 +45,7 @@ using UsedSymbolCB = llvm::function_ref<void(const SymbolReference &SymRef,
 ///    the headers for any referenced symbol
 void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
               llvm::ArrayRef<SymbolReference> MacroRefs,
-              const PragmaIncludes &PI, const SourceManager &, UsedSymbolCB CB);
+              const PragmaIncludes *PI, const SourceManager &, UsedSymbolCB CB);
 
 } // namespace include_cleaner
 } // namespace clang

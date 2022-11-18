@@ -297,7 +297,7 @@ public:
 
   CompilerType GetCompilerType(bool prefer_dynamic);
 
-  TypeSystem *GetTypeSystem(bool prefer_dynamic);
+  CompilerType::TypeSystemSPWrapper GetTypeSystem(bool prefer_dynamic);
 
   bool GetDescription(lldb_private::Stream &strm,
                       lldb::DescriptionLevel description_level);

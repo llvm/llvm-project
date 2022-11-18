@@ -188,7 +188,7 @@ void dr320(int okay[dr320_v]) { /* c89only-warning {{variable length arrays are 
     ',' == L',' && '\\' == L'\\' && '"' == L'"' && '\'' == L'\''                \
   )
 #if __STDC_MB_MIGHT_NEQ_WC__
-#ifndef __FreeBSD__ // PR22208, FreeBSD expects us to give a bad (but conforming) answer here.
+#ifndef __FreeBSD__ /* PR22208, FreeBSD expects us to give a bad (but conforming) answer here. */
 _Static_assert(!DR321, "__STDC_MB_MIGHT_NEQ_WC__ but all basic source characters have same representation");
 #endif
 #else
