@@ -152,9 +152,8 @@ static bool canWidenLoad(LoadInst *Load, const TargetTransformInfo &TTI) {
 bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // Match insert into fixed vector of scalar value.
   // TODO: Handle non-zero insert index.
-  auto *Ty = dyn_cast<FixedVectorType>(I.getType());
   Value *Scalar;
-  if (!Ty || !match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())) ||
+  if (!match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())) ||
       !Scalar->hasOneUse())
     return false;
 
@@ -241,6 +240,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // We assume this operation has no cost in codegen if there was no offset.
   // Note that we could use freeze to avoid poison problems, but then we might
   // still need a shuffle to change the vector size.
+  auto *Ty = cast<FixedVectorType>(I.getType());
   unsigned OutputNumElts = Ty->getNumElements();
   SmallVector<int, 16> Mask(OutputNumElts, UndefMaskElem);
   assert(OffsetEltIndex < MinVecNumElts && "Address offset too big");
@@ -271,9 +271,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
 /// This removes a shuffle in IR and may allow combining of other loaded values.
 bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   // Match subvector insert of fixed vector.
-  auto *Ty = dyn_cast<FixedVectorType>(I.getType());
   auto *Shuf = dyn_cast<ShuffleVectorInst>(&I);
-  if (!Ty || !Shuf || !Shuf->isIdentityWithPadding())
+  if (!Shuf || !Shuf->isIdentityWithPadding())
     return false;
 
   // Allow a non-canonical shuffle mask that is choosing elements from op1.
@@ -290,6 +289,7 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   // We use minimal alignment (maximum flexibility) because we only care about
   // the dereferenceable region. When calculating cost and creating a new op,
   // we may use a larger value based on alignment attributes.
+  auto *Ty = cast<FixedVectorType>(I.getType());
   const DataLayout &DL = I.getModule()->getDataLayout();
   Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
@@ -608,10 +608,6 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
 /// Try to replace an extract + scalar fneg + insert with a vector fneg +
 /// shuffle.
 bool VectorCombine::foldInsExtFNeg(Instruction &I) {
-  auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
-  if (!VecTy)
-    return false;
-
   // Match an insert (op (extract)) pattern.
   Value *DestVec;
   uint64_t Index;
@@ -629,6 +625,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
     return false;
 
   // TODO: We could handle this with a length-changing shuffle.
+  auto *VecTy = cast<FixedVectorType>(I.getType());
   if (SrcVec->getType() != VecTy)
     return false;
 
@@ -685,11 +682,11 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
   // mask for scalable type is a splat or not.
   // 2) Disallow non-vector casts and length-changing shuffles.
   // TODO: We could allow any shuffle.
-  auto *DestTy = dyn_cast<FixedVectorType>(I.getType());
   auto *SrcTy = dyn_cast<FixedVectorType>(V->getType());
-  if (!SrcTy || !DestTy || I.getOperand(0)->getType() != SrcTy)
+  if (!SrcTy || I.getOperand(0)->getType() != SrcTy)
     return false;
 
+  auto *DestTy = cast<FixedVectorType>(I.getType());
   unsigned DestNumElts = DestTy->getNumElements();
   unsigned SrcNumElts = SrcTy->getNumElements();
   SmallVector<int, 16> NewMask;
@@ -1121,17 +1118,14 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   if (!match(&I, m_Load(m_Value(Ptr))))
     return false;
 
+  auto *FixedVT = cast<FixedVectorType>(I.getType());
   auto *LI = cast<LoadInst>(&I);
   const DataLayout &DL = I.getModule()->getDataLayout();
-  if (LI->isVolatile() || !DL.typeSizeEqualsStoreSize(LI->getType()))
-    return false;
-
-  auto *FixedVT = dyn_cast<FixedVectorType>(LI->getType());
-  if (!FixedVT)
+  if (LI->isVolatile() || !DL.typeSizeEqualsStoreSize(FixedVT))
     return false;
 
   InstructionCost OriginalCost =
-      TTI.getMemoryOpCost(Instruction::Load, LI->getType(), LI->getAlign(),
+      TTI.getMemoryOpCost(Instruction::Load, FixedVT, LI->getAlign(),
                           LI->getPointerAddressSpace());
   InstructionCost ScalarizedCost = 0;
 
@@ -1171,7 +1165,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 
     auto *Index = dyn_cast<ConstantInt>(UI->getOperand(1));
     OriginalCost +=
-        TTI.getVectorInstrCost(Instruction::ExtractElement, LI->getType(),
+        TTI.getVectorInstrCost(Instruction::ExtractElement, FixedVT,
                                Index ? Index->getZExtValue() : -1);
     ScalarizedCost +=
         TTI.getMemoryOpCost(Instruction::Load, FixedVT->getElementType(),
@@ -1206,10 +1200,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 /// Try to convert "shuffle (binop), (binop)" with a shared binop operand into
 /// "binop (shuffle), (shuffle)".
 bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
-  auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
-  if (!VecTy)
-    return false;
-
+  auto *VecTy = cast<FixedVectorType>(I.getType());
   BinaryOperator *B0, *B1;
   ArrayRef<int> Mask;
   if (!match(&I, m_Shuffle(m_OneUse(m_BinOp(B0)), m_OneUse(m_BinOp(B1)),
@@ -1381,14 +1372,16 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
 /// number of operations if the target reports them as cheaper.
 bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   auto *SVI = dyn_cast<ShuffleVectorInst>(&I);
-  auto *VT = dyn_cast<FixedVectorType>(I.getType());
-  if (!SVI || !VT)
+  if (!SVI)
     return false;
+
+  auto *VT = cast<FixedVectorType>(I.getType());
   auto *Op0 = dyn_cast<Instruction>(SVI->getOperand(0));
   auto *Op1 = dyn_cast<Instruction>(SVI->getOperand(1));
   if (!Op0 || !Op1 || Op0 == Op1 || !Op0->isBinaryOp() || !Op1->isBinaryOp() ||
       VT != Op0->getType())
     return false;
+
   auto *SVI0A = dyn_cast<Instruction>(Op0->getOperand(0));
   auto *SVI0B = dyn_cast<Instruction>(Op0->getOperand(1));
   auto *SVI1A = dyn_cast<Instruction>(Op1->getOperand(0));
@@ -1706,18 +1699,23 @@ bool VectorCombine::run() {
   auto FoldInst = [this, &MadeChange](Instruction &I) {
     Builder.SetInsertPoint(&I);
     if (!ScalarizationOnly) {
-      MadeChange |= vectorizeLoadInsert(I);
-      MadeChange |= widenSubvectorLoad(I);
-      MadeChange |= foldExtractExtract(I);
-      MadeChange |= foldInsExtFNeg(I);
-      MadeChange |= foldBitcastShuf(I);
-      MadeChange |= foldExtractedCmps(I);
-      MadeChange |= foldShuffleOfBinops(I);
-      MadeChange |= foldShuffleFromReductions(I);
-      MadeChange |= foldSelectShuffle(I);
+      if (isa<FixedVectorType>(I.getType())) {
+        MadeChange |= vectorizeLoadInsert(I);
+        MadeChange |= widenSubvectorLoad(I);
+        MadeChange |= foldInsExtFNeg(I);
+        MadeChange |= foldBitcastShuf(I);
+        MadeChange |= foldShuffleOfBinops(I);
+        MadeChange |= foldSelectShuffle(I);
+      } else {
+        MadeChange |= foldExtractExtract(I);
+        MadeChange |= foldExtractedCmps(I);
+        MadeChange |= foldShuffleFromReductions(I);
+      }
     }
-    MadeChange |= scalarizeBinopOrCmp(I);
-    MadeChange |= scalarizeLoadExtract(I);
+    if (isa<FixedVectorType>(I.getType())) {
+      MadeChange |= scalarizeBinopOrCmp(I);
+      MadeChange |= scalarizeLoadExtract(I);
+    }
     MadeChange |= foldSingleElementStore(I);
   };
   for (BasicBlock &BB : F) {
