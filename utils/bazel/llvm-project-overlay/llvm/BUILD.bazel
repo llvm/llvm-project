@@ -1386,6 +1386,7 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":Analysis",
         ":Core",
         ":Support",
     ],

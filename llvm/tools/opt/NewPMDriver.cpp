@@ -443,16 +443,16 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     MPM.addPass(NewPMCheckDebugifyPass(false, "", &DIStatsMap));
   if (VerifyDIPreserve)
     MPM.addPass(NewPMCheckDebugifyPass(
-        false, "", nullptr, DebugifyMode::OriginalDebugInfo, &DebugInfoBeforePass,
-        VerifyDIPreserveExport));
+        false, "", nullptr, DebugifyMode::OriginalDebugInfo,
+        &DebugInfoBeforePass, VerifyDIPreserveExport));
 
   // Add any relevant output pass at the end of the pipeline.
   switch (OK) {
   case OK_NoOutput:
     break; // No output pass needed.
   case OK_OutputAssembly:
-    MPM.addPass(
-        PrintModulePass(Out->os(), "", ShouldPreserveAssemblyUseListOrder));
+    MPM.addPass(PrintModulePass(
+        Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex));
     break;
   case OK_OutputBitcode:
     MPM.addPass(BitcodeWriterPass(Out->os(), ShouldPreserveBitcodeUseListOrder,
