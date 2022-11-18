@@ -463,6 +463,11 @@ static bool hasMappingSymbols(const ObjectFile &Obj) {
   return isArmElf(Obj) || isAArch64Elf(Obj) || isCSKYElf(Obj) ;
 }
 
+static bool isMappingSymbol(const SymbolInfoTy &Sym) {
+  return Sym.Name.startswith("$d") || Sym.Name.startswith("$x") ||
+         Sym.Name.startswith("$a") || Sym.Name.startswith("$t");
+}
+
 static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
                             const RelocationRef &Rel, uint64_t Address,
                             bool Is64Bits) {
@@ -1877,10 +1882,17 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
                 auto It = llvm::partition_point(
                     *TargetSymbols,
                     [=](const SymbolInfoTy &O) { return O.Addr <= Target; });
-                if (It != TargetSymbols->begin()) {
-                  TargetSym = &*(It - 1);
-                  break;
+                while (It != TargetSymbols->begin()) {
+                  --It;
+                  // Skip mapping symbols to avoid possible ambiguity as they
+                  // do not allow uniquely identifying the target address.
+                  if (!hasMappingSymbols(Obj) || !isMappingSymbol(*It)) {
+                    TargetSym = &*It;
+                    break;
+                  }
                 }
+                if (TargetSym)
+                  break;
               }
 
               // Print the labels corresponding to the target if there's any.
