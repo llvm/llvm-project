@@ -96,6 +96,10 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
     static constexpr bool isDynamic(int64_t dSize) {
       return dSize == kDynamicSize;
     }
+    /// Whether the given shape has any size that indicates a dynamic dimension.
+    static bool isDynamicShape(ArrayRef<int64_t> dSizes) {
+      return any_of(dSizes, [](int64_t dSize) { return isDynamic(dSize); });
+    }
     static constexpr bool isDynamicStrideOrOffset(int64_t dStrideOrOffset) {
       return dStrideOrOffset == kDynamicStrideOrOffset;
     }
@@ -156,7 +160,7 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
     /// all dimensions have known size (>= 0).
     bool hasStaticShape() const {
       return $_type.hasRank() &&
-             llvm::none_of($_type.getShape(), ::mlir::ShapedType::isDynamic);
+             !::mlir::ShapedType::isDynamicShape($_type.getShape());
     }
 
     /// Returns if this type has a static shape and the shape is equal to
