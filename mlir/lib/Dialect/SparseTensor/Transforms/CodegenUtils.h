@@ -331,7 +331,9 @@ public:
   /// tensor id (tid) used in related functions.
   /// If isSparseOut is set, loop emitter assume that the sparse output tensor
   /// is empty, and will always generate loops on it based on the dim sizes.
-  explicit SparseTensorLoopEmitter(ValueRange tensors, bool hasOutput = false,
+  explicit SparseTensorLoopEmitter(ValueRange tensors,
+                                   StringAttr loopTag = nullptr,
+                                   bool hasOutput = false,
                                    bool isSparseOut = false);
 
   /// Starts a loop emitting session by generating all the buffers needed to
@@ -413,11 +415,20 @@ public:
   };
   const std::vector<Value> &getValBuffer() const { return valBuffer; };
 
+  constexpr static llvm::StringLiteral getLoopEmitterLoopAttrName() {
+    return llvm::StringLiteral("Emitted from");
+  }
+
 private:
   struct LoopLevelInfo {
     LoopLevelInfo(ArrayRef<size_t> tids, ArrayRef<size_t> dims, Operation *loop,
-                  Value iv)
-        : tids(tids), dims(dims), loop(loop), iv(iv) {}
+                  Value iv, StringAttr loopTag)
+        : tids(tids), dims(dims), loop(loop), iv(iv) {
+      // Attached a special tag to loop emitter generated loop.
+      if (loopTag)
+        loop->setAttr(SparseTensorLoopEmitter::getLoopEmitterLoopAttrName(),
+                      loopTag);
+    }
     // TODO: maybe use a vector<pair> for tid and dim?
     // The set of tensors that the loop is operating on
     const llvm::SmallVector<size_t> tids;
@@ -485,8 +496,12 @@ private:
   void exitCoIterationLoop(OpBuilder &builder, Location loc,
                            MutableArrayRef<Value> reduc);
 
-  // Whether the loop emitter needs to treat the last tensor as the output
-  // tensor.
+  /// A optional string attribute that should be attached to the loop generated
+  /// by loop emitter, it might help following passes to identify loops that
+  /// operates on sparse tensors more easily.
+  StringAttr loopTag;
+  /// Whether the loop emitter needs to treat the last tensor as the output
+  /// tensor.
   bool hasOutput;
   bool isSparseOut;
   /// Input and (optional) output tensors.

@@ -789,7 +789,9 @@ public:
     auto enc = getSparseTensorEncoding(rtp);
 
     // 1. Generates loop for the sparse input.
-    SparseTensorLoopEmitter loopEmitter(ValueRange{input});
+    SparseTensorLoopEmitter loopEmitter(
+        ValueRange{input},
+        StringAttr::get(getContext(), ForeachOp::getOperationName()));
     loopEmitter.initializeLoopEmit(rewriter, loc);
     for (int64_t i = 0; i < rank; i++) {
       // TODO: provide utility function for loop sequences that only contains
