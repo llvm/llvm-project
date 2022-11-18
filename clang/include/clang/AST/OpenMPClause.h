@@ -1722,6 +1722,72 @@ public:
   }
 };
 
+/// This represents 'message' clause in the '#pragma omp error' directive
+///
+/// \code
+/// #pragma omp error message("GNU compiler required.")
+/// \endcode
+/// In this example directive '#pragma omp error' has simple
+/// 'message' clause with user error message of "GNU compiler required.".
+class OMPMessageClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('
+  SourceLocation LParenLoc;
+
+  // Expression of the 'message' clause.
+  Stmt *MessageString = nullptr;
+
+  /// Set message string of the clause.
+  void setMessageString(Expr *MS) { MessageString = MS; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build 'message' clause with message string argument
+  ///
+  /// \param A Argument of the clause (message string).
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPMessageClause(Expr *MS, SourceLocation StartLoc, SourceLocation LParenLoc,
+                   SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_message, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), MessageString(MS) {}
+
+  /// Build an empty clause.
+  OMPMessageClause()
+      : OMPClause(llvm::omp::OMPC_message, SourceLocation(), SourceLocation()) {
+  }
+
+  /// Returns the locaiton of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns message string of the clause.
+  Expr *getMessageString() const { return cast_or_null<Expr>(MessageString); }
+
+  child_range children() {
+    return child_range(&MessageString, &MessageString + 1);
+  }
+
+  const_child_range children() const {
+    return const_child_range(&MessageString, &MessageString + 1);
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_message;
+  }
+};
+
 /// This represents 'schedule' clause in the '#pragma omp ...' directive.
 ///
 /// \code
