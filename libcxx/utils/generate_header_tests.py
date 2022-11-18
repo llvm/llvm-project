@@ -21,7 +21,7 @@ header_restrictions = {
 
     "clocale": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "codecvt": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "fstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+    "fstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_FSTREAM)",
     "iomanip": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "ios": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "iostream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
