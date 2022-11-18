@@ -54,7 +54,7 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
     A shape is a list of sizes corresponding to the dimensions of the container.
     If the number of dimensions in the shape is unknown, the shape is "unranked".
     If the number of dimensions is known, the shape "ranked". The sizes of the
-    dimensions of the shape must be positive, or kDynamicSize (in which case the
+    dimensions of the shape must be positive, or kDynamic (in which case the
     size of the dimension is dynamic, or not statically known).
   }];
   let methods = [
@@ -84,24 +84,17 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
   ];
 
   let extraClassDeclaration = [{
-    // TODO: merge these two special values in a single one used everywhere.
-    // Unfortunately, uses of `-1` have crept deep into the codebase now and are
-    // hard to track.
-    static constexpr int64_t kDynamicSize =
-        std::numeric_limits<int64_t>::min();
-    static constexpr int64_t kDynamicStrideOrOffset =
+    static constexpr int64_t kDynamic =
         std::numeric_limits<int64_t>::min();
 
     /// Whether the given dimension size indicates a dynamic dimension.
-    static constexpr bool isDynamic(int64_t dSize) {
-      return dSize == kDynamicSize;
+    static constexpr bool isDynamic(int64_t dValue) {
+	return dValue == kDynamic;
     }
+
     /// Whether the given shape has any size that indicates a dynamic dimension.
     static bool isDynamicShape(ArrayRef<int64_t> dSizes) {
       return any_of(dSizes, [](int64_t dSize) { return isDynamic(dSize); });
-    }
-    static constexpr bool isDynamicStrideOrOffset(int64_t dStrideOrOffset) {
-      return dStrideOrOffset == kDynamicStrideOrOffset;
     }
 
     /// Return the number of elements present in the given shape.

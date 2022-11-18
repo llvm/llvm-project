@@ -44,7 +44,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   unsigned reductionDim = dims[0];
   SmallVector<int64_t, 4> loopRanges = op.getStaticLoopRanges();
   int64_t reductionDimSize = loopRanges[reductionDim];
-  if (reductionDimSize == ShapedType::kDynamicSize ||
+  if (reductionDimSize == ShapedType::kDynamic ||
       reductionDimSize % ratio != 0)
     return b.notifyMatchFailure(
         op, "Reduction dimension not divisible by split ratio");
@@ -253,7 +253,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   unsigned reductionDimPos = dims[0];
   SmallVector<int64_t> loopRanges = op.getStaticLoopRanges();
   int64_t reductionDimSize = loopRanges[reductionDimPos];
-  if (reductionDimSize == ShapedType::kDynamicSize ||
+  if (reductionDimSize == ShapedType::kDynamic ||
       reductionDimSize % splitFactor != 0 ||
       insertSplitDimension >= loopRanges.size())
     return b.notifyMatchFailure(

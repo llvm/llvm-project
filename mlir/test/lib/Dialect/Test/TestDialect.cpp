@@ -1172,7 +1172,7 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
     return emitOptionalError(location, "only shaped type operands allowed");
   }
   int64_t dim =
-      sval.hasRank() ? sval.getShape().front() : ShapedType::kDynamicSize;
+      sval.hasRank() ? sval.getShape().front() : ShapedType::kDynamic;
   auto type = IntegerType::get(context, 17);
   inferredReturnShapes.push_back(ShapedTypeComponents({dim}, type));
   return success();
