@@ -6521,6 +6521,7 @@ cc_library(
         ":Support",
         ":TranslateLib",
         "//llvm:Core",
+        "//llvm:IRPrinter",
         "//llvm:IRReader",
         "//llvm:Support",
     ],
