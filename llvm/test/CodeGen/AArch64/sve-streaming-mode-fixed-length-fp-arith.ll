@@ -10,7 +10,11 @@ target triple = "aarch64-unknown-linux-gnu"
 define <2 x half> @fadd_v2f16(<2 x half> %op1, <2 x half> %op2) #0 {
 ; CHECK-LABEL: fadd_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fadd <2 x half> %op1, %op2
   ret <2 x half> %res
@@ -19,7 +23,11 @@ define <2 x half> @fadd_v2f16(<2 x half> %op1, <2 x half> %op2) #0 {
 define <4 x half> @fadd_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
 ; CHECK-LABEL: fadd_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fadd <4 x half> %op1, %op2
   ret <4 x half> %res
@@ -28,7 +36,11 @@ define <4 x half> @fadd_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
 define <8 x half> @fadd_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
 ; CHECK-LABEL: fadd_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fadd <8 x half> %op1, %op2
   ret <8 x half> %res
@@ -38,9 +50,10 @@ define void @fadd_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fadd_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    fadd v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    fadd v1.8h, v1.8h, v3.8h
+; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    fadd z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -53,7 +66,11 @@ define void @fadd_v16f16(ptr %a, ptr %b) #0 {
 define <2 x float> @fadd_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
 ; CHECK-LABEL: fadd_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fadd <2 x float> %op1, %op2
   ret <2 x float> %res
@@ -62,7 +79,11 @@ define <2 x float> @fadd_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
 define <4 x float> @fadd_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
 ; CHECK-LABEL: fadd_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fadd <4 x float> %op1, %op2
   ret <4 x float> %res
@@ -72,9 +93,10 @@ define void @fadd_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fadd_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    fadd v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    fadd z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
@@ -87,7 +109,11 @@ define void @fadd_v8f32(ptr %a, ptr %b) #0 {
 define <2 x double> @fadd_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
 ; CHECK-LABEL: fadd_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fadd <2 x double> %op1, %op2
   ret <2 x double> %res
@@ -97,9 +123,10 @@ define void @fadd_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fadd_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    fadd v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    fadd v1.2d, v1.2d, v3.2d
+; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    fadd z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
@@ -116,7 +143,11 @@ define void @fadd_v4f64(ptr %a, ptr %b) #0 {
 define <2 x half> @fdiv_v2f16(<2 x half> %op1, <2 x half> %op2) #0 {
 ; CHECK-LABEL: fdiv_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fdiv v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fdiv z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fdiv <2 x half> %op1, %op2
   ret <2 x half> %res
@@ -125,7 +156,11 @@ define <2 x half> @fdiv_v2f16(<2 x half> %op1, <2 x half> %op2) #0 {
 define <4 x half> @fdiv_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
 ; CHECK-LABEL: fdiv_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fdiv v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fdiv z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fdiv <4 x half> %op1, %op2
   ret <4 x half> %res
@@ -134,7 +169,11 @@ define <4 x half> @fdiv_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
 define <8 x half> @fdiv_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
 ; CHECK-LABEL: fdiv_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fdiv v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fdiv z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fdiv <8 x half> %op1, %op2
   ret <8 x half> %res
@@ -143,10 +182,11 @@ define <8 x half> @fdiv_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
 define void @fdiv_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fdiv_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q3, [x1]
-; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    fdiv v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    fdiv v1.8h, v2.8h, v3.8h
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    fdiv z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    fdiv z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -159,7 +199,11 @@ define void @fdiv_v16f16(ptr %a, ptr %b) #0 {
 define <2 x float> @fdiv_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
 ; CHECK-LABEL: fdiv_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fdiv v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fdiv <2 x float> %op1, %op2
   ret <2 x float> %res
@@ -168,7 +212,11 @@ define <2 x float> @fdiv_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
 define <4 x float> @fdiv_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
 ; CHECK-LABEL: fdiv_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fdiv v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fdiv <4 x float> %op1, %op2
   ret <4 x float> %res
@@ -177,10 +225,11 @@ define <4 x float> @fdiv_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
 define void @fdiv_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fdiv_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q3, [x1]
-; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    fdiv v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    fdiv v1.4s, v2.4s, v3.4s
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    fdiv z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    fdiv z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
@@ -193,7 +242,11 @@ define void @fdiv_v8f32(ptr %a, ptr %b) #0 {
 define <2 x double> @fdiv_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
 ; CHECK-LABEL: fdiv_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fdiv v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fdiv z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fdiv <2 x double> %op1, %op2
   ret <2 x double> %res
@@ -202,10 +255,11 @@ define <2 x double> @fdiv_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
 define void @fdiv_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fdiv_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q3, [x1]
-; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    fdiv v0.2d, v1.2d, v0.2d
-; CHECK-NEXT:    fdiv v1.2d, v2.2d, v3.2d
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    fdiv z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    fdiv z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
@@ -222,8 +276,12 @@ define void @fdiv_v4f64(ptr %a, ptr %b) #0 {
 define <2 x half> @fma_v2f16(<2 x half> %op1, <2 x half> %op2, <2 x half> %op3) #0 {
 ; CHECK-LABEL: fma_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla v2.4h, v1.4h, v0.4h
-; CHECK-NEXT:    fmov d0, d2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fmad z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x half> @llvm.fma.v2f16(<2 x half> %op1, <2 x half> %op2, <2 x half> %op3)
   ret <2 x half> %res
@@ -232,8 +290,12 @@ define <2 x half> @fma_v2f16(<2 x half> %op1, <2 x half> %op2, <2 x half> %op3) 
 define <4 x half> @fma_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x half> %op3) #0 {
 ; CHECK-LABEL: fma_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla v2.4h, v1.4h, v0.4h
-; CHECK-NEXT:    fmov d0, d2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fmad z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x half> @llvm.fma.v4f16(<4 x half> %op1, <4 x half> %op2, <4 x half> %op3)
   ret <4 x half> %res
@@ -242,8 +304,12 @@ define <4 x half> @fma_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x half> %op3) 
 define <8 x half> @fma_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3) #0 {
 ; CHECK-LABEL: fma_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla v2.8h, v1.8h, v0.8h
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fmad z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x half> @llvm.fma.v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3)
   ret <8 x half> %res
@@ -253,11 +319,13 @@ define void @fma_v16f16(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fma_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    ldp q4, q5, [x2]
-; CHECK-NEXT:    fmla v4.8h, v0.8h, v1.8h
-; CHECK-NEXT:    fmla v5.8h, v3.8h, v2.8h
-; CHECK-NEXT:    stp q4, q5, [x0]
+; CHECK-NEXT:    fmad z0.h, p0/m, z1.h, z4.h
+; CHECK-NEXT:    movprfx z1, z5
+; CHECK-NEXT:    fmla z1.h, p0/m, z2.h, z3.h
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %op2 = load <16 x half>, ptr %b
@@ -270,8 +338,12 @@ define void @fma_v16f16(ptr %a, ptr %b, ptr %c) #0 {
 define <2 x float> @fma_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x float> %op3) #0 {
 ; CHECK-LABEL: fma_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla v2.2s, v1.2s, v0.2s
-; CHECK-NEXT:    fmov d0, d2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x float> @llvm.fma.v2f32(<2 x float> %op1, <2 x float> %op2, <2 x float> %op3)
   ret <2 x float> %res
@@ -280,8 +352,12 @@ define <2 x float> @fma_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x float> %o
 define <4 x float> @fma_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x float> %op3) #0 {
 ; CHECK-LABEL: fma_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla v2.4s, v1.4s, v0.4s
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x float> @llvm.fma.v4f32(<4 x float> %op1, <4 x float> %op2, <4 x float> %op3)
   ret <4 x float> %res
@@ -291,11 +367,13 @@ define void @fma_v8f32(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fma_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    ldp q4, q5, [x2]
-; CHECK-NEXT:    fmla v4.4s, v0.4s, v1.4s
-; CHECK-NEXT:    fmla v5.4s, v3.4s, v2.4s
-; CHECK-NEXT:    stp q4, q5, [x0]
+; CHECK-NEXT:    fmad z0.s, p0/m, z1.s, z4.s
+; CHECK-NEXT:    movprfx z1, z5
+; CHECK-NEXT:    fmla z1.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
   %op2 = load <8 x float>, ptr %b
@@ -308,8 +386,12 @@ define void @fma_v8f32(ptr %a, ptr %b, ptr %c) #0 {
 define <2 x double> @fma_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x double> %op3) #0 {
 ; CHECK-LABEL: fma_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla v2.2d, v1.2d, v0.2d
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fmad z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x double> @llvm.fma.v2f64(<2 x double> %op1, <2 x double> %op2, <2 x double> %op3)
   ret <2 x double> %res
@@ -319,11 +401,13 @@ define void @fma_v4f64(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fma_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    ldp q4, q5, [x2]
-; CHECK-NEXT:    fmla v4.2d, v0.2d, v1.2d
-; CHECK-NEXT:    fmla v5.2d, v3.2d, v2.2d
-; CHECK-NEXT:    stp q4, q5, [x0]
+; CHECK-NEXT:    fmad z0.d, p0/m, z1.d, z4.d
+; CHECK-NEXT:    movprfx z1, z5
+; CHECK-NEXT:    fmla z1.d, p0/m, z2.d, z3.d
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
   %op2 = load <4 x double>, ptr %b
@@ -473,7 +557,10 @@ define void @fmul_v4f64(ptr %a, ptr %b) #0 {
 define <2 x half> @fneg_v2f16(<2 x half> %op) #0 {
 ; CHECK-LABEL: fneg_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fneg v0.4h, v0.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fneg <2 x half> %op
   ret <2 x half> %res
@@ -482,7 +569,10 @@ define <2 x half> @fneg_v2f16(<2 x half> %op) #0 {
 define <4 x half> @fneg_v4f16(<4 x half> %op) #0 {
 ; CHECK-LABEL: fneg_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fneg v0.4h, v0.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fneg <4 x half> %op
   ret <4 x half> %res
@@ -491,7 +581,10 @@ define <4 x half> @fneg_v4f16(<4 x half> %op) #0 {
 define <8 x half> @fneg_v8f16(<8 x half> %op) #0 {
 ; CHECK-LABEL: fneg_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fneg v0.8h, v0.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fneg <8 x half> %op
   ret <8 x half> %res
@@ -501,8 +594,9 @@ define void @fneg_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fneg_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fneg v0.8h, v0.8h
-; CHECK-NEXT:    fneg v1.8h, v1.8h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
+; CHECK-NEXT:    fneg z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op = load <16 x half>, ptr %a
@@ -514,7 +608,10 @@ define void @fneg_v16f16(ptr %a, ptr %b) #0 {
 define <2 x float> @fneg_v2f32(<2 x float> %op) #0 {
 ; CHECK-LABEL: fneg_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fneg v0.2s, v0.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    fneg z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fneg <2 x float> %op
   ret <2 x float> %res
@@ -523,7 +620,10 @@ define <2 x float> @fneg_v2f32(<2 x float> %op) #0 {
 define <4 x float> @fneg_v4f32(<4 x float> %op) #0 {
 ; CHECK-LABEL: fneg_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fneg v0.4s, v0.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    fneg z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fneg <4 x float> %op
   ret <4 x float> %res
@@ -533,8 +633,9 @@ define void @fneg_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: fneg_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fneg v0.4s, v0.4s
-; CHECK-NEXT:    fneg v1.4s, v1.4s
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    fneg z0.s, p0/m, z0.s
+; CHECK-NEXT:    fneg z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op = load <8 x float>, ptr %a
@@ -546,7 +647,10 @@ define void @fneg_v8f32(ptr %a) #0 {
 define <2 x double> @fneg_v2f64(<2 x double> %op) #0 {
 ; CHECK-LABEL: fneg_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fneg v0.2d, v0.2d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fneg z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fneg <2 x double> %op
   ret <2 x double> %res
@@ -556,8 +660,9 @@ define void @fneg_v4f64(ptr %a) #0 {
 ; CHECK-LABEL: fneg_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fneg v0.2d, v0.2d
-; CHECK-NEXT:    fneg v1.2d, v1.2d
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fneg z0.d, p0/m, z0.d
+; CHECK-NEXT:    fneg z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op = load <4 x double>, ptr %a
@@ -573,7 +678,10 @@ define void @fneg_v4f64(ptr %a) #0 {
 define <2 x half> @fsqrt_v2f16(<2 x half> %op) #0 {
 ; CHECK-LABEL: fsqrt_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsqrt v0.4h, v0.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x half> @llvm.sqrt.v2f16(<2 x half> %op)
   ret <2 x half> %res
@@ -582,7 +690,10 @@ define <2 x half> @fsqrt_v2f16(<2 x half> %op) #0 {
 define <4 x half> @fsqrt_v4f16(<4 x half> %op) #0 {
 ; CHECK-LABEL: fsqrt_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsqrt v0.4h, v0.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x half> @llvm.sqrt.v4f16(<4 x half> %op)
   ret <4 x half> %res
@@ -591,7 +702,10 @@ define <4 x half> @fsqrt_v4f16(<4 x half> %op) #0 {
 define <8 x half> @fsqrt_v8f16(<8 x half> %op) #0 {
 ; CHECK-LABEL: fsqrt_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsqrt v0.8h, v0.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x half> @llvm.sqrt.v8f16(<8 x half> %op)
   ret <8 x half> %res
@@ -601,8 +715,9 @@ define void @fsqrt_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fsqrt_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fsqrt v0.8h, v0.8h
-; CHECK-NEXT:    fsqrt v1.8h, v1.8h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z0.h
+; CHECK-NEXT:    fsqrt z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op = load <16 x half>, ptr %a
@@ -614,7 +729,10 @@ define void @fsqrt_v16f16(ptr %a, ptr %b) #0 {
 define <2 x float> @fsqrt_v2f32(<2 x float> %op) #0 {
 ; CHECK-LABEL: fsqrt_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsqrt v0.2s, v0.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %op)
   ret <2 x float> %res
@@ -623,7 +741,10 @@ define <2 x float> @fsqrt_v2f32(<2 x float> %op) #0 {
 define <4 x float> @fsqrt_v4f32(<4 x float> %op) #0 {
 ; CHECK-LABEL: fsqrt_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsqrt v0.4s, v0.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %op)
   ret <4 x float> %res
@@ -633,8 +754,9 @@ define void @fsqrt_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: fsqrt_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fsqrt v0.4s, v0.4s
-; CHECK-NEXT:    fsqrt v1.4s, v1.4s
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z0.s
+; CHECK-NEXT:    fsqrt z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op = load <8 x float>, ptr %a
@@ -646,7 +768,10 @@ define void @fsqrt_v8f32(ptr %a) #0 {
 define <2 x double> @fsqrt_v2f64(<2 x double> %op) #0 {
 ; CHECK-LABEL: fsqrt_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsqrt v0.2d, v0.2d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fsqrt z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %op)
   ret <2 x double> %res
@@ -656,8 +781,9 @@ define void @fsqrt_v4f64(ptr %a) #0 {
 ; CHECK-LABEL: fsqrt_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fsqrt v0.2d, v0.2d
-; CHECK-NEXT:    fsqrt v1.2d, v1.2d
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fsqrt z0.d, p0/m, z0.d
+; CHECK-NEXT:    fsqrt z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op = load <4 x double>, ptr %a
@@ -673,7 +799,11 @@ define void @fsqrt_v4f64(ptr %a) #0 {
 define <2 x half> @fsub_v2f16(<2 x half> %op1, <2 x half> %op2) #0 {
 ; CHECK-LABEL: fsub_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsub v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fsub z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fsub <2 x half> %op1, %op2
   ret <2 x half> %res
@@ -682,7 +812,11 @@ define <2 x half> @fsub_v2f16(<2 x half> %op1, <2 x half> %op2) #0 {
 define <4 x half> @fsub_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
 ; CHECK-LABEL: fsub_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsub v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fsub z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fsub <4 x half> %op1, %op2
   ret <4 x half> %res
@@ -691,7 +825,11 @@ define <4 x half> @fsub_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
 define <8 x half> @fsub_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
 ; CHECK-LABEL: fsub_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fsub z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fsub <8 x half> %op1, %op2
   ret <8 x half> %res
@@ -701,9 +839,10 @@ define void @fsub_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fsub_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    fsub v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    fsub v1.8h, v1.8h, v3.8h
+; CHECK-NEXT:    fsub z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    fsub z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -716,7 +855,11 @@ define void @fsub_v16f16(ptr %a, ptr %b) #0 {
 define <2 x float> @fsub_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
 ; CHECK-LABEL: fsub_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsub v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fsub <2 x float> %op1, %op2
   ret <2 x float> %res
@@ -725,7 +868,11 @@ define <2 x float> @fsub_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
 define <4 x float> @fsub_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
 ; CHECK-LABEL: fsub_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fsub <4 x float> %op1, %op2
   ret <4 x float> %res
@@ -735,9 +882,10 @@ define void @fsub_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fsub_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    fsub v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    fsub v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    fsub z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
@@ -750,7 +898,11 @@ define void @fsub_v8f32(ptr %a, ptr %b) #0 {
 define <2 x double> @fsub_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
 ; CHECK-LABEL: fsub_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsub v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fsub z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fsub <2 x double> %op1, %op2
   ret <2 x double> %res
@@ -760,9 +912,10 @@ define void @fsub_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fsub_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    fsub v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    fsub v1.2d, v1.2d, v3.2d
+; CHECK-NEXT:    fsub z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    fsub z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
@@ -779,7 +932,10 @@ define void @fsub_v4f64(ptr %a, ptr %b) #0 {
 define <2 x half> @fabs_v2f16(<2 x half> %op) #0 {
 ; CHECK-LABEL: fabs_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fabs v0.4h, v0.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    fabs z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x half> @llvm.fabs.v2f16(<2 x half> %op)
   ret <2 x half> %res
@@ -788,7 +944,10 @@ define <2 x half> @fabs_v2f16(<2 x half> %op) #0 {
 define <4 x half> @fabs_v4f16(<4 x half> %op) #0 {
 ; CHECK-LABEL: fabs_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fabs v0.4h, v0.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    fabs z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x half> @llvm.fabs.v4f16(<4 x half> %op)
   ret <4 x half> %res
@@ -797,7 +956,10 @@ define <4 x half> @fabs_v4f16(<4 x half> %op) #0 {
 define <8 x half> @fabs_v8f16(<8 x half> %op) #0 {
 ; CHECK-LABEL: fabs_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fabs v0.8h, v0.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    fabs z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x half> @llvm.fabs.v8f16(<8 x half> %op)
   ret <8 x half> %res
@@ -807,8 +969,9 @@ define void @fabs_v16f16(ptr %a) #0 {
 ; CHECK-LABEL: fabs_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fabs v0.8h, v0.8h
-; CHECK-NEXT:    fabs v1.8h, v1.8h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    fabs z0.h, p0/m, z0.h
+; CHECK-NEXT:    fabs z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op = load <16 x half>, ptr %a
@@ -820,7 +983,10 @@ define void @fabs_v16f16(ptr %a) #0 {
 define <2 x float> @fabs_v2f32(<2 x float> %op) #0 {
 ; CHECK-LABEL: fabs_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fabs v0.2s, v0.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    fabs z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x float> @llvm.fabs.v2f32(<2 x float> %op)
   ret <2 x float> %res
@@ -829,7 +995,10 @@ define <2 x float> @fabs_v2f32(<2 x float> %op) #0 {
 define <4 x float> @fabs_v4f32(<4 x float> %op) #0 {
 ; CHECK-LABEL: fabs_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fabs v0.4s, v0.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    fabs z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x float> @llvm.fabs.v4f32(<4 x float> %op)
   ret <4 x float> %res
@@ -839,8 +1008,9 @@ define void @fabs_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: fabs_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fabs v0.4s, v0.4s
-; CHECK-NEXT:    fabs v1.4s, v1.4s
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    fabs z0.s, p0/m, z0.s
+; CHECK-NEXT:    fabs z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op = load <8 x float>, ptr %a
@@ -852,7 +1022,10 @@ define void @fabs_v8f32(ptr %a) #0 {
 define <2 x double> @fabs_v2f64(<2 x double> %op) #0 {
 ; CHECK-LABEL: fabs_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fabs v0.2d, v0.2d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fabs z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x double> @llvm.fabs.v2f64(<2 x double> %op)
   ret <2 x double> %res
@@ -862,8 +1035,9 @@ define void @fabs_v4f64(ptr %a) #0 {
 ; CHECK-LABEL: fabs_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fabs v0.2d, v0.2d
-; CHECK-NEXT:    fabs v1.2d, v1.2d
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fabs z0.d, p0/m, z0.d
+; CHECK-NEXT:    fabs z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op = load <4 x double>, ptr %a
