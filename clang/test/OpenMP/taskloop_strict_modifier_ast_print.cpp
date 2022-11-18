@@ -56,6 +56,46 @@ T tmain(T argc) {
   // CHECK-NEXT: #pragma omp cancel taskgroup
   // CHECK-NEXT: #pragma omp cancellation point taskgroup
   // CHECK-NEXT: foo();
+
+#pragma omp taskgroup
+#pragma omp taskloop num_tasks(strict: N)
+  // CHECK: #pragma omp taskgroup
+  // CHECK-NEXT: #pragma omp taskloop num_tasks(strict: N)
+  for (int i = 0; i < 2; ++i)
+    a = 2;
+// CHECK-NEXT: for (int i = 0; i < 2; ++i)
+// CHECK-NEXT: a = 2;
+#pragma omp parallel
+#pragma omp taskloop num_tasks(strict: N)
+  for (int i = 0; i < 2; ++i)
+    for (int j = 0; j < 2; ++j)
+      for (int j = 0; j < 2; ++j)
+        for (int j = 0; j < 2; ++j)
+          for (int j = 0; j < 2; ++j)
+  for (int i = 0; i < 2; ++i)
+    for (int j = 0; j < 2; ++j)
+      for (int j = 0; j < 2; ++j)
+        for (int j = 0; j < 2; ++j)
+          for (int j = 0; j < 2; ++j) {
+#pragma omp cancel taskgroup
+#pragma omp cancellation point taskgroup
+            foo();
+          }
+  // CHECK-NEXT: #pragma omp parallel
+  // CHECK-NEXT: #pragma omp taskloop num_tasks(strict: N)
+  // CHECK-NEXT: for (int i = 0; i < 2; ++i)
+  // CHECK-NEXT: for (int j = 0; j < 2; ++j)
+  // CHECK-NEXT: for (int j = 0; j < 2; ++j)
+  // CHECK-NEXT: for (int j = 0; j < 2; ++j)
+  // CHECK-NEXT: for (int j = 0; j < 2; ++j)
+  // CHECK-NEXT: for (int i = 0; i < 2; ++i)
+  // CHECK-NEXT: for (int j = 0; j < 2; ++j)
+  // CHECK-NEXT: for (int j = 0; j < 2; ++j)
+  // CHECK-NEXT: for (int j = 0; j < 2; ++j)
+  // CHECK-NEXT: for (int j = 0; j < 2; ++j) {
+  // CHECK-NEXT: #pragma omp cancel taskgroup
+  // CHECK-NEXT: #pragma omp cancellation point taskgroup
+  // CHECK-NEXT: foo();
   return T();
 }
 
@@ -133,6 +173,77 @@ int main(int argc, char **argv) {
    for (int i = 0; i < 10; ++i)
      foo();
    // CHECK-NEXT: #pragma omp parallel master taskloop simd grainsize(strict: argc)
+   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
+   // CHECK-NEXT: foo();
+
+#pragma omp taskloop num_tasks(strict: argc)
+  for (int i = 0; i < 10; ++i)
+    foo();
+  // CHECK: #pragma omp taskloop num_tasks(strict: argc)
+  // CHECK-NEXT: for (int i = 0; i < 10; ++i)
+  // CHECK-NEXT: foo();
+
+#pragma omp parallel
+#pragma omp masked taskloop num_tasks(strict: argc)
+  for (int i = 0; i < 10; ++i)
+    foo();
+  // CHECK: #pragma omp parallel
+  // CHECK-NEXT: #pragma omp masked taskloop num_tasks(strict: argc)
+  // CHECK-NEXT: for (int i = 0; i < 10; ++i)
+  // CHECK-NEXT: foo();
+
+#pragma omp parallel
+#pragma omp masked taskloop simd num_tasks(strict: argc)
+   for (int i = 0; i < 10; ++i)
+     foo();
+   // CHECK: #pragma omp parallel
+   // CHECK-NEXT: #pragma omp masked taskloop simd num_tasks(strict: argc)
+   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
+   // CHECK-NEXT: foo();
+
+#pragma omp parallel masked taskloop num_tasks(strict: argc)
+  for (int i = 0; i < 10; ++i)
+    foo();
+  // CHECK-NEXT: #pragma omp parallel masked taskloop num_tasks(strict: argc)
+  // CHECK-NEXT: for (int i = 0; i < 10; ++i)
+  // CHECK-NEXT: foo();
+
+#pragma omp parallel masked taskloop simd num_tasks(strict: argc)
+   for (int i = 0; i < 10; ++i)
+     foo();
+   // CHECK-NEXT: #pragma omp parallel masked taskloop simd num_tasks(strict: argc)
+   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
+   // CHECK-NEXT: foo();
+
+#pragma omp parallel
+#pragma omp master taskloop num_tasks(strict: argc)
+  for (int i = 0; i < 10; ++i)
+    foo();
+  // CHECK: #pragma omp parallel
+  // CHECK-NEXT: #pragma omp master taskloop num_tasks(strict: argc)
+  // CHECK-NEXT: for (int i = 0; i < 10; ++i)
+  // CHECK-NEXT: foo();
+
+#pragma omp parallel
+#pragma omp master taskloop simd num_tasks(strict: argc)
+   for (int i = 0; i < 10; ++i)
+     foo();
+   // CHECK: #pragma omp parallel
+   // CHECK-NEXT: #pragma omp master taskloop simd num_tasks(strict: argc)
+   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
+   // CHECK-NEXT: foo();
+
+#pragma omp parallel master taskloop num_tasks(strict: argc)
+  for (int i = 0; i < 10; ++i)
+    foo();
+  // CHECK-NEXT: #pragma omp parallel master taskloop num_tasks(strict: argc)
+  // CHECK-NEXT: for (int i = 0; i < 10; ++i)
+  // CHECK-NEXT: foo();
+
+#pragma omp parallel master taskloop simd num_tasks(strict: argc)
+   for (int i = 0; i < 10; ++i)
+     foo();
+   // CHECK-NEXT: #pragma omp parallel master taskloop simd num_tasks(strict: argc)
    // CHECK-NEXT: for (int i = 0; i < 10; ++i)
    // CHECK-NEXT: foo();
 

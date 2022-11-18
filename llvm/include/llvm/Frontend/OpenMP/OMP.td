@@ -246,9 +246,18 @@ def OMPC_GrainSize : Clause<"grainsize"> {
 def OMPC_NoGroup : Clause<"nogroup"> {
   let clangClass = "OMPNogroupClause";
 }
+
+def OMP_NUMTASKS_Strict : ClauseVal<"strict", 1, 1> {}
+def OMP_NUMTASKS_Unknown : ClauseVal<"unkonwn", 2, 0> { let isDefault = 1; }
+
 def OMPC_NumTasks : Clause<"num_tasks"> {
   let clangClass = "OMPNumTasksClause";
   let flangClass = "ScalarIntExpr";
+  let enumClauseValue = "NumTasksType";
+  let allowedClauseValues = [
+    OMP_NUMTASKS_Strict,
+    OMP_NUMTASKS_Unknown
+  ];
 }
 def OMPC_Hint : Clause<"hint"> {
   let clangClass = "OMPHintClause";
