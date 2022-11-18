@@ -37,8 +37,8 @@ StmtResult Parser::ParseStatement(SourceLocation *TrailingElseLoc,
 
   // We may get back a null statement if we found a #pragma. Keep going until
   // we get an actual statement.
+  StmtVector Stmts;
   do {
-    StmtVector Stmts;
     Res = ParseStatementOrDeclaration(Stmts, StmtCtx, TrailingElseLoc);
   } while (!Res.isInvalid() && !Res.get());
 
