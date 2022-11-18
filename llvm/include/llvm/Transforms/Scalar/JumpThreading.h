@@ -75,15 +75,17 @@ enum ConstantPreference { WantInteger, WantBlockAddress };
 /// In this case, the unconditional branch at the end of the first if can be
 /// revectored to the false side of the second if.
 class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
-  TargetLibraryInfo *TLI;
-  TargetTransformInfo *TTI;
-  LazyValueInfo *LVI;
-  AAResults *AA;
-  DomTreeUpdater *DTU;
-  std::unique_ptr<BlockFrequencyInfo> BFI;
-  std::unique_ptr<BranchProbabilityInfo> BPI;
-  bool HasProfileData = false;
+  Function *F = nullptr;
+  FunctionAnalysisManager *FAM = nullptr;
+  TargetLibraryInfo *TLI = nullptr;
+  TargetTransformInfo *TTI = nullptr;
+  LazyValueInfo *LVI = nullptr;
+  AAResults *AA = nullptr;
+  DomTreeUpdater *DTU = nullptr;
+  Optional<BlockFrequencyInfo *> BFI = None;
+  Optional<BranchProbabilityInfo *> BPI = None;
   bool HasGuards = false;
+  bool HasProfile = false;
 #ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
 #else
@@ -97,17 +99,13 @@ public:
   JumpThreadingPass(int T = -1);
 
   // Glue for old PM.
-  bool runImpl(Function &F, TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
+  bool runImpl(Function &F, FunctionAnalysisManager *FAM,
+               TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
                LazyValueInfo *LVI, AAResults *AA, DomTreeUpdater *DTU,
-               bool HasProfileData, std::unique_ptr<BlockFrequencyInfo> BFI,
-               std::unique_ptr<BranchProbabilityInfo> BPI);
+               Optional<BlockFrequencyInfo *> BFI,
+               Optional<BranchProbabilityInfo *> BPI);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  void releaseMemory() {
-    BFI.reset();
-    BPI.reset();
-  }
 
   void findLoopHeaders(Function &F);
   bool processBlock(BasicBlock *BB);
@@ -171,6 +169,26 @@ private:
                                     BasicBlock *NewBB, BasicBlock *SuccBB);
   /// Check if the block has profile metadata for its outgoing edges.
   bool doesBlockHaveProfileData(BasicBlock *BB);
+
+  /// Returns an existing instance of BPI if any, otherwise nullptr. By
+  /// "existing" we mean either cached result provided by FunctionAnalysisManger
+  /// or created by preceding call to 'getOrCreateBPI'.
+  BranchProbabilityInfo *getBPI();
+
+  /// Returns an existing instance of BFI if any, otherwise nullptr. By
+  /// "existing" we mean either cached result provided by FunctionAnalysisManger
+  /// or created by preceding call to 'getOrCreateBFI'.
+  BlockFrequencyInfo *getBFI();
+
+  /// Returns an existing instance of BPI if any, otherwise:
+  ///   if 'HasProfile' is true creates new instance through
+  ///   FunctionAnalysisManager, otherwise nullptr.
+  BranchProbabilityInfo *getOrCreateBPI();
+
+  /// Returns an existing instance of BFI if any, otherwise:
+  ///   if 'HasProfile' is true creates new instance through
+  ///   FunctionAnalysisManager, otherwise nullptr.
+  BlockFrequencyInfo *getOrCreateBFI();
 };
 
 } // end namespace llvm

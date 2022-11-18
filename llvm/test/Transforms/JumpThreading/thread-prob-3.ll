@@ -1,4 +1,6 @@
-; RUN: opt -debug-only=branch-prob -jump-threading -S %s 2>&1 | FileCheck %s
+; RUN: opt -debug-only=branch-prob -enable-new-pm=false -branch-prob -jump-threading -S %s 2>&1 | FileCheck %s
+; RUN: opt -debug-only=branch-prob -passes="require<branch-prob>,jump-threading" -S %s 2>&1 | FileCheck %s
+; RUN: opt -debug-only=branch-prob -passes=jump-threading -S %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOBPI
 ; REQUIRES: asserts
 
 ; Make sure that we set edge probabilities for bb2 as we
@@ -7,6 +9,7 @@
 ; CHECK-LABEL: ---- Branch Probability Info : foo
 ; CHECK:      set edge bb2 -> 0 successor probability to 0x80000000 / 0x80000000 = 100.00%
 ; CHECK-NEXT: set edge bb2 -> 1 successor probability to 0x00000000 / 0x80000000 = 0.00%
+; CHECK-NOBPI-NOT: ---- Branch Probability Info : foo
 define void @foo(i1 %f0, i1 %f1, i1 %f2) !prof !{!"function_entry_count", i64 0} {
 ; CHECK-LABEL: @foo(
 bb1:
