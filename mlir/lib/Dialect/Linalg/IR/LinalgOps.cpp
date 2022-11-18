@@ -1543,13 +1543,7 @@ LogicalResult BroadcastOp::verify() {
   }
 
   for (const auto &[idx, inputDimIdx] : llvm::enumerate(reverseDimMap)) {
-    if (inputDimIdx == kUnmappedDim) {
-      // This dimensions is being added. Should be statically known.
-      if (ShapedType::isDynamic(initShape[idx]))
-        return emitOpError()
-               << "init dim " << idx
-               << " can't be dynamic, because it's not matched to input";
-    } else {
+    if (inputDimIdx != kUnmappedDim) {
       // This dimensions is mapped from the input. Init and input dims should
       // match.
       if (inputShape[inputDimIdx] != initShape[idx])
