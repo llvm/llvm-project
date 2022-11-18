@@ -1682,6 +1682,7 @@ namespace llvm {
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const;
     void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
+    void emitCmpArithAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
 
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;

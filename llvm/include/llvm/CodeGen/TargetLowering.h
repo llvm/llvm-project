@@ -258,6 +258,8 @@ public:
     MaskedIntrinsic,  // Use a target-specific intrinsic for the LL/SC loop.
     BitTestIntrinsic, // Use a target-specific intrinsic for special bit
                       // operations; used by X86.
+    CmpArithIntrinsic,// Use a target-specific intrinsic for special compare
+                      // operations; used by X86.
     Expand,           // Generic expansion in terms of other atomic operations.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
@@ -2016,6 +2018,14 @@ public:
   virtual void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
     llvm_unreachable(
         "Bit test atomicrmw expansion unimplemented on this target");
+  }
+
+  /// Perform a atomicrmw which the result is only used by comparison, using a
+  /// target-specific intrinsic. This represents the combined atomic and compare
+  /// intrinsic which will be lowered at a late stage by the backend.
+  virtual void emitCmpArithAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
+    llvm_unreachable(
+        "Compare arith atomicrmw expansion unimplemented on this target");
   }
 
   /// Perform a masked cmpxchg using a target-specific intrinsic. This
