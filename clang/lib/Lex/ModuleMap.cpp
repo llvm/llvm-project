@@ -962,7 +962,8 @@ static void inferFrameworkLink(Module *Mod, const DirectoryEntry *FrameworkDir,
   // for both before we give up.
   for (const char *extension : {"", ".tbd"}) {
     llvm::sys::path::replace_extension(LibName, extension);
-    if (FileMgr.getFile(LibName)) {
+    // Use VFS exists to avoid depending on the file's contents in cached builds
+    if (FileMgr.getVirtualFileSystem().exists(LibName)) {
       Mod->LinkLibraries.push_back(Module::LinkLibrary(Mod->Name,
                                                        /*IsFramework=*/true));
       return;

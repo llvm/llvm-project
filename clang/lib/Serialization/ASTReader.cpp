@@ -2961,6 +2961,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
     case MODULE_CACHE_KEY:
       F.ModuleCacheKey = Blob.str();
       break;
+
+    case CASFS_ROOT_ID:
+      F.CASFileSystemRootID = Blob.str();
+      break;
     }
   }
 }
@@ -5387,7 +5391,8 @@ bool ASTReader::readASTFileControlBlock(
         std::string Filename = ReadString(Record, Idx);
         ResolveImportedPath(Filename, ModuleDir);
         std::string CacheKey = ReadString(Record, Idx);
-        Listener.readModuleCacheKey(ModuleName, Filename, CacheKey);
+        if (!CacheKey.empty())
+          Listener.readModuleCacheKey(ModuleName, Filename, CacheKey);
         Listener.visitImport(ModuleName, Filename);
       }
       break;
@@ -5602,6 +5607,8 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
         CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
         if (!F.ModuleCacheKey.empty())
           CurrentModule->setModuleCacheKey(F.ModuleCacheKey);
+        if (!F.CASFileSystemRootID.empty())
+          CurrentModule->setCASFileSystemRootID(F.CASFileSystemRootID);
       }
 
       CurrentModule->Kind = Kind;

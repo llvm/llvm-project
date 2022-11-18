@@ -363,6 +363,10 @@ enum ControlRecordTypes {
 
   /// Record code for the (optional) \c ActionCache  key for this module.
   MODULE_CACHE_KEY,
+
+  /// Record code for the (optional) CAS filesystem root ID for implicit modules
+  /// built with the dependency scanner.
+  CASFS_ROOT_ID,
 };
 
 /// Record types that occur within the options block inside

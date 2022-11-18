@@ -17,6 +17,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -68,11 +69,13 @@ using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
 /// files.
 class PrebuiltModuleListener : public ASTReaderListener {
 public:
-  PrebuiltModuleListener(PrebuiltModuleFilesT &PrebuiltModuleFiles,
+  PrebuiltModuleListener(CompilerInstance &CI,
+                         PrebuiltModuleFilesT &PrebuiltModuleFiles,
                          llvm::StringSet<> &InputFiles, bool VisitInputFiles,
                          llvm::SmallVector<std::string> &NewModuleFiles)
-      : PrebuiltModuleFiles(PrebuiltModuleFiles), InputFiles(InputFiles),
-        VisitInputFiles(VisitInputFiles), NewModuleFiles(NewModuleFiles) {}
+      : CI(CI), PrebuiltModuleFiles(PrebuiltModuleFiles),
+        InputFiles(InputFiles), VisitInputFiles(VisitInputFiles),
+        NewModuleFiles(NewModuleFiles) {}
 
   bool needsImportVisitation() const override { return true; }
   bool needsInputFileVisitation() override { return VisitInputFiles; }
@@ -89,7 +92,16 @@ public:
     return true;
   }
 
+  bool readModuleCacheKey(StringRef ModuleName, StringRef Filename,
+                          StringRef CacheKey) override {
+    CI.getFrontendOpts().ModuleCacheKeys.emplace_back(std::string(Filename),
+                                                      std::string(CacheKey));
+    // FIXME: add name/path of the importing module?
+    return CI.addCachedModuleFile(Filename, CacheKey, "imported module");
+  }
+
 private:
+  CompilerInstance &CI;
   PrebuiltModuleFilesT &PrebuiltModuleFiles;
   llvm::StringSet<> &InputFiles;
   bool VisitInputFiles;
@@ -105,7 +117,7 @@ static void visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                 bool VisitInputFiles) {
   // List of module files to be processed.
   llvm::SmallVector<std::string> Worklist{PrebuiltModuleFilename.str()};
-  PrebuiltModuleListener Listener(ModuleFiles, InputFiles, VisitInputFiles,
+  PrebuiltModuleListener Listener(CI, ModuleFiles, InputFiles, VisitInputFiles,
                                   Worklist);
 
   while (!Worklist.empty())
@@ -198,6 +210,76 @@ public:
   }
 };
 
+/// See \c WrapScanModuleBuildAction.
+class WrapScanModuleBuildConsumer : public ASTConsumer {
+public:
+  WrapScanModuleBuildConsumer(CompilerInstance &CI, Module &M,
+                              llvm::cas::CachingOnDiskFileSystem &FS)
+      : M(M), FS(FS) {}
+
+  void HandleTranslationUnit(ASTContext &Ctx) override {
+    auto Tree = FS.createTreeFromNewAccesses();
+    if (Tree)
+      M.setCASFileSystemRootID(Tree->getID().toString());
+    else
+      Ctx.getDiagnostics().Report(diag::err_cas_depscan_failed)
+          << toString(Tree.takeError());
+  }
+
+private:
+  Module &M;
+  llvm::cas::CachingOnDiskFileSystem &FS;
+};
+
+/// A wrapper for implicit module build actions in the scanner.
+///
+/// Captures per-module information such as the CAS filesystem root ID for
+/// module inputs.
+class WrapScanModuleBuildAction : public WrapperFrontendAction {
+public:
+  WrapScanModuleBuildAction(
+      std::unique_ptr<FrontendAction> WrappedAction,
+      IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS)
+      : WrapperFrontendAction(std::move(WrappedAction)), FS(std::move(FS)) {
+    assert(this->FS);
+  }
+
+private:
+  bool BeginInvocation(CompilerInstance &CI) override {
+    // FIXME: exclude unnecessary files such as implicit module pcms from the
+    // scanner itself. These are wasteful and cause spurious cache misses.
+    FS->trackNewAccesses();
+    // Normally this would be looked up while creating the VFS, but implicit
+    // modules share their VFS.
+    for (const auto &File : CI.getHeaderSearchOpts().VFSOverlayFiles)
+      (void)FS->status(File);
+    // Exclude the module cache from tracking. The implicit build pcms should
+    // not be needed after scanning.
+    if (!CI.getHeaderSearchOpts().ModuleCachePath.empty())
+      (void)FS->excludeFromTracking(CI.getHeaderSearchOpts().ModuleCachePath);
+    return WrapperFrontendAction::BeginInvocation(CI);
+  }
+
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override {
+    auto OtherConsumer = WrapperFrontendAction::CreateASTConsumer(CI, InFile);
+    if (!OtherConsumer)
+      return nullptr;
+    Module *M = CI.getPreprocessor().getCurrentModule();
+    assert(M && "WrapScanModuleBuildAction should only be used with module");
+    if (!M)
+      return OtherConsumer;
+    auto Consumer = std::make_unique<WrapScanModuleBuildConsumer>(CI, *M, *FS);
+    std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+    Consumers.push_back(std::move(Consumer));
+    Consumers.push_back(std::move(OtherConsumer));
+    return std::make_unique<MultiplexConsumer>(std::move(Consumers));
+  }
+
+private:
+  llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
+};
+
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
 class DependencyScanningAction : public tooling::ToolAction {
@@ -240,11 +322,6 @@ public:
       return true;
     }
 
-    if (CacheFS) {
-      CacheFS->trackNewAccesses();
-      CacheFS->setCurrentWorkingDirectory(WorkingDirectory);
-    }
-
     Scanned = true;
 
     // Create a compiler instance to handle the actual work.
@@ -252,6 +329,13 @@ public:
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
     ScanInstance.setInvocation(std::move(Invocation));
     ScanInstance.getInvocation().getCASOpts() = CASOpts;
+
+    if (CacheFS) {
+      CacheFS->trackNewAccesses();
+      CacheFS->setCurrentWorkingDirectory(WorkingDirectory);
+      // Enable caching in the resulting commands.
+      ScanInstance.getFrontendOpts().CacheCompileJob = true;
+    }
 
     // Create the compiler's actual diagnostics engine.
     if (!DiagGenerationAsCompilation)
@@ -355,6 +439,14 @@ public:
           std::move(Opts), ScanInstance, Consumer, OriginalInvocation,
           OptimizeArgs, EagerLoadModules);
       ScanInstance.addDependencyCollector(MDC);
+      if (CacheFS) {
+        ScanInstance.setGenModuleActionWrapper(
+            [CacheFS = CacheFS](const FrontendOptions &Opts,
+                                std::unique_ptr<FrontendAction> Wrapped) {
+              return std::make_unique<WrapScanModuleBuildAction>(
+                  std::move(Wrapped), std::move(CacheFS));
+            });
+      }
       break;
     }
 
@@ -376,10 +468,18 @@ public:
     Consumer.finalize(ScanInstance);
 
     if (CacheFS) {
+      // Exclude the module cache from tracking. The implicit build pcms should
+      // not be needed after scanning.
+      if (!ScanInstance.getHeaderSearchOpts().ModuleCachePath.empty())
+        (void)CacheFS->excludeFromTracking(
+            ScanInstance.getHeaderSearchOpts().ModuleCachePath);
+
       auto Tree = CacheFS->createTreeFromNewAccesses(RemapPath);
-      if (Tree)
+      if (Tree) {
+        if (MDC)
+          MDC->setMainFileCASFileSystemRootID(Tree->getID());
         Consumer.handleCASFileSystemRootID(Tree->getID());
-      else
+      } else
         ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
             << Tree.takeError();
     }

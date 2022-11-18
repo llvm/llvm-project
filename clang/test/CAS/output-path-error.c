@@ -19,4 +19,4 @@
 // RUN: cat %t/output.txt | FileCheck %s --check-prefix=ERROR
 
 // CACHE-MISS: remark: compile job cache miss
-// ERROR: fatal error: error in backend: cannot handle unknown compile-job cache key
+// ERROR: fatal error: CAS missing expected root-id
