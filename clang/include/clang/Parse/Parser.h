@@ -1763,7 +1763,7 @@ public:
   ExprResult ParseExpression(TypeCastState isTypeCast = NotTypeCast);
   ExprResult ParseConstantExpressionInExprEvalContext(
       TypeCastState isTypeCast = NotTypeCast);
-  ExprResult ParseConstantExpression(TypeCastState isTypeCast = NotTypeCast);
+  ExprResult ParseConstantExpression();
   ExprResult ParseCaseExpression(SourceLocation CaseLoc);
   ExprResult ParseConstraintExpression();
   ExprResult

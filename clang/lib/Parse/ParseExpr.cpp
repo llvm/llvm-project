@@ -208,14 +208,14 @@ Parser::ParseConstantExpressionInExprEvalContext(TypeCastState isTypeCast) {
   return Actions.ActOnConstantExpression(Res);
 }
 
-ExprResult Parser::ParseConstantExpression(TypeCastState isTypeCast) {
+ExprResult Parser::ParseConstantExpression() {
   // C++03 [basic.def.odr]p2:
   //   An expression is potentially evaluated unless it appears where an
   //   integral constant expression is required (see 5.19) [...].
   // C++98 and C++11 have no such rule, but this is only a defect in C++98.
   EnterExpressionEvaluationContext ConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-  return ParseConstantExpressionInExprEvalContext(isTypeCast);
+  return ParseConstantExpressionInExprEvalContext(NotTypeCast);
 }
 
 ExprResult Parser::ParseCaseExpression(SourceLocation CaseLoc) {
