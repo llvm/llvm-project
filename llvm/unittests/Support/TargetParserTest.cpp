@@ -1689,14 +1689,23 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
 }
 
 TEST(TargetParserTest, AArch64ArchFeatures) {
-  std::vector<StringRef> Features;
-
-  for (auto AK : AArch64::ArchKinds) {
-    if (AK == AArch64::ArchKind::INVALID)
-      EXPECT_FALSE(AArch64::getArchFeatures(AK, Features));
-    else
-      EXPECT_TRUE(AArch64::getArchFeatures(AK, Features));
-  }
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::INVALID), "+");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8A), "+v8a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_1A), "+v8.1a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_2A), "+v8.2a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_3A), "+v8.3a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_4A), "+v8.4a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_5A), "+v8.5a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_6A), "+v8.6a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_7A), "+v8.7a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_8A), "+v8.8a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_9A), "+v8.9a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV9A), "+v9a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV9_1A), "+v9.1a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV9_2A), "+v9.2a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV9_3A), "+v9.3a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV9_4A), "+v9.4a");
+  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8R), "+v8r");
 }
 
 TEST(TargetParserTest, AArch64ArchV9toV8Conversion) {

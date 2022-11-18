@@ -160,7 +160,7 @@ inline ArchKind &operator--(ArchKind &Kind) {
 
 bool getExtensionFeatures(uint64_t Extensions,
                           std::vector<StringRef> &Features);
-bool getArchFeatures(ArchKind AK, std::vector<StringRef> &Features);
+StringRef getArchFeature(ArchKind AK);
 
 StringRef getArchName(ArchKind AK);
 StringRef getSubArch(ArchKind AK);

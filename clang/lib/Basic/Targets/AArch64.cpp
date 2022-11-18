@@ -810,12 +810,9 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
       // Parse the architecture version, adding the required features to
       // Ret.Features.
-      std::vector<StringRef> FeatureStrs;
-      if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
-          !llvm::AArch64::getArchFeatures(ArchKind, FeatureStrs))
+      if (ArchKind == llvm::AArch64::ArchKind::INVALID)
         continue;
-      for (auto R : FeatureStrs)
-        Ret.Features.push_back(R.str());
+      Ret.Features.push_back(llvm::AArch64::getArchFeature(ArchKind).str());
       // Add any extra features, after the +
       SplitAndAddFeatures(Split.second, Ret.Features);
     } else if (Feature.startswith("cpu=")) {

@@ -80,12 +80,8 @@ StringRef AArch64::resolveCPUAlias(StringRef CPU) {
   .Default(CPU);
 }
 
-bool AArch64::getArchFeatures(AArch64::ArchKind AK,
-                              std::vector<StringRef> &Features) {
-  if (AK == ArchKind::INVALID)
-    return false;
-  Features.push_back(AArch64ARCHNames[static_cast<unsigned>(AK)].ArchFeature);
-  return true;
+StringRef AArch64::getArchFeature(AArch64::ArchKind AK) {
+  return AArch64ARCHNames[static_cast<unsigned>(AK)].ArchFeature;
 }
 
 StringRef AArch64::getArchName(AArch64::ArchKind AK) {
