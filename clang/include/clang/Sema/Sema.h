@@ -11679,8 +11679,10 @@ public:
                            SourceLocation LParenLoc = SourceLocation(),
                            Expr *NumForLoops = nullptr);
   /// Called on well-formed 'grainsize' clause.
-  OMPClause *ActOnOpenMPGrainsizeClause(Expr *Size, SourceLocation StartLoc,
+  OMPClause *ActOnOpenMPGrainsizeClause(OpenMPGrainsizeClauseModifier Modifier,
+                                        Expr *Size, SourceLocation StartLoc,
                                         SourceLocation LParenLoc,
+                                        SourceLocation ModifierLoc,
                                         SourceLocation EndLoc);
   /// Called on well-formed 'num_tasks' clause.
   OMPClause *ActOnOpenMPNumTasksClause(Expr *NumTasks, SourceLocation StartLoc,

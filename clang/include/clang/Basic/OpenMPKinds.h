@@ -195,6 +195,12 @@ enum OpenMPBindClauseKind {
   OMPC_BIND_unknown
 };
 
+enum OpenMPGrainsizeClauseModifier {
+#define OPENMP_GRAINSIZE_MODIFIER(Name) OMPC_GRAINSIZE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_GRAINSIZE_unknown
+};
+
 /// Contains 'interop' data for 'append_args' and 'init' clauses.
 class Expr;
 struct OMPInteropInfo final {

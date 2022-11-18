@@ -1920,6 +1920,11 @@ void OMPClausePrinter::VisitOMPPriorityClause(OMPPriorityClause *Node) {
 
 void OMPClausePrinter::VisitOMPGrainsizeClause(OMPGrainsizeClause *Node) {
   OS << "grainsize(";
+  OpenMPGrainsizeClauseModifier Modifier = Node->getModifier();
+  if (Modifier != OMPC_GRAINSIZE_unknown) {
+    OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(), Modifier)
+       << ": ";
+  }
   Node->getGrainsize()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
 }

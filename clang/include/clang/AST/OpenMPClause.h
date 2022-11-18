@@ -6354,26 +6354,43 @@ class OMPGrainsizeClause : public OMPClause, public OMPClauseWithPreInit {
   /// Location of '('.
   SourceLocation LParenLoc;
 
+  /// Modifiers for 'grainsize' clause.
+  OpenMPGrainsizeClauseModifier Modifier = OMPC_GRAINSIZE_unknown;
+
+  /// Location of the modifier.
+  SourceLocation ModifierLoc;
+
   /// Safe iteration space distance.
   Stmt *Grainsize = nullptr;
 
   /// Set safelen.
   void setGrainsize(Expr *Size) { Grainsize = Size; }
 
+  /// Sets modifier.
+  void setModifier(OpenMPGrainsizeClauseModifier M) { Modifier = M; }
+
+  /// Sets modifier location.
+  void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
+
 public:
   /// Build 'grainsize' clause.
   ///
+  /// \param Modifier Clause modifier.
   /// \param Size Expression associated with this clause.
   /// \param HelperSize Helper grainsize for the construct.
   /// \param CaptureRegion Innermost OpenMP region where expressions in this
   /// clause must be captured.
   /// \param StartLoc Starting location of the clause.
+  /// \param ModifierLoc Modifier location.
+  /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPGrainsizeClause(Expr *Size, Stmt *HelperSize,
-                     OpenMPDirectiveKind CaptureRegion, SourceLocation StartLoc,
-                     SourceLocation LParenLoc, SourceLocation EndLoc)
+  OMPGrainsizeClause(OpenMPGrainsizeClauseModifier Modifier, Expr *Size,
+                     Stmt *HelperSize, OpenMPDirectiveKind CaptureRegion,
+                     SourceLocation StartLoc, SourceLocation LParenLoc,
+                     SourceLocation ModifierLoc, SourceLocation EndLoc)
       : OMPClause(llvm::omp::OMPC_grainsize, StartLoc, EndLoc),
-        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), Grainsize(Size) {
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), Modifier(Modifier),
+        ModifierLoc(ModifierLoc), Grainsize(Size) {
     setPreInitStmt(HelperSize, CaptureRegion);
   }
 
@@ -6391,6 +6408,12 @@ public:
 
   /// Return safe iteration space distance.
   Expr *getGrainsize() const { return cast_or_null<Expr>(Grainsize); }
+
+  /// Gets modifier.
+  OpenMPGrainsizeClauseModifier getModifier() const { return Modifier; }
+
+  /// Gets modifier location.
+  SourceLocation getModifierLoc() const { return ModifierLoc; }
 
   child_range children() { return child_range(&Grainsize, &Grainsize + 1); }
 
