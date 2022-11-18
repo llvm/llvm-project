@@ -270,3 +270,7 @@ bool lldb_private::LLDBSwigPythonStopHookCallHandleStop(
     lldb::StreamSP stream) {
   return false;
 }
+
+python::PythonObject lldb_private::python::ToSWIGWrapper(const Status &status) {
+  return python::PythonObject();
+}

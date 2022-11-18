@@ -77,6 +77,12 @@ class ScriptedProcesTestCase(TestBase):
         self.assertEqual(process.GetProcessID(), 666)
         self.assertEqual(process.GetNumThreads(), 0)
 
+        addr = 0x500000000
+        buff = process.ReadMemory(addr, 4, error)
+        self.assertEqual(buff, None)
+        self.assertTrue(error.Fail())
+        self.assertEqual(error.GetCString(), "This is an invalid scripted process!")
+
         with open(log_file, 'r') as f:
             log = f.read()
 
@@ -109,8 +115,13 @@ class ScriptedProcesTestCase(TestBase):
         process = target.Launch(launch_info, error)
         self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 42)
-
         self.assertEqual(process.GetNumThreads(), 1)
+
+        addr = 0x500000000
+        message = "Hello, world!"
+        buff = process.ReadCStringFromMemory(addr, len(message) + 1, error)
+        self.assertSuccess(error)
+        self.assertEqual(buff, message)
 
         thread = process.GetSelectedThread()
         self.assertTrue(thread, "Invalid thread.")
