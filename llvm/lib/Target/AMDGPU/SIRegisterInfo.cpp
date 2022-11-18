@@ -1594,7 +1594,6 @@ void SIRegisterInfo::buildSpillLoadStore(
     if (SOffset == AMDGPU::NoRegister) {
       if (!IsFlat) {
         if (UseVGPROffset && ScratchOffsetReg) {
-          assert(!FuncInfo->isEntryFunction());
           MIB.addReg(ScratchOffsetReg);
         } else {
           assert(FuncInfo->isEntryFunction());

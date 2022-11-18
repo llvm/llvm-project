@@ -3441,7 +3441,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         return false;
       return !Style.Cpp11BracedListStyle;
     }
-    return false;
+    // Don't attempt to format operator<(), as it is handled later.
+    if (Right.isNot(TT_OverloadedOperatorLParen))
+      return false;
   }
   if (Right.is(tok::ellipsis)) {
     return Left.Tok.isLiteral() || (Left.is(tok::identifier) && Left.Previous &&

@@ -29,8 +29,8 @@ static StringRef getHWDivSynonym(StringRef HWDiv) {
 ARM::ArchKind ARM::parseArch(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
   StringRef Syn = getArchSynonym(Arch);
-  for (const auto &A : ARCHNames) {
-    if (A.getName().endswith(Syn))
+  for (const auto &A : ARMArchNames) {
+    if (A.Name.endswith(Syn))
       return A.ID;
   }
   return ArchKind::INVALID;
@@ -73,6 +73,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV8_6A:
   case ArchKind::ARMV8_7A:
   case ArchKind::ARMV8_8A:
+  case ArchKind::ARMV8_9A:
   case ArchKind::ARMV8R:
   case ArchKind::ARMV8MBaseline:
   case ArchKind::ARMV8MMainline:
@@ -82,6 +83,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV9_1A:
   case ArchKind::ARMV9_2A:
   case ArchKind::ARMV9_3A:
+  case ArchKind::ARMV9_4A:
     return 9;
   case ArchKind::INVALID:
     return 0;
@@ -113,10 +115,12 @@ static ARM::ProfileKind getProfileKind(ARM::ArchKind AK) {
   case ARM::ArchKind::ARMV8_6A:
   case ARM::ArchKind::ARMV8_7A:
   case ARM::ArchKind::ARMV8_8A:
+  case ARM::ArchKind::ARMV8_9A:
   case ARM::ArchKind::ARMV9A:
   case ARM::ArchKind::ARMV9_1A:
   case ARM::ArchKind::ARMV9_2A:
   case ARM::ArchKind::ARMV9_3A:
+  case ARM::ArchKind::ARMV9_4A:
     return ARM::ProfileKind::A;
   case ARM::ArchKind::ARMV4:
   case ARM::ArchKind::ARMV4T:
@@ -207,39 +211,10 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
   return true;
 }
 
-// Little/Big endian
-ARM::EndianKind ARM::parseArchEndian(StringRef Arch) {
-  if (Arch.startswith("armeb") || Arch.startswith("thumbeb") ||
-      Arch.startswith("aarch64_be"))
-    return EndianKind::BIG;
-
-  if (Arch.startswith("arm") || Arch.startswith("thumb")) {
-    if (Arch.endswith("eb"))
-      return EndianKind::BIG;
-    else
-      return EndianKind::LITTLE;
-  }
-
-  if (Arch.startswith("aarch64") || Arch.startswith("aarch64_32"))
-    return EndianKind::LITTLE;
-
-  return EndianKind::INVALID;
-}
-
-// ARM, Thumb, AArch64
-ARM::ISAKind ARM::parseArchISA(StringRef Arch) {
-  return StringSwitch<ISAKind>(Arch)
-      .StartsWith("aarch64", ISAKind::AARCH64)
-      .StartsWith("arm64", ISAKind::AARCH64)
-      .StartsWith("thumb", ISAKind::THUMB)
-      .StartsWith("arm", ISAKind::ARM)
-      .Default(ISAKind::INVALID);
-}
-
 unsigned ARM::parseFPU(StringRef FPU) {
   StringRef Syn = getFPUSynonym(FPU);
   for (const auto &F : FPUNames) {
-    if (Syn == F.getName())
+    if (Syn == F.Name)
       return F.ID;
   }
   return FK_INVALID;
@@ -271,7 +246,7 @@ StringRef ARM::getFPUSynonym(StringRef FPU) {
 StringRef ARM::getFPUName(unsigned FPUKind) {
   if (FPUKind >= FK_LAST)
     return StringRef();
-  return FPUNames[FPUKind].getName();
+  return FPUNames[FPUKind].Name;
 }
 
 ARM::FPUVersion ARM::getFPUVersion(unsigned FPUKind) {
@@ -288,7 +263,7 @@ ARM::FPURestriction ARM::getFPURestriction(unsigned FPUKind) {
 
 unsigned ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
   if (CPU == "generic")
-    return ARM::ARCHNames[static_cast<unsigned>(AK)].DefaultFPU;
+    return ARM::ARMArchNames[static_cast<unsigned>(AK)].DefaultFPU;
 
   return StringSwitch<unsigned>(CPU)
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
@@ -299,12 +274,12 @@ unsigned ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
 
 uint64_t ARM::getDefaultExtensions(StringRef CPU, ARM::ArchKind AK) {
   if (CPU == "generic")
-    return ARM::ARCHNames[static_cast<unsigned>(AK)].ArchBaseExtensions;
+    return ARM::ARMArchNames[static_cast<unsigned>(AK)].ArchBaseExtensions;
 
   return StringSwitch<uint64_t>(CPU)
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
   .Case(NAME,                                                                  \
-        ARCHNames[static_cast<unsigned>(ArchKind::ID)].ArchBaseExtensions |    \
+        ARMArchNames[static_cast<unsigned>(ArchKind::ID)].ArchBaseExtensions | \
             DEFAULT_EXT)
 #include "llvm/Support/ARMTargetParser.def"
   .Default(ARM::AEK_INVALID);
@@ -336,9 +311,9 @@ bool ARM::getExtensionFeatures(uint64_t Extensions,
     return false;
 
   for (const auto &AE : ARCHExtNames) {
-    if ((Extensions & AE.ID) == AE.ID && AE.Feature)
+    if ((Extensions & AE.ID) == AE.ID && !AE.Feature.empty())
       Features.push_back(AE.Feature);
-    else if (AE.NegFeature)
+    else if (!AE.NegFeature.empty())
       Features.push_back(AE.NegFeature);
   }
 
@@ -346,25 +321,25 @@ bool ARM::getExtensionFeatures(uint64_t Extensions,
 }
 
 StringRef ARM::getArchName(ARM::ArchKind AK) {
-  return ARCHNames[static_cast<unsigned>(AK)].getName();
+  return ARMArchNames[static_cast<unsigned>(AK)].Name;
 }
 
 StringRef ARM::getCPUAttr(ARM::ArchKind AK) {
-  return ARCHNames[static_cast<unsigned>(AK)].getCPUAttr();
+  return ARMArchNames[static_cast<unsigned>(AK)].CPUAttr;
 }
 
 StringRef ARM::getSubArch(ARM::ArchKind AK) {
-  return ARCHNames[static_cast<unsigned>(AK)].getSubArch();
+  return ARMArchNames[static_cast<unsigned>(AK)].getSubArch();
 }
 
 unsigned ARM::getArchAttr(ARM::ArchKind AK) {
-  return ARCHNames[static_cast<unsigned>(AK)].ArchAttr;
+  return ARMArchNames[static_cast<unsigned>(AK)].ArchAttr;
 }
 
 StringRef ARM::getArchExtName(uint64_t ArchExtKind) {
   for (const auto &AE : ARCHExtNames) {
     if (ArchExtKind == AE.ID)
-      return AE.getName();
+      return AE.Name;
   }
   return StringRef();
 }
@@ -380,7 +355,7 @@ static bool stripNegationPrefix(StringRef &Name) {
 StringRef ARM::getArchExtFeature(StringRef ArchExt) {
   bool Negated = stripNegationPrefix(ArchExt);
   for (const auto &AE : ARCHExtNames) {
-    if (AE.Feature && ArchExt == AE.getName())
+    if (!AE.Feature.empty() && ArchExt == AE.Name)
       return StringRef(Negated ? AE.NegFeature : AE.Feature);
   }
 
@@ -430,10 +405,10 @@ bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
 
   for (const auto &AE : ARCHExtNames) {
     if (Negated) {
-      if ((AE.ID & ID) == ID && AE.NegFeature)
+      if ((AE.ID & ID) == ID && !AE.NegFeature.empty())
         Features.push_back(AE.NegFeature);
     } else {
-      if ((AE.ID & ID) == AE.ID && AE.Feature)
+      if ((AE.ID & ID) == AE.ID && !AE.Feature.empty())
         Features.push_back(AE.Feature);
     }
   }
@@ -479,7 +454,7 @@ StringRef ARM::getDefaultCPU(StringRef Arch) {
   // Look for multiple AKs to find the default for pair AK+Name.
   for (const auto &CPU : CPUNames) {
     if (CPU.ArchID == AK && CPU.Default)
-      return CPU.getName();
+      return CPU.Name;
   }
 
   // If we can't find a default then target the architecture instead
@@ -489,7 +464,7 @@ StringRef ARM::getDefaultCPU(StringRef Arch) {
 uint64_t ARM::parseHWDiv(StringRef HWDiv) {
   StringRef Syn = getHWDivSynonym(HWDiv);
   for (const auto &D : HWDivNames) {
-    if (Syn == D.getName())
+    if (Syn == D.Name)
       return D.ID;
   }
   return AEK_INVALID;
@@ -497,7 +472,7 @@ uint64_t ARM::parseHWDiv(StringRef HWDiv) {
 
 uint64_t ARM::parseArchExt(StringRef ArchExt) {
   for (const auto &A : ARCHExtNames) {
-    if (ArchExt == A.getName())
+    if (ArchExt == A.Name)
       return A.ID;
   }
   return AEK_INVALID;
@@ -505,16 +480,16 @@ uint64_t ARM::parseArchExt(StringRef ArchExt) {
 
 ARM::ArchKind ARM::parseCPUArch(StringRef CPU) {
   for (const auto &C : CPUNames) {
-    if (CPU == C.getName())
+    if (CPU == C.Name)
       return C.ArchID;
   }
   return ArchKind::INVALID;
 }
 
 void ARM::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
-  for (const CpuNames<ArchKind> &Arch : CPUNames) {
+  for (const auto &Arch : CPUNames) {
     if (Arch.ArchID != ArchKind::INVALID)
-      Values.push_back(Arch.getName());
+      Values.push_back(Arch.Name);
   }
 }
 

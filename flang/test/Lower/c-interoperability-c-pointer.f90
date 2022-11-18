@@ -11,7 +11,7 @@
 ! CHECK:         %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_6]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_8:.*]] = fir.load %[[VAL_7]] : !fir.ref<i64>
 ! CHECK:         %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i64) -> !fir.ref<i64>
-! CHECK:         fir.call @c_func(%[[VAL_5]], %[[VAL_9]]) : (!fir.ref<i64>, !fir.ref<i64>) -> ()
+! CHECK:         fir.call @c_func(%[[VAL_5]], %[[VAL_9]]) {{.*}}: (!fir.ref<i64>, !fir.ref<i64>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 

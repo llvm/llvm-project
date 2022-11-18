@@ -8,7 +8,7 @@
 !CHECK:  omp.yield(%[[C0_1]] : f64)
 !CHECK: } combiner {
 !CHECK: ^bb0(%[[ARG0:.*]]: f64, %[[ARG1:.*]]: f64):
-!CHECK:  %[[RES:.*]] = arith.mulf %[[ARG0]], %[[ARG1]] : f64
+!CHECK:  %[[RES:.*]] = arith.mulf %[[ARG0]], %[[ARG1]] {{.*}}: f64
 !CHECK:  omp.yield(%[[RES]] : f64)
 !CHECK: }
 
@@ -30,7 +30,7 @@
 !CHECK:  omp.yield(%[[C0_1]] : f32)
 !CHECK: } combiner {
 !CHECK: ^bb0(%[[ARG0:.*]]: f32, %[[ARG1:.*]]: f32):
-!CHECK:  %[[RES:.*]] = arith.mulf %[[ARG0]], %[[ARG1]] : f32
+!CHECK:  %[[RES:.*]] = arith.mulf %[[ARG0]], %[[ARG1]] {{.*}}: f32
 !CHECK:  omp.yield(%[[RES]] : f32)
 !CHECK: }
 

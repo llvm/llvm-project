@@ -27,6 +27,10 @@ def HasV8_6a         : Predicate<"Subtarget->hasV8_6aOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV8_6aOps), "armv8.6a">;
 def HasV8_7a         : Predicate<"Subtarget->hasV8_7aOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV8_7aOps), "armv8.7a">;
+def HasV8_8a         : Predicate<"Subtarget->hasV8_8aOps()">,
+                                 AssemblerPredicateWithAll<(all_of HasV8_8aOps), "armv8.8a">;
+def HasV8_9a         : Predicate<"Subtarget->hasV8_9aOps()">,
+                                 AssemblerPredicateWithAll<(all_of HasV8_9aOps), "armv8.9a">;
 def HasV9_0a         : Predicate<"Subtarget->hasV9_0aOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV9_0aOps), "armv9-a">;
 def HasV9_1a         : Predicate<"Subtarget->hasV9_1aOps()">,
@@ -35,6 +39,8 @@ def HasV9_2a         : Predicate<"Subtarget->hasV9_2aOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV9_2aOps), "armv9.2a">;
 def HasV9_3a         : Predicate<"Subtarget->hasV9_3aOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV9_3aOps), "armv9.3a">;
+def HasV9_4a         : Predicate<"Subtarget->hasV9_4aOps()">,
+                                 AssemblerPredicateWithAll<(all_of HasV9_4aOps), "armv9.4a">;
 def HasV8_0r         : Predicate<"Subtarget->hasV8_0rOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV8_0rOps), "armv8-r">;
 
@@ -1500,8 +1506,16 @@ let Predicates = [HasPerfMon] in
 def : Pat<(readcyclecounter), (MRS 0xdce8)>;
 
 // FPCR register
-def : Pat<(i64 (int_aarch64_get_fpcr)), (MRS 0xda20)>;
-def : Pat<(int_aarch64_set_fpcr i64:$val), (MSR 0xda20, GPR64:$val)>;
+let Uses = [FPCR] in
+def MRS_FPCR : Pseudo<(outs GPR64:$dst), (ins),
+                      [(set GPR64:$dst, (int_aarch64_get_fpcr))]>,
+               PseudoInstExpansion<(MRS GPR64:$dst, 0xda20)>,
+               Sched<[WriteSys]>;
+let Defs = [FPCR] in
+def MSR_FPCR : Pseudo<(outs), (ins GPR64:$val),
+                      [(int_aarch64_set_fpcr i64:$val)]>,
+               PseudoInstExpansion<(MSR 0xda20, GPR64:$val)>,
+               Sched<[WriteSys]>;
 
 // Generic system instructions
 def SYSxt  : SystemXtI<0, "sys">;

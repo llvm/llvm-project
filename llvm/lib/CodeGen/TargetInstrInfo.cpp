@@ -870,12 +870,12 @@ void TargetInstrInfo::reassociateOps(
 
   // Create new instructions for insertion.
   MachineInstrBuilder MIB1 =
-      BuildMI(*MF, Prev.getDebugLoc(), TII->get(Opcode), NewVR)
+      BuildMI(*MF, MIMetadata(Prev), TII->get(Opcode), NewVR)
           .addReg(RegX, getKillRegState(KillX))
           .addReg(RegY, getKillRegState(KillY))
           .setMIFlags(Prev.getFlags());
   MachineInstrBuilder MIB2 =
-      BuildMI(*MF, Root.getDebugLoc(), TII->get(Opcode), RegC)
+      BuildMI(*MF, MIMetadata(Root), TII->get(Opcode), RegC)
           .addReg(RegA, getKillRegState(KillA))
           .addReg(NewVR, getKillRegState(true))
           .setMIFlags(Root.getFlags());

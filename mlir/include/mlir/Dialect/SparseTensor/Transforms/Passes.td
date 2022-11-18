@@ -11,13 +11,13 @@
 
 include "mlir/Pass/PassBase.td"
 
-def SparseTensorRewrite : Pass<"sparse-tensor-rewrite", "ModuleOp"> {
+def PreSparsificationRewrite : Pass<"pre-sparsification-rewrite", "ModuleOp"> {
   let summary = "Applies sparse tensor rewriting rules prior to sparsification";
   let description = [{
     A pass that applies rewriting rules to sparse tensor operations prior
     to running the actual sparsification pass.
   }];
-  let constructor = "mlir::createSparseTensorRewritePass()";
+  let constructor = "mlir::createPreSparsificationRewritePass()";
   let dependentDialects = [
     "arith::ArithDialect",
     "bufferization::BufferizationDialect",
@@ -25,14 +25,6 @@ def SparseTensorRewrite : Pass<"sparse-tensor-rewrite", "ModuleOp"> {
     "memref::MemRefDialect",
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
-  ];
-  let options = [
-    Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
-           "true", "Enable runtime library for manipulating sparse tensors">,
-    Option<"enableForeach", "enable-foreach", "bool",
-           "true", "Enable rewriting rules for the foreach operator">,
-    Option<"enableConvert", "enable-convert", "bool",
-           "true", "Enable rewriting rules for the convert operator">,
   ];
 }
 
@@ -106,6 +98,31 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
                         "Enable sparse parallelization for any storage and loop."))}]>
+  ];
+}
+
+def PostSparsificationRewrite : Pass<"post-sparsification-rewrite", "ModuleOp"> {
+  let summary = "Applies sparse tensor rewriting rules after sparsification";
+  let description = [{
+    A pass that applies rewriting rules to sparse tensor operations after
+    running the actual sparsification pass.
+  }];
+  let constructor = "mlir::createPostSparsificationRewritePass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+  let options = [
+    Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
+           "true", "Enable runtime library for manipulating sparse tensors">,
+    Option<"enableForeach", "enable-foreach", "bool",
+           "true", "Enable rewriting rules for the foreach operator">,
+    Option<"enableConvert", "enable-convert", "bool",
+           "true", "Enable rewriting rules for the convert operator">,
   ];
 }
 

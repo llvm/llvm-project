@@ -34,7 +34,7 @@ public:
   void GetObjCMethods(lldb_private::ConstString class_name,
                       llvm::function_ref<bool(DWARFDIE die)> callback) override;
 
-  llvm::Expected<lldb_private::TypeSystem &>
+  llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   DWARFDIE

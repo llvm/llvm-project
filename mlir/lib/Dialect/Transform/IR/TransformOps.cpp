@@ -765,6 +765,39 @@ void transform::SequenceOp::getRegionInvocationBounds(
   bounds.emplace_back(1, 1);
 }
 
+void transform::SequenceOp::build(OpBuilder &builder, OperationState &state,
+                                  TypeRange resultTypes,
+                                  FailurePropagationMode failurePropagationMode,
+                                  Value root,
+                                  SequenceBodyBuilderFn bodyBuilder) {
+  build(builder, state, resultTypes, failurePropagationMode, root);
+  Region *region = state.regions.back().get();
+  auto bbArgType = root.getType();
+  Block *bodyBlock = builder.createBlock(
+      region, region->begin(), TypeRange{bbArgType}, {state.location});
+
+  // Populate body.
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(bodyBlock);
+  bodyBuilder(builder, state.location, bodyBlock->getArgument(0));
+}
+
+void transform::SequenceOp::build(OpBuilder &builder, OperationState &state,
+                                  TypeRange resultTypes,
+                                  FailurePropagationMode failurePropagationMode,
+                                  Type bbArgType,
+                                  SequenceBodyBuilderFn bodyBuilder) {
+  build(builder, state, resultTypes, failurePropagationMode, /*root=*/Value());
+  Region *region = state.regions.back().get();
+  Block *bodyBlock = builder.createBlock(
+      region, region->begin(), TypeRange{bbArgType}, {state.location});
+
+  // Populate body.
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(bodyBlock);
+  bodyBuilder(builder, state.location, bodyBlock->getArgument(0));
+}
+
 //===----------------------------------------------------------------------===//
 // WithPDLPatternsOp
 //===----------------------------------------------------------------------===//

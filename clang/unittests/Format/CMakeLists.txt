@@ -6,6 +6,7 @@ add_clang_unittest(FormatTests
   BracesInserterTest.cpp
   BracesRemoverTest.cpp
   CleanupTest.cpp
+  ConfigParseTest.cpp
   DefinitionBlockSeparatorTest.cpp
   FormatTest.cpp
   FormatTestComments.cpp

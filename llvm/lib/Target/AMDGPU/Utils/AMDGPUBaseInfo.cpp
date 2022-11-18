@@ -499,8 +499,8 @@ unsigned ComponentInfo::getParsedOperandIndex(unsigned OprIdx) const {
     return getParsedDstIndex();
 
   auto SrcIdx = OprIdx - Component::DST_NUM;
-  if (SrcIdx < getSrcOperandsNum())
-    return getParsedSrcIndex(SrcIdx, hasSrc2Acc());
+  if (SrcIdx < getParsedSrcOperandsNum())
+    return getParsedSrcIndex(SrcIdx);
 
   // The specified operand does not exist.
   return 0;
@@ -522,25 +522,30 @@ Optional<unsigned> InstInfo::getInvalidOperandIndex(
   return {};
 }
 
+// Return an array of VGPR registers [DST,SRC0,SRC1,SRC2] used
+// by the specified component. If an operand is unused
+// or is not a VGPR, the corresponding value is 0.
+//
+// GetRegIdx(Component, OperandIdx) must return a VGPR register index
+// for the specified component and operand. The callback must return 0
+// if the operand is not a register or not a VGPR.
 InstInfo::RegIndices InstInfo::getRegIndices(
     unsigned ComponentIdx,
     std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
   assert(ComponentIdx < COMPONENTS_NUM);
 
   auto Comp = CompInfo[ComponentIdx];
+  InstInfo::RegIndices RegIndices;
 
-  unsigned DstReg = GetRegIdx(ComponentIdx, Comp.getDstIndex());
-  unsigned Src0Reg = GetRegIdx(ComponentIdx, Comp.getSrcIndex(0));
+  RegIndices[DST] = GetRegIdx(ComponentIdx, Comp.getDstIndex());
 
-  unsigned Src1Reg = 0;
-  if (Comp.hasRegularSrcOperand(1))
-    Src1Reg = GetRegIdx(ComponentIdx, Comp.getSrcIndex(1));
-
-  unsigned Src2Reg = 0;
-  if (Comp.hasRegularSrcOperand(2))
-    Src2Reg = GetRegIdx(ComponentIdx, Comp.getSrcIndex(2));
-
-  return {DstReg, Src0Reg, Src1Reg, Src2Reg};
+  for (unsigned OprIdx : {SRC0, SRC1, SRC2}) {
+    unsigned SrcIdx = OprIdx - DST_NUM;
+    RegIndices[OprIdx] = Comp.hasRegSrcOperand(SrcIdx)
+                             ? GetRegIdx(ComponentIdx, Comp.getSrcIndex(SrcIdx))
+                             : 0;
+  }
+  return RegIndices;
 }
 
 } // namespace VOPD
@@ -555,9 +560,7 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   const auto &OpXDesc = InstrInfo->get(OpX);
   const auto &OpYDesc = InstrInfo->get(OpY);
   VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X);
-  VOPD::ComponentInfo OpYInfo(
-      OpYDesc, VOPD::ComponentKind::COMPONENT_Y, OpXInfo.getSrcOperandsNum(),
-      OpXInfo.getSrcOperandsNum() - OpXInfo.hasSrc2Acc());
+  VOPD::ComponentInfo OpYInfo(OpYDesc, OpXInfo);
   return VOPD::InstInfo(OpXInfo, OpYInfo);
 }
 

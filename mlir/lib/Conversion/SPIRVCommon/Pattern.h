@@ -19,8 +19,7 @@ namespace spirv {
 /// Converts elementwise unary, binary and ternary standard operations to SPIR-V
 /// operations.
 template <typename Op, typename SPIRVOp>
-class ElementwiseOpPattern final : public OpConversionPattern<Op> {
-public:
+struct ElementwiseOpPattern : public OpConversionPattern<Op> {
   using OpConversionPattern<Op>::OpConversionPattern;
 
   LogicalResult

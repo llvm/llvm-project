@@ -1368,9 +1368,11 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
                          "Unable to guess value for given address");
           return ValueObjectSP();
         } else {
+          auto ts = *c_type_system_or_err;
+          if (!ts)
+            return {};
           CompilerType void_ptr_type =
-              c_type_system_or_err
-                  ->GetBasicTypeFromAST(lldb::BasicType::eBasicTypeChar)
+              ts->GetBasicTypeFromAST(lldb::BasicType::eBasicTypeChar)
                   .GetPointerType();
           return ValueObjectMemory::Create(this, "", addr, void_ptr_type);
         }

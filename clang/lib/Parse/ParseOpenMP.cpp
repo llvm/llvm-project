@@ -1627,6 +1627,42 @@ bool Parser::parseOMPDeclareVariantMatchClause(SourceLocation Loc,
   return false;
 }
 
+/// <clause> [clause[ [,] clause] ... ]
+///
+///  clauses: for error directive
+///     'at' '(' compilation | execution ')'
+///     'severity' '(' fatal | warning ')'
+///     'message' '(' msg-string ')'
+/// ....
+void Parser::ParseOpenMPClauses(OpenMPDirectiveKind DKind,
+                                SmallVectorImpl<OMPClause *> &Clauses,
+                                SourceLocation Loc) {
+  SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
+              llvm::omp::Clause_enumSize + 1>
+      FirstClauses(llvm::omp::Clause_enumSize + 1);
+  while (Tok.isNot(tok::annot_pragma_openmp_end)) {
+    OpenMPClauseKind CKind = Tok.isAnnotation()
+                                 ? OMPC_unknown
+                                 : getOpenMPClauseKind(PP.getSpelling(Tok));
+    Actions.StartOpenMPClause(CKind);
+    OMPClause *Clause = ParseOpenMPClause(
+        DKind, CKind, !FirstClauses[unsigned(CKind)].getInt());
+    SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
+              StopBeforeMatch);
+    FirstClauses[unsigned(CKind)].setInt(true);
+    if (Clause != nullptr)
+      Clauses.push_back(Clause);
+    if (Tok.is(tok::annot_pragma_openmp_end)) {
+      Actions.EndOpenMPClause();
+      break;
+    }
+    // Skip ',' if any.
+    if (Tok.is(tok::comma))
+      ConsumeToken();
+    Actions.EndOpenMPClause();
+  }
+}
+
 /// `omp assumes` or `omp begin/end assumes` <clause> [[,]<clause>]...
 /// where
 ///
@@ -1801,9 +1837,21 @@ void Parser::ParseOMPDeclareTargetClauses(
             << getOpenMPClauseName(OMPC_indirect) << 0;
         break;
       }
-      bool IsToOrLinkClause =
+      bool IsToEnterOrLinkClause =
           OMPDeclareTargetDeclAttr::ConvertStrToMapTypeTy(ClauseName, MT);
-      assert((!IsDeviceTypeClause || !IsToOrLinkClause) && "Cannot be both!");
+      assert((!IsDeviceTypeClause || !IsToEnterOrLinkClause) &&
+             "Cannot be both!");
+
+      // Starting with OpenMP 5.2 the `to` clause has been replaced by the
+      // `enter` clause.
+      if (getLangOpts().OpenMP >= 52 && ClauseName == "to") {
+        Diag(Tok, diag::err_omp_declare_target_unexpected_to_clause);
+        break;
+      }
+      if (getLangOpts().OpenMP <= 51 && ClauseName == "enter") {
+        Diag(Tok, diag::err_omp_declare_target_unexpected_enter_clause);
+        break;
+      }
 
       if (!IsDeviceTypeClause && !IsIndirectClause &&
           DTCI.Kind == OMPD_begin_declare_target) {
@@ -1811,16 +1859,18 @@ void Parser::ParseOMPDeclareTargetClauses(
             << ClauseName << (getLangOpts().OpenMP >= 51 ? 3 : 0);
         break;
       }
-      if (!IsDeviceTypeClause && !IsToOrLinkClause && !IsIndirectClause) {
-        Diag(Tok, diag::err_omp_declare_target_unexpected_clause)
+      if (!IsDeviceTypeClause && !IsToEnterOrLinkClause && !IsIndirectClause) {
+        Diag(Tok, getLangOpts().OpenMP >= 52
+                      ? diag::err_omp_declare_target_unexpected_clause_52
+                      : diag::err_omp_declare_target_unexpected_clause)
             << ClauseName
-            << (getLangOpts().OpenMP >= 51   ? 4
-                : getLangOpts().OpenMP >= 50 ? 2
-                                             : 1);
+            << (getLangOpts().OpenMP >= 51
+                    ? 4
+                    : getLangOpts().OpenMP >= 50 ? 2 : 1);
         break;
       }
 
-      if (IsToOrLinkClause || IsIndirectClause)
+      if (IsToEnterOrLinkClause || IsIndirectClause)
         HasToOrLinkOrIndirectClause = true;
 
       if (IsIndirectClause) {
@@ -1884,7 +1934,9 @@ void Parser::ParseOMPDeclareTargetClauses(
     }
     if (!HasIdentifier && Tok.isNot(tok::annot_pragma_openmp_end)) {
       Diag(Tok,
-           diag::err_omp_declare_target_unexpected_clause_after_implicit_to);
+           getLangOpts().OpenMP >= 52
+               ? diag::err_omp_declare_target_wrong_clause_after_implicit_enter
+               : diag::err_omp_declare_target_wrong_clause_after_implicit_to);
       break;
     }
 
@@ -1899,7 +1951,10 @@ void Parser::ParseOMPDeclareTargetClauses(
   // For declare target require at least 'to' or 'link' to be present.
   if (DTCI.Kind == OMPD_declare_target && RequiresToOrLinkOrIndirectClause &&
       !HasToOrLinkOrIndirectClause)
-    Diag(DTCI.Loc, diag::err_omp_declare_target_missing_to_or_link_clause)
+    Diag(DTCI.Loc,
+         getLangOpts().OpenMP >= 52
+             ? diag::err_omp_declare_target_missing_enter_or_link_clause
+             : diag::err_omp_declare_target_missing_to_or_link_clause)
         << (getLangOpts().OpenMP >= 51 ? 1 : 0);
 
   SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
@@ -2124,6 +2179,14 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     ConsumeAnnotationToken();
     return Actions.ActOnOpenMPRequiresDirective(StartLoc, Clauses);
   }
+  case OMPD_error: {
+    SmallVector<OMPClause *, 1> Clauses;
+    SourceLocation StartLoc = ConsumeToken();
+    ParseOpenMPClauses(DKind, Clauses, StartLoc);
+    Actions.ActOnOpenMPErrorDirective(Clauses, StartLoc, SourceLocation(),
+                                      /*InExContext = */ false);
+    break;
+  }
   case OMPD_assumes:
   case OMPD_begin_assumes:
     ParseOpenMPAssumesDirective(DKind, ConsumeToken());
@@ -2310,7 +2373,6 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_unroll:
   case OMPD_task:
   case OMPD_taskyield:
-  case OMPD_error:
   case OMPD_barrier:
   case OMPD_taskwait:
   case OMPD_taskgroup:
@@ -2711,6 +2773,10 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         ParsedStmtContext()) {
       Diag(Tok, diag::err_omp_immediate_directive)
           << getOpenMPDirectiveName(DKind) << 0;
+      if (DKind == OMPD_error) {
+        SkipUntil(tok::annot_pragma_openmp_end);
+        break;
+      }
     }
     HasAssociatedStatement = false;
     // Fall through for further analysis.
@@ -3170,6 +3236,8 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_atomic_default_mem_order:
+  case OMPC_at:
+  case OMPC_severity:
   case OMPC_order:
   case OMPC_bind:
     // OpenMP [2.14.3.1, Restrictions]
@@ -3180,6 +3248,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     // OpenMP [5.0, Requires directive, Restrictions]
     //  At most one atomic_default_mem_order clause can appear
     //  on the directive
+    // OpenMP [5.1, error directive, Restrictions]
+    //  At most one at clause can appear on the directive
+    //  At most one severity clause can appear on the directive
     // OpenMP 5.1, 2.11.7 loop Construct, Restrictions.
     // At most one bind clause can appear on a loop directive.
     if (!FirstClause && CKind != OMPC_order) {

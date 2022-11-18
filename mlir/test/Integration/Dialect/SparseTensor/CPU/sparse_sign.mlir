@@ -1,8 +1,15 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
+// RUN: %{command}
 
 #SparseVector = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
 
@@ -55,7 +62,7 @@ module {
   // Driver method to call and verify sign kernel.
   func.func @entry() {
     %c0 = arith.constant 0 : index
-    %du = arith.constant 99.99 : f64
+    %du = arith.constant 0.0 : f64
 
     %pnan = arith.constant 0x7FF0000001000000 : f64
     %nnan = arith.constant 0xFFF0000001000000 : f64
@@ -84,7 +91,7 @@ module {
     //
     // Verify the results.
     //
-    // CHECK: ( -1, 1, -1, 1, 1, -1, nan, -nan, 1, -1, -0, 0, 99.99 )
+    // CHECK: ( -1, 1, -1, 1, 1, -1, nan, -nan, 1, -1, -0, 0, 0 )
     //
     %1 = sparse_tensor.values %0 : tensor<?xf64, #SparseVector> to memref<?xf64>
     %2 = vector.transfer_read %1[%c0], %du: memref<?xf64>, vector<13xf64>

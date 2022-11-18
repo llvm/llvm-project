@@ -10,7 +10,7 @@
 subroutine exp_testr(a, b)
   real :: a, b
 ! CHECK:  %[[A:.*]] = fir.load %[[AREF:.*]] : !fir.ref<f32>
-! CHECK:  %[[RES:.*]] = fir.call @fir.exp.f32.f32(%[[A]]) : (f32) -> f32
+! CHECK:  %[[RES:.*]] = fir.call @fir.exp.f32.f32(%[[A]]) {{.*}}: (f32) -> f32
 ! CHECK:  fir.store %[[RES]] to %[[BREF]] : !fir.ref<f32>
   b = exp(a)
 end subroutine
@@ -20,7 +20,7 @@ end subroutine
 subroutine exp_testd(a, b)
   real(kind=8) :: a, b
 ! CHECK:  %[[A:.*]] = fir.load %[[AREF:.*]] : !fir.ref<f64>
-! CHECK:  %[[RES:.*]] = fir.call @fir.exp.f64.f64(%[[A]]) : (f64) -> f64
+! CHECK:  %[[RES:.*]] = fir.call @fir.exp.f64.f64(%[[A]]) {{.*}}: (f64) -> f64
 ! CHECK:  fir.store %[[RES]] to %[[BREF]] : !fir.ref<f64>
   b = exp(a)
 end subroutine
@@ -30,7 +30,7 @@ end subroutine
 subroutine exp_testc(a, b)
   complex :: a, b
 ! CHECK:  %[[A:.*]] = fir.load %[[AREF:.*]] : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[RES:.*]] = fir.call @fir.exp.z4.z4(%[[A]]) : (!fir.complex<4>) -> !fir.complex<4>
+! CHECK:  %[[RES:.*]] = fir.call @fir.exp.z4.z4(%[[A]]) {{.*}}: (!fir.complex<4>) -> !fir.complex<4>
 ! CHECK:  fir.store %[[RES]] to %[[BREF]] : !fir.ref<!fir.complex<4>>
   b = exp(a)
 end subroutine
@@ -40,7 +40,7 @@ end subroutine
 subroutine exp_testcd(a, b)
   complex(kind=8) :: a, b
 ! CHECK:  %[[A:.*]] = fir.load %[[AREF:.*]] : !fir.ref<!fir.complex<8>>
-! CHECK:  %[[RES:.*]] = fir.call @fir.exp.z8.z8(%[[A]]) : (!fir.complex<8>) -> !fir.complex<8>
+! CHECK:  %[[RES:.*]] = fir.call @fir.exp.z8.z8(%[[A]]) {{.*}}: (!fir.complex<8>) -> !fir.complex<8>
 ! CHECK:  fir.store %[[RES]] to %[[BREF]] : !fir.ref<!fir.complex<8>>
   b = exp(a)
 end subroutine
