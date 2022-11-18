@@ -15544,6 +15544,8 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   Space.SpaceBeforeParens = FormatStyle::SBPO_Always;
 
   verifyFormat("int f ();", Space);
+  verifyFormat("bool operator< ();", Space);
+  verifyFormat("bool operator> ();", Space);
   verifyFormat("void f (int a, T b) {\n"
                "  while (true)\n"
                "    continue;\n"
