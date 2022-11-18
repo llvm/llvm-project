@@ -398,48 +398,47 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   if (UNLIKELY(!AddrIsAlignedByGranularity(end))) {
     uptr end_down = RoundDownTo(end, granularity);
     // Either new or old mid must be in the granule to affect it.
-    if (new_mid > end_down) {
+    if (new_mid > end_down || old_mid > end_down) {
+      // Do nothing if the byte after the container is unpoisoned. Asan can't
+      // poison only the begining of the granule.
       if (AddressIsPoisoned(end)) {
-        *(u8 *)MemToShadow(end_down) = static_cast<u8>(new_mid - end_down);
-      } else {
-        // Something after the container - don't touch.
+        *(u8 *)MemToShadow(end_down) = new_mid > end_down
+                                           ? static_cast<u8>(new_mid - end_down)
+                                           : kAsanContiguousContainerOOBMagic;
       }
-    } else if (old_mid > end_down) {
-      if (AddressIsPoisoned(end)) {
-        *(u8 *)MemToShadow(end_down) = kAsanContiguousContainerOOBMagic;
-      } else {
-        // Something after the container - don't touch.
-      }
+      old_mid = Min(end_down, old_mid);
+      new_mid = Min(end_down, new_mid);
+
+      if (old_mid == new_mid)
+        return;
     }
 
     if (beg >= end_down)
       return;  // Same granule.
 
-    old_mid = Min(end_down, old_mid);
-    new_mid = Min(end_down, new_mid);
+    end = end_down;
   }
 
   // Handle misaligned begin and cut it off.
   if (UNLIKELY(!AddrIsAlignedByGranularity(beg))) {
     uptr beg_up = RoundUpTo(beg, granularity);
-    uptr beg_down = RoundDownTo(beg, granularity);
     // As soon as we add first byte into container we will not be able to
     // determine the state of the byte before the container. So we assume it's
     // always unpoison.
 
     // Either new or old mid must be in the granule to affect it.
-    if (new_mid < beg_up) {
-      *(u8 *)MemToShadow(beg_down) = static_cast<u8>(new_mid - beg_down);
-    } else if (old_mid < beg_up) {
-      *(u8 *)MemToShadow(beg_down) = 0;
+    if (new_mid < beg_up || old_mid < beg_up) {
+      uptr beg_down = RoundDownTo(beg, granularity);
+      *(u8 *)MemToShadow(beg_down) =
+          new_mid < beg_up ? static_cast<u8>(new_mid - beg_down) : 0;
+      old_mid = Max(beg_up, old_mid);
+      new_mid = Max(beg_up, new_mid);
+      if (old_mid == new_mid)
+        return;
     }
 
-    old_mid = Max(beg_up, old_mid);
-    new_mid = Max(beg_up, new_mid);
+    beg = beg_up;
   }
-
-  if (old_mid == new_mid)
-    return;
 
   uptr a = RoundDownTo(Min(old_mid, new_mid), granularity);
   uptr c = RoundUpTo(Max(old_mid, new_mid), granularity);
@@ -463,8 +462,10 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   uptr b2 = RoundUpTo(new_mid, granularity);
   // New state:
   // [a, b1) is good, [b2, c) is bad, [b1, b2) is partially good.
-  PoisonShadow(a, b1 - a, 0);
-  PoisonShadow(b2, c - b2, kAsanContiguousContainerOOBMagic);
+  if (b1 > a)
+    PoisonShadow(a, b1 - a, 0);
+  else if (c > b2)
+    PoisonShadow(b2, c - b2, kAsanContiguousContainerOOBMagic);
   if (b1 != b2) {
     CHECK_EQ(b2 - b1, granularity);
     *(u8 *)MemToShadow(b1) = static_cast<u8>(new_mid - b1);
