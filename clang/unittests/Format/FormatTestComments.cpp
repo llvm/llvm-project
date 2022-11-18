@@ -3087,6 +3087,118 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                    Style));
 }
 
+TEST_F(FormatTestComments, DontAlignNamespaceComments) {
+  FormatStyle Style = getLLVMStyle();
+  Style.NamespaceIndentation = FormatStyle::NI_All;
+  Style.NamespaceMacros.push_back("TESTSUITE");
+  Style.ShortNamespaceLines = 0;
+
+  StringRef Input = "namespace A {\n"
+                    "  TESTSUITE(B) {\n"
+                    "    namespace C {\n"
+                    "      namespace D {} // namespace D\n"
+                    "      std::string Foo = Bar; // Comment\n"
+                    "      std::string BazString = Baz;   // C2\n"
+                    "    }          // namespace C\n"
+                    "  }\n"
+                    "} // NaMeSpAcE A";
+
+  EXPECT_TRUE(Style.FixNamespaceComments);
+  EXPECT_EQ(Style.AlignTrailingComments.Kind, FormatStyle::TCAS_Always);
+  verifyFormat("namespace A {\n"
+               "  TESTSUITE(B) {\n"
+               "    namespace C {\n"
+               "      namespace D {} // namespace D\n"
+               "      std::string Foo = Bar;       // Comment\n"
+               "      std::string BazString = Baz; // C2\n"
+               "    } // namespace C\n"
+               "  } // TESTSUITE(B)\n"
+               "} // NaMeSpAcE A",
+               Input, Style);
+
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Never;
+  verifyFormat("namespace A {\n"
+               "  TESTSUITE(B) {\n"
+               "    namespace C {\n"
+               "      namespace D {} // namespace D\n"
+               "      std::string Foo = Bar; // Comment\n"
+               "      std::string BazString = Baz; // C2\n"
+               "    } // namespace C\n"
+               "  } // TESTSUITE(B)\n"
+               "} // NaMeSpAcE A",
+               Input, Style);
+
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Leave;
+  verifyFormat("namespace A {\n"
+               "  TESTSUITE(B) {\n"
+               "    namespace C {\n"
+               "      namespace D {} // namespace D\n"
+               "      std::string Foo = Bar; // Comment\n"
+               "      std::string BazString = Baz;   // C2\n"
+               "    }          // namespace C\n"
+               "  } // TESTSUITE(B)\n"
+               "} // NaMeSpAcE A",
+               Input, Style);
+
+  Style.FixNamespaceComments = false;
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
+  verifyFormat("namespace A {\n"
+               "  TESTSUITE(B) {\n"
+               "    namespace C {\n"
+               "      namespace D {} // namespace D\n"
+               "      std::string Foo = Bar;       // Comment\n"
+               "      std::string BazString = Baz; // C2\n"
+               "    } // namespace C\n"
+               "  }\n"
+               "} // NaMeSpAcE A",
+               Input, Style);
+
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Never;
+  verifyFormat("namespace A {\n"
+               "  TESTSUITE(B) {\n"
+               "    namespace C {\n"
+               "      namespace D {} // namespace D\n"
+               "      std::string Foo = Bar; // Comment\n"
+               "      std::string BazString = Baz; // C2\n"
+               "    } // namespace C\n"
+               "  }\n"
+               "} // NaMeSpAcE A",
+               Input, Style);
+
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Leave;
+  verifyFormat("namespace A {\n"
+               "  TESTSUITE(B) {\n"
+               "    namespace C {\n"
+               "      namespace D {} // namespace D\n"
+               "      std::string Foo = Bar; // Comment\n"
+               "      std::string BazString = Baz;   // C2\n"
+               "    }          // namespace C\n"
+               "  }\n"
+               "} // NaMeSpAcE A",
+               Input, Style);
+
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
+  Style.FixNamespaceComments = true;
+  Input = "namespace A {\n"
+          "  int Foo;\n"
+          "  int Bar;\n"
+          "}\n"
+          "// Comment";
+
+#if 0
+  // FIXME: The following comment is aligned with the namespace comment.
+  verifyFormat("namespace A {\n"
+               "  int Foo;\n"
+               "  int Bar;\n"
+               "} // namespace A\n"
+               " // Comment",
+               Input, Style);
+#endif
+
+  Style.FixNamespaceComments = false;
+  verifyFormat(Input, Style);
+}
+
 TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
   EXPECT_EQ("/*\n"
             " */",
