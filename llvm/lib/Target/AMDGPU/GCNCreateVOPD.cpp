@@ -77,14 +77,17 @@ public:
     auto InstInfo =
         AMDGPU::getVOPDInstInfo(FirstMI->getDesc(), SecondMI->getDesc());
 
-    for (auto CompIdx : VOPD::COMPONENTS)
-      VOPDInst.add(MI[CompIdx]->getOperand(InstInfo[CompIdx].getDstIndex()));
+    for (auto CompIdx : VOPD::COMPONENTS) {
+      auto MCOprIdx = InstInfo[CompIdx].getIndexOfDstInMCOperands();
+      VOPDInst.add(MI[CompIdx]->getOperand(MCOprIdx));
+    }
 
     for (auto CompIdx : VOPD::COMPONENTS) {
-      auto SrcOperandsNum = InstInfo[CompIdx].getSrcOperandsNum();
-      for (unsigned SrcIdx = 0; SrcIdx < SrcOperandsNum; ++SrcIdx)
-        VOPDInst.add(
-            MI[CompIdx]->getOperand(InstInfo[CompIdx].getSrcIndex(SrcIdx)));
+      auto CompSrcOprNum = InstInfo[CompIdx].getCompSrcOperandsNum();
+      for (unsigned CompSrcIdx = 0; CompSrcIdx < CompSrcOprNum; ++CompSrcIdx) {
+        auto MCOprIdx = InstInfo[CompIdx].getIndexOfSrcInMCOperands(CompSrcIdx);
+        VOPDInst.add(MI[CompIdx]->getOperand(MCOprIdx));
+      }
     }
 
     for (auto CompIdx : VOPD::COMPONENTS)
