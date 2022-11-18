@@ -8,7 +8,6 @@ add_llvm_component_library(LLVMIRPrinter
   intrinsics_gen
 
   LINK_COMPONENTS
-  Analysis
   Core
   Support
   )
