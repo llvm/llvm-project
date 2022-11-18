@@ -314,11 +314,10 @@ ConstString CompilerType::GetTypeName(bool BaseOnly) const {
 
 ConstString
 CompilerType::GetDisplayTypeName(const SymbolContext *sc) const {
-  if (IsValid()) {
+  if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetDisplayTypeName(m_type, sc);
-  }
-  return ConstString();
+  return ConstString("<invalid>");
 }
 
 ConstString CompilerType::GetMangledTypeName() const {

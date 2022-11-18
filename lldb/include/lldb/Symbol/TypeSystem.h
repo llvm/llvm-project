@@ -84,9 +84,6 @@ public:
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Module *module);
 
-  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
-                                           Target *target);
-
   // BEGIN SWIFT
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Target *target,
