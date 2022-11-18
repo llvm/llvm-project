@@ -26,7 +26,7 @@ framework module FW_Private {
 [{
   "file": "DIR/from_tu.m",
   "directory": "DIR",
-  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -iframework DIR/frameworks -c DIR/from_tu.m -o DIR/from_tu.o"
+  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -F DIR/frameworks -c DIR/from_tu.m -o DIR/from_tu.o"
 }]
 //--- from_tu.m
 #include "FW/FW.h"
@@ -45,8 +45,7 @@ framework module FW_Private {
 // CHECK_TU-NEXT:       "context-hash": "{{.*}}",
 // CHECK_TU-NEXT:       "file-deps": [
 // CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
-// CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
-// CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap"
+// CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap"
 // CHECK_TU-NEXT:       ],
 // CHECK_TU-NEXT:       "name": "FW"
 // CHECK_TU-NEXT:     },
@@ -57,7 +56,6 @@ framework module FW_Private {
 // CHECK_TU:            ],
 // CHECK_TU-NEXT:       "context-hash": "{{.*}}",
 // CHECK_TU-NEXT:       "file-deps": [
-// CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
 // CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap",
 // CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/FW_Private.h",
 // CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/One.h"
@@ -102,7 +100,7 @@ framework module FW_Private {
 [{
   "file": "DIR/from_module.m",
   "directory": "DIR",
-  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -iframework DIR/frameworks -c DIR/from_module.m -o DIR/from_module.o"
+  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -F DIR/frameworks -c DIR/from_module.m -o DIR/from_module.o"
 }]
 //--- module.modulemap
 module Mod { header "Mod.h" }
@@ -125,8 +123,7 @@ module Mod { header "Mod.h" }
 // CHECK_MODULE-NEXT:       "context-hash": "{{.*}}",
 // CHECK_MODULE-NEXT:       "file-deps": [
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
-// CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
-// CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap"
+// CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap"
 // CHECK_MODULE-NEXT:       ],
 // CHECK_MODULE-NEXT:       "name": "FW"
 // CHECK_MODULE-NEXT:     },
@@ -137,7 +134,6 @@ module Mod { header "Mod.h" }
 // CHECK_MODULE:            ],
 // CHECK_MODULE-NEXT:       "context-hash": "{{.*}}",
 // CHECK_MODULE-NEXT:       "file-deps": [
-// CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap",
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/FW_Private.h",
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/One.h"

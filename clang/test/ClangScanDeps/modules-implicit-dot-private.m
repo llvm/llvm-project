@@ -15,7 +15,7 @@ framework module FW_Private { umbrella header "FW_Private.h" }
 [{
   "file": "DIR/tu.m",
   "directory": "DIR",
-  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -iframework DIR/frameworks -c DIR/tu.m -o DIR/tu.o"
+  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -F DIR/frameworks -c DIR/tu.m -o DIR/tu.o"
 }]
 //--- tu.m
 @import FW.Private;
@@ -33,8 +33,7 @@ framework module FW_Private { umbrella header "FW_Private.h" }
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK:            "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "name": "FW"
 // CHECK:          },
@@ -45,7 +44,6 @@ framework module FW_Private { umbrella header "FW_Private.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/FW_Private.h"
 // CHECK-NEXT:       ],
