@@ -131,16 +131,22 @@ template <typename To, typename From>
   return static_cast<To>(x);
 }
 
-// TODO: would be better to use various architectures' intrinsics to
-// detect the overflow directly, instead of doing the assertion beforehand
-// (which requires an expensive division).
-//
 /// A version of `operator*` on `uint64_t` which guards against overflows
 /// (when assertions are enabled).
 inline uint64_t checkedMul(uint64_t lhs, uint64_t rhs) {
+  // If assertions are enabled and we have the intrinsic, then use it to
+  // avoid the expensive division.  If assertions are disabled, then don't
+  // bother with intrinsics (to avoid any possible slowdown vs `operator*`).
+#if !defined(NDEBUG) && __has_builtin(__builtin_mul_overflow)
+  uint64_t result;
+  bool overflowed = __builtin_mul_overflow(lhs, rhs, &result);
+  assert(!overflowed && "Integer overflow");
+  return result;
+#else
   assert((lhs == 0 || rhs <= std::numeric_limits<uint64_t>::max() / lhs) &&
          "Integer overflow");
   return lhs * rhs;
+#endif
 }
 
 } // namespace detail
