@@ -1501,50 +1501,29 @@ StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_RegisterInfo(
     StructuredData::ObjectSP os_plugin_object_sp) {
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
 
-  static char callee_name[] = "get_register_info";
-
   if (!os_plugin_object_sp)
-    return StructuredData::DictionarySP();
+    return {};
 
   StructuredData::Generic *generic = os_plugin_object_sp->GetAsGeneric();
   if (!generic)
-    return nullptr;
+    return {};
 
   PythonObject implementor(PyRefType::Borrowed,
                            (PyObject *)generic->GetValue());
 
   if (!implementor.IsAllocated())
-    return StructuredData::DictionarySP();
+    return {};
 
-  PythonObject pmeth(PyRefType::Owned,
-                     PyObject_GetAttrString(implementor.get(), callee_name));
+  llvm::Expected<PythonObject> expected_py_return =
+      implementor.CallMethod("get_register_info");
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  if (!pmeth.IsAllocated())
-    return StructuredData::DictionarySP();
-
-  if (PyCallable_Check(pmeth.get()) == 0) {
-    if (PyErr_Occurred())
-      PyErr_Clear();
-
-    return StructuredData::DictionarySP();
+  if (!expected_py_return) {
+    llvm::consumeError(expected_py_return.takeError());
+    return {};
   }
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
+  PythonObject py_return = std::move(expected_py_return.get());
 
-  // right now we know this function exists and is callable..
-  PythonObject py_return(
-      PyRefType::Owned,
-      PyObject_CallMethod(implementor.get(), callee_name, nullptr));
-
-  // if it fails, print the error but otherwise go on
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-  }
   if (py_return.get()) {
     PythonDictionary result_dict(PyRefType::Borrowed, py_return.get());
     return result_dict.CreateStructuredDictionary();
@@ -1555,51 +1534,28 @@ StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_RegisterInfo(
 StructuredData::ArraySP ScriptInterpreterPythonImpl::OSPlugin_ThreadsInfo(
     StructuredData::ObjectSP os_plugin_object_sp) {
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-
-  static char callee_name[] = "get_thread_info";
-
   if (!os_plugin_object_sp)
-    return StructuredData::ArraySP();
+    return {};
 
   StructuredData::Generic *generic = os_plugin_object_sp->GetAsGeneric();
   if (!generic)
-    return nullptr;
+    return {};
 
   PythonObject implementor(PyRefType::Borrowed,
                            (PyObject *)generic->GetValue());
 
   if (!implementor.IsAllocated())
-    return StructuredData::ArraySP();
+    return {};
 
-  PythonObject pmeth(PyRefType::Owned,
-                     PyObject_GetAttrString(implementor.get(), callee_name));
+  llvm::Expected<PythonObject> expected_py_return =
+      implementor.CallMethod("get_thread_info");
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  if (!pmeth.IsAllocated())
-    return StructuredData::ArraySP();
-
-  if (PyCallable_Check(pmeth.get()) == 0) {
-    if (PyErr_Occurred())
-      PyErr_Clear();
-
-    return StructuredData::ArraySP();
+  if (!expected_py_return) {
+    llvm::consumeError(expected_py_return.takeError());
+    return {};
   }
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  // right now we know this function exists and is callable..
-  PythonObject py_return(
-      PyRefType::Owned,
-      PyObject_CallMethod(implementor.get(), callee_name, nullptr));
-
-  // if it fails, print the error but otherwise go on
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-  }
+  PythonObject py_return = std::move(expected_py_return.get());
 
   if (py_return.get()) {
     PythonList result_list(PyRefType::Borrowed, py_return.get());
@@ -1613,56 +1569,33 @@ ScriptInterpreterPythonImpl::OSPlugin_RegisterContextData(
     StructuredData::ObjectSP os_plugin_object_sp, lldb::tid_t tid) {
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
 
-  static char callee_name[] = "get_register_data";
-  static char *param_format =
-      const_cast<char *>(GetPythonValueFormatString(tid));
-
   if (!os_plugin_object_sp)
-    return StructuredData::StringSP();
+    return {};
 
   StructuredData::Generic *generic = os_plugin_object_sp->GetAsGeneric();
   if (!generic)
-    return nullptr;
+    return {};
   PythonObject implementor(PyRefType::Borrowed,
                            (PyObject *)generic->GetValue());
 
   if (!implementor.IsAllocated())
-    return StructuredData::StringSP();
+    return {};
 
-  PythonObject pmeth(PyRefType::Owned,
-                     PyObject_GetAttrString(implementor.get(), callee_name));
+  llvm::Expected<PythonObject> expected_py_return =
+      implementor.CallMethod("get_register_data", tid);
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  if (!pmeth.IsAllocated())
-    return StructuredData::StringSP();
-
-  if (PyCallable_Check(pmeth.get()) == 0) {
-    if (PyErr_Occurred())
-      PyErr_Clear();
-    return StructuredData::StringSP();
+  if (!expected_py_return) {
+    llvm::consumeError(expected_py_return.takeError());
+    return {};
   }
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  // right now we know this function exists and is callable..
-  PythonObject py_return(
-      PyRefType::Owned,
-      PyObject_CallMethod(implementor.get(), callee_name, param_format, tid));
-
-  // if it fails, print the error but otherwise go on
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-  }
+  PythonObject py_return = std::move(expected_py_return.get());
 
   if (py_return.get()) {
     PythonBytes result(PyRefType::Borrowed, py_return.get());
     return result.CreateStructuredString();
   }
-  return StructuredData::StringSP();
+  return {};
 }
 
 StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_CreateThread(
@@ -1670,52 +1603,28 @@ StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_CreateThread(
     lldb::addr_t context) {
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
 
-  static char callee_name[] = "create_thread";
-  std::string param_format;
-  param_format += GetPythonValueFormatString(tid);
-  param_format += GetPythonValueFormatString(context);
-
   if (!os_plugin_object_sp)
-    return StructuredData::DictionarySP();
+    return {};
 
   StructuredData::Generic *generic = os_plugin_object_sp->GetAsGeneric();
   if (!generic)
-    return nullptr;
+    return {};
 
   PythonObject implementor(PyRefType::Borrowed,
                            (PyObject *)generic->GetValue());
 
   if (!implementor.IsAllocated())
-    return StructuredData::DictionarySP();
+    return {};
 
-  PythonObject pmeth(PyRefType::Owned,
-                     PyObject_GetAttrString(implementor.get(), callee_name));
+  llvm::Expected<PythonObject> expected_py_return =
+      implementor.CallMethod("create_thread", tid, context);
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  if (!pmeth.IsAllocated())
-    return StructuredData::DictionarySP();
-
-  if (PyCallable_Check(pmeth.get()) == 0) {
-    if (PyErr_Occurred())
-      PyErr_Clear();
-    return StructuredData::DictionarySP();
+  if (!expected_py_return) {
+    llvm::consumeError(expected_py_return.takeError());
+    return {};
   }
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  // right now we know this function exists and is callable..
-  PythonObject py_return(PyRefType::Owned,
-                         PyObject_CallMethod(implementor.get(), callee_name,
-                                             &param_format[0], tid, context));
-
-  // if it fails, print the error but otherwise go on
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-  }
+  PythonObject py_return = std::move(expected_py_return.get());
 
   if (py_return.get()) {
     PythonDictionary result_dict(PyRefType::Borrowed, py_return.get());
@@ -2436,51 +2345,31 @@ ConstString ScriptInterpreterPythonImpl::GetSyntheticTypeName(
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
 
-  static char callee_name[] = "get_type_name";
+  if (!implementor_sp)
+    return {};
+
+  StructuredData::Generic *generic = implementor_sp->GetAsGeneric();
+  if (!generic)
+    return {};
+
+  PythonObject implementor(PyRefType::Borrowed,
+                           (PyObject *)generic->GetValue());
+  if (!implementor.IsAllocated())
+    return {};
+
+  llvm::Expected<PythonObject> expected_py_return =
+      implementor.CallMethod("get_type_name");
+
+  if (!expected_py_return) {
+    llvm::consumeError(expected_py_return.takeError());
+    return {};
+  }
+
+  PythonObject py_return = std::move(expected_py_return.get());
 
   ConstString ret_val;
   bool got_string = false;
   std::string buffer;
-
-  if (!implementor_sp)
-    return ret_val;
-
-  StructuredData::Generic *generic = implementor_sp->GetAsGeneric();
-  if (!generic)
-    return ret_val;
-  PythonObject implementor(PyRefType::Borrowed,
-                           (PyObject *)generic->GetValue());
-  if (!implementor.IsAllocated())
-    return ret_val;
-
-  PythonObject pmeth(PyRefType::Owned,
-                     PyObject_GetAttrString(implementor.get(), callee_name));
-
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  if (!pmeth.IsAllocated())
-    return ret_val;
-
-  if (PyCallable_Check(pmeth.get()) == 0) {
-    if (PyErr_Occurred())
-      PyErr_Clear();
-    return ret_val;
-  }
-
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  // right now we know this function exists and is callable..
-  PythonObject py_return(
-      PyRefType::Owned,
-      PyObject_CallMethod(implementor.get(), callee_name, nullptr));
-
-  // if it fails, print the error but otherwise go on
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-  }
 
   if (py_return.IsAllocated() && PythonString::Check(py_return.get())) {
     PythonString py_string(PyRefType::Borrowed, py_return.get());
@@ -2986,8 +2875,6 @@ bool ScriptInterpreterPythonImpl::GetShortHelpForCommandObject(
 
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
 
-  static char callee_name[] = "get_short_help";
-
   if (!cmd_obj_sp)
     return false;
 
@@ -2997,34 +2884,15 @@ bool ScriptInterpreterPythonImpl::GetShortHelpForCommandObject(
   if (!implementor.IsAllocated())
     return false;
 
-  PythonObject pmeth(PyRefType::Owned,
-                     PyObject_GetAttrString(implementor.get(), callee_name));
+  llvm::Expected<PythonObject> expected_py_return =
+      implementor.CallMethod("get_short_help");
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  if (!pmeth.IsAllocated())
-    return false;
-
-  if (PyCallable_Check(pmeth.get()) == 0) {
-    if (PyErr_Occurred())
-      PyErr_Clear();
+  if (!expected_py_return) {
+    llvm::consumeError(expected_py_return.takeError());
     return false;
   }
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  // Right now we know this function exists and is callable.
-  PythonObject py_return(
-      PyRefType::Owned,
-      PyObject_CallMethod(implementor.get(), callee_name, nullptr));
-
-  // If it fails, print the error but otherwise go on.
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-  }
+  PythonObject py_return = std::move(expected_py_return.get());
 
   if (py_return.IsAllocated() && PythonString::Check(py_return.get())) {
     PythonString py_string(PyRefType::Borrowed, py_return.get());
@@ -3087,12 +2955,9 @@ uint32_t ScriptInterpreterPythonImpl::GetFlagsForCommandObject(
 
 bool ScriptInterpreterPythonImpl::GetLongHelpForCommandObject(
     StructuredData::GenericSP cmd_obj_sp, std::string &dest) {
-  bool got_string = false;
   dest.clear();
 
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-
-  static char callee_name[] = "get_long_help";
 
   if (!cmd_obj_sp)
     return false;
@@ -3103,36 +2968,17 @@ bool ScriptInterpreterPythonImpl::GetLongHelpForCommandObject(
   if (!implementor.IsAllocated())
     return false;
 
-  PythonObject pmeth(PyRefType::Owned,
-                     PyObject_GetAttrString(implementor.get(), callee_name));
+  llvm::Expected<PythonObject> expected_py_return =
+      implementor.CallMethod("get_long_help");
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
-
-  if (!pmeth.IsAllocated())
-    return false;
-
-  if (PyCallable_Check(pmeth.get()) == 0) {
-    if (PyErr_Occurred())
-      PyErr_Clear();
-
+  if (!expected_py_return) {
+    llvm::consumeError(expected_py_return.takeError());
     return false;
   }
 
-  if (PyErr_Occurred())
-    PyErr_Clear();
+  PythonObject py_return = std::move(expected_py_return.get());
 
-  // right now we know this function exists and is callable..
-  PythonObject py_return(
-      PyRefType::Owned,
-      PyObject_CallMethod(implementor.get(), callee_name, nullptr));
-
-  // if it fails, print the error but otherwise go on
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-  }
-
+  bool got_string = false;
   if (py_return.IsAllocated() && PythonString::Check(py_return.get())) {
     PythonString str(PyRefType::Borrowed, py_return.get());
     llvm::StringRef str_data(str.GetString());
