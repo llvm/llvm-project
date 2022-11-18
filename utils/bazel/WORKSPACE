@@ -4,6 +4,7 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 SKYLIB_VERSION = "1.3.0"
 
@@ -69,5 +70,42 @@ load("@llvm-raw//utils/bazel:vulkan_sdk.bzl", "vulkan_sdk_setup")
 maybe(
     vulkan_sdk_setup,
     name = "vulkan_sdk",
+)
+
+# llvm libc math tests reply on `mpfr`.
+# The availability of `mpfr` is controlled by a flag and can be either `disable`, `system` or `external`.
+# Continuous integration uses `system` to speed up the build process (see .bazelrc).
+# Otherwise by default it is set to `external`: `mpfr` and `gmp` are built from source by using `rules_foreign_cc`.
+# Note: that building from source requires `m4` to be installed on the host machine.
+# This is a known issue: https://github.com/bazelbuild/rules_foreign_cc/issues/755.
+
+git_repository(
+    name = "rules_foreign_cc",
+    tag = "0.9.0",
+    remote = "https://github.com/bazelbuild/rules_foreign_cc.git"
+)
+
+load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
+rules_foreign_cc_dependencies()
+
+maybe(
+    http_archive,
+    name = "gmp",
+    build_file = "@llvm-raw//utils/bazel/third_party_build:gmp.BUILD",
+    sha256 = "fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2",
+    strip_prefix = "gmp-6.2.1",
+    urls = [
+        "https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz",
+        "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz",
+    ],
+)
+
+maybe(
+    http_archive,
+    name = "mpfr",
+    build_file = "@llvm-raw//utils/bazel/third_party_build:mpfr.BUILD",
+    sha256 = "3127fe813218f3a1f0adf4e8899de23df33b4cf4b4b3831a5314f78e65ffa2d6",
+    strip_prefix = "mpfr-4.1.0",
+    urls = ["https://www.mpfr.org/mpfr-current/mpfr-4.1.0.tar.gz"],
 )
 

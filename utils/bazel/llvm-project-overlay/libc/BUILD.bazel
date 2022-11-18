@@ -6,6 +6,7 @@
 load(":libc_build_rules.bzl", "libc_function", "libc_math_function")
 load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -13,6 +14,34 @@ package(
 )
 
 licenses(["notice"])
+
+# A flag to pick which `mpfr` to use for math tests.
+# Usage: `--@llvm-project//libc:mpfr=<disable|external|system>`.
+# Flag documentation: https://bazel.build/extending/config
+string_flag(
+    name = "mpfr",
+    build_setting_default = "external",
+    values = [
+        "disable",  # Skip tests that need mpfr
+        "external",  # Build mpfr from source
+        "system",  # Use system mpfr (non hermetic)
+    ],
+)
+
+config_setting(
+    name = "mpfr_disable",
+    flag_values = {":mpfr": "disable"},
+)
+
+config_setting(
+    name = "mpfr_external",
+    flag_values = {":mpfr": "external"},
+)
+
+config_setting(
+    name = "mpfr_system",
+    flag_values = {":mpfr": "system"},
+)
 
 # This empty root library helps us add an include path to this directory
 # using the 'includes' attribute. The strings listed in the includes attribute
@@ -151,13 +180,13 @@ cc_library(
     name = "__support_uint",
     hdrs = ["src/__support/UInt.h"],
     deps = [
+        "__support_builtin_wrappers",
         "__support_cpp_array",
         "__support_cpp_limits",
-        "__support_cpp_type_traits",
         "__support_cpp_optional",
-        "__support_builtin_wrappers",
-        "__support_number_pair",
+        "__support_cpp_type_traits",
         "__support_integer_utils",
+        "__support_number_pair",
         ":libc_root",
     ],
 )
