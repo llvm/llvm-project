@@ -2318,11 +2318,14 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
   // Construct the list of identifiers with macro directives that need to be
   // serialized.
   SmallVector<const IdentifierInfo *, 128> MacroIdentifiers;
-  for (auto &Id : PP.getIdentifierTable())
-    if (Id.second->hadMacroDefinition() &&
-        (!Id.second->isFromAST() ||
-         Id.second->hasChangedSinceDeserialization()))
-      MacroIdentifiers.push_back(Id.second);
+  // It is meaningless to emit macros for named modules. It only wastes times
+  // and spaces.
+  if (!isWritingStdCXXNamedModules())
+    for (auto &Id : PP.getIdentifierTable())
+      if (Id.second->hadMacroDefinition() &&
+          (!Id.second->isFromAST() ||
+          Id.second->hasChangedSinceDeserialization()))
+        MacroIdentifiers.push_back(Id.second);
   // Sort the set of macro definitions that need to be serialized by the
   // name of the macro, to provide a stable ordering.
   llvm::sort(MacroIdentifiers, llvm::deref<std::less<>>());
