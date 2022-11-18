@@ -10,8 +10,12 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x half> @fma_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x half> %op3) #0 {
 ; CHECK-LABEL: fma_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla v2.4h, v1.4h, v0.4h
-; CHECK-NEXT:    fmov d0, d2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fmad z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %mul = fmul contract <4 x half> %op1, %op2
   %res = fadd contract <4 x half> %mul, %op3
@@ -21,8 +25,12 @@ define <4 x half> @fma_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x half> %op3) 
 define <8 x half> @fma_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3) #0 {
 ; CHECK-LABEL: fma_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla v2.8h, v1.8h, v0.8h
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fmad z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %mul = fmul contract <8 x half> %op1, %op2
   %res = fadd contract <8 x half> %mul, %op3
@@ -33,11 +41,13 @@ define void @fma_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x half>* %c) #0 {
 ; CHECK-LABEL: fma_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    ldp q4, q5, [x2]
-; CHECK-NEXT:    fmla v4.8h, v0.8h, v1.8h
-; CHECK-NEXT:    fmla v5.8h, v3.8h, v2.8h
-; CHECK-NEXT:    stp q4, q5, [x0]
+; CHECK-NEXT:    fmad z0.h, p0/m, z1.h, z4.h
+; CHECK-NEXT:    movprfx z1, z5
+; CHECK-NEXT:    fmla z1.h, p0/m, z2.h, z3.h
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, <16 x half>* %a
   %op2 = load <16 x half>, <16 x half>* %b
@@ -51,8 +61,12 @@ define void @fma_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x half>* %c) #0 {
 define <2 x float> @fma_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x float> %op3) #0 {
 ; CHECK-LABEL: fma_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla v2.2s, v1.2s, v0.2s
-; CHECK-NEXT:    fmov d0, d2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %mul = fmul contract <2 x float> %op1, %op2
   %res = fadd contract <2 x float> %mul, %op3
@@ -62,8 +76,12 @@ define <2 x float> @fma_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x float> %o
 define <4 x float> @fma_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x float> %op3) #0 {
 ; CHECK-LABEL: fma_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla v2.4s, v1.4s, v0.4s
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %mul = fmul contract <4 x float> %op1, %op2
   %res = fadd contract <4 x float> %mul, %op3
@@ -74,11 +92,13 @@ define void @fma_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) #0 {
 ; CHECK-LABEL: fma_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    ldp q4, q5, [x2]
-; CHECK-NEXT:    fmla v4.4s, v0.4s, v1.4s
-; CHECK-NEXT:    fmla v5.4s, v3.4s, v2.4s
-; CHECK-NEXT:    stp q4, q5, [x0]
+; CHECK-NEXT:    fmad z0.s, p0/m, z1.s, z4.s
+; CHECK-NEXT:    movprfx z1, z5
+; CHECK-NEXT:    fmla z1.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, <8 x float>* %a
   %op2 = load <8 x float>, <8 x float>* %b
@@ -105,8 +125,12 @@ define <1 x double> @fma_v1f64(<1 x double> %op1, <1 x double> %op2, <1 x double
 define <2 x double> @fma_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x double> %op3) #0 {
 ; CHECK-LABEL: fma_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla v2.2d, v1.2d, v0.2d
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fmad z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %mul = fmul contract <2 x double> %op1, %op2
   %res = fadd contract <2 x double> %mul, %op3
@@ -117,11 +141,13 @@ define void @fma_v4f64(<4 x double>* %a, <4 x double>* %b, <4 x double>* %c) #0 
 ; CHECK-LABEL: fma_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    ldp q4, q5, [x2]
-; CHECK-NEXT:    fmla v4.2d, v0.2d, v1.2d
-; CHECK-NEXT:    fmla v5.2d, v3.2d, v2.2d
-; CHECK-NEXT:    stp q4, q5, [x0]
+; CHECK-NEXT:    fmad z0.d, p0/m, z1.d, z4.d
+; CHECK-NEXT:    movprfx z1, z5
+; CHECK-NEXT:    fmla z1.d, p0/m, z2.d, z3.d
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, <4 x double>* %a
   %op2 = load <4 x double>, <4 x double>* %b
