@@ -210,8 +210,9 @@ OpPrintingFlags::elideLargeElementsAttrs(int64_t largeElementLimit) {
 
 /// Enable printing of debug information. If 'prettyForm' is set to true,
 /// debug information is printed in a more readable 'pretty' form.
-OpPrintingFlags &OpPrintingFlags::enableDebugInfo(bool prettyForm) {
-  printDebugInfoFlag = true;
+OpPrintingFlags &OpPrintingFlags::enableDebugInfo(bool enable,
+                                                  bool prettyForm) {
+  printDebugInfoFlag = enable;
   printDebugInfoPrettyFormFlag = prettyForm;
   return *this;
 }
