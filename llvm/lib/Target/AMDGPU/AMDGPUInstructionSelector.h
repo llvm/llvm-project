@@ -148,7 +148,11 @@ private:
 
   std::pair<Register, unsigned>
   selectVOP3ModsImpl(MachineOperand &Root, bool AllowAbs = true,
-                     bool OpSel = false, bool ForceVGPR = false) const;
+                     bool OpSel = false) const;
+
+  Register copyToVGPRIfSrcFolded(Register Src, unsigned Mods,
+                                 MachineOperand Root, MachineInstr *InsertPt,
+                                 bool ForceVGPR = false) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;
