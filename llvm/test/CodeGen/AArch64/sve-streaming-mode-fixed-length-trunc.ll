@@ -421,29 +421,25 @@ define <8 x i8> @trunc_v8i64_v8i8(<8 x i64>* %in) #0 {
 ; CHECK-LABEL: trunc_v8i64_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    ldp q0, q1, [x0, #32]
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ldp q1, q0, [x0, #32]
+; CHECK-NEXT:    fmov x9, d1
 ; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov z4.s, z1.s[1]
-; CHECK-NEXT:    xtn v3.2s, v3.2d
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    mov z4.d, z0.d[1]
 ; CHECK-NEXT:    strb w9, [sp, #12]
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    mov z1.s, z0.s[1]
-; CHECK-NEXT:    xtn v2.2s, v2.2d
+; CHECK-NEXT:    fmov x9, d4
+; CHECK-NEXT:    mov z0.d, z1.d[1]
 ; CHECK-NEXT:    strb w8, [sp, #14]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    mov z0.s, z2.s[1]
-; CHECK-NEXT:    mov z2.s, z3.s[1]
+; CHECK-NEXT:    fmov x8, d3
 ; CHECK-NEXT:    strb w9, [sp, #15]
+; CHECK-NEXT:    fmov x10, d2
+; CHECK-NEXT:    mov z1.d, z2.d[1]
+; CHECK-NEXT:    mov z2.d, z3.d[1]
 ; CHECK-NEXT:    strb w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    fmov x9, d2
 ; CHECK-NEXT:    strb w10, [sp, #10]
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov x10, d0
 ; CHECK-NEXT:    strb w8, [sp, #11]
 ; CHECK-NEXT:    strb w10, [sp, #13]
 ; CHECK-NEXT:    strb w9, [sp, #9]
@@ -512,29 +508,25 @@ define <8 x i16> @trunc_v8i64_v8i16(<8 x i64>* %in) #0 {
 ; CHECK-LABEL: trunc_v8i64_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    ldp q0, q1, [x0, #32]
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ldp q1, q0, [x0, #32]
+; CHECK-NEXT:    fmov x9, d1
 ; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov z4.s, z1.s[1]
-; CHECK-NEXT:    xtn v3.2s, v3.2d
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    mov z4.d, z0.d[1]
 ; CHECK-NEXT:    strh w9, [sp, #8]
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    mov z1.s, z0.s[1]
-; CHECK-NEXT:    xtn v2.2s, v2.2d
+; CHECK-NEXT:    fmov x9, d4
+; CHECK-NEXT:    mov z0.d, z1.d[1]
 ; CHECK-NEXT:    strh w8, [sp, #12]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    mov z0.s, z2.s[1]
-; CHECK-NEXT:    mov z2.s, z3.s[1]
+; CHECK-NEXT:    fmov x8, d3
 ; CHECK-NEXT:    strh w9, [sp, #14]
+; CHECK-NEXT:    fmov x10, d2
+; CHECK-NEXT:    mov z1.d, z2.d[1]
+; CHECK-NEXT:    mov z2.d, z3.d[1]
 ; CHECK-NEXT:    strh w8, [sp]
-; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    fmov x9, d2
 ; CHECK-NEXT:    strh w10, [sp, #4]
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov x10, d0
 ; CHECK-NEXT:    strh w8, [sp, #6]
 ; CHECK-NEXT:    strh w10, [sp, #10]
 ; CHECK-NEXT:    strh w9, [sp, #2]
@@ -604,18 +596,30 @@ define <4 x i32> @trunc_v4i64_v4i32(<4 x i64>* %in) vscale_range(2,0) #0 {
 define void @trunc_v8i64_v8i32(<8 x i64>* %in, <8 x i32>* %out) #0 {
 ; CHECK-LABEL: trunc_v8i64_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0, #32]
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    ldp q1, q0, [x0, #32]
+; CHECK-NEXT:    fmov x9, d1
 ; CHECK-NEXT:    ldp q2, q3, [x0]
-; CHECK-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
-; CHECK-NEXT:    xtn v2.2s, v2.2d
+; CHECK-NEXT:    mov z4.d, z0.d[1]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    mov z0.d, z1.d[1]
+; CHECK-NEXT:    fmov x10, d4
+; CHECK-NEXT:    fmov x12, d0
+; CHECK-NEXT:    mov z0.d, z2.d[1]
+; CHECK-NEXT:    stp w8, w10, [sp, #24]
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    mov z1.d, z3.d[1]
+; CHECK-NEXT:    fmov x11, d3
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    stp w9, w12, [sp, #16]
+; CHECK-NEXT:    fmov x9, d2
+; CHECK-NEXT:    stp w11, w8, [sp, #8]
+; CHECK-NEXT:    stp w9, w10, [sp]
+; CHECK-NEXT:    ldp q1, q0, [sp]
+; CHECK-NEXT:    add z1.s, z1.s, z1.s
 ; CHECK-NEXT:    add z0.s, z0.s, z0.s
-; CHECK-NEXT:    xtn v3.2s, v3.2d
-; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
-; CHECK-NEXT:    add z1.s, z2.s, z2.s
 ; CHECK-NEXT:    stp q1, q0, [x1]
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %a = load <8 x i64>, <8 x i64>* %in
   %b = trunc <8 x i64> %a to <8 x i32>

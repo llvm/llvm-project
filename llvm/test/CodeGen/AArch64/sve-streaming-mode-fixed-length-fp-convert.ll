@@ -7,9 +7,14 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @fp_convert_combine_crash(<8 x float> *%a, <8 x i32> *%b) #0 {
 ; CHECK-LABEL: fp_convert_combine_crash:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fcvtzs v0.4s, v0.4s, #3
-; CHECK-NEXT:    fcvtzs v1.4s, v1.4s, #3
+; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fmul z1.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-NEXT:    fcvtzs z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %f = load <8 x float>, <8 x float>* %a
