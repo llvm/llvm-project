@@ -256,6 +256,17 @@ public:
 #elif __NR_sched_getaffinity != 5196
 #error Wrong code for getaffinity system call.
 #endif /* __NR_sched_getaffinity */
+#elif KMP_ARCH_LOONGARCH64
+#ifndef __NR_sched_setaffinity
+#define __NR_sched_setaffinity 122
+#elif __NR_sched_setaffinity != 122
+#error Wrong code for setaffinity system call.
+#endif /* __NR_sched_setaffinity */
+#ifndef __NR_sched_getaffinity
+#define __NR_sched_getaffinity 123
+#elif __NR_sched_getaffinity != 123
+#error Wrong code for getaffinity system call.
+#endif /* __NR_sched_getaffinity */
 #else
 #error Unknown or unsupported architecture
 #endif /* KMP_ARCH_* */
