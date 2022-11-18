@@ -10,7 +10,10 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x half> @ucvtf_v4i16_v4f16(<4 x i16> %op1) #0 {
 ; CHECK-LABEL: ucvtf_v4i16_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf v0.4h, v0.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = uitofp <4 x i16> %op1 to <4 x half>
   ret <4 x half> %res
@@ -20,7 +23,8 @@ define void @ucvtf_v8i16_v8f16(<8 x i16>* %a, <8 x half>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v8i16_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ucvtf v0.8h, v0.8h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.h
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i16>, <8 x i16>* %a
@@ -33,8 +37,9 @@ define void @ucvtf_v16i16_v16f16(<16 x i16>* %a, <16 x half>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v16i16_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ucvtf v0.8h, v0.8h
-; CHECK-NEXT:    ucvtf v1.8h, v1.8h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.h
+; CHECK-NEXT:    ucvtf z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
@@ -52,9 +57,11 @@ define <2 x float> @ucvtf_v2i16_v2f32(<2 x i16> %op1) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
-; CHECK-NEXT:    ucvtf v0.2s, v0.2s
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = uitofp <2 x i16> %op1 to <2 x float>
   ret <2 x float> %res
@@ -64,8 +71,10 @@ define <4 x float> @ucvtf_v4i16_v4f32(<4 x i16> %op1) #0 {
 ; CHECK-LABEL: ucvtf_v4i16_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = uitofp <4 x i16> %op1 to <4 x float>
   ret <4 x float> %res
@@ -75,11 +84,12 @@ define void @ucvtf_v8i16_v8f32(<8 x i16>* %a, <8 x float>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v8i16_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    ucvtf v1.4s, v1.4s
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-NEXT:    ucvtf z1.s, p0/m, z1.s
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i16>, <8 x i16>* %a
@@ -91,19 +101,21 @@ define void @ucvtf_v8i16_v8f32(<8 x i16>* %a, <8 x float>* %b) #0 {
 define void @ucvtf_v16i16_v16f32(<16 x i16>* %a, <16 x float>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v16i16_v16f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    uunpklo z3.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    ucvtf v3.4s, v3.4s
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    uunpklo z2.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    ucvtf v2.4s, v2.4s
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NEXT:    ucvtf v1.4s, v1.4s
-; CHECK-NEXT:    stp q3, q1, [x1]
-; CHECK-NEXT:    stp q2, q0, [x1, #32]
+; CHECK-NEXT:    uunpklo z3.s, z1.h
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    ucvtf z3.s, p0/m, z3.s
+; CHECK-NEXT:    ucvtf z1.s, p0/m, z1.s
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    stp q3, q1, [x1, #32]
+; CHECK-NEXT:    movprfx z1, z2
+; CHECK-NEXT:    ucvtf z1.s, p0/m, z2.s
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %res = uitofp <16 x i16> %op1 to <16 x float>
@@ -132,10 +144,12 @@ define <2 x double> @ucvtf_v2i16_v2f64(<2 x i16> %op1) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI8_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI8_0]
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = uitofp <2 x i16> %op1 to <2 x double>
   ret <2 x double> %res
@@ -145,12 +159,13 @@ define void @ucvtf_v4i16_v4f64(<4 x i16>* %a, <4 x double>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v4i16_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    ucvtf z1.d, p0/m, z1.d
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i16>, <4 x i16>* %a
@@ -163,21 +178,23 @@ define void @ucvtf_v8i16_v8f64(<8 x i16>* %a, <8 x double>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v8i16_v8f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z3.d, z1.s
-; CHECK-NEXT:    uunpklo z2.d, z0.s
+; CHECK-NEXT:    uunpklo z2.d, z1.s
+; CHECK-NEXT:    uunpklo z3.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ucvtf z3.d, p0/m, z3.d
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    ucvtf z2.d, p0/m, z2.d
 ; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    stp q2, q0, [x1, #32]
-; CHECK-NEXT:    stp q3, q1, [x1]
+; CHECK-NEXT:    stp q3, q0, [x1, #32]
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z1.d
+; CHECK-NEXT:    stp q2, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i16>, <8 x i16>* %a
   %res = uitofp <8 x i16> %op1 to <8 x double>
@@ -189,6 +206,7 @@ define void @ucvtf_v16i16_v16f64(<16 x i16>* %a, <16 x double>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v16i16_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    uunpklo z2.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
@@ -196,29 +214,33 @@ define void @ucvtf_v16i16_v16f64(<16 x i16>* %a, <16 x double>* %b) #0 {
 ; CHECK-NEXT:    uunpklo z3.s, z1.h
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z5.d, z3.s
-; CHECK-NEXT:    uunpklo z6.d, z1.s
+; CHECK-NEXT:    uunpklo z6.d, z0.s
+; CHECK-NEXT:    uunpklo z7.d, z1.s
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    uunpklo z7.d, z0.s
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    uunpklo z5.d, z3.s
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-NEXT:    stp q6, q1, [x1, #96]
-; CHECK-NEXT:    uunpklo z1.d, z2.s
-; CHECK-NEXT:    ucvtf v5.2d, v5.2d
-; CHECK-NEXT:    ucvtf v7.2d, v7.2d
-; CHECK-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    stp q7, q0, [x1, #32]
-; CHECK-NEXT:    stp q4, q1, [x1]
-; CHECK-NEXT:    stp q5, q3, [x1, #64]
+; CHECK-NEXT:    ucvtf z7.d, p0/m, z7.d
+; CHECK-NEXT:    ucvtf z1.d, p0/m, z1.d
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    stp q7, q1, [x1, #96]
+; CHECK-NEXT:    ucvtf z5.d, p0/m, z5.d
+; CHECK-NEXT:    movprfx z1, z3
+; CHECK-NEXT:    ucvtf z1.d, p0/m, z3.d
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    stp q5, q1, [x1, #64]
+; CHECK-NEXT:    movprfx z3, z6
+; CHECK-NEXT:    ucvtf z3.d, p0/m, z6.d
+; CHECK-NEXT:    stp q3, q0, [x1, #32]
+; CHECK-NEXT:    movprfx z1, z4
+; CHECK-NEXT:    ucvtf z1.d, p0/m, z4.d
+; CHECK-NEXT:    movprfx z0, z2
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z2.d
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %res = uitofp <16 x i16> %op1 to <16 x double>
@@ -233,9 +255,24 @@ define void @ucvtf_v16i16_v16f64(<16 x i16>* %a, <16 x double>* %b) #0 {
 define <2 x half> @ucvtf_v2i32_v2f16(<2 x i32> %op1) #0 {
 ; CHECK-LABEL: ucvtf_v2i32_v2f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    mov z2.s, z0.s[2]
+; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    strh w9, [sp, #14]
+; CHECK-NEXT:    strh w10, [sp, #12]
+; CHECK-NEXT:    strh w8, [sp, #10]
+; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = uitofp <2 x i32> %op1 to <2 x half>
   ret <2 x half> %res
@@ -244,8 +281,24 @@ define <2 x half> @ucvtf_v2i32_v2f16(<2 x i32> %op1) #0 {
 define <4 x half> @ucvtf_v4i32_v4f16(<4 x i32> %op1) #0 {
 ; CHECK-LABEL: ucvtf_v4i32_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    mov z2.s, z0.s[2]
+; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    strh w9, [sp, #14]
+; CHECK-NEXT:    strh w10, [sp, #12]
+; CHECK-NEXT:    strh w8, [sp, #10]
+; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = uitofp <4 x i32> %op1 to <4 x half>
   ret <4 x half> %res
@@ -254,14 +307,35 @@ define <4 x half> @ucvtf_v4i32_v4f16(<4 x i32> %op1) #0 {
 define <8 x half> @ucvtf_v8i32_v8f16(<8 x i32>* %a) #0 {
 ; CHECK-LABEL: ucvtf_v8i32_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NEXT:    ucvtf v1.4s, v1.4s
-; CHECK-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ucvtf z1.h, p0/m, z1.s
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z5.s, z1.s[2]
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z2.s, z0.s[3]
+; CHECK-NEXT:    mov z3.s, z0.s[2]
+; CHECK-NEXT:    mov z4.s, z0.s[1]
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    strh w9, [sp]
+; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    fmov w9, s4
+; CHECK-NEXT:    mov z0.s, z1.s[3]
+; CHECK-NEXT:    mov z1.s, z1.s[1]
+; CHECK-NEXT:    strh w10, [sp, #14]
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    strh w8, [sp, #12]
+; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    strh w9, [sp, #10]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    strh w10, [sp, #6]
+; CHECK-NEXT:    strh w8, [sp, #4]
+; CHECK-NEXT:    strh w9, [sp, #2]
+; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, <8 x i32>* %a
   %res = uitofp <8 x i32> %op1 to <8 x half>
@@ -271,20 +345,64 @@ define <8 x half> @ucvtf_v8i32_v8f16(<8 x i32>* %a) #0 {
 define void @ucvtf_v16i32_v16f16(<16 x i32>* %a, <16 x half>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v16i32_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0, #32]
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NEXT:    ldp q2, q3, [x0]
-; CHECK-NEXT:    ucvtf v1.4s, v1.4s
-; CHECK-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NEXT:    ucvtf v2.4s, v2.4s
-; CHECK-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NEXT:    ucvtf v3.4s, v3.4s
-; CHECK-NEXT:    fcvtn v2.4h, v2.4s
-; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
-; CHECK-NEXT:    fcvtn v3.4h, v3.4s
-; CHECK-NEXT:    splice z2.h, p0, z2.h, z3.h
-; CHECK-NEXT:    stp q2, q0, [x1]
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z5.s, z0.s[2]
+; CHECK-NEXT:    ucvtf z1.h, p0/m, z1.s
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    mov z2.s, z1.s[3]
+; CHECK-NEXT:    mov z3.s, z1.s[2]
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    ldp q6, q7, [x0, #32]
+; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    mov z4.s, z1.s[1]
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    strh w9, [sp]
+; CHECK-NEXT:    fmov w9, s4
+; CHECK-NEXT:    strh w10, [sp, #14]
+; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    strh w8, [sp, #12]
+; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    strh w9, [sp, #10]
+; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    strh w10, [sp, #6]
+; CHECK-NEXT:    strh w8, [sp, #4]
+; CHECK-NEXT:    movprfx z1, z7
+; CHECK-NEXT:    ucvtf z1.h, p0/m, z7.s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z0.s, z1.s[3]
+; CHECK-NEXT:    mov z2.s, z1.s[2]
+; CHECK-NEXT:    mov z3.s, z1.s[1]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    movprfx z1, z6
+; CHECK-NEXT:    ucvtf z1.h, p0/m, z6.s
+; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    strh w8, [sp, #2]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z4.s, z1.s[3]
+; CHECK-NEXT:    strh w9, [sp, #24]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    strh w10, [sp, #16]
+; CHECK-NEXT:    fmov w10, s3
+; CHECK-NEXT:    mov z5.s, z1.s[2]
+; CHECK-NEXT:    mov z6.s, z1.s[1]
+; CHECK-NEXT:    strh w8, [sp, #30]
+; CHECK-NEXT:    fmov w8, s4
+; CHECK-NEXT:    strh w9, [sp, #28]
+; CHECK-NEXT:    fmov w9, s5
+; CHECK-NEXT:    strh w10, [sp, #26]
+; CHECK-NEXT:    fmov w10, s6
+; CHECK-NEXT:    strh w8, [sp, #22]
+; CHECK-NEXT:    strh w9, [sp, #20]
+; CHECK-NEXT:    strh w10, [sp, #18]
+; CHECK-NEXT:    ldp q1, q0, [sp]
+; CHECK-NEXT:    stp q1, q0, [x1]
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i32>, <16 x i32>* %a
   %res = uitofp <16 x i32> %op1 to <16 x half>
@@ -299,7 +417,10 @@ define void @ucvtf_v16i32_v16f16(<16 x i32>* %a, <16 x half>* %b) #0 {
 define <2 x float> @ucvtf_v2i32_v2f32(<2 x i32> %op1) #0 {
 ; CHECK-LABEL: ucvtf_v2i32_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf v0.2s, v0.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = uitofp <2 x i32> %op1 to <2 x float>
   ret <2 x float> %res
@@ -308,7 +429,10 @@ define <2 x float> @ucvtf_v2i32_v2f32(<2 x i32> %op1) #0 {
 define <4 x float> @ucvtf_v4i32_v4f32(<4 x i32> %op1) #0 {
 ; CHECK-LABEL: ucvtf_v4i32_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = uitofp <4 x i32> %op1 to <4 x float>
   ret <4 x float> %res
@@ -318,8 +442,9 @@ define void @ucvtf_v8i32_v8f32(<8 x i32>* %a, <8 x float>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v8i32_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NEXT:    ucvtf v1.4s, v1.4s
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    ucvtf z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, <8 x i32>* %a
@@ -336,8 +461,10 @@ define <2 x double> @ucvtf_v2i32_v2f64(<2 x i32> %op1) #0 {
 ; CHECK-LABEL: ucvtf_v2i32_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = uitofp <2 x i32> %op1 to <2 x double>
   ret <2 x double> %res
@@ -347,11 +474,12 @@ define void @ucvtf_v4i32_v4f64(<4 x i32>* %a, <4 x double>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v4i32_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    ucvtf z1.d, p0/m, z1.d
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i32>, <4 x i32>* %a
@@ -363,19 +491,21 @@ define void @ucvtf_v4i32_v4f64(<4 x i32>* %a, <4 x double>* %b) #0 {
 define void @ucvtf_v8i32_v8f64(<8 x i32>* %a, <8 x double>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v8i32_v8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    uunpklo z3.d, z1.s
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    ucvtf v3.2d, v3.2d
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    uunpklo z2.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    stp q3, q1, [x1]
-; CHECK-NEXT:    stp q2, q0, [x1, #32]
+; CHECK-NEXT:    uunpklo z3.d, z1.s
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    ucvtf z3.d, p0/m, z3.d
+; CHECK-NEXT:    ucvtf z1.d, p0/m, z1.d
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    stp q3, q1, [x1, #32]
+; CHECK-NEXT:    movprfx z1, z2
+; CHECK-NEXT:    ucvtf z1.d, p0/m, z2.d
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, <8 x i32>* %a
   %res = uitofp <8 x i32> %op1 to <8 x double>
@@ -410,14 +540,37 @@ define <2 x half> @ucvtf_v2i64_v2f16(<2 x i64> %op1) #0 {
 define <4 x half> @ucvtf_v4i64_v4f16(<4 x i64>* %a) #0 {
 ; CHECK-LABEL: ucvtf_v4i64_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn v1.2s, v1.2d
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
-; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d[1]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z1.d
+; CHECK-NEXT:    mov z1.d, z0.d[1]
+; CHECK-NEXT:    fmov x9, d2
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    fmov x11, d1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    stp w8, w9, [sp, #8]
+; CHECK-NEXT:    stp w10, w11, [sp]
+; CHECK-NEXT:    ldr q0, [sp]
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    mov z2.s, z0.s[2]
+; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    strh w8, [sp, #24]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    strh w9, [sp, #30]
+; CHECK-NEXT:    strh w10, [sp, #28]
+; CHECK-NEXT:    strh w8, [sp, #26]
+; CHECK-NEXT:    ldr d0, [sp, #24]
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, <4 x i64>* %a
   %res = uitofp <4 x i64> %op1 to <4 x half>
@@ -427,24 +580,62 @@ define <4 x half> @ucvtf_v4i64_v4f16(<4 x i64>* %a) #0 {
 define <8 x half> @ucvtf_v8i64_v8f16(<8 x i64>* %a) #0 {
 ; CHECK-LABEL: ucvtf_v8i64_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0, #32]
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    ldp q1, q0, [x0, #32]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ucvtf z1.s, p0/m, z1.d
+; CHECK-NEXT:    fmov x9, d1
 ; CHECK-NEXT:    ldp q2, q3, [x0]
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-NEXT:    fcvtn v1.2s, v1.2d
-; CHECK-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-NEXT:    fcvtn v2.2s, v2.2d
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
-; CHECK-NEXT:    fcvtn v3.2s, v3.2d
-; CHECK-NEXT:    fcvtn v1.4h, v0.4s
-; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    fcvtn v0.4h, v2.4s
-; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.d
+; CHECK-NEXT:    mov z4.d, z0.d[1]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    mov z0.d, z1.d[1]
+; CHECK-NEXT:    fmov x10, d4
+; CHECK-NEXT:    fmov x12, d0
+; CHECK-NEXT:    ucvtf z2.s, p0/m, z2.d
+; CHECK-NEXT:    movprfx z1, z3
+; CHECK-NEXT:    ucvtf z1.s, p0/m, z3.d
+; CHECK-NEXT:    mov z0.d, z2.d[1]
+; CHECK-NEXT:    stp w8, w10, [sp, #24]
+; CHECK-NEXT:    mov z3.d, z1.d[1]
+; CHECK-NEXT:    stp w9, w12, [sp, #16]
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    ldr q0, [sp, #16]
+; CHECK-NEXT:    fmov x11, d1
+; CHECK-NEXT:    fmov x8, d3
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmov x9, d2
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    stp w11, w8, [sp, #8]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    stp w9, w10, [sp]
+; CHECK-NEXT:    mov z2.s, z0.s[2]
+; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    strh w8, [sp, #40]
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    ldr q1, [sp]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    strh w8, [sp, #46]
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvt z0.h, p0/m, z1.s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    mov z2.s, z0.s[2]
+; CHECK-NEXT:    mov z3.s, z0.s[1]
+; CHECK-NEXT:    strh w9, [sp, #44]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    strh w10, [sp, #42]
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    strh w8, [sp, #32]
+; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    strh w9, [sp, #38]
+; CHECK-NEXT:    strh w10, [sp, #36]
+; CHECK-NEXT:    strh w8, [sp, #34]
+; CHECK-NEXT:    ldr q0, [sp, #32]
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i64>, <8 x i64>* %a
   %res = uitofp <8 x i64> %op1 to <8 x half>
@@ -458,8 +649,17 @@ define <8 x half> @ucvtf_v8i64_v8f16(<8 x i64>* %a) #0 {
 define <2 x float> @ucvtf_v2i64_v2f32(<2 x i64> %op1) #0 {
 ; CHECK-LABEL: ucvtf_v2i64_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.d
+; CHECK-NEXT:    mov z1.d, z0.d[1]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    stp w8, w9, [sp, #8]
+; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = uitofp <2 x i64> %op1 to <2 x float>
   ret <2 x float> %res
@@ -468,14 +668,22 @@ define <2 x float> @ucvtf_v2i64_v2f32(<2 x i64> %op1) #0 {
 define <4 x float> @ucvtf_v4i64_v4f32(<4 x i64>* %a) #0 {
 ; CHECK-LABEL: ucvtf_v4i64_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn v1.2s, v1.2d
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d[1]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z1.d
+; CHECK-NEXT:    mov z1.d, z0.d[1]
+; CHECK-NEXT:    fmov x9, d2
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    fmov x11, d1
+; CHECK-NEXT:    stp w8, w9, [sp, #8]
+; CHECK-NEXT:    stp w10, w11, [sp]
+; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, <4 x i64>* %a
   %res = uitofp <4 x i64> %op1 to <4 x float>
@@ -485,20 +693,37 @@ define <4 x float> @ucvtf_v4i64_v4f32(<4 x i64>* %a) #0 {
 define void @ucvtf_v8i64_v8f32(<8 x i64>* %a, <8 x float>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v8i64_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0, #32]
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ldp q2, q3, [x0]
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-NEXT:    fcvtn v1.2s, v1.2d
-; CHECK-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-NEXT:    fcvtn v2.2s, v2.2d
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
-; CHECK-NEXT:    fcvtn v3.2s, v3.2d
-; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
-; CHECK-NEXT:    stp q2, q0, [x1]
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.d
+; CHECK-NEXT:    ldp q3, q2, [x0, #32]
+; CHECK-NEXT:    mov z4.d, z0.d[1]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z1.d
+; CHECK-NEXT:    movprfx z1, z2
+; CHECK-NEXT:    ucvtf z1.s, p0/m, z2.d
+; CHECK-NEXT:    movprfx z2, z3
+; CHECK-NEXT:    ucvtf z2.s, p0/m, z3.d
+; CHECK-NEXT:    fmov x9, d4
+; CHECK-NEXT:    mov z3.d, z0.d[1]
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    fmov x11, d3
+; CHECK-NEXT:    mov z0.d, z1.d[1]
+; CHECK-NEXT:    stp w8, w9, [sp, #8]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    mov z0.d, z2.d[1]
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    stp w10, w11, [sp]
+; CHECK-NEXT:    fmov x10, d2
+; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    stp w8, w9, [sp, #24]
+; CHECK-NEXT:    stp w10, w11, [sp, #16]
+; CHECK-NEXT:    ldp q1, q0, [sp]
+; CHECK-NEXT:    stp q1, q0, [x1]
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i64>, <8 x i64>* %a
   %res = uitofp <8 x i64> %op1 to <8 x float>
@@ -513,7 +738,10 @@ define void @ucvtf_v8i64_v8f32(<8 x i64>* %a, <8 x float>* %b) #0 {
 define <2 x double> @ucvtf_v2i64_v2f64(<2 x i64> %op1) #0 {
 ; CHECK-LABEL: ucvtf_v2i64_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = uitofp <2 x i64> %op1 to <2 x double>
   ret <2 x double> %res
@@ -523,8 +751,9 @@ define void @ucvtf_v4i64_v4f64(<4 x i64>* %a, <4 x double>* %b) #0 {
 ; CHECK-LABEL: ucvtf_v4i64_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    ucvtf z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, <4 x i64>* %a
@@ -540,7 +769,10 @@ define void @ucvtf_v4i64_v4f64(<4 x i64>* %a, <4 x double>* %b) #0 {
 define <4 x half> @scvtf_v4i16_v4f16(<4 x i16> %op1) #0 {
 ; CHECK-LABEL: scvtf_v4i16_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf v0.4h, v0.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    scvtf z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sitofp <4 x i16> %op1 to <4 x half>
   ret <4 x half> %res
@@ -550,7 +782,8 @@ define void @scvtf_v8i16_v8f16(<8 x i16>* %a, <8 x half>* %b) #0 {
 ; CHECK-LABEL: scvtf_v8i16_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    scvtf v0.8h, v0.8h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    scvtf z0.h, p0/m, z0.h
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i16>, <8 x i16>* %a
@@ -563,8 +796,9 @@ define void @scvtf_v16i16_v16f16(<16 x i16>* %a, <16 x half>* %b) #0 {
 ; CHECK-LABEL: scvtf_v16i16_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    scvtf v0.8h, v0.8h
-; CHECK-NEXT:    scvtf v1.8h, v1.8h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    scvtf z0.h, p0/m, z0.h
+; CHECK-NEXT:    scvtf z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
@@ -585,7 +819,8 @@ define <2 x float> @scvtf_v2i16_v2f32(<2 x i16> %op1) #0 {
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI33_0]
 ; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    scvtf v0.2s, v0.2s
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sitofp <2 x i16> %op1 to <2 x float>
   ret <2 x float> %res
@@ -595,8 +830,10 @@ define <4 x float> @scvtf_v4i16_v4f32(<4 x i16> %op1) #0 {
 ; CHECK-LABEL: scvtf_v4i16_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sitofp <4 x i16> %op1 to <4 x float>
   ret <4 x float> %res
@@ -606,11 +843,12 @@ define void @scvtf_v8i16_v8f32(<8 x i16>* %a, <8 x float>* %b) #0 {
 ; CHECK-LABEL: scvtf_v8i16_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    sunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    scvtf v1.4s, v1.4s
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    scvtf z1.s, p0/m, z1.s
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i16>, <8 x i16>* %a
@@ -622,19 +860,21 @@ define void @scvtf_v8i16_v8f32(<8 x i16>* %a, <8 x float>* %b) #0 {
 define void @scvtf_v16i16_v16f32(<16 x i16>* %a, <16 x float>* %b) #0 {
 ; CHECK-LABEL: scvtf_v16i16_v16f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    sunpklo z3.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    sunpklo z1.s, z1.h
-; CHECK-NEXT:    scvtf v3.4s, v3.4s
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    sunpklo z2.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    scvtf v2.4s, v2.4s
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NEXT:    scvtf v1.4s, v1.4s
-; CHECK-NEXT:    stp q3, q1, [x1]
-; CHECK-NEXT:    stp q2, q0, [x1, #32]
+; CHECK-NEXT:    sunpklo z3.s, z1.h
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    sunpklo z1.s, z1.h
+; CHECK-NEXT:    scvtf z3.s, p0/m, z3.s
+; CHECK-NEXT:    scvtf z1.s, p0/m, z1.s
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    stp q3, q1, [x1, #32]
+; CHECK-NEXT:    movprfx z1, z2
+; CHECK-NEXT:    scvtf z1.s, p0/m, z2.s
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %res = sitofp <16 x i16> %op1 to <16 x float>
@@ -655,8 +895,10 @@ define <2 x double> @scvtf_v2i16_v2f64(<2 x i16> %op1) #0 {
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI37_0]
 ; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sitofp <2 x i16> %op1 to <2 x double>
   ret <2 x double> %res
@@ -666,12 +908,13 @@ define void @scvtf_v4i16_v4f64(<4 x i16>* %a, <4 x double>* %b) #0 {
 ; CHECK-LABEL: scvtf_v4i16_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NEXT:    scvtf z1.d, p0/m, z1.d
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i16>, <4 x i16>* %a
@@ -684,21 +927,23 @@ define void @scvtf_v8i16_v8f64(<8 x i16>* %a, <8 x double>* %b) #0 {
 ; CHECK-LABEL: scvtf_v8i16_v8f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    sunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sunpklo z3.d, z1.s
-; CHECK-NEXT:    sunpklo z2.d, z0.s
+; CHECK-NEXT:    sunpklo z2.d, z1.s
+; CHECK-NEXT:    sunpklo z3.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
+; CHECK-NEXT:    scvtf z3.d, p0/m, z3.d
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    scvtf z2.d, p0/m, z2.d
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    scvtf v3.2d, v3.2d
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    stp q2, q0, [x1, #32]
-; CHECK-NEXT:    stp q3, q1, [x1]
+; CHECK-NEXT:    stp q3, q0, [x1, #32]
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    scvtf z0.d, p0/m, z1.d
+; CHECK-NEXT:    stp q2, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i16>, <8 x i16>* %a
   %res = sitofp <8 x i16> %op1 to <8 x double>
@@ -710,6 +955,7 @@ define void @scvtf_v16i16_v16f64(<16 x i16>* %a, <16 x double>* %b) #0 {
 ; CHECK-LABEL: scvtf_v16i16_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    sunpklo z2.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
@@ -717,29 +963,33 @@ define void @scvtf_v16i16_v16f64(<16 x i16>* %a, <16 x double>* %b) #0 {
 ; CHECK-NEXT:    sunpklo z3.s, z1.h
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
-; CHECK-NEXT:    sunpklo z5.d, z3.s
-; CHECK-NEXT:    sunpklo z6.d, z1.s
+; CHECK-NEXT:    sunpklo z6.d, z0.s
+; CHECK-NEXT:    sunpklo z7.d, z1.s
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    scvtf v6.2d, v6.2d
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    sunpklo z7.d, z0.s
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    sunpklo z3.d, z3.s
+; CHECK-NEXT:    sunpklo z1.d, z1.s
+; CHECK-NEXT:    sunpklo z5.d, z3.s
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    scvtf v4.2d, v4.2d
-; CHECK-NEXT:    stp q6, q1, [x1, #96]
-; CHECK-NEXT:    sunpklo z1.d, z2.s
-; CHECK-NEXT:    scvtf v5.2d, v5.2d
-; CHECK-NEXT:    scvtf v7.2d, v7.2d
-; CHECK-NEXT:    scvtf v3.2d, v3.2d
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    stp q7, q0, [x1, #32]
-; CHECK-NEXT:    stp q4, q1, [x1]
-; CHECK-NEXT:    stp q5, q3, [x1, #64]
+; CHECK-NEXT:    scvtf z7.d, p0/m, z7.d
+; CHECK-NEXT:    scvtf z1.d, p0/m, z1.d
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    sunpklo z3.d, z3.s
+; CHECK-NEXT:    stp q7, q1, [x1, #96]
+; CHECK-NEXT:    scvtf z5.d, p0/m, z5.d
+; CHECK-NEXT:    movprfx z1, z3
+; CHECK-NEXT:    scvtf z1.d, p0/m, z3.d
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    sunpklo z2.d, z2.s
+; CHECK-NEXT:    stp q5, q1, [x1, #64]
+; CHECK-NEXT:    movprfx z3, z6
+; CHECK-NEXT:    scvtf z3.d, p0/m, z6.d
+; CHECK-NEXT:    stp q3, q0, [x1, #32]
+; CHECK-NEXT:    movprfx z1, z4
+; CHECK-NEXT:    scvtf z1.d, p0/m, z4.d
+; CHECK-NEXT:    movprfx z0, z2
+; CHECK-NEXT:    scvtf z0.d, p0/m, z2.d
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %res = sitofp <16 x i16> %op1 to <16 x double>
@@ -754,9 +1004,24 @@ define void @scvtf_v16i16_v16f64(<16 x i16>* %a, <16 x double>* %b) #0 {
 define <2 x half> @scvtf_v2i32_v2f16(<2 x i32> %op1) #0 {
 ; CHECK-LABEL: scvtf_v2i32_v2f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    mov z2.s, z0.s[2]
+; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    strh w9, [sp, #14]
+; CHECK-NEXT:    strh w10, [sp, #12]
+; CHECK-NEXT:    strh w8, [sp, #10]
+; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = sitofp <2 x i32> %op1 to <2 x half>
   ret <2 x half> %res
@@ -765,8 +1030,24 @@ define <2 x half> @scvtf_v2i32_v2f16(<2 x i32> %op1) #0 {
 define <4 x half> @scvtf_v4i32_v4f16(<4 x i32> %op1) #0 {
 ; CHECK-LABEL: scvtf_v4i32_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    mov z2.s, z0.s[2]
+; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    strh w9, [sp, #14]
+; CHECK-NEXT:    strh w10, [sp, #12]
+; CHECK-NEXT:    strh w8, [sp, #10]
+; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = sitofp <4 x i32> %op1 to <4 x half>
   ret <4 x half> %res
@@ -775,14 +1056,35 @@ define <4 x half> @scvtf_v4i32_v4f16(<4 x i32> %op1) #0 {
 define <8 x half> @scvtf_v8i32_v8f16(<8 x i32>* %a) #0 {
 ; CHECK-LABEL: scvtf_v8i32_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NEXT:    scvtf v1.4s, v1.4s
-; CHECK-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    scvtf z1.h, p0/m, z1.s
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z5.s, z1.s[2]
+; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z2.s, z0.s[3]
+; CHECK-NEXT:    mov z3.s, z0.s[2]
+; CHECK-NEXT:    mov z4.s, z0.s[1]
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    strh w9, [sp]
+; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    fmov w9, s4
+; CHECK-NEXT:    mov z0.s, z1.s[3]
+; CHECK-NEXT:    mov z1.s, z1.s[1]
+; CHECK-NEXT:    strh w10, [sp, #14]
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    strh w8, [sp, #12]
+; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    strh w9, [sp, #10]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    strh w10, [sp, #6]
+; CHECK-NEXT:    strh w8, [sp, #4]
+; CHECK-NEXT:    strh w9, [sp, #2]
+; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, <8 x i32>* %a
   %res = sitofp <8 x i32> %op1 to <8 x half>
@@ -796,7 +1098,10 @@ define <8 x half> @scvtf_v8i32_v8f16(<8 x i32>* %a) #0 {
 define <2 x float> @scvtf_v2i32_v2f32(<2 x i32> %op1) #0 {
 ; CHECK-LABEL: scvtf_v2i32_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf v0.2s, v0.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sitofp <2 x i32> %op1 to <2 x float>
   ret <2 x float> %res
@@ -805,7 +1110,10 @@ define <2 x float> @scvtf_v2i32_v2f32(<2 x i32> %op1) #0 {
 define <4 x float> @scvtf_v4i32_v4f32(<4 x i32> %op1) #0 {
 ; CHECK-LABEL: scvtf_v4i32_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sitofp <4 x i32> %op1 to <4 x float>
   ret <4 x float> %res
@@ -815,8 +1123,9 @@ define void @scvtf_v8i32_v8f32(<8 x i32>* %a, <8 x float>* %b) #0 {
 ; CHECK-LABEL: scvtf_v8i32_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NEXT:    scvtf v1.4s, v1.4s
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    scvtf z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, <8 x i32>* %a
@@ -833,8 +1142,10 @@ define <2 x double> @scvtf_v2i32_v2f64(<2 x i32> %op1) #0 {
 ; CHECK-LABEL: scvtf_v2i32_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sitofp <2 x i32> %op1 to <2 x double>
   ret <2 x double> %res
@@ -844,11 +1155,12 @@ define void @scvtf_v4i32_v4f64(<4 x i32>* %a, <4 x double>* %b) #0 {
 ; CHECK-LABEL: scvtf_v4i32_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    sunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NEXT:    scvtf z1.d, p0/m, z1.d
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i32>, <4 x i32>* %a
@@ -860,19 +1172,21 @@ define void @scvtf_v4i32_v4f64(<4 x i32>* %a, <4 x double>* %b) #0 {
 define void @scvtf_v8i32_v8f64(<8 x i32>* %a, <8 x double>* %b) #0 {
 ; CHECK-LABEL: scvtf_v8i32_v8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    sunpklo z3.d, z1.s
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    scvtf v3.2d, v3.2d
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    sunpklo z2.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    stp q3, q1, [x1]
-; CHECK-NEXT:    stp q2, q0, [x1, #32]
+; CHECK-NEXT:    sunpklo z3.d, z1.s
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    sunpklo z1.d, z1.s
+; CHECK-NEXT:    scvtf z3.d, p0/m, z3.d
+; CHECK-NEXT:    scvtf z1.d, p0/m, z1.d
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    stp q3, q1, [x1, #32]
+; CHECK-NEXT:    movprfx z1, z2
+; CHECK-NEXT:    scvtf z1.d, p0/m, z2.d
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, <8 x i32>* %a
   %res = sitofp <8 x i32> %op1 to <8 x double>
@@ -883,32 +1197,38 @@ define void @scvtf_v8i32_v8f64(<8 x i32>* %a, <8 x double>* %b) #0 {
 define void @scvtf_v16i32_v16f64(<16 x i32>* %a, <16 x double>* %b) #0 {
 ; CHECK-LABEL: scvtf_v16i32_v16f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    sunpklo z4.d, z1.s
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    scvtf v4.2d, v4.2d
-; CHECK-NEXT:    ldp q3, q2, [x0, #32]
-; CHECK-NEXT:    sunpklo z5.d, z0.s
+; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov z6.d, z2.d
+; CHECK-NEXT:    sunpklo z2.d, z2.s
+; CHECK-NEXT:    ext z6.b, z6.b, z6.b, #8
+; CHECK-NEXT:    scvtf z2.d, p0/m, z2.d
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    mov z7.d, z3.d
+; CHECK-NEXT:    sunpklo z3.d, z3.s
+; CHECK-NEXT:    ext z7.b, z7.b, z7.b, #8
+; CHECK-NEXT:    scvtf z3.d, p0/m, z3.d
+; CHECK-NEXT:    sunpklo z7.d, z7.s
+; CHECK-NEXT:    sunpklo z6.d, z6.s
+; CHECK-NEXT:    sunpklo z4.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    scvtf v5.2d, v5.2d
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    sunpklo z7.d, z3.s
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
-; CHECK-NEXT:    sunpklo z3.d, z3.s
-; CHECK-NEXT:    scvtf v7.2d, v7.2d
-; CHECK-NEXT:    sunpklo z6.d, z2.s
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
-; CHECK-NEXT:    sunpklo z2.d, z2.s
-; CHECK-NEXT:    scvtf v6.2d, v6.2d
-; CHECK-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-NEXT:    scvtf v3.2d, v3.2d
-; CHECK-NEXT:    stp q4, q1, [x1]
-; CHECK-NEXT:    stp q5, q0, [x1, #32]
-; CHECK-NEXT:    stp q7, q3, [x1, #64]
-; CHECK-NEXT:    stp q6, q2, [x1, #96]
+; CHECK-NEXT:    scvtf z7.d, p0/m, z7.d
+; CHECK-NEXT:    sunpklo z5.d, z1.s
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    sunpklo z1.d, z1.s
+; CHECK-NEXT:    stp q3, q7, [x1, #96]
+; CHECK-NEXT:    movprfx z3, z6
+; CHECK-NEXT:    scvtf z3.d, p0/m, z6.d
+; CHECK-NEXT:    stp q2, q3, [x1, #64]
+; CHECK-NEXT:    movprfx z2, z5
+; CHECK-NEXT:    scvtf z2.d, p0/m, z5.d
+; CHECK-NEXT:    scvtf z1.d, p0/m, z1.d
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    stp q2, q1, [x1, #32]
+; CHECK-NEXT:    movprfx z2, z4
+; CHECK-NEXT:    scvtf z2.d, p0/m, z4.d
+; CHECK-NEXT:    stp q2, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i32>, <16 x i32>* %a
   %res = sitofp <16 x i32> %op1 to <16 x double>
@@ -943,14 +1263,37 @@ define <2 x half> @scvtf_v2i64_v2f16(<2 x i64> %op1) #0 {
 define <4 x half> @scvtf_v4i64_v4f16(<4 x i64>* %a) #0 {
 ; CHECK-LABEL: scvtf_v4i64_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn v1.2s, v1.2d
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
-; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d[1]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    scvtf z0.s, p0/m, z1.d
+; CHECK-NEXT:    mov z1.d, z0.d[1]
+; CHECK-NEXT:    fmov x9, d2
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    fmov x11, d1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    stp w8, w9, [sp, #8]
+; CHECK-NEXT:    stp w10, w11, [sp]
+; CHECK-NEXT:    ldr q0, [sp]
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    mov z2.s, z0.s[2]
+; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    strh w8, [sp, #24]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    strh w9, [sp, #30]
+; CHECK-NEXT:    strh w10, [sp, #28]
+; CHECK-NEXT:    strh w8, [sp, #26]
+; CHECK-NEXT:    ldr d0, [sp, #24]
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, <4 x i64>* %a
   %res = sitofp <4 x i64> %op1 to <4 x half>
@@ -964,8 +1307,17 @@ define <4 x half> @scvtf_v4i64_v4f16(<4 x i64>* %a) #0 {
 define <2 x float> @scvtf_v2i64_v2f32(<2 x i64> %op1) #0 {
 ; CHECK-LABEL: scvtf_v2i64_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.d
+; CHECK-NEXT:    mov z1.d, z0.d[1]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    stp w8, w9, [sp, #8]
+; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = sitofp <2 x i64> %op1 to <2 x float>
   ret <2 x float> %res
@@ -974,14 +1326,22 @@ define <2 x float> @scvtf_v2i64_v2f32(<2 x i64> %op1) #0 {
 define <4 x float> @scvtf_v4i64_v4f32(<4 x i64>* %a) #0 {
 ; CHECK-LABEL: scvtf_v4i64_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn v1.2s, v1.2d
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d[1]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    scvtf z0.s, p0/m, z1.d
+; CHECK-NEXT:    mov z1.d, z0.d[1]
+; CHECK-NEXT:    fmov x9, d2
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    fmov x11, d1
+; CHECK-NEXT:    stp w8, w9, [sp, #8]
+; CHECK-NEXT:    stp w10, w11, [sp]
+; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, <4 x i64>* %a
   %res = sitofp <4 x i64> %op1 to <4 x float>
@@ -995,7 +1355,10 @@ define <4 x float> @scvtf_v4i64_v4f32(<4 x i64>* %a) #0 {
 define <2 x double> @scvtf_v2i64_v2f64(<2 x i64> %op1) #0 {
 ; CHECK-LABEL: scvtf_v2i64_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sitofp <2 x i64> %op1 to <2 x double>
   ret <2 x double> %res
@@ -1005,8 +1368,9 @@ define void @scvtf_v4i64_v4f64(<4 x i64>* %a, <4 x double>* %b) #0 {
 ; CHECK-LABEL: scvtf_v4i64_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    scvtf z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, <4 x i64>* %a
