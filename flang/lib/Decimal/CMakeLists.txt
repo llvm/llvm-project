@@ -36,6 +36,13 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     ${FLANG_SOURCE_DIR}/include)
 endif()
 
+check_cxx_compiler_flag(-fno-lto FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
+if (FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
+  append("-fno-lto" CMAKE_CXX_FLAGS)
+endif()
+
+
+
 add_flang_library(FortranDecimal INSTALL_WITH_TOOLCHAIN
   binary-to-decimal.cpp
   decimal-to-binary.cpp
