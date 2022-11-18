@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DebugImporter.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
@@ -42,6 +43,7 @@
 
 using namespace mlir;
 using namespace mlir::LLVM;
+using mlir::LLVM::detail::DebugImporter;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsFromLLVM.inc"
 
@@ -329,7 +331,7 @@ class Importer {
 public:
   Importer(MLIRContext *context, ModuleOp module)
       : builder(context), context(context), module(module),
-        typeTranslator(*context) {
+        typeTranslator(*context), debugImporter(context) {
     builder.setInsertionPointToStart(module.getBody());
   }
 
@@ -369,12 +371,15 @@ public:
   /// Converts `value` to an integer attribute. Asserts if the conversion fails.
   IntegerAttr matchIntegerAttr(Value value);
 
-  /// Translate the debug location to a FileLineColLoc, if `loc` is non-null.
-  /// Otherwise, return UnknownLoc.
-  Location translateLoc(llvm::DILocation *loc);
+  /// Translates the debug location.
+  Location translateLoc(llvm::DILocation *loc) {
+    return debugImporter.translateLoc(loc);
+  }
 
   /// Converts the type from LLVM to MLIR LLVM dialect.
-  Type convertType(llvm::Type *type);
+  Type convertType(llvm::Type *type) {
+    return typeTranslator.translateType(type);
+  }
 
   /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
   /// counterpart exists. Otherwise, returns failure.
@@ -450,20 +455,10 @@ private:
   DenseMap<llvm::GlobalVariable *, GlobalOp> globals;
   /// The stateful type translator (contains named structs).
   LLVM::TypeFromLLVMIRTranslator typeTranslator;
+  /// Stateful debug information importer.
+  DebugImporter debugImporter;
 };
 } // namespace
-
-Location Importer::translateLoc(llvm::DILocation *loc) {
-  if (!loc)
-    return UnknownLoc::get(context);
-
-  return FileLineColLoc::get(context, loc->getFilename(), loc->getLine(),
-                             loc->getColumn());
-}
-
-Type Importer::convertType(llvm::Type *type) {
-  return typeTranslator.translateType(type);
-}
 
 LogicalResult Importer::convertIntrinsic(OpBuilder &odsBuilder,
                                          llvm::CallInst *inst) {
@@ -1064,6 +1059,9 @@ LogicalResult Importer::processFunction(llvm::Function *func) {
       UnknownLoc::get(context), func->getName(), functionType,
       convertLinkageFromLLVM(func->getLinkage()), dsoLocal, cconv);
 
+  // Set the function debug information if available.
+  debugImporter.translate(func, funcOp);
+
   for (const auto &it : llvm::enumerate(functionType.getParams())) {
     llvm::SmallVector<NamedAttribute, 1> argAttrs;
     if (auto *type = func->getParamByValType(it.index())) {
@@ -1150,8 +1148,9 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                               MLIRContext *context) {
   context->loadDialect<LLVMDialect>();
   context->loadDialect<DLTIDialect>();
-  OwningOpRef<ModuleOp> module(ModuleOp::create(
-      FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(FileLineColLoc::get(
+      StringAttr::get(context, llvmModule->getSourceFileName()), /*line=*/0,
+      /*column=*/0)));
 
   DataLayoutSpecInterface dlSpec =
       translateDataLayout(llvmModule->getDataLayout(), context);
