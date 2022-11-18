@@ -7,18 +7,14 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file defines passes to print out IR in various granularities. The
-/// PrintModulePass pass simply prints out the entire module when it is
-/// executed. The PrintFunctionPass class is designed to be pipelined with
-/// other FunctionPass's, and prints out the functions of the module as they
-/// are processed.
+/// This file contains an interface for creating legacy passes to print out IR
+/// in various granularities.
 ///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_IRPRINTINGPASSES_H
 #define LLVM_IR_IRPRINTINGPASSES_H
 
-#include "llvm/IR/PassManager.h"
 #include <string>
 
 namespace llvm {
@@ -49,40 +45,6 @@ void printLLVMNameWithoutPrefix(raw_ostream &OS, StringRef Name);
 
 /// Return true if a pass is for IR printing.
 bool isIRPrintingPass(Pass *P);
-
-/// Pass for printing a Module as LLVM's text IR assembly.
-///
-/// Note: This pass is for use with the new pass manager. Use the create...Pass
-/// functions above to create passes for use with the legacy pass manager.
-class PrintModulePass : public PassInfoMixin<PrintModulePass> {
-  raw_ostream &OS;
-  std::string Banner;
-  bool ShouldPreserveUseListOrder;
-
-public:
-  PrintModulePass();
-  PrintModulePass(raw_ostream &OS, const std::string &Banner = "",
-                  bool ShouldPreserveUseListOrder = false);
-
-  PreservedAnalyses run(Module &M, AnalysisManager<Module> &);
-  static bool isRequired() { return true; }
-};
-
-/// Pass for printing a Function as LLVM's text IR assembly.
-///
-/// Note: This pass is for use with the new pass manager. Use the create...Pass
-/// functions above to create passes for use with the legacy pass manager.
-class PrintFunctionPass : public PassInfoMixin<PrintFunctionPass> {
-  raw_ostream &OS;
-  std::string Banner;
-
-public:
-  PrintFunctionPass();
-  PrintFunctionPass(raw_ostream &OS, const std::string &Banner = "");
-
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &);
-  static bool isRequired() { return true; }
-};
 
 } // namespace llvm
 
