@@ -33,5 +33,12 @@ void Reader::ungetc(char c) {
   }
 }
 
+bool Reader::has_error() {
+  if (reader_type == ReaderType::File) {
+    return file_reader->has_error();
+  }
+  return false;
+}
+
 } // namespace scanf_core
 } // namespace __llvm_libc

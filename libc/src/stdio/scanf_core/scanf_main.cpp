@@ -35,7 +35,7 @@ int scanf_main(Reader *reader, const char *__restrict str,
     }
   }
 
-  if (conversions == 0 && ret_val != READ_OK) {
+  if (conversions == 0 && reader->has_error()) {
     // This is intended to be converted to EOF in the client call to avoid
     // including stdio.h in this internal file.
     return -1;
