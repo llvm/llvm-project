@@ -23,12 +23,14 @@ namespace llvm {
   namespace SPISD {
   enum NodeType : unsigned {
     FIRST_NUMBER = ISD::BUILTIN_OP_END,
-    CMPICC, // Compare two GPR operands, set icc+xcc.
-    CMPFCC, // Compare two FP operands, set fcc.
-    BRICC,  // Branch to dest on icc condition
-    BPICC,  // Branch to dest on icc condition, with prediction (64-bit only).
-    BPXCC,  // Branch to dest on xcc condition, with prediction (64-bit only).
-    BRFCC,  // Branch to dest on fcc condition
+    CMPICC,    // Compare two GPR operands, set icc+xcc.
+    CMPFCC,    // Compare two FP operands, set fcc.
+    CMPFCC_V9, // Compare two FP operands, set fcc (v9 variant).
+    BRICC,     // Branch to dest on icc condition
+    BPICC,    // Branch to dest on icc condition, with prediction (64-bit only).
+    BPXCC,    // Branch to dest on xcc condition, with prediction (64-bit only).
+    BRFCC,    // Branch to dest on fcc condition
+    BRFCC_V9, // Branch to dest on fcc condition (v9 variant).
     SELECT_ICC, // Select between two values using the current ICC flags.
     SELECT_XCC, // Select between two values using the current XCC flags.
     SELECT_FCC, // Select between two values using the current FCC flags.
