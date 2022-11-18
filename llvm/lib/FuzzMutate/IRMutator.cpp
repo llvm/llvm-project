@@ -162,8 +162,8 @@ void InstDeleterIRStrategy::mutate(Function &F, RandomIRBuilder &IB) {
   auto RS = makeSampler<Instruction *>(IB.Rand);
   for (Instruction &Inst : instructions(F)) {
     // TODO: We can't handle these instructions.
-    if (Inst.isTerminator() || Inst.isEHPad() ||
-        Inst.isSwiftError() || isa<PHINode>(Inst))
+    if (Inst.isTerminator() || Inst.isEHPad() || Inst.isSwiftError() ||
+        isa<PHINode>(Inst))
       continue;
 
     RS.sample(&Inst, /*Weight=*/1);
