@@ -438,7 +438,7 @@ def SplitOp : Op<Transform_Dialect, "structured.split",
     static split point attribute when it is known at transform IR construction
     time or as the handle to an operation producing a single index-typed value
     when it is computed by payload IR. In the latter case, the static split
-    point must be set to `ShapedType::kDynamicSize` and the dynamic size handle
+    point must be set to `ShapedType::kDynamic` and the dynamic size handle
     must point to as many value-producing operations as there are structured
     operations pointed to by the target handle.
 
@@ -809,9 +809,9 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
     case the tile value must be computed by the payload IR and the handle to the
     operation computing it must be provided through `dynamic_sizes`. When the
     sizes are not known statically, the corresponding entry in the
-    `static_sizes` attribute must be set to `ShapedType::kDynamicSize`. Only
+    `static_sizes` attribute must be set to `ShapedType::kDynamic`. Only
     the dynamic sizes must be provided in `dynamic_sizes`, i.e., there should
-    be as many handles as `ShapedType::kDynamicSize` values in the
+    be as many handles as `ShapedType::kDynamic` values in the
     `static_sizes` attribute. A static size of `0` indicates that the dimension
     should not be tiled. No loop will be generated for such dimensions. If all
     tile sizes are `0`, this transform is effectively a no-op.
@@ -950,10 +950,10 @@ def TileToForeachThreadOp :
     $target oilist(
         `num_threads` custom<DynamicIndexList>($num_threads,
                                                $static_num_threads,
-                                               "ShapedType::kDynamicSize") |
+                                               "ShapedType::kDynamic") |
          `tile_sizes` custom<DynamicIndexList>($tile_sizes,
                                                $static_tile_sizes,
-                                               "ShapedType::kDynamicSize"))
+                                               "ShapedType::kDynamic"))
     (`(` `mapping` `=` $mapping^ `)`)? attr-dict
   }];
   let hasVerifier = 1;
@@ -981,9 +981,9 @@ def TileToScfForOp : Op<Transform_Dialect, "structured.tile_to_scf_for",
     case the tile value must be computed by the payload IR and the handle to the
     operation computing it must be provided through `dynamic_sizes`. When the
     sizes are not known statically, the corresponding entry in the
-    `static_sizes` attribute must be set to `ShapedType::kDynamicSize`. Only
+    `static_sizes` attribute must be set to `ShapedType::kDynamic`. Only
     the dynamic sizes must be provided in `dynamic_sizes`, i.e., there should
-    be as many handles as `ShapedType::kDynamicSize` values in the
+    be as many handles as `ShapedType::kDynamic` values in the
     `static_sizes` attribute. A static size of `0` indicates that the dimension
     should not be tiled. No loop will be generated for such dimensions. If all
     tile sizes are `0`, this transform is effectively a no-op.

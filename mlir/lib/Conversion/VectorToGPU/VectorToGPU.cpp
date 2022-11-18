@@ -108,7 +108,7 @@ getMemrefConstantHorizontalStride(ShapedType type) {
       strides.back() != 1)
     return llvm::None;
   int64_t stride = strides[strides.size() - 2];
-  if (stride == ShapedType::kDynamicStrideOrOffset)
+  if (stride == ShapedType::kDynamic)
     return llvm::None;
   return stride;
 }

@@ -836,7 +836,7 @@ static void genExpansion(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   Value tensor = lhs->get();
   Location loc = op.getLoc();
   if (atStart) {
-    auto dynShape = {ShapedType::kDynamicSize};
+    auto dynShape = {ShapedType::kDynamic};
     Type etp = tensor.getType().cast<ShapedType>().getElementType();
     Type t1 = MemRefType::get(dynShape, etp);
     Type t2 = MemRefType::get(dynShape, builder.getI1Type());
