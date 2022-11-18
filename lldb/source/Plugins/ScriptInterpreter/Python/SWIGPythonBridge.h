@@ -86,27 +86,6 @@ python::ScopedPythonObject<lldb::SBEvent> ToSWIGWrapper(Event *event);
 
 } // namespace python
 
-// GetPythonValueFormatString provides a system independent type safe way to
-// convert a variable's type into a python value format. Python value formats
-// are defined in terms of builtin C types and could change from system to as
-// the underlying typedef for uint* types, size_t, off_t and other values
-// change.
-
-template <typename T> const char *GetPythonValueFormatString(T t);
-template <> const char *GetPythonValueFormatString(char *);
-template <> const char *GetPythonValueFormatString(char);
-template <> const char *GetPythonValueFormatString(unsigned char);
-template <> const char *GetPythonValueFormatString(short);
-template <> const char *GetPythonValueFormatString(unsigned short);
-template <> const char *GetPythonValueFormatString(int);
-template <> const char *GetPythonValueFormatString(unsigned int);
-template <> const char *GetPythonValueFormatString(long);
-template <> const char *GetPythonValueFormatString(unsigned long);
-template <> const char *GetPythonValueFormatString(long long);
-template <> const char *GetPythonValueFormatString(unsigned long long);
-template <> const char *GetPythonValueFormatString(float t);
-template <> const char *GetPythonValueFormatString(double t);
-
 void *LLDBSWIGPython_CastPyObjectToSBData(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBError(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);
