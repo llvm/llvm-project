@@ -7000,6 +7000,11 @@ void OMPClauseWriter::VisitOMPSeverityClause(OMPSeverityClause *C) {
   Record.AddSourceLocation(C->getSeverityKindKwLoc());
 }
 
+void OMPClauseWriter::VisitOMPMessageClause(OMPMessageClause *C) {
+  Record.AddStmt(C->getMessageString());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
 void OMPClauseWriter::VisitOMPNontemporalClause(OMPNontemporalClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
