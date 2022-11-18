@@ -137,7 +137,7 @@ void OMPDeclareTargetDeclAttr::printPrettyPragma(
   // Use fake syntax because it is for testing and debugging purpose only.
   if (getDevType() != DT_Any)
     OS << " device_type(" << ConvertDevTypeTyToStr(getDevType()) << ")";
-  if (getMapType() != MT_To)
+  if (getMapType() != MT_To && getMapType() != MT_Enter)
     OS << ' ' << ConvertMapTypeTyToStr(getMapType());
   if (Expr *E = getIndirectExpr()) {
     OS << " indirect(";

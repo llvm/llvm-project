@@ -380,7 +380,7 @@ Optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
       // If no constant bound is found, then it can always be bound by the
       // memref's dim size if the latter has a constant size along this dim.
       auto dimSize = memRefType.getDimSize(d);
-      if (dimSize == -1)
+      if (dimSize == ShapedType::kDynamicSize)
         return None;
       diffConstant = dimSize;
       // Lower bound becomes 0.
