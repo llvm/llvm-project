@@ -3778,6 +3778,7 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
       Type *FPTy = Inst->getType()->getScalarType();
       return ilogb(APFloat::getLargest(FPTy->getFltSemantics())) >= IntSize;
     }
+    case Instruction::FNeg:
     case Instruction::FPExt: {
       // Peek through to source op. If it is not infinity, this is not infinity.
       return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1);
@@ -3788,6 +3789,7 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
 
     if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
       switch (II->getIntrinsicID()) {
+      case Intrinsic::fabs:
       case Intrinsic::canonicalize:
         return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1);
       default:
