@@ -560,11 +560,11 @@ bool AMDGPUInstructionSelector::selectG_FMA_FMAD(MachineInstr &I) const {
   MachineInstr *MixInst =
       BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpC), Dst)
           .addImm(Src0Mods)
-          .addReg(Src0)
+          .addReg(copyToVGPRIfSrcFolded(Src0, Src0Mods, I.getOperand(1), &I))
           .addImm(Src1Mods)
-          .addReg(Src1)
+          .addReg(copyToVGPRIfSrcFolded(Src1, Src1Mods, I.getOperand(2), &I))
           .addImm(Src2Mods)
-          .addReg(Src2)
+          .addReg(copyToVGPRIfSrcFolded(Src2, Src2Mods, I.getOperand(3), &I))
           .addImm(0)
           .addImm(0)
           .addImm(0);
@@ -3410,9 +3410,8 @@ AMDGPUInstructionSelector::selectVCSRC(MachineOperand &Root) const {
 }
 
 std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3ModsImpl(
-    MachineOperand &Root, bool AllowAbs, bool OpSel, bool ForceVGPR) const {
+    MachineOperand &Root, bool AllowAbs, bool OpSel) const {
   Register Src = Root.getReg();
-  Register OrigSrc = Src;
   unsigned Mods = 0;
   MachineInstr *MI = getDefIgnoringCopies(Src, *MRI);
 
@@ -3430,21 +3429,26 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3ModsImpl(
   if (OpSel)
     Mods |= SISrcMods::OP_SEL_0;
 
+  return std::make_pair(Src, Mods);
+}
+
+Register AMDGPUInstructionSelector::copyToVGPRIfSrcFolded(
+    Register Src, unsigned Mods, MachineOperand Root, MachineInstr *InsertPt,
+    bool ForceVGPR) const {
   if ((Mods != 0 || ForceVGPR) &&
       RBI.getRegBank(Src, *MRI, TRI)->getID() != AMDGPU::VGPRRegBankID) {
-    MachineInstr *UseMI = Root.getParent();
 
     // If we looked through copies to find source modifiers on an SGPR operand,
     // we now have an SGPR register source. To avoid potentially violating the
     // constant bus restriction, we need to insert a copy to a VGPR.
-    Register VGPRSrc = MRI->cloneVirtualRegister(OrigSrc);
-    BuildMI(*UseMI->getParent(), UseMI, UseMI->getDebugLoc(),
+    Register VGPRSrc = MRI->cloneVirtualRegister(Root.getReg());
+    BuildMI(*InsertPt->getParent(), InsertPt, InsertPt->getDebugLoc(),
             TII.get(AMDGPU::COPY), VGPRSrc)
-      .addReg(Src);
+        .addReg(Src);
     Src = VGPRSrc;
   }
 
-  return std::make_pair(Src, Mods);
+  return Src;
 }
 
 ///
@@ -3464,7 +3468,9 @@ AMDGPUInstructionSelector::selectVOP3Mods0(MachineOperand &Root) const {
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root);
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(copyToVGPRIfSrcFolded(Src, Mods, Root, MIB));
+      },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }, // src0_mods
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },    // clamp
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }     // omod
@@ -3478,7 +3484,9 @@ AMDGPUInstructionSelector::selectVOP3BMods0(MachineOperand &Root) const {
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root, /* AllowAbs */ false);
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(copyToVGPRIfSrcFolded(Src, Mods, Root, MIB));
+      },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }, // src0_mods
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },    // clamp
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }     // omod
@@ -3501,8 +3509,10 @@ AMDGPUInstructionSelector::selectVOP3Mods(MachineOperand &Root) const {
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root);
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }  // src_mods
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(copyToVGPRIfSrcFolded(Src, Mods, Root, MIB));
+      },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
 
@@ -3513,7 +3523,9 @@ AMDGPUInstructionSelector::selectVOP3BMods(MachineOperand &Root) const {
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root, /* AllowAbs */ false);
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(copyToVGPRIfSrcFolded(Src, Mods, Root, MIB));
+      },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
@@ -3621,8 +3633,10 @@ AMDGPUInstructionSelector::selectVOP3Mods_nnan(MachineOperand &Root) const {
     return None;
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }  // src_mods
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(copyToVGPRIfSrcFolded(Src, Mods, Root, MIB));
+      },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
 
@@ -3645,11 +3659,13 @@ AMDGPUInstructionSelector::selectVINTERPMods(MachineOperand &Root) const {
   unsigned Mods;
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root,
                                            /* AllowAbs */ false,
-                                           /* OpSel */ false,
-                                           /* ForceVGPR */ true);
+                                           /* OpSel */ false);
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(
+            copyToVGPRIfSrcFolded(Src, Mods, Root, MIB, /* ForceVGPR */ true));
+      },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }, // src0_mods
   }};
 }
@@ -3660,11 +3676,13 @@ AMDGPUInstructionSelector::selectVINTERPModsHi(MachineOperand &Root) const {
   unsigned Mods;
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root,
                                            /* AllowAbs */ false,
-                                           /* OpSel */ true,
-                                           /* ForceVGPR */ true);
+                                           /* OpSel */ true);
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(
+            copyToVGPRIfSrcFolded(Src, Mods, Root, MIB, /* ForceVGPR */ true));
+      },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }, // src0_mods
   }};
 }
