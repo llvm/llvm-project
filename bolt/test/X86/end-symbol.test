@@ -1,6 +1,6 @@
 # RUN: yaml2obj %p/Inputs/plt-sec.yaml &> %t.exe
 # RUN: llvm-bolt %t.exe -o %t.out
-# RUN: (llvm-readelf --program-headers %t.out | tac ; llvm-nm %t.out) \
+# RUN: (llvm-readelf --program-headers %t.out | grep LOAD | tail -n 1 ; llvm-nm %t.out) \
 # RUN:   | FileCheck %s
 
 ## Check that llvm-bolt correctly updates _end symbol to match the end of the
