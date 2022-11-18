@@ -3712,6 +3712,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_INTRINSIC_TRUNC:
   case AMDGPU::G_STRICT_FADD:
   case AMDGPU::G_STRICT_FSUB:
+  case AMDGPU::G_STRICT_FMUL:
   case AMDGPU::G_STRICT_FMA:
   case AMDGPU::G_BSWAP: // TODO: Somehow expand for scalar?
   case AMDGPU::G_FSHR: // TODO: Expand for scalar
