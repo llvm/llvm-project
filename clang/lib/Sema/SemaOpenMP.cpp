@@ -15110,9 +15110,6 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_priority:
     Res = ActOnOpenMPPriorityClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
-  case OMPC_grainsize:
-    Res = ActOnOpenMPGrainsizeClause(Expr, StartLoc, LParenLoc, EndLoc);
-    break;
   case OMPC_num_tasks:
     Res = ActOnOpenMPNumTasksClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
@@ -15140,6 +15137,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_align:
     Res = ActOnOpenMPAlignClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_grainsize:
   case OMPC_device:
   case OMPC_if:
   case OMPC_default:
@@ -16879,6 +16877,13 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
         static_cast<OpenMPDeviceClauseModifier>(Argument.back()), Expr,
         StartLoc, LParenLoc, ArgumentLoc.back(), EndLoc);
     break;
+  case OMPC_grainsize:
+    assert(Argument.size() == 1 && ArgumentLoc.size() == 1 &&
+           "Modifier for grainsize clause and its location are expected.");
+    Res = ActOnOpenMPGrainsizeClause(
+        static_cast<OpenMPGrainsizeClauseModifier>(Argument.back()), Expr,
+        StartLoc, LParenLoc, ArgumentLoc.back(), EndLoc);
+    break;
   case OMPC_final:
   case OMPC_num_threads:
   case OMPC_safelen:
@@ -16924,7 +16929,6 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_num_teams:
   case OMPC_thread_limit:
   case OMPC_priority:
-  case OMPC_grainsize:
   case OMPC_nogroup:
   case OMPC_num_tasks:
   case OMPC_hint:
@@ -22352,10 +22356,21 @@ OMPClause *Sema::ActOnOpenMPPriorityClause(Expr *Priority,
                                          StartLoc, LParenLoc, EndLoc);
 }
 
-OMPClause *Sema::ActOnOpenMPGrainsizeClause(Expr *Grainsize,
-                                            SourceLocation StartLoc,
-                                            SourceLocation LParenLoc,
-                                            SourceLocation EndLoc) {
+OMPClause *Sema::ActOnOpenMPGrainsizeClause(
+    OpenMPGrainsizeClauseModifier Modifier, Expr *Grainsize,
+    SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation ModifierLoc, SourceLocation EndLoc) {
+  assert((ModifierLoc.isInvalid() || LangOpts.OpenMP >= 51) &&
+         "Unexpected grainsize modifier in OpenMP < 51.");
+
+  if (ModifierLoc.isValid() && Modifier == OMPC_GRAINSIZE_unknown) {
+    std::string Values = getListOfPossibleValues(OMPC_grainsize, /*First=*/0,
+                                                 OMPC_GRAINSIZE_unknown);
+    Diag(ModifierLoc, diag::err_omp_unexpected_clause_value)
+        << Values << getOpenMPClauseName(OMPC_grainsize);
+    return nullptr;
+  }
+
   Expr *ValExpr = Grainsize;
   Stmt *HelperValStmt = nullptr;
   OpenMPDirectiveKind CaptureRegion = OMPD_unknown;
@@ -22363,14 +22378,16 @@ OMPClause *Sema::ActOnOpenMPGrainsizeClause(Expr *Grainsize,
   // OpenMP [2.9.2, taskloop Constrcut]
   // The parameter of the grainsize clause must be a positive integer
   // expression.
-  if (!isNonNegativeIntegerValue(
-          ValExpr, *this, OMPC_grainsize,
-          /*StrictlyPositive=*/true, /*BuildCapture=*/true,
-          DSAStack->getCurrentDirective(), &CaptureRegion, &HelperValStmt))
+  if (!isNonNegativeIntegerValue(ValExpr, *this, OMPC_grainsize,
+                                 /*StrictlyPositive=*/true,
+                                 /*BuildCapture=*/true,
+                                 DSAStack->getCurrentDirective(),
+                                 &CaptureRegion, &HelperValStmt))
     return nullptr;
 
-  return new (Context) OMPGrainsizeClause(ValExpr, HelperValStmt, CaptureRegion,
-                                          StartLoc, LParenLoc, EndLoc);
+  return new (Context)
+      OMPGrainsizeClause(Modifier, ValExpr, HelperValStmt, CaptureRegion,
+                         StartLoc, LParenLoc, ModifierLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPNumTasksClause(Expr *NumTasks,

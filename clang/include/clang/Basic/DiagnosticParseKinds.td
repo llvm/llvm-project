@@ -1316,6 +1316,7 @@ def warn_pragma_unsupported_extension : Warning<
 def warn_pragma_extension_is_core : Warning<
   "OpenCL extension %0 is core feature or supported optional core feature - ignoring">,
   InGroup<OpenCLCoreFeaturesDiagGroup>, DefaultIgnore;
+def err_modifier_expected_colon : Error<"missing ':' after %0 modifier">;
 
 // OpenCL errors.
 def err_opencl_taking_function_address_parser : Error<
