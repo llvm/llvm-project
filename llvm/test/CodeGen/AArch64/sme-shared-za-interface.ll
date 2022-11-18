@@ -16,7 +16,7 @@ define void @disable_tailcallopt() "aarch64_pstate_za_shared" nounwind {
 ; CHECK-NEXT:    sub x9, x9, x8
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    sub x10, x29, #16
-; CHECK-NEXT:    str x9, [x29]
+; CHECK-NEXT:    stur x9, [x29, #-16]
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl private_za_callee
@@ -49,7 +49,7 @@ define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_pstate_za_shared" nounwi
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    sub x10, x29, #16
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    str x9, [x29]
+; CHECK-NEXT:    stur x9, [x29, #-16]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl __addtf3
 ; CHECK-NEXT:    smstart za

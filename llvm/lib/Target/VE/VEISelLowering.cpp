@@ -887,10 +887,10 @@ bool VETargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
                                                       unsigned AddrSpace,
                                                       Align A,
                                                       MachineMemOperand::Flags,
-                                                      bool *Fast) const {
+                                                      unsigned *Fast) const {
   if (Fast) {
     // It's fast anytime on VE
-    *Fast = true;
+    *Fast = 1;
   }
   return true;
 }

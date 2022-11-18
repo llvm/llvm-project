@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s --check-prefix=CHECK-ROUND
 // RUN: mlir-opt %s --sparse-tensor-conversion --cse --canonicalize | FileCheck %s --check-prefix=CHECK-CONV
-// RUN: mlir-opt %s --sparse-tensor-rewrite="enable-runtime-library=false enable-convert=false" \
+// RUN: mlir-opt %s --post-sparsification-rewrite="enable-runtime-library=false enable-convert=false" \
 // RUN: --cse --canonicalize  | FileCheck %s --check-prefix=CHECK-RWT
 
 #SparseVector = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>

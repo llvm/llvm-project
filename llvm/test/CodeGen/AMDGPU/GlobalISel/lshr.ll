@@ -604,18 +604,32 @@ define i16 @v_lshr_i16(i16 %value, i16 %amount) {
   ret i16 %result
 }
 
-define i16 @v_lshr_i16_31(i16 %value) {
-; GCN-LABEL: v_lshr_i16_31:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+define i16 @v_lshr_i16_15(i16 %value) {
+; GFX6-LABEL: v_lshr_i16_15:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_bfe_u32 v0, v0, 15, 1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: v_lshr_i16_31:
+; GFX8-LABEL: v_lshr_i16_15:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshrrev_b16_e32 v0, 15, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_lshr_i16_15:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b16_e32 v0, 15, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10PLUS-LABEL: v_lshr_i16_15:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_lshrrev_b16 v0, 15, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
-  %result = lshr i16 %value, 31
+  %result = lshr i16 %value, 15
   ret i16 %result
 }
 

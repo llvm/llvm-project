@@ -14,8 +14,6 @@
 
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "AggressiveInstCombineInternal.h"
-#include "llvm-c/Initialization.h"
-#include "llvm-c/Transforms/AggressiveInstCombine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -24,22 +22,16 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 using namespace PatternMatch;
-
-namespace llvm {
-class DataLayout;
-}
 
 #define DEBUG_TYPE "aggressive-instcombine"
 
@@ -53,32 +45,6 @@ STATISTIC(NumPopCountRecognized, "Number of popcount idioms recognized");
 static cl::opt<unsigned> MaxInstrsToScan(
     "aggressive-instcombine-max-scan-instrs", cl::init(64), cl::Hidden,
     cl::desc("Max number of instructions to scan for aggressive instcombine."));
-
-namespace {
-/// Contains expression pattern combiner logic.
-/// This class provides both the logic to combine expression patterns and
-/// combine them. It differs from InstCombiner class in that each pattern
-/// combiner runs only once as opposed to InstCombine's multi-iteration,
-/// which allows pattern combiner to have higher complexity than the O(1)
-/// required by the instruction combiner.
-class AggressiveInstCombinerLegacyPass : public FunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-
-  AggressiveInstCombinerLegacyPass() : FunctionPass(ID) {
-    initializeAggressiveInstCombinerLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  /// Run all expression pattern optimizations on the given /p F function.
-  ///
-  /// \param F function to optimize.
-  /// \returns true if the IR is changed.
-  bool runOnFunction(Function &F) override;
-};
-} // namespace
 
 /// Match a pattern for a bitwise funnel/rotate operation that partially guards
 /// against undefined behavior by branching around the funnel-shift/rotation
@@ -809,7 +775,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     return false;
 
   unsigned AS = LI1->getPointerAddressSpace();
-  bool Fast = false;
+  unsigned Fast = 0;
   Allowed = TTI.allowsMisalignedMemoryAccesses(I.getContext(), LOps.LoadSize,
                                                AS, LI1->getAlign(), &Fast);
   if (!Allowed || !Fast)
@@ -894,29 +860,6 @@ static bool runImpl(Function &F, AssumptionCache &AC, TargetTransformInfo &TTI,
   return MadeChange;
 }
 
-void AggressiveInstCombinerLegacyPass::getAnalysisUsage(
-    AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
-  AU.addRequired<AssumptionCacheTracker>();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
-  AU.addRequired<TargetTransformInfoWrapperPass>();
-  AU.addPreserved<AAResultsWrapperPass>();
-  AU.addPreserved<BasicAAWrapperPass>();
-  AU.addPreserved<DominatorTreeWrapperPass>();
-  AU.addPreserved<GlobalsAAWrapperPass>();
-  AU.addRequired<AAResultsWrapperPass>();
-}
-
-bool AggressiveInstCombinerLegacyPass::runOnFunction(Function &F) {
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  return runImpl(F, AC, TTI, TLI, DT, AA);
-}
-
 PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
@@ -932,32 +875,4 @@ PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
-}
-
-char AggressiveInstCombinerLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(AggressiveInstCombinerLegacyPass,
-                      "aggressive-instcombine",
-                      "Combine pattern based expressions", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(AggressiveInstCombinerLegacyPass, "aggressive-instcombine",
-                    "Combine pattern based expressions", false, false)
-
-// Initialization Routines
-void llvm::initializeAggressiveInstCombine(PassRegistry &Registry) {
-  initializeAggressiveInstCombinerLegacyPassPass(Registry);
-}
-
-void LLVMInitializeAggressiveInstCombiner(LLVMPassRegistryRef R) {
-  initializeAggressiveInstCombinerLegacyPassPass(*unwrap(R));
-}
-
-FunctionPass *llvm::createAggressiveInstCombinerPass() {
-  return new AggressiveInstCombinerLegacyPass();
-}
-
-void LLVMAddAggressiveInstCombinerPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createAggressiveInstCombinerPass());
 }

@@ -652,4 +652,56 @@ TEST(ToolChainTest, ConfigRecursiveInclude) {
 #undef INCLUDED1
 }
 
+TEST(ToolChainTest, NestedConfigFile) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  struct TestDiagnosticConsumer : public DiagnosticConsumer {};
+  DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(
+      new llvm::vfs::InMemoryFileSystem);
+
+#ifdef _WIN32
+  const char *TestRoot = "C:\\";
+#else
+  const char *TestRoot = "/";
+#endif
+  FS->setCurrentWorkingDirectory(TestRoot);
+
+  FS->addFile("/opt/sdk/root.cfg", 0,
+              llvm::MemoryBuffer::getMemBuffer("--config=platform.cfg\n"));
+  FS->addFile("/opt/sdk/platform.cfg", 0,
+              llvm::MemoryBuffer::getMemBuffer("--sysroot=/platform-sys\n"));
+  FS->addFile("/home/test/bin/platform.cfg", 0,
+              llvm::MemoryBuffer::getMemBuffer("--sysroot=/platform-bin\n"));
+
+  SmallString<128> ClangExecutable("/home/test/bin/clang");
+  FS->makeAbsolute(ClangExecutable);
+
+  // User file is absent - use system definitions.
+  {
+    Driver TheDriver(ClangExecutable, "arm-linux-gnueabi", Diags,
+                     "clang LLVM compiler", FS);
+    std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
+        {"/home/test/bin/clang", "--config", "root.cfg",
+         "--config-system-dir=/opt/sdk", "--config-user-dir=/home/test/sdk"}));
+    ASSERT_TRUE(C);
+    ASSERT_FALSE(C->containsError());
+    EXPECT_EQ("/platform-sys", TheDriver.SysRoot);
+  }
+
+  // User file overrides system definitions.
+  FS->addFile("/home/test/sdk/platform.cfg", 0,
+              llvm::MemoryBuffer::getMemBuffer("--sysroot=/platform-user\n"));
+  {
+    Driver TheDriver(ClangExecutable, "arm-linux-gnueabi", Diags,
+                     "clang LLVM compiler", FS);
+    std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
+        {"/home/test/bin/clang", "--config", "root.cfg",
+         "--config-system-dir=/opt/sdk", "--config-user-dir=/home/test/sdk"}));
+    ASSERT_TRUE(C);
+    ASSERT_FALSE(C->containsError());
+    EXPECT_EQ("/platform-user", TheDriver.SysRoot);
+  }
+}
+
 } // end anonymous namespace.

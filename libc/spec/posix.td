@@ -45,9 +45,6 @@ def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 def StructTimeSpec : NamedType<"struct timespec">;
 def StructTimeSpecPtr : PtrType<StructTimeSpec>;
 
-def StructTimeVal : NamedType<"struct timeval">;
-def StructTimeValPtr : PtrType<StructTimeVal>;
-
 def ExecArgvT : NamedType<"__exec_argv_t">;
 def ExecEnvpT : NamedType<"__exec_envp_t">;
 
@@ -733,7 +730,7 @@ def POSIX : StandardSpec<"POSIX"> {
         UidT,
         GidT,
         StructTimeSpec,
-        StructTimeVal,
+        StructTimevalType,
         BlkSizeT,
         BlkCntT,
         OffTType,
@@ -1077,7 +1074,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec Time = HeaderSpec<
       "time.h",
       [], // Macros
-      [ClockIdT, StructTimeSpec, StructTimeVal], // Types
+      [ClockIdT, StructTimeSpec, StructTimevalType], // Types
       [], // Enumerations
       [
           FunctionSpec<
@@ -1088,7 +1085,7 @@ def POSIX : StandardSpec<"POSIX"> {
           FunctionSpec<
               "gettimeofday",
               RetValSpec<IntType>,
-              [ArgSpec<StructTimeValPtr>, ArgSpec<VoidPtr>]
+              [ArgSpec<StructTimevalPtr>, ArgSpec<VoidPtr>]
           >,
           FunctionSpec<
               "nanosleep",

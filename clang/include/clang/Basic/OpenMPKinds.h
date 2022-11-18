@@ -131,6 +131,20 @@ enum OpenMPAtomicDefaultMemOrderClauseKind {
   OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown
 };
 
+/// OpenMP attributes for 'at' clause.
+enum OpenMPAtClauseKind {
+#define OPENMP_AT_KIND(Name) OMPC_AT_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_AT_unknown
+};
+
+/// OpenMP attributes for 'severity' clause.
+enum OpenMPSeverityClauseKind {
+#define OPENMP_SEVERITY_KIND(Name) OMPC_SEVERITY_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_SEVERITY_unknown
+};
+
 /// OpenMP device type for 'device_type' clause.
 enum OpenMPDeviceType {
 #define OPENMP_DEVICE_TYPE_KIND(Name) \

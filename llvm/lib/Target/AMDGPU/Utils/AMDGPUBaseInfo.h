@@ -529,6 +529,40 @@ enum ComponentIndex : unsigned { X = 0, Y = 1 };
 constexpr unsigned COMPONENTS[] = {ComponentIndex::X, ComponentIndex::Y};
 constexpr unsigned COMPONENTS_NUM = 2;
 
+// Properties of VOPD components.
+class ComponentProps {
+private:
+  unsigned SrcOperandsNum = 0;
+  Optional<unsigned> MandatoryLiteralIdx;
+  bool HasSrc2Acc = false;
+
+public:
+  ComponentProps() = default;
+  ComponentProps(const MCInstrDesc &OpDesc);
+
+  unsigned getSrcOperandsNum() const { return SrcOperandsNum; }
+  unsigned getParsedSrcOperandsNum() const {
+    return SrcOperandsNum - HasSrc2Acc;
+  }
+  bool hasMandatoryLiteral() const { return MandatoryLiteralIdx.has_value(); }
+  unsigned getMandatoryLiteralIndex() const {
+    assert(hasMandatoryLiteral());
+    return *MandatoryLiteralIdx;
+  }
+  bool hasRegSrcOperand(unsigned SrcIdx) const {
+    assert(SrcIdx < Component::MAX_SRC_NUM);
+    return SrcOperandsNum > SrcIdx && !hasMandatoryLiteralAt(SrcIdx);
+  }
+  bool hasSrc2Acc() const { return HasSrc2Acc; }
+
+private:
+  bool hasMandatoryLiteralAt(unsigned SrcIdx) const {
+    assert(SrcIdx < Component::MAX_SRC_NUM);
+    return hasMandatoryLiteral() &&
+           *MandatoryLiteralIdx == Component::DST_NUM + SrcIdx;
+  }
+};
+
 enum ComponentKind : unsigned {
   SINGLE = 0,  // A single VOP1 or VOP2 instruction which may be used in VOPD.
   COMPONENT_X, // A VOPD instruction, X component.
@@ -546,7 +580,7 @@ private:
   //   dstX, dstY, src0X [, other OpX operands], src0Y [, other OpY operands]
   // Each ComponentKind has operand indices defined below.
   static constexpr unsigned MC_DST_IDX[] = {0, 0, 1};
-  static constexpr unsigned FIRST_MC_SRC_IDX[] = {1, 2, 2 /* + OpXSrcNum */};
+  static constexpr unsigned FIRST_MC_SRC_IDX[] = {1, 2, 2 /* + OpX.SrcNum */};
 
   // Parsed operands of regular instructions are ordered as follows:
   //   Mnemo dst src0 [vsrc1 ...]
@@ -555,81 +589,58 @@ private:
   //   OpYMnemo dstY src0Y [vsrc1Y|imm vsrc1Y|vsrc1Y imm]
   // Each ComponentKind has operand indices defined below.
   static constexpr unsigned PARSED_DST_IDX[] = {1, 1,
-                                                4 /* + ParsedOpXSrcNum */};
+                                                4 /* + OpX.ParsedSrcNum */};
   static constexpr unsigned FIRST_PARSED_SRC_IDX[] = {
-      2, 2, 5 /* + ParsedOpXSrcNum */};
+      2, 2, 5 /* + OpX.ParsedSrcNum */};
 
 private:
-  ComponentKind Kind;
-  unsigned OpXSrcNum;
-  unsigned ParsedOpXSrcNum;
+  const ComponentKind Kind;
+  const ComponentProps PrevOp;
 
 public:
-  ComponentLayout(ComponentKind Kind = ComponentKind::SINGLE,
-                  unsigned OpXSrcNum = 0, unsigned ParsedOpXSrcNum = 0)
-      : Kind(Kind), OpXSrcNum(OpXSrcNum), ParsedOpXSrcNum(ParsedOpXSrcNum) {
-    assert(Kind <= ComponentKind::MAX);
-    assert((Kind == ComponentKind::COMPONENT_Y) == (OpXSrcNum > 0));
+  // Create layout for COMPONENT_X or SINGLE component
+  ComponentLayout(ComponentKind Kind) : Kind(Kind) {
+    assert(Kind == ComponentKind::SINGLE || Kind == ComponentKind::COMPONENT_X);
   }
+
+  // Create layout for COMPONENT_Y which depends on COMPONENT_X layout
+  ComponentLayout(const ComponentProps &OpXProps)
+      : Kind(ComponentKind::COMPONENT_Y), PrevOp(OpXProps) {}
 
 public:
   unsigned getDstIndex() const { return MC_DST_IDX[Kind]; }
   unsigned getSrcIndex(unsigned SrcIdx) const {
     assert(SrcIdx < Component::MAX_SRC_NUM);
-    return FIRST_MC_SRC_IDX[Kind] + OpXSrcNum + SrcIdx;
+    return FIRST_MC_SRC_IDX[Kind] + getPrevOpSrcNum() + SrcIdx;
   }
 
   unsigned getParsedDstIndex() const {
-    return PARSED_DST_IDX[Kind] + ParsedOpXSrcNum;
+    return PARSED_DST_IDX[Kind] + getPrevOpParsedSrcNum();
   }
-  unsigned getParsedSrcIndex(unsigned SrcIdx, bool ComponentHasSrc2Acc) const {
+  unsigned getParsedSrcIndex(unsigned SrcIdx) const {
     assert(SrcIdx < Component::MAX_SRC_NUM);
-    // FMAC and DOT2C have a src2 operand on the MCInst but
-    // not on the asm representation. src2 is tied to dst.
-    if (ComponentHasSrc2Acc && SrcIdx == (MAX_SRC_NUM - 1))
-      return getParsedDstIndex();
-    return FIRST_PARSED_SRC_IDX[Kind] + ParsedOpXSrcNum + SrcIdx;
+    return FIRST_PARSED_SRC_IDX[Kind] + getPrevOpParsedSrcNum() + SrcIdx;
   }
-};
-
-// Properties of VOPD components.
-class ComponentProps {
-private:
-  unsigned SrcOperandsNum;
-  Optional<unsigned> MandatoryLiteralIdx;
-  bool HasSrc2Acc;
-
-public:
-  ComponentProps(const MCInstrDesc &OpDesc);
-
-  unsigned getSrcOperandsNum() const { return SrcOperandsNum; }
-  bool hasMandatoryLiteral() const { return MandatoryLiteralIdx.has_value(); }
-  unsigned getMandatoryLiteralIndex() const {
-    assert(hasMandatoryLiteral());
-    return *MandatoryLiteralIdx;
-  }
-  bool hasRegularSrcOperand(unsigned SrcIdx) const {
-    assert(SrcIdx < Component::MAX_SRC_NUM);
-    return SrcOperandsNum > SrcIdx && !hasMandatoryLiteralAt(SrcIdx);
-  }
-  bool hasSrc2Acc() const { return HasSrc2Acc; }
 
 private:
-  bool hasMandatoryLiteralAt(unsigned SrcIdx) const {
-    assert(SrcIdx < Component::MAX_SRC_NUM);
-    return hasMandatoryLiteral() &&
-           *MandatoryLiteralIdx == Component::DST_NUM + SrcIdx;
+  unsigned getPrevOpSrcNum() const { return PrevOp.getSrcOperandsNum(); }
+  unsigned getPrevOpParsedSrcNum() const {
+    return PrevOp.getParsedSrcOperandsNum();
   }
 };
 
 // Layout and properties of VOPD components.
 class ComponentInfo : public ComponentLayout, public ComponentProps {
 public:
+  // Create ComponentInfo for COMPONENT_X or SINGLE component
   ComponentInfo(const MCInstrDesc &OpDesc,
-                ComponentKind Kind = ComponentKind::SINGLE,
-                unsigned OpXSrcNum = 0, unsigned ParsedOpXSrcNum = 0)
-      : ComponentLayout(Kind, OpXSrcNum, ParsedOpXSrcNum),
-        ComponentProps(OpDesc) {}
+                ComponentKind Kind = ComponentKind::SINGLE)
+      : ComponentLayout(Kind), ComponentProps(OpDesc) {}
+
+  // Create ComponentInfo for COMPONENT_Y which depends on COMPONENT_X layout
+  ComponentInfo(const MCInstrDesc &OpDesc,
+                const ComponentProps &OpXProps)
+      : ComponentLayout(OpXProps), ComponentProps(OpDesc) {}
 
   // Map MC operand index to parsed operand index.
   // Return 0 if the specified operand does not exist.

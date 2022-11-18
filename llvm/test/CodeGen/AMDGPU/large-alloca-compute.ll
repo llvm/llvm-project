@@ -1,10 +1,10 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck --check-prefixes=GCN,CI,ALL %s
 ; RUN: llc -march=amdgcn -mcpu=carrizo --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,VI,ALL %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,GFX9,ALL %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 < %s -mattr=-flat-for-global | FileCheck --check-prefixes=GCNHSA,GCNHSA7_10,ALL %s
-; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,GCNHSA7_10,ALL %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,GCNHSA7_10,ALL %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,GCNHSA11,ALL %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global,-architected-flat-scratch,-user-sgpr-init16-bug < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
 
 ; FIXME: align on alloca seems to be ignored for private_segment_alignment
 
@@ -19,35 +19,27 @@
 ; VI-DAG: s_mov_b32 s{{[0-9]+}}, 0xe80000
 ; GFX9-DAG: s_mov_b32 s{{[0-9]+}}, 0xe00000
 
-
-; GCNHSA7_10: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], 0 offen
-; GCNHSA7_10: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], 0 offen
-
-; GCNHSA11: scratch_store_b32 {{v[0-9]+}}, {{v[0-9]+}}, vcc_lo offset:4092
-; GCNHSA11: scratch_load_b32 {{v[0-9]+}}, off, {{s[0-9]+}} glc
+; GCNHSA: buffer_store_{{dword|b32}} {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], 0 offen
+; GCNHSA: buffer_load_{{dword|b32}} {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], 0 offen
 
 ; GCNHSA: .amdhsa_kernel large_alloca_compute_shader
 ; GCNHSA:         .amdhsa_group_segment_fixed_size 0
 ; GCNHSA:         .amdhsa_private_segment_fixed_size 32772
-; GCNHSA7_10:     .amdhsa_user_sgpr_private_segment_buffer 1
+; GCNHSA:         .amdhsa_user_sgpr_private_segment_buffer 1
 ; GCNHSA:         .amdhsa_user_sgpr_dispatch_ptr 0
 ; GCNHSA:         .amdhsa_user_sgpr_queue_ptr 0
 ; GCNHSA:         .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; GCNHSA:         .amdhsa_user_sgpr_dispatch_id 0
-; GCNHSA7_10:     .amdhsa_user_sgpr_flat_scratch_init 1
+; GCNHSA:         .amdhsa_user_sgpr_flat_scratch_init 1
 ; GCNHSA:         .amdhsa_user_sgpr_private_segment_size 0
-; GCNHSA7_10:     .amdhsa_system_sgpr_private_segment_wavefront_offset 1
-; GCNHSA11:       .amdhsa_enable_private_segment 1
-
+; GCNHSA:         .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; GCNHSA:         .amdhsa_system_sgpr_workgroup_id_x 1
 ; GCNHSA:         .amdhsa_system_sgpr_workgroup_id_y 0
 ; GCNHSA:         .amdhsa_system_sgpr_workgroup_id_z 0
 ; GCNHSA:         .amdhsa_system_sgpr_workgroup_info 0
 ; GCNHSA:         .amdhsa_system_vgpr_workitem_id 0
-; GCNHSA7_10:     .amdhsa_next_free_vgpr 3
-; GCNHSA7_10:     .amdhsa_next_free_sgpr 10
-; GCNHSA11:       .amdhsa_next_free_vgpr 2
-; GCNHSA11:       .amdhsa_next_free_sgpr 4
+; GCNHSA:         .amdhsa_next_free_vgpr 3
+; GCNHSA:         .amdhsa_next_free_sgpr 10
 ; GCNHSA:         .amdhsa_float_round_mode_32 0
 ; GCNHSA:         .amdhsa_float_round_mode_16_64 0
 ; GCNHSA:         .amdhsa_float_denorm_mode_32 3

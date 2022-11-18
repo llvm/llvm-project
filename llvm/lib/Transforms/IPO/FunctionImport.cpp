@@ -1130,7 +1130,8 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
     // It is illegal for comdats to contain declarations.
     auto *GO = dyn_cast_or_null<GlobalObject>(&GV);
     if (GO && GO->isDeclarationForLinker() && GO->hasComdat()) {
-      NonPrevailingComdats.insert(GO->getComdat());
+      if (GO->getComdat()->getName() == GO->getName())
+        NonPrevailingComdats.insert(GO->getComdat());
       GO->setComdat(nullptr);
     }
   };

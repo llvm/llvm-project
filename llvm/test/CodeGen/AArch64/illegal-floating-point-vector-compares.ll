@@ -10,9 +10,8 @@ define i1 @unordered_floating_point_compare_on_v8f32(<8 x float> %a_vec) {
 ; CHECK-NEXT:    fcmgt v1.4s, v1.4s, #0.0
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0
-; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    umaxv b0, v0.8b
 ; CHECK-NEXT:    fmov w9, s0
@@ -32,13 +31,10 @@ define i1 @unordered_floating_point_compare_on_v16f32(<16 x float> %a_vec) {
 ; CHECK-NEXT:    fcmgt v2.4s, v2.4s, #0.0
 ; CHECK-NEXT:    fcmgt v1.4s, v1.4s, #0.0
 ; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0
-; CHECK-NEXT:    mvn v3.16b, v3.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
-; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    bic w0, w8, w9
@@ -52,30 +48,23 @@ define i1 @unordered_floating_point_compare_on_v16f32(<16 x float> %a_vec) {
 define i1 @unordered_floating_point_compare_on_v32f32(<32 x float> %a_vec) {
 ; CHECK-LABEL: unordered_floating_point_compare_on_v32f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmgt v7.4s, v7.4s, #0.0
-; CHECK-NEXT:    mov w9, #1
-; CHECK-NEXT:    fcmgt v6.4s, v6.4s, #0.0
-; CHECK-NEXT:    fcmgt v5.4s, v5.4s, #0.0
-; CHECK-NEXT:    fcmgt v4.4s, v4.4s, #0.0
 ; CHECK-NEXT:    fcmgt v3.4s, v3.4s, #0.0
+; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    fcmgt v2.4s, v2.4s, #0.0
 ; CHECK-NEXT:    fcmgt v1.4s, v1.4s, #0.0
 ; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0
-; CHECK-NEXT:    mvn v7.16b, v7.16b
-; CHECK-NEXT:    mvn v6.16b, v6.16b
-; CHECK-NEXT:    mvn v5.16b, v5.16b
-; CHECK-NEXT:    mvn v4.16b, v4.16b
-; CHECK-NEXT:    mvn v3.16b, v3.16b
-; CHECK-NEXT:    mvn v2.16b, v2.16b
-; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    uzp1 v6.8h, v6.8h, v7.8h
-; CHECK-NEXT:    uzp1 v4.8h, v4.8h, v5.8h
+; CHECK-NEXT:    fcmgt v7.4s, v7.4s, #0.0
+; CHECK-NEXT:    fcmgt v6.4s, v6.4s, #0.0
+; CHECK-NEXT:    fcmgt v5.4s, v5.4s, #0.0
+; CHECK-NEXT:    fcmgt v4.4s, v4.4s, #0.0
 ; CHECK-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    uzp1 v1.16b, v4.16b, v6.16b
+; CHECK-NEXT:    uzp1 v6.8h, v6.8h, v7.8h
+; CHECK-NEXT:    uzp1 v1.8h, v4.8h, v5.8h
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uzp1 v1.16b, v1.16b, v6.16b
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    orn v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    bic w0, w9, w8

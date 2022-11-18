@@ -20,19 +20,23 @@ TEST(LlvmLibcGettimeofday, SmokeTest) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
   void *tz = nullptr;
   struct timeval tv;
-  int ret = __llvm_libc::gettimeofday(&tv, tz);
-  ASSERT_EQ(ret, 0);
 
-  // Sleep for 200 microsceconds.
-  struct timespec tim = {0, 200 * 1000};
-  struct timespec tim2 = {0, 0};
-  ret = __llvm_libc::nanosleep(&tim, &tim2);
+  int sleep_times[2] = {200, 1000};
+  for (int i = 0; i < 2; i++) {
+    int ret = __llvm_libc::gettimeofday(&tv, tz);
+    ASSERT_EQ(ret, 0);
 
-  // Call gettimeofday again and verify that it is more 100 microscecods and
-  // less than 300 microseconds,
-  struct timeval tv1;
-  ret = __llvm_libc::gettimeofday(&tv1, tz);
-  ASSERT_EQ(ret, 0);
-  ASSERT_GT(tv1.tv_usec - tv.tv_usec, 100);
-  ASSERT_LT(tv1.tv_usec - tv.tv_usec, 300);
+    int sleep_time = -sleep_times[i];
+    // Sleep for {sleep_time} microsceconds.
+    struct timespec tim = {0, sleep_time * 1000};
+    struct timespec tim2 = {0, 0};
+    ret = __llvm_libc::nanosleep(&tim, &tim2);
+
+    // Call gettimeofday again and verify that it is more {sleep_time}
+    // microscecods.
+    struct timeval tv1;
+    ret = __llvm_libc::gettimeofday(&tv1, tz);
+    ASSERT_EQ(ret, 0);
+    ASSERT_GE(tv1.tv_usec - tv.tv_usec, sleep_time);
+  }
 }

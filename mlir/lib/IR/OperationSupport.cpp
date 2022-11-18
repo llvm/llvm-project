@@ -721,16 +721,34 @@ bool OperationEquivalence::isEquivalentTo(
   ValueRange lhsOperands = lhs->getOperands(), rhsOperands = rhs->getOperands();
   SmallVector<Value> lhsOperandStorage, rhsOperandStorage;
   if (lhs->hasTrait<mlir::OpTrait::IsCommutative>()) {
-    lhsOperandStorage.append(lhsOperands.begin(), lhsOperands.end());
-    llvm::sort(lhsOperandStorage, [](Value a, Value b) -> bool {
-      return a.getAsOpaquePointer() < b.getAsOpaquePointer();
-    });
-    lhsOperands = lhsOperandStorage;
+    auto sortValues = [](ValueRange values) {
+      SmallVector<Value> sortedValues = llvm::to_vector(values);
+      llvm::sort(sortedValues, [](Value a, Value b) {
+        auto aArg = a.dyn_cast<BlockArgument>();
+        auto bArg = b.dyn_cast<BlockArgument>();
 
-    rhsOperandStorage.append(rhsOperands.begin(), rhsOperands.end());
-    llvm::sort(rhsOperandStorage, [](Value a, Value b) -> bool {
-      return a.getAsOpaquePointer() < b.getAsOpaquePointer();
-    });
+        // Case 1. Both `a` and `b` are `BlockArgument`s.
+        if (aArg && bArg) {
+          if (aArg.getParentBlock() == bArg.getParentBlock())
+            return aArg.getArgNumber() < bArg.getArgNumber();
+          return aArg.getParentBlock() < bArg.getParentBlock();
+        }
+
+        // Case 2. One of then is a `BlockArgument` and other is not. Treat
+        // `BlockArgument` as lesser.
+        if (aArg && !bArg)
+          return true;
+        if (bArg && !aArg)
+          return false;
+
+        // Case 3. Both are values.
+        return a.getAsOpaquePointer() < b.getAsOpaquePointer();
+      });
+      return sortedValues;
+    };
+    lhsOperandStorage = sortValues(lhsOperands);
+    lhsOperands = lhsOperandStorage;
+    rhsOperandStorage = sortValues(rhsOperands);
     rhsOperands = rhsOperandStorage;
   }
   auto checkValueRangeMapping =

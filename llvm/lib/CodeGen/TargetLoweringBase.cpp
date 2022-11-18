@@ -1716,7 +1716,7 @@ uint64_t TargetLoweringBase::getByValTypeAlignment(Type *Ty,
 
 bool TargetLoweringBase::allowsMemoryAccessForAlignment(
     LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
-    Align Alignment, MachineMemOperand::Flags Flags, bool *Fast) const {
+    Align Alignment, MachineMemOperand::Flags Flags, unsigned *Fast) const {
   // Check if the specified alignment is sufficient based on the data layout.
   // TODO: While using the data layout works in practice, a better solution
   // would be to implement this check directly (make this a virtual function).
@@ -1726,7 +1726,7 @@ bool TargetLoweringBase::allowsMemoryAccessForAlignment(
   if (VT.isZeroSized() || Alignment >= DL.getABITypeAlign(Ty)) {
     // Assume that an access that meets the ABI-specified alignment is fast.
     if (Fast != nullptr)
-      *Fast = true;
+      *Fast = 1;
     return true;
   }
 
@@ -1736,7 +1736,7 @@ bool TargetLoweringBase::allowsMemoryAccessForAlignment(
 
 bool TargetLoweringBase::allowsMemoryAccessForAlignment(
     LLVMContext &Context, const DataLayout &DL, EVT VT,
-    const MachineMemOperand &MMO, bool *Fast) const {
+    const MachineMemOperand &MMO, unsigned *Fast) const {
   return allowsMemoryAccessForAlignment(Context, DL, VT, MMO.getAddrSpace(),
                                         MMO.getAlign(), MMO.getFlags(), Fast);
 }
@@ -1745,7 +1745,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const DataLayout &DL, EVT VT,
                                             unsigned AddrSpace, Align Alignment,
                                             MachineMemOperand::Flags Flags,
-                                            bool *Fast) const {
+                                            unsigned *Fast) const {
   return allowsMemoryAccessForAlignment(Context, DL, VT, AddrSpace, Alignment,
                                         Flags, Fast);
 }
@@ -1753,7 +1753,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
 bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const DataLayout &DL, EVT VT,
                                             const MachineMemOperand &MMO,
-                                            bool *Fast) const {
+                                            unsigned *Fast) const {
   return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(), MMO.getAlign(),
                             MMO.getFlags(), Fast);
 }
@@ -1761,7 +1761,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
 bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const DataLayout &DL, LLT Ty,
                                             const MachineMemOperand &MMO,
-                                            bool *Fast) const {
+                                            unsigned *Fast) const {
   EVT VT = getApproximateEVTForLLT(Ty, DL, Context);
   return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(), MMO.getAlign(),
                             MMO.getFlags(), Fast);

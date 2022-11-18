@@ -465,6 +465,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   std::vector<std::unique_ptr<tidy::ClangTidyCheck>> CTChecks;
   ast_matchers::MatchFinder CTFinder;
   llvm::Optional<tidy::ClangTidyContext> CTContext;
+  // Must outlive FixIncludes.
+  auto BuildDir = VFS->getCurrentWorkingDirectory();
   llvm::Optional<IncludeFixer> FixIncludes;
   llvm::DenseMap<diag::kind, DiagnosticsEngine::Level> OverriddenSeverity;
   // No need to run clang-tidy or IncludeFixerif we are not going to surface
@@ -551,7 +553,6 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
 
     // Add IncludeFixer which can recover diagnostics caused by missing includes
     // (e.g. incomplete type) and attach include insertion fixes to diagnostics.
-    auto BuildDir = VFS->getCurrentWorkingDirectory();
     if (Inputs.Index && !BuildDir.getError()) {
       auto Style =
           getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS);

@@ -2457,7 +2457,8 @@ static bool produceCompactUnwindFrame(MachineFunction &MF) {
 }
 
 static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                             bool NeedsWinCFI, bool IsFirst) {
+                                             bool NeedsWinCFI, bool IsFirst,
+                                             const TargetRegisterInfo *TRI) {
   // If we are generating register pairs for a Windows function that requires
   // EH support, then pair consecutive registers only.  There are no unwind
   // opcodes for saves/restores of non-consectuve register pairs.
@@ -2469,7 +2470,7 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
     return true;
   if (!NeedsWinCFI)
     return false;
-  if (Reg2 == Reg1 + 1)
+  if (TRI->getEncodingValue(Reg2) == TRI->getEncodingValue(Reg1) + 1)
     return false;
   // If pairing a GPR with LR, the pair can be described by the save_lrpair
   // opcode. If this is the first register pair, it would end up with a
@@ -2488,9 +2489,11 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
 /// the frame-record. This means any other register pairing with LR is invalid.
 static bool invalidateRegisterPairing(unsigned Reg1, unsigned Reg2,
                                       bool UsesWinAAPCS, bool NeedsWinCFI,
-                                      bool NeedsFrameRecord, bool IsFirst) {
+                                      bool NeedsFrameRecord, bool IsFirst,
+                                      const TargetRegisterInfo *TRI) {
   if (UsesWinAAPCS)
-    return invalidateWindowsRegisterPairing(Reg1, Reg2, NeedsWinCFI, IsFirst);
+    return invalidateWindowsRegisterPairing(Reg1, Reg2, NeedsWinCFI, IsFirst,
+                                            TRI);
 
   // If we need to store the frame record, don't pair any register
   // with LR other than FP.
@@ -2595,13 +2598,14 @@ static void computeCalleeSaveRegisterPairs(
       case RegPairInfo::GPR:
         if (AArch64::GPR64RegClass.contains(NextReg) &&
             !invalidateRegisterPairing(RPI.Reg1, NextReg, IsWindows,
-                                       NeedsWinCFI, NeedsFrameRecord, IsFirst))
+                                       NeedsWinCFI, NeedsFrameRecord, IsFirst,
+                                       TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR64:
         if (AArch64::FPR64RegClass.contains(NextReg) &&
             !invalidateWindowsRegisterPairing(RPI.Reg1, NextReg, NeedsWinCFI,
-                                              IsFirst))
+                                              IsFirst, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR128:

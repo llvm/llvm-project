@@ -47,6 +47,15 @@ cl::opt<std::string> HTMLReportPath{
 
 class HTMLReportAction : public clang::ASTFrontendAction {
   RecordedAST AST;
+  RecordedPP PP;
+  PragmaIncludes PI;
+
+  void ExecuteAction() override {
+    auto &P = getCompilerInstance().getPreprocessor();
+    P.addPPCallbacks(PP.record(P));
+    PI.record(getCompilerInstance());
+    ASTFrontendAction::ExecuteAction();
+  }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef File) override {
@@ -62,7 +71,7 @@ class HTMLReportAction : public clang::ASTFrontendAction {
       exit(1);
     }
     writeHTMLReport(AST.Ctx->getSourceManager().getMainFileID(), AST.Roots,
-                    *AST.Ctx, OS);
+                    PP.MacroReferences, *AST.Ctx, &PI, OS);
   }
 };
 

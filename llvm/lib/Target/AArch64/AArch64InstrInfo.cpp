@@ -1308,17 +1308,13 @@ bool AArch64InstrInfo::optimizePTestInstr(
   bool PredIsPTestLike = isPTestLikeOpcode(PredOpcode);
   bool PredIsWhileLike = isWhileOpcode(PredOpcode);
 
-  if (isPTrueOpcode(MaskOpcode) && (PredIsPTestLike || PredIsWhileLike)) {
-    // For PTEST(PTRUE_ALL, WHILE), if the element size matches the PTEST is
+  if (isPTrueOpcode(MaskOpcode) && (PredIsPTestLike || PredIsWhileLike) &&
+      getElementSizeForOpcode(MaskOpcode) ==
+          getElementSizeForOpcode(PredOpcode) &&
+      Mask->getOperand(1).getImm() == 31) {
+    // For PTEST(PTRUE_ALL, WHILE), if the element size matches, the PTEST is
     // redundant since WHILE performs an implicit PTEST with an all active
-    // mask.
-    uint64_t MaskElementSize = getElementSizeForOpcode(MaskOpcode);
-    uint64_t PredElementSize = getElementSizeForOpcode(PredOpcode);
-
-    // Must be an all active predicate of matching element size.
-    if ((PredElementSize != MaskElementSize) ||
-        (Mask->getOperand(1).getImm() != 31))
-      return false;
+    // mask. Must be an all active predicate of matching element size.
 
     // For PTEST(PTRUE_ALL, PTEST_LIKE), the PTEST is redundant if the
     // PTEST_LIKE instruction uses the same all active mask and the element
@@ -4964,6 +4960,19 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(
     return Inst.getParent()->getParent()->getTarget().Options.UnsafeFPMath ||
            (Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
             Inst.getFlag(MachineInstr::MIFlag::FmNsz));
+  case AArch64::ADDXrr:
+  case AArch64::ANDXrr:
+  case AArch64::ORRXrr:
+  case AArch64::EORXrr:
+  case AArch64::EONXrr:
+  case AArch64::ADDWrr:
+  case AArch64::ANDWrr:
+  case AArch64::ORRWrr:
+  case AArch64::EORWrr:
+  case AArch64::EONWrr:
+  case AArch64::ANDSXrr:
+  case AArch64::ANDSWrr:
+    return true;
   default:
     return false;
   }
@@ -5544,18 +5553,18 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
 
   MachineInstrBuilder MIB;
   if (kind == FMAInstKind::Default)
-    MIB = BuildMI(MF, Root.getDebugLoc(), TII->get(MaddOpc), ResultReg)
+    MIB = BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
               .addReg(SrcReg0, getKillRegState(Src0IsKill))
               .addReg(SrcReg1, getKillRegState(Src1IsKill))
               .addReg(SrcReg2, getKillRegState(Src2IsKill));
   else if (kind == FMAInstKind::Indexed)
-    MIB = BuildMI(MF, Root.getDebugLoc(), TII->get(MaddOpc), ResultReg)
+    MIB = BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
               .addReg(SrcReg2, getKillRegState(Src2IsKill))
               .addReg(SrcReg0, getKillRegState(Src0IsKill))
               .addReg(SrcReg1, getKillRegState(Src1IsKill))
               .addImm(MUL->getOperand(3).getImm());
   else if (kind == FMAInstKind::Accumulator)
-    MIB = BuildMI(MF, Root.getDebugLoc(), TII->get(MaddOpc), ResultReg)
+    MIB = BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
               .addReg(SrcReg2, getKillRegState(Src2IsKill))
               .addReg(SrcReg0, getKillRegState(Src0IsKill))
               .addReg(SrcReg1, getKillRegState(Src1IsKill));
@@ -5596,7 +5605,7 @@ genIndexedMultiply(MachineInstr &Root,
   Register ResultReg = Root.getOperand(0).getReg();
 
   MachineInstrBuilder MIB;
-  MIB = BuildMI(MF, Root.getDebugLoc(), TII->get(MulOpc), ResultReg)
+  MIB = BuildMI(MF, MIMetadata(Root), TII->get(MulOpc), ResultReg)
             .add(MulOp)
             .addReg(DupSrcReg)
             .addImm(DupSrcLane);
@@ -5626,7 +5635,7 @@ static Register genNeg(MachineFunction &MF, MachineRegisterInfo &MRI,
                        unsigned MnegOpc, const TargetRegisterClass *RC) {
   Register NewVR = MRI.createVirtualRegister(RC);
   MachineInstrBuilder MIB =
-      BuildMI(MF, Root.getDebugLoc(), TII->get(MnegOpc), NewVR)
+      BuildMI(MF, MIMetadata(Root), TII->get(MnegOpc), NewVR)
           .add(Root.getOperand(2));
   InsInstrs.push_back(MIB);
 
@@ -5722,7 +5731,7 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
     MRI.constrainRegClass(VR, RC);
 
   MachineInstrBuilder MIB =
-      BuildMI(MF, Root.getDebugLoc(), TII->get(MaddOpc), ResultReg)
+      BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
           .addReg(SrcReg0, getKillRegState(Src0IsKill))
           .addReg(SrcReg1, getKillRegState(Src1IsKill))
           .addReg(VR);
@@ -5764,11 +5773,11 @@ genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
            "Unexpected instruction opcode.");
 
   MachineInstrBuilder MIB1 =
-      BuildMI(MF, Root.getDebugLoc(), TII->get(Opcode), NewVR)
+      BuildMI(MF, MIMetadata(Root), TII->get(Opcode), NewVR)
           .addReg(RegA, getKillRegState(RegAIsKill))
           .addReg(RegB, getKillRegState(RegBIsKill));
   MachineInstrBuilder MIB2 =
-      BuildMI(MF, Root.getDebugLoc(), TII->get(Opcode), ResultReg)
+      BuildMI(MF, MIMetadata(Root), TII->get(Opcode), ResultReg)
           .addReg(NewVR, getKillRegState(true))
           .addReg(RegC, getKillRegState(RegCIsKill));
 
@@ -5883,7 +5892,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MachineInstrBuilder MIB1;
     // MOV is an alias for one of three instructions: movz, movn, and orr.
     if (MovI->Opcode == OrrOpc)
-      MIB1 = BuildMI(MF, Root.getDebugLoc(), TII->get(OrrOpc), NewVR)
+      MIB1 = BuildMI(MF, MIMetadata(Root), TII->get(OrrOpc), NewVR)
                  .addReg(ZeroReg)
                  .addImm(MovI->Op2);
     else {
@@ -5895,7 +5904,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
         assert((MovI->Opcode == AArch64::MOVNXi ||
                 MovI->Opcode == AArch64::MOVZXi) &&
                "Expected opcode");
-      MIB1 = BuildMI(MF, Root.getDebugLoc(), TII->get(MovI->Opcode), NewVR)
+      MIB1 = BuildMI(MF, MIMetadata(Root), TII->get(MovI->Opcode), NewVR)
                  .addImm(MovI->Op1)
                  .addImm(MovI->Op2);
     }
@@ -5929,7 +5938,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     Register NewVR = MRI.createVirtualRegister(SubRC);
     // SUB NewVR, 0, C
     MachineInstrBuilder MIB1 =
-        BuildMI(MF, Root.getDebugLoc(), TII->get(SubOpc), NewVR)
+        BuildMI(MF, MIMetadata(Root), TII->get(SubOpc), NewVR)
             .addReg(ZeroReg)
             .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
@@ -5992,7 +6001,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MachineInstrBuilder MIB1;
     // MOV is an alias for one of three instructions: movz, movn, and orr.
     if (MovI->Opcode == OrrOpc)
-      MIB1 = BuildMI(MF, Root.getDebugLoc(), TII->get(OrrOpc), NewVR)
+      MIB1 = BuildMI(MF, MIMetadata(Root), TII->get(OrrOpc), NewVR)
                  .addReg(ZeroReg)
                  .addImm(MovI->Op2);
     else {
@@ -6004,7 +6013,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
         assert((MovI->Opcode == AArch64::MOVNXi ||
                 MovI->Opcode == AArch64::MOVZXi) &&
                "Expected opcode");
-      MIB1 = BuildMI(MF, Root.getDebugLoc(), TII->get(MovI->Opcode), NewVR)
+      MIB1 = BuildMI(MF, MIMetadata(Root), TII->get(MovI->Opcode), NewVR)
                  .addImm(MovI->Op1)
                  .addImm(MovI->Op2);
     }
@@ -6496,7 +6505,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     RC = &AArch64::FPR64RegClass;
     Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
-        BuildMI(MF, Root.getDebugLoc(), TII->get(AArch64::FNEGv4f16), NewVR)
+        BuildMI(MF, MIMetadata(Root), TII->get(AArch64::FNEGv4f16), NewVR)
             .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
@@ -6543,7 +6552,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     RC = &AArch64::FPR128RegClass;
     Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
-        BuildMI(MF, Root.getDebugLoc(), TII->get(AArch64::FNEGv8f16), NewVR)
+        BuildMI(MF, MIMetadata(Root), TII->get(AArch64::FNEGv8f16), NewVR)
             .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
@@ -6603,7 +6612,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     RC = &AArch64::FPR64RegClass;
     Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
-        BuildMI(MF, Root.getDebugLoc(), TII->get(AArch64::FNEGv2f32), NewVR)
+        BuildMI(MF, MIMetadata(Root), TII->get(AArch64::FNEGv2f32), NewVR)
             .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
@@ -6623,7 +6632,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     RC = &AArch64::FPR128RegClass;
     Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
-        BuildMI(MF, Root.getDebugLoc(), TII->get(AArch64::FNEGv4f32), NewVR)
+        BuildMI(MF, MIMetadata(Root), TII->get(AArch64::FNEGv4f32), NewVR)
             .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
@@ -6643,7 +6652,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     RC = &AArch64::FPR128RegClass;
     Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
-        BuildMI(MF, Root.getDebugLoc(), TII->get(AArch64::FNEGv2f64), NewVR)
+        BuildMI(MF, MIMetadata(Root), TII->get(AArch64::FNEGv2f64), NewVR)
             .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));

@@ -474,8 +474,10 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
   // fmamk and we are trying to fold a non-inlinable constant.
   if ((Opc == AMDGPU::S_FMAAK_F32 || Opc == AMDGPU::S_FMAMK_F32) &&
       !TII->isInlineConstant(*OpToFold)) {
-    unsigned OpImm = Opc == AMDGPU::S_FMAAK_F32 ? 3 : 2;
-    if (TII->isInlineConstant(*MI, MI->getOperand(OpNo), MI->getOperand(OpImm)))
+    unsigned ImmIdx = Opc == AMDGPU::S_FMAAK_F32 ? 3 : 2;
+    MachineOperand &OpImm = MI->getOperand(ImmIdx);
+    if (!OpImm.isReg() &&
+        TII->isInlineConstant(*MI, MI->getOperand(OpNo), OpImm))
       return tryToFoldAsFMAAKorMK();
   }
 
@@ -497,17 +499,13 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
     const MCOperandInfo &OpInfo = InstDesc.OpInfo[OpNo];
 
     // Fine if the operand can be encoded as an inline constant
-    if (TII->isLiteralConstantLike(*OpToFold, OpInfo)) {
-      if (!TRI->opCanUseInlineConstant(OpInfo.OperandType) ||
-          !TII->isInlineConstant(*OpToFold, OpInfo)) {
-        // Otherwise check for another constant
-        for (unsigned i = 0, e = InstDesc.getNumOperands(); i != e; ++i) {
-          auto &Op = MI->getOperand(i);
-          if (OpNo != i &&
-              TII->isLiteralConstantLike(Op, InstDesc.OpInfo[i])) {
-            return false;
-          }
-        }
+    if (!OpToFold->isReg() && !TII->isInlineConstant(*OpToFold, OpInfo)) {
+      // Otherwise check for another constant
+      for (unsigned i = 0, e = InstDesc.getNumOperands(); i != e; ++i) {
+        auto &Op = MI->getOperand(i);
+        if (OpNo != i && !Op.isReg() &&
+            !TII->isInlineConstant(Op, InstDesc.OpInfo[i]))
+          return false;
       }
     }
   }

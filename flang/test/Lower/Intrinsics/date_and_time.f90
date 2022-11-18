@@ -15,7 +15,7 @@ subroutine date_and_time_test(date, time, zone, values)
     ! CHECK: %[[zoneBuffer:.*]] = fir.convert %[[zoneUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
     ! CHECK: %[[zoneLen:.*]] = fir.convert %[[zoneUnbox]]#1 : (index) -> i64
     ! CHECK: %[[valuesCast:.*]] = fir.convert %[[values]] : (!fir.box<!fir.array<?xi64>>) -> !fir.box<none>
-    ! CHECK: fir.call @_FortranADateAndTime(%[[dateBuffer]], %[[dateLen]], %[[timeBuffer]], %[[timeLen]], %[[zoneBuffer]], %[[zoneLen]], %{{.*}}, %{{.*}}, %[[valuesCast]]) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i32, !fir.box<none>) -> none
+    ! CHECK: fir.call @_FortranADateAndTime(%[[dateBuffer]], %[[dateLen]], %[[timeBuffer]], %[[timeLen]], %[[zoneBuffer]], %[[zoneLen]], %{{.*}}, %{{.*}}, %[[valuesCast]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i32, !fir.box<none>) -> none
     call date_and_time(date, time, zone, values)
   end subroutine
   
@@ -31,7 +31,7 @@ subroutine date_and_time_test(date, time, zone, values)
     ! CHECK: %[[timeLen:.*]] = fir.convert %c0{{.*}} : (index) -> i64
     ! CHECK: %[[zoneBuffer:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.ref<i8>
     ! CHECK: %[[zoneLen:.*]] = fir.convert %c0{{.*}} : (index) -> i64
-    ! CHECK: fir.call @_FortranADateAndTime(%[[dateBuffer]], %[[dateLen]], %[[timeBuffer]], %[[timeLen]], %[[zoneBuffer]], %[[zoneLen]], %{{.*}}, %{{.*}}, %[[values]]) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i32, !fir.box<none>) -> none
+    ! CHECK: fir.call @_FortranADateAndTime(%[[dateBuffer]], %[[dateLen]], %[[timeBuffer]], %[[timeLen]], %[[zoneBuffer]], %[[zoneLen]], %{{.*}}, %{{.*}}, %[[values]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i32, !fir.box<none>) -> none
     call date_and_time(date)
   end subroutine
   
@@ -69,5 +69,5 @@ subroutine date_and_time_test(date, time, zone, values)
   ! CHECK:  %[[VAL_23:.*]] = fir.convert %[[VAL_5]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:  %[[VAL_24:.*]] = fir.convert %[[VAL_5]]#1 : (index) -> i64
   ! CHECK:  %[[VAL_26:.*]] = fir.convert %[[VAL_16]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<none>
-  ! CHECK:  %[[VAL_28:.*]] = fir.call @_FortranADateAndTime(%[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_24]], %{{.*}}, %{{.*}}, %[[VAL_26]]) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i32, !fir.box<none>) -> none
+  ! CHECK:  %[[VAL_28:.*]] = fir.call @_FortranADateAndTime(%[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_24]], %{{.*}}, %{{.*}}, %[[VAL_26]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i32, !fir.box<none>) -> none
   end subroutine

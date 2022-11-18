@@ -2252,19 +2252,19 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
           DL->getTypeAllocSize(GV->getValueType()) >= MinSize + Offset2)
         GV->setAlignment(PrefAlign);
     }
-    // If this is a memcpy (or similar) then we may be able to improve the
-    // alignment
-    if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(CI)) {
-      Align DestAlign = getKnownAlignment(MI->getDest(), *DL);
-      MaybeAlign MIDestAlign = MI->getDestAlign();
-      if (!MIDestAlign || DestAlign > *MIDestAlign)
-        MI->setDestAlignment(DestAlign);
-      if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
-        MaybeAlign MTISrcAlign = MTI->getSourceAlign();
-        Align SrcAlign = getKnownAlignment(MTI->getSource(), *DL);
-        if (!MTISrcAlign || SrcAlign > *MTISrcAlign)
-          MTI->setSourceAlignment(SrcAlign);
-      }
+  }
+  // If this is a memcpy (or similar) then we may be able to improve the
+  // alignment.
+  if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(CI)) {
+    Align DestAlign = getKnownAlignment(MI->getDest(), *DL);
+    MaybeAlign MIDestAlign = MI->getDestAlign();
+    if (!MIDestAlign || DestAlign > *MIDestAlign)
+      MI->setDestAlignment(DestAlign);
+    if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
+      MaybeAlign MTISrcAlign = MTI->getSourceAlign();
+      Align SrcAlign = getKnownAlignment(MTI->getSource(), *DL);
+      if (!MTISrcAlign || SrcAlign > *MTISrcAlign)
+        MTI->setSourceAlignment(SrcAlign);
     }
   }
 

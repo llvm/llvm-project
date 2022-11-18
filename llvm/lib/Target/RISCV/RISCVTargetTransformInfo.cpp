@@ -415,6 +415,32 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::bswap, MVT::nxv2i64, 31},
     {Intrinsic::bswap, MVT::nxv4i64, 31},
     {Intrinsic::bswap, MVT::nxv8i64, 31},
+    {Intrinsic::vp_bswap, MVT::v2i16, 3},
+    {Intrinsic::vp_bswap, MVT::v4i16, 3},
+    {Intrinsic::vp_bswap, MVT::v8i16, 3},
+    {Intrinsic::vp_bswap, MVT::v16i16, 3},
+    {Intrinsic::vp_bswap, MVT::nxv1i16, 3},
+    {Intrinsic::vp_bswap, MVT::nxv2i16, 3},
+    {Intrinsic::vp_bswap, MVT::nxv4i16, 3},
+    {Intrinsic::vp_bswap, MVT::nxv8i16, 3},
+    {Intrinsic::vp_bswap, MVT::nxv16i16, 3},
+    {Intrinsic::vp_bswap, MVT::v2i32, 12},
+    {Intrinsic::vp_bswap, MVT::v4i32, 12},
+    {Intrinsic::vp_bswap, MVT::v8i32, 12},
+    {Intrinsic::vp_bswap, MVT::v16i32, 12},
+    {Intrinsic::vp_bswap, MVT::nxv1i32, 12},
+    {Intrinsic::vp_bswap, MVT::nxv2i32, 12},
+    {Intrinsic::vp_bswap, MVT::nxv4i32, 12},
+    {Intrinsic::vp_bswap, MVT::nxv8i32, 12},
+    {Intrinsic::vp_bswap, MVT::nxv16i32, 12},
+    {Intrinsic::vp_bswap, MVT::v2i64, 31},
+    {Intrinsic::vp_bswap, MVT::v4i64, 31},
+    {Intrinsic::vp_bswap, MVT::v8i64, 31},
+    {Intrinsic::vp_bswap, MVT::v16i64, 31},
+    {Intrinsic::vp_bswap, MVT::nxv1i64, 31},
+    {Intrinsic::vp_bswap, MVT::nxv2i64, 31},
+    {Intrinsic::vp_bswap, MVT::nxv4i64, 31},
+    {Intrinsic::vp_bswap, MVT::nxv8i64, 31},
     {Intrinsic::bitreverse, MVT::v2i8, 17},
     {Intrinsic::bitreverse, MVT::v4i8, 17},
     {Intrinsic::bitreverse, MVT::v8i8, 17},
@@ -532,6 +558,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::vp_rint: {
     // RISC-V target uses at least 5 instructions to lower rounding intrinsics.
     unsigned Cost = 5;
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
+      return Cost * LT.first;
+    break;
+  }
+  case Intrinsic::vp_nearbyint: {
+    // More one read and one write for fflags than vp_rint.
+    unsigned Cost = 7;
     auto LT = getTypeLegalizationCost(RetTy);
     if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
       return Cost * LT.first;

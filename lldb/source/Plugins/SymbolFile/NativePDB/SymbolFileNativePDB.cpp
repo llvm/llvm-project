@@ -354,7 +354,8 @@ void SymbolFileNativePDB::InitializeObject() {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
                    "Failed to initialize");
   } else {
-    ts_or_err->SetSymbolFile(this);
+    if (auto ts = *ts_or_err)
+      ts->SetSymbolFile(this);
     BuildParentMap();
   }
 }
@@ -383,7 +384,10 @@ Block &SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
   auto ts_or_err = GetTypeSystemForLanguage(comp_unit->GetLanguage());
   if (auto err = ts_or_err.takeError())
     return *child_block;
-  PdbAstBuilder* ast_builder = ts_or_err->GetNativePDBParser();
+  auto ts = *ts_or_err;
+  if (!ts)
+    return *child_block;
+  PdbAstBuilder* ast_builder = ts->GetNativePDBParser();
 
   switch (sym.kind()) {
   case S_GPROC32:
@@ -502,7 +506,10 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   auto ts_or_err = GetTypeSystemForLanguage(comp_unit.GetLanguage());
   if (auto err = ts_or_err.takeError())
     return func_sp;
-  ts_or_err->GetNativePDBParser()->GetOrCreateFunctionDecl(func_id);
+  auto ts = *ts_or_err;
+  if (!ts)
+    return func_sp;
+  ts->GetNativePDBParser()->GetOrCreateFunctionDecl(func_id);
 
   return func_sp;
 }
@@ -798,7 +805,11 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbTypeSymId type_id) {
   auto ts_or_err = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = ts_or_err.takeError())
     return nullptr;
-  PdbAstBuilder* ast_builder = ts_or_err->GetNativePDBParser();
+  auto ts = *ts_or_err;
+  if (!ts)
+    return nullptr;
+
+  PdbAstBuilder* ast_builder = ts->GetNativePDBParser();
   clang::QualType qt = ast_builder->GetOrCreateType(best_decl_id);
   if (qt.isNull())
     return nullptr;
@@ -895,7 +906,11 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   auto ts_or_err = GetTypeSystemForLanguage(comp_unit->GetLanguage());
   if (auto err = ts_or_err.takeError())
     return nullptr;
-  ts_or_err->GetNativePDBParser()->GetOrCreateVariableDecl(var_id);
+  auto ts = *ts_or_err;
+  if (!ts)
+    return nullptr;
+
+  ts->GetNativePDBParser()->GetOrCreateVariableDecl(var_id);
 
   ModuleSP module_sp = GetObjectFile()->GetModule();
   DWARFExpressionList location(
@@ -1625,8 +1640,8 @@ void SymbolFileNativePDB::DumpClangAST(Stream &s) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
     return;
-  TypeSystemClang *clang =
-      llvm::dyn_cast_or_null<TypeSystemClang>(&ts_or_err.get());
+  auto ts = *ts_or_err;
+  TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
     return;
   clang->GetNativePDBParser()->Dump(s);
@@ -1838,7 +1853,11 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
     auto ts_or_err = GetTypeSystemForLanguage(comp_unit_sp->GetLanguage());
     if (auto err = ts_or_err.takeError())
       return nullptr;
-    ts_or_err->GetNativePDBParser()->GetOrCreateVariableDecl(scope_id, var_id);
+    auto ts = *ts_or_err;
+    if (!ts)
+      return nullptr;
+
+    ts->GetNativePDBParser()->GetOrCreateVariableDecl(scope_id, var_id);
   }
   m_local_variables[toOpaqueUid(var_id)] = var_sp;
   return var_sp;
@@ -1864,7 +1883,11 @@ TypeSP SymbolFileNativePDB::CreateTypedef(PdbGlobalSymId id) {
   auto ts_or_err = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = ts_or_err.takeError())
     return nullptr;
-  ts_or_err->GetNativePDBParser()->GetOrCreateTypedefDecl(id);
+  auto ts = *ts_or_err;
+  if (!ts)
+    return nullptr;
+
+  ts->GetNativePDBParser()->GetOrCreateTypedefDecl(id);
 
   Declaration decl;
   return std::make_shared<lldb_private::Type>(
@@ -2016,7 +2039,11 @@ CompilerDecl SymbolFileNativePDB::GetDeclForUID(lldb::user_id_t uid) {
   auto ts_or_err = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = ts_or_err.takeError())
     return CompilerDecl();
-  if (auto decl = ts_or_err->GetNativePDBParser()->GetOrCreateDeclForUid(uid))
+  auto ts = *ts_or_err;
+  if (!ts)
+    return {};
+
+  if (auto decl = ts->GetNativePDBParser()->GetOrCreateDeclForUid(uid))
     return *decl;
   return CompilerDecl();
 }
@@ -2026,7 +2053,11 @@ SymbolFileNativePDB::GetDeclContextForUID(lldb::user_id_t uid) {
   auto ts_or_err = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = ts_or_err.takeError())
     return {};
-  PdbAstBuilder *ast_builder = ts_or_err->GetNativePDBParser();
+  auto ts = *ts_or_err;
+  if (!ts)
+    return {};
+
+  PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
   clang::DeclContext *context =
       ast_builder->GetOrCreateDeclContextForUid(PdbSymUid(uid));
   if (!context)
@@ -2040,7 +2071,11 @@ SymbolFileNativePDB::GetDeclContextContainingUID(lldb::user_id_t uid) {
   auto ts_or_err = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = ts_or_err.takeError())
     return CompilerDeclContext();
-  PdbAstBuilder *ast_builder = ts_or_err->GetNativePDBParser();
+  auto ts = *ts_or_err;
+  if (!ts)
+    return {};
+
+  PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
   clang::DeclContext *context = ast_builder->GetParentDeclContext(PdbSymUid(uid));
   if (!context)
     return CompilerDeclContext();
@@ -2078,9 +2113,8 @@ SymbolFileNativePDB::GetDynamicArrayInfoForUID(
 
 bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-
-  TypeSystemClang *clang_type_system =
-      llvm::dyn_cast_or_null<TypeSystemClang>(compiler_type.GetTypeSystem());
+  auto ts = compiler_type.GetTypeSystem();
+  auto clang_type_system = ts.dyn_cast_or_null<TypeSystemClang>();
   if (!clang_type_system)
     return false;
 
@@ -2105,13 +2139,13 @@ SymbolFileNativePDB::FindNamespace(ConstString name,
   return {};
 }
 
-llvm::Expected<TypeSystem &>
+llvm::Expected<lldb::TypeSystemSP>
 SymbolFileNativePDB::GetTypeSystemForLanguage(lldb::LanguageType language) {
   auto type_system_or_err =
       m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
-  if (type_system_or_err) {
-    type_system_or_err->SetSymbolFile(this);
-  }
+  if (type_system_or_err)
+    if (auto ts = *type_system_or_err)
+      ts->SetSymbolFile(this);
   return type_system_or_err;
 }
 

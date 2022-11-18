@@ -33,18 +33,18 @@
 !CHECK:       %[[PRIVATE_DOUBLE_COUNT:.*]] = fir.alloca i32 {bindc_name = "double_count", pinned, uniq_name = "_QFEdouble_count"} 
 !CHECK:       %[[temp:.*]] = fir.load %[[PRIVATE_ETA]] : !fir.ref<f32>
 !CHECK:       %[[const:.*]] = arith.constant 7.000000e+00 : f32
-!CHECK:       %[[result:.*]] = arith.subf %[[temp]], %[[const]] : f32
+!CHECK:       %[[result:.*]] = arith.subf %[[temp]], %[[const]] {{.*}}: f32
 !CHECK:       fir.store %[[result]] to %[[PRIVATE_ETA]] : !fir.ref<f32>
 !CHECK:       {{.*}} = fir.load %[[COUNT]] : !fir.ref<i32>
 !CHECK:       %[[temp_count:.*]] = fir.convert {{.*}} : (i32) -> f32
 !CHECK:       %[[temp_eta:.*]] = fir.load %[[PRIVATE_ETA]] : !fir.ref<f32>
-!CHECK:       {{.*}} = arith.mulf %[[temp_count]], %[[temp_eta]] : f32
+!CHECK:       {{.*}} = arith.mulf %[[temp_count]], %[[temp_eta]] {{.*}}: f32
 !CHECK:       %[[result:.*]] = fir.convert {{.*}} : (f32) -> i32
 !CHECK:       fir.store %[[result]] to %[[COUNT]] : !fir.ref<i32>
 !CHECK:       {{.*}} = fir.load %[[COUNT]] : !fir.ref<i32>
 !CHECK:       %[[temp_count:.*]] = fir.convert {{.*}} : (i32) -> f32
 !CHECK:       %[[temp_eta:.*]] = fir.load %[[PRIVATE_ETA]] : !fir.ref<f32>
-!CHECK:       {{.*}} = arith.subf %[[temp_count]], %[[temp_eta]] : f32
+!CHECK:       {{.*}} = arith.subf %[[temp_count]], %[[temp_eta]] {{.*}}: f32
 !CHECK:       %[[result:.*]] = fir.convert {{.*}} : (f32) -> i32
 !CHECK:       fir.store %[[result]] to %[[PRIVATE_DOUBLE_COUNT]] : !fir.ref<i32>
 !CHECK:       omp.terminator
@@ -90,7 +90,7 @@ end program sample
 !CHECK:     omp.section  {
 !CHECK:       %[[PRIVATE_VAR:.*]] = fir.load %[[ARG]] : !fir.ref<f32>
 !CHECK:       %[[CONSTANT:.*]] = arith.constant 5.000000e+00 : f32
-!CHECK:       %[[PRIVATE_VAR_2:.*]] = arith.mulf %[[PRIVATE_VAR]], %[[CONSTANT]] : f32
+!CHECK:       %[[PRIVATE_VAR_2:.*]] = arith.mulf %[[PRIVATE_VAR]], %[[CONSTANT]] {{.*}}: f32
 !CHECK:       fir.store %[[PRIVATE_VAR_2]] to %[[ARG]] : !fir.ref<f32>
 !CHECK:       omp.terminator
 !CHECK:     }

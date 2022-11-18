@@ -18,6 +18,10 @@
 namespace llvm {
 namespace ARM {
 
+enum class ISAKind { INVALID = 0, ARM, THUMB, AARCH64 };
+
+enum class EndianKind { INVALID = 0, LITTLE, BIG };
+
 /// Converts e.g. "armv8" -> "armv8-a"
 StringRef getArchSynonym(StringRef Arch);
 
@@ -26,6 +30,12 @@ StringRef getArchSynonym(StringRef Arch);
 /// "v.+", if the latter, return unmodified string, minus 'eb'.
 /// If invalid, return empty string.
 StringRef getCanonicalArchName(StringRef Arch);
+
+// ARM, Thumb, AArch64
+ISAKind parseArchISA(StringRef Arch);
+
+// Little/Big endian
+EndianKind parseArchEndian(StringRef Arch);
 
 } // namespace ARM
 } // namespace llvm

@@ -589,6 +589,10 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAArch64StackTaggingPass(
       /*IsOptNone=*/TM->getOptLevel() == CodeGenOpt::None));
 
+  // Match complex arithmetic patterns
+  if (TM->getOptLevel() >= CodeGenOpt::Default)
+    addPass(createComplexDeinterleavingPass(TM));
+
   // Match interleaved memory accesses to ldN/stN intrinsics.
   if (TM->getOptLevel() != CodeGenOpt::None) {
     addPass(createInterleavedLoadCombinePass());

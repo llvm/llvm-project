@@ -95,7 +95,7 @@ Value genIsNonzero(OpBuilder &builder, Location loc, Value v);
 /// used when operands have dynamic shape. The shape of the destination is
 /// stored into dstShape.
 void genReshapeDstShape(Location loc, PatternRewriter &rewriter,
-                        SmallVector<Value, 4> &dstShape,
+                        SmallVectorImpl<Value> &dstShape,
                         ArrayRef<Value> srcShape,
                         ArrayRef<int64_t> staticDstShape,
                         ArrayRef<ReassociationIndices> reassociation);
@@ -177,11 +177,31 @@ void genDenseTensorOrSparseConstantIterLoop(
     function_ref<void(OpBuilder &, Location, Value, ValueRange)> bodyBuilder);
 
 /// Populates given sizes array from dense tensor or sparse tensor constant.
-void sizesFromSrc(OpBuilder &builder, SmallVector<Value, 4> &sizes,
+void sizesFromSrc(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                   Location loc, Value src);
 
 /// Scans to top of generated loop.
 Operation *getTop(Operation *op);
+
+/// Iterate over a sparse constant, generates constantOp for value and indices.
+/// E.g.,
+/// sparse<[ [0], [28], [31] ],
+///          [ (-5.13, 2.0), (3.0, 4.0), (5.0, 6.0) ] >
+/// =>
+/// %c1 = arith.constant 0
+/// %v1 = complex.constant (5.13, 2.0)
+/// callback({%c1}, %v1)
+///
+/// %c2 = arith.constant 28
+/// %v2 = complex.constant (3.0, 4.0)
+/// callback({%c2}, %v2)
+///
+/// %c3 = arith.constant 31
+/// %v3 = complex.constant (5.0, 6.0)
+/// callback({%c3}, %v3)
+void foreachInSparseConstant(
+    Location loc, RewriterBase &rewriter, SparseElementsAttr attr,
+    function_ref<void(ArrayRef<Value>, Value)> callback);
 
 //===----------------------------------------------------------------------===//
 // Inlined constant generators.
@@ -197,9 +217,9 @@ Operation *getTop(Operation *op);
 //===----------------------------------------------------------------------===//
 
 /// Generates a 0-valued constant of the given type.  In addition to
-/// the scalar types (`ComplexType`, ``FloatType`, `IndexType`, `IntegerType`),
-/// this also works for `RankedTensorType` and `VectorType` (for which it
-/// generates a constant `DenseElementsAttr` of zeros).
+/// the scalar types (`ComplexType`, ``FloatType`, `IndexType`,
+/// `IntegerType`), this also works for `RankedTensorType` and `VectorType`
+/// (for which it generates a constant `DenseElementsAttr` of zeros).
 inline Value constantZero(OpBuilder &builder, Location loc, Type tp) {
   if (auto ctp = tp.dyn_cast<ComplexType>()) {
     auto zeroe = builder.getZeroAttr(ctp.getElementType());
@@ -331,7 +351,9 @@ public:
   /// tensor id (tid) used in related functions.
   /// If isSparseOut is set, loop emitter assume that the sparse output tensor
   /// is empty, and will always generate loops on it based on the dim sizes.
-  explicit SparseTensorLoopEmitter(ValueRange tensors, bool hasOutput = false,
+  explicit SparseTensorLoopEmitter(ValueRange tensors,
+                                   StringAttr loopTag = nullptr,
+                                   bool hasOutput = false,
                                    bool isSparseOut = false);
 
   /// Starts a loop emitting session by generating all the buffers needed to
@@ -413,16 +435,25 @@ public:
   };
   const std::vector<Value> &getValBuffer() const { return valBuffer; };
 
+  constexpr static llvm::StringLiteral getLoopEmitterLoopAttrName() {
+    return llvm::StringLiteral("Emitted from");
+  }
+
 private:
   struct LoopLevelInfo {
     LoopLevelInfo(ArrayRef<size_t> tids, ArrayRef<size_t> dims, Operation *loop,
-                  Value iv)
-        : tids(tids), dims(dims), loop(loop), iv(iv) {}
+                  Value iv, StringAttr loopTag)
+        : tids(tids), dims(dims), loop(loop), iv(iv) {
+      // Attached a special tag to loop emitter generated loop.
+      if (loopTag)
+        loop->setAttr(SparseTensorLoopEmitter::getLoopEmitterLoopAttrName(),
+                      loopTag);
+    }
     // TODO: maybe use a vector<pair> for tid and dim?
     // The set of tensors that the loop is operating on
-    const llvm::SmallVector<size_t, 4> tids;
+    const llvm::SmallVector<size_t> tids;
     // The corresponding dims for the tensors
-    const llvm::SmallVector<size_t, 4> dims;
+    const llvm::SmallVector<size_t> dims;
     const Operation *loop; // the loop operation
     const Value iv;        // the induction variable for the loop
   };
@@ -485,8 +516,12 @@ private:
   void exitCoIterationLoop(OpBuilder &builder, Location loc,
                            MutableArrayRef<Value> reduc);
 
-  // Whether the loop emitter needs to treat the last tensor as the output
-  // tensor.
+  /// A optional string attribute that should be attached to the loop generated
+  /// by loop emitter, it might help following passes to identify loops that
+  /// operates on sparse tensors more easily.
+  StringAttr loopTag;
+  /// Whether the loop emitter needs to treat the last tensor as the output
+  /// tensor.
   bool hasOutput;
   bool isSparseOut;
   /// Input and (optional) output tensors.

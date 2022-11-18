@@ -432,6 +432,7 @@ typedef std::shared_ptr<lldb_private::TypeMemberFunctionImpl>
 typedef std::shared_ptr<lldb_private::TypeEnumMemberImpl> TypeEnumMemberImplSP;
 typedef std::shared_ptr<lldb_private::TypeFilterImpl> TypeFilterImplSP;
 typedef std::shared_ptr<lldb_private::TypeSystem> TypeSystemSP;
+typedef std::weak_ptr<lldb_private::TypeSystem> TypeSystemWP;
 typedef std::shared_ptr<lldb_private::TypeFormatImpl> TypeFormatImplSP;
 typedef std::shared_ptr<lldb_private::TypeNameSpecifierImpl>
     TypeNameSpecifierImplSP;

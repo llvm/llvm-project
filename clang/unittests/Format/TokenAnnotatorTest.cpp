@@ -423,50 +423,80 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionRefQualifiers) {
 TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   auto Tokens = annotate("x.operator+()");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::plus, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_OverloadedOperatorLParen);
   Tokens = annotate("x.operator=()");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::equal, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_OverloadedOperatorLParen);
   Tokens = annotate("x.operator+=()");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::plusequal, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_OverloadedOperatorLParen);
   Tokens = annotate("x.operator,()");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::comma, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_OverloadedOperatorLParen);
   Tokens = annotate("x.operator()()");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[4], tok::r_paren, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_OverloadedOperatorLParen);
   Tokens = annotate("x.operator[]()");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_FunctionDeclarationName);
   // EXPECT_TOKEN(Tokens[3], tok::l_square, TT_OverloadedOperator);
   // EXPECT_TOKEN(Tokens[4], tok::r_square, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_OverloadedOperatorLParen);
   Tokens = annotate("x.operator\"\"_a()");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_OverloadedOperatorLParen);
   Tokens = annotate("x.operator\"\" _a()");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  // FIXME
+  // EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_OverloadedOperatorLParen);
   Tokens = annotate("x.operator\"\"if()");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_OverloadedOperatorLParen);
   Tokens = annotate("x.operator\"\"s()");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_OverloadedOperatorLParen);
   Tokens = annotate("x.operator\"\" s()");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  // FIXME
+  // EXPECT_TOKEN(Tokens[2], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_OverloadedOperatorLParen);
+
+  Tokens = annotate("int operator+(int);");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[2], tok::plus, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_OverloadedOperatorLParen);
+  Tokens = annotate("auto operator=(T&) {}");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[2], tok::equal, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_OverloadedOperatorLParen);
+  Tokens = annotate("auto operator()() {}");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_OverloadedOperatorLParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {

@@ -1,9 +1,9 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8PLUS %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=-flat-for-global -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8PLUS,GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
+; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8PLUS,GFX11 %s
 
 ; Make sure fdiv is promoted to f32.
 
@@ -168,7 +168,7 @@ entry:
 ; GFX8PLUS: {{flat|global}}_load_{{ushort|u16}} [[VAL:v[0-9]+]]
 ; GFX8PLUS-NOT: [[VAL]]
 ; GFX8PLUS: v_sqrt_f16_e32 [[SQRT:v[0-9]+]], [[VAL]]
-; GFX11: s_waitcnt_depctr 0xfff
+; GFX11-NEXT: s_waitcnt_depctr 0xfff
 ; GFX8PLUS-NEXT: v_rcp_f16_e64 [[RESULT:v[0-9]+]], -[[SQRT]]
 ; GFX8PLUS-NOT: [RESULT]]
 ; GFX8PLUS: {{flat|global}}_store_{{short|b16}} v{{.+}}, [[RESULT]]
@@ -229,11 +229,11 @@ entry:
   ret void
 }
 
-; SI-LABEL: {{^}}div_afn_2_x_pat_f16:
+; GCN-LABEL: {{^}}div_afn_2_x_pat_f16:
 ; SI: v_mul_f32_e32 v{{[0-9]+}}, 0.5, v{{[0-9]+}}
 
 ; GFX8PLUS: v_mul_f16_e32 [[MUL:v[0-9]+]], 0.5, v{{[0-9]+}}
-; GFX8PLUS: buffer_store_{{short|b16}} [[MUL]]
+; GFX8PLUS: {{flat|global}}_store_{{short|b16}} v{{.*}}, [[MUL]]
 define amdgpu_kernel void @div_afn_2_x_pat_f16(half addrspace(1)* %out) #0 {
   %x = load half, half addrspace(1)* undef
   %rcp = fdiv afn half %x, 2.0
@@ -241,11 +241,11 @@ define amdgpu_kernel void @div_afn_2_x_pat_f16(half addrspace(1)* %out) #0 {
   ret void
 }
 
-; SI-LABEL: {{^}}div_afn_k_x_pat_f16:
+; GCN-LABEL: {{^}}div_afn_k_x_pat_f16:
 ; SI: v_mul_f32_e32 v{{[0-9]+}}, 0x3dcccccd, v{{[0-9]+}}
 
 ; GFX8PLUS: v_mul_f16_e32 [[MUL:v[0-9]+]], 0x2e66, v{{[0-9]+}}
-; GFX8PLUS: buffer_store_{{short|b16}} [[MUL]]
+; GFX8PLUS: {{flat|global}}_store_{{short|b16}} v{{.*}}, [[MUL]]
 define amdgpu_kernel void @div_afn_k_x_pat_f16(half addrspace(1)* %out) #0 {
   %x = load half, half addrspace(1)* undef
   %rcp = fdiv afn half %x, 10.0
@@ -253,11 +253,11 @@ define amdgpu_kernel void @div_afn_k_x_pat_f16(half addrspace(1)* %out) #0 {
   ret void
 }
 
-; SI-LABEL: {{^}}div_afn_neg_k_x_pat_f16:
+; GCN-LABEL: {{^}}div_afn_neg_k_x_pat_f16:
 ; SI: v_mul_f32_e32 v{{[0-9]+}}, 0xbdcccccd, v{{[0-9]+}}
 
 ; GFX8PLUS: v_mul_f16_e32 [[MUL:v[0-9]+]], 0xae66, v{{[0-9]+}}
-; GFX8PLUS: buffer_store_{{short|b16}} [[MUL]]
+; GFX8PLUS: {{flat|global}}_store_{{short|b16}} v{{.*}}, [[MUL]]
 define amdgpu_kernel void @div_afn_neg_k_x_pat_f16(half addrspace(1)* %out) #0 {
   %x = load half, half addrspace(1)* undef
   %rcp = fdiv afn half %x, -10.0

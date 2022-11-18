@@ -3655,11 +3655,6 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     }
   }
 
-  // Emit an alignment directive for this block, if needed.
-  const Align Alignment = MBB.getAlignment();
-  if (Alignment != Align(1))
-    emitAlignment(Alignment, nullptr, MBB.getMaxBytesForAlignment());
-
   // Switch to a new section if this basic block must begin a section. The
   // entry block is always placed in the function section and is handled
   // separately.
@@ -3669,6 +3664,11 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
                                                             MBB, TM));
     CurrentSectionBeginSym = MBB.getSymbol();
   }
+
+  // Emit an alignment directive for this block, if needed.
+  const Align Alignment = MBB.getAlignment();
+  if (Alignment != Align(1))
+    emitAlignment(Alignment, nullptr, MBB.getMaxBytesForAlignment());
 
   // If the block has its address taken, emit any labels that were used to
   // reference the block.  It is possible that there is more than one label

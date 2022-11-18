@@ -466,7 +466,6 @@ int main(int argc, char **argv) {
   initializeAnalysis(Registry);
   initializeTransformUtils(Registry);
   initializeInstCombine(Registry);
-  initializeAggressiveInstCombine(Registry);
   initializeTarget(Registry);
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
@@ -713,6 +712,13 @@ int main(int argc, char **argv) {
       errs() << "Cannot specify -O# and --passes=/--foo-pass, use "
                 "-passes='default<O#>,other-pass'\n";
       return 1;
+    }
+    if (!PassList.empty()) {
+      errs() << "The `opt -passname` syntax for the new pass manager is "
+                "deprecated, please use `opt -passes=<pipeline>` (or the `-p` "
+                "alias for a more concise version).\n";
+      errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
+                "for more details on the pass pipeline syntax.\n\n";
     }
     std::string Pipeline = PassPipeline;
 

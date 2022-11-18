@@ -501,8 +501,7 @@ entry:
 define double @load_i32_to_d(ptr %addr) #0 {
 ; CHECK-LABEL: load_i32_to_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lwz r3, 0(r3)
-; CHECK-NEXT:    mtfprwa f0, r3
+; CHECK-NEXT:    lfiwax f0, 0, r3
 ; CHECK-NEXT:    xscvsxddp f1, f0
 ; CHECK-NEXT:    blr
 ;
@@ -520,8 +519,7 @@ entry:
 define double @load_i64_to_d(ptr %addr) #0 {
 ; CHECK-LABEL: load_i64_to_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ld r3, 0(r3)
-; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    lfd f0, 0(r3)
 ; CHECK-NEXT:    xscvsxddp f1, f0
 ; CHECK-NEXT:    blr
 ;
@@ -539,8 +537,7 @@ entry:
 define double @load_u32_to_d(ptr %addr) #0 {
 ; CHECK-LABEL: load_u32_to_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lwz r3, 0(r3)
-; CHECK-NEXT:    mtfprwz f0, r3
+; CHECK-NEXT:    lfiwzx f0, 0, r3
 ; CHECK-NEXT:    xscvuxddp f1, f0
 ; CHECK-NEXT:    blr
 ;
@@ -558,8 +555,7 @@ entry:
 define double @load_u64_to_d(ptr %addr) #0 {
 ; CHECK-LABEL: load_u64_to_d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ld r3, 0(r3)
-; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    lfd f0, 0(r3)
 ; CHECK-NEXT:    xscvuxddp f1, f0
 ; CHECK-NEXT:    blr
 ;
@@ -577,8 +573,7 @@ entry:
 define float @load_i32_to_f(ptr %addr) #0 {
 ; CHECK-LABEL: load_i32_to_f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lwz r3, 0(r3)
-; CHECK-NEXT:    mtfprwa f0, r3
+; CHECK-NEXT:    lfiwax f0, 0, r3
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
 ;
@@ -596,8 +591,7 @@ entry:
 define float @load_i64_to_f(ptr %addr) #0 {
 ; CHECK-LABEL: load_i64_to_f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ld r3, 0(r3)
-; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    lfd f0, 0(r3)
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    blr
 ;
@@ -615,8 +609,7 @@ entry:
 define float @load_u32_to_f(ptr %addr) #0 {
 ; CHECK-LABEL: load_u32_to_f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lwz r3, 0(r3)
-; CHECK-NEXT:    mtfprwz f0, r3
+; CHECK-NEXT:    lfiwzx f0, 0, r3
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
 ;
@@ -634,8 +627,7 @@ entry:
 define float @load_u64_to_f(ptr %addr) #0 {
 ; CHECK-LABEL: load_u64_to_f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ld r3, 0(r3)
-; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    lfd f0, 0(r3)
 ; CHECK-NEXT:    xscvuxdsp f1, f0
 ; CHECK-NEXT:    blr
 ;

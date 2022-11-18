@@ -112,6 +112,14 @@ func.func @non_operation() {
 
 // -----
 
+func.func @unknown_dialect_operation() {
+  // expected-error@below {{Dialect `foo' not found for custom op 'foo.asd'}}
+  // expected-note-re@below {{Registered dialects:{{.*}} test{{.*}}}}
+  foo.asd
+}
+
+// -----
+
 func.func @non_operation() {
   // expected-error@+1 {{custom op 'asd' is unknown (tried 'func.asd' as well)}}
   asd

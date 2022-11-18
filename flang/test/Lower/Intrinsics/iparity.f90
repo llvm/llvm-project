@@ -10,7 +10,7 @@ integer(1) :: a(:)
 ! CHECK-DAG:  %[[a5:.*]] = fir.convert %[[c0]] : (index) -> i32
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
 iparity_test_1 = iparity(a)
-! CHECK:  %{{.*}} = fir.call @_FortranAIParity1(%[[a3]], %{{.*}}, %{{.*}}, %[[a5]], %[[a6]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i8
+! CHECK:  %{{.*}} = fir.call @_FortranAIParity1(%[[a3]], %{{.*}}, %{{.*}}, %[[a5]], %[[a6]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i8
 end function
 
 ! CHECK-LABEL: func @_QPiparity_test_2(
@@ -23,7 +23,7 @@ integer(2) :: a(:)
 ! CHECK-DAG:  %[[a5:.*]] = fir.convert %[[c0]] : (index) -> i32
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
 iparity_test_2 = iparity(a)
-! CHECK:  %{{.*}} = fir.call @_FortranAIParity2(%[[a3]], %{{.*}}, %{{.*}}, %[[a5]], %[[a6]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i16
+! CHECK:  %{{.*}} = fir.call @_FortranAIParity2(%[[a3]], %{{.*}}, %{{.*}}, %[[a5]], %[[a6]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i16
 end function
 
 ! CHECK-LABEL: func @_QPiparity_test_4(
@@ -36,7 +36,7 @@ integer :: a(:)
 ! CHECK-DAG:  %[[a5:.*]] = fir.convert %[[c0]] : (index) -> i32
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
 iparity_test_4 = iparity(a)
-! CHECK:  %{{.*}} = fir.call @_FortranAIParity4(%[[a3]], %{{.*}}, %{{.*}}, %[[a5]], %[[a6]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+! CHECK:  %{{.*}} = fir.call @_FortranAIParity4(%[[a3]], %{{.*}}, %{{.*}}, %[[a5]], %[[a6]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
 end function
 
 ! CHECK-LABEL: func @_QPiparity_test_8(
@@ -49,7 +49,7 @@ integer(8) :: a(:)
 ! CHECK-DAG:  %[[a5:.*]] = fir.convert %[[c0]] : (index) -> i32
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
 iparity_test_8 = iparity(a)
-! CHECK:  %{{.*}} = fir.call @_FortranAIParity8(%[[a3]], %{{.*}}, %{{.*}}, %[[a5]], %[[a6]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i64
+! CHECK:  %{{.*}} = fir.call @_FortranAIParity8(%[[a3]], %{{.*}}, %{{.*}}, %[[a5]], %[[a6]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i64
 end function
 
 ! CHECK-LABEL: func @_QPiparity_test_16(
@@ -62,7 +62,7 @@ integer(16) :: a(:)
 ! CHECK-DAG:  %[[a5:.*]] = fir.convert %[[c0]] : (index) -> i32
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
 iparity_test_16 = iparity(a)
-! CHECK:  %{{.*}} = fir.call @_FortranAIParity16(%[[a3]], %{{.*}}, %{{.*}}, %[[a5]], %[[a6]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i128
+! CHECK:  %{{.*}} = fir.call @_FortranAIParity16(%[[a3]], %{{.*}}, %{{.*}}, %[[a5]], %[[a6]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i128
 end function
 
 ! CHECK-LABEL: func @_QPiparity_test2(
@@ -77,7 +77,7 @@ integer :: r(:)
 ! CHECK-DAG:  %[[a7:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 ! CHECK-DAG:  %[[a9:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
 r = iparity(a,dim=2)
-! CHECK:  %{{.*}} = fir.call @_FortranAIParityDim(%[[a6]], %[[a7]], %[[c2_i32]], %{{.*}}, %{{.*}}, %[[a9]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> none
+! CHECK:  %{{.*}} = fir.call @_FortranAIParityDim(%[[a6]], %[[a7]], %[[c2_i32]], %{{.*}}, %{{.*}}, %[[a9]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> none
 ! CHECK-DAG: %[[a11:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK-DAG:  %[[a13:.*]] = fir.box_addr %[[a11]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK-DAG:  fir.freemem %[[a13]]
@@ -90,7 +90,7 @@ integer :: x(:)
 logical, optional :: mask(:)
 iparity_test_optional = iparity(x, mask=mask)
 ! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
-! CHECK:  fir.call @_FortranAIParity4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_9]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+! CHECK:  fir.call @_FortranAIParity4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_9]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
 end function
 
 ! CHECK-LABEL: func @_QPiparity_test_optional_2(
@@ -108,7 +108,7 @@ iparity_test_optional_2 = iparity(x, mask=mask)
 ! CHECK:  %[[VAL_10:.*]] = fir.absent !fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>
 ! CHECK:  %[[VAL_11:.*]] = arith.select %[[VAL_8]], %[[VAL_9]], %[[VAL_10]] : !fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>
 ! CHECK:  %[[VAL_18:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>) -> !fir.box<none>
-! CHECK:  fir.call @_FortranAIParity4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_18]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+! CHECK:  fir.call @_FortranAIParity4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_18]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
 end function
 
 ! CHECK-LABEL: func @_QPiparity_test_optional_3(
@@ -124,7 +124,7 @@ iparity_test_optional_3 = iparity(x, mask=mask)
 ! CHECK:  %[[VAL_8:.*]] = fir.absent !fir.box<!fir.array<10x!fir.logical<4>>>
 ! CHECK:  %[[VAL_9:.*]] = arith.select %[[VAL_5]], %[[VAL_7]], %[[VAL_8]] : !fir.box<!fir.array<10x!fir.logical<4>>>
 ! CHECK:  %[[VAL_18:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.array<10x!fir.logical<4>>>) -> !fir.box<none>
-! CHECK:  fir.call @_FortranAIParity4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_18]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+! CHECK:  fir.call @_FortranAIParity4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_18]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
 end function
 
 ! CHECK-LABEL: func @_QPiparity_test_optional_4(
@@ -152,5 +152,5 @@ iparity_test_optional_4 = iparity(x, mask=mask)
 ! CHECK:  %[[VAL_29:.*]] = fir.absent !fir.box<!fir.array<?x!fir.logical<4>>>
 ! CHECK:  %[[VAL_30:.*]] = arith.select %[[VAL_23]], %[[VAL_28]], %[[VAL_29]] : !fir.box<!fir.array<?x!fir.logical<4>>>
 ! CHECK:  %[[VAL_37:.*]] = fir.convert %[[VAL_30]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
-! CHECK:  fir.call @_FortranAIParity4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_37]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+! CHECK:  fir.call @_FortranAIParity4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_37]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
 end function
