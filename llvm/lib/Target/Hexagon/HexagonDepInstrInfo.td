@@ -13809,18 +13809,6 @@ tc_e9170fb7, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
-def L6_linecpy : HInst<
-(outs DoubleRegs:$Rdd32),
-(ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
-"$Rdd32 = linecpy($Rs32,$Rtt32)",
-tc_8f36a2fd, TypeLD>, Enc_fc4562, Requires<[HasV73]> {
-let Inst{7-5} = 0b001;
-let Inst{13-13} = 0b0;
-let Inst{31-21} = 0b10011001111;
-let mayLoad = 1;
-let isSolo = 1;
-let mayStore = 1;
-}
 def L6_memcpy : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32, ModRegs:$Mu2),
@@ -13831,33 +13819,6 @@ let Inst{31-21} = 0b10010010000;
 let mayLoad = 1;
 let isSolo = 1;
 let mayStore = 1;
-}
-def L6_movlen : HInst<
-(outs IntRegs:$Rd32),
-(ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
-"$Rd32 = movlen($Rs32,$Rtt32)",
-tc_5a4b5e58, TypeCR>, Enc_80296d, Requires<[HasV73]> {
-let Inst{7-5} = 0b010;
-let Inst{13-13} = 0b0;
-let Inst{31-21} = 0b01101111111;
-let hasNewValue = 1;
-let opNewValue = 0;
-let isSolo = 1;
-}
-def L6_pmemcpy : HInst<
-(outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
-(ins IntRegs:$Rx32in, DoubleRegs:$Rtt32),
-"$Rdd32 = pmemcpy($Rx32,$Rtt32)",
-tc_af6af259, TypeLD>, Enc_c89067, Requires<[HasV73]> {
-let Inst{7-5} = 0b000;
-let Inst{13-13} = 0b0;
-let Inst{31-21} = 0b10011001111;
-let hasNewValue = 1;
-let opNewValue = 1;
-let mayLoad = 1;
-let isSolo = 1;
-let mayStore = 1;
-let Constraints = "$Rx32 = $Rx32in";
 }
 def L6_return_map_to_raw : HInst<
 (outs),
@@ -28779,64 +28740,6 @@ let BaseOpcode = "V6_vL32b_tmp_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
-def V6_vL64b_ai : HInst<
-(outs HvxWR:$Vdd32),
-(ins IntRegs:$Rt32, s4_0Imm:$Ii),
-"$Vdd32 = vmem($Rt32+#$Ii)",
-tc_0390c1ca, TypeCVI_VM_LD>, Enc_634460, Requires<[UseHVXV73]> {
-let Inst{7-5} = 0b011;
-let Inst{12-11} = 0b00;
-let Inst{31-21} = 0b00101000010;
-let hasNewValue = 1;
-let opNewValue = 0;
-let addrMode = BaseImmOffset;
-let accessSize = HVXVectorAccess;
-let isCVLoad = 1;
-let isCVI = 1;
-let isHVXALU = 1;
-let mayLoad = 1;
-let isRestrictNoSlot1Store = 1;
-let DecoderNamespace = "EXT_mmvec";
-}
-def V6_vL64b_pi : HInst<
-(outs HvxWR:$Vdd32, IntRegs:$Rx32),
-(ins IntRegs:$Rx32in, s3_0Imm:$Ii),
-"$Vdd32 = vmem($Rx32++#$Ii)",
-tc_9a1cab75, TypeCVI_VM_LD>, Enc_5eb169, Requires<[UseHVXV73]> {
-let Inst{7-5} = 0b011;
-let Inst{13-11} = 0b000;
-let Inst{31-21} = 0b00101001010;
-let hasNewValue = 1;
-let opNewValue = 0;
-let addrMode = PostInc;
-let accessSize = HVXVectorAccess;
-let isCVLoad = 1;
-let isCVI = 1;
-let isHVXALU = 1;
-let mayLoad = 1;
-let isRestrictNoSlot1Store = 1;
-let DecoderNamespace = "EXT_mmvec";
-let Constraints = "$Rx32 = $Rx32in";
-}
-def V6_vL64b_ppu : HInst<
-(outs HvxWR:$Vdd32, IntRegs:$Rx32),
-(ins IntRegs:$Rx32in, ModRegs:$Mu2),
-"$Vdd32 = vmem($Rx32++$Mu2)",
-tc_9a1cab75, TypeCVI_VM_LD>, Enc_829a68, Requires<[UseHVXV73]> {
-let Inst{12-5} = 0b00000011;
-let Inst{31-21} = 0b00101011010;
-let hasNewValue = 1;
-let opNewValue = 0;
-let addrMode = PostInc;
-let accessSize = HVXVectorAccess;
-let isCVLoad = 1;
-let isCVI = 1;
-let isHVXALU = 1;
-let mayLoad = 1;
-let isRestrictNoSlot1Store = 1;
-let DecoderNamespace = "EXT_mmvec";
-let Constraints = "$Rx32 = $Rx32in";
-}
 def V6_vS32Ub_ai : HInst<
 (outs),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
@@ -29941,52 +29844,6 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVI = 1;
 let CVINew = 1;
-let mayStore = 1;
-let DecoderNamespace = "EXT_mmvec";
-let Constraints = "$Rx32 = $Rx32in";
-}
-def V6_vS64b_ai : HInst<
-(outs),
-(ins IntRegs:$Rt32, s4_0Imm:$Ii, HvxWR:$Vss32),
-"vmem($Rt32+#$Ii) = $Vss32",
-tc_9aff7a2a, TypeCVI_VM_ST>, Enc_b98b95, Requires<[UseHVXV73]> {
-let Inst{7-5} = 0b010;
-let Inst{12-11} = 0b00;
-let Inst{31-21} = 0b00101000011;
-let addrMode = BaseImmOffset;
-let accessSize = HVXVectorAccess;
-let isCVI = 1;
-let isHVXALU = 1;
-let mayStore = 1;
-let DecoderNamespace = "EXT_mmvec";
-}
-def V6_vS64b_pi : HInst<
-(outs IntRegs:$Rx32),
-(ins IntRegs:$Rx32in, s3_0Imm:$Ii, HvxWR:$Vss32),
-"vmem($Rx32++#$Ii) = $Vss32",
-tc_227864f7, TypeCVI_VM_ST>, Enc_b025d6, Requires<[UseHVXV73]> {
-let Inst{7-5} = 0b010;
-let Inst{13-11} = 0b000;
-let Inst{31-21} = 0b00101001011;
-let addrMode = PostInc;
-let accessSize = HVXVectorAccess;
-let isCVI = 1;
-let isHVXALU = 1;
-let mayStore = 1;
-let DecoderNamespace = "EXT_mmvec";
-let Constraints = "$Rx32 = $Rx32in";
-}
-def V6_vS64b_ppu : HInst<
-(outs IntRegs:$Rx32),
-(ins IntRegs:$Rx32in, ModRegs:$Mu2, HvxWR:$Vss32),
-"vmem($Rx32++$Mu2) = $Vss32",
-tc_227864f7, TypeCVI_VM_ST>, Enc_046afa, Requires<[UseHVXV73]> {
-let Inst{12-5} = 0b00000010;
-let Inst{31-21} = 0b00101011011;
-let addrMode = PostInc;
-let accessSize = HVXVectorAccess;
-let isCVI = 1;
-let isHVXALU = 1;
 let mayStore = 1;
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
