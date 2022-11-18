@@ -87,9 +87,7 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -32
 ; SPILL-O2-VLEN128-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; SPILL-O2-VLEN128-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; SPILL-O2-VLEN128-NEXT:    csrr a1, vlenb
-; SPILL-O2-VLEN128-NEXT:    slli a1, a1, 1
-; SPILL-O2-VLEN128-NEXT:    sub sp, sp, a1
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -32
 ; SPILL-O2-VLEN128-NEXT:    mv s0, a0
 ; SPILL-O2-VLEN128-NEXT:    addi a1, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
@@ -106,9 +104,7 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-VLEN128-NEXT:    vfadd.vv v8, v9, v8
-; SPILL-O2-VLEN128-NEXT:    csrr a0, vlenb
-; SPILL-O2-VLEN128-NEXT:    slli a0, a0, 1
-; SPILL-O2-VLEN128-NEXT:    add sp, sp, a0
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 32
 ; SPILL-O2-VLEN128-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; SPILL-O2-VLEN128-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 32
