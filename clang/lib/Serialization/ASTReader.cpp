@@ -10792,7 +10792,9 @@ void OMPClauseReader::VisitOMPGrainsizeClause(OMPGrainsizeClause *C) {
 
 void OMPClauseReader::VisitOMPNumTasksClause(OMPNumTasksClause *C) {
   VisitOMPClauseWithPreInit(C);
+  C->setModifier(Record.readEnum<OpenMPNumTasksClauseModifier>());
   C->setNumTasks(Record.readSubExpr());
+  C->setModifierLoc(Record.readSourceLocation());
   C->setLParenLoc(Record.readSourceLocation());
 }
 

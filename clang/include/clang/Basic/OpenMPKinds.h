@@ -201,6 +201,12 @@ enum OpenMPGrainsizeClauseModifier {
   OMPC_GRAINSIZE_unknown
 };
 
+enum OpenMPNumTasksClauseModifier {
+#define OPENMP_NUMTASKS_MODIFIER(Name) OMPC_NUMTASKS_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NUMTASKS_unknown
+};
+
 /// Contains 'interop' data for 'append_args' and 'init' clauses.
 class Expr;
 struct OMPInteropInfo final {
