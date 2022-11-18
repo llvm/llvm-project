@@ -6,27 +6,27 @@
 ; MinInstr strategy is used. The behavior is demonstrated on early if conversion
 ; pass.
 
-; CHECK: TBB: MinInstr trace %bb.0 --> %bb.0 --> %bb.0: 4 instrs. 1 cycles.
+; CHECK: TBB: MinInstr trace %bb.0 --> %bb.0 --> %bb.2: 8 instrs. 30 cycles.
 ; CHECK: %bb.0
+; CHECK:     -> %bb.2
 
 ; CHECK: FBB: MinInstr trace %bb.0 --> %bb.1 --> %bb.2: 10 instrs. 32 cycles.
 ; CHECK: %bb.1 <- %bb.0
 ; CHECK:     -> %bb.2
 
-; CHECK: Resource length 10, minimal critical path 1
-; CHECK: Not enough available ILP.
+; CHECK: Resource length 10, minimal critical path 30
+; CHECK: If-converting
 
 define i32 @_Z3fooiidd(i32 %a, i32 %b, double %d, double %e) #0 {
 ; CHECK-LABEL: _Z3fooiidd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    addl %edi, %eax
-; CHECK-NEXT:    cmpl $3, %edi
-; CHECK-NEXT:    jl .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    cvttsd2si %xmm0, %ecx
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rsi,%rdi), %ecx
+; CHECK-NEXT:    cvttsd2si %xmm0, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:  .LBB0_2: # %if.end
+; CHECK-NEXT:    cmpl $3, %edi
+; CHECK-NEXT:    cmovll %ecx, %eax
 ; CHECK-NEXT:    cvttsd2si %xmm1, %ecx
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
