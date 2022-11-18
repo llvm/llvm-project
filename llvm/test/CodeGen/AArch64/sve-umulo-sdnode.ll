@@ -9,10 +9,15 @@ define <vscale x 2 x i8> @umulo_nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i8> %
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z1.d, z1.d, #0xff
 ; CHECK-NEXT:    and z0.d, z0.d, #0xff
-; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    lsr z1.d, z0.d, #8
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    mul z2.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    lsr z1.d, z2.d, #8
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    mov z0.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    mov z2.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 2 x i8>, <vscale x 2 x i1> } @llvm.umul.with.overflow.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y)
   %b = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i1> } %a, 0
@@ -29,10 +34,15 @@ define <vscale x 4 x i8> @umulo_nxv4i8(<vscale x 4 x i8> %x, <vscale x 4 x i8> %
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and z1.s, z1.s, #0xff
 ; CHECK-NEXT:    and z0.s, z0.s, #0xff
-; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    lsr z1.s, z0.s, #8
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    mul z2.s, p0/m, z2.s, z1.s
+; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    lsr z1.s, z2.s, #8
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; CHECK-NEXT:    mov z0.s, p0/m, #0 // =0x0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    mov z2.s, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 4 x i8>, <vscale x 4 x i1> } @llvm.umul.with.overflow.nxv4i8(<vscale x 4 x i8> %x, <vscale x 4 x i8> %y)
   %b = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i1> } %a, 0
@@ -49,10 +59,15 @@ define <vscale x 8 x i8> @umulo_nxv8i8(<vscale x 8 x i8> %x, <vscale x 8 x i8> %
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    lsr z1.h, z0.h, #8
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    mul z2.h, p0/m, z2.h, z1.h
+; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    lsr z1.h, z2.h, #8
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z1.h, #0
-; CHECK-NEXT:    mov z0.h, p0/m, #0 // =0x0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    mov z2.h, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 8 x i8>, <vscale x 8 x i1> } @llvm.umul.with.overflow.nxv8i8(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y)
   %b = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i1> } %a, 0
@@ -149,10 +164,15 @@ define <vscale x 2 x i16> @umulo_nxv2i16(<vscale x 2 x i16> %x, <vscale x 2 x i1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z1.d, z1.d, #0xffff
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffff
-; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    lsr z1.d, z0.d, #16
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    mul z2.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    lsr z1.d, z2.d, #16
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    mov z0.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    mov z2.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 2 x i16>, <vscale x 2 x i1> } @llvm.umul.with.overflow.nxv2i16(<vscale x 2 x i16> %x, <vscale x 2 x i16> %y)
   %b = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i1> } %a, 0
@@ -169,10 +189,15 @@ define <vscale x 4 x i16> @umulo_nxv4i16(<vscale x 4 x i16> %x, <vscale x 4 x i1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and z1.s, z1.s, #0xffff
 ; CHECK-NEXT:    and z0.s, z0.s, #0xffff
-; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    lsr z1.s, z0.s, #16
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    mul z2.s, p0/m, z2.s, z1.s
+; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    lsr z1.s, z2.s, #16
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; CHECK-NEXT:    mov z0.s, p0/m, #0 // =0x0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    mov z2.s, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 4 x i16>, <vscale x 4 x i1> } @llvm.umul.with.overflow.nxv4i16(<vscale x 4 x i16> %x, <vscale x 4 x i16> %y)
   %b = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i1> } %a, 0
@@ -269,10 +294,15 @@ define <vscale x 2 x i32> @umulo_nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i3
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
-; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    lsr z1.d, z0.d, #32
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    mul z2.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    lsr z1.d, z2.d, #32
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    mov z0.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    mov z2.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 2 x i32>, <vscale x 2 x i1> } @llvm.umul.with.overflow.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y)
   %b = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i1> } %a, 0

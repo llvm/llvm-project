@@ -55,8 +55,7 @@ define <vscale x 2 x i64> @index_ii_range() {
 define <vscale x 8 x i16> @index_ii_range_combine(i16 %a) {
 ; CHECK-LABEL: index_ii_range_combine:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z0.h, #0, #8
-; CHECK-NEXT:    orr z0.h, z0.h, #0x2
+; CHECK-NEXT:    index z0.h, #2, #8
 ; CHECK-NEXT:    ret
   %val = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
   %val1 = shufflevector <vscale x 8 x i16> %val, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
