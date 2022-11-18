@@ -26,12 +26,7 @@ using namespace llvm::cas;
 static llvm::cas::CASID
 createCompileJobCacheKeyForArgs(ObjectStore &CAS,
                                 ArrayRef<const char *> CC1Args,
-                                llvm::cas::CASID RootID, bool IsIncludeTree) {
-  Optional<llvm::cas::ObjectRef> RootRef = CAS.getReference(RootID);
-  if (!RootRef)
-    report_fatal_error(createStringError(
-        inconvertibleErrorCode(),
-        "cannot handle unknown compile-job cache key: " + RootID.toString()));
+                                ObjectRef RootRef, bool IsIncludeTree) {
   assert(!CC1Args.empty() && StringRef(CC1Args[0]) == "-cc1");
   SmallString<256> CommandLine;
   for (StringRef Arg : CC1Args) {
@@ -41,9 +36,9 @@ createCompileJobCacheKeyForArgs(ObjectStore &CAS,
 
   llvm::cas::HierarchicalTreeBuilder Builder;
   if (IsIncludeTree) {
-    Builder.push(*RootRef, llvm::cas::TreeEntry::Regular, "include-tree");
+    Builder.push(RootRef, llvm::cas::TreeEntry::Regular, "include-tree");
   } else {
-    Builder.push(*RootRef, llvm::cas::TreeEntry::Tree, "filesystem");
+    Builder.push(RootRef, llvm::cas::TreeEntry::Tree, "filesystem");
   }
   Builder.push(
       llvm::cantFail(CAS.storeFromString(None, CommandLine)),
@@ -103,8 +98,13 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
     Diags.Report(diag::err_cas_cannot_parse_root_id) << RootIDString;
     return None;
   }
+  Optional<llvm::cas::ObjectRef> RootRef = CAS.getReference(*RootID);
+  if (!RootRef) {
+    Diags.Report(diag::err_cas_missing_root_id) << RootIDString;
+    return None;
+  }
 
-  return createCompileJobCacheKeyForArgs(CAS, Argv, *RootID, IsIncludeTree);
+  return createCompileJobCacheKeyForArgs(CAS, Argv, *RootRef, IsIncludeTree);
 }
 
 static CompileJobCachingOptions

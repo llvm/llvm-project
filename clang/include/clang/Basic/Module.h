@@ -193,6 +193,10 @@ private:
   /// The \c ActionCache key for this module, if any.
   Optional<std::string> ModuleCacheKey;
 
+  /// The CAS filesystem root ID for implicit modules built with the dependency
+  /// scanner, if any.
+  Optional<std::string> CASFileSystemRootID;
+
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<const FileEntry *, 2> TopHeaders;
 
@@ -631,6 +635,15 @@ public:
   void setModuleCacheKey(std::string Key) {
     assert(!getModuleCacheKey() || *getModuleCacheKey() == Key);
     getTopLevelModule()->ModuleCacheKey = std::move(Key);
+  }
+
+  Optional<std::string> getCASFileSystemRootID() const {
+    return getTopLevelModule()->CASFileSystemRootID;
+  }
+
+  void setCASFileSystemRootID(std::string ID) {
+    assert(!getCASFileSystemRootID() || *getCASFileSystemRootID() == ID);
+    getTopLevelModule()->CASFileSystemRootID = std::move(ID);
   }
 
   /// Retrieve the directory for which this module serves as the

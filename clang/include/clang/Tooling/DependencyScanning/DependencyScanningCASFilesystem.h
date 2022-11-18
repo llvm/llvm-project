@@ -63,6 +63,7 @@ public:
   createThreadSafeProxyFS() override;
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
+  bool exists(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
   openFileForRead(const Twine &Path) override;
 

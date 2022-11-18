@@ -266,7 +266,8 @@ static void collectIncludePCH(CompilerInstance &CI,
     // used here since we're not interested in validating the PCH at this time,
     // but only to check whether this is a file containing an AST.
     if (!ASTReader::readASTFileControlBlock(
-            Dir->path(), FileMgr, CI.getPCHContainerReader(),
+            Dir->path(), FileMgr, CI.getModuleCache(),
+            CI.getPCHContainerReader(),
             /*FindModuleFileExtensions=*/false, Validator,
             /*ValidateDiagnosticOptions=*/false))
       MDC->addFile(Dir->path());
@@ -1264,8 +1265,8 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
     FullSourceLoc(ImportLoc, ImportingInstance.getSourceManager()));
 
   // Pass along the GenModuleActionWrapper callback
-  auto wrapGenModuleAction = ImportingInstance.getGenModuleActionWrapper();
-  Instance.setGenModuleActionWrapper(wrapGenModuleAction);
+  auto WrapGenModuleAction = ImportingInstance.getGenModuleActionWrapper();
+  Instance.setGenModuleActionWrapper(WrapGenModuleAction);
 
   // Share an output manager.
   assert(ImportingInstance.hasOutputBackend() &&
@@ -1288,13 +1289,10 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // thread so that we get a stack large enough.
   bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnThread(
       [&]() {
-        // FIXME: I have no idea what the best way to do this is, but it's
-        // probably not this. Interfaces changed upstream.
         std::unique_ptr<FrontendAction> Action(
             new GenerateModuleFromModuleMapAction);
-        if (wrapGenModuleAction) {
-          Action = wrapGenModuleAction(FrontendOpts, std::move(Action));
-        }
+        if (WrapGenModuleAction)
+          Action = WrapGenModuleAction(FrontendOpts, std::move(Action));
         Instance.ExecuteAction(*Action);
       },
       DesiredStackSize);

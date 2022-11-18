@@ -457,6 +457,15 @@ ErrorOr<Status> OverlayFileSystem::status(const Twine &Path) {
   return make_error_code(llvm::errc::no_such_file_or_directory);
 }
 
+bool OverlayFileSystem::exists(const Twine &Path) {
+  // FIXME: handle symlinks that cross file systems
+  for (iterator I = overlays_begin(), E = overlays_end(); I != E; ++I) {
+    if ((*I)->exists(Path))
+      return true;
+  }
+  return false;
+}
+
 ErrorOr<std::unique_ptr<File>>
 OverlayFileSystem::openFileForRead(const llvm::Twine &Path) {
   // FIXME: handle symlinks that cross file systems
@@ -2357,6 +2366,54 @@ ErrorOr<Status> RedirectingFileSystem::status(const Twine &OriginalPath) {
   }
 
   return S;
+}
+
+bool RedirectingFileSystem::exists(const Twine &OriginalPath) {
+  SmallString<256> CanonicalPath;
+  OriginalPath.toVector(CanonicalPath);
+
+  if (makeCanonical(CanonicalPath))
+    return false;
+
+  if (Redirection == RedirectKind::Fallback) {
+    // Attempt to find the original file first, only falling back to the
+    // mapped file if that fails.
+    if (ExternalFS->exists(CanonicalPath))
+      return true;
+  }
+
+  ErrorOr<RedirectingFileSystem::LookupResult> Result =
+      lookupPath(CanonicalPath);
+  if (!Result) {
+    // Was not able to map file, fallthrough to using the original path if
+    // that was the specified redirection type.
+    if (Redirection == RedirectKind::Fallthrough &&
+        isFileNotFound(Result.getError()))
+      return ExternalFS->exists(CanonicalPath);
+    return false;
+  }
+
+  Optional<StringRef> ExtRedirect = Result->getExternalRedirect();
+  if (!ExtRedirect) {
+    assert(isa<RedirectingFileSystem::DirectoryEntry>(Result->E));
+    return true;
+  }
+
+  SmallString<256> CanonicalRemappedPath((*ExtRedirect).str());
+  if (makeCanonical(CanonicalRemappedPath))
+    return false;
+
+  if (ExternalFS->exists(CanonicalRemappedPath))
+    return true;
+
+  if (Redirection == RedirectKind::Fallthrough) {
+    // Mapped the file but it wasn't found in the underlying filesystem,
+    // fallthrough to using the original path if that was the specified
+    // redirection type.
+    return ExternalFS->exists(CanonicalPath);
+  }
+
+  return false;
 }
 
 namespace {

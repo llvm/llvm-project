@@ -45,6 +45,15 @@ public:
   /// accesses are only recorded in the currently active scope.
   virtual void trackNewAccesses() = 0;
 
+  /// Exclude \p Path from the current tracking scope. If \p Path is a
+  /// directory, this excludes the contents of that directory as well. \returns
+  /// any error seen resolving \p Path.
+  ///
+  /// \note Excluding a path should be done carefully to avoid anti-dependency
+  /// issues. It is important to understand how the path not existing will
+  /// behave when accessing the resulting \c CASFileSystem.
+  virtual std::error_code excludeFromTracking(const Twine &Path) = 0;
+
   /// Create a tree that represents all stats tracked since the call to \a
   /// trackNewAccesses(). Removes the current tracking scope.
   ///
