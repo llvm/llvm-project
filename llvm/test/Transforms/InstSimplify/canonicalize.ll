@@ -593,6 +593,30 @@ define ppc_fp128 @canonicalize_negzero_ppcf128() {
   ret ppc_fp128 %ret
 }
 
+define ppc_fp128 @canonicalize_noncanonical_zero_0_ppcf128() {
+; CHECK-LABEL: @canonicalize_noncanonical_zero_0_ppcf128(
+; CHECK-NEXT:    ret ppc_fp128 0xM00000000000000000000000000000000
+;
+  %ret = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xM0000000000000000ffffffffffffffff)
+  ret ppc_fp128 %ret
+}
+
+define ppc_fp128 @canonicalize_noncanonical_zero_1_ppcf128() {
+; CHECK-LABEL: @canonicalize_noncanonical_zero_1_ppcf128(
+; CHECK-NEXT:    ret ppc_fp128 0xM00000000000000000000000000000000
+;
+  %ret = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xM00000000000000000000000000000001)
+  ret ppc_fp128 %ret
+}
+
+define ppc_fp128 @canonicalize_noncanonical_negzero_0_ppcf128() {
+; CHECK-LABEL: @canonicalize_noncanonical_negzero_0_ppcf128(
+; CHECK-NEXT:    ret ppc_fp128 0xM80000000000000000000000000000000
+;
+  %ret = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xM8000000000000000ffffffffffffffff)
+  ret ppc_fp128 %ret
+}
+
 define ppc_fp128 @canonicalize_inf_ppcf128() {
 ; CHECK-LABEL: @canonicalize_inf_ppcf128(
 ; CHECK-NEXT:    [[RET:%.*]] = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xM7FF00000000000000000000000000000)
