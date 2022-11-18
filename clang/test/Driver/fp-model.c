@@ -66,6 +66,17 @@
 // RUN:   | FileCheck --check-prefix=WARN10 %s
 // WARN10: warning: overriding '-ffp-model=strict' option with '-fdenormal-fp-math=preserve-sign,preserve-sign' [-Woverriding-t-option]
 
+// RUN: %clang -### -ffp-model=fast -ffp-model=strict -c %s 2>&1 | FileCheck \
+// RUN:   --check-prefix=WARN11 %s
+// WARN11: warning: overriding '-ffp-model=fast' option with '-ffp-model=strict' [-Woverriding-t-option]
+// WARN11-NOT: warning: overriding '-ffp-model=strict' option with '-ffp-model=strict' [-Woverriding-t-option]
+
+// RUN: %clang -### -Ofast -ffp-model=strict -c %s 2>&1 | FileCheck \
+// RUN:   --check-prefix=WARN12 %s
+// RUN: %clang -### -ffast-math -ffp-model=strict -c %s 2>&1 | FileCheck \
+// RUN:   --check-prefix=WARN12 %s
+// WARN12-NOT: warning: overriding '-ffp-model=strict' option with '-ffp-model=strict' [-Woverriding-t-option]
+
 // RUN: %clang -### -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOROUND %s
 // CHECK-NOROUND: "-cc1"
@@ -107,6 +118,13 @@
 // CHECK-FPM-STRICT: "-frounding-math"
 // CHECK-FPM-STRICT: "-ffp-exception-behavior=strict"
 
+// RUN: %clang -### -nostdinc -ffp-model=strict -ffp-model=fast -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-EXCEPT %s
+// RUN: %clang -### -nostdinc -ffp-model=strict -ffast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-EXCEPT %s
+// RUN: %clang -### -nostdinc -ffp-model=strict -Ofast -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-EXCEPT %s
+// CHECK-NO-EXCEPT-NOT: "-ffp-exception-behavior=strict"
 
 // RUN: %clang -### -nostdinc -ffp-exception-behavior=strict -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FEB-STRICT %s
