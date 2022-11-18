@@ -484,39 +484,41 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
 
   auto OperandsNum = OpDesc.getNumOperands();
-  for (unsigned OprIdx = Component::SRC1; OprIdx < OperandsNum; ++OprIdx) {
-    if (OpDesc.OpInfo[OprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
-      MandatoryLiteralIdx = OprIdx;
+  unsigned CompOprIdx;
+  for (CompOprIdx = Component::SRC1; CompOprIdx < OperandsNum; ++CompOprIdx) {
+    if (OpDesc.OpInfo[CompOprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
+      MandatoryLiteralIdx = CompOprIdx;
       break;
     }
   }
 }
 
-unsigned ComponentInfo::getParsedOperandIndex(unsigned OprIdx) const {
-  assert(OprIdx < Component::MAX_OPR_NUM);
+unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
+  assert(CompOprIdx < Component::MAX_OPR_NUM);
 
-  if (OprIdx == Component::DST)
-    return getParsedDstIndex();
+  if (CompOprIdx == Component::DST)
+    return getIndexOfDstInParsedOperands();
 
-  auto SrcIdx = OprIdx - Component::DST_NUM;
-  if (SrcIdx < getParsedSrcOperandsNum())
-    return getParsedSrcIndex(SrcIdx);
+  auto CompSrcIdx = CompOprIdx - Component::DST_NUM;
+  if (CompSrcIdx < getCompParsedSrcOperandsNum())
+    return getIndexOfSrcInParsedOperands(CompSrcIdx);
 
   // The specified operand does not exist.
   return 0;
 }
 
-Optional<unsigned> InstInfo::getInvalidOperandIndex(
+Optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
 
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
   auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
 
-  for (unsigned OprIdx = 0; OprIdx < Component::MAX_OPR_NUM; ++OprIdx) {
-    unsigned BanksNum = BANKS_NUM[OprIdx];
-    if (OpXRegs[OprIdx] && OpYRegs[OprIdx] &&
-        (OpXRegs[OprIdx] % BanksNum == OpYRegs[OprIdx] % BanksNum))
-      return OprIdx;
+  unsigned CompOprIdx;
+  for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
+    unsigned BanksNum = BANKS_NUM[CompOprIdx];
+    if (OpXRegs[CompOprIdx] && OpYRegs[CompOprIdx] &&
+        (OpXRegs[CompOprIdx] % BanksNum == OpYRegs[CompOprIdx] % BanksNum))
+      return CompOprIdx;
   }
 
   return {};
@@ -526,24 +528,25 @@ Optional<unsigned> InstInfo::getInvalidOperandIndex(
 // by the specified component. If an operand is unused
 // or is not a VGPR, the corresponding value is 0.
 //
-// GetRegIdx(Component, OperandIdx) must return a VGPR register index
-// for the specified component and operand. The callback must return 0
+// GetRegIdx(Component, MCOperandIdx) must return a VGPR register index
+// for the specified component and MC operand. The callback must return 0
 // if the operand is not a register or not a VGPR.
 InstInfo::RegIndices InstInfo::getRegIndices(
-    unsigned ComponentIdx,
+    unsigned CompIdx,
     std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
-  assert(ComponentIdx < COMPONENTS_NUM);
+  assert(CompIdx < COMPONENTS_NUM);
 
-  auto Comp = CompInfo[ComponentIdx];
+  const auto &Comp = CompInfo[CompIdx];
   InstInfo::RegIndices RegIndices;
 
-  RegIndices[DST] = GetRegIdx(ComponentIdx, Comp.getDstIndex());
+  RegIndices[DST] = GetRegIdx(CompIdx, Comp.getIndexOfDstInMCOperands());
 
-  for (unsigned OprIdx : {SRC0, SRC1, SRC2}) {
-    unsigned SrcIdx = OprIdx - DST_NUM;
-    RegIndices[OprIdx] = Comp.hasRegSrcOperand(SrcIdx)
-                             ? GetRegIdx(ComponentIdx, Comp.getSrcIndex(SrcIdx))
-                             : 0;
+  for (unsigned CompOprIdx : {SRC0, SRC1, SRC2}) {
+    unsigned CompSrcIdx = CompOprIdx - DST_NUM;
+    RegIndices[CompOprIdx] =
+        Comp.hasRegSrcOperand(CompSrcIdx)
+            ? GetRegIdx(CompIdx, Comp.getIndexOfSrcInMCOperands(CompSrcIdx))
+            : 0;
   }
   return RegIndices;
 }
