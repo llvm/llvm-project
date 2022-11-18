@@ -1,9 +1,11 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-macosx10.7.0 -emit-llvm -o - %s -w | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.7.0 -emit-llvm -o - %s -w | FileCheck %s
+
+void side_effect();
 
 // CHECK-LABEL: define linkonce_odr void @_Z11inline_funci
 inline void inline_func(int n) {
   // CHECK: call noundef i32 @_ZZ11inline_funciENKUlvE_clEv
-  int i = []{ return 1; }();
+  int i = []{ return side_effect(), 1; }();
 
   // CHECK: call noundef i32 @_ZZ11inline_funciENKUlvE0_clEv
   int j = [=] { return n + i; }();
@@ -14,7 +16,7 @@ inline void inline_func(int n) {
   // CHECK: call noundef i32 @_ZZ11inline_funciENKUliE_clEi
   int l = [=] (int x) -> int { return x + i; }(n);
 
-  int inner(int i = []{ return 17; }());
+  int inner(int i = []{ return side_effect(), 17; }());
   // CHECK: call noundef i32 @_ZZ11inline_funciENKUlvE2_clEv
   // CHECK-NEXT: call noundef i32 @_Z5inneri
   inner();
@@ -48,14 +50,14 @@ int *use_var_template = var_template<int>();
 void use_var_template_substitution(decltype(var_template<int>), decltype(var_template<float>)) {}
 
 struct S {
-  void f(int = []{return 1;}()
-             + []{return 2;}(),
-         int = []{return 3;}());
+  void f(int = []{return side_effect(), 1;}()
+             + []{return side_effect(), 2;}(),
+         int = []{return side_effect(), 3;}());
   void g(int, int);
 };
 
-void S::g(int i = []{return 1;}(),
-          int j = []{return 2; }()) {}
+void S::g(int i = []{return side_effect(), 1;}(),
+          int j = []{return side_effect(), 2; }()) {}
 
 // CHECK-LABEL: define{{.*}} void @_Z6test_S1S
 void test_S(S s) {
@@ -128,16 +130,16 @@ struct StaticMembers {
 template<typename T> int accept_lambda(T);
 
 template<typename T>
-T StaticMembers<T>::x = []{return 1;}() + []{return 2;}();
+T StaticMembers<T>::x = []{return side_effect(), 1;}() + []{return side_effect(), 2;}();
 
 template<typename T>
-T StaticMembers<T>::y = []{return 3;}();
+T StaticMembers<T>::y = []{return side_effect(), 3;}();
 
 template<typename T>
-T StaticMembers<T>::z = accept_lambda([]{return 4;});
+T StaticMembers<T>::z = accept_lambda([]{return side_effect(), 4;});
 
 template<typename T>
-int (*StaticMembers<T>::f)() = []{return 5;};
+int (*StaticMembers<T>::f)() = (side_effect(), []{return side_effect(), 5;});
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
 // CHECK: call noundef i32 @_ZNK13StaticMembersIfE1xMUlvE_clEv
@@ -169,7 +171,7 @@ template int (*StaticMembers<float>::f)();
 // CHECK: call noundef i32 @"_ZNK13StaticMembersIdE3$_2clEv"
 // CHECK-LABEL: define internal noundef i32 @"_ZNK13StaticMembersIdE3$_2clEv"
 // CHECK: ret i32 42
-template<> double StaticMembers<double>::z = []{return 42; }();
+template<> double StaticMembers<double>::z = []{return side_effect(), 42; }();
 
 template<typename T>
 void func_template(T = []{ return T(); }());
@@ -212,7 +214,7 @@ int k = testVarargsLambdaNumbering();
 
 
 template<typename = int>
-void ft1(int = [](int p = [] { return 42; } ()) {
+void ft1(int = [](int p = [] { return side_effect(), 42; } ()) {
                  return p;
                } ());
 void test_ft1() {
@@ -225,7 +227,7 @@ void test_ft1() {
 
 struct c1 {
   template<typename = int>
-  void mft1(int = [](int p = [] { return 42; } ()) {
+  void mft1(int = [](int p = [] { return side_effect(), 42; } ()) {
                     return p;
                   } ());
 };
@@ -239,10 +241,10 @@ void test_c1_mft1() {
 
 template<typename = int>
 struct ct1 {
-  void mf1(int = [](int p = [] { return 42; } ()) {
+  void mf1(int = [](int p = [] { return side_effect(), 42; } ()) {
                    return p;
                  } ());
-  friend void ff(ct1, int = [](int p = [] { return 0; }()) { return p; }()) {}
+  friend void ff(ct1, int = [](int p = [] { return side_effect(), 0; }()) { return p; }()) {}
 };
 void test_ct1_mft1() {
   // CHECK: call noundef i32 @_ZZZN3ct1IiE3mf1EiEd_NKUliE_clEiEd_NKUlvE_clEv
@@ -259,7 +261,7 @@ void test_ct1_mft1() {
 
 template<typename = int>
 void ft2() {
-  [](int p = [] { return 42; } ()) { return p; } ();
+  [](int p = [] { return side_effect(), 42; } ()) { return p; } ();
 }
 template void ft2<>();
 // CHECK: call noundef i32 @_ZZZ3ft2IiEvvENKUliE_clEiEd_NKUlvE_clEv
@@ -269,7 +271,7 @@ template void ft2<>();
 
 template<typename>
 void ft3() {
-  void f(int = []{ return 0; }());
+  void f(int = []{ return side_effect(), 0; }());
   f();
 }
 template void ft3<int>();
@@ -279,7 +281,7 @@ template void ft3<int>();
 template<typename>
 void ft4() {
   struct lc {
-    void mf(int = []{ return 0; }()) {}
+    void mf(int = []{ return side_effect(), 0; }()) {}
   };
   lc().mf();
 }
@@ -325,7 +327,7 @@ namespace PR12808 {
     template <typename L> constexpr B(L&& x) : a(x()) { }
   };
   template <typename> void b(int) {
-    [&]{ (void)B<int>([&]{ return 1; }); }();
+    [&]{ (void)B<int>([&]{ return side_effect(), 1; }); }();
   }
   void f() {
     b<int>(1);
@@ -336,8 +338,8 @@ namespace PR12808 {
 
 
 struct Members {
-  int x = [] { return 1; }() + [] { return 2; }();
-  int y = [] { return 3; }();
+  int x = [] { return side_effect(), 1; }() + [] { return side_effect(), 2; }();
+  int y = [] { return side_effect(), 3; }();
 };
 
 void test_Members() {
