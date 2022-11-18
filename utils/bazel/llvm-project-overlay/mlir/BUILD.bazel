@@ -2224,6 +2224,7 @@ cc_library(
         ":LinalgDialect",
         ":LinalgTransforms",
         ":LinalgUtils",
+        ":MathDialect",
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
@@ -2235,6 +2236,7 @@ cc_library(
         ":Support",
         ":TensorDialect",
         ":Transforms",
+        ":VectorDialect",
         "//llvm:Support",
     ],
 )
