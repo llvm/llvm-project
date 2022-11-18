@@ -915,7 +915,6 @@ cc_library(
         ":BinaryFormat",
         ":BitReader",
         ":Core",
-        ":IRPrinter",
         ":IRReader",
         ":MC",
         ":MCParser",
@@ -1386,6 +1385,7 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":Analysis",
         ":Core",
         ":Support",
     ],
