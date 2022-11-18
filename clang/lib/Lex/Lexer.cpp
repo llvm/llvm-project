@@ -3517,8 +3517,8 @@ bool Lexer::Lex(Token &Result) {
 /// that the Flags of result have been cleared before calling this.
 bool Lexer::LexTokenInternal(Token &Result, bool TokAtPhysicalStartOfLine) {
 LexStart:
-  assert(!Result.needsCleaning() && "Result doesn't need cleaning");
-  assert(!Result.hasPtrData() && "Result has been reset");
+  assert(!Result.needsCleaning() && "Result needs cleaning");
+  assert(!Result.hasPtrData() && "Result has not been reset");
 
   // CurPtr - Cache BufferPtr in an automatic variable.
   const char *CurPtr = BufferPtr;
