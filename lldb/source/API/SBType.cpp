@@ -28,9 +28,7 @@ using namespace lldb_private;
 
 SBType::SBType() { LLDB_INSTRUMENT_VA(this); }
 
-SBType::SBType(const CompilerType &type)
-    : m_opaque_sp(new TypeImpl(
-          CompilerType(type.GetTypeSystem(), type.GetOpaqueQualType()))) {}
+SBType::SBType(const CompilerType &type) : m_opaque_sp(new TypeImpl(type)) {}
 
 SBType::SBType(const lldb::TypeSP &type_sp)
     : m_opaque_sp(new TypeImpl(type_sp)) {}
@@ -364,8 +362,8 @@ SBType SBType::GetBasicType(lldb::BasicType basic_type) {
   LLDB_INSTRUMENT_VA(this, basic_type);
 
   if (IsValid() && m_opaque_sp->IsValid())
-    return SBType(
-        m_opaque_sp->GetTypeSystem(false)->GetBasicTypeFromAST(basic_type));
+    if (auto ts = m_opaque_sp->GetTypeSystem(false))
+      return SBType(ts->GetBasicTypeFromAST(basic_type));
   return SBType();
 }
 

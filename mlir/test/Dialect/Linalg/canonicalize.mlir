@@ -47,7 +47,6 @@ func.func @dce_zero_memref(%arg0 : memref<0xf32>, %arg1: tensor<0xf32>) -> tenso
 
 // -----
 
-
 // CHECK-LABEL: func @tensor.cast(
 func.func @tensor.cast(%a : tensor<3x4xf32>, %b : tensor<4x?xf32>, %c : tensor<3x?xf32>)
   -> tensor<3x?xf32>
@@ -64,6 +63,30 @@ func.func @tensor.cast(%a : tensor<3x4xf32>, %b : tensor<4x?xf32>, %c : tensor<3
   %1 = tensor.cast %0 : tensor<?x?xf32> to tensor<3x?xf32>
 
   return %1: tensor<3x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor.cast.unranked(
+func.func @tensor.cast.unranked(%a : tensor<*xf32>, %b : tensor<*xf32>, %c : tensor<*xf32>)
+  -> tensor<*xf32>
+{
+  //      CHECK:  tensor.cast
+  //      CHECK:  tensor.cast
+  //      CHECK:  tensor.cast
+  %ta = tensor.cast %a : tensor<*xf32> to tensor<?x?xf32>
+  %tb = tensor.cast %b : tensor<*xf32> to tensor<?x?xf32>
+  %tc = tensor.cast %c : tensor<*xf32> to tensor<?x?xf32>
+
+  //      CHECK:  linalg.matmul ins({{.*}}tensor<?x?xf32>, tensor<?x?xf32>)
+  // CHECK-SAME:    outs({{.*}}tensor<?x?xf32>) -> tensor<?x?xf32>
+  %0 = linalg.matmul ins(%ta, %tb: tensor<?x?xf32>, tensor<?x?xf32>)
+                    outs(%tc: tensor<?x?xf32>) -> tensor<?x?xf32>
+
+  //      CHECK:  tensor.cast
+  %1 = tensor.cast %0 : tensor<?x?xf32> to tensor<*xf32>
+
+  return %1: tensor<*xf32>
 }
 
 // -----
@@ -270,54 +293,6 @@ func.func @self_copy(%arg0 : memref<2x3x?x4xf32>) {
 
 //   CHECK: return
   return
-}
-
-// -----
-
-// CHECK-LABEL: func @remove_deadargs_generic_basic
-//  CHECK-SAME: (%[[ARG0:.*]]: tensor<?xf32>) -> tensor<?xf32> {
-//       CHECK: %[[GENERIC_OP:.*]] = linalg.generic
-//  CHECK-SAME: ins(%[[ARG0]] : tensor<?xf32>)
-//  CHECK-SAME: outs({{.*}} : tensor<?xf32>) {
-#map0 = affine_map<(d0) -> (d0)>
-func.func @remove_deadargs_generic_basic(%arg0: tensor<?xf32>) -> (tensor<?xf32>) {
-  %c0 = arith.constant 0 : index
-  %cst = arith.constant 7.0 : f32
-  %0 = tensor.dim %arg0, %c0 : tensor<?xf32>
-  %1 = tensor.empty(%0) : tensor<?xf32>
-  %2 = tensor.empty(%0) : tensor<?xf32>
-  %3 = linalg.generic {indexing_maps = [#map0, #map0, #map0], iterator_types=["parallel"]} ins(%arg0, %1 : tensor<?xf32>, tensor<?xf32>) outs (%2:tensor<?xf32>) {
-  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
-    %4 = arith.addf  %arg1, %cst : f32
-	linalg.yield %4 : f32
-  } -> tensor<?xf32>
-  return %3 : tensor<?xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func @remove_deadargs_generic_mixedaccess
-//       CHECK: %[[GENERIC_OP:.*]] = linalg.generic
-//   CHECK-NOT: ins
-//  CHECK-SAME: outs({{.*}} : tensor<?x?xf32>) {
-#map0 = affine_map<(d0, d1) -> (d0, d1)>
-#map1 = affine_map<(d0, d1) -> (d1, d0)>
-func.func @remove_deadargs_generic_mixedaccess(%arg0: tensor<?x?xf32>) -> (tensor<?x?xf32>) {
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 0 : index
-  %cst1 = arith.constant 7.0 : f32
-  %cst2 = arith.constant 6.0 : f32
-  %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
-  %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
-  %2 = tensor.empty(%0, %1) : tensor<?x?xf32>
-  %3 = tensor.empty(%1, %0) : tensor<?x?xf32>
-  %4 = tensor.empty(%0, %1) : tensor<?x?xf32>
-  %5 = linalg.generic {indexing_maps = [#map0, #map1, #map0], iterator_types=["parallel","parallel"]} ins(%2, %3 : tensor<?x?xf32>, tensor<?x?xf32>) outs (%4:tensor<?x?xf32>) {
-  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
-    %6 = arith.divf  %cst1, %cst2 : f32
-	linalg.yield %6 : f32
-  } -> tensor<?x?xf32>
-  return %5 : tensor<?x?xf32>
 }
 
 // -----
@@ -870,3 +845,28 @@ func.func @dedeplicate_regression_test(%0: tensor<4xf32>, %1: memref<4xf32>) {
   } -> tensor<4xf32>
   return
 }
+
+// -----
+
+#map = affine_map<(d0) -> (d0)>
+func.func @cast_producer_mixed(%arg0 : tensor<5xf32>, %arg1: memref<?xf32>) {
+  %0 = tensor.cast %arg0 : tensor<5xf32> to tensor<?xf32>
+  linalg.generic {
+    indexing_maps = [#map, #map],
+    iterator_types = ["parallel"]
+  } ins(%0 : tensor<?xf32>)
+    outs(%arg1 : memref<?xf32>) {
+  ^bb0(%arg2 : f32, %arg3 : f32):
+    linalg.yield %arg2 : f32
+  }
+  return
+}
+
+// We need a mixed linalg as a bridge between tensor and memref worlds.
+// CHECK-LABEL: func @cast_producer_mixed
+//  CHECK-SAME:     (%[[ARG1:.*]]: tensor<5xf32>, %[[ARG2:.*]]: memref<?xf32>)
+//       CHECK:     linalg.generic {
+//  CHECK-SAME:    indexing_maps = [#map, #map],
+//  CHECK-SAME:    iterator_types = ["parallel"]
+//  CHECK-SAME:  } ins(%[[ARG1]] : tensor<5xf32>)
+//  CHECK-SAME:    outs(%[[ARG2]] : memref<?xf32>) {

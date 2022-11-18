@@ -8,7 +8,9 @@
 # RUN: ld.lld %t.o -o /dev/null \
 # RUN:   -plugin path/to/liblto_plugin.so \
 # RUN:   -plugin-opt=/path/to/lto-wrapper \
+# RUN:   -plugin-opt=/path/to/lto-wrapper.exe \
 # RUN:   -plugin-opt=relative/path/to/lto-wrapper \
+# RUN:   -plugin-opt=relative/path/to/lto-wrapper.exe \
 # RUN:   -plugin-opt=-fresolution=zed \
 # RUN:   -plugin-opt=-pass-through=-lgcc \
 # RUN:   -plugin-opt=-pass-through=-lgcc_eh \

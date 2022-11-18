@@ -72,7 +72,7 @@ TEST(WalkUsed, Basic) {
 
   auto &SM = AST.sourceManager();
   llvm::DenseMap<size_t, std::vector<Header>> OffsetToProviders;
-  walkUsed(TopLevelDecls, /*MacroRefs=*/{}, PI, SM,
+  walkUsed(TopLevelDecls, /*MacroRefs=*/{}, &PI, SM,
            [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
              auto [FID, Offset] = SM.getDecomposedLoc(Ref.RefLocation);
              EXPECT_EQ(FID, SM.getMainFileID());
@@ -113,11 +113,10 @@ TEST(WalkUsed, MacroRefs) {
   Symbol Answer =
       Macro{&Idents.get("ANSWER"), SM.getComposedLoc(HdrID, Hdr.point())};
   llvm::DenseMap<size_t, std::vector<Header>> OffsetToProviders;
-  PragmaIncludes PI;
   walkUsed(/*ASTRoots=*/{}, /*MacroRefs=*/
            {SymbolReference{SM.getComposedLoc(SM.getMainFileID(), Main.point()),
                             Answer, RefType::Explicit}},
-           PI, SM,
+           /*PI=*/nullptr, SM,
            [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
              auto [FID, Offset] = SM.getDecomposedLoc(Ref.RefLocation);
              EXPECT_EQ(FID, SM.getMainFileID());

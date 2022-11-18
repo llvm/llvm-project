@@ -291,8 +291,8 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
       auto addr(m_pair_ptr->GetValueAsUnsigned(LLDB_INVALID_ADDRESS));
       m_pair_ptr = nullptr;
       if (addr && addr != LLDB_INVALID_ADDRESS) {
-        TypeSystemClang *ast_ctx =
-            llvm::dyn_cast_or_null<TypeSystemClang>(pair_type.GetTypeSystem());
+        auto ts = pair_type.GetTypeSystem();
+        auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
         if (!ast_ctx)
           return false;
 
@@ -460,8 +460,8 @@ bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
       return false;
 
-    TypeSystemClang *ast_ctx =
-        llvm::dyn_cast_or_null<TypeSystemClang>(pair_type.GetTypeSystem());
+    auto ts = pair_type.GetTypeSystem();
+    auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
     if (!ast_ctx)
       return false;
 

@@ -116,15 +116,8 @@ public:
   struct CallStackIterator {
     const NodeT *N = nullptr;
     IteratorT Iter;
-    CallStackIterator(const NodeT *N, bool End) : N(N) {
-      if (!N)
-        return;
-      Iter = End ? N->StackIdIndices.end() : N->StackIdIndices.begin();
-    }
-    uint64_t operator*() {
-      assert(Iter != N->StackIdIndices.end());
-      return *Iter;
-    }
+    CallStackIterator(const NodeT *N, bool End);
+    uint64_t operator*();
     bool operator==(const CallStackIterator &rhs) { return Iter == rhs.Iter; }
     bool operator!=(const CallStackIterator &rhs) { return !(*this == rhs); }
     void operator++() { ++Iter; }
@@ -132,22 +125,44 @@ public:
 
   bool empty() const { return N == nullptr; }
 
-  CallStackIterator begin() const {
-    return CallStackIterator(N, /*End*/ false);
-  }
+  CallStackIterator begin() const;
   CallStackIterator end() const { return CallStackIterator(N, /*End*/ true); }
-
-  CallStackIterator beginAfterSharedPrefix(CallStack &Other) {
-    CallStackIterator Cur = begin();
-    for (CallStackIterator OtherCur = Other.begin();
-         Cur != end() && OtherCur != Other.end(); ++Cur, ++OtherCur)
-      assert(*Cur == *OtherCur);
-    return Cur;
-  }
+  CallStackIterator beginAfterSharedPrefix(CallStack &Other);
 
 private:
   const NodeT *N = nullptr;
 };
+
+template <class NodeT, class IteratorT>
+CallStack<NodeT, IteratorT>::CallStackIterator::CallStackIterator(
+    const NodeT *N, bool End)
+    : N(N) {
+  if (!N)
+    return;
+  Iter = End ? N->StackIdIndices.end() : N->StackIdIndices.begin();
+}
+
+template <class NodeT, class IteratorT>
+uint64_t CallStack<NodeT, IteratorT>::CallStackIterator::operator*() {
+  assert(Iter != N->StackIdIndices.end());
+  return *Iter;
+}
+
+template <class NodeT, class IteratorT>
+typename CallStack<NodeT, IteratorT>::CallStackIterator
+CallStack<NodeT, IteratorT>::begin() const {
+  return CallStackIterator(N, /*End*/ false);
+}
+
+template <class NodeT, class IteratorT>
+typename CallStack<NodeT, IteratorT>::CallStackIterator
+CallStack<NodeT, IteratorT>::beginAfterSharedPrefix(CallStack &Other) {
+  CallStackIterator Cur = begin();
+  for (CallStackIterator OtherCur = Other.begin();
+       Cur != end() && OtherCur != Other.end(); ++Cur, ++OtherCur)
+    assert(*Cur == *OtherCur);
+  return Cur;
+}
 
 /// Specializations for iterating through IR metadata stack contexts.
 template <>

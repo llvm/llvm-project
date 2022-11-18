@@ -1387,9 +1387,9 @@ bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
 
 bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     unsigned Size, unsigned AddrSpace, Align Alignment,
-    MachineMemOperand::Flags Flags, bool *IsFast) const {
+    MachineMemOperand::Flags Flags, unsigned *IsFast) const {
   if (IsFast)
-    *IsFast = false;
+    *IsFast = 0;
 
   if (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
       AddrSpace == AMDGPUAS::REGION_ADDRESS) {
@@ -1428,7 +1428,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
         // ds_write2_b32 depending on the alignment. In either case with either
         // alignment there is no faster way of doing this.
         if (IsFast)
-          *IsFast = true;
+          *IsFast = 1;
         return true;
       }
 
@@ -1468,7 +1468,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
         // will be more of them, so overall we will pay less penalty issuing a
         // single instruction.
         if (IsFast)
-          *IsFast = Alignment >= RequiredAlignment || Alignment < Align(4);
+          *IsFast= Alignment >= RequiredAlignment || Alignment < Align(4);
         return true;
       }
 
@@ -1531,14 +1531,14 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
   // byte-address are ignored, thus forcing Dword alignment.
   // This applies to private, global, and constant memory.
   if (IsFast)
-    *IsFast = true;
+    *IsFast = 1;
 
   return Size >= 32 && Alignment >= Align(4);
 }
 
 bool SITargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
-    bool *IsFast) const {
+    unsigned *IsFast) const {
   bool Allow = allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
                                                   Alignment, Flags, IsFast);
 
@@ -1551,7 +1551,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
     // which would be equally misaligned.
     // This is only used by the common passes, selection always calls the
     // allowsMisalignedMemoryAccessesImpl version.
-    *IsFast = true;
+    *IsFast= 1;
   }
 
   return Allow;
@@ -8802,7 +8802,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       llvm_unreachable("unsupported private_element_size");
     }
   } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
-    bool Fast = false;
+    unsigned Fast = 0;
     auto Flags = Load->getMemOperand()->getFlags();
     if (allowsMisalignedMemoryAccessesImpl(MemVT.getSizeInBits(), AS,
                                            Load->getAlign(), Flags, &Fast) &&
@@ -9301,7 +9301,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       llvm_unreachable("unsupported private_element_size");
     }
   } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
-    bool Fast = false;
+    unsigned Fast = 0;
     auto Flags = Store->getMemOperand()->getFlags();
     if (allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AS,
                                            Store->getAlign(), Flags, &Fast) &&

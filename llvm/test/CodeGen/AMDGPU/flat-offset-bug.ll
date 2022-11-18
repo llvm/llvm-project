@@ -1,12 +1,12 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9_GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9_11 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9_GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9_11 %s
 
 ; GCN-LABEL: flat_inst_offset:
-; GFX9_GFX11: flat_load_{{dword|b32}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:4
-; GFX9_GFX11: flat_store_{{dword|b32}} v[{{[0-9:]+}}], v{{[0-9]+}} offset:4
-; GFX10:      flat_load_dword v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
-; GFX10:      flat_store_dword v[{{[0-9:]+}}], v{{[0-9]+}}{{$}}
+; GFX9_11: flat_load_{{dword|b32}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:4
+; GFX9_11: flat_store_{{dword|b32}} v[{{[0-9:]+}}], v{{[0-9]+}} offset:4
+; GFX10: flat_load_dword v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
+; GFX10: flat_store_dword v[{{[0-9:]+}}], v{{[0-9]+}}{{$}}
 define void @flat_inst_offset(i32* nocapture %p) {
   %gep = getelementptr inbounds i32, i32* %p, i64 1
   %load = load i32, i32* %gep, align 4
@@ -27,8 +27,8 @@ define void @global_inst_offset(i32 addrspace(1)* nocapture %p) {
 }
 
 ; GCN-LABEL: load_i16_lo:
-; GFX9_GFX11: flat_load_{{short_d16|d16_b16}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:8{{$}}
-; GFX10:      flat_load_short_d16 v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
+; GFX9_11: flat_load_{{short_d16|d16_b16}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:8{{$}}
+; GFX10: flat_load_short_d16 v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @load_i16_lo(i16* %arg, <2 x i16>* %out) {
   %gep = getelementptr inbounds i16, i16* %arg, i32 4
   %ld = load i16, i16* %gep, align 2
@@ -39,8 +39,8 @@ define amdgpu_kernel void @load_i16_lo(i16* %arg, <2 x i16>* %out) {
 }
 
 ; GCN-LABEL: load_i16_hi:
-; GFX9_GFX11: flat_load_{{short_d16_hi|d16_hi_b16}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:8{{$}}
-; GFX10:      flat_load_short_d16_hi v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
+; GFX9_11: flat_load_{{short_d16_hi|d16_hi_b16}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:8{{$}}
+; GFX10: flat_load_short_d16_hi v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @load_i16_hi(i16* %arg, <2 x i16>* %out) {
   %gep = getelementptr inbounds i16, i16* %arg, i32 4
   %ld = load i16, i16* %gep, align 2
@@ -51,8 +51,8 @@ define amdgpu_kernel void @load_i16_hi(i16* %arg, <2 x i16>* %out) {
 }
 
 ; GCN-LABEL: load_half_lo:
-; GFX9_GFX11: flat_load_{{short_d16|d16_b16}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:8{{$}}
-; GFX10:      flat_load_short_d16 v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
+; GFX9_11: flat_load_{{short_d16|d16_b16}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:8{{$}}
+; GFX10: flat_load_short_d16 v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @load_half_lo(half* %arg, <2 x half>* %out) {
   %gep = getelementptr inbounds half, half* %arg, i32 4
   %ld = load half, half* %gep, align 2
@@ -63,8 +63,8 @@ define amdgpu_kernel void @load_half_lo(half* %arg, <2 x half>* %out) {
 }
 
 ; GCN-LABEL: load_half_hi:
-; GFX9_GFX11: flat_load_{{short_d16_hi|d16_hi_b16}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:8{{$}}
-; GFX10:      flat_load_short_d16_hi v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
+; GFX9_11: flat_load_{{short_d16_hi|d16_hi_b16}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:8{{$}}
+; GFX10: flat_load_short_d16_hi v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @load_half_hi(half* %arg, <2 x half>* %out) {
   %gep = getelementptr inbounds half, half* %arg, i32 4
   %ld = load half, half* %gep, align 2
@@ -75,8 +75,8 @@ define amdgpu_kernel void @load_half_hi(half* %arg, <2 x half>* %out) {
 }
 
 ; GCN-LABEL: load_float_lo:
-; GFX9_GFX11: flat_load_{{dword|b32}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:16{{$}}
-; GFX10:      flat_load_dword v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
+; GFX9_11: flat_load_{{dword|b32}} v{{[0-9]+}}, v[{{[0-9:]+}}] offset:16{{$}}
+; GFX10: flat_load_dword v{{[0-9]+}}, v[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @load_float_lo(float* %arg, float* %out) {
   %gep = getelementptr inbounds float, float* %arg, i32 4
   %ld = load float, float* %gep, align 4

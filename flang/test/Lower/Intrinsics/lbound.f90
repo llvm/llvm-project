@@ -12,7 +12,7 @@ subroutine lbound_test(a, dim, res)
 ! CHECK:         %[[VAL_3:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_0]] : (i64) -> i32
 ! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_2]]
-! CHECK:         %[[VAL_6:.*]] = fir.call @_FortranALboundDim(%[[VAL_3]], %[[VAL_4]], %[[VAL_5]], %{{.*}}) : (!fir.box<none>, i32, !fir.ref<i8>, i32) -> i64
+! CHECK:         %[[VAL_6:.*]] = fir.call @_FortranALboundDim(%[[VAL_3]], %[[VAL_4]], %[[VAL_5]], %{{.*}}) {{.*}}: (!fir.box<none>, i32, !fir.ref<i8>, i32) -> i64
 ! CHECK:         fir.store %[[VAL_6]] to %arg2 : !fir.ref<i64>
   res = lbound(a, dim, 8)
 end subroutine
@@ -32,7 +32,7 @@ subroutine lbound_test_2(a, dim, res)
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_4]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 ! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_2]] : (i64) -> i32
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_5]]
-! CHECK:  %[[VAL_9:.*]] = fir.call @_FortranALboundDim(%[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %{{.*}}) : (!fir.box<none>, i32, !fir.ref<i8>, i32) -> i64
+! CHECK:  %[[VAL_9:.*]] = fir.call @_FortranALboundDim(%[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %{{.*}}) {{.*}}: (!fir.box<none>, i32, !fir.ref<i8>, i32) -> i64
 ! CHECK:         fir.store %[[VAL_9]] to %arg2 : !fir.ref<i64>
   res = lbound(a, dim, 8)
 end subroutine
@@ -48,7 +48,7 @@ subroutine lbound_test_3(a, dim, res)
 ! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_3]] : (!fir.box<!fir.array<9x?xf32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_6:.*]] = fir.convert %[[VAL_1]] : (i64) -> i32
 ! CHECK:         %[[VAL_7:.*]] = fir.convert %[[VAL_4]]
-! CHECK:         %[[VAL_8:.*]] = fir.call @_FortranALboundDim(%[[VAL_5]], %[[VAL_6]], %[[VAL_7]], %{{.*}}) : (!fir.box<none>, i32, !fir.ref<i8>, i32) -> i64
+! CHECK:         %[[VAL_8:.*]] = fir.call @_FortranALboundDim(%[[VAL_5]], %[[VAL_6]], %[[VAL_7]], %{{.*}}) {{.*}}: (!fir.box<none>, i32, !fir.ref<i8>, i32) -> i64
 ! CHECK:         fir.store %[[VAL_8]] to %arg2 : !fir.ref<i64>
   res = lbound(a, dim, 8)
 end subroutine
@@ -89,6 +89,6 @@ subroutine lbound_test_4(a, dim, l1, u1, l2, u2)
 ! CHECK:  %[[VAL_47:.*]] = fir.shape %[[VAL_46]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_48:.*]] = fir.embox %[[VAL_6]](%[[VAL_47]]) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xi32>>
 ! CHECK:  %[[VAL_49:.*]] = fir.convert %[[VAL_48]] : (!fir.box<!fir.array<2xi32>>) -> !fir.box<none>
-! CHECK: fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[VAL_49]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK: fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[VAL_49]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
   print *, lbound(a, kind=4)
 end subroutine

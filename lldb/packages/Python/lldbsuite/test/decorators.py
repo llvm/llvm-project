@@ -140,8 +140,10 @@ def expectedFailureIfFn(expected_fn, bugnumber=None):
 def skipTestIfFn(expected_fn, bugnumber=None):
     def skipTestIfFn_impl(func):
         if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-            raise Exception(
-                "@skipTestIfFn can only be used to decorate a test method")
+            reason = expected_fn()
+            # The return value is the reason (or None if we don't skip), so
+            # reason is used for both args.
+            return unittest2.skipIf(condition=reason, reason=reason)(func)
 
         @wraps(func)
         def wrapper(*args, **kwargs):

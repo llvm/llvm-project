@@ -378,28 +378,28 @@ struct ErrorGeneric : ErrorBase {
 };
 
 // clang-format off
-#define ASAN_FOR_EACH_ERROR_KIND(macro)         \
-  macro(DeadlySignal)                           \
-  macro(DoubleFree)                             \
-  macro(NewDeleteTypeMismatch)                  \
-  macro(FreeNotMalloced)                        \
-  macro(AllocTypeMismatch)                      \
-  macro(MallocUsableSizeNotOwned)               \
-  macro(SanitizerGetAllocatedSizeNotOwned)      \
-  macro(CallocOverflow)                         \
-  macro(ReallocArrayOverflow)                   \
-  macro(PvallocOverflow)                        \
-  macro(InvalidAllocationAlignment)             \
-  macro(InvalidAlignedAllocAlignment)           \
-  macro(InvalidPosixMemalignAlignment)          \
-  macro(AllocationSizeTooBig)                   \
-  macro(RssLimitExceeded)                       \
-  macro(OutOfMemory)                            \
-  macro(StringFunctionMemoryRangesOverlap)      \
-  macro(StringFunctionSizeOverflow)             \
-  macro(BadParamsToAnnotateContiguousContainer) \
-  macro(ODRViolation)                           \
-  macro(InvalidPointerPair)                     \
+#define ASAN_FOR_EACH_ERROR_KIND(macro)                    \
+  macro(DeadlySignal)                                      \
+  macro(DoubleFree)                                        \
+  macro(NewDeleteTypeMismatch)                             \
+  macro(FreeNotMalloced)                                   \
+  macro(AllocTypeMismatch)                                 \
+  macro(MallocUsableSizeNotOwned)                          \
+  macro(SanitizerGetAllocatedSizeNotOwned)                 \
+  macro(CallocOverflow)                                    \
+  macro(ReallocArrayOverflow)                              \
+  macro(PvallocOverflow)                                   \
+  macro(InvalidAllocationAlignment)                        \
+  macro(InvalidAlignedAllocAlignment)                      \
+  macro(InvalidPosixMemalignAlignment)                     \
+  macro(AllocationSizeTooBig)                              \
+  macro(RssLimitExceeded)                                  \
+  macro(OutOfMemory)                                       \
+  macro(StringFunctionMemoryRangesOverlap)                 \
+  macro(StringFunctionSizeOverflow)                        \
+  macro(BadParamsToAnnotateContiguousContainer)            \
+  macro(ODRViolation)                                      \
+  macro(InvalidPointerPair)                                \
   macro(Generic)
 // clang-format on
 

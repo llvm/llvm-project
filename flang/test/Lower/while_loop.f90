@@ -29,7 +29,7 @@ subroutine simple_loop
 
   ! CHECK: ^[[BB3]]:  // pred: ^[[BB1]]
   ! CHECK: %[[I3:.*]] = fir.load %[[I_REF]] : !fir.ref<i32>
-  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[I3]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[I3]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
   print *, i
 end subroutine
 
@@ -84,8 +84,8 @@ subroutine while_inside_while_loop
 
   ! CHECK: ^[[EXIT1]]:  // pred: ^[[HDR1]]
   ! CHECK: %[[IPRINT:.*]] = fir.load %[[I_REF]] : !fir.ref<i32>
-  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[IPRINT]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[IPRINT]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
   ! CHECK: %[[JPRINT:.*]] = fir.load %[[J_REF]] : !fir.ref<i32>
-  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[JPRINT]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[JPRINT]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
   print *, i, j
 end subroutine

@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfNoSBHeaders
 class SBDirCheckerCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -16,7 +17,6 @@ class SBDirCheckerCase(TestBase):
         self.source = 'main.cpp'
         self.generateSource(self.source)
 
-    @skipIfNoSBHeaders
     def test_sb_api_directory(self):
         """Test the SB API directory and make sure there's no unwanted stuff."""
 

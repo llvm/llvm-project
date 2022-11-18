@@ -150,7 +150,7 @@ unsigned Merger::addLat(unsigned t, unsigned i, unsigned e) {
 
 unsigned Merger::addSet() {
   unsigned s = latSets.size();
-  latSets.emplace_back(SmallVector<unsigned, 16>());
+  latSets.emplace_back();
   return s;
 }
 

@@ -104,6 +104,16 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
 #define OPENMP_DEVICE_TYPE_KIND(Name) .Case(#Name, OMPC_DEVICE_TYPE_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_DEVICE_TYPE_unknown);
+  case OMPC_at:
+    return llvm::StringSwitch<OpenMPAtClauseKind>(Str)
+#define OPENMP_AT_KIND(Name) .Case(#Name, OMPC_AT_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_AT_unknown);
+  case OMPC_severity:
+    return llvm::StringSwitch<OpenMPSeverityClauseKind>(Str)
+#define OPENMP_SEVERITY_KIND(Name) .Case(#Name, OMPC_SEVERITY_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_SEVERITY_unknown);
   case OMPC_lastprivate:
     return llvm::StringSwitch<OpenMPLastprivateModifier>(Str)
 #define OPENMP_LASTPRIVATE_KIND(Name) .Case(#Name, OMPC_LASTPRIVATE_##Name)
@@ -336,6 +346,26 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'device_type' clause type");
+  case OMPC_at:
+    switch (Type) {
+    case OMPC_AT_unknown:
+      return "unknown";
+#define OPENMP_AT_KIND(Name)                                                   \
+  case OMPC_AT_##Name:                                                         \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'at' clause type");
+  case OMPC_severity:
+    switch (Type) {
+    case OMPC_SEVERITY_unknown:
+      return "unknown";
+#define OPENMP_SEVERITY_KIND(Name)                                             \
+  case OMPC_SEVERITY_##Name:                                                   \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'severity' clause type");
   case OMPC_lastprivate:
     switch (Type) {
     case OMPC_LASTPRIVATE_unknown:

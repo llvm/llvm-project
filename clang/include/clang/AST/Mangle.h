@@ -166,10 +166,10 @@ public:
   virtual void mangleDynamicAtExitDestructor(const VarDecl *D,
                                              raw_ostream &) = 0;
 
-  virtual void mangleSEHFilterExpression(const NamedDecl *EnclosingDecl,
+  virtual void mangleSEHFilterExpression(GlobalDecl EnclosingDecl,
                                          raw_ostream &Out) = 0;
 
-  virtual void mangleSEHFinallyBlock(const NamedDecl *EnclosingDecl,
+  virtual void mangleSEHFinallyBlock(GlobalDecl EnclosingDecl,
                                      raw_ostream &Out) = 0;
 
   /// Generates a unique string for an externally visible type for use with TBAA

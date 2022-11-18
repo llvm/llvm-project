@@ -1,8 +1,16 @@
 // Force this file to use the kDirect method for sparse2sparse.
-// RUN: mlir-opt %s --sparse-compiler="s2s-strategy=2" | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = "enable-runtime-library=true s2s-strategy=2"
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = "enable-runtime-library=false s2s-strategy=2"
+// RUN: %{command}
 
 #Tensor1 = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "dense", "compressed" ]

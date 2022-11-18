@@ -30,7 +30,7 @@ body:             |
   ; CHECK:   B %bb.4
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.9(0x80000000)
-  ; CHECK:   [[SCVTFUXDri:%[0-9]+]]:fpr64 = SCVTFUXDri [[DEF2]]
+  ; CHECK:   [[SCVTFUXDri:%[0-9]+]]:fpr64 = SCVTFUXDri [[DEF2]], implicit $fpcr
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY [[SCVTFUXDri]]
   ; CHECK:   [[COPY1:%[0-9]+]]:fpr64 = COPY [[SCVTFUXDri]]
   ; CHECK:   B %bb.9
@@ -85,7 +85,7 @@ body:             |
   bb.4:
     successors: %bb.7(0x80000000)
 
-    %6:fpr64 = SCVTFUXDri %5
+    %6:fpr64 = SCVTFUXDri %5, implicit $fpcr
     B %bb.7
 
   bb.5:

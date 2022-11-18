@@ -1,10 +1,10 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=SI,SICI,ALL %s
-; RUN: opt -S -mcpu=tonga -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=CI,SICI,ALL %s
-; RUN: opt -S -mcpu=gfx1010 -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
-; RUN: opt -S -mcpu=gfx1100 -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
+; RUN: opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=SI,SICI,ALL %s
+; RUN: opt -S -mcpu=tonga -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=CI,SICI,ALL %s
+; RUN: opt -S -mcpu=gfx1010 -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
+; RUN: opt -S -mcpu=gfx1100 -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
 
-; SI-NOT: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] undef, align 4
-; CI: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] undef, align 4
+; SI-NOT: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] poison, align 4
+; CI: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] poison, align 4
 
 define amdgpu_kernel void @promote_alloca_size_63(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
 entry:
@@ -26,7 +26,7 @@ entry:
   ret void
 }
 
-; ALL: @promote_alloca_size_256.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] undef, align 4
+; ALL: @promote_alloca_size_256.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] poison, align 4
 
 define amdgpu_kernel void @promote_alloca_size_256(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #1 {
 entry:
@@ -49,8 +49,8 @@ entry:
 }
 
 ; SI-NOT: @promote_alloca_size_1600.stack
-; CI: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1024 x [5 x i32]] undef, align 4
-; GFX10PLUS: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1024 x [5 x i32]] undef, align 4
+; CI: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1024 x [5 x i32]] poison, align 4
+; GFX10PLUS: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1024 x [5 x i32]] poison, align 4
 
 define amdgpu_kernel void @promote_alloca_size_1600(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #2 {
 entry:

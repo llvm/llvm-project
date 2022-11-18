@@ -124,8 +124,6 @@ define <1 x i32> @extract_subvector_v2i32(<2 x i32> %op) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    insr z0.s, w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %ret = call <1 x i32> @llvm.vector.extract.v1i32.v2i32(<2 x i32> %op, i64 1)
@@ -229,7 +227,6 @@ define <1 x float> @extract_subvector_v2f32(<2 x float> %op) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    insr z0.s, s0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %ret = call <1 x float> @llvm.vector.extract.v1f32.v2f32(<2 x float> %op, i64 1)

@@ -252,11 +252,11 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4096(i32 addrspace(1)* %ptr) {
 define amdgpu_ps void @mubuf_store_sgpr_ptr_sgpr_offset(i32 addrspace(1)* inreg %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_store_sgpr_ptr_sgpr_offset:
 ; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_ashr_i32 s5, s4, 31
+; GFX6-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_mov_b32 s0, s2
 ; GFX6-NEXT:    s_mov_b32 s1, s3
-; GFX6-NEXT:    s_bfe_i64 s[2:3], s[4:5], 0x200000
-; GFX6-NEXT:    s_lshl_b64 s[4:5], s[2:3], 2
-; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
@@ -266,11 +266,11 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_sgpr_offset(i32 addrspace(1)* inreg 
 ;
 ; GFX7-LABEL: mubuf_store_sgpr_ptr_sgpr_offset:
 ; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_ashr_i32 s5, s4, 31
+; GFX7-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_mov_b32 s0, s2
 ; GFX7-NEXT:    s_mov_b32 s1, s3
-; GFX7-NEXT:    s_bfe_i64 s[2:3], s[4:5], 0x200000
-; GFX7-NEXT:    s_lshl_b64 s[4:5], s[2:3], 2
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
@@ -285,8 +285,8 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_sgpr_offset(i32 addrspace(1)* inreg 
 define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset(i32 addrspace(1)* %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_store_vgpr_ptr_sgpr_offset:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX6-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
@@ -295,8 +295,8 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset(i32 addrspace(1)* %ptr, 
 ;
 ; GFX7-LABEL: mubuf_store_vgpr_ptr_sgpr_offset:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX7-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX7-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
@@ -310,8 +310,8 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset(i32 addrspace(1)* %ptr, 
 define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset_offset256(i32 addrspace(1)* %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_store_vgpr_ptr_sgpr_offset_offset256:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX6-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
@@ -320,8 +320,8 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset_offset256(i32 addrspace(
 ;
 ; GFX7-LABEL: mubuf_store_vgpr_ptr_sgpr_offset_offset256:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX7-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX7-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
@@ -336,8 +336,8 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset_offset256(i32 addrspace(
 define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset256_offset(i32 addrspace(1)* %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_store_vgpr_ptr_sgpr_offset256_offset:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX6-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
@@ -346,8 +346,8 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset256_offset(i32 addrspace(
 ;
 ; GFX7-LABEL: mubuf_store_vgpr_ptr_sgpr_offset256_offset:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX7-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX7-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
@@ -698,11 +698,11 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4096(float addrspace(1)* %ptr)
 define amdgpu_ps float @mubuf_load_sgpr_ptr_sgpr_offset(float addrspace(1)* inreg %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_load_sgpr_ptr_sgpr_offset:
 ; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_ashr_i32 s5, s4, 31
+; GFX6-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_mov_b32 s0, s2
 ; GFX6-NEXT:    s_mov_b32 s1, s3
-; GFX6-NEXT:    s_bfe_i64 s[2:3], s[4:5], 0x200000
-; GFX6-NEXT:    s_lshl_b64 s[4:5], s[2:3], 2
-; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
@@ -712,11 +712,11 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_sgpr_offset(float addrspace(1)* inre
 ;
 ; GFX7-LABEL: mubuf_load_sgpr_ptr_sgpr_offset:
 ; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_ashr_i32 s5, s4, 31
+; GFX7-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_mov_b32 s0, s2
 ; GFX7-NEXT:    s_mov_b32 s1, s3
-; GFX7-NEXT:    s_bfe_i64 s[2:3], s[4:5], 0x200000
-; GFX7-NEXT:    s_lshl_b64 s[4:5], s[2:3], 2
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
@@ -731,8 +731,8 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_sgpr_offset(float addrspace(1)* inre
 define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset(float addrspace(1)* %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_load_vgpr_ptr_sgpr_offset:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX6-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
@@ -741,8 +741,8 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset(float addrspace(1)* %ptr
 ;
 ; GFX7-LABEL: mubuf_load_vgpr_ptr_sgpr_offset:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX7-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX7-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
@@ -756,8 +756,8 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset(float addrspace(1)* %ptr
 define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset_offset256(float addrspace(1)* %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_load_vgpr_ptr_sgpr_offset_offset256:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX6-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024 glc
@@ -766,8 +766,8 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset_offset256(float addrspac
 ;
 ; GFX7-LABEL: mubuf_load_vgpr_ptr_sgpr_offset_offset256:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX7-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX7-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024 glc
@@ -782,8 +782,8 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset_offset256(float addrspac
 define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset256_offset(float addrspace(1)* %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_load_vgpr_ptr_sgpr_offset256_offset:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX6-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024 glc
@@ -792,8 +792,8 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset256_offset(float addrspac
 ;
 ; GFX7-LABEL: mubuf_load_vgpr_ptr_sgpr_offset256_offset:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX7-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX7-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024 glc

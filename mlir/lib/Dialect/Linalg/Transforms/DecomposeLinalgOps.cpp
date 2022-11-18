@@ -376,6 +376,9 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
 }
 
 void mlir::linalg::populateDecomposeLinalgOpsPattern(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, bool removeDeadArgsAndResults) {
   patterns.insert<DecomposeLinalgOp>(patterns.getContext());
+  // Add the patterns to clean up the dead operands and results.
+  if (removeDeadArgsAndResults)
+    populateEraseUnusedOperandsAndResultsPatterns(patterns);
 }

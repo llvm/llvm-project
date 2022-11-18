@@ -5,7 +5,7 @@
 subroutine omp_taskyield
   !OMPDialect: omp.taskyield
   !$omp taskyield
-  !FIRDialect: fir.call @_QPfoo() : () -> ()
+  !FIRDialect: fir.call @_QPfoo() {{.*}}: () -> ()
   call foo()
   !OMPDialect: omp.taskyield
   !$omp taskyield

@@ -154,8 +154,7 @@ else()
     set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS 0)
   endif()
   set(OPENMP_TEST_COMPILER_HAS_OMP_H 1)
-  # TODO: Implement blockaddress in GlobalISel and remove this flag!
-  set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp ${OPENMP_TEST_COMPILER_THREAD_FLAGS} -fno-experimental-isel")
+  set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp ${OPENMP_TEST_COMPILER_THREAD_FLAGS}")
   set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS 1)
 endif()
 

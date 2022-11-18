@@ -44,7 +44,11 @@ Macros:
 #endif
 
 #ifndef __GNUC__
-#include_next <limits.h>
+
+#  if __has_include_next(<limits.h>)
+#    include_next <limits.h>
+#  endif
+
 #else
 // GCC header limits.h recursively includes itself through another header called
 // syslimits.h for some reason. This setup breaks down if we directly

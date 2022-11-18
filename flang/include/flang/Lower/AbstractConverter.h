@@ -204,6 +204,10 @@ public:
   virtual void registerRuntimeTypeInfo(mlir::Location loc,
                                        SymbolRef typeInfoSym) = 0;
 
+  virtual void registerDispatchTableInfo(
+      mlir::Location loc,
+      const Fortran::semantics::DerivedTypeSpec *typeSpec) = 0;
+
   //===--------------------------------------------------------------------===//
   // Locations
   //===--------------------------------------------------------------------===//

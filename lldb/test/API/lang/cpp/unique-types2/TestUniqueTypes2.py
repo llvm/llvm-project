@@ -36,6 +36,7 @@ class UniqueTypesTestCase2(TestBase):
         self.expect("image lookup -A -t 'Foo<int>::Nested<int>'", DATA_TYPES_DISPLAYED_CORRECTLY, error=True)
         self.expect("image lookup -A -t 'Nested<char>'", DATA_TYPES_DISPLAYED_CORRECTLY, substrs=["1 match found"])
         self.expect("image lookup -A -t '::Nested<char>'", DATA_TYPES_DISPLAYED_CORRECTLY, error=True)
+        self.expect("image lookup -A -t 'Foo<int>::Nested<ns::Bar>'", DATA_TYPES_DISPLAYED_CORRECTLY, substrs=["1 match found"])
 
         self.expect_expr("t1", result_type="Foo<char>")
         self.expect_expr("t1", result_type="Foo<char>")
@@ -49,6 +50,7 @@ class UniqueTypesTestCase2(TestBase):
         self.expect_expr("p6", result_type="FooPack<int, int>")
         self.expect_expr("p7", result_type="FooPack<int, int, int>")
         self.expect_expr("n1", result_type="Foo<int>::Nested<char>")
+        self.expect_expr("n2", result_type="Foo<int>::Nested<ns::Bar>")
 
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])

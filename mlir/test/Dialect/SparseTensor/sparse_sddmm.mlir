@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s  --tensor-copy-insertion --sparse-tensor-rewrite --sparsification --cse | FileCheck %s
+// RUN: mlir-opt %s  --tensor-copy-insertion --pre-sparsification-rewrite --sparsification --cse | FileCheck %s
 
 #SM = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
 

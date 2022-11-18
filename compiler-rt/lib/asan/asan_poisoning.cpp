@@ -374,7 +374,8 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
                                                const void *end_p,
                                                const void *old_mid_p,
                                                const void *new_mid_p) {
-  if (!flags()->detect_container_overflow) return;
+  if (!flags()->detect_container_overflow)
+    return;
   VPrintf(2, "contiguous_container: %p %p %p %p\n", beg_p, end_p, old_mid_p,
           new_mid_p);
   uptr beg = reinterpret_cast<uptr>(beg_p);
@@ -388,7 +389,7 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
                                                  &stack);
   }
   CHECK_LE(end - beg,
-           FIRST_32_SECOND_64(1UL << 30, 1ULL << 40)); // Sanity check.
+           FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Sanity check.
 
   if (old_mid == new_mid)
     return;  // Nothing to do here.
@@ -453,7 +454,7 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   // if (d1 != d2)
   //  CHECK_EQ(*(u8*)MemToShadow(d1), old_mid - d1);
   if (a + granularity <= d1)
-    CHECK_EQ(*(u8*)MemToShadow(a), 0);
+    CHECK_EQ(*(u8 *)MemToShadow(a), 0);
   // if (d2 + granularity <= c && c <= end)
   //   CHECK_EQ(*(u8 *)MemToShadow(c - granularity),
   //            kAsanContiguousContainerOOBMagic);
@@ -466,7 +467,7 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   PoisonShadow(b2, c - b2, kAsanContiguousContainerOOBMagic);
   if (b1 != b2) {
     CHECK_EQ(b2 - b1, granularity);
-    *(u8*)MemToShadow(b1) = static_cast<u8>(new_mid - b1);
+    *(u8 *)MemToShadow(b1) = static_cast<u8>(new_mid - b1);
   }
 }
 

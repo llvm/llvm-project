@@ -88,7 +88,9 @@ body:             |
     ; GFX9-FLATSCR-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
     ; GFX9-FLATSCR-NEXT: $vcc_hi = S_ADD_I32 $sgpr33, 8192, implicit-def $scc
     ; GFX9-FLATSCR-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vcc_hi, implicit $exec
-    ; GFX9-FLATSCR-NEXT: $vcc_hi = S_ADD_I32 $sgpr33, 16384, implicit-def $scc
+    ; GFX9-FLATSCR-NEXT: $vcc_hi = S_ADDC_U32 $sgpr33, 16384, implicit-def $scc, implicit $scc
+    ; GFX9-FLATSCR-NEXT: S_BITCMP1_B32 $vcc_hi, 0, implicit-def $scc
+    ; GFX9-FLATSCR-NEXT: $vcc_hi = S_BITSET0_B32 0, $vcc_hi
     ; GFX9-FLATSCR-NEXT: $vgpr0 = V_OR_B32_e32 killed $vcc_hi, $vgpr1, implicit $exec
     ; GFX9-FLATSCR-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -32768, implicit-def dead $scc
     ; GFX9-FLATSCR-NEXT: $sgpr33 = V_READLANE_B32 $vgpr2, 0

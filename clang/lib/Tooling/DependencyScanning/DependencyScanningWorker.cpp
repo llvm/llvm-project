@@ -103,7 +103,7 @@ static void visitPrebuiltModule(StringRef PrebuiltModuleFilename,
 
   while (!Worklist.empty())
     ASTReader::readASTFileControlBlock(
-        Worklist.pop_back_val(), CI.getFileManager(),
+        Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
         CI.getPCHContainerReader(),
         /*FindModuleFileExtensions=*/false, Listener,
         /*ValidateDiagnosticOptions=*/false);

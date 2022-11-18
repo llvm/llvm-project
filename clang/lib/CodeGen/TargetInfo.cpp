@@ -8339,15 +8339,16 @@ public:
       : DefaultABIInfo(CGT), ParamRegs(NPR), RetRegs(NRR) {}
 
   ABIArgInfo classifyReturnType(QualType Ty, bool &LargeRet) const {
-    if (isAggregateTypeForABI(Ty)) {
-      // On AVR, a return struct with size less than or equals to 8 bytes is
-      // returned directly via registers R18-R25. On AVRTiny, a return struct
-      // with size less than or equals to 4 bytes is returned directly via
-      // registers R22-R25.
-      if (getContext().getTypeSize(Ty) <= RetRegs * 8)
-        return ABIArgInfo::getDirect();
-      // A return struct with larger size is returned via a stack
-      // slot, along with a pointer to it as the function's implicit argument.
+    // On AVR, a return struct with size less than or equals to 8 bytes is
+    // returned directly via registers R18-R25. On AVRTiny, a return struct
+    // with size less than or equals to 4 bytes is returned directly via
+    // registers R22-R25.
+    if (isAggregateTypeForABI(Ty) &&
+        getContext().getTypeSize(Ty) <= RetRegs * 8)
+      return ABIArgInfo::getDirect();
+    // A return value (struct or scalar) with larger size is returned via a
+    // stack slot, along with a pointer as the function's implicit argument.
+    if (getContext().getTypeSize(Ty) > RetRegs * 8) {
       LargeRet = true;
       return getNaturalAlignIndirect(Ty);
     }

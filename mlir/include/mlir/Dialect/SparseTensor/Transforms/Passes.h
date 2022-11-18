@@ -133,20 +133,30 @@ void populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
                                          RewritePatternSet &patterns,
                                          bool enableBufferInitialization);
 
+std::unique_ptr<Pass> createSparseTensorCodegenPass();
 std::unique_ptr<Pass>
-createSparseTensorCodegenPass(bool enableBufferInitialization = false);
+createSparseTensorCodegenPass(bool enableBufferInitialization);
 
 //===----------------------------------------------------------------------===//
-// The SparseTensorRewriting pass.
+// The PreSparsificationRewriting pass.
 //===----------------------------------------------------------------------===//
 
-void populateSparseTensorRewriting(RewritePatternSet &patterns, bool enableRT,
-                                   bool enableForeach, bool enableConvert);
+void populatePreSparsificationRewriting(RewritePatternSet &patterns);
 
-std::unique_ptr<Pass> createSparseTensorRewritePass();
-std::unique_ptr<Pass> createSparseTensorRewritePass(bool enableRT,
-                                                    bool enableForeach = true,
-                                                    bool enableConvert = true);
+std::unique_ptr<Pass> createPreSparsificationRewritePass();
+
+//===----------------------------------------------------------------------===//
+// The PostSparsificationRewriting pass.
+//===----------------------------------------------------------------------===//
+
+void populatePostSparsificationRewriting(RewritePatternSet &patterns,
+                                         bool enableRT, bool enableForeach,
+                                         bool enableConvert);
+
+std::unique_ptr<Pass> createPostSparsificationRewritePass();
+std::unique_ptr<Pass>
+createPostSparsificationRewritePass(bool enableRT, bool enableForeach = true,
+                                    bool enableConvert = true);
 
 //===----------------------------------------------------------------------===//
 // Other rewriting rules and passes.
@@ -157,8 +167,10 @@ std::unique_ptr<Pass> createDenseBufferizationPass(
 
 void populateSparseBufferRewriting(RewritePatternSet &patterns,
                                    bool enableBufferInitialization);
+
+std::unique_ptr<Pass> createSparseBufferRewritePass();
 std::unique_ptr<Pass>
-createSparseBufferRewritePass(bool enableBufferInitialization = false);
+createSparseBufferRewritePass(bool enableBufferInitialization);
 
 //===----------------------------------------------------------------------===//
 // Registration.

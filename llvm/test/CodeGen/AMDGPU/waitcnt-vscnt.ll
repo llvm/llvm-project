@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=gfx802  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8_9,GFX8_9_10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9PLUS,GFX8_9,GFX8_9_10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS,GFX8_9_10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS,GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx802  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8_9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9PLUS,GFX8_9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS %s
 
 ; GCN-LABEL: barrier_vmcnt_global:
 ; GFX8:         flat_load_dword
@@ -220,8 +220,7 @@ bb:
 }
 
 ; GCN-LABEL: store_vscnt_private:
-; GFX8_9_10:   buffer_store_dword
-; GFX11:       scratch_store_b32
+; GCN:         {{buffer|scratch}}_store_{{dword|b32}}
 ; GFX8_9:      s_waitcnt vmcnt(0)
 ; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64

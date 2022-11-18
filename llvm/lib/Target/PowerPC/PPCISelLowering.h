@@ -1076,7 +1076,7 @@ namespace llvm {
     bool allowsMisalignedMemoryAccesses(
         EVT VT, unsigned AddrSpace, Align Alignment = Align(1),
         MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
-        bool *Fast = nullptr) const override;
+        unsigned *Fast = nullptr) const override;
 
     /// isFMAFasterThanFMulAndFAdd - Return true if an FMA operation is faster
     /// than a pair of fmul and fadd instructions. fmuladd intrinsics will be

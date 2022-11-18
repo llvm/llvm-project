@@ -21,4 +21,4 @@ end subroutine achar_test1
 ! CHECK: fir.store %[[VAL_6]] to %[[VAL_0]] : !fir.ref<!fir.char<1>>
 ! CHECK: %[[VAL_7:.*]] = fir.alloca !fir.char<2,?>(%{{.*}} : index)
 ! CHECK: fir.char_convert %[[VAL_0]] for %{{.*}} to %[[VAL_7]] : !fir.ref<!fir.char<1>>, index, !fir.ref<!fir.char<2,?>>
-! CHECK: fir.call @_QPachar_test1_foo(%{{.*}}) : (!fir.boxchar<2>) -> ()
+! CHECK: fir.call @_QPachar_test1_foo(%{{.*}}) {{.*}}: (!fir.boxchar<2>) -> ()
