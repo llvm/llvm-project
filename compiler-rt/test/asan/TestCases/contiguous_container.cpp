@@ -10,12 +10,9 @@
 
 static constexpr size_t kGranularity = 8;
 
-static constexpr bool AddrIsAlignedByGranularity(uintptr_t a) {
-  return (a & (kGranularity - 1)) == 0;
-}
-
-static constexpr uintptr_t RoundDown(uintptr_t x) {
-  return x & ~(kGranularity - 1);
+template <class T> static constexpr T RoundDown(T x) {
+  return reinterpret_cast<T>(reinterpret_cast<uintptr_t>(x) &
+                             ~(kGranularity - 1));
 }
 
 void TestContainer(size_t capacity, size_t off_begin, size_t off_end,
@@ -23,16 +20,16 @@ void TestContainer(size_t capacity, size_t off_begin, size_t off_end,
   char *buffer = new char[capacity + off_begin + off_end];
   char *buffer_end = buffer + capacity + off_begin + off_end;
   if (off_poisoned)
-    __sanitizer_annotate_contiguous_container(buffer, buffer_end, buffer_end,
-                                              buffer);
+    __asan_poison_memory_region(buffer, buffer_end - buffer);
+  else
+    __asan_unpoison_memory_region(buffer, buffer_end - buffer);
   char *beg = buffer + off_begin;
   char *end = beg + capacity;
   char *mid = off_poisoned ? beg : beg + capacity;
   char *old_mid = 0;
   // If after the container, there is another object, last granule
   // cannot be poisoned.
-  char *cannot_poison =
-      (off_end == 0) ? end : (char *)RoundDown((uintptr_t)end);
+  char *cannot_poison = (off_end == 0) ? end : RoundDown(end);
 
   for (int i = 0; i < 1000; i++) {
     size_t size = rand() % (capacity + 1);
@@ -44,18 +41,15 @@ void TestContainer(size_t capacity, size_t off_begin, size_t off_end,
     // If off buffer before the container was poisoned and we had to
     // unpoison it, we won't poison it again as we don't have information,
     // if it was poisoned.
-    for (size_t idx = 0; idx < off_begin && !off_poisoned; idx++)
-      assert(!__asan_address_is_poisoned(buffer + idx));
+    if (!off_poisoned)
+      for (size_t idx = 0; idx < off_begin; idx++)
+        assert(!__asan_address_is_poisoned(buffer + idx));
     for (size_t idx = 0; idx < size; idx++)
       assert(!__asan_address_is_poisoned(beg + idx));
     for (size_t idx = size; beg + idx < cannot_poison; idx++)
       assert(__asan_address_is_poisoned(beg + idx));
-    for (size_t idx = 0; idx < off_end; idx++) {
-      if (!off_poisoned)
-        assert(!__asan_address_is_poisoned(end + idx));
-      else // off part after the buffer should be always poisoned
-        assert(__asan_address_is_poisoned(end + idx));
-    }
+    for (size_t idx = 0; idx < off_end; idx++)
+      assert(__asan_address_is_poisoned(end + idx) == off_poisoned);
 
     assert(__sanitizer_verify_contiguous_container(beg, mid, end));
     assert(NULL ==
@@ -77,13 +71,7 @@ void TestContainer(size_t capacity, size_t off_begin, size_t off_end,
     }
   }
 
-  // Don't forget to unpoison the whole thing before destroying/reallocating.
-  if (capacity == 0 && off_poisoned)
-    mid = buffer;
-  __sanitizer_annotate_contiguous_container(buffer, buffer_end, mid,
-                                            buffer_end);
-  for (size_t idx = 0; idx < capacity + off_begin + off_end; idx++)
-    assert(!__asan_address_is_poisoned(buffer + idx));
+  __asan_unpoison_memory_region(buffer, buffer_end - buffer);
   delete[] buffer;
 }
 
