@@ -148,7 +148,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f32(float 
 }
 
 ; GCN-LABEL: {{^}}test_no_denormals_fold_canonicalize_denormal1_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0{{$}}
+; GCN: v_bfrev_b32_e32 [[REG:v[0-9]+]], 1{{$}}
 ; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f32(float addrspace(1)* %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 2155872255 to float))
@@ -353,7 +353,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f64(double
 
 ; GCN-LABEL: {{^}}test_no_denormals_fold_canonicalize_denormal1_f64:
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], v[[LO]]{{$}}
+; GCN: v_bfrev_b32_e32 v[[HI:[0-9]+]], 1{{$}}
 ; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f64(double addrspace(1)* %out) #2 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 9227875636482146303 to double))

@@ -10284,8 +10284,10 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
 SDValue SITargetLowering::getCanonicalConstantFP(
   SelectionDAG &DAG, const SDLoc &SL, EVT VT, const APFloat &C) const {
   // Flush denormals to 0 if not enabled.
-  if (C.isDenormal() && !denormalsEnabledForType(DAG, VT))
-    return DAG.getConstantFP(0.0, SL, VT);
+  if (C.isDenormal() && !denormalsEnabledForType(DAG, VT)) {
+    return DAG.getConstantFP(APFloat::getZero(C.getSemantics(),
+                                              C.isNegative()), SL, VT);
+  }
 
   if (C.isNaN()) {
     APFloat CanonicalQNaN = APFloat::getQNaN(C.getSemantics());
