@@ -9,10 +9,15 @@ define <vscale x 2 x i8> @smulo_nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i8> %
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sxtb z1.d, p0/m, z1.d
 ; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    smulh z2.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    sxtb z1.d, p0/m, z0.d
-; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    asr z1.d, z0.d, #63
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    sxtb z3.d, p0/m, z0.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, z1.d
+; CHECK-NEXT:    cmpne p0.d, p0/z, z3.d, z0.d
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z0.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 2 x i8>, <vscale x 2 x i1> } @llvm.smul.with.overflow.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y)
@@ -30,10 +35,15 @@ define <vscale x 4 x i8> @smulo_nxv4i8(<vscale x 4 x i8> %x, <vscale x 4 x i8> %
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sxtb z1.s, p0/m, z1.s
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    smulh z2.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    sxtb z1.s, p0/m, z0.s
-; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    asr z1.s, z0.s, #31
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    sxtb z3.s, p0/m, z0.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    cmpne p0.s, p0/z, z3.s, z0.s
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z0.s, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 4 x i8>, <vscale x 4 x i1> } @llvm.smul.with.overflow.nxv4i8(<vscale x 4 x i8> %x, <vscale x 4 x i8> %y)
@@ -51,10 +61,15 @@ define <vscale x 8 x i8> @smulo_nxv8i8(<vscale x 8 x i8> %x, <vscale x 8 x i8> %
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    smulh z2.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    sxtb z1.h, p0/m, z0.h
-; CHECK-NEXT:    cmpne p0.h, p0/z, z1.h, z0.h
+; CHECK-NEXT:    asr z1.h, z0.h, #15
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    sxtb z3.h, p0/m, z0.h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, z1.h
+; CHECK-NEXT:    cmpne p0.h, p0/z, z3.h, z0.h
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z0.h, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 8 x i8>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i8(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y)
@@ -160,10 +175,15 @@ define <vscale x 2 x i16> @smulo_nxv2i16(<vscale x 2 x i16> %x, <vscale x 2 x i1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sxth z1.d, p0/m, z1.d
 ; CHECK-NEXT:    sxth z0.d, p0/m, z0.d
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    smulh z2.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    sxth z1.d, p0/m, z0.d
-; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    asr z1.d, z0.d, #63
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    sxth z3.d, p0/m, z0.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, z1.d
+; CHECK-NEXT:    cmpne p0.d, p0/z, z3.d, z0.d
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z0.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 2 x i16>, <vscale x 2 x i1> } @llvm.smul.with.overflow.nxv2i16(<vscale x 2 x i16> %x, <vscale x 2 x i16> %y)
@@ -181,10 +201,15 @@ define <vscale x 4 x i16> @smulo_nxv4i16(<vscale x 4 x i16> %x, <vscale x 4 x i1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
 ; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    smulh z2.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    sxth z1.s, p0/m, z0.s
-; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    asr z1.s, z0.s, #31
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    sxth z3.s, p0/m, z0.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    cmpne p0.s, p0/z, z3.s, z0.s
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z0.s, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 4 x i16>, <vscale x 4 x i1> } @llvm.smul.with.overflow.nxv4i16(<vscale x 4 x i16> %x, <vscale x 4 x i16> %y)
@@ -290,10 +315,15 @@ define <vscale x 2 x i32> @smulo_nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i3
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sxtw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    smulh z2.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    sxtw z1.d, p0/m, z0.d
-; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    asr z1.d, z0.d, #63
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    sxtw z3.d, p0/m, z0.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, z1.d
+; CHECK-NEXT:    cmpne p0.d, p0/z, z3.d, z0.d
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z0.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 2 x i32>, <vscale x 2 x i1> } @llvm.smul.with.overflow.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y)
