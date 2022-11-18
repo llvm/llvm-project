@@ -25,6 +25,11 @@ SBError::SBError(const SBError &rhs) {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
+SBError::SBError(const lldb_private::Status &status)
+    : m_opaque_up(new Status(status)) {
+  LLDB_INSTRUMENT_VA(this, status);
+}
+
 SBError::~SBError() = default;
 
 const SBError &SBError::operator=(const SBError &rhs) {

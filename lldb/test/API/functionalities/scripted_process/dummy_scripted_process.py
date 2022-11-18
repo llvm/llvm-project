@@ -20,11 +20,12 @@ class DummyScriptedProcess(ScriptedProcess):
     def get_registers_for_thread(self, tid: int):
         return {}
 
-    def read_memory_at_address(self, addr: int, size: int) -> lldb.SBData:
+    def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
         data = lldb.SBData().CreateDataFromCString(
                                     self.target.GetByteOrder(),
                                     self.target.GetCodeByteSize(),
                                     "Hello, world!")
+
         return data
 
     def get_loaded_images(self):

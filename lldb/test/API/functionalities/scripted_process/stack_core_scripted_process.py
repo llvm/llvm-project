@@ -65,9 +65,8 @@ class StackCoreScriptedProcess(ScriptedProcess):
     def get_registers_for_thread(self, tid: int):
         return {}
 
-    def read_memory_at_address(self, addr: int, size: int) -> lldb.SBData:
+    def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
         data = lldb.SBData()
-        error = lldb.SBError()
         bytes_read = self.corefile_process.ReadMemory(addr, size, error)
 
         if error.Fail():

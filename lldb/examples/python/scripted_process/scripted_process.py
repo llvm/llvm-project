@@ -98,13 +98,14 @@ class ScriptedProcess(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def read_memory_at_address(self, addr, size):
+    def read_memory_at_address(self, addr, size, error):
         """ Get a memory buffer from the scripted process at a certain address,
             of a certain size.
 
         Args:
             addr (int): Address from which we should start reading.
             size (int): Size of the memory to read.
+            error (lldb.SBError): Error object.
 
         Returns:
             lldb.SBData: An `lldb.SBData` buffer with the target byte size and

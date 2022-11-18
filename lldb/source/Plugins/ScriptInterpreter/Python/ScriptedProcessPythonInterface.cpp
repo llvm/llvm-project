@@ -8,6 +8,7 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
@@ -120,8 +121,15 @@ ScriptedProcessPythonInterface::GetRegistersForThread(lldb::tid_t tid) {
 
 lldb::DataExtractorSP ScriptedProcessPythonInterface::ReadMemoryAtAddress(
     lldb::addr_t address, size_t size, Status &error) {
-  return Dispatch<lldb::DataExtractorSP>("read_memory_at_address", error,
-                                         address, size);
+  Status py_error;
+  lldb::DataExtractorSP data_sp = Dispatch<lldb::DataExtractorSP>(
+      "read_memory_at_address", py_error, address, size, error);
+
+  // If there was an error on the python call, surface it to the user.
+  if (py_error.Fail())
+    error = py_error;
+
+  return data_sp;
 }
 
 StructuredData::ArraySP ScriptedProcessPythonInterface::GetLoadedImages() {
