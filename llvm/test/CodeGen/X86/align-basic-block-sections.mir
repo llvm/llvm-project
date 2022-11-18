@@ -1,0 +1,136 @@
+# Check if the alignment directive is put on the correct place when the basic block section option is used.
+# RUN: llc -start-after=bbsections-prepare  %s -o - | FileCheck %s -check-prefix=CHECK
+
+# How to generate the input:
+# foo.c
+# int test(int a) {
+#   switch (a) {
+#     default:
+#       return 10;
+#     case 1:
+#       a += 1;
+#     case 2:
+#       a *= -1;
+#     case 8:
+#       break;
+#   }
+#   return a;
+# }
+#
+# clang -O0 -S -emit-llvm test.c
+# llc < test.ll -stop-after=bbsections-prepare -align-all-nofallthru-blocks=8 -basic-block-sections=all
+
+
+--- |
+  define i32 @test(i32 noundef %a) {
+  entry:
+    switch i32 %a, label %return [
+      i32 1, label %sw.bb1
+      i32 2, label %sw.bb1
+      i32 8, label %sw.epilog
+    ]
+
+  sw.bb1:                                           ; preds = %entry, %entry
+    br label %sw.epilog
+
+  sw.epilog:                                        ; preds = %sw.bb1, %entry
+    %a.addr.1 = phi i32 [ %a, %entry ], [ -2, %sw.bb1 ]
+    br label %return
+
+  return:                                           ; preds = %sw.epilog, %entry
+    %retval.0 = phi i32 [ %a.addr.1, %sw.epilog ], [ 10, %entry ]
+    ret i32 %retval.0
+  }
+
+
+...
+---
+name:            test
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $edi
+  
+    renamable $edi = KILL $edi, implicit-def $rdi
+    renamable $eax = LEA64_32r renamable $rdi, 1, $noreg, -1, $noreg
+    CMP32ri8 killed renamable $eax, 2, implicit-def $eflags
+    JCC_1 %bb.2, 3, implicit $eflags
+    JMP_1 %bb.1
+  
+  bb.1.sw.bb1 (bbsections 1):
+    successors: %bb.3(0x80000000)
+  
+    renamable $edi = MOV32ri -2, implicit-def $rdi
+    JMP_1 %bb.3
+  
+  bb.2.entry (align 256, bbsections 2):
+    successors: %bb.3(0x40000000), %bb.4(0x40000000)
+    liveins: $rdi
+  
+    renamable $eax = MOV32ri 10
+    CMP32ri8 renamable $edi, 8, implicit-def $eflags
+    JCC_1 %bb.4, 5, implicit $eflags
+    JMP_1 %bb.3
+  
+  bb.3.sw.epilog (bbsections 3):
+    successors: %bb.4(0x80000000)
+    liveins: $rdi
+  
+    $eax = MOV32rr $edi, implicit killed $rdi
+    JMP_1 %bb.4
+  
+  bb.4.return (bbsections 4):
+    liveins: $eax
+  
+    RET64 $eax
+
+...
+
+# CHECK: .section	.text.test,"ax",@progbits,unique,2
+# CHECK-NEXT: .p2align	8, 0x90
+# CHECK-NEXT: test.__part.2: # %entry
