@@ -11095,7 +11095,7 @@ def err_invalid_type_for_program_scope_var : Error<
 let CategoryName = "Modules Issue" in {
 def err_module_decl_in_module_map_module : Error<
   "'module' declaration found while building module from module map">;
-def err_module_decl_in_header_module : Error<
+def err_module_decl_in_header_unit : Error<
   "'module' declaration found while building header unit">;
 def err_module_interface_implementation_mismatch : Error<
   "missing 'export' specifier in module declaration while "
