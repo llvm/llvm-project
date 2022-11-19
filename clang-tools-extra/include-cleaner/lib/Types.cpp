@@ -18,10 +18,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
   switch (S.kind()) {
   case Symbol::Declaration:
     if (const auto *ND = llvm::dyn_cast<NamedDecl>(&S.declaration()))
-      return OS << ND->getNameAsString();
+      return OS << ND->getQualifiedNameAsString();
     return OS << S.declaration().getDeclKindName();
   case Symbol::Macro:
-    return OS << S.macro().Name;
+    return OS << S.macro().Name->getName();
   }
   llvm_unreachable("Unhandled Symbol kind");
 }
