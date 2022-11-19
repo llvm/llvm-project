@@ -532,6 +532,8 @@ void OMPClauseProfiler::VisitOMPAtomicDefaultMemOrderClause(
 
 void OMPClauseProfiler::VisitOMPAtClause(const OMPAtClause *C) {}
 
+void OMPClauseProfiler::VisitOMPSeverityClause(const OMPSeverityClause *C) {}
+
 void OMPClauseProfiler::VisitOMPScheduleClause(const OMPScheduleClause *C) {
   VistOMPClauseWithPreInit(C);
   if (auto *S = C->getChunkSize())

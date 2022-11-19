@@ -304,6 +304,9 @@ def OMPC_AtomicDefaultMemOrder : Clause<"atomic_default_mem_order"> {
 def OMPC_At : Clause<"at"> {
   let clangClass = "OMPAtClause";
 }
+def OMPC_Severity : Clause<"severity"> {
+  let clangClass = "OMPSeverityClause";
+}
 def OMPC_Allocate : Clause<"allocate"> {
   let clangClass = "OMPAllocateClause";
   let flangClass = "OmpAllocateClause";
@@ -532,7 +535,8 @@ def OMP_TaskYield : Directive<"taskyield"> {}
 def OMP_Barrier : Directive<"barrier"> {}
 def OMP_Error : Directive<"error"> {
   let allowedClauses = [
-    VersionedClause<OMPC_At>
+    VersionedClause<OMPC_At, 51>,
+    VersionedClause<OMPC_Severity, 51>
   ];
 }
 def OMP_TaskWait : Directive<"taskwait"> {
