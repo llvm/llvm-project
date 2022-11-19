@@ -1364,14 +1364,17 @@ void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   // and thus emitting potential call target gadgets at each indirect call
   // site, load a negated constant to a register and compare that to the
   // expected value at the call target.
+  const Register AddrReg = MI.getOperand(0).getReg();
   const uint32_t Type = MI.getOperand(1).getImm();
-  EmitAndCountInstruction(MCInstBuilder(X86::MOV32ri)
-                              .addReg(X86::R10D)
-                              .addImm(-MaskKCFIType(Type)));
+  // The check is immediately before the call. If the call target is in R10,
+  // we can clobber R11 for the check instead.
+  unsigned TempReg = AddrReg == X86::R10 ? X86::R11D : X86::R10D;
+  EmitAndCountInstruction(
+      MCInstBuilder(X86::MOV32ri).addReg(TempReg).addImm(-MaskKCFIType(Type)));
   EmitAndCountInstruction(MCInstBuilder(X86::ADD32rm)
                               .addReg(X86::NoRegister)
-                              .addReg(X86::R10D)
-                              .addReg(MI.getOperand(0).getReg())
+                              .addReg(TempReg)
+                              .addReg(AddrReg)
                               .addImm(1)
                               .addReg(X86::NoRegister)
                               .addImm(-(PrefixNops + 4))
