@@ -89,34 +89,6 @@ uint8_t XCOFFRelocation<AddressType>::getRelocatedLength() const {
 template struct ExceptionSectionEntry<support::ubig32_t>;
 template struct ExceptionSectionEntry<support::ubig64_t>;
 
-template <typename T>
-Expected<StringRef> getLoaderSecSymNameInStrTbl(const T *LoaderSecHeader,
-                                                uint64_t Offset) {
-  if (LoaderSecHeader->LengthOfStrTbl > Offset)
-    return (reinterpret_cast<const char *>(LoaderSecHeader) +
-            LoaderSecHeader->OffsetToStrTbl + Offset);
-
-  return createError("entry with offset 0x" + Twine::utohexstr(Offset) +
-                     " in the loader section's string table with size 0x" +
-                     Twine::utohexstr(LoaderSecHeader->LengthOfStrTbl) +
-                     " is invalid");
-}
-
-Expected<StringRef> LoaderSectionSymbolEntry32::getSymbolName(
-    const LoaderSectionHeader32 *LoaderSecHeader32) const {
-  const NameOffsetInStrTbl *NameInStrTbl =
-      reinterpret_cast<const NameOffsetInStrTbl *>(SymbolName);
-  if (NameInStrTbl->IsNameInStrTbl != XCOFFSymbolRef::NAME_IN_STR_TBL_MAGIC)
-    return generateXCOFFFixedNameStringRef(SymbolName);
-
-  return getLoaderSecSymNameInStrTbl(LoaderSecHeader32, NameInStrTbl->Offset);
-}
-
-Expected<StringRef> LoaderSectionSymbolEntry64::getSymbolName(
-    const LoaderSectionHeader64 *LoaderSecHeader64) const {
-  return getLoaderSecSymNameInStrTbl(LoaderSecHeader64, Offset);
-}
-
 uintptr_t
 XCOFFObjectFile::getAdvancedSymbolEntryAddress(uintptr_t CurrentAddress,
                                                uint32_t Distance) {
