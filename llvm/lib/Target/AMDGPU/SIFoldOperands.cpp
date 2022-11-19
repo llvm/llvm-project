@@ -435,17 +435,12 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
     const MCOperandInfo &OpInfo = InstDesc.OpInfo[OpNo];
 
     // Fine if the operand can be encoded as an inline constant
-    if (TII->isLiteralConstantLike(*OpToFold, OpInfo)) {
-      if (!TRI->opCanUseInlineConstant(OpInfo.OperandType) ||
-          !TII->isInlineConstant(*OpToFold, OpInfo)) {
-        // Otherwise check for another constant
-        for (unsigned i = 0, e = InstDesc.getNumOperands(); i != e; ++i) {
-          auto &Op = MI->getOperand(i);
-          if (OpNo != i &&
-              TII->isLiteralConstantLike(Op, OpInfo)) {
-            return false;
-          }
-        }
+    if (!OpToFold->isReg() && !TII->isInlineConstant(*OpToFold, OpInfo)) {
+      // Otherwise check for another constant
+      for (unsigned i = 0, e = InstDesc.getNumOperands(); i != e; ++i) {
+        auto &Op = MI->getOperand(i);
+        if (OpNo != i && !Op.isReg() && !TII->isInlineConstant(Op, OpInfo))
+          return false;
       }
     }
   }
