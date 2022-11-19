@@ -3042,6 +3042,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       SignedZeros = false;
       TrappingMath = false;
       RoundingFPMath = false;
+      FPExceptionBehavior = "";
       // If fast-math is set then set the fp-contract mode to fast.
       FPContract = "fast";
       SeenUnsafeMathModeOption = true;
@@ -3082,10 +3083,12 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       else {
         StrictFPModel = false;
         FPModel = "";
-        D.Diag(clang::diag::warn_drv_overriding_flag_option)
-            << "-ffp-model=strict" <<
-            ((A->getNumValues() == 0) ?  A->getSpelling()
-            : Args.MakeArgString(A->getSpelling() + A->getValue()));
+        auto RHS = (A->getNumValues() == 0)
+                       ? A->getSpelling()
+                       : Args.MakeArgString(A->getSpelling() + A->getValue());
+        if (RHS != "-ffp-model=strict")
+          D.Diag(clang::diag::warn_drv_overriding_flag_option)
+              << "-ffp-model=strict" << RHS;
       }
     }
 
