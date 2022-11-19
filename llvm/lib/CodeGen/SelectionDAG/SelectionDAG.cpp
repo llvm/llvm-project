@@ -2781,9 +2781,7 @@ SDValue SelectionDAG::getSplatSourceVector(SDValue V, int &SplatIdx) {
     SplatIdx = 0;
     return V;
   case ISD::VECTOR_SHUFFLE: {
-    if (VT.isScalableVector())
-      return SDValue();
-
+    assert(!VT.isScalableVector());
     // Check if this is a shuffle node doing a splat.
     // TODO - remove this and rely purely on SelectionDAG::isSplatValue,
     // getTargetVShiftNode currently struggles without the splat source.
