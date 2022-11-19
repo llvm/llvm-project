@@ -15,21 +15,18 @@ template <class T> static constexpr T RoundDown(T x) {
                              ~(kGranularity - 1));
 }
 
-void TestContainer(size_t capacity, size_t off_begin, size_t off_end,
-                   bool poison_buffer) {
-  char *buffer = new char[capacity + off_begin + off_end];
-  char *buffer_end = buffer + capacity + off_begin + off_end;
+void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
+  size_t buffer_size = capacity + off_begin + kGranularity * 2;
+  char *buffer = new char[buffer_size];
   if (poison_buffer)
-    __asan_poison_memory_region(buffer, buffer_end - buffer);
-  else
-    __asan_unpoison_memory_region(buffer, buffer_end - buffer);
+    __asan_poison_memory_region(buffer, buffer_size);
   char *beg = buffer + off_begin;
   char *end = beg + capacity;
   char *mid = poison_buffer ? beg : beg + capacity;
   char *old_mid = 0;
   // If after the container, there is another object, last granule
   // cannot be poisoned.
-  char *cannot_poison = (off_end == 0) ? end : RoundDown(end);
+  char *cannot_poison = (poison_buffer) ? end : RoundDown(end);
 
   for (int i = 0; i < 1000; i++) {
     size_t size = rand() % (capacity + 1);
@@ -48,13 +45,13 @@ void TestContainer(size_t capacity, size_t off_begin, size_t off_end,
       assert(!__asan_address_is_poisoned(beg + idx));
     for (size_t idx = size; beg + idx < cannot_poison; idx++)
       assert(__asan_address_is_poisoned(beg + idx));
-    for (size_t idx = 0; idx < off_end; idx++)
+    for (size_t idx = 0; idx < kGranularity; idx++)
       assert(__asan_address_is_poisoned(end + idx) == poison_buffer);
 
     assert(__sanitizer_verify_contiguous_container(beg, mid, end));
     assert(NULL ==
            __sanitizer_contiguous_container_find_bad_address(beg, mid, end));
-    size_t distance = (off_end > 0) ? kGranularity + 1 : 1;
+    size_t distance = (end > RoundDown(end)) ? kGranularity + 1 : 1;
     if (mid >= beg + distance) {
       assert(
           !__sanitizer_verify_contiguous_container(beg, mid - distance, end));
@@ -71,7 +68,7 @@ void TestContainer(size_t capacity, size_t off_begin, size_t off_end,
     }
   }
 
-  __asan_unpoison_memory_region(buffer, buffer_end - buffer);
+  __asan_unpoison_memory_region(buffer, buffer_size);
   delete[] buffer;
 }
 
@@ -100,9 +97,8 @@ void TestThrow() {
 int main(int argc, char **argv) {
   int n = argc == 1 ? 64 : atoi(argv[1]);
   for (int i = 0; i <= n; i++)
-    for (int j = 0; j < 8; j++)
-      for (int k = 0; k < 8; k++)
-        for (int poison = 0; poison < 2; ++poison)
-          TestContainer(i, j, k, poison);
+    for (int j = 0; j < kGranularity * 2; j++)
+      for (int poison = 0; poison < 2; ++poison)
+        TestContainer(i, j, poison);
   TestThrow();
 }
