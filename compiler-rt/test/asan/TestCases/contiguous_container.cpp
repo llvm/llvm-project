@@ -2,6 +2,7 @@
 //
 // Test __sanitizer_annotate_contiguous_container.
 
+#include <algorithm>
 #include <assert.h>
 #include <sanitizer/asan_interface.h>
 #include <stdio.h>
@@ -23,10 +24,7 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
   char *beg = buffer + off_begin;
   char *end = beg + capacity;
   char *mid = poison_buffer ? beg : beg + capacity;
-  char *old_mid = 0;
-  // If after the container, there is another object, last granule
-  // cannot be poisoned.
-  char *cannot_poison = (poison_buffer) ? end : RoundDown(end);
+  char *old_mid;
 
   for (int i = 0; i < 1000; i++) {
     size_t size = rand() % (capacity + 1);
@@ -35,19 +33,21 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
     mid = beg + size;
     __sanitizer_annotate_contiguous_container(beg, end, old_mid, mid);
 
-    // If off buffer before the container was poisoned and we had to
-    // unpoison it, we won't poison it again as we don't have information,
-    // if it was poisoned.
-    if (!poison_buffer)
-      for (size_t idx = 0; idx < off_begin; idx++)
-        assert(!__asan_address_is_poisoned(buffer + idx));
-    for (size_t idx = 0; idx < size; idx++)
-      assert(!__asan_address_is_poisoned(beg + idx));
-    for (size_t idx = size; beg + idx < cannot_poison; idx++)
-      assert(__asan_address_is_poisoned(beg + idx));
-    for (size_t idx = 0; idx < kGranularity; idx++)
-      assert(__asan_address_is_poisoned(end + idx) == poison_buffer);
-
+    char *cur = buffer;
+    for (; cur < buffer + RoundDown(off_begin); ++cur)
+      assert(__asan_address_is_poisoned(cur) == poison_buffer);
+    // The prefix of the first incomplete granule can switch from poisoned to
+    // unpoisoned but not otherwise.
+    for (; cur < buffer + off_begin; ++cur)
+      assert(poison_buffer || !__asan_address_is_poisoned(cur));
+    for (; cur < mid; ++cur)
+      assert(!__asan_address_is_poisoned(cur));
+    for (; cur < RoundDown(end); ++cur)
+      assert(__asan_address_is_poisoned(cur));
+    // The suffix of the last incomplete granule must be poisoned the same as
+    // bytes after the end.
+    for (; cur != end + kGranularity; ++cur)
+      assert(__asan_address_is_poisoned(cur) == poison_buffer);
     assert(__sanitizer_verify_contiguous_container(beg, mid, end));
     assert(NULL ==
            __sanitizer_contiguous_container_find_bad_address(beg, mid, end));
