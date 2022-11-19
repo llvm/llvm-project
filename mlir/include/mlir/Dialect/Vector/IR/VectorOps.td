@@ -1203,11 +1203,9 @@ def Vector_TransferReadOp :
     provided to specify a fallback value in the case of out-of-bounds accesses
     and/or masking.
 
-    An optional SSA value `mask` may be specified to mask out elements read from
-    the MemRef/Tensor. The `mask` type is an `i1` vector with a shape that
-    matches how elements are read from the MemRef/Tensor, *before* any
-    permutation or broadcasting. Elements whose corresponding mask element is
-    `0` are masked out and replaced with `padding`.
+    An optional SSA value `mask` of the same shape as the vector type may be
+    specified to mask out elements. Such elements will be replaces with
+    `padding`. Elements whose corresponding mask element is `0` are masked out.
 
     An optional boolean array attribute `in_bounds` specifies for every vector
     dimension if the transfer is guaranteed to be within the source bounds.
@@ -1416,12 +1414,6 @@ def Vector_TransferWriteOp :
     write ops cannot have broadcast dimensions.
 
     The size of the slice is specified by the size of the vector.
-
-    An optional SSA value `mask` may be specified to mask out elements written
-    to the MemRef/Tensor. The `mask` type is an `i1` vector with a shape that
-    matches how elements are written into the MemRef/Tensor, *after* applying
-    any permutation. Elements whose corresponding mask element is `0` are
-    masked out.
 
     An optional SSA value `mask` of the same shape as the vector type may be
     specified to mask out elements. Elements whose corresponding mask element
