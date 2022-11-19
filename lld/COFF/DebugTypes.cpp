@@ -275,7 +275,7 @@ static bool canUseDebugH(ArrayRef<uint8_t> debugH) {
   debugH = debugH.drop_front(sizeof(object::debug_h_header));
   return header->Magic == COFF::DEBUG_HASHES_SECTION_MAGIC &&
          header->Version == 0 &&
-         header->HashAlgorithm == uint16_t(GlobalTypeHashAlg::SHA1_8) &&
+         header->HashAlgorithm == uint16_t(GlobalTypeHashAlg::BLAKE3) &&
          (debugH.size() % 8 == 0);
 }
 
