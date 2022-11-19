@@ -4,10 +4,10 @@ unittest("DebugInfoLogicalViewTests") {
   deps = [
     "//llvm/lib/DebugInfo/LogicalView",
     "//llvm/lib/MC/MCDisassembler",
-    "//llvm/lib/Testing/Support",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "CommandLineOptionsTest.cpp",
