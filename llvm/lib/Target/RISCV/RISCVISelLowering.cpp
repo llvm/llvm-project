@@ -13266,10 +13266,10 @@ bool RISCVTargetLowering::isMulAddWithConstProfitable(SDValue AddNode,
 
 bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
-    bool *Fast) const {
+    unsigned *Fast) const {
   if (!VT.isVector()) {
     if (Fast)
-      *Fast = false;
+      *Fast = 0;
     return Subtarget.enableUnalignedScalarMem();
   }
 
@@ -13277,7 +13277,7 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
   EVT ElemVT = VT.getVectorElementType();
   if (Alignment >= ElemVT.getStoreSize()) {
     if (Fast)
-      *Fast = true;
+      *Fast = 1;
     return true;
   }
 
