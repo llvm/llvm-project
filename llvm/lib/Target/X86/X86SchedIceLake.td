@@ -727,8 +727,7 @@ def ICXWriteResGroup10 : SchedWriteRes<[ICXPort0156]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[ICXWriteResGroup10], (instrs STC,
-                                          SGDT64m,
+def: InstRW<[ICXWriteResGroup10], (instrs SGDT64m,
                                           SIDT64m,
                                           SMSW16m,
                                           STRm,
