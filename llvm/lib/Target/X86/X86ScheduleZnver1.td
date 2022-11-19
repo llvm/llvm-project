@@ -712,9 +712,6 @@ def : SchedAlias<WriteBLS, ZnWriteALULat2>;
 // r,m.
 def : SchedAlias<WriteBLSLd, ZnWriteALULat2Ld>;
 
-// CLD STD.
-def : InstRW<[WriteALU], (instrs STD, CLD)>;
-
 // PDEP PEXT.
 // r,r,r.
 def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rr", "PEXT(32|64)rr")>;
