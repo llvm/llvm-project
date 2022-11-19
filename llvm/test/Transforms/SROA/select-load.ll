@@ -58,3 +58,69 @@ entry:
 
 declare void @foo_i8(ptr)
 declare void @foo_i32(ptr)
+
+; Lifetime intrinsics should not prevent dereferenceability inferrence.
+define i32 @interfering_lifetime(ptr %data, i64 %indvars.iv) {
+; CHECK-LABEL: @interfering_lifetime(
+; CHECK-NEXT:    [[MIN:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[MIN]])
+; CHECK-NEXT:    store i32 0, ptr [[MIN]], align 4
+; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp slt i32 [[I1]], 0
+; CHECK-NEXT:    [[I2:%.*]] = tail call i32 @llvm.smax.i32(i32 [[I1]], i32 0)
+; CHECK-NEXT:    [[__B___A_I_I:%.*]] = select i1 [[CMP_I_I]], ptr [[MIN]], ptr [[ARRAYIDX]]
+; CHECK-NEXT:    [[I3:%.*]] = load i32, ptr [[__B___A_I_I]], align 4
+; CHECK-NEXT:    ret i32 [[I3]]
+;
+  %min = alloca i32, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %data, i64 %indvars.iv
+  %i1 = load i32, ptr %arrayidx, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr %min)
+  store i32 0, ptr %min, align 4
+  %cmp.i.i = icmp slt i32 %i1, 0
+  %i2 = tail call i32 @llvm.smax.i32(i32 %i1, i32 0)
+  %__b.__a.i.i = select i1 %cmp.i.i, ptr %min, ptr %arrayidx
+  %i3 = load i32, ptr %__b.__a.i.i, align 4
+  ret i32 %i3
+}
+
+; We should recursively evaluate select's.
+define i32 @clamp_load_to_constant_range(ptr %data, i64 %indvars.iv) {
+; CHECK-LABEL: @clamp_load_to_constant_range(
+; CHECK-NEXT:    [[MIN:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[MAX:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV:%.*]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[MIN]])
+; CHECK-NEXT:    store i32 0, ptr [[MIN]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[MAX]])
+; CHECK-NEXT:    store i32 4095, ptr [[MAX]], align 4
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp slt i32 [[I1]], 0
+; CHECK-NEXT:    [[I2:%.*]] = tail call i32 @llvm.smax.i32(i32 [[I1]], i32 0)
+; CHECK-NEXT:    [[__B___A_I_I:%.*]] = select i1 [[CMP_I_I]], ptr [[MIN]], ptr [[ARRAYIDX]]
+; CHECK-NEXT:    [[CMP_I1_I:%.*]] = icmp ugt i32 [[I2]], 4095
+; CHECK-NEXT:    [[__B___A_I2_I:%.*]] = select i1 [[CMP_I1_I]], ptr [[MAX]], ptr [[__B___A_I_I]]
+; CHECK-NEXT:    [[I3:%.*]] = load i32, ptr [[__B___A_I2_I]], align 4
+; CHECK-NEXT:    ret i32 [[I3]]
+;
+  %min = alloca i32, align 4
+  %max = alloca i32, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %data, i64 %indvars.iv
+  call void @llvm.lifetime.start.p0(i64 4, ptr %min)
+  store i32 0, ptr %min, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr %max)
+  store i32 4095, ptr %max, align 4
+  %i1 = load i32, ptr %arrayidx, align 4
+  %cmp.i.i = icmp slt i32 %i1, 0
+  %i2 = tail call i32 @llvm.smax.i32(i32 %i1, i32 0)
+  %__b.__a.i.i = select i1 %cmp.i.i, ptr %min, ptr %arrayidx
+  %cmp.i1.i = icmp ugt i32 %i2, 4095
+  %__b.__a.i2.i = select i1 %cmp.i1.i, ptr %max, ptr %__b.__a.i.i
+  %i3 = load i32, ptr %__b.__a.i2.i, align 4
+  ret i32 %i3
+}
+
+declare void @llvm.lifetime.start.p0(i64, ptr )
+declare void @llvm.lifetime.end.p0(i64, ptr)
+declare i32 @llvm.smax.i32(i32, i32)
