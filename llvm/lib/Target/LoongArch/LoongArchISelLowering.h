@@ -29,6 +29,8 @@ enum NodeType : unsigned {
   // TODO: add more LoongArchISDs
   CALL,
   RET,
+  TAIL,
+
   // 32-bit shifts, directly matching the semantics of the named LoongArch
   // instructions.
   SLL_W,
@@ -204,6 +206,10 @@ private:
   void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
+
+  bool isEligibleForTailCallOptimization(
+      CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
+      const SmallVectorImpl<CCValAssign> &ArgLocs) const;
 };
 
 } // end namespace llvm
