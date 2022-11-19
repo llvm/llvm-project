@@ -65,9 +65,9 @@ class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
                 const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
-                bool ScalarizationOnly)
+                bool TryEarlyFoldsOnly)
       : F(F), Builder(F.getContext()), TTI(TTI), DT(DT), AA(AA), AC(AC),
-        ScalarizationOnly(ScalarizationOnly) {}
+        TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
   bool run();
 
@@ -79,9 +79,9 @@ private:
   AAResults &AA;
   AssumptionCache &AC;
 
-  /// If true only perform scalarization combines and do not introduce new
+  /// If true, only perform beneficial early IR transforms. Do not introduce new
   /// vector operations.
-  bool ScalarizationOnly;
+  bool TryEarlyFoldsOnly;
 
   InstructionWorklist Worklist;
 
@@ -1698,7 +1698,7 @@ bool VectorCombine::run() {
   bool MadeChange = false;
   auto FoldInst = [this, &MadeChange](Instruction &I) {
     Builder.SetInsertPoint(&I);
-    if (!ScalarizationOnly) {
+    if (!TryEarlyFoldsOnly) {
       if (isa<FixedVectorType>(I.getType())) {
         MadeChange |= vectorizeLoadInsert(I);
         MadeChange |= widenSubvectorLoad(I);
@@ -1800,7 +1800,7 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
-  VectorCombine Combiner(F, TTI, DT, AA, AC, ScalarizationOnly);
+  VectorCombine Combiner(F, TTI, DT, AA, AC, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
