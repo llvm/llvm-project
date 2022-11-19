@@ -1993,6 +1993,17 @@ void ObjCProtocolDecl::startDefinition() {
     RD->Data = this->Data;
 }
 
+void ObjCProtocolDecl::startDuplicateDefinitionForComparison() {
+  Data.setPointer(nullptr);
+  allocateDefinitionData();
+  // Don't propagate data to other redeclarations.
+}
+
+void ObjCProtocolDecl::mergeDuplicateDefinitionWithCommon(
+    const ObjCProtocolDecl *Definition) {
+  Data = Definition->Data;
+}
+
 void ObjCProtocolDecl::collectPropertiesToImplement(PropertyMap &PM) const {
   if (const ObjCProtocolDecl *PDecl = getDefinition()) {
     for (auto *Prop : PDecl->properties()) {
