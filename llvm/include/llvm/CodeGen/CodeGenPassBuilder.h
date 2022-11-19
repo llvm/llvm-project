@@ -29,7 +29,7 @@
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
-#include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/MC/MCAsmInfo.h"
