@@ -13,17 +13,20 @@ target triple = "x86_64-unknown-linux-gnu"
 @a = dso_local global [2 x i32] zeroinitializer, align 4
 @b = private global [2 x i32] zeroinitializer, align 4
 @c = internal global [2 x i32] zeroinitializer, align 4
-@d = unnamed_addr global [2 x i32] zeroinitializer, align 4
+@_ZL1d = unnamed_addr global [2 x i32] zeroinitializer, align 4
 
 ; Check that we generate internal alias and odr indicator symbols for global to be protected.
 ; CHECK-NOINDICATOR-NOT: __odr_asan_gen_a
 ; CHECK-NOALIAS-NOT: private alias
+; CHECK-INDICATOR: @___asan_gen_.1 = private unnamed_addr constant [2 x i8] c"a\00", align 1
 ; CHECK-INDICATOR: @__odr_asan_gen_a = global i8 0, align 1
+; CHECK-INDICATOR: @___asan_gen_.4 = private unnamed_addr constant [6 x i8] c"_ZL1d\00", align 1
+; CHECK-INDICATOR: @__odr_asan_gen__ZL1d = global i8 0, align 1
 ; CHECK-ALIAS: @0 = private alias { [2 x i32], [24 x i8] }, ptr @a
 
 ; CHECK-ALIAS: @1 = private alias { [2 x i32], [24 x i8] }, ptr @b
 ; CHECK-ALIAS: @2 = private alias { [2 x i32], [24 x i8] }, ptr @c
-; CHECK-ALIAS: @3 = private alias { [2 x i32], [24 x i8] }, ptr @d
+; CHECK-ALIAS: @3 = private alias { [2 x i32], [24 x i8] }, ptr @_ZL1d
 
 ; Function Attrs: nounwind sanitize_address uwtable
 define i32 @foo(i32 %M) #0 {
