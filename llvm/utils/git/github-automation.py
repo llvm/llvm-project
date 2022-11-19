@@ -395,7 +395,8 @@ class ReleaseWorkflow:
             args = m.group(2)
 
             if command == 'cherry-pick':
-                return self.create_branch(args.split())
+                args=[arg.rsplit('/')[-1] for arg in args] # extract commit hash from URL if one was provided
+                return self.create_branch(args)
 
             if command == 'branch':
                 m = re.match('([^/]+)/([^/]+)/(.+)', args)
