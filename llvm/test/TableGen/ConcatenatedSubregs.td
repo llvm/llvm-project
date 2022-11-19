@@ -96,12 +96,10 @@ def TestTarget : Target;
 // CHECK-LABEL: SubRegIndex sub2:
 // Check inferred indexes:
 // CHECK-LABEL: SubRegIndex ssub1_ssub2:
-// FIXME: Size should be unknown (65535).
-// CHECK:         Offset, Size: 16, 15
+// CHECK:         Offset, Size: 16, 65535
 // CHECK-LABEL: SubRegIndex ssub3_ssub4:
 // CHECK-LABEL: SubRegIndex ssub0_ssub1_ssub2_ssub3:
-// FIXME: Size should be unknown (65535).
-// CHECK:         Offset, Size: 65535, 30
+// CHECK:         Offset, Size: 65535, 65535
 // CHECK-LABEL: SubRegIndex ssub1_ssub2_ssub3_ssub4:
 
 // Check that all subregs are generated on some examples
