@@ -504,6 +504,7 @@ struct IntrinsicLibrary {
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
+  void genGetCommand(mlir::ArrayRef<fir::ExtendedValue> args);
   void genGetCommandArgument(mlir::ArrayRef<fir::ExtendedValue> args);
   void genGetEnvironmentVariable(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genIall(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -801,6 +802,13 @@ static constexpr IntrinsicHandler handlers[]{
     {"exponent", &I::genExponent},
     {"floor", &I::genFloor},
     {"fraction", &I::genFraction},
+    {"get_command",
+     &I::genGetCommand,
+     {{{"command", asBox, handleDynamicOptional},
+       {"length", asBox, handleDynamicOptional},
+       {"status", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"get_command_argument",
      &I::genGetCommandArgument,
      {{{"number", asValue},
@@ -3184,6 +3192,44 @@ mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genFraction(builder, loc, fir::getBase(args[0])));
+}
+
+// GET_COMMAND
+void IntrinsicLibrary::genGetCommand(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  const fir::ExtendedValue &command = args[0];
+  const fir::ExtendedValue &length = args[1];
+  const fir::ExtendedValue &status = args[2];
+  const fir::ExtendedValue &errmsg = args[3];
+
+  // If none of the optional parameters are present, do nothing.
+  if (!isStaticallyPresent(command) && !isStaticallyPresent(length) &&
+      !isStaticallyPresent(status) && !isStaticallyPresent(errmsg))
+    return;
+
+  mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+  mlir::Value commandBox =
+      isStaticallyPresent(command)
+          ? fir::getBase(command)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value lenBox =
+      isStaticallyPresent(length)
+          ? fir::getBase(length)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value errBox =
+      isStaticallyPresent(errmsg)
+          ? fir::getBase(errmsg)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value stat =
+      fir::runtime::genGetCommand(builder, loc, commandBox, lenBox, errBox);
+  if (isStaticallyPresent(status)) {
+    mlir::Value statAddr = fir::getBase(status);
+    mlir::Value statIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, statAddr);
+    builder.genIfThen(loc, statIsPresentAtRuntime)
+        .genThen([&]() { builder.createStoreWithConvert(loc, stat, statAddr); })
+        .end();
+  }
 }
 
 // GET_COMMAND_ARGUMENT
