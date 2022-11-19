@@ -1194,7 +1194,7 @@ vzeroupper
 # CHECK-NEXT:  1      100   0.25    *                   vdpps	$22, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.33                        vextractf128	$1, %ymm0, %xmm2
 # CHECK-NEXT:  2      8     0.33           *            vextractf128	$1, %ymm0, (%rax)
-# CHECK-NEXT:  1      2     2.00                        vextractps	$1, %xmm0, %ecx
+# CHECK-NEXT:  2      2     2.00                        vextractps	$1, %xmm0, %ecx
 # CHECK-NEXT:  2      5     2.00           *            vextractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      7     0.25                        vhaddpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      14    0.33    *                   vhaddpd	(%rax), %xmm1, %xmm2
