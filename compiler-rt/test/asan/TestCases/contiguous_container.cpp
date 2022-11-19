@@ -48,23 +48,31 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
     // bytes after the end.
     for (; cur != end + kGranularity; ++cur)
       assert(__asan_address_is_poisoned(cur) == poison_buffer);
-    assert(__sanitizer_verify_contiguous_container(beg, mid, end));
-    assert(NULL ==
-           __sanitizer_contiguous_container_find_bad_address(beg, mid, end));
-    size_t distance = (end > RoundDown(end)) ? kGranularity + 1 : 1;
-    if (mid >= beg + distance) {
-      assert(
-          !__sanitizer_verify_contiguous_container(beg, mid - distance, end));
-      assert(mid - distance ==
-             __sanitizer_contiguous_container_find_bad_address(
-                 beg, mid - distance, end));
-    }
+  }
 
-    if (mid + distance <= end) {
-      assert(
-          !__sanitizer_verify_contiguous_container(beg, mid + distance, end));
-      assert(mid == __sanitizer_contiguous_container_find_bad_address(
-                        beg, mid + distance, end));
+  for (int i = 0; i <= capacity; i++) {
+    old_mid = mid;
+    mid = beg + i;
+    __sanitizer_annotate_contiguous_container(beg, end, old_mid, mid);
+
+    for (char *cur = std::max(beg, mid - 2 * kGranularity);
+         cur <= std::min(end, mid + 2 * kGranularity); ++cur) {
+      if (cur == mid ||
+          // Any mid in the last unaligned granule is OK, if bytes after the
+          // storage are not poisoned.
+          (!poison_buffer && RoundDown(end) <= std::min(cur, mid))) {
+        assert(__sanitizer_verify_contiguous_container(beg, cur, end));
+        assert(NULL == __sanitizer_contiguous_container_find_bad_address(
+                           beg, cur, end));
+      } else if (cur < mid) {
+        assert(!__sanitizer_verify_contiguous_container(beg, cur, end));
+        assert(cur == __sanitizer_contiguous_container_find_bad_address(
+                          beg, cur, end));
+      } else {
+        assert(!__sanitizer_verify_contiguous_container(beg, cur, end));
+        assert(mid == __sanitizer_contiguous_container_find_bad_address(
+                          beg, cur, end));
+      }
     }
   }
 
