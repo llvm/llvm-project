@@ -242,3 +242,108 @@ id<CompareMethodRequirednessExplicit> compareMethodRequirednessExplicit;
 // expected-note@second.h:* {{but in 'Second' found 'required' method control}}
 id<CompareMethodRequirednessDefault> compareMethodRequirednessDefault; // no error
 #endif
+
+#if defined(FIRST)
+@protocol CompareMatchingProperties
+@property int matchingPropName;
+@end
+
+@protocol ComparePropertyPresence1
+@property int propPresence1;
+@end
+@protocol ComparePropertyPresence2
+@end
+
+@protocol ComparePropertyName
+@property int propNameA;
+@end
+
+@protocol ComparePropertyType
+@property int propType;
+@end
+
+@protocol ComparePropertyOrder
+@property int propOrderX;
+@property int propOrderY;
+@end
+
+@protocol CompareMatchingPropertyAttributes
+@property (nonatomic, assign) int matchingProp;
+@end
+@protocol ComparePropertyAttributes
+@property (nonatomic) int propAttributes;
+@end
+// Edge cases.
+@protocol CompareFirstImplAttribute
+@property int firstImplAttribute;
+@end
+@protocol CompareLastImplAttribute
+// Cannot test with protocols 'direct' attribute because it's not allowed.
+@property (class) int lastImplAttribute;
+@end
+#elif defined(SECOND)
+@protocol CompareMatchingProperties
+@property int matchingPropName;
+@end
+
+@protocol ComparePropertyPresence1
+@end
+@protocol ComparePropertyPresence2
+@property int propPresence2;
+@end
+
+@protocol ComparePropertyName
+@property int propNameB;
+@end
+
+@protocol ComparePropertyType
+@property float propType;
+@end
+
+@protocol ComparePropertyOrder
+@property int propOrderY;
+@property int propOrderX;
+@end
+
+@protocol CompareMatchingPropertyAttributes
+@property (assign, nonatomic) int matchingProp;
+@end
+@protocol ComparePropertyAttributes
+@property (atomic) int propAttributes;
+@end
+// Edge cases.
+@protocol CompareFirstImplAttribute
+@property (readonly) int firstImplAttribute;
+@end
+@protocol CompareLastImplAttribute
+@property int lastImplAttribute;
+@end
+#else
+id<CompareMatchingProperties> compareMatchingProperties;
+id<ComparePropertyPresence1> comparePropertyPresence1;
+// expected-error@first.h:* {{'ComparePropertyPresence1' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property}}
+// expected-note@second.h:* {{but in 'Second' found end of class}}
+id<ComparePropertyPresence2> comparePropertyPresence2;
+// expected-error@first.h:* {{'ComparePropertyPresence2' has different definitions in different modules; first difference is definition in module 'First.Hidden' found end of class}}
+// expected-note@second.h:* {{but in 'Second' found property}}
+id<ComparePropertyName> comparePropertyName;
+// expected-error@first.h:* {{'ComparePropertyName' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'propNameA'}}
+// expected-note@second.h:* {{but in 'Second' found property 'propNameB'}}
+id<ComparePropertyType> comparePropertyType;
+// expected-error@first.h:* {{'ComparePropertyType' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'propType' with type 'int'}}
+// expected-note@second.h:* {{but in 'Second' found property 'propType' with type 'float'}}
+id<ComparePropertyOrder> comparePropertyOrder;
+// expected-error@first.h:* {{'ComparePropertyOrder' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'propOrderX'}}
+// expected-note@second.h:* {{but in 'Second' found property 'propOrderY'}}
+
+id<CompareMatchingPropertyAttributes> compareMatchingPropertyAttributes;
+id<ComparePropertyAttributes> comparePropertyAttributes;
+// expected-error@first.h:* {{'ComparePropertyAttributes' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'propAttributes' with 'nonatomic' attribute}}
+// expected-note@second.h:* {{but in 'Second' found property 'propAttributes' with different 'nonatomic' attribute}}
+id<CompareFirstImplAttribute> compareFirstImplAttribute;
+// expected-error@first.h:* {{'CompareFirstImplAttribute' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'firstImplAttribute' with default 'readonly' attribute}}
+// expected-note@second.h:* {{but in 'Second' found property 'firstImplAttribute' with different 'readonly' attribute}}
+id<CompareLastImplAttribute> compareLastImplAttribute;
+// expected-error@first.h:* {{'CompareLastImplAttribute' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'lastImplAttribute' with 'class' attribute}}
+// expected-note@second.h:* {{but in 'Second' found property 'lastImplAttribute' with different 'class' attribute}}
+#endif

@@ -81,6 +81,7 @@ private:
     Friend,
     FunctionTemplate,
     ObjCMethod,
+    ObjCProperty,
     Other
   };
 
@@ -148,6 +149,15 @@ private:
                                      StringRef SecondModule,
                                      const ObjCMethodDecl *FirstMethod,
                                      const ObjCMethodDecl *SecondMethod) const;
+
+  /// Check if Objective-C properties are the same and diagnose if different.
+  ///
+  /// Returns true if found a mismatch and diagnosed it.
+  bool
+  diagnoseSubMismatchObjCProperty(const NamedDecl *FirstObjCContainer,
+                                  StringRef FirstModule, StringRef SecondModule,
+                                  const ObjCPropertyDecl *FirstProp,
+                                  const ObjCPropertyDecl *SecondProp) const;
 
 private:
   DiagnosticsEngine &Diags;
