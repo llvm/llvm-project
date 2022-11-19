@@ -519,6 +519,8 @@ Windows Support
   ``/guard:cf,nochecks`` in clang-cl) for enabling Control Flow Guard checks
   and generation of address-taken function table.
 
+- Switched from SHA1 to BLAKE3 for PDB type hashing / ``-gcodeview-ghash``
+
 AIX Support
 -----------
 * When using ``-shared``, the clang driver now invokes llvm-nm to create an
