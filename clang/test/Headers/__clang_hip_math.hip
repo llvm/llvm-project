@@ -1479,14 +1479,14 @@ extern "C" __device__ double test_lgamma(double x) {
 
 // DEFAULT-LABEL: @test_llrintf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_rint_f32(float noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi float [[CALL_I]] to i64
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.rint.f32(float [[X:%.*]])
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: @test_llrintf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rint_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[CALL_I]] to i64
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.rint.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long long int test_llrintf(float x) {
@@ -1495,14 +1495,14 @@ extern "C" __device__ long long int test_llrintf(float x) {
 
 // DEFAULT-LABEL: @test_llrint(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_rint_f64(double noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi double [[CALL_I]] to i64
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.rint.f64(double [[X:%.*]])
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: @test_llrint(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rint_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[CALL_I]] to i64
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.rint.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long long int test_llrint(double x) {
@@ -1655,14 +1655,14 @@ extern "C" __device__ double test_logb(double x) {
 
 // DEFAULT-LABEL: @test_lrintf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_rint_f32(float noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi float [[CALL_I]] to i64
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.rint.f32(float [[X:%.*]])
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: @test_lrintf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rint_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[CALL_I]] to i64
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.rint.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long int test_lrintf(float x) {
@@ -1671,14 +1671,14 @@ extern "C" __device__ long int test_lrintf(float x) {
 
 // DEFAULT-LABEL: @test_lrint(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_rint_f64(double noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi double [[CALL_I]] to i64
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.rint.f64(double [[X:%.*]])
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: @test_lrint(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rint_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[CALL_I]] to i64
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.rint.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long int test_lrint(double x) {
@@ -2440,13 +2440,13 @@ extern "C" __device__ double test_rhypot(double x, double y) {
 
 // DEFAULT-LABEL: @test_rintf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_rint_f32(float noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret float [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.rint.f32(float [[X:%.*]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_rintf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rint_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret float [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.rint.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_rintf(float x) {
   return rintf(x);
@@ -2454,13 +2454,13 @@ extern "C" __device__ float test_rintf(float x) {
 
 // DEFAULT-LABEL: @test_rint(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_rint_f64(double noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret double [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.rint.f64(double [[X:%.*]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_rint(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rint_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret double [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.rint.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_rint(double x) {
   return rint(x);
