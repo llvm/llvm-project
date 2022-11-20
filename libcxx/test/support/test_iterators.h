@@ -1285,6 +1285,21 @@ static_assert(std::indirectly_readable<ProxyIterator<int*>>);
 static_assert(std::indirectly_writable<ProxyIterator<int*>, Proxy<int>>);
 static_assert(std::indirectly_writable<ProxyIterator<int*>, Proxy<int&>>);
 
+template <class Iter>
+using Cpp20InputProxyIterator = ProxyIterator<cpp20_input_iterator<Iter>>;
+
+template <class Iter>
+using ForwardProxyIterator = ProxyIterator<forward_iterator<Iter>>;
+
+template <class Iter>
+using BidirectionalProxyIterator = ProxyIterator<bidirectional_iterator<Iter>>;
+
+template <class Iter>
+using RandomAccessProxyIterator = ProxyIterator<random_access_iterator<Iter>>;
+
+template <class Iter>
+using ContiguousProxyIterator = ProxyIterator<contiguous_iterator<Iter>>;
+
 template <class BaseSent>
 struct ProxySentinel {
   BaseSent base_;
