@@ -266,7 +266,7 @@ static ScanResult scanCortexA8Errata657417(InputSection *isec, uint64_t &off,
   }
 
   ScanResult scanRes = {0, 0, nullptr};
-  const uint8_t *buf = isec->rawData.begin();
+  const uint8_t *buf = isec->content().begin();
   // ARMv7-A Thumb 32-bit instructions are encoded 2 consecutive
   // little-endian halfwords.
   const ulittle16_t *instBuf = reinterpret_cast<const ulittle16_t *>(buf + off);
@@ -498,8 +498,8 @@ ARMErr657417Patcher::patchInputSectionDescription(
     while (thumbSym != mapSyms.end()) {
       auto nonThumbSym = std::next(thumbSym);
       uint64_t off = (*thumbSym)->value;
-      uint64_t limit = (nonThumbSym == mapSyms.end()) ? isec->rawData.size()
-                                                      : (*nonThumbSym)->value;
+      uint64_t limit = nonThumbSym == mapSyms.end() ? isec->content().size()
+                                                    : (*nonThumbSym)->value;
 
       while (off < limit) {
         ScanResult sr = scanCortexA8Errata657417(isec, off, limit);

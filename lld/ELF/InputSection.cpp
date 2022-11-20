@@ -59,7 +59,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
   // In order to reduce memory allocation, we assume that mergeable
   // sections are smaller than 4 GiB, which is not an unreasonable
   // assumption as of 2017.
-  if (sectionKind == SectionBase::Merge && rawData.size() > UINT32_MAX)
+  if (sectionKind == SectionBase::Merge && content().size() > UINT32_MAX)
     error(toString(this) + ": section too large");
 
   // The ELF spec states that a value of 0 means the section has
@@ -105,14 +105,15 @@ size_t InputSectionBase::getSize() const {
     return s->getSize();
   if (compressed)
     return size;
-  return rawData.size() - bytesDropped;
+  return content().size() - bytesDropped;
 }
 
 template <class ELFT>
 static void decompressAux(const InputSectionBase &sec, uint8_t *out,
                           size_t size) {
-  auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(sec.rawData.data());
-  auto compressed = sec.rawData.slice(sizeof(typename ELFT::Chdr));
+  auto *hdr =
+      reinterpret_cast<const typename ELFT::Chdr *>(sec.content().data());
+  auto compressed = sec.content().slice(sizeof(typename ELFT::Chdr));
   if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                     ? compression::zlib::decompress(compressed, out, size)
                     : compression::zstd::decompress(compressed, out, size))
@@ -170,7 +171,7 @@ uint64_t SectionBase::getOffset(uint64_t offset) const {
     // Second, InputSection::copyRelocations on .eh_frame. Some pieces may be
     // discarded due to GC/ICF. We should compute the output section offset.
     const EhInputSection *es = cast<EhInputSection>(this);
-    if (!es->rawData.empty())
+    if (!es->content().empty())
       if (InputSection *isec = es->getParent())
         return isec->outSecOff + es->getParentOffset(offset);
     return offset;
@@ -209,12 +210,12 @@ template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
   flags &= ~(uint64_t)SHF_COMPRESSED;
 
   // New-style header
-  if (rawData.size() < sizeof(typename ELFT::Chdr)) {
+  if (content().size() < sizeof(typename ELFT::Chdr)) {
     error(toString(this) + ": corrupted compressed section");
     return;
   }
 
-  auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(rawData.data());
+  auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(content().data());
   if (hdr->ch_type == ELFCOMPRESS_ZLIB) {
     if (!compression::zlib::isAvailable())
       error(toString(this) + " is compressed with ELFCOMPRESS_ZLIB, but lld is "
@@ -356,7 +357,7 @@ template <class ELFT, class RelTy>
 void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
   const TargetInfo &target = *elf::target;
   InputSectionBase *sec = getRelocatedSection();
-  (void)sec->data(); // uncompress if needed
+  (void)sec->contentMaybeDecompress(); // uncompress if needed
 
   for (const RelTy &rel : rels) {
     RelType type = rel.getType(config->isMips64EL);
@@ -409,7 +410,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
       }
 
       int64_t addend = getAddend<ELFT>(rel);
-      const uint8_t *bufLoc = sec->rawData.begin() + rel.r_offset;
+      const uint8_t *bufLoc = sec->content().begin() + rel.r_offset;
       if (!RelTy::IsRela)
         addend = target.getImplicitAddend(bufLoc, type);
 
@@ -1103,8 +1104,8 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
   // If this is a compressed section, uncompress section contents directly
   // to the buffer.
   if (compressed) {
-    auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(rawData.data());
-    auto compressed = rawData.slice(sizeof(typename ELFT::Chdr));
+    auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(content().data());
+    auto compressed = content().slice(sizeof(typename ELFT::Chdr));
     size_t size = this->size;
     if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                       ? compression::zlib::decompress(compressed, buf, size)
@@ -1118,8 +1119,8 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
 
   // Copy section contents from source object file to output file
   // and then apply relocations.
-  memcpy(buf, rawData.data(), rawData.size());
-  relocate<ELFT>(buf, buf + rawData.size());
+  memcpy(buf, content().data(), content().size());
+  relocate<ELFT>(buf, buf + content().size());
 }
 
 void InputSection::replace(InputSection *other) {
@@ -1166,7 +1167,7 @@ template <class ELFT> void EhInputSection::split() {
 
 template <class ELFT, class RelTy>
 void EhInputSection::split(ArrayRef<RelTy> rels) {
-  ArrayRef<uint8_t> d = rawData;
+  ArrayRef<uint8_t> d = content();
   const char *msg = nullptr;
   unsigned relI = 0;
   while (!d.empty()) {
@@ -1190,7 +1191,7 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
 
     // Find the first relocation that points to [off,off+size). Relocations
     // have been sorted by r_offset.
-    const uint64_t off = d.data() - rawData.data();
+    const uint64_t off = d.data() - content().data();
     while (relI != rels.size() && rels[relI].r_offset < off)
       ++relI;
     unsigned firstRel = -1;
@@ -1201,7 +1202,7 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
   }
   if (msg)
     errorOrWarn("corrupted .eh_frame: " + Twine(msg) + "\n>>> defined in " +
-                getObjMsg(d.data() - rawData.data()));
+                getObjMsg(d.data() - content().data()));
 }
 
 // Return the offset in an output section for a given input offset.
@@ -1286,13 +1287,13 @@ void MergeInputSection::splitIntoPieces() {
   assert(pieces.empty());
 
   if (flags & SHF_STRINGS)
-    splitStrings(toStringRef(data()), entsize);
+    splitStrings(toStringRef(contentMaybeDecompress()), entsize);
   else
-    splitNonStrings(data(), entsize);
+    splitNonStrings(contentMaybeDecompress(), entsize);
 }
 
 SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
-  if (rawData.size() <= offset)
+  if (content().size() <= offset)
     fatal(toString(this) + ": offset is outside the section");
   return partition_point(
       pieces, [=](SectionPiece p) { return p.inputOff <= offset; })[-1];

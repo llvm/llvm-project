@@ -101,7 +101,7 @@ ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
     const uint8_t *isecLoc =
         Out::bufferStart
             ? (Out::bufferStart + isec->getParent()->offset + isec->outSecOff)
-            : isec->data().data();
+            : isec->contentMaybeDecompress().data();
     if (isecLoc == nullptr) {
       assert(isa<SyntheticSection>(isec) && "No data but not synthetic?");
       continue;

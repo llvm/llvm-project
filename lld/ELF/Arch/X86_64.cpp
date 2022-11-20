@@ -253,7 +253,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   Relocation &r = is.relocations[rIndex];
 
   // Check if the relocation corresponds to a direct jmp.
-  const uint8_t *secContents = is.rawData.data();
+  const uint8_t *secContents = is.content().data();
   // If it is not a direct jmp instruction, there is nothing to do here.
   if (*(secContents + r.offset - 1) != 0xe9)
     return false;
