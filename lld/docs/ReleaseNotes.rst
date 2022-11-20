@@ -45,6 +45,9 @@ COFF Improvements
   (`D137723 <https://reviews.llvm.org/D137723>`_)
 * Switched from SHA1 to BLAKE3 for PDB type hashing / ``-gcodeview-ghash``
   (`D137101 <https://reviews.llvm.org/D137101>`_)
+* Improvements to the PCH.OBJ files handling. Now LLD behaves the same as MSVC
+  link.exe when merging PCH.OBJ files that don't have the same signature.
+  (`D136762 <https://reviews.llvm.org/D136762>`_)
 
 MinGW Improvements
 ------------------

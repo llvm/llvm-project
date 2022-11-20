@@ -125,18 +125,23 @@ public:
 class PrecompSource : public TpiSource {
 public:
   PrecompSource(COFFLinkerContext &ctx, ObjFile *f) : TpiSource(ctx, PCH, f) {
-    if (!f->pchSignature || !*f->pchSignature)
-      fatal(toString(f) +
-            " claims to be a PCH object, but does not have a valid signature");
-    auto it = ctx.precompSourceMappings.emplace(*f->pchSignature, this);
-    if (!it.second)
-      fatal("a PCH object with the same signature has already been provided (" +
-            toString(it.first->second->file) + " and " + toString(file) + ")");
+    // If the S_OBJNAME record contains the PCH signature, we'll register this
+    // source file right away.
+    registerMapping();
   }
+
+  Error mergeDebugT(TypeMerger *m) override;
 
   void loadGHashes() override;
 
   bool isDependency() const override { return true; }
+
+private:
+  void registerMapping();
+
+  // Whether this precomp OBJ was recorded in the precompSourceMappings map.
+  // Only happens if the file->pchSignature is valid.
+  bool registered = false;
 };
 
 // This class represents the debug type stream of an OBJ file that depends on a
@@ -310,10 +315,15 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
   // When dealing with PCH.OBJ, some indices were already merged.
   unsigned nbHeadIndices = indexMapStorage.size();
 
-  if (auto err = mergeTypeAndIdRecords(
-          m->idTable, m->typeTable, indexMapStorage, types, file->pchSignature))
+  Optional<PCHMergerInfo> pchInfo;
+  if (auto err = mergeTypeAndIdRecords(m->idTable, m->typeTable,
+                                       indexMapStorage, types, pchInfo))
     fatal("codeview::mergeTypeAndIdRecords failed: " +
           toString(std::move(err)));
+  if (pchInfo) {
+    file->pchSignature = pchInfo->PCHSignature;
+    endPrecompIdx = pchInfo->EndPrecompIndex;
+  }
 
   // In an object, there is only one mapping for both types and items.
   tpiMap = indexMapStorage;
@@ -494,14 +504,13 @@ Expected<PrecompSource *> UsePrecompSource::findPrecompMap(ObjFile *file,
         pr.getPrecompFilePath(),
         make_error<pdb::PDBError>(pdb::pdb_error_code::no_matching_pch));
 
-  if (pr.getSignature() != file->pchSignature)
+  // Don't rely on the PCH signature to validate the concordance between the PCH
+  // and the OBJ that uses it. However we do validate here that the
+  // LF_ENDPRECOMP record index lines up with the number of type records
+  // LF_PRECOMP is expecting.
+  if (precomp->endPrecompIdx != pr.getTypesCount())
     return createFileError(
         toString(file),
-        make_error<pdb::PDBError>(pdb::pdb_error_code::no_matching_pch));
-
-  if (pr.getSignature() != *precomp->file->pchSignature)
-    return createFileError(
-        toString(precomp->file),
         make_error<pdb::PDBError>(pdb::pdb_error_code::no_matching_pch));
 
   return precomp;
@@ -539,6 +548,30 @@ Error UsePrecompSource::mergeDebugT(TypeMerger *m) {
     return e;
 
   return TpiSource::mergeDebugT(m);
+}
+
+Error PrecompSource::mergeDebugT(TypeMerger *m) {
+  // In some cases, the S_OBJNAME record doesn't contain the PCH signature.
+  // The signature comes later with the LF_ENDPRECOMP record, so we first need
+  // to merge in all the .PCH.OBJ file type records, before registering below.
+  if (Error e = TpiSource::mergeDebugT(m))
+    return e;
+
+  registerMapping();
+
+  return Error::success();
+}
+
+void PrecompSource::registerMapping() {
+  if (registered)
+    return;
+  if (file->pchSignature && *file->pchSignature) {
+    auto it = ctx.precompSourceMappings.emplace(*file->pchSignature, this);
+    if (!it.second)
+      fatal("a PCH object with the same signature has already been provided (" +
+            toString(it.first->second->file) + " and " + toString(file) + ")");
+    registered = true;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -808,8 +841,14 @@ void PrecompSource::loadGHashes() {
     // Remember the index of the LF_ENDPRECOMP record so it can be excluded from
     // the PDB. There must be an entry in the list of ghashes so that the type
     // indexes of the following records in the /Yc PCH object line up.
-    if (ty.kind() == LF_ENDPRECOMP)
-      endPrecompGHashIdx = ghashIdx;
+    if (ty.kind() == LF_ENDPRECOMP) {
+      EndPrecompRecord endPrecomp;
+      cantFail(TypeDeserializer::deserializeAs<EndPrecompRecord>(
+          const_cast<CVType &>(ty), endPrecomp));
+      file->pchSignature = endPrecomp.getSignature();
+      registerMapping();
+      endPrecompIdx = ghashIdx;
+    }
 
     hashVec.push_back(GloballyHashedType::hashType(ty, hashVec, hashVec));
     isItemIndex.push_back(isIdRecord(ty.kind()));
@@ -819,9 +858,13 @@ void PrecompSource::loadGHashes() {
 }
 
 void UsePrecompSource::loadGHashes() {
-  PrecompSource *pchSrc = findPrecompSource(file, precompDependency);
-  if (!pchSrc)
+  auto e = findPrecompMap(file, precompDependency);
+  if (!e) {
+    warn(toString(e.takeError()));
     return;
+  }
+
+  PrecompSource *pchSrc = *e;
 
   // To compute ghashes of a /Yu object file, we need to build on the ghashes of
   // the /Yc PCH object. After we are done hashing, discard the ghashes from the
