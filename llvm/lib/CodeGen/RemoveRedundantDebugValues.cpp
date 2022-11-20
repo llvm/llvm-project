@@ -89,7 +89,7 @@ static bool reduceDbgValsForwardScan(MachineBasicBlock &MBB) {
 
   for (auto &MI : MBB) {
     if (MI.isDebugValue()) {
-      DebugVariable Var(MI.getDebugVariable(), NoneType(),
+      DebugVariable Var(MI.getDebugVariable(), None,
                         MI.getDebugLoc()->getInlinedAt());
       auto VMI = VariableMap.find(Var);
       // Just stop tracking this variable, until we cover DBG_VALUE_LIST.
