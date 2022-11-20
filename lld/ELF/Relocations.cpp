@@ -480,7 +480,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
   if (pairTy == R_MIPS_NONE)
     return 0;
 
-  const uint8_t *buf = sec->rawData.data();
+  const uint8_t *buf = sec->content().data();
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
 
   // To make things worse, paired relocations might not be contiguous in
@@ -1027,7 +1027,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       expr = fromPlt(expr);
     } else if (!isAbsoluteValue(sym)) {
       expr =
-          target->adjustGotPcExpr(type, addend, sec->rawData.data() + offset);
+          target->adjustGotPcExpr(type, addend, sec->content().data() + offset);
     }
   }
 
@@ -1348,11 +1348,11 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   if (offset == uint64_t(-1))
     return;
 
-  RelExpr expr = target->getRelExpr(type, sym, sec->rawData.data() + offset);
-  int64_t addend =
-      RelTy::IsRela
-          ? getAddend<ELFT>(rel)
-          : target->getImplicitAddend(sec->rawData.data() + rel.r_offset, type);
+  RelExpr expr = target->getRelExpr(type, sym, sec->content().data() + offset);
+  int64_t addend = RelTy::IsRela
+                       ? getAddend<ELFT>(rel)
+                       : target->getImplicitAddend(
+                             sec->content().data() + rel.r_offset, type);
   if (LLVM_UNLIKELY(config->emachine == EM_MIPS))
     addend += computeMipsAddend<ELFT>(rel, expr, sym.isLocal());
   else if (config->emachine == EM_PPC64 && config->isPic && type == R_PPC64_TOC)

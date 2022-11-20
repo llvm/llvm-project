@@ -556,7 +556,7 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
                       Relocation &r, uint32_t &remove) {
   const bool rvc = config->eflags & EF_RISCV_RVC;
   const Symbol &sym = *r.sym;
-  const uint64_t insnPair = read64le(sec.rawData.data() + r.offset);
+  const uint64_t insnPair = read64le(sec.content().data() + r.offset);
   const uint32_t rd = extractBits(insnPair, 32 + 11, 32 + 7);
   const uint64_t dest =
       (r.expr == R_PLT_PC ? sym.getPltVA() : sym.getVA()) + r.addend;
@@ -584,7 +584,7 @@ static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
   uint64_t val = r.sym->getVA(r.addend);
   if (hi20(val) != 0)
     return;
-  uint32_t insn = read32le(sec.rawData.data() + r.offset);
+  uint32_t insn = read32le(sec.content().data() + r.offset);
   switch (r.type) {
   case R_RISCV_TPREL_HI20:
   case R_RISCV_TPREL_ADD:
@@ -728,7 +728,7 @@ void elf::riscvFinalizeRelax(int passes) {
         continue;
 
       auto &rels = sec->relocations;
-      ArrayRef<uint8_t> old = sec->rawData;
+      ArrayRef<uint8_t> old = sec->content();
       size_t newSize =
           old.size() - aux.relocDeltas[sec->relocations.size() - 1];
       size_t writesIdx = 0;
