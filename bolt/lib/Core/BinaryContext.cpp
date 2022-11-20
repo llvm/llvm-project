@@ -1898,7 +1898,7 @@ BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
     }
   }
 
-  return NoneType();
+  return None;
 }
 
 ErrorOr<BinarySection &> BinaryContext::getSectionForAddress(uint64_t Address) {

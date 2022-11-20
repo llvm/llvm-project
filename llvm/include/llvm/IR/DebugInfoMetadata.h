@@ -3675,8 +3675,7 @@ public:
 
   DebugVariable(const DILocalVariable *Var, const DIExpression *DIExpr,
                 const DILocation *InlinedAt)
-      : Variable(Var),
-        Fragment(DIExpr ? DIExpr->getFragmentInfo() : NoneType()),
+      : Variable(Var), Fragment(DIExpr ? DIExpr->getFragmentInfo() : None),
         InlinedAt(InlinedAt) {}
 
   const DILocalVariable *getVariable() const { return Variable; }
@@ -3707,7 +3706,7 @@ template <> struct DenseMapInfo<DebugVariable> {
 
   /// Empty key: no key should be generated that has no DILocalVariable.
   static inline DebugVariable getEmptyKey() {
-    return DebugVariable(nullptr, NoneType(), nullptr);
+    return DebugVariable(nullptr, None, nullptr);
   }
 
   /// Difference in tombstone is that the Optional is meaningful.
