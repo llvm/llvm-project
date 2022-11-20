@@ -210,6 +210,8 @@ void ACInstrumentation::instrumentCallsForAFComputation(
           ->isIntrinsic())
     NumOperands--;
 
+  // Incomplete phi nodes are those that are to be assigned an incoming value
+  // which is no generated yet.
   std::vector<Value *> IncompletePHINodes;
   for (int I = 0; I < NumOperands; ++I) {
     if (getFunctionEnum(
@@ -221,10 +223,13 @@ void ACInstrumentation::instrumentCallsForAFComputation(
                static_cast<Instruction *>(BaseInstruction->getOperand(I))
                        ->getOpcode() == Instruction::PHI &&
                InstructionAFMap.count(BaseInstruction->getOperand(I)) == 0) {
+      // Case when operand is a phi node.
       IncompletePHINodes.push_back(instrumentPhiNodeForAF(
           BaseInstruction->getOperand(I), NumInstrumentedInstructions));
       AFArray.push_back(InstructionAFMap[BaseInstruction->getOperand(I)]);
     } else {
+      // Case for when the operand cannot have an associated AF Object.
+      // eg: When operand is constant.
       AFArray.push_back(
           ConstantPointerNull::get(InstructionBuilder.getPtrTy()));
       IncompletePHINodes.push_back(NULL);
@@ -317,33 +322,46 @@ Value *ACInstrumentation::instrumentSelectForAF(
          static_cast<Instruction *>(OriginalSelInstr)->getOpcode() ==
              Instruction::Select);
 
+  Value *TrueValue = static_cast<SelectInst *>(OriginalSelInstr)->getTrueValue();
+  Value *FalseValue = static_cast<SelectInst *>(OriginalSelInstr)->getFalseValue();
+
   IRBuilder<> InstructionBuilder((*InstructionIterator)->getNextNode());
 
   // Setting the AF Values to propagate for the True and False cases.
-  Value *TrueValue, *FalseValue;
-  if (!(isa<Constant>(
-            static_cast<SelectInst *>(OriginalSelInstr)->getTrueValue()) ||
-        isa<Argument>(
-            static_cast<SelectInst *>(OriginalSelInstr)->getTrueValue())))
-    TrueValue = InstructionAFMap[static_cast<SelectInst *>(OriginalSelInstr)
-                                     ->getTrueValue()];
+  Value *TrueAFValue, *FalseAFValue;
+  if (getFunctionEnum(static_cast<Instruction *>(TrueValue)) != -1) {
+    assert(InstructionAFMap.count(TrueValue) == 1  &&
+           "InstructionAFMap does not contain value for this key.");
+    TrueAFValue = InstructionAFMap[TrueValue];
+  } else if(static_cast<Instruction*>(TrueValue)->getOpcode() == Instruction::PHI &&
+        InstructionAFMap.count(TrueValue) == 0) {
+    instrumentPhiNodeForAF(TrueValue, NumInstrumentedInstructions);
+    assert(InstructionAFMap.count(TrueValue) == 1  &&
+           "InstructionAFMap does not contain value for this key.");
+    TrueAFValue = InstructionAFMap[TrueValue];
+  }
   else
-    TrueValue = ConstantPointerNull::get(InstructionBuilder.getPtrTy());
+    TrueAFValue = ConstantPointerNull::get(InstructionBuilder.getPtrTy());
 
-  if (!(isa<Constant>(
-            static_cast<SelectInst *>(OriginalSelInstr)->getFalseValue()) ||
-        isa<Argument>(
-            static_cast<SelectInst *>(OriginalSelInstr)->getFalseValue())))
-    FalseValue = InstructionAFMap[static_cast<SelectInst *>(OriginalSelInstr)
-                                      ->getFalseValue()];
+  if (getFunctionEnum(static_cast<Instruction *>(FalseValue)) != -1) {
+    assert(InstructionAFMap.count(FalseValue) == 1  &&
+           "InstructionAFMap does not contain value for this key.");
+    FalseAFValue = InstructionAFMap[FalseValue];
+  } else if(static_cast<Instruction*>(FalseValue)->getOpcode() == Instruction::PHI &&
+        InstructionAFMap.count(FalseValue) == 0) {
+    instrumentPhiNodeForAF(FalseValue, NumInstrumentedInstructions);
+    assert(InstructionAFMap.count(FalseValue) == 1  &&
+           "InstructionAFMap does not contain value for this key.");
+    FalseAFValue = InstructionAFMap[FalseValue];
+  }
   else
-    FalseValue = ConstantPointerNull::get(InstructionBuilder.getPtrTy());
+    FalseAFValue = ConstantPointerNull::get(InstructionBuilder.getPtrTy());
 
   // Instrumenting Select instruction, incrementing instrumented instructions
   // and incrementing insert pointer.
   Value *AFSel = InstructionBuilder.CreateSelect(
-      static_cast<SelectInst *>(OriginalSelInstr)->getCondition(), TrueValue,
-      FalseValue);
+      static_cast<SelectInst *>(OriginalSelInstr)->getCondition(), TrueAFValue,
+      FalseAFValue);
   (*NumInstrumentedInstructions)++;
   (*InstructionIterator)++;
 
