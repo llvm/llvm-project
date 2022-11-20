@@ -59,7 +59,6 @@ public:
     DepscanJobClass,
     PreprocessJobClass,
     PrecompileJobClass,
-    HeaderModulePrecompileJobClass,
     ExtractAPIJobClass,
     AnalyzeJobClass,
     MigrateJobClass,
@@ -449,8 +448,7 @@ public:
   PrecompileJobAction(Action *Input, types::ID OutputType);
 
   static bool classof(const Action *A) {
-    return A->getKind() == PrecompileJobClass ||
-           A->getKind() == HeaderModulePrecompileJobClass;
+    return A->getKind() == PrecompileJobClass;
   }
 };
 
