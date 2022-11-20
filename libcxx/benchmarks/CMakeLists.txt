@@ -176,6 +176,7 @@ set(BENCHMARK_TESTS
     algorithms/stable_sort.bench.cpp
     allocation.bench.cpp
     deque.bench.cpp
+    deque_iterator.bench.cpp
     filesystem.bench.cpp
     format_to_n.bench.cpp
     format_to.bench.cpp
