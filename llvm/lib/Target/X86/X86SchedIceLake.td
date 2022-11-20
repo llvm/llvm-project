@@ -672,7 +672,6 @@ def: InstRW<[ICXWriteResGroup3], (instregex "COM(P?)_FST0r",
                                             "(V?)PALIGNR(Y|Z128|Z256)?rri",
                                             "(V?)PERMIL(PD|PS)(Y|Z128|Z256)?ri",
                                             "(V?)PERMIL(PD|PS)(Y|Z128|Z256)?rr",
-                                            "(V?)PACK(U|S)S(DW|WB)(Y|Z|Z128|Z256)?rr",
                                             "(V?)UNPCK(L|H)(PD|PS)(Y|Z128|Z256)?rr")>;
 
 def ICXWriteResGroup4 : SchedWriteRes<[ICXPort6]> {
@@ -848,6 +847,7 @@ def: InstRW<[ICXWriteResGroup32], (instregex "(ADD|SUB|SUBR)_(FPrST0|FST0r|FrST0
                                              "VALIGND(Z|Z128|Z256)rri",
                                              "VALIGNQ(Z|Z128|Z256)rri",
                                              "VPBROADCAST(B|W)rr",
+                                             "(V?)PACK(U|S)S(DW|WB)(Y|Z|Z128|Z256)?rr",
                                              "VP(MAX|MIN)(S|U)Q(Z|Z128|Z256)rr")>;
 
 def ICXWriteResGroup33 : SchedWriteRes<[ICXPort5]> {
@@ -1303,7 +1303,6 @@ def: InstRW<[ICXWriteResGroup92], (instregex "VMOV(SD|SS)Zrm(b?)",
                                              "(V?)PALIGNR(Z128)?rmi",
                                              "(V?)PERMIL(PD|PS)(Z128)?m(b?)i",
                                              "(V?)PERMIL(PD|PS)(Z128)?rm",
-                                             "(V?)PACK(U|S)S(DW|WB)(Z128)?rm",
                                              "(V?)UNPCK(L|H)(PD|PS)(Z128)?rm")>;
 
 def ICXWriteResGroup93 : SchedWriteRes<[ICXPort5,ICXPort01]> {
@@ -1542,7 +1541,6 @@ def: InstRW<[ICXWriteResGroup119], (instregex "FCOM(P?)(32|64)m",
                                               "(V?)PALIGNR(Y|Z256)rmi",
                                               "(V?)PERMIL(PD|PS)(Y|Z256)m(b?)i",
                                               "(V?)PERMIL(PD|PS)(Y|Z256)rm",
-                                              "(V?)PACK(U|S)S(DW|WB)(Y|Z|Z256)rm",
                                               "(V?)UNPCK(L|H)(PD|PS)(Y|Z256)rm")>;
 def: InstRW<[ICXWriteResGroup119], (instrs VPBROADCASTBYrm,
                                            VPBROADCASTWYrm,
@@ -1724,6 +1722,7 @@ def: InstRW<[ICXWriteResGroup136_2], (instregex "VCMP(PD|PS)Z128rm(b?)i",
                                                 "VPCMPQZ128rmi(b?)",
                                                 "VPCMPU(B|D|Q|W)Z128rmi(b?)",
                                                 "VPCMPWZ128rmi(b?)",
+                                                "(V?)PACK(U|S)S(DW|WB)(Z128)?rm",
                                                 "VPTESTMBZ128rm(b?)",
                                                 "VPTESTMDZ128rm(b?)",
                                                 "VPTESTMQZ128rm(b?)",
@@ -1795,6 +1794,7 @@ def: InstRW<[ICXWriteResGroup148_2], (instregex "VCMPPD(Z|Z256)rm(b?)i",
                                                 "VPCMPU(B|D|Q|W)Z256rmi(b?)",
                                                 "VPCMPU(B|D|Q|W)Zrmi(b?)",
                                                 "VPCMPW(Z|Z256)rmi(b?)",
+                                                "(V?)PACK(U|S)S(DW|WB)(Y|Z|Z256)rm",
                                                 "VPTESTM(B|D|Q|W)Z256rm(b?)",
                                                 "VPTESTM(B|D|Q|W)Zrm(b?)",
                                                 "VPTESTNM(B|D|Q|W)Z256rm(b?)",
