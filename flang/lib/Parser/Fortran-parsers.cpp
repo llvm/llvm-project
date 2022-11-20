@@ -384,7 +384,7 @@ TYPE_PARSER(construct<PrivateOrSequence>(Parser<PrivateStmt>{}) ||
 
 // R730 end-type-stmt -> END TYPE [type-name]
 TYPE_PARSER(construct<EndTypeStmt>(
-    recovery("END TYPE" >> maybe(name), endStmtErrorRecovery)))
+    recovery("END TYPE" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R731 sequence-stmt -> SEQUENCE
 TYPE_PARSER(construct<SequenceStmt>("SEQUENCE"_tok))
@@ -607,7 +607,7 @@ TYPE_PARSER(
     construct<Enumerator>(namedConstant, maybe("=" >> scalarIntConstantExpr)))
 
 // R763 end-enum-stmt -> END ENUM
-TYPE_PARSER(recovery("END ENUM"_tok, "END" >> SkipPast<'\n'>{}) >>
+TYPE_PARSER(recovery("END ENUM"_tok, constructEndStmtErrorRecovery) >>
     construct<EndEnumStmt>())
 
 // R801 type-declaration-stmt ->

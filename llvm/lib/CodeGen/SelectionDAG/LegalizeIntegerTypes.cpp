@@ -2870,14 +2870,28 @@ void DAGTypeLegalizer::ExpandIntRes_MINMAX(SDNode *N,
   ISD::CondCode CondC;
   std::tie(CondC, LoOpc) = getExpandedMinMaxOps(N->getOpcode());
 
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
   // Expand the subcomponents.
   SDValue LHSL, LHSH, RHSL, RHSH;
-  GetExpandedInteger(N->getOperand(0), LHSL, LHSH);
-  GetExpandedInteger(N->getOperand(1), RHSL, RHSH);
+  GetExpandedInteger(LHS, LHSL, LHSH);
+  GetExpandedInteger(RHS, RHSL, RHSH);
 
   // Value types
   EVT NVT = LHSL.getValueType();
   EVT CCT = getSetCCResultType(NVT);
+
+  // If the upper halves are all sign bits, then we can perform the MINMAX on
+  // the lower half and sign-extend the result to the upper half.
+  unsigned NumHalfBits = NVT.getScalarSizeInBits();
+  if (DAG.ComputeNumSignBits(LHS) > NumHalfBits &&
+      DAG.ComputeNumSignBits(RHS) > NumHalfBits) {
+    Lo = DAG.getNode(N->getOpcode(), DL, NVT, LHSL, RHSL);
+    Hi = DAG.getNode(ISD::SRA, DL, NVT, Lo,
+                     DAG.getShiftAmountConstant(NumHalfBits - 1, NVT, DL));
+    return;
+  }
 
   // Hi part is always the same op
   Hi = DAG.getNode(N->getOpcode(), DL, NVT, {LHSH, RHSH});

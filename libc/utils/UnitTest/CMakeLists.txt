@@ -69,3 +69,18 @@ add_dependencies(
   libc.src.stdio.printf_core.core_structs
   libc.utils.UnitTest.string_utils
 )
+
+add_library(
+  LibcScanfHelpers
+    ScanfMatcher.h
+    ScanfMatcher.cpp
+)
+target_include_directories(LibcScanfHelpers PUBLIC ${LIBC_SOURCE_DIR})
+target_link_libraries(LibcScanfHelpers LibcUnitTest)
+add_dependencies(
+  LibcScanfHelpers
+  LibcUnitTest
+  libc.src.__support.FPUtil.fp_bits
+  libc.src.stdio.scanf_core.core_structs
+  libc.utils.UnitTest.string_utils
+)

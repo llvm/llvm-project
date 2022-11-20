@@ -968,9 +968,9 @@ value llvm_string_of_const(LLVMValueRef Const) {
   return cstr_to_string_option(CStr, Len);
 }
 
-/* llvalue -> int -> llvalue */
-LLVMValueRef llvm_const_element(LLVMValueRef Const, value N) {
-  return LLVMGetElementAsConstant(Const, Int_val(N));
+/* llvalue -> int -> llvalue option */
+value llvm_aggregate_element(LLVMValueRef Const, value N) {
+  return ptr_to_option(LLVMGetAggregateElement(Const, Int_val(N)));
 }
 
 /*--... Constant expressions ...............................................--*/
@@ -995,9 +995,10 @@ LLVMValueRef llvm_const_gep(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
 }
 
 /* llvalue -> llvalue array -> llvalue */
-LLVMValueRef llvm_const_in_bounds_gep(LLVMValueRef ConstantVal, value Indices) {
-  return LLVMConstInBoundsGEP(ConstantVal, (LLVMValueRef *)Op_val(Indices),
-                              Wosize_val(Indices));
+LLVMValueRef llvm_const_in_bounds_gep(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                                      value Indices) {
+  return LLVMConstInBoundsGEP2(Ty, ConstantVal, (LLVMValueRef *)Op_val(Indices),
+                               Wosize_val(Indices));
 }
 
 /* llvalue -> lltype -> is_signed:bool -> llvalue */

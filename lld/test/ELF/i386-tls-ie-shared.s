@@ -4,7 +4,7 @@
 // RUN: ld.lld -shared -soname=t.so %tso.o -o %tso
 // RUN: ld.lld -shared %t.o %tso -o %t1
 // RUN: llvm-readobj -S -r -d %t1 | FileCheck --check-prefix=GOTRELSHARED %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASMSHARED %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASMSHARED %s
 
 // GOTRELSHARED:     Section {
 // GOTRELSHARED:      Name: .got

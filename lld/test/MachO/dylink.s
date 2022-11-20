@@ -20,7 +20,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/dylink.o
 # RUN: %lld -o %t/dylink -L%t -lhello -lgoodbye %t/dylink.o
-# RUN: llvm-objdump --bind -d --no-show-raw-insn %t/dylink | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --bind -d --no-show-raw-insn %t/dylink | FileCheck %s
 
 # CHECK: movq [[#%u, HELLO_OFF:]](%rip), %rsi
 # CHECK-NEXT: [[#%x, HELLO_RIP:]]:

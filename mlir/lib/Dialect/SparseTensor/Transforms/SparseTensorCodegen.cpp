@@ -31,6 +31,9 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
+// TODO: start using these when insertions are implemented
+// static constexpr uint64_t DimSizesIdx = 0;
+// static constexpr uint64_t DimCursorIdx = 1;
 static constexpr uint64_t MemSizesIdx = 2;
 static constexpr uint64_t FieldsIdx = 3;
 
@@ -632,13 +635,7 @@ public:
                                      filled, index);
     rewriter.create<scf::YieldOp>(loc, fields);
     // Deallocate the buffers on exit of the full loop nest.
-    Operation *parent = op;
-    for (; isa<scf::ForOp>(parent->getParentOp()) ||
-           isa<scf::WhileOp>(parent->getParentOp()) ||
-           isa<scf::ParallelOp>(parent->getParentOp()) ||
-           isa<scf::IfOp>(parent->getParentOp());
-         parent = parent->getParentOp())
-      ;
+    Operation *parent = getTop(op);
     rewriter.setInsertionPointAfter(parent);
     rewriter.create<memref::DeallocOp>(loc, values);
     rewriter.create<memref::DeallocOp>(loc, filled);

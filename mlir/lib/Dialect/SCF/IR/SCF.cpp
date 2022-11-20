@@ -762,13 +762,13 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       return success();
     }
 
-    IntegerAttr step;
-    if (!matchPattern(op.getStep(), m_Constant(&step)))
+    llvm::Optional<llvm::APInt> maybeStepValue = op.getConstantStep();
+    if (!maybeStepValue)
       return failure();
 
     // If the loop is known to have 1 iteration, inline its body and remove the
     // loop.
-    llvm::APInt stepValue = step.getValue();
+    llvm::APInt stepValue = *maybeStepValue;
     if (stepValue.sge(*diff)) {
       SmallVector<Value, 4> blockArgs;
       blockArgs.reserve(op.getNumIterOperands() + 1);
@@ -1063,6 +1063,25 @@ void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.add<ForOpIterArgsFolder, SimplifyTrivialLoops,
               LastTensorLoadCanonicalization, ForOpTensorCastFolder>(context);
+}
+
+Optional<APInt> ForOp::getConstantStep() {
+  IntegerAttr step;
+  if (matchPattern(getStep(), m_Constant(&step)))
+    return step.getValue();
+  return {};
+}
+
+Speculation::Speculatability ForOp::getSpeculatability() {
+  // `scf.for (I = Start; I < End; I += 1)` terminates for all values of Start
+  // and End.
+  if (auto constantStep = getConstantStep())
+    if (*constantStep == 1)
+      return Speculation::RecursivelySpeculatable;
+
+  // For Step != 1, the loop may not terminate.  We can add more smarts here if
+  // needed.
+  return Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//

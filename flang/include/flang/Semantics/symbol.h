@@ -480,6 +480,7 @@ public:
   Symbol *derivedType() { return derivedType_; }
   const Symbol *derivedType() const { return derivedType_; }
   void set_derivedType(Symbol &derivedType);
+  void clear_derivedType();
   void AddUse(const Symbol &);
 
   // Copy in specificProcs, specific, and derivedType from another generic
@@ -558,6 +559,8 @@ public:
   const SourceName &name() const { return name_; }
   Attrs &attrs() { return attrs_; }
   const Attrs &attrs() const { return attrs_; }
+  Attrs &implicitAttrs() { return implicitAttrs_; }
+  const Attrs &implicitAttrs() const { return implicitAttrs_; }
   Flags &flags() { return flags_; }
   const Flags &flags() const { return flags_; }
   bool test(Flag flag) const { return flags_.test(flag); }
@@ -684,6 +687,7 @@ private:
   const Scope *owner_;
   SourceName name_;
   Attrs attrs_;
+  Attrs implicitAttrs_; // subset of attrs_ that were not explicit
   Flags flags_;
   Scope *scope_{nullptr};
   std::size_t size_{0}; // size in bytes

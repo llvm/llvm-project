@@ -7,7 +7,7 @@
 # RUN: %lld -arch arm64 -dylib -install_name @executable_path/libbar.dylib %t/bar.o -o %t/libbar.dylib
 # RUN: %lld -arch arm64 -lSystem %t/libfoo.dylib %t/libbar.dylib %t/test.o -o %t/test
 
-# RUN: llvm-objdump --macho -d --no-show-raw-insn --section="__TEXT,__stubs" --section="__TEXT,__stub_helper" %t/test | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-show-raw-insn --section="__TEXT,__stubs" --section="__TEXT,__stub_helper" %t/test | FileCheck %s
 
 # CHECK:       _main:
 # CHECK-NEXT:  bl 0x[[#%x,FOO:]] ; symbol stub for: _foo

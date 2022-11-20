@@ -313,7 +313,6 @@ defm : SKXWriteResPair<WriteFMAZ, [SKXPort05],  4, [1], 1, 7>;
 defm : SKXWriteResPair<WriteDPPD, [SKXPort5,SKXPort015],  9, [1,2], 3, 6>; // Floating point double dot product.
 defm : SKXWriteResPair<WriteDPPS, [SKXPort5,SKXPort015], 13, [1,3], 4, 6>;
 defm : SKXWriteResPair<WriteDPPSY,[SKXPort5,SKXPort015], 13, [1,3], 4, 7>;
-defm : SKXWriteResPair<WriteDPPSZ,[SKXPort5,SKXPort015], 13, [1,3], 4, 7>;
 defm : SKXWriteResPair<WriteFSign,  [SKXPort0],  1>; // Floating point fabs/fchs.
 defm : SKXWriteResPair<WriteFRnd,   [SKXPort01], 8, [2], 2, 6>; // Floating point rounding.
 defm : SKXWriteResPair<WriteFRndY,  [SKXPort01], 8, [2], 2, 7>;

@@ -31,6 +31,11 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
   // Check that AMDGPU targets add -G1 if it's not present.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "r600"), "e-p:32:32-G1");
   EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64", "amdgcn"), "e-p:64:64-G1");
+
+  // Check that RISCV64 upgrades -n64 to -n32:64.
+  EXPECT_EQ(UpgradeDataLayoutString("e-m:e-p:64:64-i64:64-i128:128-n64-S128",
+                                    "riscv64"),
+            "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
 }
 
 TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {

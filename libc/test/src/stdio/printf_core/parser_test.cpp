@@ -56,7 +56,7 @@ TEST(LlvmLibcPrintfParserTest, EvalRaw) {
 
   expected.raw_string = {str, 4};
 
-  ASSERT_FORMAT_EQ(expected, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
   // TODO: add checks that the format_arr after the last one has length 0
 }
 
@@ -70,20 +70,20 @@ TEST(LlvmLibcPrintfParserTest, EvalSimple) {
 
   expected0.raw_string = {str, 5};
 
-  ASSERT_FORMAT_EQ(expected0, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
 
   expected1.has_conv = true;
 
   expected1.raw_string = {str + 5, 2};
   expected1.conv_name = '%';
 
-  ASSERT_FORMAT_EQ(expected1, format_arr[1]);
+  ASSERT_PFORMAT_EQ(expected1, format_arr[1]);
 
   expected2.has_conv = false;
 
   expected2.raw_string = {str + 7, 5};
 
-  ASSERT_FORMAT_EQ(expected2, format_arr[2]);
+  ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArg) {
@@ -99,7 +99,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArg) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags) {
@@ -121,7 +121,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithWidth) {
@@ -138,7 +138,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithWidth) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision) {
@@ -155,7 +155,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision) {
@@ -172,7 +172,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier) {
@@ -189,7 +189,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
@@ -206,7 +206,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
@@ -229,7 +229,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
@@ -247,7 +247,7 @@ TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   expected0.conv_val_raw = arg1;
   expected0.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected0, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
 
   expected1.has_conv = true;
 
@@ -255,7 +255,7 @@ TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   expected1.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
   expected1.conv_name = 'f';
 
-  ASSERT_FORMAT_EQ(expected1, format_arr[1]);
+  ASSERT_PFORMAT_EQ(expected1, format_arr[1]);
 
   expected2.has_conv = true;
 
@@ -263,7 +263,7 @@ TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   expected2.conv_val_ptr = const_cast<char *>(arg3);
   expected2.conv_name = 's';
 
-  ASSERT_FORMAT_EQ(expected2, format_arr[2]);
+  ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
 #ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
@@ -281,7 +281,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeOneArg) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
@@ -299,7 +299,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
   expected0.conv_val_raw = arg1;
   expected0.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected0, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
 
   expected1.has_conv = true;
 
@@ -307,7 +307,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
   expected1.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
   expected1.conv_name = 'f';
 
-  ASSERT_FORMAT_EQ(expected1, format_arr[1]);
+  ASSERT_PFORMAT_EQ(expected1, format_arr[1]);
 
   expected2.has_conv = true;
 
@@ -315,7 +315,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
   expected2.conv_val_ptr = const_cast<char *>(arg3);
   expected2.conv_name = 's';
 
-  ASSERT_FORMAT_EQ(expected2, format_arr[2]);
+  ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
 TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
@@ -333,7 +333,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
   expected0.conv_val_raw = arg1;
   expected0.conv_name = 'd';
 
-  ASSERT_FORMAT_EQ(expected0, format_arr[0]);
+  ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
 
   expected1.has_conv = true;
 
@@ -341,7 +341,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
   expected1.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
   expected1.conv_name = 'f';
 
-  ASSERT_FORMAT_EQ(expected1, format_arr[1]);
+  ASSERT_PFORMAT_EQ(expected1, format_arr[1]);
 
   expected2.has_conv = true;
 
@@ -349,7 +349,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
   expected2.conv_val_ptr = const_cast<char *>(arg3);
   expected2.conv_name = 's';
 
-  ASSERT_FORMAT_EQ(expected2, format_arr[2]);
+  ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
 TEST(LlvmLibcPrintfParserTest, IndexModeTenArgsRandom) {
@@ -367,7 +367,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeTenArgsRandom) {
                            static_cast<size_t>(4 + (i >= 9 ? 1 : 0))};
     expected.conv_val_raw = i + 1;
     expected.conv_name = 'd';
-    EXPECT_FORMAT_EQ(expected, format_arr[i]);
+    EXPECT_PFORMAT_EQ(expected, format_arr[i]);
   }
 }
 
@@ -388,7 +388,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
 
   expected0.raw_string = {str, 12};
 
-  EXPECT_FORMAT_EQ(expected0, format_arr[0]);
+  EXPECT_PFORMAT_EQ(expected0, format_arr[0]);
 
   expected1.has_conv = true;
 
@@ -397,26 +397,26 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected1.conv_val_raw = arg3;
   expected1.conv_name = 'u';
 
-  EXPECT_FORMAT_EQ(expected1, format_arr[1]);
+  EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
 
   expected2.has_conv = false;
 
   expected2.raw_string = {str + 18, 1};
 
-  EXPECT_FORMAT_EQ(expected2, format_arr[2]);
+  EXPECT_PFORMAT_EQ(expected2, format_arr[2]);
 
   expected3.has_conv = true;
 
   expected3.raw_string = {str + 19, 2};
   expected3.conv_name = '%';
 
-  EXPECT_FORMAT_EQ(expected3, format_arr[3]);
+  EXPECT_PFORMAT_EQ(expected3, format_arr[3]);
 
   expected4.has_conv = false;
 
   expected4.raw_string = {str + 21, 1};
 
-  EXPECT_FORMAT_EQ(expected4, format_arr[4]);
+  EXPECT_PFORMAT_EQ(expected4, format_arr[4]);
 
   expected5.has_conv = true;
 
@@ -426,13 +426,13 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected5.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
   expected5.conv_name = 'f';
 
-  EXPECT_FORMAT_EQ(expected5, format_arr[5]);
+  EXPECT_PFORMAT_EQ(expected5, format_arr[5]);
 
   expected6.has_conv = false;
 
   expected6.raw_string = {str + 30, 1};
 
-  EXPECT_FORMAT_EQ(expected6, format_arr[6]);
+  EXPECT_PFORMAT_EQ(expected6, format_arr[6]);
 
   expected7.has_conv = true;
 
@@ -442,13 +442,13 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected7.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
   expected7.conv_name = 'f';
 
-  EXPECT_FORMAT_EQ(expected7, format_arr[7]);
+  EXPECT_PFORMAT_EQ(expected7, format_arr[7]);
 
   expected8.has_conv = false;
 
   expected8.raw_string = {str + 40, 1};
 
-  EXPECT_FORMAT_EQ(expected8, format_arr[8]);
+  EXPECT_PFORMAT_EQ(expected8, format_arr[8]);
 
   expected9.has_conv = true;
 
@@ -458,7 +458,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected9.conv_val_raw = arg1;
   expected9.conv_name = 'c';
 
-  EXPECT_FORMAT_EQ(expected9, format_arr[9]);
+  EXPECT_PFORMAT_EQ(expected9, format_arr[9]);
 }
 
 #endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE

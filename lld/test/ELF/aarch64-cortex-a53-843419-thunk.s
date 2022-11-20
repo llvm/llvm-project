@@ -5,7 +5,7 @@
 // RUN:          .text2 0x8010000 : { *(.text.04) } } " > %t.script
 // RUN: ld.lld --script %t.script -fix-cortex-a53-843419 -verbose %t.o -o %t2 \
 // RUN:   2>&1 | FileCheck -check-prefix=CHECK-PRINT %s
-// RUN: llvm-objdump --no-show-raw-insn --triple=aarch64-linux-gnu -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --triple=aarch64-linux-gnu -d %t2 | FileCheck %s
 
 /// %t2 is 128 Megabytes, so delete it early.
 // RUN: rm %t2

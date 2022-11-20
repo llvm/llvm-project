@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
 # RUN:         %S/Inputs/mips-dynamic.s -o %t2.o
 # RUN: ld.lld %t1.o %t2.o -o %t.exe
-# RUN: llvm-objdump -d --no-show-raw-insn %t.exe | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.exe | FileCheck %s
 
   .global  __start
 __start:

@@ -1,5 +1,5 @@
-# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu -x86-pad-max-prefix-size=0 %s | llvm-objdump -d - | FileCheck %s --check-prefix=NOPAD
-# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu -x86-pad-max-prefix-size=0 -x86-pad-for-align=1 %s | llvm-objdump -d - | FileCheck %s
+# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu -x86-pad-max-prefix-size=0 %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefix=NOPAD
+# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu -x86-pad-max-prefix-size=0 -x86-pad-for-align=1 %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 # This test exercises only the padding via relaxation logic.  The  interaction
 # etween prefix padding and relaxation logic can be seen in align-via-padding.s

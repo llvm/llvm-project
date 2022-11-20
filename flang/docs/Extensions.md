@@ -478,3 +478,15 @@ end module
   standard and not allowed by most other compilers.
   If the `USE`-associated entity of the same name is not a procedure,
   most compilers disallow it as well.
+
+* Fortran 2018 19.3.4p1: "A component name has the scope of its derived-type
+  definition.  Outside the type definition, it may also appear ..." which
+  seems to imply that within its derived-type definition, a component
+  name is in its scope, and at least shadows any entity of the same name
+  in the enclosing scope and might be read, thanks to the "also", to mean
+  that a "bare" reference to the name could be used in a specification inquiry.
+  However, most other compilers do not allow a component to shadow exterior
+  symbols, much less appear in specification inquiries, and there are
+  application codes that expect exterior symbols whose names match
+  components to be visible in a derived-type definition's default initialization
+  expressions, and so f18 follows that precedent.

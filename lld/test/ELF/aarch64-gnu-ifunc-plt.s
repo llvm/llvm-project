@@ -3,7 +3,7 @@
 // RUN: ld.lld %t1.o --shared --soname=t.so -o %t.so
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
 // RUN: ld.lld --hash-style=sysv %t.so %t.o -o %tout
-// RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
 // RUN: llvm-readobj --dynamic-table -r %tout | FileCheck %s
 
@@ -11,7 +11,7 @@
 // RUN: ld.lld %t1.be.o --shared --soname=t.so -o %t.be.so
 // RUN: llvm-mc -filetype=obj -triple=aarch64_be %s -o %t.be.o
 // RUN: ld.lld --hash-style=sysv %t.be.so %t.be.o -o %t.be
-// RUN: llvm-objdump -d --no-show-raw-insn %t.be | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.be | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %t.be | FileCheck %s --check-prefix=GOTPLT_BE
 // RUN: llvm-readobj --dynamic-table -r %t.be | FileCheck %s
 

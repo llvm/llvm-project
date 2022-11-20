@@ -336,6 +336,16 @@ define void @store_to_constant() {
   ret void
 }
 
+; We can't delete stores to readonly noalias pointers yet.
+define void @store_to_readonly_noalias(ptr readonly noalias %0) {
+; CHECK-LABEL: @store_to_readonly_noalias(
+; CHECK-NEXT:    store i32 3, ptr [[TMP0:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 3, ptr %0, align 4
+  ret void
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}

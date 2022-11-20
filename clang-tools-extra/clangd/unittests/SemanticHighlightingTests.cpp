@@ -887,6 +887,17 @@ sizeof...($TemplateParameter[[Elements]]);
         $TemplateParameter[[T]] $Variable_def[[x]] = {};
         template <>
         int $Variable_def[[x]]<int> = (int)sizeof($Class[[Base]]);
+      )cpp",
+      // no crash
+      R"cpp(
+        struct $Class_def[[Foo]] {
+          void $Method_decl[[foo]]();
+        };
+
+        void $Function_def[[s]]($Class[[Foo]] $Parameter_def[[f]]) {
+          auto $LocalVariable_def[[k]] = &$Class[[Foo]]::$Method[[foo]];
+          ($Parameter[[f]].*$LocalVariable[[k]])(); // no crash on VisitCXXMemberCallExpr
+        }
       )cpp"};
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.

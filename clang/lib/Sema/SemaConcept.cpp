@@ -408,6 +408,7 @@ bool Sema::CheckConstraintSatisfaction(
     OutSatisfaction = *Cached;
     return false;
   }
+
   auto Satisfaction =
       std::make_unique<ConstraintSatisfaction>(Template, FlattenedArgs);
   if (::CheckConstraintSatisfaction(*this, Template, ConstraintExprs,
@@ -415,6 +416,21 @@ bool Sema::CheckConstraintSatisfaction(
                                     TemplateIDRange, *Satisfaction)) {
     return true;
   }
+
+  if (auto *Cached = SatisfactionCache.FindNodeOrInsertPos(ID, InsertPos)) {
+    // The evaluation of this constraint resulted in us trying to re-evaluate it
+    // recursively. This isn't really possible, except we try to form a
+    // RecoveryExpr as a part of the evaluation.  If this is the case, just
+    // return the 'cached' version (which will have the same result), and save
+    // ourselves the extra-insert. If it ever becomes possible to legitimately
+    // recursively check a constraint, we should skip checking the 'inner' one
+    // above, and replace the cached version with this one, as it would be more
+    // specific.
+    OutSatisfaction = *Cached;
+    return false;
+  }
+
+  // Else we can simply add this satisfaction to the list.
   OutSatisfaction = *Satisfaction;
   // We cannot use InsertPos here because CheckConstraintSatisfaction might have
   // invalidated it.
@@ -1284,6 +1300,20 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
                                   NamedDecl *D2,
                                   MutableArrayRef<const Expr *> AC2,
                                   bool &Result) {
+  if (const auto *FD1 = dyn_cast<FunctionDecl>(D1)) {
+    auto IsExpectedEntity = [](const FunctionDecl *FD) {
+      FunctionDecl::TemplatedKind Kind = FD->getTemplatedKind();
+      return Kind == FunctionDecl::TK_NonTemplate ||
+             Kind == FunctionDecl::TK_FunctionTemplate;
+    };
+    const auto *FD2 = dyn_cast<FunctionDecl>(D2);
+    (void)IsExpectedEntity;
+    (void)FD2;
+    assert(IsExpectedEntity(FD1) && FD2 && IsExpectedEntity(FD2) &&
+           "use non-instantiated function declaration for constraints partial "
+           "ordering");
+  }
+
   if (AC1.empty()) {
     Result = AC2.empty();
     return false;

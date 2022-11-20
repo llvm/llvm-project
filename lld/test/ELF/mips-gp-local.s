@@ -7,7 +7,7 @@
 # RUN:         . = 0x30000; .got :  { *(.got) } \
 # RUN:       }" > %t.script
 # RUN: ld.lld --script %t.script -o %t.exe %t.o
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d -t --no-show-raw-insn %t.exe | FileCheck %s
 
 # CHECK: 00037ff0 l .got  00000000 .hidden _gp
 # CHECK: 00011000 g .text 00000000 __start

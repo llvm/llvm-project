@@ -29,8 +29,8 @@
 // DECLS-FOR-EXTERN: [[FN1_TYPES]] = !{[[X_TYPE:![0-9]+]],
 // DECLS-FOR-EXTERN: [[X_TYPE]] = !DIDerivedType(tag: DW_TAG_typedef, name: "x",
 // DECLS-FOR-EXTERN-SAME: baseType: [[INT_TYPE]])
-// DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "memcmp"
-// DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "__some_reserved_name"
+// DECLS-FOR-EXTERN: !DISubprogram(name: "memcmp"
+// DECLS-FOR-EXTERN: !DISubprogram(name: "__some_reserved_name"
 
 // NO-DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "fn1"
 // NO-DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "memcmp"

@@ -177,6 +177,9 @@ void genDenseTensorOrSparseConstantIterLoop(
 void sizesFromSrc(OpBuilder &builder, SmallVector<Value, 4> &sizes,
                   Location loc, Value src);
 
+/// Scans to top of generated loop.
+Operation *getTop(Operation *op);
+
 //===----------------------------------------------------------------------===//
 // Inlined constant generators.
 //

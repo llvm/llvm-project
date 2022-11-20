@@ -10,7 +10,7 @@
 // RUN:               } " > %t.script
 // RUN: ld.lld -n --script %t.script %t.o -o %t
 // RUN: llvm-readobj --symbols %t | FileCheck %s --check-prefix=SYMS
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-eabi %t | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv7a-none-eabi %t | FileCheck %s
 
 /// Test the various legal cases for the R_ARM_LDR_PC_G0 relocation
 /// Range is +- 4095 bytes

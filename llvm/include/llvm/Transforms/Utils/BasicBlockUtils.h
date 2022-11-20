@@ -575,10 +575,11 @@ bool SplitIndirectBrCriticalEdges(Function &F, bool IgnoreBlocksWithoutPHI,
 ///    may have additional information which simplifies this fixup. For example,
 ///    see restoreSSA() in the UnifyLoopExits pass.
 BasicBlock *CreateControlFlowHub(DomTreeUpdater *DTU,
-                                 SmallVectorImpl<BasicBlock *> &GuardBlocks,
-                                 const SetVector<BasicBlock *> &Predecessors,
-                                 const SetVector<BasicBlock *> &Successors,
-                                 const StringRef Prefix);
+    SmallVectorImpl<BasicBlock *> &GuardBlocks,
+    const SetVector<BasicBlock *> &Predecessors,
+    const SetVector<BasicBlock *> &Successors,
+    const StringRef Prefix,
+    Optional<unsigned> MaxControlFlowBooleans = None);
 
 } // end namespace llvm
 

@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-objdump -d %t | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s
  .syntax unified
  .global _start, foo
  .type _start, %function

@@ -1,0 +1,25 @@
+//===------ LangOptions.def - Code generation option database ----- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the language dialect options. Users of this file
+// must define the LANGOPT macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+#ifndef LANGOPT
+#  error Define the LANGOPT macro to handle language options
+#endif
+
+#ifndef ENUM_LANGOPT
+#  define ENUM_LANGOPT(Name, Type, Bits, Default) \
+LANGOPT(Name, Bits, Default)
+#endif
+
+ENUM_LANGOPT(FPContractMode, FPModeKind, 2, FPM_Off) ///< FP Contract Mode (off/fast)
+
+#undef LANGOPT
+#undef ENUM_LANGOPT

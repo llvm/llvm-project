@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=aarch64-none-linux-gnu -filetype=obj < %s -o - | \
-// RUN:   llvm-objdump -r -d - | FileCheck %s
+// RUN:   llvm-objdump --no-print-imm-hex -r -d - | FileCheck %s
 
   // TLS add TPREL
   add x2, x1, #:tprel_hi12:var

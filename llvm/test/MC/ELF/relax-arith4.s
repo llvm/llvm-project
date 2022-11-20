@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu %s -o - | llvm-objdump -d - | FileCheck  %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu %s -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck  %s
 
 // Test for proper instruction relaxation behavior for the push $imm
 // instruction forms. This is the 32-bit version of the push $imm tests from

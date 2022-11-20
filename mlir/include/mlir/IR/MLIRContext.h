@@ -98,9 +98,6 @@ public:
         }));
   }
 
-  /// Return true if the given dialect is currently loading.
-  bool isDialectLoading(StringRef dialectNamespace);
-
   /// Load a dialect in the context.
   template <typename Dialect>
   void loadDialect() {
@@ -239,6 +236,9 @@ public:
   llvm::hash_code getRegistryHash();
 
 private:
+  /// Return true if the given dialect is currently loading.
+  bool isDialectLoading(StringRef dialectNamespace);
+
   const std::unique_ptr<MLIRContextImpl> impl;
 
   MLIRContext(const MLIRContext &) = delete;

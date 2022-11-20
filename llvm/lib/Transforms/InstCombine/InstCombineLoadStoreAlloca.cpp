@@ -39,8 +39,8 @@ STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 /// the alloca, and if the source pointer is a pointer to a constant global, we
 /// can optimize this.
 static bool
-isOnlyCopiedFromConstantMemory(AAResults *AA,
-                               Value *V, MemTransferInst *&TheCopy,
+isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
+                               MemTransferInst *&TheCopy,
                                SmallVectorImpl<Instruction *> &ToDelete) {
   // We track lifetime intrinsics as we encounter them.  If we decide to go
   // ahead and replace the value with the global, this lets the caller quickly
@@ -85,11 +85,12 @@ isOnlyCopiedFromConstantMemory(AAResults *AA,
         if (IsArgOperand && Call->isInAllocaArgument(DataOpNo))
           return false;
 
-        // If this is a readonly/readnone call site, then we know it is just a
-        // load (but one that potentially returns the value itself), so we can
+        // If this call site doesn't modify the memory, then we know it is just
+        // a load (but one that potentially returns the value itself), so we can
         // ignore it if we know that the value isn't captured.
-        if (Call->onlyReadsMemory() &&
-            (Call->use_empty() || Call->doesNotCapture(DataOpNo)))
+        bool NoCapture = Call->doesNotCapture(DataOpNo);
+        if ((Call->onlyReadsMemory() && (Call->use_empty() || NoCapture)) ||
+            (Call->onlyReadsMemory(DataOpNo) && NoCapture))
           continue;
 
         // If this is being passed as a byval argument, the caller is making a
@@ -111,12 +112,14 @@ isOnlyCopiedFromConstantMemory(AAResults *AA,
       if (!MI)
         return false;
 
+      // If the transfer is volatile, reject it.
+      if (MI->isVolatile())
+        return false;
+
       // If the transfer is using the alloca as a source of the transfer, then
       // ignore it since it is a load (unless the transfer is volatile).
-      if (U.getOperandNo() == 1) {
-        if (MI->isVolatile()) return false;
+      if (U.getOperandNo() == 1)
         continue;
-      }
 
       // If we already have seen a copy, reject the second one.
       if (TheCopy) return false;

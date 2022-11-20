@@ -15,6 +15,7 @@
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/BoxAnalyzer.h"
 #include "flang/Lower/CallInterface.h"
+#include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/Mangler.h"
@@ -431,9 +432,9 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
       const auto *details =
           sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
       if (details->init()) {
-        global = Fortran::lower::createDenseGlobal(
-            loc, symTy, globalName, linkage, isConst, details->init().value(),
-            converter);
+        global = Fortran::lower::tryCreatingDenseGlobal(
+            builder, loc, symTy, globalName, linkage, isConst,
+            details->init().value());
         if (global) {
           global.setVisibility(mlir::SymbolTable::Visibility::Public);
           return global;

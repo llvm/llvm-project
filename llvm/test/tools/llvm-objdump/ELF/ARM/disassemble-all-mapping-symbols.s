@@ -3,8 +3,8 @@
 // mixed Arm/Thumb code would not all be correctly disassembled.
 
 @ RUN: llvm-mc -triple arm-unknown-linux -filetype=obj %s -o %t.o
-@ RUN: llvm-objdump -d %t.o | FileCheck %s
-@ RUN: llvm-objdump -d --disassemble-all %t.o | FileCheck %s
+@ RUN: llvm-objdump --no-print-imm-hex -d %t.o | FileCheck %s
+@ RUN: llvm-objdump --no-print-imm-hex -d --disassemble-all %t.o | FileCheck %s
 
 @ CHECK: 00000000 <armfunc>:
 @ CHECK:        0: e2800001      add     r0, r0, #1

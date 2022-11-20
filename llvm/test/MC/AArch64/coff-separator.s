@@ -1,7 +1,7 @@
 // RUN: llvm-mc -triple aarch64-windows-gnu -filetype obj -o %t.obj %s
-// RUN: llvm-objdump -d %t.obj | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t.obj | FileCheck %s
 // RUN: llvm-mc -triple aarch64-windows-msvc -filetype obj -o %t.obj %s
-// RUN: llvm-objdump -d %t.obj | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t.obj | FileCheck %s
 
 func:
 // Check that the nop instruction after the semicolon also is handled

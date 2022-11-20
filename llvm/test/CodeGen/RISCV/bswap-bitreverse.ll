@@ -1499,19 +1499,17 @@ define i64 @test_bitreverse_bswap_i64(i64 %a) nounwind {
 define i32 @pr55484(i32 %0) {
 ; RV32I-LABEL: pr55484:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    srli a1, a0, 8
-; RV32I-NEXT:    slli a0, a0, 8
-; RV32I-NEXT:    or a0, a1, a0
-; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    slli a1, a0, 8
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: pr55484:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a1, a0, 8
-; RV64I-NEXT:    slli a0, a0, 8
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    slli a1, a0, 40
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
@@ -1533,19 +1531,17 @@ define i32 @pr55484(i32 %0) {
 ;
 ; RV32ZBKB-LABEL: pr55484:
 ; RV32ZBKB:       # %bb.0:
-; RV32ZBKB-NEXT:    srli a1, a0, 8
-; RV32ZBKB-NEXT:    slli a0, a0, 8
-; RV32ZBKB-NEXT:    or a0, a1, a0
-; RV32ZBKB-NEXT:    slli a0, a0, 16
+; RV32ZBKB-NEXT:    slli a1, a0, 8
+; RV32ZBKB-NEXT:    slli a0, a0, 24
+; RV32ZBKB-NEXT:    or a0, a0, a1
 ; RV32ZBKB-NEXT:    srai a0, a0, 16
 ; RV32ZBKB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: pr55484:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    srli a1, a0, 8
-; RV64ZBKB-NEXT:    slli a0, a0, 8
-; RV64ZBKB-NEXT:    or a0, a1, a0
-; RV64ZBKB-NEXT:    slli a0, a0, 48
+; RV64ZBKB-NEXT:    slli a1, a0, 40
+; RV64ZBKB-NEXT:    slli a0, a0, 56
+; RV64ZBKB-NEXT:    or a0, a0, a1
 ; RV64ZBKB-NEXT:    srai a0, a0, 48
 ; RV64ZBKB-NEXT:    ret
   %2 = lshr i32 %0, 8

@@ -17,6 +17,12 @@ define void @constraint_I() {
   ret void
 }
 
+define void @constraint_J() {
+; CHECK: error: value out of range for constraint 'J'
+  tail call void asm sideeffect "addi.w $$a0, $$a0, $$0", "J"(i32 1)
+  ret void
+}
+
 define void @constraint_K() {
 ; CHECK: error: value out of range for constraint 'K'
   tail call void asm sideeffect "andi.w $$a0, $$a0, $0", "K"(i32 4096)

@@ -6,9 +6,9 @@
 # RUN: ld.lld %t.o %t2.so -o %t
 # RUN: ld.lld -shared %t.o %t2.so -o %t.so
 # RUN: llvm-readelf -S -r %t | FileCheck %s --check-prefix=CHECK1
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefixes=DISASM,DISASM1
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s --check-prefixes=DISASM,DISASM1
 # RUN: llvm-readelf -S -r %t.so | FileCheck %s --check-prefix=CHECK2
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s --check-prefixes=DISASM,DISASM2
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck %s --check-prefixes=DISASM,DISASM2
 
 # CHECK1:      Name      Type     Address          Off    Size   ES Flg Lk Inf Al
 # CHECK1:      .plt      PROGBITS 00000000002012e0 0002e0 000030 00 AX   0   0 16

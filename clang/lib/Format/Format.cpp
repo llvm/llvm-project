@@ -214,6 +214,47 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::TrailingCommentsAlignmentKinds> {
+  static void enumeration(IO &IO,
+                          FormatStyle::TrailingCommentsAlignmentKinds &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::TCAS_Leave);
+    IO.enumCase(Value, "Always", FormatStyle::TCAS_Always);
+    IO.enumCase(Value, "Never", FormatStyle::TCAS_Never);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::TrailingCommentsAlignmentStyle> {
+  static void enumInput(IO &IO,
+                        FormatStyle::TrailingCommentsAlignmentStyle &Value) {
+    IO.enumCase(Value, "Leave",
+                FormatStyle::TrailingCommentsAlignmentStyle(
+                    {FormatStyle::TCAS_Leave, 1}));
+
+    IO.enumCase(Value, "Always",
+                FormatStyle::TrailingCommentsAlignmentStyle(
+                    {FormatStyle::TCAS_Always, 1}));
+
+    IO.enumCase(Value, "Never",
+                FormatStyle::TrailingCommentsAlignmentStyle(
+                    {FormatStyle::TCAS_Never, 1}));
+
+    // For backwards compatibility
+    IO.enumCase(Value, "true",
+                FormatStyle::TrailingCommentsAlignmentStyle(
+                    {FormatStyle::TCAS_Always, 1}));
+    IO.enumCase(Value, "false",
+                FormatStyle::TrailingCommentsAlignmentStyle(
+                    {FormatStyle::TCAS_Never, 1}));
+  }
+
+  static void mapping(IO &IO,
+                      FormatStyle::TrailingCommentsAlignmentStyle &Value) {
+    IO.mapOptional("Kind", Value.Kind);
+    IO.mapOptional("OverEmptyLines", Value.OverEmptyLines);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::ArrayInitializerAlignmentStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::ArrayInitializerAlignmentStyle &Value) {
@@ -1194,7 +1235,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignAfterOpenBracket = FormatStyle::BAS_Align;
   LLVMStyle.AlignArrayOfStructures = FormatStyle::AIAS_None;
   LLVMStyle.AlignOperands = FormatStyle::OAS_Align;
-  LLVMStyle.AlignTrailingComments = true;
   LLVMStyle.AlignConsecutiveAssignments = {};
   LLVMStyle.AlignConsecutiveAssignments.Enabled = false;
   LLVMStyle.AlignConsecutiveAssignments.AcrossEmptyLines = false;
@@ -1204,6 +1244,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignConsecutiveBitFields = {};
   LLVMStyle.AlignConsecutiveDeclarations = {};
   LLVMStyle.AlignConsecutiveMacros = {};
+  LLVMStyle.AlignTrailingComments = {};
+  LLVMStyle.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
+  LLVMStyle.AlignTrailingComments.OverEmptyLines = 0;
   LLVMStyle.AllowAllArgumentsOnNextLine = true;
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
   LLVMStyle.AllowShortEnumsOnASingleLine = true;
@@ -1463,7 +1506,8 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   if (Language == FormatStyle::LK_Java) {
     GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;
-    GoogleStyle.AlignTrailingComments = false;
+    GoogleStyle.AlignTrailingComments = {};
+    GoogleStyle.AlignTrailingComments.Kind = FormatStyle::TCAS_Never;
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
     GoogleStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
@@ -1611,7 +1655,8 @@ FormatStyle getWebKitStyle() {
   Style.AccessModifierOffset = -4;
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
   Style.AlignOperands = FormatStyle::OAS_DontAlign;
-  Style.AlignTrailingComments = false;
+  Style.AlignTrailingComments = {};
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Never;
   Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
   Style.BreakBeforeBraces = FormatStyle::BS_WebKit;

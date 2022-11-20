@@ -105,6 +105,10 @@ static MCTargetStreamer * createAMDGPUObjectTargetStreamer(
   return new AMDGPUTargetELFStreamer(S, STI);
 }
 
+static MCTargetStreamer *createAMDGPUNullTargetStreamer(MCStreamer &S) {
+  return new AMDGPUTargetStreamer(S);
+}
+
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                     std::unique_ptr<MCObjectWriter> &&OW,
@@ -172,4 +176,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTargetMC() {
                                             createAMDGPUAsmTargetStreamer);
   TargetRegistry::RegisterObjectTargetStreamer(
       getTheGCNTarget(), createAMDGPUObjectTargetStreamer);
+  TargetRegistry::RegisterNullTargetStreamer(getTheGCNTarget(),
+                                             createAMDGPUNullTargetStreamer);
 }

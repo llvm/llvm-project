@@ -83,4 +83,8 @@ subroutine test
   call implicit(null())
   !ERROR: Null pointer argument requires an explicit interface
   call implicit(null(mold=ip0))
+  !ERROR: A NULL() pointer is not allowed for 'x=' intrinsic argument
+  print *, sin(null(rp0))
+  !ERROR: A NULL() pointer is not allowed for 'source=' intrinsic argument
+  print *, transfer(null(rp0),ip0)
 end subroutine test

@@ -6,12 +6,12 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/ledef.s -o %tdef.o
 # RUN: ld.lld %texec.o -o %t.exec
 # RUN: ld.lld %tshared.o -o %t.shared --shared
-# RUN: llvm-objdump -d %t.exec | FileCheck %s --check-prefix=EXEC
-# RUN: llvm-objdump -d %t.shared | FileCheck %s --check-prefix=SHARED
+# RUN: llvm-objdump --no-print-imm-hex -d %t.exec | FileCheck %s --check-prefix=EXEC
+# RUN: llvm-objdump --no-print-imm-hex -d %t.shared | FileCheck %s --check-prefix=SHARED
 
 ## An undefined weak TLS symbol does not fetch a lazy definition.
 # RUN: ld.lld %texec.o --start-lib %tdef.o --end-lib -o %tlazy
-# RUN: llvm-objdump -d %tlazy | FileCheck %s --check-prefix=EXEC
+# RUN: llvm-objdump --no-print-imm-hex -d %tlazy | FileCheck %s --check-prefix=EXEC
 
 ## Undefined TLS symbols arbitrarily resolve to 0.
 # EXEC:   leaq 16(%rax), %rdx

@@ -1,0 +1,14 @@
+add_libc_unittest(
+  parser_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    parser_test.cpp
+  LINK_LIBRARIES
+    LibcScanfHelpers
+  DEPENDS
+    libc.src.stdio.scanf_core.parser
+    libc.src.stdio.scanf_core.core_structs
+    libc.src.__support.CPP.string_view
+    libc.src.__support.arg_list
+)

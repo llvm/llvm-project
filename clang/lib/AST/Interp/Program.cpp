@@ -64,6 +64,7 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   unsigned Sz = Desc->getAllocSize();
   auto *G = new (Allocator, Sz) Global(Desc, /*isStatic=*/true,
                                        /*isExtern=*/false);
+  G->block()->invokeCtor();
   Globals.push_back(G);
 
   // Construct the string in storage.

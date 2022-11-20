@@ -3,7 +3,7 @@
 # RUN: ld.lld -shared %t.o -o %t.so
 # RUN: llvm-readelf -S %t.so | FileCheck --check-prefix=SEC %s
 # RUN: llvm-readobj -r %t.so | FileCheck --check-prefix=REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck %s
 
 # SEC: .got PROGBITS 0000000000002338 000338 000010 00 WA 0 0 8
 

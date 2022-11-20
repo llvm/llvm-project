@@ -43,6 +43,12 @@ void test_I(void) {
   asm volatile ("" :: "I"(-2048));
 }
 
+void test_J(void) {
+// CHECK-LABEL: define{{.*}} void @test_J()
+// CHECK: call void asm sideeffect "", "J"(i32 0)
+  asm volatile ("" :: "J"(0));
+}
+
 void test_K(void) {
 // CHECK-LABEL: define{{.*}} void @test_K()
 // CHECK: call void asm sideeffect "", "K"(i32 4095)

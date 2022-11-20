@@ -11,7 +11,7 @@
 # RUN: llvm-readelf --symbols %t.so | FileCheck -check-prefix=INT-SO %s
 # RUN: llvm-readelf --symbols %S/Inputs/mips-gp-disp.so \
 # RUN:   | FileCheck -check-prefix=EXT-SO %s
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.so | FileCheck --check-prefix=DIS %s
+# RUN: llvm-objdump --no-print-imm-hex -d -t --no-show-raw-insn %t.so | FileCheck --check-prefix=DIS %s
 # RUN: llvm-readelf -r %t.so | FileCheck -check-prefix=REL %s
 
 # INT-SO: 00000000     0 NOTYPE  LOCAL  HIDDEN   ABS _gp_disp

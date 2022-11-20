@@ -1,13 +1,13 @@
-;RUN: llc < %s -mtriple=armv7-none-linux-gnueabi   -mattr=+neon -verify-machineinstrs -filetype=obj | llvm-objdump --triple=armv7-none-linux-gnueabi   -d - | FileCheck %s --check-prefix=ARM
-;RUN: llc < %s -mtriple=thumbv7-none-linux-gnueabi -mattr=+neon -verify-machineinstrs -filetype=obj | llvm-objdump --triple=thumbv7-none-linux-gnueabi -d - | FileCheck %s --check-prefix=THUMB2
-;RUN: llc < %s -mtriple=armv7-none-linux-gnueabi   -mattr=-neon -verify-machineinstrs -filetype=obj | llvm-objdump --triple=armv7-none-linux-gnueabi   -d - | FileCheck %s --check-prefix=NO_NEON
+;RUN: llc < %s -mtriple=armv7-none-linux-gnueabi   -mattr=+neon -verify-machineinstrs -filetype=obj | llvm-objdump --no-print-imm-hex --triple=armv7-none-linux-gnueabi   -d - | FileCheck %s --check-prefix=ARM
+;RUN: llc < %s -mtriple=thumbv7-none-linux-gnueabi -mattr=+neon -verify-machineinstrs -filetype=obj | llvm-objdump --no-print-imm-hex --triple=thumbv7-none-linux-gnueabi -d - | FileCheck %s --check-prefix=THUMB2
+;RUN: llc < %s -mtriple=armv7-none-linux-gnueabi   -mattr=-neon -verify-machineinstrs -filetype=obj | llvm-objdump --no-print-imm-hex --triple=armv7-none-linux-gnueabi   -d - | FileCheck %s --check-prefix=NO_NEON
 ;We want to have both positive and negative checks for thumb1. These checks
 ;are not easy to do in a single pass so we generate the output once to a
 ;temp file and run filecheck twice with different prefixes.
-;RUN: llc < %s -mtriple=thumbv5-none-linux-gnueabi              -verify-machineinstrs -filetype=obj | llvm-objdump --triple=thumbv5-none-linux-gnueabi -d - > %t
+;RUN: llc < %s -mtriple=thumbv5-none-linux-gnueabi              -verify-machineinstrs -filetype=obj | llvm-objdump --no-print-imm-hex --triple=thumbv5-none-linux-gnueabi -d - > %t
 ;RUN: cat %t | FileCheck %s --check-prefix=THUMB1
 ;RUN: cat %t | FileCheck %s --check-prefix=T1POST
-;RUN: llc < %s -mtriple=thumbv8m.base-arm-none-eabi             -verify-machineinstrs -filetype=obj | llvm-objdump --triple=thumbv8m.base-arm-none-eabi -d - > %t
+;RUN: llc < %s -mtriple=thumbv8m.base-arm-none-eabi             -verify-machineinstrs -filetype=obj | llvm-objdump --no-print-imm-hex --triple=thumbv8m.base-arm-none-eabi -d - > %t
 ;RUN: cat %t | FileCheck %s --check-prefix=THUMB1
 ;RUN: cat %t | FileCheck %s --check-prefix=T1POST
 ;RUN: cat %t | FileCheck %s --check-prefix=V8MBASE

@@ -103,7 +103,7 @@ func.func @invariant_affine_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
-    affine.for %arg1 = 0 to 10 {
+    affine.for %arg1 = 0 to 20 {
       affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
           %cf9 = arith.addf %cf8, %cf8 : f32
       }
@@ -112,11 +112,100 @@ func.func @invariant_affine_if() {
 
   // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: %[[CST:.*]] = arith.constant 8.000000e+00 : f32
-  // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 10 {
+  // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 20 {
   // CHECK-NEXT: }
   // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.if #set(%[[ARG]], %[[ARG]]) {
   // CHECK-NEXT: arith.addf %[[CST]], %[[CST]] : f32
+  // CHECK-NEXT: }
+
+  return
+}
+
+// -----
+
+func.func @hoist_affine_for_with_unknown_trip_count(%lb: index, %ub: index) {
+  affine.for %arg0 = 0 to 10 {
+    affine.for %arg1 = %lb to %ub {
+    }
+  }
+
+  // CHECK: @hoist_affine_for_with_unknown_trip_count(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) {
+  // CHECK-NEXT: affine.for %[[ARG2:.*]] = %[[ARG0]] to %[[ARG1]] {
+  // CHECK-NEXT: }
+  // CHECK-NEXT: affine.for %[[ARG3:.*]] = 0 to 10 {
+  // CHECK-NEXT: }
+
+  return
+}
+
+// -----
+
+func.func @hoist_affine_for_with_unknown_trip_count_non_unit_step(%lb: index, %ub: index) {
+  affine.for %arg0 = 0 to 10 {
+    affine.for %arg1 = %lb to %ub step 2 {
+    }
+  }
+
+  // CHECK: @hoist_affine_for_with_unknown_trip_count_non_unit_step(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) {
+  // CHECK-NEXT: affine.for %[[ARG2:.*]] = 0 to 10 {
+  // CHECK-NEXT: affine.for %[[ARG3:.*]] = %[[ARG0]] to %[[ARG1]] step 2 {
+  // CHECK-NEXT: }
+  // CHECK-NEXT: }
+
+  return
+}
+
+// -----
+
+func.func @hoist_scf_for_with_unknown_trip_count_unit_step(%lb: index, %ub: index) {
+  %c1 = arith.constant 1 : index
+  scf.for %arg0 = %lb to %ub step %c1 {
+    scf.for %arg1 = %lb to %ub step %c1 {
+    }
+  }
+
+  // CHECK: @hoist_scf_for_with_unknown_trip_count_unit_step(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) {
+  // CHECK: scf.for %[[ARG2:.*]] = %[[ARG0]] to %[[ARG1]]
+  // CHECK-NEXT: }
+  // CHECK-NEXT: scf.for %[[ARG3:.*]] = %[[ARG0]] to %[[ARG1]]
+  // CHECK-NEXT: }
+
+  return
+}
+
+// -----
+
+func.func @hoist_scf_for_with_unknown_trip_count_non_unit_constant_step(%lb: index, %ub: index) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  scf.for %arg0 = %lb to %ub step %c1 {
+    scf.for %arg1 = %lb to %ub step %c2 {
+    }
+  }
+
+  // CHECK: @hoist_scf_for_with_unknown_trip_count_non_unit_constant_step(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) {
+  // CHECK: scf.for %[[ARG2:.*]] = %[[ARG0]] to %[[ARG1]]
+  // CHECK-NEXT: scf.for %[[ARG3:.*]] = %[[ARG0]] to %[[ARG1]]
+  // CHECK-NEXT: }
+  // CHECK-NEXT: }
+
+  return
+}
+
+// -----
+
+func.func @hoist_scf_for_with_unknown_trip_count_unknown_step(%lb: index, %ub: index, %step: index) {
+  %c1 = arith.constant 1 : index
+  scf.for %arg0 = %lb to %ub step %c1 {
+    scf.for %arg1 = %lb to %ub step %step {
+    }
+  }
+
+  // CHECK: @hoist_scf_for_with_unknown_trip_count_unknown_step(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[STEP:.*]]: index) {
+  // CHECK: scf.for %[[ARG2:.*]] = %[[ARG0]] to %[[ARG1]]
+  // CHECK-NEXT: scf.for %[[ARG3:.*]] = %[[ARG0]] to %[[ARG1]] step %[[STEP]]
+  // CHECK-NEXT: }
   // CHECK-NEXT: }
 
   return

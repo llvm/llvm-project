@@ -313,7 +313,6 @@ defm : X86WriteResPairUnsupported<WriteFMAZ>;
 defm : SKLWriteResPair<WriteDPPD,   [SKLPort5,SKLPort01],  9, [1,2], 3, 6>; // Floating point double dot product.
 defm : SKLWriteResPair<WriteDPPS,   [SKLPort5,SKLPort01], 13, [1,3], 4, 6>;
 defm : SKLWriteResPair<WriteDPPSY,  [SKLPort5,SKLPort01], 13, [1,3], 4, 7>;
-defm : X86WriteResPairUnsupported<WriteDPPSZ>;
 defm : SKLWriteResPair<WriteFSign,   [SKLPort0], 1>; // Floating point fabs/fchs.
 defm : SKLWriteResPair<WriteFRnd,     [SKLPort01], 8, [2], 2, 6>; // Floating point rounding.
 defm : SKLWriteResPair<WriteFRndY,    [SKLPort01], 8, [2], 2, 7>;

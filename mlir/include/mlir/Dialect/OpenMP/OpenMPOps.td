@@ -229,7 +229,7 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
                        Variadic<AnyType>:$allocators_vars,
                        UnitAttr:$nowait);
 
-  let regions = (region SizedRegion<1>:$region);
+  let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
     oilist(`allocate` `(`

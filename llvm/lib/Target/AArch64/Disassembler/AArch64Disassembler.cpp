@@ -271,21 +271,6 @@ static DecodeStatus DecodeSETMemOpInstruction(MCInst &Inst, uint32_t insn,
                                               uint64_t Addr,
                                               const MCDisassembler *Decoder);
 
-static bool Check(DecodeStatus &Out, DecodeStatus In) {
-  switch (In) {
-    case MCDisassembler::Success:
-      // Out stays the same.
-      return true;
-    case MCDisassembler::SoftFail:
-      Out = In;
-      return true;
-    case MCDisassembler::Fail:
-      Out = In;
-      return false;
-  }
-  llvm_unreachable("Invalid DecodeStatus!");
-}
-
 #include "AArch64GenDisassemblerTables.inc"
 #include "AArch64GenInstrInfo.inc"
 

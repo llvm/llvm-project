@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple=i686-pc-win32 -filetype=obj %s -o %t.o
 # RUN: llvm-readobj --codeview %t.o | FileCheck %s
-# RUN: llvm-objdump -d %t.o | FileCheck %s --check-prefix=ASM
+# RUN: llvm-objdump --no-print-imm-hex -d %t.o | FileCheck %s --check-prefix=ASM
 # RUN: llvm-pdbutil dump -symbols %t.o | FileCheck %s --check-prefix=PDB
 	.text
 	.def	 @feat.00;

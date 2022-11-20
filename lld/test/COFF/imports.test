@@ -3,12 +3,12 @@
 #
 # RUN: lld-link /out:%t.exe /entry:main /subsystem:console \
 # RUN:   %p/Inputs/hello64.obj %p/Inputs/std64.lib
-# RUN: llvm-objdump -d %t.exe | FileCheck --check-prefix=TEXT %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t.exe | FileCheck --check-prefix=TEXT %s
 # RUN: llvm-readobj --coff-imports %t.exe | FileCheck -check-prefix=IMPORT %s
 
 # RUN: lld-link /out:%t.exe /entry:main /subsystem:console \
 # RUN:   %p/Inputs/hello64.obj %p/Inputs/std64.lib /include:ExitProcess
-# RUN: llvm-objdump -d %t.exe | FileCheck --check-prefix=TEXT %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t.exe | FileCheck --check-prefix=TEXT %s
 # RUN: llvm-readobj --coff-imports %t.exe | FileCheck -check-prefix=IMPORT %s
 
 TEXT: Disassembly of section .text:

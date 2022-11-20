@@ -213,6 +213,23 @@ bool BitOr(InterpState &S, CodePtr OpPC) {
 
 /// 1) Pops the RHS from the stack.
 /// 2) Pops the LHS from the stack.
+/// 3) Pushes 'LHS ^ RHS' on the stack
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool BitXor(InterpState &S, CodePtr OpPC) {
+  const T &RHS = S.Stk.pop<T>();
+  const T &LHS = S.Stk.pop<T>();
+
+  unsigned Bits = RHS.bitWidth();
+  T Result;
+  if (!T::bitXor(LHS, RHS, Bits, &Result)) {
+    S.Stk.push<T>(Result);
+    return true;
+  }
+  return false;
+}
+
+/// 1) Pops the RHS from the stack.
+/// 2) Pops the LHS from the stack.
 /// 3) Pushes 'LHS % RHS' on the stack (the remainder of dividing LHS by RHS).
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Rem(InterpState &S, CodePtr OpPC) {
@@ -279,6 +296,105 @@ bool Neg(InterpState &S, CodePtr OpPC) {
 
   S.Stk.push<T>(Result);
   return true;
+}
+
+enum class PushVal : bool {
+  No,
+  Yes,
+};
+enum class IncDecOp {
+  Inc,
+  Dec,
+};
+
+template <typename T, IncDecOp Op, PushVal DoPush>
+bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  T Value = Ptr.deref<T>();
+  T Result;
+
+  if constexpr (DoPush == PushVal::Yes)
+    S.Stk.push<T>(Result);
+
+  if constexpr (Op == IncDecOp::Inc) {
+    if (!T::increment(Value, &Result)) {
+      Ptr.deref<T>() = Result;
+      return true;
+    }
+  } else {
+    if (!T::decrement(Value, &Result)) {
+      Ptr.deref<T>() = Result;
+      return true;
+    }
+  }
+
+  // Something went wrong with the previous operation. Compute the
+  // result with another bit of precision.
+  unsigned Bits = Value.bitWidth() + 1;
+  APSInt APResult;
+  if constexpr (Op == IncDecOp::Inc)
+    APResult = ++Value.toAPSInt(Bits);
+  else
+    APResult = --Value.toAPSInt(Bits);
+
+  // Report undefined behaviour, stopping if required.
+  const Expr *E = S.Current->getExpr(OpPC);
+  QualType Type = E->getType();
+  if (S.checkingForUndefinedBehavior()) {
+    SmallString<32> Trunc;
+    APResult.trunc(Result.bitWidth()).toString(Trunc, 10);
+    auto Loc = E->getExprLoc();
+    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    return true;
+  }
+
+  S.CCEDiag(E, diag::note_constexpr_overflow) << APResult << Type;
+  return S.noteUndefinedBehavior();
+}
+
+/// 1) Pops a pointer from the stack
+/// 2) Load the value from the pointer
+/// 3) Writes the value increased by one back to the pointer
+/// 4) Pushes the original (pre-inc) value on the stack.
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Inc(InterpState &S, CodePtr OpPC) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr);
+}
+
+/// 1) Pops a pointer from the stack
+/// 2) Load the value from the pointer
+/// 3) Writes the value increased by one back to the pointer
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool IncPop(InterpState &S, CodePtr OpPC) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr);
+}
+
+/// 1) Pops a pointer from the stack
+/// 2) Load the value from the pointer
+/// 3) Writes the value decreased by one back to the pointer
+/// 4) Pushes the original (pre-dec) value on the stack.
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Dec(InterpState &S, CodePtr OpPC) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr);
+}
+
+/// 1) Pops a pointer from the stack
+/// 2) Load the value from the pointer
+/// 3) Writes the value decreased by one back to the pointer
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool DecPop(InterpState &S, CodePtr OpPC) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr);
 }
 
 /// 1) Pops the value from the stack.
@@ -1004,84 +1120,63 @@ inline bool This(InterpState &S, CodePtr OpPC) {
 // Shr, Shl
 //===----------------------------------------------------------------------===//
 
-template <PrimType TR, PrimType TL, class T = typename PrimConv<TR>::T>
-unsigned Trunc(InterpState &S, CodePtr OpPC, unsigned Bits, const T &V) {
+template <PrimType NameL, PrimType NameR>
+inline bool Shr(InterpState &S, CodePtr OpPC) {
+  using LT = typename PrimConv<NameL>::T;
+  using RT = typename PrimConv<NameR>::T;
+  const auto &RHS = S.Stk.pop<RT>();
+  const auto &LHS = S.Stk.pop<LT>();
+  const unsigned Bits = LHS.bitWidth();
+
+  if (RHS.isNegative()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
+    return false;
+  }
+
   // C++11 [expr.shift]p1: Shift width must be less than the bit width of
   // the shifted type.
-  if (Bits > 1 && V >= T::from(Bits, V.bitWidth())) {
+  if (Bits > 1 && RHS >= RT::from(Bits, RHS.bitWidth())) {
     const Expr *E = S.Current->getExpr(OpPC);
-    const APSInt Val = V.toAPSInt();
+    const APSInt Val = RHS.toAPSInt();
     QualType Ty = E->getType();
     S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
-    return Bits;
-  } else {
-    return static_cast<unsigned>(V);
+    return false;
   }
-}
 
-template <PrimType TL, PrimType TR, typename T = typename PrimConv<TL>::T>
-inline bool ShiftRight(InterpState &S, CodePtr OpPC, const T &V, unsigned RHS) {
-  if (RHS >= V.bitWidth()) {
-    S.Stk.push<T>(T::from(0, V.bitWidth()));
-  } else {
-    S.Stk.push<T>(T::from(V >> RHS, V.bitWidth()));
-  }
+  unsigned URHS = static_cast<unsigned>(RHS);
+  S.Stk.push<LT>(LT::from(static_cast<unsigned>(LHS) >> URHS, LHS.bitWidth()));
   return true;
 }
 
-template <PrimType TL, PrimType TR, typename T = typename PrimConv<TL>::T>
-inline bool ShiftLeft(InterpState &S, CodePtr OpPC, const T &V, unsigned RHS) {
-  if (V.isSigned() && !S.getLangOpts().CPlusPlus20) {
-    // C++11 [expr.shift]p2: A signed left shift must have a non-negative
-    // operand, and must not overflow the corresponding unsigned type.
-    // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to
-    // E1 x 2^E2 module 2^N.
-    if (V.isNegative()) {
-      const Expr *E = S.Current->getExpr(OpPC);
-      S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << V.toAPSInt();
-    } else if (V.countLeadingZeros() < RHS) {
-      S.CCEDiag(S.Current->getExpr(OpPC), diag::note_constexpr_lshift_discards);
-    }
-  }
-
-  if (V.bitWidth() == 1) {
-    S.Stk.push<T>(V);
-  } else if (RHS >= V.bitWidth()) {
-    S.Stk.push<T>(T::from(0, V.bitWidth()));
-  } else {
-    S.Stk.push<T>(T::from(V.toUnsigned() << RHS, V.bitWidth()));
-  }
-  return true;
-}
-
-template <PrimType TL, PrimType TR>
-inline bool Shr(InterpState &S, CodePtr OpPC) {
-  const auto &RHS = S.Stk.pop<typename PrimConv<TR>::T>();
-  const auto &LHS = S.Stk.pop<typename PrimConv<TL>::T>();
-  const unsigned Bits = LHS.bitWidth();
-
-  if (RHS.isSigned() && RHS.isNegative()) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
-    return ShiftLeft<TL, TR>(S, OpPC, LHS, Trunc<TR, TL>(S, OpPC, Bits, -RHS));
-  } else {
-    return ShiftRight<TL, TR>(S, OpPC, LHS, Trunc<TR, TL>(S, OpPC, Bits, RHS));
-  }
-}
-
-template <PrimType TL, PrimType TR>
+template <PrimType NameL, PrimType NameR>
 inline bool Shl(InterpState &S, CodePtr OpPC) {
-  const auto &RHS = S.Stk.pop<typename PrimConv<TR>::T>();
-  const auto &LHS = S.Stk.pop<typename PrimConv<TL>::T>();
+  using LT = typename PrimConv<NameL>::T;
+  using RT = typename PrimConv<NameR>::T;
+  const auto &RHS = S.Stk.pop<RT>();
+  const auto &LHS = S.Stk.pop<LT>();
   const unsigned Bits = LHS.bitWidth();
 
-  if (RHS.isSigned() && RHS.isNegative()) {
+  if (RHS.isNegative()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
-    return ShiftRight<TL, TR>(S, OpPC, LHS, Trunc<TR, TL>(S, OpPC, Bits, -RHS));
-  } else {
-    return ShiftLeft<TL, TR>(S, OpPC, LHS, Trunc<TR, TL>(S, OpPC, Bits, RHS));
+    return false;
   }
+
+  // C++11 [expr.shift]p1: Shift width must be less than the bit width of
+  // the shifted type.
+  if (Bits > 1 && RHS >= RT::from(Bits, RHS.bitWidth())) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    const APSInt Val = RHS.toAPSInt();
+    QualType Ty = E->getType();
+    S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
+    return false;
+  }
+
+  unsigned URHS = static_cast<unsigned>(RHS);
+  S.Stk.push<LT>(LT::from(static_cast<unsigned>(LHS) << URHS, LHS.bitWidth()));
+
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

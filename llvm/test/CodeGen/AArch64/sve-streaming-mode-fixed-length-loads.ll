@@ -6,8 +6,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @load_v4i8(<4 x i8>* %a) #0 {
 ; CHECK-LABEL: load_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %load = load <4 x i8>, <4 x i8>* %a
@@ -44,12 +44,14 @@ define <32 x i8> @load_v32i8(<32 x i8>* %a) #0 {
 define <2 x i16> @load_v2i16(<2 x i16>* %a) #0 {
 ; CHECK-LABEL: load_v2i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldrh w8, [x0, #2]
-; CHECK-NEXT:    ldrh w9, [x0]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    zip1 z0.s, z1.s, z0.s
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    str w8, [sp, #12]
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    str w8, [sp, #8]
+; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %load = load <2 x i16>, <2 x i16>* %a
   ret <2 x i16> %load

@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple aarch64-darwin -filetype=obj %s -o - | llvm-objdump -r -d - | FileCheck %s
-// RUN: llvm-mc -triple aarch64-ios -filetype=obj %s -o - | llvm-objdump -r -d - | FileCheck %s
+// RUN: llvm-mc -triple aarch64-darwin -filetype=obj %s -o - | llvm-objdump --no-print-imm-hex -r -d - | FileCheck %s
+// RUN: llvm-mc -triple aarch64-ios -filetype=obj %s -o - | llvm-objdump --no-print-imm-hex -r -d - | FileCheck %s
 
 visible:
   .space 8

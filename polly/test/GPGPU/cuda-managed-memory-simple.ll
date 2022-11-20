@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S  -polly-process-unprofitable -polly-acc-mincompute=0 -polly-target=gpu  -polly-codegen-ppcg -polly-acc-codegen-managed-memory < %s | \
+; RUN: opt %loadPolly -S  -polly-process-unprofitable -polly-acc-mincompute=0 -polly-codegen-ppcg -polly-acc-codegen-managed-memory < %s | \
 ; RUN: FileCheck %s
 
 ; REQUIRES: pollyacc

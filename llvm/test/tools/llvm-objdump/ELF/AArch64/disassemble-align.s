@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t
-# RUN: llvm-objdump -d %t | tr '\t' '|' | FileCheck --match-full-lines --strict-whitespace %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t | tr '\t' '|' | FileCheck --match-full-lines --strict-whitespace %s
 
 ## Use '|' to show where the tabs line up.
 #       CHECK:0000000000000000 <$x.0>:

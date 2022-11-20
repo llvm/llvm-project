@@ -4,12 +4,12 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libfoo.s -o %t/libfoo.o
 # RUN: %lld -dylib %t/libfoo.o -o %t/libfoo.dylib
 # RUN: %lld %t/test.o -L%t -lfoo -o %t/test -lSystem
-# RUN: llvm-objdump -d --no-show-raw-insn --rebase --bind --lazy-bind --weak-bind \
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --rebase --bind --lazy-bind --weak-bind \
 # RUN:     --full-contents %t/test | FileCheck --check-prefixes=COMMON,CHECK %s
 
 # RUN: %lld -fixup_chains %t/test.o -L%t -lfoo -o %t/chained -lSystem
-# RUN: llvm-objdump -d --no-show-raw-insn --syms --full-contents %t/chained > %t/chained.objdump
-# RUN: llvm-objdump --macho --dyld-info %t/chained >> %t/chained.objdump
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --syms --full-contents %t/chained > %t/chained.objdump
+# RUN: llvm-objdump --no-print-imm-hex --macho --dyld-info %t/chained >> %t/chained.objdump
 # RUN: FileCheck %s --check-prefixes=COMMON,CHAINED < %t/chained.objdump
 
 # CHAINED: SYMBOL TABLE:

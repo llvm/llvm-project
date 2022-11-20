@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -filetype=obj -o - \
-; RUN:  | llvm-objdump --triple=x86_64-linux-gnu -d - \
+; RUN:  | llvm-objdump --no-print-imm-hex --triple=x86_64-linux-gnu -d - \
 ; RUN:  | FileCheck %s
 
 ; CHECK: 0000000000000000 <test1>:

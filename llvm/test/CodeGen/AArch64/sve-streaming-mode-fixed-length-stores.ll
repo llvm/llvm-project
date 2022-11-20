@@ -65,7 +65,8 @@ define void @store_v2f16(<2 x half>* %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI5_0
 ; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI5_0]
-; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
   store <2 x half> zeroinitializer, <2 x half>* %a
   ret void

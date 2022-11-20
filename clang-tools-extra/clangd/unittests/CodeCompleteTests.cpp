@@ -21,6 +21,7 @@
 #include "TestTU.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
+#include "index/SymbolOrigin.h"
 #include "support/Threading.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <condition_variable>
@@ -83,6 +85,9 @@ MATCHER(insertInclude, "") {
 MATCHER_P(snippetSuffix, Text, "") { return arg.SnippetSuffix == Text; }
 MATCHER_P(origin, OriginSet, "") { return arg.Origin == OriginSet; }
 MATCHER_P(signature, S, "") { return arg.Signature == S; }
+MATCHER_P(replacesRange, Range, "") {
+  return arg.CompletionTokenRange == Range;
+}
 
 // Shorthand for Contains(named(Name)).
 Matcher<const std::vector<CodeCompletion> &> has(std::string Name) {
@@ -3713,7 +3718,6 @@ TEST(CompletionTest, PreambleCodeComplete) {
 }
 
 TEST(CompletionTest, CommentParamName) {
-  clangd::CodeCompleteOptions Opts;
   const std::string Code = R"cpp(
     void fun(int foo, int bar);
     void overloaded(int param_int);
@@ -3722,23 +3726,46 @@ TEST(CompletionTest, CommentParamName) {
     int main() {
   )cpp";
 
-  EXPECT_THAT(completions(Code + "fun(/*^", {}, Opts).Completions,
-              UnorderedElementsAre(labeled("foo=")));
-  EXPECT_THAT(completions(Code + "fun(1, /*^", {}, Opts).Completions,
-              UnorderedElementsAre(labeled("bar=")));
-  EXPECT_THAT(completions(Code + "/*^", {}, Opts).Completions, IsEmpty());
+  EXPECT_THAT(completions(Code + "fun(/*^").Completions,
+              UnorderedElementsAre(labeled("foo=*/")));
+  EXPECT_THAT(completions(Code + "fun(1, /*^").Completions,
+              UnorderedElementsAre(labeled("bar=*/")));
+  EXPECT_THAT(completions(Code + "/*^").Completions, IsEmpty());
   // Test de-duplication.
   EXPECT_THAT(
-      completions(Code + "overloaded(/*^", {}, Opts).Completions,
-      UnorderedElementsAre(labeled("param_int="), labeled("param_char=")));
+      completions(Code + "overloaded(/*^").Completions,
+      UnorderedElementsAre(labeled("param_int=*/"), labeled("param_char=*/")));
   // Comment already has some text in it.
-  EXPECT_THAT(completions(Code + "fun(/*  ^", {}, Opts).Completions,
-              UnorderedElementsAre(labeled("foo=")));
-  EXPECT_THAT(completions(Code + "fun(/* f^", {}, Opts).Completions,
-              UnorderedElementsAre(labeled("foo=")));
-  EXPECT_THAT(completions(Code + "fun(/* x^", {}, Opts).Completions, IsEmpty());
-  EXPECT_THAT(completions(Code + "fun(/* f ^", {}, Opts).Completions,
-              IsEmpty());
+  EXPECT_THAT(completions(Code + "fun(/*  ^").Completions,
+              UnorderedElementsAre(labeled("foo=*/")));
+  EXPECT_THAT(completions(Code + "fun(/* f^").Completions,
+              UnorderedElementsAre(labeled("foo=*/")));
+  EXPECT_THAT(completions(Code + "fun(/* x^").Completions, IsEmpty());
+  EXPECT_THAT(completions(Code + "fun(/* f ^").Completions, IsEmpty());
+
+  // Test ranges
+  {
+    std::string CompletionRangeTest(Code + "fun(/*[[^]]");
+    auto Results = completions(CompletionRangeTest);
+    EXPECT_THAT(Results.CompletionRange,
+                llvm::ValueIs(Annotations(CompletionRangeTest).range()));
+    EXPECT_THAT(
+        Results.Completions,
+        testing::Each(
+            AllOf(replacesRange(Annotations(CompletionRangeTest).range()),
+                  origin(SymbolOrigin::AST), kind(CompletionItemKind::Text))));
+  }
+  {
+    std::string CompletionRangeTest(Code + "fun(/*[[fo^]]");
+    auto Results = completions(CompletionRangeTest);
+    EXPECT_THAT(Results.CompletionRange,
+                llvm::ValueIs(Annotations(CompletionRangeTest).range()));
+    EXPECT_THAT(
+        Results.Completions,
+        testing::Each(
+            AllOf(replacesRange(Annotations(CompletionRangeTest).range()),
+                  origin(SymbolOrigin::AST), kind(CompletionItemKind::Text))));
+  }
 }
 
 TEST(CompletionTest, Concepts) {

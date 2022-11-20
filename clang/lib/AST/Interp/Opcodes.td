@@ -402,12 +402,24 @@ def Rem : Opcode {
   let Types = [NumberTypeClass];
   let HasGroup = 1;
 }
+
+def Shl : Opcode {
+  let Types = [IntegerTypeClass, IntegerTypeClass];
+  let HasGroup = 1;
+}
+
+def Shr : Opcode {
+  let Types = [IntegerTypeClass, IntegerTypeClass];
+  let HasGroup = 1;
+}
+
 def BitAnd : IntegerOpcode;
 def BitOr : IntegerOpcode;
 def Div : Opcode {
   let Types = [NumberTypeClass];
   let HasGroup = 1;
 }
+def BitXor : IntegerOpcode;
 
 //===----------------------------------------------------------------------===//
 // Unary operators.
@@ -418,6 +430,11 @@ def Inv: Opcode {
   let Types = [BoolTypeClass];
   let HasGroup = 1;
 }
+
+def Inc: IntegerOpcode;
+def IncPop : IntegerOpcode;
+def Dec: IntegerOpcode;
+def DecPop: IntegerOpcode;
 
 // [Real] -> [Real]
 def Neg: Opcode {

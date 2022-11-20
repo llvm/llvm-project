@@ -12,10 +12,10 @@
 # RUN:         -mcpu=mips32r6 %S/Inputs/mips-dynamic.s -o %t2.o
 # RUN: ld.lld %t2.o -shared -soname=t.so -o %t.so
 # RUN: ld.lld %t1.o %t.so -script %t.script -o %t.exe
-# RUN: llvm-objdump -d --no-show-raw-insn %t.exe | FileCheck %s --check-prefixes=DEFAULT,CHECK
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.exe | FileCheck %s --check-prefixes=DEFAULT,CHECK
 # RUN: ld.lld %t2.o -shared -soname=t.so -o %t.so -z hazardplt
 # RUN: ld.lld %t1.o %t.so -script %t.script -o %t.exe -z hazardplt
-# RUN: llvm-objdump -d --no-show-raw-insn %t.exe | FileCheck %s --check-prefixes=HAZARDPLT,CHECK
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.exe | FileCheck %s --check-prefixes=HAZARDPLT,CHECK
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:

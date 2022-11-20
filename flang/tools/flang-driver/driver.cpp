@@ -77,7 +77,9 @@ static void ExpandResponseFiles(
   // We're defaulting to the GNU syntax, since we don't have a CL mode.
   llvm::cl::TokenizerCallback tokenizer = &llvm::cl::TokenizeGNUCommandLine;
   llvm::cl::ExpansionContext ExpCtx(saver.getAllocator(), tokenizer);
-  ExpCtx.expandResponseFiles(args);
+  if (llvm::Error Err = ExpCtx.expandResponseFiles(args)) {
+    llvm::errs() << toString(std::move(Err)) << '\n';
+  }
 }
 
 int main(int argc, const char **argv) {

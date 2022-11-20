@@ -45,6 +45,7 @@ MCOPT(bool, NoWarn)
 MCOPT(bool, NoDeprecatedWarn)
 MCOPT(bool, NoTypeCheck)
 MCOPT(std::string, ABIName)
+MCOPT(std::string, AsSecureLogFile)
 
 llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
 #define MCBINDOPT(NAME)                                                        \
@@ -114,6 +115,10 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       cl::init(""));
   MCBINDOPT(ABIName);
 
+  static cl::opt<std::string> AsSecureLogFile(
+      "as-secure-log-file", cl::desc("As secure log file name"), cl::Hidden);
+  MCBINDOPT(AsSecureLogFile);
+
 #undef MCBINDOPT
 }
 
@@ -130,6 +135,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCNoDeprecatedWarn = getNoDeprecatedWarn();
   Options.MCNoTypeCheck = getNoTypeCheck();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
+  Options.AsSecureLogFile = getAsSecureLogFile();
 
   return Options;
 }

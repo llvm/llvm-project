@@ -292,7 +292,7 @@ for.cond.cleanup:                                 ; preds = %for.inc, %entry
 
 
 
-define void @gather_nxv4i32_ind64_stride2(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
+define void @gather_nxv4i32_ind64_stride2(float* noalias nocapture %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 ; CHECK-LABEL: @gather_nxv4i32_ind64_stride2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()

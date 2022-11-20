@@ -4,11 +4,11 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux -mcpu=mips32r6 -o %t.o %s
 # RUN: ld.lld -r -o %t %t.o %t.o
-# RUN: llvm-objdump -d -r --no-show-raw-insn %t | FileCheck --check-prefix=EB %s
+# RUN: llvm-objdump --no-print-imm-hex -d -r --no-show-raw-insn %t | FileCheck --check-prefix=EB %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux -mcpu=mips32r6 -o %t.o %s
 # RUN: ld.lld -r -o %t %t.o %t.o
-# RUN: llvm-objdump -d -r --no-show-raw-insn %t | FileCheck --check-prefix=EL %s
+# RUN: llvm-objdump --no-print-imm-hex -d -r --no-show-raw-insn %t | FileCheck --check-prefix=EL %s
 
 # EB:        8:       sigrie 1
 # EL:        8:       sigrie 1

@@ -1,5 +1,5 @@
-@ RUN: llvm-mc < %s --triple=armv8a   -mattr=+mve,+lob -filetype=obj | llvm-objdump -dr - --triple armv8a --mattr=+mve,+lob --no-show-raw-insn | FileCheck %s
-@ RUN: llvm-mc < %s --triple=thumbv8a -mattr=+mve,+lob -filetype=obj | llvm-objdump -dr - --triple armv8a --mattr=+mve,+lob --no-show-raw-insn | FileCheck %s
+@ RUN: llvm-mc < %s --triple=armv8a   -mattr=+mve,+lob -filetype=obj | llvm-objdump --no-print-imm-hex -dr - --triple armv8a --mattr=+mve,+lob --no-show-raw-insn | FileCheck %s
+@ RUN: llvm-mc < %s --triple=thumbv8a -mattr=+mve,+lob -filetype=obj | llvm-objdump --no-print-imm-hex -dr - --triple armv8a --mattr=+mve,+lob --no-show-raw-insn | FileCheck %s
 
 foo:
 

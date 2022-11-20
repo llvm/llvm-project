@@ -239,11 +239,11 @@ SDValue LoongArchTargetLowering::lowerFRAMEADDR(SDValue Op,
   }
 
   // Currently only support lowering frame address for current frame.
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
-  assert((Depth == 0) &&
-         "Frame address can only be determined for current frame.");
-  if (Depth != 0)
+  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+    DAG.getContext()->emitError(
+        "frame address can only be determined for the current frame");
     return SDValue();
+  }
 
   MachineFunction &MF = DAG.getMachineFunction();
   MF.getFrameInfo().setFrameAddressIsTaken(true);
@@ -259,11 +259,11 @@ SDValue LoongArchTargetLowering::lowerRETURNADDR(SDValue Op,
     return SDValue();
 
   // Currently only support lowering return address for current frame.
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
-  assert((Depth == 0) &&
-         "Return address can only be determined for current frame.");
-  if (Depth != 0)
+  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+    DAG.getContext()->emitError(
+        "return address can only be determined for the current frame");
     return SDValue();
+  }
 
   MachineFunction &MF = DAG.getMachineFunction();
   MF.getFrameInfo().setReturnAddressIsTaken(true);
@@ -2184,6 +2184,7 @@ LoongArchTargetLowering::getConstraintType(StringRef Constraint) const {
   //       offset that is suitable for use in instructions with the same
   //       addressing mode as st.w and ld.w.
   // 'I':  A signed 12-bit constant (for arithmetic instructions).
+  // 'J':  Integer zero.
   // 'K':  An unsigned 12-bit constant (for logic instructions).
   // "ZB": An address that is held in a general-purpose register. The offset is
   //       zero.
@@ -2198,6 +2199,7 @@ LoongArchTargetLowering::getConstraintType(StringRef Constraint) const {
       return C_RegisterClass;
     case 'l':
     case 'I':
+    case 'J':
     case 'K':
       return C_Immediate;
     case 'k':
@@ -2300,6 +2302,13 @@ void LoongArchTargetLowering::LowerAsmOperandForConstraint(
           Ops.push_back(
               DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getGRLenVT()));
       }
+      return;
+    case 'J':
+      // Validate & create an integer zero operand.
+      if (auto *C = dyn_cast<ConstantSDNode>(Op))
+        if (C->getZExtValue() == 0)
+          Ops.push_back(
+              DAG.getTargetConstant(0, SDLoc(Op), Subtarget.getGRLenVT()));
       return;
     case 'K':
       // Validate & create a 12-bit unsigned immediate operand.

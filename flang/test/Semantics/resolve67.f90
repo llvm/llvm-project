@@ -35,7 +35,7 @@ end
 
 module m3
   interface operator(/)
-    !ERROR: OPERATOR(/) function 'divide' may not have assumed-length CHARACTER(*) result
+    !ERROR: A function interface may not declare an assumed-length CHARACTER(*) result
     character(*) function divide(x, y)
       character(*), intent(in) :: x, y
     end
@@ -57,6 +57,23 @@ module m3
       end interface
     end
   end interface
+ contains
+  subroutine s(alcf1, alcf2)
+    interface
+      character(*) function alcf1(x, y)
+        character(*), intent(in) :: x, y
+      end function
+      character(*) function alcf2(x, y)
+        character(*), intent(in) :: x, y
+      end function
+    end interface
+    interface operator(+)
+      !ERROR: OPERATOR(+) function 'alcf1' may not have assumed-length CHARACTER(*) result
+      procedure alcf1
+    end interface
+    !ERROR: OPERATOR(-) function 'alcf2' may not have assumed-length CHARACTER(*) result
+    generic :: operator(-) => alcf2
+  end subroutine
 end
 
 module m4

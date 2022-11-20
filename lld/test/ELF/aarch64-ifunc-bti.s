@@ -4,10 +4,10 @@
 
 # RUN: ld.lld --shared --soname=t1.so %t1.o -o %t1.so
 # RUN: ld.lld --pie %t1.so %t.o -o %t
-# RUN: llvm-objdump -d --no-show-raw-insn --mattr=+bti --triple=aarch64-linux-gnu %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --mattr=+bti --triple=aarch64-linux-gnu %t | FileCheck %s
 
 # RUN: ld.lld -shared -Bsymbolic %t1.so %t.o -o %t.so
-# RUN: llvm-objdump -d --no-show-raw-insn --mattr=+bti %t.so | FileCheck %s --check-prefix=SHARED
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --mattr=+bti %t.so | FileCheck %s --check-prefix=SHARED
 
 # When the address of an ifunc is taken using a non-got reference which clang
 # can do, LLD exports a canonical PLT entry that may have its address taken so

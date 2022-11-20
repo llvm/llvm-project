@@ -8,7 +8,7 @@
 # RUN: llvm-as -o %t/resume.bc %t/resume.ll
 # RUN: ld.lld -shared -o %t/libresume.so -soname libresume.so %t/resume.bc \
 # RUN:   %t/libunwind.so --wrap _Unwind_Resume
-# RUN: llvm-objdump --dynamic-reloc --disassemble %t/libresume.so | \
+# RUN: llvm-objdump --no-print-imm-hex --dynamic-reloc --disassemble %t/libresume.so | \
 # RUN:   FileCheck --check-prefix=UNWIND-DISASM %s
 # RUN: llvm-readelf --dyn-syms %t/libresume.so | \
 # RUN:   FileCheck --check-prefix=UNWIND-DYNSYM %s
@@ -32,7 +32,7 @@
 # RUN: ld.lld --plugin-opt=opaque-pointers -shared -o %t/libusetls.so \
 # RUN:   %t/usetls.bc %t/libmalloc.so \
 # RUN:   --start-lib %t/emutls.o -mllvm -emulated-tls --wrap malloc
-# RUN: llvm-objdump --dynamic-reloc --disassemble %t/libusetls.so | \
+# RUN: llvm-objdump --no-print-imm-hex --dynamic-reloc --disassemble %t/libusetls.so | \
 # RUN:   FileCheck --check-prefix=USETLS-DISASM %s
 # RUN: llvm-readelf --dyn-syms %t/libusetls.so | \
 # RUN:   FileCheck --check-prefix=USETLS-DYNSYM %s

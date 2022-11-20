@@ -279,6 +279,33 @@ namespace bitOr {
   static_assert((12 | true) == 13, "");
 };
 
+namespace bitXor {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wxor-used-as-pow"
+  static_assert((10 ^ 1) == 11, "");
+  static_assert((10 ^ 10) == 0, "");
+
+  enum {
+    ONE = 1,
+  };
+
+  static_assert((1337 ^ -1) == -1338, "");
+  static_assert((0 | gimme(12)) == 12, "");
+  static_assert((12 ^ true) == 13, "");
+  static_assert((12 ^ ONE) == 13, "");
+#pragma clang diagnostic pop
+};
+
+#if __cplusplus >= 201402L
+constexpr bool IgnoredUnary() {
+  bool bo = true;
+  !bo; // expected-warning {{expression result unused}} \
+       // ref-warning {{expression result unused}}
+  return bo;
+}
+static_assert(IgnoredUnary(), "");
+#endif
+
 namespace strings {
   constexpr const char *S = "abc";
   static_assert(S[0] == 97, "");
@@ -321,3 +348,127 @@ namespace strings {
 
 #pragma clang diagnostic pop
 };
+
+#if __cplusplus > 201402L
+namespace IncDec {
+  constexpr int zero() {
+    int a = 0;
+    a++;
+    ++a;
+    a--;
+    --a;
+    return a;
+  }
+  static_assert(zero() == 0, "");
+
+  constexpr int preInc() {
+    int a = 0;
+    return ++a;
+  }
+  static_assert(preInc() == 1, "");
+
+  constexpr int postInc() {
+    int a = 0;
+    return a++;
+  }
+  static_assert(postInc() == 0, "");
+
+  constexpr int preDec() {
+    int a = 0;
+    return --a;
+  }
+  static_assert(preDec() == -1, "");
+
+  constexpr int postDec() {
+    int a = 0;
+    return a--;
+  }
+  static_assert(postDec() == 0, "");
+
+  constexpr int three() {
+    int a = 0;
+    return ++a + ++a; // expected-warning {{multiple unsequenced modifications to 'a'}} \
+                      // ref-warning {{multiple unsequenced modifications to 'a'}} \
+
+  }
+  static_assert(three() == 3, "");
+
+  constexpr bool incBool() {
+    bool b = false;
+    return ++b; // expected-error {{ISO C++17 does not allow incrementing expression of type bool}} \
+                // ref-error {{ISO C++17 does not allow incrementing expression of type bool}}
+  }
+  static_assert(incBool(), "");
+
+  constexpr int uninit() {
+    int a;
+    ++a; // ref-note {{increment of uninitialized}} \
+         // FIXME: Should also be rejected by new interpreter
+    return 1;
+  }
+  static_assert(uninit(), ""); // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to 'uninit()'}} \
+                               // expected-error {{not an integral constant expression}}
+
+  constexpr int OverFlow() { // ref-error {{never produces a constant expression}}
+    int a = INT_MAX;
+    ++a; // ref-note 2{{is outside the range}} \
+         // expected-note {{is outside the range}}
+    return -1;
+  }
+  static_assert(OverFlow() == -1, "");  // expected-error {{not an integral constant expression}} \
+                                        // expected-note {{in call to 'OverFlow()'}} \
+                                        // ref-error {{not an integral constant expression}} \
+                                        // ref-note {{in call to 'OverFlow()'}}
+
+
+  constexpr int UnderFlow() { // ref-error {{never produces a constant expression}}
+    int a = INT_MIN;
+    --a; // ref-note 2{{is outside the range}} \
+         // expected-note {{is outside the range}}
+    return -1;
+  }
+  static_assert(UnderFlow() == -1, "");  // expected-error {{not an integral constant expression}} \
+                                         // expected-note {{in call to 'UnderFlow()'}} \
+                                         // ref-error {{not an integral constant expression}} \
+                                         // ref-note {{in call to 'UnderFlow()'}}
+
+  constexpr int getTwo() {
+    int i = 1;
+    return (i += 1);
+  }
+  static_assert(getTwo() == 2, "");
+
+  constexpr int sub(int a) {
+    return (a -= 2);
+  }
+  static_assert(sub(7) == 5, "");
+
+  constexpr int add(int a, int b) {
+    a += b; // expected-note {{is outside the range of representable values}} \
+            // ref-note {{is outside the range of representable values}} 
+    return a;
+  }
+  static_assert(add(1, 2) == 3, "");
+  static_assert(add(INT_MAX, 1) == 0, ""); // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{in call to 'add}} \
+                                           // ref-error {{not an integral constant expression}} \
+                                           // ref-note {{in call to 'add}}
+
+  constexpr int sub(int a, int b) {
+    a -= b; // expected-note {{is outside the range of representable values}} \
+            // ref-note {{is outside the range of representable values}} 
+    return a;
+  }
+  static_assert(sub(10, 20) == -10, "");
+  static_assert(sub(INT_MIN, 1) == 0, ""); // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{in call to 'sub}} \
+                                           // ref-error {{not an integral constant expression}} \
+                                           // ref-note {{in call to 'sub}}
+
+  constexpr int subAll(int a) {
+    return (a -= a);
+  }
+  static_assert(subAll(213) == 0, "");
+};
+#endif

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple=hexagon %s | llvm-objdump -r -d - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=hexagon %s | llvm-objdump --no-print-imm-hex -r -d - | FileCheck %s
 {
   call ##foo
   memw(##a) = r0

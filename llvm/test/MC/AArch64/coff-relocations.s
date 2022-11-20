@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple aarch64-windows -filetype obj -o %t.obj %s
 // RUN: llvm-readobj -r %t.obj | FileCheck %s
-// RUN: llvm-objdump -d %t.obj | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump --no-print-imm-hex -d %t.obj | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %t.obj | FileCheck %s --check-prefix=DATA
 
 // IMAGE_REL_ARM64_ADDR32

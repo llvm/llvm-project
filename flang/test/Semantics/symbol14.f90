@@ -1,6 +1,5 @@
 ! RUN: %python %S/test_symbols.py %s %flang_fc1
-! "Bare" uses of type parameters and components
-
+! "Bare" uses of type parameters
  !DEF: /MainProgram1/t1 DerivedType
  !DEF: /MainProgram1/t1/k TypeParam INTEGER(4)
  type :: t1(k)
@@ -18,7 +17,7 @@
   real :: b(k)
   !DEF: /MainProgram1/t2/c ObjectEntity REAL(4)
   !DEF: /MainProgram1/size INTRINSIC, PURE (Function) ProcEntity
-  !REF: /MainProgram1/t1/a
+  !DEF: /MainProgram1/a (Implicit) ObjectEntity REAL(4)
   real :: c(size(a))
   !REF: /MainProgram1/t1
   !DEF: /MainProgram1/t2/x ObjectEntity TYPE(t1(k=666_4))

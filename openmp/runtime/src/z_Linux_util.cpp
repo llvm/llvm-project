@@ -135,6 +135,9 @@ void __kmp_affinity_determine_capable(const char *env_var) {
   long gCode;
   unsigned char *buf;
   buf = (unsigned char *)KMP_INTERNAL_MALLOC(KMP_CPU_SET_SIZE_LIMIT);
+  int verbose = __kmp_affinity.flags.verbose;
+  int warnings = __kmp_affinity.flags.warnings;
+  enum affinity_type type = __kmp_affinity.type;
 
   // If the syscall returns a suggestion for the size,
   // then we don't have to search for an appropriate size.
@@ -145,10 +148,9 @@ void __kmp_affinity_determine_capable(const char *env_var) {
 
   if (gCode < 0 && errno != EINVAL) {
     // System call not supported
-    if (__kmp_affinity_verbose ||
-        (__kmp_affinity_warnings && (__kmp_affinity_type != affinity_none) &&
-         (__kmp_affinity_type != affinity_default) &&
-         (__kmp_affinity_type != affinity_disabled))) {
+    if (verbose ||
+        (warnings && (type != affinity_none) && (type != affinity_default) &&
+         (type != affinity_disabled))) {
       int error = errno;
       kmp_msg_t err_code = KMP_ERR(error);
       __kmp_msg(kmp_ms_warning, KMP_MSG(GetAffSysCallNotSupported, env_var),
@@ -188,11 +190,9 @@ void __kmp_affinity_determine_capable(const char *env_var) {
                       "inconsistent OS call behavior: errno == ENOSYS for mask "
                       "size %d\n",
                       size));
-        if (__kmp_affinity_verbose ||
-            (__kmp_affinity_warnings &&
-             (__kmp_affinity_type != affinity_none) &&
-             (__kmp_affinity_type != affinity_default) &&
-             (__kmp_affinity_type != affinity_disabled))) {
+        if (verbose ||
+            (warnings && (type != affinity_none) &&
+             (type != affinity_default) && (type != affinity_disabled))) {
           int error = errno;
           kmp_msg_t err_code = KMP_ERR(error);
           __kmp_msg(kmp_ms_warning, KMP_MSG(GetAffSysCallNotSupported, env_var),
@@ -239,10 +239,8 @@ void __kmp_affinity_determine_capable(const char *env_var) {
   KMP_AFFINITY_DISABLE();
   KA_TRACE(10, ("__kmp_affinity_determine_capable: "
                 "cannot determine mask size - affinity not supported\n"));
-  if (__kmp_affinity_verbose ||
-      (__kmp_affinity_warnings && (__kmp_affinity_type != affinity_none) &&
-       (__kmp_affinity_type != affinity_default) &&
-       (__kmp_affinity_type != affinity_disabled))) {
+  if (verbose || (warnings && (type != affinity_none) &&
+                  (type != affinity_default) && (type != affinity_disabled))) {
     KMP_WARNING(AffCantGetMaskSize, env_var);
   }
 }
@@ -1230,12 +1228,13 @@ static void __kmp_atfork_child(void) {
   // Set default not to bind threads tightly in the child (we're expecting
   // over-subscription after the fork and this can improve things for
   // scripting languages that use OpenMP inside process-parallel code).
-  __kmp_affinity_type = affinity_none;
   if (__kmp_nested_proc_bind.bind_types != NULL) {
     __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
   }
-  __kmp_affinity_masks = NULL;
-  __kmp_affinity_num_masks = 0;
+  for (kmp_affinity_t *affinity : __kmp_affinities)
+    *affinity = KMP_AFFINITY_INIT(affinity->env_var);
+  __kmp_affin_fullMask = nullptr;
+  __kmp_affin_origMask = nullptr;
 #endif // KMP_AFFINITY_SUPPORTED
 
 #if KMP_USE_MONITOR

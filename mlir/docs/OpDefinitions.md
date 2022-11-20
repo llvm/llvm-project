@@ -878,8 +878,9 @@ The elements of an optional group have the following requirements:
         the group is if the region is empty.
 *   Literals, variables, custom directives, and type directives are the only
     valid elements within the group.
-    -   Any attribute variable may be used, but only optional attributes can be
-        marked as the anchor.
+    -   Any attribute variable may be used, but only optional or default-valued
+        attributes can be marked as the anchor. A default-valued anchor is
+        considered present if it holds a value other than the default.
     -   Only variadic or optional results and operand arguments and can be used.
     -   All region variables can be used. When a non-variable length region is
         used, if the group is not present the region is empty.

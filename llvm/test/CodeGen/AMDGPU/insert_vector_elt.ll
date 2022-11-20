@@ -1213,13 +1213,13 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    s_lshr_b32 s4, s11, 24
 ; SI-NEXT:    s_cmp_lg_u32 s6, 15
 ; SI-NEXT:    s_cselect_b32 s4, s4, 5
-; SI-NEXT:    s_lshl_b32 s4, s4, 8
+; SI-NEXT:    s_lshl_b32 s4, s4, 24
 ; SI-NEXT:    s_lshr_b32 s5, s11, 16
 ; SI-NEXT:    s_cmp_lg_u32 s6, 14
 ; SI-NEXT:    s_cselect_b32 s5, s5, 5
 ; SI-NEXT:    s_and_b32 s5, s5, 0xff
-; SI-NEXT:    s_or_b32 s4, s5, s4
-; SI-NEXT:    s_lshl_b32 s4, s4, 16
+; SI-NEXT:    s_lshl_b32 s5, s5, 16
+; SI-NEXT:    s_or_b32 s4, s4, s5
 ; SI-NEXT:    s_lshr_b32 s5, s11, 8
 ; SI-NEXT:    s_cmp_lg_u32 s6, 13
 ; SI-NEXT:    s_cselect_b32 s5, s5, 5
@@ -1233,13 +1233,13 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    s_lshr_b32 s5, s10, 24
 ; SI-NEXT:    s_cmp_lg_u32 s6, 11
 ; SI-NEXT:    s_cselect_b32 s5, s5, 5
-; SI-NEXT:    s_lshl_b32 s5, s5, 8
+; SI-NEXT:    s_lshl_b32 s5, s5, 24
 ; SI-NEXT:    s_lshr_b32 s7, s10, 16
 ; SI-NEXT:    s_cmp_lg_u32 s6, 10
 ; SI-NEXT:    s_cselect_b32 s7, s7, 5
 ; SI-NEXT:    s_and_b32 s7, s7, 0xff
-; SI-NEXT:    s_or_b32 s5, s7, s5
-; SI-NEXT:    s_lshl_b32 s5, s5, 16
+; SI-NEXT:    s_lshl_b32 s7, s7, 16
+; SI-NEXT:    s_or_b32 s5, s5, s7
 ; SI-NEXT:    s_lshr_b32 s7, s10, 8
 ; SI-NEXT:    s_cmp_lg_u32 s6, 9
 ; SI-NEXT:    s_cselect_b32 s7, s7, 5
@@ -1253,13 +1253,13 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    s_lshr_b32 s7, s9, 24
 ; SI-NEXT:    s_cmp_lg_u32 s6, 7
 ; SI-NEXT:    s_cselect_b32 s7, s7, 5
-; SI-NEXT:    s_lshl_b32 s7, s7, 8
+; SI-NEXT:    s_lshl_b32 s7, s7, 24
 ; SI-NEXT:    s_lshr_b32 s10, s9, 16
 ; SI-NEXT:    s_cmp_lg_u32 s6, 6
 ; SI-NEXT:    s_cselect_b32 s10, s10, 5
 ; SI-NEXT:    s_and_b32 s10, s10, 0xff
-; SI-NEXT:    s_or_b32 s7, s10, s7
-; SI-NEXT:    s_lshl_b32 s7, s7, 16
+; SI-NEXT:    s_lshl_b32 s10, s10, 16
+; SI-NEXT:    s_or_b32 s7, s7, s10
 ; SI-NEXT:    s_lshr_b32 s10, s9, 8
 ; SI-NEXT:    s_cmp_lg_u32 s6, 5
 ; SI-NEXT:    s_cselect_b32 s10, s10, 5
@@ -1273,13 +1273,13 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    s_lshr_b32 s9, s8, 24
 ; SI-NEXT:    s_cmp_lg_u32 s6, 3
 ; SI-NEXT:    s_cselect_b32 s9, s9, 5
-; SI-NEXT:    s_lshl_b32 s9, s9, 8
+; SI-NEXT:    s_lshl_b32 s9, s9, 24
 ; SI-NEXT:    s_lshr_b32 s10, s8, 16
 ; SI-NEXT:    s_cmp_lg_u32 s6, 2
 ; SI-NEXT:    s_cselect_b32 s10, s10, 5
 ; SI-NEXT:    s_and_b32 s10, s10, 0xff
-; SI-NEXT:    s_or_b32 s9, s10, s9
-; SI-NEXT:    s_lshl_b32 s9, s9, 16
+; SI-NEXT:    s_lshl_b32 s10, s10, 16
+; SI-NEXT:    s_or_b32 s9, s9, s10
 ; SI-NEXT:    s_lshr_b32 s10, s8, 8
 ; SI-NEXT:    s_cmp_lg_u32 s6, 1
 ; SI-NEXT:    s_cselect_b32 s10, s10, 5

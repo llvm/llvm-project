@@ -1,9 +1,9 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv5-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d %t2 --triple=armv5-none-linux-gnueabi | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --triple=armv5-none-linux-gnueabi | FileCheck %s
 // RUN: ld.lld %t -o %t3 --shared
-// RUN: llvm-objdump -d %t3 --triple=armv5-none-linux-gnueabi | FileCheck --check-prefix=CHECK-PI %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t3 --triple=armv5-none-linux-gnueabi | FileCheck --check-prefix=CHECK-PI %s
 
 // Test ARM Thumb Interworking on older Arm architectures using Thunks that do
 // not use MOVT/MOVW instructions.

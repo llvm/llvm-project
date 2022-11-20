@@ -3384,12 +3384,27 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
     return SDValue();
   }
 
-  if (DCI.isBeforeLegalizeOps())
-    return SDValue();
-
   SDValue Op(N, 0);
   const SDLoc &dl(Op);
   unsigned Opc = Op.getOpcode();
+
+  if (Opc == ISD::TRUNCATE) {
+    SDValue Op0 = Op.getOperand(0);
+    // fold (truncate (build pair x, y)) -> (truncate x) or x
+    if (Op0.getOpcode() == ISD::BUILD_PAIR) {
+      EVT TruncTy = Op.getValueType();
+      SDValue Elem0 = Op0.getOperand(0);
+      // if we match the low element of the pair, just return it.
+      if (Elem0.getValueType() == TruncTy)
+        return Elem0;
+      // otherwise, if the low part is still too large, apply the truncate.
+      if (Elem0.getValueType().bitsGT(TruncTy))
+        return DCI.DAG.getNode(ISD::TRUNCATE, dl, TruncTy, Elem0);
+    }
+  }
+
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
 
   if (Opc == HexagonISD::P2D) {
     SDValue P = Op.getOperand(0);

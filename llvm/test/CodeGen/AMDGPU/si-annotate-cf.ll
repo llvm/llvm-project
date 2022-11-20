@@ -185,8 +185,8 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; SI-NEXT:    v_mov_b32_e32 v0, 3
 ; SI-NEXT:    s_branch .LBB3_3
 ; SI-NEXT:  .LBB3_1: ; in Loop: Header=BB3_3 Depth=1
-; SI-NEXT:    s_mov_b64 s[10:11], -1
 ; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:    s_mov_b64 s[10:11], -1
 ; SI-NEXT:    s_mov_b64 s[12:13], -1
 ; SI-NEXT:  .LBB3_2: ; %Flow
 ; SI-NEXT:    ; in Loop: Header=BB3_3 Depth=1
@@ -194,8 +194,8 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; SI-NEXT:    s_cbranch_vccnz .LBB3_8
 ; SI-NEXT:  .LBB3_3: ; %while.cond
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SI-NEXT:    s_mov_b64 s[8:9], -1
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
+; SI-NEXT:    s_mov_b64 s[8:9], -1
 ; SI-NEXT:    s_mov_b64 s[12:13], -1
 ; SI-NEXT:    s_mov_b64 vcc, s[0:1]
 ; SI-NEXT:    s_cbranch_vccz .LBB3_2
@@ -260,8 +260,8 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; FLAT-NEXT:    v_mov_b32_e32 v0, 3
 ; FLAT-NEXT:    s_branch .LBB3_3
 ; FLAT-NEXT:  .LBB3_1: ; in Loop: Header=BB3_3 Depth=1
-; FLAT-NEXT:    s_mov_b64 s[10:11], -1
 ; FLAT-NEXT:    s_mov_b64 s[8:9], 0
+; FLAT-NEXT:    s_mov_b64 s[10:11], -1
 ; FLAT-NEXT:    s_mov_b64 s[12:13], -1
 ; FLAT-NEXT:  .LBB3_2: ; %Flow
 ; FLAT-NEXT:    ; in Loop: Header=BB3_3 Depth=1
@@ -269,8 +269,8 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; FLAT-NEXT:    s_cbranch_vccnz .LBB3_8
 ; FLAT-NEXT:  .LBB3_3: ; %while.cond
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
-; FLAT-NEXT:    s_mov_b64 s[8:9], -1
 ; FLAT-NEXT:    s_mov_b64 s[10:11], -1
+; FLAT-NEXT:    s_mov_b64 s[8:9], -1
 ; FLAT-NEXT:    s_mov_b64 s[12:13], -1
 ; FLAT-NEXT:    s_mov_b64 vcc, s[0:1]
 ; FLAT-NEXT:    s_cbranch_vccz .LBB3_2

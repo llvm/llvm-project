@@ -189,24 +189,30 @@ public:
   void removeInstruction(Instruction *I);
 };
 
-/// Reduced version of MemoryLocation that only stores a pointer and size.
-/// Used for caching AATags independent BasicAA results.
+/// Cache key for BasicAA results. It only includes the pointer and size from
+/// MemoryLocation, as BasicAA is AATags independent. Additionally, it includes
+/// the value of MayBeCrossIteration, which may affect BasicAA results.
 struct AACacheLoc {
-  const Value *Ptr;
+  using PtrTy = PointerIntPair<const Value *, 1, bool>;
+  PtrTy Ptr;
   LocationSize Size;
+
+  AACacheLoc(PtrTy Ptr, LocationSize Size) : Ptr(Ptr), Size(Size) {}
+  AACacheLoc(const Value *Ptr, LocationSize Size, bool MayBeCrossIteration)
+      : Ptr(Ptr, MayBeCrossIteration), Size(Size) {}
 };
 
 template <> struct DenseMapInfo<AACacheLoc> {
   static inline AACacheLoc getEmptyKey() {
-    return {DenseMapInfo<const Value *>::getEmptyKey(),
+    return {DenseMapInfo<AACacheLoc::PtrTy>::getEmptyKey(),
             DenseMapInfo<LocationSize>::getEmptyKey()};
   }
   static inline AACacheLoc getTombstoneKey() {
-    return {DenseMapInfo<const Value *>::getTombstoneKey(),
+    return {DenseMapInfo<AACacheLoc::PtrTy>::getTombstoneKey(),
             DenseMapInfo<LocationSize>::getTombstoneKey()};
   }
   static unsigned getHashValue(const AACacheLoc &Val) {
-    return DenseMapInfo<const Value *>::getHashValue(Val.Ptr) ^
+    return DenseMapInfo<AACacheLoc::PtrTy>::getHashValue(Val.Ptr) ^
            DenseMapInfo<LocationSize>::getHashValue(Val.Size);
   }
   static bool isEqual(const AACacheLoc &LHS, const AACacheLoc &RHS) {
@@ -257,15 +263,6 @@ public:
   SmallVector<AAQueryInfo::LocPair, 4> AssumptionBasedResults;
 
   AAQueryInfo(AAResults &AAR, CaptureInfo *CI) : AAR(AAR), CI(CI) {}
-
-  /// Create a new AAQueryInfo based on this one, but with the cache cleared.
-  /// This is used for recursive queries across phis, where cache results may
-  /// not be valid.
-  AAQueryInfo withEmptyCache() {
-    AAQueryInfo NewAAQI(AAR, CI);
-    NewAAQI.Depth = Depth;
-    return NewAAQI;
-  }
 };
 
 /// AAQueryInfo that uses SimpleCaptureInfo.

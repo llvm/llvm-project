@@ -1,10 +1,10 @@
-// RUN: %clang -### -Werror -target x86_64-linux-gnu -fdebug-default-version=4 -gdwarf-2 -S -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF2
-// RUN: %clang -### -Werror -target x86_64-linux-gnu -gdwarf-3 -fdebug-default-version=4 -S -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF3
-// RUN: %clang -### -Werror -target x86_64-linux-gnu -gdwarf-4 -fdebug-default-version=2 -S -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF4
-// RUN: %clang -### -Werror -target x86_64-linux-gnu -gdwarf-5 -S -fdebug-default-version=2 -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF5
-// RUN: %clang -### -Werror -target x86_64-linux-gnu -fdebug-default-version=5 -g -S -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF5
-// RUN: %clang -### -Werror -target x86_64-linux-gnu -gdwarf -fdebug-default-version=2 -S -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF2
-// RUN: %clang -### -Werror -target x86_64-linux-gnu -fdebug-default-version=4 -S -o - %s 2>&1 | FileCheck %s --check-prefixes=NODEBUGINFO,NODWARF4
+// RUN: %clang -### -Werror --target=x86_64 -fdebug-default-version=4 -gdwarf-2 -S -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF2 --implicit-check-not=warning:
+// RUN: %clang -### -Werror --target=x86_64 -gdwarf-3 -fdebug-default-version=4 -S -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF3
+// RUN: %clang -### -Werror --target=x86_64 -gdwarf-4 -fdebug-default-version=2 -S -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF4
+// RUN: %clang -### -Werror --target=x86_64 -gdwarf-5 -S -fdebug-default-version=2 -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF5
+// RUN: %clang -### -Werror --target=x86_64 -fdebug-default-version=5 -g -S -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF5 --implicit-check-not=warning:
+// RUN: %clang -### -Werror --target=x86_64 -gdwarf -fdebug-default-version=2 -S -o - %s 2>&1 | FileCheck %s --check-prefix=DWARF2
+// RUN: %clang -### -Werror --target=x86_64 -fdebug-default-version=4 -S -o - %s 2>&1 | FileCheck %s --check-prefixes=NODEBUGINFO,NODWARF4
 
 // Check which debug info formats we use on Windows. By default, in an MSVC
 // environment, we should use codeview. You can enable dwarf, which implicitly

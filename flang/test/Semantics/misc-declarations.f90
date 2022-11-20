@@ -29,7 +29,7 @@ module m
     volatile :: coarrayComponent
   end subroutine
   subroutine C868(coarray,coarrayComponent)
-    real, volatile :: coarray[*]
+    real :: coarray[*]
     type(hasCoarray) :: coarrayComponent
     block
       !ERROR: VOLATILE attribute may not apply to a coarray accessed by USE or host association

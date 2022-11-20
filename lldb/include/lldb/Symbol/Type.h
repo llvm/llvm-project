@@ -135,6 +135,8 @@ public:
 
   ConstString GetName();
 
+  ConstString GetBaseName();
+
   llvm::Optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope);
 
   uint32_t GetNumChildren(bool omit_empty_base_classes);

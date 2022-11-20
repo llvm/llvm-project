@@ -1060,13 +1060,7 @@ public:
                    EmitCInterface::On);
     rewriter.replaceOp(op, adaptor.getTensor());
     // Deallocate the buffers on exit of the loop nest.
-    Operation *parent = op;
-    for (; isa<scf::ForOp>(parent->getParentOp()) ||
-           isa<scf::WhileOp>(parent->getParentOp()) ||
-           isa<scf::ParallelOp>(parent->getParentOp()) ||
-           isa<scf::IfOp>(parent->getParentOp());
-         parent = parent->getParentOp())
-      ;
+    Operation *parent = getTop(op);
     rewriter.setInsertionPointAfter(parent);
     rewriter.create<memref::DeallocOp>(loc, values);
     rewriter.create<memref::DeallocOp>(loc, filled);

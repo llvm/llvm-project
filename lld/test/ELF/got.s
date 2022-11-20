@@ -4,7 +4,7 @@
 // RUN: ld.lld -shared %t2.o -soname=t2.so -o %t2.so
 // RUN: ld.lld --hash-style=sysv %t.o %t2.so -o %t
 // RUN: llvm-readobj -S -r %t | FileCheck %s
-// RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck --check-prefix=DISASM %s
 
 // CHECK:      Name: .got
 // CHECK-NEXT: Type: SHT_PROGBITS

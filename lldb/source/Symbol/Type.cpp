@@ -305,6 +305,10 @@ ConstString Type::GetName() {
   return m_name;
 }
 
+ConstString Type::GetBaseName() {
+  return GetForwardCompilerType().GetTypeName(/*BaseOnly*/ true);
+}
+
 void Type::DumpTypeName(Stream *s) { GetName().Dump(s, "<invalid-type-name>"); }
 
 void Type::DumpValue(ExecutionContext *exe_ctx, Stream *s,

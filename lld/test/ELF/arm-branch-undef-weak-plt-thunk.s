@@ -3,7 +3,7 @@
 // RUN: ld.lld %t1.o --shared -soname=t1.so -o %t1.so
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o %t1.so -o %t
-// RUN: llvm-objdump -d --triple=armv7a-none-linux-gnueabi --start-address=0x201e4 --stop-address=0x20204 %t | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d --triple=armv7a-none-linux-gnueabi --start-address=0x201e4 --stop-address=0x20204 %t | FileCheck %s
 
 /// When we are dynamic linking, undefined weak references have a PLT entry so
 /// we must create a thunk for the branch to the PLT entry.

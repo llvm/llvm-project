@@ -30,8 +30,8 @@ inline A &ExtractElement(IoStatementState &io, const Descriptor &descriptor,
     const SubscriptValue subscripts[]) {
   A *p{descriptor.Element<A>(subscripts)};
   if (!p) {
-    io.GetIoErrorHandler().Crash(
-        "ExtractElement: null base address or subscripts out of range");
+    io.GetIoErrorHandler().Crash("Bad address for I/O item -- null base "
+                                 "address or subscripts out of range");
   }
   return *p;
 }

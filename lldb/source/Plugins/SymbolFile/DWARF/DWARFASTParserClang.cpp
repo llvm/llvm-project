@@ -1524,6 +1524,41 @@ TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
 }
 
 std::string
+DWARFASTParserClang::GetTemplateParametersString(const DWARFDIE &die) {
+  if (llvm::StringRef(die.GetName()).contains("<"))
+    return std::string();
+  TypeSystemClang::TemplateParameterInfos template_param_infos;
+  if (!ParseTemplateParameterInfos(die, template_param_infos))
+    return std::string();
+  std::string all_template_names;
+  llvm::SmallVector<clang::TemplateArgument, 2> args =
+      template_param_infos.args;
+  if (template_param_infos.hasParameterPack())
+    args.append(template_param_infos.packed_args->args);
+  if (args.empty())
+    return std::string();
+  for (auto &arg : args) {
+    std::string template_name;
+    llvm::raw_string_ostream os(template_name);
+    arg.print(m_ast.getASTContext().getPrintingPolicy(), os, true);
+
+    if (!template_name.empty()) {
+      if (all_template_names.empty()) {
+        all_template_names.append("<");
+      } else {
+        all_template_names.append(", ");
+      }
+      all_template_names.append(template_name);
+    }
+  }
+  assert(!all_template_names.empty() && "no template parameters?");
+  // Spacing doesn't matter as long as we're consistent because we're only using
+  // this to deduplicate C++ symbols.
+  all_template_names.append(">");
+  return all_template_names;
+}
+
+std::string
 DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   if (!die.IsValid())
     return "";
@@ -1534,6 +1569,9 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   DWARFDIE parent_decl_ctx_die = die.GetParentDeclContextDIE();
   // TODO: change this to get the correct decl context parent....
   while (parent_decl_ctx_die) {
+    // The name may not contain template parameters due to simplified template
+    // names; we must reconstruct the full name from child template parameter
+    // dies via GetTemplateParametersString().
     const dw_tag_t parent_tag = parent_decl_ctx_die.Tag();
     switch (parent_tag) {
     case DW_TAG_namespace: {
@@ -1551,6 +1589,8 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
     case DW_TAG_structure_type:
     case DW_TAG_union_type: {
       if (const char *class_union_struct_name = parent_decl_ctx_die.GetName()) {
+        qualified_name.insert(0,
+                              GetTemplateParametersString(parent_decl_ctx_die));
         qualified_name.insert(0, "::");
         qualified_name.insert(0, class_union_struct_name);
       }
@@ -1568,6 +1608,7 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
     qualified_name.append("::");
 
   qualified_name.append(name);
+  qualified_name.append(GetTemplateParametersString(die));
 
   return qualified_name;
 }
@@ -1772,36 +1813,36 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     metadata.SetUserID(die.GetID());
     metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
 
-    if (attrs.name.GetStringRef().contains('<')) {
-      TypeSystemClang::TemplateParameterInfos template_param_infos;
-      if (ParseTemplateParameterInfos(die, template_param_infos)) {
-        clang::ClassTemplateDecl *class_template_decl =
-            m_ast.ParseClassTemplateDecl(
-                decl_ctx, GetOwningClangModule(die), attrs.accessibility,
-                attrs.name.GetCString(), tag_decl_kind, template_param_infos);
-        if (!class_template_decl) {
-          if (log) {
-            dwarf->GetObjectFile()->GetModule()->LogMessage(
-                log,
-                "SymbolFileDWARF(%p) - 0x%8.8x: %s type \"%s\" "
-                "clang::ClassTemplateDecl failed to return a decl.",
-                static_cast<void *>(this), die.GetOffset(),
-                DW_TAG_value_to_name(tag), attrs.name.GetCString());
-          }
-          return TypeSP();
+    TypeSystemClang::TemplateParameterInfos template_param_infos;
+    if (ParseTemplateParameterInfos(die, template_param_infos) &&
+        (!template_param_infos.args.empty() ||
+         template_param_infos.packed_args)) {
+      clang::ClassTemplateDecl *class_template_decl =
+          m_ast.ParseClassTemplateDecl(
+              decl_ctx, GetOwningClangModule(die), attrs.accessibility,
+              attrs.name.GetCString(), tag_decl_kind, template_param_infos);
+      if (!class_template_decl) {
+        if (log) {
+          dwarf->GetObjectFile()->GetModule()->LogMessage(
+              log,
+              "SymbolFileDWARF(%p) - 0x%8.8x: %s type \"%s\" "
+              "clang::ClassTemplateDecl failed to return a decl.",
+              static_cast<void *>(this), die.GetOffset(),
+              DW_TAG_value_to_name(tag), attrs.name.GetCString());
         }
-
-        clang::ClassTemplateSpecializationDecl *class_specialization_decl =
-            m_ast.CreateClassTemplateSpecializationDecl(
-                decl_ctx, GetOwningClangModule(die), class_template_decl,
-                tag_decl_kind, template_param_infos);
-        clang_type = m_ast.CreateClassTemplateSpecializationType(
-            class_specialization_decl);
-        clang_type_was_created = true;
-
-        m_ast.SetMetadata(class_template_decl, metadata);
-        m_ast.SetMetadata(class_specialization_decl, metadata);
+        return TypeSP();
       }
+
+      clang::ClassTemplateSpecializationDecl *class_specialization_decl =
+          m_ast.CreateClassTemplateSpecializationDecl(
+              decl_ctx, GetOwningClangModule(die), class_template_decl,
+              tag_decl_kind, template_param_infos);
+      clang_type = m_ast.CreateClassTemplateSpecializationType(
+          class_specialization_decl);
+      clang_type_was_created = true;
+
+      m_ast.SetMetadata(class_template_decl, metadata);
+      m_ast.SetMetadata(class_specialization_decl, metadata);
     }
 
     if (!clang_type_was_created) {

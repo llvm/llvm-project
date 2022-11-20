@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=thumbv7 -filetype=obj %s | llvm-objdump --triple=thumbv7 -d - | FileCheck %s
+// RUN: llvm-mc -triple=thumbv7 -filetype=obj %s | llvm-objdump --no-print-imm-hex --triple=thumbv7 -d - | FileCheck %s
 
 .syntax unified
 

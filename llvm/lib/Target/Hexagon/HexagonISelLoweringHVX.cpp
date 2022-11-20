@@ -429,7 +429,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     }
   }
 
-  setTargetDAGCombine({ISD::SPLAT_VECTOR, ISD::VSELECT});
+  setTargetDAGCombine({ISD::SPLAT_VECTOR, ISD::VSELECT, ISD::TRUNCATE});
 }
 
 unsigned
@@ -3512,10 +3512,41 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op(N, 0);
   unsigned Opc = Op.getOpcode();
-  if (DCI.isBeforeLegalizeOps())
-    return SDValue();
 
   SmallVector<SDValue, 4> Ops(N->ops().begin(), N->ops().end());
+
+  if (Opc == ISD::TRUNCATE) {
+    // Simplify V:v2NiB --(bitcast)--> vNi2B --(truncate)--> vNiB
+    // to extract-subvector (shuffle V, pick even, pick odd)
+    if (Ops[0].getOpcode() == ISD::BITCAST)
+      return SDValue();
+    SDValue Cast = Ops[0];
+    SDValue Src = Cast.getOperand(0);
+
+    EVT TruncTy = Op.getValueType();
+    EVT CastTy = Cast.getValueType();
+    EVT SrcTy = Src.getValueType();
+    if (SrcTy.isSimple())
+      return SDValue();
+    if (SrcTy.getVectorElementType() != TruncTy.getVectorElementType())
+      return SDValue();
+    unsigned SrcLen = SrcTy.getVectorNumElements();
+    unsigned CastLen = CastTy.getVectorNumElements();
+    if (2 * CastLen != SrcLen)
+      return SDValue();
+
+    SmallVector<int, 128> Mask(SrcLen);
+    for (int i = 0; i != static_cast<int>(CastLen); ++i) {
+      Mask[i] = 2 * i;
+      Mask[i + CastLen] = 2 * i + 1;
+    }
+    SDValue Deal =
+        DAG.getVectorShuffle(SrcTy, dl, Src, DAG.getUNDEF(SrcTy), Mask);
+    return opSplit(Deal, dl, DAG).first;
+  }
+
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
 
   switch (Opc) {
     case ISD::VSELECT: {

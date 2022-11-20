@@ -9,7 +9,7 @@
 
 # RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=small -data-sections=false -mcpu=pwr4 -mattr=-altivec -O0 \
 # RUN:     -filetype=obj -o %t.o < %t.ll
-# RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck --check-prefix=DIS32 %s
+# RUN: llvm-objdump --no-print-imm-hex -D -r --symbol-description %t.o | FileCheck --check-prefix=DIS32 %s
 
 ## FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 

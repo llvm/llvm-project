@@ -5,9 +5,9 @@
 # RUN: rm -rf %t && split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/a.s -o %t/a.o
 # RUN: ld.lld --emit-relocs --no-relax -T %t/1.t %t/a.o -o %t/a1
-# RUN: llvm-objdump -dr %t/a1 | FileCheck %s --check-prefixes=CHECK,CHECK1
+# RUN: llvm-objdump --no-print-imm-hex -dr %t/a1 | FileCheck %s --check-prefixes=CHECK,CHECK1
 # RUN: ld.lld --emit-relocs --no-relax -T %t/2.t %t/a.o -o %t/a2
-# RUN: llvm-objdump -dr %t/a2 | FileCheck %s --check-prefixes=CHECK,CHECK2
+# RUN: llvm-objdump --no-print-imm-hex -dr %t/a2 | FileCheck %s --check-prefixes=CHECK,CHECK2
 
 # CHECK:       <_start>:
 ## %t/a1: bss is at offset 17. bss-4 = .bss + 0xd

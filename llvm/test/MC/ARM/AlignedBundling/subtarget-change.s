@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple armv7-linux-gnueabi %s -o - \
-# RUN:   | llvm-objdump --no-show-raw-insn --triple=armv7 -d - | FileCheck %s
+# RUN:   | llvm-objdump --no-print-imm-hex --no-show-raw-insn --triple=armv7 -d - | FileCheck %s
 
         # We can switch subtargets with .arch outside of a bundle
         .syntax unified

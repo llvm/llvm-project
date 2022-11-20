@@ -22,24 +22,37 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
+
 #include <vector>
+
+#define DEBUG_TYPE "llvm-reduce"
 
 using namespace llvm;
 
 /// Replaces BB Terminator with one that only contains Chunk BBs
 static void replaceBranchTerminator(BasicBlock &BB,
-                                    const DenseSet<BasicBlock *> &BBsToKeep) {
+                                    const DenseSet<BasicBlock *> &BBsToDelete) {
   auto *Term = BB.getTerminator();
   std::vector<BasicBlock *> ChunkSuccessors;
-  for (auto *Succ : successors(&BB))
-    if (BBsToKeep.count(Succ))
+  for (auto *Succ : successors(&BB)) {
+    if (!BBsToDelete.count(Succ))
       ChunkSuccessors.push_back(Succ);
+  }
 
   // BB only references Chunk BBs
   if (ChunkSuccessors.size() == Term->getNumSuccessors())
     return;
 
-  bool IsBranch = isa<BranchInst>(Term) || isa<InvokeInst>(Term);
+  bool IsBranch = isa<BranchInst>(Term);
+  if (InvokeInst *Invoke = dyn_cast<InvokeInst>(Term)) {
+    LandingPadInst *LP = Invoke->getLandingPadInst();
+    LP->replaceAllUsesWith(getDefaultValue(LP->getType()));
+    LP->eraseFromParent();
+    IsBranch = true;
+  }
+
   Value *Address = nullptr;
   if (auto *IndBI = dyn_cast<IndirectBrInst>(Term))
     Address = IndBI->getAddress();
@@ -48,18 +61,6 @@ static void replaceBranchTerminator(BasicBlock &BB,
   Term->eraseFromParent();
 
   if (ChunkSuccessors.empty()) {
-    // Scan forward in BB list to try find a block that is kept.
-    Function &F = *BB.getParent();
-    Function::iterator FI = BB.getIterator();
-    FI++;
-    while (FI != F.end()) {
-      auto &FIB = *FI;
-      if (BBsToKeep.count(&FIB) && !isa<PHINode>(FIB.begin())) {
-        BranchInst::Create(&FIB, &BB);
-        return;
-      }
-      FI++;
-    }
     // If that fails then resort to replacing with a ret.
     auto *FnRetTy = BB.getParent()->getReturnType();
     ReturnInst::Create(BB.getContext(),
@@ -84,68 +85,120 @@ static void replaceBranchTerminator(BasicBlock &BB,
 /// replace with something)
 static void
 removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
-                                 const DenseSet<BasicBlock *> &BBsToKeep) {
-  if (!BBsToKeep.count(SwInst.getDefaultDest())) {
-    auto *FnRetTy = SwInst.getParent()->getParent()->getReturnType();
-    ReturnInst::Create(SwInst.getContext(),
-                       FnRetTy->isVoidTy() ? nullptr : getDefaultValue(FnRetTy),
-                       SwInst.getParent());
-    SwInst.eraseFromParent();
-  } else
-    for (int I = 0, E = SwInst.getNumCases(); I != E; ++I) {
-      auto Case = SwInst.case_begin() + I;
-      if (!BBsToKeep.count(Case->getCaseSuccessor())) {
-        SwInst.removeCase(Case);
-        --I;
-        --E;
-      }
+                                 const DenseSet<BasicBlock *> &BBsToDelete) {
+  for (int I = 0, E = SwInst.getNumCases(); I != E; ++I) {
+    auto Case = SwInst.case_begin() + I;
+    if (BBsToDelete.count(Case->getCaseSuccessor())) {
+      SwInst.removeCase(Case);
+      --I;
+      --E;
     }
+  }
+
+  if (BBsToDelete.count(SwInst.getDefaultDest())) {
+    if (SwInst.getNumCases() == 0) {
+      auto *FnRetTy = SwInst.getParent()->getParent()->getReturnType();
+      Value *RetValue =
+          FnRetTy->isVoidTy() ? nullptr : getDefaultValue(FnRetTy);
+      ReturnInst::Create(SwInst.getContext(), RetValue, SwInst.getParent());
+      SwInst.eraseFromParent();
+      return;
+    }
+
+    // Replace the default dest with one of the other cases
+    auto Case = SwInst.case_begin();
+
+    BasicBlock *NewDefault = Case->getCaseSuccessor();
+    SwInst.setDefaultDest(NewDefault);
+
+    for (PHINode &SuccPHI : NewDefault->phis()) {
+      SuccPHI.addIncoming(SuccPHI.getIncomingValueForBlock(SwInst.getParent()),
+                          SwInst.getParent());
+    }
+  }
 }
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
-  DenseSet<BasicBlock *> BBsToKeep, BBsToDelete;
+  DenseSet<BasicBlock *> BBsToDelete;
+  df_iterator_default_set<BasicBlock *> Reachable;
 
   for (auto &F : Program) {
     if (F.empty())
       continue;
 
-    // Never try to delete the entry block.
-    for (auto &BB : make_range(++F.begin(), F.end())) {
-      if (O.shouldKeep())
-        BBsToKeep.insert(&BB);
-      else
+    BasicBlock &Entry = F.getEntryBlock();
+    for (auto *BB : depth_first_ext(&Entry, Reachable))
+      (void)BB;
+
+    // Skip any function with unreachable blocks. It's somewhat difficult to
+    // avoid producing invalid IR without deleting them.
+    //
+    // We also do not want to unconditionally delete them, as doing so would
+    // break the invariant of changing the number of chunks during counting.
+
+    const bool HasUnreachableBlocks = Reachable.size() != F.size();
+    Reachable.clear();
+
+    if (HasUnreachableBlocks) {
+      LLVM_DEBUG(dbgs() << "Skipping function with unreachable blocks\n");
+      continue;
+    }
+
+    for (BasicBlock &BB : F) {
+      if (&BB != &Entry && !O.shouldKeep())
         BBsToDelete.insert(&BB);
     }
-  }
 
-  // Remove out-of-chunk BB from successor phi nodes
-  for (auto &BB : BBsToDelete) {
-    for (auto *Succ : successors(BB))
-      Succ->removePredecessor(BB, /*KeepOneInputPHIs=*/true);
-  }
-
-  // Replace terminators that reference out-of-chunk BBs
-  for (auto &F : Program)
-    for (auto &BB : F) {
+    // Replace terminators that reference out-of-chunk BBs
+    for (BasicBlock &BB : F) {
       if (auto *SwInst = dyn_cast<SwitchInst>(BB.getTerminator()))
-        removeUninterestingBBsFromSwitch(*SwInst, BBsToKeep);
+        removeUninterestingBBsFromSwitch(*SwInst, BBsToDelete);
       else
-        replaceBranchTerminator(BB, BBsToKeep);
+        replaceBranchTerminator(BB, BBsToDelete);
     }
 
-  // Replace out-of-chunk switch uses
-  for (auto &BB : BBsToDelete) {
-    // Instructions might be referenced in other BBs
-    for (auto &I : *BB)
-      I.replaceAllUsesWith(getDefaultValue(I.getType()));
-    // Should not be completely removing the body of a function.
-    assert(BB->getParent()->size() > 1);
-    BB->eraseFromParent();
+    // Cleanup any blocks that are now dead after eliminating this set. This
+    // will likely be larger than the number of blocks the oracle told us to
+    // delete.
+    EliminateUnreachableBlocks(F);
+    BBsToDelete.clear();
   }
 }
 
 void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, extractBasicBlocksFromModule, "Reducing Basic Blocks");
+}
+
+static void removeUnreachableBasicBlocksFromModule(Oracle &O, Module &M) {
+  std::vector<BasicBlock *> DeadBlocks;
+  df_iterator_default_set<BasicBlock *> Reachable;
+
+  for (Function &F : M) {
+    if (F.empty())
+      continue;
+
+    // Mark all reachable blocks.
+    for (BasicBlock *BB : depth_first_ext(&F, Reachable))
+      (void)BB;
+
+    if (Reachable.size() != F.size() && !O.shouldKeep()) {
+      for (BasicBlock &BB : F) {
+        if (!Reachable.count(&BB))
+          DeadBlocks.push_back(&BB);
+      }
+
+      // Delete the dead blocks.
+      DeleteDeadBlocks(DeadBlocks, nullptr, /*KeepOneInputPHIs*/ false);
+      DeadBlocks.clear();
+    }
+
+    Reachable.clear();
+  }
+}
+
+void llvm::reduceUnreachableBasicBlocksDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, removeUnreachableBasicBlocksFromModule,
+               "Removing Unreachable Basic Blocks");
 }

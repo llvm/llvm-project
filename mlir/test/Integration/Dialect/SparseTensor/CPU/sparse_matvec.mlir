@@ -91,10 +91,6 @@ module {
     // Release the resources.
     bufferization.dealloc_tensor %a : tensor<?x?xi32, #SparseMatrix>
 
-    // TODO(springerm): auto release!
-    bufferization.dealloc_tensor %b : tensor<?xi32>
-    bufferization.dealloc_tensor %x : tensor<?xi32>
-
     return
   }
 }

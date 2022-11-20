@@ -944,7 +944,6 @@ defm : X86WriteResPairUnsupported<WriteFMAZ>; // Fused Multiply Add (ZMM).
 defm : Zn3WriteResXMMPair<WriteDPPD, [Zn3FPFMul01], 9, [6], 3, /*LoadUOps=*/2>; // Floating point double dot product.
 defm : Zn3WriteResXMMPair<WriteDPPS, [Zn3FPFMul01], 15, [8], 8, /*LoadUOps=*/2>; // Floating point single dot product.
 defm : Zn3WriteResYMMPair<WriteDPPSY, [Zn3FPFMul01], 15, [8], 7, /*LoadUOps=*/1>; // Floating point single dot product (YMM).
-defm : X86WriteResPairUnsupported<WriteDPPSZ>; // Floating point single dot product (ZMM).
 defm : Zn3WriteResXMMPair<WriteFSign, [Zn3FPFMul01], 1, [2], 1>; // FIXME: latency not from llvm-exegesis  // Floating point fabs/fchs.
 defm : Zn3WriteResXMMPair<WriteFRnd, [Zn3FPFCvt01], 3, [1], 1>; // Floating point rounding.
 defm : Zn3WriteResYMMPair<WriteFRndY, [Zn3FPFCvt01], 3, [1], 1>; // Floating point rounding (YMM).

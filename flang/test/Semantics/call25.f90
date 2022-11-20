@@ -43,7 +43,7 @@ program main
   call subr2(notChar)
   call subr3(explicitLength)
   call subr3(assumedLength)
-  !CHECK: warning: If the procedure's interface were explicit, this reference would be in error:
+  !CHECK: warning: If the procedure's interface were explicit, this reference would be in error
   !CHECK: because: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
   call subr3(notChar)
 end program

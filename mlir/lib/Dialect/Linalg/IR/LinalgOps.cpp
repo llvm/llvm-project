@@ -1672,6 +1672,7 @@ void TransposeOp::build(::mlir::OpBuilder &builder,
   if (initType.isa<RankedTensorType>())
     result.addTypes(initType);
 
+  (void)result.addRegion();
   buildGenericRegion(builder, result, input, init,
                      [&](OpBuilder &b, Location loc, ValueRange args) {
                        b.create<linalg::YieldOp>(loc, args[0]);

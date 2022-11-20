@@ -65,9 +65,17 @@ void DiagnosticInfoInlineAsm::print(DiagnosticPrinter &DP) const {
     DP << " at line " << getLocCookie();
 }
 
+DiagnosticInfoResourceLimit::DiagnosticInfoResourceLimit(
+    const Function &Fn, const char *ResourceName, uint64_t ResourceSize,
+    uint64_t ResourceLimit, DiagnosticSeverity Severity, DiagnosticKind Kind)
+    : DiagnosticInfoWithLocationBase(Kind, Severity, Fn, Fn.getSubprogram()),
+      Fn(Fn), ResourceName(ResourceName), ResourceSize(ResourceSize),
+      ResourceLimit(ResourceLimit) {}
+
 void DiagnosticInfoResourceLimit::print(DiagnosticPrinter &DP) const {
-  DP << getResourceName() << " (" << getResourceSize() << ") exceeds limit ("
-     << getResourceLimit() << ") in function '" << getFunction() << '\'';
+  DP << getLocationStr() << ": " << getResourceName() << " ("
+     << getResourceSize() << ") exceeds limit (" << getResourceLimit()
+     << ") in function '" << getFunction() << '\'';
 }
 
 void DiagnosticInfoDebugMetadataVersion::print(DiagnosticPrinter &DP) const {

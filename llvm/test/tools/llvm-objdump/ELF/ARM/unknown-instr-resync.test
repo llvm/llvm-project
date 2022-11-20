@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s | llvm-objdump -d --mcpu=cortex-a8 - | FileCheck %s
+# RUN: yaml2obj %s | llvm-objdump --no-print-imm-hex -d --mcpu=cortex-a8 - | FileCheck %s
 
 # Test that unrecognized instructions are skipped in a way that makes
 # sense for the Arm instruction set encoding.

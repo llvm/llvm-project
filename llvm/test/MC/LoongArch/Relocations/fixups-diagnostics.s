@@ -9,12 +9,12 @@ unaligned:
   .byte 0
   .byte 0
 
-  beq $a0, $a1, out_of_range_b16 # CHECK: :[[#@LINE]]:3: error: fixup value out of range
+  beq $a0, $a1, out_of_range_b18 # CHECK: :[[#@LINE]]:3: error: fixup value out of range [-131072, 131071]
   .space 1<<18
-out_of_range_b16:
-  beqz $a0, out_of_range_b21 # CHECK: :[[#@LINE]]:3: error: fixup value out of range
+out_of_range_b18:
+  beqz $a0, out_of_range_b23 # CHECK: :[[#@LINE]]:3: error: fixup value out of range [-4194304, 4194303]
   .space 1<<23
-out_of_range_b21:
-  b out_of_range_b26 # CHECK: :[[#@LINE]]:3: error: fixup value out of range
+out_of_range_b23:
+  b out_of_range_b28 # CHECK: :[[#@LINE]]:3: error: fixup value out of range [-134217728, 134217727]
   .space 1<<28
-out_of_range_b26:
+out_of_range_b28:

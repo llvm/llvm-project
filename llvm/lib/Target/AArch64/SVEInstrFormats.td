@@ -8763,3 +8763,28 @@ class sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, bits<3> tsz>
 multiclass sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc> {
   def : sve2p1_multi_vec_extract_narrow<mnemonic, opc, 0b010>;
 }
+
+// SVE2 multi-vec shift narrow
+class sve2p1_multi_vec_shift_narrow<string mnemonic, bits<3> opc, bits<2> tsz>
+    : I<(outs ZPR16:$Zd), (ins ZZ_s_mul_r:$Zn, vecshiftR16:$imm4),
+        mnemonic, "\t$Zd, $Zn, $imm4",
+        "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<4> Zn;
+  bits<4> imm4;
+  let Inst{31-23} = 0b010001011;
+  let Inst{22}    = tsz{1};
+  let Inst{21}    = 0b1;
+  let Inst{20}    = tsz{0};
+  let Inst{19-16} = imm4;
+  let Inst{15-14} = 0b00;
+  let Inst{13-11} = opc;
+  let Inst{10}    = 0b0;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2p1_multi_vec_shift_narrow<string mnemonic, bits<3> opc> {
+  def : sve2p1_multi_vec_shift_narrow<mnemonic, opc, 0b01>;
+}

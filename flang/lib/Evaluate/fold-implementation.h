@@ -1607,7 +1607,6 @@ Expr<TO> FoldOperation(
         TypeCategory constexpr FromCat{FROMCAT};
         static_assert(FromCat == Operand::category);
         auto &convert{msvcWorkaround.convert};
-        char buffer[64];
         if (auto value{GetScalarConstantValue<Operand>(kindExpr)}) {
           FoldingContext &ctx{msvcWorkaround.context};
           if constexpr (TO::category == TypeCategory::Integer) {
@@ -1636,6 +1635,7 @@ Expr<TO> FoldOperation(
             if constexpr (FromCat == TypeCategory::Integer) {
               auto converted{Scalar<TO>::FromInteger(*value)};
               if (!converted.flags.empty()) {
+                char buffer[64];
                 std::snprintf(buffer, sizeof buffer,
                     "INTEGER(%d) to REAL(%d) conversion", Operand::kind,
                     TO::kind);
@@ -1644,6 +1644,7 @@ Expr<TO> FoldOperation(
               return ScalarConstantToExpr(std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Real) {
               auto converted{Scalar<TO>::Convert(*value)};
+              char buffer[64];
               if (!converted.flags.empty()) {
                 std::snprintf(buffer, sizeof buffer,
                     "REAL(%d) to REAL(%d) conversion", Operand::kind, TO::kind);

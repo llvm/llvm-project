@@ -2273,6 +2273,16 @@ Optional<OpFoldResult> AffineForOp::getSingleUpperBound() {
   return OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()));
 }
 
+Speculation::Speculatability AffineForOp::getSpeculatability() {
+  // `affine.for (I = Start; I < End; I += 1)` terminates for all values of
+  // Start and End.
+  //
+  // For Step != 1, the loop may not terminate.  We can add more smarts here if
+  // needed.
+  return getStep() == 1 ? Speculation::RecursivelySpeculatable
+                        : Speculation::NotSpeculatable;
+}
+
 /// Returns true if the provided value is the induction variable of a
 /// AffineForOp.
 bool mlir::isForInductionVar(Value val) {

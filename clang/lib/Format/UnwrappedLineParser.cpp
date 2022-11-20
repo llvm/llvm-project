@@ -1215,9 +1215,12 @@ void UnwrappedLineParser::parsePPElse() {
   // If a potential include guard has an #else, it's not an include guard.
   if (IncludeGuard == IG_Defined && PPBranchLevel == 0)
     IncludeGuard = IG_Rejected;
+  // Don't crash when there is an #else without an #if.
+  assert(PPBranchLevel >= -1);
+  if (PPBranchLevel == -1)
+    conditionalCompilationStart(/*Unreachable=*/true);
   conditionalCompilationAlternative();
-  if (PPBranchLevel > -1)
-    --PPBranchLevel;
+  --PPBranchLevel;
   parsePPUnknown();
   ++PPBranchLevel;
 }

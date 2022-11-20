@@ -1,5 +1,5 @@
 ; RUN: llvm-mc -triple avr -mattr=jmpcall -show-encoding < %s | FileCheck %s
-; RUN: llvm-mc -filetype=obj -triple avr -mattr=jmpcall < %s | llvm-objdump -dr --mattr=jmpcall - | FileCheck -check-prefix=CHECK-INST %s
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=jmpcall < %s | llvm-objdump --no-print-imm-hex -dr --mattr=jmpcall - | FileCheck -check-prefix=CHECK-INST %s
 
 
 foo:

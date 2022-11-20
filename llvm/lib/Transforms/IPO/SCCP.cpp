@@ -12,6 +12,7 @@
 
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -32,7 +33,8 @@ PreservedAnalyses IPSCCPPass::run(Module &M, ModuleAnalysisManager &AM) {
     DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
     return {
         std::make_unique<PredicateInfo>(F, DT, FAM.getResult<AssumptionAnalysis>(F)),
-        &DT, FAM.getCachedResult<PostDominatorTreeAnalysis>(F)};
+        &DT, FAM.getCachedResult<PostDominatorTreeAnalysis>(F),
+        nullptr};
   };
 
   if (!runIPSCCP(M, DL, GetTLI, getAnalysis))
@@ -75,8 +77,9 @@ public:
               F, DT,
               this->getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
                   F)),
-          nullptr,  // We cannot preserve the DT or PDT with the legacy pass
-          nullptr}; // manager, so set them to nullptr.
+          nullptr,  // We cannot preserve the LI, DT or PDT with the legacy pass
+          nullptr,  // manager, so set them to nullptr.
+          nullptr};
     };
 
     return runIPSCCP(M, DL, GetTLI, getAnalysis);
@@ -123,7 +126,8 @@ PreservedAnalyses FunctionSpecializationPass::run(Module &M,
     DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
     return {std::make_unique<PredicateInfo>(
                 F, DT, FAM.getResult<AssumptionAnalysis>(F)),
-            &DT, FAM.getCachedResult<PostDominatorTreeAnalysis>(F)};
+            &DT, FAM.getCachedResult<PostDominatorTreeAnalysis>(F),
+            &FAM.getResult<LoopAnalysis>(F)};
   };
 
   if (!runFunctionSpecialization(M, DL, GetTLI, GetTTI, GetAC, GetAnalysis))
@@ -171,8 +175,9 @@ struct FunctionSpecializationLegacyPass : public ModulePass {
               F, DT,
               this->getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
                   F)),
-          nullptr,  // We cannot preserve the DT or PDT with the legacy pass
-          nullptr}; // manager, so set them to nullptr.
+          nullptr, // We cannot preserve the LI, DT, or PDT with the legacy pass
+          nullptr, // manager, so set them to nullptr.
+          nullptr};
     };
     return runFunctionSpecialization(M, DL, GetTLI, GetTTI, GetAC, GetAnalysis);
   }

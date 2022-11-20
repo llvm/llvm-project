@@ -1371,7 +1371,7 @@ describes the various floating point semantic modes and the corresponding option
   :header: "Mode", "Values"
   :widths: 15, 30, 30
 
-  "ffp-exception-behavior", "{ignore, strict, may_trap}",
+  "ffp-exception-behavior", "{ignore, strict, maytrap}",
   "fenv_access", "{off, on}", "(none)"
   "frounding-math", "{dynamic, tonearest, downward, upward, towardzero}"
   "ffp-contract", "{on, off, fast, fast-honor-pragmas}"

@@ -193,6 +193,7 @@ def SparseBufferRewrite : Pass<"sparse-buffer-rewrite", "ModuleOp"> {
   let constructor = "mlir::createSparseBufferRewritePass()";
   let dependentDialects = [
     "arith::ArithDialect",
+    "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",

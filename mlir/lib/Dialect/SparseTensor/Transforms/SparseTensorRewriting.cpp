@@ -169,7 +169,8 @@ public:
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     if (!op.hasTensorSemantics() || op.getNumResults() != 1 ||
-        !isAlloc(op.getDpsInitOperand(0), /*isZero=*/false) || !isZeroYield(op))
+        !isAlloc(op.getDpsInitOperand(0), /*isZero=*/false) ||
+        !isZeroYield(op) || !op.getDpsInitOperand(0)->get().hasOneUse())
       return failure();
     auto outputType = op.getResult(0).getType().cast<RankedTensorType>();
     // Yielding zero on newly allocated (all-zero) sparse tensors can be

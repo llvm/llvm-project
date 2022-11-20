@@ -720,7 +720,8 @@ fir::MutableBoxValue Fortran::lower::createMutableBox(
   fir::MutableBoxValue box(boxAddr, nonDeferredParams, mutableProperties);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (!var.isGlobal() && !Fortran::semantics::IsDummy(var.getSymbol()))
-    fir::factory::disassociateMutableBox(builder, loc, box);
+    fir::factory::disassociateMutableBox(builder, loc, box,
+                                         /*polymorphicSetType=*/false);
   return box;
 }
 

@@ -4,7 +4,6 @@
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/ManagedStatic.h"
 
 using namespace llvm;
 
@@ -44,37 +43,41 @@ private:
   }
 };
 
-struct CreateDebugCounterOption {
-  static void *call() {
-    return new DebugCounterList(
-        "debug-counter", cl::Hidden,
-        cl::desc("Comma separated list of debug counter skip and count"),
-        cl::CommaSeparated, cl::location(DebugCounter::instance()));
+// All global objects associated to the DebugCounter, including the DebugCounter
+// itself, are owned by a single global instance of the DebugCounterOwner
+// struct. This makes it easier to control the order in which constructors and
+// destructors are run.
+struct DebugCounterOwner {
+  DebugCounter DC;
+  DebugCounterList DebugCounterOption{
+      "debug-counter", cl::Hidden,
+      cl::desc("Comma separated list of debug counter skip and count"),
+      cl::CommaSeparated, cl::location(DC)};
+  cl::opt<bool> PrintDebugCounter{
+      "print-debug-counter", cl::Hidden, cl::init(false), cl::Optional,
+      cl::desc("Print out debug counter info after all counters accumulated")};
+
+  DebugCounterOwner() {
+    // Our destructor uses the debug stream. By referencing it here, we
+    // ensure that its destructor runs after our destructor.
+    (void)dbgs();
+  }
+
+  // Print information when destroyed, iff command line option is specified.
+  ~DebugCounterOwner() {
+    if (DC.isCountingEnabled() && PrintDebugCounter)
+      DC.print(dbgs());
   }
 };
-} // namespace
 
-static ManagedStatic<DebugCounterList, CreateDebugCounterOption>
-    DebugCounterOption;
-static bool PrintDebugCounter;
+} // anonymous namespace
 
-void llvm::initDebugCounterOptions() {
-  *DebugCounterOption;
-  static cl::opt<bool, true> RegisterPrintDebugCounter(
-      "print-debug-counter", cl::Hidden, cl::location(PrintDebugCounter),
-      cl::init(false), cl::Optional,
-      cl::desc("Print out debug counter info after all counters accumulated"));
+void llvm::initDebugCounterOptions() { (void)DebugCounter::instance(); }
+
+DebugCounter &DebugCounter::instance() {
+  static DebugCounterOwner O;
+  return O.DC;
 }
-
-static ManagedStatic<DebugCounter> DC;
-
-// Print information when destroyed, iff command line option is specified.
-DebugCounter::~DebugCounter() {
-  if (isCountingEnabled() && PrintDebugCounter)
-    print(dbgs());
-}
-
-DebugCounter &DebugCounter::instance() { return *DC; }
 
 // This is called by the command line parser when it sees a value for the
 // debug-counter option defined above.

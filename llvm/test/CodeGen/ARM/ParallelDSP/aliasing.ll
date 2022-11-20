@@ -4,6 +4,7 @@
 ; instruction possibly aliasing any mul load operands; arguments are passed
 ; without 'restrict' enabled.
 ;
+; CHECK-LABEL: @no_restrict
 ; CHECK-NOT:  call i32 @llvm.arm.smlad
 ;
 define dso_local i32 @no_restrict(i32 %arg, i32* nocapture %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
@@ -52,9 +53,10 @@ for.body:
 ; aliasing one of the mul load operands. Arguments are now annotated with
 ; 'noalias'.
 ;
+; CHECK-LABEL: @restrict
 ; CHECK-NOT:  call i32 @llvm.arm.smlad
 ;
-define dso_local i32 @restrict(i32 %arg, i32* noalias %arg1, i16* noalias readonly %arg2, i16* noalias readonly %arg3) {
+define dso_local i32 @restrict(i32 %arg, i32* noalias %arg1, i16* noalias readonly %arg2, i16* noalias %arg3) {
 entry:
   %cmp24 = icmp sgt i32 %arg, 0
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
@@ -289,7 +291,7 @@ for.body:
 
 ; CHECK-LABEL: store_alias_arg3_illegal_1
 ; CHECK-NOT: load i32
-define dso_local i32 @store_alias_arg3_illegal_1(i32 %arg, i32* nocapture %arg1, i16* noalias nocapture readonly %arg2, i16* noalias nocapture readonly %arg3) {
+define dso_local i32 @store_alias_arg3_illegal_1(i32 %arg, i32* nocapture %arg1, i16* noalias nocapture readonly %arg2, i16* noalias nocapture %arg3) {
 entry:
   %cmp24 = icmp sgt i32 %arg, 0
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
@@ -330,7 +332,7 @@ for.body:
 
 ; CHECK-LABEL: store_alias_arg3_illegal_2
 ; CHECK-NOT: load i32
-define dso_local i32 @store_alias_arg3_illegal_2(i32 %arg, i32* nocapture %arg1, i16* noalias nocapture readonly %arg2, i16* noalias nocapture readonly %arg3) {
+define dso_local i32 @store_alias_arg3_illegal_2(i32 %arg, i32* nocapture %arg1, i16* noalias nocapture readonly %arg2, i16* noalias nocapture %arg3) {
 entry:
   %cmp24 = icmp sgt i32 %arg, 0
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
@@ -455,7 +457,7 @@ for.body:
 ; when it finds the alias.
 ; CHECK-LABEL: one_pair_alias
 ; CHECK-NOT: call i32 @llvm.arm.smlad
-define i32 @one_pair_alias(i16* noalias nocapture readonly %b, i16* noalias nocapture readonly %c) {
+define i32 @one_pair_alias(i16* noalias nocapture readonly %b, i16* noalias nocapture %c) {
 entry:
   br label %for.body
 

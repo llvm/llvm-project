@@ -51,7 +51,7 @@ class TestCase(TestBase):
         # Record types without a defining declaration are not complete.
         self.assertPointeeIncomplete("FwdClass *", "fwd_class")
         self.assertPointeeIncomplete("FwdClassTypedef *", "fwd_class_typedef")
-        self.assertPointeeIncomplete("FwdTemplateClass<> *", "fwd_template_class")
+        self.assertPointeeIncomplete("FwdTemplateClass<int> *", "fwd_template_class")
 
         # A pointer type is complete even when it points to an incomplete type.
         fwd_class_ptr = self.expect_expr("fwd_class", result_type="FwdClass *")

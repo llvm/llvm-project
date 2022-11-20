@@ -4,7 +4,7 @@
 // RUN: ld.lld -shared %t2.o -soname=so -o %t2.so
 // RUN: ld.lld -e main %t1.o %t2.so -o %t3
 // RUN: llvm-readobj -S -r %t3 | FileCheck %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t3 | FileCheck --check-prefix=DISASM %s
 
 // CHECK:      Section {
 // CHECK:      Index: 9

@@ -22,7 +22,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: %lld -lSystem -L%t -ltlv %t/test.o -o %t/test
-# RUN: llvm-objdump --bind -d --no-show-raw-insn %t/test | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --bind -d --no-show-raw-insn %t/test | FileCheck %s
 
 # CHECK:      movq [[#]](%rip), %rax ## 0x[[#%x, FOO:]]
 # CHECK-NEXT: movq [[#]](%rip), %rax ## 0x[[#%x, BAR:]]

@@ -58,6 +58,17 @@ define void @constraint_I() nounwind {
   ret void
 }
 
+define void @constraint_J() nounwind {
+; CHECK-LABEL: constraint_J:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    addi.w $a0, $a0, 0
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ret
+  tail call void asm sideeffect "addi.w $$a0, $$a0, $0", "J"(i32 0)
+  ret void
+}
+
 define void @constraint_K() nounwind {
 ; CHECK-LABEL: constraint_K:
 ; CHECK:       # %bb.0:

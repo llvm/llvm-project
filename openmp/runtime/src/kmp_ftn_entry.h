@@ -241,7 +241,8 @@ int FTN_STDCALL FTN_GET_AFFINITY(void **mask) {
   }
   __kmp_assign_root_init_mask();
   int gtid = __kmp_get_gtid();
-  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 && __kmp_affin_reset) {
+  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 &&
+      __kmp_affinity.flags.reset) {
     __kmp_reset_root_init_mask(gtid);
   }
   return __kmp_aux_get_affinity(mask);
@@ -367,7 +368,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_MAX_THREADS)(void) {
   gtid = __kmp_entry_gtid();
   thread = __kmp_threads[gtid];
 #if KMP_AFFINITY_SUPPORTED
-  if (thread->th.th_team->t.t_level == 0 && !__kmp_affin_reset) {
+  if (thread->th.th_team->t.t_level == 0 && !__kmp_affinity.flags.reset) {
     __kmp_assign_root_init_mask();
   }
 #endif
@@ -535,7 +536,8 @@ void FTN_STDCALL KMP_EXPAND_NAME_IF_APPEND(FTN_DISPLAY_AFFINITY)(
   __kmp_assign_root_init_mask();
   gtid = __kmp_get_gtid();
 #if KMP_AFFINITY_SUPPORTED
-  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 && __kmp_affin_reset) {
+  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 &&
+      __kmp_affinity.flags.reset) {
     __kmp_reset_root_init_mask(gtid);
   }
 #endif
@@ -568,7 +570,8 @@ size_t FTN_STDCALL KMP_EXPAND_NAME_IF_APPEND(FTN_CAPTURE_AFFINITY)(
   __kmp_assign_root_init_mask();
   gtid = __kmp_get_gtid();
 #if KMP_AFFINITY_SUPPORTED
-  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 && __kmp_affin_reset) {
+  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 &&
+      __kmp_affinity.flags.reset) {
     __kmp_reset_root_init_mask(gtid);
   }
 #endif
@@ -648,7 +651,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_PROCS)(void) {
     __kmp_middle_initialize();
   }
 #if KMP_AFFINITY_SUPPORTED
-  if (!__kmp_affin_reset) {
+  if (!__kmp_affinity.flags.reset) {
     // only bind root here if its affinity reset is not requested
     int gtid = __kmp_entry_gtid();
     kmp_info_t *thread = __kmp_threads[gtid];
@@ -848,7 +851,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_PLACES)(void) {
   }
   if (!KMP_AFFINITY_CAPABLE())
     return 0;
-  if (!__kmp_affin_reset) {
+  if (!__kmp_affinity.flags.reset) {
     // only bind root here if its affinity reset is not requested
     int gtid = __kmp_entry_gtid();
     kmp_info_t *thread = __kmp_threads[gtid];
@@ -856,7 +859,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_PLACES)(void) {
       __kmp_assign_root_init_mask();
     }
   }
-  return __kmp_affinity_num_masks;
+  return __kmp_affinity.num_masks;
 #endif
 }
 
@@ -871,7 +874,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PLACE_NUM_PROCS)(int place_num) {
   }
   if (!KMP_AFFINITY_CAPABLE())
     return 0;
-  if (!__kmp_affin_reset) {
+  if (!__kmp_affinity.flags.reset) {
     // only bind root here if its affinity reset is not requested
     int gtid = __kmp_entry_gtid();
     kmp_info_t *thread = __kmp_threads[gtid];
@@ -879,9 +882,9 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PLACE_NUM_PROCS)(int place_num) {
       __kmp_assign_root_init_mask();
     }
   }
-  if (place_num < 0 || place_num >= (int)__kmp_affinity_num_masks)
+  if (place_num < 0 || place_num >= (int)__kmp_affinity.num_masks)
     return 0;
-  kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity_masks, place_num);
+  kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity.masks, place_num);
   KMP_CPU_SET_ITERATE(i, mask) {
     if ((!KMP_CPU_ISSET(i, __kmp_affin_fullMask)) ||
         (!KMP_CPU_ISSET(i, mask))) {
@@ -904,7 +907,7 @@ void FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PLACE_PROC_IDS)(int place_num,
   }
   if (!KMP_AFFINITY_CAPABLE())
     return;
-  if (!__kmp_affin_reset) {
+  if (!__kmp_affinity.flags.reset) {
     // only bind root here if its affinity reset is not requested
     int gtid = __kmp_entry_gtid();
     kmp_info_t *thread = __kmp_threads[gtid];
@@ -912,9 +915,9 @@ void FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PLACE_PROC_IDS)(int place_num,
       __kmp_assign_root_init_mask();
     }
   }
-  if (place_num < 0 || place_num >= (int)__kmp_affinity_num_masks)
+  if (place_num < 0 || place_num >= (int)__kmp_affinity.num_masks)
     return;
-  kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity_masks, place_num);
+  kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity.masks, place_num);
   j = 0;
   KMP_CPU_SET_ITERATE(i, mask) {
     if ((!KMP_CPU_ISSET(i, __kmp_affin_fullMask)) ||
@@ -939,7 +942,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PLACE_NUM)(void) {
     return -1;
   gtid = __kmp_entry_gtid();
   thread = __kmp_thread_from_gtid(gtid);
-  if (thread->th.th_team->t.t_level == 0 && !__kmp_affin_reset) {
+  if (thread->th.th_team->t.t_level == 0 && !__kmp_affinity.flags.reset) {
     __kmp_assign_root_init_mask();
   }
   if (thread->th.th_current_place < 0)
@@ -961,7 +964,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PARTITION_NUM_PLACES)(void) {
     return 0;
   gtid = __kmp_entry_gtid();
   thread = __kmp_thread_from_gtid(gtid);
-  if (thread->th.th_team->t.t_level == 0 && !__kmp_affin_reset) {
+  if (thread->th.th_team->t.t_level == 0 && !__kmp_affinity.flags.reset) {
     __kmp_assign_root_init_mask();
   }
   first_place = thread->th.th_first_place;
@@ -971,7 +974,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PARTITION_NUM_PLACES)(void) {
   if (first_place <= last_place)
     num_places = last_place - first_place + 1;
   else
-    num_places = __kmp_affinity_num_masks - first_place + last_place + 1;
+    num_places = __kmp_affinity.num_masks - first_place + last_place + 1;
   return num_places;
 #endif
 }
@@ -990,7 +993,7 @@ KMP_EXPAND_NAME(FTN_GET_PARTITION_PLACE_NUMS)(int *place_nums) {
     return;
   gtid = __kmp_entry_gtid();
   thread = __kmp_thread_from_gtid(gtid);
-  if (thread->th.th_team->t.t_level == 0 && !__kmp_affin_reset) {
+  if (thread->th.th_team->t.t_level == 0 && !__kmp_affinity.flags.reset) {
     __kmp_assign_root_init_mask();
   }
   first_place = thread->th.th_first_place;

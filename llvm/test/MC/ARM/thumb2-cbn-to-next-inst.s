@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple thumbv7-apple-darwin -filetype=obj -o %t.o %s
-@ RUN: llvm-objdump --triple=thumbv7-apple-darwin -d %t.o | FileCheck %s
+@ RUN: llvm-objdump --no-print-imm-hex --triple=thumbv7-apple-darwin -d %t.o | FileCheck %s
 
 .thumb
 start:

@@ -77,13 +77,21 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
                    "actual argument", *expr, context)}) {
       const auto *argProcDesignator{
           std::get_if<evaluate::ProcedureDesignator>(&expr->u)};
-      const auto *argProcSymbol{
-          argProcDesignator ? argProcDesignator->GetSymbol() : nullptr};
-      if (argProcSymbol && !argChars->IsTypelessIntrinsicDummy() &&
-          argProcDesignator && argProcDesignator->IsElemental()) { // C1533
-        evaluate::SayWithDeclaration(messages, *argProcSymbol,
-            "Non-intrinsic ELEMENTAL procedure '%s' may not be passed as an actual argument"_err_en_US,
-            argProcSymbol->name());
+      if (const auto *argProcSymbol{
+              argProcDesignator ? argProcDesignator->GetSymbol() : nullptr}) {
+        if (!argChars->IsTypelessIntrinsicDummy() && argProcDesignator &&
+            argProcDesignator->IsElemental()) { // C1533
+          evaluate::SayWithDeclaration(messages, *argProcSymbol,
+              "Non-intrinsic ELEMENTAL procedure '%s' may not be passed as an actual argument"_err_en_US,
+              argProcSymbol->name());
+        } else if (const auto *subp{argProcSymbol->GetUltimate()
+                                        .detailsIf<SubprogramDetails>()}) {
+          if (subp->stmtFunction()) {
+            evaluate::SayWithDeclaration(messages, *argProcSymbol,
+                "Statement function '%s' may not be passed as an actual argument"_err_en_US,
+                argProcSymbol->name());
+          }
+        }
       }
     }
   }
@@ -574,6 +582,17 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
         std::get_if<evaluate::ProcedureDesignator>(&expr->u)};
     const auto *argProcSymbol{
         argProcDesignator ? argProcDesignator->GetSymbol() : nullptr};
+    if (argProcSymbol) {
+      if (const auto *subp{
+              argProcSymbol->GetUltimate().detailsIf<SubprogramDetails>()}) {
+        if (subp->stmtFunction()) {
+          evaluate::SayWithDeclaration(messages, *argProcSymbol,
+              "Statement function '%s' may not be passed as an actual argument"_err_en_US,
+              argProcSymbol->name());
+          return;
+        }
+      }
+    }
     if (auto argChars{characteristics::DummyArgument::FromActual(
             "actual argument", *expr, context)}) {
       if (!argChars->IsTypelessIntrinsicDummy()) {
@@ -658,8 +677,7 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
             dummyName);
       }
     }
-    if (interface.HasExplicitInterface() && dummyIsPointer &&
-        dummy.intent != common::Intent::In) {
+    if (dummyIsPointer && dummy.intent != common::Intent::In) {
       const Symbol *last{GetLastSymbol(*expr)};
       if (!(last && IsProcedurePointer(*last)) &&
           !(dummy.intent == common::Intent::Default &&
@@ -965,7 +983,7 @@ void CheckArguments(const characteristics::Procedure &proc,
         CheckExplicitInterface(proc, actuals, context, scope, intrinsic)};
     if (treatingExternalAsImplicit && !buffer.empty()) {
       if (auto *msg{messages.Say(
-              "If the procedure's interface were explicit, this reference would be in error:"_warn_en_US)}) {
+              "If the procedure's interface were explicit, this reference would be in error"_warn_en_US)}) {
         buffer.AttachTo(*msg, parser::Severity::Because);
       }
     }

@@ -119,6 +119,9 @@ Changes to the RISC-V Backend
 
 * Support for the unratified Zbe, Zbf, Zbm, Zbp, Zbr, and Zbt extensions have
   been removed.
+* i32 is now a native type in the datalayout string. This enables
+  LoopStrengthReduce for loops with i32 induction variables, among other
+  optimizations.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -196,6 +199,9 @@ Changes to the LLVM tools
   parsed in the same way, since each object no longer has a unique key. Tools
   that consume ``llvm-readobj``'s JSON output should update their parsers
   accordingly.
+
+* ``llvm-objdump`` now uses ``--print-imm-hex`` by default, which brings its
+  default behavior closer in line with ``objdump``.
 
 Changes to LLDB
 ---------------------------------

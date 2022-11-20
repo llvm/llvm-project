@@ -8,7 +8,7 @@
 // RUN: ld.lld -shared %tso.o -soname=t.so -o %t.so
 // RUN: ld.lld %t.o %t.so -o %t1
 // RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=RELOC %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASM %s
 
 // RELOC:      Relocations [
 // RELOC-NEXT:  Section {{.*}} .rela.dyn {

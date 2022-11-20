@@ -694,12 +694,12 @@ if.end:                                           ; preds = %if.then, %lor.lhs.f
   ret i32 undef
 }
 
+; ((X >> C) - Y) + Z --> (Z - Y) + (X >> C)
 define i32 @commute_subop0(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: commute_subop0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #3
-; CHECK-NEXT:    sub w8, w8, w1
-; CHECK-NEXT:    add w0, w8, w2
+; CHECK-NEXT:    sub w8, w2, w1
+; CHECK-NEXT:    add w0, w8, w0, lsl #3
 ; CHECK-NEXT:    ret
   %shl = shl i32 %x, 3
   %sub = sub i32 %shl, %y
@@ -707,12 +707,40 @@ define i32 @commute_subop0(i32 %x, i32 %y, i32 %z) {
   ret i32 %add
 }
 
+; ((X << C) - Y) + Z --> (Z - Y) + (X << C)
+define i32 @commute_subop0_lshr(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: commute_subop0_lshr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w8, w0, #3
+; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    add w0, w8, w2
+; CHECK-NEXT:    ret
+  %lshr = lshr i32 %x, 3
+  %sub = sub i32 %lshr, %y
+  %add = add i32 %sub, %z
+  ret i32 %add
+}
+
+; ((X << C) - Y) + Z --> (Z - Y) + (X << C)
+define i32 @commute_subop0_ashr(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: commute_subop0_ashr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr w8, w0, #3
+; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    add w0, w8, w2
+; CHECK-NEXT:    ret
+  %ashr = ashr i32 %x, 3
+  %sub = sub i32 %ashr, %y
+  %add = add i32 %sub, %z
+  ret i32 %add
+}
+
+; Z + ((X >> C) - Y) --> (Z - Y) + (X >> C)
 define i32 @commute_subop0_cadd(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: commute_subop0_cadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #3
-; CHECK-NEXT:    sub w8, w8, w1
-; CHECK-NEXT:    add w0, w2, w8
+; CHECK-NEXT:    sub w8, w2, w1
+; CHECK-NEXT:    add w0, w8, w0, lsl #3
 ; CHECK-NEXT:    ret
   %shl = shl i32 %x, 3
   %sub = sub i32 %shl, %y
@@ -720,14 +748,61 @@ define i32 @commute_subop0_cadd(i32 %x, i32 %y, i32 %z) {
   ret i32 %add
 }
 
+; Y + ((X >> C) - X) --> (Y - X) + (X >> C)
 define i32 @commute_subop0_mul(i32 %x, i32 %y) {
 ; CHECK-LABEL: commute_subop0_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #3
-; CHECK-NEXT:    sub w8, w8, w0
-; CHECK-NEXT:    add w0, w8, w1
+; CHECK-NEXT:    sub w8, w1, w0
+; CHECK-NEXT:    add w0, w8, w0, lsl #3
 ; CHECK-NEXT:    ret
   %mul = mul i32 %x, 7
   %add = add i32 %mul, %y
   ret i32 %add
+}
+
+; negative case for ((X >> C) - Y) + Z --> (Z - Y) + (X >> C)
+; Y can't be constant to avoid dead loop
+define i32 @commute_subop0_zconst(i32 %x, i32 %y) {
+; CHECK-LABEL: commute_subop0_zconst:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w8, w0, #3
+; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    add w0, w8, #1
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 3
+  %sub = sub i32 %shl, %y
+  %add = add i32 %sub, 1
+  ret i32 %add
+}
+
+; negative case for ((X >> C) - Y) + Z --> (Z - Y) + (X >> C)
+; Y can't be shift C also to avoid dead loop
+define i32 @commute_subop0_zshiftc_oneuse(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: commute_subop0_zshiftc_oneuse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w8, w0, #3
+; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    add w0, w8, w2, lsl #2
+; CHECK-NEXT:    ret
+  %xshl = shl i32 %x, 3
+  %sub = sub i32 %xshl, %y
+  %zshl = shl i32 %z, 2
+  %add = add i32 %sub, %zshl
+  ret i32 %add
+}
+
+define i32 @commute_subop0_zshiftc(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: commute_subop0_zshiftc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w8, w2, #2
+; CHECK-NEXT:    sub w9, w8, w1
+; CHECK-NEXT:    add w9, w9, w0, lsl #3
+; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    ret
+  %xshl = shl i32 %x, 3
+  %sub = sub i32 %xshl, %y
+  %zshl = shl i32 %z, 2
+  %add = add i32 %sub, %zshl
+  %r = xor i32 %zshl, %add
+  ret i32 %r
 }

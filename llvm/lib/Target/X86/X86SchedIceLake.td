@@ -321,7 +321,6 @@ defm : ICXWriteResPair<WriteFMAZ, [ICXPort05],  4, [1], 1, 7>;
 defm : ICXWriteResPair<WriteDPPD, [ICXPort5,ICXPort015],  9, [1,2], 3, 6>; // Floating point double dot product.
 defm : ICXWriteResPair<WriteDPPS, [ICXPort5,ICXPort015], 13, [1,3], 4, 6>;
 defm : ICXWriteResPair<WriteDPPSY,[ICXPort5,ICXPort015], 13, [1,3], 4, 7>;
-defm : ICXWriteResPair<WriteDPPSZ,[ICXPort5,ICXPort015], 13, [1,3], 4, 7>;
 defm : ICXWriteResPair<WriteFSign,  [ICXPort0],  1>; // Floating point fabs/fchs.
 defm : ICXWriteResPair<WriteFRnd,   [ICXPort01], 8, [2], 2, 6>; // Floating point rounding.
 defm : ICXWriteResPair<WriteFRndY,  [ICXPort01], 8, [2], 2, 7>;

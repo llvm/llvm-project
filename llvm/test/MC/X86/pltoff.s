@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple=x86_64 %s | FileCheck %s --check-prefix=ASM
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
-# RUN: llvm-objdump -d -r %t | FileCheck %s --check-prefix=OBJ
+# RUN: llvm-objdump --no-print-imm-hex -d -r %t | FileCheck %s --check-prefix=OBJ
 
 # RUN: not llvm-mc -filetype=obj -triple=x86_64 --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 

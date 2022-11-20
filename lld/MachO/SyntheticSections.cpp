@@ -2174,8 +2174,9 @@ void ChainedFixupsSection::writeTo(uint8_t *buf) const {
   uint64_t nameOffset = 0;
   for (auto [import, idx] : bindings) {
     const Symbol &sym = *import.first;
-    int16_t libOrdinal = needsWeakBind(sym) ? BIND_SPECIAL_DYLIB_WEAK_LOOKUP
-                                            : ordinalForSymbol(sym);
+    int16_t libOrdinal = needsWeakBind(sym)
+                             ? (int64_t)BIND_SPECIAL_DYLIB_WEAK_LOOKUP
+                             : ordinalForSymbol(sym);
     buf += writeImport(buf, importFormat, libOrdinal, sym.isWeakRef(),
                        nameOffset, import.second);
     nameOffset += sym.getName().size() + 1;

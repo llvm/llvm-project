@@ -94,7 +94,13 @@ public:
   }
 
   static ConstantSubscript LEN_TRIM(const Character &str) {
-    return VERIFY(str, Character{' '}, true);
+    auto j{str.length()};
+    for (; j >= 1; --j) {
+      if (str[j - 1] != ' ') {
+        break;
+      }
+    }
+    return static_cast<ConstantSubscript>(j);
   }
 
   static Character REPEAT(const Character &str, ConstantSubscript ncopies) {

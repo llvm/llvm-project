@@ -76,7 +76,9 @@ static cl::list<std::string>
     DELTA_PASS("aliases", reduceAliasesDeltaPass)                              \
     DELTA_PASS("simplify-conditionals-true", reduceConditionalsTrueDeltaPass)  \
     DELTA_PASS("simplify-conditionals-false", reduceConditionalsFalseDeltaPass)\
+    DELTA_PASS("unreachable-basic-blocks", reduceUnreachableBasicBlocksDeltaPass) \
     DELTA_PASS("basic-blocks", reduceBasicBlocksDeltaPass)                     \
+    DELTA_PASS("simplify-cfg", reduceUsingSimplifyCFGDeltaPass)                \
     DELTA_PASS("global-values", reduceGlobalValuesDeltaPass)                   \
     DELTA_PASS("global-objects", reduceGlobalObjectsDeltaPass)                 \
     DELTA_PASS("global-initializers", reduceGlobalsInitializersDeltaPass)      \
@@ -93,7 +95,6 @@ static cl::list<std::string>
     DELTA_PASS("operands-to-args", reduceOperandsToArgsDeltaPass)              \
     DELTA_PASS("operands-skip", reduceOperandsSkipDeltaPass)                   \
     DELTA_PASS("operand-bundles", reduceOperandBundesDeltaPass)                \
-    DELTA_PASS("simplify-cfg", reduceUsingSimplifyCFGDeltaPass)                \
     DELTA_PASS("attributes", reduceAttributesDeltaPass)                        \
     DELTA_PASS("module-data", reduceModuleDataDeltaPass)                       \
     DELTA_PASS("opcodes", reduceOpcodesDeltaPass)                              \

@@ -72,25 +72,40 @@ define void @f2(ptr %a0, ptr %a1, ptr %a2) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vmem(r0+#0)
+; CHECK-NEXT:     v0 = vmem(r1+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7 = #-4
+; CHECK-NEXT:     v1:0.w = vunpack(v0.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vmem(r1+#0)
+; CHECK-NEXT:     r3 = #15
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1:0.w = vmpy(v0.h,v1.h)
+; CHECK-NEXT:     v2 = vmem(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1:0.w = vadd(v1:0.w,v1:0.w)
+; CHECK-NEXT:     v3:2.w = vunpack(v2.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1:0 = vshuff(v1,v0,r7)
+; CHECK-NEXT:     v4.w = vmpyieo(v2.h,v0.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.h = vpacko(v1.w,v0.w)
+; CHECK-NEXT:     v5.w = vmpyieo(v3.h,v1.h)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v4.w += vmpyie(v2.w,v0.uh)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v5.w += vmpyie(v3.w,v1.uh)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0.uw = vlsr(v4.uw,r3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1.uw = vlsr(v5.uw,r3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0.h = vpacke(v1.w,v0.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r2+#0) = v0
@@ -114,13 +129,58 @@ define void @f3(ptr %a0, ptr %a1, ptr %a2) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vmem(r0+#0)
+; CHECK-NEXT:     v0 = vmem(r1+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vmem(r1+#0)
+; CHECK-NEXT:     v1:0.w = vunpack(v0.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.h = vmpy(v0.h,v1.h):<<1:rnd:sat
+; CHECK-NEXT:     r4 = #16384
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3 = #15
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v2 = vmem(r0+#0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v3:2.w = vunpack(v2.h)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     q0 = vcmp.gt(v0.w,v0.w)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     q1 = and(q0,q0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v4 = vsplat(r4)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v5.w = vmpyieo(v2.h,v0.h)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v6.w = vmpyieo(v3.h,v1.h)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v5.w += vmpyie(v2.w,v0.uh)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v6.w += vmpyie(v3.w,v1.uh)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0.w = vadd(v4.w,v5.w,q1):carry
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1.w = vadd(v4.w,v6.w,q0):carry
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0.uw = vlsr(v0.uw,r3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1.uw = vlsr(v1.uw,r3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0.h = vpacke(v1.w,v0.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r2+#0) = v0

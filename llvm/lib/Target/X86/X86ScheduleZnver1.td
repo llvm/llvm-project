@@ -338,10 +338,10 @@ defm : ZnWriteResFpuPair<WriteFTest,     [ZnFPU12], 2, [2], 1, 7, 1>;
 defm : ZnWriteResFpuPair<WriteFTestY,    [ZnFPU12], 4, [4], 3, 7, 2>;
 defm : X86WriteResPairUnsupported<WriteFTestZ>;
 defm : ZnWriteResFpuPair<WriteFShuffle,  [ZnFPU12], 1>;
-defm : ZnWriteResFpuPair<WriteFShuffleY, [ZnFPU12], 1>;
+defm : ZnWriteResFpuPair<WriteFShuffleY, [ZnFPU12], 1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteFShuffleZ>;
 defm : ZnWriteResFpuPair<WriteFVarShuffle, [ZnFPU12], 1>;
-defm : ZnWriteResFpuPair<WriteFVarShuffleY,[ZnFPU12], 1>;
+defm : ZnWriteResFpuPair<WriteFVarShuffleY,[ZnFPU12], 1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteFVarShuffleZ>;
 defm : ZnWriteResFpuPair<WriteFMul,      [ZnFPU01], 3>;
 defm : ZnWriteResFpuPair<WriteFMulX,     [ZnFPU01], 3>;
@@ -365,13 +365,15 @@ defm : ZnWriteResFpuPair<WriteFRsqrtY,   [ZnFPU01], 5, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteFRsqrtZ>;
 defm : ZnWriteResFpuPair<WriteFSqrt,     [ZnFPU3], 14, [5]>;
 defm : ZnWriteResFpuPair<WriteFSqrtX,    [ZnFPU3], 14, [5]>;
-defm : ZnWriteResFpuPair<WriteFSqrtY,    [ZnFPU3], 14, [10], 1>;
+defm : ZnWriteResFpuPair<WriteFSqrtY,    [ZnFPU3], 14, [10], 2>;
 defm : X86WriteResPairUnsupported<WriteFSqrtZ>;
 defm : ZnWriteResFpuPair<WriteFSqrt64,   [ZnFPU3], 20, [8]>;
 defm : ZnWriteResFpuPair<WriteFSqrt64X,  [ZnFPU3], 20, [8]>;
-defm : ZnWriteResFpuPair<WriteFSqrt64Y,  [ZnFPU3], 20, [16], 1>;
+defm : ZnWriteResFpuPair<WriteFSqrt64Y,  [ZnFPU3], 20, [16], 2>;
 defm : X86WriteResPairUnsupported<WriteFSqrt64Z>;
 defm : ZnWriteResFpuPair<WriteFSqrt80,   [ZnFPU3], 20, [20]>;
+defm : ZnWriteResFpuPair<WriteFShuffle256, [ZnFPU12], 2, [2], 2>;
+defm : ZnWriteResFpuPair<WriteFVarShuffle256, [ZnFPU12], 2, [2], 2>;
 
 // Vector integer operations which uses FPU units
 defm : X86WriteRes<WriteVecLoad,         [ZnAGU], 8, [1], 1>;
@@ -416,9 +418,9 @@ defm : X86WriteResPairUnsupported<WriteVecLogicZ>;
 defm : ZnWriteResFpuPair<WriteVecTest,    [ZnFPU12], 2, [2], 1, 7, 1>;
 defm : ZnWriteResFpuPair<WriteVecTestY,   [ZnFPU12], 4, [4], 3, 7, 2>;
 defm : X86WriteResPairUnsupported<WriteVecTestZ>;
-defm : ZnWriteResFpuPair<WriteVecALU,     [ZnFPU],   1>;
-defm : ZnWriteResFpuPair<WriteVecALUX,    [ZnFPU],   1>;
-defm : ZnWriteResFpuPair<WriteVecALUY,    [ZnFPU],   1, [2], 2>;
+defm : ZnWriteResFpuPair<WriteVecALU,     [ZnFPU013],   1>;
+defm : ZnWriteResFpuPair<WriteVecALUX,    [ZnFPU013],   1>;
+defm : ZnWriteResFpuPair<WriteVecALUY,    [ZnFPU013],   1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteVecALUZ>;
 defm : ZnWriteResFpuPair<WriteVecIMul,    [ZnFPU0],  4>;
 defm : ZnWriteResFpuPair<WriteVecIMulX,   [ZnFPU0],  4>;
@@ -427,23 +429,23 @@ defm : X86WriteResPairUnsupported<WriteVecIMulZ>;
 defm : ZnWriteResFpuPair<WritePMULLD,     [ZnFPU0],  4, [2]>;
 defm : ZnWriteResFpuPair<WritePMULLDY,    [ZnFPU0],  4, [4], 2>;
 defm : X86WriteResPairUnsupported<WritePMULLDZ>;
-defm : ZnWriteResFpuPair<WriteShuffle,    [ZnFPU],   1>;
-defm : ZnWriteResFpuPair<WriteShuffleX,   [ZnFPU],   1>;
-defm : ZnWriteResFpuPair<WriteShuffleY,   [ZnFPU],   1>;
+defm : ZnWriteResFpuPair<WriteShuffle,    [ZnFPU12],   1>;
+defm : ZnWriteResFpuPair<WriteShuffleX,   [ZnFPU12],   1>;
+defm : ZnWriteResFpuPair<WriteShuffleY,   [ZnFPU12],   1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteShuffleZ>;
-defm : ZnWriteResFpuPair<WriteVarShuffle, [ZnFPU],   1>;
-defm : ZnWriteResFpuPair<WriteVarShuffleX,[ZnFPU],   1>;
-defm : ZnWriteResFpuPair<WriteVarShuffleY,[ZnFPU],   1>;
+defm : ZnWriteResFpuPair<WriteVarShuffle, [ZnFPU12],   1>;
+defm : ZnWriteResFpuPair<WriteVarShuffleX,[ZnFPU12],   1>;
+defm : ZnWriteResFpuPair<WriteVarShuffleY,[ZnFPU12],   1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
 defm : ZnWriteResFpuPair<WriteBlend,      [ZnFPU01], 1>;
-defm : ZnWriteResFpuPair<WriteBlendY,     [ZnFPU01], 1>;
+defm : ZnWriteResFpuPair<WriteBlendY,     [ZnFPU01], 1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteBlendZ>;
-defm : ZnWriteResFpuPair<WriteShuffle256, [ZnFPU],   2>;
-defm : ZnWriteResFpuPair<WriteVPMOV256,   [ZnFPU12],  1, [4], 3>;
-defm : ZnWriteResFpuPair<WriteVarShuffle256, [ZnFPU],   2>;
+defm : ZnWriteResFpuPair<WriteShuffle256, [ZnFPU12],   2, [2], 2>;
+defm : ZnWriteResFpuPair<WriteVPMOV256,   [ZnFPU12],   1, [4], 3>;
+defm : ZnWriteResFpuPair<WriteVarShuffle256, [ZnFPU12],2, [2], 2>;
 defm : ZnWriteResFpuPair<WritePSADBW,     [ZnFPU0],  3>;
 defm : ZnWriteResFpuPair<WritePSADBWX,    [ZnFPU0],  3>;
-defm : ZnWriteResFpuPair<WritePSADBWY,    [ZnFPU0],  3>;
+defm : ZnWriteResFpuPair<WritePSADBWY,    [ZnFPU0],  3, [2], 2>;
 defm : X86WriteResPairUnsupported<WritePSADBWZ>;
 defm : ZnWriteResFpuPair<WritePHMINPOS,   [ZnFPU0],  4>;
 
@@ -478,11 +480,6 @@ defm : ZnWriteResFpuPair<WriteAESKeyGen, [ZnFPU01], 4>;
 
 def : WriteRes<WriteFence,  [ZnAGU]>;
 def : WriteRes<WriteNop, []>;
-
-// Following instructions with latency=100 are microcoded.
-// We set long latency so as to block the entire pipeline.
-defm : ZnWriteResFpuPair<WriteFShuffle256, [ZnFPU], 100>;
-defm : ZnWriteResFpuPair<WriteFVarShuffle256, [ZnFPU], 100>;
 
 // Microcoded Instructions
 def ZnWriteMicrocoded : SchedWriteRes<[]> {
@@ -974,25 +971,6 @@ def : InstRW<[WriteMicrocoded], (instrs FNCLEX)>;
 def : InstRW<[WriteMicrocoded], (instrs FNINIT)>;
 
 //=== Integer MMX and XMM Instructions ===//
-
-// PACKSSWB/DW.
-// mm <- mm.
-def ZnWriteFPU12 : SchedWriteRes<[ZnFPU12]> ;
-def ZnWriteFPU12Y : SchedWriteRes<[ZnFPU12]> {
-  let NumMicroOps = 2;
-}
-def ZnWriteFPU12m : SchedWriteRes<[ZnAGU, ZnFPU12]> ;
-def ZnWriteFPU12Ym : SchedWriteRes<[ZnAGU, ZnFPU12]> {
-  let Latency = 8;
-  let NumMicroOps = 2;
-}
-
-def : InstRW<[ZnWriteFPU12], (instrs MMX_PACKSSDWrr,
-                                     MMX_PACKSSWBrr,
-                                     MMX_PACKUSWBrr)>;
-def : InstRW<[ZnWriteFPU12m], (instrs MMX_PACKSSDWrm,
-                                      MMX_PACKSSWBrm,
-                                      MMX_PACKUSWBrm)>;
 
 def ZnWriteFPU013 : SchedWriteRes<[ZnFPU013]> ;
 def ZnWriteFPU013Y : SchedWriteRes<[ZnFPU013]> {

@@ -314,4 +314,11 @@ contains
     ptr => s_external
     call ptr
   end subroutine
+
+  subroutine s14
+    procedure(real), pointer :: ptr
+    sf(x) = x + 1.
+    !ERROR: Statement function 'sf' may not be the target of a pointer assignment
+    ptr => sf
+  end subroutine
 end

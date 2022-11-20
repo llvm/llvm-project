@@ -9,9 +9,9 @@
 # RUN: %lld -arch arm64 %t/near-got.o %t/lib.dylib -o %t/NearGot
 # RUN: %lld -arch arm64 %t/far-got.o %t/lib.dylib -o %t/FarGot
 # RUN: %lld -arch arm64 %t/local.o -o %t/Local
-# RUN: llvm-objdump -d --macho %t/NearGot | FileCheck %s -check-prefix=NEAR-GOT
-# RUN: llvm-objdump -d --macho %t/FarGot | FileCheck %s -check-prefix=FAR-GOT
-# RUN: llvm-objdump -d --macho %t/Local | FileCheck %s -check-prefix=LOCAL
+# RUN: llvm-objdump --no-print-imm-hex -d --macho %t/NearGot | FileCheck %s -check-prefix=NEAR-GOT
+# RUN: llvm-objdump --no-print-imm-hex -d --macho %t/FarGot | FileCheck %s -check-prefix=FAR-GOT
+# RUN: llvm-objdump --no-print-imm-hex -d --macho %t/Local | FileCheck %s -check-prefix=LOCAL
 
 #--- external.s
 .text

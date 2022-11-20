@@ -658,6 +658,42 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   return diags.getNumErrors() == numErrorsBefore;
 }
 
+/// Parses all floating point related arguments and populates the
+/// CompilerInvocation accordingly.
+/// Returns false if new errors are generated.
+///
+/// \param [out] invoc Stores the processed arguments
+/// \param [in] args The compiler invocation arguments to parse
+/// \param [out] diags DiagnosticsEngine to report erros with
+static bool parseFloatingPointArgs(CompilerInvocation &invoc,
+                                   llvm::opt::ArgList &args,
+                                   clang::DiagnosticsEngine &diags) {
+  LangOptions &opts = invoc.getLangOpts();
+  const unsigned diagUnimplemented = diags.getCustomDiagID(
+      clang::DiagnosticsEngine::Warning, "%0 is not currently implemented");
+
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_ffp_contract)) {
+    const llvm::StringRef val = a->getValue();
+    enum LangOptions::FPModeKind fpContractMode;
+
+    if (val == "off")
+      fpContractMode = LangOptions::FPM_Off;
+    else if (val == "fast")
+      fpContractMode = LangOptions::FPM_Fast;
+    else {
+      diags.Report(clang::diag::err_drv_unsupported_option_argument)
+          << a->getOption().getName() << val;
+      return false;
+    }
+
+    diags.Report(diagUnimplemented) << a->getOption().getName();
+    opts.setFPContractMode(fpContractMode);
+  }
+
+  return true;
+}
+
 bool CompilerInvocation::createFromArgs(
     CompilerInvocation &res, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags) {
@@ -711,6 +747,8 @@ bool CompilerInvocation::createFromArgs(
 
   res.frontendOpts.mlirArgs =
       args.getAllArgValues(clang::driver::options::OPT_mmlir);
+
+  success &= parseFloatingPointArgs(res, args, diags);
 
   return success;
 }

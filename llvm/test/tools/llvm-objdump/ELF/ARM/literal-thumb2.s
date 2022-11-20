@@ -1,7 +1,7 @@
 @@ Check that PC-relative memory addressing is annotated
 
 @ RUN: llvm-mc %s -triple=thumbv7 -filetype=obj | \
-@ RUN:   llvm-objdump -d --no-show-raw-insn --triple=thumbv7 - | \
+@ RUN:   llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=thumbv7 - | \
 @ RUN:   FileCheck %s
 
 .text

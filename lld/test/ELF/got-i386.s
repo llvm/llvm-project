@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-readobj -S -r --symbols %t | FileCheck %s
-// RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck --check-prefix=DISASM %s
 
 // CHECK:      Name: .got.plt
 // CHECK-NEXT: Type: SHT_PROGBITS

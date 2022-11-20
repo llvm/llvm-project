@@ -2652,7 +2652,7 @@ void __kmp_join_call(ident_t *loc, int gtid
   __kmp_release_bootstrap_lock(&__kmp_forkjoin_lock);
 
 #if KMP_AFFINITY_SUPPORTED
-  if (master_th->th.th_team->t.t_level == 0 && __kmp_affin_reset) {
+  if (master_th->th.th_team->t.t_level == 0 && __kmp_affinity.flags.reset) {
     __kmp_reset_root_init_mask(gtid);
   }
 #endif
@@ -4741,6 +4741,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
   int first_place = master_th->th.th_first_place;
   int last_place = master_th->th.th_last_place;
   int masters_place = master_th->th.th_current_place;
+  int num_masks = __kmp_affinity.num_masks;
   team->t.t_first_place = first_place;
   team->t.t_last_place = last_place;
 
@@ -4785,7 +4786,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
     if (first_place <= last_place) {
       n_places = last_place - first_place + 1;
     } else {
-      n_places = __kmp_affinity_num_masks - first_place + last_place + 1;
+      n_places = num_masks - first_place + last_place + 1;
     }
     if (n_th <= n_places) {
       int place = masters_place;
@@ -4795,7 +4796,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
 
         if (place == last_place) {
           place = first_place;
-        } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+        } else if (place == (num_masks - 1)) {
           place = 0;
         } else {
           place++;
@@ -4840,7 +4841,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
           // we added an extra thread to this place; move to next place
           if (place == last_place) {
             place = first_place;
-          } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+          } else if (place == (num_masks - 1)) {
             place = 0;
           } else {
             place++;
@@ -4851,7 +4852,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         } else if (s_count == S) { // place full; don't add extra
           if (place == last_place) {
             place = first_place;
-          } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+          } else if (place == (num_masks - 1)) {
             place = 0;
           } else {
             place++;
@@ -4878,12 +4879,12 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
     if (first_place <= last_place) {
       n_places = last_place - first_place + 1;
     } else {
-      n_places = __kmp_affinity_num_masks - first_place + last_place + 1;
+      n_places = num_masks - first_place + last_place + 1;
     }
     if (n_th <= n_places) {
       int place = -1;
 
-      if (n_places != static_cast<int>(__kmp_affinity_num_masks)) {
+      if (n_places != num_masks) {
         int S = n_places / n_th;
         int s_count, rem, gap, gap_ct;
 
@@ -4908,7 +4909,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
           while (s_count < S) {
             if (place == last_place) {
               place = first_place;
-            } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+            } else if (place == (num_masks - 1)) {
               place = 0;
             } else {
               place++;
@@ -4918,7 +4919,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
           if (rem && (gap_ct == gap)) {
             if (place == last_place) {
               place = first_place;
-            } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+            } else if (place == (num_masks - 1)) {
               place = 0;
             } else {
               place++;
@@ -4931,7 +4932,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
 
           if (place == last_place) {
             place = first_place;
-          } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+          } else if (place == (num_masks - 1)) {
             place = 0;
           } else {
             place++;
@@ -4939,10 +4940,10 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
 
           KA_TRACE(100,
                    ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
-                    "partition = [%d,%d], __kmp_affinity_num_masks: %u\n",
+                    "partition = [%d,%d], num_masks: %u\n",
                     __kmp_gtid_from_thread(team->t.t_threads[f]), team->t.t_id,
                     f, th->th.th_new_place, th->th.th_first_place,
-                    th->th.th_last_place, __kmp_affinity_num_masks));
+                    th->th.th_last_place, num_masks));
         }
       } else {
         /* Having uniform space of available computation places I can create
@@ -5039,7 +5040,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
           // we added an extra thread to this place; move on to next place
           if (place == last_place) {
             place = first_place;
-          } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+          } else if (place == (num_masks - 1)) {
             place = 0;
           } else {
             place++;
@@ -5050,7 +5051,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         } else if (s_count == S) { // place is full; don't add extra thread
           if (place == last_place) {
             place = first_place;
-          } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+          } else if (place == (num_masks - 1)) {
             place = 0;
           } else {
             place++;
@@ -7285,7 +7286,7 @@ static void __kmp_do_middle_initialize(void) {
 #if KMP_AFFINITY_SUPPORTED
   // __kmp_affinity_initialize() will try to set __kmp_ncores to the
   // number of cores on the machine.
-  __kmp_affinity_initialize();
+  __kmp_affinity_initialize(__kmp_affinity);
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
@@ -7470,6 +7471,14 @@ void __kmp_hidden_helper_initialize() {
     __kmp_release_bootstrap_lock(&__kmp_initz_lock);
     return;
   }
+
+#if KMP_AFFINITY_SUPPORTED
+  // Initialize hidden helper affinity settings.
+  // The above __kmp_parallel_initialize() will initialize
+  // regular affinity (and topology) if not already done.
+  if (!__kmp_hh_affinity.flags.initialized)
+    __kmp_affinity_initialize(__kmp_hh_affinity);
+#endif
 
   // Set the count of hidden helper tasks to be executed to zero
   KMP_ATOMIC_ST_REL(&__kmp_unexecuted_hidden_helper_tasks, 0);

@@ -874,3 +874,10 @@ purposes of optimization (but definitions of these functions are still not inclu
 this means the build speedup at higher optimization levels may be lower than expected given ``O0`` experience, 
 but does provide by more optimization opportunities.
 
+Interoperability with Clang Modules
+-----------------------------------
+
+We **wish** to support clang modules and standard c++ modules at the same time,
+but the mixed using form is not well used/tested yet.
+
+Please file new github issues as you find interoperability problems.

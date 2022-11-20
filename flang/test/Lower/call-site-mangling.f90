@@ -112,7 +112,6 @@ subroutine test_bind_interface()
     end subroutine
   end interface
  procedure(some_bindc_iface) :: foo5
- external :: foo5
  ! CHECK: fir.call @foo5
  call foo5()
 end

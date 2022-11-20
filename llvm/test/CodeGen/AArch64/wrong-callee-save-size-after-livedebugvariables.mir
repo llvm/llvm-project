@@ -1,7 +1,7 @@
 # RUN: llc -start-before=prologepilog -filetype=obj -o %t %s
 # RUN: llvm-dwarfdump --name=obj1 %t | FileCheck %s --check-prefix=CHECKDWARF1
 # RUN: llvm-dwarfdump --name=obj2 %t | FileCheck %s --check-prefix=CHECKDWARF2
-# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=CHECKASM
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s --check-prefix=CHECKASM
 #
 # Test that the location for obj1 and obj2 in the debug information is
 # the same as the location used by load instructions.

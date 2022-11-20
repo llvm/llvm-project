@@ -127,6 +127,10 @@ protected:
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
 
+  /// Get the template parameters of a die as a string if the die name does not
+  /// already contain them. This happens with -gsimple-template-names.
+  std::string GetTemplateParametersString(const DWARFDIE &die);
+
   std::string GetCPlusPlusQualifiedName(const DWARFDIE &die);
 
   bool ParseChildMembers(

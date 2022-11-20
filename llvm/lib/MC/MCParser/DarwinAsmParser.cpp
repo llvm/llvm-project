@@ -767,8 +767,8 @@ bool DarwinAsmParser::parseDirectiveSecureLogUnique(StringRef, SMLoc IDLoc) {
     return Error(IDLoc, ".secure_log_unique specified multiple times");
 
   // Get the secure log path.
-  const char *SecureLogFile = getContext().getSecureLogFile();
-  if (!SecureLogFile)
+  StringRef SecureLogFile = getContext().getSecureLogFile();
+  if (SecureLogFile.empty())
     return Error(IDLoc, ".secure_log_unique used but AS_SECURE_LOG_FILE "
                  "environment variable unset.");
 
@@ -776,9 +776,8 @@ bool DarwinAsmParser::parseDirectiveSecureLogUnique(StringRef, SMLoc IDLoc) {
   raw_fd_ostream *OS = getContext().getSecureLog();
   if (!OS) {
     std::error_code EC;
-    auto NewOS = std::make_unique<raw_fd_ostream>(StringRef(SecureLogFile), EC,
-                                                  sys::fs::OF_Append |
-                                                      sys::fs::OF_TextWithCRLF);
+    auto NewOS = std::make_unique<raw_fd_ostream>(
+        SecureLogFile, EC, sys::fs::OF_Append | sys::fs::OF_TextWithCRLF);
     if (EC)
        return Error(IDLoc, Twine("can't open secure log file: ") +
                                SecureLogFile + " (" + EC.message() + ")");

@@ -5008,6 +5008,25 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
         getDefaultScalableVLOps(I32ContainerVT, DL, DAG, Subtarget).first;
     // Limit the active VL to two.
     SDValue InsertI64VL = DAG.getConstant(2, DL, XLenVT);
+    // If the Idx is 0 we can insert directly into the vector.
+    if (isNullConstant(Idx)) {
+      // First slide in the lo value, then the hi in above it. We use slide1down
+      // to avoid the register group overlap constraint of vslide1up.
+      ValInVec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32ContainerVT,
+                             Vec, Vec, ValLo, I32Mask, InsertI64VL);
+      // If the source vector is undef don't pass along the tail elements from
+      // the previous slide1down.
+      SDValue Tail = Vec.isUndef() ? Vec : ValInVec;
+      ValInVec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32ContainerVT,
+                             Tail, ValInVec, ValHi, I32Mask, InsertI64VL);
+      // Bitcast back to the right container type.
+      ValInVec = DAG.getBitcast(ContainerVT, ValInVec);
+
+      if (!VecVT.isFixedLengthVector())
+        return ValInVec;
+      return convertFromScalableVector(VecVT, ValInVec, DAG, Subtarget);
+    }
+
     // First slide in the lo value, then the hi in above it. We use slide1down
     // to avoid the register group overlap constraint of vslide1up.
     ValInVec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32ContainerVT,

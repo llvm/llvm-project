@@ -1,5 +1,5 @@
 ; RUN: llvm-mc -filetype=obj -triple=avr %s -o %t
-; RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=DEC
+; RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s --check-prefix=DEC
 ; RUN: llvm-objdump -d --print-imm-hex %t | FileCheck %s --check-prefix=HEX
 
 ; DEC: ldi r24, 66

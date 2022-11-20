@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple mips64 -mcpu=mips64 %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MIPS64
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MIPS64
 # RUN: llvm-mc -filetype=obj -triple mips64 -mcpu=mips64r6 %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MIPS64R6
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MIPS64R6
 
 lld $2, 128($sp)
 # MIPS64:         d3 a2 00 80  lld    $2, 128($sp)

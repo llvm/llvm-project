@@ -11,7 +11,7 @@
 # RUN:         -position-independent -mcpu=mips32r2 -mattr=micromips \
 # RUN:         %S/Inputs/mips-micro.s -o %t-eb-pic.o
 # RUN: ld.lld -o %t-eb.exe -script %t.script %t-eb.o %t-eb-pic.o
-# RUN: llvm-objdump -d --mattr=+micromips --no-show-raw-insn %t-eb.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+micromips --no-show-raw-insn %t-eb.exe \
 # RUN:   | FileCheck --check-prefix=R2 %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
@@ -20,7 +20,7 @@
 # RUN:         -position-independent -mcpu=mips32r2 -mattr=micromips \
 # RUN:         %S/Inputs/mips-micro.s -o %t-el-pic.o
 # RUN: ld.lld -o %t-el.exe -script %t.script %t-el.o %t-el-pic.o
-# RUN: llvm-objdump -d --mattr=+micromips --no-show-raw-insn %t-el.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+micromips --no-show-raw-insn %t-el.exe \
 # RUN:   | FileCheck --check-prefix=R2 %s
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
@@ -29,7 +29,7 @@
 # RUN:         -position-independent -mcpu=mips32r6 -mattr=micromips \
 # RUN:         %S/Inputs/mips-micro.s -o %t-eb-pic-r6.o
 # RUN: ld.lld -o %t-eb-r6.exe -script %t.script %t-eb-r6.o %t-eb-pic-r6.o
-# RUN: llvm-objdump -d --mattr=+micromips --no-show-raw-insn %t-eb-r6.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+micromips --no-show-raw-insn %t-eb-r6.exe \
 # RUN:   | FileCheck --check-prefix=R6 %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
@@ -38,7 +38,7 @@
 # RUN:         -position-independent -mcpu=mips32r6 -mattr=micromips \
 # RUN:         %S/Inputs/mips-micro.s -o %t-el-pic-r6.o
 # RUN: ld.lld -o %t-el-r6.exe -script %t.script %t-el-r6.o %t-el-pic-r6.o
-# RUN: llvm-objdump -d --mattr=+micromips --no-show-raw-insn %t-el-r6.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+micromips --no-show-raw-insn %t-el-r6.exe \
 # RUN:   | FileCheck --check-prefix=R6 %s
 
 # R2: <__start>:

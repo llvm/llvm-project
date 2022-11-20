@@ -251,7 +251,8 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   bool isRegElgibleForForwarding(const MachineOperand &RegMO,
                                  const MachineInstr &DefMI,
                                  const MachineInstr &MI, bool KillDefMI,
-                                 bool &IsFwdFeederRegKilled) const;
+                                 bool &IsFwdFeederRegKilled,
+                                 bool &SeenIntermediateUse) const;
   unsigned getSpillTarget() const;
   const unsigned *getStoreOpcodesForSpillArray() const;
   const unsigned *getLoadOpcodesForSpillArray() const;
@@ -643,6 +644,8 @@ public:
                                     const MachineOperand *&BaseOp,
                                     int64_t &Offset, unsigned &Width,
                                     const TargetRegisterInfo *TRI) const;
+
+  bool optimizeCmpPostRA(MachineInstr &MI) const;
 
   /// Get the base operand and byte offset of an instruction that reads/writes
   /// memory.

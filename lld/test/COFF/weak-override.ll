@@ -5,9 +5,9 @@
 ; RUN: lld-link /dll /out:%t-weak-first.dll %t.obj %t-weak.obj %t-strong.obj
 ; RUN: lld-link /dll /out:%t-strong-first.dll %t.obj %t-strong.obj %t-weak.obj
 ; RUN: lld-link /dll /out:%t-weak-only.dll %t.obj %t-weak.obj
-; RUN: llvm-objdump -d %t-weak-first.dll | FileCheck --check-prefix=CHECK-STRONG %s
-; RUN: llvm-objdump -d %t-strong-first.dll | FileCheck --check-prefix=CHECK-STRONG %s
-; RUN: llvm-objdump -d %t-weak-only.dll | FileCheck --check-prefix=CHECK-WEAK %s
+; RUN: llvm-objdump --no-print-imm-hex -d %t-weak-first.dll | FileCheck --check-prefix=CHECK-STRONG %s
+; RUN: llvm-objdump --no-print-imm-hex -d %t-strong-first.dll | FileCheck --check-prefix=CHECK-STRONG %s
+; RUN: llvm-objdump --no-print-imm-hex -d %t-weak-only.dll | FileCheck --check-prefix=CHECK-WEAK %s
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"

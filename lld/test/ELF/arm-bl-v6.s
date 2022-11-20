@@ -1,10 +1,10 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv6-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d --triple=armv6-none-linux-gnueabi --start-address=0x21000 --stop-address=0x21008 %t2 | FileCheck --check-prefix=CHECK-ARM1 %s
-// RUN: llvm-objdump -d --triple=thumbv6-none-linux-gnueabi %t2 --start-address=0x21008 --stop-address=0x2100c | FileCheck --check-prefix=CHECK-THUMB1 %s
-// RUN: llvm-objdump -d --triple=armv6-none-linux-gnueabi --start-address=0x22100c --stop-address=0x221014 %t2 | FileCheck --check-prefix=CHECK-ARM2 %s
-// RUN: llvm-objdump -d --triple=thumbv6-none-linux-gnueabi %t2 --start-address=0x622000 --stop-address=0x622002 | FileCheck --check-prefix=CHECK-THUMB2 %s
+// RUN: llvm-objdump --no-print-imm-hex -d --triple=armv6-none-linux-gnueabi --start-address=0x21000 --stop-address=0x21008 %t2 | FileCheck --check-prefix=CHECK-ARM1 %s
+// RUN: llvm-objdump --no-print-imm-hex -d --triple=thumbv6-none-linux-gnueabi %t2 --start-address=0x21008 --stop-address=0x2100c | FileCheck --check-prefix=CHECK-THUMB1 %s
+// RUN: llvm-objdump --no-print-imm-hex -d --triple=armv6-none-linux-gnueabi --start-address=0x22100c --stop-address=0x221014 %t2 | FileCheck --check-prefix=CHECK-ARM2 %s
+// RUN: llvm-objdump --no-print-imm-hex -d --triple=thumbv6-none-linux-gnueabi %t2 --start-address=0x622000 --stop-address=0x622002 | FileCheck --check-prefix=CHECK-THUMB2 %s
 
 /// On Arm v6 the range of a Thumb BL instruction is only 4 megabytes as the
 /// extended range encoding is not supported. The following example has a Thumb

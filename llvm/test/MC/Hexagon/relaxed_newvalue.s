@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=hexagon -filetype=obj %s | llvm-objdump -d - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -filetype=obj %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 # Make sure relaxation doesn't hinder newvalue calculation
 
 #CHECK: r18 = add(r2,#-6)

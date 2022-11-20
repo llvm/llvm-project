@@ -74,7 +74,8 @@ void associateMutableBoxWithRemap(fir::FirOpBuilder &builder,
 /// previously associated/allocated. The function generates code that sets the
 /// address field of the MutableBoxValue to zero.
 void disassociateMutableBox(fir::FirOpBuilder &builder, mlir::Location loc,
-                            const fir::MutableBoxValue &box);
+                            const fir::MutableBoxValue &box,
+                            bool polymorphicSetType = true);
 
 /// Generate code to conditionally reallocate a MutableBoxValue with a new
 /// shape, lower bounds, and LEN parameters if it is unallocated or if its

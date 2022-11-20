@@ -13,7 +13,7 @@
 # RUN: rm -rf %t; mkdir %t
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t/input.o
 # RUN: %lld -arch arm64 -dead_strip -lSystem -o %t/thunk %t/input.o
-# RUN: llvm-objdump -d --no-show-raw-insn %t/thunk | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/thunk | FileCheck %s
 
 # CHECK: Disassembly of section __TEXT,__text:
 

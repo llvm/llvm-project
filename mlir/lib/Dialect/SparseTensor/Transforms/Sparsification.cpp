@@ -58,7 +58,10 @@ struct CodeGen {
           std::vector<unsigned> &ts)
       : options(o), loopEmitter(tensors, /*isLastOutput=*/true,
                                 /*isSparseOut=*/op != nullptr),
-        sparseOut(op), outerParNest(nest), topSort(ts) {}
+        sparseOut(op), outerParNest(nest), topSort(ts) {
+    if (op)
+      insChain = op->get();
+  }
   /// Sparsification options.
   SparsificationOptions options;
   /// Loop emitter helper class.
@@ -74,6 +77,7 @@ struct CodeGen {
   // in the innermost loop nest (`expValues` through `expCount`).
   OpOperand *sparseOut;
   unsigned outerParNest;
+  Value insChain; // bookkeeping for insertion chain
   Value expValues;
   Value expFilled;
   Value expAdded;
@@ -560,7 +564,8 @@ static void genInsertionStore(CodeGen &codegen, OpBuilder &builder,
       assert(codegen.loopEmitter.getLoopIV(i));
       indices.push_back(codegen.loopEmitter.getLoopIV(i));
     }
-    builder.create<InsertOp>(loc, rhs, t->get(), indices);
+    codegen.insChain =
+        builder.create<InsertOp>(loc, rhs, codegen.insChain, indices);
     return;
   }
   // Generates insertion code along expanded access pattern.
@@ -633,13 +638,26 @@ static void genTensorStore(Merger &merger, CodeGen &codegen, OpBuilder &builder,
       // to indicate missing output.
       assert(merger.exp(exp).kind == kUnary || merger.exp(exp).kind == kBinary);
     } else if (merger.exp(exp).kind == kSelect) {
-      scf::IfOp ifOp = builder.create<scf::IfOp>(loc, rhs);
+      // Select operation insertion.
+      Value insChain = codegen.insChain;
+      assert(insChain);
+      SmallVector<Type, 1> types;
+      types.push_back(codegen.insChain.getType());
+      scf::IfOp ifOp =
+          builder.create<scf::IfOp>(loc, types, rhs, /*else=*/true);
       builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
       // Existing value was preserved to be used here.
       assert(merger.exp(exp).val);
       Value v0 = merger.exp(exp).val;
       genInsertionStore(codegen, builder, op, t, v0);
       merger.exp(exp).val = Value();
+      // Yield modified insertion chain along true branch.
+      builder.create<scf::YieldOp>(op.getLoc(), codegen.insChain);
+      // Yield original insertion chain along false branch.
+      builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+      builder.create<scf::YieldOp>(loc, insChain);
+      // Done with if statement.
+      codegen.insChain = ifOp->getResult(0);
       builder.setInsertionPointAfter(ifOp);
     } else {
       genInsertionStore(codegen, builder, op, t, rhs);
@@ -811,7 +829,11 @@ static void genExpansion(Merger &merger, CodeGen &codegen, OpBuilder &builder,
       at != codegen.outerParNest)
     return; // not needed at this level
   assert(codegen.redVal == nullptr);
-  // Generate start or end of an expanded access pattern.
+  // Generate start or end of an expanded access pattern. Note that because
+  // an expension does not rely on the ongoing contents of the sparse storage
+  // scheme, we can use the original tensor as incoming SSA value (which
+  // simplifies codegen a bit). If expansion on the actual contents is ever
+  // needed, we will need to use the SSA value in the insertion chain instead.
   Value tensor = lhs->get();
   Location loc = op.getLoc();
   if (atStart) {
@@ -836,9 +858,9 @@ static void genExpansion(Merger &merger, CodeGen &codegen, OpBuilder &builder,
       assert(codegen.loopEmitter.getLoopIV(i));
       indices.push_back(codegen.loopEmitter.getLoopIV(i));
     }
-    builder.create<CompressOp>(loc, codegen.expValues, codegen.expFilled,
-                               codegen.expAdded, codegen.expCount, tensor,
-                               indices);
+    codegen.insChain = builder.create<CompressOp>(
+        loc, codegen.expValues, codegen.expFilled, codegen.expAdded,
+        codegen.expCount, codegen.insChain, indices);
     codegen.expValues = codegen.expFilled = codegen.expAdded =
         codegen.expCount = Value();
   }
@@ -882,21 +904,26 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   bool isParallel = isParallelFor(codegen, isOuter, isReduction, isSparse);
   assert(!isParallel);
 
-  // Emit a sequential or vector loop.
+  // Emit a sequential for loop.
   SmallVector<Value, 4> operands;
   if (codegen.redVal)
     operands.push_back(codegen.redVal);
   if (codegen.expValues)
     operands.push_back(codegen.expCount);
+  if (codegen.insChain)
+    operands.push_back(codegen.insChain);
 
   Operation *loop = codegen.loopEmitter.enterLoopOverTensorAtDim(
       builder, loc, tid, dim, operands, isParallel, extraTids, extraDims);
 
-  // The operands should be updated by loop emitter already.
+  unsigned o = 0;
   if (codegen.redVal)
-    updateReduc(merger, codegen, operands.front());
+    updateReduc(merger, codegen, operands[o++]);
   if (codegen.expValues)
-    codegen.expCount = operands.back();
+    codegen.expCount = operands[o++];
+  if (codegen.insChain)
+    codegen.insChain = operands[o++];
+  assert(o == operands.size());
 
   return loop;
 }
@@ -907,7 +934,6 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                            ArrayRef<size_t> condTids, ArrayRef<size_t> condDims,
                            ArrayRef<size_t> extraTids,
                            ArrayRef<size_t> extraDims) {
-
   SmallVector<Value, 4> operands;
 
   // Construct the while-loop with a parameter for each index.
@@ -915,15 +941,21 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     operands.push_back(codegen.redVal);
   if (codegen.expValues)
     operands.push_back(codegen.expCount);
+  if (codegen.insChain)
+    operands.push_back(codegen.insChain);
 
   Operation *loop = codegen.loopEmitter.enterCoIterationOverTensorsAtDims(
       builder, op.getLoc(), condTids, condDims, needsUniv, operands, extraTids,
       extraDims);
 
+  unsigned o = 0;
   if (codegen.redVal)
-    updateReduc(merger, codegen, operands.front());
+    updateReduc(merger, codegen, operands[o++]);
   if (codegen.expValues)
-    codegen.expCount = operands.back();
+    codegen.expCount = operands[o++];
+  if (codegen.insChain)
+    codegen.insChain = operands[o++];
+  assert(o == operands.size());
 
   return loop;
 }
@@ -955,7 +987,7 @@ static void finalizeWhileOp(Merger &merger, CodeGen &codegen,
                             scf::WhileOp whileOp) {
   Location loc = op.getLoc();
   // Finalize each else branch of all if statements.
-  if (codegen.redVal || codegen.expValues) {
+  if (codegen.redVal || codegen.expValues || codegen.insChain) {
     while (auto ifOp = dyn_cast_or_null<scf::IfOp>(
                builder.getInsertionBlock()->getParentOp())) {
       unsigned y = 0;
@@ -967,6 +999,10 @@ static void finalizeWhileOp(Merger &merger, CodeGen &codegen,
       if (codegen.expValues) {
         yields.push_back(codegen.expCount);
         codegen.expCount = ifOp->getResult(y++);
+      }
+      if (codegen.insChain) {
+        yields.push_back(codegen.insChain);
+        codegen.insChain = ifOp->getResult(y++);
       }
       assert(y == yields.size());
       builder.create<scf::YieldOp>(loc, yields);
@@ -1007,6 +1043,8 @@ static scf::IfOp genIf(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     types.push_back(codegen.redVal.getType());
   if (codegen.expValues)
     types.push_back(builder.getIndexType());
+  if (codegen.insChain)
+    types.push_back(codegen.insChain.getType());
   scf::IfOp ifOp = builder.create<scf::IfOp>(loc, types, cond, /*else=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   return ifOp;
@@ -1015,7 +1053,7 @@ static scf::IfOp genIf(Merger &merger, CodeGen &codegen, OpBuilder &builder,
 /// Generates end of true branch of if-statement within a while-loop.
 static void endIf(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                   linalg::GenericOp op, scf::IfOp ifOp, Operation *loop,
-                  Value redInput, Value cntInput) {
+                  Value redInput, Value cntInput, Value insInput) {
   SmallVector<Value, 4> operands;
   if (codegen.redVal) {
     operands.push_back(codegen.redVal);
@@ -1024,6 +1062,10 @@ static void endIf(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   if (codegen.expValues) {
     operands.push_back(codegen.expCount);
     codegen.expCount = cntInput;
+  }
+  if (codegen.insChain) {
+    operands.push_back(codegen.insChain);
+    codegen.insChain = insInput;
   }
   if (!operands.empty())
     builder.create<scf::YieldOp>(op.getLoc(), operands);
@@ -1160,15 +1202,21 @@ static bool endLoop(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     reduc.push_back(codegen.redVal);
   if (codegen.expValues)
     reduc.push_back(codegen.expCount);
+  if (codegen.insChain)
+    reduc.push_back(codegen.insChain);
 
   auto loopRet =
       codegen.loopEmitter.exitCurrentLoop(builder, op.getLoc(), reduc);
   assert(reduc.size() == loopRet.size());
 
+  unsigned o = 0;
   if (codegen.redVal)
-    updateReduc(merger, codegen, loopRet.front());
+    updateReduc(merger, codegen, loopRet[o++]);
   if (codegen.expValues)
-    codegen.expCount = loopRet.back();
+    codegen.expCount = loopRet[o++];
+  if (codegen.insChain)
+    codegen.insChain = loopRet[o++];
+  assert(o == loopRet.size());
 
   return needsUniv;
 }
@@ -1203,6 +1251,9 @@ static void genStmt(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
   unsigned ldx = at == 0 ? -1u : codegen.topSort[at - 1];
   unsigned lts = merger.optimizeSet(merger.buildLattices(exp, idx));
 
+  // TODO: sort
+  // TODO: dedup
+
   // Start a loop sequence.
   bool needsUniv =
       startLoopSeq(merger, codegen, rewriter, op, exp, at, idx, ldx, lts);
@@ -1219,6 +1270,7 @@ static void genStmt(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
     // loop-body, possibly with if statements for coiteration.
     Value redInput = codegen.redVal;
     Value cntInput = codegen.expCount;
+    Value insInput = codegen.insChain;
     bool isWhile = dyn_cast<scf::WhileOp>(loop) != nullptr;
     for (unsigned j = 0; j < lsize; j++) {
       unsigned lj = merger.set(lts)[j];
@@ -1229,7 +1281,8 @@ static void genStmt(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
           scf::IfOp ifOp =
               genIf(merger, codegen, rewriter, op, idx, merger.lat(lj).simple);
           genStmt(merger, codegen, rewriter, op, ej, at + 1);
-          endIf(merger, codegen, rewriter, op, ifOp, loop, redInput, cntInput);
+          endIf(merger, codegen, rewriter, op, ifOp, loop, redInput, cntInput,
+                insInput);
         } else {
           genStmt(merger, codegen, rewriter, op, ej, at + 1);
         }
@@ -1249,12 +1302,16 @@ static void genStmt(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
 static void genResult(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
                       linalg::GenericOp op) {
   OpOperand *lhs = op.getDpsInitOperand(0);
-  Type resType = lhs->get().getType();
+  Value tensor = lhs->get();
+  Type resType = tensor.getType();
   if (getSparseTensorEncoding(resType)) {
     // The sparse tensor rematerializes from the original sparse tensor's
-    // underlying sparse storage format.
-    rewriter.replaceOpWithNewOp<LoadOp>(op, resType, lhs->get(),
-                                        codegen.sparseOut == lhs);
+    // underlying sparse storage format. For an insertion chain, the
+    // tensor materializes from the chain with 'hasInserts' enabled.
+    bool hasInserts = codegen.sparseOut == lhs;
+    if (hasInserts)
+      tensor = codegen.insChain;
+    rewriter.replaceOpWithNewOp<LoadOp>(op, resType, tensor, hasInserts);
   } else {
     // To rematerialize an non-annotated tensor, simply load it
     // from the bufferized value.

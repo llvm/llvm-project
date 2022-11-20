@@ -196,7 +196,7 @@ OPTIONS
 
 .. option:: --no-print-imm-hex
 
-  Do not use hex format for immediate values in disassembly output (default).
+  Do not use hex format for immediate values in disassembly output.
 
 .. option:: --no-show-raw-insn
 
@@ -219,7 +219,7 @@ OPTIONS
 
 .. option:: --print-imm-hex
 
-  Use hex format when printing immediate values in disassembly output.
+  Use hex format when printing immediate values in disassembly output (default).
 
 .. option:: -S, --source
 

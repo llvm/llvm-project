@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %t
-# RUN: llvm-objdump -d %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s
 
 .section .mysection,"ax",@progbits
 .globl _start

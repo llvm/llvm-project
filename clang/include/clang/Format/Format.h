@@ -369,14 +369,83 @@ struct FormatStyle {
   /// \version 3.5
   OperandAlignmentStyle AlignOperands;
 
-  /// If ``true``, aligns trailing comments.
-  /// \code
-  ///   true:                                   false:
-  ///   int a;     // My comment a      vs.     int a; // My comment a
-  ///   int b = 2; // comment  b                int b = 2; // comment about b
+  /// Enums for AlignTrailingComments
+  enum TrailingCommentsAlignmentKinds : int8_t {
+    /// Leave trailing comments as they are.
+    /// \code
+    ///   int a;    // comment
+    ///   int ab;       // comment
+    ///
+    ///   int abc;  // comment
+    ///   int abcd;     // comment
+    /// \endcode
+    TCAS_Leave,
+    /// Align trailing comments.
+    /// \code
+    ///   int a;  // comment
+    ///   int ab; // comment
+    ///
+    ///   int abc;  // comment
+    ///   int abcd; // comment
+    /// \endcode
+    TCAS_Always,
+    /// Don't align trailing comments but other formatter applies.
+    /// \code
+    ///   int a; // comment
+    ///   int ab; // comment
+    ///
+    ///   int abc; // comment
+    ///   int abcd; // comment
+    /// \endcode
+    TCAS_Never,
+  };
+
+  /// Alignment options
+  struct TrailingCommentsAlignmentStyle {
+    /// Specifies the way to align trailing comments
+    TrailingCommentsAlignmentKinds Kind;
+    /// How many empty lines to apply alignment
+    /// With ``MaxEmptyLinesToKeep`` is 2 and ``OverEmptyLines`` is 2,
+    /// \code
+    ///   int a;      // all these
+    ///
+    ///   int ab;     // comments are
+    ///
+    ///
+    ///   int abcdef; // aligned
+    /// \endcode
+    /// And with ``MaxEmptyLinesToKeep`` is 2 and ``OverEmptyLines`` is 1,
+    /// \code
+    ///   int a;  // these are
+    ///
+    ///   int ab; // aligned
+    ///
+    ///
+    ///   int abcdef; // but this isn't
+    /// \endcode
+    unsigned OverEmptyLines;
+
+    bool operator==(const TrailingCommentsAlignmentStyle &R) const {
+      return Kind == R.Kind && OverEmptyLines == R.OverEmptyLines;
+    }
+    bool operator!=(const TrailingCommentsAlignmentStyle &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Control of trailing comments.
+  ///
+  /// NOTE: As of clang-format 16 this option is not a bool but can be set
+  /// to the options. Conventional bool options still can be parsed as before.
+  ///
+  /// \code{.yaml}
+  ///   # Example of usage:
+  ///   AlignTrailingComments:
+  ///     Kind: Always
+  ///     OverEmptyLines: 2
   /// \endcode
   /// \version 3.7
-  bool AlignTrailingComments;
+  TrailingCommentsAlignmentStyle AlignTrailingComments;
 
   /// \brief If a function call or braced initializer list doesn't fit on a
   /// line, allow putting all arguments onto the next line, even if

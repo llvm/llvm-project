@@ -263,6 +263,7 @@ public:
   Optional<unsigned> getVScaleRangeMax() const;
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
+  MemoryEffects getMemoryEffects() const;
   std::string getAsString(bool InAttrGrp) const;
   Type *getAttributeType(Attribute::AttrKind Kind) const;
 

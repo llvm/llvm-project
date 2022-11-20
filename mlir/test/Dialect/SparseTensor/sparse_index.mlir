@@ -83,22 +83,24 @@ func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
 // CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK:           %[[VAL_11:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_1]]] : memref<?xindex>
 // CHECK:           %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_2]]] : memref<?xindex>
-// CHECK:           scf.for %[[VAL_13:.*]] = %[[VAL_11]] to %[[VAL_12]] step %[[VAL_2]] {
+// CHECK:           %[[T:.*]] = scf.for %[[VAL_13:.*]] = %[[VAL_11]] to %[[VAL_12]] step %[[VAL_2]] {{.*}} {
 // CHECK:             %[[VAL_14:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_13]]] : memref<?xindex>
 // CHECK:             %[[VAL_15:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_13]]] : memref<?xindex>
 // CHECK:             %[[VAL_16:.*]] = arith.addi %[[VAL_13]], %[[VAL_2]] : index
 // CHECK:             %[[VAL_17:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_16]]] : memref<?xindex>
-// CHECK:             scf.for %[[VAL_18:.*]] = %[[VAL_15]] to %[[VAL_17]] step %[[VAL_2]] {
+// CHECK:             %[[L:.*]] = scf.for %[[VAL_18:.*]] = %[[VAL_15]] to %[[VAL_17]] step %[[VAL_2]] {{.*}} {
 // CHECK:               %[[VAL_19:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_18]]] : memref<?xindex>
 // CHECK:               %[[VAL_20:.*]] = arith.index_cast %[[VAL_19]] : index to i64
 // CHECK:               %[[VAL_21:.*]] = arith.index_cast %[[VAL_14]] : index to i64
 // CHECK:               %[[VAL_22:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_18]]] : memref<?xi64>
 // CHECK:               %[[VAL_23:.*]] = arith.muli %[[VAL_21]], %[[VAL_22]] : i64
 // CHECK:               %[[VAL_24:.*]] = arith.muli %[[VAL_20]], %[[VAL_23]] : i64
-// CHECK:               sparse_tensor.insert %[[VAL_24]] into %[[VAL_5]]{{\[}}%[[VAL_14]], %[[VAL_19]]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK:               %[[Y:.*]] = sparse_tensor.insert %[[VAL_24]] into %{{.*}}[%[[VAL_14]], %[[VAL_19]]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK:               scf.yield %[[Y]]
 // CHECK:             }
+// CHECK:             scf.yield %[[L]]
 // CHECK:           }
-// CHECK:           %[[VAL_25:.*]] = sparse_tensor.load %[[VAL_5]] hasInserts : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK:           %[[VAL_25:.*]] = sparse_tensor.load %[[T]] hasInserts : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK:           return %[[VAL_25]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK:         }
 func.func @sparse_index(%arga: tensor<?x?xi64, #SparseMatrix>)

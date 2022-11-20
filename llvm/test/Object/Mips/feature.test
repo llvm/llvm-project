@@ -1,4 +1,4 @@
-RUN: llvm-objdump -d %p/../Inputs/dext-test.elf-mips64r2 | FileCheck %s
+RUN: llvm-objdump --no-print-imm-hex -d %p/../Inputs/dext-test.elf-mips64r2 | FileCheck %s
 
 CHECK: Disassembly of section .text:
 CHECK: <dext>:

@@ -11,7 +11,7 @@
 // both STT_FUNC and STT_NOTYPE are regarded as code symbols.
 
 @ RUN: llvm-mc -triple armv8a-unknown-linux -filetype=obj %s -o %t.o
-@ RUN: llvm-objdump --triple armv8a -d %t.o | FileCheck %s
+@ RUN: llvm-objdump --no-print-imm-hex --triple armv8a -d %t.o | FileCheck %s
 
 // Ensure that all four instructions in the section are disassembled
 // rather than dumped as data, and that in each case, the code symbol

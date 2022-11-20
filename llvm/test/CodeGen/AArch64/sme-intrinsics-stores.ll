@@ -10,8 +10,8 @@ define void @st1b(<vscale x 16 x i1> %pg, ptr %ptr, i32 %sliceidx) {
 ; CHECK-NEXT:    st1b {za0v.b[w13, 0]}, p0, [x0]
 ; CHECK-NEXT:    ret
   %tileslice = add i32 %sliceidx, 15
-  call void @llvm.aarch64.sme.st1b.horiz(<vscale x 16 x i1> %pg, ptr %ptr, i64 0, i32 %tileslice)
-  call void @llvm.aarch64.sme.st1b.vert(<vscale x 16 x i1> %pg, ptr %ptr, i64 0, i32 0)
+  call void @llvm.aarch64.sme.st1b.horiz(<vscale x 16 x i1> %pg, ptr %ptr, i32 0, i32 %tileslice)
+  call void @llvm.aarch64.sme.st1b.vert(<vscale x 16 x i1> %pg, ptr %ptr, i32 0, i32 0)
   ret void;
 }
 
@@ -25,8 +25,8 @@ define void @st1b_with_addr_offset(<vscale x 16 x i1> %pg, ptr %ptr, i64 %index,
 ; CHECK-NEXT:    ret
   %base = getelementptr i8, ptr %ptr, i64 %index
   %tileslice = add i32 %sliceidx, 15
-  call void @llvm.aarch64.sme.st1b.horiz(<vscale x 16 x i1> %pg, ptr %base, i64 0, i32 0)
-  call void @llvm.aarch64.sme.st1b.vert(<vscale x 16 x i1> %pg, ptr %base, i64 0, i32 %tileslice)
+  call void @llvm.aarch64.sme.st1b.horiz(<vscale x 16 x i1> %pg, ptr %base, i32 0, i32 0)
+  call void @llvm.aarch64.sme.st1b.vert(<vscale x 16 x i1> %pg, ptr %base, i32 0, i32 %tileslice)
   ret void;
 }
 
@@ -41,10 +41,10 @@ define void @st1h(<vscale x 8 x i1> %pg, ptr %ptr, i32 %sliceidx) {
 ; CHECK-NEXT:    st1h {za1v.h[w12, 7]}, p0, [x0]
 ; CHECK-NEXT:    ret
   %tileslice = add i32 %sliceidx, 7
-  call void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1> %pg, ptr %ptr, i64 0, i32 %tileslice)
-  call void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1> %pg, ptr %ptr, i64 1, i32 0)
-  call void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1> %pg, ptr %ptr, i64 0, i32 0)
-  call void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1> %pg, ptr %ptr, i64 1, i32 %tileslice)
+  call void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1> %pg, ptr %ptr, i32 0, i32 %tileslice)
+  call void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1> %pg, ptr %ptr, i32 1, i32 0)
+  call void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1> %pg, ptr %ptr, i32 0, i32 0)
+  call void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1> %pg, ptr %ptr, i32 1, i32 %tileslice)
   ret void;
 }
 
@@ -58,8 +58,8 @@ define void @st1h_with_addr_offset(<vscale x 8 x i1> %pg, ptr %ptr, i64 %index, 
 ; CHECK-NEXT:    ret
   %base = getelementptr i16, ptr %ptr, i64 %index
   %tileslice = add i32 %sliceidx, 7
-  call void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1> %pg, ptr %base, i64 0, i32 %tileslice)
-  call void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1> %pg, ptr %base, i64 1, i32 0)
+  call void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1> %pg, ptr %base, i32 0, i32 %tileslice)
+  call void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1> %pg, ptr %base, i32 1, i32 0)
   ret void;
 }
 
@@ -78,14 +78,14 @@ define void @st1w(<vscale x 4 x i1> %pg, ptr %ptr, i32 %sliceidx) {
 ; CHECK-NEXT:    st1w {za3v.s[w13, 0]}, p0, [x0]
 ; CHECK-NEXT:    ret
   %tileslice = add i32 %sliceidx, 3
-  call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %ptr, i64 0, i32 0)
-  call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %ptr, i64 1, i32 0)
-  call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %ptr, i64 2, i32 0)
-  call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %ptr, i64 3, i32 %tileslice)
-  call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> %pg, ptr %ptr, i64 0, i32 0)
-  call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> %pg, ptr %ptr, i64 1, i32 0)
-  call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> %pg, ptr %ptr, i64 2, i32 %tileslice)
-  call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> %pg, ptr %ptr, i64 3, i32 0)
+  call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %ptr, i32 0, i32 0)
+  call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %ptr, i32 1, i32 0)
+  call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %ptr, i32 2, i32 0)
+  call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %ptr, i32 3, i32 %tileslice)
+  call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> %pg, ptr %ptr, i32 0, i32 0)
+  call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> %pg, ptr %ptr, i32 1, i32 0)
+  call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> %pg, ptr %ptr, i32 2, i32 %tileslice)
+  call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> %pg, ptr %ptr, i32 3, i32 0)
   ret void;
 }
 
@@ -99,8 +99,8 @@ define void @st1w_with_addr_offset(<vscale x 4 x i1> %pg, ptr %ptr, i64 %index, 
 ; CHECK-NEXT:    ret
   %base = getelementptr i32, ptr %ptr, i64 %index
   %tileslice = add i32 %sliceidx, 3
-  call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %base, i64 0, i32 0)
-  call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> %pg, ptr %base, i64 3, i32 %tileslice)
+  call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %base, i32 0, i32 0)
+  call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> %pg, ptr %base, i32 3, i32 %tileslice)
   ret void;
 }
 
@@ -127,22 +127,22 @@ define void @st1d(<vscale x 2 x i1> %pg, ptr %ptr, i32 %sliceidx) {
 ; CHECK-NEXT:    st1d {za7v.d[w12, 1]}, p0, [x0]
 ; CHECK-NEXT:    ret
   %tileslice = add i32 %sliceidx, 1
-  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i64 0, i32 0)
-  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i64 1, i32 0)
-  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i64 2, i32 0)
-  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i64 3, i32 0)
-  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i64 4, i32 %tileslice)
-  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i64 5, i32 0)
-  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i64 6, i32 0)
-  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i64 7, i32 0)
-  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i64 0, i32 0)
-  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i64 1, i32 0)
-  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i64 2, i32 0)
-  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i64 3, i32 0)
-  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i64 4, i32 0)
-  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i64 5, i32 0)
-  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i64 6, i32 0)
-  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i64 7, i32 %tileslice)
+  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i32 0, i32 0)
+  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i32 1, i32 0)
+  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i32 2, i32 0)
+  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i32 3, i32 0)
+  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i32 4, i32 %tileslice)
+  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i32 5, i32 0)
+  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i32 6, i32 0)
+  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %ptr, i32 7, i32 0)
+  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i32 0, i32 0)
+  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i32 1, i32 0)
+  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i32 2, i32 0)
+  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i32 3, i32 0)
+  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i32 4, i32 0)
+  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i32 5, i32 0)
+  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i32 6, i32 0)
+  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %ptr, i32 7, i32 %tileslice)
   ret void;
 }
 
@@ -156,8 +156,8 @@ define void @st1d_with_addr_offset(<vscale x 2 x i1> %pg, ptr %ptr, i64 %index, 
 ; CHECK-NEXT:    ret
   %base = getelementptr i64, ptr %ptr, i64 %index
   %tileslice = add i32 %sliceidx, 1
-  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %base, i64 0, i32 %tileslice)
-  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %base, i64 7, i32 0)
+  call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> %pg, ptr %base, i32 0, i32 %tileslice)
+  call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> %pg, ptr %base, i32 7, i32 0)
   ret void;
 }
 
@@ -198,38 +198,38 @@ define void @st1q(<vscale x 1 x i1> %pg, ptr %ptr) {
 ; CHECK-NEXT:    st1q {za14v.q[w12, 0]}, p0, [x0]
 ; CHECK-NEXT:    st1q {za15v.q[w12, 0]}, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 0, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 1, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 2, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 3, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 4, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 5, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 6, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 7, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 8, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 9, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 10, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 11, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 12, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 13, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 14, i32 0)
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i64 15, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 0, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 1, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 2, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 3, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 4, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 5, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 6, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 7, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 8, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 9, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 10, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 11, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 12, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 13, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 14, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i64 15, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 0, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 1, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 2, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 3, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 4, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 5, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 6, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 7, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 8, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 9, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 10, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 11, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 12, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 13, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 14, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %ptr, i32 15, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 0, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 1, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 2, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 3, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 4, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 5, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 6, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 7, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 8, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 9, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 10, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 11, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 12, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 13, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 14, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %ptr, i32 15, i32 0)
   ret void;
 }
 
@@ -241,8 +241,8 @@ define void @st1q_with_addr_offset(<vscale x 1 x i1> %pg, ptr %ptr, i64 %index) 
 ; CHECK-NEXT:    st1q {za15v.q[w12, 0]}, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %base = getelementptr i128, ptr %ptr, i64 %index
-  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %base, i64 0, i32 0)
-  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %base, i64 15, i32 0)
+  call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> %pg, ptr %base, i32 0, i32 0)
+  call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> %pg, ptr %base, i32 15, i32 0)
   ret void;
 }
 
@@ -317,9 +317,9 @@ entry:
 
 for.body:
   %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %src, i64 0, i32 %base)
-  tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %src, i64 0, i32 %add0)
-  tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %src, i64 0, i32 %add1)
+  tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %src, i32 0, i32 %base)
+  tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %src, i32 0, i32 %add0)
+  tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> %pg, ptr %src, i32 0, i32 %add1)
   %inc = add nuw nsw i32 %i, 1
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %exit, label %for.body
@@ -328,16 +328,16 @@ exit:
   ret void
 }
 
-declare void @llvm.aarch64.sme.st1b.horiz(<vscale x 16 x i1>, ptr, i64, i32)
-declare void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1>, ptr, i64, i32)
-declare void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1>, ptr, i64, i32)
-declare void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1>, ptr, i64, i32)
-declare void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1>, ptr, i64, i32)
-declare void @llvm.aarch64.sme.st1b.vert(<vscale x 16 x i1>, ptr, i64, i32)
-declare void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1>, ptr, i64, i32)
-declare void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1>, ptr, i64, i32)
-declare void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1>, ptr, i64, i32)
-declare void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1>, ptr, i64, i32)
+declare void @llvm.aarch64.sme.st1b.horiz(<vscale x 16 x i1>, ptr, i32, i32)
+declare void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1>, ptr, i32, i32)
+declare void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1>, ptr, i32, i32)
+declare void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1>, ptr, i32, i32)
+declare void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1>, ptr, i32, i32)
+declare void @llvm.aarch64.sme.st1b.vert(<vscale x 16 x i1>, ptr, i32, i32)
+declare void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1>, ptr, i32, i32)
+declare void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1>, ptr, i32, i32)
+declare void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1>, ptr, i32, i32)
+declare void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1>, ptr, i32, i32)
 
 declare void @llvm.aarch64.sme.str(i32, ptr)
 declare i64 @llvm.vscale.i64()

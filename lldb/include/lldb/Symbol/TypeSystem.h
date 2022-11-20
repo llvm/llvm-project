@@ -208,7 +208,8 @@ public:
 
   // Accessors
 
-  virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type) = 0;
+  virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type,
+                                  bool BaseOnly) = 0;
 
   virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) = 0;
 

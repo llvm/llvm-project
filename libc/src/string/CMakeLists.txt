@@ -97,6 +97,14 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strcoll
+  SRCS
+    strcoll.cpp
+  HDRS
+    strcoll.h
+)
+
+add_entrypoint_object(
   strcpy
   SRCS
     strcpy.cpp

@@ -140,9 +140,54 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   return nullptr;
 }
 
+/// Reduce integer multiplication patterns that contain a (+/-1 << Z) factor.
+/// Callers are expected to call this twice to handle commuted patterns.
+static Value *foldMulShl1(BinaryOperator &Mul, bool CommuteOperands,
+                          InstCombiner::BuilderTy &Builder) {
+  Value *X = Mul.getOperand(0), *Y = Mul.getOperand(1);
+  if (CommuteOperands)
+    std::swap(X, Y);
+
+  const bool HasNSW = Mul.hasNoSignedWrap();
+  const bool HasNUW = Mul.hasNoUnsignedWrap();
+
+  // X * (1 << Z) --> X << Z
+  Value *Z;
+  if (match(Y, m_Shl(m_One(), m_Value(Z)))) {
+    bool PropagateNSW = HasNSW && cast<ShlOperator>(Y)->hasNoSignedWrap();
+    return Builder.CreateShl(X, Z, Mul.getName(), HasNUW, PropagateNSW);
+  }
+
+  // Similar to above, but an increment of the shifted value becomes an add:
+  // X * ((1 << Z) + 1) --> (X * (1 << Z)) + X --> (X << Z) + X
+  // This increases uses of X, so it may require a freeze, but that is still
+  // expected to be an improvement because it removes the multiply.
+  BinaryOperator *Shift;
+  if (match(Y, m_OneUse(m_Add(m_BinOp(Shift), m_One()))) &&
+      match(Shift, m_OneUse(m_Shl(m_One(), m_Value(Z))))) {
+    bool PropagateNSW = HasNSW && Shift->hasNoSignedWrap();
+    Value *FrX = Builder.CreateFreeze(X, X->getName() + ".fr");
+    Value *Shl = Builder.CreateShl(FrX, Z, "mulshl", HasNUW, PropagateNSW);
+    return Builder.CreateAdd(Shl, FrX, Mul.getName(), HasNUW, PropagateNSW);
+  }
+
+  // Similar to above, but a decrement of the shifted value is disguised as
+  // 'not' and becomes a sub:
+  // X * (~(-1 << Z)) --> X * ((1 << Z) - 1) --> (X << Z) - X
+  // This increases uses of X, so it may require a freeze, but that is still
+  // expected to be an improvement because it removes the multiply.
+  if (match(Y, m_OneUse(m_Not(m_OneUse(m_Shl(m_AllOnes(), m_Value(Z))))))) {
+    Value *FrX = Builder.CreateFreeze(X, X->getName() + ".fr");
+    Value *Shl = Builder.CreateShl(FrX, Z, "mulshl");
+    return Builder.CreateAdd(Shl, FrX, Mul.getName());
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
-  if (Value *V = simplifyMulInst(I.getOperand(0), I.getOperand(1),
-                                 SQ.getWithInstruction(&I)))
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  if (Value *V = simplifyMulInst(Op0, Op1, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (SimplifyAssociativeOrCommutative(I))
@@ -154,19 +199,18 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
-  if (Value *V = SimplifyUsingDistributiveLaws(I))
+  if (Value *V = foldUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Type *Ty = I.getType();
-  unsigned BitWidth = Ty->getScalarSizeInBits();
+  const unsigned BitWidth = Ty->getScalarSizeInBits();
+  const bool HasNSW = I.hasNoSignedWrap();
+  const bool HasNUW = I.hasNoUnsignedWrap();
 
-  // X * -1 == 0 - X
+  // X * -1 --> 0 - X
   if (match(Op1, m_AllOnes())) {
-    BinaryOperator *BO = BinaryOperator::CreateNeg(Op0, I.getName());
-    if (I.hasNoSignedWrap())
-      BO->setHasNoSignedWrap();
-    return BO;
+    return HasNSW ? BinaryOperator::CreateNSWNeg(Op0)
+                  : BinaryOperator::CreateNeg(Op0);
   }
 
   // Also allow combining multiply instructions on vectors.
@@ -181,10 +225,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       Constant *Shl = ConstantExpr::getShl(C1, C2);
       BinaryOperator *Mul = cast<BinaryOperator>(I.getOperand(0));
       BinaryOperator *BO = BinaryOperator::CreateMul(NewOp, Shl);
-      if (I.hasNoUnsignedWrap() && Mul->hasNoUnsignedWrap())
+      if (HasNUW && Mul->hasNoUnsignedWrap())
         BO->setHasNoUnsignedWrap();
-      if (I.hasNoSignedWrap() && Mul->hasNoSignedWrap() &&
-          Shl->isNotMinSignedValue())
+      if (HasNSW && Mul->hasNoSignedWrap() && Shl->isNotMinSignedValue())
         BO->setHasNoSignedWrap();
       return BO;
     }
@@ -194,9 +237,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       if (Constant *NewCst = ConstantExpr::getExactLogBase2(C1)) {
         BinaryOperator *Shl = BinaryOperator::CreateShl(NewOp, NewCst);
 
-        if (I.hasNoUnsignedWrap())
+        if (HasNUW)
           Shl->setHasNoUnsignedWrap();
-        if (I.hasNoSignedWrap()) {
+        if (HasNSW) {
           const APInt *V;
           if (match(NewCst, m_APInt(V)) && *V != V->getBitWidth() - 1)
             Shl->setHasNoSignedWrap();
@@ -257,7 +300,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
           (BOp0->getOpcode() == Instruction::Or || BOp0->hasNoUnsignedWrap());
       Value *NewMul = Builder.CreateMul(X, MulC);
       auto *BO = BinaryOperator::CreateAdd(NewMul, NewC);
-      if (I.hasNoUnsignedWrap() && Op0NUW) {
+      if (HasNUW && Op0NUW) {
         // If NewMulBO is constant we also can set BO to nuw.
         if (auto *NewMulBO = dyn_cast<BinaryOperator>(NewMul))
           NewMulBO->setHasNoUnsignedWrap();
@@ -288,8 +331,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   // -X * -Y --> X * Y
   if (match(Op0, m_Neg(m_Value(X))) && match(Op1, m_Neg(m_Value(Y)))) {
     auto *NewMul = BinaryOperator::CreateMul(X, Y);
-    if (I.hasNoSignedWrap() &&
-        cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap() &&
+    if (HasNSW && cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap() &&
         cast<OverflowingBinaryOperator>(Op1)->hasNoSignedWrap())
       NewMul->setHasNoSignedWrap();
     return NewMul;
@@ -345,27 +387,10 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
        match(Op1, m_And(m_Value(), m_One()))))
     return BinaryOperator::CreateAnd(Op0, Op1);
 
-  // X*(1 << Y) --> X << Y
-  // (1 << Y)*X --> X << Y
-  {
-    Value *Y;
-    BinaryOperator *BO = nullptr;
-    bool ShlNSW = false;
-    if (match(Op0, m_Shl(m_One(), m_Value(Y)))) {
-      BO = BinaryOperator::CreateShl(Op1, Y);
-      ShlNSW = cast<ShlOperator>(Op0)->hasNoSignedWrap();
-    } else if (match(Op1, m_Shl(m_One(), m_Value(Y)))) {
-      BO = BinaryOperator::CreateShl(Op0, Y);
-      ShlNSW = cast<ShlOperator>(Op1)->hasNoSignedWrap();
-    }
-    if (BO) {
-      if (I.hasNoUnsignedWrap())
-        BO->setHasNoUnsignedWrap();
-      if (I.hasNoSignedWrap() && ShlNSW)
-        BO->setHasNoSignedWrap();
-      return BO;
-    }
-  }
+  if (Value *R = foldMulShl1(I, /* CommuteOperands */ false, Builder))
+    return replaceInstUsesWith(I, R);
+  if (Value *R = foldMulShl1(I, /* CommuteOperands */ true, Builder))
+    return replaceInstUsesWith(I, R);
 
   // (zext bool X) * (zext bool Y) --> zext (and X, Y)
   // (sext bool X) * (sext bool Y) --> zext (and X, Y)
@@ -436,8 +461,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
                                m_One()),
                           m_Deferred(X)))) {
     Value *Abs = Builder.CreateBinaryIntrinsic(
-        Intrinsic::abs, X,
-        ConstantInt::getBool(I.getContext(), I.hasNoSignedWrap()));
+        Intrinsic::abs, X, ConstantInt::getBool(I.getContext(), HasNSW));
     Abs->takeName(&I);
     return replaceInstUsesWith(I, Abs);
   }
@@ -446,12 +470,12 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     return Ext;
 
   bool Changed = false;
-  if (!I.hasNoSignedWrap() && willNotOverflowSignedMul(Op0, Op1, I)) {
+  if (!HasNSW && willNotOverflowSignedMul(Op0, Op1, I)) {
     Changed = true;
     I.setHasNoSignedWrap(true);
   }
 
-  if (!I.hasNoUnsignedWrap() && willNotOverflowUnsignedMul(Op0, Op1, I)) {
+  if (!HasNUW && willNotOverflowUnsignedMul(Op0, Op1, I)) {
     Changed = true;
     I.setHasNoUnsignedWrap(true);
   }

@@ -31,6 +31,7 @@
 ! HELP-NEXT: -ffixed-form           Process source files in fixed form
 ! HELP-NEXT: -ffixed-line-length=<value>
 ! HELP-NEXT: Use <value> as character line width in fixed mode
+! HELP-NEXT: -ffp-contract=<value> Form fused FP ops (e.g. FMAs)
 ! HELP-NEXT: -ffree-form            Process source files in free form
 ! HELP-NEXT: -fimplicit-none        No implicit typing allowed unless overridden by IMPLICIT statements
 ! HELP-NEXT: -finput-charset=<value> Specify the default character set for source files
@@ -105,6 +106,7 @@
 ! HELP-FC1-NEXT: -ffixed-form           Process source files in fixed form
 ! HELP-FC1-NEXT: -ffixed-line-length=<value>
 ! HELP-FC1-NEXT: Use <value> as character line width in fixed mode
+! HELP-FC1-NEXT: -ffp-contract=<value> Form fused FP ops (e.g. FMAs)
 ! HELP-FC1-NEXT: -ffree-form            Process source files in free form
 ! HELP-FC1-NEXT: -fget-definition <value> <value> <value>
 ! HELP-FC1-NEXT:                        Get the symbol definition from <line> <start-column> <end-column>

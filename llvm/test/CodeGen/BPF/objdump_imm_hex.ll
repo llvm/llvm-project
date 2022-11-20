@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -filetype=obj -o - %s | llvm-objdump -d - | FileCheck --check-prefix=CHECK-DEC %s
+; RUN: llc -march=bpfel -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=CHECK-DEC %s
 ; RUN: llc -march=bpfel -filetype=obj -o - %s | llvm-objdump -d --print-imm-hex - | FileCheck --check-prefix=CHECK-HEX %s
 
 ; Source Code:

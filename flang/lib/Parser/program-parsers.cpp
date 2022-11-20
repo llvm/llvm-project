@@ -9,7 +9,6 @@
 // Per-type parsers for program units
 
 #include "basic-parsers.h"
-#include "debug-parser.h"
 #include "expr-parsers.h"
 #include "misc-parsers.h"
 #include "stmt-parser.h"
@@ -31,10 +30,10 @@ namespace Fortran::parser {
 // statement without an otherwise empty list of dummy arguments.  That
 // MODULE prefix is disallowed by a constraint (C1547) in this context,
 // so the standard language is not ambiguous, but disabling its misrecognition
-// here would require context-sensitive keyword recognition or (or via)
-// variant parsers for several productions; giving the "module" production
-// priority here is a cleaner solution, though regrettably subtle.  Enforcing
-// C1547 is done in semantics.
+// here would require context-sensitive keyword recognition or variant parsers
+// for several productions; giving the "module" production priority here is a
+// cleaner solution, though regrettably subtle.
+// Enforcing C1547 is done in semantics.
 static constexpr auto programUnit{
     construct<ProgramUnit>(indirect(Parser<Module>{})) ||
     construct<ProgramUnit>(indirect(functionSubprogram)) ||
@@ -329,7 +328,9 @@ TYPE_PARSER(construct<InterfaceStmt>("INTERFACE" >> maybe(genericSpec)) ||
     construct<InterfaceStmt>(construct<Abstract>("ABSTRACT INTERFACE"_sptok)))
 
 // R1504 end-interface-stmt -> END INTERFACE [generic-spec]
-TYPE_PARSER(construct<EndInterfaceStmt>("END INTERFACE" >> maybe(genericSpec)))
+TYPE_PARSER(
+    construct<EndInterfaceStmt>(recovery("END INTERFACE" >> maybe(genericSpec),
+        constructEndStmtErrorRecovery >> pure<std::optional<GenericSpec>>())))
 
 // R1505 interface-body ->
 //         function-stmt [specification-part] end-function-stmt |
