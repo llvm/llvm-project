@@ -1049,17 +1049,17 @@ def int_eh_sjlj_setup_dispatch  : Intrinsic<[], []>;
 //===---------------- Generic Variable Attribute Intrinsics----------------===//
 //
 def int_var_annotation : DefaultAttrsIntrinsic<
-    [], [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty, llvm_ptr_ty],
+    [], [llvm_anyptr_ty, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty, LLVMMatchType<1>],
     [IntrInaccessibleMemOnly], "llvm.var.annotation">;
 
 def int_ptr_annotation : DefaultAttrsIntrinsic<
     [LLVMAnyPointerType<llvm_anyint_ty>],
-    [LLVMMatchType<0>, llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty, llvm_ptr_ty],
+    [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty, LLVMMatchType<1>],
     [IntrInaccessibleMemOnly], "llvm.ptr.annotation">;
 
 def int_annotation : DefaultAttrsIntrinsic<
     [llvm_anyint_ty],
-    [LLVMMatchType<0>, llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
+    [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty],
     [IntrInaccessibleMemOnly], "llvm.annotation">;
 
 // Annotates the current program point with metadata strings which are emitted
