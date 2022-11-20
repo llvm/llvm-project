@@ -83,6 +83,10 @@ void ReportStringFunctionSizeOverflow(uptr offset, uptr size,
 void ReportBadParamsToAnnotateContiguousContainer(uptr beg, uptr end,
                                                   uptr old_mid, uptr new_mid,
                                                   BufferedStackTrace *stack);
+void ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
+    uptr storage_beg, uptr storage_end, uptr old_container_beg,
+    uptr old_container_end, uptr new_container_beg, uptr new_container_end,
+    BufferedStackTrace *stack);
 
 void ReportODRViolation(const __asan_global *g1, u32 stack_id1,
                         const __asan_global *g2, u32 stack_id2);
