@@ -43,7 +43,7 @@
 #error "wrong value for __cpp_if_consteval"
 #endif
 
-#if check(multidimensional_subscript, 0, 0, 0, 0, 0, 202110)
+#if check(multidimensional_subscript, 0, 0, 0, 0, 0, 202211)
 #error "wrong value for __cpp_multidimensional_subscript"
 #endif
 
