@@ -909,13 +909,13 @@ extern "C" __device__ float test_fdividef(float x, float y) {
 
 // DEFAULT-LABEL: @test_floorf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_floor_f32(float noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret float [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.floor.f32(float [[X:%.*]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_floorf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_floor_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret float [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.floor.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_floorf(float x) {
   return floorf(x);
@@ -923,13 +923,13 @@ extern "C" __device__ float test_floorf(float x) {
 
 // DEFAULT-LABEL: @test_floor(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_floor_f64(double noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret double [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.floor.f64(double [[X:%.*]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_floor(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_floor_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret double [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.floor.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_floor(double x) {
   return floor(x);
