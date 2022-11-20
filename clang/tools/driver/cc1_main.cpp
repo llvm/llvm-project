@@ -502,7 +502,6 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   switch (FrontendOpts.ProgramAction) {
   case frontend::GenerateModule:
   case frontend::GenerateModuleInterface:
-  case frontend::GenerateHeaderModule:
   case frontend::GeneratePCH:
     Clang.getPreprocessorOpts().CachingDiagOption = CachingDiagKind::Error;
     break;
