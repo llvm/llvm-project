@@ -173,6 +173,9 @@ Changes to the AMDGPU Backend
 * Implemented new 2ulp IEEE lowering strategy for float
   reciprocal. This is used by default for OpenCL on gfx9+.
 
+* `llvm.sqrt.f64` is now lowered correctly. Use `llvm.amdgcn.sqrt.f64`
+  for raw instruction access.
+
 Changes to the ARM Backend
 --------------------------
 
