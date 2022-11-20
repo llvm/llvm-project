@@ -965,6 +965,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
   =========================================  ==========================================================
   LLVM Intrinsic                             Description
   =========================================  ==========================================================
+  llvm.amdgcn.sqrt                           Provides direct access to v_sqrt_f64, v_sqrt_f32 and v_sqrt_f16
+                                             (on targets with half support). Peforms sqrt function.
+
   llvm.amdgcn.log                            Provides direct access to v_log_f32 and v_log_f16
                                              (on targets with half support). Peforms log2 function.
 
@@ -979,6 +982,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                              instruction does not natively support denormal
                                              inputs. Backend will optimize out denormal scaling if
                                              marked with the :ref:`afn <fastmath_afn>` flag.
+
+  :ref:`llvm.sqrt <int_sqrt>`                Implemented for double, float and half (and vectors).
 
   :ref:`llvm.log <int_log>`                  Implemented for float and half (and vectors).
 

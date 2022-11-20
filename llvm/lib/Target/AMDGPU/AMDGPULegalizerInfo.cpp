@@ -907,7 +907,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S16, S64);
 
   if (ST.has16BitInsts()) {
-    getActionDefinitionsBuilder({G_FSQRT, G_FFLOOR})
+    getActionDefinitionsBuilder(G_FSQRT)
+      .legalFor({S32, S16})
+      .customFor({S64})
+      .scalarize(0)
+      .clampScalar(0, S16, S64);
+    getActionDefinitionsBuilder(G_FFLOOR)
       .legalFor({S32, S64, S16})
       .scalarize(0)
       .clampScalar(0, S16, S64);
@@ -925,7 +930,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
   } else {
     getActionDefinitionsBuilder(G_FSQRT)
-      .legalFor({S32, S64})
+      .legalFor({S32})
+      .customFor({S64})
       .scalarize(0)
       .clampScalar(0, S32, S64);
 
@@ -1996,6 +2002,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeFDIV(MI, MRI, B);
   case TargetOpcode::G_FFREXP:
     return legalizeFFREXP(MI, MRI, B);
+  case TargetOpcode::G_FSQRT:
+    return legalizeFSQRT(MI, MRI, B);
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_UREM:
   case TargetOpcode::G_UDIVREM:
@@ -4824,6 +4832,90 @@ bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
   auto Mul1 = B.buildFMul(S32, LHS, RCP, Flags);
 
   B.buildFMul(Res, Sel, Mul1, Flags);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFSQRT(MachineInstr &MI,
+                                        MachineRegisterInfo &MRI,
+                                        MachineIRBuilder &B) const {
+  // For double type, the SQRT and RSQ instructions don't have required
+  // precision, we apply Goldschmidt's algorithm to improve the result:
+  //
+  //   y0 = rsq(x)
+  //   g0 = x * y0
+  //   h0 = 0.5 * y0
+  //
+  //   r0 = 0.5 - h0 * g0
+  //   g1 = g0 * r0 + g0
+  //   h1 = h0 * r0 + h0
+  //
+  //   r1 = 0.5 - h1 * g1 => d0 = x - g1 * g1
+  //   g2 = g1 * r1 + g1     g2 = d0 * h1 + g1
+  //   h2 = h1 * r1 + h1
+  //
+  //   r2 = 0.5 - h2 * g2 => d1 = x - g2 * g2
+  //   g3 = g2 * r2 + g2     g3 = d1 * h1 + g2
+  //
+  //   sqrt(x) = g3
+
+  const LLT S1 = LLT::scalar(1);
+  const LLT S32 = LLT::scalar(32);
+  const LLT F64 = LLT::scalar(64);
+
+  Register Dst = MI.getOperand(0).getReg();
+  assert(MRI.getType(Dst) == F64 && "only expect to lower f64 sqrt");
+
+  Register X = MI.getOperand(1).getReg();
+  unsigned Flags = MI.getFlags();
+
+  auto ScaleConstant = B.buildFConstant(F64, 0x1.0p-767);
+
+  auto ZeroInt = B.buildConstant(S32, 0);
+  auto Scaling = B.buildFCmp(FCmpInst::FCMP_OLT, S1, X, ScaleConstant);
+
+  // Scale up input if it is too small.
+  auto ScaleUpFactor = B.buildConstant(S32, 256);
+  auto ScaleUp = B.buildSelect(S32, Scaling, ScaleUpFactor, ZeroInt);
+  auto SqrtX = B.buildFLdexp(F64, X, ScaleUp, Flags);
+
+  auto SqrtY = B.buildIntrinsic(Intrinsic::amdgcn_rsq, {F64}, false)
+                   .addReg(SqrtX.getReg(0));
+
+  auto Half = B.buildFConstant(F64, 0.5);
+  auto SqrtH0 = B.buildFMul(F64, SqrtY, Half);
+  auto SqrtS0 = B.buildFMul(F64, SqrtX, SqrtY);
+
+  auto NegSqrtH0 = B.buildFNeg(F64, SqrtH0);
+  auto SqrtR0 = B.buildFMA(F64, NegSqrtH0, SqrtS0, Half);
+
+  auto SqrtS1 = B.buildFMA(F64, SqrtS0, SqrtR0, SqrtS0);
+  auto SqrtH1 = B.buildFMA(F64, SqrtH0, SqrtR0, SqrtH0);
+
+  auto NegSqrtS1 = B.buildFNeg(F64, SqrtS1);
+  auto SqrtD0 = B.buildFMA(F64, NegSqrtS1, SqrtS1, SqrtX);
+
+  auto SqrtS2 = B.buildFMA(F64, SqrtD0, SqrtH1, SqrtS1);
+
+  auto NegSqrtS2 = B.buildFNeg(F64, SqrtS2);
+  auto SqrtD1 = B.buildFMA(F64, NegSqrtS2, SqrtS2, SqrtX);
+
+  auto SqrtRet = B.buildFMA(F64, SqrtD1, SqrtH1, SqrtS2);
+
+  // Scale down the result.
+  auto ScaleDownFactor = B.buildConstant(S32, -128);
+  auto ScaleDown = B.buildSelect(S32, Scaling, ScaleDownFactor, ZeroInt);
+  SqrtRet = B.buildFLdexp(F64, SqrtRet, ScaleDown, Flags);
+
+  // TODO: Switch to fcmp oeq 0 for finite only. Can't fully remove this check
+  // with finite only or nsz because rsq(+/-0) = +/-inf
+
+  // TODO: Check for DAZ and expand to subnormals
+  auto IsZeroOrInf = B.buildIsFPClass(LLT::scalar(1), SqrtX, fcZero | fcPosInf);
+
+  // If x is +INF, +0, or -0, use its original value
+  B.buildSelect(Dst, IsZeroOrInf, SqrtX, SqrtRet, Flags);
 
   MI.eraseFromParent();
   return true;
