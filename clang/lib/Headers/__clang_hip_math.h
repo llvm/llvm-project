@@ -247,10 +247,10 @@ float fmaf(float __x, float __y, float __z) {
 }
 
 __DEVICE__
-float fmaxf(float __x, float __y) { return __ocml_fmax_f32(__x, __y); }
+float fmaxf(float __x, float __y) { return __builtin_fmaxf(__x, __y); }
 
 __DEVICE__
-float fminf(float __x, float __y) { return __ocml_fmin_f32(__x, __y); }
+float fminf(float __x, float __y) { return __builtin_fminf(__x, __y); }
 
 __DEVICE__
 float fmodf(float __x, float __y) { return __ocml_fmod_f32(__x, __y); }
@@ -796,10 +796,10 @@ double fma(double __x, double __y, double __z) {
 }
 
 __DEVICE__
-double fmax(double __x, double __y) { return __ocml_fmax_f64(__x, __y); }
+double fmax(double __x, double __y) { return __builtin_fmax(__x, __y); }
 
 __DEVICE__
-double fmin(double __x, double __y) { return __ocml_fmin_f64(__x, __y); }
+double fmin(double __x, double __y) { return __builtin_fmin(__x, __y); }
 
 __DEVICE__
 double fmod(double __x, double __y) { return __ocml_fmod_f64(__x, __y); }
@@ -1277,16 +1277,16 @@ __DEVICE__ int max(int __arg1, int __arg2) {
 }
 
 __DEVICE__
-float max(float __x, float __y) { return fmaxf(__x, __y); }
+float max(float __x, float __y) { return __builtin_fmaxf(__x, __y); }
 
 __DEVICE__
-double max(double __x, double __y) { return fmax(__x, __y); }
+double max(double __x, double __y) { return __builtin_fmax(__x, __y); }
 
 __DEVICE__
-float min(float __x, float __y) { return fminf(__x, __y); }
+float min(float __x, float __y) { return __builtin_fminf(__x, __y); }
 
 __DEVICE__
-double min(double __x, double __y) { return fmin(__x, __y); }
+double min(double __x, double __y) { return __builtin_fmin(__x, __y); }
 
 #if !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__)
 __host__ inline static int min(int __arg1, int __arg2) {
