@@ -668,12 +668,12 @@ def: InstRW<[ICXWriteResGroup3], (instregex "COM(P?)_FST0r",
                                             "VPBROADCAST(D|Q)rr",
                                             "(V?)INSERTPS(Z?)rr",
                                             "(V?)MOV(HL|LH)PS(Z?)rr",
-                                            "(V?)MOVDDUP(Y|Z|Z128|Z256)?rr",
-                                            "(V?)PALIGNR(Y|Z|Z128|Z256)?rri",
-                                            "(V?)PERMIL(PD|PS)(Y|Z|Z128|Z256)?ri",
-                                            "(V?)PERMIL(PD|PS)(Y|Z|Z128|Z256)?rr",
+                                            "(V?)MOVDDUP(Y|Z128|Z256)?rr",
+                                            "(V?)PALIGNR(Y|Z128|Z256)?rri",
+                                            "(V?)PERMIL(PD|PS)(Y|Z128|Z256)?ri",
+                                            "(V?)PERMIL(PD|PS)(Y|Z128|Z256)?rr",
                                             "(V?)PACK(U|S)S(DW|WB)(Y|Z|Z128|Z256)?rr",
-                                            "(V?)UNPCK(L|H)(PD|PS)(Y|Z|Z128|Z256)?rr")>;
+                                            "(V?)UNPCK(L|H)(PD|PS)(Y|Z128|Z256)?rr")>;
 
 def ICXWriteResGroup4 : SchedWriteRes<[ICXPort6]> {
   let Latency = 1;
@@ -1539,11 +1539,11 @@ def ICXWriteResGroup119 : SchedWriteRes<[ICXPort5,ICXPort23]> {
 def: InstRW<[ICXWriteResGroup119], (instregex "FCOM(P?)(32|64)m",
                                               "VPBROADCASTB(Z|Z256)rm(b?)",
                                               "VPBROADCASTW(Z|Z256)rm(b?)",
-                                              "(V?)PALIGNR(Y|Z|Z256)rmi",
-                                              "(V?)PERMIL(PD|PS)(Y|Z|Z256)m(b?)i",
-                                              "(V?)PERMIL(PD|PS)(Y|Z|Z256)rm",
+                                              "(V?)PALIGNR(Y|Z256)rmi",
+                                              "(V?)PERMIL(PD|PS)(Y|Z256)m(b?)i",
+                                              "(V?)PERMIL(PD|PS)(Y|Z256)rm",
                                               "(V?)PACK(U|S)S(DW|WB)(Y|Z|Z256)rm",
-                                              "(V?)UNPCK(L|H)(PD|PS)(Y|Z|Z256)rm")>;
+                                              "(V?)UNPCK(L|H)(PD|PS)(Y|Z256)rm")>;
 def: InstRW<[ICXWriteResGroup119], (instrs VPBROADCASTBYrm,
                                            VPBROADCASTWYrm,
                                            VPMOVSXBDYrm,
