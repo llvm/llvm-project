@@ -4543,7 +4543,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   bool IsHIP = JA.isOffloading(Action::OFK_HIP);
   bool IsHIPDevice = JA.isDeviceOffloading(Action::OFK_HIP);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
-  bool IsHeaderModulePrecompile = isa<HeaderModulePrecompileJobAction>(JA);
   bool IsExtractAPI = isa<ExtractAPIJobAction>(JA);
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
@@ -4558,28 +4557,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   bool IsUsingLTO = D.isUsingLTO(IsDeviceOffloadAction);
   auto LTOMode = D.getLTOMode(IsDeviceOffloadAction);
 
-  // A header module compilation doesn't have a main input file, so invent a
-  // fake one as a placeholder.
-  const char *ModuleName = [&] {
-    auto *ModuleNameArg = Args.getLastArg(options::OPT_fmodule_name_EQ);
-    return ModuleNameArg ? ModuleNameArg->getValue() : "";
-  }();
-  InputInfo HeaderModuleInput(Inputs[0].getType(), ModuleName, ModuleName);
-
   // Extract API doesn't have a main input file, so invent a fake one as a
   // placeholder.
   InputInfo ExtractAPIPlaceholderInput(Inputs[0].getType(), "extract-api",
                                        "extract-api");
 
   const InputInfo &Input = [&]() -> const InputInfo & {
-    if (IsHeaderModulePrecompile)
-      return HeaderModuleInput;
     if (IsExtractAPI)
       return ExtractAPIPlaceholderInput;
     return Inputs[0];
   }();
 
-  InputInfoList ModuleHeaderInputs;
   InputInfoList ExtractAPIInputs;
   InputInfoList HostOffloadingInputs;
   const InputInfo *CudaDeviceInput = nullptr;
@@ -4587,15 +4575,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   for (const InputInfo &I : Inputs) {
     if (&I == &Input || I.getType() == types::TY_Nothing) {
       // This is the primary input or contains nothing.
-    } else if (IsHeaderModulePrecompile &&
-               types::getPrecompiledType(I.getType()) == types::TY_PCH) {
-      types::ID Expected = HeaderModuleInput.getType();
-      if (I.getType() != Expected) {
-        D.Diag(diag::err_drv_module_header_wrong_kind)
-            << I.getFilename() << types::getTypeName(I.getType())
-            << types::getTypeName(Expected);
-      }
-      ModuleHeaderInputs.push_back(I);
     } else if (IsExtractAPI) {
       auto ExpectedInputType = ExtractAPIPlaceholderInput.getType();
       if (I.getType() != ExpectedInputType) {
@@ -4856,9 +4835,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
     if (JA.getType() == types::TY_Nothing)
       CmdArgs.push_back("-fsyntax-only");
     else if (JA.getType() == types::TY_ModuleFile)
-      CmdArgs.push_back(IsHeaderModulePrecompile
-                            ? "-emit-header-module"
-                            : "-emit-module-interface");
+      CmdArgs.push_back("-emit-module-interface");
     else if (JA.getType() == types::TY_HeaderUnit)
       CmdArgs.push_back("-emit-header-unit");
     else
@@ -7523,9 +7500,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   addDashXForInput(Args, Input, CmdArgs);
 
   ArrayRef<InputInfo> FrontendInputs = Input;
-  if (IsHeaderModulePrecompile)
-    FrontendInputs = ModuleHeaderInputs;
-  else if (IsExtractAPI)
+  if (IsExtractAPI)
     FrontendInputs = ExtractAPIInputs;
   else if (Input.isNothing())
     FrontendInputs = {};
