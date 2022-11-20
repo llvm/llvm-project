@@ -1814,65 +1814,47 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
 }
 
 void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
-  switch (Options.TheAccelTableKind) {
-  case DwarfLinkerAccelTableKind::None:
-    // Nothing to do.
-    break;
-  case DwarfLinkerAccelTableKind::Apple:
-    emitAppleAcceleratorEntriesForUnit(Unit);
-    break;
-  case DwarfLinkerAccelTableKind::Dwarf:
-    emitDwarfAcceleratorEntriesForUnit(Unit);
-    break;
-  case DwarfLinkerAccelTableKind::Pub:
-    emitPubAcceleratorEntriesForUnit(Unit);
-    break;
-  case DwarfLinkerAccelTableKind::Default:
-    llvm_unreachable("The default must be updated to a concrete value.");
-    break;
+  for (DwarfLinkerAccelTableKind AccelTableKind : Options.AccelTables) {
+    switch (AccelTableKind) {
+    case DwarfLinkerAccelTableKind::Apple: {
+      // Add namespaces.
+      for (const auto &Namespace : Unit.getNamespaces())
+        AppleNamespaces.addName(Namespace.Name, Namespace.Die->getOffset() +
+                                                    Unit.getStartOffset());
+      // Add names.
+      for (const auto &Pubname : Unit.getPubnames())
+        AppleNames.addName(Pubname.Name,
+                           Pubname.Die->getOffset() + Unit.getStartOffset());
+      // Add types.
+      for (const auto &Pubtype : Unit.getPubtypes())
+        AppleTypes.addName(
+            Pubtype.Name, Pubtype.Die->getOffset() + Unit.getStartOffset(),
+            Pubtype.Die->getTag(),
+            Pubtype.ObjcClassImplementation ? dwarf::DW_FLAG_type_implementation
+                                            : 0,
+            Pubtype.QualifiedNameHash);
+      // Add ObjC names.
+      for (const auto &ObjC : Unit.getObjC())
+        AppleObjc.addName(ObjC.Name,
+                          ObjC.Die->getOffset() + Unit.getStartOffset());
+    } break;
+    case DwarfLinkerAccelTableKind::Pub: {
+      TheDwarfEmitter->emitPubNamesForUnit(Unit);
+      TheDwarfEmitter->emitPubTypesForUnit(Unit);
+    } break;
+    case DwarfLinkerAccelTableKind::DebugNames: {
+      for (const auto &Namespace : Unit.getNamespaces())
+        DebugNames.addName(Namespace.Name, Namespace.Die->getOffset(),
+                           Namespace.Die->getTag(), Unit.getUniqueID());
+      for (const auto &Pubname : Unit.getPubnames())
+        DebugNames.addName(Pubname.Name, Pubname.Die->getOffset(),
+                           Pubname.Die->getTag(), Unit.getUniqueID());
+      for (const auto &Pubtype : Unit.getPubtypes())
+        DebugNames.addName(Pubtype.Name, Pubtype.Die->getOffset(),
+                           Pubtype.Die->getTag(), Unit.getUniqueID());
+    } break;
+    }
   }
-}
-
-void DWARFLinker::emitAppleAcceleratorEntriesForUnit(CompileUnit &Unit) {
-  // Add namespaces.
-  for (const auto &Namespace : Unit.getNamespaces())
-    AppleNamespaces.addName(Namespace.Name,
-                            Namespace.Die->getOffset() + Unit.getStartOffset());
-
-  /// Add names.
-  for (const auto &Pubname : Unit.getPubnames())
-    AppleNames.addName(Pubname.Name,
-                       Pubname.Die->getOffset() + Unit.getStartOffset());
-
-  /// Add types.
-  for (const auto &Pubtype : Unit.getPubtypes())
-    AppleTypes.addName(
-        Pubtype.Name, Pubtype.Die->getOffset() + Unit.getStartOffset(),
-        Pubtype.Die->getTag(),
-        Pubtype.ObjcClassImplementation ? dwarf::DW_FLAG_type_implementation
-                                        : 0,
-        Pubtype.QualifiedNameHash);
-
-  /// Add ObjC names.
-  for (const auto &ObjC : Unit.getObjC())
-    AppleObjc.addName(ObjC.Name, ObjC.Die->getOffset() + Unit.getStartOffset());
-}
-
-void DWARFLinker::emitDwarfAcceleratorEntriesForUnit(CompileUnit &Unit) {
-  for (const auto &Namespace : Unit.getNamespaces())
-    DebugNames.addName(Namespace.Name, Namespace.Die->getOffset(),
-                       Namespace.Die->getTag(), Unit.getUniqueID());
-  for (const auto &Pubname : Unit.getPubnames())
-    DebugNames.addName(Pubname.Name, Pubname.Die->getOffset(),
-                       Pubname.Die->getTag(), Unit.getUniqueID());
-  for (const auto &Pubtype : Unit.getPubtypes())
-    DebugNames.addName(Pubtype.Name, Pubtype.Die->getOffset(),
-                       Pubtype.Die->getTag(), Unit.getUniqueID());
-}
-
-void DWARFLinker::emitPubAcceleratorEntriesForUnit(CompileUnit &Unit) {
-  TheDwarfEmitter->emitPubNamesForUnit(Unit);
-  TheDwarfEmitter->emitPubTypesForUnit(Unit);
 }
 
 /// Read the frame info stored in the object, and emit the
@@ -2256,25 +2238,6 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
   return OutputDebugInfoSize - StartOutputDebugInfoSize;
 }
 
-void DWARFLinker::updateAccelKind(DWARFContext &Dwarf) {
-  if (Options.TheAccelTableKind != DwarfLinkerAccelTableKind::Default)
-    return;
-
-  auto &DwarfObj = Dwarf.getDWARFObj();
-
-  if (!AtLeastOneDwarfAccelTable &&
-      (!DwarfObj.getAppleNamesSection().Data.empty() ||
-       !DwarfObj.getAppleTypesSection().Data.empty() ||
-       !DwarfObj.getAppleNamespacesSection().Data.empty() ||
-       !DwarfObj.getAppleObjCSection().Data.empty())) {
-    AtLeastOneAppleAccelTable = true;
-  }
-
-  if (!AtLeastOneDwarfAccelTable && !DwarfObj.getNamesSection().Data.empty()) {
-    AtLeastOneDwarfAccelTable = true;
-  }
-}
-
 bool DWARFLinker::emitPaperTrailWarnings(const DWARFFile &File,
                                          OffsetsStringPool &StringPool) {
 
@@ -2357,8 +2320,6 @@ void DWARFLinker::addObjectFile(DWARFFile &File, objFileLoader Loader,
   ObjectContexts.emplace_back(LinkContext(File));
 
   if (ObjectContexts.back().File.Dwarf) {
-    updateAccelKind(*ObjectContexts.back().File.Dwarf);
-
     for (const std::unique_ptr<DWARFUnit> &CU :
          ObjectContexts.back().File.Dwarf->compile_units()) {
       DWARFDie CUDie = CU->getUnitDIE();
@@ -2391,19 +2352,6 @@ Error DWARFLinker::link() {
 
   // ODR Contexts for the optimize.
   DeclContextTree ODRContexts;
-
-  // If we haven't decided on an accelerator table kind yet, we base ourselves
-  // on the DWARF we have seen so far. At this point we haven't pulled in debug
-  // information from modules yet, so it is technically possible that they
-  // would affect the decision. However, as they're built with the same
-  // compiler and flags, it is safe to assume that they will follow the
-  // decision made here.
-  if (Options.TheAccelTableKind == DwarfLinkerAccelTableKind::Default) {
-    if (AtLeastOneDwarfAccelTable && !AtLeastOneAppleAccelTable)
-      Options.TheAccelTableKind = DwarfLinkerAccelTableKind::Dwarf;
-    else
-      Options.TheAccelTableKind = DwarfLinkerAccelTableKind::Apple;
-  }
 
   for (LinkContext &OptContext : ObjectContexts) {
     if (Options.Verbose) {
@@ -2624,25 +2572,22 @@ Error DWARFLinker::link() {
     if (!Options.NoOutput) {
       TheDwarfEmitter->emitAbbrevs(Abbreviations, Options.TargetDWARFVersion);
       TheDwarfEmitter->emitStrings(OffsetsStringPool);
-      switch (Options.TheAccelTableKind) {
-      case DwarfLinkerAccelTableKind::None:
-        // Nothing to do.
-        break;
-      case DwarfLinkerAccelTableKind::Apple:
-        TheDwarfEmitter->emitAppleNames(AppleNames);
-        TheDwarfEmitter->emitAppleNamespaces(AppleNamespaces);
-        TheDwarfEmitter->emitAppleTypes(AppleTypes);
-        TheDwarfEmitter->emitAppleObjc(AppleObjc);
-        break;
-      case DwarfLinkerAccelTableKind::Dwarf:
-        TheDwarfEmitter->emitDebugNames(DebugNames);
-        break;
-      case DwarfLinkerAccelTableKind::Pub:
-        // Already emitted by emitPubAcceleratorEntriesForUnit.
-        break;
-      case DwarfLinkerAccelTableKind::Default:
-        llvm_unreachable("Default should have already been resolved.");
-        break;
+      for (DwarfLinkerAccelTableKind TableKind : Options.AccelTables) {
+        switch (TableKind) {
+        case DwarfLinkerAccelTableKind::Apple:
+          TheDwarfEmitter->emitAppleNamespaces(AppleNamespaces);
+          TheDwarfEmitter->emitAppleNames(AppleNames);
+          TheDwarfEmitter->emitAppleTypes(AppleTypes);
+          TheDwarfEmitter->emitAppleObjc(AppleObjc);
+          break;
+        case DwarfLinkerAccelTableKind::Pub:
+          // Already emitted by emitAcceleratorEntriesForUnit.
+          // Already emitted by emitAcceleratorEntriesForUnit.
+          break;
+        case DwarfLinkerAccelTableKind::DebugNames:
+          TheDwarfEmitter->emitDebugNames(DebugNames);
+          break;
+        }
       }
     }
   };
