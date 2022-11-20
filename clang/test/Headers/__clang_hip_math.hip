@@ -979,13 +979,13 @@ extern "C" __device__ double test_fma_rn(double x, double y, double z) {
 
 // DEFAULT-LABEL: @test_fmaxf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_fmax_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret float [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_fmaxf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fmax_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret float [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_fmaxf(float x, float y) {
   return fmaxf(x, y);
@@ -993,13 +993,13 @@ extern "C" __device__ float test_fmaxf(float x, float y) {
 
 // DEFAULT-LABEL: @test_fmax(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_fmax_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret double [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_fmax(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fmax_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret double [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_fmax(double x, double y) {
   return fmax(x, y);
@@ -1007,13 +1007,13 @@ extern "C" __device__ double test_fmax(double x, double y) {
 
 // DEFAULT-LABEL: @test_fminf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_fmin_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret float [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_fminf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fmin_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret float [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_fminf(float x, float y) {
   return fminf(x, y);
@@ -1021,13 +1021,13 @@ extern "C" __device__ float test_fminf(float x, float y) {
 
 // DEFAULT-LABEL: @test_fmin(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_fmin_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret double [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_fmin(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fmin_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret double [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_fmin(double x, double y) {
   return fmin(x, y);
@@ -3694,13 +3694,13 @@ extern "C" __device__ double test__fma_rn(double x, double y, double z) {
 
 // DEFAULT-LABEL: @test_float_min(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I_I:%.*]] = tail call contract float @__ocml_fmin_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret float [[CALL_I_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_float_min(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fmin_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret float [[CALL_I_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_float_min(float x, float y) {
   return min(x, y);
@@ -3708,13 +3708,13 @@ extern "C" __device__ float test_float_min(float x, float y) {
 
 // DEFAULT-LABEL: @test_float_max(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I_I:%.*]] = tail call contract float @__ocml_fmax_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret float [[CALL_I_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_float_max(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fmax_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret float [[CALL_I_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_float_max(float x, float y) {
   return max(x, y);
@@ -3722,13 +3722,13 @@ extern "C" __device__ float test_float_max(float x, float y) {
 
 // DEFAULT-LABEL: @test_double_min(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I_I:%.*]] = tail call contract double @__ocml_fmin_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret double [[CALL_I_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_double_min(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fmin_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret double [[CALL_I_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_double_min(double x, double y) {
   return min(x, y);
@@ -3736,13 +3736,13 @@ extern "C" __device__ double test_double_min(double x, double y) {
 
 // DEFAULT-LABEL: @test_double_max(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I_I:%.*]] = tail call contract double @__ocml_fmax_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret double [[CALL_I_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_double_max(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fmax_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret double [[CALL_I_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_double_max(double x, double y) {
   return max(x, y);
