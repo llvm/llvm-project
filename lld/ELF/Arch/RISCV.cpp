@@ -735,7 +735,8 @@ void elf::riscvFinalizeRelax(int passes) {
       uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
-      sec->rawData = makeArrayRef(p, newSize);
+      sec->content_ = p;
+      sec->size = newSize;
       sec->bytesDropped = 0;
 
       // Update section content: remove NOPs for R_RISCV_ALIGN and rewrite
