@@ -476,7 +476,7 @@ __DEVICE__
 float scalbnf(float __x, int __n) { return __ocml_scalbn_f32(__x, __n); }
 
 __DEVICE__
-__RETURN_TYPE __signbitf(float __x) { return __ocml_signbit_f32(__x); }
+__RETURN_TYPE __signbitf(float __x) { return __builtin_signbitf(__x); }
 
 __DEVICE__
 void sincosf(float __x, float *__sinptr, float *__cosptr) {
@@ -1032,7 +1032,7 @@ __DEVICE__
 double scalbn(double __x, int __n) { return __ocml_scalbn_f64(__x, __n); }
 
 __DEVICE__
-__RETURN_TYPE __signbit(double __x) { return __ocml_signbit_f64(__x); }
+__RETURN_TYPE __signbit(double __x) { return __builtin_signbit(__x); }
 
 __DEVICE__
 double sin(double __x) { return __ocml_sin_f64(__x); }
