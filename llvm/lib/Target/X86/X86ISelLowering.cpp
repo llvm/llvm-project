@@ -5661,7 +5661,10 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     case Intrinsic::x86_axor32:
     case Intrinsic::x86_axor64:
     case Intrinsic::x86_atomic_add_cc:
-    case Intrinsic::x86_atomic_sub_cc: {
+    case Intrinsic::x86_atomic_sub_cc:
+    case Intrinsic::x86_atomic_or_cc:
+    case Intrinsic::x86_atomic_and_cc:
+    case Intrinsic::x86_atomic_xor_cc: {
       Info.opc = ISD::INTRINSIC_W_CHAIN;
       Info.ptrVal = I.getArgOperand(0);
       unsigned Size = I.getArgOperand(1)->getType()->getScalarSizeInBits();
@@ -28385,7 +28388,10 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                                      {Chain, Op1, Op2}, VT, MMO);
     }
     case Intrinsic::x86_atomic_add_cc:
-    case Intrinsic::x86_atomic_sub_cc: {
+    case Intrinsic::x86_atomic_sub_cc:
+    case Intrinsic::x86_atomic_or_cc:
+    case Intrinsic::x86_atomic_and_cc:
+    case Intrinsic::x86_atomic_xor_cc: {
       SDLoc DL(Op);
       SDValue Chain = Op.getOperand(0);
       SDValue Op1 = Op.getOperand(2);
@@ -28401,6 +28407,15 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
         break;
       case Intrinsic::x86_atomic_sub_cc:
         Opc = X86ISD::LSUB;
+        break;
+      case Intrinsic::x86_atomic_or_cc:
+        Opc = X86ISD::LOR;
+        break;
+      case Intrinsic::x86_atomic_and_cc:
+        Opc = X86ISD::LAND;
+        break;
+      case Intrinsic::x86_atomic_xor_cc:
+        Opc = X86ISD::LXOR;
         break;
       }
       MachineMemOperand *MMO = cast<MemIntrinsicSDNode>(Op)->getMemOperand();
@@ -31417,6 +31432,23 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
       return Pred == CmpInst::ICMP_SLT;
     return false;
   }
+  if (Opc == AtomicRMWInst::Or) {
+    if (match(I, m_OneUse(m_c_Or(m_Specific(Op), m_Value()))) &&
+        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SLT;
+  }
+  if (Opc == AtomicRMWInst::And) {
+    if (match(I, m_OneUse(m_c_And(m_Specific(Op), m_Value()))) &&
+        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SLT;
+  }
+  if (Opc == AtomicRMWInst::Xor) {
+    if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
+      return Pred == CmpInst::ICMP_EQ;
+    if (match(I, m_OneUse(m_c_Xor(m_Specific(Op), m_Value()))) &&
+        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+      return Pred == CmpInst::ICMP_SLT;
+  }
 
   return false;
 }
@@ -31445,6 +31477,15 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     break;
   case AtomicRMWInst::Sub:
     IID = Intrinsic::x86_atomic_sub_cc;
+    break;
+  case AtomicRMWInst::Or:
+    IID = Intrinsic::x86_atomic_or_cc;
+    break;
+  case AtomicRMWInst::And:
+    IID = Intrinsic::x86_atomic_and_cc;
+    break;
+  case AtomicRMWInst::Xor:
+    IID = Intrinsic::x86_atomic_xor_cc;
     break;
   }
   Function *CmpArith =
@@ -31487,6 +31528,8 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   case AtomicRMWInst::Or:
   case AtomicRMWInst::And:
   case AtomicRMWInst::Xor:
+    if (shouldExpandCmpArithRMWInIR(AI))
+      return AtomicExpansionKind::CmpArithIntrinsic;
     return shouldExpandLogicAtomicRMWInIR(AI);
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::Max:
