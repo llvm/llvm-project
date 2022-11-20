@@ -31490,9 +31490,10 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
   }
   Function *CmpArith =
       Intrinsic::getDeclaration(AI->getModule(), IID, AI->getType());
-  Value *Call = Builder.CreateCall(CmpArith, {AI->getPointerOperand(),
-                                              AI->getValOperand(),
-                                              Builder.getInt32((unsigned)CC)});
+  Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
+                                          Type::getInt8PtrTy(Ctx));
+  Value *Call = Builder.CreateCall(
+      CmpArith, {Addr, AI->getValOperand(), Builder.getInt32((unsigned)CC)});
   Value *Result = Builder.CreateTrunc(Call, Type::getInt1Ty(Ctx));
   ICI->replaceAllUsesWith(Result);
   ICI->eraseFromParent();
