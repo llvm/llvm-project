@@ -274,7 +274,7 @@ __DEVICE__
 __RETURN_TYPE __isinff(float __x) { return __builtin_isinf(__x); }
 
 __DEVICE__
-__RETURN_TYPE __isnanf(float __x) { return __ocml_isnan_f32(__x); }
+__RETURN_TYPE __isnanf(float __x) { return __builtin_isnan(__x); }
 
 __DEVICE__
 float j0f(float __x) { return __ocml_j0_f32(__x); }
@@ -823,7 +823,7 @@ __DEVICE__
 __RETURN_TYPE __isinf(double __x) { return __builtin_isinf(__x); }
 
 __DEVICE__
-__RETURN_TYPE __isnan(double __x) { return __ocml_isnan_f64(__x); }
+__RETURN_TYPE __isnan(double __x) { return __builtin_isnan(__x); }
 
 __DEVICE__
 double j0(double __x) { return __ocml_j0_f64(__x); }
