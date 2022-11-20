@@ -103,8 +103,8 @@ InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
 size_t InputSectionBase::getSize() const {
   if (auto *s = dyn_cast<SyntheticSection>(this))
     return s->getSize();
-  if (uncompressedSize >= 0)
-    return uncompressedSize;
+  if (compressed)
+    return size;
   return rawData.size() - bytesDropped;
 }
 
@@ -121,7 +121,6 @@ static void decompressAux(const InputSectionBase &sec, uint8_t *out,
 }
 
 void InputSectionBase::decompress() const {
-  size_t size = uncompressedSize;
   uint8_t *uncompressedBuf;
   {
     static std::mutex mu;
@@ -131,7 +130,7 @@ void InputSectionBase::decompress() const {
 
   invokeELFT(decompressAux, *this, uncompressedBuf, size);
   rawData = makeArrayRef(uncompressedBuf, size);
-  uncompressedSize = -1;
+  compressed = false;
 }
 
 template <class ELFT> RelsOrRelas<ELFT> InputSectionBase::relsOrRelas() const {
@@ -230,7 +229,8 @@ template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
     return;
   }
 
-  uncompressedSize = hdr->ch_size;
+  compressed = true;
+  size = hdr->ch_size;
   alignment = std::max<uint32_t>(hdr->ch_addralign, 1);
 }
 
@@ -1102,10 +1102,10 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
 
   // If this is a compressed section, uncompress section contents directly
   // to the buffer.
-  if (uncompressedSize >= 0) {
+  if (compressed) {
     auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(rawData.data());
     auto compressed = rawData.slice(sizeof(typename ELFT::Chdr));
-    size_t size = uncompressedSize;
+    size_t size = this->size;
     if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                       ? compression::zlib::decompress(compressed, buf, size)
                       : compression::zstd::decompress(compressed, buf, size))
