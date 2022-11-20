@@ -78,6 +78,12 @@ let TargetPrefix = "x86" in {
                                          [ImmArg<ArgIndex<2>>]>;
   def int_x86_atomic_sub_cc  : Intrinsic<[llvm_i8_ty], [llvm_ptr_ty, llvm_anyint_ty, llvm_i32_ty],
                                          [ImmArg<ArgIndex<2>>]>;
+  def int_x86_atomic_or_cc  : Intrinsic<[llvm_i8_ty], [llvm_ptr_ty, llvm_anyint_ty, llvm_i32_ty],
+                                         [ImmArg<ArgIndex<2>>]>;
+  def int_x86_atomic_and_cc  : Intrinsic<[llvm_i8_ty], [llvm_ptr_ty, llvm_anyint_ty, llvm_i32_ty],
+                                         [ImmArg<ArgIndex<2>>]>;
+  def int_x86_atomic_xor_cc  : Intrinsic<[llvm_i8_ty], [llvm_ptr_ty, llvm_anyint_ty, llvm_i32_ty],
+                                         [ImmArg<ArgIndex<2>>]>;
 }
 
 // Read Processor Register.
