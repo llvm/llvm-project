@@ -579,7 +579,6 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   GeneralLinker.setNoODR(Options.NoODR);
   GeneralLinker.setUpdate(Options.Update);
   GeneralLinker.setNumThreads(Options.Threads);
-  GeneralLinker.setAccelTableKind(Options.TheAccelTableKind);
   GeneralLinker.setPrependPath(Options.PrependPath);
   GeneralLinker.setKeepFunctionForStatic(Options.KeepFunctionForStatic);
   if (Options.Translator)
@@ -726,6 +725,27 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
   if (Error E = GeneralLinker.setTargetDWARFVersion(MaxDWARFVersion))
     return error(toString(std::move(E)));
+
+  switch (Options.TheAccelTableKind) {
+  case DsymutilAccelTableKind::Apple:
+    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Apple);
+    break;
+  case DsymutilAccelTableKind::Dwarf:
+    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::DebugNames);
+    break;
+  case DsymutilAccelTableKind::Pub:
+    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Pub);
+    break;
+  case DsymutilAccelTableKind::Default:
+    if (MaxDWARFVersion >= 5)
+      GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::DebugNames);
+    else
+      GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Apple);
+    break;
+  case DsymutilAccelTableKind::None:
+    // Nothing to do.
+    break;
+  }
 
   // link debug info for loaded object files.
   if (Error E = GeneralLinker.link())
