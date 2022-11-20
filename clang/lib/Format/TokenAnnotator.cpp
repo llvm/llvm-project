@@ -2851,6 +2851,8 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
           return false;
       } else if (isCppAttribute(IsCpp, *Next)) {
         Next = Next->MatchingParen;
+        if (!Next)
+          return false;
       } else if (Next->is(tok::l_paren)) {
         break;
       } else {

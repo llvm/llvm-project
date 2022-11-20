@@ -25017,6 +25017,8 @@ TEST_F(FormatTest, RemoveSemicolon) {
                "}",
                Style);
 
+  verifyIncompleteFormat("class C final [[deprecated(l]] {});", Style);
+
   // These tests are here to show a problem that may not be easily
   // solved, our implementation to remove semicolons is only as good
   // as our FunctionLBrace detection and this fails for empty braces
