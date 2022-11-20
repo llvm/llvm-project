@@ -578,12 +578,17 @@ class TestCase(TestBase):
         (target, process, thread, bkpt) = lldbutil.run_to_name_breakpoint(self, 'main')
 
         # Get stats and verify we had errors.
-        exe_stats = self.find_module_in_metrics(exe, self.get_stats())
+        stats = self.get_stats()
+        exe_stats = self.find_module_in_metrics(exe, stats)
         self.assertTrue(exe_stats is not None)
 
         # Make sure we have "debugInfoHadVariableErrors" variable that is set to
         # false before failing to get local variables due to missing .o file.
         self.assertEqual(exe_stats['debugInfoHadVariableErrors'], False)
+
+        # Verify that the top level statistic that aggregates the number of
+        # modules with debugInfoHadVariableErrors is zero
+        self.assertEqual(stats['totalModuleCountWithVariableErrors'], 0)
 
         # Try and fail to get variables
         vars = thread.GetFrameAtIndex(0).GetVariables(True, True, False, True)
@@ -593,9 +598,14 @@ class TestCase(TestBase):
         self.assertTrue(vars.GetError().Fail())
 
         # Get stats and verify we had errors.
-        exe_stats = self.find_module_in_metrics(exe, self.get_stats())
+        stats = self.get_stats()
+        exe_stats = self.find_module_in_metrics(exe, stats)
         self.assertTrue(exe_stats is not None)
 
         # Make sure we have "hadFrameVariableErrors" variable that is set to
         # true after failing to get local variables due to missing .o file.
         self.assertEqual(exe_stats['debugInfoHadVariableErrors'], True)
+
+        # Verify that the top level statistic that aggregates the number of
+        # modules with debugInfoHadVariableErrors is greater than zero
+        self.assertGreater(stats['totalModuleCountWithVariableErrors'], 0)
