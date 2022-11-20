@@ -21,17 +21,17 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
   char *buffer = new char[buffer_size];
   if (poison_buffer)
     __asan_poison_memory_region(buffer, buffer_size);
-  char *beg = buffer + off_begin;
-  char *end = beg + capacity;
-  char *mid = poison_buffer ? beg : beg + capacity;
-  char *old_mid;
+  char *st_beg = buffer + off_begin;
+  char *st_end = st_beg + capacity;
+  char *end = poison_buffer ? st_beg : st_end;
+  char *old_end;
 
   for (int i = 0; i < 1000; i++) {
     size_t size = rand() % (capacity + 1);
     assert(size <= capacity);
-    old_mid = mid;
-    mid = beg + size;
-    __sanitizer_annotate_contiguous_container(beg, end, old_mid, mid);
+    old_end = end;
+    end = st_beg + size;
+    __sanitizer_annotate_contiguous_container(st_beg, st_end, old_end, end);
 
     char *cur = buffer;
     for (; cur < buffer + RoundDown(off_begin); ++cur)
@@ -40,38 +40,38 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
     // unpoisoned but not otherwise.
     for (; cur < buffer + off_begin; ++cur)
       assert(poison_buffer || !__asan_address_is_poisoned(cur));
-    for (; cur < mid; ++cur)
+    for (; cur < end; ++cur)
       assert(!__asan_address_is_poisoned(cur));
-    for (; cur < RoundDown(end); ++cur)
+    for (; cur < RoundDown(st_end); ++cur)
       assert(__asan_address_is_poisoned(cur));
     // The suffix of the last incomplete granule must be poisoned the same as
     // bytes after the end.
-    for (; cur != end + kGranularity; ++cur)
+    for (; cur != st_end + kGranularity; ++cur)
       assert(__asan_address_is_poisoned(cur) == poison_buffer);
   }
 
   for (int i = 0; i <= capacity; i++) {
-    old_mid = mid;
-    mid = beg + i;
-    __sanitizer_annotate_contiguous_container(beg, end, old_mid, mid);
+    old_end = end;
+    end = st_beg + i;
+    __sanitizer_annotate_contiguous_container(st_beg, st_end, old_end, end);
 
-    for (char *cur = std::max(beg, mid - 2 * kGranularity);
-         cur <= std::min(end, mid + 2 * kGranularity); ++cur) {
-      if (cur == mid ||
-          // Any mid in the last unaligned granule is OK, if bytes after the
+    for (char *cur = std::max(st_beg, st_end - 2 * kGranularity);
+         cur <= std::min(st_end, end + 2 * kGranularity); ++cur) {
+      if (cur == end ||
+          // Any end in the last unaligned granule is OK, if bytes after the
           // storage are not poisoned.
-          (!poison_buffer && RoundDown(end) <= std::min(cur, mid))) {
-        assert(__sanitizer_verify_contiguous_container(beg, cur, end));
+          (!poison_buffer && RoundDown(st_end) <= std::min(cur, end))) {
+        assert(__sanitizer_verify_contiguous_container(st_beg, cur, st_end));
         assert(NULL == __sanitizer_contiguous_container_find_bad_address(
-                           beg, cur, end));
-      } else if (cur < mid) {
-        assert(!__sanitizer_verify_contiguous_container(beg, cur, end));
+                           st_beg, cur, st_end));
+      } else if (cur < end) {
+        assert(!__sanitizer_verify_contiguous_container(st_beg, cur, st_end));
         assert(cur == __sanitizer_contiguous_container_find_bad_address(
-                          beg, cur, end));
+                          st_beg, cur, st_end));
       } else {
-        assert(!__sanitizer_verify_contiguous_container(beg, cur, end));
-        assert(mid == __sanitizer_contiguous_container_find_bad_address(
-                          beg, cur, end));
+        assert(!__sanitizer_verify_contiguous_container(st_beg, cur, st_end));
+        assert(end == __sanitizer_contiguous_container_find_bad_address(
+                          st_beg, cur, st_end));
       }
     }
   }
