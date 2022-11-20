@@ -55,7 +55,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
                                    StringRef name, Kind sectionKind)
     : SectionBase(sectionKind, name, flags, entsize, alignment, type, info,
                   link),
-      file(file), rawData(data) {
+      file(file), content_(data.data()), size(data.size()) {
   // In order to reduce memory allocation, we assume that mergeable
   // sections are smaller than 4 GiB, which is not an unreasonable
   // assumption as of 2017.
@@ -111,9 +111,9 @@ size_t InputSectionBase::getSize() const {
 template <class ELFT>
 static void decompressAux(const InputSectionBase &sec, uint8_t *out,
                           size_t size) {
-  auto *hdr =
-      reinterpret_cast<const typename ELFT::Chdr *>(sec.content().data());
-  auto compressed = sec.content().slice(sizeof(typename ELFT::Chdr));
+  auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(sec.content_);
+  auto compressed = ArrayRef<uint8_t>(sec.content_, sec.compressedSize)
+                        .slice(sizeof(typename ELFT::Chdr));
   if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                     ? compression::zlib::decompress(compressed, out, size)
                     : compression::zstd::decompress(compressed, out, size))
@@ -130,7 +130,7 @@ void InputSectionBase::decompress() const {
   }
 
   invokeELFT(decompressAux, *this, uncompressedBuf, size);
-  rawData = makeArrayRef(uncompressedBuf, size);
+  content_ = uncompressedBuf;
   compressed = false;
 }
 
@@ -231,6 +231,7 @@ template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
   }
 
   compressed = true;
+  compressedSize = size;
   size = hdr->ch_size;
   alignment = std::max<uint32_t>(hdr->ch_addralign, 1);
 }
@@ -1104,8 +1105,9 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
   // If this is a compressed section, uncompress section contents directly
   // to the buffer.
   if (compressed) {
-    auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(content().data());
-    auto compressed = content().slice(sizeof(typename ELFT::Chdr));
+    auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(content_);
+    auto compressed = ArrayRef<uint8_t>(content_, compressedSize)
+                          .slice(sizeof(typename ELFT::Chdr));
     size_t size = this->size;
     if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                       ? compression::zlib::decompress(compressed, buf, size)

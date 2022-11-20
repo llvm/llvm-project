@@ -155,20 +155,23 @@ public:
     bytesDropped -= num;
   }
 
-  mutable ArrayRef<uint8_t> rawData;
+  mutable const uint8_t *content_;
+  uint64_t size;
 
   void trim() {
     if (bytesDropped) {
-      rawData = rawData.drop_back(bytesDropped);
+      size -= bytesDropped;
       bytesDropped = 0;
     }
   }
 
-  ArrayRef<uint8_t> content() const { return rawData; }
+  ArrayRef<uint8_t> content() const {
+    return ArrayRef<uint8_t>(content_, size);
+  }
   ArrayRef<uint8_t> contentMaybeDecompress() const {
     if (compressed)
       decompress();
-    return rawData;
+    return content();
   }
 
   // The next member in the section group if this section is in a group. This is
@@ -217,6 +220,9 @@ public:
     // Auxiliary information for RISC-V linker relaxation. RISC-V does not use
     // jumpInstrMod.
     RISCVRelaxAux *relaxAux;
+
+    // The compressed content size when `compressed` is true.
+    size_t compressedSize;
   };
 
   // A function compiled with -fsplit-stack calling a function
@@ -238,12 +244,6 @@ protected:
   template <typename ELFT>
   void parseCompressedHeader();
   void decompress() const;
-
-  // This field stores the uncompressed size of the compressed data in rawData,
-  // or -1 if rawData is not compressed (either because the section wasn't
-  // compressed in the first place, or because we ended up uncompressing it).
-  // Since the feature is not used often, this is usually -1.
-  mutable int64_t size = -1;
 };
 
 // SectionPiece represents a piece of splittable section contents.
@@ -397,7 +397,7 @@ private:
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };
 
-static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
+static_assert(sizeof(InputSection) <= 152, "InputSection is too big");
 
 class SyntheticSection : public InputSection {
 public:
