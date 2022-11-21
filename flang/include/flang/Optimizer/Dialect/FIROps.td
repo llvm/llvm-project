@@ -2822,9 +2822,6 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
   ];
 
   let extraClassDeclaration = [{
-    /// Append a dispatch table entry to the table.
-    void appendTableEntry(mlir::Operation *op);
-
     static constexpr llvm::StringRef getParentAttrNameStr() { return "parent"; }
     static constexpr llvm::StringRef getExtendsKeyword() { return "extends"; }
 

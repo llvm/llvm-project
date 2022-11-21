@@ -1083,12 +1083,6 @@ mlir::FunctionType fir::DispatchOp::getFunctionType() {
 // DispatchTableOp
 //===----------------------------------------------------------------------===//
 
-void fir::DispatchTableOp::appendTableEntry(mlir::Operation *op) {
-  assert(mlir::isa<fir::DTEntryOp>(*op) && "operation must be a DTEntryOp");
-  auto &block = getBlock();
-  block.getOperations().insert(block.end(), op);
-}
-
 mlir::ParseResult fir::DispatchTableOp::parse(mlir::OpAsmParser &parser,
                                               mlir::OperationState &result) {
   // Parse the name as a symbol reference attribute.
