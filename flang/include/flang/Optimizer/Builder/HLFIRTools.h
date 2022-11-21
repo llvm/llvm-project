@@ -166,6 +166,14 @@ void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity,
                          llvm::SmallVectorImpl<mlir::Value> &result);
 
+/// Return the fir base, shape, and type parameters for a variable. Note that
+/// type parameters are only added if the entity is not a box and the type
+/// parameters is not a constant in the base type. This matches the arguments
+/// expected by fir.embox/fir.array_coor.
+std::pair<mlir::Value, mlir::Value> genVariableFirBaseShapeAndParams(
+    mlir::Location loc, fir::FirOpBuilder &builder, Entity entity,
+    llvm::SmallVectorImpl<mlir::Value> &typeParams);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

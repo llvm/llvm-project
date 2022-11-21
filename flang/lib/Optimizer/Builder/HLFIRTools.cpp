@@ -225,3 +225,19 @@ void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
   }
   TODO(loc, "inquire PDTs length parameters in HLFIR");
 }
+
+std::pair<mlir::Value, mlir::Value> hlfir::genVariableFirBaseShapeAndParams(
+    mlir::Location loc, fir::FirOpBuilder &builder, Entity entity,
+    llvm::SmallVectorImpl<mlir::Value> &typeParams) {
+  auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);
+  assert(!cleanup && "variable to Exv should not produce cleanup");
+  if (entity.hasLengthParameters()) {
+    auto params = fir::getTypeParams(exv);
+    typeParams.append(params.begin(), params.end());
+  }
+  if (entity.isScalar())
+    return {fir::getBase(exv), mlir::Value{}};
+  if (auto variableInterface = entity.getIfVariableInterface())
+    return {fir::getBase(exv), variableInterface.getShape()};
+  return {fir::getBase(exv), builder.createShape(loc, exv)};
+}
