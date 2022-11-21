@@ -4163,6 +4163,11 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock,
     if (!SunkVariables.insert(DbgUserVariable).second)
       continue;
 
+    // Leave dbg.assign intrinsics in their original positions and there should
+    // be no need to insert a clone.
+    if (isa<DbgAssignIntrinsic>(User))
+      continue;
+
     DIIClones.emplace_back(cast<DbgVariableIntrinsic>(User->clone()));
     if (isa<DbgDeclareInst>(User) && isa<CastInst>(I))
       DIIClones.back()->replaceVariableLocationOp(I, I->getOperand(0));
