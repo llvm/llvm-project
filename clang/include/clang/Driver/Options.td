@@ -5963,8 +5963,6 @@ def fmodule_file_cache_key : Joined<["-"], "fmodule-file-cache-key=">,
            "if it were at <path>. This option may be combined with "
            "-fmodule-file= to import the module. The module must have "
            "previously been built with -fcache-compile-job.">;
-def fconcepts_ts : Flag<["-"], "fconcepts-ts">,
-  HelpText<"Enable C++ Extensions for Concepts. (deprecated - use -std=c++2a)">;
 
 defm recovery_ast : BoolOption<"f", "recovery-ast",
   LangOpts<"RecoveryAST">, DefaultTrue,
