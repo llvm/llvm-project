@@ -1,4 +1,4 @@
-// RUN: mlir-opt --simplify-extract-strided-metadata -split-input-file %s -o - | FileCheck %s
+// RUN: mlir-opt --expand-strided-metadata -split-input-file %s -o - | FileCheck %s
 
 // CHECK-LABEL: func @extract_strided_metadata_constants
 //  CHECK-SAME: (%[[ARG:.*]]: memref<5x4xf32, strided<[4, 1], offset: 2>>)
