@@ -109,7 +109,7 @@ NamedDecl *Sema::getAsTemplateNameDecl(NamedDecl *D,
     return D;
   }
 
-  if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(D)) {
+  if (const auto *Record = dyn_cast<CXXRecordDecl>(D)) {
     // C++ [temp.local]p1:
     //   Like normal (non-template) classes, class templates have an
     //   injected-class-name (Clause 9). The injected-class-name
@@ -126,8 +126,7 @@ NamedDecl *Sema::getAsTemplateNameDecl(NamedDecl *D,
       if (Record->getDescribedClassTemplate())
         return Record->getDescribedClassTemplate();
 
-      if (ClassTemplateSpecializationDecl *Spec
-            = dyn_cast<ClassTemplateSpecializationDecl>(Record))
+      if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(Record))
         return Spec->getSpecializedTemplate();
     }
 
