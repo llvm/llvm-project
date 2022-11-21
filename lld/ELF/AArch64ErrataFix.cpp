@@ -544,10 +544,10 @@ static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
   // and replace the relocation with a R_AARCH_JUMP26 branch relocation.
   // Case 4: No relocation. We must create a new R_AARCH64_JUMP26 branch
   // relocation at the offset.
-  auto relIt = llvm::find_if(isec->relocations, [=](const Relocation &r) {
+  auto relIt = llvm::find_if(isec->relocs(), [=](const Relocation &r) {
     return r.offset == patcheeOffset;
   });
-  if (relIt != isec->relocations.end() &&
+  if (relIt != isec->relocs().end() &&
       (relIt->type == R_AARCH64_JUMP26 || relIt->expr == R_RELAX_TLS_IE_TO_LE))
     return;
 
@@ -561,12 +561,11 @@ static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
     return Relocation{R_PC, R_AARCH64_JUMP26, offset, 0, patchSym};
   };
 
-  if (relIt != isec->relocations.end()) {
-    ps->relocations.push_back(
-        {relIt->expr, relIt->type, 0, relIt->addend, relIt->sym});
+  if (relIt != isec->relocs().end()) {
+    ps->addReloc({relIt->expr, relIt->type, 0, relIt->addend, relIt->sym});
     *relIt = makeRelToPatch(patcheeOffset, ps->patchSym);
   } else
-    isec->relocations.push_back(makeRelToPatch(patcheeOffset, ps->patchSym));
+    isec->addReloc(makeRelToPatch(patcheeOffset, ps->patchSym));
 }
 
 // Scan all the instructions in InputSectionDescription, for each instance of

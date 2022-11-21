@@ -432,7 +432,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
       if (RelTy::IsRela)
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
       else if (config->relocatable && type != target.noneRel)
-        sec->relocations.push_back({R_ABS, type, rel.r_offset, addend, &sym});
+        sec->addReloc({R_ABS, type, rel.r_offset, addend, &sym});
     } else if (config->emachine == EM_PPC && type == R_PPC_PLTREL24 &&
                p->r_addend >= 0x8000 && sec->file->ppc32Got2) {
       // Similar to R_MIPS_GPREL{16,32}. If the addend of R_PPC_PLTREL24
@@ -561,7 +561,7 @@ static Relocation *getRISCVPCRelHi20(const Symbol *sym, uint64_t addend) {
   Relocation r;
   r.offset = d->value;
   auto range =
-      std::equal_range(isec->relocations.begin(), isec->relocations.end(), r,
+      std::equal_range(isec->relocs().begin(), isec->relocs().end(), r,
                        [](const Relocation &lhs, const Relocation &rhs) {
                          return lhs.offset < rhs.offset;
                        });
@@ -950,7 +950,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
 static void relocateNonAllocForRelocatable(InputSection *sec, uint8_t *buf) {
   const unsigned bits = config->is64 ? 64 : 32;
 
-  for (const Relocation &rel : sec->relocations) {
+  for (const Relocation &rel : sec->relocs()) {
     // InputSection::copyRelocations() adds only R_ABS relocations.
     assert(rel.expr == R_ABS);
     uint8_t *bufLoc = buf + rel.offset;
@@ -1037,7 +1037,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
   DenseSet<Defined *> prologues;
   SmallVector<Relocation *, 0> morestackCalls;
 
-  for (Relocation &rel : relocations) {
+  for (Relocation &rel : relocs()) {
     // Ignore calls into the split-stack api.
     if (rel.sym->getName().startswith("__morestack")) {
       if (rel.sym->getName().equals("__morestack"))
