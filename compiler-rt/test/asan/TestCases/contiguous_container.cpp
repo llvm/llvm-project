@@ -16,16 +16,16 @@ template <class T> static constexpr T RoundDown(T x) {
 }
 
 void TestContainer(size_t capacity, size_t off_begin, size_t off_end,
-                   bool off_poisoned) {
+                   bool poison_buffer) {
   char *buffer = new char[capacity + off_begin + off_end];
   char *buffer_end = buffer + capacity + off_begin + off_end;
-  if (off_poisoned)
+  if (poison_buffer)
     __asan_poison_memory_region(buffer, buffer_end - buffer);
   else
     __asan_unpoison_memory_region(buffer, buffer_end - buffer);
   char *beg = buffer + off_begin;
   char *end = beg + capacity;
-  char *mid = off_poisoned ? beg : beg + capacity;
+  char *mid = poison_buffer ? beg : beg + capacity;
   char *old_mid = 0;
   // If after the container, there is another object, last granule
   // cannot be poisoned.
@@ -41,7 +41,7 @@ void TestContainer(size_t capacity, size_t off_begin, size_t off_end,
     // If off buffer before the container was poisoned and we had to
     // unpoison it, we won't poison it again as we don't have information,
     // if it was poisoned.
-    if (!off_poisoned)
+    if (!poison_buffer)
       for (size_t idx = 0; idx < off_begin; idx++)
         assert(!__asan_address_is_poisoned(buffer + idx));
     for (size_t idx = 0; idx < size; idx++)
@@ -49,7 +49,7 @@ void TestContainer(size_t capacity, size_t off_begin, size_t off_end,
     for (size_t idx = size; beg + idx < cannot_poison; idx++)
       assert(__asan_address_is_poisoned(beg + idx));
     for (size_t idx = 0; idx < off_end; idx++)
-      assert(__asan_address_is_poisoned(end + idx) == off_poisoned);
+      assert(__asan_address_is_poisoned(end + idx) == poison_buffer);
 
     assert(__sanitizer_verify_contiguous_container(beg, mid, end));
     assert(NULL ==
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i <= n; i++)
     for (int j = 0; j < 8; j++)
       for (int k = 0; k < 8; k++)
-        for (int off = 0; off < 2; ++off)
-          TestContainer(i, j, k, off);
+        for (int poison = 0; poison < 2; ++poison)
+          TestContainer(i, j, k, poison);
   TestThrow();
 }
