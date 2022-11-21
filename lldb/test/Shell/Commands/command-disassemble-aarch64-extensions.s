@@ -31,6 +31,8 @@ fn:
   sm4e z0.s, z0.s, z0.s               // SVE2SM4
   rax1 z0.d, z0.d, z0.d               // SVE2SHA3
   bdep z0.b, z1.b, z31.b              // SVE2BITPERM
+  addqv   v0.8h, p0, z0.h             // SVE2p1 / SME2p1
+  bfadd z23.h, p3/m, z23.h, z13.h     // B16B16
   ldaprb w0, [x0, #0]                 // RCPC
   mrs x0, rndr                        // RAND
   irg x0, x0                          // MTE
@@ -78,6 +80,8 @@ lbl:
 # CHECK: sm4e   z0.s, z0.s, z0.s
 # CHECK: rax1   z0.d, z0.d, z0.d
 # CHECK: bdep   z0.b, z1.b, z31.b
+# CHECK: addqv  v0.8h, p0, z0.h
+# CHECK: bfadd  z23.h, p3/m, z23.h, z13.h
 # CHECK: ldaprb w0, [x0]
 # CHECK: mrs    x0, RNDR
 # CHECK: irg    x0, x0
@@ -97,6 +101,6 @@ lbl:
 # CHECK: fmopa  za0.d, p0/m, p0/m, z0.d, z0.d
 # CHECK: addha  za0.d, p0/m, p0/m, z0.d
 # CHECK: add    { z0.h, z1.h }, { z0.h, z1.h }, z0.h
-# CHECK: bc.eq  0x9c
+# CHECK: bc.eq  0xa4
 # CHECK: cpyfp  [x0]!, [x1]!, x2!
 # CHECK: mrs    x0, PMCCNTR_EL0
