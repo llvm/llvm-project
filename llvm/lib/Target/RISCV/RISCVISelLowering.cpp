@@ -2946,38 +2946,66 @@ static SDValue lowerVECTOR_SHUFFLEAsVNSRL(const SDLoc &DL, MVT VT,
 }
 
 // Lower the following shuffle to vslidedown.
+// a)
 // t49: v8i8 = extract_subvector t13, Constant:i64<0>
-// t109: v8i8 = extract_subvector t12, Constant:i64<8>
+// t109: v8i8 = extract_subvector t13, Constant:i64<8>
 // t108: v8i8 = vector_shuffle<1,2,3,4,5,6,7,8> t49, t106
+// b)
+// t69: v16i16 = extract_subvector t68, Constant:i64<0>
+// t23: v8i16 = extract_subvector t69, Constant:i64<0>
+// t29: v4i16 = extract_subvector t23, Constant:i64<4>
+// t26: v8i16 = extract_subvector t69, Constant:i64<8>
+// t30: v4i16 = extract_subvector t26, Constant:i64<0>
+// t54: v4i16 = vector_shuffle<1,2,3,4> t29, t30
 static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
                                                SDValue V1, SDValue V2,
                                                ArrayRef<int> Mask,
                                                const RISCVSubtarget &Subtarget,
                                                SelectionDAG &DAG) {
-  // Both input must be extracts.
-  if (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-      V2.getOpcode() != ISD::EXTRACT_SUBVECTOR)
-    return SDValue();
+  auto findNonEXTRACT_SUBVECTORParent =
+      [](SDValue Parent) -> std::pair<SDValue, uint64_t> {
+    uint64_t Offset = 0;
+    while (Parent.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+           // EXTRACT_SUBVECTOR can be used to extract a fixed-width vector from
+           // a scalable vector. But we don't want to match the case.
+           Parent.getOperand(0).getSimpleValueType().isFixedLengthVector()) {
+      Offset += Parent.getConstantOperandVal(1);
+      Parent = Parent.getOperand(0);
+    }
+    return std::make_pair(Parent, Offset);
+  };
+
+  auto [V1Src, V1IndexOffset] = findNonEXTRACT_SUBVECTORParent(V1);
+  auto [V2Src, V2IndexOffset] = findNonEXTRACT_SUBVECTORParent(V2);
 
   // Extracting from the same source.
-  SDValue Src = V1.getOperand(0);
-  if (Src != V2.getOperand(0))
+  SDValue Src = V1Src;
+  if (Src != V2Src)
     return SDValue();
 
-  // V1 must be started with 0.
-  // V1 and V2 are continuous.
-  if (V1.getConstantOperandVal(1) != 0 ||
-      VT.getVectorNumElements() != V2.getConstantOperandVal(1))
-    return SDValue();
+  // Rebuild mask because Src may be from multiple EXTRACT_SUBVECTORs.
+  SmallVector<int, 16> NewMask(Mask);
+  for (size_t i = 0; i != NewMask.size(); ++i) {
+    if (NewMask[i] == -1)
+      continue;
+
+    if (static_cast<size_t>(NewMask[i]) < NewMask.size()) {
+      NewMask[i] = NewMask[i] + V1IndexOffset;
+    } else {
+      // Minus NewMask.size() is needed. Otherwise, the b case would be
+      // <5,6,7,12> instead of <5,6,7,8>.
+      NewMask[i] = NewMask[i] - NewMask.size() + V2IndexOffset;
+    }
+  }
 
   // First index must be known and non-zero. It will be used as the slidedown
   // amount.
-  if (Mask[0] <= 0)
+  if (NewMask[0] <= 0)
     return SDValue();
 
-  // Mask is also continuous.
-  for (unsigned i = 1; i != Mask.size(); ++i)
-    if (Mask[i - 1] + 1 != Mask[i])
+  // NewMask is also continuous.
+  for (unsigned i = 1; i != NewMask.size(); ++i)
+    if (NewMask[i - 1] + 1 != NewMask[i])
       return SDValue();
 
   MVT XLenVT = Subtarget.getXLenVT();
@@ -2987,7 +3015,7 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
   SDValue Slidedown = DAG.getNode(
       RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
       convertToScalableVector(ContainerVT, Src, DAG, Subtarget),
-      DAG.getConstant(Mask[0], DL, XLenVT), TrueMask, VL);
+      DAG.getConstant(NewMask[0], DL, XLenVT), TrueMask, VL);
   return DAG.getNode(
       ISD::EXTRACT_SUBVECTOR, DL, VT,
       convertFromScalableVector(SrcVT, Slidedown, DAG, Subtarget),
