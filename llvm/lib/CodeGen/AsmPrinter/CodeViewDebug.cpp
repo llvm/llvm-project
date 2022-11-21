@@ -760,7 +760,7 @@ void CodeViewDebug::emitTypeGlobalHashes() {
   OS.AddComment("Section Version");
   OS.emitInt16(0);
   OS.AddComment("Hash Algorithm");
-  OS.emitInt16(uint16_t(GlobalTypeHashAlg::SHA1_8));
+  OS.emitInt16(uint16_t(GlobalTypeHashAlg::BLAKE3));
 
   TypeIndex TI(TypeIndex::FirstNonSimpleIndex);
   for (const auto &GHR : TypeTable.hashes()) {

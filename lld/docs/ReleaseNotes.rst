@@ -43,6 +43,8 @@ COFF Improvements
 * The linker command line entry in ``S_ENVBLOCK`` of the PDB is now stripped
   from input files, to align with MSVC behavior.
   (`D137723 <https://reviews.llvm.org/D137723>`_)
+* Switched from SHA1 to BLAKE3 for PDB type hashing / ``-gcodeview-ghash``
+  (`D137101 <https://reviews.llvm.org/D137101>`_)
 
 MinGW Improvements
 ------------------
