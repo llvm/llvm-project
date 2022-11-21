@@ -1669,11 +1669,38 @@ Token ASTReader::ReadToken(ModuleFile &F, const RecordDataImpl &Record,
   Token Tok;
   Tok.startToken();
   Tok.setLocation(ReadSourceLocation(F, Record, Idx));
-  Tok.setLength(Record[Idx++]);
-  if (IdentifierInfo *II = getLocalIdentifier(F, Record[Idx++]))
-    Tok.setIdentifierInfo(II);
   Tok.setKind((tok::TokenKind)Record[Idx++]);
   Tok.setFlag((Token::TokenFlags)Record[Idx++]);
+
+  if (Tok.isAnnotation()) {
+    Tok.setAnnotationEndLoc(ReadSourceLocation(F, Record, Idx));
+    switch (Tok.getKind()) {
+    case tok::annot_pragma_loop_hint: {
+      auto *Info = new (PP.getPreprocessorAllocator()) PragmaLoopHintInfo;
+      Info->PragmaName = ReadToken(F, Record, Idx);
+      Info->Option = ReadToken(F, Record, Idx);
+      unsigned NumTokens = Record[Idx++];
+      SmallVector<Token, 4> Toks;
+      Toks.reserve(NumTokens);
+      for (unsigned I = 0; I < NumTokens; ++I)
+        Toks.push_back(ReadToken(F, Record, Idx));
+      Info->Toks = llvm::makeArrayRef(Toks).copy(PP.getPreprocessorAllocator());
+      Tok.setAnnotationValue(static_cast<void *>(Info));
+      break;
+    }
+    // Some annotation tokens do not use the PtrData field.
+    case tok::annot_pragma_openmp:
+    case tok::annot_pragma_openmp_end:
+    case tok::annot_pragma_unused:
+      break;
+    default:
+      llvm_unreachable("missing deserialization code for annotation token");
+    }
+  } else {
+    Tok.setLength(Record[Idx++]);
+    if (IdentifierInfo *II = getLocalIdentifier(F, Record[Idx++]))
+      Tok.setIdentifierInfo(II);
+  }
   return Tok;
 }
 
