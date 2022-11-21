@@ -58,7 +58,7 @@ RISCVInstrInfo::RISCVInstrInfo(RISCVSubtarget &STI)
       STI(STI) {}
 
 MCInst RISCVInstrInfo::getNop() const {
-  if (STI.getFeatureBits()[RISCV::FeatureStdExtC])
+  if (STI.hasStdExtCOrZca())
     return MCInstBuilder(RISCV::C_NOP);
   return MCInstBuilder(RISCV::ADDI)
       .addReg(RISCV::X0)
@@ -1707,8 +1707,10 @@ outliner::OutlinedFunction RISCVInstrInfo::getOutliningCandidateInfo(
 
   // jr t0 = 4 bytes, 2 bytes if compressed instructions are enabled.
   unsigned FrameOverhead = 4;
-  if (RepeatedSequenceLocs[0].getMF()->getSubtarget()
-          .getFeatureBits()[RISCV::FeatureStdExtC])
+  if (RepeatedSequenceLocs[0]
+          .getMF()
+          ->getSubtarget<RISCVSubtarget>()
+          .hasStdExtCOrZca())
     FrameOverhead = 2;
 
   return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
