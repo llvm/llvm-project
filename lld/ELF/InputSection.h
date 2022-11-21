@@ -164,7 +164,8 @@ public:
     }
   }
 
-  ArrayRef<uint8_t> data() const {
+  ArrayRef<uint8_t> content() const { return rawData; }
+  ArrayRef<uint8_t> contentMaybeDecompress() const {
     if (compressed)
       decompress();
     return rawData;
@@ -228,9 +229,9 @@ public:
 
 
   template <typename T> llvm::ArrayRef<T> getDataAs() const {
-    size_t s = rawData.size();
+    size_t s = content().size();
     assert(s % sizeof(T) == 0);
-    return llvm::makeArrayRef<T>((const T *)rawData.data(), s / sizeof(T));
+    return llvm::makeArrayRef<T>((const T *)content().data(), s / sizeof(T));
   }
 
 protected:
@@ -288,8 +289,8 @@ public:
   llvm::CachedHashStringRef getData(size_t i) const {
     size_t begin = pieces[i].inputOff;
     size_t end =
-        (pieces.size() - 1 == i) ? rawData.size() : pieces[i + 1].inputOff;
-    return {toStringRef(rawData.slice(begin, end - begin)), pieces[i].hash};
+        (pieces.size() - 1 == i) ? content().size() : pieces[i + 1].inputOff;
+    return {toStringRef(content().slice(begin, end - begin)), pieces[i].hash};
   }
 
   // Returns the SectionPiece at a given input section offset.
@@ -313,7 +314,7 @@ struct EhSectionPiece {
       : inputOff(off), sec(sec), size(size), firstRelocation(firstRelocation) {}
 
   ArrayRef<uint8_t> data() const {
-    return {sec->rawData.data() + this->inputOff, size};
+    return {sec->content().data() + this->inputOff, size};
   }
 
   size_t inputOff;

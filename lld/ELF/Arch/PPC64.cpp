@@ -1561,7 +1561,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
         // recursive calls even if the function is preemptible. This is not
         // wrong in the common case where the function is not preempted at
         // runtime. Just ignore.
-        if ((rel.offset + 8 > sec.rawData.size() ||
+        if ((rel.offset + 8 > sec.content().size() ||
              read32(loc + 4) != 0x60000000) &&
             rel.sym->file != sec.file) {
           // Use substr(6) to remove the "__plt_" prefix.

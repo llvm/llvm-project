@@ -44,17 +44,17 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
                 .Case(".debug_str_offsets", &strOffsetsSection)
                 .Case(".debug_line", &lineSection)
                 .Default(nullptr)) {
-      m->Data = toStringRef(sec->data());
+      m->Data = toStringRef(sec->contentMaybeDecompress());
       m->sec = sec;
       continue;
     }
 
     if (sec->name == ".debug_abbrev")
-      abbrevSection = toStringRef(sec->data());
+      abbrevSection = toStringRef(sec->contentMaybeDecompress());
     else if (sec->name == ".debug_str")
-      strSection = toStringRef(sec->data());
+      strSection = toStringRef(sec->contentMaybeDecompress());
     else if (sec->name == ".debug_line_str")
-      lineStrSection = toStringRef(sec->data());
+      lineStrSection = toStringRef(sec->contentMaybeDecompress());
     else if (sec->name == ".debug_info" &&
              !(objSections[i].sh_flags & ELF::SHF_GROUP)) {
       // In DWARF v5, -fdebug-types-section places type units in .debug_info
@@ -66,7 +66,7 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
       // need to perform a lightweight parsing. We drop the SHF_GROUP flag when
       // the InputSection was created, so we need to retrieve sh_flags from the
       // associated ELF section header.
-      infoSection.Data = toStringRef(sec->data());
+      infoSection.Data = toStringRef(sec->contentMaybeDecompress());
       infoSection.sec = sec;
     }
   }
