@@ -1037,6 +1037,37 @@ define float @v_fma_f32_fneg_z(float %x, float %y, float %z) {
   ret float %fma
 }
 
+define amdgpu_ps float @dont_crash_after_fma_mix_select_attempt(float inreg %x, float %y, float %z) {
+; GFX6-LABEL: dont_crash_after_fma_mix_select_attempt:
+; GFX6:       ; %bb.0: ; %.entry
+; GFX6-NEXT:    v_fma_f32 v0, |s0|, v0, v1
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: dont_crash_after_fma_mix_select_attempt:
+; GFX8:       ; %bb.0: ; %.entry
+; GFX8-NEXT:    v_fma_f32 v0, |s0|, v0, v1
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: dont_crash_after_fma_mix_select_attempt:
+; GFX9:       ; %bb.0: ; %.entry
+; GFX9-NEXT:    v_fma_f32 v0, |s0|, v0, v1
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: dont_crash_after_fma_mix_select_attempt:
+; GFX10:       ; %bb.0: ; %.entry
+; GFX10-NEXT:    v_fma_f32 v0, |s0|, v0, v1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dont_crash_after_fma_mix_select_attempt:
+; GFX11:       ; %bb.0: ; %.entry
+; GFX11-NEXT:    v_fma_f32 v0, |s0|, v0, v1
+; GFX11-NEXT:    ; return to shader part epilog
+.entry:
+  %fabs.x = call contract float @llvm.fabs.f32(float %x)
+  %fma = call float @llvm.fma.f32(float %fabs.x, float %y, float %z)
+  ret float %fma
+}
+
 declare half @llvm.fma.f16(half, half, half) #0
 declare float @llvm.fma.f32(float, float, float) #0
 declare double @llvm.fma.f64(double, double, double) #0
