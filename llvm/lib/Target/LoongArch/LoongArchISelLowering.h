@@ -60,7 +60,10 @@ enum NodeType : unsigned {
   BITREV_W,
 
   // Intrinsic operations
+  BREAK,
   DBAR,
+  IBAR,
+  SYSCALL,
 
   // CRC check operations
   CRC_W_D_W

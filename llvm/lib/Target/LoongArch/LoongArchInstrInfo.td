@@ -35,7 +35,8 @@ def SDT_LoongArchBStrPick: SDTypeProfile<1, 3, [
   SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<2, 3>
 ]>;
 
-def SDT_LoongArchDBAR : SDTypeProfile<0, 1, [SDTCisVT<0, GRLenVT>]>;
+// "VI" means no output and an integer input.
+def SDT_LoongArchVI : SDTypeProfile<0, 1, [SDTCisVT<0, GRLenVT>]>;
 
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
@@ -70,8 +71,14 @@ def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
 def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
 def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
 def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
-def loongarch_dbar : SDNode<"LoongArchISD::DBAR", SDT_LoongArchDBAR,
+def loongarch_dbar : SDNode<"LoongArchISD::DBAR", SDT_LoongArchVI,
                              [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_ibar : SDNode<"LoongArchISD::IBAR", SDT_LoongArchVI,
+                             [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_break : SDNode<"LoongArchISD::BREAK", SDT_LoongArchVI,
+                              [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_syscall : SDNode<"LoongArchISD::SYSCALL", SDT_LoongArchVI,
+                                [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -1341,13 +1348,12 @@ def : Pat<(atomic_load_xor_32 GPR:$addr, GPR:$incr),
 
 /// Intrinsics
 
-let Predicates = [IsLA32] in {
-def : Pat<(int_loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
-} // Predicates = [IsLA32]
+def : Pat<(loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
+def : Pat<(loongarch_ibar uimm15:$imm15), (IBAR uimm15:$imm15)>;
+def : Pat<(loongarch_break uimm15:$imm15), (BREAK uimm15:$imm15)>;
+def : Pat<(loongarch_syscall uimm15:$imm15), (SYSCALL uimm15:$imm15)>;
 
 let Predicates = [IsLA64] in {
-def : Pat<(loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
-
 // CRC Check Instructions
 def : PatGprGpr<loongarch_crc_w_d_w, CRC_W_D_W>;
 } // Predicates = [IsLA64]
