@@ -590,6 +590,12 @@ LogicalResult tosa::PadOp::inferReturnTypeComponents(
   return success();
 }
 
+static SmallVector<int64_t> convertToMlirShape(ArrayRef<int64_t> shape) {
+  return to_vector(llvm::map_range(shape, [](int64_t dim) {
+    return dim == -1 ? ShapedType::kDynamicSize : dim;
+  }));
+}
+
 LogicalResult tosa::SliceOp::inferReturnTypeComponents(
     MLIRContext *context, ::llvm::Optional<Location> location,
     ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
@@ -601,7 +607,8 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
     outputShape.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
   }
 
-  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  inferredReturnShapes.push_back(ShapedTypeComponents(
+    convertToMlirShape(outputShape)));
   return success();
 }
 
@@ -655,11 +662,6 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
   return success();
 }
 
-static SmallVector<int64_t> convertToMlirShape(ArrayRef<int64_t> shape) {
-  return to_vector(llvm::map_range(shape, [](int64_t dim) {
-    return dim == -1 ? ShapedType::kDynamicSize : dim;
-  }));
-}
 
 LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     MLIRContext *context, ::llvm::Optional<Location> location,
