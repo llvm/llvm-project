@@ -1389,7 +1389,7 @@ static void readConfigs(opt::InputArgList &args) {
     parallel::strategy = hardware_concurrency(threads);
     config->thinLTOJobs = v;
   }
-  if (auto *arg = args.getLastArg(OPT_thinlto_jobs))
+  if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
     config->thinLTOJobs = arg->getValue();
   config->threadCount = parallel::strategy.compute_thread_count();
 
