@@ -1,0 +1,124 @@
+## Test the --loader-section-symbols option.
+
+# RUN: yaml2obj --docnum=1 -DSYMNUM=2 %s -o %t_xcoff32.o
+# RUN: yaml2obj --docnum=1 -DSYMNUM=4 %s -o %t_xcoff32_invalid.o
+# RUN: yaml2obj --docnum=2 %s -o %t_xcoff64.o
+
+# RUN: llvm-readobj --loader-section-symbols %t_xcoff32.o |\
+# RUN:   FileCheck %s --check-prefixes=CHECK32
+# RUN: llvm-readobj --loader-section-symbols %t_xcoff32_invalid.o 2>&1 |\
+# RUN:   FileCheck -DFILE=%t_xcoff32_invalid.o %s --check-prefixes=CHECK32,WARN
+# RUN: llvm-readobj --loader-section-symbols %t_xcoff64.o |\
+# RUN:   FileCheck %s --check-prefixes=CHECK64
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .loader
+    Flags:           [ STYP_LOADER ]
+    SectionData:     "000000010000000[[SYMNUM]]000000050000016D00000001000000A40000000c000000506d79696e74766172200002800002110500000000000000000000000000000002200002840002110a0000000000000000000a66756e63305f5f467600"
+##                    ^-------                                                           -Version=1
+##                            ^----------------                                                   -NumberOfSymbolEntries=SYMNUM
+##                                             ^-------                                           -NumberOfRelocationEntries=5
+##                                                     ^-------                                   -LengthOfImportFileIDStringTable=365
+##                                                             ^-------                           -NumberOfImportFileIDs=1
+##                                                                     ^-------                   -OffsetToImportFileIDs=0xA4
+##                                                                             ^-------           -LengthOfStringTable=12
+##                                                                                     ^-------   -OffsetToStringTable=0x050
+##                                                                                             ^---------------         SymbolName=myintvar
+##                                                                                                             ^------- Value=0x20000280
+##                                                                                                                     ^---  sectionNumber = 2
+##                                                                                                                         ^- SymbolType=0x11
+##                                                                                                                           ^- StorageClass=0x05
+##                                                                                                                             ^-------   ImportFileID=0
+##                                                                                                                                     ^-------ParameterCheckType=0
+##                                                                                                                                             ^-------SymbolZero=0
+##                                                                                                                                                     ^-------OffsetToSymTbl=2 
+##                                                                                                                                                             ^------- Value=20000284
+##                                                                                                                                                                     ^---  sectionNumber = 2
+##                                                                                                                                                                         ^- SymbolType=0x11
+##                                                                                                                                                                           ^- StorageClass=0x0a
+##                                                                                                                                                                              ^-------   ImportFileID=0
+##                                                                                                                                                                                      ^-------ParameterCheckType=0
+##                                                                                                                                                                                              ^StringTable
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1F7
+Sections:
+  - Name:            .loader
+    Flags:           [ STYP_LOADER ]
+    SectionData:     "0000000200000002000000050000016D000000010000001200000000000000D000000000000000680000000000000038000000000000008000000001100003000000000200021105000000000000000000000001100003080000000d0002110a000000000000000000096d79696e7476617200000a5f5a3566756e6330760000"
+##                    ^-------                                                           -Version=2
+##                            ^-------                                                   -NumberOfSymbolEntries=2
+##                                    ^-------                                           -NumberOfRelocationEntries=5
+##                                            ^-------                                   -LengthOfImportFileIDStringTable=365
+##                                                    ^-------                           -NumberOfImportFileIDs=1
+##                                                            ^-------                   --LengthOfStringTable=0x12
+##                                                                    ^---------------   -OffsetToImportFileIDs=0xD0
+##                                                                                    ^---------------   -OffsetToStringTable=0x68
+##                                                                                                    ^---------------  -OffsetToSymbolTable=0x38
+##                                                                                                                    ^---------------   -OffsetToRelocationEntries=0x80
+##                                                                                                                                    ^---------------         Value=0x0000000110000300
+##                                                                                                                                                    ^------- OffsetToStringTbl=2
+##                                                                                                                                                            ^---  sectionNumber = 2
+##                                                                                                                                                                ^- SymbolType=0x11
+##                                                                                                                                                                  ^- StorageClass=0x05
+##                                                                                                                                                                    ^-------   ImportFileID=0
+##                                                                                                                                                                            ^-------ParameterCheckType=0
+##                                                                                                                                                                                    ^--------------- Value=0x0000000110000308
+##                                                                                                                                                                                                    ^------- OffsetToStringTbl= 0x0d
+##                                                                                                                                                                                                            ^---  sectionNumber = 2
+##                                                                                                                                                                                                                ^- SymbolType=0x11
+##                                                                                                                                                                                                                  ^- StorageClass=0x0a
+##                                                                                                                                                                                                                    ^-------   ImportFileID=0
+##                                                                                                                                                                                                                            ^-------ParameterCheckType=0
+##                                                                                                                                                                                                                                    ^StringTable
+
+# CHECK32:      Loader Section {
+# CHECK32-NEXT:     Loader Section Symbols {
+# CHECK32-NEXT:       Symbol {
+# CHECK32-NEXT:         Name: myintvar
+# CHECK32-NEXT:         Virtual Address: 0x20000280
+# CHECK32-NEXT:         SectionNum: 2
+# CHECK32-NEXT:         SymbolType: 0x11
+# CHECK32-NEXT:         StorageClass: C_EXTDEF (0x5)
+# CHECK32-NEXT:         ImportFileID: 0x0
+# CHECK32-NEXT:         ParameterTypeCheck: 0
+# CHECK32-NEXT:       }
+# CHECK32-NEXT:       Symbol {
+# CHECK32-NEXT:         Name: func0__Fv
+# CHECK32-NEXT:         Virtual Address: 0x20000284
+# CHECK32-NEXT:         SectionNum: 2
+# CHECK32-NEXT:         SymbolType: 0x11
+# CHECK32-NEXT:         StorageClass: C_STRTAG (0xA)
+# CHECK32-NEXT:         ImportFileID: 0x0
+# CHECK32-NEXT:         ParameterTypeCheck: 0
+# CHECK32-NEXT:       }
+# WARN:          warning: '[[FILE]]': The end of the file was unexpectedly encountered
+# CHECK32-NEXT:     }
+# CHECK32-NEXT: }
+
+# CHECK64:      Loader Section {
+# CHECK64-NEXT:     Loader Section Symbols {
+# CHECK64-NEXT:       Symbol {
+# CHECK64-NEXT:         Name: myintvar
+# CHECK64-NEXT:         Virtual Address: 0x110000300
+# CHECK64-NEXT:         SectionNum: 2
+# CHECK64-NEXT:         SymbolType: 0x11
+# CHECK64-NEXT:         StorageClass: C_EXTDEF (0x5)
+# CHECK64-NEXT:         ImportFileID: 0x0
+# CHECK64-NEXT:         ParameterTypeCheck: 0
+# CHECK64-NEXT:       }
+# CHECK64-NEXT:       Symbol {
+# CHECK64-NEXT:         Name: _Z5func0v
+# CHECK64-NEXT:         Virtual Address: 0x110000308 
+# CHECK64-NEXT:         SectionNum: 2
+# CHECK64-NEXT:         SymbolType: 0x11
+# CHECK64-NEXT:         StorageClass: C_STRTAG (0xA)
+# CHECK64-NEXT:         ImportFileID: 0x0
+# CHECK64-NEXT:         ParameterTypeCheck: 0
+# CHECK64-NEXT:       }
+# CHECK64-NEXT:     }
+# CHECK64-NEXT: }
