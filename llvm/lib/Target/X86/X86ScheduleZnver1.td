@@ -758,9 +758,6 @@ def : InstRW<[WriteMicrocoded], (instrs PAUSE)>;
 // RDRAND.
 def : InstRW<[WriteMicrocoded], (instrs RDRAND16r, RDRAND32r, RDRAND64r)>;
 
-// XGETBV.
-def : InstRW<[WriteMicrocoded], (instrs XGETBV)>;
-
 // XADD.
 def ZnXADD : SchedWriteRes<[ZnALU]>;
 def : InstRW<[ZnXADD], (instregex "XADD(8|16|32|64)rr")>;
