@@ -6013,21 +6013,6 @@ AArch64TargetLowering::CCAssignFnForReturn(CallingConv::ID CC) const {
 }
 
 
-/// Returns true if the Function has ZA state and contains at least one call to
-/// a function that requires setting up a lazy-save buffer.
-static bool requiresBufferForLazySave(const Function &F) {
-  SMEAttrs CallerAttrs(F);
-  if (!CallerAttrs.hasZAState())
-    return false;
-
-  for (const BasicBlock &BB : F)
-    for (const Instruction &I : BB)
-      if (const CallInst *Call = dyn_cast<CallInst>(&I))
-        if (CallerAttrs.requiresLazySave(SMEAttrs(*Call)))
-          return true;
-  return false;
-}
-
 unsigned
 AArch64TargetLowering::allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
                                               SelectionDAG &DAG) const {
@@ -6443,8 +6428,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (Subtarget->hasCustomCallingConv())
     Subtarget->getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
 
-  if (requiresBufferForLazySave(MF.getFunction())) {
-    // Set up a buffer once and store the buffer in the MachineFunctionInfo.
+  // Conservatively assume the function requires the lazy-save mechanism.
+  if (SMEAttrs(MF.getFunction()).hasZAState()) {
     unsigned TPIDR2Obj = allocateLazySaveBuffer(Chain, DL, DAG);
     FuncInfo->setLazySaveTPIDR2Obj(TPIDR2Obj);
   }
@@ -7040,9 +7025,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                             DAG.getConstant(1, DL, MVT::i32));
     SDValue NN = DAG.getNode(ISD::MUL, DL, MVT::i64, N, N);
     unsigned TPIDR2Obj = FuncInfo->getLazySaveTPIDR2Obj();
-
-    if (!TPIDR2Obj)
-      TPIDR2Obj = allocateLazySaveBuffer(Chain, DL, DAG);
 
     MachinePointerInfo MPI = MachinePointerInfo::getStack(MF, TPIDR2Obj);
     SDValue TPIDR2ObjAddr = DAG.getFrameIndex(TPIDR2Obj,
