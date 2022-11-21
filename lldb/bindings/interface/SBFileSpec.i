@@ -84,18 +84,7 @@ public:
 
 #ifdef SWIGPYTHON
     %pythoncode %{
-        def __get_fullpath__(self):
-            spec_dir = self.GetDirectory()
-            spec_file = self.GetFilename()
-            if spec_dir and spec_file:
-                return '%s/%s' % (spec_dir, spec_file)
-            elif spec_dir:
-                return spec_dir
-            elif spec_file:
-                return spec_file
-            return None
-
-        fullpath = property(__get_fullpath__, None, doc='''A read only property that returns the fullpath as a python string.''')
+        fullpath = property(str, None, doc='''A read only property that returns the fullpath as a python string.''')
         basename = property(GetFilename, None, doc='''A read only property that returns the path basename as a python string.''')
         dirname = property(GetDirectory, None, doc='''A read only property that returns the path directory name as a python string.''')
         exists = property(Exists, None, doc='''A read only property that returns a boolean value that indicates if the file exists.''')
