@@ -238,7 +238,7 @@ FailureOr<BaseMemRefType> AllocTensorOp::getBufferType(
   assert(value == getResult() && "invalid value");
 
   // Compute memory space of this allocation.
-  unsigned memorySpace;
+  Attribute memorySpace;
   if (getMemorySpace().has_value()) {
     memorySpace = *getMemorySpace();
   } else if (getCopy()) {
@@ -246,7 +246,7 @@ FailureOr<BaseMemRefType> AllocTensorOp::getBufferType(
         bufferization::getBufferType(getCopy(), options, fixedTypes);
     if (failed(copyBufferType))
       return failure();
-    memorySpace = copyBufferType->getMemorySpaceAsInt();
+    memorySpace = copyBufferType->getMemorySpace();
   } else if (options.defaultMemorySpace.has_value()) {
     memorySpace = *options.defaultMemorySpace;
   } else {

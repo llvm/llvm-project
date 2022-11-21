@@ -81,7 +81,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
   let arguments = (ins Variadic<Index>:$dynamic_sizes,
                        Optional<AnyTensor>:$copy,
                        Optional<Index>:$size_hint,
-                       OptionalAttr<UI64Attr>:$memory_space);
+                       OptionalAttr<AnyAttr>:$memory_space);
 
   let results = (outs AnyTensor:$result);
 
