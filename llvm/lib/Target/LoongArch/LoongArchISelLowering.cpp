@@ -578,33 +578,62 @@ LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
   }
 }
 
+// Helper function that emits error message for intrinsics with void return
+// value.
+static SDValue emitIntrinsicErrorMessage(SDValue Op, StringRef Name,
+                                         StringRef ErrorMsg,
+                                         SelectionDAG &DAG) {
+
+  DAG.getContext()->emitError("argument to '" + Name + "' " + ErrorMsg);
+  return Op.getOperand(0);
+}
+
 SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
   MVT GRLenVT = Subtarget.getGRLenVT();
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Op2 = Op.getOperand(2);
+  const StringRef ErrorMsgOOR = "out of range";
 
   switch (Op.getConstantOperandVal(1)) {
   default:
     // TODO: Add more Intrinsics.
     return SDValue();
   case Intrinsic::loongarch_dbar: {
-    SDValue Op0 = Op.getOperand(0);
-    SDValue Op2 = Op.getOperand(2);
-    if (!isa<ConstantSDNode>(Op2)) {
-      DAG.getContext()->emitError("argument to '__builtin_loongarch_dbar' must "
-                                  "be a constant integer");
-      return Op.getOperand(0);
-    }
     unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
-    if (!isUInt<15>(Imm)) {
-      DAG.getContext()->emitError(
-          "argument to '__builtin_loongarch_dbar' out of range");
-      return Op0;
-    }
+    if (!isUInt<15>(Imm))
+      return emitIntrinsicErrorMessage(Op, "__builtin_loongarch_dbar",
+                                       ErrorMsgOOR, DAG);
 
-    if (GRLenVT == MVT::i32)
-      return Op;
     return DAG.getNode(LoongArchISD::DBAR, DL, MVT::Other, Op0,
+                       DAG.getConstant(Imm, DL, GRLenVT));
+  }
+  case Intrinsic::loongarch_ibar: {
+    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    if (!isUInt<15>(Imm))
+      return emitIntrinsicErrorMessage(Op, "__builtin_loongarch_ibar",
+                                       ErrorMsgOOR, DAG);
+
+    return DAG.getNode(LoongArchISD::IBAR, DL, MVT::Other, Op0,
+                       DAG.getConstant(Imm, DL, GRLenVT));
+  }
+  case Intrinsic::loongarch_break: {
+    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    if (!isUInt<15>(Imm))
+      return emitIntrinsicErrorMessage(Op, "__builtin_loongarch_break",
+                                       ErrorMsgOOR, DAG);
+
+    return DAG.getNode(LoongArchISD::BREAK, DL, MVT::Other, Op0,
+                       DAG.getConstant(Imm, DL, GRLenVT));
+  }
+  case Intrinsic::loongarch_syscall: {
+    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    if (!isUInt<15>(Imm))
+      return emitIntrinsicErrorMessage(Op, "__builtin_loongarch_syscall",
+                                       ErrorMsgOOR, DAG);
+
+    return DAG.getNode(LoongArchISD::SYSCALL, DL, MVT::Other, Op0,
                        DAG.getConstant(Imm, DL, GRLenVT));
   }
   }
@@ -1354,6 +1383,9 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(CLZ_W)
     NODE_NAME_CASE(CTZ_W)
     NODE_NAME_CASE(DBAR)
+    NODE_NAME_CASE(IBAR)
+    NODE_NAME_CASE(BREAK)
+    NODE_NAME_CASE(SYSCALL)
     NODE_NAME_CASE(CRC_W_D_W)
   }
 #undef NODE_NAME_CASE
