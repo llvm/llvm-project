@@ -72,6 +72,12 @@ llvm::cl::opt<std::string> CheckFileLines{
         "testing to lines 3 to 7 (inclusive) or --check-lines=5 to restrict "
         "to one line. Default is testing entire file."),
     llvm::cl::init("")};
+llvm::cl::opt<bool> CheckLocations{
+    "check-locations",
+    llvm::cl::desc(
+        "Runs certain features (e.g. hover) at each point in the file. "
+        "Somewhat slow."),
+    llvm::cl::init(true)};
 llvm::cl::opt<bool> CheckCompletion{
     "check-completion",
     llvm::cl::desc("Run code-completion at each point (slow)"),
@@ -455,7 +461,8 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
     return false;
   C.buildInlayHints(LineRange);
   C.buildSemanticHighlighting(LineRange);
-  C.testLocationFeatures(LineRange);
+  if (CheckLocations)
+    C.testLocationFeatures(LineRange);
 
   log("All checks completed, {0} errors", C.ErrCount);
   return C.ErrCount == 0;
