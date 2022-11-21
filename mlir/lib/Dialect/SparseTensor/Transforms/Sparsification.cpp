@@ -61,7 +61,7 @@ struct CodeGen {
             tensors,
             StringAttr::get(context, linalg::GenericOp::getOperationName()),
             /*hasOutput=*/true,
-            /*isSparseOut=*/op != nullptr),
+            /*isSparseOut=*/op != nullptr, ts),
         sparseOut(op), outerParNest(nest), topSort(ts) {
     if (op)
       insChain = op->get();
@@ -485,38 +485,6 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
       });
 }
 
-/// Generates an affine expression.
-//
-// TODO: generalize for sparse tensor subscripts
-//
-static Value genAffine(CodeGen &codegen, OpBuilder &builder, AffineExpr a,
-                       Location loc) {
-  switch (a.getKind()) {
-  case AffineExprKind::DimId: {
-    unsigned idx = a.cast<AffineDimExpr>().getPosition();
-    return codegen.getLoopIdxValue(idx); // universal dense index
-  }
-  case AffineExprKind::Add: {
-    auto binOp = a.cast<AffineBinaryOpExpr>();
-    return builder.create<arith::AddIOp>(
-        loc, genAffine(codegen, builder, binOp.getLHS(), loc),
-        genAffine(codegen, builder, binOp.getRHS(), loc));
-  }
-  case AffineExprKind::Mul: {
-    auto binOp = a.cast<AffineBinaryOpExpr>();
-    return builder.create<arith::MulIOp>(
-        loc, genAffine(codegen, builder, binOp.getLHS(), loc),
-        genAffine(codegen, builder, binOp.getRHS(), loc));
-  }
-  case AffineExprKind::Constant: {
-    int64_t c = a.cast<AffineConstantExpr>().getValue();
-    return constantIndex(builder, loc, c);
-  }
-  default:
-    llvm_unreachable("unexpected affine subscript");
-  }
-}
-
 /// Generates index for load/store on sparse tensor.
 static Value genIndex(CodeGen &codegen, linalg::GenericOp op, OpOperand *t) {
   auto map = op.getMatchingIndexingMap(t);
@@ -546,7 +514,7 @@ static Value genSubscript(CodeGen &codegen, OpBuilder &builder,
   } else {
     for (unsigned d = 0; d < rank; d++) {
       AffineExpr a = map.getResult(d);
-      args.push_back(genAffine(codegen, builder, a, op.getLoc()));
+      args.push_back(codegen.loopEmitter.genAffine(builder, a, op.getLoc()));
     }
   }
   return codegen.loopEmitter.getValBuffer()[tensor];
