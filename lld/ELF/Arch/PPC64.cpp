@@ -1518,7 +1518,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
   uint64_t lastPPCRelaxedRelocOff = -1;
-  for (const Relocation &rel : sec.relocations) {
+  for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val =
         sec.getRelocTargetVA(sec.file, rel.type, rel.addend,

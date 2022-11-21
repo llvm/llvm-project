@@ -210,6 +210,10 @@ public:
   // This vector contains such "cooked" relocations.
   SmallVector<Relocation, 0> relocations;
 
+  void addReloc(const Relocation &r) { relocations.push_back(r); }
+  MutableArrayRef<Relocation> relocs() { return relocations; }
+  ArrayRef<Relocation> relocs() const { return relocations; }
+
   union {
     // These are modifiers to jump instructions that are necessary when basic
     // block sections are enabled.  Basic block sections creates opportunities
