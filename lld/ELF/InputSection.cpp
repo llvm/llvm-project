@@ -103,9 +103,7 @@ InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
 size_t InputSectionBase::getSize() const {
   if (auto *s = dyn_cast<SyntheticSection>(this))
     return s->getSize();
-  if (compressed)
-    return size;
-  return content().size() - bytesDropped;
+  return size - bytesDropped;
 }
 
 template <class ELFT>
