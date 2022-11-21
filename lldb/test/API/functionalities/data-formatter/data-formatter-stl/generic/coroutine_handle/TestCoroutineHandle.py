@@ -97,7 +97,7 @@ class TestCoroutineHandle(TestBase):
             self.expect_expr("type_erased_hdl",
                 result_summary=re.compile("^coro frame = 0x[0-9a-f]*$"),
                 result_children=[
-                    ValueCheck(name="resume", value = "0x0000000000000000"),
+                    ValueCheck(name="resume", value = re.compile("^0x0+$")),
                     ValueCheck(name="destroy", summary = test_generator_func_ptr_re),
                     ValueCheck(name="promise", children=[
                         ValueCheck(name="current_value", value = "42"),
