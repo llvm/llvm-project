@@ -2264,13 +2264,12 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
     if (G->hasSanitizerMetadata())
       MD = G->getSanitizerMetadata();
 
-    // ASan runtime demangles Itanium mangled names, so keep the original name
-    // to prevent unneeded size increase of the string table.
+    // The runtime library tries demangling symbol names in the descriptor but
+    // functionality like __cxa_demangle may be unavailable (e.g.
+    // -static-libstdc++). So we demangle the symbol names here.
     std::string NameForGlobal = G->getName().str();
-    if (!StringRef(NameForGlobal).startswith("_Z"))
-      NameForGlobal = llvm::demangle(NameForGlobal);
     GlobalVariable *Name =
-        createPrivateGlobalForString(M, NameForGlobal,
+        createPrivateGlobalForString(M, llvm::demangle(NameForGlobal),
                                      /*AllowMerging*/ true, kAsanGenPrefix);
 
     Type *Ty = G->getValueType();

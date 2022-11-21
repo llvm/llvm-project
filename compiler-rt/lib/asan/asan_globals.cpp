@@ -148,7 +148,7 @@ static void CheckODRViolationViaIndicator(const Global *g) {
   for (ListOfGlobals *l = list_of_all_globals; l; l = l->next) {
     if (g->odr_indicator == l->g->odr_indicator &&
         (flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
-        !IsODRViolationSuppressed(MaybeDemangleGlobalName(g->name)))
+        !IsODRViolationSuppressed(g->name))
       ReportODRViolation(g, FindRegistrationSite(g), l->g,
                          FindRegistrationSite(l->g));
   }
@@ -164,7 +164,7 @@ static void CheckODRViolationViaPoisoning(const Global *g) {
     for (ListOfGlobals *l = list_of_all_globals; l; l = l->next) {
       if (g->beg == l->g->beg &&
           (flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
-          !IsODRViolationSuppressed(MaybeDemangleGlobalName(g->name)))
+          !IsODRViolationSuppressed(g->name))
         ReportODRViolation(g, FindRegistrationSite(g),
                            l->g, FindRegistrationSite(l->g));
     }
