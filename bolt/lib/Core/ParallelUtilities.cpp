@@ -13,10 +13,10 @@
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "llvm/Support/RWMutex.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Timer.h"
 #include <mutex>
-#include <shared_mutex>
 
 #define DEBUG_TYPE "par-utils"
 
@@ -170,13 +170,13 @@ void runOnEachFunctionWithUniqueAllocId(
   if (BC.getBinaryFunctions().size() == 0)
     return;
 
-  std::shared_timed_mutex MainLock;
+  llvm::sys::RWMutex MainLock;
   auto runBlock = [&](std::map<uint64_t, BinaryFunction>::iterator BlockBegin,
                       std::map<uint64_t, BinaryFunction>::iterator BlockEnd,
                       MCPlusBuilder::AllocatorIdTy AllocId) {
     Timer T(LogName, LogName);
     LLVM_DEBUG(T.startTimer());
-    std::shared_lock<std::shared_timed_mutex> Lock(MainLock);
+    std::shared_lock<llvm::sys::RWMutex> Lock(MainLock);
     for (auto It = BlockBegin; It != BlockEnd; ++It) {
       BinaryFunction &BF = It->second;
       if (SkipPredicate && SkipPredicate(BF))
@@ -192,7 +192,7 @@ void runOnEachFunctionWithUniqueAllocId(
     return;
   }
   // This lock is used to postpone task execution
-  std::unique_lock<std::shared_timed_mutex> Lock(MainLock);
+  std::unique_lock<llvm::sys::RWMutex> Lock(MainLock);
 
   // Estimate the overall runtime cost using the scheduling policy
   const unsigned TotalCost = estimateTotalCost(BC, SkipPredicate, SchedPolicy);
