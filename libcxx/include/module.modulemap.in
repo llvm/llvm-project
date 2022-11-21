@@ -996,6 +996,7 @@ module std [system] {
       module iter_swap             { private header "__iterator/iter_swap.h" }
       module iterator              { private header "__iterator/iterator.h" }
       module iterator_traits       { private header "__iterator/iterator_traits.h" }
+      module iterator_with_data    { private header "__iterator/iterator_with_data.h" }
       module mergeable {
         private header "__iterator/mergeable.h"
         export functional.__functional.ranges_operations
