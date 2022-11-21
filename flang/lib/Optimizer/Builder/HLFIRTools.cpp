@@ -69,10 +69,10 @@ getExplicitTypeParams(fir::FortranVariableOpInterface var) {
 }
 
 std::pair<fir::ExtendedValue, llvm::Optional<hlfir::CleanupFunction>>
-hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &,
+hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                                 hlfir::Entity entity) {
   if (auto variable = entity.getIfVariableInterface())
-    return {hlfir::translateToExtendedValue(variable), {}};
+    return {hlfir::translateToExtendedValue(loc, builder, variable), {}};
   if (entity.isVariable())
     TODO(loc, "HLFIR variable to fir::ExtendedValue without a "
               "FortranVariableOpInterface");
@@ -90,7 +90,8 @@ mlir::Value hlfir::Entity::getFirBase() const {
 }
 
 fir::ExtendedValue
-hlfir::translateToExtendedValue(fir::FortranVariableOpInterface variable) {
+hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                                fir::FortranVariableOpInterface variable) {
   /// When going towards FIR, use the original base value to avoid
   /// introducing descriptors at runtime when they are not required.
   mlir::Value firBase = Entity{variable}.getFirBase();
@@ -106,6 +107,13 @@ hlfir::translateToExtendedValue(fir::FortranVariableOpInterface variable) {
       return fir::CharArrayBoxValue(firBase, variable.getExplicitCharLen(),
                                     getExplicitExtents(variable),
                                     getExplicitLbounds(variable));
+    if (auto boxCharType = firBase.getType().dyn_cast<fir::BoxCharType>()) {
+      auto unboxed = builder.create<fir::UnboxCharOp>(
+          loc, fir::ReferenceType::get(boxCharType.getEleTy()),
+          builder.getIndexType(), firBase);
+      return fir::CharBoxValue(unboxed.getResult(0),
+                               variable.getExplicitCharLen());
+    }
     return fir::CharBoxValue(firBase, variable.getExplicitCharLen());
   }
   if (variable.isArray())
@@ -164,4 +172,56 @@ hlfir::Entity hlfir::loadTrivialScalar(mlir::Location loc,
     return Entity{builder.create<fir::LoadOp>(loc, entity)};
   }
   return entity;
+}
+
+static mlir::Value genUBound(mlir::Location loc, fir::FirOpBuilder &builder,
+                             mlir::Value lb, mlir::Value extent,
+                             mlir::Value one) {
+  if (auto constantLb = fir::factory::getIntIfConstant(lb))
+    if (*constantLb == 1)
+      return extent;
+  extent = builder.createConvert(loc, one.getType(), extent);
+  lb = builder.createConvert(loc, one.getType(), lb);
+  auto add = builder.create<mlir::arith::AddIOp>(loc, lb, extent);
+  return builder.create<mlir::arith::SubIOp>(loc, add, one);
+}
+
+llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
+hlfir::genBounds(mlir::Location loc, fir::FirOpBuilder &builder,
+                 Entity entity) {
+  if (entity.getType().isa<hlfir::ExprType>())
+    TODO(loc, "bounds of expressions in hlfir");
+  auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);
+  assert(!cleanup && "translation of entity should not yield cleanup");
+  if (const auto *mutableBox = exv.getBoxOf<fir::MutableBoxValue>())
+    exv = fir::factory::genMutableBoxRead(builder, loc, *mutableBox);
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  llvm::SmallVector<std::pair<mlir::Value, mlir::Value>> result;
+  for (unsigned dim = 0; dim < exv.rank(); ++dim) {
+    mlir::Value extent = fir::factory::readExtent(builder, loc, exv, dim);
+    mlir::Value lb = fir::factory::readLowerBound(builder, loc, exv, dim, one);
+    mlir::Value ub = genUBound(loc, builder, lb, extent, one);
+    result.push_back({lb, ub});
+  }
+  return result;
+}
+
+void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
+                                Entity entity,
+                                llvm::SmallVectorImpl<mlir::Value> &result) {
+  if (!entity.hasLengthParameters())
+    return;
+  if (entity.getType().isa<hlfir::ExprType>())
+    // Going through fir::ExtendedValue would create a temp,
+    // which is not desired for an inquiry.
+    TODO(loc, "inquire type parameters of hlfir.expr");
+
+  if (entity.isCharacter()) {
+    auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);
+    assert(!cleanup && "translation of entity should not yield cleanup");
+    result.push_back(fir::factory::readCharLen(builder, loc, exv));
+    return;
+  }
+  TODO(loc, "inquire PDTs length parameters in HLFIR");
 }

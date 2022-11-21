@@ -88,6 +88,10 @@ public:
            fir::isRecordWithTypeParameters(eleTy);
   }
 
+  bool isCharacter() const {
+    return getFortranElementType().isa<fir::CharacterType>();
+  }
+
   fir::FortranVariableOpInterface getIfVariableInterface() const {
     return this->getDefiningOp<fir::FortranVariableOpInterface>();
   }
@@ -135,9 +139,11 @@ translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity);
 
 /// Function to translate FortranVariableOpInterface to fir::ExtendedValue.
-/// It does not generate any IR, and is a simple packaging operation.
+/// It may generates IR to unbox fir.boxchar, but has otherwise no side effects
+/// on the IR.
 fir::ExtendedValue
-translateToExtendedValue(fir::FortranVariableOpInterface fortranVariable);
+translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                         fir::FortranVariableOpInterface fortranVariable);
 
 /// Generate declaration for a fir::ExtendedValue in memory.
 EntityWithAttributes genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
@@ -150,6 +156,15 @@ EntityWithAttributes genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
 /// if it is not a scalar entity of numerical or logical type.
 Entity loadTrivialScalar(mlir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity);
+
+/// Compute the lower and upper bounds of an entity.
+llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
+genBounds(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
+
+/// Read length parameters into result if this entity has any.
+void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
+                         Entity entity,
+                         llvm::SmallVectorImpl<mlir::Value> &result);
 
 } // namespace hlfir
 
