@@ -3319,7 +3319,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     MI.eraseFromParent();
     return Legalized;
   }
-  case TargetOpcode::G_FSUB: {
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_STRICT_FSUB: {
     Register Res = MI.getOperand(0).getReg();
     LLT Ty = MRI.getType(Res);
 
@@ -3330,9 +3331,13 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
       return UnableToLegalize;
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
-    Register Neg = MRI.createGenericVirtualRegister(Ty);
-    MIRBuilder.buildFNeg(Neg, RHS);
-    MIRBuilder.buildFAdd(Res, LHS, Neg, MI.getFlags());
+    auto Neg = MIRBuilder.buildFNeg(Ty, RHS);
+
+    if (MI.getOpcode() == TargetOpcode::G_STRICT_FSUB)
+      MIRBuilder.buildStrictFAdd(Res, LHS, Neg, MI.getFlags());
+    else
+      MIRBuilder.buildFAdd(Res, LHS, Neg, MI.getFlags());
+
     MI.eraseFromParent();
     return Legalized;
   }
@@ -4219,6 +4224,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_SADDE:
   case G_SSUBE:
   case G_STRICT_FADD:
+  case G_STRICT_FSUB:
   case G_STRICT_FMUL:
   case G_STRICT_FMA:
     return fewerElementsVectorMultiEltType(GMI, NumElts);

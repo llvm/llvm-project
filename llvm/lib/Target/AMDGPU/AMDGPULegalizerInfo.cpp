@@ -795,7 +795,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32))
     .scalarize(0);
 
-  auto &FSubActions = getActionDefinitionsBuilder(G_FSUB);
+  auto &FSubActions = getActionDefinitionsBuilder({G_FSUB, G_STRICT_FSUB});
   if (ST.has16BitInsts()) {
     FSubActions
       // Use actual fsub instruction
