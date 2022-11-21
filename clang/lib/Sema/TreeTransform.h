@@ -2380,6 +2380,16 @@ public:
                                                EndLoc);
   }
 
+  /// Build a new OpenMP 'message' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPMessageClause(Expr *MS, SourceLocation StartLoc,
+                                     SourceLocation LParenLoc,
+                                     SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPMessageClause(MS, StartLoc, LParenLoc, EndLoc);
+  }
+
   /// Rebuild the operand to an Objective-C \@synchronized statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -9897,6 +9907,17 @@ TreeTransform<Derived>::TransformOMPSeverityClause(OMPSeverityClause *C) {
   return getDerived().RebuildOMPSeverityClause(
       C->getSeverityKind(), C->getSeverityKindKwLoc(), C->getBeginLoc(),
       C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPMessageClause(OMPMessageClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getMessageString());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPMessageClause(
+      C->getMessageString(), C->getBeginLoc(), C->getLParenLoc(),
+      C->getEndLoc());
 }
 
 template <typename Derived>
