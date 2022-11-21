@@ -114,9 +114,10 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   FailureOr<BaseMemRefType> copyBufferType = getBufferType(tensor, options);
   if (failed(copyBufferType))
     return failure();
-  allocTensorOp.setMemorySpaceAttr(
-      b.getIntegerAttr(b.getIntegerType(64, /*isSigned=*/false),
-                       copyBufferType->getMemorySpaceAsInt()));
+  Attribute memorySpace = copyBufferType->getMemorySpace();
+  if (!memorySpace)
+    memorySpace = b.getI64IntegerAttr(0);
+  allocTensorOp.setMemorySpaceAttr(memorySpace);
   return allocTensorOp.getResult();
 }
 
@@ -258,7 +259,7 @@ bool OpFilter::isOpAllowed(Operation *op) const {
 
 /// Default unknown type converter: Use a fully dynamic layout map.
 static BaseMemRefType
-defaultUnknownTypeConverter(Value value, unsigned memorySpace,
+defaultUnknownTypeConverter(Value value, Attribute memorySpace,
                             const BufferizationOptions &options) {
   return getMemRefTypeWithFullyDynamicLayout(value.getType().cast<TensorType>(),
                                              memorySpace);
@@ -731,16 +732,14 @@ bool bufferization::isFunctionArgument(Value value) {
 BaseMemRefType bufferization::getMemRefType(Value value,
                                             const BufferizationOptions &options,
                                             MemRefLayoutAttrInterface layout,
-                                            unsigned memorySpace) {
+                                            Attribute memorySpace) {
   auto tensorType = value.getType().cast<TensorType>();
-  auto memorySpaceAttr = IntegerAttr::get(
-      IntegerType::get(tensorType.getContext(), 64), memorySpace);
 
   // Case 1: Unranked memref type.
   if (auto unrankedTensorType = tensorType.dyn_cast<UnrankedTensorType>()) {
     assert(!layout && "UnrankedTensorType cannot have a layout map");
     return UnrankedMemRefType::get(unrankedTensorType.getElementType(),
-                                   memorySpaceAttr);
+                                   memorySpace);
   }
 
   // Case 2: Ranked memref type with specified layout.
@@ -748,7 +747,7 @@ BaseMemRefType bufferization::getMemRefType(Value value,
   if (layout) {
     return MemRefType::get(rankedTensorType.getShape(),
                            rankedTensorType.getElementType(), layout,
-                           memorySpaceAttr);
+                           memorySpace);
   }
 
   return options.unknownTypeConverterFn(value, memorySpace, options);
@@ -756,7 +755,7 @@ BaseMemRefType bufferization::getMemRefType(Value value,
 
 BaseMemRefType
 bufferization::getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
-                                                   unsigned memorySpace) {
+                                                   Attribute memorySpace) {
   // Case 1: Unranked memref type.
   if (auto unrankedTensorType = tensorType.dyn_cast<UnrankedTensorType>()) {
     return UnrankedMemRefType::get(unrankedTensorType.getElementType(),
@@ -764,8 +763,6 @@ bufferization::getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
   }
 
   // Case 2: Ranked memref type.
-  auto memorySpaceAttr = IntegerAttr::get(
-      IntegerType::get(tensorType.getContext(), 64), memorySpace);
   auto rankedTensorType = tensorType.cast<RankedTensorType>();
   int64_t dynamicOffset = ShapedType::kDynamic;
   SmallVector<int64_t> dynamicStrides(rankedTensorType.getRank(),
@@ -774,14 +771,14 @@ bufferization::getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
                                               dynamicOffset, dynamicStrides);
   return MemRefType::get(rankedTensorType.getShape(),
                          rankedTensorType.getElementType(), stridedLayout,
-                         memorySpaceAttr);
+                         memorySpace);
 }
 
 /// Return a MemRef type with a static identity layout (i.e., no layout map). If
 /// the given tensor type is unranked, return an unranked MemRef type.
 BaseMemRefType
 bufferization::getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
-                                                     unsigned memorySpace) {
+                                                     Attribute memorySpace) {
   // Case 1: Unranked memref type.
   if (auto unrankedTensorType = tensorType.dyn_cast<UnrankedTensorType>()) {
     return UnrankedMemRefType::get(unrankedTensorType.getElementType(),
@@ -790,12 +787,10 @@ bufferization::getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
 
   // Case 2: Ranked memref type.
   auto rankedTensorType = tensorType.cast<RankedTensorType>();
-  auto memorySpaceAttr = IntegerAttr::get(
-      IntegerType::get(tensorType.getContext(), 64), memorySpace);
   MemRefLayoutAttrInterface layout = {};
   return MemRefType::get(rankedTensorType.getShape(),
                          rankedTensorType.getElementType(), layout,
-                         memorySpaceAttr);
+                         memorySpace);
 }
 
 bool bufferization::detail::defaultIsRepetitiveRegion(
