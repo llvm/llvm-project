@@ -765,6 +765,9 @@ Arm and AArch64 Support in Clang
   * Arm Cortex-A715 (cortex-a715).
   * Arm Cortex-X3 (cortex-x3).
   * Arm Neoverse V2 (neoverse-v2)
+- Strict floating point has been enabled for AArch64, which means that
+  ``-ftrapping-math``, ``-frounding-math``, ``-ffp-model=strict``, and
+  ``-ffp-exception-behaviour=<arg>`` are now accepted.
 
 Floating Point Support in Clang
 -------------------------------
