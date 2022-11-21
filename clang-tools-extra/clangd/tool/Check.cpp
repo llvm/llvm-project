@@ -60,10 +60,22 @@ namespace clangd {
 namespace {
 
 // These will never be shown in --help, ClangdMain doesn't list the category.
-llvm::cl::opt<std::string> CheckTidyTime(
+llvm::cl::opt<std::string> CheckTidyTime{
     "check-tidy-time",
     llvm::cl::desc("Print the overhead of checks matching this glob"),
-    llvm::cl::init(""));
+    llvm::cl::init("")};
+llvm::cl::opt<std::string> CheckFileLines{
+    "check-lines",
+    llvm::cl::desc(
+        "Limits the range of tokens in -check file on which "
+        "various features are tested. Example --check-lines=3-7 restricts "
+        "testing to lines 3 to 7 (inclusive) or --check-lines=5 to restrict "
+        "to one line. Default is testing entire file."),
+    llvm::cl::init("")};
+llvm::cl::opt<bool> CheckCompletion{
+    "check-completion",
+    llvm::cl::desc("Run code-completion at each point (slow)"),
+    llvm::cl::init(false)};
 
 // Print (and count) the error-level diagnostics (warnings are ignored).
 unsigned showErrors(llvm::ArrayRef<Diag> Diags) {
@@ -330,8 +342,7 @@ public:
   }
 
   // Run AST-based features at each token in the file.
-  void testLocationFeatures(llvm::Optional<Range> LineRange,
-                            const bool EnableCodeCompletion) {
+  void testLocationFeatures(llvm::Optional<Range> LineRange) {
     trace::Span Trace("testLocationFeatures");
     log("Testing features at each token (may be slow in large files)");
     auto &SM = AST->getSourceManager();
@@ -383,7 +394,7 @@ public:
       unsigned DocHighlights = findDocumentHighlights(*AST, Pos).size();
       vlog("    documentHighlight: {0}", DocHighlights);
 
-      if (EnableCodeCompletion) {
+      if (CheckCompletion) {
         Position EndPos = offsetToPosition(Inputs.Contents, End);
         auto CC = codeComplete(File, EndPos, Preamble.get(), Inputs, CCOpts);
         vlog("    code completion: {0}",
@@ -395,9 +406,27 @@ public:
 
 } // namespace
 
-bool check(llvm::StringRef File, llvm::Optional<Range> LineRange,
-           const ThreadsafeFS &TFS, const ClangdLSPServer::Options &Opts,
-           bool EnableCodeCompletion) {
+bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
+           const ClangdLSPServer::Options &Opts) {
+  llvm::Optional<Range> LineRange;
+  if (!CheckFileLines.empty()) {
+    uint32_t Begin = 0, End = std::numeric_limits<uint32_t>::max();
+    StringRef RangeStr(CheckFileLines);
+    bool ParseError = RangeStr.consumeInteger(0, Begin);
+    if (RangeStr.empty()) {
+      End = Begin;
+    } else {
+      ParseError |= !RangeStr.consume_front("-");
+      ParseError |= RangeStr.consumeInteger(0, End);
+    }
+    if (ParseError || !RangeStr.empty() || Begin <= 0 || End < Begin) {
+      elog("Invalid --check-lines specified. Use Begin-End format, e.g. 3-17");
+      return false;
+    }
+    LineRange = Range{Position{static_cast<int>(Begin - 1), 0},
+                      Position{static_cast<int>(End), 0}};
+  }
+
   llvm::SmallString<0> FakeFile;
   llvm::Optional<std::string> Contents;
   if (File.empty()) {
@@ -426,7 +455,7 @@ bool check(llvm::StringRef File, llvm::Optional<Range> LineRange,
     return false;
   C.buildInlayHints(LineRange);
   C.buildSemanticHighlighting(LineRange);
-  C.testLocationFeatures(LineRange, EnableCodeCompletion);
+  C.testLocationFeatures(LineRange);
 
   log("All checks completed, {0} errors", C.ErrCount);
   return C.ErrCount == 0;
