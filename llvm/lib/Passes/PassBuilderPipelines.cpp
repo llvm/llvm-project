@@ -618,7 +618,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // The matrix extension can introduce large vector operations early, which can
   // benefit from running vector-combine early on.
   if (EnableMatrix)
-    FPM.addPass(VectorCombinePass(/*ScalarizationOnly=*/true));
+    FPM.addPass(VectorCombinePass(/*TryEarlyFoldsOnly=*/true));
 
   // Eliminate redundancies.
   FPM.addPass(MergedLoadStoreMotionPass());
