@@ -385,3 +385,104 @@ ptr.check:
 exit:
   ret i4 3
 }
+
+define i1 @gep_count_add_1_sge_known_ult_1(i32 %count, ptr %p) {
+; CHECK-LABEL: @gep_count_add_1_sge_known_ult_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SGE:%.*]] = icmp sge i32 [[COUNT:%.*]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[SGE]])
+; CHECK-NEXT:    [[COUNT_EXT:%.*]] = zext i32 [[COUNT]] to i64
+; CHECK-NEXT:    [[GEP_COUNT:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[COUNT_EXT]]
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[COUNT]], -1
+; CHECK-NEXT:    [[SUB_EXT:%.*]] = zext i32 [[SUB]] to i64
+; CHECK-NEXT:    [[GEP_SUB:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[SUB_EXT]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[GEP_SUB]], [[GEP_COUNT]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %sge = icmp sge i32 %count, 1
+  call void @llvm.assume(i1 %sge)
+  %count.ext = zext i32 %count to i64
+  %gep.count = getelementptr inbounds i32, ptr %p, i64 %count.ext
+  %sub = add nsw i32 %count, -1
+  %sub.ext = zext i32 %sub to i64
+  %gep.sub = getelementptr inbounds i32, ptr %p, i64 %sub.ext
+  %c = icmp ult ptr %gep.sub, %gep.count
+  ;%2 = icmp uge ptr %0, %p
+  ret i1 %c
+}
+
+define i1 @gep_count_add_1_sge_known_uge_1(i32 %count, ptr %p) {
+; CHECK-LABEL: @gep_count_add_1_sge_known_uge_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SGE:%.*]] = icmp sge i32 [[COUNT:%.*]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[SGE]])
+; CHECK-NEXT:    [[COUNT_EXT:%.*]] = zext i32 [[COUNT]] to i64
+; CHECK-NEXT:    [[GEP_COUNT:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[COUNT_EXT]]
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[COUNT]], -1
+; CHECK-NEXT:    [[SUB_EXT:%.*]] = zext i32 [[SUB]] to i64
+; CHECK-NEXT:    [[GEP_SUB:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[SUB_EXT]]
+; CHECK-NEXT:    [[C:%.*]] = icmp uge ptr [[GEP_SUB]], [[P]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %sge = icmp sge i32 %count, 1
+  call void @llvm.assume(i1 %sge)
+  %count.ext = zext i32 %count to i64
+  %gep.count = getelementptr inbounds i32, ptr %p, i64 %count.ext
+  %sub = add nsw i32 %count, -1
+  %sub.ext = zext i32 %sub to i64
+  %gep.sub = getelementptr inbounds i32, ptr %p, i64 %sub.ext
+  %c = icmp uge ptr %gep.sub, %p
+  ret i1 %c
+}
+
+define i1 @gep_count_add_2_sge_not_known_ult_1(i32 %count, ptr %p) {
+; CHECK-LABEL: @gep_count_add_2_sge_not_known_ult_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SGE:%.*]] = icmp sge i32 [[COUNT:%.*]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[SGE]])
+; CHECK-NEXT:    [[COUNT_EXT:%.*]] = zext i32 [[COUNT]] to i64
+; CHECK-NEXT:    [[GEP_COUNT:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[COUNT_EXT]]
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[COUNT]], -2
+; CHECK-NEXT:    [[SUB_EXT:%.*]] = zext i32 [[SUB]] to i64
+; CHECK-NEXT:    [[GEP_SUB:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[SUB_EXT]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[GEP_SUB]], [[GEP_COUNT]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %sge = icmp sge i32 %count, 1
+  call void @llvm.assume(i1 %sge)
+  %count.ext = zext i32 %count to i64
+  %gep.count = getelementptr inbounds i32, ptr %p, i64 %count.ext
+  %sub = add nsw i32 %count, -2
+  %sub.ext = zext i32 %sub to i64
+  %gep.sub = getelementptr inbounds i32, ptr %p, i64 %sub.ext
+  %c = icmp ult ptr %gep.sub, %gep.count
+  ret i1 %c
+}
+
+define i1 @gep_count_add_2_sge_not_known_uge_1(i32 %count, ptr %p) {
+; CHECK-LABEL: @gep_count_add_2_sge_not_known_uge_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SGE:%.*]] = icmp sge i32 [[COUNT:%.*]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[SGE]])
+; CHECK-NEXT:    [[COUNT_EXT:%.*]] = zext i32 [[COUNT]] to i64
+; CHECK-NEXT:    [[GEP_COUNT:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[COUNT_EXT]]
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[COUNT]], -2
+; CHECK-NEXT:    [[SUB_EXT:%.*]] = zext i32 [[SUB]] to i64
+; CHECK-NEXT:    [[GEP_SUB:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[SUB_EXT]]
+; CHECK-NEXT:    [[C:%.*]] = icmp uge ptr [[GEP_SUB]], [[P]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %sge = icmp sge i32 %count, 1
+  call void @llvm.assume(i1 %sge)
+  %count.ext = zext i32 %count to i64
+  %gep.count = getelementptr inbounds i32, ptr %p, i64 %count.ext
+  %sub = add nsw i32 %count, -2
+  %sub.ext = zext i32 %sub to i64
+  %gep.sub = getelementptr inbounds i32, ptr %p, i64 %sub.ext
+  %c = icmp uge ptr %gep.sub, %p
+  ret i1 %c
+}
