@@ -196,6 +196,7 @@ check-generated-output)
            --exclude 'locale-specific_form.pass.cpp' \
            --exclude 'ostream.pass.cpp' \
            --exclude 'std_format_spec_string_unicode.bench.cpp' \
+           --exclude 'underflow.pass.cpp' \
            || false
 
     # Reject code with trailing whitespace
@@ -332,6 +333,11 @@ generic-no-filesystem)
 generic-no-random_device)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake"
+    check-runtimes
+;;
+generic-no-fstream)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-fstream.cmake"
     check-runtimes
 ;;
 generic-no-localization)
