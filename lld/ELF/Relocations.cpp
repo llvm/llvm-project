@@ -1661,40 +1661,41 @@ void elf::postScanRelocations() {
     if (!sym.isTls())
       return;
     bool isLocalInExecutable = !sym.isPreemptible && !config->shared;
+    GotSection *got = in.got.get();
 
     if (flags & NEEDS_TLSDESC) {
-      in.got->addTlsDescEntry(sym);
+      got->addTlsDescEntry(sym);
       mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-          target->tlsDescRel, *in.got, in.got->getTlsDescOffset(sym), sym,
+          target->tlsDescRel, *got, got->getTlsDescOffset(sym), sym,
           target->tlsDescRel);
     }
     if (flags & NEEDS_TLSGD) {
-      in.got->addDynTlsEntry(sym);
-      uint64_t off = in.got->getGlobalDynOffset(sym);
+      got->addDynTlsEntry(sym);
+      uint64_t off = got->getGlobalDynOffset(sym);
       if (isLocalInExecutable)
         // Write one to the GOT slot.
-        in.got->addConstant({R_ADDEND, target->symbolicRel, off, 1, &sym});
+        got->addConstant({R_ADDEND, target->symbolicRel, off, 1, &sym});
       else
-        mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, *in.got,
-                                          off, sym);
+        mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, *got, off,
+                                          sym);
 
       // If the symbol is preemptible we need the dynamic linker to write
       // the offset too.
       uint64_t offsetOff = off + config->wordsize;
       if (sym.isPreemptible)
-        mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, *in.got,
-                                          offsetOff, sym);
+        mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, *got, offsetOff,
+                                          sym);
       else
-        in.got->addConstant({R_ABS, target->tlsOffsetRel, offsetOff, 0, &sym});
+        got->addConstant({R_ABS, target->tlsOffsetRel, offsetOff, 0, &sym});
     }
     if (flags & NEEDS_TLSGD_TO_IE) {
-      in.got->addEntry(sym);
-      mainPart->relaDyn->addSymbolReloc(target->tlsGotRel, *in.got,
+      got->addEntry(sym);
+      mainPart->relaDyn->addSymbolReloc(target->tlsGotRel, *got,
                                         sym.getGotOffset(), sym);
     }
     if (flags & NEEDS_GOT_DTPREL) {
-      in.got->addEntry(sym);
-      in.got->addConstant(
+      got->addEntry(sym);
+      got->addConstant(
           {R_ABS, target->tlsOffsetRel, sym.getGotOffset(), 0, &sym});
     }
 
@@ -1702,14 +1703,15 @@ void elf::postScanRelocations() {
       addTpOffsetGotEntry(sym);
   };
 
-  if (ctx.needsTlsLd.load(std::memory_order_relaxed) && in.got->addTlsIndex()) {
+  GotSection *got = in.got.get();
+  if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
     static Undefined dummy(nullptr, "", STB_LOCAL, 0, 0);
     if (config->shared)
       mainPart->relaDyn->addReloc(
-          {target->tlsModuleIndexRel, in.got.get(), in.got->getTlsIndexOff()});
+          {target->tlsModuleIndexRel, got, got->getTlsIndexOff()});
     else
-      in.got->addConstant(
-          {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &dummy});
+      got->addConstant(
+          {R_ADDEND, target->symbolicRel, got->getTlsIndexOff(), 1, &dummy});
   }
 
   assert(symAux.size() == 1);
