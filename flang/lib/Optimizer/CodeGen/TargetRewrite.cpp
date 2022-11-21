@@ -100,14 +100,14 @@ public:
     // Convert ops in target-specific patterns.
     mod.walk([&](mlir::Operation *op) {
       if (auto call = mlir::dyn_cast<fir::CallOp>(op)) {
-        if (!hasPortableSignature(call.getFunctionType(), op))
+        if (!hasPortableSignature(call.getFunctionType()))
           convertCallOp(call);
       } else if (auto dispatch = mlir::dyn_cast<fir::DispatchOp>(op)) {
-        if (!hasPortableSignature(dispatch.getFunctionType(), op))
+        if (!hasPortableSignature(dispatch.getFunctionType()))
           convertCallOp(dispatch);
       } else if (auto addr = mlir::dyn_cast<fir::AddrOfOp>(op)) {
         if (addr.getType().isa<mlir::FunctionType>() &&
-            !hasPortableSignature(addr.getType(), op))
+            !hasPortableSignature(addr.getType()))
           convertAddrOp(addr);
       }
     });
@@ -443,23 +443,19 @@ public:
   /// then it is considered portable for any target, and this function will
   /// return `true`. Otherwise, the signature is not portable and `false` is
   /// returned.
-  bool hasPortableSignature(mlir::Type signature, mlir::Operation *op) {
+  bool hasPortableSignature(mlir::Type signature) {
     assert(signature.isa<mlir::FunctionType>());
     auto func = signature.dyn_cast<mlir::FunctionType>();
-    bool hasFirRuntime = op->hasAttrOfType<mlir::UnitAttr>(
-        fir::FIROpsDialect::getFirRuntimeAttrName());
     for (auto ty : func.getResults())
       if ((ty.isa<fir::BoxCharType>() && !noCharacterConversion) ||
-          (fir::isa_complex(ty) && !noComplexConversion) ||
-          (ty.isa<mlir::IntegerType>() && hasFirRuntime)) {
+          (fir::isa_complex(ty) && !noComplexConversion)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
     for (auto ty : func.getInputs())
       if (((ty.isa<fir::BoxCharType>() || fir::isCharacterProcedureTuple(ty)) &&
            !noCharacterConversion) ||
-          (fir::isa_complex(ty) && !noComplexConversion) ||
-          (ty.isa<mlir::IntegerType>() && hasFirRuntime)) {
+          (fir::isa_complex(ty) && !noComplexConversion)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
@@ -480,14 +476,13 @@ public:
   /// the immediately subsequent target code gen.
   void convertSignature(mlir::func::FuncOp func) {
     auto funcTy = func.getFunctionType().cast<mlir::FunctionType>();
-    if (hasPortableSignature(funcTy, func) && !hasHostAssociations(func))
+    if (hasPortableSignature(funcTy) && !hasHostAssociations(func))
       return;
     llvm::SmallVector<mlir::Type> newResTys;
     llvm::SmallVector<mlir::Type> newInTys;
     llvm::SmallVector<std::pair<unsigned, mlir::NamedAttribute>> savedAttrs;
     llvm::SmallVector<std::pair<unsigned, mlir::NamedAttribute>> extraAttrs;
     llvm::SmallVector<FixupTy> fixups;
-    llvm::SmallVector<std::pair<unsigned, mlir::NamedAttrList>, 1> resultAttrs;
 
     // Save argument attributes in case there is a shift so we can replace them
     // correctly.
@@ -513,22 +508,6 @@ public:
               newResTys.push_back(cmplx);
             else
               doComplexReturn(func, cmplx, newResTys, newInTys, fixups);
-          })
-          .Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
-            auto m = specifics->integerArgumentType(func.getLoc(), intTy);
-            assert(m.size() == 1);
-            auto attr = std::get<fir::CodeGenSpecifics::Attributes>(m[0]);
-            auto retTy = std::get<mlir::Type>(m[0]);
-            std::size_t resId = newResTys.size();
-            llvm::StringRef extensionAttrName = attr.getIntExtensionAttrName();
-            if (!extensionAttrName.empty() &&
-                // TODO: we have to do the same for BIND(C) routines.
-                func->hasAttrOfType<mlir::UnitAttr>(
-                    fir::FIROpsDialect::getFirRuntimeAttrName()))
-              resultAttrs.emplace_back(
-                  resId, rewriter->getNamedAttr(extensionAttrName,
-                                                rewriter->getUnitAttr()));
-            newResTys.push_back(retTy);
           })
           .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
 
@@ -593,26 +572,6 @@ public:
               newInTys.push_back(ty);
             }
           })
-          .Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
-            auto m = specifics->integerArgumentType(func.getLoc(), intTy);
-            assert(m.size() == 1);
-            auto attr = std::get<fir::CodeGenSpecifics::Attributes>(m[0]);
-            auto argTy = std::get<mlir::Type>(m[0]);
-            auto argNo = newInTys.size();
-            llvm::StringRef extensionAttrName = attr.getIntExtensionAttrName();
-            if (!extensionAttrName.empty() &&
-                // TODO: we have to do the same for BIND(C) routines.
-                func->hasAttrOfType<mlir::UnitAttr>(
-                    fir::FIROpsDialect::getFirRuntimeAttrName())) {
-              fixups.emplace_back(FixupTy::Codes::ArgumentType, argNo,
-                                  [=](mlir::func::FuncOp func) {
-                                    func.setArgAttr(
-                                        argNo, extensionAttrName,
-                                        mlir::UnitAttr::get(func.getContext()));
-                                  });
-            }
-            newInTys.push_back(argTy);
-          })
           .Default([&](mlir::Type ty) { newInTys.push_back(ty); });
 
       if (func.getArgAttrOfType<mlir::UnitAttr>(index,
@@ -649,18 +608,14 @@ public:
         case FixupTy::Codes::ArgumentType: {
           // Argument is pass-by-value, but its type has likely been modified to
           // suit the target ABI convention.
-          auto oldArgTy =
-              fir::ReferenceType::get(oldArgTys[fixup.index - offset]);
-          // If type did not change, keep the original argument.
-          if (newInTys[fixup.index] == oldArgTy)
-            break;
-
           auto newArg = func.front().insertArgument(fixup.index,
                                                     newInTys[fixup.index], loc);
           rewriter->setInsertionPointToStart(&func.front());
           auto mem =
               rewriter->create<fir::AllocaOp>(loc, newInTys[fixup.index]);
           rewriter->create<fir::StoreOp>(loc, newArg, mem);
+          auto oldArgTy =
+              fir::ReferenceType::get(oldArgTys[fixup.index - offset]);
           auto cast = rewriter->create<fir::ConvertOp>(loc, oldArgTy, mem);
           mlir::Value load = rewriter->create<fir::LoadOp>(loc, cast);
           func.getArgument(fixup.index + 1).replaceAllUsesWith(load);
@@ -788,10 +743,6 @@ public:
     for (std::pair<unsigned, mlir::NamedAttribute> extraAttr : extraAttrs)
       func.setArgAttr(extraAttr.first, extraAttr.second.getName(),
                       extraAttr.second.getValue());
-
-    for (auto [resId, resAttrList] : resultAttrs)
-      for (mlir::NamedAttribute resAttr : resAttrList)
-        func.setResultAttr(resId, resAttr.getName(), resAttr.getValue());
 
     // Replace attributes to the correct argument if there was an argument shift
     // to the right.

@@ -32,7 +32,6 @@
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Runtime/Transformational.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Runtime/entry-names.h"
@@ -1685,8 +1684,7 @@ static mlir::func::FuncOp getFuncOp(mlir::Location loc,
                                     const RuntimeFunction &runtime) {
   mlir::func::FuncOp function = builder.addNamedFunction(
       loc, runtime.symbol, runtime.typeGenerator(builder.getContext()));
-  function->setAttr(fir::FIROpsDialect::getFirRuntimeAttrName(),
-                    builder.getUnitAttr());
+  function->setAttr("fir.runtime", builder.getUnitAttr());
   return function;
 }
 
