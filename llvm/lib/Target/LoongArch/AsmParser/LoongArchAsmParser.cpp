@@ -9,6 +9,7 @@
 #include "MCTargetDesc/LoongArchInstPrinter.h"
 #include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
+#include "MCTargetDesc/LoongArchMatInt.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -116,6 +117,9 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   void emitLoadAddressTLSGD(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
   // Helper to emit pseudo instruction "la.tls.gd $rd, $rj, sym".
   void emitLoadAddressTLSGDLarge(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
+
+  // Helper to emit pseudo instruction "li.w/d $rd, $imm".
+  void emitLoadImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
 
 public:
   enum LoongArchMatchResultTy {
@@ -408,6 +412,8 @@ public:
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
                      IsValidKind;
   }
+
+  bool isImm32() const { return isSImm<32>() || isUImm<32>(); }
 
   /// Gets location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -1059,6 +1065,28 @@ void LoongArchAsmParser::emitLoadAddressTLSGDLarge(MCInst &Inst, SMLoc IDLoc,
   emitLAInstSeq(DestReg, TmpReg, Symbol, Insts, IDLoc, Out);
 }
 
+void LoongArchAsmParser::emitLoadImm(MCInst &Inst, SMLoc IDLoc,
+                                     MCStreamer &Out) {
+  MCRegister DestReg = Inst.getOperand(0).getReg();
+  int64_t Imm = Inst.getOperand(1).getImm();
+  MCRegister SrcReg = LoongArch::R0;
+
+  if (Inst.getOpcode() == LoongArch::PseudoLI_W)
+    Imm = SignExtend64<32>(Imm);
+
+  for (LoongArchMatInt::Inst &Inst : LoongArchMatInt::generateInstSeq(Imm)) {
+    unsigned Opc = Inst.Opc;
+    if (Opc == LoongArch::LU12I_W)
+      Out.emitInstruction(MCInstBuilder(Opc).addReg(DestReg).addImm(Inst.Imm),
+                          getSTI());
+    else
+      Out.emitInstruction(
+          MCInstBuilder(Opc).addReg(DestReg).addReg(SrcReg).addImm(Inst.Imm),
+          getSTI());
+    SrcReg = DestReg;
+  }
+}
+
 bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
                                             OperandVector &Operands,
                                             MCStreamer &Out) {
@@ -1102,6 +1130,10 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     return false;
   case LoongArch::PseudoLA_TLS_GD_LARGE:
     emitLoadAddressTLSGDLarge(Inst, IDLoc, Out);
+    return false;
+  case LoongArch::PseudoLI_W:
+  case LoongArch::PseudoLI_D:
+    emitLoadImm(Inst, IDLoc, Out);
     return false;
   }
   Out.emitInstruction(Inst, getSTI());
@@ -1342,6 +1374,10 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands, ErrorInfo, /*Lower=*/-(1 << 27), /*Upper=*/(1 << 27) - 4,
         "operand must be a bare symbol name or an immediate must be a multiple "
         "of 4 in the range");
+  case Match_InvalidImm32: {
+    SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be a 32 bit immediate");
+  }
   case Match_InvalidBareSymbol: {
     SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be a bare symbol name");
