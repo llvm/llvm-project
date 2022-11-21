@@ -848,7 +848,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: indirect_mov_t
-# GCN:      $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec, implicit $m0
+# GCN:      $vgpr2 = V_MOV_B32_indirect_read killed $vgpr0, implicit $exec, implicit $m0
 # GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
 # GCN-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
@@ -859,7 +859,7 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
-    $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec, implicit $m0
+    $vgpr2 = V_MOV_B32_indirect_read killed $vgpr0, implicit $exec, implicit $m0
     $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
     $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
     S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
@@ -867,7 +867,7 @@ body:             |
 
 # GCN-LABEL: name: indirect_mov_x
 # GCN:      $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
-# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec, implicit $m0
+# GCN-NEXT: $vgpr0 = V_MOV_B32_indirect_read killed $vgpr1, implicit $exec, implicit $m0
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
 # GCN-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
 
@@ -878,7 +878,7 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
     $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
-    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec, implicit $m0
+    $vgpr0 = V_MOV_B32_indirect_read killed $vgpr1, implicit $exec, implicit $m0
     $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
     S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
 ...
@@ -886,7 +886,7 @@ body:             |
 # GCN-LABEL: name: indirect_mov_y
 # GCN:      $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
-# GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec, implicit $m0
+# GCN-NEXT: $vgpr1 = V_MOV_B32_indirect_read killed $vgpr2, implicit $exec, implicit $m0
 # GCN-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
 
 ---
@@ -897,7 +897,7 @@ body:             |
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
     $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
-    $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec, implicit $m0
+    $vgpr1 = V_MOV_B32_indirect_read killed $vgpr2, implicit $exec, implicit $m0
     S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
 ...
 

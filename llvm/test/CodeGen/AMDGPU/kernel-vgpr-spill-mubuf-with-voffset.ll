@@ -27,8 +27,8 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def vgpr10
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_add_i32 s34, s33, 0x100100
-; CHECK-NEXT:    buffer_store_dword v10, off, s[0:3], s34 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_add_i32 s8, s33, 0x100100
+; CHECK-NEXT:    buffer_store_dword v10, off, s[0:3], s8 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 s[18:19], 8
 ; CHECK-NEXT:    s_mov_b32 s8, s16
 ; CHECK-NEXT:    s_mov_b32 s9, s17
@@ -56,8 +56,8 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    s_add_i32 s6, s33, 0x100100
-; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s6 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_add_i32 s4, s33, 0x100100
+; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_readlane_b32 s4, v40, 1
 ; CHECK-NEXT:    s_mov_b32 s5, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s4, s5
@@ -66,8 +66,8 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-NEXT:    buffer_store_dword v10, v0, s[0:3], s33 offen ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %store
-; CHECK-NEXT:    s_add_i32 s5, s33, 0x100000
-; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s5 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_add_i32 s4, s33, 0x100000
+; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    ; implicit-def: $sgpr4
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

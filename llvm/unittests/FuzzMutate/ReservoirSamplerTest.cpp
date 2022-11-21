@@ -60,7 +60,7 @@ TEST(ReservoirSamplerTest, Uniform) {
     // v=9 | 2.088 | 3.325 | 5.899 | 8.343 | 11.39 | 16.92 | 21.67 |
     //
     // Check that we're in the likely range of results.
-    //if (V < 2.088 || V > 21.67)
+    // if (V < 2.088 || V > 21.67)
     if (V < 2.088 || V > 21.67)
       ++Failures;
   }

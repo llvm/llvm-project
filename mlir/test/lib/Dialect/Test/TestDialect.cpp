@@ -862,6 +862,21 @@ ParseResult ParseWrappedKeywordOp::parse(OpAsmParser &parser,
 
 void ParseWrappedKeywordOp::print(OpAsmPrinter &p) { p << " " << getKeyword(); }
 
+ParseResult ParseB64BytesOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
+  std::vector<char> bytes;
+  if (parser.parseBase64Bytes(&bytes))
+    return failure();
+  result.addAttribute("b64", parser.getBuilder().getStringAttr(
+                                 StringRef(&bytes.front(), bytes.size())));
+  return success();
+}
+
+void ParseB64BytesOp::print(OpAsmPrinter &p) {
+  // Don't print the base64 version to check that we decoded it correctly.
+  p << " \"" << getB64() << "\"";
+}
+
 //===----------------------------------------------------------------------===//
 // Test WrapRegionOp - wrapping op exercising `parseGenericOperation()`.
 

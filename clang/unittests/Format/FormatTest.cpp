@@ -5059,6 +5059,213 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                "  int y = 0;\n"
                "}",
                style);
+
+  style.IndentPPDirectives = FormatStyle::PPDIS_None;
+  verifyFormat("#ifdef foo\n"
+               "#define bar() \\\n"
+               "    if (A) {  \\\n"
+               "        B();  \\\n"
+               "    }         \\\n"
+               "    C();\n"
+               "#endif",
+               style);
+  verifyFormat("if (emacs) {\n"
+               "#ifdef is\n"
+               "#define lit           \\\n"
+               "    if (af) {         \\\n"
+               "        return duh(); \\\n"
+               "    }\n"
+               "#endif\n"
+               "}",
+               style);
+  verifyFormat("#if abc\n"
+               "#ifdef foo\n"
+               "#define bar()    \\\n"
+               "    if (A) {     \\\n"
+               "        if (B) { \\\n"
+               "            C(); \\\n"
+               "        }        \\\n"
+               "    }            \\\n"
+               "    D();\n"
+               "#endif\n"
+               "#endif",
+               style);
+  verifyFormat("#ifndef foo\n"
+               "#define foo\n"
+               "if (emacs) {\n"
+               "#ifdef is\n"
+               "#define lit           \\\n"
+               "    if (af) {         \\\n"
+               "        return duh(); \\\n"
+               "    }\n"
+               "#endif\n"
+               "}\n"
+               "#endif",
+               style);
+  verifyFormat("#if 1\n"
+               "#define X  \\\n"
+               "    {      \\\n"
+               "        x; \\\n"
+               "        x; \\\n"
+               "    }\n"
+               "#endif",
+               style);
+  verifyFormat("#define X  \\\n"
+               "    {      \\\n"
+               "        x; \\\n"
+               "        x; \\\n"
+               "    }",
+               style);
+
+  style.PPIndentWidth = 2;
+  verifyFormat("#ifdef foo\n"
+               "#define bar() \\\n"
+               "    if (A) {  \\\n"
+               "        B();  \\\n"
+               "    }         \\\n"
+               "    C();\n"
+               "#endif",
+               style);
+  style.IndentWidth = 8;
+  verifyFormat("#ifdef foo\n"
+               "#define bar()        \\\n"
+               "        if (A) {     \\\n"
+               "                B(); \\\n"
+               "        }            \\\n"
+               "        C();\n"
+               "#endif",
+               style);
+
+  style.IndentWidth = 1;
+  style.PPIndentWidth = 4;
+  verifyFormat("#if 1\n"
+               "#define X \\\n"
+               " {        \\\n"
+               "  x;      \\\n"
+               "  x;      \\\n"
+               " }\n"
+               "#endif",
+               style);
+  verifyFormat("#define X \\\n"
+               " {        \\\n"
+               "  x;      \\\n"
+               "  x;      \\\n"
+               " }",
+               style);
+
+  style.IndentWidth = 4;
+  style.PPIndentWidth = 1;
+  style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
+  verifyFormat("#ifdef foo\n"
+               "# define bar() \\\n"
+               "     if (A) {  \\\n"
+               "         B();  \\\n"
+               "     }         \\\n"
+               "     C();\n"
+               "#endif",
+               style);
+  verifyFormat("#if abc\n"
+               "# ifdef foo\n"
+               "#  define bar()    \\\n"
+               "      if (A) {     \\\n"
+               "          if (B) { \\\n"
+               "              C(); \\\n"
+               "          }        \\\n"
+               "      }            \\\n"
+               "      D();\n"
+               "# endif\n"
+               "#endif",
+               style);
+  verifyFormat("#ifndef foo\n"
+               "#define foo\n"
+               "if (emacs) {\n"
+               "#ifdef is\n"
+               "# define lit           \\\n"
+               "     if (af) {         \\\n"
+               "         return duh(); \\\n"
+               "     }\n"
+               "#endif\n"
+               "}\n"
+               "#endif",
+               style);
+  verifyFormat("#define X  \\\n"
+               "    {      \\\n"
+               "        x; \\\n"
+               "        x; \\\n"
+               "    }",
+               style);
+
+  style.PPIndentWidth = 2;
+  style.IndentWidth = 8;
+  verifyFormat("#ifdef foo\n"
+               "#  define bar()        \\\n"
+               "          if (A) {     \\\n"
+               "                  B(); \\\n"
+               "          }            \\\n"
+               "          C();\n"
+               "#endif",
+               style);
+
+  style.PPIndentWidth = 4;
+  style.IndentWidth = 1;
+  verifyFormat("#define X \\\n"
+               " {        \\\n"
+               "  x;      \\\n"
+               "  x;      \\\n"
+               " }",
+               style);
+
+  style.IndentWidth = 4;
+  style.PPIndentWidth = 1;
+  style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
+  verifyFormat("if (emacs) {\n"
+               "#ifdef is\n"
+               " #define lit           \\\n"
+               "     if (af) {         \\\n"
+               "         return duh(); \\\n"
+               "     }\n"
+               "#endif\n"
+               "}",
+               style);
+  verifyFormat("#if abc\n"
+               " #ifdef foo\n"
+               "  #define bar() \\\n"
+               "      if (A) {  \\\n"
+               "          B();  \\\n"
+               "      }         \\\n"
+               "      C();\n"
+               " #endif\n"
+               "#endif",
+               style);
+  verifyFormat("#if 1\n"
+               " #define X  \\\n"
+               "     {      \\\n"
+               "         x; \\\n"
+               "         x; \\\n"
+               "     }\n"
+               "#endif",
+               style);
+
+  style.PPIndentWidth = 2;
+  verifyFormat("#ifdef foo\n"
+               "  #define bar() \\\n"
+               "      if (A) {  \\\n"
+               "          B();  \\\n"
+               "      }         \\\n"
+               "      C();\n"
+               "#endif",
+               style);
+
+  style.PPIndentWidth = 4;
+  style.IndentWidth = 1;
+  verifyFormat("#if 1\n"
+               "    #define X \\\n"
+               "     {        \\\n"
+               "      x;      \\\n"
+               "      x;      \\\n"
+               "     }\n"
+               "#endif",
+               style);
 }
 
 TEST_F(FormatTest, IndentsPPDirectiveInReducedSpace) {

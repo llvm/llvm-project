@@ -77,16 +77,23 @@ void CSKYConstantPoolValue::print(raw_ostream &O) const {
 //===----------------------------------------------------------------------===//
 
 CSKYConstantPoolConstant::CSKYConstantPoolConstant(
-    const Constant *C, CSKYCP::CSKYCPKind Kind, unsigned PCAdjust,
+    const Constant *C, Type *Ty, CSKYCP::CSKYCPKind Kind, unsigned PCAdjust,
     CSKYCP::CSKYCPModifier Modifier, bool AddCurrentAddress, unsigned ID)
-    : CSKYConstantPoolValue(C->getType(), Kind, PCAdjust, Modifier,
-                            AddCurrentAddress, ID),
+    : CSKYConstantPoolValue(Ty, Kind, PCAdjust, Modifier, AddCurrentAddress,
+                            ID),
       CVal(C) {}
 
 CSKYConstantPoolConstant *CSKYConstantPoolConstant::Create(
     const Constant *C, CSKYCP::CSKYCPKind Kind, unsigned PCAdjust,
     CSKYCP::CSKYCPModifier Modifier, bool AddCurrentAddress, unsigned ID) {
-  return new CSKYConstantPoolConstant(C, Kind, PCAdjust, Modifier,
+  return new CSKYConstantPoolConstant(C, C->getType(), Kind, PCAdjust, Modifier,
+                                      AddCurrentAddress, ID);
+}
+
+CSKYConstantPoolConstant *CSKYConstantPoolConstant::Create(
+    const Constant *C, Type *Ty, CSKYCP::CSKYCPKind Kind, unsigned PCAdjust,
+    CSKYCP::CSKYCPModifier Modifier, bool AddCurrentAddress, unsigned ID) {
+  return new CSKYConstantPoolConstant(C, Ty, Kind, PCAdjust, Modifier,
                                       AddCurrentAddress, ID);
 }
 
@@ -98,6 +105,10 @@ const GlobalValue *CSKYConstantPoolConstant::getGV() const {
 const BlockAddress *CSKYConstantPoolConstant::getBlockAddress() const {
   assert(isa<BlockAddress>(CVal) && "CVal should be BlockAddress");
   return cast<BlockAddress>(CVal);
+}
+
+const Constant *CSKYConstantPoolConstant::getConstantPool() const {
+  return CVal;
 }
 
 int CSKYConstantPoolConstant::getExistingMachineCPValue(MachineConstantPool *CP,

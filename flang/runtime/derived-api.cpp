@@ -39,6 +39,25 @@ void RTNAME(Destroy)(const Descriptor &descriptor) {
   }
 }
 
+bool RTNAME(ClassIs)(
+    const Descriptor &descriptor, const typeInfo::DerivedType &derivedType) {
+  if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      if (derived == &derivedType) {
+        return true;
+      }
+      const typeInfo::DerivedType *parent{derived->GetParentType()};
+      while (parent) {
+        if (parent == &derivedType) {
+          return true;
+        }
+        parent = parent->GetParentType();
+      }
+    }
+  }
+  return false;
+}
+
 // TODO: Assign()
 
 } // extern "C"

@@ -77,7 +77,8 @@ private:
                               MachineBasicBlock::iterator &NextMBBI);
   bool expandFunctionCALL(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI,
-                          MachineBasicBlock::iterator &NextMBBI);
+                          MachineBasicBlock::iterator &NextMBBI,
+                          bool IsTailCall);
 };
 
 char LoongArchPreRAExpandPseudo::ID = 0;
@@ -121,7 +122,9 @@ bool LoongArchPreRAExpandPseudo::expandMI(
   case LoongArch::PseudoLA_TLS_GD:
     return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoCALL:
-    return expandFunctionCALL(MBB, MBBI, NextMBBI);
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false);
+  case LoongArch::PseudoTAIL:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
   }
   return false;
 }
@@ -247,27 +250,43 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSGD(
 
 bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
+    MachineBasicBlock::iterator &NextMBBI, bool IsTailCall) {
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
   const MachineOperand &Func = MI.getOperand(0);
   MachineInstrBuilder CALL;
+  unsigned Opcode;
 
   switch (MF->getTarget().getCodeModel()) {
   default:
     report_fatal_error("Unsupported code model");
     break;
-  case CodeModel::Small: // Default CodeModel.
-    CALL = BuildMI(MBB, MBBI, DL, TII->get(LoongArch::BL)).add(Func);
+  case CodeModel::Small: {
+    // CALL:
+    // bl func
+    // TAIL:
+    // b func
+    Opcode = IsTailCall ? LoongArch::PseudoB_TAIL : LoongArch::BL;
+    CALL = BuildMI(MBB, MBBI, DL, TII->get(Opcode)).add(Func);
     break;
+  }
   case CodeModel::Medium: {
+    // CALL:
     // pcalau12i  $ra, %pc_hi20(func)
     // jirl       $ra, $ra, %pc_lo12(func)
+    // TAIL:
+    // pcalau12i  $scratch, %pc_hi20(func)
+    // jirl       $r0, $scratch, %pc_lo12(func)
+    Opcode =
+        IsTailCall ? LoongArch::PseudoJIRL_TAIL : LoongArch::PseudoJIRL_CALL;
+    Register ScratchReg =
+        IsTailCall
+            ? MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass)
+            : LoongArch::R1;
     MachineInstrBuilder MIB =
-        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), LoongArch::R1);
-    CALL = BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PseudoJIRL_CALL))
-               .addReg(LoongArch::R1);
+        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), ScratchReg);
+    CALL = BuildMI(MBB, MBBI, DL, TII->get(Opcode)).addReg(ScratchReg);
     if (Func.isSymbol()) {
       const char *FnName = Func.getSymbolName();
       MIB.addExternalSymbol(FnName, LoongArchII::MO_PCREL_HI);

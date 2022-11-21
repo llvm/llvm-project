@@ -185,22 +185,34 @@ inline const char *py2_const_cast(const char *s) { return s; }
 
 enum class PyInitialValue { Invalid, Empty };
 
+// DOC: https://docs.python.org/3/c-api/arg.html#building-values
 template <typename T, typename Enable = void> struct PythonFormat;
 
-template <> struct PythonFormat<unsigned long long> {
-  static constexpr char format = 'K';
-  static auto get(unsigned long long value) { return value; }
+template <typename T, char F> struct PassthroughFormat {
+  static constexpr char format = F;
+  static constexpr T get(T t) { return t; }
 };
 
-template <> struct PythonFormat<long long> {
-  static constexpr char format = 'L';
-  static auto get(long long value) { return value; }
-};
-
-template <> struct PythonFormat<PyObject *> {
-  static constexpr char format = 'O';
-  static auto get(PyObject *value) { return value; }
-};
+template <> struct PythonFormat<char *> : PassthroughFormat<char *, 's'> {};
+template <> struct PythonFormat<char> : PassthroughFormat<char, 'b'> {};
+template <>
+struct PythonFormat<unsigned char> : PassthroughFormat<unsigned char, 'B'> {};
+template <> struct PythonFormat<short> : PassthroughFormat<short, 'h'> {};
+template <>
+struct PythonFormat<unsigned short> : PassthroughFormat<unsigned short, 'H'> {};
+template <> struct PythonFormat<int> : PassthroughFormat<int, 'i'> {};
+template <>
+struct PythonFormat<unsigned int> : PassthroughFormat<unsigned int, 'I'> {};
+template <> struct PythonFormat<long> : PassthroughFormat<long, 'l'> {};
+template <>
+struct PythonFormat<unsigned long> : PassthroughFormat<unsigned long, 'k'> {};
+template <>
+struct PythonFormat<long long> : PassthroughFormat<long long, 'L'> {};
+template <>
+struct PythonFormat<unsigned long long>
+    : PassthroughFormat<unsigned long long, 'K'> {};
+template <>
+struct PythonFormat<PyObject *> : PassthroughFormat<PyObject *, 'O'> {};
 
 template <typename T>
 struct PythonFormat<

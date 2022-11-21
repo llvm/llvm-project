@@ -2123,7 +2123,7 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   if (!isa<Defined>(sym) || !sym->includeInDynsym())
     return;
 
-  StringRef partName = reinterpret_cast<const char *>(s->rawData.data());
+  StringRef partName = reinterpret_cast<const char *>(s->content().data());
   for (Partition &part : partitions) {
     if (part.name == partName) {
       sym->partition = part.getNumber();

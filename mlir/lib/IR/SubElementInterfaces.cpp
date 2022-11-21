@@ -145,6 +145,15 @@ void AttrTypeReplacer::replaceElementsIn(Operation *op, bool replaceAttrs,
   }
 }
 
+void AttrTypeReplacer::recursivelyReplaceElementsIn(Operation *op,
+                                                    bool replaceAttrs,
+                                                    bool replaceLocs,
+                                                    bool replaceTypes) {
+  op->walk([&](Operation *nestedOp) {
+    replaceElementsIn(nestedOp, replaceAttrs, replaceLocs, replaceTypes);
+  });
+}
+
 template <typename T>
 static void updateSubElementImpl(T element, AttrTypeReplacer &replacer,
                                  DenseMap<T, T> &elementMap,

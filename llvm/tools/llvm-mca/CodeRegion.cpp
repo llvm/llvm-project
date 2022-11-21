@@ -16,11 +16,6 @@
 namespace llvm {
 namespace mca {
 
-CodeRegions::CodeRegions(llvm::SourceMgr &S) : SM(S), FoundErrors(false) {
-  // Create a default region for the input code sequence.
-  Regions.emplace_back(std::make_unique<CodeRegion>("", SMLoc()));
-}
-
 bool CodeRegion::isLocInRange(SMLoc Loc) const {
   if (RangeEnd.isValid() && Loc.getPointer() > RangeEnd.getPointer())
     return false;
@@ -29,7 +24,19 @@ bool CodeRegion::isLocInRange(SMLoc Loc) const {
   return true;
 }
 
-void CodeRegions::beginRegion(StringRef Description, SMLoc Loc) {
+void CodeRegions::addInstruction(const MCInst &Instruction) {
+  SMLoc Loc = Instruction.getLoc();
+  for (UniqueCodeRegion &Region : Regions)
+    if (Region->isLocInRange(Loc))
+      Region->addInstruction(Instruction);
+}
+
+AnalysisRegions::AnalysisRegions(llvm::SourceMgr &S) : CodeRegions(S) {
+  // Create a default region for the input code sequence.
+  Regions.emplace_back(std::make_unique<CodeRegion>("", SMLoc()));
+}
+
+void AnalysisRegions::beginRegion(StringRef Description, SMLoc Loc) {
   if (ActiveRegions.empty()) {
     // Remove the default region if there is at least one user defined region.
     // By construction, only the default region has an invalid start location.
@@ -44,17 +51,17 @@ void CodeRegions::beginRegion(StringRef Description, SMLoc Loc) {
     if (It != ActiveRegions.end()) {
       const CodeRegion &R = *Regions[It->second];
       if (Description.empty()) {
-        SM.PrintMessage(Loc, SourceMgr::DK_Error,
+        SM.PrintMessage(Loc, llvm::SourceMgr::DK_Error,
                         "found multiple overlapping anonymous regions");
-        SM.PrintMessage(R.startLoc(), SourceMgr::DK_Note,
+        SM.PrintMessage(R.startLoc(), llvm::SourceMgr::DK_Note,
                         "Previous anonymous region was defined here");
         FoundErrors = true;
         return;
       }
 
-      SM.PrintMessage(Loc, SourceMgr::DK_Error,
+      SM.PrintMessage(Loc, llvm::SourceMgr::DK_Error,
                       "overlapping regions cannot have the same name");
-      SM.PrintMessage(R.startLoc(), SourceMgr::DK_Note,
+      SM.PrintMessage(R.startLoc(), llvm::SourceMgr::DK_Note,
                       "region " + Description + " was previously defined here");
       FoundErrors = true;
       return;
@@ -65,7 +72,7 @@ void CodeRegions::beginRegion(StringRef Description, SMLoc Loc) {
   Regions.emplace_back(std::make_unique<CodeRegion>(Description, Loc));
 }
 
-void CodeRegions::endRegion(StringRef Description, SMLoc Loc) {
+void AnalysisRegions::endRegion(StringRef Description, SMLoc Loc) {
   if (Description.empty()) {
     // Special case where there is only one user defined region,
     // and this LLVM-MCA-END directive doesn't provide a region name.
@@ -94,22 +101,73 @@ void CodeRegions::endRegion(StringRef Description, SMLoc Loc) {
   }
 
   FoundErrors = true;
-  SM.PrintMessage(Loc, SourceMgr::DK_Error,
+  SM.PrintMessage(Loc, llvm::SourceMgr::DK_Error,
                   "found an invalid region end directive");
   if (!Description.empty()) {
-    SM.PrintMessage(Loc, SourceMgr::DK_Note,
+    SM.PrintMessage(Loc, llvm::SourceMgr::DK_Note,
                     "unable to find an active region named " + Description);
   } else {
-    SM.PrintMessage(Loc, SourceMgr::DK_Note,
+    SM.PrintMessage(Loc, llvm::SourceMgr::DK_Note,
                     "unable to find an active anonymous region");
   }
 }
 
-void CodeRegions::addInstruction(const MCInst &Instruction) {
-  SMLoc Loc = Instruction.getLoc();
-  for (UniqueCodeRegion &Region : Regions)
-    if (Region->isLocInRange(Loc))
-      Region->addInstruction(Instruction);
+InstrumentRegions::InstrumentRegions(llvm::SourceMgr &S) : CodeRegions(S) {}
+
+void InstrumentRegions::beginRegion(StringRef Description, SMLoc Loc,
+                                    SharedInstrument I) {
+  if (Description.empty()) {
+    SM.PrintMessage(Loc, llvm::SourceMgr::DK_Error,
+                    "anonymous instrumentation regions are not permitted");
+    FoundErrors = true;
+    return;
+  }
+
+  auto It = ActiveRegions.find(Description);
+  if (It != ActiveRegions.end()) {
+    const CodeRegion &R = *Regions[It->second];
+    SM.PrintMessage(
+        Loc, llvm::SourceMgr::DK_Error,
+        "overlapping instrumentation regions cannot be of the same kind");
+    SM.PrintMessage(R.startLoc(), llvm::SourceMgr::DK_Note,
+                    "instrumentation region " + Description +
+                        " was previously defined here");
+    FoundErrors = true;
+    return;
+  }
+
+  ActiveRegions[Description] = Regions.size();
+  Regions.emplace_back(std::make_unique<InstrumentRegion>(Description, Loc, I));
+}
+
+void InstrumentRegions::endRegion(StringRef Description, SMLoc Loc) {
+  auto It = ActiveRegions.find(Description);
+  if (It != ActiveRegions.end()) {
+    Regions[It->second]->setEndLocation(Loc);
+    ActiveRegions.erase(It);
+    return;
+  }
+
+  FoundErrors = true;
+  SM.PrintMessage(Loc, llvm::SourceMgr::DK_Error,
+                  "found an invalid instrumentation region end directive");
+  if (!Description.empty()) {
+    SM.PrintMessage(Loc, llvm::SourceMgr::DK_Note,
+                    "unable to find an active instrumentation region named " +
+                        Description);
+  }
+}
+
+const SmallVector<SharedInstrument>
+InstrumentRegions::getActiveInstruments(SMLoc Loc) const {
+  SmallVector<SharedInstrument> AI;
+  for (auto &R : Regions) {
+    if (R->isLocInRange(Loc)) {
+      InstrumentRegion *IR = static_cast<InstrumentRegion *>(R.get());
+      AI.emplace_back(IR->getInstrument());
+    }
+  }
+  return AI;
 }
 
 } // namespace mca

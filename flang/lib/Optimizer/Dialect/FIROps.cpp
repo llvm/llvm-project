@@ -1083,12 +1083,6 @@ mlir::FunctionType fir::DispatchOp::getFunctionType() {
 // DispatchTableOp
 //===----------------------------------------------------------------------===//
 
-void fir::DispatchTableOp::appendTableEntry(mlir::Operation *op) {
-  assert(mlir::isa<fir::DTEntryOp>(*op) && "operation must be a DTEntryOp");
-  auto &block = getBlock();
-  block.getOperations().insert(block.end(), op);
-}
-
 mlir::ParseResult fir::DispatchTableOp::parse(mlir::OpAsmParser &parser,
                                               mlir::OperationState &result) {
   // Parse the name as a symbol reference attribute.
@@ -2940,6 +2934,16 @@ fir::SelectTypeOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
 
+llvm::Optional<mlir::ValueRange>
+fir::SelectTypeOp::getSuccessorOperands(mlir::ValueRange operands,
+                                        unsigned oper) {
+  auto a =
+      (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
+      getOperandSegmentSizeAttr());
+  return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
+}
+
 mlir::ParseResult fir::SelectTypeOp::parse(mlir::OpAsmParser &parser,
                                            mlir::OperationState &result) {
   mlir::OpAsmParser::UnresolvedOperand selector;
@@ -3017,8 +3021,11 @@ mlir::LogicalResult fir::SelectTypeOp::verify() {
   if (auto boxType = getSelector().getType().dyn_cast<fir::BoxType>())
     if (!boxType.getEleTy().isa<mlir::NoneType>())
       return emitOpError("selector must be polymorphic");
-  auto cases =
-      getOperation()->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
+  auto typeGuardAttr = getCases();
+  for (unsigned idx = 0; idx < typeGuardAttr.size(); ++idx)
+    if (typeGuardAttr[idx].isa<mlir::UnitAttr>() &&
+        idx != typeGuardAttr.size() - 1)
+      return emitOpError("default must be the last attribute");
   auto count = getNumDest();
   if (count == 0)
     return emitOpError("must have at least one successor");
@@ -3026,10 +3033,10 @@ mlir::LogicalResult fir::SelectTypeOp::verify() {
     return emitOpError("number of conditions and successors don't match");
   if (targetOffsetSize() != count)
     return emitOpError("incorrect number of successor operand groups");
-  for (decltype(count) i = 0; i != count; ++i) {
-    auto &attr = cases[i];
-    if (!(attr.isa<fir::ExactTypeAttr>() || attr.isa<fir::SubclassAttr>() ||
-          attr.isa<mlir::UnitAttr>()))
+  for (unsigned i = 0; i != count; ++i) {
+    if (!(typeGuardAttr[i].isa<fir::ExactTypeAttr>() ||
+          typeGuardAttr[i].isa<fir::SubclassAttr>() ||
+          typeGuardAttr[i].isa<mlir::UnitAttr>()))
       return emitOpError("invalid type-case alternative");
   }
   return mlir::success();

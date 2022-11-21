@@ -11,11 +11,11 @@ int test_global_1;
 // INDICATOR1-DAG: Added Global{{.*}} name=test_global_1{{.*}} odr_indicator={{0x0*[^0]+.*$}}
 
 static int test_global_2;
-// CHECK-DAG: Added Global{{.*}} name=test_global_2{{.*}} odr_indicator={{0xf+$}}
+// CHECK-DAG: Added Global{{.*}} name=_ZL13test_global_2 {{.*}} odr_indicator={{0xf+$}}
 
 namespace {
 static int test_global_3;
-// CHECK-DAG: Added Global{{.*}} name={{.*}}::test_global_3{{.*}} odr_indicator={{0xf+$}}
+// CHECK-DAG: Added Global{{.*}} name=_ZN12_GLOBAL__N_113test_global_3E {{.*}} odr_indicator={{0xf+$}}
 } // namespace
 
 int main() {

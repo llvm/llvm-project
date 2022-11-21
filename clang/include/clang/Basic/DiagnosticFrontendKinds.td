@@ -213,9 +213,6 @@ def err_module_build_requires_fmodules : Error<
   "module compilation requires '-fmodules'">;
 def err_module_interface_requires_cpp_modules : Error<
   "module interface compilation requires '-std=c++20' or '-fmodules-ts'">;
-def err_header_module_requires_modules : Error<
-  "header module compilation requires '-fmodules', '-std=c++20', or "
-  "'-fmodules-ts'">;
 def warn_module_config_mismatch : Warning<
   "module file %0 cannot be loaded due to a configuration mismatch with the current "
   "compilation">, InGroup<DiagGroup<"module-file-config-mismatch">>, DefaultError;
@@ -279,7 +276,7 @@ def warn_avx_calling_convention
     : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "
               "enabled changes the ABI">,
       InGroup<DiagGroup<"psabi">>;
-def err_avx_calling_convention : Error<warn_avx_calling_convention.Text>;
+def err_avx_calling_convention : Error<warn_avx_calling_convention.Summary>;
 
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined "

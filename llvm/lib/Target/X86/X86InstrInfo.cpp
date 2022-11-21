@@ -6135,6 +6135,11 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       MI.getOpcode() != X86::ADD64rr)
     return nullptr;
 
+  // Don't fold loads into indirect calls that need a KCFI check as we'll
+  // have to unfold these in X86KCFIPass anyway.
+  if (MI.isCall() && MI.getCFIType())
+    return nullptr;
+
   MachineInstr *NewMI = nullptr;
 
   // Attempt to fold any custom cases we have.

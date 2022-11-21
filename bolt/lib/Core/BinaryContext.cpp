@@ -1191,8 +1191,7 @@ bool BinaryContext::handleAArch64Veneer(uint64_t Address, bool MatchOnly) {
     MIB->addAnnotation(Instruction, "AArch64Veneer", true);
     Veneer->addInstruction(Offset, std::move(Instruction));
     --Count;
-    for (auto It = std::prev(Instructions.end()); Count != 0;
-         It = std::prev(It), --Count) {
+    for (auto It = Instructions.rbegin(); Count != 0; ++It, --Count) {
       MIB->addAnnotation(It->second, "AArch64Veneer", true);
       Veneer->addInstruction(It->first, std::move(It->second));
     }
@@ -1899,7 +1898,7 @@ BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
     }
   }
 
-  return NoneType();
+  return None;
 }
 
 ErrorOr<BinarySection &> BinaryContext::getSectionForAddress(uint64_t Address) {

@@ -26,6 +26,7 @@
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_list.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
@@ -34,6 +35,9 @@
 
 #include <sched.h>
 #include <time.h>
+
+// Allow the user to specify a profile output file via the binary.
+SANITIZER_WEAK_ATTRIBUTE char __memprof_profile_filename[1];
 
 namespace __memprof {
 namespace {
@@ -280,6 +284,12 @@ struct Allocator {
   }
 
   void FinishAndWrite() {
+    // Use profile name specified via the binary itself if it exists, and hasn't
+    // been overrriden by a flag at runtime.
+    if (__memprof_profile_filename[0] != 0 && !common_flags()->log_path)
+      __sanitizer_set_report_path(__memprof_profile_filename);
+    else
+      __sanitizer_set_report_path(common_flags()->log_path);
     if (print_text && common_flags()->print_module_map)
       DumpProcessMap();
 
@@ -304,6 +314,11 @@ struct Allocator {
     }
 
     allocator.ForceUnlock();
+
+    // Set the report back to the default stderr now that we have dumped the
+    // profile, in case there are later errors or stats dumping on exit has been
+    // enabled.
+    __sanitizer_set_report_path("stderr");
   }
 
   // Inserts any blocks which have been allocated but not yet deallocated.

@@ -513,11 +513,11 @@ static void initSymbolAnchors() {
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
       sec->relaxAux = make<RISCVRelaxAux>();
-      if (sec->relocations.size()) {
+      if (sec->relocs().size()) {
         sec->relaxAux->relocDeltas =
-            std::make_unique<uint32_t[]>(sec->relocations.size());
+            std::make_unique<uint32_t[]>(sec->relocs().size());
         sec->relaxAux->relocTypes =
-            std::make_unique<RelType[]>(sec->relocations.size());
+            std::make_unique<RelType[]>(sec->relocs().size());
       }
     }
   }
@@ -556,7 +556,7 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
                       Relocation &r, uint32_t &remove) {
   const bool rvc = config->eflags & EF_RISCV_RVC;
   const Symbol &sym = *r.sym;
-  const uint64_t insnPair = read64le(sec.rawData.data() + r.offset);
+  const uint64_t insnPair = read64le(sec.content().data() + r.offset);
   const uint32_t rd = extractBits(insnPair, 32 + 11, 32 + 7);
   const uint64_t dest =
       (r.expr == R_PLT_PC ? sym.getPltVA() : sym.getVA()) + r.addend;
@@ -584,7 +584,7 @@ static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
   uint64_t val = r.sym->getVA(r.addend);
   if (hi20(val) != 0)
     return;
-  uint32_t insn = read32le(sec.rawData.data() + r.offset);
+  uint32_t insn = read32le(sec.content().data() + r.offset);
   switch (r.type) {
   case R_RISCV_TPREL_HI20:
   case R_RISCV_TPREL_ADD:
@@ -617,7 +617,7 @@ static bool relax(InputSection &sec) {
   DenseMap<const Defined *, uint64_t> valueDelta;
   ArrayRef<SymbolAnchor> sa = makeArrayRef(aux.anchors);
   uint32_t delta = 0;
-  for (auto [i, r] : llvm::enumerate(sec.relocations)) {
+  for (auto [i, r] : llvm::enumerate(sec.relocs())) {
     for (; sa.size() && sa[0].offset <= r.offset; sa = sa.slice(1))
       if (!sa[0].end)
         valueDelta[sa[0].d] = delta;
@@ -629,9 +629,9 @@ static bool relax(InputSection &sec) {
   sa = makeArrayRef(aux.anchors);
   delta = 0;
 
-  std::fill_n(aux.relocTypes.get(), sec.relocations.size(), R_RISCV_NONE);
+  std::fill_n(aux.relocTypes.get(), sec.relocs().size(), R_RISCV_NONE);
   aux.writes.clear();
-  for (auto [i, r] : llvm::enumerate(sec.relocations)) {
+  for (auto [i, r] : llvm::enumerate(sec.relocs())) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
     switch (r.type) {
@@ -646,16 +646,16 @@ static bool relax(InputSection &sec) {
     }
     case R_RISCV_CALL:
     case R_RISCV_CALL_PLT:
-      if (i + 1 != sec.relocations.size() &&
-          sec.relocations[i + 1].type == R_RISCV_RELAX)
+      if (i + 1 != sec.relocs().size() &&
+          sec.relocs()[i + 1].type == R_RISCV_RELAX)
         relaxCall(sec, i, loc, r, remove);
       break;
     case R_RISCV_TPREL_HI20:
     case R_RISCV_TPREL_ADD:
     case R_RISCV_TPREL_LO12_I:
     case R_RISCV_TPREL_LO12_S:
-      if (i + 1 != sec.relocations.size() &&
-          sec.relocations[i + 1].type == R_RISCV_RELAX)
+      if (i + 1 != sec.relocs().size() &&
+          sec.relocs()[i + 1].type == R_RISCV_RELAX)
         relaxTlsLe(sec, i, loc, r, remove);
       break;
     }
@@ -727,15 +727,15 @@ void elf::riscvFinalizeRelax(int passes) {
       if (!aux.relocDeltas)
         continue;
 
-      auto &rels = sec->relocations;
-      ArrayRef<uint8_t> old = sec->rawData;
-      size_t newSize =
-          old.size() - aux.relocDeltas[sec->relocations.size() - 1];
+      MutableArrayRef<Relocation> rels = sec->relocs();
+      ArrayRef<uint8_t> old = sec->content();
+      size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
       size_t writesIdx = 0;
       uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
-      sec->rawData = makeArrayRef(p, newSize);
+      sec->content_ = p;
+      sec->size = newSize;
       sec->bytesDropped = 0;
 
       // Update section content: remove NOPs for R_RISCV_ALIGN and rewrite

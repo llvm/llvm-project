@@ -4749,6 +4749,22 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                  Op.getOperand(1))));
     return SDValue();
   }
+  case Intrinsic::aarch64_sve_whilelo: {
+    if (isa<ConstantSDNode>(Op.getOperand(1)) &&
+        isa<ConstantSDNode>(Op.getOperand(2))) {
+      unsigned MinSVEVectorSize =
+          std::max(Subtarget->getMinSVEVectorSizeInBits(), 128u);
+      unsigned ElementSize = 128 / Op.getValueType().getVectorMinNumElements();
+      unsigned NumActiveElems =
+          Op.getConstantOperandVal(2) - Op.getConstantOperandVal(1);
+      Optional<unsigned> PredPattern =
+          getSVEPredPatternFromNumElements(NumActiveElems);
+      if ((PredPattern != None) &&
+          NumActiveElems <= (MinSVEVectorSize / ElementSize))
+        return getPTrue(DAG, dl, Op.getValueType(), *PredPattern);
+    }
+    return SDValue();
+  }
   case Intrinsic::aarch64_sve_sunpkhi:
     return DAG.getNode(AArch64ISD::SUNPKHI, dl, Op.getValueType(),
                        Op.getOperand(1));
@@ -12288,7 +12304,8 @@ SDValue AArch64TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
                                                       SelectionDAG &DAG) const {
   assert(Op.getOpcode() == ISD::INSERT_VECTOR_ELT && "Unknown opcode!");
 
-  if (useSVEForFixedLengthVectorVT(Op.getValueType()))
+  if (useSVEForFixedLengthVectorVT(Op.getValueType(),
+                                   Subtarget->forceStreamingCompatibleSVE()))
     return LowerFixedLengthInsertVectorElt(Op, DAG);
 
   // Check for non-constant or out of range lane.

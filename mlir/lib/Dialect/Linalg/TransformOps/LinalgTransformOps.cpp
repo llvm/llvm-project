@@ -1385,10 +1385,10 @@ void transform::TileToForeachThreadOp::build(
   build(builder, result,
         /*resultTypes=*/TypeRange{operationType, operationType},
         /*target=*/target,
-        /*numThreads=*/ValueRange{},
-        /*tileSizes=*/dynamicTileSizes,
-        /*staticNumThreads=*/builder.getI64ArrayAttr({}),
-        /*staticTileSizes=*/staticTileSizesAttr,
+        /*num_threads=*/ValueRange{},
+        /*tile_sizes=*/dynamicTileSizes,
+        /*static_num_threads=*/builder.getI64ArrayAttr({}),
+        /*static_tile_sizes=*/staticTileSizesAttr,
         /*mapping=*/mapping);
 }
 
@@ -1420,10 +1420,10 @@ void transform::TileToForeachThreadOp::build(
   build(builder, result,
         /*resultTypes=*/TypeRange{operationType, operationType},
         /*target=*/target,
-        /*numThreads=*/dynamicNumThreads,
-        /*tileSizes=*/ValueRange{},
-        /*staticNumThreads=*/staticNumThreadsAttr,
-        /*staticTileSizes=*/builder.getI64ArrayAttr({}),
+        /*num_threads=*/dynamicNumThreads,
+        /*tile_sizes=*/ValueRange{},
+        /*static_num_threads=*/staticNumThreadsAttr,
+        /*static_tile_sizes=*/builder.getI64ArrayAttr({}),
         /*mapping=*/mapping);
 }
 

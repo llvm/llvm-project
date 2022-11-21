@@ -75,7 +75,7 @@
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/SafepointIRVerifier.h"

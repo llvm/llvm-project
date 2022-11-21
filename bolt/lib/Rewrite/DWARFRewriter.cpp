@@ -91,7 +91,7 @@ static cl::opt<bool> KeepARanges(
 
 static cl::opt<bool>
 DeterministicDebugInfo("deterministic-debuginfo",
-  cl::desc("disables parallel execution of tasks that may produce"
+  cl::desc("disables parallel execution of tasks that may produce "
            "nondeterministic debug info"),
   cl::init(true),
   cl::cat(BoltCategory));

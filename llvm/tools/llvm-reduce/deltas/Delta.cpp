@@ -74,7 +74,8 @@ bool isReduced(ReducerWorkItem &M, TestRunner &Test) {
   int FD;
   std::error_code EC = sys::fs::createTemporaryFile(
       "llvm-reduce", M.isMIR() ? "mir" : (UseBitcode ? "bc" : "ll"), FD,
-      CurrentFilepath);
+      CurrentFilepath,
+      UseBitcode && !M.isMIR() ? sys::fs::OF_None : sys::fs::OF_Text);
   if (EC) {
     errs() << "Error making unique filename: " << EC.message() << "!\n";
     exit(1);

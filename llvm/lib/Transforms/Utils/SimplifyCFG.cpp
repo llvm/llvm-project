@@ -41,6 +41,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -1999,9 +2000,15 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   }
 
   // Finally nuke all instructions apart from the common instruction.
-  for (auto *I : Insts)
-    if (I != I0)
-      I->eraseFromParent();
+  for (auto *I : Insts) {
+    if (I == I0)
+      continue;
+    // The remaining uses are debug users, replace those with the common inst.
+    // In most (all?) cases this just introduces a use-before-def.
+    assert(I->user_empty() && "Inst unexpectedly still has non-dbg users");
+    I->replaceAllUsesWith(I0);
+    I->eraseFromParent();
+  }
 
   return true;
 }
@@ -2969,6 +2976,7 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // Insert a select of the value of the speculated store.
   if (SpeculatedStoreValue) {
     IRBuilder<NoFolder> Builder(BI);
+    Value *OrigV = SpeculatedStore->getValueOperand();
     Value *TrueV = SpeculatedStore->getValueOperand();
     Value *FalseV = SpeculatedStoreValue;
     if (Invert)
@@ -2978,6 +2986,35 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
     SpeculatedStore->setOperand(0, S);
     SpeculatedStore->applyMergedLocation(BI->getDebugLoc(),
                                          SpeculatedStore->getDebugLoc());
+    // The value stored is still conditional, but the store itself is now
+    // unconditonally executed, so we must be sure that any linked dbg.assign
+    // intrinsics are tracking the new stored value (the result of the
+    // select). If we don't, and the store were to be removed by another pass
+    // (e.g. DSE), then we'd eventually end up emitting a location describing
+    // the conditional value, unconditionally.
+    //
+    // === Before this transformation ===
+    // pred:
+    //   store %one, %x.dest, !DIAssignID !1
+    //   dbg.assign %one, "x", ..., !1, ...
+    //   br %cond if.then
+    //
+    // if.then:
+    //   store %two, %x.dest, !DIAssignID !2
+    //   dbg.assign %two, "x", ..., !2, ...
+    //
+    // === After this transformation ===
+    // pred:
+    //   store %one, %x.dest, !DIAssignID !1
+    //   dbg.assign %one, "x", ..., !1
+    ///  ...
+    //   %merge = select %cond, %two, %one
+    //   store %merge, %x.dest, !DIAssignID !2
+    //   dbg.assign %merge, "x", ..., !2
+    for (auto *DAI : at::getAssignmentMarkers(SpeculatedStore)) {
+      if (any_of(DAI->location_ops(), [&](Value *V) { return V == OrigV; }))
+        DAI->replaceVariableLocationOp(OrigV, S);
+    }
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
@@ -2987,8 +3024,11 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // Similarly strip attributes that maybe dependent on condition we are
   // hoisting above.
   for (auto &I : make_early_inc_range(*ThenBB)) {
-    if (!SpeculatedStoreValue || &I != SpeculatedStore)
-      I.setDebugLoc(DebugLoc());
+    if (!SpeculatedStoreValue || &I != SpeculatedStore) {
+      // Don't update the DILocation of dbg.assign intrinsics.
+      if (!isa<DbgAssignIntrinsic>(&I))
+        I.setDebugLoc(DebugLoc());
+    }
     I.dropUndefImplyingAttrsAndUnknownMetadata();
 
     // Drop ephemeral values.
@@ -3028,8 +3068,12 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // Remove speculated dbg intrinsics.
   // FIXME: Is it possible to do this in a more elegant way? Moving/merging the
   // dbg value for the different flows and inserting it after the select.
-  for (Instruction *I : SpeculatedDbgIntrinsics)
-    I->eraseFromParent();
+  for (Instruction *I : SpeculatedDbgIntrinsics) {
+    // We still want to know that an assignment took place so don't remove
+    // dbg.assign intrinsics.
+    if (!isa<DbgAssignIntrinsic>(I))
+      I->eraseFromParent();
+  }
 
   ++NumSpeculations;
   return true;

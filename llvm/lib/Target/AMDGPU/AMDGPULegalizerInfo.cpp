@@ -702,7 +702,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_BLOCK_ADDR).legalFor({CodePtr});
 
   auto &FPOpActions = getActionDefinitionsBuilder(
-    { G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE})
+    { G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE,
+      G_STRICT_FADD, G_STRICT_FMUL, G_STRICT_FMA})
     .legalFor({S32, S64});
   auto &TrigActions = getActionDefinitionsBuilder({G_FSIN, G_FCOS})
     .customFor({S32, S64});
@@ -794,7 +795,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32))
     .scalarize(0);
 
-  auto &FSubActions = getActionDefinitionsBuilder(G_FSUB);
+  auto &FSubActions = getActionDefinitionsBuilder({G_FSUB, G_STRICT_FSUB});
   if (ST.has16BitInsts()) {
     FSubActions
       // Use actual fsub instruction

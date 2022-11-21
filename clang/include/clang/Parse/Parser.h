@@ -1763,7 +1763,7 @@ public:
   ExprResult ParseExpression(TypeCastState isTypeCast = NotTypeCast);
   ExprResult ParseConstantExpressionInExprEvalContext(
       TypeCastState isTypeCast = NotTypeCast);
-  ExprResult ParseConstantExpression(TypeCastState isTypeCast = NotTypeCast);
+  ExprResult ParseConstantExpression();
   ExprResult ParseCaseExpression(SourceLocation CaseLoc);
   ExprResult ParseConstraintExpression();
   ExprResult
@@ -1835,11 +1835,8 @@ private:
                                                      ParsedType &CastTy,
                                                      SourceRange &CastRange);
 
-  typedef SmallVector<SourceLocation, 20> CommaLocsTy;
-
   /// ParseExpressionList - Used for C/C++ (argument-)expression-list.
   bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
-                           SmallVectorImpl<SourceLocation> &CommaLocs,
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
                            bool FailImmediatelyOnInvalidExpr = false,
@@ -1847,9 +1844,7 @@ private:
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
-  bool ParseSimpleExpressionList(SmallVectorImpl<Expr*> &Exprs,
-                                 SmallVectorImpl<SourceLocation> &CommaLocs);
-
+  bool ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs);
 
   /// ParenParseOption - Control what ParseParenExpression will parse.
   enum ParenParseOption {
@@ -2109,8 +2104,8 @@ private:
   bool ParseParenExprOrCondition(StmtResult *InitStmt,
                                  Sema::ConditionResult &CondResult,
                                  SourceLocation Loc, Sema::ConditionKind CK,
-                                 bool MissingOK, SourceLocation *LParenLoc,
-                                 SourceLocation *RParenLoc);
+                                 SourceLocation &LParenLoc,
+                                 SourceLocation &RParenLoc);
   StmtResult ParseIfStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);

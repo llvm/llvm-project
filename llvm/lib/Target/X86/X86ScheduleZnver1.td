@@ -712,9 +712,6 @@ def : SchedAlias<WriteBLS, ZnWriteALULat2>;
 // r,m.
 def : SchedAlias<WriteBLSLd, ZnWriteALULat2Ld>;
 
-// CLD STD.
-def : InstRW<[WriteALU], (instrs STD, CLD)>;
-
 // PDEP PEXT.
 // r,r,r.
 def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rr", "PEXT(32|64)rr")>;
@@ -758,36 +755,8 @@ def : InstRW<[ZnWriteLEAVE], (instregex "LEAVE")>;
 // PAUSE.
 def : InstRW<[WriteMicrocoded], (instrs PAUSE)>;
 
-// RDTSC.
-def : InstRW<[WriteMicrocoded], (instregex "RDTSC")>;
-
-// RDPMC.
-def : InstRW<[WriteMicrocoded], (instrs RDPMC)>;
-
 // RDRAND.
 def : InstRW<[WriteMicrocoded], (instrs RDRAND16r, RDRAND32r, RDRAND64r)>;
-
-// XGETBV.
-def : InstRW<[WriteMicrocoded], (instrs XGETBV)>;
-
-//-- String instructions --//
-// CMPS.
-def : InstRW<[WriteMicrocoded], (instregex "CMPS(B|L|Q|W)")>;
-
-// LODSB/W.
-def : InstRW<[WriteMicrocoded], (instregex "LODS(B|W)")>;
-
-// LODSD/Q.
-def : InstRW<[WriteMicrocoded], (instregex "LODS(L|Q)")>;
-
-// MOVS.
-def : InstRW<[WriteMicrocoded], (instregex "MOVS(B|L|Q|W)")>;
-
-// SCAS.
-def : InstRW<[WriteMicrocoded], (instregex "SCAS(B|W|L|Q)")>;
-
-// STOS
-def : InstRW<[WriteMicrocoded], (instregex "STOS(B|L|Q|W)")>;
 
 // XADD.
 def ZnXADD : SchedWriteRes<[ZnALU]>;

@@ -84,6 +84,8 @@ option(LIBCXX_ENABLE_LOCALIZATION
    the C locale API (e.g. embedded). When localization is not supported,
    several parts of the library will be disabled: <iostream>, <regex>, <locale>
    will be completely unusable, and other parts may be only partly available." ON)
+option(LIBCXX_ENABLE_FSTREAM
+   "Whether to include support for <fstream>." ON) # TODO: Consider rolling that into LIBCXX_ENABLE_FILESYSTEM
 option(LIBCXX_ENABLE_UNICODE
   "Whether to include support for Unicode in the library. Disabling Unicode can
    be useful when porting to platforms that don't support UTF-8 encoding (e.g.
@@ -860,6 +862,7 @@ config_define_if(LIBCXX_ENABLE_PARALLEL_ALGORITHMS _LIBCPP_HAS_PARALLEL_ALGORITH
 config_define_if_not(LIBCXX_ENABLE_FILESYSTEM _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 config_define_if_not(LIBCXX_ENABLE_RANDOM_DEVICE _LIBCPP_HAS_NO_RANDOM_DEVICE)
 config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
+config_define_if_not(LIBCXX_ENABLE_FSTREAM _LIBCPP_HAS_NO_FSTREAM)
 config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)

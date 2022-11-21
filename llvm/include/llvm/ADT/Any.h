@@ -102,8 +102,6 @@ public:
     return *this;
   }
 
-  LLVM_DEPRECATED("Use has_value instead.", "has_value")
-  bool hasValue() const { return !!Storage; }
   bool has_value() const { return !!Storage; }
 
   void reset() { Storage.reset(); }

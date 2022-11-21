@@ -534,6 +534,11 @@ void OMPClauseProfiler::VisitOMPAtClause(const OMPAtClause *C) {}
 
 void OMPClauseProfiler::VisitOMPSeverityClause(const OMPSeverityClause *C) {}
 
+void OMPClauseProfiler::VisitOMPMessageClause(const OMPMessageClause *C) {
+  if (C->getMessageString())
+    Profiler->VisitStmt(C->getMessageString());
+}
+
 void OMPClauseProfiler::VisitOMPScheduleClause(const OMPScheduleClause *C) {
   VistOMPClauseWithPreInit(C);
   if (auto *S = C->getChunkSize())
