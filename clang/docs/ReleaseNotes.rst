@@ -298,6 +298,9 @@ Bug Fixes
   and Clang 15 accidentally stopped predeclaring those functions in that
   language mode. Clang 16 now predeclares those functions again. This fixes
   `Issue 56607 <https://github.com/llvm/llvm-project/issues/56607>`_.
+- GNU attributes being applied prior to standard attributes would be handled
+  improperly, which was corrected to match the behaviour exhibited by GCC.
+  `Issue 58229 <https://github.com/llvm/llvm-project/issues/58229>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
