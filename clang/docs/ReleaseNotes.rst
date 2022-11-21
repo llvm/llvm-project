@@ -450,6 +450,10 @@ Non-comprehensive list of changes in this release
   It can be used to writing conditionally constexpr code that uses builtins.
 - The time profiler (using ``-ftime-trace`` option) now traces various constant
   evaluation events.
+- Clang can now generate a PCH when using ``-fdelayed-template-parsing`` for
+  code with templates containing loop hint pragmas, OpenMP pragmas, and
+  ``#pragma unused``.
+
 
 New Compiler Flags
 ------------------
