@@ -555,7 +555,7 @@ def store_align16_local_m0 : PatFrag <(ops node:$value, node:$ptr),
   let IsStore = 1;
 }
 
-let PredicateCode = [{return cast<MemSDNode>(N)->getAlignment() < 4;}],
+let PredicateCode = [{return cast<MemSDNode>(N)->getAlign() < 4;}],
     GISelPredicateCode = [{return (*MI.memoperands_begin())->getAlign() < 4;}],
     AddressSpaces = [ AddrSpaces.Local ] in {
 def load_align_less_than_4_local : PatFrag<(ops node:$ptr),
