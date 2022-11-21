@@ -656,7 +656,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
   // shuffle blend with the pass through value.
   if (isConstantIntVector(Mask)) {
     unsigned MemIndex = 0;
-    VResult = UndefValue::get(VecType);
+    VResult = PoisonValue::get(VecType);
     SmallVector<int, 16> ShuffleMask(VectorWidth, UndefMaskElem);
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
       Value *InsertElt;
