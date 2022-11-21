@@ -3591,21 +3591,22 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
   };
 
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
-  auto InvalidOperandInfo = InstInfo.getInvalidOperandIndex(getVRegIdx);
-  if (!InvalidOperandInfo)
+  auto InvalidCompOprIdx = InstInfo.getInvalidCompOperandIndex(getVRegIdx);
+  if (!InvalidCompOprIdx)
     return true;
 
-  auto OprIdx = *InvalidOperandInfo;
-  auto ParsedIdx = std::max(InstInfo[VOPD::X].getParsedOperandIndex(OprIdx),
-                            InstInfo[VOPD::Y].getParsedOperandIndex(OprIdx));
+  auto CompOprIdx = *InvalidCompOprIdx;
+  auto ParsedIdx =
+      std::max(InstInfo[VOPD::X].getIndexInParsedOperands(CompOprIdx),
+               InstInfo[VOPD::Y].getIndexInParsedOperands(CompOprIdx));
   assert(ParsedIdx > 0 && ParsedIdx < Operands.size());
 
   auto Loc = ((AMDGPUOperand &)*Operands[ParsedIdx]).getStartLoc();
-  if (OprIdx == VOPD::Component::DST) {
+  if (CompOprIdx == VOPD::Component::DST) {
     Error(Loc, "one dst register must be even and the other odd");
   } else {
-    auto SrcIdx = OprIdx - VOPD::Component::DST_NUM;
-    Error(Loc, Twine("src") + Twine(SrcIdx) +
+    auto CompSrcIdx = CompOprIdx - VOPD::Component::DST_NUM;
+    Error(Loc, Twine("src") + Twine(CompSrcIdx) +
                    " operands must use different VGPR banks");
   }
 
@@ -8500,8 +8501,8 @@ OperandMatchResultTy AMDGPUAsmParser::parseVOPD(OperandVector &Operands) {
 
 // Create VOPD MCInst operands using parsed assembler operands.
 void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
-  auto addOp = [&](uint16_t i) { // NOLINT:function pointer
-    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+  auto addOp = [&](uint16_t ParsedOprIdx) { // NOLINT:function pointer
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[ParsedOprIdx]);
     if (Op.isReg()) {
       Op.addRegOperands(Inst, 1);
       return;
@@ -8519,16 +8520,16 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
   //   dstX, dstY, src0X [, other OpX operands], src0Y [, other OpY operands]
 
   for (auto CompIdx : VOPD::COMPONENTS) {
-    addOp(InstInfo[CompIdx].getParsedDstIndex());
+    addOp(InstInfo[CompIdx].getIndexOfDstInParsedOperands());
   }
 
   for (auto CompIdx : VOPD::COMPONENTS) {
     const auto &CInfo = InstInfo[CompIdx];
-    auto ParsedSrcOperandsNum = InstInfo[CompIdx].getParsedSrcOperandsNum();
-    for (unsigned SrcIdx = 0; SrcIdx < ParsedSrcOperandsNum; ++SrcIdx)
-      addOp(CInfo.getParsedSrcIndex(SrcIdx));
+    auto CompSrcOperandsNum = InstInfo[CompIdx].getCompParsedSrcOperandsNum();
+    for (unsigned CompSrcIdx = 0; CompSrcIdx < CompSrcOperandsNum; ++CompSrcIdx)
+      addOp(CInfo.getIndexOfSrcInParsedOperands(CompSrcIdx));
     if (CInfo.hasSrc2Acc())
-      addOp(CInfo.getParsedDstIndex());
+      addOp(CInfo.getIndexOfDstInParsedOperands());
   }
 }
 
