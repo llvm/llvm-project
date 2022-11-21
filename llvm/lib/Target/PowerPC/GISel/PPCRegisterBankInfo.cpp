@@ -60,6 +60,9 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   unsigned MappingID = DefaultMappingID;
 
   switch (Opc) {
+    // Arithmetic ops.
+  case TargetOpcode::G_ADD:
+  case TargetOpcode::G_SUB:
     // Bitwise ops.
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR:
