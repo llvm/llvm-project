@@ -298,7 +298,7 @@ OpDescriptor llvm::fuzzerop::insertElementDescriptor(unsigned Weight) {
   auto buildInsert = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
     return InsertElementInst::Create(Srcs[0], Srcs[1], Srcs[2], "I", Inst);
   };
-    // TODO: Try to avoid undefined accesses.
+  // TODO: Try to avoid undefined accesses.
   return {Weight,
           {anyVectorType(), matchScalarOfFirstType(), anyIntType()},
           buildInsert};
@@ -313,8 +313,8 @@ static SourcePred validShuffleVectorIndex() {
     auto *Int32Ty = Type::getInt32Ty(Cur[0]->getContext());
     // TODO: It's straighforward to make up reasonable values, but listing them
     // exhaustively would be insane. Come up with a couple of sensible ones.
-    return std::vector<Constant *>{UndefValue::get(
-        VectorType::get(Int32Ty, FirstTy->getElementCount()))};
+    return std::vector<Constant *>{
+        UndefValue::get(VectorType::get(Int32Ty, FirstTy->getElementCount()))};
   };
   return {Pred, Make};
 }
