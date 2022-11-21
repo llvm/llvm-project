@@ -1984,14 +1984,10 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
             ArgExprs.push_back(Idx.get());
           }
         } else if (Tok.isNot(tok::r_square)) {
-          CommaLocsTy CommaLocs;
-          if (ParseExpressionList(ArgExprs, CommaLocs)) {
+          if (ParseExpressionList(ArgExprs)) {
             LHS = Actions.CorrectDelayedTyposInExpr(LHS);
             HasError = true;
           }
-          assert(
-              (ArgExprs.empty() || ArgExprs.size() == CommaLocs.size() + 1) &&
-              "Unexpected number of commas!");
         }
       }
 
@@ -2053,10 +2049,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 
       if (OpKind == tok::lesslessless) {
         ExprVector ExecConfigExprs;
-        CommaLocsTy ExecConfigCommaLocs;
         SourceLocation OpenLoc = ConsumeToken();
 
-        if (ParseSimpleExpressionList(ExecConfigExprs, ExecConfigCommaLocs)) {
+        if (ParseSimpleExpressionList(ExecConfigExprs)) {
           (void)Actions.CorrectDelayedTyposInExpr(LHS);
           LHS = ExprError();
         }
@@ -2096,7 +2091,6 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       }
 
       ExprVector ArgExprs;
-      CommaLocsTy CommaLocs;
       auto RunSignatureHelp = [&]() -> QualType {
         QualType PreferredType = Actions.ProduceCallSignatureHelp(
             LHS.get(), ArgExprs, PT.getOpenLocation());
@@ -2105,7 +2099,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       };
       if (OpKind == tok::l_paren || !LHS.isInvalid()) {
         if (Tok.isNot(tok::r_paren)) {
-          if (ParseExpressionList(ArgExprs, CommaLocs, [&] {
+          if (ParseExpressionList(ArgExprs, [&] {
                 PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                     RunSignatureHelp);
               })) {
@@ -2143,9 +2137,6 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           PT.consumeClose();
         LHS = ExprError();
       } else {
-        assert(
-            (ArgExprs.size() == 0 || ArgExprs.size() - 1 == CommaLocs.size()) &&
-            "Unexpected number of commas!");
         Expr *Fn = LHS.get();
         SourceLocation RParLoc = Tok.getLocation();
         LHS = Actions.ActOnCallExpr(getCurScope(), Fn, Loc, ArgExprs, RParLoc,
@@ -3149,11 +3140,9 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
   } else if (isTypeCast) {
     // Parse the expression-list.
     InMessageExpressionRAIIObject InMessage(*this, false);
-
     ExprVector ArgExprs;
-    CommaLocsTy CommaLocs;
 
-    if (!ParseSimpleExpressionList(ArgExprs, CommaLocs)) {
+    if (!ParseSimpleExpressionList(ArgExprs)) {
       // FIXME: If we ever support comma expressions as operands to
       // fold-expressions, we'll need to allow multiple ArgExprs here.
       if (ExprType >= FoldExpr && ArgExprs.size() == 1 &&
@@ -3452,7 +3441,6 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
 /// [C++0x]   braced-init-list
 /// \endverbatim
 bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
-                                 SmallVectorImpl<SourceLocation> &CommaLocs,
                                  llvm::function_ref<void()> ExpressionStarts,
                                  bool FailImmediatelyOnInvalidExpr,
                                  bool EarlyTypoCorrection) {
@@ -3496,8 +3484,7 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
       break;
     // Move to the next argument, remember where the comma was.
     Token Comma = Tok;
-    CommaLocs.push_back(ConsumeToken());
-
+    ConsumeToken();
     checkPotentialAngleBracketDelimiter(Comma);
   }
   if (SawError) {
@@ -3519,9 +3506,7 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
 ///         assignment-expression
 ///         simple-expression-list , assignment-expression
 /// \endverbatim
-bool
-Parser::ParseSimpleExpressionList(SmallVectorImpl<Expr*> &Exprs,
-                                  SmallVectorImpl<SourceLocation> &CommaLocs) {
+bool Parser::ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs) {
   while (true) {
     ExprResult Expr = ParseAssignmentExpression();
     if (Expr.isInvalid())
@@ -3536,8 +3521,7 @@ Parser::ParseSimpleExpressionList(SmallVectorImpl<Expr*> &Exprs,
 
     // Move to the next argument, remember where the comma was.
     Token Comma = Tok;
-    CommaLocs.push_back(ConsumeToken());
-
+    ConsumeToken();
     checkPotentialAngleBracketDelimiter(Comma);
   }
 }
