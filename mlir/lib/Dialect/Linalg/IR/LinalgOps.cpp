@@ -1511,10 +1511,6 @@ void BroadcastOp::print(OpAsmPrinter &p) {
 LogicalResult BroadcastOp::verify() {
   ArrayRef<int64_t> dimensionsRef = getDimensions();
 
-  if (!llvm::is_sorted(dimensionsRef))
-    return emitOpError() << "dimensions should be in sorted order, implicit "
-                            "transpose is not supported";
-
   auto inputType = getInput().getType();
   auto initType = getInit().getType();
 
@@ -1524,34 +1520,35 @@ LogicalResult BroadcastOp::verify() {
   auto inputShape = inputType.getShape();
   auto initShape = initType.getShape();
 
-  if ((size_t)inputRank != dimensionsRef.size())
-    return emitOpError()
-           << "input rank does match the number of dimensions. expected: "
-           << inputRank << ", got: " << dimensionsRef.size();
-
-  // Mapping from init dims to input dims.
-  const int64_t kUnmappedDim = -1;
-  SmallVector<int64_t> reverseDimMap(initRank, kUnmappedDim);
+  if ((size_t)inputRank + dimensionsRef.size() != (size_t)initRank)
+    return emitOpError() << "input rank plus added dimensions does not "
+                            "match init rank. input rank: "
+                         << inputRank
+                         << ", dimensions size: " << dimensionsRef.size()
+                         << ", init rank: " << initRank;
 
   for (const auto &[idx, dim] : llvm::enumerate(dimensionsRef)) {
     if (dim < 0 || dim >= initRank)
       return emitOpError() << "dimension " << idx
                            << " is out of range. expected range: [0, "
                            << initRank - 1 << "], got: " << dim;
-
-    reverseDimMap[dim] = idx;
   }
 
-  for (const auto &[idx, inputDimIdx] : llvm::enumerate(reverseDimMap)) {
-    if (inputDimIdx != kUnmappedDim) {
-      // This dimensions is mapped from the input. Init and input dims should
-      // match.
-      if (inputShape[inputDimIdx] != initShape[idx])
-        return emitOpError()
-               << "input dim " << inputDimIdx << " should match init dim "
-               << idx << ". input: " << inputShape[inputDimIdx]
-               << ", init: " << initShape[idx];
-    }
+  // Mapping from input dims to init dims.
+  SmallVector<int64_t> dimMap;
+  for (auto dim : llvm::seq<int64_t>(0, initRank)) {
+    if (!llvm::is_contained(dimensionsRef, dim))
+      dimMap.push_back(dim);
+  }
+
+  for (const auto &[inputDimIdx, initDimIdx] : llvm::enumerate(dimMap)) {
+    // This dimensions is mapped from the input. Init and input dims should
+    // match.
+    if (inputShape[inputDimIdx] != initShape[initDimIdx])
+      return emitOpError() << "input dim " << inputDimIdx
+                           << " should match init dim " << initDimIdx
+                           << ". input: " << inputShape[inputDimIdx]
+                           << ", init: " << initShape[initDimIdx];
   }
 
   return success();
@@ -1566,8 +1563,7 @@ ArrayAttr BroadcastOp::getIndexingMaps() {
   Builder builder(getContext());
   int64_t rank = getInit().getType().getRank();
   return builder.getAffineMapArrayAttr(
-      {builder.getMultiDimIdentityMap(rank).getSubMap(
-           llvm::to_vector_of<unsigned>(getDimensions())),
+      {builder.getMultiDimIdentityMap(rank).dropResults(getDimensions()),
        builder.getMultiDimIdentityMap(rank)});
 }
 
