@@ -49,6 +49,7 @@ enum class HighlightingKind {
   Concept,
   Primitive,
   Macro,
+  Modifier,
 
   // This one is different from the other kinds as it's a line style
   // rather than a token style.
