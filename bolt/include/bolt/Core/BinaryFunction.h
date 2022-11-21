@@ -979,7 +979,7 @@ public:
       if (Callback(StringRef(Name)))
         return StringRef(Name);
 
-    return NoneType();
+    return None;
   }
 
   /// Check if (possibly one out of many) function name matches the given
@@ -1317,7 +1317,7 @@ public:
   /// Return the name of the section this function originated from.
   Optional<StringRef> getOriginSectionName() const {
     if (!OriginSection)
-      return NoneType();
+      return None;
     return OriginSection->getName();
   }
 
