@@ -52,8 +52,9 @@ Macros:
 #else
 // GCC header limits.h recursively includes itself through another header called
 // syslimits.h for some reason. This setup breaks down if we directly
-// #include_next GCC's limits.h (reasons not entirely clear to me). Therefore,
-// we manually re-create the necessary include sequence below:
+// #include_next GCC's limits.h (reasons not entirely clear to me).
+// See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107795 for more details.
+// Therefore, we manually re-create the necessary include sequence below:
 
 // Get the system limits.h defines (force recurse into the next level)
 #define _GCC_LIMITS_H_
