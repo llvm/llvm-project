@@ -469,9 +469,12 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
           Value v =
               createOrFoldDimOp(rewriter, loc, op.getOperand(0), d.index());
           rewriter.create<tensor::DimOp>(loc, op.getOperand(0), d.index());
-          for (const auto &opnd : op.getOperands().drop_front()) {
-            Value t = createOrFoldDimOp(rewriter, loc, opnd, d.index());
-            v = rewriter.create<arith::AddIOp>(loc, v, t);
+          if (conDim == d.index()) {
+            // Adding the size of the concatenating dimension.
+            for (const auto &opnd : op.getOperands().drop_front()) {
+              Value t = createOrFoldDimOp(rewriter, loc, opnd, d.index());
+              v = rewriter.create<arith::AddIOp>(loc, v, t);
+            }
           }
           dynSizes.push_back(v);
         }
