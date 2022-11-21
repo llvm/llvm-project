@@ -3157,7 +3157,8 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
     auto FilenameGV =
         CGM.GetAddrOfConstantCString(std::string(FilenameString), ".src");
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(
-                          cast<llvm::GlobalVariable>(FilenameGV.getPointer()));
+        cast<llvm::GlobalVariable>(
+            FilenameGV.getPointer()->stripPointerCasts()));
     Filename = FilenameGV.getPointer();
     Line = PLoc.getLine();
     Column = PLoc.getColumn();
@@ -3325,13 +3326,15 @@ void CodeGenFunction::EmitCheck(
     // Emit handler arguments and create handler function type.
     if (!StaticArgs.empty()) {
       llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
-      auto *InfoPtr =
-          new llvm::GlobalVariable(CGM.getModule(), Info->getType(), false,
-                                   llvm::GlobalVariable::PrivateLinkage, Info);
+      auto *InfoPtr = new llvm::GlobalVariable(
+          CGM.getModule(), Info->getType(), false,
+          llvm::GlobalVariable::PrivateLinkage, Info, "", nullptr,
+          llvm::GlobalVariable::NotThreadLocal,
+          CGM.getDataLayout().getDefaultGlobalsAddressSpace());
       InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
       CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
-      Args.push_back(Builder.CreateBitCast(InfoPtr, Int8PtrTy));
-      ArgTypes.push_back(Int8PtrTy);
+      Args.push_back(EmitCastToVoidPtr(InfoPtr));
+      ArgTypes.push_back(Args.back()->getType());
     }
 
     for (size_t i = 0, n = DynamicArgs.size(); i != n; ++i) {
