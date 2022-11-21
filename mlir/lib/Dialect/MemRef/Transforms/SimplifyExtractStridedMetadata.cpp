@@ -81,7 +81,7 @@ public:
 
     detail::bindSymbolsList(rewriter.getContext(), symbols);
     AffineExpr expr = symbols.front();
-    values[0] = ShapedType::isDynamicStrideOrOffset(sourceOffset)
+    values[0] = ShapedType::isDynamic(sourceOffset)
                     ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
                     : rewriter.getIndexAttr(sourceOffset);
     SmallVector<OpFoldResult> subOffsets = subview.getMixedOffsets();
@@ -91,7 +91,7 @@ public:
     for (unsigned i = 0; i < sourceRank; ++i) {
       // Compute the stride.
       OpFoldResult origStride =
-          ShapedType::isDynamicStrideOrOffset(sourceStrides[i])
+          ShapedType::isDynamic(sourceStrides[i])
               ? origStrides[i]
               : OpFoldResult(rewriter.getIndexAttr(sourceStrides[i]));
       strides.push_back(makeComposedFoldedAffineApply(
@@ -273,7 +273,7 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
          "getStridesAndOffset must work on valid expand_shape");
 
   OpFoldResult origStride =
-      ShapedType::isDynamicStrideOrOffset(strides[groupId])
+      ShapedType::isDynamic(strides[groupId])
           ? origStrides[groupId]
           : builder.getIndexAttr(strides[groupId]);
 
@@ -425,7 +425,7 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
   int64_t innerMostDimForGroup = reassocGroup.back();
   int64_t innerMostStrideForGroup = strides[innerMostDimForGroup];
   collapsedStride.push_back(
-      ShapedType::isDynamicStrideOrOffset(innerMostStrideForGroup)
+      ShapedType::isDynamic(innerMostStrideForGroup)
           ? origStrides[innerMostDimForGroup]
           : builder.getIndexAttr(innerMostStrideForGroup));
 
@@ -483,7 +483,7 @@ public:
     unsigned reshapeRank = reshapeType.getRank();
 
     OpFoldResult offsetOfr =
-        ShapedType::isDynamicStrideOrOffset(offset)
+        ShapedType::isDynamic(offset)
             ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
             : rewriter.getIndexAttr(offset);
 

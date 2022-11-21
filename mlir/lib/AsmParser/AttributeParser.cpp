@@ -1170,7 +1170,7 @@ Attribute Parser::parseStridedLayoutAttr() {
   // fit into int64_t limits.
   auto parseStrideOrOffset = [&]() -> Optional<int64_t> {
     if (consumeIf(Token::question))
-      return ShapedType::kDynamicStrideOrOffset;
+      return ShapedType::kDynamic;
 
     SMLoc loc = getToken().getLoc();
     auto emitWrongTokenError = [&] {

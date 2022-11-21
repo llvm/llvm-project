@@ -92,7 +92,7 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
   // Put together alloc operands for any dynamic dimensions of the memref.
   SmallVector<Value, 4> allocOperands;
   for (const auto &dim : llvm::enumerate(oldMemRefType.getShape())) {
-    if (dim.value() == ShapedType::kDynamicSize)
+    if (dim.value() == ShapedType::kDynamic)
       allocOperands.push_back(bOuter.createOrFold<memref::DimOp>(
           forOp.getLoc(), oldMemRef, dim.index()));
   }

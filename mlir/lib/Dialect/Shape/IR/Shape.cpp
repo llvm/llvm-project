@@ -1763,7 +1763,7 @@ LogicalResult mlir::shape::ShapeOfOp::inferReturnTypes(
   else {
     auto shapedTy = operands[0].getType().cast<ShapedType>();
     int64_t rank =
-        shapedTy.hasRank() ? shapedTy.getRank() : ShapedType::kDynamicSize;
+        shapedTy.hasRank() ? shapedTy.getRank() : ShapedType::kDynamic;
     Type indexTy = IndexType::get(context);
     Type extentTensorTy = RankedTensorType::get({rank}, indexTy);
     inferredReturnTypes.assign({extentTensorTy});

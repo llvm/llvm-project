@@ -170,13 +170,13 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
       resStrides(bT.getRank(), 0);
   for (int64_t idx = 0, e = aT.getRank(); idx < e; ++idx) {
     resShape[idx] =
-        (aShape[idx] == bShape[idx]) ? aShape[idx] : ShapedType::kDynamicSize;
+        (aShape[idx] == bShape[idx]) ? aShape[idx] : ShapedType::kDynamic;
     resStrides[idx] = (aStrides[idx] == bStrides[idx])
                           ? aStrides[idx]
-                          : ShapedType::kDynamicStrideOrOffset;
+                          : ShapedType::kDynamic;
   }
   resOffset =
-      (aOffset == bOffset) ? aOffset : ShapedType::kDynamicStrideOrOffset;
+      (aOffset == bOffset) ? aOffset : ShapedType::kDynamic;
   return MemRefType::get(
       resShape, aT.getElementType(),
       StridedLayoutAttr::get(aT.getContext(), resOffset, resStrides));
