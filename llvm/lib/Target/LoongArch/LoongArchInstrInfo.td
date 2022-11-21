@@ -249,6 +249,18 @@ def simm26_symbol : Operand<GRLenVT> {
   let DecoderMethod = "decodeSImmOperand<26, 2>";
 }
 
+def BareSymbol : AsmOperandClass {
+  let Name = "BareSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidBareSymbol";
+  let ParserMethod = "parseImmediate";
+}
+
+// A bare symbol used in "PseudoLA_*" instructions.
+def bare_symbol : Operand<GRLenVT> {
+  let ParserMatchClass = BareSymbol;
+}
+
 // Standalone (codegen-only) immleaf patterns.
 
 // A 12-bit signed immediate plus one where the imm range will be [-2047, 2048].
@@ -985,23 +997,102 @@ def PseudoJIRL_TAIL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL R0, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def PseudoLA_PCREL : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+/// Load address (la*) macro instructions.
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def PseudoLA_GOT : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+// Define isCodeGenOnly = 0 to expose them to tablegened assembly parser.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
+    isAsmParserOnly = 1 in {
+def PseudoLA_ABS : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                          "la.abs", "$dst, $src">;
+def PseudoLA_ABS_LARGE : Pseudo<(outs GPR:$dst),
+                                (ins GPR:$tmp, bare_symbol:$src), [],
+                                "la.abs", "$dst, $src">;
+def PseudoLA_PCREL : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                            "la.pcrel", "$dst, $src">;
+def PseudoLA_PCREL_LARGE : Pseudo<(outs GPR:$dst),
+                                  (ins GPR:$tmp, bare_symbol:$src), [],
+                                  "la.pcrel", "$dst, $tmp, $src">,
+                           Requires<[IsLA64]>;
+def PseudoLA_TLS_LE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.le", "$dst, $src">;
+}
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
+    isAsmParserOnly = 1 in {
+def PseudoLA_GOT : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                          "la.got", "$dst, $src">;
+def PseudoLA_GOT_LARGE : Pseudo<(outs GPR:$dst),
+                                (ins GPR:$tmp, bare_symbol:$src), [],
+                                "la.got", "$dst, $tmp, $src">,
+                         Requires<[IsLA64]>;
+def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.ie", "$dst, $src">;
+def PseudoLA_TLS_IE_LARGE : Pseudo<(outs GPR:$dst),
+                                   (ins GPR:$tmp, bare_symbol:$src), [],
+                                   "la.tls.ie", "$dst, $tmp, $src">,
+                            Requires<[IsLA64]>;
+def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.ld", "$dst, $src">;
+def PseudoLA_TLS_LD_LARGE : Pseudo<(outs GPR:$dst),
+                                   (ins GPR:$tmp, bare_symbol:$src), [],
+                                   "la.tls.ld", "$dst, $tmp, $src">,
+                            Requires<[IsLA64]>;
+def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.gd", "$dst, $src">;
+def PseudoLA_TLS_GD_LARGE : Pseudo<(outs GPR:$dst),
+                                   (ins GPR:$tmp, bare_symbol:$src), [],
+                                   "la.tls.gd", "$dst, $tmp, $src">,
+                            Requires<[IsLA64]>;
+}
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def PseudoLA_TLS_LE : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+// Load address inst alias: "la", "la.global" and "la.local".
+// Default:
+//     la = la.global = la.got
+//     la.local = la.pcrel
+// With feature "+la-global-with-pcrel":
+//     la = la.global = la.pcrel
+// With feature "+la-global-with-abs":
+//     la = la.global = la.abs
+// With feature "+la-local-with-abs":
+//     la.local = la.abs
+// With features "+la-global-with-pcrel,+la-global-with-abs"(disorder):
+//     la = la.global = la.pcrel
+// Note: To keep consistent with gnu-as behavior, the "la" can only have one
+//       register operand.
+def : InstAlias<"la $dst, $src", (PseudoLA_GOT GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $src",
+                (PseudoLA_GOT GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $tmp, $src",
+                (PseudoLA_GOT_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
+def : InstAlias<"la.local $dst, $src",
+                (PseudoLA_PCREL GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.local $dst, $tmp, $src",
+                (PseudoLA_PCREL_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+// Note: Keep HasLaGlobalWithPcrel before HasLaGlobalWithAbs to ensure
+// "la-global-with-pcrel" takes effect when bose "la-global-with-pcrel" and
+// "la-global-with-abs" are enabled.
+let Predicates = [HasLaGlobalWithPcrel] in {
+def : InstAlias<"la $dst, $src", (PseudoLA_PCREL GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $src",
+                (PseudoLA_PCREL GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $tmp, $src",
+                (PseudoLA_PCREL_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
+} // Predicates = [HasLaGlobalWithPcrel]
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+let Predicates = [HasLaGlobalWithAbs] in {
+def : InstAlias<"la $dst, $src", (PseudoLA_ABS GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $src",
+                (PseudoLA_ABS GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $tmp, $src",
+                (PseudoLA_ABS_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
+} // Predicates = [HasLaGlobalWithAbs]
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+let Predicates = [HasLaLocalWithAbs] in {
+def : InstAlias<"la.local $dst, $src",
+                (PseudoLA_ABS GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.local $dst, $tmp, $src",
+                (PseudoLA_ABS_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
+} // Predicates = [HasLaLocalWithAbs]
 
 /// BSTRINS and BSTRPICK
 
