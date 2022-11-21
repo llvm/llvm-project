@@ -101,6 +101,9 @@ class UImmAsmOperand<int width, string suffix = "">
 
 // A parameterized register class alternative to i32imm/i64imm from Target.td.
 def grlenimm : Operand<GRLenVT>;
+def imm32 : Operand<GRLenVT> {
+  let ParserMatchClass = ImmAsmOperand<"", 32, "">;
+}
 
 def uimm2 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<2>;
@@ -1491,6 +1494,15 @@ def : InstAlias<"blez $rj, $imm16",
                 (BGE R0, GPR:$rj, simm16_lsl2_br:$imm16), 0>;
 def : InstAlias<"bgez $rd, $imm16",
                 (BGE GPR:$rd, R0, simm16_lsl2_br:$imm16), 0>;
+
+// Load immediate.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
+    isAsmParserOnly = 1 in {
+def PseudoLI_W : Pseudo<(outs GPR:$rd), (ins imm32:$imm), [],
+                        "li.w", "$rd, $imm">;
+def PseudoLI_D : Pseudo<(outs GPR:$rd), (ins grlenimm:$imm), [],
+                        "li.d", "$rd, $imm">, Requires<[IsLA64]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Basic Floating-Point Instructions
