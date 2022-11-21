@@ -12,7 +12,7 @@
 
 #include "DXILBitcodeWriter.h"
 #include "DXILValueEnumerator.h"
-#include "PointerTypeAnalysis.h"
+#include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
