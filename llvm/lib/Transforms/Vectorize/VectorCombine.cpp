@@ -1700,8 +1700,6 @@ bool VectorCombine::run() {
     Builder.SetInsertPoint(&I);
     if (!TryEarlyFoldsOnly) {
       if (isa<FixedVectorType>(I.getType())) {
-        MadeChange |= vectorizeLoadInsert(I);
-        MadeChange |= widenSubvectorLoad(I);
         MadeChange |= foldInsExtFNeg(I);
         MadeChange |= foldBitcastShuf(I);
         MadeChange |= foldShuffleOfBinops(I);
@@ -1713,6 +1711,8 @@ bool VectorCombine::run() {
       }
     }
     if (isa<FixedVectorType>(I.getType())) {
+      MadeChange |= vectorizeLoadInsert(I);
+      MadeChange |= widenSubvectorLoad(I);
       MadeChange |= scalarizeBinopOrCmp(I);
       MadeChange |= scalarizeLoadExtract(I);
     }
