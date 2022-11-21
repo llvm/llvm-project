@@ -59,10 +59,9 @@ void populateResolveRankedShapeTypeResultDimsPatterns(
 /// terms of shapes of its input operands.
 void populateResolveShapedTypeResultDimsPatterns(RewritePatternSet &patterns);
 
-/// Appends patterns for simplifying extract_strided_metadata(other_op) into
-/// easier to analyze constructs.
-void populateSimplifyExtractStridedMetadataOpPatterns(
-    RewritePatternSet &patterns);
+/// Appends patterns for expanding memref operations that modify the metadata
+/// (sizes, offset, strides) of a memref into easier to analyze constructs.
+void populateExpandStridedMetadataPatterns(RewritePatternSet &patterns);
 
 /// Appends patterns for emulating wide integer memref operations with ops over
 /// narrower integer types.
@@ -135,10 +134,9 @@ std::unique_ptr<Pass> createResolveRankedShapeTypeResultDimsPass();
 /// in terms of shapes of its input operands.
 std::unique_ptr<Pass> createResolveShapedTypeResultDimsPass();
 
-/// Creates an operation pass to simplify
-/// `extract_strided_metadata(other_op(memref))` into
-/// `extract_strided_metadata(memref)`.
-std::unique_ptr<Pass> createSimplifyExtractStridedMetadataPass();
+/// Creates an operation pass to expand some memref operation into
+/// easier to reason about operations.
+std::unique_ptr<Pass> createExpandStridedMetadataPass();
 
 //===----------------------------------------------------------------------===//
 // Registration
