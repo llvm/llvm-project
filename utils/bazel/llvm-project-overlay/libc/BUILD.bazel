@@ -161,6 +161,7 @@ cc_library(
     hdrs = ["src/__support/number_pair.h"],
     deps = [
         "__support_cpp_type_traits",
+        "__support_named_pair",
         ":libc_root",
     ],
 )
@@ -231,10 +232,17 @@ cc_library(
 )
 
 cc_library(
+    name = "__support_named_pair",
+    hdrs = ["src/__support/named_pair.h"],
+    deps = [":libc_root"],
+)
+
+cc_library(
     name = "__support_builtin_wrappers",
     hdrs = ["src/__support/builtin_wrappers.h"],
     deps = [
         ":__support_cpp_type_traits",
+        ":__support_named_pair",
         ":libc_root",
     ],
 )
