@@ -485,6 +485,8 @@ Modified Compiler Flags
 
 Removed Compiler Flags
 -------------------------
+- Clang now no longer supports ``-cc1 -fconcepts-ts``.  This flag has been deprecated
+  and encouraged use of ``-std=c++20`` since Clang 10, so we're now removing it.
 
 New Pragmas in Clang
 --------------------
