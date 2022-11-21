@@ -276,7 +276,7 @@ def warn_avx_calling_convention
     : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "
               "enabled changes the ABI">,
       InGroup<DiagGroup<"psabi">>;
-def err_avx_calling_convention : Error<warn_avx_calling_convention.Text>;
+def err_avx_calling_convention : Error<warn_avx_calling_convention.Summary>;
 
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined "
