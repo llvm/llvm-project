@@ -548,7 +548,7 @@ static Value *simplifyX86addcarry(const IntrinsicInst &II,
     Value *UAddResult = Builder.CreateExtractValue(UAdd, 0);
     Value *UAddOV = Builder.CreateZExt(Builder.CreateExtractValue(UAdd, 1),
                                        Builder.getInt8Ty());
-    Value *Res = UndefValue::get(RetTy);
+    Value *Res = PoisonValue::get(RetTy);
     Res = Builder.CreateInsertValue(Res, UAddOV, 0);
     return Builder.CreateInsertValue(Res, UAddResult, 1);
   }
