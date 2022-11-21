@@ -138,12 +138,12 @@ def SparcMEMriAsmOperand : AsmOperandClass {
 
 def MEMrr : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc:$rs1, ptr_rc:$rs2);
+  let MIOperandInfo = (ops ptr_rc, ptr_rc);
   let ParserMatchClass = SparcMEMrrAsmOperand;
 }
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc:$rs1, i32imm:$simm13);
+  let MIOperandInfo = (ops ptr_rc, i32imm);
   let ParserMatchClass = SparcMEMriAsmOperand;
 }
 
@@ -419,7 +419,6 @@ multiclass LoadA<string OpcStr, bits<6> Op3Val, bits<6> LoadAOp3Val,
 // The LDSTUB instruction is supported for asm only.
 // It is unlikely that general-purpose code could make use of it.
 // CAS is preferred for sparc v9.
-let DecoderMethod = "DecodeFIXMEInstruction" in {
 def LDSTUBrr : F3_1<3, 0b001101, (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
                     "ldstub [$addr], $rd", []>;
 def LDSTUBri : F3_2<3, 0b001101, (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
@@ -427,7 +426,6 @@ def LDSTUBri : F3_2<3, 0b001101, (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):
 def LDSTUBArr : F3_1_asi<3, 0b011101, (outs IntRegs:$rd),
                          (ins (MEMrr $rs1, $rs2):$addr, i8imm:$asi),
                          "ldstuba [$addr] $asi, $rd", []>;
-}
 
 // Store multiclass - Define both Reg+Reg/Reg+Imm patterns in one shot.
 multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
@@ -563,38 +561,28 @@ let usesCustomInserter = 1, Uses = [FCC0] in {
 }
 
 // Section B.1 - Load Integer Instructions, p. 90
-let DecoderMethod = "DecodeLoadInt" in {
-  defm LDSB : LoadA<"ldsb", 0b001001, 0b011001, sextloadi8,  IntRegs, i32>;
-  defm LDSH : LoadA<"ldsh", 0b001010, 0b011010, sextloadi16, IntRegs, i32>;
-  defm LDUB : LoadA<"ldub", 0b000001, 0b010001, zextloadi8,  IntRegs, i32>;
-  defm LDUH : LoadA<"lduh", 0b000010, 0b010010, zextloadi16, IntRegs, i32>;
-  defm LD   : LoadA<"ld",   0b000000, 0b010000, load,        IntRegs, i32>;
-}
-
-let DecoderMethod = "DecodeLoadIntPair" in
-  defm LDD : LoadA<"ldd", 0b000011, 0b010011, load, IntPair, v2i32, IIC_ldd>;
+defm LDSB : LoadA<"ldsb", 0b001001, 0b011001, sextloadi8,  IntRegs, i32>;
+defm LDSH : LoadA<"ldsh", 0b001010, 0b011010, sextloadi16, IntRegs, i32>;
+defm LDUB : LoadA<"ldub", 0b000001, 0b010001, zextloadi8,  IntRegs, i32>;
+defm LDUH : LoadA<"lduh", 0b000010, 0b010010, zextloadi16, IntRegs, i32>;
+defm LD   : LoadA<"ld",   0b000000, 0b010000, load,        IntRegs, i32>;
+defm LDD : LoadA<"ldd", 0b000011, 0b010011, load, IntPair, v2i32, IIC_ldd>;
 
 // Section B.2 - Load Floating-point Instructions, p. 92
-let DecoderMethod = "DecodeLoadFP" in {
-  defm LDF   : Load<"ld",  0b100000, load,    FPRegs,  f32, IIC_iu_or_fpu_instr>;
-  def LDFArr : LoadASI<"ld",  0b110000, FPRegs>,
-                Requires<[HasV9]>;
-}
-let DecoderMethod = "DecodeLoadDFP" in {
-  defm LDDF   : Load<"ldd", 0b100011, load,    DFPRegs, f64, IIC_ldd>;
-  def LDDFArr : LoadASI<"ldd", 0b110011, DFPRegs>,
-                 Requires<[HasV9]>;
-}
-let DecoderMethod = "DecodeLoadQFP" in
-  defm LDQF  : LoadA<"ldq", 0b100010, 0b110010, load, QFPRegs, f128>,
-               Requires<[HasV9, HasHardQuad]>;
+defm LDF   : Load<"ld",  0b100000, load,    FPRegs,  f32, IIC_iu_or_fpu_instr>;
+def LDFArr : LoadASI<"ld",  0b110000, FPRegs>,
+             Requires<[HasV9]>;
 
-let DecoderMethod = "DecodeLoadCP" in
-  defm LDC   : Load<"ld", 0b110000, load, CoprocRegs, i32>;
-let DecoderMethod = "DecodeLoadCPPair" in
-  defm LDDC   : Load<"ldd", 0b110011, load, CoprocPair, v2i32, IIC_ldd>;
+defm LDDF   : Load<"ldd", 0b100011, load,    DFPRegs, f64, IIC_ldd>;
+def LDDFArr : LoadASI<"ldd", 0b110011, DFPRegs>,
+              Requires<[HasV9]>;
+defm LDQF  : LoadA<"ldq", 0b100010, 0b110010, load, QFPRegs, f128>,
+             Requires<[HasV9, HasHardQuad]>;
 
-let DecoderMethod = "DecodeLoadCP", Defs = [CPSR] in {
+defm LDC   : Load<"ld", 0b110000, load, CoprocRegs, i32>;
+defm LDDC   : Load<"ldd", 0b110011, load, CoprocPair, v2i32, IIC_ldd>;
+
+let Defs = [CPSR] in {
   let rd = 0 in {
     def LDCSRrr : F3_1<3, 0b110001, (outs), (ins (MEMrr $rs1, $rs2):$addr),
                        "ld [$addr], %csr", []>;
@@ -603,21 +591,20 @@ let DecoderMethod = "DecodeLoadCP", Defs = [CPSR] in {
   }
 }
 
-let DecoderMethod = "DecodeLoadFP" in
-  let Defs = [FSR] in {
-    let rd = 0 in {
-      def LDFSRrr : F3_1<3, 0b100001, (outs), (ins (MEMrr $rs1, $rs2):$addr),
-                     "ld [$addr], %fsr", [], IIC_iu_or_fpu_instr>;
-      def LDFSRri : F3_2<3, 0b100001, (outs), (ins (MEMri $rs1, $simm13):$addr),
-                     "ld [$addr], %fsr", [], IIC_iu_or_fpu_instr>;
-    }
-    let rd = 1 in {
-      def LDXFSRrr : F3_1<3, 0b100001, (outs), (ins (MEMrr $rs1, $rs2):$addr),
-                     "ldx [$addr], %fsr", []>, Requires<[HasV9]>;
-      def LDXFSRri : F3_2<3, 0b100001, (outs), (ins (MEMri $rs1, $simm13):$addr),
-                     "ldx [$addr], %fsr", []>, Requires<[HasV9]>;
-    }
+let Defs = [FSR] in {
+  let rd = 0 in {
+    def LDFSRrr : F3_1<3, 0b100001, (outs), (ins (MEMrr $rs1, $rs2):$addr),
+		   "ld [$addr], %fsr", [], IIC_iu_or_fpu_instr>;
+    def LDFSRri : F3_2<3, 0b100001, (outs), (ins (MEMri $rs1, $simm13):$addr),
+		   "ld [$addr], %fsr", [], IIC_iu_or_fpu_instr>;
   }
+  let rd = 1 in {
+    def LDXFSRrr : F3_1<3, 0b100001, (outs), (ins (MEMrr $rs1, $rs2):$addr),
+		   "ldx [$addr], %fsr", []>, Requires<[HasV9]>;
+    def LDXFSRri : F3_2<3, 0b100001, (outs), (ins (MEMri $rs1, $simm13):$addr),
+		   "ldx [$addr], %fsr", []>, Requires<[HasV9]>;
+  }
+}
 
 let mayLoad = 1, isAsmParserOnly = 1 in {
   def GDOP_LDrr : F3_1<3, 0b000000,
@@ -629,37 +616,25 @@ let mayLoad = 1, isAsmParserOnly = 1 in {
 }
 
 // Section B.4 - Store Integer Instructions, p. 95
-let DecoderMethod = "DecodeStoreInt" in {
-  defm STB   : StoreA<"stb", 0b000101, 0b010101, truncstorei8,  IntRegs, i32>;
-  defm STH   : StoreA<"sth", 0b000110, 0b010110, truncstorei16, IntRegs, i32>;
-  defm ST    : StoreA<"st",  0b000100, 0b010100, store,         IntRegs, i32>;
-}
-
-let DecoderMethod = "DecodeStoreIntPair" in
-  defm STD   : StoreA<"std", 0b000111, 0b010111, store, IntPair, v2i32>;
+defm STB   : StoreA<"stb", 0b000101, 0b010101, truncstorei8,  IntRegs, i32>;
+defm STH   : StoreA<"sth", 0b000110, 0b010110, truncstorei16, IntRegs, i32>;
+defm ST    : StoreA<"st",  0b000100, 0b010100, store,         IntRegs, i32>;
+defm STD   : StoreA<"std", 0b000111, 0b010111, store, IntPair, v2i32>;
 
 // Section B.5 - Store Floating-point Instructions, p. 97
-let DecoderMethod = "DecodeStoreFP" in {
-  defm STF   : Store<"st",  0b100100, store,         FPRegs,  f32>;
-  def STFArr : StoreASI<"st",  0b110100, FPRegs>,
-               Requires<[HasV9]>;
-}
-let DecoderMethod = "DecodeStoreDFP" in {
-  defm STDF   : Store<"std", 0b100111, store,         DFPRegs, f64, IIC_std>;
-  def STDFArr : StoreASI<"std", 0b110111, DFPRegs>,
-                Requires<[HasV9]>;
-}
-let DecoderMethod = "DecodeStoreQFP" in
-  defm STQF  : StoreA<"stq", 0b100110, 0b110110, store, QFPRegs, f128>,
-               Requires<[HasV9, HasHardQuad]>;
+defm STF    : Store<"st",  0b100100, store,         FPRegs,  f32>;
+def STFArr  : StoreASI<"st",  0b110100, FPRegs>,
+              Requires<[HasV9]>;
+defm STDF   : Store<"std", 0b100111, store,         DFPRegs, f64, IIC_std>;
+def STDFArr : StoreASI<"std", 0b110111, DFPRegs>,
+              Requires<[HasV9]>;
+defm STQF   : StoreA<"stq", 0b100110, 0b110110, store, QFPRegs, f128>,
+              Requires<[HasV9, HasHardQuad]>;
 
-let DecoderMethod = "DecodeStoreCP" in
-  defm STC   : Store<"st", 0b110100, store, CoprocRegs, i32>;
+defm STC   : Store<"st", 0b110100, store, CoprocRegs, i32>;
+defm STDC   : Store<"std", 0b110111, store, CoprocPair, v2i32, IIC_std>;
 
-let DecoderMethod = "DecodeStoreCPPair" in
-  defm STDC   : Store<"std", 0b110111, store, CoprocPair, v2i32, IIC_std>;
-
-let DecoderMethod = "DecodeStoreCP", rd = 0 in {
+let rd = 0 in {
   let Defs = [CPSR] in {
     def STCSRrr : F3_1<3, 0b110101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
                        "st %csr, [$addr]", [], IIC_st>;
@@ -674,32 +649,30 @@ let DecoderMethod = "DecodeStoreCP", rd = 0 in {
   }
 }
 
-let DecoderMethod = "DecodeStoreFP" in {
-  let rd = 0 in {
-    let Defs = [FSR] in {
-      def STFSRrr : F3_1<3, 0b100101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
-                     "st %fsr, [$addr]", [], IIC_st>;
-      def STFSRri : F3_2<3, 0b100101, (outs (MEMri $rs1, $simm13):$addr), (ins),
-                     "st %fsr, [$addr]", [], IIC_st>;
-    }
-    let Defs = [FQ] in {
-      def STDFQrr : F3_1<3, 0b100110, (outs (MEMrr $rs1, $rs2):$addr), (ins),
-                     "std %fq, [$addr]", [], IIC_std>;
-      def STDFQri : F3_2<3, 0b100110, (outs (MEMri $rs1, $simm13):$addr), (ins),
-                     "std %fq, [$addr]", [], IIC_std>;
-    }
+let rd = 0 in {
+  let Defs = [FSR] in {
+    def STFSRrr : F3_1<3, 0b100101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+		   "st %fsr, [$addr]", [], IIC_st>;
+    def STFSRri : F3_2<3, 0b100101, (outs (MEMri $rs1, $simm13):$addr), (ins),
+		   "st %fsr, [$addr]", [], IIC_st>;
   }
-  let rd = 1, Defs = [FSR] in {
-    def STXFSRrr : F3_1<3, 0b100101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
-                   "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
-    def STXFSRri : F3_2<3, 0b100101, (outs (MEMri $rs1, $simm13):$addr), (ins),
-                   "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
+  let Defs = [FQ] in {
+    def STDFQrr : F3_1<3, 0b100110, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+		   "std %fq, [$addr]", [], IIC_std>;
+    def STDFQri : F3_2<3, 0b100110, (outs (MEMri $rs1, $simm13):$addr), (ins),
+		   "std %fq, [$addr]", [], IIC_std>;
   }
+}
+let rd = 1, Defs = [FSR] in {
+  def STXFSRrr : F3_1<3, 0b100101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+		 "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
+  def STXFSRri : F3_2<3, 0b100101, (outs (MEMri $rs1, $simm13):$addr), (ins),
+		 "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
 }
 
 // Section B.8 - SWAP Register with Memory Instruction
 // (Atomic swap)
-let Constraints = "$val = $rd", DecoderMethod = "DecodeSWAP" in {
+let Constraints = "$val = $rd" in {
   def SWAPrr : F3_1<3, 0b001111,
                  (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr, IntRegs:$val),
                  "swap [$addr], $rd",
@@ -1032,8 +1005,7 @@ let Uses = [O6],
 // Section B.25 - Jump and Link Instruction
 
 // JMPL Instruction.
-let isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
-    DecoderMethod = "DecodeJMPL" in {
+let isTerminator = 1, hasDelaySlot = 1, isBarrier = 1 in {
   def JMPLrr: F3_1<2, 0b111000,
                    (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
                    "jmpl $addr, $rd",
@@ -1067,7 +1039,7 @@ let isReturn = 1, isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
 
 // Section B.26 - Return from Trap Instruction
 let isReturn = 1, isTerminator = 1, hasDelaySlot = 1,
-     isBarrier = 1, rd = 0, DecoderMethod = "DecodeReturn" in {
+     isBarrier = 1, rd = 0 in {
   def RETTrr : F3_1<2, 0b111001,
                    (outs), (ins (MEMrr $rs1, $rs2):$addr),
                    "rett $addr",
@@ -1083,7 +1055,7 @@ let isReturn = 1, isTerminator = 1, hasDelaySlot = 1,
 
 // Section B.27 - Trap on Integer Condition Codes Instruction
 // conditional branch class:
-let DecoderNamespace = "SparcV8", DecoderMethod = "DecodeTRAP", hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
+let DecoderNamespace = "SparcV8", hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
 {
   def TRAPrr : TRAPSPrr<0b111010,
                         (outs), (ins IntRegs:$rs1, IntRegs:$rs2, CCOp:$cond),
@@ -1106,7 +1078,7 @@ multiclass TRAP<string regStr> {
                     []>;
 }
 
-let DecoderNamespace = "SparcV9", DecoderMethod = "DecodeTRAP", Predicates = [HasV9], hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
+let DecoderNamespace = "SparcV9", Predicates = [HasV9], hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
   defm TICC : TRAP<"%icc">;
 
 
@@ -1197,7 +1169,7 @@ let rd = 0 in
                   "unimp $imm22", []>;
 
 // Section B.32 - Flush Instruction Memory
-let DecoderMethod = "DecodeFIXMEInstruction", rd = 0 in {
+let rd = 0 in {
   def FLUSHrr : F3_1<2, 0b111011, (outs), (ins (MEMrr $rs1, $rs2):$addr),
                        "flush $addr", []>;
   def FLUSHri : F3_2<2, 0b111011, (outs), (ins (MEMri $rs1, $simm13):$addr),
@@ -1761,7 +1733,7 @@ let hasSideEffects = 1 in {
 }
 
 // Section A.42 - Prefetch Data
-let DecoderMethod = "DecodeFIXMEInstruction", Predicates = [HasV9] in {
+let Predicates = [HasV9] in {
   def PREFETCHr : F3_1<3, 0b101101,
                    (outs), (ins (MEMrr $rs1, $rs2):$addr, shift_imm5:$rd),
                    "prefetch [$addr], $rd", []>;
