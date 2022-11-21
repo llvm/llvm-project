@@ -1283,6 +1283,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AMDGPUIncGen",
+        ":ArithDialect",
         ":IR",
         ":SideEffectInterfaces",
         "//llvm:Core",
