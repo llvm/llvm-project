@@ -1055,16 +1055,19 @@ def : InstRW<[ZnWritePCMPGTQYm], (instrs VPCMPGTQYrm)>;
 //=== Floating Point XMM and YMM Instructions ===//
 //-- Move instructions --//
 
-// VPERM2F128.
-def : InstRW<[WriteMicrocoded], (instrs VPERM2F128rr)>;
-def : InstRW<[WriteMicrocoded], (instrs VPERM2F128rm)>;
+// VPERM2F128 / VPERM2I128.
+def : InstRW<[WriteMicrocoded], (instrs VPERM2F128rr,
+                                        VPERM2I128rr)>;
+def : InstRW<[WriteMicrocoded], (instrs VPERM2F128rm,
+                                        VPERM2I128rm)>;
 
 def ZnWriteBROADCAST : SchedWriteRes<[ZnAGU, ZnFPU13]> {
   let NumMicroOps = 2;
   let Latency = 8;
 }
-// VBROADCASTF128.
-def : InstRW<[ZnWriteBROADCAST], (instrs VBROADCASTF128)>;
+// VBROADCASTF128 / VBROADCASTI128.
+def : InstRW<[ZnWriteBROADCAST], (instrs VBROADCASTF128,
+                                         VBROADCASTI128)>;
 
 // EXTRACTPS.
 // r32,x,i.
@@ -1083,12 +1086,14 @@ def ZnWriteEXTRACTPSm : SchedWriteRes<[ZnAGU,ZnFPU12, ZnFPU2]> {
 // m32,x,i.
 def : InstRW<[ZnWriteEXTRACTPSm], (instregex "(V?)EXTRACTPSmr")>;
 
-// VEXTRACTF128.
+// VEXTRACTF128 / VEXTRACTI128.
 // x,y,i.
-def : InstRW<[ZnWriteFPU013], (instrs VEXTRACTF128rr)>;
+def : InstRW<[ZnWriteFPU013], (instrs VEXTRACTF128rr,
+                                      VEXTRACTI128rr)>;
 
 // m128,y,i.
-def : InstRW<[ZnWriteFPU013m], (instrs VEXTRACTF128mr)>;
+def : InstRW<[ZnWriteFPU013m], (instrs VEXTRACTF128mr,
+                                       VEXTRACTI128mr)>;
 
 def ZnWriteVINSERT128r: SchedWriteRes<[ZnFPU013]> {
   let Latency = 2;
@@ -1099,10 +1104,12 @@ def ZnWriteVINSERT128Ld: SchedWriteRes<[ZnAGU,ZnFPU013]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1, 2];
 }
-// VINSERTF128.
+// VINSERTF128 / VINSERTI128.
 // y,y,x,i.
-def : InstRW<[ZnWriteVINSERT128r], (instrs VINSERTF128rr)>;
-def : InstRW<[ZnWriteVINSERT128Ld], (instrs VINSERTF128rm)>;
+def : InstRW<[ZnWriteVINSERT128r], (instrs VINSERTF128rr,
+                                           VINSERTI128rr)>;
+def : InstRW<[ZnWriteVINSERT128Ld], (instrs VINSERTF128rm,
+                                            VINSERTI128rm)>;
 
 // VGATHER.
 def : InstRW<[WriteMicrocoded], (instregex "VGATHER(Q|D)(PD|PS)(Y?)rm")>;
