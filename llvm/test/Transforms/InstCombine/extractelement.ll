@@ -794,6 +794,28 @@ define i32 @extelt_select_const_operand_vector(i1 %c) {
   ret i32 %r
 }
 
+define float @extelt_select_const_operand_vector_float(i1 %c) {
+; ANY-LABEL: @extelt_select_const_operand_vector_float(
+; ANY-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <3 x float> <float poison, float poison, float 4.000000e+00>, <3 x float> <float poison, float poison, float 7.000000e+00>
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x float> [[S]], i64 2
+; ANY-NEXT:    ret float [[R]]
+;
+  %s = select i1 %c, <3 x float> <float 2.0, float 3.0, float 4.0>, <3 x float> <float 5.0, float 6.0, float 7.0>
+  %r = extractelement <3 x float> %s, i32 2
+  ret float %r
+}
+
+define i32 @extelt_vecselect_const_operand_vector(<3 x i1> %c) {
+; ANY-LABEL: @extelt_vecselect_const_operand_vector(
+; ANY-NEXT:    [[S:%.*]] = select <3 x i1> [[C:%.*]], <3 x i32> <i32 poison, i32 poison, i32 4>, <3 x i32> <i32 poison, i32 poison, i32 7>
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i32> [[S]], i64 2
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %s = select <3 x i1> %c, <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
+  %r = extractelement <3 x i32> %s, i32 2
+  ret i32 %r
+}
+
 define i32 @extelt_select_const_operand_extractelt_use(i1 %c) {
 ; ANY-LABEL: @extelt_select_const_operand_extractelt_use(
 ; ANY-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <3 x i32> <i32 poison, i32 poison, i32 4>, <3 x i32> <i32 poison, i32 poison, i32 7>
@@ -823,5 +845,79 @@ define i32 @extelt_select_const_operand_select_use(i1 %c) {
   %e = extractelement <3 x i32> %s, i32 2
   %e.2 = extractelement <3 x i32> %s, i32 1
   %r = mul i32 %e, %e.2
+  ret i32 %r
+}
+
+define i32 @extelt_select_const_operand_vector_cond_index(i1 %c) {
+; ANY-LABEL: @extelt_select_const_operand_vector_cond_index(
+; ANY-NEXT:    [[E:%.*]] = select i1 [[C:%.*]], i32 3, i32 4
+; ANY-NEXT:    [[S:%.*]] = select i1 [[C]], <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i32> [[S]], i32 [[E]]
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %e = select i1 %c, i32 3, i32 4
+  %s = select i1 %c, <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
+  %r = extractelement <3 x i32> %s, i32 %e
+  ret i32 %r
+}
+
+define i32 @extelt_select_const_operand_vector_var_index(i1 %c, i32 %e) {
+; ANY-LABEL: @extelt_select_const_operand_vector_var_index(
+; ANY-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i32> [[S]], i32 [[E:%.*]]
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %s = select i1 %c, <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
+  %r = extractelement <3 x i32> %s, i32 %e
+  ret i32 %r
+}
+
+define i32 @extelt_select_var_const_operand_vector(i1 %c, <3 x i32> %v) {
+; ANY-LABEL: @extelt_select_var_const_operand_vector(
+; ANY-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <3 x i32> [[V:%.*]], <3 x i32> <i32 poison, i32 6, i32 poison>
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i32> [[S]], i64 1
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %s = select i1 %c, <3 x i32> %v, <3 x i32> <i32 5, i32 6, i32 7>
+  %r = extractelement <3 x i32> %s, i32 1
+  ret i32 %r
+}
+
+define i32 @extelt_select_const_var_operand_vector(i1 %c, <3 x i32> %v) {
+; ANY-LABEL: @extelt_select_const_var_operand_vector(
+; ANY-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <3 x i32> <i32 5, i32 poison, i32 poison>, <3 x i32> [[V:%.*]]
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i32> [[S]], i64 0
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %s = select i1 %c, <3 x i32> <i32 5, i32 6, i32 7>, <3 x i32> %v
+  %r = extractelement <3 x i32> %s, i32 0
+  ret i32 %r
+}
+
+declare void @use_select(<3 x i32>)
+
+define i32 @extelt_select_const_var_operands_vector_extra_use(i1 %c, <3 x i32> %x) {
+; ANY-LABEL: @extelt_select_const_var_operands_vector_extra_use(
+; ANY-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <3 x i32> <i32 42, i32 5, i32 4>, <3 x i32> [[X:%.*]]
+; ANY-NEXT:    call void @use_select(<3 x i32> [[S]])
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i32> [[S]], i64 0
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %s = select i1 %c, <3 x i32> <i32 42, i32 5, i32 4>, <3 x i32> %x
+  call void @use_select(<3 x i32> %s)
+  %r = extractelement <3 x i32> %s, i64 0
+  ret i32 %r
+}
+
+define i32 @extelt_select_const_operands_vector_extra_use_2(i1 %c) {
+; ANY-LABEL: @extelt_select_const_operands_vector_extra_use_2(
+; ANY-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <3 x i32> <i32 42, i32 5, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
+; ANY-NEXT:    call void @use_select(<3 x i32> [[S]])
+; ANY-NEXT:    [[R:%.*]] = extractelement <3 x i32> [[S]], i64 0
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %s = select i1 %c, <3 x i32> <i32 42, i32 5, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
+  call void @use_select(<3 x i32> %s)
+  %r = extractelement <3 x i32> %s, i64 0
   ret i32 %r
 }
