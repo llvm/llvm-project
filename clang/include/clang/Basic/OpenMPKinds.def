@@ -71,6 +71,9 @@
 #ifndef OPENMP_BIND_KIND
 #define OPENMP_BIND_KIND(Name)
 #endif
+#ifndef OPENMP_GRAINSIZE_MODIFIER
+#define OPENMP_GRAINSIZE_MODIFIER(Name)
+#endif
 
 // Static attributes for 'schedule' clause.
 OPENMP_SCHEDULE_KIND(static)
@@ -181,6 +184,10 @@ OPENMP_BIND_KIND(teams)
 OPENMP_BIND_KIND(parallel)
 OPENMP_BIND_KIND(thread)
 
+// Modifiers for the 'grainsize' clause.
+OPENMP_GRAINSIZE_MODIFIER(strict)
+
+#undef OPENMP_GRAINSIZE_MODIFIER
 #undef OPENMP_BIND_KIND
 #undef OPENMP_ADJUST_ARGS_KIND
 #undef OPENMP_REDUCTION_MODIFIER

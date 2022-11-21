@@ -230,9 +230,18 @@ def OMPC_Priority : Clause<"priority"> {
   let clangClass = "OMPPriorityClause";
   let flangClass = "ScalarIntExpr";
 }
+
+def OMP_GRAINSIZE_Strict : ClauseVal<"strict", 1, 1> {}
+def OMP_GRAINSIZE_Unknown : ClauseVal<"unkonwn", 2, 0> { let isDefault = 1; }
+
 def OMPC_GrainSize : Clause<"grainsize"> {
   let clangClass = "OMPGrainsizeClause";
   let flangClass = "ScalarIntExpr";
+  let enumClauseValue = "GrainsizeType";
+  let allowedClauseValues = [
+    OMP_GRAINSIZE_Strict,
+    OMP_GRAINSIZE_Unknown
+  ];
 }
 def OMPC_NoGroup : Clause<"nogroup"> {
   let clangClass = "OMPNogroupClause";
