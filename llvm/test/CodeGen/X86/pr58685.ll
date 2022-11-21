@@ -4,9 +4,7 @@
 define i1 @lock_add_sete(ptr %0, i32 %1) nounwind {
 ; CHECK-LABEL: lock_add_sete:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    lock xaddl %eax, (%rdi)
-; CHECK-NEXT:    addl %esi, %eax
+; CHECK-NEXT:    lock addl %esi, (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %3 = atomicrmw add ptr %0, i32 %1 seq_cst, align 4
@@ -18,11 +16,8 @@ define i1 @lock_add_sete(ptr %0, i32 %1) nounwind {
 define i1 @lock_add_sets(ptr %0, i32 %1) nounwind {
 ; CHECK-LABEL: lock_add_sets:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    lock xaddl %eax, (%rdi)
-; CHECK-NEXT:    addl %esi, %eax
-; CHECK-NEXT:    shrl $31, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    lock addl %esi, (%rdi)
+; CHECK-NEXT:    sets %al
 ; CHECK-NEXT:    retq
   %3 = atomicrmw add ptr %0, i32 %1 seq_cst, align 4
   %4 = add i32 %3, %1
@@ -33,10 +28,7 @@ define i1 @lock_add_sets(ptr %0, i32 %1) nounwind {
 define i1 @lock_sub_sete(ptr %0, i32 %1) nounwind {
 ; CHECK-LABEL: lock_sub_sete:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    lock xaddl %eax, (%rdi)
-; CHECK-NEXT:    cmpl %esi, %eax
+; CHECK-NEXT:    lock subl %esi, (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %3 = atomicrmw sub ptr %0, i32 %1 seq_cst, align 4
@@ -47,12 +39,8 @@ define i1 @lock_sub_sete(ptr %0, i32 %1) nounwind {
 define i1 @lock_sub_sets(ptr %0, i32 %1) nounwind {
 ; CHECK-LABEL: lock_sub_sets:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    lock xaddl %eax, (%rdi)
-; CHECK-NEXT:    subl %esi, %eax
-; CHECK-NEXT:    shrl $31, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    lock subl %esi, (%rdi)
+; CHECK-NEXT:    sets %al
 ; CHECK-NEXT:    retq
   %3 = atomicrmw sub ptr %0, i32 %1 seq_cst, align 4
   %4 = sub i32 %3, %1
