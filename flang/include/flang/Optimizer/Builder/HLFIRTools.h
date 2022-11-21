@@ -67,10 +67,7 @@ public:
       : mlir::Value(variable.getBase()) {}
   bool isValue() const { return isFortranValue(*this); }
   bool isVariable() const { return !isValue(); }
-  bool isMutableBox() const {
-    mlir::Type type = fir::dyn_cast_ptrEleTy(getType());
-    return type && type.isa<fir::BaseBoxType>();
-  }
+  bool isMutableBox() const { return hlfir::isBoxAddressType(getType()); }
   bool isArray() const {
     mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getType()));
     if (type.isa<fir::SequenceType>())
@@ -82,11 +79,7 @@ public:
   bool isScalar() const { return !isArray(); }
 
   mlir::Type getFortranElementType() const {
-    mlir::Type type = fir::unwrapSequenceType(
-        fir::unwrapPassByRefType(fir::unwrapRefType(getType())));
-    if (auto exprType = type.dyn_cast<hlfir::ExprType>())
-      return exprType.getEleTy();
-    return type;
+    return hlfir::getFortranElementType(getType());
   }
 
   bool hasLengthParameters() const {
