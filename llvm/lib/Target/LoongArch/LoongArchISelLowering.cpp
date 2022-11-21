@@ -580,11 +580,11 @@ LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
 
 // Helper function that emits error message for intrinsics with void return
 // value.
-static SDValue emitIntrinsicErrorMessage(SDValue Op, StringRef Name,
-                                         StringRef ErrorMsg,
+static SDValue emitIntrinsicErrorMessage(SDValue Op, StringRef ErrorMsg,
                                          SelectionDAG &DAG) {
 
-  DAG.getContext()->emitError("argument to '" + Name + "' " + ErrorMsg);
+  DAG.getContext()->emitError("argument to '" + Op->getOperationName(0) + "' " +
+                              ErrorMsg);
   return Op.getOperand(0);
 }
 
@@ -603,8 +603,7 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::loongarch_dbar: {
     unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
     if (!isUInt<15>(Imm))
-      return emitIntrinsicErrorMessage(Op, "__builtin_loongarch_dbar",
-                                       ErrorMsgOOR, DAG);
+      return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
 
     return DAG.getNode(LoongArchISD::DBAR, DL, MVT::Other, Op0,
                        DAG.getConstant(Imm, DL, GRLenVT));
@@ -612,8 +611,7 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::loongarch_ibar: {
     unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
     if (!isUInt<15>(Imm))
-      return emitIntrinsicErrorMessage(Op, "__builtin_loongarch_ibar",
-                                       ErrorMsgOOR, DAG);
+      return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
 
     return DAG.getNode(LoongArchISD::IBAR, DL, MVT::Other, Op0,
                        DAG.getConstant(Imm, DL, GRLenVT));
@@ -621,8 +619,7 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::loongarch_break: {
     unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
     if (!isUInt<15>(Imm))
-      return emitIntrinsicErrorMessage(Op, "__builtin_loongarch_break",
-                                       ErrorMsgOOR, DAG);
+      return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
 
     return DAG.getNode(LoongArchISD::BREAK, DL, MVT::Other, Op0,
                        DAG.getConstant(Imm, DL, GRLenVT));
@@ -630,8 +627,7 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::loongarch_syscall: {
     unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
     if (!isUInt<15>(Imm))
-      return emitIntrinsicErrorMessage(Op, "__builtin_loongarch_syscall",
-                                       ErrorMsgOOR, DAG);
+      return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
 
     return DAG.getNode(LoongArchISD::SYSCALL, DL, MVT::Other, Op0,
                        DAG.getConstant(Imm, DL, GRLenVT));
