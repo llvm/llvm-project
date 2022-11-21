@@ -1,0 +1,25 @@
+//===--- MathOptionsBase.def - Math options config ---------------- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines math options. Users of this file must define
+/// ENUM_MATHOPT macro to make use of this information.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef ENUM_MATHOPT
+#  error Define the ENUM_MATHOPT macro to handle lowering options
+#endif
+
+/// Allow fusing FP operations (e.g. create FMAs from mul/add).
+ENUM_MATHOPT(FPContractEnabled, unsigned, 1, 0)
+
+/// Permit floating point optimizations without regard to infinities.
+ENUM_MATHOPT(NoHonorInfs, unsigned, 1, 0)
+
+#undef ENUM_MATHOPT

@@ -731,11 +731,11 @@ TEST(InstructionsTest, CloneCall) {
   // Test cloning an attribute.
   {
     AttrBuilder AB(C);
-    AB.addAttribute(Attribute::ReadOnly);
+    AB.addAttribute(Attribute::NoUnwind);
     Call->setAttributes(
         AttributeList::get(C, AttributeList::FunctionIndex, AB));
     std::unique_ptr<CallInst> Clone(cast<CallInst>(Call->clone()));
-    EXPECT_TRUE(Clone->onlyReadsMemory());
+    EXPECT_TRUE(Clone->doesNotThrow());
   }
 }
 

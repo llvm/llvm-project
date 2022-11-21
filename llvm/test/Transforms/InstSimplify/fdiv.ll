@@ -59,3 +59,98 @@ define <2 x i1> @pr6096() {
   %fcmp = fcmp ole <2 x float> %fdiv, zeroinitializer
   ret <2 x i1> %fcmp
 }
+
+
+; https://alive2.llvm.org/ce/z/JxX5in
+define float @fdiv_nnan_ninf_by_zero_f32(float %x) {
+; CHECK-LABEL: @fdiv_nnan_ninf_by_zero_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %fdiv = fdiv nnan ninf float %x, 0.0
+  ret float %fdiv
+}
+
+define float @fdiv_nnan_ninf_by_negzero_f32(float %x) {
+; CHECK-LABEL: @fdiv_nnan_ninf_by_negzero_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %fdiv = fdiv nnan ninf float %x, -0.0
+  ret float %fdiv
+}
+
+define float @fdiv_nnan_ninf_by_undef_f32(float %x) {
+; CHECK-LABEL: @fdiv_nnan_ninf_by_undef_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %fdiv = fdiv nnan ninf float %x, undef
+  ret float %fdiv
+}
+
+define float @fdiv_nnan_ninf_by_poison_f32(float %x) {
+; CHECK-LABEL: @fdiv_nnan_ninf_by_poison_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %fdiv = fdiv nnan ninf float %x, poison
+  ret float %fdiv
+}
+
+define <2 x float> @fdiv_nnan_ninf_by_zero_v2f32(<2 x float> %x) {
+; CHECK-LABEL: @fdiv_nnan_ninf_by_zero_v2f32(
+; CHECK-NEXT:    ret <2 x float> poison
+;
+  %fdiv = fdiv nnan ninf <2 x float> %x, zeroinitializer
+  ret <2 x float> %fdiv
+}
+
+define <2 x float> @fdiv_nnan_ninf_by_undef_v2f32(<2 x float> %x) {
+; CHECK-LABEL: @fdiv_nnan_ninf_by_undef_v2f32(
+; CHECK-NEXT:    ret <2 x float> poison
+;
+  %fdiv = fdiv nnan ninf <2 x float> %x, undef
+  ret <2 x float> %fdiv
+}
+
+define <2 x float> @fdiv_nnan_ninf_by_zero_undef_v2f32(<2 x float> %x) {
+; CHECK-LABEL: @fdiv_nnan_ninf_by_zero_undef_v2f32(
+; CHECK-NEXT:    ret <2 x float> poison
+;
+  %fdiv = fdiv nnan ninf <2 x float> %x, <float 0.0, float undef>
+  ret <2 x float> %fdiv
+}
+
+; https://alive2.llvm.org/ce/z/wRV28p
+define float @fdiv_nnan_nsz_ninf_by_zero_f32(float %x) {
+; CHECK-LABEL: @fdiv_nnan_nsz_ninf_by_zero_f32(
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan nsz float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv nnan nsz float %x, 0.0
+  ret float %fdiv
+}
+
+define float @fdiv_nnan_nsz_ninf_by_negzero_f32(float %x) {
+; CHECK-LABEL: @fdiv_nnan_nsz_ninf_by_negzero_f32(
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan nsz float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv nnan nsz float %x, -0.0
+  ret float %fdiv
+}
+
+define <2 x float> @fdiv_nnan_nsz_ninf_by_zero_v2f32(<2 x float> %x) {
+; CHECK-LABEL: @fdiv_nnan_nsz_ninf_by_zero_v2f32(
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan nsz <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x float> [[FDIV]]
+;
+  %fdiv = fdiv nnan nsz <2 x float> %x, zeroinitializer
+  ret <2 x float> %fdiv
+}
+
+define <2 x float> @fdiv_nnan_nsz_ninf_by_negzero_v2f32(<2 x float> %x) {
+; CHECK-LABEL: @fdiv_nnan_nsz_ninf_by_negzero_v2f32(
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan nsz <2 x float> [[X:%.*]], <float -0.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[FDIV]]
+;
+  %fdiv = fdiv nnan nsz <2 x float> %x, <float -0.0, float -0.0>
+  ret <2 x float> %fdiv
+}

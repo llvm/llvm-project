@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="func.func(convert-complex-to-standard),convert-complex-to-llvm,func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts" | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-complex-to-standard),convert-complex-to-llvm,func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" | FileCheck %s
 
 // CHECK-LABEL: llvm.func @complex_abs
 // CHECK-SAME: %[[ARG:.*]]: ![[C_TY:.*]])
@@ -11,7 +11,7 @@ func.func @complex_abs(%arg: complex<f32>) -> f32 {
 // CHECK-DAG: %[[REAL_SQ:.*]] = llvm.fmul %[[REAL]], %[[REAL]]  : f32
 // CHECK-DAG: %[[IMAG_SQ:.*]] = llvm.fmul %[[IMAG]], %[[IMAG]]  : f32
 // CHECK: %[[SQ_NORM:.*]] = llvm.fadd %[[REAL_SQ]], %[[IMAG_SQ]]  : f32
-// CHECK: %[[NORM:.*]] = "llvm.intr.sqrt"(%[[SQ_NORM]]) : (f32) -> f32
+// CHECK: %[[NORM:.*]] = llvm.intr.sqrt(%[[SQ_NORM]]) : (f32) -> f32
 // CHECK: llvm.return %[[NORM]] : f32
 
 // CHECK-LABEL: llvm.func @complex_eq

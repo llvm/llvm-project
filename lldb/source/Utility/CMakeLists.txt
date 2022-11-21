@@ -35,6 +35,7 @@ add_lldb_library(lldbUtility
   DataBufferLLVM.cpp
   DataEncoder.cpp
   DataExtractor.cpp
+  Diagnostics.cpp
   Environment.cpp
   Event.cpp
   FileSpec.cpp

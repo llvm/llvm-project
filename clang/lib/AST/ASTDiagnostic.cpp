@@ -538,7 +538,7 @@ class TemplateDiff {
   bool ShowColor;
 
   /// FromTemplateType - When single type printing is selected, this is the
-  /// type to be be printed.  When tree printing is selected, this type will
+  /// type to be printed.  When tree printing is selected, this type will
   /// show up first in the tree.
   QualType FromTemplateType;
 

@@ -1,5 +1,8 @@
 // RUN: mlir-opt %s --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
 
+// RUN: mlir-opt %s --sparse-tensor-rewrite="enable-runtime-library=false enable-foreach=false" \
+// RUN: --canonicalize --cse | FileCheck %s --check-prefix=CHECK-RWT
+
 #SparseVector = #sparse_tensor.encoding<{
   dimLevelType = ["compressed"]
 }>
@@ -128,6 +131,18 @@ func.func @sparse_convert_1d_dyn(%arg0: tensor<?xi32, #SparseVector>) -> tensor<
 //       CHECK: }
 //       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<2x4xf64>
 //       CHECK: return %[[T]] : tensor<2x4xf64>
+
+// CHECK-RWT-LABEL: func.func @sparse_convert_2d(
+//  CHECK-RWT-SAME: %[[A:.*]]: tensor<2x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ] }>>) -> tensor<2x4xf64> {
+//       CHECK-RWT: %[[F0:.*]] = arith.constant 0.000000e+00 : f64
+//       CHECK-RWT: %[[B:.*]] = memref.alloc() : memref<2x4xf64>
+//       CHECK-RWT: linalg.fill ins(%[[F0]] : f64) outs(%[[B]]
+//       CHECK-RWT: sparse_tensor.foreach in %[[A]]
+//       CHECK-RWT: ^bb0(%[[FI0:.*]]: index, %[[FI1:.*]]: index, %[[FV:.*]]: f64):
+//       CHECK-RWT:   memref.store %[[FV]], %[[B]]{{\[}}%[[FI0]], %[[FI1]]]
+//       CHECK-RWT: }
+//       CHECK-RWT: %[[T:.*]] = bufferization.to_tensor %[[B]]
+//       CHECK-RWT: return %[[T]] : tensor<2x4xf64>
 func.func @sparse_convert_2d(%arg0: tensor<2x4xf64, #SparseMatrix>) -> tensor<2x4xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<2x4xf64, #SparseMatrix> to tensor<2x4xf64>
   return %0 : tensor<2x4xf64>
@@ -260,6 +275,22 @@ func.func @sparse_convert_2d_dyn1(%arg0: tensor<2x?xf64, #SparseMatrix>) -> tens
 //       CHECK: }
 //       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<?x?xf64>
 //       CHECK: return %[[T]] : tensor<?x?xf64>
+
+// CHECK-RWT-LABEL: func.func @sparse_convert_2d_dyn2(
+//  CHECK-RWT-SAME: %[[A:.*]]: tensor<?x?xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ] }>>) -> tensor<?x?xf64> {
+//   CHECK-RWT-DAG: %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-RWT-DAG: %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-RWT-DAG: %[[F0:.*]] = arith.constant 0.000000e+00 : f64
+//       CHECK-RWT: %[[D0:.*]] = tensor.dim %[[A]], %[[C0]]
+//       CHECK-RWT: %[[D1:.*]] = tensor.dim %[[A]], %[[C1]]
+//       CHECK-RWT: %[[B:.*]] = memref.alloc(%[[D0]], %[[D1]])
+//       CHECK-RWT: linalg.fill ins(%[[F0]] : f64) outs(%[[B]]
+//       CHECK-RWT: sparse_tensor.foreach in %[[A]]
+//       CHECK-RWT: ^bb0(%[[FI0:.*]]: index, %[[FI1:.*]]: index, %[[FV:.*]]: f64):
+//       CHECK-RWT:   memref.store %[[FV]], %[[B]]{{\[}}%[[FI0]], %[[FI1]]]
+//       CHECK-RWT: }
+//       CHECK-RWT: %[[T:.*]] = bufferization.to_tensor %[[B]]
+//       CHECK-RWT: return %[[T]] : tensor<?x?xf64>
 func.func @sparse_convert_2d_dyn2(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x?xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<?x?xf64, #SparseMatrix> to tensor<?x?xf64>
   return %0 : tensor<?x?xf64>

@@ -398,6 +398,39 @@ StringRef PatternOp::getDefaultDialect() {
 }
 
 //===----------------------------------------------------------------------===//
+// pdl::RangeOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseRangeType(OpAsmParser &p, TypeRange argumentTypes,
+                                  Type &resultType) {
+  // If arguments were provided, infer the result type from the argument list.
+  if (!argumentTypes.empty()) {
+    resultType = RangeType::get(getRangeElementTypeOrSelf(argumentTypes[0]));
+    return success();
+  }
+  // Otherwise, parse the type as a trailing type.
+  return p.parseColonType(resultType);
+}
+
+static void printRangeType(OpAsmPrinter &p, RangeOp op, TypeRange argumentTypes,
+                           Type resultType) {
+  if (argumentTypes.empty())
+    p << ": " << resultType;
+}
+
+LogicalResult RangeOp::verify() {
+  Type elementType = getType().getElementType();
+  for (Type operandType : getOperandTypes()) {
+    Type operandElementType = getRangeElementTypeOrSelf(operandType);
+    if (operandElementType != elementType) {
+      return emitOpError("expected operand to have element type ")
+             << elementType << ", but got " << operandElementType;
+    }
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // pdl::ReplaceOp
 //===----------------------------------------------------------------------===//
 

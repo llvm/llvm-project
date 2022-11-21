@@ -29,6 +29,7 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 
@@ -813,6 +814,8 @@ public:
 
   llvm::Expected<TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language);
+
+  void ForEachTypeSystem(llvm::function_ref<bool(TypeSystem *)> callback);
 
   // Special error functions that can do printf style formatting that will
   // prepend the message with something appropriate for this module (like the

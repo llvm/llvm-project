@@ -9,7 +9,7 @@
 ; CHECK: @[[VAR2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0
 ;.
 define i32 addrspace(1)* @foo(i32 addrspace(4)* %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (i32 addrspace(4)* nofree readnone [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -22,7 +22,7 @@ entry:
 }
 
 define i32* @func1() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@func1
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    ret i32* getelementptr inbounds ([1 x i32], [1 x i32]* @var1, i32 0, i32 0)
@@ -37,7 +37,7 @@ define internal i32* @func1a([1 x i32]* %arg) {
 }
 
 define internal void @func2a(i32* %0) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@func2a
 ; CHECK-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    store i32 0, i32* @var2, align 4
@@ -118,7 +118,7 @@ define i16 @foo3() {
   ret i16 %call
 }
 define internal i16 @bar3(i16* %p1, i16 %p2) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bar3
 ; CHECK-SAME: (i16* nocapture nofree readnone [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret i16 [[P2]]
@@ -130,7 +130,7 @@ define internal i16 @bar3(i16* %p1, i16 %p2) {
 ; CHECK-SAME: (i8*)
 declare void @func6(i8*)
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn writeonly }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(write) }
 ; CHECK: attributes #[[ATTR2]] = { norecurse }
 ;.

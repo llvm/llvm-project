@@ -302,11 +302,16 @@ static cl::opt<std::string> PGOTraceFuncHash(
 
 static cl::opt<unsigned> PGOFunctionSizeThreshold(
     "pgo-function-size-threshold", cl::Hidden,
-    cl::desc("Do not instrument functions smaller than this threshold"));
+    cl::desc("Do not instrument functions smaller than this threshold."));
 
 static cl::opt<bool> MatchMemProf(
     "pgo-match-memprof", cl::init(true), cl::Hidden,
     cl::desc("Perform matching and annotation of memprof profiles."));
+
+static cl::opt<unsigned> PGOFunctionCriticalEdgeThreshold(
+    "pgo-critical-edge-threshold", cl::init(20000), cl::Hidden,
+    cl::desc("Do not instrument functions with the number of critical edges "
+             " greater than this threshold."));
 
 namespace llvm {
 // Command line option to turn on CFG dot dump after profile annotation.
@@ -1846,6 +1851,38 @@ static void collectComdatMembers(
       ComdatMembers.insert(std::make_pair(C, &GA));
 }
 
+// Don't perform PGO instrumeatnion / profile-use.
+static bool skipPGO(const Function &F) {
+  if (F.isDeclaration())
+    return true;
+  if (F.hasFnAttribute(llvm::Attribute::NoProfile))
+    return true;
+  if (F.hasFnAttribute(llvm::Attribute::SkipProfile))
+    return true;
+  if (F.getInstructionCount() < PGOFunctionSizeThreshold)
+    return true;
+
+  // If there are too many critical edges, PGO might cause
+  // compiler time problem. Skip PGO if the number of
+  // critical edges execeed the threshold.
+  unsigned NumCriticalEdges = 0;
+  for (auto &BB : F) {
+    const Instruction *TI = BB.getTerminator();
+    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
+      if (isCriticalEdge(TI, I))
+        NumCriticalEdges++;
+    }
+  }
+  if (NumCriticalEdges > PGOFunctionCriticalEdgeThreshold) {
+    LLVM_DEBUG(dbgs() << "In func " << F.getName()
+                      << ", NumCriticalEdges=" << NumCriticalEdges
+                      << " exceed the threshold. Skip PGO.\n");
+    return true;
+  }
+
+  return false;
+}
+
 static bool InstrumentAllFunctions(
     Module &M, function_ref<TargetLibraryInfo &(Function &)> LookupTLI,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
@@ -1858,13 +1895,7 @@ static bool InstrumentAllFunctions(
   collectComdatMembers(M, ComdatMembers);
 
   for (auto &F : M) {
-    if (F.isDeclaration())
-      continue;
-    if (F.hasFnAttribute(llvm::Attribute::NoProfile))
-      continue;
-    if (F.hasFnAttribute(llvm::Attribute::SkipProfile))
-      continue;
-    if (F.getInstructionCount() < PGOFunctionSizeThreshold)
+    if (skipPGO(F))
       continue;
     auto &TLI = LookupTLI(F);
     auto *BPI = LookupBPI(F);
@@ -2092,7 +2123,7 @@ static bool annotateAllFunctions(
   if (PGOInstrumentEntry.getNumOccurrences() > 0)
     InstrumentFuncEntry = PGOInstrumentEntry;
   for (auto &F : M) {
-    if (F.isDeclaration())
+    if (skipPGO(F))
       continue;
     auto &TLI = LookupTLI(F);
     auto *BPI = LookupBPI(F);

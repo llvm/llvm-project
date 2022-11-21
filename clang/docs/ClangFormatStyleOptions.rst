@@ -865,7 +865,7 @@ the configuration (without a prefix: ``Auto``).
   Alignment options
 
   * ``TrailingCommentsAlignmentKinds Kind``
-    Specifies the way to align trailing comments
+    Specifies the way to align trailing comments.
 
     Possible values:
 
@@ -903,8 +903,9 @@ the configuration (without a prefix: ``Auto``).
         int abcd; // comment
 
 
-  * ``unsigned OverEmptyLines`` How many empty lines to apply alignment
-    With ``MaxEmptyLinesToKeep`` is 2 and ``OverEmptyLines`` is 2,
+  * ``unsigned OverEmptyLines`` How many empty lines to apply alignment.
+    When both ``MaxEmptyLinesToKeep`` and ``OverEmptyLines`` are set to 2,
+    it formats like below.
 
     .. code-block:: c++
 
@@ -915,7 +916,8 @@ the configuration (without a prefix: ``Auto``).
 
       int abcdef; // aligned
 
-    And with ``MaxEmptyLinesToKeep`` is 2 and ``OverEmptyLines`` is 1,
+    When ``MaxEmptyLinesToKeep`` is set to 2 and ``OverEmptyLines`` is set
+    to 1, it formats like below.
 
     .. code-block:: c++
 
@@ -3581,8 +3583,7 @@ the configuration (without a prefix: ``Auto``).
   (counted relative to leading non-whitespace column).
 
 **PenaltyReturnTypeOnItsOwnLine** (``Unsigned``) :versionbadge:`clang-format 3.7`
-  Penalty for putting the return type of a function onto its own
-  line.
+  Penalty for putting the return type of a function onto its own line.
 
 **PointerAlignment** (``PointerAlignmentStyle``) :versionbadge:`clang-format 3.7`
   Pointer and reference alignment style.

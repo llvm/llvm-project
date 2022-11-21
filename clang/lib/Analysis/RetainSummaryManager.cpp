@@ -32,7 +32,7 @@ constexpr static bool isOneOf() {
 /// rest of varargs.
 template <class T, class P, class... ToCompare>
 constexpr static bool isOneOf() {
-  return std::is_same<T, P>::value || isOneOf<T, ToCompare...>();
+  return std::is_same_v<T, P> || isOneOf<T, ToCompare...>();
 }
 
 namespace {

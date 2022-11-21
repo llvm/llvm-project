@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AnalysisInternal.h"
+#include "clang-include-cleaner/Analysis.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -212,8 +213,9 @@ void writeHTMLReport(FileID File, llvm::ArrayRef<Decl *> Roots, ASTContext &Ctx,
                      llvm::raw_ostream &OS) {
   Reporter R(OS, Ctx, File);
   for (Decl *Root : Roots)
-    walkAST(*Root,
-            [&](SourceLocation Loc, const NamedDecl &D) { R.addRef(Loc, D); });
+    walkAST(*Root, [&](SourceLocation Loc, const NamedDecl &D, RefType) {
+      R.addRef(Loc, D);
+    });
   R.write();
 }
 

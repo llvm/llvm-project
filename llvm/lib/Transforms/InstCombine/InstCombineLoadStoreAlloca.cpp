@@ -31,20 +31,20 @@ using namespace PatternMatch;
 STATISTIC(NumDeadStore,    "Number of dead stores eliminated");
 STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 
-/// isOnlyCopiedFromConstantGlobal - Recursively walk the uses of a (derived)
+/// isOnlyCopiedFromConstantMemory - Recursively walk the uses of a (derived)
 /// pointer to an alloca.  Ignore any reads of the pointer, return false if we
 /// see any stores or other unknown uses.  If we see pointer arithmetic, keep
 /// track of whether it moves the pointer (with IsOffset) but otherwise traverse
 /// the uses.  If we see a memcpy/memmove that targets an unoffseted pointer to
-/// the alloca, and if the source pointer is a pointer to a constant global, we
-/// can optimize this.
+/// the alloca, and if the source pointer is a pointer to a constant memory
+/// location, we can optimize this.
 static bool
 isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
                                MemTransferInst *&TheCopy,
                                SmallVectorImpl<Instruction *> &ToDelete) {
   // We track lifetime intrinsics as we encounter them.  If we decide to go
-  // ahead and replace the value with the global, this lets the caller quickly
-  // eliminate the markers.
+  // ahead and replace the value with the memory location, this lets the caller
+  // quickly eliminate the markers.
 
   SmallVector<std::pair<Value *, bool>, 35> ValuesToInspect;
   ValuesToInspect.emplace_back(V, false);
@@ -131,8 +131,8 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
       // If the memintrinsic isn't using the alloca as the dest, reject it.
       if (U.getOperandNo() != 0) return false;
 
-      // If the source of the memcpy/move is not a constant global, reject it.
-      if (!AA->pointsToConstantMemory(MI->getSource()))
+      // If the source of the memcpy/move is not constant, reject it.
+      if (isModSet(AA->getModRefInfoMask(MI->getSource())))
         return false;
 
       // Otherwise, the transform is safe.  Remember the copy instruction.
@@ -142,9 +142,10 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
   return true;
 }
 
-/// isOnlyCopiedFromConstantGlobal - Return true if the specified alloca is only
-/// modified by a copy from a constant global.  If we can prove this, we can
-/// replace any uses of the alloca with uses of the global directly.
+/// isOnlyCopiedFromConstantMemory - Return true if the specified alloca is only
+/// modified by a copy from a constant memory location. If we can prove this, we
+/// can replace any uses of the alloca with uses of the memory location
+/// directly.
 static MemTransferInst *
 isOnlyCopiedFromConstantMemory(AAResults *AA,
                                AllocaInst *AI,
@@ -398,11 +399,11 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
   }
 
   // Check to see if this allocation is only modified by a memcpy/memmove from
-  // a constant whose alignment is equal to or exceeds that of the allocation.
-  // If this is the case, we can change all users to use the constant global
-  // instead.  This is commonly produced by the CFE by constructs like "void
-  // foo() { int A[] = {1,2,3,4,5,6,7,8,9...}; }" if 'A' is only subsequently
-  // read.
+  // a memory location whose alignment is equal to or exceeds that of the
+  // allocation. If this is the case, we can change all users to use the
+  // constant memory location instead.  This is commonly produced by the CFE by
+  // constructs like "void foo() { int A[] = {1,2,3,4,5,6,7,8,9...}; }" if 'A'
+  // is only subsequently read.
   SmallVector<Instruction *, 4> ToDelete;
   if (MemTransferInst *Copy = isOnlyCopiedFromConstantMemory(AA, &AI, ToDelete)) {
     Value *TheSrc = Copy->getSource();
@@ -1378,7 +1379,7 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   // If we have a store to a location which is known constant, we can conclude
   // that the store must be storing the constant value (else the memory
   // wouldn't be constant), and this must be a noop.
-  if (AA->pointsToConstantMemory(Ptr))
+  if (!isModSet(AA->getModRefInfoMask(Ptr)))
     return eraseInstFromFunction(SI);
 
   // Do really simple DSE, to catch cases where there are several consecutive

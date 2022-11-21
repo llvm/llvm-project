@@ -5,7 +5,7 @@
 ; FIXME: icmp folding is missing
 
 define i1 @invokecaller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@invokecaller
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
 ; TUNIT-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]]) #[[ATTR1:[0-9]+]]
@@ -15,7 +15,7 @@ define i1 @invokecaller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; TUNIT:       FAIL:
 ; TUNIT-NEXT:    unreachable
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@invokecaller
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
 ; CGSCC-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]]) #[[ATTR2:[0-9]+]]
@@ -37,7 +37,7 @@ FAIL:
 }
 
 define internal i32 @foo(i1 %C) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@foo
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -46,7 +46,7 @@ define internal i32 @foo(i1 %C) {
 ; TUNIT:       F:
 ; TUNIT-NEXT:    ret i32 undef
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -65,12 +65,12 @@ F:              ; preds = %0
 }
 
 define i1 @caller(i1 %C) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@caller
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    ret i1 true
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]]) #[[ATTR3:[0-9]+]]
@@ -84,11 +84,11 @@ define i1 @caller(i1 %C) {
 
 declare i32 @__gxx_personality_v0(...)
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; TUNIT: attributes #[[ATTR1]] = { nounwind readnone }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR1]] = { nounwind }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2]] = { nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR3]] = { readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
+; CGSCC: attributes #[[ATTR3]] = { willreturn }
 ;.

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='func.func(canonicalize)' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(canonicalize))' -split-input-file | FileCheck %s
 
 
 // -----

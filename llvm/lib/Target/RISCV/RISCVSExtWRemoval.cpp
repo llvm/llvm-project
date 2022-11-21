@@ -73,8 +73,7 @@ static void addUses(const MachineInstr &MI,
 // returns true if all uses of OrigMI only depend on the lower word of its
 // output, so we can transform OrigMI to the corresponding W-version.
 // TODO: handle multiple interdependent transformations
-static bool isAllUsesReadW(const MachineInstr &OrigMI,
-                           MachineRegisterInfo &MRI) {
+static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
 
   SmallPtrSet<const MachineInstr *, 4> Visited;
   SmallVector<const MachineInstr *, 4> Worklist;
@@ -118,10 +117,17 @@ static bool isAllUsesReadW(const MachineInstr &OrigMI,
     case RISCV::CTZW:
     case RISCV::CPOPW:
     case RISCV::SLLI_UW:
+    case RISCV::FMV_H_X:
+    case RISCV::FMV_W_X:
+    case RISCV::FCVT_H_W:
+    case RISCV::FCVT_H_WU:
     case RISCV::FCVT_S_W:
     case RISCV::FCVT_S_WU:
     case RISCV::FCVT_D_W:
     case RISCV::FCVT_D_WU:
+    case RISCV::SEXT_B:
+    case RISCV::SEXT_H:
+    case RISCV::ZEXT_H_RV64:
       continue;
 
     // these overwrite higher input bits, otherwise the lower word of output
@@ -167,8 +173,6 @@ static bool isAllUsesReadW(const MachineInstr &OrigMI,
     case RISCV::CLMUL:
     case RISCV::ORC_B:
     case RISCV::ORN:
-    case RISCV::SEXT_B:
-    case RISCV::SEXT_H:
     case RISCV::SH1ADD:
     case RISCV::SH1ADD_UW:
     case RISCV::SH2ADD:
@@ -176,7 +180,6 @@ static bool isAllUsesReadW(const MachineInstr &OrigMI,
     case RISCV::SH3ADD:
     case RISCV::SH3ADD_UW:
     case RISCV::XNOR:
-    case RISCV::ZEXT_H_RV64:
       addUses(*MI, Worklist, MRI);
       continue;
     default:
@@ -254,7 +257,7 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
   case RISCV::ADDI:
     if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0)
       return true;
-    if (isAllUsesReadW(MI, MRI)) {
+    if (hasAllWUsers(MI, MRI)) {
       // transform to ADDIW
       FixableDef.insert(&MI);
       return true;
@@ -282,10 +285,11 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
   case RISCV::LWU:
   case RISCV::MUL:
   case RISCV::SUB:
-    if (isAllUsesReadW(MI, MRI)) {
+    if (hasAllWUsers(MI, MRI)) {
       FixableDef.insert(&MI);
       return true;
     }
+    break;
   }
 
   return false;

@@ -7,7 +7,7 @@ declare void @llvm.sideeffect()
 ; is present.
 
 define void @test() {
-; CHECK: Function Attrs: inaccessiblememonly mustprogress nofree nosync nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    call void @llvm.sideeffect()
 ; CHECK-NEXT:    ret void
@@ -17,7 +17,7 @@ define void @test() {
 }
 
 define void @loop() {
-; CHECK: Function Attrs: inaccessiblememonly nofree noreturn nosync nounwind
+; CHECK: Function Attrs: nofree noreturn nosync nounwind memory(inaccessiblemem: readwrite)
 ; CHECK-LABEL: @loop(
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:

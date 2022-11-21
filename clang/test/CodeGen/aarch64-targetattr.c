@@ -75,6 +75,20 @@ void all() {}
 __attribute__((target("cpu=neoverse-n1,tune=cortex-a710,arch=armv8.6-a+sve2,branch-protection=standard")))
 void allplusbranchprotection() {}
 
+// These tests check that the user facing and internal llvm name are both accepted.
+// CHECK-LABEL: @plusnoneon() #18
+__attribute__((target("+noneon")))
+void plusnoneon() {}
+// CHECK-LABEL: @plusnosimd() #18
+__attribute__((target("+nosimd")))
+void plusnosimd() {}
+// CHECK-LABEL: @noneon() #18
+__attribute__((target("no-neon")))
+void noneon() {}
+// CHECK-LABEL: @nosimd() #18
+__attribute__((target("no-simd")))
+void nosimd() {}
+
 // CHECK: attributes #0 = { {{.*}} "target-features"="+v8.1a,+v8.2a,+v8a" }
 // CHECK: attributes #1 = { {{.*}} "target-features"="+sve,+v8.1a,+v8.2a,+v8a" }
 // CHECK: attributes #2 = { {{.*}} "target-features"="+sve2,+v8.1a,+v8.2a,+v8a" }
@@ -92,3 +106,4 @@ void allplusbranchprotection() {}
 // CHECK: attributes #15 = { {{.*}} "target-features"="+fullfp16" }
 // CHECK: attributes #16 = { {{.*}} "target-cpu"="neoverse-n1" "target-features"="+crc,+crypto,+dotprod,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+spe,+ssbs,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
 // CHECK: attributes #17 = { {{.*}} "branch-target-enforcement"="true" {{.*}} "target-cpu"="neoverse-n1" "target-features"="+crc,+crypto,+dotprod,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+spe,+ssbs,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
+// CHECK: attributes #18 = { {{.*}} "target-features"="-neon" }

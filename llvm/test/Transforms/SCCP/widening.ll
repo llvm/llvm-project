@@ -432,12 +432,11 @@ exit:
 ; In the function below, the condition %c.1 results in a range [7, 6), which
 ; can be used as a widening bound. It does not fully contain the range we get
 ; from combining it with the information from %tmp12.
-define void @foo(i64* %arg) {
+define void @foo(ptr %arg) {
 ; SCCP-LABEL: @foo(
 ; SCCP-NEXT:  bb:
 ; SCCP-NEXT:    [[TMP:%.*]] = zext i8 undef to i32
-; SCCP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, i64* [[ARG:%.*]], i32 0
-; SCCP-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP1]], align 8
+; SCCP-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARG:%.*]], align 8
 ; SCCP-NEXT:    switch i32 [[TMP]], label [[BB20:%.*]] [
 ; SCCP-NEXT:    i32 1, label [[BB3:%.*]]
 ; SCCP-NEXT:    i32 2, label [[BB4:%.*]]
@@ -474,8 +473,7 @@ define void @foo(i64* %arg) {
 ; IPSCCP-LABEL: @foo(
 ; IPSCCP-NEXT:  bb:
 ; IPSCCP-NEXT:    [[TMP:%.*]] = zext i8 undef to i32
-; IPSCCP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, i64* [[ARG:%.*]], i32 0
-; IPSCCP-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP1]], align 8
+; IPSCCP-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARG:%.*]], align 8
 ; IPSCCP-NEXT:    switch i32 [[TMP]], label [[BB20:%.*]] [
 ; IPSCCP-NEXT:    i32 1, label [[BB3:%.*]]
 ; IPSCCP-NEXT:    i32 2, label [[BB4:%.*]]
@@ -511,8 +509,7 @@ define void @foo(i64* %arg) {
 ;
 bb:
   %tmp = zext i8 undef to i32
-  %tmp1 = getelementptr inbounds i64, i64* %arg, i32 0
-  %tmp2 = load i64, i64* %tmp1, align 8
+  %tmp2 = load i64, ptr %arg, align 8
   switch i32 %tmp, label %bb20 [
   i32 1, label %bb3
   i32 2, label %bb4
@@ -559,72 +556,70 @@ bb20:                                             ; preds = %bb
 ; The functions below check that widening with an upper bound does correctly
 ; return whether the range changed. Make sure we do not eliminate %c.2.
 
-%struct.baz.1 = type { i32, i32, i8*, i8* }
+%struct.baz.1 = type { i32, i32, ptr, ptr }
 %struct.blam.2 = type <{ %struct.baz.1, i32, [4 x i8] }>
 
 @global.11 = linkonce_odr global [4 x i8] zeroinitializer, align 1
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 
-define linkonce_odr dereferenceable(1) i8* @spam(%struct.baz.1* %arg, i32 %arg1) align 2 {
+define linkonce_odr dereferenceable(1) ptr @spam(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-LABEL: @spam(
 ; SCCP-NEXT:  bb:
-; SCCP-NEXT:    [[TMP:%.*]] = getelementptr inbounds [[STRUCT_BAZ_1:%.*]], %struct.baz.1* [[ARG:%.*]], i32 0, i32 3
-; SCCP-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[TMP]], align 8
+; SCCP-NEXT:    [[TMP:%.*]] = getelementptr inbounds [[STRUCT_BAZ_1:%.*]], ptr [[ARG:%.*]], i32 0, i32 3
+; SCCP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8
 ; SCCP-NEXT:    [[TMP3:%.*]] = sext i32 [[ARG1:%.*]] to i64
-; SCCP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* [[TMP2]], i64 [[TMP3]]
-; SCCP-NEXT:    ret i8* [[TMP4]]
+; SCCP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 [[TMP3]]
+; SCCP-NEXT:    ret ptr [[TMP4]]
 ;
 ; IPSCCP-LABEL: @spam(
 ; IPSCCP-NEXT:  bb:
-; IPSCCP-NEXT:    [[TMP:%.*]] = getelementptr inbounds [[STRUCT_BAZ_1:%.*]], %struct.baz.1* [[ARG:%.*]], i32 0, i32 3
-; IPSCCP-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[TMP]], align 8
+; IPSCCP-NEXT:    [[TMP:%.*]] = getelementptr inbounds [[STRUCT_BAZ_1:%.*]], ptr [[ARG:%.*]], i32 0, i32 3
+; IPSCCP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8
 ; IPSCCP-NEXT:    [[TMP3:%.*]] = sext i32 [[ARG1:%.*]] to i64
-; IPSCCP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* [[TMP2]], i64 [[TMP3]]
-; IPSCCP-NEXT:    ret i8* [[TMP4]]
+; IPSCCP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 [[TMP3]]
+; IPSCCP-NEXT:    ret ptr [[TMP4]]
 ;
 bb:
-  %tmp = getelementptr inbounds %struct.baz.1, %struct.baz.1* %arg, i32 0, i32 3
-  %tmp2 = load i8*, i8** %tmp, align 8
+  %tmp = getelementptr inbounds %struct.baz.1, ptr %arg, i32 0, i32 3
+  %tmp2 = load ptr, ptr %tmp, align 8
   %tmp3 = sext i32 %arg1 to i64
-  %tmp4 = getelementptr inbounds i8, i8* %tmp2, i64 %tmp3
-  ret i8* %tmp4
+  %tmp4 = getelementptr inbounds i8, ptr %tmp2, i64 %tmp3
+  ret ptr %tmp4
 }
 
-define i8* @wobble(%struct.blam.2* %arg, i32 %arg1) align 2 {
+define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-LABEL: @wobble(
 ; SCCP-NEXT:  bb:
 ; SCCP-NEXT:    [[TMP:%.*]] = lshr i32 [[ARG1:%.*]], 16
 ; SCCP-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP]], [[ARG1]]
 ; SCCP-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 65535
 ; SCCP-NEXT:    [[TMP4:%.*]] = mul i32 [[ARG1]], 8
-; SCCP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2:%.*]], %struct.blam.2* [[ARG:%.*]], i32 0, i32 1
-; SCCP-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 8
+; SCCP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2:%.*]], ptr [[ARG:%.*]], i32 0, i32 1
+; SCCP-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 8
 ; SCCP-NEXT:    [[TMP7:%.*]] = and i32 [[TMP4]], [[TMP6]]
 ; SCCP-NEXT:    br label [[BB8:%.*]]
 ; SCCP:       bb8:
-; SCCP-NEXT:    [[TMP9:%.*]] = phi i8* [ undef, [[BB:%.*]] ], [ [[TMP17:%.*]], [[BB29:%.*]] ]
-; SCCP-NEXT:    [[TMP10:%.*]] = phi i16* [ undef, [[BB]] ], [ [[TMP18:%.*]], [[BB29]] ]
+; SCCP-NEXT:    [[TMP9:%.*]] = phi ptr [ undef, [[BB:%.*]] ], [ [[TMP17:%.*]], [[BB29:%.*]] ]
+; SCCP-NEXT:    [[TMP10:%.*]] = phi ptr [ undef, [[BB]] ], [ [[TMP18:%.*]], [[BB29]] ]
 ; SCCP-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP30:%.*]], [[BB29]] ]
 ; SCCP-NEXT:    [[C_1:%.*]] = icmp slt i32 [[TMP11]], 8
 ; SCCP-NEXT:    br i1 [[C_1]], label [[BB13:%.*]], label [[BB31:%.*]]
 ; SCCP:       bb13:
-; SCCP-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2]], %struct.blam.2* [[ARG]], i32 0, i32 0
 ; SCCP-NEXT:    [[TMP15:%.*]] = add i32 [[TMP7]], [[TMP11]]
 ; SCCP-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 4
-; SCCP-NEXT:    [[TMP17]] = call dereferenceable(1) i8* @spam(%struct.baz.1* [[TMP14]], i32 [[TMP16]])
-; SCCP-NEXT:    [[TMP18]] = bitcast i8* [[TMP17]] to i16*
-; SCCP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, i8* [[TMP17]], i64 2
-; SCCP-NEXT:    [[TMP20:%.*]] = load i8, i8* [[TMP19]], align 1
+; SCCP-NEXT:    [[TMP17]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP16]])
+; SCCP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP17]], i64 2
+; SCCP-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
 ; SCCP-NEXT:    [[TMP21:%.*]] = zext i8 [[TMP20]] to i32
 ; SCCP-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[TMP21]], 0
 ; SCCP-NEXT:    br i1 [[TMP22]], label [[BB23:%.*]], label [[BB25:%.*]]
 ; SCCP:       bb23:
 ; SCCP-NEXT:    [[TMP24:%.*]] = trunc i32 [[TMP3]] to i16
-; SCCP-NEXT:    store i16 [[TMP24]], i16* [[TMP18]], align 2
+; SCCP-NEXT:    store i16 [[TMP24]], ptr [[TMP17]], align 2
 ; SCCP-NEXT:    br label [[BB31]]
 ; SCCP:       bb25:
-; SCCP-NEXT:    [[TMP26:%.*]] = load i16, i16* [[TMP18]], align 2
+; SCCP-NEXT:    [[TMP26:%.*]] = load i16, ptr [[TMP17]], align 2
 ; SCCP-NEXT:    [[TMP27:%.*]] = zext i16 [[TMP26]] to i32
 ; SCCP-NEXT:    [[TMP28:%.*]] = icmp eq i32 [[TMP27]], [[TMP3]]
 ; SCCP-NEXT:    br i1 [[TMP28]], label [[BB31]], label [[BB29]]
@@ -632,12 +627,12 @@ define i8* @wobble(%struct.blam.2* %arg, i32 %arg1) align 2 {
 ; SCCP-NEXT:    [[TMP30]] = add nsw i32 [[TMP11]], 1
 ; SCCP-NEXT:    br label [[BB8]]
 ; SCCP:       bb31:
-; SCCP-NEXT:    [[TMP32:%.*]] = phi i8* [ [[TMP17]], [[BB23]] ], [ [[TMP17]], [[BB25]] ], [ [[TMP9]], [[BB8]] ]
-; SCCP-NEXT:    [[TMP33:%.*]] = phi i16* [ [[TMP18]], [[BB23]] ], [ [[TMP18]], [[BB25]] ], [ [[TMP10]], [[BB8]] ]
+; SCCP-NEXT:    [[TMP32:%.*]] = phi ptr [ [[TMP17]], [[BB23]] ], [ [[TMP17]], [[BB25]] ], [ [[TMP9]], [[BB8]] ]
+; SCCP-NEXT:    [[TMP33:%.*]] = phi ptr [ [[TMP17]], [[BB23]] ], [ [[TMP17]], [[BB25]] ], [ [[TMP10]], [[BB8]] ]
 ; SCCP-NEXT:    [[TMP34:%.*]] = icmp eq i32 [[TMP11]], 0
 ; SCCP-NEXT:    br i1 [[TMP34]], label [[BB35:%.*]], label [[BB37:%.*]]
 ; SCCP:       bb35:
-; SCCP-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, i8* [[TMP32]], i64 1
+; SCCP-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, ptr [[TMP32]], i64 1
 ; SCCP-NEXT:    br label [[BB66:%.*]]
 ; SCCP:       bb37:
 ; SCCP-NEXT:    [[C_2:%.*]] = icmp eq i32 [[TMP11]], 8
@@ -645,19 +640,18 @@ define i8* @wobble(%struct.blam.2* %arg, i32 %arg1) align 2 {
 ; SCCP:       bb39:
 ; SCCP-NEXT:    [[TMP40:%.*]] = add nsw i32 [[TMP11]], -1
 ; SCCP-NEXT:    [[TMP41:%.*]] = trunc i32 [[TMP3]] to i16
-; SCCP-NEXT:    store i16 [[TMP41]], i16* bitcast ([4 x i8]* @global.11 to i16*), align 1
-; SCCP-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2]], %struct.blam.2* [[ARG]], i32 0, i32 0
+; SCCP-NEXT:    store i16 [[TMP41]], ptr @global.11, align 1
 ; SCCP-NEXT:    [[TMP43:%.*]] = add i32 [[TMP7]], [[TMP40]]
 ; SCCP-NEXT:    [[TMP44:%.*]] = mul i32 [[TMP43]], 4
 ; SCCP-NEXT:    [[TMP45:%.*]] = add i32 [[TMP44]], 2
-; SCCP-NEXT:    [[TMP46:%.*]] = call dereferenceable(1) i8* @spam(%struct.baz.1* [[TMP42]], i32 [[TMP45]])
-; SCCP-NEXT:    [[TMP47:%.*]] = load i8, i8* [[TMP46]], align 1
+; SCCP-NEXT:    [[TMP46:%.*]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP45]])
+; SCCP-NEXT:    [[TMP47:%.*]] = load i8, ptr [[TMP46]], align 1
 ; SCCP-NEXT:    [[TMP48:%.*]] = zext i8 [[TMP47]] to i32
 ; SCCP-NEXT:    [[TMP49:%.*]] = sub i32 [[TMP43]], 1
 ; SCCP-NEXT:    [[TMP50:%.*]] = mul i32 [[TMP49]], 4
 ; SCCP-NEXT:    [[TMP51:%.*]] = add i32 [[TMP50]], 2
-; SCCP-NEXT:    [[TMP52:%.*]] = call dereferenceable(1) i8* @spam(%struct.baz.1* [[TMP42]], i32 [[TMP51]])
-; SCCP-NEXT:    [[TMP53:%.*]] = load i8, i8* [[TMP52]], align 1
+; SCCP-NEXT:    [[TMP52:%.*]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP51]])
+; SCCP-NEXT:    [[TMP53:%.*]] = load i8, ptr [[TMP52]], align 1
 ; SCCP-NEXT:    [[TMP54:%.*]] = zext i8 [[TMP53]] to i32
 ; SCCP-NEXT:    [[TMP55:%.*]] = icmp sgt i32 [[TMP48]], [[TMP54]]
 ; SCCP-NEXT:    br i1 [[TMP55]], label [[BB56:%.*]], label [[BB60:%.*]]
@@ -665,19 +659,17 @@ define i8* @wobble(%struct.blam.2* %arg, i32 %arg1) align 2 {
 ; SCCP-NEXT:    [[TMP57:%.*]] = add nsw i32 [[TMP40]], -1
 ; SCCP-NEXT:    br label [[BB60]]
 ; SCCP:       bb58:
-; SCCP-NEXT:    [[TMP59:%.*]] = bitcast i16* [[TMP33]] to i8*
-; SCCP-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 getelementptr inbounds ([4 x i8], [4 x i8]* @global.11, i64 0, i64 0), i8* align 2 [[TMP59]], i64 4, i1 false)
+; SCCP-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 @global.11, ptr align 2 [[TMP33]], i64 4, i1 false)
 ; SCCP-NEXT:    br label [[BB60]]
 ; SCCP:       bb60:
 ; SCCP-NEXT:    [[TMP61:%.*]] = phi i32 [ [[TMP57]], [[BB56]] ], [ [[TMP40]], [[BB39]] ], [ [[TMP11]], [[BB58]] ]
-; SCCP-NEXT:    [[TMP62:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2]], %struct.blam.2* [[ARG]], i32 0, i32 0
 ; SCCP-NEXT:    [[TMP63:%.*]] = add i32 [[TMP7]], 1
 ; SCCP-NEXT:    [[TMP64:%.*]] = mul i32 [[TMP63]], 4
-; SCCP-NEXT:    [[TMP65:%.*]] = call dereferenceable(1) i8* @spam(%struct.baz.1* [[TMP62]], i32 [[TMP64]])
+; SCCP-NEXT:    [[TMP65:%.*]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP64]])
 ; SCCP-NEXT:    br label [[BB66]]
 ; SCCP:       bb66:
-; SCCP-NEXT:    [[TMP67:%.*]] = phi i8* [ [[TMP36]], [[BB35]] ], [ null, [[BB60]] ]
-; SCCP-NEXT:    ret i8* [[TMP67]]
+; SCCP-NEXT:    [[TMP67:%.*]] = phi ptr [ [[TMP36]], [[BB35]] ], [ null, [[BB60]] ]
+; SCCP-NEXT:    ret ptr [[TMP67]]
 ;
 ; IPSCCP-LABEL: @wobble(
 ; IPSCCP-NEXT:  bb:
@@ -685,33 +677,31 @@ define i8* @wobble(%struct.blam.2* %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP]], [[ARG1]]
 ; IPSCCP-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 65535
 ; IPSCCP-NEXT:    [[TMP4:%.*]] = mul i32 [[ARG1]], 8
-; IPSCCP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2:%.*]], %struct.blam.2* [[ARG:%.*]], i32 0, i32 1
-; IPSCCP-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 8
+; IPSCCP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2:%.*]], ptr [[ARG:%.*]], i32 0, i32 1
+; IPSCCP-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 8
 ; IPSCCP-NEXT:    [[TMP7:%.*]] = and i32 [[TMP4]], [[TMP6]]
 ; IPSCCP-NEXT:    br label [[BB8:%.*]]
 ; IPSCCP:       bb8:
-; IPSCCP-NEXT:    [[TMP9:%.*]] = phi i8* [ undef, [[BB:%.*]] ], [ [[TMP17:%.*]], [[BB29:%.*]] ]
-; IPSCCP-NEXT:    [[TMP10:%.*]] = phi i16* [ undef, [[BB]] ], [ [[TMP18:%.*]], [[BB29]] ]
+; IPSCCP-NEXT:    [[TMP9:%.*]] = phi ptr [ undef, [[BB:%.*]] ], [ [[TMP17:%.*]], [[BB29:%.*]] ]
+; IPSCCP-NEXT:    [[TMP10:%.*]] = phi ptr [ undef, [[BB]] ], [ [[TMP18:%.*]], [[BB29]] ]
 ; IPSCCP-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP30:%.*]], [[BB29]] ]
 ; IPSCCP-NEXT:    [[C_1:%.*]] = icmp slt i32 [[TMP11]], 8
 ; IPSCCP-NEXT:    br i1 [[C_1]], label [[BB13:%.*]], label [[BB31:%.*]]
 ; IPSCCP:       bb13:
-; IPSCCP-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2]], %struct.blam.2* [[ARG]], i32 0, i32 0
 ; IPSCCP-NEXT:    [[TMP15:%.*]] = add i32 [[TMP7]], [[TMP11]]
 ; IPSCCP-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 4
-; IPSCCP-NEXT:    [[TMP17]] = call dereferenceable(1) i8* @spam(%struct.baz.1* [[TMP14]], i32 [[TMP16]])
-; IPSCCP-NEXT:    [[TMP18]] = bitcast i8* [[TMP17]] to i16*
-; IPSCCP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, i8* [[TMP17]], i64 2
-; IPSCCP-NEXT:    [[TMP20:%.*]] = load i8, i8* [[TMP19]], align 1
+; IPSCCP-NEXT:    [[TMP17]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP16]])
+; IPSCCP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP17]], i64 2
+; IPSCCP-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
 ; IPSCCP-NEXT:    [[TMP21:%.*]] = zext i8 [[TMP20]] to i32
 ; IPSCCP-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[TMP21]], 0
 ; IPSCCP-NEXT:    br i1 [[TMP22]], label [[BB23:%.*]], label [[BB25:%.*]]
 ; IPSCCP:       bb23:
 ; IPSCCP-NEXT:    [[TMP24:%.*]] = trunc i32 [[TMP3]] to i16
-; IPSCCP-NEXT:    store i16 [[TMP24]], i16* [[TMP18]], align 2
+; IPSCCP-NEXT:    store i16 [[TMP24]], ptr [[TMP17]], align 2
 ; IPSCCP-NEXT:    br label [[BB31]]
 ; IPSCCP:       bb25:
-; IPSCCP-NEXT:    [[TMP26:%.*]] = load i16, i16* [[TMP18]], align 2
+; IPSCCP-NEXT:    [[TMP26:%.*]] = load i16, ptr [[TMP17]], align 2
 ; IPSCCP-NEXT:    [[TMP27:%.*]] = zext i16 [[TMP26]] to i32
 ; IPSCCP-NEXT:    [[TMP28:%.*]] = icmp eq i32 [[TMP27]], [[TMP3]]
 ; IPSCCP-NEXT:    br i1 [[TMP28]], label [[BB31]], label [[BB29]]
@@ -719,87 +709,82 @@ define i8* @wobble(%struct.blam.2* %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    [[TMP30]] = add nsw i32 [[TMP11]], 1
 ; IPSCCP-NEXT:    br label [[BB8]]
 ; IPSCCP:       bb31:
-; IPSCCP-NEXT:    [[TMP32:%.*]] = phi i8* [ [[TMP17]], [[BB23]] ], [ [[TMP17]], [[BB25]] ], [ [[TMP9]], [[BB8]] ]
-; IPSCCP-NEXT:    [[TMP33:%.*]] = phi i16* [ [[TMP18]], [[BB23]] ], [ [[TMP18]], [[BB25]] ], [ [[TMP10]], [[BB8]] ]
+; IPSCCP-NEXT:    [[TMP32:%.*]] = phi ptr [ [[TMP17]], [[BB23]] ], [ [[TMP17]], [[BB25]] ], [ [[TMP9]], [[BB8]] ]
+; IPSCCP-NEXT:    [[TMP33:%.*]] = phi ptr [ [[TMP17]], [[BB23]] ], [ [[TMP17]], [[BB25]] ], [ [[TMP10]], [[BB8]] ]
 ; IPSCCP-NEXT:    [[TMP34:%.*]] = icmp eq i32 [[TMP11]], 0
 ; IPSCCP-NEXT:    br i1 [[TMP34]], label [[BB35:%.*]], label [[BB37:%.*]]
 ; IPSCCP:       bb35:
-; IPSCCP-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, i8* [[TMP32]], i64 1
+; IPSCCP-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, ptr [[TMP32]], i64 1
 ; IPSCCP-NEXT:    br label [[BB66:%.*]]
 ; IPSCCP:       bb37:
 ; IPSCCP-NEXT:    [[C_2:%.*]] = icmp eq i32 [[TMP11]], 8
 ; IPSCCP-NEXT:    br i1 [[C_2]], label [[BB39:%.*]], label [[BB58:%.*]]
 ; IPSCCP:       bb39:
 ; IPSCCP-NEXT:    [[TMP41:%.*]] = trunc i32 [[TMP3]] to i16
-; IPSCCP-NEXT:    store i16 [[TMP41]], i16* bitcast ([4 x i8]* @global.11 to i16*), align 1
-; IPSCCP-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2]], %struct.blam.2* [[ARG]], i32 0, i32 0
+; IPSCCP-NEXT:    store i16 [[TMP41]], ptr @global.11, align 1
 ; IPSCCP-NEXT:    [[TMP43:%.*]] = add i32 [[TMP7]], 7
 ; IPSCCP-NEXT:    [[TMP44:%.*]] = mul i32 [[TMP43]], 4
 ; IPSCCP-NEXT:    [[TMP45:%.*]] = add i32 [[TMP44]], 2
-; IPSCCP-NEXT:    [[TMP46:%.*]] = call dereferenceable(1) i8* @spam(%struct.baz.1* [[TMP42]], i32 [[TMP45]])
-; IPSCCP-NEXT:    [[TMP47:%.*]] = load i8, i8* [[TMP46]], align 1
+; IPSCCP-NEXT:    [[TMP46:%.*]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP45]])
+; IPSCCP-NEXT:    [[TMP47:%.*]] = load i8, ptr [[TMP46]], align 1
 ; IPSCCP-NEXT:    [[TMP48:%.*]] = zext i8 [[TMP47]] to i32
 ; IPSCCP-NEXT:    [[TMP49:%.*]] = sub i32 [[TMP43]], 1
 ; IPSCCP-NEXT:    [[TMP50:%.*]] = mul i32 [[TMP49]], 4
 ; IPSCCP-NEXT:    [[TMP51:%.*]] = add i32 [[TMP50]], 2
-; IPSCCP-NEXT:    [[TMP52:%.*]] = call dereferenceable(1) i8* @spam(%struct.baz.1* [[TMP42]], i32 [[TMP51]])
-; IPSCCP-NEXT:    [[TMP53:%.*]] = load i8, i8* [[TMP52]], align 1
+; IPSCCP-NEXT:    [[TMP52:%.*]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP51]])
+; IPSCCP-NEXT:    [[TMP53:%.*]] = load i8, ptr [[TMP52]], align 1
 ; IPSCCP-NEXT:    [[TMP54:%.*]] = zext i8 [[TMP53]] to i32
 ; IPSCCP-NEXT:    [[TMP55:%.*]] = icmp sgt i32 [[TMP48]], [[TMP54]]
 ; IPSCCP-NEXT:    br i1 [[TMP55]], label [[BB56:%.*]], label [[BB60:%.*]]
 ; IPSCCP:       bb56:
 ; IPSCCP-NEXT:    br label [[BB60]]
 ; IPSCCP:       bb58:
-; IPSCCP-NEXT:    [[TMP59:%.*]] = bitcast i16* [[TMP33]] to i8*
-; IPSCCP-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 getelementptr inbounds ([4 x i8], [4 x i8]* @global.11, i64 0, i64 0), i8* align 2 [[TMP59]], i64 4, i1 false)
+; IPSCCP-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 @global.11, ptr align 2 [[TMP33]], i64 4, i1 false)
 ; IPSCCP-NEXT:    br label [[BB60]]
 ; IPSCCP:       bb60:
 ; IPSCCP-NEXT:    [[TMP61:%.*]] = phi i32 [ 6, [[BB56]] ], [ 7, [[BB39]] ], [ [[TMP11]], [[BB58]] ]
-; IPSCCP-NEXT:    [[TMP62:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2]], %struct.blam.2* [[ARG]], i32 0, i32 0
 ; IPSCCP-NEXT:    [[TMP63:%.*]] = add i32 [[TMP7]], 1
 ; IPSCCP-NEXT:    [[TMP64:%.*]] = mul i32 [[TMP63]], 4
-; IPSCCP-NEXT:    [[TMP65:%.*]] = call dereferenceable(1) i8* @spam(%struct.baz.1* [[TMP62]], i32 [[TMP64]])
+; IPSCCP-NEXT:    [[TMP65:%.*]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP64]])
 ; IPSCCP-NEXT:    br label [[BB66]]
 ; IPSCCP:       bb66:
-; IPSCCP-NEXT:    [[TMP67:%.*]] = phi i8* [ [[TMP36]], [[BB35]] ], [ null, [[BB60]] ]
-; IPSCCP-NEXT:    ret i8* [[TMP67]]
+; IPSCCP-NEXT:    [[TMP67:%.*]] = phi ptr [ [[TMP36]], [[BB35]] ], [ null, [[BB60]] ]
+; IPSCCP-NEXT:    ret ptr [[TMP67]]
 ;
 bb:
   %tmp = lshr i32 %arg1, 16
   %tmp2 = xor i32 %tmp, %arg1
   %tmp3 = and i32 %tmp2, 65535
   %tmp4 = mul i32 %arg1, 8
-  %tmp5 = getelementptr inbounds %struct.blam.2, %struct.blam.2* %arg, i32 0, i32 1
-  %tmp6 = load i32, i32* %tmp5, align 8
+  %tmp5 = getelementptr inbounds %struct.blam.2, ptr %arg, i32 0, i32 1
+  %tmp6 = load i32, ptr %tmp5, align 8
   %tmp7 = and i32 %tmp4, %tmp6
   br label %bb8
 
 bb8:                                              ; preds = %bb29, %bb
-  %tmp9 = phi i8* [ undef, %bb ], [ %tmp17, %bb29 ]
-  %tmp10 = phi i16* [ undef, %bb ], [ %tmp18, %bb29 ]
+  %tmp9 = phi ptr [ undef, %bb ], [ %tmp17, %bb29 ]
+  %tmp10 = phi ptr [ undef, %bb ], [ %tmp17, %bb29 ]
   %tmp11 = phi i32 [ 0, %bb ], [ %tmp30, %bb29 ]
   %c.1 = icmp slt i32 %tmp11, 8
   br i1 %c.1, label %bb13, label %bb31
 
 bb13:                                             ; preds = %bb8
-  %tmp14 = getelementptr inbounds %struct.blam.2, %struct.blam.2* %arg, i32 0, i32 0
   %tmp15 = add i32 %tmp7, %tmp11
   %tmp16 = mul i32 %tmp15, 4
-  %tmp17 = call dereferenceable(1) i8* @spam(%struct.baz.1* %tmp14, i32 %tmp16)
-  %tmp18 = bitcast i8* %tmp17 to i16*
-  %tmp19 = getelementptr inbounds i8, i8* %tmp17, i64 2
-  %tmp20 = load i8, i8* %tmp19, align 1
+  %tmp17 = call dereferenceable(1) ptr @spam(ptr %arg, i32 %tmp16)
+  %tmp19 = getelementptr inbounds i8, ptr %tmp17, i64 2
+  %tmp20 = load i8, ptr %tmp19, align 1
   %tmp21 = zext i8 %tmp20 to i32
   %tmp22 = icmp eq i32 %tmp21, 0
   br i1 %tmp22, label %bb23, label %bb25
 
 bb23:                                             ; preds = %bb13
   %tmp24 = trunc i32 %tmp3 to i16
-  store i16 %tmp24, i16* %tmp18, align 2
+  store i16 %tmp24, ptr %tmp17, align 2
   br label %bb31
 
 bb25:                                             ; preds = %bb13
-  %tmp26 = load i16, i16* %tmp18, align 2
+  %tmp26 = load i16, ptr %tmp17, align 2
   %tmp27 = zext i16 %tmp26 to i32
   %tmp28 = icmp eq i32 %tmp27, %tmp3
   br i1 %tmp28, label %bb31, label %bb29
@@ -809,13 +794,13 @@ bb29:                                             ; preds = %bb25
   br label %bb8
 
 bb31:                                             ; preds = %bb25, %bb23, %bb8
-  %tmp32 = phi i8* [ %tmp17, %bb23 ], [ %tmp17, %bb25 ], [ %tmp9, %bb8 ]
-  %tmp33 = phi i16* [ %tmp18, %bb23 ], [ %tmp18, %bb25 ], [ %tmp10, %bb8 ]
+  %tmp32 = phi ptr [ %tmp17, %bb23 ], [ %tmp17, %bb25 ], [ %tmp9, %bb8 ]
+  %tmp33 = phi ptr [ %tmp17, %bb23 ], [ %tmp17, %bb25 ], [ %tmp10, %bb8 ]
   %tmp34 = icmp eq i32 %tmp11, 0
   br i1 %tmp34, label %bb35, label %bb37
 
 bb35:                                             ; preds = %bb31
-  %tmp36 = getelementptr inbounds i8, i8* %tmp32, i64 1
+  %tmp36 = getelementptr inbounds i8, ptr %tmp32, i64 1
   br label %bb66
 
 bb37:                                             ; preds = %bb31
@@ -825,19 +810,18 @@ bb37:                                             ; preds = %bb31
 bb39:                                             ; preds = %bb37
   %tmp40 = add nsw i32 %tmp11, -1
   %tmp41 = trunc i32 %tmp3 to i16
-  store i16 %tmp41, i16* bitcast ([4 x i8]* @global.11 to i16*), align 1
-  %tmp42 = getelementptr inbounds %struct.blam.2, %struct.blam.2* %arg, i32 0, i32 0
+  store i16 %tmp41, ptr @global.11, align 1
   %tmp43 = add i32 %tmp7, %tmp40
   %tmp44 = mul i32 %tmp43, 4
   %tmp45 = add i32 %tmp44, 2
-  %tmp46 = call dereferenceable(1) i8* @spam(%struct.baz.1* %tmp42, i32 %tmp45)
-  %tmp47 = load i8, i8* %tmp46, align 1
+  %tmp46 = call dereferenceable(1) ptr @spam(ptr %arg, i32 %tmp45)
+  %tmp47 = load i8, ptr %tmp46, align 1
   %tmp48 = zext i8 %tmp47 to i32
   %tmp49 = sub i32 %tmp43, 1
   %tmp50 = mul i32 %tmp49, 4
   %tmp51 = add i32 %tmp50, 2
-  %tmp52 = call dereferenceable(1) i8* @spam(%struct.baz.1* %tmp42, i32 %tmp51)
-  %tmp53 = load i8, i8* %tmp52, align 1
+  %tmp52 = call dereferenceable(1) ptr @spam(ptr %arg, i32 %tmp51)
+  %tmp53 = load i8, ptr %tmp52, align 1
   %tmp54 = zext i8 %tmp53 to i32
   %tmp55 = icmp sgt i32 %tmp48, %tmp54
   br i1 %tmp55, label %bb56, label %bb60
@@ -847,21 +831,19 @@ bb56:                                             ; preds = %bb39
   br label %bb60
 
 bb58:                                             ; preds = %bb37
-  %tmp59 = bitcast i16* %tmp33 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 getelementptr inbounds ([4 x i8], [4 x i8]* @global.11, i64 0, i64 0), i8* align 2 %tmp59, i64 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 @global.11, ptr align 2 %tmp33, i64 4, i1 false)
   br label %bb60
 
 bb60:                                             ; preds = %bb58, %bb56, %bb39
   %tmp61 = phi i32 [ %tmp57, %bb56 ], [ %tmp40, %bb39 ], [ %tmp11, %bb58 ]
-  %tmp62 = getelementptr inbounds %struct.blam.2, %struct.blam.2* %arg, i32 0, i32 0
   %tmp63 = add i32 %tmp7, 1
   %tmp64 = mul i32 %tmp63, 4
-  %tmp65 = call dereferenceable(1) i8* @spam(%struct.baz.1* %tmp62, i32 %tmp64)
+  %tmp65 = call dereferenceable(1) ptr @spam(ptr %arg, i32 %tmp64)
   br label %bb66
 
 bb66:                                             ; preds = %bb60, %bb35
-  %tmp67 = phi i8* [ %tmp36, %bb35 ], [ null, %bb60 ]
-  ret i8* %tmp67
+  %tmp67 = phi ptr [ %tmp36, %bb35 ], [ null, %bb60 ]
+  ret ptr %tmp67
 }
 
 

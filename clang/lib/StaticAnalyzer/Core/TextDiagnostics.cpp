@@ -32,7 +32,7 @@ using namespace tooling;
 
 namespace {
 /// Emitsd minimal diagnostics (report message + notes) for the 'none' output
-/// type to the standard error, or to to compliment many others. Emits detailed
+/// type to the standard error, or to compliment many others. Emits detailed
 /// diagnostics in textual format for the 'text' output type.
 class TextDiagnostics : public PathDiagnosticConsumer {
   PathDiagnosticConsumerOptions DiagOpts;

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='func.func(scf-for-loop-range-folding)' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(scf-for-loop-range-folding))' -split-input-file | FileCheck %s
 
 func.func @fold_one_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: index) {
   %c0 = arith.constant 0 : index

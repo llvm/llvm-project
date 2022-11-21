@@ -331,6 +331,15 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
   if (Previous.is(tok::l_square) && Previous.is(TT_ObjCMethodExpr))
     return false;
 
+  if (Current.is(TT_ConditionalExpr) && Previous.is(tok::r_paren) &&
+      Previous.MatchingParen && Previous.MatchingParen->Previous &&
+      Previous.MatchingParen->Previous->MatchingParen &&
+      Previous.MatchingParen->Previous->MatchingParen->is(TT_LambdaLBrace)) {
+    // We have a lambda within a conditional expression, allow breaking here.
+    assert(Previous.MatchingParen->Previous->is(tok::r_brace));
+    return true;
+  }
+
   return !CurrentState.NoLineBreak;
 }
 

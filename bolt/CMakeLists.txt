@@ -55,6 +55,7 @@ if (BOLT_ENABLE_RUNTIME)
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                -DCMAKE_INSTALL_PREFIX=${LLVM_BINARY_DIR}
+               -DLLVM_LIBDIR_SUFFIX=${LLVM_LIBDIR_SUFFIX}
     BUILD_ALWAYS True
     )
   install(CODE "execute_process\(COMMAND \${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=\${CMAKE_INSTALL_PREFIX} -P ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/cmake_install.cmake \)"
@@ -87,3 +88,6 @@ option(BOLT_INCLUDE_DOCS "Generate build targets for the BOLT docs."
 if (BOLT_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc.in
+               ${CMAKE_CURRENT_BINARY_DIR}/include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc @ONLY)

@@ -5,7 +5,7 @@
 ; function attributes when we derive readnone.
 
 define ptr @given_argmem_infer_readnone(ptr %p) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @given_argmem_infer_readnone(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret ptr [[P:%.*]]
@@ -15,7 +15,7 @@ entry:
 }
 
 define ptr @given_inaccessible_infer_readnone(ptr %p) #1 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @given_inaccessible_infer_readnone(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret ptr [[P:%.*]]
@@ -25,7 +25,7 @@ entry:
 }
 
 define ptr @given_inaccessible_or_argmem_infer_readnone(ptr %p) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @given_inaccessible_or_argmem_infer_readnone(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret ptr [[P:%.*]]

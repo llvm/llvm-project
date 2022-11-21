@@ -213,6 +213,12 @@ bool LoongArchDAGToDAGISel::selectSExti32(SDValue N, SDValue &Val) {
     Val = N.getOperand(0);
     return true;
   }
+  if (N.getOpcode() == LoongArchISD::BSTRPICK &&
+      N.getConstantOperandVal(1) < UINT64_C(0X1F) &&
+      N.getConstantOperandVal(2) == UINT64_C(0)) {
+    Val = N;
+    return true;
+  }
   MVT VT = N.getSimpleValueType();
   if (CurDAG->ComputeNumSignBits(N) > (VT.getSizeInBits() - 32)) {
     Val = N;

@@ -283,6 +283,7 @@ def llvm_v128i1_ty     : LLVMType<v128i1>;   // 128 x i1
 def llvm_v256i1_ty     : LLVMType<v256i1>;   // 256 x i1
 def llvm_v512i1_ty     : LLVMType<v512i1>;   // 512 x i1
 def llvm_v1024i1_ty    : LLVMType<v1024i1>;  //1024 x i1
+def llvm_v2048i1_ty    : LLVMType<v2048i1>;  //2048 x i1
 
 def llvm_v1i8_ty       : LLVMType<v1i8>;     //  1 x i8
 def llvm_v2i8_ty       : LLVMType<v2i8>;     //  2 x i8
@@ -997,6 +998,13 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
                                        [llvm_metadata_ty,
                                         llvm_metadata_ty,
                                         llvm_metadata_ty]>;
+  def int_dbg_assign        : DefaultAttrsIntrinsic<[],
+                                       [llvm_metadata_ty,
+                                        llvm_metadata_ty,
+                                        llvm_metadata_ty,
+                                        llvm_metadata_ty,
+                                        llvm_metadata_ty,
+                                        llvm_metadata_ty]>;
   def int_dbg_label        : DefaultAttrsIntrinsic<[],
                                        [llvm_metadata_ty]>;
   def int_dbg_def          : DefaultAttrsIntrinsic<[],
@@ -1253,21 +1261,20 @@ def int_experimental_gc_statepoint : Intrinsic<[llvm_token_ty],
                                 ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>,
                                 ImmArg<ArgIndex<4>>]>;
 
-def int_experimental_gc_result   : Intrinsic<[llvm_any_ty], [llvm_token_ty],
-                                             [IntrNoMem]>;
-def int_experimental_gc_relocate : Intrinsic<[llvm_any_ty],
-                                             [llvm_token_ty, llvm_i32_ty,
-                                              llvm_i32_ty],
-                                             [IntrNoMem, ImmArg<ArgIndex<1>>,
-                                              ImmArg<ArgIndex<2>>]>;
+def int_experimental_gc_result : DefaultAttrsIntrinsic<
+    [llvm_any_ty], [llvm_token_ty], [IntrNoMem]>;
 
-def int_experimental_gc_get_pointer_base : Intrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrWillReturn,
-                 ReadNone<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_experimental_gc_relocate : DefaultAttrsIntrinsic<
+    [llvm_any_ty], [llvm_token_ty, llvm_i32_ty, llvm_i32_ty],
+    [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
-def int_experimental_gc_get_pointer_offset : Intrinsic<[llvm_i64_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrWillReturn,
-                 ReadNone<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_experimental_gc_get_pointer_base : DefaultAttrsIntrinsic<
+    [llvm_anyptr_ty], [llvm_anyptr_ty],
+    [IntrNoMem, IntrWillReturn, ReadNone<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+
+def int_experimental_gc_get_pointer_offset : DefaultAttrsIntrinsic<
+    [llvm_i64_ty], [llvm_anyptr_ty],
+    [IntrNoMem, IntrWillReturn, ReadNone<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
 //===------------------------ Coroutine Intrinsics ---------------===//
 // These are documented in docs/Coroutines.rst
@@ -1639,6 +1646,10 @@ let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_roundtozero : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_rint : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;

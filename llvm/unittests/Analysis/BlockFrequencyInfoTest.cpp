@@ -91,7 +91,7 @@ TEST_F(BlockFrequencyInfoTest, Basic) {
   EXPECT_EQ(BFI.getBlockFreq(BB3).getFrequency(), BB3Freq);
 }
 
-static_assert(std::is_trivially_copyable<bfi_detail::BlockMass>::value,
+static_assert(std::is_trivially_copyable_v<bfi_detail::BlockMass>,
               "trivially copyable");
 
 } // end anonymous namespace

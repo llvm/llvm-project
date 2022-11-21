@@ -45,7 +45,7 @@ private:
 
 public:
   void HandleDiagnostic(clang::DiagnosticsEngine::Level diagLevel,
-      const clang::Diagnostic &info) override;
+                        const clang::Diagnostic &info) override;
 
   /// Flush the buffered diagnostics to a given diagnostic engine.
   void flushDiagnostics(clang::DiagnosticsEngine &diags) const;

@@ -77,6 +77,15 @@ add_gen_header(
 )
 
 add_gen_header(
+  setjmp
+  DEF_FILE setjmp.h.def
+  GEN_HDR setjmp.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.jmp_buf
+)
+
+add_gen_header(
   string
   DEF_FILE string.h.def
   GEN_HDR string.h
@@ -135,10 +144,11 @@ add_gen_header(
     ../config/${LIBC_TARGET_OS}/signal.h.in
   DEPENDS
     .llvm-libc-macros.signal_macros
-    .llvm-libc-types.struct_sigaction
     .llvm-libc-types.__sighandler_t
-    .llvm-libc-types.stack_t
     .llvm-libc-types.sigset_t
+    .llvm-libc-types.sig_atomic_t
+    .llvm-libc-types.stack_t
+    .llvm-libc-types.struct_sigaction
     .llvm-libc-types.pid_t
 )
 
@@ -149,8 +159,10 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.file_seek_macros
+    .llvm-libc-macros.stdio_macros
     .llvm-libc-types.cookie_io_functions_t
     .llvm-libc-types.FILE
+    .llvm-libc-types.off_t
     .llvm-libc-types.size_t
 )
 
@@ -185,6 +197,7 @@ add_gen_header(
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
     .llvm-libc-types.uid_t
+    .llvm-libc-types.__getoptargv_t
 )
 
 add_gen_header(

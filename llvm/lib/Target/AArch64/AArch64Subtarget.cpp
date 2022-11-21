@@ -142,6 +142,7 @@ void AArch64Subtarget::initializeProperties() {
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA710:
+  case CortexA715:
   case CortexX2:
     PrefFunctionLogAlignment = 4;
     VScaleForTuning = 1;

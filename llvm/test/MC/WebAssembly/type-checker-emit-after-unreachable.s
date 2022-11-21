@@ -16,12 +16,12 @@ foo:
   end_function
 
 # CHECK-LABEL: foo:
-# CHEKC-NEXT: .functype foo () -> (i32)
-# CHEKC-NEXT: i32.const 1
-# CHEKC-NEXT: if i32
-# CHEKC-NEXT: i32.const 2
-# CHEKC-NEXT: return
-# CHEKC-NEXT: else
-# CHEKC-NEXT: i32.const 3
-# CHEKC-NEXT: end_if
-# CHEKC-NEXT: end_function
+# CHECK-NEXT: .functype foo () -> (i32)
+# CHECK-NEXT: i32.const 1
+# CHECK-NEXT: if i32
+# CHECK-NEXT: i32.const 2
+# CHECK-NEXT: return
+# CHECK-NEXT: else
+# CHECK-NEXT: i32.const 3
+# CHECK-NEXT: end_if
+# CHECK-NEXT: end_function

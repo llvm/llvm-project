@@ -651,10 +651,10 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
 
     ```mlir
       fir.select_type %arg : !fir.box<()> [
-          #fir.instance<!fir.type<type1>>, ^bb1(%0 : i32),
-          #fir.instance<!fir.type<type2>>, ^bb2(%2 : i32),
-          #fir.subsumed<!fir.type<type3>>, ^bb3(%2 : i32),
-          #fir.instance<!fir.type<type4>>, ^bb4(%1,%3 : i32,f32),
+          #fir.type_is<!fir.type<type1>>, ^bb1(%0 : i32),
+          #fir.type_is<!fir.type<type2>>, ^bb2(%2 : i32),
+          #fir.class_is<!fir.type<type3>>, ^bb3(%2 : i32),
+          #fir.type_is<!fir.type<type4>>, ^bb4(%1,%3 : i32,f32),
           unit, ^bb5]
     ```
   }];

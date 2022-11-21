@@ -1133,7 +1133,7 @@ exit:
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind uwtable }
 ; CHECK: attributes #[[ATTR1]] = { nounwind }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { noredzone nounwind readnone ssp }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { noredzone nounwind ssp memory(none) }
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 5, i32 11}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 3}

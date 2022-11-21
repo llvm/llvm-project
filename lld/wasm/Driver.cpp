@@ -393,7 +393,27 @@ static void readConfigs(opt::InputArgList &args) {
   config->exportAll = args.hasArg(OPT_export_all);
   config->exportTable = args.hasArg(OPT_export_table);
   config->growableTable = args.hasArg(OPT_growable_table);
-  config->importMemory = args.hasArg(OPT_import_memory);
+
+  if (args.hasArg(OPT_import_memory_with_name)) {
+    config->memoryImport =
+        args.getLastArgValue(OPT_import_memory_with_name).split(",");
+  } else if (args.hasArg(OPT_import_memory)) {
+    config->memoryImport =
+        std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
+  } else {
+    config->memoryImport =
+        llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>();
+  }
+
+  if (args.hasArg(OPT_export_memory_with_name)) {
+    config->memoryExport =
+        args.getLastArgValue(OPT_export_memory_with_name);
+  } else if (args.hasArg(OPT_export_memory)) {
+    config->memoryExport = memoryName;
+  } else {
+    config->memoryExport = llvm::Optional<llvm::StringRef>();
+  }
+
   config->sharedMemory = args.hasArg(OPT_shared_memory);
   config->importTable = args.hasArg(OPT_import_table);
   config->importUndefined = args.hasArg(OPT_import_undefined);
@@ -510,8 +530,20 @@ static void setConfigs() {
   }
 
   if (config->shared) {
-    config->importMemory = true;
+    if (config->memoryExport.has_value()) {
+      error("--export-memory is incompatible with --shared");
+    }
+    if (!config->memoryImport.has_value()) {
+      config->memoryImport =
+          std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
+    }
     config->importUndefined = true;
+  }
+
+  // If neither export-memory nor import-memory is specified, default to
+  // exporting memory under its default name.
+  if (!config->memoryExport.has_value() && !config->memoryImport.has_value()) {
+    config->memoryExport = memoryName;
   }
 }
 
@@ -584,6 +616,12 @@ static void checkOptions(opt::InputArgList &args) {
   if (config->globalBase && config->isPic) {
     error("--global-base may not be used with -shared/-pie");
   }
+}
+
+static const char *getReproduceOption(opt::InputArgList &args) {
+  if (auto *arg = args.getLastArg(OPT_reproduce))
+    return arg->getValue();
+  return getenv("LLD_REPRODUCE");
 }
 
 // Force Sym to be entered in the output. Used for -u or equivalent.
@@ -923,8 +961,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   // Handle --reproduce
-  if (auto *arg = args.getLastArg(OPT_reproduce)) {
-    StringRef path = arg->getValue();
+  if (const char *path = getReproduceOption(args)) {
     Expected<std::unique_ptr<TarWriter>> errOrWriter =
         TarWriter::create(path, path::stem(path));
     if (errOrWriter) {

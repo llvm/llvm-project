@@ -1499,6 +1499,10 @@ def : ProcModel<"sapphirerapids", SkylakeServerModel,
                 ProcessorFeatures.SPRFeatures, ProcessorFeatures.SPRTuning>;
 def : ProcModel<"alderlake", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.ADLTuning>;
+def : ProcModel<"raptorlake", AlderlakePModel,
+                ProcessorFeatures.ADLFeatures, ProcessorFeatures.ADLTuning>;
+def : ProcModel<"meteorlake", AlderlakePModel,
+                ProcessorFeatures.ADLFeatures, ProcessorFeatures.ADLTuning>;
 
 // AMD CPUs.
 

@@ -22,11 +22,14 @@ subroutine s2(x)
   !ERROR: Assignment to constant 'x' is not allowed
   x = 2.0
   i = 2
-  !ERROR: Left-hand side of assignment is not modifiable
+  !ERROR: Left-hand side of assignment is not definable
+  !BECAUSE: 'a' is not a variable
   a(i) = 3.0
-  !ERROR: Left-hand side of assignment is not modifiable
+  !ERROR: Left-hand side of assignment is not definable
+  !BECAUSE: 'a' is not a variable
   a(i:i+1) = [4, 5]
-  !ERROR: Left-hand side of assignment is not modifiable
+  !ERROR: Left-hand side of assignment is not definable
+  !BECAUSE: 'c' is not a variable
   c(i:2) = "cd"
 end
 
@@ -40,7 +43,8 @@ subroutine s3
   type(t), parameter :: y = t([1,2], 3)
   integer :: i = 1
   x%a(i) = 1
-  !ERROR: Left-hand side of assignment is not modifiable
+  !ERROR: Left-hand side of assignment is not definable
+  !BECAUSE: 'y' is not a variable
   y%a(i) = 2
   x%b = 4
   !ERROR: Assignment to constant 'y%b' is not allowed
@@ -57,11 +61,14 @@ contains
     type(t), intent(in) :: x
     character(10), intent(in) :: c
     type(t) :: y
-    !ERROR: Left-hand side of assignment is not modifiable
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'x' is an INTENT(IN) dummy argument
     x = y
-    !ERROR: Left-hand side of assignment is not modifiable
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'x' is an INTENT(IN) dummy argument
     x%a(1) = 2
-    !ERROR: Left-hand side of assignment is not modifiable
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'c' is an INTENT(IN) dummy argument
     c(2:3) = "ab"
   end
 end
@@ -80,11 +87,13 @@ subroutine s5()
   use m5
   implicit none
   x = 1.0
-  !ERROR: Left-hand side of assignment is not modifiable
+  !ERROR: Left-hand side of assignment is not definable
+  !BECAUSE: 'y' is protected in this scope
   y = 2.0
   !ERROR: No explicit type declared for 'z'
   z = 3.0
-  !ERROR: Left-hand side of assignment is not modifiable
+  !ERROR: Left-hand side of assignment is not definable
+  !BECAUSE: 'b' is protected in this scope
   b%a = 1.0
 end
 

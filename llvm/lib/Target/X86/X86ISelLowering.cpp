@@ -3438,8 +3438,8 @@ template <typename T>
 static bool hasCalleePopSRet(const SmallVectorImpl<T> &Args,
                              const X86Subtarget &Subtarget) {
   // Not C++20 (yet), so no concepts available.
-  static_assert(std::is_same<T, ISD::OutputArg>::value ||
-                    std::is_same<T, ISD::InputArg>::value,
+  static_assert(std::is_same_v<T, ISD::OutputArg> ||
+                    std::is_same_v<T, ISD::InputArg>,
                 "requires ISD::OutputArg or ISD::InputArg");
 
   // Only 32-bit pops the sret.  It's a 64-bit world these days, so early-out
@@ -54367,7 +54367,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::GF2P8AFFINEQB:
       if (!IsSplat &&
           (VT.is256BitVector() ||
-           (VT.is512BitVector() && Subtarget.useBWIRegs())) &&
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
           llvm::all_of(Ops, [Op0](SDValue Op) {
             return Op0.getOperand(2) == Op.getOperand(2);
           })) {

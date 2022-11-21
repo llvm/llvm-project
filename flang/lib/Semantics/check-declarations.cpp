@@ -680,7 +680,8 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
         if (auto designator{evaluate::AsGenericExpr(symbol)}) {
           auto restorer{messages_.SetLocation(symbol.name())};
           context_.set_location(symbol.name());
-          CheckInitialTarget(foldingContext_, *designator, *object->init());
+          CheckInitialTarget(
+              foldingContext_, *designator, *object->init(), DEREF(scope_));
         }
       }
     } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
@@ -1572,9 +1573,7 @@ void CheckHelper::CheckPassArg(
     return;
   }
   const auto &name{proc.name()};
-  const Symbol *interface {
-    interface0 ? FindInterface(*interface0) : nullptr
-  };
+  const Symbol *interface { interface0 ? FindInterface(*interface0) : nullptr };
   if (!interface) {
     messages_.Say(name,
         "Procedure component '%s' must have NOPASS attribute or explicit interface"_err_en_US,

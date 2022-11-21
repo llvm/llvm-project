@@ -97,7 +97,13 @@ def WebAssemblyInstrInfo : InstrInfo;
 def : ProcessorModel<"mvp", NoSchedModel, []>;
 
 // Generic processor: latest stable version.
-def : ProcessorModel<"generic", NoSchedModel, []>;
+//
+// This includes features that have achieved phase 4 of the standards process,
+// and that are expected to work for most users in the current time, with
+// consideration given to available support in relevant engines and tools, and
+// the importance of the features.
+def : ProcessorModel<"generic", NoSchedModel,
+                      [FeatureSignExt, FeatureMutableGlobals]>;
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,

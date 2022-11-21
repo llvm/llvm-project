@@ -1,7 +1,11 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9 %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9 %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9,GCN-SDAG %s
+; XUN: llc -global-isel=1 -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9,GCN-GISEL %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,GCN-SDAG %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,GCN-GISEL %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,GCN-SDAG %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,GCN-GISEL %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9,GCN-SDAG %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9,GCN-GISEL %s
 
 ; GCN-LABEL: {{^}}ds_consume_lds:
 ; GCN: s_load_dword [[PTR:s[0-9]+]]
@@ -52,9 +56,10 @@ define amdgpu_kernel void @ds_consume_no_fold_offset_si(i32 addrspace(3)* addrsp
 ; GCN: s_load_dword [[PTR:s[0-9]+]]
 
 ; SI: s_bitset1_b32 [[PTR]], 16
-; CIPLUS: s_add_i32 [[PTR]], [[PTR]], 0x10000
+; CIPLUS-SDAG: s_add_i32 [[PTR]], [[PTR]], 0x10000
+; CIPLUS-GISEL: s_add_u32 [[PTR]], [[PTR]], 0x10000
 
-; GCN: s_mov_b32 m0, [[PTR]]
+; GCN-SDAG: s_mov_b32 m0, [[PTR]]
 ; GCN: ds_consume [[RESULT:v[0-9]+]]{{$}}
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]
@@ -66,8 +71,9 @@ define amdgpu_kernel void @ds_consume_lds_over_max_offset(i32 addrspace(3)* %lds
 }
 
 ; GCN-LABEL: {{^}}ds_consume_lds_vgpr_addr:
-; GCN: v_readfirstlane_b32 [[READLANE:s[0-9]+]], v0
-; GCN: s_mov_b32 m0, [[READLANE]]
+; GCN-SDAG: v_readfirstlane_b32 [[READLANE:s[0-9]+]], v0
+; GCN-SDAG: s_mov_b32 m0, [[READLANE]]
+; GCN-GISEL: v_readfirstlane_b32 m0, v0
 ; GCN: ds_consume [[RESULT:v[0-9]+]]{{$}}
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]

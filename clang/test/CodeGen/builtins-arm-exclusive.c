@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wall -Werror -triple thumbv8-linux-gnueabi -fno-signed-char -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
-// RUN: %clang_cc1 -Wall -Werror -triple arm64-apple-ios7.0 -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s --check-prefix=CHECK-ARM64
+// RUN: %clang_cc1 -Wall -Werror -triple thumbv8-linux-gnueabi -fno-signed-char -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s
+// RUN: %clang_cc1 -Wall -Werror -triple arm64-apple-ios7.0 -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s --check-prefix=CHECK-ARM64
 
 struct Simple {
   char a, b;

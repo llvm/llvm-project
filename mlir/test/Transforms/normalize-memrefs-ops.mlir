@@ -29,15 +29,15 @@ func.func @test_norm(%arg0 : memref<1x16x14x14xf32, #map0>) -> () {
 // Same test with op_nonnorm, with maps in the arguments and the operations in the function.
 
 // CHECK-LABEL: test_nonnorm
-// CHECK-SAME: (%[[ARG0:.*]]: memref<1x16x14x14xf32, #map>)
+// CHECK-SAME: (%[[ARG0:.*]]: memref<1x16x14x14xf32, #[[MAP:.*]]>)
 func.func @test_nonnorm(%arg0 : memref<1x16x14x14xf32, #map0>) -> () {
     %0 = memref.alloc() : memref<1x16x14x14xf32, #map0>
     "test.op_nonnorm"(%arg0, %0) : (memref<1x16x14x14xf32, #map0>, memref<1x16x14x14xf32, #map0>) -> ()
     memref.dealloc %0 :  memref<1x16x14x14xf32, #map0>
 
-    // CHECK: %[[v0:.*]] = memref.alloc() : memref<1x16x14x14xf32, #map>
-    // CHECK: "test.op_nonnorm"(%[[ARG0]], %[[v0]]) : (memref<1x16x14x14xf32, #map>, memref<1x16x14x14xf32, #map>) -> ()
-    // CHECK: memref.dealloc %[[v0]] : memref<1x16x14x14xf32, #map>
+    // CHECK: %[[v0:.*]] = memref.alloc() : memref<1x16x14x14xf32, #[[MAP]]>
+    // CHECK: "test.op_nonnorm"(%[[ARG0]], %[[v0]]) : (memref<1x16x14x14xf32, #[[MAP]]>, memref<1x16x14x14xf32, #[[MAP]]>) -> ()
+    // CHECK: memref.dealloc %[[v0]] : memref<1x16x14x14xf32, #[[MAP]]>
     return
 }
 

@@ -98,19 +98,19 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
 void X86AsmPrinter::emitFunctionBodyStart() {
   if (EmitFPOData) {
-    if (auto *XTS =
-        static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer()))
-      XTS->emitFPOProc(
-          CurrentFnSym,
-          MF->getInfo<X86MachineFunctionInfo>()->getArgumentStackSize());
+    auto *XTS =
+        static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer());
+    XTS->emitFPOProc(
+        CurrentFnSym,
+        MF->getInfo<X86MachineFunctionInfo>()->getArgumentStackSize());
   }
 }
 
 void X86AsmPrinter::emitFunctionBodyEnd() {
   if (EmitFPOData) {
-    if (auto *XTS =
-            static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer()))
-      XTS->emitFPOEndProc();
+    auto *XTS =
+        static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer());
+    XTS->emitFPOEndProc();
   }
 }
 

@@ -125,6 +125,25 @@ Pattern {
 // -----
 
 //===----------------------------------------------------------------------===//
+// Range Expr
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: unable to convert expression of type `Tuple<>` to the expected type of `ValueRange`
+  // CHECK: Tuple to Range conversion is currently only allowed within a rewrite context
+  erase op<>(());
+}
+
+// -----
+
+Pattern {
+  // CHECK: unable to convert expression of type `Tuple<Value, Type>` to the expected type of `ValueRange`
+  replace op<>(arg: Value) -> (type: Type) with op<test.op>((arg, type));
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Tuple Expr
 //===----------------------------------------------------------------------===//
 

@@ -85,6 +85,11 @@ translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 fir::ExtendedValue
 translateToExtendedValue(fir::FortranVariableOpInterface fortranVariable);
 
+/// Generate declaration for a fir::ExtendedValue in memory.
+FortranEntity genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
+                         const fir::ExtendedValue &exv, llvm::StringRef name,
+                         fir::FortranVariableFlagsAttr flags);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

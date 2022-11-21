@@ -776,49 +776,53 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
     case CodeGenIntrinsic::NoMem:
       if (Intrinsic.hasSideEffects)
         break;
-      OS << "      Attribute::get(C, Attribute::ReadNone),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::none()),\n";
       break;
     case CodeGenIntrinsic::ReadArgMem:
-      OS << "      Attribute::get(C, Attribute::ReadOnly),\n";
-      OS << "      Attribute::get(C, Attribute::ArgMemOnly),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::argMemOnly(ModRefInfo::Ref)),\n";
       break;
     case CodeGenIntrinsic::ReadMem:
-      OS << "      Attribute::get(C, Attribute::ReadOnly),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::readOnly()),\n";
       break;
     case CodeGenIntrinsic::ReadInaccessibleMem:
-      OS << "      Attribute::get(C, Attribute::ReadOnly),\n";
-      OS << "      Attribute::get(C, Attribute::InaccessibleMemOnly),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::inaccessibleMemOnly(ModRefInfo::Ref)),\n";
       break;
     case CodeGenIntrinsic::ReadInaccessibleMemOrArgMem:
-      OS << "      Attribute::get(C, Attribute::ReadOnly),\n";
-      OS << "      Attribute::get(C, "
-         << "Attribute::InaccessibleMemOrArgMemOnly),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::inaccessibleOrArgMemOnly(ModRefInfo::Ref)),\n";
+      break;
       break;
     case CodeGenIntrinsic::WriteArgMem:
-      OS << "      Attribute::get(C, Attribute::WriteOnly),\n";
-      OS << "      Attribute::get(C, Attribute::ArgMemOnly),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::argMemOnly(ModRefInfo::Mod)),\n";
       break;
     case CodeGenIntrinsic::WriteMem:
-      OS << "      Attribute::get(C, Attribute::WriteOnly),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::writeOnly()),\n";
       break;
     case CodeGenIntrinsic::WriteInaccessibleMem:
-      OS << "      Attribute::get(C, Attribute::WriteOnly),\n";
-      OS << "      Attribute::get(C, Attribute::InaccessibleMemOnly),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::inaccessibleMemOnly(ModRefInfo::Mod)),\n";
       break;
     case CodeGenIntrinsic::WriteInaccessibleMemOrArgMem:
-      OS << "      Attribute::get(C, Attribute::WriteOnly),\n";
-      OS << "      Attribute::get(C, "
-         << "Attribute::InaccessibleMemOrArgMemOnly),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::inaccessibleOrArgMemOnly(ModRefInfo::Mod)),\n";
       break;
     case CodeGenIntrinsic::ReadWriteArgMem:
-      OS << "      Attribute::get(C, Attribute::ArgMemOnly),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::argMemOnly(ModRefInfo::ModRef)),\n";
       break;
     case CodeGenIntrinsic::ReadWriteInaccessibleMem:
-      OS << "      Attribute::get(C, Attribute::InaccessibleMemOnly),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef)),\n";
       break;
     case CodeGenIntrinsic::ReadWriteInaccessibleMemOrArgMem:
-      OS << "      Attribute::get(C, "
-         << "Attribute::InaccessibleMemOrArgMemOnly),\n";
+      OS << "      Attribute::getWithMemoryEffects(C, "
+         << "MemoryEffects::inaccessibleOrArgMemOnly(ModRefInfo::ModRef)),\n";
       break;
     case CodeGenIntrinsic::ReadWriteMem:
       break;

@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_OUTPUT_H
 #define _LIBCPP___FORMAT_FORMATTER_OUTPUT_H
 
-#include <__algorithm/in_out_result.h>
 #include <__algorithm/ranges_copy.h>
 #include <__algorithm/ranges_fill_n.h>
 #include <__algorithm/ranges_transform.h>

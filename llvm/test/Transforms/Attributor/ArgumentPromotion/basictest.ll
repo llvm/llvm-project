@@ -4,7 +4,7 @@
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
 define internal i32 @test(i32* %X, i32* %Y) {
-; CGSCC: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@test
 ; CGSCC-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    [[X_PRIV:%.*]] = alloca i32, align 4
@@ -21,7 +21,7 @@ define internal i32 @test(i32* %X, i32* %Y) {
 }
 
 define internal i32 @caller(i32* %B) {
-; CGSCC: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
 ; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[B_PRIV:%.*]] = alloca i32, align 4
@@ -36,13 +36,13 @@ define internal i32 @caller(i32* %B) {
 }
 
 define i32 @callercaller() {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@callercaller
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    ret i32 3
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@callercaller
 ; CGSCC-SAME: () #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:    [[X:%.*]] = call i32 @caller(i32 noundef 2) #[[ATTR4:[0-9]+]]
@@ -55,11 +55,11 @@ define i32 @callercaller() {
 }
 
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; CGSCC: attributes #[[ATTR1]] = { argmemonly nofree nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR3]] = { readonly willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR3]] = { willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR4]] = { nounwind willreturn }
 ;.

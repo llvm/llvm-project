@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-DEFINE_PPC_REGCLASSES;
+DEFINE_PPC_REGCLASSES
 
 #define DEBUG_TYPE "ppc-disassembler"
 
@@ -185,6 +185,45 @@ static DecodeStatus DecodeACCRCRegisterClass(MCInst &Inst, uint64_t RegNo,
                                              uint64_t Address,
                                              const MCDisassembler *Decoder) {
   return decodeRegisterClass(Inst, RegNo, ACCRegs);
+}
+
+static DecodeStatus DecodeWACCRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, WACCRegs);
+}
+
+static DecodeStatus DecodeWACC_HIRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                                 uint64_t Address,
+                                                 const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, WACC_HIRegs);
+}
+
+// TODO: Make this function static when the register class is used by a new
+//       instruction.
+DecodeStatus DecodeDMRROWRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                         uint64_t Address,
+                                         const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, DMRROWRegs);
+}
+
+static DecodeStatus DecodeDMRROWpRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                                 uint64_t Address,
+                                                 const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, DMRROWpRegs);
+}
+
+static DecodeStatus DecodeDMRRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, DMRRegs);
+}
+
+// TODO: Make this function static when the register class is used by a new
+//       instruction.
+DecodeStatus DecodeDMRpRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                       uint64_t Address, const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, DMRpRegs);
 }
 
 static DecodeStatus DecodeVSRpRCRegisterClass(MCInst &Inst, uint64_t RegNo,

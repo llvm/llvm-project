@@ -271,7 +271,7 @@ public:
 
 /// A virtual file system optimized for the dependency discovery.
 ///
-/// It is primarily designed to work with source files whose contents was was
+/// It is primarily designed to work with source files whose contents was
 /// preprocessed to remove any tokens that are unlikely to affect the dependency
 /// computation.
 ///

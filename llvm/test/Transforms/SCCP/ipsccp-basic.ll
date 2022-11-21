@@ -51,38 +51,38 @@ define i32 @test2b() {
 @G = internal global i32 undef
 
 define void @test3a() {
-	%X = load i32, i32* @G
-	store i32 %X, i32* @G
+	%X = load i32, ptr @G
+	store i32 %X, ptr @G
 	ret void
 }
 ; CHECK-LABEL: define void @test3a(
-; CHECK-NEXT:    %X = load i32, i32* @G
-; CHECK-NEXT:    store i32 %X, i32* @G
+; CHECK-NEXT:    %X = load i32, ptr @G
+; CHECK-NEXT:    store i32 %X, ptr @G
 ; CHECK-NEXT:   ret void
 
 
 define i32 @test3b() {
-	%V = load i32, i32* @G
+	%V = load i32, ptr @G
 	%C = icmp eq i32 %V, 17
 	br i1 %C, label %T, label %F
 T:
-	store i32 17, i32* @G
+	store i32 17, ptr @G
 	ret i32 %V
 F:	
-	store i32 123, i32* @G
+	store i32 123, ptr @G
 	ret i32 0
 }
 ; CHECK-LABEL: define i32 @test3b(
-; CHECK-NEXT:    %V = load i32, i32* @G
+; CHECK-NEXT:    %V = load i32, ptr @G
 ; CHECK-NEXT:    %C = icmp eq i32 %V, 17
 ; CHECK-NEXT:    br i1 %C, label %T, label %F
 
 ; CHECK-LABEL: T:
-; CHECK-NEXT:   store i32 17, i32* @G
+; CHECK-NEXT:   store i32 17, ptr @G
 ; CHECK-NEXT:   ret i32 17
 
 ; CHECK-LABEL: F:
-; CHECK-NEXT:    store i32 123, i32* @G
+; CHECK-NEXT:    store i32 123, ptr @G
 ; CHECK-NEXT:    ret i32 0
 
 ;;======================== test4
@@ -97,7 +97,7 @@ define internal {i64,i64} @test4a() {
 ; CHECK-NEXT:   ret { i64, i64 } undef
 ; CHECK-NEXT: }
 
-define i64 @test4b() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i64 @test4b() personality ptr @__gxx_personality_v0 {
   %a = invoke {i64,i64} @test4a()
           to label %A unwind label %B
 A:
@@ -105,8 +105,8 @@ A:
   %c = call i64 @test4c(i64 %b)
   ret i64 %c
 B:
-  %val = landingpad { i8*, i32 }
-           catch i8* null
+  %val = landingpad { ptr, i32 }
+           catch ptr null
   ret i64 0
 }
 ; CHECK: define i64 @test4b()
@@ -131,15 +131,15 @@ define internal {i64,i64} @test5a() {
   ret {i64,i64} %b
 }
 
-define i64 @test5b() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i64 @test5b() personality ptr @__gxx_personality_v0 {
   %a = invoke {i64,i64} @test5a()
           to label %A unwind label %B
 A:
   %c = call i64 @test5c({i64,i64} %a)
   ret i64 %c
 B:
-  %val = landingpad { i8*, i32 }
-           catch i8* null
+  %val = landingpad { ptr, i32 }
+           catch ptr null
   ret i64 0
 }
 
@@ -194,16 +194,16 @@ define i32 @test7b() {
 ;;======================== test8
 
 
-define internal {} @test8a(i32 %A, i32* %P) {
-  store i32 %A, i32* %P
+define internal {} @test8a(i32 %A, ptr %P) {
+  store i32 %A, ptr %P
   ret {} {}
 ; CHECK-LABEL: @test8a(
 ; CHECK-NEXT: store i32 5, 
 ; CHECK-NEXT: ret 
 }
 
-define void @test8b(i32* %P) {
-    %X = call {} @test8a(i32 5, i32* %P)
+define void @test8b(ptr %P) {
+    %X = call {} @test8a(i32 5, ptr %P)
     ret void
 ; CHECK-LABEL: define void @test8b(
 ; CHECK-NEXT: call {} @test8a
@@ -217,15 +217,15 @@ define void @test8b(i32* %P) {
 define void @test9() {
 entry:
         %local_foo = alloca {  }
-        load {  }, {  }* @test9g
-        store {  } %0, {  }* %local_foo
+        load {  }, ptr @test9g
+        store {  } %0, ptr %local_foo
         ret void
 }
 
 ; CHECK-LABEL: define void @test9(
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: %local_foo = alloca {}
-; CHECK-NEXT:  store {} zeroinitializer, {}* %local_foo
+; CHECK-NEXT:  store {} zeroinitializer, ptr %local_foo
 ; CHECK-NEXT: ret void
 
 declare i32 @__gxx_personality_v0(...)

@@ -85,6 +85,8 @@ static cl::opt<std::string> PassPipeline(
     cl::desc(
         "A textual description of the pass pipeline. To have analysis passes "
         "available before a certain pass, add 'require<foo-analysis>'."));
+static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
+                                   cl::desc("Alias for -passes"));
 
 static cl::opt<bool> PrintPasses("print-passes",
                                  cl::desc("Print available passes that can be "

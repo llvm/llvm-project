@@ -226,6 +226,29 @@ TEST_F(RemoveUsingNamespaceTest, All) {
       int main() {
         std::vector V;
       }
+    )cpp"},
+      {// Does not qualify operators declared in a non-class context
+       R"cpp(
+      namespace ns {
+      struct Foo {};
+      void operator+(const Foo &, int) {}
+      }
+      using namespace n^s;
+      int main() {
+        Foo foo;
+        foo + 10;
+      }
+    )cpp",
+       R"cpp(
+      namespace ns {
+      struct Foo {};
+      void operator+(const Foo &, int) {}
+      }
+      
+      int main() {
+        ns::Foo foo;
+        foo + 10;
+      }
     )cpp"}};
   for (auto C : Cases)
     EXPECT_EQ(C.second, apply(C.first)) << C.first;

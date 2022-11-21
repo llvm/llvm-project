@@ -32,7 +32,7 @@ namespace fir::support {
       mlir::scf::SCFDialect, mlir::arith::ArithDialect,                        \
       mlir::cf::ControlFlowDialect, mlir::func::FuncDialect,                   \
       mlir::vector::VectorDialect, mlir::math::MathDialect,                    \
-      mlir::complex::ComplexDialect
+      mlir::complex::ComplexDialect, mlir::DLTIDialect
 
 // The definitive list of dialects used by flang.
 #define FLANG_DIALECT_LIST                                                     \

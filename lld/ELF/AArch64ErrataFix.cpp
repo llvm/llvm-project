@@ -55,7 +55,7 @@ static bool isADRP(uint32_t instr) {
   return (instr & 0x9f000000) == 0x90000000;
 }
 
-// Load and store bit patterns from ARMv8-A ARM ARM.
+// Load and store bit patterns from ARMv8-A.
 // Instructions appear in order of appearance starting from table in
 // C4.1.3 Loads and Stores.
 

@@ -78,7 +78,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
 
-  pool_options options() const;
+  [[__gnu__::__pure__]] pool_options options() const;
 
 protected:
   void* do_allocate(size_t __bytes, size_t __align) override; // key function

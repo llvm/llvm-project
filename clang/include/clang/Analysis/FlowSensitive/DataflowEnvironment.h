@@ -48,6 +48,13 @@ enum class SkipPast {
   ReferenceThenPointer,
 };
 
+/// Indicates the result of a tentative comparison.
+enum class ComparisonResult {
+  Same,
+  Different,
+  Unknown,
+};
+
 /// Holds the state of the program (store and heap) at a given program point.
 ///
 /// WARNING: Symbolic values that are created by the environment for static
@@ -62,7 +69,11 @@ public:
   public:
     virtual ~ValueModel() = default;
 
-    /// Returns true if and only if `Val1` is equivalent to `Val2`.
+    /// Returns:
+    ///   `Same`: `Val1` is equivalent to `Val2`, according to the model.
+    ///   `Different`: `Val1` is distinct from `Val2`, according to the model.
+    ///   `Unknown`: The model can't determine a relationship between `Val1` and
+    ///    `Val2`.
     ///
     /// Requirements:
     ///
@@ -72,16 +83,16 @@ public:
     ///
     ///  `Val1` and `Val2` must be assigned to the same storage location in
     ///  `Env1` and `Env2` respectively.
-    virtual bool compareEquivalent(QualType Type, const Value &Val1,
-                                   const Environment &Env1, const Value &Val2,
-                                   const Environment &Env2) {
+    virtual ComparisonResult compare(QualType Type, const Value &Val1,
+                                     const Environment &Env1, const Value &Val2,
+                                     const Environment &Env2) {
       // FIXME: Consider adding QualType to StructValue and removing the Type
       // argument here.
       //
-      // FIXME: default to a sound comparison and/or expand the comparison logic
-      // built into the framework to support broader forms of equivalence than
-      // strict pointer equality.
-      return true;
+      // FIXME: default to a sound comparison (`Unknown`) and/or expand the
+      // comparison logic built into the framework to support broader forms of
+      // equivalence than strict pointer equality.
+      return ComparisonResult::Same;
     }
 
     /// Modifies `MergedVal` to approximate both `Val1` and `Val2`. This could

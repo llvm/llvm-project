@@ -1447,6 +1447,11 @@ static bool isTargetEnvironment(const TargetInfo &TI,
                                 const IdentifierInfo *II) {
   std::string EnvName = (llvm::Twine("---") + II->getName().lower()).str();
   llvm::Triple Env(EnvName);
+  // The unknown environment is matched only if
+  // '__is_target_environment(unknown)' is used.
+  if (Env.getEnvironment() == llvm::Triple::UnknownEnvironment &&
+      EnvName != "---unknown")
+    return false;
   return TI.getTriple().getEnvironment() == Env.getEnvironment();
 }
 

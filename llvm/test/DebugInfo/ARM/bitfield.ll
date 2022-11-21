@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -O0 -filetype=obj -o %t.o %s
+; RUN: llc -mtriple=thumbv7-apple-ios -O0 -filetype=obj -o %t.o %s
 ; RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
 ;
 ; Generated from:
@@ -14,9 +14,6 @@
 ; CHECK:          DW_AT_bit_size   {{.*}} (0x1c)
 ; CHECK:          DW_AT_bit_offset {{.*}} (0xfffffffffffffff8)
 ; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
-source_filename = "test/DebugInfo/ARM/bitfield.ll"
-target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-target triple = "thumbv7-apple-ios"
 
 %struct.anon = type { i8, [5 x i8] }
 

@@ -14,7 +14,7 @@ using namespace llvm;
 using namespace llvm::pdb;
 
 #define PDB_ENUM_CLASS_ENT(enum_class, enum)                                   \
-  { #enum, std::underlying_type < enum_class > ::type(enum_class::enum) }
+  { #enum, std::underlying_type_t<enum_class>(enum_class::enum) }
 
 #define PDB_ENUM_ENT(ns, enum)                                                 \
   { #enum, ns::enum }

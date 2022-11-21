@@ -55,6 +55,10 @@ Instruction::~Instruction() {
   //   instructions in a BasicBlock are deleted).
   if (isUsedByMetadata())
     ValueAsMetadata::handleRAUW(this, UndefValue::get(getType()));
+
+  // Explicitly remove DIAssignID metadata to clear up ID -> Instruction(s)
+  // mapping in LLVMContext.
+  setMetadata(LLVMContext::MD_DIAssignID, nullptr);
 }
 
 

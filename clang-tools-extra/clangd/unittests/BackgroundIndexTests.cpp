@@ -146,7 +146,7 @@ TEST_F(BackgroundIndexTest, Config) {
   MemoryShardStorage MSS(Storage, CacheHits);
   // We need the CommandMangler, because that applies the config we're testing.
   OverlayCDB CDB(/*Base=*/nullptr, /*FallbackFlags=*/{},
-                 tooling::ArgumentsAdjuster(CommandMangler::forTests()));
+                 CommandMangler::forTests());
 
   BackgroundIndex Idx(
       FS, CDB, [&](llvm::StringRef) { return &MSS; }, std::move(Opts));

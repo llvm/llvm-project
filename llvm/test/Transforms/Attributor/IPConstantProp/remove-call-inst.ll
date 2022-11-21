@@ -9,13 +9,13 @@
 ; FIXME: Remove obsolete calls/instructions
 
 define i32 @main() noreturn nounwind {
-; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@main
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    ret i32 123
 ;
-; CGSCC: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree noreturn nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@main
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -28,7 +28,7 @@ entry:
 }
 
 define internal i32 @wwrite(i64 %i) nounwind readnone {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@wwrite
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -54,9 +54,9 @@ return:
   ret i32 0
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree noreturn nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2]] = { nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree noreturn nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
 ;.

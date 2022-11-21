@@ -109,6 +109,10 @@ public:
                  const allocator_type& a = allocator_type());                                   // constexpr since C++20
     basic_string(const basic_string& str, size_type pos, size_type n,
                  const Allocator& a = Allocator());                                             // constexpr since C++20
+    constexpr basic_string(
+        basic_string&& str, size_type pos, const Allocator& a = Allocator());                   // since C++23
+    constexpr basic_string(
+        basic_string&& str, size_type pos, size_type n, const Allocator& a = Allocator());      // since C++23
     template<class T>
         basic_string(const T& t, size_type pos, size_type n, const Allocator& a = Allocator()); // C++17, constexpr since C++20
     template <class T>
@@ -261,8 +265,9 @@ public:
     basic_string& replace(const_iterator i1, const_iterator i2, initializer_list<value_type>);  // constexpr since C++20
 
     size_type copy(value_type* s, size_type n, size_type pos = 0) const;                        // constexpr since C++20
-    basic_string substr(size_type pos = 0, size_type n = npos) const;                           // constexpr since C++20
-
+    basic_string substr(size_type pos = 0, size_type n = npos) const;                           // constexpr in C++20, removed in C++23
+    basic_string substr(size_type pos = 0, size_type n = npos) const&;                          // since C++23
+    constexpr basic_string substr(size_type pos = 0, size_type n = npos) &&;                    // since C++23
     void swap(basic_string& str)
         noexcept(allocator_traits<allocator_type>::propagate_on_container_swap::value ||
                  allocator_traits<allocator_type>::is_always_equal::value);                     // C++17, constexpr since C++20
@@ -539,6 +544,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__format/enable_insertable.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__fwd/string.h>
 #include <__ios/fpos.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -565,7 +571,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <cstdio>  // EOF
 #include <cstdlib>
 #include <cstring>
-#include <iosfwd>
 #include <limits>
 #include <stdexcept>
 #include <string_view>
@@ -646,23 +651,10 @@ struct __can_be_converted_to_string_view : public _BoolConstant<
      !is_convertible<const _Tp&, const _CharT*>::value
     > {};
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
-typedef basic_string<char8_t> u8string;
-#endif
-typedef basic_string<char16_t> u16string;
-typedef basic_string<char32_t> u32string;
-
 struct __uninitialized_size_tag {};
 
 template<class _CharT, class _Traits, class _Allocator>
-class
-    _LIBCPP_TEMPLATE_VIS
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
-    _LIBCPP_PREFERRED_NAME(u8string)
-#endif
-    _LIBCPP_PREFERRED_NAME(u16string)
-    _LIBCPP_PREFERRED_NAME(u32string)
-    basic_string
+class basic_string
 {
 public:
     typedef basic_string                                 __self;
@@ -910,6 +902,36 @@ public:
     std::__debug_db_insert_c(this);
   }
 
+#if _LIBCPP_STD_VER > 20
+  _LIBCPP_HIDE_FROM_ABI constexpr
+  basic_string(basic_string&& __str, size_type __pos, const _Allocator& __alloc = _Allocator())
+      : basic_string(std::move(__str), __pos, npos, __alloc) {}
+
+  _LIBCPP_HIDE_FROM_ABI constexpr
+  basic_string(basic_string&& __str, size_type __pos, size_type __n, const _Allocator& __alloc = _Allocator())
+      : __r_(__default_init_tag(), __alloc) {
+    if (__pos > __str.size())
+      __throw_out_of_range();
+
+    auto __len = std::min<size_type>(__n, __str.size() - __pos);
+    if (__alloc_traits::is_always_equal::value || __alloc == __str.__alloc()) {
+      __r_.first() = __str.__r_.first();
+      __str.__default_init();
+
+      _Traits::move(data(), data() + __pos, __len);
+      __set_size(__len);
+      _Traits::assign(data()[__len], value_type());
+    } else {
+      // Perform a copy because the allocators are not compatible.
+      __init(__str.data() + __pos, __len);
+    }
+
+    std::__debug_db_insert_c(this);
+    if (__is_long())
+      std::__debug_db_swap(this, &__str);
+  }
+#endif
+
   template <class = __enable_if_t<__is_allocator<_Allocator>::value, nullptr_t> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(size_type __n, _CharT __c, const _Allocator& __a);
 
@@ -988,9 +1010,12 @@ public:
     }
 
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string& operator=(basic_string&& __str)
-        _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(basic_string&& __str)
+      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+    __move_assign(__str, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
+    return *this;
+  }
+
      _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     basic_string& operator=(initializer_list<value_type> __il) {return assign(__il.begin(), __il.size());}
 #endif
@@ -1043,7 +1068,17 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type size() const _NOEXCEPT
         {return __is_long() ? __get_long_size() : __get_short_size();}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type length() const _NOEXCEPT {return size();}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type max_size() const _NOEXCEPT;
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type max_size() const _NOEXCEPT {
+    size_type __m = __alloc_traits::max_size(__alloc());
+    if (__m <= std::numeric_limits<size_type>::max() / 2) {
+      return __m - __alignment;
+    } else {
+    bool __uses_lsb = __endian_factor == 2;
+      return __uses_lsb ? __m - __alignment : (__m / 2) - __alignment;
+    }
+  }
+
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type capacity() const _NOEXCEPT {
         return (__is_long() ? __get_long_cap() : static_cast<size_type>(__min_cap)) - 1;
     }
@@ -1071,9 +1106,15 @@ public:
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     bool empty() const _NOEXCEPT {return size() == 0;}
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    const_reference operator[](size_type __pos) const _NOEXCEPT;
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](size_type __pos) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference operator[](size_type __pos) const _NOEXCEPT {
+    _LIBCPP_ASSERT(__pos <= size(), "string index out of bounds");
+    return *(data() + __pos);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](size_type __pos) _NOEXCEPT {
+    _LIBCPP_ASSERT(__pos <= size(), "string index out of bounds");
+    return *(__get_pointer() + __pos);
+  }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference at(size_type __n) const;
     _LIBCPP_CONSTEXPR_SINCE_CXX20 reference       at(size_type __n);
@@ -1108,8 +1149,9 @@ public:
     basic_string& operator+=(initializer_list<value_type> __il) { return append(__il); }
 #endif // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string& append(const basic_string& __str);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(const basic_string& __str) {
+        return append(__str.data(), __str.size());
+  }
 
     template <class _Tp>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -1167,10 +1209,26 @@ public:
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void push_back(value_type __c);
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void pop_back();
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference       front() _NOEXCEPT;
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference front() const _NOEXCEPT;
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference       back() _NOEXCEPT;
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference back() const _NOEXCEPT;
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference front() _NOEXCEPT {
+    _LIBCPP_ASSERT(!empty(), "string::front(): string is empty");
+    return *__get_pointer();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference front() const _NOEXCEPT {
+    _LIBCPP_ASSERT(!empty(), "string::front(): string is empty");
+    return *data();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference back() _NOEXCEPT {
+    _LIBCPP_ASSERT(!empty(), "string::back(): string is empty");
+    return *(__get_pointer() + size() - 1);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference back() const _NOEXCEPT {
+    _LIBCPP_ASSERT(!empty(), "string::back(): string is empty");
+    return *(data() + size() - 1);
+  }
 
     template <class _Tp>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -1222,8 +1280,10 @@ public:
     basic_string& assign(initializer_list<value_type> __il) {return assign(__il.begin(), __il.size());}
 #endif // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string& insert(size_type __pos1, const basic_string& __str);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
+  insert(size_type __pos1, const basic_string& __str) {
+    return insert(__pos1, __str.data(), __str.size());
+  }
 
     template <class _Tp>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -1249,8 +1309,16 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& insert(size_type __pos, const value_type* __s);
     _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& insert(size_type __pos, size_type __n, value_type __c);
     _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator      insert(const_iterator __pos, value_type __c);
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    iterator      insert(const_iterator __pos, size_type __n, value_type __c);
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator
+  insert(const_iterator __pos, size_type __n, value_type __c) {
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                         "string::insert(iterator, n, value) called with an iterator not referring to this string");
+    difference_type __p = __pos - begin();
+    insert(static_cast<size_type>(__p), __n, __c);
+    return begin() + __p;
+  }
+
     template<class _InputIterator>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20
     __enable_if_t
@@ -1279,8 +1347,10 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     iterator      erase(const_iterator __first, const_iterator __last);
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string& replace(size_type __pos1, size_type __n1, const basic_string& __str);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
+  replace(size_type __pos1, size_type __n1, const basic_string& __str) {
+    return replace(__pos1, __n1, __str.data(), __str.size());
+  }
 
     template <class _Tp>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -1304,8 +1374,12 @@ public:
     basic_string& replace(size_type __pos, size_type __n1, const value_type* __s, size_type __n2);
     _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& replace(size_type __pos, size_type __n1, const value_type* __s);
     _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& replace(size_type __pos, size_type __n1, size_type __n2, value_type __c);
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string& replace(const_iterator __i1, const_iterator __i2, const basic_string& __str);
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
+  replace(const_iterator __i1, const_iterator __i2, const basic_string& __str) {
+    return replace(
+        static_cast<size_type>(__i1 - begin()), static_cast<size_type>(__i2 - __i1), __str.data(), __str.size());
+  }
 
     template <class _Tp>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -1316,12 +1390,21 @@ public:
         >
                   replace(const_iterator __i1, const_iterator __i2, const _Tp& __t) { __self_view __sv = __t; return replace(__i1 - begin(), __i2 - __i1, __sv); }
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string& replace(const_iterator __i1, const_iterator __i2, const value_type* __s, size_type __n);
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string& replace(const_iterator __i1, const_iterator __i2, const value_type* __s);
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string& replace(const_iterator __i1, const_iterator __i2, size_type __n, value_type __c);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
+  replace(const_iterator __i1, const_iterator __i2, const value_type* __s, size_type __n) {
+    return replace(static_cast<size_type>(__i1 - begin()), static_cast<size_type>(__i2 - __i1), __s, __n);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
+  replace(const_iterator __i1, const_iterator __i2, const value_type* __s) {
+    return replace(static_cast<size_type>(__i1 - begin()), static_cast<size_type>(__i2 - __i1), __s);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
+  replace(const_iterator __i1, const_iterator __i2, size_type __n, value_type __c) {
+    return replace(static_cast<size_type>(__i1 - begin()), static_cast<size_type>(__i2 - __i1), __n, __c);
+  }
+
     template<class _InputIterator>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20
     __enable_if_t
@@ -1337,8 +1420,24 @@ public:
 #endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type copy(value_type* __s, size_type __n, size_type __pos = 0) const;
+
+    // TODO: Maybe don't pass in the allocator. See https://llvm.org/PR57190
+#if _LIBCPP_STD_VER <= 20
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string substr(size_type __pos = 0, size_type __n = npos) const;
+    basic_string substr(size_type __pos = 0, size_type __n = npos) const {
+      return basic_string(*this, __pos, __n, __alloc());
+    }
+#else
+    _LIBCPP_HIDE_FROM_ABI constexpr
+    basic_string substr(size_type __pos = 0, size_type __n = npos) const& {
+      return basic_string(*this, __pos, __n, __alloc());
+    }
+
+    _LIBCPP_HIDE_FROM_ABI constexpr
+    basic_string substr(size_type __pos = 0, size_type __n = npos) && {
+      return basic_string(std::move(*this), __pos, __n, __alloc());
+    }
+#endif
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     void swap(basic_string& __str)
@@ -1762,8 +1861,9 @@ private:
     template <bool __is_short>
     _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& __assign_no_alias(const value_type* __s, size_type __n);
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    void __erase_to_end(size_type __pos);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __erase_to_end(size_type __pos) {
+    __null_terminate_at(std::__to_address(__get_pointer()), __pos);
+  }
 
     // __erase_external_with_move is invoked for erase() invocations where
     // `n ~= npos`, likely requiring memory moves on the string data.
@@ -2473,17 +2573,6 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
   }
 }
 
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::operator=(basic_string&& __str)
-    _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value))
-{
-    __move_assign(__str, integral_constant<bool,
-          __alloc_traits::propagate_on_container_move_assignment::value>());
-    return *this;
-}
-
 #endif
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2725,14 +2814,6 @@ basic_string<_CharT, _Traits, _Allocator>::append(
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::append(const basic_string& __str)
-{
-    return append(__str.data(), __str.size());
-}
-
-template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::append(const basic_string& __str, size_type __pos, size_type __n)
@@ -2890,14 +2971,6 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _Forward
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos1, const basic_string& __str)
-{
-    return insert(__pos1, __str.data(), __str.size());
-}
-
-template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos1, const basic_string& __str,
@@ -2965,19 +3038,6 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, value_ty
     traits_type::assign(__p[++__sz], value_type());
     __set_size(__sz);
     return begin() + static_cast<difference_type>(__ip);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename basic_string<_CharT, _Traits, _Allocator>::iterator
-basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, size_type __n, value_type __c)
-{
-  _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
-                       "string::insert(iterator, n, value) called with an iterator not"
-                       " referring to this string");
-  difference_type __p = __pos - begin();
-  insert(static_cast<size_type>(__p), __n, __c);
-  return begin() + __p;
 }
 
 // replace
@@ -3082,14 +3142,6 @@ basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_it
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos1, size_type __n1, const basic_string& __str)
-{
-    return replace(__pos1, __n1, __str.data(), __str.size());
-}
-
-template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos1, size_type __n1, const basic_string& __str,
@@ -3126,39 +3178,6 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
 {
     _LIBCPP_ASSERT(__s != nullptr, "string::replace received nullptr");
     return replace(__pos, __n1, __s, traits_type::length(__s));
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_iterator __i2, const basic_string& __str)
-{
-    return replace(static_cast<size_type>(__i1 - begin()), static_cast<size_type>(__i2 - __i1),
-                   __str.data(), __str.size());
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_iterator __i2, const value_type* __s, size_type __n)
-{
-    return replace(static_cast<size_type>(__i1 - begin()), static_cast<size_type>(__i2 - __i1), __s, __n);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_iterator __i2, const value_type* __s)
-{
-    return replace(static_cast<size_type>(__i1 - begin()), static_cast<size_type>(__i2 - __i1), __s);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_iterator __i2, size_type __n, value_type __c)
-{
-    return replace(static_cast<size_type>(__i1 - begin()), static_cast<size_type>(__i2 - __i1), __n, __c);
 }
 
 // erase
@@ -3258,14 +3277,6 @@ basic_string<_CharT, _Traits, _Allocator>::clear() _NOEXCEPT
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-void
-basic_string<_CharT, _Traits, _Allocator>::__erase_to_end(size_type __pos)
-{
-  __null_terminate_at(std::__to_address(__get_pointer()), __pos);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 void
 basic_string<_CharT, _Traits, _Allocator>::resize(size_type __n, value_type __c)
@@ -3286,20 +3297,6 @@ basic_string<_CharT, _Traits, _Allocator>::__resize_default_init(size_type __n)
        __append_default_init(__n - __sz);
     } else
         __erase_to_end(__n);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename basic_string<_CharT, _Traits, _Allocator>::size_type
-basic_string<_CharT, _Traits, _Allocator>::max_size() const _NOEXCEPT
-{
-    size_type __m = __alloc_traits::max_size(__alloc());
-    if (__m <= std::numeric_limits<size_type>::max() / 2) {
-        return __m - __alignment;
-    } else {
-        bool __uses_lsb = __endian_factor == 2;
-        return __uses_lsb ? __m - __alignment : (__m / 2) - __alignment;
-    }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3399,24 +3396,6 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename basic_string<_CharT, _Traits, _Allocator>::const_reference
-basic_string<_CharT, _Traits, _Allocator>::operator[](size_type __pos) const _NOEXCEPT
-{
-    _LIBCPP_ASSERT(__pos <= size(), "string index out of bounds");
-    return *(data() + __pos);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename basic_string<_CharT, _Traits, _Allocator>::reference
-basic_string<_CharT, _Traits, _Allocator>::operator[](size_type __pos) _NOEXCEPT
-{
-    _LIBCPP_ASSERT(__pos <= size(), "string index out of bounds");
-    return *(__get_pointer() + __pos);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename basic_string<_CharT, _Traits, _Allocator>::const_reference
 basic_string<_CharT, _Traits, _Allocator>::at(size_type __n) const
@@ -3437,42 +3416,6 @@ basic_string<_CharT, _Traits, _Allocator>::at(size_type __n)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename basic_string<_CharT, _Traits, _Allocator>::reference
-basic_string<_CharT, _Traits, _Allocator>::front() _NOEXCEPT
-{
-    _LIBCPP_ASSERT(!empty(), "string::front(): string is empty");
-    return *__get_pointer();
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename basic_string<_CharT, _Traits, _Allocator>::const_reference
-basic_string<_CharT, _Traits, _Allocator>::front() const _NOEXCEPT
-{
-    _LIBCPP_ASSERT(!empty(), "string::front(): string is empty");
-    return *data();
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename basic_string<_CharT, _Traits, _Allocator>::reference
-basic_string<_CharT, _Traits, _Allocator>::back() _NOEXCEPT
-{
-    _LIBCPP_ASSERT(!empty(), "string::back(): string is empty");
-    return *(__get_pointer() + size() - 1);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename basic_string<_CharT, _Traits, _Allocator>::const_reference
-basic_string<_CharT, _Traits, _Allocator>::back() const _NOEXCEPT
-{
-    _LIBCPP_ASSERT(!empty(), "string::back(): string is empty");
-    return *(data() + size() - 1);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::copy(value_type* __s, size_type __n, size_type __pos) const
@@ -3483,14 +3426,6 @@ basic_string<_CharT, _Traits, _Allocator>::copy(value_type* __s, size_type __n, 
     size_type __rlen = std::min(__n, __sz - __pos);
     traits_type::copy(__s, data() + __pos, __rlen);
     return __rlen;
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>
-basic_string<_CharT, _Traits, _Allocator>::substr(size_type __pos, size_type __n) const
-{
-    return basic_string(*this, __pos, __n, __alloc());
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -4674,24 +4609,11 @@ inline constexpr bool __format::__enable_insertable<std::basic_string<wchar_t>> 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
-_LIBCPP_BEGIN_NAMESPACE_STD
-namespace pmr {
-template <class _CharT, class _TraitsT = std::char_traits<_CharT>>
-using basic_string = std::basic_string<_CharT, _TraitsT, polymorphic_allocator<_CharT>>;
-
-using string    = basic_string<char>;
-using u16string = basic_string<char16_t>;
-using u32string = basic_string<char32_t>;
-using wstring   = basic_string<wchar_t>;
-} // namespace pmr
-_LIBCPP_END_NAMESPACE_STD
-#endif
-
 _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>
+#  include <concepts>
 #  include <functional>
 #  include <iterator>
 #  include <new>

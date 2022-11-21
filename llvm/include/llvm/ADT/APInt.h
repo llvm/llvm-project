@@ -2287,13 +2287,13 @@ void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src, unsigned LoadBytes);
 template <> struct DenseMapInfo<APInt, void> {
   static inline APInt getEmptyKey() {
     APInt V(nullptr, 0);
-    V.U.VAL = 0;
+    V.U.VAL = ~0ULL;
     return V;
   }
 
   static inline APInt getTombstoneKey() {
     APInt V(nullptr, 0);
-    V.U.VAL = 1;
+    V.U.VAL = ~1ULL;
     return V;
   }
 

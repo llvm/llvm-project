@@ -435,6 +435,10 @@ protected:
   // Return size of Global Offset Table (GOT) entry
   virtual size_t getGOTEntrySize() { return 0; }
 
+  // Hook for the subclasses to do further processing when a symbol is added to
+  // the global symbol table. This function may modify the symbol table entry.
+  virtual void processNewSymbol(const SymbolRef &ObjSymbol, SymbolTableEntry& Entry) {}
+
   // Return true if the relocation R may require allocating a GOT entry.
   virtual bool relocationNeedsGot(const RelocationRef &R) const {
     return false;

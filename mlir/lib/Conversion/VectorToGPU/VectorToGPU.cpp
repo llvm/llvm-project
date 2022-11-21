@@ -212,7 +212,7 @@ extractStridedSliceSupportsMMAMatrixType(vector::ExtractStridedSliceOp op) {
   if (warpMatrixInfo->operandRole == nvgpu::MatMulOperandRole::B)
     return (op->getResult(0).getType().cast<VectorType>() ==
             (*contractOp).getRhs().getType().cast<VectorType>());
-  else if (warpMatrixInfo->operandRole == nvgpu::MatMulOperandRole::C)
+  if (warpMatrixInfo->operandRole == nvgpu::MatMulOperandRole::C)
     return (op->getResult(0).getType().cast<VectorType>() ==
             (*contractOp).getAcc().getType().cast<VectorType>());
 
@@ -768,7 +768,7 @@ convertExtractStridedSlice(vector::ExtractStridedSliceOp op,
 
   if (offsets[0] && offsets[1])
     return op->emitError() << "Slicing fragments in 2D is not supported. ";
-  else if (offsets[0])
+  if (offsets[0])
     sliceOffset[0] = (warpVectorShape[0] / offsets[0]);
   else if (offsets[1])
     sliceOffset[0] = (warpVectorShape[1] / offsets[1]);

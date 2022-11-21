@@ -11,6 +11,8 @@
 // test_memory_resource requires RTTI for dynamic_cast
 // UNSUPPORTED: no-rtti
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // <experimental/memory_resource>
 
 // template <class T> class polymorphic_allocator

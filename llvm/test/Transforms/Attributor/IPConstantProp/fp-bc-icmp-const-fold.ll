@@ -5,7 +5,7 @@ target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux"
 
 define void @test(i32 signext %n) {
-; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind readnone
+; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@test
 ; CHECK-SAME: (i32 signext [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -79,5 +79,5 @@ _ZN5boost4math4signIgEEiRKT_.exit30:              ; preds = %cond.false.i28, %if
 }
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind memory(none) }
 ;.

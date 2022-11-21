@@ -57,8 +57,8 @@ public:
 
             // Expressions.
             const AttributeExpr, const CallExpr, const DeclRefExpr,
-            const MemberAccessExpr, const OperationExpr, const TupleExpr,
-            const TypeExpr,
+            const MemberAccessExpr, const OperationExpr, const RangeExpr,
+            const TupleExpr, const TypeExpr,
 
             // Core Constraint Decls.
             const AttrConstraintDecl, const OpConstraintDecl,
@@ -107,6 +107,10 @@ private:
     for (const Node *child : expr->getResultTypes())
       visit(child);
     for (const Node *child : expr->getAttributes())
+      visit(child);
+  }
+  void visitImpl(const RangeExpr *expr) {
+    for (const Node *child : expr->getElements())
       visit(child);
   }
   void visitImpl(const TupleExpr *expr) {
@@ -323,6 +327,21 @@ OperationExpr::create(Context &ctx, SMRange loc, const ods::Operation *odsOp,
 
 Optional<StringRef> OperationExpr::getName() const {
   return getNameDecl()->getName();
+}
+
+//===----------------------------------------------------------------------===//
+// RangeExpr
+//===----------------------------------------------------------------------===//
+
+RangeExpr *RangeExpr::create(Context &ctx, SMRange loc,
+                             ArrayRef<Expr *> elements, RangeType type) {
+  unsigned allocSize = RangeExpr::totalSizeToAlloc<Expr *>(elements.size());
+  void *rawData = ctx.getAllocator().Allocate(allocSize, alignof(TupleExpr));
+
+  RangeExpr *expr = new (rawData) RangeExpr(loc, type, elements.size());
+  std::uninitialized_copy(elements.begin(), elements.end(),
+                          expr->getElements().begin());
+  return expr;
 }
 
 //===----------------------------------------------------------------------===//

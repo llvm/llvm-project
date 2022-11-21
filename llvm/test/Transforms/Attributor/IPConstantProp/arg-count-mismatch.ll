@@ -40,7 +40,7 @@ define dso_local i16 @foo(i16 %a) {
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]])
 ; TUNIT-NEXT:    ret i16 [[CALL]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone
+; CGSCC: Function Attrs: nofree nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@foo
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]])
@@ -51,7 +51,7 @@ define dso_local i16 @foo(i16 %a) {
 }
 
 define internal i16 @bar(i16 %p1, i16 %p2) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    ret i16 0
@@ -66,7 +66,7 @@ define dso_local i16 @foo2(i16 %a) {
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar2 to i16 (i16)*)(i16 [[A]])
 ; TUNIT-NEXT:    ret i16 [[CALL]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone
+; CGSCC: Function Attrs: nofree nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@foo2
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar2 to i16 (i16)*)(i16 [[A]])
@@ -77,7 +77,7 @@ define dso_local i16 @foo2(i16 %a) {
 }
 
 define internal i16 @bar2(i16 %p1, i16 %p2) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bar2
 ; CHECK-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[A:%.*]] = add i16 [[P1]], [[P2]]
@@ -101,7 +101,7 @@ define dso_local i16 @vararg_tests(i16 %a) {
 ; TUNIT-NEXT:    [[ADD:%.*]] = add i16 7, [[CALL2]]
 ; TUNIT-NEXT:    ret i16 [[ADD]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone
+; CGSCC: Function Attrs: nofree nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@vararg_tests
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    [[CALL1:%.*]] = call i16 (i16, ...) @vararg_prop(i16 noundef 7, i16 noundef 8, i16 [[A]]) #[[ATTR2:[0-9]+]]
@@ -116,7 +116,7 @@ define dso_local i16 @vararg_tests(i16 %a) {
 }
 
 define internal i16 @vararg_prop(i16 %p1, ...) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@vararg_prop
 ; CGSCC-SAME: (i16 [[P1:%.*]], ...) #[[ATTR1]] {
 ; CGSCC-NEXT:    ret i16 7
@@ -125,7 +125,7 @@ define internal i16 @vararg_prop(i16 %p1, ...) {
 }
 
 define internal i16 @vararg_no_prop(i16 %p1, i16 %p2, ...) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@vararg_no_prop
 ; CHECK-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]], ...) #[[ATTR1]] {
 ; CHECK-NEXT:    ret i16 7
@@ -135,9 +135,9 @@ define internal i16 @vararg_no_prop(i16 %p1, i16 %p2, ...) {
 
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { norecurse }
-; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind readnone }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2]] = { readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { willreturn }
 ;.

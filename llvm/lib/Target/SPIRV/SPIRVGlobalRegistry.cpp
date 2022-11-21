@@ -390,6 +390,26 @@ SPIRVGlobalRegistry::getOrCreateConsIntArray(uint64_t Val,
                                        LLVMArrTy->getNumElements());
 }
 
+Register
+SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
+                                             SPIRVType *SpvType) {
+  const Type *LLVMTy = getTypeForSPIRVType(SpvType);
+  const PointerType *LLVMPtrTy = cast<PointerType>(LLVMTy);
+  // Find a constant in DT or build a new one.
+  Constant *CP = ConstantPointerNull::get(const_cast<PointerType *>(LLVMPtrTy));
+  Register Res = DT.find(CP, CurMF);
+  if (!Res.isValid()) {
+    LLT LLTy = LLT::pointer(LLVMPtrTy->getAddressSpace(), PointerSize);
+    Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
+    assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
+    MIRBuilder.buildInstr(SPIRV::OpConstantNull)
+        .addDef(Res)
+        .addUse(getSPIRVTypeID(SpvType));
+    DT.add(CP, CurMF, Res);
+  }
+  return Res;
+}
+
 Register SPIRVGlobalRegistry::buildConstantSampler(
     Register ResReg, unsigned AddrMode, unsigned Param, unsigned FilerMode,
     MachineIRBuilder &MIRBuilder, SPIRVType *SpvType) {
@@ -845,6 +865,16 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypePipe(
   return MIRBuilder.buildInstr(SPIRV::OpTypePipe)
       .addDef(ResVReg)
       .addImm(AccessQual);
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeDeviceEvent(
+    MachineIRBuilder &MIRBuilder) {
+  SPIRV::DeviceEventTypeDescriptor TD;
+  if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
+    return Res;
+  Register ResVReg = createTypeVReg(MIRBuilder);
+  DT.add(TD, &MIRBuilder.getMF(), ResVReg);
+  return MIRBuilder.buildInstr(SPIRV::OpTypeDeviceEvent).addDef(ResVReg);
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeSampledImage(

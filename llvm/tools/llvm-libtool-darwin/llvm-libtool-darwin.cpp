@@ -256,8 +256,8 @@ public:
       "This test makes sure NewArchiveMemberList is used by MembersData since "
       "the following asserts test invariants required for MembersData.");
   static_assert(
-      !std::is_copy_constructible<
-          decltype(NewArchiveMemberList::Members)::value_type>::value,
+      !std::is_copy_constructible_v<
+          decltype(NewArchiveMemberList::Members)::value_type>,
       "MembersData::MembersPerArchitecture has a dependency on "
       "MembersData::FileBuffers so it should not be able to "
       "be copied on its own without FileBuffers. Unfortunately, "
@@ -265,8 +265,8 @@ public:
       "of a non-copyable type is itself non-copyable so we have to test the "
       "actual type of the stored data (ie, value_type).");
   static_assert(
-      !std::is_copy_assignable<
-          decltype(NewArchiveMemberList::Members)::value_type>::value,
+      !std::is_copy_assignable_v<
+          decltype(NewArchiveMemberList::Members)::value_type>,
       "MembersData::MembersPerArchitecture has a dependency on "
       "MembersData::FileBuffers so it should not be able to "
       "be copied on its own without FileBuffers. Unfortunately, "

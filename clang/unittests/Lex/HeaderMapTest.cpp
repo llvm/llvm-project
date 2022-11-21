@@ -115,8 +115,7 @@ template <class FileTy, class PaddingTy> struct PaddedFile {
 TEST(HeaderMapTest, lookupFilenameTruncatedSuffix) {
   typedef HMapFileMock<2, 64 - sizeof(HMapHeader) - 2 * sizeof(HMapBucket)>
       FileTy;
-  static_assert(std::is_standard_layout<FileTy>::value,
-                "Expected standard layout");
+  static_assert(std::is_standard_layout_v<FileTy>, "Expected standard layout");
   static_assert(sizeof(FileTy) == 64, "check the math");
   PaddedFile<FileTy, uint64_t> P;
   auto &File = P.File;
@@ -151,8 +150,7 @@ TEST(HeaderMapTest, lookupFilenameTruncatedSuffix) {
 TEST(HeaderMapTest, lookupFilenameTruncatedPrefix) {
   typedef HMapFileMock<2, 64 - sizeof(HMapHeader) - 2 * sizeof(HMapBucket)>
       FileTy;
-  static_assert(std::is_standard_layout<FileTy>::value,
-                "Expected standard layout");
+  static_assert(std::is_standard_layout_v<FileTy>, "Expected standard layout");
   static_assert(sizeof(FileTy) == 64, "check the math");
   PaddedFile<FileTy, uint64_t> P;
   auto &File = P.File;

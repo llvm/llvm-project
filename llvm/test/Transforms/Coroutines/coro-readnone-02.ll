@@ -50,7 +50,7 @@ suspend:
 ; CHECK_SPLITTED-NEXT:    call void @nop()
 ; CHECK_SPLITTED-NEXT:    call void @print_same()
 ;
-; CHECK_SPLITTED: attributes #[[ATTR_NUM]] = { readnone }
+; CHECK_SPLITTED: attributes #[[ATTR_NUM]] = { memory(none) }
 ;
 ; CHECK_UNSPLITTED-LABEL: @f(
 ; CHECK_UNSPLITTED: br i1 %cmp, label %same, label %diff

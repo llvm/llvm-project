@@ -50,8 +50,7 @@ static int getPosixProtectionFlags(unsigned Flags) {
       llvm::sys::Memory::MF_EXEC:
     return PROT_READ | PROT_WRITE | PROT_EXEC;
   case llvm::sys::Memory::MF_EXEC:
-#if (defined(__FreeBSD__) || defined(__POWERPC__) || defined (__ppc__) || \
-     defined(_POWER) || defined(_ARCH_PPC))
+#if defined(__FreeBSD__) || defined(__powerpc__)
     // On PowerPC, having an executable page that has no read permission
     // can have unintended consequences.  The function InvalidateInstruction-
     // Cache uses instructions dcbf and icbi, both of which are treated by
@@ -213,9 +212,7 @@ void Memory::InvalidateInstructionCache(const void *Addr,
 // icache invalidation for PPC and ARM.
 #if defined(__APPLE__)
 
-#  if (defined(__POWERPC__) || defined (__ppc__) || \
-       defined(_POWER) || defined(_ARCH_PPC) || defined(__arm__) || \
-       defined(__arm64__))
+#  if (defined(__powerpc__) || defined(__arm__) || defined(__arm64__))
   sys_icache_invalidate(const_cast<void *>(Addr), Len);
 #  endif
 
@@ -226,8 +223,7 @@ void Memory::InvalidateInstructionCache(const void *Addr,
 
 #else
 
-#  if (defined(__POWERPC__) || defined (__ppc__) || \
-       defined(_POWER) || defined(_ARCH_PPC)) && defined(__GNUC__)
+#  if defined(__powerpc__) && defined(__GNUC__)
   const size_t LineSize = 32;
 
   const intptr_t Mask = ~(LineSize - 1);

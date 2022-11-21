@@ -86,7 +86,6 @@ define <16 x i8> @icmp_constfold_v16i8(<16 x i8> %a) {
 ; CHECK-LABEL: icmp_constfold_v16i8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    movi.16b v0, #1
-; CHECK-NEXT:    and.16b v0, v0, v0
 ; CHECK-NEXT:    ret
   %1 = icmp eq <16 x i8> %a, %a
   br label %bb2

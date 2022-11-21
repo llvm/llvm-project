@@ -26,16 +26,16 @@ namespace include_cleaner {
 ///
 /// References occur at a particular location, refer to a single symbol, and
 /// that symbol may be provided by several headers.
-/// FIXME: Provide signals about the reference type and providing headers so the
-/// caller can filter and rank the results.
-using UsedSymbolCB = llvm::function_ref<void(
-    SourceLocation RefLoc, Symbol Target, llvm::ArrayRef<Header> Providers)>;
+/// FIXME: Provide signals about the providing headers so the caller can filter
+/// and rank the results.
+using UsedSymbolCB = llvm::function_ref<void(const SymbolReference &SymRef,
+                                             llvm::ArrayRef<Header> Providers)>;
 
 /// Find and report all references to symbols in a region of code.
 ///
 /// The AST traversal is rooted at ASTRoots - typically top-level declarations
 /// of a single source file.
-/// FIXME: Handle macro uses.
+/// The references to macros must be recorded separately and provided.
 ///
 /// This is the main entrypoint of the include-cleaner library, and can be used:
 ///  - to diagnose missing includes: a referenced symbol is provided by
@@ -44,7 +44,9 @@ using UsedSymbolCB = llvm::function_ref<void(
 ///    the headers for any referenced symbol
 /// FIXME: Take in an include structure to improve location to header mappings
 /// (e.g. IWYU pragmas).
-void walkUsed(llvm::ArrayRef<Decl *> ASTRoots, UsedSymbolCB CB);
+void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
+              llvm::ArrayRef<SymbolReference> MacroRefs, const SourceManager &,
+              UsedSymbolCB CB);
 
 } // namespace include_cleaner
 } // namespace clang

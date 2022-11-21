@@ -579,9 +579,37 @@ class IsVectorOfRankPred<list<int> allowedRanks> :
                            == }]
                          # allowedlength>)>]>;
 
+// Whether the number of elements of a fixed-length vector is from the given
+// `allowedRanks` list
+class IsFixedVectorOfRankPred<list<int> allowedRanks> :
+  And<[IsFixedVectorTypePred,
+       Or<!foreach(allowedlength, allowedRanks,
+                   CPred<[{$_self.cast<::mlir::VectorType>().getRank()
+                           == }]
+                         # allowedlength>)>]>;
+
+// Whether the number of elements of a scalable vector is from the given
+// `allowedRanks` list
+class IsScalableVectorOfRankPred<list<int> allowedRanks> :
+  And<[IsScalableVectorTypePred,
+       Or<!foreach(allowedlength, allowedRanks,
+                   CPred<[{$_self.cast<::mlir::VectorType>().getRank()
+                           == }]
+                         # allowedlength>)>]>;
+
 // Any vector where the rank is from the given `allowedRanks` list
 class VectorOfRank<list<int> allowedRanks> : Type<
   IsVectorOfRankPred<allowedRanks>,
+  " of ranks " # !interleave(allowedRanks, "/"), "::mlir::VectorType">;
+
+// Any fixed-length vector where the rank is from the given `allowedRanks` list
+class FixedVectorOfRank<list<int> allowedRanks> : Type<
+  IsFixedVectorOfRankPred<allowedRanks>,
+  " of ranks " # !interleave(allowedRanks, "/"), "::mlir::VectorType">;
+
+// Any scalable vector where the rank is from the given `allowedRanks` list
+class ScalableVectorOfRank<list<int> allowedRanks> : Type<
+  IsScalableVectorOfRankPred<allowedRanks>,
   " of ranks " # !interleave(allowedRanks, "/"), "::mlir::VectorType">;
 
 // Any vector where the rank is from the given `allowedRanks` list and the type

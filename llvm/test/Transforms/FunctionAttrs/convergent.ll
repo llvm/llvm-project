@@ -2,7 +2,7 @@
 ; RUN: opt -passes=function-attrs -S < %s | FileCheck %s
 
 define i32 @nonleaf() convergent {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@nonleaf
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @leaf()
@@ -13,7 +13,7 @@ define i32 @nonleaf() convergent {
 }
 
 define i32 @leaf() convergent {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@leaf
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    ret i32 0
@@ -85,7 +85,7 @@ define i32 @intrinsic() convergent {
 }
 
 define i32 @recursive1() convergent {
-; CHECK: Function Attrs: nofree nosync nounwind readnone
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@recursive1
 ; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @recursive2() #[[ATTR1]]
@@ -96,7 +96,7 @@ define i32 @recursive1() convergent {
 }
 
 define i32 @recursive2() convergent {
-; CHECK: Function Attrs: nofree nosync nounwind readnone
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@recursive2
 ; CHECK-SAME: () #[[ATTR5]] {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @recursive1() #[[ATTR1]]

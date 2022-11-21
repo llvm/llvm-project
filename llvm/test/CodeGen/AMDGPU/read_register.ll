@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire -verify-machineinstrs < %s | FileCheck %s
 
 declare i32 @llvm.read_register.i32(metadata) #0
 declare i64 @llvm.read_register.i64(metadata) #0

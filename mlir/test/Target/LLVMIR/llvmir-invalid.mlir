@@ -83,6 +83,20 @@ llvm.func @invalid_align(%arg0 : f32 {llvm.align = 4}) -> f32 {
 
 // -----
 
+// expected-error @below{{llvm.signext attribute attached to LLVM non-integer argument}}
+llvm.func @invalid_signext(%arg0: f32 {llvm.signext}) {
+  "llvm.return"() : () -> ()
+}
+
+// -----
+
+// expected-error @below{{llvm.zeroext attribute attached to LLVM non-integer argument}}
+llvm.func @invalid_zeroext(%arg0: f32 {llvm.zeroext}) {
+  "llvm.return"() : () -> ()
+}
+
+// -----
+
 llvm.func @no_non_complex_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
   // expected-error @below{{expected struct type to be a complex number}}
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>

@@ -12,7 +12,7 @@ define internal void @foo(i32 %X) {
 }
 
 define void @bar() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -20,5 +20,5 @@ define void @bar() {
   ret void
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.

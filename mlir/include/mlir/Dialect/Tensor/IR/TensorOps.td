@@ -191,14 +191,17 @@ def Tensor_EmptyOp : Tensor_Op<"empty",
 
   let builders = [
     // Build with fully static sizes.
-    OpBuilder<(ins "ArrayRef<int64_t>":$staticShape, "Type":$elementType)>,
+    OpBuilder<(ins "ArrayRef<int64_t>":$staticShape, "Type":$elementType,
+                   CArg<"Attribute", "{}">:$encoding)>,
 
     // Build with mixed static/dynamic sizes.
     OpBuilder<(ins "ArrayRef<int64_t>":$staticShape, "Type":$elementType,
-                   "ValueRange":$dynamicSizes)>,
+                   "ValueRange":$dynamicSizes,
+                   CArg<"Attribute", "{}">:$encoding)>,
 
     // Build with mixed static/dynamic sizes.
-    OpBuilder<(ins "ArrayRef<OpFoldResult>":$sizes, "Type":$elementType)>
+    OpBuilder<(ins "ArrayRef<OpFoldResult>":$sizes, "Type":$elementType,
+                   CArg<"Attribute", "{}">:$encoding)>
   ];
 
   let hasCanonicalizer = 1;

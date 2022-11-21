@@ -15,6 +15,7 @@
 #include "Arch/M68k.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
+#include "Arch/RISCV.h"
 #include "Arch/Sparc.h"
 #include "Arch/SystemZ.h"
 #include "Arch/VE.h"
@@ -330,7 +331,7 @@ void tools::addLinkerCompressDebugSectionsOption(
       CmdArgs.push_back(Args.MakeArgString("--compress-debug-sections=" + V));
     else
       TC.getDriver().Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << V;
+          << A->getSpelling() << V;
   }
 }
 
@@ -472,9 +473,7 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
       return "ck810";
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
-    if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
-      return A->getValue();
-    return "";
+    return riscv::getRISCVTargetCPU(Args, T);
 
   case llvm::Triple::bpfel:
   case llvm::Triple::bpfeb:

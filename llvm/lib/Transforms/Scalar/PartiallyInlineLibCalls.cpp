@@ -80,10 +80,9 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   Instruction *LibCall = Call->clone();
   Builder.Insert(LibCall);
 
-  // Add attribute "readnone" so that backend can use a native sqrt instruction
-  // for this call.
-  Call->removeFnAttr(Attribute::WriteOnly);
-  Call->addFnAttr(Attribute::ReadNone);
+  // Add memory(none) attribute, so that the backend can use a native sqrt
+  // instruction for this call.
+  Call->setDoesNotAccessMemory();
 
   // Insert a FP compare instruction and use it as the CurrBB branch condition.
   Builder.SetInsertPoint(CurrBBTerm);

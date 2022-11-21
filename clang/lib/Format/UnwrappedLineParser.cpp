@@ -1108,12 +1108,10 @@ void UnwrappedLineParser::parsePPDirective() {
     parsePPIf(/*IfDef=*/true);
     break;
   case tok::pp_else:
-    parsePPElse();
-    break;
   case tok::pp_elifdef:
   case tok::pp_elifndef:
   case tok::pp_elif:
-    parsePPElIf();
+    parsePPElse();
     break;
   case tok::pp_endif:
     parsePPEndIf();
@@ -1144,12 +1142,10 @@ void UnwrappedLineParser::conditionalCompilationStart(bool Unreachable) {
   ++PPBranchLevel;
   assert(PPBranchLevel >= 0 && PPBranchLevel <= (int)PPLevelBranchIndex.size());
   if (PPBranchLevel == (int)PPLevelBranchIndex.size()) {
-    // If the first branch is unreachable, set the BranchIndex to 1.  This way
-    // the next branch will be parsed if there is one.
-    PPLevelBranchIndex.push_back(Unreachable ? 1 : 0);
+    PPLevelBranchIndex.push_back(0);
     PPLevelBranchCount.push_back(0);
   }
-  PPChainBranchIndex.push(0);
+  PPChainBranchIndex.push(Unreachable ? -1 : 0);
   bool Skip = PPLevelBranchIndex[PPBranchLevel] > 0;
   conditionalCompilationCondition(Unreachable || Skip);
 }
@@ -1224,8 +1220,6 @@ void UnwrappedLineParser::parsePPElse() {
   parsePPUnknown();
   ++PPBranchLevel;
 }
-
-void UnwrappedLineParser::parsePPElIf() { parsePPElse(); }
 
 void UnwrappedLineParser::parsePPEndIf() {
   conditionalCompilationEnd();

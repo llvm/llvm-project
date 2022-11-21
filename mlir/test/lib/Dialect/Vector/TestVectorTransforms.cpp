@@ -746,24 +746,26 @@ struct TestVectorDistribution
       }
     });
     MLIRContext *ctx = &getContext();
+    auto distributionFn = [](Value val) {
+      // Create a map (d0, d1) -> (d1) to distribute along the inner
+      // dimension. Once we support n-d distribution we can add more
+      // complex cases.
+      VectorType vecType = val.getType().dyn_cast<VectorType>();
+      int64_t vecRank = vecType ? vecType.getRank() : 0;
+      OpBuilder builder(val.getContext());
+      if (vecRank == 0)
+        return AffineMap::get(val.getContext());
+      return AffineMap::get(vecRank, 0, builder.getAffineDimExpr(vecRank - 1));
+    };
     if (distributeTransferWriteOps) {
-      auto distributionFn = [](vector::TransferWriteOp writeOp) {
-        // Create a map (d0, d1) -> (d1) to distribute along the inner
-        // dimension. Once we support n-d distribution we can add more
-        // complex cases.
-        int64_t vecRank = writeOp.getVectorType().getRank();
-        OpBuilder builder(writeOp.getContext());
-        auto map =
-            AffineMap::get(vecRank, 0, builder.getAffineDimExpr(vecRank - 1));
-        return map;
-      };
       RewritePatternSet patterns(ctx);
       populateDistributeTransferWriteOpPatterns(patterns, distributionFn);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     }
     if (propagateDistribution) {
       RewritePatternSet patterns(ctx);
-      vector::populatePropagateWarpVectorDistributionPatterns(patterns);
+      vector::populatePropagateWarpVectorDistributionPatterns(patterns,
+                                                              distributionFn);
       vector::populateDistributeReduction(patterns, warpReduction);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     }

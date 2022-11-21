@@ -98,10 +98,24 @@ def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
   let hasVerifier = 1;
 }
 
-def NVGPU_MmaSyncOp : NVGPU_Op<"mma.sync", [
-                               Pure,
-                               PredOpTrait<"matrixA and matrixB have same element type", 
-                                           TCopVTEtIsSameAs<0, 1>>]> {
+class NVGPU_MmaSyncOp<string mnemonic> :
+        NVGPU_Op<mnemonic,  [Pure,
+                             PredOpTrait<"matrixA and matrixB have same element type", 
+                                         TCopVTEtIsSameAs<0, 1>>]> {
+  code extraBaseClassDeclaration = [{
+    std::array<int64_t, 3> getMmaShapeAsArray() {      
+      ArrayAttr mmaShape = this->getMmaShape();
+      assert(mmaShape.size() == 3 && "mmaShape should be three integers");
+      return {mmaShape[0].cast<IntegerAttr>().getInt(),
+              mmaShape[1].cast<IntegerAttr>().getInt(),
+              mmaShape[2].cast<IntegerAttr>().getInt()};
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
   let description = [{
     The `nvgpu.mma.sync` op represents the warp-level matrix-multiply-and-
     accumulate (mma) operation that is compatible with `nvvm.mma.sync`. 
@@ -143,9 +157,63 @@ def NVGPU_MmaSyncOp : NVGPU_Op<"mma.sync", [
     `:` `(` type($matrixA) `,` type($matrixB) `,` type($matrixC) `)` `->` type($res)
   }];
 
-  let hasVerifier = 1;
+  let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
+def NVGPU_MmaSparseSyncMetadataType : FixedVectorOfLengthAndType<[2], [I16]>,
+                        BuildableType<"::mlir::VectorType::get("
+                          "{2},$_builder.getI16Type())">;
+
+def NVGPU_MmaSparseSyncOp : NVGPU_MmaSyncOp<"mma.sp.sync"> {
+  let description = [{
+  The `nvgu.mma.sp.sync` operation performs a warp-distributed MMA operation
+  where operand A is "structured sparse". In this case, the `matrixA` operand
+  represents the (warp-distributed) non-zero values of operand A, and the
+  `sparse_metadata` operand provides the indices.
+
+  The full description of the sparsity storage format and distribution scheme is
+  described in the PTX docs. This operation is meant to follow the semantic
+  described in the PTX documentation here:
+  https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-instructions-for-sparse-mma
+
+  The way the indices are distributed among the threads in a warp is controlled
+  by the optional `sparsity_selector` operand, which is `0` by default. For
+  more information, please consult the PTX documentation linked above.
+
+  Example (targetingthe f16 16x8x32 `mma.sp` PTX instruction):
+
+  ```mlir  
+  nvgpu.mma.sp.sync (%a, %b, %c) metadata (%meta) {mmaShape = [16, 8, 32]} :
+    (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>    
+  ```  
+  }];
+
+  let arguments = (ins AnyVector:$matrixA,                       
+                       AnyVector:$matrixB,
+                       AnyVector:$matrixC,
+                       NVGPU_MmaSparseSyncMetadataType:$sparseMetadata,
+                       I64ArrayAttr:$mmaShape,
+                       DefaultValuedAttr<I32Attr, "0">:$sparsitySelector,
+                       OptionalAttr<UnitAttr>:$tf32Enabled
+                       );
+
+  let results = (outs AnyVector:$res);
+
+  let builders = [
+    OpBuilder<(ins "Value":$matrixA,
+                   "Value":$matrixB,
+                   "Value":$matrixC,
+                   "Value":$sparseMetadata,
+                   "ArrayRef<int64_t>":$mmaShape)>
+  ];
+
+  let assemblyFormat = [{
+    `(` $matrixA`,` $matrixB`,` $matrixC `)` `metadata` `(` $sparseMetadata `)` attr-dict
+    `:` `(` type($matrixA) `,` type($matrixB) `,` type($matrixC) `)` `->` type($res)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration;
+}
 
 def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
                                        AttrSizedOperandSegments]> {

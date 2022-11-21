@@ -567,6 +567,40 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// RangeExpr
+//===----------------------------------------------------------------------===//
+
+/// This expression builds a range from a set of element values (which may be
+/// ranges themselves).
+class RangeExpr final : public Node::NodeBase<RangeExpr, Expr>,
+                        private llvm::TrailingObjects<RangeExpr, Expr *> {
+public:
+  static RangeExpr *create(Context &ctx, SMRange loc, ArrayRef<Expr *> elements,
+                           RangeType type);
+
+  /// Return the element expressions of this range.
+  MutableArrayRef<Expr *> getElements() {
+    return {getTrailingObjects<Expr *>(), numElements};
+  }
+  ArrayRef<Expr *> getElements() const {
+    return const_cast<RangeExpr *>(this)->getElements();
+  }
+
+  /// Return the range result type of this expression.
+  RangeType getType() const { return Base::getType().cast<RangeType>(); }
+
+private:
+  RangeExpr(SMRange loc, RangeType type, unsigned numElements)
+      : Base(loc, type), numElements(numElements) {}
+
+  /// The number of element values for this range.
+  unsigned numElements;
+
+  /// TrailingObject utilities.
+  friend class llvm::TrailingObjects<RangeExpr, Expr *>;
+};
+
+//===----------------------------------------------------------------------===//
 // TupleExpr
 //===----------------------------------------------------------------------===//
 
@@ -909,7 +943,7 @@ private:
                      Type resultType)
       : Base(name.getLoc(), &name), numInputs(numInputs),
         numResults(numResults), codeBlock(codeBlock), constraintBody(body),
-        resultType(resultType) {}
+        resultType(resultType), hasNativeInputTypes(hasNativeInputTypes) {}
 
   /// The number of inputs to this constraint.
   unsigned numInputs;
@@ -1284,7 +1318,7 @@ inline bool CoreConstraintDecl::classof(const Node *node) {
 
 inline bool Expr::classof(const Node *node) {
   return isa<AttributeExpr, CallExpr, DeclRefExpr, MemberAccessExpr,
-             OperationExpr, TupleExpr, TypeExpr>(node);
+             OperationExpr, RangeExpr, TupleExpr, TypeExpr>(node);
 }
 
 inline bool OpRewriteStmt::classof(const Node *node) {

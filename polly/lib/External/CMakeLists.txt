@@ -64,7 +64,7 @@ if (POLLY_BUNDLED_ISL)
     check_c_source_compiles("
     ${_includes}
     ${_type} typeVar;
-    int main() {
+    int main(void) {
     return 0;
     }
     " ${_variable})
@@ -73,7 +73,7 @@ if (POLLY_BUNDLED_ISL)
 
   check_c_source_compiles("
   int func(void) __attribute__((__warn_unused_result__));
-  int main() { return 0; }
+  int main(void) { return 0; }
   " HAS_ATTRIBUTE_WARN_UNUSED_RESULT)
   set(GCC_WARN_UNUSED_RESULT)
   if (HAS_ATTRIBUTE_WARN_UNUSED_RESULT)
@@ -82,22 +82,22 @@ if (POLLY_BUNDLED_ISL)
 
   check_c_source_compiles("
   __attribute__ ((unused)) static void foo(void);
-  int main() { return 0; }
+  int main(void) { return 0; }
   " HAVE___ATTRIBUTE__)
 
 
   check_c_source_compiles_numeric("
   #include <strings.h>
-  int main() { (void)ffs(0); return 0; }
+  int main(void) { (void)ffs(0); return 0; }
   " HAVE_DECL_FFS)
 
   check_c_source_compiles_numeric("
-  int main() { (void)__builtin_ffs(0); return 0; }
+  int main(void) { (void)__builtin_ffs(0); return 0; }
   " HAVE_DECL___BUILTIN_FFS)
 
   check_c_source_compiles_numeric("
   #include <intrin.h>
-  int main() { (void)_BitScanForward(NULL, 0); return 0; }
+  int main(void) { (void)_BitScanForward(NULL, 0); return 0; }
   " HAVE_DECL__BITSCANFORWARD)
 
   if (NOT HAVE_DECL_FFS AND
@@ -109,12 +109,12 @@ if (POLLY_BUNDLED_ISL)
 
   check_c_source_compiles_numeric("
   #include <strings.h>
-  int main() { (void)strcasecmp(\"\", \"\"); return 0; }
+  int main(void) { (void)strcasecmp(\"\", \"\"); return 0; }
   " HAVE_DECL_STRCASECMP)
 
   check_c_source_compiles_numeric("
   #include <string.h>
-  int main() { (void)_stricmp(\"\", \"\"); return 0; }
+  int main(void) { (void)_stricmp(\"\", \"\"); return 0; }
   " HAVE_DECL__STRICMP)
 
   if (NOT HAVE_DECL_STRCASECMP AND NOT HAVE_DECL__STRICMP)
@@ -124,12 +124,12 @@ if (POLLY_BUNDLED_ISL)
 
   check_c_source_compiles_numeric("
   #include <strings.h>
-  int main() { (void)strncasecmp(\"\", \"\", 0); return 0; }
+  int main(void) { (void)strncasecmp(\"\", \"\", 0); return 0; }
   " HAVE_DECL_STRNCASECMP)
 
   check_c_source_compiles_numeric("
   #include <string.h>
-  int main() { (void)_strnicmp(\"\", \"\", 0); return 0; }
+  int main(void) { (void)_strnicmp(\"\", \"\", 0); return 0; }
   " HAVE_DECL__STRNICMP)
 
   if (NOT HAVE_DECL_STRNCASECMP AND NOT HAVE_DECL__STRNICMP)
@@ -139,12 +139,12 @@ if (POLLY_BUNDLED_ISL)
 
   check_c_source_compiles_numeric("
   #include <stdio.h>
-  int main() { snprintf((void*)0, 0, \" \"); return 0; }
+  int main(void) { snprintf((void*)0, 0, \" \"); return 0; }
   " HAVE_DECL_SNPRINTF)
 
   check_c_source_compiles_numeric("
   #include <stdio.h>
-  int main() { _snprintf((void*)0, 0, \" \"); return 0; }
+  int main(void) { _snprintf((void*)0, 0, \" \"); return 0; }
   " HAVE_DECL__SNPRINTF)
 
   if (NOT HAVE_DECL_SNPRINTF AND NOT HAVE_DECL__SNPRINTF)

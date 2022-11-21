@@ -2000,6 +2000,14 @@ public:
     llvm_unreachable("Masked atomicrmw expansion unimplemented on this target");
   }
 
+  /// Perform a atomicrmw expansion using a target-specific way. This is
+  /// expected to be called when masked atomicrmw and bit test atomicrmw don't
+  /// work, and the target supports another way to lower atomicrmw.
+  virtual void emitExpandAtomicRMW(AtomicRMWInst *AI) const {
+    llvm_unreachable(
+        "Generic atomicrmw expansion unimplemented on this target");
+  }
+
   /// Perform a bit test atomicrmw using a target-specific intrinsic. This
   /// represents the combined bit test intrinsic which will be lowered at a late
   /// stage by the backend.

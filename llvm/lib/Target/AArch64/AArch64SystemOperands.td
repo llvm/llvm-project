@@ -314,6 +314,22 @@ def : SVEPREDPAT<"mul3",  0x1e>;
 def : SVEPREDPAT<"all",   0x1f>;
 
 //===----------------------------------------------------------------------===//
+// SVE Predicate-as-counter patterns
+//===----------------------------------------------------------------------===//
+
+class SVEVECLENSPECIFIER<string name, bits<1> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<1> Encoding;
+  let Encoding = encoding;
+}
+
+def : SVEVECLENSPECIFIER<"vlx2", 0x0>;
+def : SVEVECLENSPECIFIER<"vlx4", 0x1>;
+
+//===----------------------------------------------------------------------===//
 // Exact FP Immediates.
 //
 // These definitions are used to create a lookup table with FP Immediates that

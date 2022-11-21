@@ -1,0 +1,52 @@
+# REQUIRES: python, native && target-aarch64 && system-darwin
+
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/application_specific_info/asi.yaml > %t.dir/asi
+# RUN: %lldb -o 'command script import lldb.macosx.crashlog' \
+# RUN: -o 'crashlog -a -i -t %t.dir/asi %S/Inputs/application_specific_info/asi.ips' \
+# RUN: -o "thread list" -o "bt all" 2>&1 | FileCheck %s
+
+# CHECK: "crashlog" {{.*}} commands have been installed, use the "--help" options on these commands
+
+# CHECK: (lldb) process status --verbose
+# CHECK-NEXT: Process 96535 stopped
+# CHECK-NEXT: * thread #1, queue = 'com.apple.main-thread', stop reason = EXC_CRASH (code=0, subcode=0x0)
+# CHECK-NEXT:     frame #0: 0x00000001a08c7224{{.*}}[artificial]
+# CHECK: Extended Crash Information:
+# CHECK:   Application Specific Information:
+# CHECK-NEXT:     CoreFoundation: *** Terminating app due to uncaught exception 'NSRangeException', reason: '*** __boundsFail: index 10 beyond bounds [0 .. 3]'
+# CHECK-NEXT:     libc++abi.dylib: terminating with uncaught exception of type NSException
+# CHECK-NEXT:     libsystem_c.dylib: abort() called
+
+
+# CHECK: (lldb) thread backtrace --extended true
+# CHECK-NEXT: * thread #1, queue = 'com.apple.main-thread', stop reason = EXC_CRASH (code=0, subcode=0x0)
+# CHECK-NEXT:   * frame #0: 0x00000001a08c7224{{.*}}[artificial]
+# CHECK-NEXT:     frame #1: 0x00000001a08fdceb{{.*}}[artificial]
+# CHECK-NEXT:     frame #2: 0x00000001a08372c7{{.*}}[artificial]
+# CHECK-NEXT:     frame #3: 0x00000001a08b7b17{{.*}}[artificial]
+# CHECK-NEXT:     frame #4: 0x00000001a08a7a0b{{.*}}[artificial]
+# CHECK-NEXT:     frame #5: 0x00000001a05ab763{{.*}}[artificial]
+# CHECK-NEXT:     frame #6: 0x00000001a08b6eb3{{.*}}[artificial]
+# CHECK-NEXT:     frame #7: 0x00000001a08b9c2b{{.*}}[artificial]
+# CHECK-NEXT:     frame #8: 0x00000001a08b9bd7{{.*}}[artificial]
+# CHECK-NEXT:     frame #9: 0x00000001a05a3007{{.*}}[artificial]
+# CHECK-NEXT:     frame #10: 0x00000001a0b3dcc3{{.*}}[artificial]
+# CHECK-NEXT:     frame #11: 0x00000001a0b46af3{{.*}}[artificial]
+# CHECK-NEXT:     frame #12: 0x00000001a09a12a3{{.*}}[artificial]
+# CHECK-NEXT:     frame #13: 0x00000001047e3ecf asi`main{{.*}}[artificial]
+# CHECK-NEXT:     frame #14: 0x00000001a05d3e4f{{.*}}[artificial]
+
+# CHECK:   thread #4294967295: tid = 0x0001, 0x00000001a0a58418{{.*}}, queue = 'Application Specific Backtrace'
+# CHECK-NEXT:     frame #0: 0x00000001a0a58418{{.*}}
+# CHECK-NEXT:     frame #1: 0x00000001a05a2ea7{{.*}}
+# CHECK-NEXT:     frame #2: 0x00000001a0b3dcc3{{.*}}
+# CHECK-NEXT:     frame #3: 0x00000001a0b46af3{{.*}}
+# CHECK-NEXT:     frame #4: 0x00000001a09a12a3{{.*}}
+# CHECK-NEXT:     frame #5: 0x00000001047e3ecf asi`main{{.*}}
+# CHECK-NEXT:     frame #6: 0x00000001a05d3e4f dyld`start{{.*}}
+
+
+# CHECK: (lldb) thread list
+# CHECK-NEXT: Process 96535 stopped
+# CHECK-NEXT: * thread #1: tid = 0x1af8f3, 0x00000001a08c7224{{.*}}, queue = 'com.apple.main-thread', stop reason = EXC_CRASH (code=0, subcode=0x0)

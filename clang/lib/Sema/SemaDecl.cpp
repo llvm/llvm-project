@@ -19339,7 +19339,7 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
     }
   }
 
-  // If we have have an empty set of enumerators we still need one bit.
+  // If we have an empty set of enumerators we still need one bit.
   // From [dcl.enum]p8
   // If the enumerator-list is empty, the values of the enumeration are as if
   // the enumeration had a single enumerator with value 0

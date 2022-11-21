@@ -1,3 +1,5 @@
+.. _entrypoints:
+
 Entrypoints in LLVM libc
 ------------------------
 

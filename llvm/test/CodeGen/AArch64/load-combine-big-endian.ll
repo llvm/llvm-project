@@ -463,8 +463,8 @@ define i32 @zext_load_i32_by_i8_shl_8(i32* %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0]
 ; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    lsl w0, w8, #8
-; CHECK-NEXT:    bfi w0, w9, #16, #8
+; CHECK-NEXT:    lsl w8, w8, #8
+; CHECK-NEXT:    orr w0, w8, w9, lsl #16
 ; CHECK-NEXT:    ret
   %tmp = bitcast i32* %arg to i8*
   %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 0
@@ -486,8 +486,8 @@ define i32 @zext_load_i32_by_i8_shl_16(i32* %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0]
 ; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    lsl w0, w8, #16
-; CHECK-NEXT:    bfi w0, w9, #24, #8
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    orr w0, w8, w9, lsl #24
 ; CHECK-NEXT:    ret
   %tmp = bitcast i32* %arg to i8*
   %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 0
@@ -527,8 +527,8 @@ define i32 @zext_load_i32_by_i8_bswap_shl_8(i32* %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0, #1]
 ; CHECK-NEXT:    ldrb w9, [x0]
-; CHECK-NEXT:    lsl w0, w8, #8
-; CHECK-NEXT:    bfi w0, w9, #16, #8
+; CHECK-NEXT:    lsl w8, w8, #8
+; CHECK-NEXT:    orr w0, w8, w9, lsl #16
 ; CHECK-NEXT:    ret
   %tmp = bitcast i32* %arg to i8*
   %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 1
@@ -550,8 +550,8 @@ define i32 @zext_load_i32_by_i8_bswap_shl_16(i32* %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0, #1]
 ; CHECK-NEXT:    ldrb w9, [x0]
-; CHECK-NEXT:    lsl w0, w8, #16
-; CHECK-NEXT:    bfi w0, w9, #24, #8
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    orr w0, w8, w9, lsl #24
 ; CHECK-NEXT:    ret
   %tmp = bitcast i32* %arg to i8*
   %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 1
@@ -576,8 +576,8 @@ define i16 @load_i16_from_nonzero_offset(i8* %p) {
 ; CHECK-LABEL: load_i16_from_nonzero_offset:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ldrb w0, [x0, #2]
-; CHECK-NEXT:    bfi w0, w8, #8, #24
+; CHECK-NEXT:    ldrb w9, [x0, #2]
+; CHECK-NEXT:    orr w0, w9, w8, lsl #8
 ; CHECK-NEXT:    ret
   %p1.i16 = bitcast i8* %p to i16*
   %p2.i8 = getelementptr i8, i8* %p, i64 2

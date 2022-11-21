@@ -9,8 +9,8 @@ llvm.func @fdiv_fp16(%arg0 : f16, %arg1 : f16) -> f16 {
   // CHECK-DAG: %[[rcp:.*]]     = nvvm.rcp.approx.ftz.f %[[rhs]] : f32
   // CHECK-DAG: %[[approx:.*]]  = llvm.fmul %[[lhs]], %[[rcp]] : f32
   // CHECK-DAG: %[[neg:.*]]     = llvm.fneg %[[rhs]] : f32
-  // CHECK-DAG: %[[err:.*]]     = "llvm.intr.fma"(%[[approx]], %[[neg]], %[[lhs]]) : (f32, f32, f32) -> f32
-  // CHECK-DAG: %[[refined:.*]] = "llvm.intr.fma"(%[[err]], %[[rcp]], %[[approx]]) : (f32, f32, f32) -> f32
+  // CHECK-DAG: %[[err:.*]]     = llvm.intr.fma(%[[approx]], %[[neg]], %[[lhs]]) : (f32, f32, f32) -> f32
+  // CHECK-DAG: %[[refined:.*]] = llvm.intr.fma(%[[err]], %[[rcp]], %[[approx]]) : (f32, f32, f32) -> f32
   // CHECK-DAG: %[[cast:.*]]    = llvm.bitcast %[[approx]] : f32 to i32
   // CHECK-DAG: %[[exp:.*]]     = llvm.and %[[cast]], %[[mask]] : i32
   // CHECK-DAG: %[[is_zero:.*]] = llvm.icmp "eq" %[[exp]], %[[c0]] : i32

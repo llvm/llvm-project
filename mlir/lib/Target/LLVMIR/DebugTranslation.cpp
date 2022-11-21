@@ -108,9 +108,10 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
     elements.push_back(translate(member));
   return llvm::DICompositeType::get(
       llvmCtx, attr.getTag(), attr.getName(), translate(attr.getFile()),
-      attr.getLine(), translate(attr.getScope()), /*BaseType=*/nullptr,
+      attr.getLine(), translate(attr.getScope()), translate(attr.getBaseType()),
       attr.getSizeInBits(), attr.getAlignInBits(),
-      /*OffsetInBits=*/0, /*Flags=*/llvm::DINode::FlagZero,
+      /*OffsetInBits=*/0,
+      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
       llvm::MDNode::get(llvmCtx, elements),
       /*RuntimeLang=*/0, /*VTableHolder=*/nullptr);
 }
@@ -216,7 +217,7 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
           .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
                 DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
                 DILexicalBlockFileAttr, DILocalVariableAttr, DISubprogramAttr,
-                DISubroutineTypeAttr>(
+                DISubrangeAttr, DISubroutineTypeAttr>(
               [&](auto attr) { return translateImpl(attr); });
   attrToNode.insert({attr, node});
   return node;
@@ -231,10 +232,6 @@ const llvm::DILocation *
 DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope) {
   if (!debugEmissionIsEnabled)
     return nullptr;
-
-  // Check for a scope encoded with the location.
-  if (auto scopedLoc = loc->findInstanceOf<FusedLocWith<LLVM::DIScopeAttr>>())
-    scope = cast<llvm::DILocalScope>(translate(scopedLoc.getMetadata()));
   return translateLoc(loc, scope, /*inlinedAt=*/nullptr);
 }
 
@@ -247,7 +244,7 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
     return nullptr;
 
   // Check for a cached instance.
-  auto existingIt = locationToLoc.find(std::make_pair(loc, scope));
+  auto existingIt = locationToLoc.find(std::make_tuple(loc, scope, inlinedAt));
   if (existingIt != locationToLoc.end())
     return existingIt->second;
 
@@ -268,6 +265,11 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
   } else if (auto fusedLoc = loc.dyn_cast<FusedLoc>()) {
     ArrayRef<Location> locations = fusedLoc.getLocations();
 
+    // Check for a scope encoded with the location.
+    if (auto scopedAttr =
+            fusedLoc.getMetadata().dyn_cast_or_null<LLVM::DIScopeAttr>())
+      scope = cast<llvm::DILocalScope>(translate(scopedAttr));
+
     // For fused locations, merge each of the nodes.
     llvmLoc = translateLoc(locations.front(), scope, inlinedAt);
     for (Location locIt : locations.drop_front()) {
@@ -285,7 +287,7 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
     llvm_unreachable("unknown location kind");
   }
 
-  locationToLoc.try_emplace(std::make_pair(loc, scope), llvmLoc);
+  locationToLoc.try_emplace(std::make_tuple(loc, scope, inlinedAt), llvmLoc);
   return llvmLoc;
 }
 

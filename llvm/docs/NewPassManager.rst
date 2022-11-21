@@ -179,6 +179,11 @@ sanitizer) passes to various parts of the pipeline.
 ``AMDGPUTargetMachine::registerPassBuilderCallbacks()`` is an example of a
 backend adding passes to various parts of the pipeline.
 
+Pass plugins can also add passes into default pipelines. Different tools have
+different ways of loading dynamic pass plugins. For example, ``opt
+-load-pass-plugin=path/to/plugin.so`` loads a pass plugin into ``opt``. For
+information on writing a pass plugin, see :doc:`WritingAnLLVMNewPMPass`.
+
 Using Analyses
 ==============
 
@@ -430,6 +435,8 @@ To use the new PM:
 .. code-block:: shell
 
   $ opt -passes='pass1,pass2' /tmp/a.ll -S
+  # -p is an alias for -passes
+  $ opt -p pass1,pass2 /tmp/a.ll -S
 
 The new PM typically requires explicit pass nesting. For example, to run a
 function pass, then a module pass, we need to wrap the function pass in a module

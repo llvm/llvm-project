@@ -144,6 +144,36 @@ void Sema::HandleStartOfHeaderUnit() {
   TU->setLocalOwningModule(Mod);
 }
 
+/// Tests whether the given identifier is reserved as a module name and
+/// diagnoses if it is. Returns true if a diagnostic is emitted and false
+/// otherwise.
+static bool DiagReservedModuleName(Sema &S, const IdentifierInfo *II,
+                                   SourceLocation Loc) {
+  enum {
+    Valid = -1,
+    Invalid = 0,
+    Reserved = 1,
+  } Reason = Valid;
+
+  if (II->isStr("module") || II->isStr("import"))
+    Reason = Invalid;
+  else if (II->isReserved(S.getLangOpts()) !=
+           ReservedIdentifierStatus::NotReserved)
+    Reason = Reserved;
+
+  // If the identifier is reserved (not invalid) but is in a system header,
+  // we do not diagnose (because we expect system headers to use reserved
+  // identifiers).
+  if (Reason == Reserved && S.getSourceManager().isInSystemHeader(Loc))
+    Reason = Valid;
+
+  if (Reason != Valid) {
+    S.Diag(Loc, diag::err_invalid_module_name) << II << (int)Reason;
+    return true;
+  }
+  return false;
+}
+
 Sema::DeclGroupPtrTy
 Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                       ModuleDeclKind MDK, ModuleIdPath Path,
@@ -236,6 +266,32 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       Diag(BeginLoc, diag::note_global_module_introducer_missing)
           << FixItHint::CreateInsertion(BeginLoc, "module;\n");
     }
+  }
+
+  // C++2b [module.unit]p1: ... The identifiers module and import shall not
+  // appear as identifiers in a module-name or module-partition. All
+  // module-names either beginning with an identifier consisting of std
+  // followed by zero or more digits or containing a reserved identifier
+  // ([lex.name]) are reserved and shall not be specified in a
+  // module-declaration; no diagnostic is required.
+
+  // Test the first part of the path to see if it's std[0-9]+ but allow the
+  // name in a system header.
+  StringRef FirstComponentName = Path[0].first->getName();
+  if (!getSourceManager().isInSystemHeader(Path[0].second) &&
+      (FirstComponentName == "std" ||
+       (FirstComponentName.startswith("std") &&
+        llvm::all_of(FirstComponentName.drop_front(3), &llvm::isDigit)))) {
+    Diag(Path[0].second, diag::err_invalid_module_name)
+        << Path[0].first << /*reserved*/ 1;
+    return nullptr;
+  }
+
+  // Then test all of the components in the path to see if any of them are
+  // using another kind of reserved or invalid identifier.
+  for (auto Part : Path) {
+    if (DiagReservedModuleName(*this, Part.first, Part.second))
+      return nullptr;
   }
 
   // Flatten the dots in a module name. Unlike Clang's hierarchical module map

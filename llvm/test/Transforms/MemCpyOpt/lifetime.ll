@@ -55,9 +55,8 @@ define i32 @call_slot_move_lifetime_start() {
 ; CHECK-LABEL: @call_slot_move_lifetime_start(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DST:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @call(ptr [[TMP]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[DST]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[TMP]], i64 4, i1 false)
+; CHECK-NEXT:    call void @call(ptr [[DST]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[DST]])
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[DST]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]

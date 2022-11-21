@@ -24,9 +24,9 @@ Section,Description,Dependencies,Assignee,Status,First released version
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month_weekday``",,Mark de Wever,|In Progress|,
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month_weekday_last``",,Mark de Wever,|In Progress|,
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::hh_mm_ss<duration<Rep, Period>>``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::sys_info``",A ``<chrono>`` implementation,Not assigned,,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::local_info``",A ``<chrono>`` implementation,Not assigned,,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::zoned_time<Duration, TimeZonePtr>``",A ``<chrono>`` implementation,Not assigned,,
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::sys_info``",A ``<chrono>`` implementation,Mark de Wever,,
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::local_info``",A ``<chrono>`` implementation,Mark de Wever,,
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::zoned_time<Duration, TimeZonePtr>``",A ``<chrono>`` implementation,Mark de Wever,,
 `P2286R8 <https://wg21.link/P2286R8>`__,"Formatting ranges"
 `[format.syn] <https://wg21.link/format.syn>`_,"Concept ``formattable``",,Mark de Wever,|Complete|, Clang 16
 `[format.string.std] <https://wg21.link/format.string.std>`_,"std-format-spec ``type`` debug",,Mark de Wever,|Complete|,Clang 16

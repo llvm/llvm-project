@@ -1972,6 +1972,12 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     Known = KnownBits::ashr(Known, Known2);
     break;
   }
+  case AArch64ISD::MOVI: {
+    ConstantSDNode *CN = cast<ConstantSDNode>(Op->getOperand(0));
+    Known =
+        KnownBits::makeConstant(APInt(Known.getBitWidth(), CN->getZExtValue()));
+    break;
+  }
   case AArch64ISD::LOADgot:
   case AArch64ISD::ADDlow: {
     if (!Subtarget->isTargetILP32())
@@ -14436,15 +14442,23 @@ AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
   SDValue ShiftLHS = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
-  // If ShiftLHS is unsigned bit extraction: ((x >> C) & mask), then do not combine
-  // it with shift 'N' to let it be lowered to UBFX.
+  // If ShiftLHS is unsigned bit extraction: ((x >> C) & mask), then do not
+  // combine it with shift 'N' to let it be lowered to UBFX except:
+  // ((x >> C) & mask) << C.
   if (ShiftLHS.getOpcode() == ISD::AND && (VT == MVT::i32 || VT == MVT::i64) &&
       isa<ConstantSDNode>(ShiftLHS.getOperand(1))) {
     uint64_t TruncMask = ShiftLHS.getConstantOperandVal(1);
-    if (isMask_64(TruncMask) &&
-        ShiftLHS.getOperand(0).getOpcode() == ISD::SRL &&
-        isa<ConstantSDNode>(ShiftLHS.getOperand(0).getOperand(1)))
-      return false;
+    if (isMask_64(TruncMask)) {
+      SDValue AndLHS = ShiftLHS.getOperand(0);
+      if (AndLHS.getOpcode() == ISD::SRL) {
+        if (auto *SRLC = dyn_cast<ConstantSDNode>(AndLHS.getOperand(1))) {
+          if (N->getOpcode() == ISD::SHL)
+            if (auto *SHLC = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+              return SRLC->getZExtValue() == SHLC->getZExtValue();
+          return false;
+        }
+      }
+    }
   }
   return true;
 }
@@ -23114,6 +23128,7 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
 
 bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
   return Op.getOpcode() == AArch64ISD::DUP ||
+         Op.getOpcode() == AArch64ISD::MOVI ||
          (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
           Op.getOperand(0).getOpcode() == AArch64ISD::DUP) ||
          TargetLowering::isTargetCanonicalConstantNode(Op);

@@ -660,12 +660,9 @@ let SubtargetPredicate = isGFX11Only in
 defm : IMAD32_Pats<V_MAD_U64_U32_gfx11_e64>;
 
 def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3_OPSEL> {
-  let Src0RC64 = VRegSrc_32;
-  let Src1RC64 = SCSrc_b32;
-  let Src2RC64 = SCSrc_b32;
   let InsVOP3OpSel = (ins IntOpSelMods:$src0_modifiers, VRegSrc_32:$src0,
-                          IntOpSelMods:$src1_modifiers, SCSrc_b32:$src1,
-                          IntOpSelMods:$src2_modifiers, SCSrc_b32:$src2,
+                          IntOpSelMods:$src1_modifiers, SSrc_b32:$src1,
+                          IntOpSelMods:$src2_modifiers, SSrc_b32:$src2,
                           VGPR_32:$vdst_in, op_sel0:$op_sel);
   let HasClamp = 0;
   let HasExtVOP3DPP = 0;

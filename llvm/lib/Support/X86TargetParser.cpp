@@ -370,6 +370,10 @@ constexpr ProcInfo Processors[] = {
   { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512BF16, FeaturesSapphireRapids },
   // Alderlake microarchitecture based processors.
   { {"alderlake"}, CK_Alderlake, FEATURE_AVX2, FeaturesAlderlake },
+  // Raptorlake microarchitecture based processors.
+  { {"raptorlake"}, CK_Raptorlake, FEATURE_AVX2, FeaturesAlderlake },
+  // Meteorlake microarchitecture based processors.
+  { {"meteorlake"}, CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake },
   // Knights Landing processor.
   { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL },
   // Knights Mill processor.

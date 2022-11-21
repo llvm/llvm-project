@@ -97,6 +97,7 @@ private:
   SmallVector<Value> genExprImpl(const ast::DeclRefExpr *expr);
   Value genExprImpl(const ast::MemberAccessExpr *expr);
   Value genExprImpl(const ast::OperationExpr *expr);
+  Value genExprImpl(const ast::RangeExpr *expr);
   SmallVector<Value> genExprImpl(const ast::TupleExpr *expr);
   Value genExprImpl(const ast::TypeExpr *expr);
 
@@ -377,7 +378,8 @@ void CodeGen::applyVarConstraints(const ast::VariableDecl *varDecl,
 Value CodeGen::genSingleExpr(const ast::Expr *expr) {
   return TypeSwitch<const ast::Expr *, Value>(expr)
       .Case<const ast::AttributeExpr, const ast::MemberAccessExpr,
-            const ast::OperationExpr, const ast::TypeExpr>(
+            const ast::OperationExpr, const ast::RangeExpr,
+            const ast::TypeExpr>(
           [&](auto derivedNode) { return this->genExprImpl(derivedNode); })
       .Case<const ast::CallExpr, const ast::DeclRefExpr, const ast::TupleExpr>(
           [&](auto derivedNode) {
@@ -515,6 +517,15 @@ Value CodeGen::genExprImpl(const ast::OperationExpr *expr) {
 
   return builder.create<pdl::OperationOp>(loc, opName, operands, attrNames,
                                           attrValues, results);
+}
+
+Value CodeGen::genExprImpl(const ast::RangeExpr *expr) {
+  SmallVector<Value> elements;
+  for (const ast::Expr *element : expr->getElements())
+    llvm::append_range(elements, genExpr(element));
+
+  return builder.create<pdl::RangeOp>(genLoc(expr->getLoc()),
+                                      genType(expr->getType()), elements);
 }
 
 SmallVector<Value> CodeGen::genExprImpl(const ast::TupleExpr *expr) {

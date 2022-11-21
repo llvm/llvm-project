@@ -338,7 +338,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
     using TBAAStructField = llvm::MDBuilder::TBAAStructField;
     SmallVector<TBAAStructField, 4> Fields;
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-      // Handle C++ base classes. Non-virtual bases can treated a a kind of
+      // Handle C++ base classes. Non-virtual bases can treated a kind of
       // field. Virtual bases are more complex and omitted, but avoid an
       // incomplete view for NewStructPathTBAA.
       if (CodeGenOpts.NewStructPathTBAA && CXXRD->getNumVBases() != 0)

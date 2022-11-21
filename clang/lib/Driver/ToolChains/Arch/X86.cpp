@@ -30,9 +30,6 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
 
     // FIXME: Reject attempts to use -march=native unless the target matches
     // the host.
-    //
-    // FIXME: We should also incorporate the detected target features for use
-    // with -native.
     CPU = llvm::sys::getHostCPUName();
     if (!CPU.empty() && CPU != "generic")
       return std::string(CPU);
@@ -258,7 +255,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       Features.push_back("+harden-sls-ijmp");
     } else if (Scope != "none") {
       D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Scope;
+          << A->getSpelling() << Scope;
     }
   }
 }

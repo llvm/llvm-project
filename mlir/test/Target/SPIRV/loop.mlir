@@ -1,4 +1,4 @@
-// RUN: mlir-translate -split-input-file -test-spirv-roundtrip %s | FileCheck %s
+// RUN: mlir-translate -no-implicit-module -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
 // Single loop
 

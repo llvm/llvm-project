@@ -9,6 +9,8 @@
 #ifndef _LIBCPP___RANGES_COMMON_VIEW_H
 #define _LIBCPP___RANGES_COMMON_VIEW_H
 
+#include <__concepts/constructible.h>
+#include <__concepts/copyable.h>
 #include <__config>
 #include <__iterator/common_iterator.h>
 #include <__iterator/iterator_traits.h>
@@ -21,7 +23,6 @@
 #include <__ranges/view_interface.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

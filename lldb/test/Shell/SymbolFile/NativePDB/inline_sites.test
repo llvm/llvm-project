@@ -56,7 +56,7 @@
 # https://github.com/llvm/llvm-project/issues/53575. Fix them after resolving
 # the issue.
 
-# CEHCK-LABEL: (lldb) image lookup -a 0x140001003 -v
+# CHECK-LABEL: (lldb) image lookup -a 0x140001003 -v
 # CHECK:       Summary: {{.*}}`main + 3 at a.cpp:2
 # CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
 # CHECK:       Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
@@ -64,7 +64,7 @@
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x000000014000102d) -> DW_OP_reg26 XMM9
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
 
-# CEHCK-LABEL: (lldb) image lookup -a 0x140001004 -v
+# CHECK-LABEL: (lldb) image lookup -a 0x140001004 -v
 # CHECK:       Summary: {{.*}}`main + 4 [inlined] Namespace1::foo at a.h:5
 # CHECK-NEXT:           {{.*}}`main + 4 at a.cpp:3
 # CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
@@ -77,7 +77,7 @@
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
 
-# CEHCK-LABEL: (lldb) image lookup -a 0x140001010 -v
+# CHECK-LABEL: (lldb) image lookup -a 0x140001010 -v
 # CHECK:       Summary: {{.*}}`main + 16 [inlined] Namespace1::foo + 12 at a.h:7
 # CHECK-NEXT:           {{.*}}`main + 4 at a.cpp:3
 # CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
@@ -90,7 +90,7 @@
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
 
-# CEHCK-LABEL: (lldb) image lookup -a 0x14000101c -v
+# CHECK-LABEL: (lldb) image lookup -a 0x14000101c -v
 # CHECK:       Summary: {{.*}}`main + 28 [inlined] Class1::bar at b.h:5
 # CHECK-NEXT:           {{.*}}`main + 28 [inlined] Namespace1::foo + 24 at a.h:9
 # CHECK-NEXT:           {{.*}}`main + 4 at a.cpp:3
@@ -107,7 +107,7 @@
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
 
-# CEHCK-LABEL: (lldb) image lookup -a 0x14000102a -v
+# CHECK-LABEL: (lldb) image lookup -a 0x14000102a -v
 # CHECK:       Summary: {{.*}}`main + 42 [inlined] Namespace2::Class2::func at c.h:5
 # CHECK-NEXT:           {{.*}}`main + 42 [inlined] Class1::bar + 14 at b.h:7
 # CHECK-NEXT:           {{.*}}`main + 28 [inlined] Namespace1::foo + 24 at a.h:9
@@ -127,7 +127,7 @@
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
 
-# CEHCK-LABEL: (lldb) image lookup -a 0x140001039 -v
+# CHECK-LABEL: (lldb) image lookup -a 0x140001039 -v
 # CHECK:       Summary: {{.*}}`main + 57 at a.cpp:3
 # CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
 # CHECK:         Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
@@ -135,7 +135,7 @@
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
 
-# CEHCK-LABEL: (lldb) image lookup -a 0x140001044 -v
+# CHECK-LABEL: (lldb) image lookup -a 0x140001044 -v
 # CHECK:       Summary: {{.*}}`main + 68 [inlined] Namespace1::foo + 5 at a.h:8
 # CHECK-NEXT:           {{.*}}`main + 63 at a.cpp:3
 # CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)

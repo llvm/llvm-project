@@ -75,11 +75,6 @@ static bool setOnlyReadsMemory(Function &F) {
 static bool setOnlyWritesMemory(Function &F) {
   if (F.onlyWritesMemory()) // writeonly or readnone
     return false;
-  // Turn readonly and writeonly into readnone.
-  if (F.hasFnAttribute(Attribute::ReadOnly)) {
-    F.removeFnAttr(Attribute::ReadOnly);
-    return setDoesNotAccessMemory(F);
-  }
   ++NumWriteOnly;
   F.setOnlyWritesMemory();
   return true;

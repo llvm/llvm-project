@@ -220,9 +220,16 @@ static Type convertScalarType(const spirv::TargetEnv &targetEnv,
 
   // Otherwise we need to adjust the type, which really means adjusting the
   // bitwidth given this is a scalar type.
-
-  if (!options.emulateNon32BitScalarTypes)
+  if (!options.emulateLT32BitScalarTypes)
     return nullptr;
+
+  // We only emulate narrower scalar types here and do not truncate results.
+  if (type.getIntOrFloatBitWidth() > 32) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type
+               << " not converted to 32-bit for SPIR-V to avoid truncation\n");
+    return nullptr;
+  }
 
   if (auto floatType = type.dyn_cast<FloatType>()) {
     LLVM_DEBUG(llvm::dbgs() << type << " converted to 32-bit for SPIR-V\n");

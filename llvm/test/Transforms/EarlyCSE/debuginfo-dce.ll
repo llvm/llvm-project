@@ -1,4 +1,4 @@
-; RUN: opt -early-cse -earlycse-debug-hash -S %s -o - | FileCheck %s
+; RUN: opt -passes=early-cse -earlycse-debug-hash -S %s -o - | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable

@@ -224,6 +224,46 @@ func.func @trunci_vector(%a : vector<3xi64>) -> vector<3xi16> {
     return %b : vector<3xi16>
 }
 
+// CHECK-LABEL: func.func @select_scalar
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<2xi32>, [[ARG1:%.+]]: vector<2xi32>, [[ARG2:%.+]]: i1)
+// CHECK-SAME:    -> vector<2xi32>
+// CHECK-NEXT:    [[TLOW:%.+]] = vector.extract [[ARG0]][0] : vector<2xi32>
+// CHECK-NEXT:    [[THIGH:%.+]] = vector.extract [[ARG0]][1] : vector<2xi32>
+// CHECK-NEXT:    [[FLOW:%.+]] = vector.extract [[ARG1]][0] : vector<2xi32>
+// CHECK-NEXT:    [[FHIGH:%.+]] = vector.extract [[ARG1]][1] : vector<2xi32>
+// CHECK-NEXT:    [[SLOW:%.+]] = arith.select [[ARG2]], [[TLOW]], [[FLOW]] : i32
+// CHECK-NEXT:    [[SHIGH:%.+]] = arith.select [[ARG2]], [[THIGH]], [[FHIGH]] : i32
+// CHECK-NEXT:    [[VZ:%.+]]   = arith.constant dense<0> : vector<2xi32>
+// CHECK-NEXT:    [[INS0:%.+]] = vector.insert [[SLOW]], [[VZ]] [0] : i32 into vector<2xi32>
+// CHECK-NEXT:    [[INS1:%.+]] = vector.insert [[SHIGH]], [[INS0]] [1] : i32 into vector<2xi32>
+// CHECK:         return [[INS1]] : vector<2xi32>
+func.func @select_scalar(%a : i64, %b : i64, %c : i1) -> i64 {
+    %r = arith.select %c, %a, %b : i64
+    return %r : i64
+}
+
+// CHECK-LABEL: func.func @select_vector_whole
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<3x2xi32>, [[ARG1:%.+]]: vector<3x2xi32>, [[ARG2:%.+]]: i1)
+// CHECK-SAME:    -> vector<3x2xi32>
+// CHECK:         arith.select {{%.+}}, {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK-NEXT:    arith.select {{%.+}}, {{%.+}}, {{%.+}} : vector<3x1xi32>
+// CHECK:         return {{%.+}} : vector<3x2xi32>
+func.func @select_vector_whole(%a : vector<3xi64>, %b : vector<3xi64>, %c : i1) -> vector<3xi64> {
+    %r = arith.select %c, %a, %b : vector<3xi64>
+    return %r : vector<3xi64>
+}
+
+// CHECK-LABEL: func.func @select_vector_elementwise
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<3x2xi32>, [[ARG1:%.+]]: vector<3x2xi32>, [[ARG2:%.+]]: vector<3xi1>)
+// CHECK-SAME:    -> vector<3x2xi32>
+// CHECK:         arith.select {{%.+}}, {{%.+}}, {{%.+}} : vector<3x1xi1>, vector<3x1xi32>
+// CHECK-NEXT:    arith.select {{%.+}}, {{%.+}}, {{%.+}} : vector<3x1xi1>, vector<3x1xi32>
+// CHECK:         return {{%.+}} : vector<3x2xi32>
+func.func @select_vector_elementwise(%a : vector<3xi64>, %b : vector<3xi64>, %c : vector<3xi1>) -> vector<3xi64> {
+    %r = arith.select %c, %a, %b : vector<3xi1>, vector<3xi64>
+    return %r : vector<3xi64>
+}
+
 // CHECK-LABEL: func.func @muli_scalar
 // CHECK-SAME:    ([[ARG0:%.+]]: vector<2xi32>, [[ARG1:%.+]]: vector<2xi32>) -> vector<2xi32>
 // CHECK-NEXT:    [[LOW0:%.+]]      = vector.extract [[ARG0]][0] : vector<2xi32>

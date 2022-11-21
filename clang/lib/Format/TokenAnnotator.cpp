@@ -313,7 +313,7 @@ private:
     }
 
     // Infer the role of the l_paren based on the previous token if we haven't
-    // detected one one yet.
+    // detected one yet.
     if (PrevNonComment && OpeningParen.is(TT_Unknown)) {
       if (PrevNonComment->is(tok::kw___attribute)) {
         OpeningParen.setType(TT_AttributeParen);
@@ -362,7 +362,8 @@ private:
           FormatToken *Next = CurrentToken->Next;
           if (PrevPrev && PrevPrev->is(tok::identifier) &&
               Prev->isOneOf(tok::star, tok::amp, tok::ampamp) &&
-              CurrentToken->is(tok::identifier) && Next->isNot(tok::equal)) {
+              CurrentToken->is(tok::identifier) &&
+              !Next->isOneOf(tok::equal, tok::l_brace)) {
             Prev->setType(TT_BinaryOperator);
             LookForDecls = false;
           }
@@ -1989,7 +1990,9 @@ private:
     } else if (Current.isOneOf(tok::identifier, tok::kw_const, tok::kw_noexcept,
                                tok::kw_requires) &&
                Current.Previous &&
-               !Current.Previous->isOneOf(tok::equal, tok::at) &&
+               !Current.Previous->isOneOf(tok::equal, tok::at,
+                                          TT_CtorInitializerComma,
+                                          TT_CtorInitializerColon) &&
                Line.MightBeFunctionDecl && Contexts.size() == 1) {
       // Line.MightBeFunctionDecl can only be true after the parentheses of a
       // function declaration have been found.
@@ -2382,6 +2385,12 @@ private:
     // presence of the matching brace to distinguish between those.
     if (PrevToken->is(tok::r_brace) && Tok.is(tok::star) &&
         !PrevToken->MatchingParen) {
+      return TT_PointerOrReference;
+    }
+
+    // if (Class* obj { function() })
+    if (PrevToken->Tok.isAnyIdentifier() && NextToken->Tok.isAnyIdentifier() &&
+        NextToken->Next && NextToken->Next->is(tok::l_brace)) {
       return TT_PointerOrReference;
     }
 
@@ -4894,7 +4903,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       //
       // instead, even if it is longer by one line.
       //
-      // Note that this allows allows the "{" to go over the column limit
+      // Note that this allows the "{" to go over the column limit
       // when the column limit is just between ":" and "{", but that does
       // not happen too often and alternative formattings in this case are
       // not much better.

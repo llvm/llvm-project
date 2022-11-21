@@ -54,7 +54,7 @@ struct __fn {
   template <input_iterator _Iter, sentinel_for<_Iter> _Sent,
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
-  _LIBCPP_HIDE_FROM_ABI constexpr
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
   bool operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) const {
     return __is_parititioned_impl(std::move(__first), std::move(__last), __pred, __proj);
   }
@@ -62,7 +62,7 @@ struct __fn {
   template <input_range _Range,
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
-  _LIBCPP_HIDE_FROM_ABI constexpr
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
   bool operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) const {
     return __is_parititioned_impl(ranges::begin(__range), ranges::end(__range), __pred, __proj);
   }

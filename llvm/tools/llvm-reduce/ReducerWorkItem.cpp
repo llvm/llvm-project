@@ -385,10 +385,11 @@ static void initializeTargetInfo() {
   InitializeAllAsmParsers();
 }
 
-std::unique_ptr<ReducerWorkItem>
+std::pair<std::unique_ptr<ReducerWorkItem>, bool>
 parseReducerWorkItem(const char *ToolName, StringRef Filename,
                      LLVMContext &Ctxt, std::unique_ptr<TargetMachine> &TM,
                      bool IsMIR) {
+  bool IsBitcode = false;
   Triple TheTriple;
 
   auto MMM = std::make_unique<ReducerWorkItem>();
@@ -399,7 +400,7 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
     auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
     if (std::error_code EC = FileOrErr.getError()) {
       WithColor::error(errs(), ToolName) << EC.message() << '\n';
-      return nullptr;
+      return {nullptr, false};
     }
 
     std::unique_ptr<MIRParser> MParser =
@@ -447,7 +448,7 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFileOrSTDIN(Filename);
     if (std::error_code EC = MB.getError()) {
       WithColor::error(errs(), ToolName) << Filename << ": " << EC.message() << "\n";
-      return nullptr;
+      return {nullptr, false};
     }
 
     if (!isBitcode((const unsigned char *)(*MB)->getBufferStart(),
@@ -455,10 +456,11 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
       std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
       if (!Result) {
         Err.print(ToolName, errs());
-        return nullptr;
+        return {nullptr, false};
       }
       MMM->M = std::move(Result);
     } else {
+      IsBitcode = true;
       readBitcode(*MMM, MemoryBufferRef(**MB), Ctxt, ToolName);
 
       if (MMM->LTOInfo->IsThinLTO && MMM->LTOInfo->EnableSplitLTOUnit)
@@ -468,9 +470,9 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
   if (verifyReducerWorkItem(*MMM, &errs())) {
     WithColor::error(errs(), ToolName)
         << Filename << " - input module is broken!\n";
-    return nullptr;
+    return {nullptr, false};
   }
-  return MMM;
+  return {std::move(MMM), IsBitcode};
 }
 
 std::unique_ptr<ReducerWorkItem>

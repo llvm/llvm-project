@@ -4,7 +4,9 @@ namespace PR47043 {
   template<typename T> concept True = true;
   template<typename ...T> concept AllTrue1 = True<T>; // expected-error {{expression contains unexpanded parameter pack 'T'}}
   template<typename ...T> concept AllTrue2 = (True<T> && ...);
+  template<typename ...T> concept AllTrue3 = (bool)(True<T> & ...);
   static_assert(AllTrue2<int, float, char>);
+  static_assert(AllTrue3<int, float, char>);
 }
 
 namespace PR47025 {

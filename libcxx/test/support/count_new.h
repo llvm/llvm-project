@@ -472,6 +472,40 @@ private:
     DisableAllocationGuard& operator=(DisableAllocationGuard const&);
 };
 
+#if TEST_STD_VER >= 20
+
+struct ConstexprDisableAllocationGuard {
+    TEST_CONSTEXPR_CXX14 explicit ConstexprDisableAllocationGuard(bool disable = true) : m_disabled(disable)
+    {
+        if (!TEST_IS_CONSTANT_EVALUATED) {
+            // Don't re-disable if already disabled.
+            if (globalMemCounter.disable_allocations == true) m_disabled = false;
+            if (m_disabled) globalMemCounter.disableAllocations();
+        } else {
+            m_disabled = false;
+        }
+    }
+
+    TEST_CONSTEXPR_CXX14 void release() {
+        if (!TEST_IS_CONSTANT_EVALUATED) {
+            if (m_disabled) globalMemCounter.enableAllocations();
+            m_disabled = false;
+        }
+    }
+
+    TEST_CONSTEXPR_CXX20 ~ConstexprDisableAllocationGuard() {
+        release();
+    }
+
+private:
+    bool m_disabled;
+
+    ConstexprDisableAllocationGuard(ConstexprDisableAllocationGuard const&);
+    ConstexprDisableAllocationGuard& operator=(ConstexprDisableAllocationGuard const&);
+};
+
+#endif
+
 struct RequireAllocationGuard {
     explicit RequireAllocationGuard(std::size_t RequireAtLeast = 1)
             : m_req_alloc(RequireAtLeast),

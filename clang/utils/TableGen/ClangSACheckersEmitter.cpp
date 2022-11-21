@@ -219,7 +219,7 @@ void clang::EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
   //   - DESCRIPTION
   //   - DEFAULT: The default value for this option.
   //
-  // The full option can be specified in the command like like this:
+  // The full option can be specified in the command like this:
   //   -analyzer-config PACKAGENAME:OPTIONNAME=VALUE
   OS << "\n"
         "#ifdef GET_PACKAGE_OPTIONS\n";
@@ -319,7 +319,7 @@ void clang::EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
   //   - DESCRIPTION
   //   - DEFAULT: The default value for this option.
   //
-  // The full option can be specified in the command like like this:
+  // The full option can be specified in the command like this:
   //   -analyzer-config CHECKERNAME:OPTIONNAME=VALUE
   OS << "\n"
         "#ifdef GET_CHECKER_OPTIONS\n";

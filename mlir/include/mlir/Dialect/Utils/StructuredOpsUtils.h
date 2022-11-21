@@ -48,37 +48,6 @@ bool isColumnMajorMatmul(ArrayAttr indexingMaps);
 /// the reduction.
 bool isRowMajorBatchMatmul(ArrayAttr indexingMaps);
 
-/// Attribute name for the AffineArrayAttr which encodes the relationship
-/// between a structured op iterators' and its operands.
-constexpr StringRef getIndexingMapsAttrName() { return "indexing_maps"; }
-
-/// Attribute name for the StrArrayAttr which encodes the type of a structured
-/// op's iterators.
-constexpr StringRef getIteratorTypesAttrName() { return "iterator_types"; }
-
-/// Attribute name for the StrArrayAttr which encodes the distribution type for
-/// `linalg.tiled_loop`.
-constexpr StringRef getDistributionTypesAttrName() {
-  return "distribution_types";
-}
-
-/// Attribute name for the StringAttr which encodes an optional documentation
-/// string of the structured op.
-constexpr StringRef getDocAttrName() { return "doc"; }
-
-/// Attribute name for the StrArrayAttr which encodes the external library
-/// function that implements the structured op.
-constexpr StringRef getLibraryCallAttrName() { return "library_call"; }
-
-/// Attribute name for the StrArrayAttr which encodes the value of strides.
-constexpr StringRef getStridesAttrName() { return "strides"; }
-
-/// Attribute name for the StrArrayAttr which encodes the value of dilations.
-constexpr StringRef getDilationsAttrName() { return "dilations"; }
-
-/// Attribute name for the StrArrayAttr which encodes the value of paddings.
-constexpr StringRef getPaddingAttrName() { return "padding"; }
-
 /// Use to encode that a particular iterator type has parallel semantics.
 constexpr StringRef getParallelIteratorTypeName() { return "parallel"; }
 

@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file -pass-pipeline="func.func(tosa-to-linalg)" %s -o -| FileCheck %s
+// RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" %s -o -| FileCheck %s
 
 // CHECK: #map = affine_map<(d0, d1, d2, d3) -> (d0, d3)>
 // CHECK: #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>

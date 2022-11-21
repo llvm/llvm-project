@@ -146,7 +146,7 @@ attributes #6 = { convergent nounwind "llvm.assume"="ompx_spmd_amenable" }
 !11 = !{!"Simple C/C++ TBAA"}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-; CHECK: attributes #[[ATTR1]] = { alwaysinline mustprogress nofree norecurse nosync nounwind readnone willreturn "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+; CHECK: attributes #[[ATTR1]] = { alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(none) "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 ; CHECK: attributes #[[ATTR2]] = { norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 ; CHECK: attributes #[[ATTR3]] = { nounwind }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { alwaysinline }

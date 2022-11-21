@@ -346,6 +346,10 @@ createHexagonObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return new HexagonTargetELFStreamer(S, STI);
 }
 
+static MCTargetStreamer *createHexagonNullTargetStreamer(MCStreamer &S) {
+  return new HexagonTargetStreamer(S);
+}
+
 static void LLVM_ATTRIBUTE_UNUSED clearFeature(MCSubtargetInfo* STI, uint64_t F) {
   if (STI->getFeatureBits()[F])
     STI->ToggleFeature(F);
@@ -659,6 +663,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTargetMC() {
   // Register the asm streamer
   TargetRegistry::RegisterAsmTargetStreamer(getTheHexagonTarget(),
                                             createMCAsmTargetStreamer);
+
+  // Register the null streamer
+  TargetRegistry::RegisterNullTargetStreamer(getTheHexagonTarget(),
+                                             createHexagonNullTargetStreamer);
 
   // Register the MC Inst Printer
   TargetRegistry::RegisterMCInstPrinter(getTheHexagonTarget(),

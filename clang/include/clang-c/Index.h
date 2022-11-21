@@ -1978,7 +1978,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPParallelMaskedTaskLoopSimdDirective = 304,
 
-  CXCursor_LastStmt = CXCursor_OMPParallelMaskedTaskLoopSimdDirective,
+  /** OpenMP error directive.
+   */
+  CXCursor_OMPErrorDirective = 305,
+
+  CXCursor_LastStmt = CXCursor_OMPErrorDirective,
 
   /**
    * Cursor that represents the translation unit itself.

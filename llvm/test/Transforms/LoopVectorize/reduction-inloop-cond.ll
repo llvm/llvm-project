@@ -168,7 +168,7 @@ define float @cond_cmp_sel(float* noalias %a, float* noalias %cond, i64 %N) {
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP25:%.*]] = phi <4 x float> [ [[TMP19]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP24]], [[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    [[TMP26:%.*]] = select fast <4 x i1> [[TMP2]], <4 x float> [[TMP25]], <4 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
+; CHECK-NEXT:    [[TMP26:%.*]] = select fast <4 x i1> [[TMP2]], <4 x float> [[TMP25]], <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
 ; CHECK-NEXT:    [[TMP27:%.*]] = call fast float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP26]])
 ; CHECK-NEXT:    [[TMP28]] = call fast float @llvm.minnum.f32(float [[TMP27]], float [[VEC_PHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

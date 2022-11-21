@@ -48,13 +48,13 @@ func.func @gen8() -> !fir.complex<8> {
   return %5 : !fir.complex<8>
 }
 
-// I32: declare void @sink4(ptr)
+// I32: declare void @sink4(ptr byval({ float, float }) align 4)
 // X64: declare void @sink4(<2 x float>)
 // AARCH64: declare void @sink4([2 x float])
 // PPC: declare void @sink4(float, float)
 func.func private @sink4(!fir.complex<4>) -> ()
 
-// I32: declare void @sink8(ptr)
+// I32: declare void @sink8(ptr byval({ double, double }) align 4)
 // X64: declare void @sink8(double, double)
 // AARCH64: declare void @sink8([2 x double])
 // PPC: declare void @sink8(double, double)

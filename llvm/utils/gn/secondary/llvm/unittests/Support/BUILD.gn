@@ -44,6 +44,7 @@ unittest("SupportTests") {
     "FileCollectorTest.cpp",
     "FileOutputBufferTest.cpp",
     "FileUtilitiesTest.cpp",
+    "FormatChkTest.cpp",
     "FormatVariadicTest.cpp",
     "GlobPatternTest.cpp",
     "HashBuilderTest.cpp",

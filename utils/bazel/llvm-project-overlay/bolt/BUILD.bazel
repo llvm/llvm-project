@@ -2,6 +2,8 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+
 package(
     default_visibility = ["//visibility:public"],
 )
@@ -91,14 +93,24 @@ cc_library(
     ],
 )
 
+expand_template(
+    name = "RuntimeLibraryVariables_inc",
+    out = "include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc",
+    substitutions = {
+        # FIXME this is a total guess
+        "@LLVM_LIBDIR_SUFFIX@": "lib",
+    },
+    template = "include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc.in",
+)
+
 cc_library(
     name = "RuntimeLibs",
     srcs = glob([
         "lib/RuntimeLibs/*.cpp",
     ]),
-    hdrs = glob([
+    textual_hdrs = glob([
         "include/bolt/RuntimeLibs/*.h",
-    ]),
+    ]) + ["include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc"],
     includes = ["include"],
     deps = [
         ":Core",

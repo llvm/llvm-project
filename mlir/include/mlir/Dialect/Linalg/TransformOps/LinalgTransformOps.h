@@ -20,6 +20,12 @@ namespace linalg {
 class GenericOp;
 class LinalgOp;
 } // namespace linalg
+
+namespace transform {
+// Types needed for builders.
+struct TileSizesSpec {};
+struct NumThreadsSpec {};
+} // namespace transform
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//

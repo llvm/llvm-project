@@ -290,6 +290,14 @@ struct DoWhileLowering : public OpRewritePattern<WhileOp> {
   LogicalResult matchAndRewrite(WhileOp whileOp,
                                 PatternRewriter &rewriter) const override;
 };
+
+/// Lower an `scf.index_switch` operation to a `cf.switch` operation.
+struct IndexSwitchLowering : public OpRewritePattern<IndexSwitchOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IndexSwitchOp op,
+                                PatternRewriter &rewriter) const override;
+};
 } // namespace
 
 LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
@@ -615,10 +623,68 @@ DoWhileLowering::matchAndRewrite(WhileOp whileOp,
   return success();
 }
 
+LogicalResult
+IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
+                                     PatternRewriter &rewriter) const {
+  // Split the block at the op.
+  Block *condBlock = rewriter.getInsertionBlock();
+  Block *continueBlock = rewriter.splitBlock(condBlock, Block::iterator(op));
+
+  // Create the arguments on the continue block with which to replace the
+  // results of the op.
+  SmallVector<Value> results;
+  results.reserve(op.getNumResults());
+  for (Type resultType : op.getResultTypes())
+    results.push_back(continueBlock->addArgument(resultType, op.getLoc()));
+
+  // Handle the regions.
+  auto convertRegion = [&](Region &region) -> FailureOr<Block *> {
+    Block *block = &region.front();
+
+    // Convert the yield terminator to a branch to the continue block.
+    auto yield = cast<scf::YieldOp>(block->getTerminator());
+    rewriter.setInsertionPoint(yield);
+    rewriter.replaceOpWithNewOp<cf::BranchOp>(yield, continueBlock,
+                                              yield.getOperands());
+
+    // Inline the region.
+    rewriter.inlineRegionBefore(region, continueBlock);
+    return block;
+  };
+
+  // Convert the case regions.
+  SmallVector<Block *> caseSuccessors;
+  SmallVector<int32_t> caseValues;
+  caseSuccessors.reserve(op.getCases().size());
+  caseValues.reserve(op.getCases().size());
+  for (auto [region, value] : llvm::zip(op.getCaseRegions(), op.getCases())) {
+    FailureOr<Block *> block = convertRegion(region);
+    if (failed(block))
+      return failure();
+    caseSuccessors.push_back(*block);
+    caseValues.push_back(value);
+  }
+
+  // Convert the default region.
+  FailureOr<Block *> defaultBlock = convertRegion(op.getDefaultRegion());
+  if (failed(defaultBlock))
+    return failure();
+
+  // Create the switch.
+  rewriter.setInsertionPointToEnd(condBlock);
+  SmallVector<ValueRange> caseOperands(caseSuccessors.size(), {});
+  rewriter.create<cf::SwitchOp>(
+      op.getLoc(), op.getArg(), *defaultBlock, ValueRange(),
+      rewriter.getDenseI32ArrayAttr(caseValues), caseSuccessors, caseOperands);
+  rewriter.replaceOp(op, continueBlock->getArguments());
+  return success();
+}
+
 void mlir::populateSCFToControlFlowConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<ForLowering, IfLowering, ParallelLowering, WhileLowering,
-               ExecuteRegionLowering>(patterns.getContext());
+               ExecuteRegionLowering, IndexSwitchLowering>(
+      patterns.getContext());
   patterns.add<DoWhileLowering>(patterns.getContext(), /*benefit=*/2);
 }
 

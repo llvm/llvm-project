@@ -9,7 +9,7 @@
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = constant [[T:%.*]] { i32 0, i32 0, i32 17, i32 25 }
 ;.
 define internal i32 @test(%T* %p) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -26,13 +26,13 @@ entry:
 
 define i32 @caller() {
 ;
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@caller
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    ret i32 42
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -44,9 +44,9 @@ entry:
   ret i32 %v
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2]] = { readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { willreturn }
 ;.

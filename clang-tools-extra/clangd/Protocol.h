@@ -1700,7 +1700,7 @@ struct SemanticTokensDeltaParams {
 bool fromJSON(const llvm::json::Value &Params, SemanticTokensDeltaParams &R,
               llvm::json::Path);
 
-/// Describes a a replacement of a contiguous range of semanticTokens.
+/// Describes a replacement of a contiguous range of semanticTokens.
 struct SemanticTokensEdit {
   // LSP specifies `start` and `deleteCount` which are relative to the array
   // encoding of the previous tokens.

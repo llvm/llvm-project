@@ -140,6 +140,12 @@ static DecodeStatus DecodePPR_3bRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus
 DecodePPR_p8to15RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
                               const MCDisassembler *Decoder);
+static DecodeStatus DecodePPR2RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder);
+static DecodeStatus DecodePPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Address,
+                                                const void *Decoder);
 
 static DecodeStatus DecodeFixedPointScaleImm32(MCInst &Inst, unsigned Imm,
                                                uint64_t Address,
@@ -322,6 +328,9 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
           break;
         case AArch64::MPR8RegClassID:
           MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZAB0));
+          break;
+        case AArch64::ZTRRegClassID:
+          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZT0));
           break;
         }
       } else if (Desc.OpInfo[i].OperandType ==
@@ -705,6 +714,29 @@ DecodePPR_p8to15RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
 
   // Just reuse the PPR decode table
   return DecodePPRRegisterClass(Inst, RegNo + 8, Addr, Decoder);
+}
+
+static DecodeStatus DecodePPR2RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  if (RegNo > 15)
+    return Fail;
+
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::PPR2RegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
+static DecodeStatus DecodePPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Address,
+                                                const void *Decoder) {
+  if ((RegNo * 2) > 14)
+    return Fail;
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::PPR2RegClassID].getRegister(RegNo * 2);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
 }
 
 static DecodeStatus DecodeQQRegisterClass(MCInst &Inst, unsigned RegNo,

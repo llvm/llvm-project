@@ -47,7 +47,7 @@ static cl::opt<unsigned int> StartingGranularityLevel(
 
 static cl::opt<bool> TmpFilesAsBitcode(
     "write-tmp-files-as-bitcode",
-    cl::desc("Write temporary files as bitcode, instead of textual IR"),
+    cl::desc("Always write temporary files as bitcode instead of textual IR"),
     cl::init(false), cl::cat(LLVMReduceOptions));
 
 #ifdef LLVM_ENABLE_THREADS
@@ -60,43 +60,37 @@ static cl::opt<unsigned> NumJobs(
 unsigned NumJobs = 1;
 #endif
 
-void writeOutput(ReducerWorkItem &M, llvm::StringRef Message);
-
 void writeBitcode(ReducerWorkItem &M, raw_ostream &OutStream);
 
 void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
                  const char *ToolName);
 
 bool isReduced(ReducerWorkItem &M, TestRunner &Test) {
+  const bool UseBitcode = Test.inputIsBitcode() || TmpFilesAsBitcode;
+
   SmallString<128> CurrentFilepath;
+
   // Write ReducerWorkItem to tmp file
   int FD;
   std::error_code EC = sys::fs::createTemporaryFile(
-      "llvm-reduce", M.isMIR() ? "mir" : (TmpFilesAsBitcode ? "bc" : "ll"), FD,
+      "llvm-reduce", M.isMIR() ? "mir" : (UseBitcode ? "bc" : "ll"), FD,
       CurrentFilepath);
   if (EC) {
     errs() << "Error making unique filename: " << EC.message() << "!\n";
     exit(1);
   }
 
-  if (TmpFilesAsBitcode) {
-    llvm::raw_fd_ostream OutStream(FD, true);
-    writeBitcode(M, OutStream);
-    OutStream.close();
-    if (OutStream.has_error()) {
-      errs() << "Error emitting bitcode to file '" << CurrentFilepath << "'!\n";
-      sys::fs::remove(CurrentFilepath);
-      exit(1);
-    }
-    bool Res = Test.run(CurrentFilepath);
-    sys::fs::remove(CurrentFilepath);
-    return Res;
-  }
   ToolOutputFile Out(CurrentFilepath, FD);
-  M.print(Out.os(), /*AnnotationWriter=*/nullptr);
+
+  if (TmpFilesAsBitcode)
+    writeBitcode(M, Out.os());
+  else
+    M.print(Out.os(), /*AnnotationWriter=*/nullptr);
+
   Out.os().close();
   if (Out.os().has_error()) {
-    errs() << "Error emitting bitcode to file '" << CurrentFilepath << "'!\n";
+    errs() << "Error emitting bitcode to file '" << CurrentFilepath
+           << "': " << Out.os().error().message();
     exit(1);
   }
 
@@ -376,7 +370,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
       ReducedProgram = std::move(Result);
 
       // FIXME: Report meaningful progress info
-      writeOutput(*ReducedProgram, " **** SUCCESS | Saved new best reduction to ");
+      Test.writeOutput(" **** SUCCESS | Saved new best reduction to ");
     }
     // Delete uninteresting chunks
     erase_if(ChunksStillConsideredInteresting,

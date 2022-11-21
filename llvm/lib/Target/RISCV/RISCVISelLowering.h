@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Support/TargetParser.h"
 
 namespace llvm {
 class RISCVSubtarget;
@@ -232,7 +233,8 @@ enum NodeType : unsigned {
   FCOPYSIGN_VL, // Has a merge operand
   VFCVT_RTZ_X_F_VL,
   VFCVT_RTZ_XU_F_VL,
-  VFCVT_X_F_VL, // Has a rounding mode operand.
+  VFCVT_X_F_VL,
+  VFCVT_RM_X_F_VL, // Has a rounding mode operand.
   SINT_TO_FP_VL,
   UINT_TO_FP_VL,
   FP_ROUND_VL,
@@ -323,11 +325,6 @@ enum NodeType : unsigned {
   LA_TLS_IE,
 };
 } // namespace RISCVISD
-
-namespace RISCV {
-// We use 64 bits as the known part in the scalable vector types.
-static constexpr unsigned RVVBitsPerBlock = 64;
-} // namespace RISCV
 
 class RISCVTargetLowering : public TargetLowering {
   const RISCVSubtarget &Subtarget;

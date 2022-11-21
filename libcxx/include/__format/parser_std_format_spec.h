@@ -19,6 +19,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/min.h>
 #include <__assert>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__debug>
 #include <__format/format_arg.h>
@@ -28,7 +29,6 @@
 #include <__format/unicode.h>
 #include <__variant/monostate.h>
 #include <bit>
-#include <concepts>
 #include <cstdint>
 #include <string_view>
 #include <type_traits>

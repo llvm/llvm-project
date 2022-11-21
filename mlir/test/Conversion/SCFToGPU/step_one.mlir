@@ -1,5 +1,5 @@
-// RUN: mlir-opt -pass-pipeline="func.func(convert-affine-for-to-gpu{gpu-block-dims=1 gpu-thread-dims=1})" %s | FileCheck --check-prefix=CHECK-11 %s
-// RUN: mlir-opt -pass-pipeline="func.func(convert-affine-for-to-gpu{gpu-block-dims=2 gpu-thread-dims=2})" %s | FileCheck --check-prefix=CHECK-22 %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-affine-for-to-gpu{gpu-block-dims=1 gpu-thread-dims=1}))" %s | FileCheck --check-prefix=CHECK-11 %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-affine-for-to-gpu{gpu-block-dims=2 gpu-thread-dims=2}))" %s | FileCheck --check-prefix=CHECK-22 %s
 
 // CHECK-11-LABEL: @step_1
 // CHECK-22-LABEL: @step_1

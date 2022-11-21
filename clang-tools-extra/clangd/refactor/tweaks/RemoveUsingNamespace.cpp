@@ -155,6 +155,13 @@ Expected<Tweak::Effect> RemoveUsingNamespace::apply(const Selection &Inputs) {
             if (!visibleContext(T->getDeclContext())
                      ->Equals(TargetDirective->getNominatedNamespace()))
               return;
+            // Avoid adding qualifiers before operators, e.g.
+            //   using namespace std;
+            //   cout << "foo"; // Must not changed to std::cout std:: << "foo"
+            // FIXME: User-defined literals are not handled
+            if (T->isInIdentifierNamespace(
+                    Decl::IdentifierNamespace::IDNS_NonMemberOperator))
+              return;
           }
           SourceLocation Loc = Ref.NameLoc;
           if (Loc.isMacroID()) {

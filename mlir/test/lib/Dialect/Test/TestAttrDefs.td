@@ -119,8 +119,7 @@ def TestI64ElementsAttr : Test_Attr<"TestI64Elements", [
 }
 
 def TestSubElementsAccessAttr : Test_Attr<"TestSubElementsAccess", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface,
-        ["replaceImmediateSubElements"]>
+    SubElementAttrInterface
   ]> {
   let mnemonic = "sub_elements_access";
 

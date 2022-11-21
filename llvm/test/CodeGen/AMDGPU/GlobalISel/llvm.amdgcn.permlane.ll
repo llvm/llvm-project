@@ -1,2 +1,0 @@
-; RUN: llc -global-isel -amdgpu-load-store-vectorizer=0 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %S/../llvm.amdgcn.permlane.ll | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX10 %S/../llvm.amdgcn.permlane.ll
-; RUN: llc -global-isel -amdgpu-load-store-vectorizer=0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %S/../llvm.amdgcn.permlane.ll | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11 %S/../llvm.amdgcn.permlane.ll

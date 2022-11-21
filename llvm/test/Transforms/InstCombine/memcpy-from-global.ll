@@ -338,12 +338,10 @@ entry:
   ret float %r
 }
 
-; Tests that we can't eliminate allocas copied from readonly noalias pointers yet.
+; Tests that we can eliminate allocas copied from readonly noalias pointers.
 define void @memcpy_from_readonly_noalias(ptr readonly noalias align 8 dereferenceable(124) %arg) {
 ; CHECK-LABEL: @memcpy_from_readonly_noalias(
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [[T:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[ALLOCA]], ptr noundef nonnull align 8 dereferenceable(124) [[ARG:%.*]], i64 124, i1 false)
-; CHECK-NEXT:    call void @bar(ptr nonnull [[ALLOCA]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull [[ARG:%.*]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca %T, align 8

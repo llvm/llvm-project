@@ -1,5 +1,5 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=gvn -S < %s | FileCheck %s
-; REQUIRES: arm
+; REQUIRES: arm-registered-target
 
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:64-v128:32:128-a0:0:32-n32"
 
@@ -26,6 +26,6 @@ entry:
 declare <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8*, i32) nounwind readonly
 declare void @llvm.arm.neon.vst1.p0i8.v8i16(i8*, <8 x i16>, i32) nounwind
 
-; CHECK: attributes #0 = { argmemonly nounwind readonly }
-; CHECK: attributes #1 = { argmemonly nounwind }
+; CHECK: attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; CHECK: attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes [[ATTR]] = { nounwind }

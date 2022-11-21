@@ -73,7 +73,7 @@ struct PathDiagnosticConsumerOptions {
   bool ShouldSerializeStats = false;
 
   /// If the consumer intends to produce multiple output files, should it
-  /// use a pseudo-random file name name or a human-readable file name.
+  /// use a pseudo-random file name or a human-readable file name.
   bool ShouldWriteVerboseReportFilename = false;
 
   /// Whether the consumer should treat consumed diagnostics as hard errors.

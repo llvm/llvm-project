@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 
 define i32 @f() {
-; CHECK: Function Attrs: nofree readonly
+; CHECK: Function Attrs: nofree memory(read)
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = call i32 @e()

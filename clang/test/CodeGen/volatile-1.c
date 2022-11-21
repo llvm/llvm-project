@@ -1,3 +1,4 @@
+// XFAIL: aarch64-pc-windows-msvc
 // RUN: %clang_cc1 -Wno-return-type -Wno-unused-value -emit-llvm %s -w -o - | FileCheck %s
 
 // CHECK: @i = {{(dso_local )?}}global [[INT:i[0-9]+]] 0

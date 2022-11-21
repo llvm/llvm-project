@@ -51,6 +51,8 @@ ProgressEventData::GetEventDataFromEvent(const Event *event_ptr) {
 
 llvm::StringRef DiagnosticEventData::GetPrefix() const {
   switch (m_type) {
+  case Type::Info:
+    return "info";
   case Type::Warning:
     return "warning";
   case Type::Error:

@@ -67,3 +67,16 @@ transform.sequence failures(propagate) {
   // CHECK: cast %{{.*}} : !transform.any_op to !transform.op<"builtin.module">
   %1 = cast %0: !transform.any_op to !transform.op<"builtin.module">
 }
+
+// CHECK: transform.sequence
+// CHECK: print
+// CHECK: print
+// CHECK: print
+// CHECK: print
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  transform.print %arg0 : !pdl.operation
+  transform.print
+  transform.print %arg0 {name = "test"} : !pdl.operation
+  transform.print {name = "test"}
+}

@@ -18,7 +18,8 @@ def NeoverseN2Model : SchedMachineModel {
   let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.
   let CompleteModel         =   1;
 
-  list<Predicate> UnsupportedFeatures = SMEUnsupported.F;
+  list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
+                                                    [HasSVE2p1]);
 }
 
 //===----------------------------------------------------------------------===//

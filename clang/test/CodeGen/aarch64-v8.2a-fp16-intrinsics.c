@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16\
-// RUN: -fallow-half-arguments-and-returns -S -disable-O0-optnone -emit-llvm -o - %s \
-// RUN: | opt -S -mem2reg \
+// RUN: -S -disable-O0-optnone -emit-llvm -o - %s \
+// RUN: | opt -S -passes=mem2reg \
 // RUN: | FileCheck %s
 
 // REQUIRES: aarch64-registered-target

@@ -109,7 +109,7 @@ catch:                                            ; preds = %catch.start
   catchret from %2 to label %catchret.dest
 ; CHECK: catch:                                            ; preds = %catch.start
 ; CHECK-NEXT:   %exn = load i8*, i8** %exn.slot15, align 4
-; CHECK-NEXT:   %5 = call i8* @__cxa_begin_catch(i8* %exn) #2 [ "funclet"(token %2) ]
+; CHECK-NEXT:   %5 = call i8* @__cxa_begin_catch(i8* %exn) #7 [ "funclet"(token %2) ]
 ; CHECK-NEXT:   invoke void @__cxa_end_catch() [ "funclet"(token %2) ]
 ; CHECK-NEXT:           to label %.noexc unwind label %catch.dispatch.longjmp
 

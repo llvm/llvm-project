@@ -2457,11 +2457,12 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   SourceLocation Loc = D->getLocation();
   unsigned Index = ID - FirstDeclID;
   if (DeclOffsets.size() == Index)
-    DeclOffsets.emplace_back(Loc, Offset, DeclTypesBlockStartOffset);
+    DeclOffsets.emplace_back(getAdjustedLocation(Loc), Offset,
+                             DeclTypesBlockStartOffset);
   else if (DeclOffsets.size() < Index) {
     // FIXME: Can/should this happen?
     DeclOffsets.resize(Index+1);
-    DeclOffsets[Index].setLocation(Loc);
+    DeclOffsets[Index].setLocation(getAdjustedLocation(Loc));
     DeclOffsets[Index].setBitOffset(Offset, DeclTypesBlockStartOffset);
   } else {
     llvm_unreachable("declarations should be emitted in ID order");

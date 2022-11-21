@@ -24,6 +24,7 @@
 
 namespace llvm {
 class CanonicalLoopInfo;
+struct TargetRegionEntryInfo;
 class OffloadEntriesInfoManager;
 
 /// Move the instruction after an InsertPoint to the beginning of another
@@ -1093,6 +1094,37 @@ public:
                                     bool EmitDebug = false,
                                     bool ForEndCall = false);
 
+  /// Creates offloading entry for the provided entry ID \a ID,
+  /// address \a Addr, size \a Size, and flags \a Flags.
+  void createOffloadEntry(bool IsTargetCodegen, Constant *ID, Constant *Addr,
+                          uint64_t Size, int32_t Flags,
+                          GlobalValue::LinkageTypes);
+
+  /// The kind of errors that can occur when emitting the offload entries and
+  /// metadata.
+  enum EmitMetadataErrorKind {
+    EMIT_MD_TARGET_REGION_ERROR,
+    EMIT_MD_DECLARE_TARGET_ERROR,
+    EMIT_MD_GLOBAL_VAR_LINK_ERROR
+  };
+
+  /// Callback function type
+  using EmitMetadataErrorReportFunctionTy =
+      std::function<void(EmitMetadataErrorKind, TargetRegionEntryInfo)>;
+
+  // Emit the offloading entries and metadata so that the device codegen side
+  // can easily figure out what to emit. The produced metadata looks like
+  // this:
+  //
+  // !omp_offload.info = !{!1, ...}
+  //
+  // We only generate metadata for function that contain target regions.
+  void createOffloadEntriesAndInfoMetadata(
+      OffloadEntriesInfoManager &OffloadEntriesInfoManager,
+      bool IsTargetCodegen, bool IsEmbedded,
+      bool HasRequiresUnifiedSharedMemory,
+      EmitMetadataErrorReportFunctionTy &ErrorReportFunction);
+
 public:
   /// Generator for __kmpc_copyprivate
   ///
@@ -1681,6 +1713,19 @@ public:
                                         BasicBlock *PreInsertBefore,
                                         BasicBlock *PostInsertBefore,
                                         const Twine &Name = {});
+  /// OMP Offload Info Metadata name string
+  const std::string ompOffloadInfoName = "omp_offload.info";
+
+  /// Loads all the offload entries information from the host IR
+  /// metadata. This function is only meant to be used with device code
+  /// generation.
+  ///
+  /// \param M         Module to load Metadata info from. Module passed maybe
+  /// loaded from bitcode file, i.e, different from OpenMPIRBuilder::M module.
+  /// \param OffloadEntriesInfoManager Initialize Offload Entry information.
+  void
+  loadOffloadInfoMetadata(Module &M,
+                          OffloadEntriesInfoManager &OffloadEntriesInfoManager);
 };
 
 /// Data structure to contain the information needed to uniquely identify
@@ -1690,23 +1735,24 @@ struct TargetRegionEntryInfo {
   unsigned DeviceID;
   unsigned FileID;
   unsigned Line;
+  unsigned Count;
 
-  TargetRegionEntryInfo() : ParentName(""), DeviceID(0), FileID(0), Line(0) {}
+  TargetRegionEntryInfo()
+      : ParentName(""), DeviceID(0), FileID(0), Line(0), Count(0) {}
   TargetRegionEntryInfo(StringRef ParentName, unsigned DeviceID,
-                        unsigned FileID, unsigned Line)
-      : ParentName(ParentName), DeviceID(DeviceID), FileID(FileID), Line(Line) {
-  }
+                        unsigned FileID, unsigned Line, unsigned Count = 0)
+      : ParentName(ParentName), DeviceID(DeviceID), FileID(FileID), Line(Line),
+        Count(Count) {}
 
   static void getTargetRegionEntryFnName(SmallVectorImpl<char> &Name,
                                          StringRef ParentName,
                                          unsigned DeviceID, unsigned FileID,
-                                         unsigned Line);
-
-  void getTargetRegionEntryFnName(SmallVectorImpl<char> &Name);
+                                         unsigned Line, unsigned Count);
 
   bool operator<(const TargetRegionEntryInfo RHS) const {
-    return std::make_tuple(ParentName, DeviceID, FileID, Line) <
-           std::make_tuple(RHS.ParentName, RHS.DeviceID, RHS.FileID, RHS.Line);
+    return std::make_tuple(ParentName, DeviceID, FileID, Line, Count) <
+           std::make_tuple(RHS.ParentName, RHS.DeviceID, RHS.FileID, RHS.Line,
+                           RHS.Count);
   }
 };
 
@@ -1814,14 +1860,19 @@ public:
   void initializeTargetRegionEntryInfo(const TargetRegionEntryInfo &EntryInfo,
                                        unsigned Order);
   /// Register target region entry.
-  void registerTargetRegionEntryInfo(const TargetRegionEntryInfo &EntryInfo,
+  void registerTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
                                      Constant *Addr, Constant *ID,
                                      OMPTargetRegionEntryKind Flags,
                                      bool IsDevice);
   /// Return true if a target region entry with the provided information
   /// exists.
-  bool hasTargetRegionEntryInfo(const TargetRegionEntryInfo &EntryInfo,
+  bool hasTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
                                 bool IgnoreAddressId = false) const;
+
+  // Return the Name based on \a EntryInfo using the next available Count.
+  void getTargetRegionEntryFnName(SmallVectorImpl<char> &Name,
+                                  const TargetRegionEntryInfo &EntryInfo);
+
   /// brief Applies action \a Action on all registered entries.
   typedef function_ref<void(const TargetRegionEntryInfo &EntryInfo,
                             const OffloadEntryInfoTargetRegion &)>
@@ -1894,6 +1945,23 @@ public:
       const OffloadDeviceGlobalVarEntryInfoActTy &Action);
 
 private:
+  /// Return the count of entries at a particular source location.
+  unsigned
+  getTargetRegionEntryInfoCount(const TargetRegionEntryInfo &EntryInfo) const;
+
+  /// Update the count of entries at a particular source location.
+  void
+  incrementTargetRegionEntryInfoCount(const TargetRegionEntryInfo &EntryInfo);
+
+  static TargetRegionEntryInfo
+  getTargetRegionEntryCountKey(const TargetRegionEntryInfo &EntryInfo) {
+    return TargetRegionEntryInfo(EntryInfo.ParentName, EntryInfo.DeviceID,
+                                 EntryInfo.FileID, EntryInfo.Line, 0);
+  }
+
+  // Count of entries at a location.
+  std::map<TargetRegionEntryInfo, unsigned> OffloadEntriesTargetRegionCount;
+
   // Storage for target region entries kind.
   typedef std::map<TargetRegionEntryInfo, OffloadEntryInfoTargetRegion>
       OffloadEntriesTargetRegionTy;

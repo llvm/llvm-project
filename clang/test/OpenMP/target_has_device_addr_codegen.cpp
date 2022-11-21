@@ -350,11 +350,10 @@ void use_template() {
 // CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[Z]], align 8
 // CHECK-NEXT:    store ptr [[TMP17]], ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[TMP19]], ptr [[TMP20]], align 8
+// CHECK-NEXT:    store ptr [[TMP18]], ptr [[TMP20]], align 8
 // CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[TMP19]], ptr [[TMP21]], align 8
+// CHECK-NEXT:    store ptr [[TMP18]], ptr [[TMP21]], align 8
 // CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS3]], i64 0, i64 0
 // CHECK-NEXT:    store ptr null, ptr [[TMP22]], align 8
 // CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
@@ -422,11 +421,10 @@ void use_template() {
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[RAA]], align 8
 // CHECK-NEXT:    store ptr [[TMP52]], ptr [[_TMP13]], align 8
 // CHECK-NEXT:    [[TMP53:%.*]] = load ptr, ptr [[_TMP13]], align 8
-// CHECK-NEXT:    [[TMP54:%.*]] = load ptr, ptr [[_TMP13]], align 8
 // CHECK-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS14]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[TMP54]], ptr [[TMP55]], align 8
+// CHECK-NEXT:    store ptr [[TMP53]], ptr [[TMP55]], align 8
 // CHECK-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS15]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[TMP54]], ptr [[TMP56]], align 8
+// CHECK-NEXT:    store ptr [[TMP53]], ptr [[TMP56]], align 8
 // CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS16]], i64 0, i64 0
 // CHECK-NEXT:    store ptr null, ptr [[TMP57]], align 8
 // CHECK-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS14]], i32 0, i32 0
@@ -491,11 +489,10 @@ void use_template() {
 // CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153(ptr [[H]]) #[[ATTR5]]
 // CHECK-NEXT:    br label [[OMP_OFFLOAD_CONT25]]
 // CHECK:       omp_offload.cont25:
-// CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [5 x i32], ptr [[DA]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP87:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS26]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[TMP87]], align 8
+// CHECK-NEXT:    store ptr [[DA]], ptr [[TMP87]], align 8
 // CHECK-NEXT:    [[TMP88:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS27]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[TMP88]], align 8
+// CHECK-NEXT:    store ptr [[DA]], ptr [[TMP88]], align 8
 // CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS28]], i64 0, i64 0
 // CHECK-NEXT:    store ptr null, ptr [[TMP89]], align 8
 // CHECK-NEXT:    [[TMP90:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS26]], i32 0, i32 0
@@ -684,11 +681,10 @@ void use_template() {
 // CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[Z]], align 8
 // CHECK-NEXT:    store ptr [[TMP17]], ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[TMP19]], ptr [[TMP20]], align 8
+// CHECK-NEXT:    store ptr [[TMP18]], ptr [[TMP20]], align 8
 // CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[TMP19]], ptr [[TMP21]], align 8
+// CHECK-NEXT:    store ptr [[TMP18]], ptr [[TMP21]], align 8
 // CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS3]], i64 0, i64 0
 // CHECK-NEXT:    store ptr null, ptr [[TMP22]], align 8
 // CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
@@ -859,11 +855,10 @@ void use_template() {
 // CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[Z]], align 8
 // CHECK-NEXT:    store ptr [[TMP17]], ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[TMP19]], ptr [[TMP20]], align 8
+// CHECK-NEXT:    store ptr [[TMP18]], ptr [[TMP20]], align 8
 // CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
-// CHECK-NEXT:    store ptr [[TMP19]], ptr [[TMP21]], align 8
+// CHECK-NEXT:    store ptr [[TMP18]], ptr [[TMP21]], align 8
 // CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS3]], i64 0, i64 0
 // CHECK-NEXT:    store ptr null, ptr [[TMP22]], align 8
 // CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0

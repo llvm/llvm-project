@@ -2,19 +2,19 @@
 // RUN: %clang_cc1 \
 // RUN:   -triple aarch64-arm-none-eabi -target-feature +neon -target-feature +bf16 \
 // RUN:   -disable-O0-optnone -emit-llvm -o - %s \
-// RUN:   | opt -S -mem2reg \
+// RUN:   | opt -S -passes=mem2reg \
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-A64 %s
 // RUN: %clang_cc1 \
 // RUN:   -triple armv8.6a-arm-none-eabi -target-feature +neon \
 // RUN:   -target-feature +bf16 -mfloat-abi hard \
 // RUN:   -disable-O0-optnone -emit-llvm -o - %s \
-// RUN:   | opt -S -mem2reg \
+// RUN:   | opt -S -passes=mem2reg \
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-A32-HARDFP %s
 // RUN: %clang_cc1 \
 // RUN:   -triple armv8.6a-arm-none-eabi -target-feature +neon \
 // RUN:   -target-feature +bf16 -mfloat-abi softfp \
 // RUN:   -disable-O0-optnone -emit-llvm -o - %s \
-// RUN:   | opt -S -mem2reg \
+// RUN:   | opt -S -passes=mem2reg \
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-A32-SOFTFP %s
 
 // REQUIRES: arm-registered-target

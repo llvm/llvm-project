@@ -94,6 +94,8 @@ template <typename Type> struct Foo {
 
   template <typename T> void operator<<(T t) {}
 };
+
+template <typename Type> void g() {}
 } // namespace ns
 
 int main (int argc, char const *argv[])
@@ -122,6 +124,9 @@ int main (int argc, char const *argv[])
     f.operator ns::Foo<int>();
     f.operator<<(5);
     f.operator<< <ns::Foo<int>>({});
+
+    ns::g<int>();
+    ns::g<char>();
 
     return 0;
 }

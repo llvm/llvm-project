@@ -3,7 +3,7 @@
 // RUN:  -target-feature +fullfp16 -ffreestanding \
 // RUN:  -flax-vector-conversions=none \
 // RUN:  -disable-O0-optnone -emit-llvm -o - %s \
-// RUN:  | opt -S -mem2reg | FileCheck %s
+// RUN:  | opt -S -passes=mem2reg | FileCheck %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

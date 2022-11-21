@@ -20,6 +20,8 @@
 // polymorphic_allocator
 // polymorphic_allocator<T>::select_on_container_copy_construction() const
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 #include <type_traits>
 #include <cassert>

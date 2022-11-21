@@ -61,10 +61,11 @@ void GIMatchDag::writeDOTGraph(raw_ostream &OS, StringRef ID) const {
     const char *ToFmt = "Node%p:d%d:s";
     if (E->getFromMO()->isDef() && !E->getToMO()->isDef())
       std::swap(FromFmt, ToFmt);
-    auto From = format(FromFmt, E->getFromMI(), E->getFromMO()->getIdx());
-    auto To = format(ToFmt, E->getToMI(), E->getToMO()->getIdx());
-    if (E->getFromMO()->isDef() && !E->getToMO()->isDef())
-      std::swap(From, To);
+    auto FromF = format(FromFmt, E->getFromMI(), E->getFromMO()->getIdx());
+    auto ToF = format(ToFmt, E->getToMI(), E->getToMO()->getIdx());
+    bool Swap = E->getFromMO()->isDef() && !E->getToMO()->isDef();
+    auto &From = Swap ? ToF : FromF;
+    auto &To = Swap ? FromF : ToF;
 
     OS << "  " << From << " -> " << To << " [label=\"$" << E->getName();
     if (E->getFromMO()->isDef() == E->getToMO()->isDef())

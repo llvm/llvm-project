@@ -50,12 +50,12 @@ TEST(WalkUsed, Basic) {
 
   auto &SM = AST.sourceManager();
   llvm::DenseMap<size_t, std::vector<Header>> OffsetToProviders;
-  walkUsed(TopLevelDecls, [&](SourceLocation RefLoc, Symbol S,
-                              llvm::ArrayRef<Header> Providers) {
-    auto [FID, Offset] = SM.getDecomposedLoc(RefLoc);
-    EXPECT_EQ(FID, SM.getMainFileID());
-    OffsetToProviders.try_emplace(Offset, Providers.vec());
-  });
+  walkUsed(TopLevelDecls, /*MacroRefs=*/{}, SM,
+           [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
+             auto [FID, Offset] = SM.getDecomposedLoc(Ref.RefLocation);
+             EXPECT_EQ(FID, SM.getMainFileID());
+             OffsetToProviders.try_emplace(Offset, Providers.vec());
+           });
   auto HeaderFile = Header(AST.fileManager().getFile("header.h").get());
   auto MainFile = Header(SM.getFileEntryForID(SM.getMainFileID()));
   auto VectorSTL = Header(tooling::stdlib::Header::named("<vector>").value());
@@ -66,6 +66,42 @@ TEST(WalkUsed, Basic) {
           Pair(Code.point("foo"), UnorderedElementsAre(HeaderFile)),
           Pair(Code.point("vector"), UnorderedElementsAre(VectorSTL)),
           Pair(Code.point("vconstructor"), UnorderedElementsAre(VectorSTL))));
+}
+
+TEST(WalkUsed, MacroRefs) {
+  llvm::Annotations Hdr(R"cpp(
+    #define ^ANSWER 42
+  )cpp");
+  llvm::Annotations Main(R"cpp(
+    #include "hdr.h"
+    int x = ^ANSWER;
+  )cpp");
+
+  SourceManagerForFile SMF("main.cpp", Main.code());
+  auto &SM = SMF.get();
+  const FileEntry *HdrFile =
+      SM.getFileManager().getVirtualFile("hdr.h", Hdr.code().size(), 0);
+  SM.overrideFileContents(HdrFile,
+                          llvm::MemoryBuffer::getMemBuffer(Hdr.code().str()));
+  FileID HdrID = SM.createFileID(HdrFile, SourceLocation(), SrcMgr::C_User);
+
+  IdentifierTable Idents;
+  Symbol Answer =
+      Macro{&Idents.get("ANSWER"), SM.getComposedLoc(HdrID, Hdr.point())};
+  llvm::DenseMap<size_t, std::vector<Header>> OffsetToProviders;
+  walkUsed(/*ASTRoots=*/{}, /*MacroRefs=*/
+           {SymbolReference{SM.getComposedLoc(SM.getMainFileID(), Main.point()),
+                            Answer, RefType::Explicit}},
+           SM,
+           [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
+             auto [FID, Offset] = SM.getDecomposedLoc(Ref.RefLocation);
+             EXPECT_EQ(FID, SM.getMainFileID());
+             OffsetToProviders.try_emplace(Offset, Providers.vec());
+           });
+
+  EXPECT_THAT(
+      OffsetToProviders,
+      UnorderedElementsAre(Pair(Main.point(), UnorderedElementsAre(HdrFile))));
 }
 
 } // namespace

@@ -158,11 +158,15 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
   if (!other.pdlModule)
     return;
 
-  // Steal the functions of the other module.
+  // Steal the functions and config of the other module.
   for (auto &it : other.constraintFunctions)
     registerConstraintFunction(it.first(), std::move(it.second));
   for (auto &it : other.rewriteFunctions)
     registerRewriteFunction(it.first(), std::move(it.second));
+  for (auto &it : other.configs)
+    configs.emplace_back(std::move(it));
+  for (auto &it : other.configMap)
+    configMap.insert(it);
 
   // Steal the other state if we have no patterns.
   if (!pdlModule) {
@@ -174,6 +178,18 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
   Block *block = pdlModule->getBody();
   block->getOperations().splice(block->end(),
                                 other.pdlModule->getBody()->getOperations());
+}
+
+void PDLPatternModule::attachConfigToPatterns(ModuleOp module,
+                                              PDLPatternConfigSet &configSet) {
+  // Attach the configuration to the symbols within the module. We only add
+  // to symbols to avoid hardcoding any specific operation names here (given
+  // that we don't depend on any PDL dialect). We can't use
+  // cast<SymbolOpInterface> here because patterns may be optional symbols.
+  module->walk([&](Operation *op) {
+    if (op->hasTrait<SymbolOpInterface::Trait>())
+      configMap[op] = &configSet;
+  });
 }
 
 //===----------------------------------------------------------------------===//

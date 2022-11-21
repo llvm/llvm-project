@@ -437,6 +437,48 @@ def PDL_PatternOp : PDL_Op<"pattern", [
 }
 
 //===----------------------------------------------------------------------===//
+// pdl::RangeOp
+//===----------------------------------------------------------------------===//
+
+def PDL_RangeOp : PDL_Op<"range", [Pure, HasParent<"pdl::RewriteOp">]> {
+  let summary = "Construct a range of pdl entities";
+  let description = [{
+    `pdl.range` operations construct a range from a given set of PDL entities,
+    which all share the same underlying element type. For example, a
+    `!pdl.range<value>` may be constructed from a list of `!pdl.value`
+    or `!pdl.range<value>` entities.
+
+    Example:
+
+    ```mlir
+    // Construct a range of values.
+    %valueRange = pdl.range %inputValue, %inputRange : !pdl.value, !pdl.range<value>
+
+    // Construct a range of types.
+    %typeRange = pdl.range %inputType, %inputRange : !pdl.type, !pdl.range<type>
+    
+    // Construct an empty range of types.
+    %valueRange = pdl.range : !pdl.range<type>
+    ```
+
+    TODO: Range construction is currently limited to rewrites, but it could
+    be extended to constraints under certain circustances; i.e., if we can
+    determine how to extract the underlying elements. If we can't, e.g. if
+    there are multiple sub ranges used for construction, we won't be able
+    to determine their sizes during constraint time.
+  }];
+
+  let arguments = (ins Variadic<PDL_AnyType>:$arguments);
+  let results = (outs PDL_RangeOf<AnyTypeOf<[PDL_Type, PDL_Value]>>:$result);
+  let assemblyFormat = [{
+    ($arguments^ `:` type($arguments))?
+    custom<RangeType>(ref(type($arguments)), type($result))
+    attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // pdl::ReplaceOp
 //===----------------------------------------------------------------------===//
 

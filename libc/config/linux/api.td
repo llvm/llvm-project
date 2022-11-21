@@ -106,6 +106,7 @@ def MathAPI : PublicAPI<"math.h"> {
     SimpleMacroDef<"MATH_ERREXCEPT", "2">,
     MathErrHandlingMacro,
 
+    SimpleMacroDef<"HUGE_VAL", "__builtin_huge_val()">,
     SimpleMacroDef<"INFINITY", "__builtin_inff()">,
     SimpleMacroDef<"NAN", "__builtin_nanf(\"\")">,
 
@@ -207,6 +208,7 @@ def SysMManAPI : PublicAPI<"sys/mman.h"> {
 
 def SignalAPI : PublicAPI<"signal.h"> {
   let Types = [
+    "sig_atomic_t",
     "sigset_t",
     "struct sigaction",
     "union sigval",
@@ -268,7 +270,7 @@ def DirentAPI : PublicAPI<"dirent.h"> {
 }
 
 def UniStdAPI : PublicAPI<"unistd.h"> {
-  let Types = ["__exec_argv_t", "__exec_envp_t", "off_t", "pid_t", "size_t", "ssize_t", "uid_t"];
+  let Types = ["__exec_argv_t", "__exec_envp_t", "off_t", "pid_t", "size_t", "ssize_t", "uid_t", "__getoptargv_t"];
 }
 
 def SysRandomAPI : PublicAPI<"sys/random.h"> {
@@ -313,4 +315,8 @@ def SpawnAPI : PublicAPI<"spawn.h"> {
 
 def TermiosAPI : PublicAPI<"termios.h"> {
   let Types = ["cc_t", "pid_t", "speed_t", "struct termios", "tcflag_t"];
+}
+
+def SetJmpAPI : PublicAPI<"setjmp.h"> {
+  let Types = ["jmp_buf"];
 }

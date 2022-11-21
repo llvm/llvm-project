@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S -debug-counter=early-cse-skip=1,early-cse-count=1 -early-cse -earlycse-debug-hash < %s 2>&1 | FileCheck %s
+; RUN: opt -S -debug-counter=early-cse-skip=1,early-cse-count=1 -passes=early-cse -earlycse-debug-hash < %s 2>&1 | FileCheck %s
 ;; Test that, with debug counters on, we only optimize the second CSE opportunity.
 define i32 @test(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test(

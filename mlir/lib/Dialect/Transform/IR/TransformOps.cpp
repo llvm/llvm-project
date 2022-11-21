@@ -472,6 +472,16 @@ OpFoldResult transform::MergeHandlesOp::fold(ArrayRef<Attribute> operands) {
 // SplitHandlesOp
 //===----------------------------------------------------------------------===//
 
+void transform::SplitHandlesOp::build(OpBuilder &builder,
+                                      OperationState &result, Value target,
+                                      int64_t numResultHandles) {
+  result.addOperands(target);
+  result.addAttribute(SplitHandlesOp::getNumResultHandlesAttrName(result.name),
+                      builder.getI64IntegerAttr(numResultHandles));
+  auto pdlOpType = pdl::OperationType::get(builder.getContext());
+  result.addTypes(SmallVector<pdl::OperationType>(numResultHandles, pdlOpType));
+}
+
 DiagnosedSilenceableFailure
 transform::SplitHandlesOp::apply(transform::TransformResults &results,
                                  transform::TransformState &state) {
@@ -806,4 +816,52 @@ LogicalResult transform::WithPDLPatternsOp::verify() {
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// PrintOp
+//===----------------------------------------------------------------------===//
+
+void transform::PrintOp::build(OpBuilder &builder, OperationState &result,
+                               StringRef name) {
+  if (!name.empty()) {
+    result.addAttribute(PrintOp::getNameAttrName(result.name),
+                        builder.getStrArrayAttr(name));
+  }
+}
+
+void transform::PrintOp::build(OpBuilder &builder, OperationState &result,
+                               Value target, StringRef name) {
+  result.addOperands({target});
+  build(builder, result, name);
+}
+
+DiagnosedSilenceableFailure
+transform::PrintOp::apply(transform::TransformResults &results,
+                          transform::TransformState &state) {
+  llvm::errs() << "[[[ IR printer: ";
+  if (getName().has_value())
+    llvm::errs() << *getName() << " ";
+
+  if (!getTarget()) {
+    llvm::errs() << "top-level ]]]\n" << *state.getTopLevel() << "\n";
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  llvm::errs() << "]]]\n";
+  ArrayRef<Operation *> targets = state.getPayloadOps(getTarget());
+  for (Operation *target : targets)
+    llvm::errs() << *target << "\n";
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::PrintOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTarget(), effects);
+  onlyReadsPayload(effects);
+
+  // There is no resource for stderr file descriptor, so just declare print
+  // writes into the default resource.
+  effects.emplace_back(MemoryEffects::Write::get());
 }

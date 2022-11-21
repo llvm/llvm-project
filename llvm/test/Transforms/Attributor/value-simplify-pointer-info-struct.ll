@@ -36,7 +36,7 @@ declare void @harmless_use(ptr nocapture readonly) nofree norecurse nosync nounw
 ; CHECK: @[[GLOBALS:[a-zA-Z0-9_$"\\.-]+]] = internal constant [[STRUCT_S:%.*]] { i32 42, double 3.140000e+00, ptr null, i32 0 }, align 8
 ;.
 define i32 @testOneFieldGlobalS(i32 %cmpx) {
-; CHECK: Function Attrs: nofree norecurse nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@testOneFieldGlobalS
 ; CHECK-SAME: (i32 [[CMPX:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -95,7 +95,7 @@ if.end7:                                          ; preds = %if.then5, %if.end4
 }
 
 define i32 @testOneFieldGlobalS_type_mismatch() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@testOneFieldGlobalS_type_mismatch
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -152,7 +152,7 @@ if.end7:                                          ; preds = %if.then5, %if.end4
 }
 
 define i32 @testOneFieldGlobalS_byte_offset_wrong() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@testOneFieldGlobalS_byte_offset_wrong
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
@@ -210,7 +210,7 @@ if.end7:                                          ; preds = %if.then5, %if.end4
   ret i32 %r.2
 }
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree norecurse nosync nounwind readnone willreturn }
-; CHECK: attributes #[[ATTR1]] = { nofree norecurse nounwind readnone willreturn }
-; CHECK: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree norecurse nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR1]] = { nofree norecurse nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.

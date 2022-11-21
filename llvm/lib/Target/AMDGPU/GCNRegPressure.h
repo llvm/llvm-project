@@ -172,8 +172,8 @@ public:
   // Returns false if block is empty except debug values.
   bool reset(const MachineInstr &MI, const LiveRegSet *LiveRegs = nullptr);
 
-  // Move to the state right before the next MI. Returns false if reached
-  // end of the block.
+  // Move to the state right before the next MI or after the end of MBB.
+  // Returns false if reached end of the block.
   bool advanceBeforeNext();
 
   // Move to the state at the MI, advanceBeforeNext has to be called first.

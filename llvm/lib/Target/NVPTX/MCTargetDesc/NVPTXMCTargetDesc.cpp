@@ -63,6 +63,10 @@ static MCInstPrinter *createNVPTXMCInstPrinter(const Triple &T,
 static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &,
                                                  MCInstPrinter *, bool) {
+  return new NVPTXAsmTargetStreamer(S);
+}
+
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
   return new NVPTXTargetStreamer(S);
 }
 
@@ -86,5 +90,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTargetMC() {
 
     // Register the MCTargetStreamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T, createTargetAsmStreamer);
+
+    // Register the MCTargetStreamer.
+    TargetRegistry::RegisterNullTargetStreamer(*T, createNullTargetStreamer);
   }
 }

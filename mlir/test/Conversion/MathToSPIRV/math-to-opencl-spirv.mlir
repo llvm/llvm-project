@@ -18,24 +18,26 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.CL.log %[[ADDONE]]
   %4 = math.log1p %arg0 : f32
+  // CHECK: spirv.CL.rint %{{.*}}: f32
+  %5 = math.roundeven %arg0 : f32
   // CHECK: spirv.CL.rsqrt %{{.*}}: f32
-  %5 = math.rsqrt %arg0 : f32
+  %6 = math.rsqrt %arg0 : f32
   // CHECK: spirv.CL.sqrt %{{.*}}: f32
-  %6 = math.sqrt %arg0 : f32
+  %7 = math.sqrt %arg0 : f32
   // CHECK: spirv.CL.tanh %{{.*}}: f32
-  %7 = math.tanh %arg0 : f32
+  %8 = math.tanh %arg0 : f32
   // CHECK: spirv.CL.sin %{{.*}}: f32
-  %8 = math.sin %arg0 : f32
+  %9 = math.sin %arg0 : f32
   // CHECK: spirv.CL.fabs %{{.*}}: f32
-  %9 = math.absf %arg0 : f32
+  %10 = math.absf %arg0 : f32
   // CHECK: spirv.CL.ceil %{{.*}}: f32
-  %10 = math.ceil %arg0 : f32
+  %11 = math.ceil %arg0 : f32
   // CHECK: spirv.CL.floor %{{.*}}: f32
-  %11 = math.floor %arg0 : f32
+  %12 = math.floor %arg0 : f32
   // CHECK: spirv.CL.erf %{{.*}}: f32
-  %12 = math.erf %arg0 : f32
+  %13 = math.erf %arg0 : f32
   // CHECK: spirv.CL.round %{{.*}}: f32
-  %13 = math.round %arg0 : f32
+  %14 = math.round %arg0 : f32
   return
 }
 
@@ -55,14 +57,16 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.CL.log %[[ADDONE]]
   %4 = math.log1p %arg0 : vector<3xf32>
+  // CHECK: spirv.CL.rint %{{.*}}: vector<3xf32>
+  %5 = math.roundeven %arg0 : vector<3xf32>
   // CHECK: spirv.CL.rsqrt %{{.*}}: vector<3xf32>
-  %5 = math.rsqrt %arg0 : vector<3xf32>
+  %6 = math.rsqrt %arg0 : vector<3xf32>
   // CHECK: spirv.CL.sqrt %{{.*}}: vector<3xf32>
-  %6 = math.sqrt %arg0 : vector<3xf32>
+  %7 = math.sqrt %arg0 : vector<3xf32>
   // CHECK: spirv.CL.tanh %{{.*}}: vector<3xf32>
-  %7 = math.tanh %arg0 : vector<3xf32>
+  %8 = math.tanh %arg0 : vector<3xf32>
   // CHECK: spirv.CL.sin %{{.*}}: vector<3xf32>
-  %8 = math.sin %arg0 : vector<3xf32>
+  %9 = math.sin %arg0 : vector<3xf32>
   return
 }
 

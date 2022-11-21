@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @fn2(i32* %P, i1 %C) {
 ;
-; TUNIT: Function Attrs: argmemonly nofree norecurse nosync nounwind
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@fn2
 ; TUNIT-SAME: (i32* nocapture nofree [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -21,7 +21,7 @@ define void @fn2(i32* %P, i1 %C) {
 ; TUNIT:       exit:
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: argmemonly nofree nosync nounwind
+; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@fn2
 ; CGSCC-SAME: (i32* nocapture nofree nonnull align 4 dereferenceable(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -54,7 +54,7 @@ exit:
 }
 
 define internal i32 @fn1(i32 %p1) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@fn1
 ; CGSCC-SAME: (i32 returned [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -116,7 +116,7 @@ exit:
 }
 
 define internal i32 @fn0(i32 %p1) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@fn0
 ; CGSCC-SAME: (i32 returned [[P1:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  entry:
@@ -128,10 +128,10 @@ entry:
   ret i32 %cond
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind null_pointer_is_valid }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree nosync nounwind }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind null_pointer_is_valid }
 ;.

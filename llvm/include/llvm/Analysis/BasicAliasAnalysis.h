@@ -75,9 +75,15 @@ public:
   ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
                            AAQueryInfo &AAQI);
 
-  /// Chases pointers until we find a (constant global) or not.
-  bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
-                              bool OrLocal);
+  /// Returns a bitmask that should be unconditionally applied to the ModRef
+  /// info of a memory location. This allows us to eliminate Mod and/or Ref
+  /// from the ModRef info based on the knowledge that the memory location
+  /// points to constant and/or locally-invariant memory.
+  ///
+  /// If IgnoreLocals is true, then this method returns NoModRef for memory
+  /// that points to a local alloca.
+  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
+                               bool IgnoreLocals = false);
 
   /// Get the location associated with a pointer argument of a callsite.
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx);

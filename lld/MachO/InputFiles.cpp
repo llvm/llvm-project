@@ -519,16 +519,15 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     // ARM64_RELOC_BRANCH26 or ARM64_RELOC_PAGE21/PAGEOFF12 holds the
     // base symbolic address.
     //
-    // Note: X86 does not use *_RELOC_ADDEND because it can embed an
-    // addend into the instruction stream. On X86, a relocatable address
-    // field always occupies an entire contiguous sequence of byte(s),
-    // so there is no need to merge opcode bits with address
-    // bits. Therefore, it's easy and convenient to store addends in the
-    // instruction-stream bytes that would otherwise contain zeroes. By
-    // contrast, RISC ISAs such as ARM64 mix opcode bits with with
-    // address bits so that bitwise arithmetic is necessary to extract
-    // and insert them. Storing addends in the instruction stream is
-    // possible, but inconvenient and more costly at link time.
+    // Note: X86 does not use *_RELOC_ADDEND because it can embed an addend into
+    // the instruction stream. On X86, a relocatable address field always
+    // occupies an entire contiguous sequence of byte(s), so there is no need to
+    // merge opcode bits with address bits. Therefore, it's easy and convenient
+    // to store addends in the instruction-stream bytes that would otherwise
+    // contain zeroes. By contrast, RISC ISAs such as ARM64 mix opcode bits with
+    // address bits so that bitwise arithmetic is necessary to extract and
+    // insert them. Storing addends in the instruction stream is possible, but
+    // inconvenient and more costly at link time.
 
     relocation_info relInfo = relInfos[i];
     bool isSubtrahend =
@@ -1347,11 +1346,11 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
     // that all EH frames have an associated symbol so that we can generate
     // subtractor relocs that reference them.
     if (isec->symbols.size() == 0)
-      isec->symbols.push_back(make<Defined>(
-          "EH_Frame", isec->getFile(), isec, /*value=*/0, /*size=*/0,
-          /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/false,
-          /*includeInSymtab=*/false, /*isThumb=*/false,
-          /*isReferencedDynamically=*/false, /*noDeadStrip=*/false));
+      make<Defined>("EH_Frame", isec->getFile(), isec, /*value=*/0,
+                    isec->getSize(), /*isWeakDef=*/false, /*isExternal=*/false,
+                    /*isPrivateExtern=*/false, /*includeInSymtab=*/false,
+                    /*isThumb=*/false, /*isReferencedDynamically=*/false,
+                    /*noDeadStrip=*/false);
     else if (isec->symbols[0]->value != 0)
       fatal("found symbol at unexpected offset in __eh_frame");
 

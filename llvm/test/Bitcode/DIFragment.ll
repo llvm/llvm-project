@@ -1,5 +1,7 @@
 ; RUN: llvm-dis -o - %s.bc | FileCheck %s
 
+; XFAIL: *
+
 ; CHECK: !named = !{!0, !1}
 !named = !{!0, !1}
 

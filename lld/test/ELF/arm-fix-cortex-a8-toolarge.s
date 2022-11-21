@@ -38,7 +38,7 @@ target:
 target2:
  .section .text.02, "ax", %progbits
 /// 32-bit Branch and link spans 2 4KiB regions, preceded by a 32-bit
-/// non branch instruction, a patch will be be attempted. Unfortunately the
+/// non branch instruction, a patch will be attempted. Unfortunately the
 /// the BL cannot reach outside the section so we have to abort the patch.
  nop.w
  bl target2

@@ -486,6 +486,39 @@ def SPIRV_CLRoundOp : SPIRV_CLUnaryArithmeticOp<"round", 55, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLRintOp : SPIRV_CLUnaryArithmeticOp<"rint", 53, SPIRV_Float> {
+  let summary = [{
+    Round x to integral value (using round to nearest even rounding mode) in
+    floating-point format.
+  }];
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    rint-op ::= ssa-id `=` `spirv.CL.rint` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.CL.rint %0 : f32
+    %1 = spirv.CL.rint %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLRsqrtOp : SPIRV_CLUnaryArithmeticOp<"rsqrt", 56, SPIRV_Float> {
   let summary = "Compute inverse square root of x.";
 
@@ -687,6 +720,8 @@ def SPIRV_CLUMaxOp : SPIRV_CLBinaryArithmeticOp<"u_max", 157, SPIRV_Integer> {
     ```
   }];
 }
+
+// -----
 
 def SPIRV_CLSMinOp : SPIRV_CLBinaryArithmeticOp<"s_min", 158, SPIRV_Integer> {
   let summary = "Return minimum of two signed integer operands";

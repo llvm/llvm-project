@@ -13,7 +13,7 @@ libc++ Format Status
 Overview
 ========
 
-This document contains the status of the C++20 Format library in libc++. It is used to
+This document contains the status of the Format library in libc++. It is used to
 track both the status of the sub-projects of the Format library and who is assigned to
 these sub-projects. This is imperative to effective implementation so that work is not
 duplicated and implementors are not blocked by each other.

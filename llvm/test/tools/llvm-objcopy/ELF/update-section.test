@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86-registered-target
 
 # RUN: yaml2obj %s -o %t
 

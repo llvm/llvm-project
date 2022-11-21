@@ -240,3 +240,29 @@ func.func @reduce(%arg0: memref<16x32x64xf32>,
 // CHECK:           %[[OUT_ELEM:.*]] = memref.load %[[OUT]][%[[I]], %[[K]]]
 // CHECK:           %[[ADD:.*]] = arith.addf %[[IN_ELEM]], %[[OUT_ELEM]]
 // CHECK:           memref.store %[[ADD]], %[[OUT]][%[[I]], %[[K]]]
+
+// -----
+
+func.func @broadcast(%input: memref<8x32xf32>,
+                     %init: memref<8x16x32xf32>) {
+  linalg.broadcast
+      ins(%input:memref<8x32xf32>)
+      outs(%init:memref<8x16x32xf32>)
+      dimensions = [0, 2]
+  func.return
+}
+// CHECK-LABEL: func.func @broadcast(
+// CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]: memref<8x32xf32>,
+// CHECK-SAME:    %[[OUT:[a-zA-Z0-9]+]]: memref<8x16x32xf32>
+
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+// CHECK-DAG: %[[C16:.*]] = arith.constant 16 : index
+// CHECK-DAG: %[[C32:.*]] = arith.constant 32 : index
+
+// CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C8]] step %[[C1]] {
+// CHECK:       scf.for %[[J:.*]] = %[[C0]] to %[[C16]] step %[[C1]] {
+// CHECK:         scf.for %[[K:.*]] = %[[C0]] to %[[C32]] step %[[C1]] {
+// CHECK:           %[[ELEM:.*]] = memref.load %[[IN]][%[[I]], %[[K]]]
+// CHECK:           memref.store %[[ELEM]], %[[OUT]][%[[I]], %[[J]], %[[K]]]

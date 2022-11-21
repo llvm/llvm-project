@@ -937,3 +937,58 @@ define <2 x half> @powi_recip(<2 x half> %x, i32 %y) {
   %r = fdiv reassoc arcp nnan ninf <2 x half> <half 1.0, half 1.0>, %p
   ret <2 x half> %r
 }
+
+define float @fdiv_zero_f32(float %x) {
+; CHECK-LABEL: @fdiv_zero_f32(
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %x, 0.0
+  ret float %fdiv
+}
+
+; https://alive2.llvm.org/ce/z/gLBFKB
+define float @fdiv_nnan_zero_f32(float %x) {
+; CHECK-LABEL: @fdiv_nnan_zero_f32(
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan float @llvm.copysign.f32(float 0x7FF0000000000000, float [[X:%.*]])
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv nnan float %x, 0.0
+  ret float %fdiv
+}
+
+define <2 x float> @fdiv_nnan_zero_v2f32(<2 x float> %x) {
+; CHECK-LABEL: @fdiv_nnan_zero_v2f32(
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan <2 x float> @llvm.copysign.v2f32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[FDIV]]
+;
+  %fdiv = fdiv nnan <2 x float> %x, zeroinitializer
+  ret <2 x float> %fdiv
+}
+
+define float @fdiv_nnan_zero_f32_fmf(float %x) {
+; CHECK-LABEL: @fdiv_nnan_zero_f32_fmf(
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan nsz float @llvm.copysign.f32(float 0x7FF0000000000000, float [[X:%.*]])
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv nnan nsz float %x, 0.0
+  ret float %fdiv
+}
+
+define <2 x float> @fdiv_nnan_zero_v2f32_fmf(<2 x float> %x) {
+; CHECK-LABEL: @fdiv_nnan_zero_v2f32_fmf(
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan nsz <2 x float> @llvm.copysign.v2f32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[FDIV]]
+;
+  %fdiv = fdiv nnan nsz <2 x float> %x, zeroinitializer
+  ret <2 x float> %fdiv
+}
+
+define float @fdiv_nnan_neg_zero_f32(float %x) {
+; CHECK-LABEL: @fdiv_nnan_neg_zero_f32(
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv nnan float %x, -0.0
+  ret float %fdiv
+}

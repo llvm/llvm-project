@@ -155,9 +155,9 @@ subroutine assoc()
     pureFuncPointer => intProc
     !WARNING: PURE procedure pointer 'purefuncpointer' may not be associated with non-PURE procedure designator 'intproc'
     lvar = associated(pureFuncPointer, intProc)
-    !ERROR: Procedure pointer 'realprocpointer1' associated with incompatible procedure designator 'intproc': function results have incompatible types: REAL(4) vs INTEGER(4)
+    !ERROR: Function pointer 'realprocpointer1' associated with incompatible function designator 'intproc': function results have incompatible types: REAL(4) vs INTEGER(4)
     realProcPointer1 => intProc
-    !WARNING: Procedure pointer 'realprocpointer1' associated with incompatible procedure designator 'intproc': function results have incompatible types: REAL(4) vs INTEGER(4)
+    !WARNING: Function pointer 'realprocpointer1' associated with incompatible function designator 'intproc': function results have incompatible types: REAL(4) vs INTEGER(4)
     lvar = associated(realProcPointer1, intProc)
     subProcPointer => externalProc ! OK to associate a procedure pointer  with an explicit interface to a procedure with an implicit interface
     lvar = associated(subProcPointer, externalProc) ! OK to associate a procedure pointer with an explicit interface to a procedure with an implicit interface

@@ -22,7 +22,7 @@ using namespace clang;
 using namespace clang::interp;
 
 template <typename T> inline T ReadArg(Program &P, CodePtr &OpPC) {
-  if constexpr (std::is_pointer<T>::value) {
+  if constexpr (std::is_pointer_v<T>) {
     uint32_t ID = OpPC.read<uint32_t>();
     return reinterpret_cast<T>(P.getNativePointer(ID));
   } else {

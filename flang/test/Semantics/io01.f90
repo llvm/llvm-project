@@ -75,7 +75,8 @@
   !ERROR: If NEWUNIT appears, FILE or STATUS must also appear
   open(newunit=n, newunit=nn, iostat=stat4)
 
-  !ERROR: NEWUNIT variable 'const_new_unit' must be definable
+  !ERROR: NEWUNIT variable 'const_new_unit' is not definable
+  !BECAUSE: '66_4' is not a variable or pointer
   open(newunit=const_new_unit, status=cc)
 
   !ERROR: Duplicate UNIT specifier

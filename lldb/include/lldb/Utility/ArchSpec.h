@@ -108,6 +108,12 @@ public:
     eRISCVSubType_riscv64,
   };
 
+  enum LoongArchSubType {
+    eLoongArchSubType_unknown,
+    eLoongArchSubType_loongarch32,
+    eLoongArchSubType_loongarch64,
+  };
+
   enum Core {
     eCore_arm_generic,
     eCore_arm_armv4,
@@ -203,6 +209,9 @@ public:
 
     eCore_riscv32,
     eCore_riscv64,
+
+    eCore_loongarch32,
+    eCore_loongarch64,
 
     eCore_uknownMach32,
     eCore_uknownMach64,

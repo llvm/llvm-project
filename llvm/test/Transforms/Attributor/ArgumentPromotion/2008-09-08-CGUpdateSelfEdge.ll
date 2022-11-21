@@ -3,7 +3,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
 define internal fastcc i32 @term_SharingList(i32* %Term, i32* %List) nounwind {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@term_SharingList
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -25,7 +25,7 @@ bb5:		; preds = %entry
 }
 
 define i32 @term_Sharing(i32* %Term) nounwind {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@term_Sharing
 ; CHECK-SAME: (i32* nocapture nofree readnone [[TERM:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -46,5 +46,5 @@ bb14:		; preds = %entry
   ret i32 0
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.

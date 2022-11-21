@@ -23,13 +23,14 @@ TEST(SubElementInterfaceTest, Nested) {
   BoolAttr trueAttr = builder.getBoolAttr(true);
   BoolAttr falseAttr = builder.getBoolAttr(false);
   ArrayAttr boolArrayAttr = builder.getArrayAttr({trueAttr, falseAttr});
+  StringAttr strAttr = builder.getStringAttr("array");
   DictionaryAttr dictAttr =
-      builder.getDictionaryAttr(builder.getNamedAttr("array", boolArrayAttr));
+      builder.getDictionaryAttr(builder.getNamedAttr(strAttr, boolArrayAttr));
 
   SmallVector<Attribute> subAttrs;
   dictAttr.walkSubAttrs([&](Attribute attr) { subAttrs.push_back(attr); });
   EXPECT_EQ(llvm::makeArrayRef(subAttrs),
-            ArrayRef<Attribute>({trueAttr, falseAttr, boolArrayAttr}));
+            ArrayRef<Attribute>({strAttr, trueAttr, falseAttr, boolArrayAttr}));
 }
 
 } // namespace

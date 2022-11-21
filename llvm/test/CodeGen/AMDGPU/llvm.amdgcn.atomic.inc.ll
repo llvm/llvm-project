@@ -1,7 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,CIVI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,CIVI %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -stop-before=machine-scheduler < %s | FileCheck -enable-var-scope -check-prefixes=MIR %s
 
 declare i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture, i32, i32, i32, i1) #2
 declare i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture, i32, i32, i32, i1) #2
@@ -19,17 +18,11 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 42
 ; GCN: ds_inc_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, [[K]]
-; MIR-LABEL: @lds_atomic_inc_ret_i32
-; MIR: DS_INC_RTN_U32 {{.*}} :: (load store (s32) on %{{.*}}, !noalias !{{[0-9]+}}, addrspace 3)
 define amdgpu_kernel void @lds_atomic_inc_ret_i32(i32 addrspace(1)* %out, i32 addrspace(3)* %ptr) #0 {
-  %result = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 0, i32 0, i1 false), !noalias !0
+  %result = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 0, i32 0, i1 false)
   store i32 %result, i32 addrspace(1)* %out
   ret void
 }
-
-!0 = !{!1}
-!1 = distinct !{!1, !2}
-!2 = distinct !{!2}
 
 ; GCN-LABEL: {{^}}lds_atomic_inc_ret_i32_offset:
 ; CIVI-DAG: s_mov_b32 m0

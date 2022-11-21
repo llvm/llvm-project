@@ -40,7 +40,7 @@ void populateWarpExecuteOnLane0OpToScfForPattern(
     const WarpExecuteOnLane0LoweringOptions &options,
     PatternBenefit benefit = 1);
 
-using DistributionMapFn = std::function<AffineMap(vector::TransferWriteOp)>;
+using DistributionMapFn = std::function<AffineMap(Value)>;
 
 /// Distribute transfer_write ops based on the affine map returned by
 /// `distributionMapFn`.
@@ -67,9 +67,12 @@ void populateDistributeTransferWriteOpPatterns(
 /// region.
 void moveScalarUniformCode(WarpExecuteOnLane0Op op);
 
-/// Collect patterns to propagate warp distribution.
+/// Collect patterns to propagate warp distribution. `distributionMapFn` is used
+/// to decide how a value should be distributed when this cannot be inferred
+/// from its uses.
 void populatePropagateWarpVectorDistributionPatterns(
-    RewritePatternSet &pattern, PatternBenefit benefit = 1);
+    RewritePatternSet &pattern, const DistributionMapFn &distributionMapFn,
+    PatternBenefit benefit = 1);
 
 /// Lambda signature to compute a reduction of a distributed value for the given
 /// reduction kind and size.

@@ -2423,6 +2423,13 @@ void PruneThreadPlans();
     return Status("Not supported");
   }
 
+  /// Fetch process defined metadata.
+  ///
+  /// \return
+  ///     A StructuredDataSP object which, if non-empty, will contain the
+  ///     information related to the process.
+  virtual StructuredData::DictionarySP GetMetadata() { return nullptr; }
+
   size_t AddImageToken(lldb::addr_t image_ptr);
 
   lldb::addr_t GetImagePtrFromToken(size_t token) const;

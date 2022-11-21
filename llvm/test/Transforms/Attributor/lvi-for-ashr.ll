@@ -5,7 +5,7 @@
 ; FIXME: DOT should be replaced with 3
 
 define i32 @test-ashr(i32 %c) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@test-ashr
 ; CHECK-SAME: (i32 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  chk65:
@@ -49,5 +49,5 @@ return:
   ret i32 %retval
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.

@@ -1730,6 +1730,7 @@ class piecewise_linear_distribution
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>
 #  include <cmath>
+#  include <concepts>
 #  include <cstddef>
 #  include <cstdint>
 #  include <iosfwd>

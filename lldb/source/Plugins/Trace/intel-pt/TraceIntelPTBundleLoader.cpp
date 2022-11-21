@@ -241,6 +241,8 @@ StringRef TraceIntelPTBundleLoader::GetSchema() {
       "pid": integer,
       "triple"?: string,
           // Optional clang/llvm target triple.
+          // This must be provided if the trace will be created not using the
+          // CLI or on a machine other than where the target was traced.
       "threads": [
           // A list of known threads for the given process. When context switch
           // data is provided, LLDB will automatically create threads for the

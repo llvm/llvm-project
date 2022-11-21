@@ -117,6 +117,9 @@ public:
                                 lldb::SymbolContextItem resolve_scope,
                                 lldb_private::SymbolContext &sc) override;
 
+  lldb_private::Status
+  CalculateFrameVariableError(lldb_private::StackFrame &frame) override;
+
   uint32_t ResolveSymbolContext(
       const lldb_private::SourceLocationSpec &src_location_spec,
       lldb::SymbolContextItem resolve_scope,

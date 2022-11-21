@@ -60,7 +60,8 @@
   !ERROR: If ID appears, PENDING must also appear
   inquire(file='abc', id=id)
 
-  !ERROR: ROUND variable 'const_round' must be definable
+  !ERROR: ROUND variable 'const_round' is not definable
+  !BECAUSE: '"c"' is not a variable or pointer
   inquire(file='abc', round=const_round)
 
 9 continue

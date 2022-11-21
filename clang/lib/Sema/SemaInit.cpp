@@ -1528,8 +1528,8 @@ void InitListChecker::CheckComplexType(const InitializedEntity &Entity,
 
   // As an extension, clang supports complex initializers, which initialize
   // a complex number component-wise.  When an explicit initializer list for
-  // a complex number contains two two initializers, this extension kicks in:
-  // it exepcts the initializer list to contain two elements convertible to
+  // a complex number contains two initializers, this extension kicks in:
+  // it expects the initializer list to contain two elements convertible to
   // the element type of the complex type. The first element initializes
   // the real part, and the second element intitializes the imaginary part.
 
@@ -7596,15 +7596,15 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
 }
 
 static bool pathOnlyInitializesGslPointer(IndirectLocalPath &Path) {
-  for (auto It = Path.rbegin(), End = Path.rend(); It != End; ++It) {
-    if (It->Kind == IndirectLocalPathEntry::VarInit)
+  for (const auto &It : llvm::reverse(Path)) {
+    if (It.Kind == IndirectLocalPathEntry::VarInit)
       continue;
-    if (It->Kind == IndirectLocalPathEntry::AddressOf)
+    if (It.Kind == IndirectLocalPathEntry::AddressOf)
       continue;
-    if (It->Kind == IndirectLocalPathEntry::LifetimeBoundCall)
+    if (It.Kind == IndirectLocalPathEntry::LifetimeBoundCall)
       continue;
-    return It->Kind == IndirectLocalPathEntry::GslPointerInit ||
-           It->Kind == IndirectLocalPathEntry::GslReferenceInit;
+    return It.Kind == IndirectLocalPathEntry::GslPointerInit ||
+           It.Kind == IndirectLocalPathEntry::GslReferenceInit;
   }
   return false;
 }

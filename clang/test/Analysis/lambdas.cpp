@@ -338,7 +338,7 @@ void captureByReference() {
     local1++;
   };
 
-  // Don't treat as a dead store because local1 was was captured by reference.
+  // Don't treat as a dead store because local1 was captured by reference.
   local1 = 7; // no-warning
 
   lambda1();
@@ -349,7 +349,7 @@ void captureByReference() {
     local2++; // Implicit capture by reference
   };
 
-  // Don't treat as a dead store because local2 was was captured by reference.
+  // Don't treat as a dead store because local2 was captured by reference.
   local2 = 7; // no-warning
 
   lambda2();

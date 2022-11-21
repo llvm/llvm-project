@@ -20,30 +20,30 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA32-NEXT:    blt $a2, $a0, .LBB0_4
 ; LA32-NEXT:  # %bb.1: # %entry
 ; LA32-NEXT:    ori $a3, $zero, 1
-; LA32-NEXT:    beq $a0, $a3, .LBB0_8
+; LA32-NEXT:    beq $a0, $a3, .LBB0_7
 ; LA32-NEXT:  # %bb.2: # %entry
-; LA32-NEXT:    bne $a0, $a2, .LBB0_10
+; LA32-NEXT:    bne $a0, $a2, .LBB0_9
 ; LA32-NEXT:  # %bb.3: # %bb2
 ; LA32-NEXT:    ori $a0, $zero, 3
 ; LA32-NEXT:    st.w $a0, $a1, 0
 ; LA32-NEXT:    ret
 ; LA32-NEXT:  .LBB0_4: # %entry
 ; LA32-NEXT:    ori $a3, $zero, 3
-; LA32-NEXT:    beq $a0, $a3, .LBB0_9
+; LA32-NEXT:    beq $a0, $a3, .LBB0_8
 ; LA32-NEXT:  # %bb.5: # %entry
 ; LA32-NEXT:    ori $a2, $zero, 4
-; LA32-NEXT:    bne $a0, $a2, .LBB0_10
+; LA32-NEXT:    bne $a0, $a2, .LBB0_9
 ; LA32-NEXT:  # %bb.6: # %bb4
 ; LA32-NEXT:    ori $a0, $zero, 1
 ; LA32-NEXT:    st.w $a0, $a1, 0
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB0_8: # %bb1
+; LA32-NEXT:  .LBB0_7: # %bb1
 ; LA32-NEXT:    ori $a0, $zero, 4
 ; LA32-NEXT:    st.w $a0, $a1, 0
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB0_9: # %bb3
+; LA32-NEXT:  .LBB0_8: # %bb3
 ; LA32-NEXT:    st.w $a2, $a1, 0
-; LA32-NEXT:  .LBB0_10: # %exit
+; LA32-NEXT:  .LBB0_9: # %exit
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: switch_4_arms:
@@ -53,30 +53,30 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA64-NEXT:    blt $a2, $a0, .LBB0_4
 ; LA64-NEXT:  # %bb.1: # %entry
 ; LA64-NEXT:    ori $a3, $zero, 1
-; LA64-NEXT:    beq $a0, $a3, .LBB0_8
+; LA64-NEXT:    beq $a0, $a3, .LBB0_7
 ; LA64-NEXT:  # %bb.2: # %entry
-; LA64-NEXT:    bne $a0, $a2, .LBB0_10
+; LA64-NEXT:    bne $a0, $a2, .LBB0_9
 ; LA64-NEXT:  # %bb.3: # %bb2
 ; LA64-NEXT:    ori $a0, $zero, 3
 ; LA64-NEXT:    st.w $a0, $a1, 0
 ; LA64-NEXT:    ret
 ; LA64-NEXT:  .LBB0_4: # %entry
 ; LA64-NEXT:    ori $a3, $zero, 3
-; LA64-NEXT:    beq $a0, $a3, .LBB0_9
+; LA64-NEXT:    beq $a0, $a3, .LBB0_8
 ; LA64-NEXT:  # %bb.5: # %entry
 ; LA64-NEXT:    ori $a2, $zero, 4
-; LA64-NEXT:    bne $a0, $a2, .LBB0_10
+; LA64-NEXT:    bne $a0, $a2, .LBB0_9
 ; LA64-NEXT:  # %bb.6: # %bb4
 ; LA64-NEXT:    ori $a0, $zero, 1
 ; LA64-NEXT:    st.w $a0, $a1, 0
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB0_8: # %bb1
+; LA64-NEXT:  .LBB0_7: # %bb1
 ; LA64-NEXT:    ori $a0, $zero, 4
 ; LA64-NEXT:    st.w $a0, $a1, 0
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB0_9: # %bb3
+; LA64-NEXT:  .LBB0_8: # %bb3
 ; LA64-NEXT:    st.w $a2, $a1, 0
-; LA64-NEXT:  .LBB0_10: # %exit
+; LA64-NEXT:  .LBB0_9: # %exit
 ; LA64-NEXT:    ret
 ;
 ; LA32-JT-LABEL: switch_4_arms:

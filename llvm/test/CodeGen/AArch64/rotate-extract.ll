@@ -113,8 +113,8 @@ define i64 @no_extract_mul(i64 %i) nounwind {
 ; CHECK-LABEL: no_extract_mul:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add x8, x0, x0, lsl #3
-; CHECK-NEXT:    lsr x0, x8, #57
-; CHECK-NEXT:    bfi x0, x8, #8, #56
+; CHECK-NEXT:    lsr x9, x8, #57
+; CHECK-NEXT:    orr x0, x9, x8, lsl #8
 ; CHECK-NEXT:    ret
   %lhs_mul = mul i64 %i, 2304
   %rhs_mul = mul i64 %i, 9

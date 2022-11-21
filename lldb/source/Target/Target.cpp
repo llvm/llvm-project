@@ -1436,7 +1436,8 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     if (!m_arch.GetSpec().IsValid()) {
       m_arch = executable_sp->GetArchitecture();
       LLDB_LOG(log,
-               "setting architecture to {0} ({1}) based on executable file",
+               "Target::SetExecutableModule setting architecture to {0} ({1}) "
+               "based on executable file",
                m_arch.GetSpec().GetArchitectureName(),
                m_arch.GetSpec().GetTriple().getTriple());
     }
@@ -1536,7 +1537,9 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
     // specified
     if (replace_local_arch)
       m_arch = other;
-    LLDB_LOG(log, "set architecture to {0} ({1})",
+    LLDB_LOG(log,
+             "Target::SetArchitecture merging compatible arch; arch "
+             "is now {0} ({1})",
              m_arch.GetSpec().GetArchitectureName(),
              m_arch.GetSpec().GetTriple().getTriple());
     return true;
@@ -1544,9 +1547,13 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
 
   // If we have an executable file, try to reset the executable to the desired
   // architecture
-  LLDB_LOGF(log, "Target::SetArchitecture changing architecture to %s (%s)",
-            arch_spec.GetArchitectureName(),
-            arch_spec.GetTriple().getTriple().c_str());
+  LLDB_LOGF(
+      log,
+      "Target::SetArchitecture changing architecture to %s (%s) from %s (%s)",
+      arch_spec.GetArchitectureName(),
+      arch_spec.GetTriple().getTriple().c_str(),
+      m_arch.GetSpec().GetArchitectureName(),
+      m_arch.GetSpec().GetTriple().getTriple().c_str());
   m_arch = other;
   ModuleSP executable_sp = GetExecutableModule();
 

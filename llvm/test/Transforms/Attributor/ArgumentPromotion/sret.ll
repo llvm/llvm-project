@@ -7,13 +7,13 @@ target triple = "x86_64-pc-windows-msvc"
 
 define internal void @add({i32, i32}* %this, i32* sret(i32) %r) {
 ;
-; TUNIT: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@add
 ; TUNIT-SAME: ({ i32, i32 }* noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[THIS:%.*]], i32* noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:    store i32 undef, i32* [[R]], align 4
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@add
 ; CGSCC-SAME: ({ i32, i32 }* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[THIS:%.*]], i32* noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    [[AP:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[THIS]], i32 0, i32 0
@@ -34,14 +34,14 @@ define internal void @add({i32, i32}* %this, i32* sret(i32) %r) {
 }
 
 define void @f() {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@f
 ; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:    [[R:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    call void @add({ i32, i32 }* noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) undef, i32* noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@f
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[R:%.*]] = alloca i32, align 4
@@ -56,11 +56,11 @@ define void @f() {
   ret void
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn writeonly }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
 ;.

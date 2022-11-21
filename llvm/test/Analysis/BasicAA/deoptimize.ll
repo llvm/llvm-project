@@ -21,7 +21,7 @@ define void @test1(i8* %p) {
 ; Check that global G1 is reported as Ref by memcpy/memmove calls.
 define i32 @test_memcpy_with_deopt() {
 ; CHECK-LABEL: Function: test_memcpy_with_deopt:
-; CHECK: Just Mod:  Ptr: i8* %A	<->  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
+; CHECK: Both ModRef:  Ptr: i8* %A	<->  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
 ; CHECK: Just Ref:  Ptr: i8* %B	<->  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
 ; CHECK: Just Ref:  Ptr: i32* @G1	<->  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
 
@@ -40,7 +40,7 @@ define i32 @test_memcpy_with_deopt() {
 
 define i32 @test_memmove_with_deopt() {
 ; CHECK-LABEL: Function: test_memmove_with_deopt:
-; CHECK: Just Mod:  Ptr: i8* %A	<->  call void @llvm.memmove.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
+; CHECK: Both ModRef:  Ptr: i8* %A	<->  call void @llvm.memmove.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
 ; CHECK: Just Ref:  Ptr: i8* %B	<->  call void @llvm.memmove.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
 ; CHECK: Just Ref:  Ptr: i32* @G1	<->  call void @llvm.memmove.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
 

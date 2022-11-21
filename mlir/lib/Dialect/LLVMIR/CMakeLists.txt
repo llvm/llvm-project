@@ -4,7 +4,6 @@ add_mlir_dialect_library(MLIRLLVMDialect
   IR/FunctionCallUtils.cpp
   IR/LLVMAttrs.cpp
   IR/LLVMDialect.cpp
-  IR/LLVMIntrinsicOps.cpp
   IR/LLVMTypes.cpp
   IR/LLVMTypeSyntax.cpp
 

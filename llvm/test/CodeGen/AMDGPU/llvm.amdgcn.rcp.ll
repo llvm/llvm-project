@@ -7,7 +7,9 @@ declare double @llvm.sqrt.f64(double) #0
 declare float @llvm.sqrt.f32(float) #0
 
 ; FUNC-LABEL: {{^}}rcp_undef_f32:
-; SI-NOT: v_rcp_f32
+; SI: v_mov_b32_e32 [[NAN:v[0-9]+]], 0x7fc00000
+; SI-NOT: [[NAN]]
+; SI: buffer_store_dword [[NAN]]
 define amdgpu_kernel void @rcp_undef_f32(float addrspace(1)* %out) #1 {
   %rcp = call float @llvm.amdgcn.rcp.f32(float undef)
   store float %rcp, float addrspace(1)* %out, align 4

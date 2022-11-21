@@ -1917,6 +1917,7 @@ template <class BidirectionalIterator, class Compare>
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <atomic>
+#  include <concepts>
 #  include <iterator>
 #  include <memory>
 #  include <stdexcept>

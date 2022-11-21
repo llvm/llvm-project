@@ -8,7 +8,7 @@
 ; the function is not exactly defined, and marked alwaysinline and can be inlined,
 ; so the function can be analyzed
 define linkonce void @inner1() alwaysinline {
-; CHECK: Function Attrs: alwaysinline nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: alwaysinline nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@inner1
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -19,13 +19,13 @@ entry:
 }
 
 define void @outer1() {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@outer1
 ; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@outer1
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -122,12 +122,12 @@ define i32 @outer3(i32 %x) {
   ret i32 %call
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { alwaysinline nofree norecurse nosync nounwind readnone willreturn }
-; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { alwaysinline nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR2]] = { norecurse }
 ; TUNIT: attributes #[[ATTR3]] = { alwaysinline }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { alwaysinline nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { alwaysinline nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { alwaysinline }
 ;.

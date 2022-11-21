@@ -490,6 +490,15 @@ namespace AArch64SVEPredPattern {
 #include "AArch64GenSystemOperands.inc"
 }
 
+namespace AArch64SVEVecLenSpecifier {
+  struct SVEVECLENSPECIFIER {
+    const char *Name;
+    uint16_t Encoding;
+  };
+#define GET_SVEVECLENSPECIFIER_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64SVEVecLenSpecifier
+
 /// Return the number of active elements for VL1 to VL256 predicate pattern,
 /// zero for all other patterns.
 inline unsigned getNumElementsFromSVEPredPattern(unsigned Pattern) {

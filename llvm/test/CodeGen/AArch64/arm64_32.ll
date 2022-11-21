@@ -662,8 +662,9 @@ define void @test_struct_hi(i32 %hi) nounwind {
 ; CHECK-LABEL: test_struct_hi:
 ; CHECK: mov w[[IN:[0-9]+]], w0
 ; CHECK: bl _get_int
-; CHECK-FAST-NEXT: mov w0, w0
-; CHECK-NEXT: bfi x0, x[[IN]], #32, #32
+; CHECK-FAST-NEXT: mov w[[DST:[0-9]+]], w0
+; CHECK-FAST-NEXT: orr x0, x[[DST]], x[[IN]], lsl #32
+; CHECK-OPT-NEXT: bfi x0, x[[IN]], #32, #32
 ; CHECK-NEXT: bl _take_pair
   %val.64 = call i64 @get_int()
   %val.32 = trunc i64 %val.64 to i32

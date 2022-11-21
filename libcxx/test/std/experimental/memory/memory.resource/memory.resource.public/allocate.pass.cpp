@@ -24,6 +24,8 @@
 //  D) Invoking 'allocate' invokes 'do_allocate' with the same arguments.
 //  E) If 'do_allocate' throws then 'allocate' propagates that exception.
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 #include <type_traits>
 #include <cstddef>

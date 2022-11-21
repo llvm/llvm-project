@@ -53,8 +53,8 @@ let Predicates = [HasSME] in {
 // Outer products
 //===----------------------------------------------------------------------===//
 
-defm BFMOPA_MPPZZ  : sme_bf16_outer_product<0b0, "bfmopa", int_aarch64_sme_mopa_wide>;
-defm BFMOPS_MPPZZ  : sme_bf16_outer_product<0b1, "bfmops", int_aarch64_sme_mops_wide>;
+defm BFMOPA_MPPZZ  : sme_bf16_outer_product<0b000, "bfmopa", int_aarch64_sme_mopa_wide>;
+defm BFMOPS_MPPZZ  : sme_bf16_outer_product<0b001, "bfmops", int_aarch64_sme_mops_wide>;
 
 defm FMOPA_MPPZZ_S : sme_outer_product_fp32<0b0, "fmopa", int_aarch64_sme_mopa>;
 defm FMOPS_MPPZZ_S : sme_outer_product_fp32<0b1, "fmops", int_aarch64_sme_mops>;
@@ -66,8 +66,8 @@ defm FMOPS_MPPZZ_D : sme_outer_product_fp64<0b1, "fmops", int_aarch64_sme_mops>;
 }
 
 let Predicates = [HasSME] in {
-defm FMOPAL_MPPZZ  : sme_f16_outer_product<0b0, "fmopa", int_aarch64_sme_mopa_wide>;
-defm FMOPSL_MPPZZ  : sme_f16_outer_product<0b1, "fmops", int_aarch64_sme_mops_wide>;
+defm FMOPAL_MPPZZ  : sme_f16_outer_product<0b010, "fmopa", int_aarch64_sme_mopa_wide>;
+defm FMOPSL_MPPZZ  : sme_f16_outer_product<0b011, "fmops", int_aarch64_sme_mops_wide>;
 
 defm SMOPA_MPPZZ_S  : sme_int_outer_product_i32<0b000, "smopa",  int_aarch64_sme_smopa_wide>;
 defm SMOPS_MPPZZ_S  : sme_int_outer_product_i32<0b001, "smops",  int_aarch64_sme_smops_wide>;
@@ -351,14 +351,14 @@ defm UMLSL_VG4_M4ZZ  : sme2_int_mla_long_array_vg4_single<"umlsl", 0b11>;
 defm UMLSL_VG2_M2Z2Z : sme2_int_mla_long_array_vg2_multi<"umlsl",  0b11>;
 defm UMLSL_VG4_M4Z4Z : sme2_int_mla_long_array_vg4_multi<"umlsl",  0b11>;
 
-def FCVT_Z2Z_StoH   : sme2_cvt_vg2_single<"fcvt",   0b00, 0b00>;
-def FCVTN_Z2Z_StoH  : sme2_cvt_vg2_single<"fcvtn",  0b01, 0b00>;
-def BFCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"bfcvt",  0b10, 0b00>;
-def BFCVTN_Z2Z_StoH : sme2_cvt_vg2_single<"bfcvtn", 0b11, 0b00>;
+defm FCVT_Z2Z_StoH   : sme2_cvt_vg2_single<"fcvt",   0b0000>;
+defm FCVTN_Z2Z_StoH  : sme2_cvt_vg2_single<"fcvtn",  0b0001>;
+defm BFCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"bfcvt",  0b1000>;
+defm BFCVTN_Z2Z_StoH : sme2_cvt_vg2_single<"bfcvtn", 0b1001>;
 
-def SQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"sqcvt", 0b00, 0b11>;
-def UQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"uqcvt", 0b01, 0b11>;
-def SQCVTU_Z2Z_StoH : sme2_cvt_vg2_single<"sqcvtu", 0b10, 0b11>;
+defm SQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"sqcvt",  0b0110>;
+defm UQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"uqcvt",  0b0111>;
+defm SQCVTU_Z2Z_StoH : sme2_cvt_vg2_single<"sqcvtu", 0b1110>;
 defm SQCVT_Z4Z      : sme2_int_cvt_vg4_single<"sqcvt", 0b000>;
 defm UQCVT_Z4Z      : sme2_int_cvt_vg4_single<"uqcvt", 0b001>;
 defm SQCVTU_Z4Z     : sme2_int_cvt_vg4_single<"sqcvtu", 0b100>;
@@ -366,14 +366,14 @@ defm SQCVTN_Z4Z     : sme2_int_cvt_vg4_single<"sqcvtn", 0b010>;
 defm SQCVTUN_Z4Z    : sme2_int_cvt_vg4_single<"sqcvtun", 0b110>;
 defm UQCVTN_Z4Z     : sme2_int_cvt_vg4_single<"uqcvtn", 0b011>;
 
-def FCVTZS_2Z2Z_StoS : sme2_fp_cvt_vg2_multi<"fcvtzs", 0b010>;
-def FCVTZS_4Z4Z_StoS : sme2_fp_cvt_vg4_multi<"fcvtzs", 0b010>;
-def FCVTZU_2Z2Z_StoS : sme2_fp_cvt_vg2_multi<"fcvtzu", 0b011>;
-def FCVTZU_4Z4Z_StoS : sme2_fp_cvt_vg4_multi<"fcvtzu", 0b011>;
-def SCVTF_2Z2Z_StoS  : sme2_fp_cvt_vg2_multi<"scvtf", 0b100>;
-def SCVTF_4Z4Z_StoS  : sme2_fp_cvt_vg4_multi<"scvtf", 0b100>;
-def UCVTF_2Z2Z_StoS  : sme2_fp_cvt_vg2_multi<"ucvtf", 0b101>;
-def UCVTF_4Z4Z_StoS  : sme2_fp_cvt_vg4_multi<"ucvtf", 0b101>;
+defm FCVTZS_2Z2Z_StoS : sme2_fp_cvt_vg2_multi<"fcvtzs", 0b00010>;
+defm FCVTZS_4Z4Z_StoS : sme2_fp_cvt_vg4_multi<"fcvtzs", 0b0001000>;
+defm FCVTZU_2Z2Z_StoS : sme2_fp_cvt_vg2_multi<"fcvtzu", 0b00011>;
+defm FCVTZU_4Z4Z_StoS : sme2_fp_cvt_vg4_multi<"fcvtzu", 0b0001010>;
+defm SCVTF_2Z2Z_StoS  : sme2_fp_cvt_vg2_multi<"scvtf", 0b00100>;
+defm SCVTF_4Z4Z_StoS  : sme2_fp_cvt_vg4_multi<"scvtf", 0b0010000>;
+defm UCVTF_2Z2Z_StoS  : sme2_fp_cvt_vg2_multi<"ucvtf", 0b00101>;
+defm UCVTF_4Z4Z_StoS  : sme2_fp_cvt_vg4_multi<"ucvtf", 0b0010010>;
 
 defm SMAX_VG2_2ZZ  : sme2_int_sve_destructive_vector_vg2_single<"smax", 0b0000000>;
 defm SMAX_VG4_4ZZ  : sme2_int_sve_destructive_vector_vg4_single<"smax", 0b0000000>;
@@ -550,8 +550,76 @@ defm UMLSLL_VG2_M2ZZ_BtoS  : sme2_mla_ll_array_vg24_single<"umlsll", 0b00110, Ma
 defm UMLSLL_VG4_M4ZZ_BtoS  : sme2_mla_ll_array_vg24_single<"umlsll", 0b01110, MatrixOp32, ZZZZ_b, ZPR4b8>;
 defm UMLSLL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"umlsll", 0b0110, MatrixOp32, ZZ_b_mul_r>;
 defm UMLSLL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"umlsll", 0b0110, MatrixOp32, ZZZZ_b_mul_r>;
-}
 
+defm BMOPA_MPPZZ_S : sme2_bfp_mopx_tile<"bmopa", 0b100>;
+defm BMOPS_MPPZZ_S : sme2_bfp_mopx_tile<"bmops", 0b101>;
+
+defm SMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"smopa", 0b000>;
+defm SMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"smops", 0b001>;
+
+defm UMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"umopa", 0b100>;
+defm UMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"umops", 0b101>;
+
+def ZERO_T : sme2_zero_zt<"zero", 0b0001>;
+
+def LDR_TX : sme2_spill_fill_vector<"ldr", 0b01111100>;
+def STR_TX : sme2_spill_fill_vector<"str", 0b11111100>;
+
+def MOVT_XTI : sme2_movt_zt_to_scalar<"movt", 0b0011111>;
+def MOVT_TIX : sme2_movt_scalar_to_zt<"movt", 0b0011111>;
+
+defm LUTI2_ZTZI  : sme2_luti2_vector_index<"luti2">;
+defm LUTI2_2ZTZI : sme2_luti2_vector_vg2_index<"luti2">;
+defm LUTI2_4ZTZI : sme2_luti2_vector_vg4_index<"luti2">;
+
+defm LUTI4_ZTZI  : sme2_luti4_vector_index<"luti4">;
+defm LUTI4_2ZTZI : sme2_luti4_vector_vg2_index<"luti4">;
+defm LUTI4_4ZTZI : sme2_luti4_vector_vg4_index<"luti4">;
+
+defm SUNPK_VG2_2ZZ  : sme2_unpk_vector_vg2<"sunpk", 0b0>;
+defm SUNPK_VG4_4Z2Z : sme2_unpk_vector_vg4<"sunpk", 0b0>;
+defm UUNPK_VG2_2ZZ  : sme2_unpk_vector_vg2<"uunpk", 0b1>;
+defm UUNPK_VG4_4Z2Z : sme2_unpk_vector_vg4<"uunpk", 0b1>;
+
+defm ZIP_VG2_2ZZZ : sme2_zip_vector_vg2<"zip", 0b0>;
+defm UZP_VG2_2ZZZ : sme2_zip_vector_vg2<"uzp", 0b1>;
+defm ZIP_VG4_4Z4Z : sme2_zip_vector_vg4<"zip", 0b0110000>;
+defm UZP_VG4_4Z4Z : sme2_zip_vector_vg4<"uzp", 0b0110001>;
+defm ZIP_VG4_4Z4Z_Q : sme2_zip_vector_vg4_Q<"zip", 0b0111000>;
+defm UZP_VG4_4Z4Z_Q : sme2_zip_vector_vg4_Q<"uzp", 0b0111001>;
+
+defm FRINTA_2Z2Z: sme2_frint_vector_vg2_multi<"frinta", 0b11000>;
+defm FRINTA_4Z4Z: sme2_frint_vector_vg4_multi<"frinta", 0b1100000>;
+defm FRINTM_2Z2Z: sme2_frint_vector_vg2_multi<"frintm", 0b10100>;
+defm FRINTM_4Z4Z: sme2_frint_vector_vg4_multi<"frintm", 0b1010000>;
+defm FRINTN_2Z2Z: sme2_frint_vector_vg2_multi<"frintn", 0b10000>;
+defm FRINTN_4Z4Z: sme2_frint_vector_vg4_multi<"frintn", 0b1000000>;
+defm FRINTP_2Z2Z: sme2_frint_vector_vg2_multi<"frintp", 0b10010>;
+defm FRINTP_4Z4Z: sme2_frint_vector_vg4_multi<"frintp", 0b1001000>;
+
+defm MOVA_MXI2Z   : sme2_mova_vec_to_tile_vg2_multi<"mova">;
+defm MOVA_MXI4Z   : sme2_mova_vec_to_tile_vg4_multi<"mova">;
+defm MOVA_2ZMXI  : sme2_mova_tile_to_vec_vg2_multi<"mova">;
+defm MOVA_4ZMXI : sme2_mova_tile_to_vec_vg4_multi<"mova">;
+
+defm MOVA_VG2_MXI2Z  : sme2_mova_vec_to_array_vg2_multi<"mova">;
+defm MOVA_VG4_MXI4Z  : sme2_mova_vec_to_array_vg4_multi<"mova">;
+defm MOVA_VG2_2ZMXI : sme2_mova_array_to_vec_vg2_multi<"mova">;
+defm MOVA_VG4_4ZMXI : sme2_mova_array_to_vec_vg4_multi<"mova">;
+
+defm SQRSHR_VG2_Z2ZI : sme2_sat_shift_vector_vg2<"sqrshr", 0b0, 0b0>;
+defm SQRSHR_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshr", 0b000>;
+
+defm UQRSHR_VG2_Z2ZI : sme2_sat_shift_vector_vg2<"uqrshr", 0b0, 0b1>;
+defm UQRSHR_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"uqrshr", 0b001>;
+
+defm SQRSHRU_VG2_Z2ZI : sme2_sat_shift_vector_vg2<"sqrshru", 0b1, 0b0>;
+defm SQRSHRU_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshru", 0b010>;
+
+defm SQRSHRN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshrn", 0b100>;
+defm UQRSHRN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"uqrshrn", 0b101>;
+defm SQRSHRUN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshrun", 0b110>;
+}
 
 let Predicates = [HasSME2, HasSMEI16I64] in {
 defm ADD_VG2_M2ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"add", 0b1011010, MatrixOp64, ZZ_d, ZPR4b64>;

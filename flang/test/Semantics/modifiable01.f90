@@ -33,38 +33,38 @@ module m
     type(ptype), intent(in) :: dummy
     type(t2) :: t2var
     associate (a => 3+4)
-      !CHECK: error: Input variable 'a' must be definable
-      !CHECK: 'a' is construct associated with an expression
+      !CHECK: error: Input variable 'a' is not definable
+      !CHECK: because: 'a' is construct associated with an expression
       read(internal,*) a
     end associate
     associate (a => arr([1])) ! vector subscript
-      !CHECK: error: Input variable 'a' must be definable
-      !CHECK: Construct association has a vector subscript
+      !CHECK: error: Input variable 'a' is not definable
+      !CHECK: because: Construct association 'a' has a vector subscript
       read(internal,*) a
     end associate
     associate (a => arr(2:1:-1))
       read(internal,*) a ! ok
     end associate
-    !CHECK: error: Input variable 'j3' must be definable
-    !CHECK: '666_4' is not a variable
+    !CHECK: error: Input variable 'j3' is not definable
+    !CHECK: because: '666_4' is not a variable
     read(internal,*) j3
-    !CHECK: error: Left-hand side of assignment is not modifiable
-    !CHECK: 't2var' is an entity with either an EVENT_TYPE or LOCK_TYPE
+    !CHECK: error: Left-hand side of assignment is not definable
+    !CHECK: because: 't2var' is an entity with either an EVENT_TYPE or LOCK_TYPE
     t2var = t2static
     t2var%x2 = 0. ! ok
-    !CHECK: error: Left-hand side of assignment is not modifiable
-    !CHECK: 'prot' is protected in this scope
+    !CHECK: error: Left-hand side of assignment is not definable
+    !CHECK: because: 'prot' is protected in this scope
     prot = 0.
     protptr%ptr = 0. ! ok
-    !CHECK: error: Left-hand side of assignment is not modifiable
-    !CHECK: 'dummy' is an INTENT(IN) dummy argument
+    !CHECK: error: Left-hand side of assignment is not definable
+    !CHECK: because: 'dummy' is an INTENT(IN) dummy argument
     dummy%x = 0.
     dummy%ptr = 0. ! ok
   end subroutine
   pure subroutine test2(ptr)
     integer, pointer, intent(in) :: ptr
-    !CHECK: error: Input variable 'ptr' must be definable
-    !CHECK: 'ptr' is externally visible and referenced in a pure procedure
+    !CHECK: error: Input variable 'ptr' is not definable
+    !CHECK: because: 'ptr' is externally visible via 'ptr' and not definable in a pure subprogram
     read(internal,*) ptr
   end subroutine
 end module

@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 
+#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
@@ -24,31 +25,39 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-using AbsFOpLowering = VectorConvertToLLVMPattern<math::AbsFOp, LLVM::FAbsOp>;
-using CeilOpLowering = VectorConvertToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
+
+template <typename SourceOp, typename TargetOp>
+using ConvertFastMath = arith::AttrConvertFastMathToLLVM<SourceOp, TargetOp>;
+
+template <typename SourceOp, typename TargetOp>
+using ConvertFMFMathToLLVMPattern =
+    VectorConvertToLLVMPattern<SourceOp, TargetOp, ConvertFastMath>;
+
+using AbsFOpLowering = ConvertFMFMathToLLVMPattern<math::AbsFOp, LLVM::FAbsOp>;
+using CeilOpLowering = ConvertFMFMathToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
 using CopySignOpLowering =
-    VectorConvertToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
-using CosOpLowering = VectorConvertToLLVMPattern<math::CosOp, LLVM::CosOp>;
+    ConvertFMFMathToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
+using CosOpLowering = ConvertFMFMathToLLVMPattern<math::CosOp, LLVM::CosOp>;
 using CtPopFOpLowering =
     VectorConvertToLLVMPattern<math::CtPopOp, LLVM::CtPopOp>;
-using Exp2OpLowering = VectorConvertToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
-using ExpOpLowering = VectorConvertToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
+using Exp2OpLowering = ConvertFMFMathToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
+using ExpOpLowering = ConvertFMFMathToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
 using FloorOpLowering =
-    VectorConvertToLLVMPattern<math::FloorOp, LLVM::FFloorOp>;
-using FmaOpLowering = VectorConvertToLLVMPattern<math::FmaOp, LLVM::FMAOp>;
+    ConvertFMFMathToLLVMPattern<math::FloorOp, LLVM::FFloorOp>;
+using FmaOpLowering = ConvertFMFMathToLLVMPattern<math::FmaOp, LLVM::FMAOp>;
 using Log10OpLowering =
-    VectorConvertToLLVMPattern<math::Log10Op, LLVM::Log10Op>;
-using Log2OpLowering = VectorConvertToLLVMPattern<math::Log2Op, LLVM::Log2Op>;
-using LogOpLowering = VectorConvertToLLVMPattern<math::LogOp, LLVM::LogOp>;
-using PowFOpLowering = VectorConvertToLLVMPattern<math::PowFOp, LLVM::PowOp>;
+    ConvertFMFMathToLLVMPattern<math::Log10Op, LLVM::Log10Op>;
+using Log2OpLowering = ConvertFMFMathToLLVMPattern<math::Log2Op, LLVM::Log2Op>;
+using LogOpLowering = ConvertFMFMathToLLVMPattern<math::LogOp, LLVM::LogOp>;
+using PowFOpLowering = ConvertFMFMathToLLVMPattern<math::PowFOp, LLVM::PowOp>;
 using RoundEvenOpLowering =
-    VectorConvertToLLVMPattern<math::RoundEvenOp, LLVM::RoundEvenOp>;
+    ConvertFMFMathToLLVMPattern<math::RoundEvenOp, LLVM::RoundEvenOp>;
 using RoundOpLowering =
-    VectorConvertToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
-using SinOpLowering = VectorConvertToLLVMPattern<math::SinOp, LLVM::SinOp>;
-using SqrtOpLowering = VectorConvertToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
+    ConvertFMFMathToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
+using SinOpLowering = ConvertFMFMathToLLVMPattern<math::SinOp, LLVM::SinOp>;
+using SqrtOpLowering = ConvertFMFMathToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 using FTruncOpLowering =
-    VectorConvertToLLVMPattern<math::TruncOp, LLVM::FTruncOp>;
+    ConvertFMFMathToLLVMPattern<math::TruncOp, LLVM::FTruncOp>;
 
 // A `CtLz/CtTz/absi(a)` is converted into `CtLz/CtTz/absi(a, false)`.
 template <typename MathOp, typename LLVMOp>
@@ -113,6 +122,8 @@ struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {
     auto resultType = op.getResult().getType();
     auto floatType = getElementTypeOrSelf(resultType).cast<FloatType>();
     auto floatOne = rewriter.getFloatAttr(floatType, 1.0);
+    ConvertFastMath<math::ExpM1Op, LLVM::ExpOp> expAttrs(op);
+    ConvertFastMath<math::ExpM1Op, LLVM::FSubOp> subAttrs(op);
 
     if (!operandType.isa<LLVM::LLVMArrayType>()) {
       LLVM::ConstantOp one;
@@ -123,8 +134,10 @@ struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {
       } else {
         one = rewriter.create<LLVM::ConstantOp>(loc, operandType, floatOne);
       }
-      auto exp = rewriter.create<LLVM::ExpOp>(loc, adaptor.getOperand());
-      rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, operandType, exp, one);
+      auto exp = rewriter.create<LLVM::ExpOp>(loc, adaptor.getOperand(),
+                                              expAttrs.getAttrs());
+      rewriter.replaceOpWithNewOp<LLVM::FSubOp>(
+          op, operandType, ValueRange{exp, one}, subAttrs.getAttrs());
       return success();
     }
 
@@ -142,9 +155,10 @@ struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {
               floatOne);
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
-          auto exp =
-              rewriter.create<LLVM::ExpOp>(loc, llvm1DVectorTy, operands[0]);
-          return rewriter.create<LLVM::FSubOp>(loc, llvm1DVectorTy, exp, one);
+          auto exp = rewriter.create<LLVM::ExpOp>(
+              loc, llvm1DVectorTy, operands[0], expAttrs.getAttrs());
+          return rewriter.create<LLVM::FSubOp>(
+              loc, llvm1DVectorTy, ValueRange{exp, one}, subAttrs.getAttrs());
         },
         rewriter);
   }
@@ -166,6 +180,8 @@ struct Log1pOpLowering : public ConvertOpToLLVMPattern<math::Log1pOp> {
     auto resultType = op.getResult().getType();
     auto floatType = getElementTypeOrSelf(resultType).cast<FloatType>();
     auto floatOne = rewriter.getFloatAttr(floatType, 1.0);
+    ConvertFastMath<math::Log1pOp, LLVM::FAddOp> addAttrs(op);
+    ConvertFastMath<math::Log1pOp, LLVM::LogOp> logAttrs(op);
 
     if (!operandType.isa<LLVM::LLVMArrayType>()) {
       LLVM::ConstantOp one =
@@ -176,9 +192,11 @@ struct Log1pOpLowering : public ConvertOpToLLVMPattern<math::Log1pOp> {
                                            floatOne))
               : rewriter.create<LLVM::ConstantOp>(loc, operandType, floatOne);
 
-      auto add = rewriter.create<LLVM::FAddOp>(loc, operandType, one,
-                                               adaptor.getOperand());
-      rewriter.replaceOpWithNewOp<LLVM::LogOp>(op, operandType, add);
+      auto add = rewriter.create<LLVM::FAddOp>(
+          loc, operandType, ValueRange{one, adaptor.getOperand()},
+          addAttrs.getAttrs());
+      rewriter.replaceOpWithNewOp<LLVM::LogOp>(op, operandType, ValueRange{add},
+                                               logAttrs.getAttrs());
       return success();
     }
 
@@ -196,9 +214,11 @@ struct Log1pOpLowering : public ConvertOpToLLVMPattern<math::Log1pOp> {
               floatOne);
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
-          auto add = rewriter.create<LLVM::FAddOp>(loc, llvm1DVectorTy, one,
-                                                   operands[0]);
-          return rewriter.create<LLVM::LogOp>(loc, llvm1DVectorTy, add);
+          auto add = rewriter.create<LLVM::FAddOp>(loc, llvm1DVectorTy,
+                                                   ValueRange{one, operands[0]},
+                                                   addAttrs.getAttrs());
+          return rewriter.create<LLVM::LogOp>(
+              loc, llvm1DVectorTy, ValueRange{add}, logAttrs.getAttrs());
         },
         rewriter);
   }
@@ -220,6 +240,8 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
     auto resultType = op.getResult().getType();
     auto floatType = getElementTypeOrSelf(resultType).cast<FloatType>();
     auto floatOne = rewriter.getFloatAttr(floatType, 1.0);
+    ConvertFastMath<math::RsqrtOp, LLVM::SqrtOp> sqrtAttrs(op);
+    ConvertFastMath<math::RsqrtOp, LLVM::FDivOp> divAttrs(op);
 
     if (!operandType.isa<LLVM::LLVMArrayType>()) {
       LLVM::ConstantOp one;
@@ -230,8 +252,10 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
       } else {
         one = rewriter.create<LLVM::ConstantOp>(loc, operandType, floatOne);
       }
-      auto sqrt = rewriter.create<LLVM::SqrtOp>(loc, adaptor.getOperand());
-      rewriter.replaceOpWithNewOp<LLVM::FDivOp>(op, operandType, one, sqrt);
+      auto sqrt = rewriter.create<LLVM::SqrtOp>(loc, adaptor.getOperand(),
+                                                sqrtAttrs.getAttrs());
+      rewriter.replaceOpWithNewOp<LLVM::FDivOp>(
+          op, operandType, ValueRange{one, sqrt}, divAttrs.getAttrs());
       return success();
     }
 
@@ -249,9 +273,10 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
               floatOne);
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
-          auto sqrt =
-              rewriter.create<LLVM::SqrtOp>(loc, llvm1DVectorTy, operands[0]);
-          return rewriter.create<LLVM::FDivOp>(loc, llvm1DVectorTy, one, sqrt);
+          auto sqrt = rewriter.create<LLVM::SqrtOp>(
+              loc, llvm1DVectorTy, operands[0], sqrtAttrs.getAttrs());
+          return rewriter.create<LLVM::FDivOp>(
+              loc, llvm1DVectorTy, ValueRange{one, sqrt}, divAttrs.getAttrs());
         },
         rewriter);
   }

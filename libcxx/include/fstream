@@ -1744,4 +1744,13 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <atomic>
+#  include <concepts>
+#  include <iosfwd>
+#  include <limits>
+#  include <new>
+#  include <stdexcept>
+#endif
+
 #endif // _LIBCPP_FSTREAM

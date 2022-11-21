@@ -207,6 +207,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 
     # math.h entrypoints
     libc.src.math.acosf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.atanf
     libc.src.math.atanhf
@@ -281,6 +282,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
+    libc.src.math.pow
     libc.src.math.remainderf
     libc.src.math.remainder
     libc.src.math.remainderl
@@ -360,6 +362,10 @@ if(LLVM_LIBC_FULL_BUILD)
     # sched.h entrypoints
     libc.src.sched.__sched_getcpucount
 
+    # setjmp.h entrypoints
+    libc.src.setjmp.longjmp
+    libc.src.setjmp.setjmp
+
     # stdio.h entrypoints
     libc.src.stdio.clearerr
     libc.src.stdio.clearerr_unlocked
@@ -370,6 +376,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.ferror
     libc.src.stdio.ferror_unlocked
     libc.src.stdio.fgetc
+    libc.src.stdio.fgetc_unlocked
     libc.src.stdio.fgets
     libc.src.stdio.fflush
     libc.src.stdio.fopen
@@ -379,17 +386,23 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fread
     libc.src.stdio.fread_unlocked
     libc.src.stdio.fseek
+    libc.src.stdio.ftell
     libc.src.stdio.funlockfile
     libc.src.stdio.fwrite
     libc.src.stdio.fwrite_unlocked
     libc.src.stdio.fprintf
+    libc.src.stdio.getc
+    libc.src.stdio.getc_unlocked
     libc.src.stdio.printf
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
+    libc.src.stdio.setbuf
+    libc.src.stdio.setvbuf
     libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout
+    libc.src.stdio.ungetc
 
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
@@ -457,6 +470,11 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.execv
     libc.src.unistd.fork
     libc.src.unistd.__llvm_libc_syscall
+    libc.src.unistd.getopt
+    libc.src.unistd.optarg
+    libc.src.unistd.optind
+    libc.src.unistd.optopt
+    libc.src.unistd.opterr
 
     # sys/select.h entrypoints
     libc.src.sys.select.select

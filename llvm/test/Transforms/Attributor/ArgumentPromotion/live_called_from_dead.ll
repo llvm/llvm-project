@@ -13,7 +13,7 @@ define internal void @dead() {
 }
 
 define internal i32 @test(i32* %X, i32* %Y) {
-; CGSCC: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@test
 ; CGSCC-SAME: (i32* noalias nocapture nofree noundef writeonly align 4 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    br i1 true, label [[LIVE:%.*]], label [[DEAD:%.*]]
@@ -34,7 +34,7 @@ dead:
 }
 
 define internal i32 @caller(i32* %B) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -48,13 +48,13 @@ define internal i32 @caller(i32* %B) {
 }
 
 define i32 @callercaller() {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@callercaller
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    ret i32 0
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@callercaller
 ; CGSCC-SAME: () #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 4
@@ -68,11 +68,11 @@ define i32 @callercaller() {
 }
 
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR3]] = { nofree nosync nounwind willreturn writeonly }
-; CGSCC: attributes #[[ATTR4]] = { readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR3]] = { nofree nosync nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR4]] = { willreturn }
 ;.

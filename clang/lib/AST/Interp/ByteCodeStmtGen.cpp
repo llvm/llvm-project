@@ -114,6 +114,9 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
 
           if (!this->emitInitField(*T, F->Offset, InitExpr))
             return false;
+
+          if (!this->emitPopPtr(InitExpr))
+            return false;
         } else {
           // Non-primitive case. Get a pointer to the field-to-initialize
           // on the stack and call visitInitialzer() for it.
@@ -234,12 +237,11 @@ bool ByteCodeStmtGen<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       this->emitCleanup();
       return this->emitRetVoid(RS);
     }
-  } else {
-    this->emitCleanup();
-    if (!this->emitRetVoid(RS))
-      return false;
-    return true;
   }
+
+  // Void return.
+  this->emitCleanup();
+  return this->emitRetVoid(RS);
 }
 
 template <class Emitter>

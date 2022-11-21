@@ -39,7 +39,8 @@ struct Configuration {
   bool extendedConst;
   bool growableTable;
   bool gcSections;
-  bool importMemory;
+  llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>> memoryImport;
+  llvm::Optional<llvm::StringRef> memoryExport;
   bool sharedMemory;
   bool importTable;
   bool importUndefined;

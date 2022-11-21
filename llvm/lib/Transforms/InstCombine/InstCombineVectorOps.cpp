@@ -2598,6 +2598,35 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
   return new ShuffleVectorInst(X, Y, NewMask);
 }
 
+// Splatting the first element of the result of a BinOp, where any of the
+// BinOp's operands are the result of a first element splat can be simplified to
+// splatting the first element of the result of the BinOp
+Instruction *InstCombinerImpl::simplifyBinOpSplats(ShuffleVectorInst &SVI) {
+  if (!match(SVI.getOperand(1), m_Undef()) ||
+      !match(SVI.getShuffleMask(), m_ZeroMask()))
+    return nullptr;
+
+  Value *Op0 = SVI.getOperand(0);
+  Value *X, *Y;
+  if (!match(Op0, m_BinOp(m_Shuffle(m_Value(X), m_Undef(), m_ZeroMask()),
+                          m_Value(Y))) &&
+      !match(Op0, m_BinOp(m_Value(X),
+                          m_Shuffle(m_Value(Y), m_Undef(), m_ZeroMask()))))
+    return nullptr;
+  if (X->getType() != Y->getType())
+    return nullptr;
+
+  auto *BinOp = cast<BinaryOperator>(Op0);
+  if (!isSafeToSpeculativelyExecute(BinOp))
+    return nullptr;
+
+  Value *NewBO = Builder.CreateBinOp(BinOp->getOpcode(), X, Y);
+  if (auto NewBOI = dyn_cast<Instruction>(NewBO))
+    NewBOI->copyIRFlags(BinOp);
+
+  return new ShuffleVectorInst(NewBO, SVI.getShuffleMask());
+}
+
 Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
@@ -2606,7 +2635,9 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
                                           SVI.getType(), ShufQuery))
     return replaceInstUsesWith(SVI, V);
 
-  // Bail out for scalable vectors
+  if (Instruction *I = simplifyBinOpSplats(SVI))
+    return I;
+
   if (isa<ScalableVectorType>(LHS->getType()))
     return nullptr;
 

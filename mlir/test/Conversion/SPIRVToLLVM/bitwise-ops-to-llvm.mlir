@@ -6,14 +6,14 @@
 
 // CHECK-LABEL: @bitcount_scalar
 spirv.func @bitcount_scalar(%arg0: i16) "None" {
-  // CHECK: "llvm.intr.ctpop"(%{{.*}}) : (i16) -> i16
+  // CHECK: llvm.intr.ctpop(%{{.*}}) : (i16) -> i16
   %0 = spirv.BitCount %arg0: i16
   spirv.Return
 }
 
 // CHECK-LABEL: @bitcount_vector
 spirv.func @bitcount_vector(%arg0: vector<3xi32>) "None" {
-  // CHECK: "llvm.intr.ctpop"(%{{.*}}) : (vector<3xi32>) -> vector<3xi32>
+  // CHECK: llvm.intr.ctpop(%{{.*}}) : (vector<3xi32>) -> vector<3xi32>
   %0 = spirv.BitCount %arg0: vector<3xi32>
   spirv.Return
 }
@@ -24,14 +24,14 @@ spirv.func @bitcount_vector(%arg0: vector<3xi32>) "None" {
 
 // CHECK-LABEL: @bitreverse_scalar
 spirv.func @bitreverse_scalar(%arg0: i64) "None" {
-  // CHECK: "llvm.intr.bitreverse"(%{{.*}}) : (i64) -> i64
+  // CHECK: llvm.intr.bitreverse(%{{.*}}) : (i64) -> i64
   %0 = spirv.BitReverse %arg0: i64
   spirv.Return
 }
 
 // CHECK-LABEL: @bitreverse_vector
 spirv.func @bitreverse_vector(%arg0: vector<4xi32>) "None" {
-  // CHECK: "llvm.intr.bitreverse"(%{{.*}}) : (vector<4xi32>) -> vector<4xi32>
+  // CHECK: llvm.intr.bitreverse(%{{.*}}) : (vector<4xi32>) -> vector<4xi32>
   %0 = spirv.BitReverse %arg0: vector<4xi32>
   spirv.Return
 }

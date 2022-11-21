@@ -6818,7 +6818,8 @@ public:
         Expr, Expr ? Expr->getExprLoc() : SourceLocation(), DiscardedValue);
   }
   ExprResult ActOnFinishFullExpr(Expr *Expr, SourceLocation CC,
-                                 bool DiscardedValue, bool IsConstexpr = false);
+                                 bool DiscardedValue, bool IsConstexpr = false,
+                                 bool IsTemplateArgument = false);
   StmtResult ActOnFinishFullStmt(Stmt *Stmt);
 
   // Marks SS invalid if it represents an incomplete type.
@@ -7220,7 +7221,43 @@ private:
       FunctionDecl *FD, llvm::Optional<ArrayRef<TemplateArgument>> TemplateArgs,
       LocalInstantiationScope &Scope);
 
+private:
+  // The current stack of constraint satisfactions, so we can exit-early.
+  llvm::SmallVector<llvm::FoldingSetNodeID, 10> SatisfactionStack;
+
 public:
+  void PushSatisfactionStackEntry(const llvm::FoldingSetNodeID &ID) {
+    SatisfactionStack.push_back(ID);
+  }
+
+  void PopSatisfactionStackEntry() { SatisfactionStack.pop_back(); }
+
+  bool SatisfactionStackContains(const llvm::FoldingSetNodeID &ID) const {
+    return llvm::find(SatisfactionStack, ID) != SatisfactionStack.end();
+  }
+
+  // Resets the current SatisfactionStack for cases where we are instantiating
+  // constraints as a 'side effect' of normal instantiation in a way that is not
+  // indicative of recursive definition.
+  class SatisfactionStackResetRAII {
+    llvm::SmallVector<llvm::FoldingSetNodeID, 10> BackupSatisfactionStack;
+    Sema &SemaRef;
+
+  public:
+    SatisfactionStackResetRAII(Sema &S) : SemaRef(S) {
+      SemaRef.SwapSatisfactionStack(BackupSatisfactionStack);
+    }
+
+    ~SatisfactionStackResetRAII() {
+      SemaRef.SwapSatisfactionStack(BackupSatisfactionStack);
+    }
+  };
+
+  void
+  SwapSatisfactionStack(llvm::SmallVectorImpl<llvm::FoldingSetNodeID> &NewSS) {
+    SatisfactionStack.swap(NewSS);
+  }
+
   const NormalizedConstraint *
   getNormalizedAssociatedConstraints(
       NamedDecl *ConstrainedDecl, ArrayRef<const Expr *> AssociatedConstraints);
@@ -8200,14 +8237,11 @@ public:
                                         SourceLocation TemplateLoc,
                                         Declarator &D);
 
-  TemplateArgumentLoc
-  SubstDefaultTemplateArgumentIfAvailable(TemplateDecl *Template,
-                                          SourceLocation TemplateLoc,
-                                          SourceLocation RAngleLoc,
-                                          Decl *Param,
-                                          SmallVectorImpl<TemplateArgument>
-                                            &Converted,
-                                          bool &HasDefaultArg);
+  TemplateArgumentLoc SubstDefaultTemplateArgumentIfAvailable(
+      TemplateDecl *Template, SourceLocation TemplateLoc,
+      SourceLocation RAngleLoc, Decl *Param,
+      ArrayRef<TemplateArgument> SugaredConverted,
+      ArrayRef<TemplateArgument> CanonicalConverted, bool &HasDefaultArg);
 
   /// Specifies the context in which a particular template
   /// argument is being checked.
@@ -8233,7 +8267,7 @@ public:
                         SmallVectorImpl<TemplateArgument> &CanonicalConverted,
                         CheckTemplateArgumentKind CTAK);
 
-  /// Check that the given template arguments can be be provided to
+  /// Check that the given template arguments can be provided to
   /// the given template, converting the arguments along the way.
   ///
   /// \param Template The template to which the template arguments are being
@@ -11252,6 +11286,10 @@ public:
   /// Called on well-formed '\#pragma omp taskyield'.
   StmtResult ActOnOpenMPTaskyieldDirective(SourceLocation StartLoc,
                                            SourceLocation EndLoc);
+  /// Called on well-formed '\#pragma omp error'.
+  StmtResult ActOnOpenMPErrorDirective(ArrayRef<OMPClause *> Clauses,
+                                       SourceLocation StartLoc,
+                                       SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp barrier'.
   StmtResult ActOnOpenMPBarrierDirective(SourceLocation StartLoc,
                                          SourceLocation EndLoc);
@@ -12189,6 +12227,12 @@ public:
     /// pointers types that are not compatible, but we accept them as an
     /// extension.
     IncompatibleFunctionPointer,
+
+    /// IncompatibleFunctionPointerStrict - The assignment is between two
+    /// function pointer types that are not identical, but are compatible,
+    /// unless compiled with -fsanitize=cfi, in which case the type mismatch
+    /// may trip an indirect call runtime check.
+    IncompatibleFunctionPointerStrict,
 
     /// IncompatiblePointerSign - The assignment is between two pointers types
     /// which point to integers which have a different sign, but are otherwise

@@ -360,7 +360,7 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // as the input registers.
   Register ScratchRSrcReg = AMDGPU::PRIVATE_RSRC_REG;
 
-  // This is the the unswizzled offset from the current dispatch's scratch wave
+  // This is the unswizzled offset from the current dispatch's scratch wave
   // base to the beginning of the current function's frame.
   Register FrameOffsetReg = AMDGPU::FP_REG;
 
@@ -464,7 +464,7 @@ public:
     // VGPR used for SGPR spills
     Register VGPR;
 
-    // If the VGPR is is used for SGPR spills in a non-entrypoint function, the
+    // If the VGPR is used for SGPR spills in a non-entrypoint function, the
     // stack slot used to save/restore it in the prolog/epilog.
     Optional<int> FI;
 
@@ -995,7 +995,7 @@ public:
 
   // \returns true if a function has a use of AGPRs via inline asm or
   // has a call which may use it.
-  bool mayUseAGPRs(const MachineFunction &MF) const;
+  bool mayUseAGPRs(const Function &F) const;
 
   // \returns true if a function needs or may need AGPRs.
   bool usesAGPRs(const MachineFunction &MF) const;

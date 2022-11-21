@@ -97,3 +97,42 @@ hlfir::translateToExtendedValue(fir::FortranVariableOpInterface variable) {
                               getExplicitLbounds(variable));
   return variable.getBase();
 }
+
+hlfir::FortranEntity hlfir::genDeclare(mlir::Location loc,
+                                       fir::FirOpBuilder &builder,
+                                       const fir::ExtendedValue &exv,
+                                       llvm::StringRef name,
+                                       fir::FortranVariableFlagsAttr flags) {
+
+  mlir::Value base = fir::getBase(exv);
+  assert(fir::isa_passbyref_type(base.getType()) &&
+         "entity being declared must be in memory");
+  mlir::Value shapeOrShift;
+  llvm::SmallVector<mlir::Value> lenParams;
+  exv.match(
+      [&](const fir::CharBoxValue &box) {
+        lenParams.emplace_back(box.getLen());
+      },
+      [&](const fir::ArrayBoxValue &) {
+        shapeOrShift = builder.createShape(loc, exv);
+      },
+      [&](const fir::CharArrayBoxValue &box) {
+        shapeOrShift = builder.createShape(loc, exv);
+        lenParams.emplace_back(box.getLen());
+      },
+      [&](const fir::BoxValue &box) {
+        if (!box.getLBounds().empty())
+          shapeOrShift = builder.createShape(loc, exv);
+        lenParams.append(box.getExplicitParameters().begin(),
+                         box.getExplicitParameters().end());
+      },
+      [&](const fir::MutableBoxValue &box) {
+        lenParams.append(box.nonDeferredLenParams().begin(),
+                         box.nonDeferredLenParams().end());
+      },
+      [](const auto &) {});
+  auto nameAttr = mlir::StringAttr::get(builder.getContext(), name);
+  auto declareOp = builder.create<fir::DeclareOp>(
+      loc, base.getType(), base, shapeOrShift, lenParams, nameAttr, flags);
+  return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
+}

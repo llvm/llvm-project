@@ -52,7 +52,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr void set_debug_format() { __parser_.__type_ = __format_spec::__type::__debug; }
 #  endif
 
-  __format_spec::__parser<_CharT> __parser_;
+  __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__left};
 };
 
 // Formatter const char*.

@@ -1,18 +1,27 @@
-; RUN: llc -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
 
-; RUN: llc -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mattr=+trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
-; RUN: llc -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mattr=-trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-HSA-TRAP %s
-; RUN: llc -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mattr=+trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mattr=+trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mattr=-trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-HSA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mattr=-trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-HSA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
 
 ; enable trap handler feature
-; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
-; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
 
 ; disable trap handler feature
-; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
-; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
 
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=0 -march=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=1 -march=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
 
 ; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (i32 addrspace(1)*): debugtrap handler not supported
 

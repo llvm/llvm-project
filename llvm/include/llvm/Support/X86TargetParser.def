@@ -60,6 +60,10 @@ X86_CPU_TYPE_ALIAS(INTEL_SILVERMONT, "slm")
 #define X86_CPU_SUBTYPE(ENUM, STR)
 #endif
 
+#ifndef X86_CPU_SUBTYPE_ALIAS
+#define X86_CPU_SUBTYPE_ALIAS(ENUM, STR)
+#endif
+
 // This list must match what is implemented in libgcc and compilert-rt. Clang
 // uses this to know how to implement __builtin_cpu_is.
 X86_CPU_SUBTYPE(INTEL_COREI7_NEHALEM,        "nehalem")
@@ -89,6 +93,12 @@ X86_CPU_SUBTYPE(INTEL_COREI7_SAPPHIRERAPIDS, "sapphirerapids")
 X86_CPU_SUBTYPE(INTEL_COREI7_ALDERLAKE,      "alderlake")
 X86_CPU_SUBTYPE(AMDFAM19H_ZNVER3,            "znver3")
 X86_CPU_SUBTYPE(INTEL_COREI7_ROCKETLAKE,     "rocketlake")
+
+// Alternate names supported by __builtin_cpu_is and target multiversioning.
+X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "raptorlake")
+X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "meteorlake")
+
+#undef X86_CPU_SUBTYPE_ALIAS
 #undef X86_CPU_SUBTYPE
 
 // This macro is used for cpu types present in compiler-rt/libgcc. The third

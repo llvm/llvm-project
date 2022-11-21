@@ -436,7 +436,7 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
       // Some sections have embedded addends that foil ICF's hashing / equality
       // checks. (We can ignore embedded addends when doing ICF because the same
       // information gets recorded in our Reloc structs.) We therefore create a
-      // mutable copy of the the section data and zero out the embedded addends
+      // mutable copy of the section data and zero out the embedded addends
       // before performing any hashing / equality checks.
       if (isFoldableWithAddendsRemoved) {
         // We have to do this copying serially as the BumpPtrAllocator is not

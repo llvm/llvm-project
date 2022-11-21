@@ -101,7 +101,7 @@ std::string createCrossTUIndexString(const llvm::StringMap<std::string> &Index);
 
 using InvocationListTy = llvm::StringMap<llvm::SmallVector<std::string, 32>>;
 /// Parse the YAML formatted invocation list file content \p FileContent.
-/// The format is expected to be a mapping from from absolute source file
+/// The format is expected to be a mapping from absolute source file
 /// paths in the filesystem to a list of command-line parts, which
 /// constitute the invocation needed to compile that file. That invocation
 /// will be used to produce the AST of the TU.

@@ -541,6 +541,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     else
       // Forget the entire nest as this exits the entire nest.
       SE->forgetTopmostLoop(&L);
+    SE->forgetBlockAndLoopDispositions();
   }
 
   if (MSSAU && VerifyMemorySSA)
@@ -2766,7 +2767,8 @@ static bool collectUnswitchCandidates(
     if (CollectGuards)
       for (auto &I : *BB)
         if (isGuard(&I)) {
-          auto *Cond = cast<IntrinsicInst>(&I)->getArgOperand(0);
+          auto *Cond =
+              skipTrivialSelect(cast<IntrinsicInst>(&I)->getArgOperand(0));
           // TODO: Support AND, OR conditions and partial unswitching.
           if (!isa<Constant>(Cond) && L.isLoopInvariant(Cond))
             UnswitchCandidates.push_back({&I, {Cond}});

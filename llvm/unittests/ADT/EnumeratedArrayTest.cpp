@@ -106,15 +106,15 @@ enum class Colors { Red, Blue, Green, Last = Green };
 
 using Array = EnumeratedArray<float, Colors, Colors::Last, size_t>;
 
-static_assert(std::is_same<Array::value_type, float>::value,
+static_assert(std::is_same_v<Array::value_type, float>,
               "Incorrect value_type type");
-static_assert(std::is_same<Array::reference, float &>::value,
+static_assert(std::is_same_v<Array::reference, float &>,
               "Incorrect reference type!");
-static_assert(std::is_same<Array::pointer, float *>::value,
+static_assert(std::is_same_v<Array::pointer, float *>,
               "Incorrect pointer type!");
-static_assert(std::is_same<Array::const_reference, const float &>::value,
+static_assert(std::is_same_v<Array::const_reference, const float &>,
               "Incorrect const_reference type!");
-static_assert(std::is_same<Array::const_pointer, const float *>::value,
+static_assert(std::is_same_v<Array::const_pointer, const float *>,
               "Incorrect const_pointer type!");
 } // namespace
 

@@ -182,7 +182,8 @@ void testParsePassPipeline() {
   MlirLogicalResult status = mlirParsePassPipeline(
       mlirPassManagerGetAsOpPassManager(pm),
       mlirStringRefCreateFromCString(
-          "builtin.module(func.func(print-op-stats{json=false}))"));
+          "builtin.module(func.func(print-op-stats{json=false}))"),
+      printToStderr, NULL);
   // Expect a failure, we haven't registered the print-op-stats pass yet.
   if (mlirLogicalResultIsSuccess(status)) {
     fprintf(
@@ -195,7 +196,8 @@ void testParsePassPipeline() {
   status = mlirParsePassPipeline(
       mlirPassManagerGetAsOpPassManager(pm),
       mlirStringRefCreateFromCString(
-          "builtin.module(func.func(print-op-stats{json=false}))"));
+          "builtin.module(func.func(print-op-stats{json=false}))"),
+      printToStderr, NULL);
   // Expect a failure, we haven't registered the print-op-stats pass yet.
   if (mlirLogicalResultIsFailure(status)) {
     fprintf(stderr,
@@ -203,9 +205,7 @@ void testParsePassPipeline() {
     exit(EXIT_FAILURE);
   }
 
-  //      CHECK: Round-trip: builtin.module(
-  // CHECK-SAME:   builtin.module(func.func(print-op-stats{json=false}))
-  // CHECK-SAME: )
+  // CHECK: Round-trip: builtin.module(func.func(print-op-stats{json=false}))
   fprintf(stderr, "Round-trip: ");
   mlirPrintPassPipeline(mlirPassManagerGetAsOpPassManager(pm), printToStderr,
                         NULL);
@@ -221,7 +221,7 @@ void testParsePassPipeline() {
     exit(EXIT_FAILURE);
   }
   //      CHECK: Appended: builtin.module(
-  // CHECK-SAME:   builtin.module(func.func(print-op-stats{json=false})),
+  // CHECK-SAME:   func.func(print-op-stats{json=false}),
   // CHECK-SAME:   func.func(print-op-stats{json=false})
   // CHECK-SAME: )
   fprintf(stderr, "Appended: ");
@@ -242,6 +242,14 @@ void testParseErrorCapture() {
   MlirOpPassManager opm = mlirPassManagerGetAsOpPassManager(pm);
   MlirStringRef invalidPipeline = mlirStringRefCreateFromCString("invalid");
 
+  // CHECK: mlirParsePassPipeline:
+  // CHECK: expected pass pipeline to be wrapped with the anchor operation type
+  fprintf(stderr, "mlirParsePassPipeline:\n");
+  if (mlirLogicalResultIsSuccess(
+          mlirParsePassPipeline(opm, invalidPipeline, printToStderr, NULL)))
+    exit(EXIT_FAILURE);
+  fprintf(stderr, "\n");
+
   // CHECK: mlirOpPassManagerAddPipeline:
   // CHECK: 'invalid' does not refer to a registered pass or pass pipeline
   fprintf(stderr, "mlirOpPassManagerAddPipeline:\n");
@@ -253,6 +261,9 @@ void testParseErrorCapture() {
   // Make sure all output is going through the callback.
   // CHECK: dontPrint: <>
   fprintf(stderr, "dontPrint: <");
+  if (mlirLogicalResultIsSuccess(
+          mlirParsePassPipeline(opm, invalidPipeline, dontPrint, NULL)))
+    exit(EXIT_FAILURE);
   if (mlirLogicalResultIsSuccess(
           mlirOpPassManagerAddPipeline(opm, invalidPipeline, dontPrint, NULL)))
     exit(EXIT_FAILURE);

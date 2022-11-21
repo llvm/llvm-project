@@ -635,7 +635,7 @@ def AnyAddressableLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
     FunctionType.predicate]>, "any addressable">;
 
 def ArrayOrBoxOrRecord : TypeConstraint<Or<[fir_SequenceType.predicate,
-    fir_BoxType.predicate, fir_RecordType.predicate]>,
+    IsBaseBoxTypePred, fir_RecordType.predicate]>,
     "fir.box, fir.array or fir.type">;
 
 

@@ -18,8 +18,9 @@ function(check_z3_version z3_include z3_lib)
   # The program that will be executed to print Z3's version.
   file(WRITE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testz3.cpp
        "#include <assert.h>
+        #include <stdio.h> 
         #include <z3.h>
-        int main() {
+        int main(void) {
           unsigned int major, minor, build, rev;
           Z3_get_version(&major, &minor, &build, &rev);
           printf(\"%u.%u.%u\", major, minor, build);

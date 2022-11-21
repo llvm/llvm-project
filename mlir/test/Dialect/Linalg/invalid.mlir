@@ -673,3 +673,81 @@ func.func @transpose_input_init_rank_mismatch(%input: tensor<16x32xf32>,
       permutation = [1, 0, 2]
   func.return %transpose : tensor<32x64x16xf32>
 }
+
+// -----
+
+func.func @broadcast_unsorted_dims(
+    %input: tensor<4x16xf32>, %init: tensor<4x8x16xf32>)
+    -> tensor<4x8x16xf32> {
+  // expected-error @+1 {{'linalg.broadcast' op dimensions should be in sorted order}}
+  %bcast = linalg.broadcast
+      ins(%input:tensor<4x16xf32>)
+      outs(%init:tensor<4x8x16xf32>)
+      dimensions = [1, 0]
+  func.return %bcast : tensor<4x8x16xf32>
+}
+
+// -----
+
+func.func @broadcast_input_dims_rank_mismatch(
+    %input: tensor<4x16xf32>, %init: tensor<4x8x16xf32>)
+    -> tensor<4x8x16xf32> {
+  // expected-error @+1 {{'linalg.broadcast' op input rank does match the number of dimensions. expected: 2, got: 1}}
+  %bcast = linalg.broadcast
+      ins(%input:tensor<4x16xf32>)
+      outs(%init:tensor<4x8x16xf32>)
+      dimensions = [0]
+  func.return %bcast : tensor<4x8x16xf32>
+}
+
+// -----
+
+func.func @broadcast_unsorted_dims(
+    %input: tensor<4x16xf32>, %init: tensor<4x8x16xf32>)
+    -> tensor<4x8x16xf32> {
+  // expected-error @+1 {{'linalg.broadcast' op dimension 1 is out of range. expected range: [0, 2], got: 5}}
+  %bcast = linalg.broadcast
+      ins(%input:tensor<4x16xf32>)
+      outs(%init:tensor<4x8x16xf32>)
+      dimensions = [0, 5]
+  func.return %bcast : tensor<4x8x16xf32>
+}
+
+// -----
+
+func.func @broadcast_mapped_dim_mismatch(
+    %input: tensor<4x16xf32>, %init: tensor<5x8x16xf32>)
+    -> tensor<5x8x16xf32> {
+  // expected-error @+1 {{'linalg.broadcast' op input dim 0 should match init dim 0. input: 4, init: 5}}
+  %bcast = linalg.broadcast
+      ins(%input:tensor<4x16xf32>)
+      outs(%init:tensor<5x8x16xf32>)
+      dimensions = [0, 2]
+  func.return %bcast : tensor<5x8x16xf32>
+}
+
+// -----
+
+func.func @broadcast_added_dynamic_mismatch(
+    %input: tensor<4x16xf32>, %init: tensor<4x?x16xf32>)
+    -> tensor<4x?x16xf32> {
+  // expected-error @+1 {{'linalg.broadcast' op init dim 1 can't be dynamic, because it's not matched to input}}
+  %bcast = linalg.broadcast
+      ins(%input:tensor<4x16xf32>)
+      outs(%init:tensor<4x?x16xf32>)
+      dimensions = [0, 2]
+  func.return %bcast : tensor<4x?x16xf32>
+}
+
+// -----
+
+func.func @broadcast_size_1_extension_not_supported(
+    %input: tensor<1x16xf32>, %init: tensor<4x?x16xf32>)
+    -> tensor<4x?x16xf32> {
+  // expected-error @+1 {{'linalg.broadcast' op input dim 0 should match init dim 0. input: 1, init: 4}}
+  %bcast = linalg.broadcast
+      ins(%input:tensor<1x16xf32>)
+      outs(%init:tensor<4x?x16xf32>)
+      dimensions = [0, 2]
+  func.return %bcast : tensor<4x?x16xf32>
+}

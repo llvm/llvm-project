@@ -203,10 +203,14 @@ size_t File::read_unlocked(void *data, size_t len) {
   for (size_t i = 0; i < available_data; ++i)
     dataref[i] = bufref[i + pos];
   read_limit = pos = 0; // Reset the pointers.
+  // Update the dataref to reflect that fact that we have already
+  // copied |available_data| into |data|.
+  dataref = cpp::span<uint8_t>(dataref.data() + available_data,
+                               dataref.size() - available_data);
 
   size_t to_fetch = len - available_data;
   if (to_fetch > bufsize) {
-    size_t fetched_size = platform_read(this, data, to_fetch);
+    size_t fetched_size = platform_read(this, dataref.data(), to_fetch);
     if (fetched_size < to_fetch) {
       if (errno == 0)
         eof = true;
@@ -233,6 +237,44 @@ size_t File::read_unlocked(void *data, size_t len) {
   return transfer_size + available_data;
 }
 
+int File::ungetc_unlocked(int c) {
+  // There is no meaning to unget if:
+  // 1. You are trying to push back EOF.
+  // 2. Read operations are not allowed on this file.
+  // 3. The previous operation was a write operation.
+  if (c == EOF || !read_allowed() || (prev_op == FileOp::WRITE))
+    return EOF;
+
+  cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
+  if (read_limit == 0) {
+    // If |read_limit| is zero, it can mean three things:
+    //   a. This file was just created.
+    //   b. The previous operation was a seek operation.
+    //   c. The previous operation was a read operation which emptied
+    //      the buffer.
+    // For all the above cases, we simply write |c| at the beginning
+    // of the buffer and bump |read_limit|. Note that |pos| will also
+    // be zero in this case, so we don't need to adjust it.
+    bufref[0] = static_cast<unsigned char>(c);
+    ++read_limit;
+  } else {
+    // If |read_limit| is non-zero, it means that there is data in the buffer
+    // from a previous read operation. Which would also mean that |pos| is not
+    // zero. So, we decrement |pos| and write |c| in to the buffer at the new
+    // |pos|. If too many ungetc operations are performed without reads, it
+    // can lead to (pos == 0 but read_limit != 0). We will just error out in
+    // such a case.
+    if (pos == 0)
+      return EOF;
+    --pos;
+    bufref[pos] = static_cast<unsigned char>(c);
+  }
+
+  eof = false; // There is atleast one character that can be read now.
+  err = false; // This operation was a success.
+  return c;
+}
+
 int File::seek(long offset, int whence) {
   FileLock lock(this);
   if (prev_op == FileOp::WRITE && pos > 0) {
@@ -252,7 +294,28 @@ int File::seek(long offset, int whence) {
   // Reset the eof flag as a seek might move the file positon to some place
   // readable.
   eof = false;
-  return platform_seek(this, offset, whence);
+  long platform_pos = platform_seek(this, offset, whence);
+  if (platform_pos >= 0)
+    return 0;
+  else
+    return -1;
+}
+
+long File::tell() {
+  FileLock lock(this);
+  long platform_offset;
+  if (eof)
+    platform_offset = platform_seek(this, 0, SEEK_END);
+  else
+    platform_offset = platform_seek(this, 0, SEEK_CUR);
+  if (platform_offset < 0)
+    return -1;
+  if (prev_op == FileOp::READ)
+    return platform_offset - (read_limit - pos);
+  else if (prev_op == FileOp::WRITE)
+    return platform_offset + pos;
+  else
+    return platform_offset;
 }
 
 int File::flush_unlocked() {
@@ -288,12 +351,49 @@ int File::close() {
   return 0;
 }
 
-void File::set_buffer(void *buffer, size_t size, bool owned) {
-  if (own_buf)
-    free(buf);
-  buf = static_cast<uint8_t *>(buffer);
-  bufsize = size;
-  own_buf = owned;
+int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
+  // We do not need to lock the file as this method should be called before
+  // other operations are performed on the file.
+
+  if (buffer != nullptr && size == 0)
+    return EINVAL;
+
+  switch (buffer_mode) {
+  case _IOFBF:
+  case _IOLBF:
+  case _IONBF:
+    break;
+  default:
+    return EINVAL;
+  }
+
+  if (buffer == nullptr && size != 0 && buffer_mode != _IONBF) {
+    // We exclude the case of buffer_mode == _IONBF in this branch
+    // because we don't need to allocate buffer in such a case.
+    if (own_buf) {
+      buf = realloc(buf, size);
+    } else {
+      buf = malloc(size);
+      own_buf = true;
+    }
+    bufsize = size;
+    // TODO: Handle allocation failures.
+  } else {
+    if (own_buf)
+      free(buf);
+    if (buffer_mode != _IONBF) {
+      buf = static_cast<uint8_t *>(buffer);
+      bufsize = size;
+    } else {
+      // We don't need any buffer.
+      buf = nullptr;
+      bufsize = 0;
+    }
+    own_buf = false;
+  }
+  bufmode = buffer_mode;
+  adjust_buf();
+  return 0;
 }
 
 File::ModeFlags File::mode_flags(const char *mode) {

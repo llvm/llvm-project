@@ -919,8 +919,7 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
           if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
             return false;
       } else {
-        if ((AMDGPU::getNamedOperandIdx(MI.getOpcode(),
-                                        AMDGPU::OpName::op_sel) == -1) ||
+        if (!AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::op_sel) ||
             !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)
                   ->getImm() &
               SISrcMods::DST_OP_SEL))

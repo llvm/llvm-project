@@ -614,8 +614,8 @@ void *use[] = {
 // CHECK-ERRNO: declare { double, double } @ctanh(double noundef, double noundef) [[NONCONST]]
 // CHECK-ERRNO: declare <2 x float> @ctanhf(<2 x float> noundef) [[NONCONST]]
 
-// CHECK-NOERRNO: attributes [[NUWRN]] = { nounwind readnone{{.*}} }
-// CHECK-NOERRNO: attributes [[NUWRO]] = { nounwind readonly{{.*}} }
+// CHECK-NOERRNO: attributes [[NUWRN]] = { nounwind willreturn memory(none){{.*}} }
+// CHECK-NOERRNO: attributes [[NUWRO]] = { nounwind willreturn memory(read){{.*}} }
 
-// CHECK-ERRNO: attributes [[NUWRN]] = { nounwind readnone{{.*}} }
-// CHECK-ERRNO: attributes [[NUWRO]] = { nounwind readonly{{.*}} }
+// CHECK-ERRNO: attributes [[NUWRN]] = { nounwind willreturn memory(none){{.*}} }
+// CHECK-ERRNO: attributes [[NUWRO]] = { nounwind willreturn memory(read){{.*}} }

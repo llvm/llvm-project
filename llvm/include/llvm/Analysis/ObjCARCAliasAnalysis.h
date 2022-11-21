@@ -52,8 +52,8 @@ public:
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI);
-  bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
-                              bool OrLocal);
+  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
+                               bool IgnoreLocals);
 
   using AAResultBase::getMemoryEffects;
   MemoryEffects getMemoryEffects(const Function *F);

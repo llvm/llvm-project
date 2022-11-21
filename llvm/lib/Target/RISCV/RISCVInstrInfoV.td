@@ -402,97 +402,124 @@ multiclass VIndexLoadStore<list<int> EEWList> {
 
 multiclass VALU_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVIALUV, ReadVIALUV, ReadVIALUV, ReadVMask]>;
+           Sched<[WriteVIALUV_UpperBound, ReadVIALUV_UpperBound,
+             ReadVIALUV_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVIALUX, ReadVIALUV, ReadVIALUX, ReadVMask]>;
+           Sched<[WriteVIALUX_UpperBound, ReadVIALUV_UpperBound,
+             ReadVIALUX_UpperBound, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # "." # vw # "i", optype>,
-           Sched<[WriteVIALUI, ReadVIALUV, ReadVMask]>;
+           Sched<[WriteVIALUI_UpperBound, ReadVIALUV_UpperBound,
+             ReadVMask]>;
 }
 
 multiclass VALU_IV_V_X<string opcodestr, bits<6> funct6, string vw = "v"> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVIALUV, ReadVIALUV, ReadVIALUV, ReadVMask]>;
+           Sched<[WriteVIALUV_UpperBound, ReadVIALUV_UpperBound,
+             ReadVIALUV_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVIALUX, ReadVIALUV, ReadVIALUX, ReadVMask]>;
+           Sched<[WriteVIALUX_UpperBound, ReadVIALUV_UpperBound,
+             ReadVIALUX_UpperBound, ReadVMask]>;
 }
 
 multiclass VALU_IV_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVIALUV, ReadVIALUV, ReadVIALUX, ReadVMask]>;
+           Sched<[WriteVIALUV_UpperBound, ReadVIALUV_UpperBound,
+             ReadVIALUX_UpperBound, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # "." # vw # "i", optype>,
-           Sched<[WriteVIALUI, ReadVIALUV, ReadVMask]>;
+           Sched<[WriteVIALUI_UpperBound, ReadVIALUV_UpperBound,
+             ReadVMask]>;
 }
 
 multiclass VALU_MV_V_X<string opcodestr, bits<6> funct6, string vw = "v"> {
   def V  : VALUVV<funct6, OPMVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVIWALUV, ReadVIWALUV, ReadVIWALUV, ReadVMask]>;
+           Sched<[WriteVIWALUV_UpperBound, ReadVIWALUV_UpperBound,
+             ReadVIWALUV_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPMVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVIWALUX, ReadVIWALUV, ReadVIWALUX, ReadVMask]>;
+           Sched<[WriteVIWALUX_UpperBound, ReadVIWALUV_UpperBound,
+             ReadVIWALUX_UpperBound, ReadVMask]>;
 }
 
 multiclass VMAC_MV_V_X<string opcodestr, bits<6> funct6, string vw = "v"> {
   def V : VALUrVV<funct6, OPMVV, opcodestr # "." # vw # "v">,
-          Sched<[WriteVIMulAddV, ReadVIMulAddV, ReadVIMulAddV, ReadVMask]>;
+          Sched<[WriteVIMulAddV_UpperBound, ReadVIMulAddV_UpperBound,
+            ReadVIMulAddV_UpperBound, ReadVMask]>;
   def X : VALUrVX<funct6, OPMVX, opcodestr # "." # vw # "x">,
-          Sched<[WriteVIMulAddX, ReadVIMulAddV, ReadVIMulAddX, ReadVMask]>;
+          Sched<[WriteVIMulAddX_UpperBound, ReadVIMulAddV_UpperBound,
+            ReadVIMulAddX_UpperBound, ReadVMask]>;
 }
 
 multiclass VWMAC_MV_V_X<string opcodestr, bits<6> funct6, string vw = "v"> {
   def V : VALUrVV<funct6, OPMVV, opcodestr # "." # vw # "v">,
-          Sched<[WriteVIWMulAddV, ReadVIWMulAddV, ReadVIWMulAddV, ReadVMask]>;
+          Sched<[WriteVIWMulAddV_UpperBound, ReadVIWMulAddV_UpperBound,
+            ReadVIWMulAddV_UpperBound, ReadVMask]>;
   def X : VALUrVX<funct6, OPMVX, opcodestr # "." # vw # "x">,
-          Sched<[WriteVIWMulAddX, ReadVIWMulAddV, ReadVIWMulAddX, ReadVMask]>;
+          Sched<[WriteVIWMulAddX_UpperBound, ReadVIWMulAddV_UpperBound,
+            ReadVIWMulAddX_UpperBound, ReadVMask]>;
 }
 
 multiclass VWMAC_MV_X<string opcodestr, bits<6> funct6, string vw = "v"> {
   def X : VALUrVX<funct6, OPMVX, opcodestr # "." # vw # "x">,
-          Sched<[WriteVIWMulAddX, ReadVIWMulAddV, ReadVIWMulAddX, ReadVMask]>;
+          Sched<[WriteVIWMulAddX_UpperBound, ReadVIWMulAddV_UpperBound,
+            ReadVIWMulAddX_UpperBound, ReadVMask]>;
 }
 
 multiclass VALU_MV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
   def "" : VALUVs2<funct6, vs1, OPMVV, opcodestr>,
-           Sched<[WriteVExtV, ReadVExtV, ReadVMask]>;
+           Sched<[WriteVExtV_UpperBound, ReadVExtV_UpperBound,
+             ReadVMask]>;
 }
 
 multiclass VALUm_IV_V_X_I<string opcodestr, bits<6> funct6> {
   def VM : VALUmVV<funct6, OPIVV, opcodestr # ".vvm">,
-           Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV, ReadVMask]>;
+           Sched<[WriteVICALUV_UpperBound, ReadVICALUV_UpperBound,
+             ReadVICALUV_UpperBound, ReadVMask]>;
   def XM : VALUmVX<funct6, OPIVX, opcodestr # ".vxm">,
-           Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX, ReadVMask]>;
+           Sched<[WriteVICALUX_UpperBound, ReadVICALUV_UpperBound,
+             ReadVICALUX_UpperBound, ReadVMask]>;
   def IM : VALUmVI<funct6, opcodestr # ".vim">,
-           Sched<[WriteVICALUI, ReadVICALUV, ReadVMask]>;
+           Sched<[WriteVICALUI_UpperBound, ReadVICALUV_UpperBound,
+             ReadVMask]>;
 }
 
 multiclass VMRG_IV_V_X_I<string opcodestr, bits<6> funct6> {
   def VM : VALUmVV<funct6, OPIVV, opcodestr # ".vvm">,
-           Sched<[WriteVIMergeV, ReadVIMergeV, ReadVIMergeV, ReadVMask]>;
+           Sched<[WriteVIMergeV_UpperBound, ReadVIMergeV_UpperBound,
+             ReadVIMergeV_UpperBound, ReadVMask]>;
   def XM : VALUmVX<funct6, OPIVX, opcodestr # ".vxm">,
-           Sched<[WriteVIMergeX, ReadVIMergeV, ReadVIMergeX, ReadVMask]>;
+           Sched<[WriteVIMergeX_UpperBound, ReadVIMergeV_UpperBound,
+             ReadVIMergeX_UpperBound, ReadVMask]>;
   def IM : VALUmVI<funct6, opcodestr # ".vim">,
-           Sched<[WriteVIMergeI, ReadVIMergeV, ReadVMask]>;
+           Sched<[WriteVIMergeI_UpperBound, ReadVIMergeV_UpperBound,
+             ReadVMask]>;
 }
 
 multiclass VALUm_IV_V_X<string opcodestr, bits<6> funct6> {
   def VM : VALUmVV<funct6, OPIVV, opcodestr # ".vvm">,
-           Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV, ReadVMask]>;
+           Sched<[WriteVICALUV_UpperBound, ReadVICALUV_UpperBound,
+             ReadVICALUV_UpperBound, ReadVMask]>;
   def XM : VALUmVX<funct6, OPIVX, opcodestr # ".vxm">,
-           Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX, ReadVMask]>;
+           Sched<[WriteVICALUX_UpperBound, ReadVICALUV_UpperBound,
+             ReadVICALUX_UpperBound, ReadVMask]>;
 }
 
 multiclass VALUNoVm_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5> {
   def V : VALUVVNoVm<funct6, OPIVV, opcodestr # ".vv">,
-          Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV]>;
+          Sched<[WriteVICALUV_UpperBound, ReadVICALUV_UpperBound,
+            ReadVICALUV_UpperBound]>;
   def X : VALUVXNoVm<funct6, OPIVX, opcodestr # ".vx">,
-          Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX]>;
+          Sched<[WriteVICALUX_UpperBound, ReadVICALUV_UpperBound
+            , ReadVICALUX_UpperBound]>;
   def I : VALUVINoVm<funct6, opcodestr # ".vi", optype>,
-          Sched<[WriteVICALUI, ReadVICALUV]>;
+          Sched<[WriteVICALUI_UpperBound, ReadVICALUV_UpperBound]>;
 }
 
 multiclass VALUNoVm_IV_V_X<string opcodestr, bits<6> funct6> {
   def V : VALUVVNoVm<funct6, OPIVV, opcodestr # ".vv">,
-          Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV]>;
+          Sched<[WriteVICALUV_UpperBound, ReadVICALUV_UpperBound,
+            ReadVICALUV_UpperBound]>;
   def X : VALUVXNoVm<funct6, OPIVX, opcodestr # ".vx">,
-          Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX]>;
+          Sched<[WriteVICALUX_UpperBound, ReadVICALUV_UpperBound,
+            ReadVICALUX_UpperBound]>;
 }
 
 multiclass VALU_FV_V_F<string opcodestr, bits<6> funct6, string vw = "v"> {
@@ -675,64 +702,83 @@ multiclass VMIOT_MV_V<string opcodestr, bits<6> funct6, bits<5> vs1> {
 
 multiclass VSHT_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVShiftV, ReadVShiftV, ReadVShiftV, ReadVMask]>;
+           Sched<[WriteVShiftV_UpperBound, ReadVShiftV_UpperBound,
+             ReadVShiftV_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVShiftX, ReadVShiftV, ReadVShiftX, ReadVMask]>;
+           Sched<[WriteVShiftX_UpperBound, ReadVShiftV_UpperBound,
+             ReadVShiftX_UpperBound, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # "." # vw # "i", optype>,
-           Sched<[WriteVShiftI, ReadVShiftV, ReadVMask]>;
+           Sched<[WriteVShiftI_UpperBound, ReadVShiftV_UpperBound,
+             ReadVMask]>;
 }
 
 multiclass VNSHT_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVNShiftV, ReadVNShiftV, ReadVNShiftV, ReadVMask]>;
+           Sched<[WriteVNShiftV_UpperBound, ReadVNShiftV_UpperBound,
+             ReadVNShiftV_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVNShiftX, ReadVNShiftV, ReadVNShiftX, ReadVMask]>;
+           Sched<[WriteVNShiftX_UpperBound, ReadVNShiftV_UpperBound,
+             ReadVNShiftX_UpperBound, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # "." # vw # "i", optype>,
-           Sched<[WriteVNShiftI, ReadVNShiftV, ReadVMask]>;
+           Sched<[WriteVNShiftI_UpperBound, ReadVNShiftV_UpperBound,
+             ReadVMask]>;
 }
 
 multiclass VCMP_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVICmpV, ReadVICmpV, ReadVICmpV, ReadVMask]>;
+           Sched<[WriteVICmpV_UpperBound, ReadVICmpV_UpperBound,
+             ReadVICmpV_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVICmpX, ReadVICmpV, ReadVICmpX, ReadVMask]>;
+           Sched<[WriteVICmpX_UpperBound, ReadVICmpV_UpperBound,
+             ReadVICmpX_UpperBound, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # "." # vw # "i", optype>,
-           Sched<[WriteVICmpI, ReadVICmpV, ReadVMask]>;
+           Sched<[WriteVICmpI_UpperBound, ReadVICmpV_UpperBound,
+             ReadVMask]>;
 }
 
 multiclass VCMP_IV_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVICmpV, ReadVICmpV, ReadVICmpX, ReadVMask]>;
+           Sched<[WriteVICmpV_UpperBound, ReadVICmpV_UpperBound,
+             ReadVICmpX_UpperBound, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # "." # vw # "i", optype>,
-           Sched<[WriteVICmpI, ReadVICmpV, ReadVMask]>;
+           Sched<[WriteVICmpI_UpperBound, ReadVICmpV_UpperBound,
+             ReadVMask]>;
 }
 
 multiclass VCMP_IV_V_X<string opcodestr, bits<6> funct6, string vw = "v"> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVICmpV, ReadVICmpV, ReadVICmpV, ReadVMask]>;
+           Sched<[WriteVICmpV_UpperBound, ReadVICmpV_UpperBound,
+             ReadVICmpV_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVICmpX, ReadVICmpV, ReadVICmpX, ReadVMask]>;
+           Sched<[WriteVICmpX_UpperBound, ReadVICmpV_UpperBound,
+             ReadVICmpX_UpperBound, ReadVMask]>;
 }
 
 multiclass VMUL_MV_V_X<string opcodestr, bits<6> funct6, string vw = "v"> {
   def V  : VALUVV<funct6, OPMVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVIMulV, ReadVIMulV, ReadVIMulV, ReadVMask]>;
+           Sched<[WriteVIMulV_UpperBound, ReadVIMulV_UpperBound,
+             ReadVIMulV_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPMVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVIMulX, ReadVIMulV, ReadVIMulX, ReadVMask]>;
+           Sched<[WriteVIMulX_UpperBound, ReadVIMulV_UpperBound,
+             ReadVIMulX_UpperBound, ReadVMask]>;
 }
 
 multiclass VWMUL_MV_V_X<string opcodestr, bits<6> funct6, string vw = "v"> {
   def V  : VALUVV<funct6, OPMVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVIWMulV, ReadVIWMulV, ReadVIWMulV, ReadVMask]>;
+           Sched<[WriteVIWMulV_UpperBound, ReadVIWMulV_UpperBound,
+             ReadVIWMulV_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPMVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVIWMulX, ReadVIWMulV, ReadVIWMulX, ReadVMask]>;
+           Sched<[WriteVIWMulX_UpperBound, ReadVIWMulV_UpperBound,
+             ReadVIWMulX_UpperBound, ReadVMask]>;
 }
 
 multiclass VDIV_MV_V_X<string opcodestr, bits<6> funct6, string vw = "v"> {
   def V  : VALUVV<funct6, OPMVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVIDivV, ReadVIDivV, ReadVIDivV, ReadVMask]>;
+           Sched<[WriteVIDivV_UpperBound, ReadVIDivV_UpperBound,
+             ReadVIDivV_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPMVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVIDivX, ReadVIDivV, ReadVIDivX, ReadVMask]>;
+           Sched<[WriteVIDivX_UpperBound, ReadVIDivV_UpperBound,
+             ReadVIDivX_UpperBound, ReadVMask]>;
 }
 
 multiclass VSALU_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
@@ -1126,15 +1172,15 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vs2 = 0, vm = 1,
 // op vd, vs1
 def VMV_V_V : RVInstVV<0b010111, OPIVV, (outs VR:$vd),
                        (ins VR:$vs1), "vmv.v.v", "$vd, $vs1">,
-              Sched<[WriteVIMovV, ReadVIMovV]>;
+              Sched<[WriteVIMovV_UpperBound, ReadVIMovV_UpperBound]>;
 // op vd, rs1
 def VMV_V_X : RVInstVX<0b010111, OPIVX, (outs VR:$vd),
                        (ins GPR:$rs1), "vmv.v.x", "$vd, $rs1">,
-              Sched<[WriteVIMovX, ReadVIMovX]>;
+              Sched<[WriteVIMovX_UpperBound, ReadVIMovX_UpperBound]>;
 // op vd, imm
 def VMV_V_I : RVInstIVI<0b010111, (outs VR:$vd),
                        (ins simm5:$imm), "vmv.v.i", "$vd, $imm">,
-              Sched<[WriteVIMovI]>;
+              Sched<[WriteVIMovI_UpperBound]>;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 // Vector Fixed-Point Arithmetic Instructions

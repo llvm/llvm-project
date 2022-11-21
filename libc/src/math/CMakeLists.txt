@@ -65,7 +65,10 @@ add_entrypoint_object(
 )
 
 add_math_entrypoint_object(acosf)
+
+add_math_entrypoint_object(asin)
 add_math_entrypoint_object(asinf)
+
 add_math_entrypoint_object(atanf)
 
 add_math_entrypoint_object(atanhf)
@@ -167,6 +170,8 @@ add_math_entrypoint_object(nearbyintl)
 add_math_entrypoint_object(nextafter)
 add_math_entrypoint_object(nextafterf)
 add_math_entrypoint_object(nextafterl)
+
+add_math_entrypoint_object(pow)
 
 add_math_entrypoint_object(remainder)
 add_math_entrypoint_object(remainderf)

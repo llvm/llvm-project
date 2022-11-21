@@ -44,11 +44,8 @@ entry:
   ret void
 }
 
-; CHECK-NOT: readnone
-; CHECK-NOT: readonly
-; CHECK-NOT: writeonly
-; CHECK-NOT: argmemonly
+; CHECK-NOT: memory(
 ; CHECK-NOT: speculatable
 
-; CHECK: Function Attrs: nocallback nofree nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
 ; CHECK-NEXT: declare void @llvm.donothing

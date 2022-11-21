@@ -44,6 +44,9 @@ Implemented Papers
 - P0591R4 - Utility functions to implement uses-allocator construction
 - P2291R3 - Add Constexpr Modifiers to Functions ``to_chars`` and
   ``from_chars`` for Integral Types in ``<charconv>`` Header
+- P0220R1 - Adopt Library Fundamentals V1 TS Components for C++17
+- P0482R6 - char8_t: A type for UTF-8 characters and strings
+- P2438R2 - ``std::string::substr() &&``
 
 Improvements and New Features
 -----------------------------
@@ -89,6 +92,10 @@ Deprecations and Removals
 
 - The ``_LIBCPP_ENABLE_CXX03_FUNCTION`` macro that allowed re-enabling the now-deprecated C++03 implementation of
   ``std::function`` has been removed. Users who need to use ``std::function`` should switch to C++11 and above.
+
+- The contents of ``<experimental/memory_resource>`` are now deprecated since libc++ ships ``<memory_resource>`` now.
+  Please migrate to ``<memory_resource>`` instead. Per libc++'s TS deprecation policy,
+  ``<experimental/memory_resource>`` will be removed in LLVM 18.
 
 Upcoming Deprecations and Removals
 ----------------------------------

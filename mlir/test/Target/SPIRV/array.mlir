@@ -1,4 +1,4 @@
-// RUN: mlir-translate -split-input-file -test-spirv-roundtrip %s | FileCheck %s
+// RUN: mlir-translate -no-implicit-module -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   spirv.func @array_stride(%arg0 : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32, stride=4>, stride=128>, StorageBuffer>, %arg1 : i32, %arg2 : i32) "None" {

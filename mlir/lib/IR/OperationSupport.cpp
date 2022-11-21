@@ -16,6 +16,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/Support/SHA1.h"
 #include <numeric>
 
 using namespace mlir;
@@ -756,4 +757,43 @@ bool OperationEquivalence::isEquivalentTo(
                               flags))
       return false;
   return true;
+}
+
+//===----------------------------------------------------------------------===//
+// OperationFingerPrint
+//===----------------------------------------------------------------------===//
+
+template <typename T>
+static void addDataToHash(llvm::SHA1 &hasher, const T &data) {
+  hasher.update(
+      ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
+}
+
+OperationFingerPrint::OperationFingerPrint(Operation *topOp) {
+  llvm::SHA1 hasher;
+
+  // Hash each of the operations based upon their mutable bits:
+  topOp->walk([&](Operation *op) {
+    //   - Operation pointer
+    addDataToHash(hasher, op);
+    //   - Attributes
+    addDataToHash(hasher, op->getAttrDictionary());
+    //   - Blocks in Regions
+    for (Region &region : op->getRegions()) {
+      for (Block &block : region) {
+        addDataToHash(hasher, &block);
+        for (BlockArgument arg : block.getArguments())
+          addDataToHash(hasher, arg);
+      }
+    }
+    //   - Location
+    addDataToHash(hasher, op->getLoc().getAsOpaquePointer());
+    //   - Operands
+    for (Value operand : op->getOperands())
+      addDataToHash(hasher, operand);
+    //   - Successors
+    for (unsigned i = 0, e = op->getNumSuccessors(); i != e; ++i)
+      addDataToHash(hasher, op->getSuccessor(i));
+  });
+  hash = hasher.result();
 }

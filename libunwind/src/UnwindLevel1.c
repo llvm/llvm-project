@@ -50,6 +50,7 @@
     __unw_resume((cursor));                                                    \
   } while (0)
 #elif defined(_LIBUNWIND_TARGET_I386)
+#define __cet_ss_step_size 4
 #define __unw_phase2_resume(cursor, fn)                                        \
   do {                                                                         \
     _LIBUNWIND_POP_CET_SSP((fn));                                              \
@@ -61,6 +62,7 @@
                      "d"(cetJumpAddress));                                     \
   } while (0)
 #elif defined(_LIBUNWIND_TARGET_X86_64)
+#define __cet_ss_step_size 8
 #define __unw_phase2_resume(cursor, fn)                                        \
   do {                                                                         \
     _LIBUNWIND_POP_CET_SSP((fn));                                              \
@@ -177,6 +179,9 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
   // uc is initialized by __unw_getcontext in the parent frame. The first stack
   // frame walked is unwind_phase2.
   unsigned framesWalked = 1;
+#ifdef _LIBUNWIND_USE_CET
+  unsigned long shadowStackTop = _get_ssp();
+#endif
   // Walk each frame until we reach where search phase said to stop.
   while (true) {
 
@@ -228,6 +233,20 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
     }
 #endif
 
+// In CET enabled environment, we check return address stored in normal stack
+// against return address stored in CET shadow stack, if the 2 addresses don't
+// match, it means return address in normal stack has been corrupted, we return
+// _URC_FATAL_PHASE2_ERROR.
+#ifdef _LIBUNWIND_USE_CET
+    if (shadowStackTop != 0) {
+      unw_word_t retInNormalStack;
+      __unw_get_reg(cursor, UNW_REG_IP, &retInNormalStack);
+      unsigned long retInShadowStack = *(
+          unsigned long *)(shadowStackTop + __cet_ss_step_size * framesWalked);
+      if (retInNormalStack != retInShadowStack)
+        return _URC_FATAL_PHASE2_ERROR;
+    }
+#endif
     ++framesWalked;
     // If there is a personality routine, tell it we are unwinding.
     if (frameInfo.handler != 0) {

@@ -724,7 +724,10 @@ public:
     /// and its callees rely upon.
     Register findValueFromDefImpl(Register DefReg, unsigned StartBit,
                                   unsigned Size) {
-      MachineInstr *Def = getDefIgnoringCopies(DefReg, MRI);
+      Optional<DefinitionAndSourceRegister> DefSrcReg =
+          getDefSrcRegIgnoringCopies(DefReg, MRI);
+      MachineInstr *Def = DefSrcReg->MI;
+      DefReg = DefSrcReg->Reg;
       // If the instruction has a single def, then simply delegate the search.
       // For unmerge however with multiple defs, we need to compute the offset
       // into the source of the unmerge.

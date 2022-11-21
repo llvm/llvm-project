@@ -857,6 +857,27 @@ bool GCNTTIImpl::useGPUDivergenceAnalysis() const {
   return !UseLegacyDA;
 }
 
+bool GCNTTIImpl::isReadRegisterSourceOfDivergence(
+    const IntrinsicInst *ReadReg) const {
+  Metadata *MD =
+      cast<MetadataAsValue>(ReadReg->getArgOperand(0))->getMetadata();
+  StringRef RegName =
+      cast<MDString>(cast<MDNode>(MD)->getOperand(0))->getString();
+
+  // Special case registers that look like VCC.
+  MVT VT = MVT::getVT(ReadReg->getType());
+  if (VT == MVT::i1)
+    return true;
+
+  // Special case scalar registers that start with 'v'.
+  if (RegName.startswith("vcc") || RegName.empty())
+    return false;
+
+  // VGPR or AGPR is divergent. There aren't any specially named vector
+  // registers.
+  return RegName[0] == 'v' || RegName[0] == 'a';
+}
+
 /// \returns true if the result of the value could potentially be
 /// different across workitems in a wavefront.
 bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
@@ -880,8 +901,12 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   if (isa<AtomicRMWInst>(V) || isa<AtomicCmpXchgInst>(V))
     return true;
 
-  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V))
+  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
+    if (Intrinsic->getIntrinsicID() == Intrinsic::read_register)
+      return isReadRegisterSourceOfDivergence(Intrinsic);
+
     return AMDGPU::isIntrinsicSourceOfDivergence(Intrinsic->getIntrinsicID());
+  }
 
   // Assume all function calls are a source of divergence.
   if (const CallInst *CI = dyn_cast<CallInst>(V)) {

@@ -201,6 +201,7 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check(SV("hello universe and world"), SV("hello {1} and {0}"), world, universe);
 
   check(SV("hello world"), SV("hello {:_>}"), world);
+  check(SV("hello world   "), SV("hello {:8}"), world);
   check(SV("hello    world"), SV("hello {:>8}"), world);
   check(SV("hello ___world"), SV("hello {:_>8}"), world);
   check(SV("hello _world__"), SV("hello {:_^8}"), world);
@@ -883,7 +884,6 @@ void format_test_char(TestFunction check, ExceptionTest check_exception) {
   // ***** Char type *****
   // *** align-fill & width ***
   check(SV("answer is '*     '"), SV("answer is '{:6}'"), CharT('*'));
-
   check(SV("answer is '     *'"), SV("answer is '{:>6}'"), CharT('*'));
   check(SV("answer is '*     '"), SV("answer is '{:<6}'"), CharT('*'));
   check(SV("answer is '  *   '"), SV("answer is '{:^6}'"), CharT('*'));

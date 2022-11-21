@@ -189,7 +189,7 @@ attributes #7 = { noduplicate }
 ; CHECK: %[[ALLOCATED_STORAGE:.+]] = invoke i8* @allocate()
 ; CHECK-NEXT: to label %[[NORMAL_DEST:.+]] unwind
 ; CHECK: [[NORMAL_DEST]]
-; CHEKC-NEXT: call void @llvm.dbg.declare(metadata i8* %[[ALLOCATED_STORAGE]]
+; CHECK-NEXT: call void @llvm.dbg.declare(metadata i8* %[[ALLOCATED_STORAGE]]
 ; CHECK: %[[CALLBR_RES:.+]] = callbr i32 asm
 ; CHECK-NEXT: to label %[[DEFAULT_DEST:.+]] [label
 ; CHECK: [[DEFAULT_DEST]]:

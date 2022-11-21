@@ -1,4 +1,4 @@
-; RUN: opt -early-cse -earlycse-debug-hash -S %s -o - | FileCheck %s
+; RUN: opt -passes=early-cse -earlycse-debug-hash -S %s -o - | FileCheck %s
 
 ; PR40628: The first load below is determined to be redundant by EarlyCSE.
 ; During salvaging, the corresponding dbg.value could have a DW_OP_deref used

@@ -65,6 +65,6 @@ entry:
 declare <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16>, <4 x i16>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16>, <4 x i16>) nounwind readnone
 
-; CHECK: attributes #0 = { nounwind readnone ssp }
-; CHECK: attributes #1 = { nocallback nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #0 = { nounwind ssp memory(none) }
+; CHECK: attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes [[NUW]] = { nounwind }

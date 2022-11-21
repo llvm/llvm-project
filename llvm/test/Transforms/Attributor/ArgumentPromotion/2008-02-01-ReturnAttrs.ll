@@ -3,7 +3,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
 define internal i32 @deref(i32* %x) nounwind {
-; CGSCC: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@deref
 ; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -18,7 +18,7 @@ entry:
 }
 
 define i32 @f(i32 %x) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@f
 ; TUNIT-SAME: (i32 returned [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -26,7 +26,7 @@ define i32 @f(i32 %x) {
 ; TUNIT-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
 ; TUNIT-NEXT:    ret i32 [[X]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@f
 ; CGSCC-SAME: (i32 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -42,9 +42,9 @@ entry:
   ret i32 %tmp1
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2]] = { nounwind readonly willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
 ;.

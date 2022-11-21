@@ -151,9 +151,8 @@ TEST_F(TreeTest, Iterators) {
   // FIXME: mutate and observe no invalidation. Mutations are private for now...
   auto It = Range.begin();
   auto CIt = ConstRange.begin();
-  static_assert(std::is_same<decltype(*It), syntax::Node &>::value,
-                "mutable range");
-  static_assert(std::is_same<decltype(*CIt), const syntax::Node &>::value,
+  static_assert(std::is_same_v<decltype(*It), syntax::Node &>, "mutable range");
+  static_assert(std::is_same_v<decltype(*CIt), const syntax::Node &>,
                 "const range");
 
   for (unsigned I = 0; I < 3; ++I) {

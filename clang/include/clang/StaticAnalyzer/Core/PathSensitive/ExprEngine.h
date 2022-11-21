@@ -360,13 +360,13 @@ public:
   void processSwitch(SwitchNodeBuilder& builder);
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
-  /// function has begun. Called for both inlined and and top-level functions.
+  /// function has begun. Called for both inlined and top-level functions.
   void processBeginOfFunction(NodeBuilderContext &BC,
                               ExplodedNode *Pred, ExplodedNodeSet &Dst,
                               const BlockEdge &L);
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
-  /// function has ended. Called for both inlined and and top-level functions.
+  /// function has ended. Called for both inlined and top-level functions.
   void processEndOfFunction(NodeBuilderContext& BC,
                             ExplodedNode *Pred,
                             const ReturnStmt *RS = nullptr);

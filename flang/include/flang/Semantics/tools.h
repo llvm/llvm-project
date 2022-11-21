@@ -177,11 +177,6 @@ inline bool IsAssumedSizeArray(const Symbol &symbol) {
 bool IsAssumedLengthCharacter(const Symbol &);
 bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);
-// Is the symbol modifiable in this scope
-std::optional<parser::Message> WhyNotModifiable(const Symbol &, const Scope &);
-std::optional<parser::Message> WhyNotModifiable(SourceName, const SomeExpr &,
-    const Scope &, bool vectorSubscriptIsOk = false);
-const Symbol *IsExternalInPureContext(const Symbol &, const Scope &);
 bool HasCoarray(const parser::Expr &);
 bool IsAssumedType(const Symbol &);
 bool IsPolymorphic(const Symbol &);
@@ -221,7 +216,8 @@ const Symbol *FindSeparateModuleSubprogramInterface(const Symbol *);
 // Determines whether an object might be visible outside a
 // pure function (C1594); returns a non-null Symbol pointer for
 // diagnostic purposes if so.
-const Symbol *FindExternallyVisibleObject(const Symbol &, const Scope &);
+const Symbol *FindExternallyVisibleObject(
+    const Symbol &, const Scope &, bool isPointerDefinition);
 
 template <typename A>
 const Symbol *FindExternallyVisibleObject(const A &, const Scope &) {
@@ -232,7 +228,7 @@ template <typename T>
 const Symbol *FindExternallyVisibleObject(
     const evaluate::Designator<T> &designator, const Scope &scope) {
   if (const Symbol * symbol{designator.GetBaseObject().symbol()}) {
-    return FindExternallyVisibleObject(*symbol, scope);
+    return FindExternallyVisibleObject(*symbol, scope, false);
   } else if (std::holds_alternative<evaluate::CoarrayRef>(designator.u)) {
     // Coindexed values are visible even if their image-local objects are not.
     return designator.GetBaseObject().symbol();

@@ -12,7 +12,7 @@ clflushopt (%rax)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      8     0.33    *      *      U     clflushopt	(%rax)
+# CHECK-NEXT:  1      4     0.33    *      *      U     clflushopt	(%rax)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn2AGU0

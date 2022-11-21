@@ -854,7 +854,7 @@ protected:
     // If a variable is dead (is not referenced directly or indirectly after
     // some point), it will be removed from the Store before the end of its
     // actual lifetime.
-    // This means that that if the ownership status didn't change, CurrOwners
+    // This means that if the ownership status didn't change, CurrOwners
     // must be a superset of, but not necessarily equal to ExitOwners.
     return !llvm::set_is_subset(ExitOwners, CurrOwners);
   }

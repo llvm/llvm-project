@@ -35,10 +35,10 @@ define void @store(i8* %p) {
 ; CHECK: declare void @__dfsan_mem_transfer_callback(i[[#SBITS]]*, i64)
 ; CHECK: declare void @__dfsan_cmp_callback(i[[#SBITS]])
 
-; CHECK: ; Function Attrs: nounwind readonly
+; CHECK: ; Function Attrs: nounwind memory(read)
 ; CHECK-NEXT: declare zeroext i[[#SBITS]] @__dfsan_union_load(i[[#SBITS]]*, i64)
 
-; CHECK: ; Function Attrs: nounwind readonly
+; CHECK: ; Function Attrs: nounwind memory(read)
 ; CHECK-NEXT: declare zeroext i64 @__dfsan_load_label_and_origin(i8*, i64)
 
 ; CHECK: declare void @__dfsan_unimplemented(i8*)

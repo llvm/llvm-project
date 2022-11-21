@@ -27,7 +27,7 @@ declare <32 x i32> @llvm.hexagon.V6.lvsplatb.128B(i32) #1
 declare <128 x i8> @llvm.masked.load.v128i8.p0v128i8(<128 x i8>*, i32 immarg, <128 x i1>, <128 x i8>) #2
 declare void @llvm.masked.store.v128i8.p0v128i8(<128 x i8>, <128 x i8>*, i32 immarg, <128 x i1>) #2
 
-attributes #0 = { "target-cpu"="hexagonv65" "target-features"="+hvx,+hvx-length128b" }
+attributes #0 = { nounwind "target-features"="+hvxv65,+hvx-length128b" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { argmemonly nounwind readonly willreturn }
 attributes #3 = { argmemonly nounwind willreturn }

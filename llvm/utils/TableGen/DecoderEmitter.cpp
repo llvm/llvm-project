@@ -1906,6 +1906,69 @@ void parseVarLenInstOperand(const Record &Def,
   }
 }
 
+static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
+                                std::map<std::string, std::string> &TiedNames,
+                                StringRef OpName, OperandInfo &OpInfo) {
+  // Some bits of the operand may be required to be 1 depending on the
+  // instruction's encoding. Collect those bits.
+  if (const RecordVal *EncodedValue = EncodingDef.getValue(OpName))
+    if (const BitsInit *OpBits = dyn_cast<BitsInit>(EncodedValue->getValue()))
+      for (unsigned I = 0; I < OpBits->getNumBits(); ++I)
+        if (const BitInit *OpBit = dyn_cast<BitInit>(OpBits->getBit(I)))
+          if (OpBit->getValue())
+            OpInfo.InitValue |= 1ULL << I;
+
+  unsigned Base = ~0U;
+  unsigned Width = 0;
+  unsigned Offset = 0;
+
+  for (unsigned bi = 0; bi < Bits.getNumBits(); ++bi) {
+    VarInit *Var = nullptr;
+    VarBitInit *BI = dyn_cast<VarBitInit>(Bits.getBit(bi));
+    if (BI)
+      Var = dyn_cast<VarInit>(BI->getBitVar());
+    else
+      Var = dyn_cast<VarInit>(Bits.getBit(bi));
+
+    if (!Var) {
+      if (Base != ~0U) {
+        OpInfo.addField(Base, Width, Offset);
+        Base = ~0U;
+        Width = 0;
+        Offset = 0;
+      }
+      continue;
+    }
+
+    if ((Var->getName() != OpName &&
+         Var->getName() != TiedNames[std::string(OpName)])) {
+      if (Base != ~0U) {
+        OpInfo.addField(Base, Width, Offset);
+        Base = ~0U;
+        Width = 0;
+        Offset = 0;
+      }
+      continue;
+    }
+
+    if (Base == ~0U) {
+      Base = bi;
+      Width = 1;
+      Offset = BI ? BI->getBitNum() : 0;
+    } else if (BI && BI->getBitNum() != Offset + Width) {
+      OpInfo.addField(Base, Width, Offset);
+      Base = bi;
+      Width = 1;
+      Offset = BI->getBitNum();
+    } else {
+      ++Width;
+    }
+  }
+
+  if (Base != ~0U)
+    OpInfo.addField(Base, Width, Offset);
+}
+
 static unsigned
 populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
                     const CodeGenInstruction &CGI, unsigned Opc,
@@ -2119,21 +2182,24 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
 
     // For each operand, see if we can figure out where it is encoded.
     for (const auto &Op : InOutOperands) {
+      Init *OpInit = Op.first;
+      StringRef OpName = Op.second;
+
       if (SupportPositionalDecoding) {
-        if (!NumberedInsnOperands[std::string(Op.second)].empty()) {
+        if (!NumberedInsnOperands[std::string(OpName)].empty()) {
           llvm::append_range(InsnOperands,
-                             NumberedInsnOperands[std::string(Op.second)]);
+                             NumberedInsnOperands[std::string(OpName)]);
           continue;
         }
-        if (!NumberedInsnOperands[TiedNames[std::string(Op.second)]].empty()) {
+        if (!NumberedInsnOperands[TiedNames[std::string(OpName)]].empty()) {
           if (!NumberedInsnOperandsNoTie.count(
-                  TiedNames[std::string(Op.second)])) {
+                  TiedNames[std::string(OpName)])) {
             // Figure out to which (sub)operand we're tied.
             unsigned i =
-                CGI.Operands.getOperandNamed(TiedNames[std::string(Op.second)]);
+                CGI.Operands.getOperandNamed(TiedNames[std::string(OpName)]);
             int tiedTo = CGI.Operands[i].getTiedRegister();
             if (tiedTo == -1) {
-              i = CGI.Operands.getOperandNamed(Op.second);
+              i = CGI.Operands.getOperandNamed(OpName);
               tiedTo = CGI.Operands[i].getTiedRegister();
             }
 
@@ -2142,7 +2208,7 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
                   CGI.Operands.getSubOperandNumber(tiedTo);
 
               InsnOperands.push_back(
-                  NumberedInsnOperands[TiedNames[std::string(Op.second)]]
+                  NumberedInsnOperands[TiedNames[std::string(OpName)]]
                                       [SO.second]);
             }
           }
@@ -2154,76 +2220,15 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
       // to interpret it.  As a first step, require the target to provide
       // callbacks for decoding register classes.
 
-      Init *OpInit = Op.first;
       if (DagInit *Dag = dyn_cast<DagInit>(OpInit))
         OpInit = Dag->getOperator();
       OperandInfo OpInfo = getOpInfo(cast<DefInit>(OpInit)->getDef());
 
-      // Some bits of the operand may be required to be 1 depending on the
-      // instruction's encoding. Collect those bits.
-      if (const RecordVal *EncodedValue = EncodingDef.getValue(Op.second))
-        if (const BitsInit *OpBits =
-                dyn_cast<BitsInit>(EncodedValue->getValue()))
-          for (unsigned I = 0; I < OpBits->getNumBits(); ++I)
-            if (const BitInit *OpBit = dyn_cast<BitInit>(OpBits->getBit(I)))
-              if (OpBit->getValue())
-                OpInfo.InitValue |= 1ULL << I;
-
-      unsigned Base = ~0U;
-      unsigned Width = 0;
-      unsigned Offset = 0;
-
-      for (unsigned bi = 0; bi < Bits.getNumBits(); ++bi) {
-        VarInit *Var = nullptr;
-        VarBitInit *BI = dyn_cast<VarBitInit>(Bits.getBit(bi));
-        if (BI)
-          Var = dyn_cast<VarInit>(BI->getBitVar());
-        else
-          Var = dyn_cast<VarInit>(Bits.getBit(bi));
-
-        if (!Var) {
-          if (Base != ~0U) {
-            OpInfo.addField(Base, Width, Offset);
-            Base = ~0U;
-            Width = 0;
-            Offset = 0;
-          }
-          continue;
-        }
-
-        if ((Var->getName() != Op.second &&
-             Var->getName() != TiedNames[std::string(Op.second)])) {
-          if (Base != ~0U) {
-            OpInfo.addField(Base, Width, Offset);
-            Base = ~0U;
-            Width = 0;
-            Offset = 0;
-          }
-          continue;
-        }
-
-        if (Base == ~0U) {
-          Base = bi;
-          Width = 1;
-          Offset = BI ? BI->getBitNum() : 0;
-        } else if (BI && BI->getBitNum() != Offset + Width) {
-          OpInfo.addField(Base, Width, Offset);
-          Base = bi;
-          Width = 1;
-          Offset = BI->getBitNum();
-        } else {
-          ++Width;
-        }
-      }
-
-      if (Base != ~0U)
-        OpInfo.addField(Base, Width, Offset);
-
+      addOneOperandFields(EncodingDef, Bits, TiedNames, OpName, OpInfo);
       if (OpInfo.numFields() > 0)
         InsnOperands.push_back(OpInfo);
     }
   }
-
   Operands[Opc] = InsnOperands;
 
 #if 0

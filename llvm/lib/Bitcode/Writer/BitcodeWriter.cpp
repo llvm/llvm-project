@@ -342,6 +342,8 @@ private:
                       unsigned Abbrev);
   void writeDIModule(const DIModule *N, SmallVectorImpl<uint64_t> &Record,
                      unsigned Abbrev);
+  void writeDIAssignID(const DIAssignID *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
   void writeDITemplateTypeParameter(const DITemplateTypeParameter *N,
                                     SmallVectorImpl<uint64_t> &Record,
                                     unsigned Abbrev);
@@ -628,8 +630,6 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_ALLOC_SIZE;
   case Attribute::AlwaysInline:
     return bitc::ATTR_KIND_ALWAYS_INLINE;
-  case Attribute::ArgMemOnly:
-    return bitc::ATTR_KIND_ARGMEMONLY;
   case Attribute::Builtin:
     return bitc::ATTR_KIND_BUILTIN;
   case Attribute::ByVal:
@@ -648,10 +648,6 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_HOT;
   case Attribute::ElementType:
     return bitc::ATTR_KIND_ELEMENTTYPE;
-  case Attribute::InaccessibleMemOnly:
-    return bitc::ATTR_KIND_INACCESSIBLEMEM_ONLY;
-  case Attribute::InaccessibleMemOrArgMemOnly:
-    return bitc::ATTR_KIND_INACCESSIBLEMEM_OR_ARGMEMONLY;
   case Attribute::InlineHint:
     return bitc::ATTR_KIND_INLINE_HINT;
   case Attribute::InReg:
@@ -1959,6 +1955,15 @@ void ModuleBitcodeWriter::writeDIModule(const DIModule *N,
   Record.push_back(N->getIsDecl());
 
   Stream.EmitRecord(bitc::METADATA_MODULE, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDIAssignID(const DIAssignID *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  // There are no arguments for this metadata type.
+  Record.push_back(N->isDistinct());
+  Stream.EmitRecord(bitc::METADATA_ASSIGN_ID, Record, Abbrev);
   Record.clear();
 }
 

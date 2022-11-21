@@ -171,6 +171,81 @@ static void printLinearClause(OpAsmPrinter &p, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Parser, verifier and printer for Aligned Clause
+//===----------------------------------------------------------------------===//
+static LogicalResult verifyAlignedClause(Operation *op,
+                                         Optional<ArrayAttr> alignmentValues,
+                                         OperandRange alignedVariables) {
+  // Check if number of alignment values equals to number of aligned variables
+  if (!alignedVariables.empty()) {
+    if (!alignmentValues || alignmentValues->size() != alignedVariables.size())
+      return op->emitOpError()
+             << "expected as many alignment values as aligned variables";
+  } else {
+    if (alignmentValues)
+      return op->emitOpError() << "unexpected alignment values attribute";
+    return success();
+  }
+
+  // Check if each var is aligned only once - OpenMP 4.5 -> 2.8.1 section
+  DenseSet<Value> alignedItems;
+  for (auto it : alignedVariables)
+    if (!alignedItems.insert(it).second)
+      return op->emitOpError() << "aligned variable used more than once";
+
+  if (!alignmentValues)
+    return success();
+
+  // Check if all alignment values are positive - OpenMP 4.5 -> 2.8.1 section
+  for (unsigned i = 0; i < (*alignmentValues).size(); ++i) {
+    if (auto intAttr = (*alignmentValues)[i].dyn_cast<IntegerAttr>()) {
+      if (intAttr.getValue().sle(0))
+        return op->emitOpError() << "alignment should be greater than 0";
+    } else {
+      return op->emitOpError() << "expected integer alignment";
+    }
+  }
+
+  return success();
+}
+
+/// aligned ::= `aligned` `(` aligned-list `)`
+/// aligned-list := aligned-val | aligned-val aligned-list
+/// aligned-val := ssa-id-and-type `->` alignment
+static ParseResult parseAlignedClause(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &alignedItems,
+    SmallVectorImpl<Type> &types, ArrayAttr &alignmentValues) {
+  SmallVector<Attribute> alignmentVec;
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseOperand(alignedItems.emplace_back()) ||
+            parser.parseColonType(types.emplace_back()) ||
+            parser.parseArrow() ||
+            parser.parseAttribute(alignmentVec.emplace_back())) {
+          return failure();
+        }
+        return success();
+      })))
+    return failure();
+  SmallVector<Attribute> alignments(alignmentVec.begin(), alignmentVec.end());
+  alignmentValues = ArrayAttr::get(parser.getContext(), alignments);
+  return success();
+}
+
+/// Print Aligned Clause
+static void printAlignedClause(OpAsmPrinter &p, Operation *op,
+                               ValueRange alignedVars,
+                               TypeRange alignedVarTypes,
+                               Optional<ArrayAttr> alignmentValues) {
+  for (unsigned i = 0; i < alignedVars.size(); ++i) {
+    if (i != 0)
+      p << ", ";
+    p << alignedVars[i] << " : " << alignedVars[i].getType();
+    p << " -> " << (*alignmentValues)[i];
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Parser, printer and verifier for Schedule Clause
 //===----------------------------------------------------------------------===//
 
@@ -583,8 +658,8 @@ LogicalResult SimdLoopOp::verify() {
            << "simdlen clause and safelen clause are both present, but the "
               "simdlen value is not less than or equal to safelen value";
   }
-
-  return success();
+  return verifyAlignedClause(*this, this->getAlignmentValues(),
+                             this->getAlignedVars());
 }
 
 //===----------------------------------------------------------------------===//

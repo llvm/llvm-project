@@ -8,7 +8,7 @@
 ; CHECK: @[[_ZL6TEST1G:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 42, align 4
 ;.
 define void @_Z7test1f1v() nounwind {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@_Z7test1f1v
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -32,7 +32,7 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 define i32 @_Z7test1f2v() nounwind {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@_Z7test1f2v
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -43,5 +43,5 @@ entry:
   ret i32 %tmp
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.

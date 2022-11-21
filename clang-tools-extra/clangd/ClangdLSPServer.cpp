@@ -502,14 +502,14 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     CDBOpts.ContextProvider = Opts.ContextProvider;
     BaseCDB =
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
-    BaseCDB = getQueryDriverDatabase(llvm::makeArrayRef(Opts.QueryDriverGlobs),
-                                     std::move(BaseCDB));
   }
   auto Mangler = CommandMangler::detect();
+  Mangler.SystemIncludeExtractor =
+      getSystemIncludeExtractor(llvm::makeArrayRef(Opts.QueryDriverGlobs));
   if (Opts.ResourceDir)
     Mangler.ResourceDir = *Opts.ResourceDir;
   CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags,
-              tooling::ArgumentsAdjuster(std::move(Mangler)));
+              std::move(Mangler));
   {
     // Switch caller's context with LSPServer's background context. Since we
     // rather want to propagate information from LSPServer's context into the
@@ -1815,5 +1815,6 @@ void ClangdLSPServer::onSemanticsMaybeChanged(PathRef File) {
     });
   }
 }
+
 } // namespace clangd
 } // namespace clang

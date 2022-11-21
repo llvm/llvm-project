@@ -48,7 +48,7 @@ public:
 
   void emitConstantPools() override;
 
-  virtual void emitMachine(StringRef CPU) = 0;
+  virtual void emitMachine(StringRef CPU) {};
 };
 
 } // end namespace llvm

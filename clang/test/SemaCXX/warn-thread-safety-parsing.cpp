@@ -1240,7 +1240,7 @@ void call_method_ptr_inst(UnFoo* f) {
 
 int temp;
 void empty_back_edge() {
-  // Create a back edge to a block with with no statements
+  // Create a back edge to a block with no statements
   for (;;) {
     ++temp;
     if (temp > 10) break;

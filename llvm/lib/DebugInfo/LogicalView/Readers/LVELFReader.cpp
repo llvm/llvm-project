@@ -726,9 +726,8 @@ void LVELFReader::createLineAndFileRecords(
   // In DWARF5 the file indexes start at 0;
   bool IncrementIndex = Lines->Prologue.getVersion() >= 5;
 
-  // Get the source lines.
-  if ((options().getAttributeRange() || options().getPrintLines()) &&
-      Lines->Rows.size())
+  // Get the source lines if requested by command line option.
+  if (options().getPrintLines() && Lines->Rows.size())
     for (const DWARFDebugLine::Row &Row : Lines->Rows) {
       // Here we collect logical debug lines in CULines. Later on,
       // the 'processLines()' function will move each created logical line

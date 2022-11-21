@@ -1,4 +1,4 @@
-; RUN: llc < %s -mattr=+reference-types | FileCheck %s
+; RUN: llc < %s -mcpu=mvp -mattr=+reference-types | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

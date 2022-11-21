@@ -16,10 +16,10 @@ define void @test1(i64 %tmp35) {
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i64 [[TMP35:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[BB_TRUE:%.*]], label [[BB_FALSE:%.*]]
 ; CHECK:       bb_true:
-; CHECK-NEXT:    tail call void @check1(i1 false) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    tail call void @check1(i1 false) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb_false:
-; CHECK-NEXT:    tail call void @check2(i1 true) #[[ATTR1]]
+; CHECK-NEXT:    tail call void @check2(i1 true) #[[ATTR2]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -55,7 +55,7 @@ define void @test2(i64 %tmp35, i1 %inner_cmp) {
 ; CHECK-NEXT:    tail call void @check1(i1 false)
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb_false:
-; CHECK-NEXT:    tail call void @check2(i1 true) #[[ATTR1]]
+; CHECK-NEXT:    tail call void @check2(i1 true) #[[ATTR2]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -1171,5 +1171,78 @@ if.true:
 if.false:
   ret void
 }
+
+define void @non_const_range(i32 %a, i32 %b) {
+; CHECK-LABEL: @non_const_range(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[A:%.*]], 11
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[B:%.*]], 21
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    br i1 [[AND]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[A_100:%.*]] = add nuw nsw i32 [[A]], 100
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    [[A_10:%.*]] = add nuw nsw i32 [[A]], 10
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ne i32 [[A_10]], [[B]]
+; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[A_10]], [[B]]
+; CHECK-NEXT:    call void @check1(i1 [[CMP6]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    ret void
+;
+  %cmp1 = icmp ult i32 %a, 11
+  %cmp2 = icmp ult i32 %b, 21
+  %and = select i1 %cmp1, i1 %cmp2, i1 false
+  br i1 %and, label %if, label %else
+
+if:
+  %a.100 = add nuw nsw i32 %a, 100
+  %cmp3 = icmp ne i32 %a.100, %b
+  call void @check1(i1 %cmp3)
+  %cmp4 = icmp eq i32 %a.100, %b
+  call void @check1(i1 %cmp4)
+
+  %a.10 = add nuw nsw i32 %a, 10
+  %cmp5 = icmp ne i32 %a.10, %b
+  call void @check1(i1 %cmp5)
+  %cmp6 = icmp eq i32 %a.10, %b
+  call void @check1(i1 %cmp6)
+  ret void
+
+else:
+  ret void
+}
+
+define i1 @non_const_range_minmax(i8 %a, i8 %b) {
+; CHECK-LABEL: @non_const_range_minmax(
+; CHECK-NEXT:    [[A2:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 10)
+; CHECK-NEXT:    [[B2:%.*]] = call i8 @llvm.umax.i8(i8 [[B:%.*]], i8 11)
+; CHECK-NEXT:    ret i1 true
+;
+  %a2 = call i8 @llvm.umin.i8(i8 %a, i8 10)
+  %b2 = call i8 @llvm.umax.i8(i8 %b, i8 11)
+  %cmp1 = icmp ult i8 %a2, %b2
+  ret i1 %cmp1
+}
+
+; FIXME: Also support vectors.
+define <2 x i1> @non_const_range_minmax_vec(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @non_const_range_minmax_vec(
+; CHECK-NEXT:    [[A2:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 10>)
+; CHECK-NEXT:    [[B2:%.*]] = call <2 x i8> @llvm.umax.v2i8(<2 x i8> [[B:%.*]], <2 x i8> <i8 11, i8 11>)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i8> [[A2]], [[B2]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
+;
+  %a2 = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %a, <2 x i8> <i8 10, i8 10>)
+  %b2 = call <2 x i8> @llvm.umax.v2i8(<2 x i8> %b, <2 x i8> <i8 11, i8 11>)
+  %cmp1 = icmp ult <2 x i8> %a2, %b2
+  ret <2 x i1> %cmp1
+}
+
+declare i8 @llvm.umin.i8(i8, i8)
+declare i8 @llvm.umax.i8(i8, i8)
+declare <2 x i8> @llvm.umin.v2i8(<2 x i8>, <2 x i8>)
+declare <2 x i8> @llvm.umax.v2i8(<2 x i8>, <2 x i8>)
 
 attributes #4 = { noreturn }

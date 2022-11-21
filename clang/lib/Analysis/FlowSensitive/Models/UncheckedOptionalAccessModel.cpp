@@ -208,7 +208,7 @@ QualType stripReference(QualType Type) {
 }
 
 /// Returns true if and only if `Type` is an optional type.
-bool IsOptionalType(QualType Type) {
+bool isOptionalType(QualType Type) {
   if (!Type->isRecordType())
     return false;
   // FIXME: Optimize this by avoiding the `getQualifiedNameAsString` call.
@@ -222,7 +222,7 @@ bool IsOptionalType(QualType Type) {
 /// For example, if `Type` is `optional<optional<int>>`, the result of this
 /// function will be 2.
 int countOptionalWrappers(const ASTContext &ASTCtx, QualType Type) {
-  if (!IsOptionalType(Type))
+  if (!isOptionalType(Type))
     return 0;
   return 1 + countOptionalWrappers(
                  ASTCtx,
@@ -720,12 +720,14 @@ void UncheckedOptionalAccessModel::transfer(const CFGElement *Elt,
   TransferMatchSwitch(*Elt, getASTContext(), State);
 }
 
-bool UncheckedOptionalAccessModel::compareEquivalent(QualType Type,
-                                                     const Value &Val1,
-                                                     const Environment &Env1,
-                                                     const Value &Val2,
-                                                     const Environment &Env2) {
-  return isNonEmptyOptional(Val1, Env1) == isNonEmptyOptional(Val2, Env2);
+ComparisonResult UncheckedOptionalAccessModel::compare(
+    QualType Type, const Value &Val1, const Environment &Env1,
+    const Value &Val2, const Environment &Env2) {
+  if (!isOptionalType(Type))
+    return ComparisonResult::Unknown;
+  return isNonEmptyOptional(Val1, Env1) == isNonEmptyOptional(Val2, Env2)
+             ? ComparisonResult::Same
+             : ComparisonResult::Different;
 }
 
 bool UncheckedOptionalAccessModel::merge(QualType Type, const Value &Val1,
@@ -734,7 +736,7 @@ bool UncheckedOptionalAccessModel::merge(QualType Type, const Value &Val1,
                                          const Environment &Env2,
                                          Value &MergedVal,
                                          Environment &MergedEnv) {
-  if (!IsOptionalType(Type))
+  if (!isOptionalType(Type))
     return true;
 
   auto &HasValueVal = MergedEnv.makeAtomicBoolValue();

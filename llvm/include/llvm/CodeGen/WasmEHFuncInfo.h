@@ -50,8 +50,6 @@ struct WasmEHFuncInfo {
   }
   void setUnwindDest(const BasicBlock *BB, const BasicBlock *Dest) {
     SrcToUnwindDest[BB] = Dest;
-    if (!UnwindDestToSrcs.count(Dest))
-      UnwindDestToSrcs[Dest] = SmallPtrSet<BBOrMBB, 4>();
     UnwindDestToSrcs[Dest].insert(BB);
   }
   bool hasUnwindDest(const BasicBlock *BB) const {
@@ -76,8 +74,6 @@ struct WasmEHFuncInfo {
   }
   void setUnwindDest(MachineBasicBlock *MBB, MachineBasicBlock *Dest) {
     SrcToUnwindDest[MBB] = Dest;
-    if (!UnwindDestToSrcs.count(Dest))
-      UnwindDestToSrcs[Dest] = SmallPtrSet<BBOrMBB, 4>();
     UnwindDestToSrcs[Dest].insert(MBB);
   }
   bool hasUnwindDest(MachineBasicBlock *MBB) const {

@@ -682,7 +682,7 @@ struct B : public A {
 
 namespace llvm {
 template <typename T>
-struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<A, T>::value>> {
+struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
   static inline T getEmptyKey() { return {static_cast<int>(~0)}; }
   static inline T getTombstoneKey() { return {static_cast<int>(~0U - 1)}; }
   static unsigned getHashValue(const T &Val) { return Val.value; }

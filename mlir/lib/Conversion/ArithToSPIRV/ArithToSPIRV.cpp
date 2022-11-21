@@ -1031,7 +1031,7 @@ struct ConvertArithToSPIRVPass
     auto target = SPIRVConversionTarget::get(targetAttr);
 
     SPIRVConversionOptions options;
-    options.emulateNon32BitScalarTypes = this->emulateNon32BitScalarTypes;
+    options.emulateLT32BitScalarTypes = this->emulateLT32BitScalarTypes;
     options.enableFastMathMode = this->enableFastMath;
     SPIRVTypeConverter typeConverter(targetAttr, options);
 
@@ -1045,6 +1045,9 @@ struct ConvertArithToSPIRVPass
     typeConverter.addSourceMaterialization(addUnrealizedCast);
     typeConverter.addTargetMaterialization(addUnrealizedCast);
     target->addLegalOp<UnrealizedConversionCastOp>();
+
+    // Fail hard when there are any remaining 'arith' ops.
+    target->addIllegalDialect<arith::ArithDialect>();
 
     RewritePatternSet patterns(&getContext());
     arith::populateArithToSPIRVPatterns(typeConverter, patterns);

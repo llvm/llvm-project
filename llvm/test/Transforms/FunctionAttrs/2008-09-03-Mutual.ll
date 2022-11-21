@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 
 define i32 @a() {
-; CHECK: Function Attrs: nofree nosync nounwind readnone
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@a
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP:%.*]] = call i32 @b()
@@ -13,7 +13,7 @@ define i32 @a() {
 }
 
 define i32 @b() {
-; CHECK: Function Attrs: nofree nosync nounwind readnone
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@b
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP:%.*]] = call i32 @a()

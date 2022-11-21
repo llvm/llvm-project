@@ -279,13 +279,13 @@ TEST_F(PointerUnionTest, NewCastInfra) {
   EXPECT_EQ(dyn_cast<long long *>(constd4), nullptr);
 
   auto *result1 = cast<double *>(constd4);
-  static_assert(std::is_same<double *, decltype(result1)>::value,
+  static_assert(std::is_same_v<double *, decltype(result1)>,
                 "type mismatch for cast with PointerUnion");
 
   PointerUnion<int *, const double *> constd2(&d);
   auto *result2 = cast<const double *>(constd2);
   EXPECT_EQ(result2, &d);
-  static_assert(std::is_same<const double *, decltype(result2)>::value,
+  static_assert(std::is_same_v<const double *, decltype(result2)>,
                 "type mismatch for cast with PointerUnion");
 }
 

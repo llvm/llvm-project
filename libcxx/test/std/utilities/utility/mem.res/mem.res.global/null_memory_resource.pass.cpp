@@ -90,7 +90,6 @@ void test_deallocate() {
   globalMemCounter.reset();
 
   int x = 42;
-  std::pmr::null_memory_resource()->deallocate(nullptr, 0);
   std::pmr::null_memory_resource()->deallocate(&x, 0);
 
   assert(globalMemCounter.checkDeleteCalledEq(0));

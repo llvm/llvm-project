@@ -17,6 +17,7 @@ static_library("Utility") {
     "DataBufferLLVM.cpp",
     "DataEncoder.cpp",
     "DataExtractor.cpp",
+    "Diagnostics.cpp",
     "Environment.cpp",
     "Event.cpp",
     "FileSpec.cpp",

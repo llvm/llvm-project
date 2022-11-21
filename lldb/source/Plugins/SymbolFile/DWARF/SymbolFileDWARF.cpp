@@ -2389,6 +2389,24 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
       ResolveFunction(die, include_inlines, sc_list);
     return true;
   });
+  // With -gsimple-template-names, a templated type's DW_AT_name will not
+  // contain the template parameters. Try again stripping '<' and anything
+  // after, filtering out entries with template parameters that don't match.
+  {
+    const llvm::StringRef name_ref = name.GetStringRef();
+    auto it = name_ref.find('<');
+    if (it != llvm::StringRef::npos) {
+      const llvm::StringRef name_no_template_params = name_ref.slice(0, it);
+
+      Module::LookupInfo no_tp_lookup_info(lookup_info);
+      no_tp_lookup_info.SetLookupName(ConstString(name_no_template_params));
+      m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx, [&](DWARFDIE die) {
+        if (resolved_dies.insert(die.GetDIE()).second)
+          ResolveFunction(die, include_inlines, sc_list);
+        return true;
+      });
+    }
+  }
 
   // Return the number of variable that were appended to the list
   const uint32_t num_matches = sc_list.GetSize() - original_size;

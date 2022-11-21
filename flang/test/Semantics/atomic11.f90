@@ -1,10 +1,9 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! XFAIL: *
 ! This test checks for semantic errors in atomic_xor subroutine calls based on
 ! the interface defined in section 16.9.30 of the Fortran 2018 standard.
 
 program test_atomic_xor
-  use iso_fortran_env, only: atomic_int_kind
+  use iso_fortran_env, only: atomic_int_kind, atomic_logical_kind
   implicit none
 
   integer(kind=atomic_int_kind) :: scalar_coarray[*], non_scalar_coarray(10)[*], val, non_coarray
@@ -13,6 +12,7 @@ program test_atomic_xor
   integer(kind=1) :: kind1_coarray[*]
   real :: non_integer_coarray[*]
   logical :: non_integer
+  logical(atomic_logical_kind) :: atomic_logical[*]
 
   !___ standard-conforming calls ___
   call atomic_xor(scalar_coarray, val)
@@ -27,13 +27,16 @@ program test_atomic_xor
 
   !___ non-standard-conforming calls ___
 
-  !ERROR: 'atom=' argument must be a scalar coarray for intrinsic 'atomic_xor'
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_xor'
   call atomic_xor(non_scalar_coarray, val)
 
-  !ERROR: 'atom=' argument must be a coarray or a coindexed object for intrinsic 'atomic_xor'
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_xor'
+  call atomic_xor(non_scalar_coarray[1], val)
+
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_xor'
   call atomic_xor(non_coarray, val)
 
-  !ERROR: 'atom=' argument must be a coarray or a coindexed object for intrinsic 'atomic_xor'
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_xor'
   call atomic_xor(array, val)
 
   !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind, but is 'INTEGER(4)'
@@ -44,6 +47,9 @@ program test_atomic_xor
 
   !ERROR: Actual argument for 'atom=' has bad type 'REAL(4)'
   call atomic_xor(non_integer_coarray, val)
+
+  !ERROR: Actual argument for 'atom=' has bad type 'LOGICAL(8)'
+  call atomic_xor(atomic_logical, val)
 
   !ERROR: 'value=' argument has unacceptable rank 1
   call atomic_xor(scalar_coarray, array)
@@ -57,9 +63,11 @@ program test_atomic_xor
   !ERROR: 'stat=' argument has unacceptable rank 1
   call atomic_xor(scalar_coarray, val, status_array)
 
+  !ERROR: 'stat' argument to 'atomic_xor' may not be a coindexed object
   call atomic_xor(scalar_coarray, val, coindexed_status[1])
 
-  !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'stat=' must be definable
+  !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'stat=' is not definable
+  !BECAUSE: '1_4' is not a variable or pointer
   call atomic_xor(scalar_coarray, val, 1)
 
   !ERROR: missing mandatory 'atom=' argument

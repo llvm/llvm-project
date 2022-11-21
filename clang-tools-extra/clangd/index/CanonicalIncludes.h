@@ -42,7 +42,7 @@ public:
   /// Returns the overridden include for symbol with \p QualifiedName, or "".
   llvm::StringRef mapSymbol(llvm::StringRef QualifiedName) const;
 
-  /// Returns the overridden include for for files in \p Header, or "".
+  /// Returns the overridden include for files in \p Header, or "".
   llvm::StringRef mapHeader(FileEntryRef Header) const;
 
   /// Adds mapping for system headers and some special symbols (e.g. STL symbols

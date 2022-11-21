@@ -102,6 +102,28 @@ struct Derived : Base<false> { // expected-note {{requested here}}
 };
 } // namespace DontDiagnoseInvalidTest
 
+namespace shadow_nested_operator {
+template <typename T>
+struct A {
+  struct Nested {};
+  operator Nested*() {return 0;};
+};
+
+template <typename T>
+struct B : A<T> {
+  using A<T>::operator typename A<T>::Nested*;
+  operator typename A<T>::Nested *() {
+    struct A<T> * thi = this;
+    return *thi;
+ };
+};
+
+int foo () {
+  struct B<int> b;
+  auto s = *b;
+}
+} // namespace shadow_nested_operator
+
 namespace func_templ {
 namespace sss {
 double foo(int, double);

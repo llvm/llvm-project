@@ -130,10 +130,6 @@ OPTIONS
 
  Print how the provided components can be collectively linked (`shared` or `static`).
 
-**--src-root**
-
- Print the source root from which LLVM was built.
-
 **--system-libs**
 
  Print all the system libraries needed to link against the specified LLVM

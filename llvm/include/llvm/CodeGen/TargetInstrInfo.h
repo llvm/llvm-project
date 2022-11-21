@@ -1148,8 +1148,8 @@ public:
   /// Return true if target supports reassociation of instructions in machine
   /// combiner pass to reduce register pressure for a given BB.
   virtual bool
-  shouldReduceRegisterPressure(MachineBasicBlock *MBB,
-                               RegisterClassInfo *RegClassInfo) const {
+  shouldReduceRegisterPressure(const MachineBasicBlock *MBB,
+                               const RegisterClassInfo *RegClassInfo) const {
     return false;
   }
 

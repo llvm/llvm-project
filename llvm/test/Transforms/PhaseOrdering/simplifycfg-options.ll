@@ -15,7 +15,7 @@ define i1 @PR33605(i32 %a, i32 %b, i32* %c) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    store i32 [[OR]], i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    tail call void @foo()
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[CMP]], true
@@ -24,7 +24,7 @@ define i1 @PR33605(i32 %a, i32 %b, i32* %c) {
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[IF_END_1:%.*]], label [[IF_THEN_1:%.*]]
 ; CHECK:       if.then.1:
 ; CHECK-NEXT:    store i32 [[OR]], i32* [[C]], align 4
-; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    tail call void @foo()
 ; CHECK-NEXT:    br label [[IF_END_1]]
 ; CHECK:       if.end.1:
 ; CHECK-NEXT:    [[CHANGED_1_OFF0_1:%.*]] = phi i1 [ true, [[IF_THEN_1]] ], [ [[TMP1]], [[IF_END]] ]
@@ -100,5 +100,26 @@ else:
 end:
   %max = phi double [ %xi_again,  %if ], [ %yi_again, %else ]
   ret double %max
+}
+
+define i1 @PR58313(i1 %lhs, i1 %rhs) {
+; CHECK-LABEL: @PR58313(
+; CHECK-NEXT:  andandend:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = xor i1 [[LHS:%.*]], [[RHS:%.*]]
+; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
+;
+andandend:
+  %0 = xor i1 %rhs, true
+  %andandval = select i1 %lhs, i1 %0, i1 false
+  br i1 %andandval, label %ororend, label %oror
+
+oror:
+  %1 = xor i1 %lhs, true
+  %andandval3 = select i1 %1, i1 %rhs, i1 false
+  br label %ororend
+
+ororend:
+  %ororval = phi i1 [ true, %andandend ], [ %andandval3, %oror ]
+  ret i1 %ororval
 }
 

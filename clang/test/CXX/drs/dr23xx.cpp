@@ -89,6 +89,16 @@ namespace dr2353 { // dr2353: 9
 #pragma clang __debug dump not_use_2
 }
 
+#if __cplusplus >= 201402L
+namespace dr2358 { // dr2358: 16
+  void f2() {
+    int i = 1;
+    void g1(int = [xxx=1] { return xxx; }());  // OK
+    void g2(int = [xxx=i] { return xxx; }());  // expected-error {{default argument references local variable 'i' of enclosing function}}
+  }
+}
+#endif
+
 #if __cplusplus >= 201707L
 // Otherwise, if the qualified-id std::tuple_size<E> names a complete class
 // type **with a member value**, the expression std::tuple_size<E>::value shall

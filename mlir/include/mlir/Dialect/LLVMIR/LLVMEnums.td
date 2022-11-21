@@ -225,6 +225,100 @@ def LLVM_DIEmissionKind : I64EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// DIFlags
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIFlagZero : I32BitEnumAttrCaseNone<"Zero">;
+
+// The first two bits are used for a visibility enum.
+//   * Private = 1
+//   * Protected = 2
+//   * Public = 3
+def LLVM_DIFlagVisibilityBit0 : I32BitEnumAttrCaseBit<"Bit0", 0>;
+def LLVM_DIFlagVisibilityBit1 : I32BitEnumAttrCaseBit<"Bit1", 1>;
+def LLVM_DIFlagPrivate : I32BitEnumAttrCaseGroup<"Private",
+  [LLVM_DIFlagVisibilityBit0]
+>;
+def LLVM_DIFlagProtected : I32BitEnumAttrCaseGroup<"Protected",
+  [LLVM_DIFlagVisibilityBit1]
+>;
+def LLVM_DIFlagPublic : I32BitEnumAttrCaseGroup<"Public",
+  [LLVM_DIFlagVisibilityBit0, LLVM_DIFlagVisibilityBit1]
+>;
+
+// The remaining bits are used for the various flags.
+def LLVM_DIFlagFwdDecl             : I32BitEnumAttrCaseBit<"FwdDecl", 2>;
+def LLVM_DIFlagAppleBlock          : I32BitEnumAttrCaseBit<"AppleBlock", 3>;
+def LLVM_DIFlagReservedBit4        : I32BitEnumAttrCaseBit<"ReservedBit4", 4>;
+def LLVM_DIFlagVirtual             : I32BitEnumAttrCaseBit<"Virtual", 5>;
+def LLVM_DIFlagArtificial          : I32BitEnumAttrCaseBit<"Artificial", 6>;
+def LLVM_DIFlagExplicit            : I32BitEnumAttrCaseBit<"Explicit", 7>;
+def LLVM_DIFlagPrototyped          : I32BitEnumAttrCaseBit<"Prototyped", 8>;
+def LLVM_DIFlagObjcClassComplete   : I32BitEnumAttrCaseBit<"ObjcClassComplete", 9>;
+def LLVM_DIFlagObjectPointer       : I32BitEnumAttrCaseBit<"ObjectPointer", 10>;
+def LLVM_DIFlagVector              : I32BitEnumAttrCaseBit<"Vector", 11>;
+def LLVM_DIFlagStaticMember        : I32BitEnumAttrCaseBit<"StaticMember", 12>;
+def LLVM_DIFlagLValueReference     : I32BitEnumAttrCaseBit<"LValueReference", 13>;
+def LLVM_DIFlagRValueReference     : I32BitEnumAttrCaseBit<"RValueReference", 14>;
+def LLVM_DIFlagExportSymbols       : I32BitEnumAttrCaseBit<"ExportSymbols", 15>;
+def LLVM_DIFlagSingleInheritance   : I32BitEnumAttrCaseBit<"SingleInheritance", 16>;
+def LLVM_DIFlagMultipleInheritance : I32BitEnumAttrCaseBit<"MultipleInheritance", 16>;
+def LLVM_DIFlagVirtualInheritance  : I32BitEnumAttrCaseBit<"VirtualInheritance", 16>;
+def LLVM_DIFlagIntroducedVirtual   : I32BitEnumAttrCaseBit<"IntroducedVirtual", 18>;
+def LLVM_DIFlagBitField            : I32BitEnumAttrCaseBit<"BitField", 19>;
+def LLVM_DIFlagNoReturn            : I32BitEnumAttrCaseBit<"NoReturn", 20>;
+def LLVM_DIFlagTypePassByValue     : I32BitEnumAttrCaseBit<"TypePassByValue", 22>;
+def LLVM_DIFlagTypePassByReference : I32BitEnumAttrCaseBit<"TypePassByReference", 23>;
+def LLVM_DIFlagEnumClass           : I32BitEnumAttrCaseBit<"EnumClass", 24>;
+def LLVM_DIFlagThunk               : I32BitEnumAttrCaseBit<"Thunk", 25>;
+def LLVM_DIFlagNonTrivial          : I32BitEnumAttrCaseBit<"NonTrivial", 26>;
+def LLVM_DIFlagBigEndian           : I32BitEnumAttrCaseBit<"BigEndian", 27>;
+def LLVM_DIFlagLittleEndian        : I32BitEnumAttrCaseBit<"LittleEndian", 28>;
+def LLVM_DIFlagAllCallsDescribed   : I32BitEnumAttrCaseBit<"AllCallsDescribed", 29>;
+
+def DIFlags : I32BitEnumAttr<
+    "DIFlags",
+    "LLVM DI flags", [
+      LLVM_DIFlagZero,
+      LLVM_DIFlagVisibilityBit0,
+      LLVM_DIFlagVisibilityBit1,
+      LLVM_DIFlagPrivate,
+      LLVM_DIFlagProtected,
+      LLVM_DIFlagPublic,
+      LLVM_DIFlagFwdDecl,
+      LLVM_DIFlagAppleBlock,
+      LLVM_DIFlagReservedBit4,
+      LLVM_DIFlagVirtual,
+      LLVM_DIFlagArtificial,
+      LLVM_DIFlagExplicit,
+      LLVM_DIFlagPrototyped,
+      LLVM_DIFlagObjcClassComplete,
+      LLVM_DIFlagObjectPointer,
+      LLVM_DIFlagVector,
+      LLVM_DIFlagStaticMember,
+      LLVM_DIFlagLValueReference,
+      LLVM_DIFlagRValueReference,
+      LLVM_DIFlagExportSymbols,
+      LLVM_DIFlagSingleInheritance,
+      LLVM_DIFlagMultipleInheritance,
+      LLVM_DIFlagVirtualInheritance,
+      LLVM_DIFlagIntroducedVirtual,
+      LLVM_DIFlagBitField,
+      LLVM_DIFlagNoReturn,
+      LLVM_DIFlagTypePassByValue,
+      LLVM_DIFlagTypePassByReference,
+      LLVM_DIFlagEnumClass,
+      LLVM_DIFlagThunk,
+      LLVM_DIFlagNonTrivial,
+      LLVM_DIFlagBigEndian,
+      LLVM_DIFlagLittleEndian,
+      LLVM_DIFlagAllCallsDescribed
+    ]> {
+  let cppNamespace = "::mlir::LLVM";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // DISubprogramFlags
 //===----------------------------------------------------------------------===//
 

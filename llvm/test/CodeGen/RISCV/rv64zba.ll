@@ -1408,6 +1408,33 @@ define signext i16 @srliw_1_sh1add(i16* %0, i32 signext %1) {
   ret i16 %6
 }
 
+define i128 @slliuw_ptrdiff(i64 %diff, i128* %baseptr) {
+; RV64I-LABEL: slliuw_ptrdiff:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a2, 1
+; RV64I-NEXT:    slli a2, a2, 36
+; RV64I-NEXT:    addi a2, a2, -16
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    add a1, a1, a0
+; RV64I-NEXT:    ld a0, 0(a1)
+; RV64I-NEXT:    ld a1, 8(a1)
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: slliuw_ptrdiff:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    srli a0, a0, 4
+; RV64ZBA-NEXT:    slli.uw a0, a0, 4
+; RV64ZBA-NEXT:    add a1, a1, a0
+; RV64ZBA-NEXT:    ld a0, 0(a1)
+; RV64ZBA-NEXT:    ld a1, 8(a1)
+; RV64ZBA-NEXT:    ret
+  %ptrdiff = lshr exact i64 %diff, 4
+  %cast = and i64 %ptrdiff, 4294967295
+  %ptr = getelementptr inbounds i128, i128* %baseptr, i64 %cast
+  %res = load i128, i128* %ptr
+  ret i128 %res
+}
+
 define signext i32 @srliw_2_sh2add(i32* %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_2_sh2add:
 ; RV64I:       # %bb.0:

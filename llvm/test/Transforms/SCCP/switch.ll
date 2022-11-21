@@ -73,12 +73,12 @@ end:
   ret i32 %phi
 }
 
-define i32 @test_duplicate_successors_phi_3(i1 %c1, i32* %p, i32 %y) {
+define i32 @test_duplicate_successors_phi_3(i1 %c1, ptr %p, i32 %y) {
 ; CHECK-LABEL: @test_duplicate_successors_phi_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[SWITCH:%.*]], label [[SWITCH_1:%.*]]
 ; CHECK:       switch:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range !0
 ; CHECK-NEXT:    switch i32 [[X]], label [[SWITCH_DEFAULT:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[SWITCH_DEFAULT]]
 ; CHECK-NEXT:    i32 1, label [[SWITCH_0:%.*]]
@@ -95,7 +95,7 @@ entry:
   br i1 %c1, label %switch, label %switch.1
 
 switch:
-  %x = load i32, i32* %p, !range !{i32 0, i32 3}
+  %x = load i32, ptr %p, !range !{i32 0, i32 3}
   switch i32 %x, label %switch.default [
   i32 0, label %switch.default
   i32 1, label %switch.0
@@ -116,9 +116,9 @@ switch.1:
 }
 
 ; TODO: Determine that the default destination is dead.
-define i32 @test_local_range(i32* %p) {
+define i32 @test_local_range(ptr %p) {
 ; CHECK-LABEL: @test_local_range(
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range !0
 ; CHECK-NEXT:    switch i32 [[X]], label [[SWITCH_DEFAULT:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[SWITCH_0:%.*]]
 ; CHECK-NEXT:    i32 1, label [[SWITCH_1:%.*]]
@@ -133,7 +133,7 @@ define i32 @test_local_range(i32* %p) {
 ; CHECK:       switch.2:
 ; CHECK-NEXT:    ret i32 2
 ;
-  %x = load i32, i32* %p, !range !{i32 0, i32 3}
+  %x = load i32, ptr %p, !range !{i32 0, i32 3}
   switch i32 %x, label %switch.default [
   i32 0, label %switch.0
   i32 1, label %switch.1
@@ -158,9 +158,9 @@ switch.3:
 }
 
 ; TODO: Determine that case i3 is dead, even though the edge is shared?
-define i32 @test_duplicate_successors(i32* %p) {
+define i32 @test_duplicate_successors(ptr %p) {
 ; CHECK-LABEL: @test_duplicate_successors(
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range !0
 ; CHECK-NEXT:    switch i32 [[X]], label [[SWITCH_DEFAULT:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[SWITCH_0:%.*]]
 ; CHECK-NEXT:    i32 1, label [[SWITCH_0]]
@@ -174,7 +174,7 @@ define i32 @test_duplicate_successors(i32* %p) {
 ; CHECK:       switch.1:
 ; CHECK-NEXT:    ret i32 1
 ;
-  %x = load i32, i32* %p, !range !{i32 0, i32 3}
+  %x = load i32, ptr %p, !range !{i32 0, i32 3}
   switch i32 %x, label %switch.default [
   i32 0, label %switch.0
   i32 1, label %switch.0

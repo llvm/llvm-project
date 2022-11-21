@@ -51,10 +51,6 @@ public:
 
 } // namespace
 
-//===----------------------------------------------------------------------===//
-// async.execute op outlining to the coroutine functions.
-//===----------------------------------------------------------------------===//
-
 /// Function targeted for coroutine transformation has two additional blocks at
 /// the end: coroutine cleanup and coroutine suspension.
 ///
@@ -64,6 +60,12 @@ namespace {
 struct CoroMachinery {
   func::FuncOp func;
 
+  // Async function returns an optional token, followed by some async values
+  //
+  //  async.func @foo() -> !async.value<T> {
+  //    %cst = arith.constant 42.0 : T
+  //    return %cst: T
+  //  }
   // Async execute region returns a completion token, and an async value for
   // each yielded value.
   //
@@ -71,12 +73,12 @@ struct CoroMachinery {
   //     %0 = arith.constant ... : T
   //     async.yield %0 : T
   //   }
-  Value asyncToken; // token representing completion of the async region
+  Optional<Value> asyncToken;               // returned completion token
   llvm::SmallVector<Value, 4> returnValues; // returned async values
 
   Value coroHandle; // coroutine handle (!async.coro.getHandle value)
   Block *entry;     // coroutine entry block
-  Block *setError;  // switch completion token and all values to error state
+  Optional<Block *> setError; // set returned values to error state
   Block *cleanup;   // coroutine cleanup block
   Block *suspend;   // coroutine suspension block
 };
@@ -87,12 +89,8 @@ struct CoroMachinery {
 /// `async.runtime.*` and `async.coro.*` operations. Adds a new entry block
 /// that branches into preexisting entry block. Also inserts trailing blocks.
 ///
-/// The result types of the passed `func` must start with an `async.token`
+/// The result types of the passed `func` start with an optional `async.token`
 /// and be continued with some number of `async.value`s.
-///
-/// The func given to this function needs to have been preprocessed to have
-/// either branch or yield ops as terminators. Branches to the cleanup block are
-/// inserted after each yield.
 ///
 /// See LLVM coroutines documentation: https://llvm.org/docs/Coroutines.html
 ///
@@ -110,7 +108,7 @@ struct CoroMachinery {
 ///     ^entry(<function-arguments>):
 ///       %token = <async token> : !async.token    // create async runtime token
 ///       %value = <async value> : !async.value<T> // create async value
-///       %id = async.coro.getId                      // create a coroutine id
+///       %id = async.coro.getId                   // create a coroutine id
 ///       %hdl = async.coro.begin %id              // create a coroutine handle
 ///       cf.br ^preexisting_entry_block
 ///
@@ -142,11 +140,20 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   // ------------------------------------------------------------------------ //
   // Allocate async token/values that we will return from a ramp function.
   // ------------------------------------------------------------------------ //
-  auto retToken =
-      builder.create<RuntimeCreateOp>(TokenType::get(ctx)).getResult();
+
+  // We treat TokenType as state update marker to represent side-effects of
+  // async computations
+  bool isStateful = func.getCallableResults().front().isa<TokenType>();
+
+  Optional<Value> retToken;
+  if (isStateful)
+    retToken.emplace(builder.create<RuntimeCreateOp>(TokenType::get(ctx)));
 
   llvm::SmallVector<Value, 4> retValues;
-  for (auto resType : func.getCallableResults().drop_front())
+  ArrayRef<Type> resValueTypes = isStateful
+                                     ? func.getCallableResults().drop_front()
+                                     : func.getCallableResults();
+  for (auto resType : resValueTypes)
     retValues.emplace_back(
         builder.create<RuntimeCreateOp>(resType).getResult());
 
@@ -179,25 +186,16 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   // Mark the end of a coroutine: async.coro.end
   builder.create<CoroEndOp>(coroHdlOp.getHandle());
 
-  // Return created `async.token` and `async.values` from the suspend block.
-  // This will be the return value of a coroutine ramp function.
-  SmallVector<Value, 4> ret{retToken};
+  // Return created optional `async.token` and `async.values` from the suspend
+  // block. This will be the return value of a coroutine ramp function.
+  SmallVector<Value, 4> ret;
+  if (retToken)
+    ret.push_back(*retToken);
   ret.insert(ret.end(), retValues.begin(), retValues.end());
   builder.create<func::ReturnOp>(ret);
 
   // `async.await` op lowering will create resume blocks for async
   // continuations, and will conditionally branch to cleanup or suspend blocks.
-
-  for (Block &block : func.getBody().getBlocks()) {
-    if (&block == entryBlock || &block == cleanupBlock ||
-        &block == suspendBlock)
-      continue;
-    Operation *terminator = block.getTerminator();
-    if (auto yield = dyn_cast<YieldOp>(terminator)) {
-      builder.setInsertionPointToEnd(&block);
-      builder.create<cf::BranchOp>(cleanupBlock);
-    }
-  }
 
   // The switch-resumed API based coroutine should be marked with
   // coroutine.presplit attribute to mark the function as a coroutine.
@@ -210,7 +208,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   machinery.returnValues = retValues;
   machinery.coroHandle = coroHdlOp.getHandle();
   machinery.entry = entryBlock;
-  machinery.setError = nullptr; // created lazily only if needed
+  machinery.setError = None; // created lazily only if needed
   machinery.cleanup = cleanupBlock;
   machinery.suspend = suspendBlock;
   return machinery;
@@ -220,24 +218,30 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
 // runtime operations (see for example lowering of assert operation).
 static Block *setupSetErrorBlock(CoroMachinery &coro) {
   if (coro.setError)
-    return coro.setError;
+    return *coro.setError;
 
   coro.setError = coro.func.addBlock();
-  coro.setError->moveBefore(coro.cleanup);
+  (*coro.setError)->moveBefore(coro.cleanup);
 
   auto builder =
-      ImplicitLocOpBuilder::atBlockBegin(coro.func->getLoc(), coro.setError);
+      ImplicitLocOpBuilder::atBlockBegin(coro.func->getLoc(), *coro.setError);
 
   // Coroutine set_error block: set error on token and all returned values.
-  builder.create<RuntimeSetErrorOp>(coro.asyncToken);
+  if (coro.asyncToken)
+    builder.create<RuntimeSetErrorOp>(*coro.asyncToken);
+
   for (Value retValue : coro.returnValues)
     builder.create<RuntimeSetErrorOp>(retValue);
 
   // Branch into the cleanup block.
   builder.create<cf::BranchOp>(coro.cleanup);
 
-  return coro.setError;
+  return *coro.setError;
 }
+
+//===----------------------------------------------------------------------===//
+// async.execute op outlining to the coroutine functions.
+//===----------------------------------------------------------------------===//
 
 /// Outline the body region attached to the `async.execute` op into a standalone
 /// function.
@@ -383,6 +387,118 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// Convert async.func, async.return and async.call operations to non-blocking
+// operations based on llvm coroutine
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+//===----------------------------------------------------------------------===//
+// Convert async.func operation to func.func
+//===----------------------------------------------------------------------===//
+
+class AsyncFuncOpLowering : public OpConversionPattern<async::FuncOp> {
+public:
+  AsyncFuncOpLowering(MLIRContext *ctx,
+                      llvm::DenseMap<func::FuncOp, CoroMachinery> &coros)
+      : OpConversionPattern<async::FuncOp>(ctx), coros(coros) {}
+
+  LogicalResult
+  matchAndRewrite(async::FuncOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+
+    auto newFuncOp =
+        rewriter.create<func::FuncOp>(loc, op.getName(), op.getFunctionType());
+
+    SymbolTable::setSymbolVisibility(newFuncOp,
+                                     SymbolTable::getSymbolVisibility(op));
+    // Copy over all attributes other than the name.
+    for (const auto &namedAttr : op->getAttrs()) {
+      if (namedAttr.getName() != SymbolTable::getSymbolAttrName())
+        newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
+    }
+
+    rewriter.inlineRegionBefore(op.getBody(), newFuncOp.getBody(),
+                                newFuncOp.end());
+
+    CoroMachinery coro = setupCoroMachinery(newFuncOp);
+    coros[newFuncOp] = coro;
+    // no initial suspend, we should hot-start
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+
+private:
+  llvm::DenseMap<func::FuncOp, CoroMachinery> &coros;
+};
+
+//===----------------------------------------------------------------------===//
+// Convert async.call operation to func.call
+//===----------------------------------------------------------------------===//
+
+class AsyncCallOpLowering : public OpConversionPattern<async::CallOp> {
+public:
+  AsyncCallOpLowering(MLIRContext *ctx)
+      : OpConversionPattern<async::CallOp>(ctx) {}
+
+  LogicalResult
+  matchAndRewrite(async::CallOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<func::CallOp>(
+        op, op.getCallee(), op.getResultTypes(), op.getOperands());
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// Convert async.return operation to async.runtime operations.
+//===----------------------------------------------------------------------===//
+
+class AsyncReturnOpLowering : public OpConversionPattern<async::ReturnOp> {
+public:
+  AsyncReturnOpLowering(MLIRContext *ctx,
+                        llvm::DenseMap<func::FuncOp, CoroMachinery> &coros)
+      : OpConversionPattern<async::ReturnOp>(ctx), coros(coros) {}
+
+  LogicalResult
+  matchAndRewrite(async::ReturnOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto func = op->template getParentOfType<func::FuncOp>();
+    auto funcCoro = coros.find(func);
+    if (funcCoro == coros.end())
+      return rewriter.notifyMatchFailure(
+          op, "operation is not inside the async coroutine function");
+
+    Location loc = op->getLoc();
+    const CoroMachinery &coro = funcCoro->getSecond();
+    rewriter.setInsertionPointAfter(op);
+
+    // Store return values into the async values storage and switch async
+    // values state to available.
+    for (auto tuple : llvm::zip(adaptor.getOperands(), coro.returnValues)) {
+      Value returnValue = std::get<0>(tuple);
+      Value asyncValue = std::get<1>(tuple);
+      rewriter.create<RuntimeStoreOp>(loc, returnValue, asyncValue);
+      rewriter.create<RuntimeSetAvailableOp>(loc, asyncValue);
+    }
+
+    if (coro.asyncToken)
+      // Switch the coroutine completion token to available state.
+      rewriter.create<RuntimeSetAvailableOp>(loc, *coro.asyncToken);
+
+    rewriter.eraseOp(op);
+    rewriter.create<cf::BranchOp>(loc, coro.cleanup);
+    return success();
+  }
+
+private:
+  llvm::DenseMap<func::FuncOp, CoroMachinery> &coros;
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // Convert async.await and async.await_all operations to the async.runtime.await
 // or async.runtime.await_and_resume operations.
 //===----------------------------------------------------------------------===//
@@ -393,11 +509,9 @@ class AwaitOpLoweringBase : public OpConversionPattern<AwaitType> {
   using AwaitAdaptor = typename AwaitType::Adaptor;
 
 public:
-  AwaitOpLoweringBase(
-      MLIRContext *ctx,
-      llvm::DenseMap<func::FuncOp, CoroMachinery> &outlinedFunctions)
-      : OpConversionPattern<AwaitType>(ctx),
-        outlinedFunctions(outlinedFunctions) {}
+  AwaitOpLoweringBase(MLIRContext *ctx,
+                      llvm::DenseMap<func::FuncOp, CoroMachinery> &coros)
+      : OpConversionPattern<AwaitType>(ctx), coros(coros) {}
 
   LogicalResult
   matchAndRewrite(AwaitType op, typename AwaitType::Adaptor adaptor,
@@ -409,8 +523,8 @@ public:
 
     // Check if await operation is inside the outlined coroutine function.
     auto func = op->template getParentOfType<func::FuncOp>();
-    auto outlined = outlinedFunctions.find(func);
-    const bool isInCoroutine = outlined != outlinedFunctions.end();
+    auto funcCoro = coros.find(func);
+    const bool isInCoroutine = funcCoro != coros.end();
 
     Location loc = op->getLoc();
     Value operand = adaptor.getOperand();
@@ -436,7 +550,7 @@ public:
     // Inside the coroutine we convert await operation into coroutine suspension
     // point, and resume execution asynchronously.
     if (isInCoroutine) {
-      CoroMachinery &coro = outlined->getSecond();
+      CoroMachinery &coro = funcCoro->getSecond();
       Block *suspended = op->getBlock();
 
       ImplicitLocOpBuilder builder(loc, op, rewriter.getListener());
@@ -488,7 +602,7 @@ public:
   }
 
 private:
-  llvm::DenseMap<func::FuncOp, CoroMachinery> &outlinedFunctions;
+  llvm::DenseMap<func::FuncOp, CoroMachinery> &coros;
 };
 
 /// Lowering for `async.await` with a token operand.
@@ -531,24 +645,22 @@ public:
 
 class YieldOpLowering : public OpConversionPattern<async::YieldOp> {
 public:
-  YieldOpLowering(
-      MLIRContext *ctx,
-      const llvm::DenseMap<func::FuncOp, CoroMachinery> &outlinedFunctions)
-      : OpConversionPattern<async::YieldOp>(ctx),
-        outlinedFunctions(outlinedFunctions) {}
+  YieldOpLowering(MLIRContext *ctx,
+                  const llvm::DenseMap<func::FuncOp, CoroMachinery> &coros)
+      : OpConversionPattern<async::YieldOp>(ctx), coros(coros) {}
 
   LogicalResult
   matchAndRewrite(async::YieldOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Check if yield operation is inside the async coroutine function.
     auto func = op->template getParentOfType<func::FuncOp>();
-    auto outlined = outlinedFunctions.find(func);
-    if (outlined == outlinedFunctions.end())
+    auto funcCoro = coros.find(func);
+    if (funcCoro == coros.end())
       return rewriter.notifyMatchFailure(
           op, "operation is not inside the async coroutine function");
 
     Location loc = op->getLoc();
-    const CoroMachinery &coro = outlined->getSecond();
+    const CoroMachinery &coro = funcCoro->getSecond();
 
     // Store yielded values into the async values storage and switch async
     // values state to available.
@@ -559,14 +671,18 @@ public:
       rewriter.create<RuntimeSetAvailableOp>(loc, asyncValue);
     }
 
-    // Switch the coroutine completion token to available state.
-    rewriter.replaceOpWithNewOp<RuntimeSetAvailableOp>(op, coro.asyncToken);
+    if (coro.asyncToken)
+      // Switch the coroutine completion token to available state.
+      rewriter.create<RuntimeSetAvailableOp>(loc, *coro.asyncToken);
+
+    rewriter.eraseOp(op);
+    rewriter.create<cf::BranchOp>(loc, coro.cleanup);
 
     return success();
   }
 
 private:
-  const llvm::DenseMap<func::FuncOp, CoroMachinery> &outlinedFunctions;
+  const llvm::DenseMap<func::FuncOp, CoroMachinery> &coros;
 };
 
 //===----------------------------------------------------------------------===//
@@ -575,24 +691,22 @@ private:
 
 class AssertOpLowering : public OpConversionPattern<cf::AssertOp> {
 public:
-  AssertOpLowering(
-      MLIRContext *ctx,
-      llvm::DenseMap<func::FuncOp, CoroMachinery> &outlinedFunctions)
-      : OpConversionPattern<cf::AssertOp>(ctx),
-        outlinedFunctions(outlinedFunctions) {}
+  AssertOpLowering(MLIRContext *ctx,
+                   llvm::DenseMap<func::FuncOp, CoroMachinery> &coros)
+      : OpConversionPattern<cf::AssertOp>(ctx), coros(coros) {}
 
   LogicalResult
   matchAndRewrite(cf::AssertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Check if assert operation is inside the async coroutine function.
     auto func = op->template getParentOfType<func::FuncOp>();
-    auto outlined = outlinedFunctions.find(func);
-    if (outlined == outlinedFunctions.end())
+    auto funcCoro = coros.find(func);
+    if (funcCoro == coros.end())
       return rewriter.notifyMatchFailure(
           op, "operation is not inside the async coroutine function");
 
     Location loc = op->getLoc();
-    CoroMachinery &coro = outlined->getSecond();
+    CoroMachinery &coro = funcCoro->getSecond();
 
     Block *cont = rewriter.splitBlock(op->getBlock(), Block::iterator(op));
     rewriter.setInsertionPointToEnd(cont->getPrevNode());
@@ -607,168 +721,32 @@ public:
   }
 
 private:
-  llvm::DenseMap<func::FuncOp, CoroMachinery> &outlinedFunctions;
+  llvm::DenseMap<func::FuncOp, CoroMachinery> &coros;
 };
-
-//===----------------------------------------------------------------------===//
-
-/// Rewrite a func as a coroutine by:
-/// 1) Wrapping the results into `async.value`.
-/// 2) Prepending the results with `async.token`.
-/// 3) Setting up coroutine blocks.
-/// 4) Rewriting return ops as yield op and branch op into the suspend block.
-static CoroMachinery rewriteFuncAsCoroutine(func::FuncOp func) {
-  auto *ctx = func->getContext();
-  auto loc = func.getLoc();
-  SmallVector<Type> resultTypes;
-  resultTypes.reserve(func.getCallableResults().size());
-  llvm::transform(func.getCallableResults(), std::back_inserter(resultTypes),
-                  [](Type type) { return ValueType::get(type); });
-  func.setType(
-      FunctionType::get(ctx, func.getFunctionType().getInputs(), resultTypes));
-  func.insertResult(0, TokenType::get(ctx), {});
-  for (Block &block : func.getBlocks()) {
-    Operation *terminator = block.getTerminator();
-    if (auto returnOp = dyn_cast<func::ReturnOp>(*terminator)) {
-      ImplicitLocOpBuilder builder(loc, returnOp);
-      builder.create<YieldOp>(returnOp.getOperands());
-      returnOp.erase();
-    }
-  }
-  return setupCoroMachinery(func);
-}
-
-/// Rewrites a call into a function that has been rewritten as a coroutine.
-///
-/// The invocation of this function is safe only when call ops are traversed in
-/// reverse order of how they appear in a single block. See `funcsToCoroutines`.
-static void rewriteCallsiteForCoroutine(func::CallOp oldCall,
-                                        func::FuncOp func) {
-  auto loc = func.getLoc();
-  ImplicitLocOpBuilder callBuilder(loc, oldCall);
-  auto newCall = callBuilder.create<func::CallOp>(
-      func.getName(), func.getCallableResults(), oldCall.getArgOperands());
-
-  // Await on the async token and all the value results and unwrap the latter.
-  callBuilder.create<AwaitOp>(loc, newCall.getResults().front());
-  SmallVector<Value> unwrappedResults;
-  unwrappedResults.reserve(newCall->getResults().size() - 1);
-  for (Value result : newCall.getResults().drop_front())
-    unwrappedResults.push_back(
-        callBuilder.create<AwaitOp>(loc, result).getResult());
-  // Careful, when result of a call is piped into another call this could lead
-  // to a dangling pointer.
-  oldCall.replaceAllUsesWith(unwrappedResults);
-  oldCall.erase();
-}
-
-static bool isAllowedToBlock(func::FuncOp func) {
-  return !!func->getAttrOfType<UnitAttr>(AsyncDialect::kAllowedToBlockAttrName);
-}
-
-static LogicalResult funcsToCoroutines(
-    ModuleOp module,
-    llvm::DenseMap<func::FuncOp, CoroMachinery> &outlinedFunctions) {
-  // The following code supports the general case when 2 functions mutually
-  // recurse into each other. Because of this and that we are relying on
-  // SymbolUserMap to find pointers to calling FuncOps, we cannot simply erase
-  // a FuncOp while inserting an equivalent coroutine, because that could lead
-  // to dangling pointers.
-
-  SmallVector<func::FuncOp> funcWorklist;
-
-  // Careful, it's okay to add a func to the worklist multiple times if and only
-  // if the loop processing the worklist will skip the functions that have
-  // already been converted to coroutines.
-  auto addToWorklist = [&](func::FuncOp func) {
-    if (isAllowedToBlock(func))
-      return;
-    // N.B. To refactor this code into a separate pass the lookup in
-    // outlinedFunctions is the most obvious obstacle. Looking at an arbitrary
-    // func and recognizing if it has a coroutine structure is messy. Passing
-    // this dict between the passes is ugly.
-    if (isAllowedToBlock(func) ||
-        outlinedFunctions.find(func) == outlinedFunctions.end()) {
-      for (Operation &op : func.getBody().getOps()) {
-        if (isa<AwaitOp, AwaitAllOp>(op)) {
-          funcWorklist.push_back(func);
-          break;
-        }
-      }
-    }
-  };
-
-  // Traverse in post-order collecting for each func op the await ops it has.
-  for (func::FuncOp func : module.getOps<func::FuncOp>())
-    addToWorklist(func);
-
-  SymbolTableCollection symbolTable;
-  SymbolUserMap symbolUserMap(symbolTable, module);
-
-  // Rewrite funcs, while updating call sites and adding them to the worklist.
-  while (!funcWorklist.empty()) {
-    auto func = funcWorklist.pop_back_val();
-    auto insertion = outlinedFunctions.insert({func, CoroMachinery{}});
-    if (!insertion.second)
-      // This function has already been processed because this is either
-      // the corecursive case, or a caller with multiple calls to a newly
-      // created corouting. Either way, skip updating the call sites.
-      continue;
-    insertion.first->second = rewriteFuncAsCoroutine(func);
-    SmallVector<Operation *> users(symbolUserMap.getUsers(func).begin(),
-                                   symbolUserMap.getUsers(func).end());
-    // If there are multiple calls from the same block they need to be traversed
-    // in reverse order so that symbolUserMap references are not invalidated
-    // when updating the users of the call op which is earlier in the block.
-    llvm::sort(users, [](Operation *a, Operation *b) {
-      Block *blockA = a->getBlock();
-      Block *blockB = b->getBlock();
-      // Impose arbitrary order on blocks so that there is a well-defined order.
-      return blockA > blockB || (blockA == blockB && !a->isBeforeInBlock(b));
-    });
-    // Rewrite the callsites to await on results of the newly created coroutine.
-    for (Operation *op : users) {
-      if (func::CallOp call = dyn_cast<func::CallOp>(*op)) {
-        func::FuncOp caller = call->getParentOfType<func::FuncOp>();
-        rewriteCallsiteForCoroutine(call, func); // Careful, erases the call op.
-        addToWorklist(caller);
-      } else {
-        op->emitError("Unexpected reference to func referenced by symbol");
-        return failure();
-      }
-    }
-  }
-  return success();
-}
 
 //===----------------------------------------------------------------------===//
 void AsyncToAsyncRuntimePass::runOnOperation() {
   ModuleOp module = getOperation();
   SymbolTable symbolTable(module);
 
-  // Outline all `async.execute` body regions into async functions (coroutines).
-  llvm::DenseMap<func::FuncOp, CoroMachinery> outlinedFunctions;
+  // Functions with coroutine CFG setups, which are results of outlining
+  // `async.execute` body regions and converting async.func.
+  llvm::DenseMap<func::FuncOp, CoroMachinery> coros;
 
   module.walk([&](ExecuteOp execute) {
-    outlinedFunctions.insert(outlineExecuteOp(symbolTable, execute));
+    coros.insert(outlineExecuteOp(symbolTable, execute));
   });
 
   LLVM_DEBUG({
-    llvm::dbgs() << "Outlined " << outlinedFunctions.size()
+    llvm::dbgs() << "Outlined " << coros.size()
                  << " functions built from async.execute operations\n";
   });
 
   // Returns true if operation is inside the coroutine.
   auto isInCoroutine = [&](Operation *op) -> bool {
     auto parentFunc = op->getParentOfType<func::FuncOp>();
-    return outlinedFunctions.find(parentFunc) != outlinedFunctions.end();
+    return coros.find(parentFunc) != coros.end();
   };
-
-  if (eliminateBlockingAwaitOps &&
-      failed(funcsToCoroutines(module, outlinedFunctions))) {
-    signalPassFailure();
-    return;
-  }
 
   // Lower async operations to async.runtime operations.
   MLIRContext *ctx = module->getContext();
@@ -783,18 +761,23 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   // Async lowering does not use type converter because it must preserve all
   // types for async.runtime operations.
   asyncPatterns.add<CreateGroupOpLowering, AddToGroupOpLowering>(ctx);
+
+  // Lower async.func to func.func with coroutine cfg.
+  asyncPatterns.add<AsyncCallOpLowering>(ctx);
+  asyncPatterns.add<AsyncFuncOpLowering, AsyncReturnOpLowering>(ctx, coros);
+
   asyncPatterns.add<AwaitTokenOpLowering, AwaitValueOpLowering,
-                    AwaitAllOpLowering, YieldOpLowering>(ctx,
-                                                         outlinedFunctions);
+                    AwaitAllOpLowering, YieldOpLowering>(ctx, coros);
 
   // Lower assertions to conditional branches into error blocks.
-  asyncPatterns.add<AssertOpLowering>(ctx, outlinedFunctions);
+  asyncPatterns.add<AssertOpLowering>(ctx, coros);
 
   // All high level async operations must be lowered to the runtime operations.
   ConversionTarget runtimeTarget(*ctx);
-  runtimeTarget.addLegalDialect<AsyncDialect>();
+  runtimeTarget.addLegalDialect<AsyncDialect, func::FuncDialect>();
   runtimeTarget.addIllegalOp<CreateGroupOp, AddToGroupOp>();
-  runtimeTarget.addIllegalOp<ExecuteOp, AwaitOp, AwaitAllOp, async::YieldOp>();
+  runtimeTarget.addIllegalOp<ExecuteOp, AwaitOp, AwaitAllOp, async::YieldOp,
+                             async::FuncOp, async::CallOp, async::ReturnOp>();
 
   // Decide if structured control flow has to be lowered to branch-based CFG.
   runtimeTarget.addDynamicallyLegalDialect<scf::SCFDialect>([&](Operation *op) {
@@ -812,14 +795,8 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   runtimeTarget.addDynamicallyLegalOp<cf::AssertOp>(
       [&](cf::AssertOp op) -> bool {
         auto func = op->getParentOfType<func::FuncOp>();
-        return outlinedFunctions.find(func) == outlinedFunctions.end();
+        return coros.find(func) == coros.end();
       });
-
-  if (eliminateBlockingAwaitOps)
-    runtimeTarget.addDynamicallyLegalOp<RuntimeAwaitOp>(
-        [&](RuntimeAwaitOp op) -> bool {
-          return isAllowedToBlock(op->getParentOfType<func::FuncOp>());
-        });
 
   if (failed(applyPartialConversion(module, runtimeTarget,
                                     std::move(asyncPatterns)))) {

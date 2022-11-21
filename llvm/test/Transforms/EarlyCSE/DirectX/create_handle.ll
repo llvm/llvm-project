@@ -1,4 +1,4 @@
-; RUN: opt %s -early-cse -S | FileCheck %s
+; RUN: opt %s -passes=early-cse -S | FileCheck %s
 
 define void @fn() {
 entry:

@@ -740,7 +740,7 @@ DecodeStatus AMDGPUDisassembler::convertVINTERPInst(MCInst &MI) const {
 DecodeStatus AMDGPUDisassembler::convertSDWAInst(MCInst &MI) const {
   if (STI.getFeatureBits()[AMDGPU::FeatureGFX9] ||
       STI.getFeatureBits()[AMDGPU::FeatureGFX10]) {
-    if (AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::sdst) != -1)
+    if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::sdst))
       // VOPC - insert clamp
       insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::clamp);
   } else if (STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands]) {
@@ -804,7 +804,7 @@ bool AMDGPUDisassembler::isMacDPP(MCInst &MI) const {
 
   if (OldIdx != -1 && Desc.getOperandConstraint(
                           OldIdx, MCOI::OperandConstraint::TIED_TO) == -1) {
-    assert(AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2) != -1);
+    assert(AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2));
     assert(Desc.getOperandConstraint(
                AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2),
                MCOI::OperandConstraint::TIED_TO) == DST_IDX);
@@ -838,19 +838,19 @@ DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
 
     unsigned DescNumOps = MCII->get(Opc).getNumOperands();
     if (MI.getNumOperands() < DescNumOps &&
-        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1) {
+        AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel)) {
       auto Mods = collectVOPModifiers(MI);
       insertNamedMCOperand(MI, MCOperand::createImm(Mods.OpSel),
                            AMDGPU::OpName::op_sel);
     } else {
       // Insert dummy unused src modifiers.
       if (MI.getNumOperands() < DescNumOps &&
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers) != -1)
+          AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src0_modifiers))
         insertNamedMCOperand(MI, MCOperand::createImm(0),
                              AMDGPU::OpName::src0_modifiers);
 
       if (MI.getNumOperands() < DescNumOps &&
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1_modifiers) != -1)
+          AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src1_modifiers))
         insertNamedMCOperand(MI, MCOperand::createImm(0),
                              AMDGPU::OpName::src1_modifiers);
     }
@@ -865,7 +865,7 @@ DecodeStatus AMDGPUDisassembler::convertVOP3DPPInst(MCInst &MI) const {
   unsigned Opc = MI.getOpcode();
   unsigned DescNumOps = MCII->get(Opc).getNumOperands();
   if (MI.getNumOperands() < DescNumOps &&
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1) {
+      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel)) {
     auto Mods = collectVOPModifiers(MI);
     insertNamedMCOperand(MI, MCOperand::createImm(Mods.OpSel),
                          AMDGPU::OpName::op_sel);
@@ -900,9 +900,8 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   assert(VDataIdx != -1);
   if (BaseOpcode->BVH) {
     // Add A16 operand for intersect_ray instructions
-    if (AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::a16) > -1) {
+    if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::a16))
       addOperand(MI, MCOperand::createImm(1));
-    }
     return MCDisassembler::Success;
   }
 
@@ -1020,23 +1019,23 @@ DecodeStatus AMDGPUDisassembler::convertVOP3PDPPInst(MCInst &MI) const {
   auto Mods = collectVOPModifiers(MI, true);
 
   if (MI.getNumOperands() < DescNumOps &&
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in) != -1)
+      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in))
     insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::vdst_in);
 
   if (MI.getNumOperands() < DescNumOps &&
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1)
+      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel))
     insertNamedMCOperand(MI, MCOperand::createImm(Mods.OpSel),
                          AMDGPU::OpName::op_sel);
   if (MI.getNumOperands() < DescNumOps &&
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel_hi) != -1)
+      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel_hi))
     insertNamedMCOperand(MI, MCOperand::createImm(Mods.OpSelHi),
                          AMDGPU::OpName::op_sel_hi);
   if (MI.getNumOperands() < DescNumOps &&
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_lo) != -1)
+      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::neg_lo))
     insertNamedMCOperand(MI, MCOperand::createImm(Mods.NegLo),
                          AMDGPU::OpName::neg_lo);
   if (MI.getNumOperands() < DescNumOps &&
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_hi) != -1)
+      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::neg_hi))
     insertNamedMCOperand(MI, MCOperand::createImm(Mods.NegHi),
                          AMDGPU::OpName::neg_hi);
 
@@ -1049,16 +1048,16 @@ DecodeStatus AMDGPUDisassembler::convertVOPCDPPInst(MCInst &MI) const {
   unsigned DescNumOps = MCII->get(Opc).getNumOperands();
 
   if (MI.getNumOperands() < DescNumOps &&
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::old) != -1)
+      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::old))
     insertNamedMCOperand(MI, MCOperand::createReg(0), AMDGPU::OpName::old);
 
   if (MI.getNumOperands() < DescNumOps &&
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers) != -1)
+      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src0_modifiers))
     insertNamedMCOperand(MI, MCOperand::createImm(0),
                          AMDGPU::OpName::src0_modifiers);
 
   if (MI.getNumOperands() < DescNumOps &&
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1_modifiers) != -1)
+      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src1_modifiers))
     insertNamedMCOperand(MI, MCOperand::createImm(0),
                          AMDGPU::OpName::src1_modifiers);
   return MCDisassembler::Success;

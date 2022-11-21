@@ -569,6 +569,48 @@ module @ir attributes { test.create_op_infer_results } {
 // -----
 
 //===----------------------------------------------------------------------===//
+// pdl_interp::CreateRangeOp
+//===----------------------------------------------------------------------===//
+
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operand_count of %root is 2 -> ^pat1, ^end
+
+  ^pat1:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root: !pdl.operation) {
+      %rootOperand = pdl_interp.get_operand 0 of %root
+      %rootOperands = pdl_interp.get_operands of %root : !pdl.range<value>
+      %operandRange = pdl_interp.create_range %rootOperand, %rootOperands : !pdl.value, !pdl.range<value>
+      
+      %operandType = pdl_interp.get_value_type of %rootOperand : !pdl.type
+      %operandTypes = pdl_interp.get_value_type of %rootOperands : !pdl.range<type>
+      %typeRange = pdl_interp.create_range %operandType, %operandTypes : !pdl.type, !pdl.range<type>
+
+      %op = pdl_interp.create_operation "test.success"(%operandRange : !pdl.range<value>) -> (%typeRange : !pdl.range<type>)
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.create_range_1
+// CHECK: %[[INPUTS:.*]]:2 = "test.input"()
+// CHECK: "test.success"(%[[INPUTS]]#0, %[[INPUTS]]#0, %[[INPUTS]]#1) : (i32, i32, i32) -> (i32, i32, i32)
+module @ir attributes { test.create_range_1 } {
+  %values:2 = "test.input"() : () -> (i32, i32)
+  "test.op"(%values#0, %values#1) : (i32, i32) -> ()
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // pdl_interp::CreateTypeOp
 //===----------------------------------------------------------------------===//
 

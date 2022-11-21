@@ -20,11 +20,6 @@ include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/EnumAttr.td"
 
-def Arith_FastMathAttr :
-    EnumAttr<Arith_Dialect, FastMathFlags, "fastmath"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
 // Base class for Arith dialect ops. Ops in this dialect have no side
 // effects and can be applied element-wise to vectors and tensors.
 class Arith_Op<string mnemonic, list<Trait> traits = []> :
@@ -71,7 +66,7 @@ class Arith_FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
     Arguments<(ins FloatLike:$operand,
       DefaultValuedAttr<Arith_FastMathAttr, "FastMathFlags::none">:$fastmath)>,
     Results<(outs FloatLike:$result)> {
-  let assemblyFormat = [{ $operand custom<ArithFastMathAttr>($fastmath)
+  let assemblyFormat = [{ $operand (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($result) }];
 }
 
@@ -83,7 +78,7 @@ class Arith_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
     Arguments<(ins FloatLike:$lhs, FloatLike:$rhs,
       DefaultValuedAttr<Arith_FastMathAttr, "FastMathFlags::none">:$fastmath)>,
     Results<(outs FloatLike:$result)> {
-  let assemblyFormat = [{ $lhs `,` $rhs `` custom<ArithFastMathAttr>($fastmath)
+  let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($result) }];
 }
 

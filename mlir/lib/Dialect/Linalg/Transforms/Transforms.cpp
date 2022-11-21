@@ -64,34 +64,6 @@ mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
   return *this;
 }
 
-LinalgTilingOptions &mlir::linalg::LinalgTilingOptions::scalarizeDynamicDims() {
-  assert(!tileSizeComputationFunction && "tile sizes already set");
-  tileSizeComputationFunction = [](OpBuilder &b, Operation *op) {
-    SmallVector<Value, 4> tileSizes;
-    auto linalgOp = dyn_cast<LinalgOp>(op);
-    if (!linalgOp)
-      return tileSizes;
-    Location loc = linalgOp.getLoc();
-    SmallVector<OpFoldResult> allShapeSizes =
-        linalgOp.createFlatListOfOperandDims(b, loc);
-    AffineMap map = linalgOp.getShapesToLoopsMap();
-    if (!map)
-      return tileSizes;
-    IRRewriter rewriter(b);
-    SmallVector<OpFoldResult> shapeSizes =
-        makeComposedFoldedMultiResultAffineApply(rewriter, loc, map,
-                                                 allShapeSizes);
-    // If the shape size is dynamic, tile by 1. Otherwise, do not tile (tile
-    // size 0).
-    for (OpFoldResult shapeSize : shapeSizes)
-      tileSizes.push_back(getConstantIntValue(shapeSize)
-                              ? b.create<arith::ConstantIndexOp>(loc, 0)
-                              : b.create<arith::ConstantIndexOp>(loc, 1));
-    return tileSizes;
-  };
-  return *this;
-}
-
 /// Pad the `opOperand` in the `paddingDimensions` using the padding value and
 /// the nofold flag found in `paddingValues` and `packPaddings`, respectively.
 /// Exit early and return the `opOperand` value if the shape dimensions that
@@ -246,7 +218,8 @@ linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
 
 /// Try to peel a loop `op` and return the new result.
 // TODO: Add support for scf.parallel and affine.for loops.
-static SmallVector<Value, 4> peelLoop(RewriterBase &rewriter, Operation *op) {
+SmallVector<Value> mlir::linalg::peelLoop(RewriterBase &rewriter,
+                                          Operation *op) {
   return llvm::TypeSwitch<Operation *, SmallVector<Value, 4>>(op)
       .Case<scf::ForOp>([&](scf::ForOp forOp) {
         scf::ForOp partialIteration;
@@ -262,47 +235,8 @@ static SmallVector<Value, 4> peelLoop(RewriterBase &rewriter, Operation *op) {
 /// Peel and canonicalize 'loops'.
 void mlir::linalg::peelLoops(RewriterBase &rewriter,
                              ArrayRef<scf::ForOp> loops) {
-  for (auto loopOp : loops) {
-    SmallVector<Value, 4> loopResults;
-    loopResults = peelLoop(rewriter, loopOp);
-  }
-}
-
-/// Peel loops after tiling.
-void mlir::linalg::peelTiledLinalgOp(RewriterBase &rewriter, TiledLinalgOp &res,
-                                     ArrayRef<int64_t> peeledLoops,
-                                     LinalgTilingLoopType loopType) {
-  for (int64_t loop : peeledLoops) {
-    assert(loop < static_cast<int64_t>(res.loops.size()) &&
-           "requested peeling of non-existing loop");
-    SmallVector<Value, 4> loopResults;
-    Operation *loopOp = res.loops[loop];
-    loopResults = peelLoop(rewriter, loopOp);
-
-    // The result of the loop nest may change with peeling.
-    if (res.tensorResults.size() == loopOp->getNumResults() &&
-        std::equal(res.tensorResults.begin(), res.tensorResults.end(),
-                   loopOp->getResults().begin()))
-      res.tensorResults = loopResults;
-  }
-}
-
-FailureOr<TiledLinalgOp>
-mlir::linalg::tileWithLinalgTilingOptions(RewriterBase &rewriter, LinalgOp op,
-                                          const LinalgTilingOptions &options) {
-  FailureOr<TiledLinalgOp> res = tileLinalgOp(rewriter, op, options);
-  if (failed(res))
-    return failure();
-
-  // Peel the loops of the TiledLinalgOp.
-  peelTiledLinalgOp(rewriter, *res, options.peeledLoops, options.loopType);
-
-  if (res->tensorResults.empty())
-    rewriter.eraseOp(op);
-  else
-    rewriter.replaceOp(op, res->tensorResults);
-
-  return res;
+  for (auto loopOp : loops)
+    peelLoop(rewriter, loopOp);
 }
 
 /// Linalg padding pattern.

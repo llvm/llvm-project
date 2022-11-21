@@ -1,6 +1,6 @@
-; RUN: opt -S -early-cse -earlycse-debug-hash < %s | FileCheck %s
-; RUN: opt -S -gvn < %s | FileCheck %s
-; RUN: opt -S -newgvn < %s | FileCheck %s
+; RUN: opt -S -passes=early-cse -earlycse-debug-hash < %s | FileCheck %s
+; RUN: opt -S -passes=gvn < %s | FileCheck %s
+; RUN: opt -S -passes=newgvn < %s | FileCheck %s
 
 ; These tests checks if passes with CSE functionality can do CSE on
 ; launder.invariant.group, that is prohibited if there is a memory clobber
@@ -91,11 +91,11 @@ declare void @use(i8* readonly)
 declare void @useBool(i1)
 
 declare void @clobber(i8*)
-; CHECK: Function Attrs: inaccessiblememonly nocallback nofree nosync nounwind speculatable willreturn{{$}}
+; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite){{$}}
 ; CHECK-NEXT: declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 
-; CHECK: Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn{{$}}
+; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none){{$}}
 ; CHECK-NEXT: declare i8* @llvm.strip.invariant.group.p0i8(i8*)
 declare i8* @llvm.strip.invariant.group.p0i8(i8*)
 

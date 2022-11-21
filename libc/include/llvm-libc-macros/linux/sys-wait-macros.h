@@ -18,5 +18,7 @@
 #define WTERMSIG(status) (((status)&0x7F))
 #define WIFEXITED(status) (WTERMSIG(status) == 0)
 #define WEXITSTATUS(status) (((status)&0xFF00) >> 8)
+#define WIFSIGNALED(status)                                                    \
+  ((WTERMSIG(status) < 0x7F) && (WTERMSIG(status) > 0))
 
 #endif // __LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H

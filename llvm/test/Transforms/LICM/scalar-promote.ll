@@ -600,7 +600,7 @@ Out:
 }
 
 define i8 @test_hoistable_existing_load_sinkable_store_writeonly(ptr dereferenceable(8) %ptr, i8 %start) writeonly {
-; CHECK: Function Attrs: writeonly
+; CHECK: Function Attrs: memory(write)
 ; CHECK-LABEL: @test_hoistable_existing_load_sinkable_store_writeonly(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i8, ptr [[PTR:%.*]], align 1
@@ -641,7 +641,7 @@ exit:
 
 ; Test case for PR51248.
 define void @test_sink_store_only() writeonly {
-; CHECK: Function Attrs: writeonly
+; CHECK: Function Attrs: memory(write)
 ; CHECK-LABEL: @test_sink_store_only(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
@@ -678,7 +678,7 @@ exit:
 }
 
 define void @test_sink_store_to_local_object_only_loop_must_execute() writeonly {
-; CHECK: Function Attrs: writeonly
+; CHECK: Function Attrs: memory(write)
 ; CHECK-LABEL: @test_sink_store_to_local_object_only_loop_must_execute(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
@@ -719,7 +719,7 @@ exit:
 ; The store in the loop may not execute, so we need to introduce a load in the
 ; pre-header. Make sure the writeonly attribute is dropped.
 define void @test_sink_store_to_local_object_only_loop_may_not_execute(i8 %n) writeonly {
-; CHECK: Function Attrs: writeonly
+; CHECK: Function Attrs: memory(write)
 ; CHECK-LABEL: @test_sink_store_to_local_object_only_loop_may_not_execute(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
@@ -761,7 +761,7 @@ exit:
 declare dereferenceable(8) noalias ptr @alloc_writeonly() writeonly
 
 define void @test_sink_store_to_noalias_call_object_only_loop_may_not_execute1(i8 %n) writeonly {
-; CHECK: Function Attrs: writeonly
+; CHECK: Function Attrs: memory(write)
 ; CHECK-LABEL: @test_sink_store_to_noalias_call_object_only_loop_may_not_execute1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = call noalias dereferenceable(8) ptr @alloc_writeonly()
@@ -801,7 +801,7 @@ exit:
 }
 
 define void @test_sink_store_only_no_phi_needed() writeonly {
-; CHECK: Function Attrs: writeonly
+; CHECK: Function Attrs: memory(write)
 ; CHECK-LABEL: @test_sink_store_only_no_phi_needed(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

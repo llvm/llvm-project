@@ -187,6 +187,7 @@ class ObjectEntityDetails : public EntityDetails {
 public:
   explicit ObjectEntityDetails(EntityDetails &&);
   ObjectEntityDetails(const ObjectEntityDetails &) = default;
+  ObjectEntityDetails(ObjectEntityDetails &&) = default;
   ObjectEntityDetails &operator=(const ObjectEntityDetails &) = default;
   ObjectEntityDetails(bool isDummy = false) : EntityDetails(isDummy) {}
   MaybeExpr &init() { return init_; }
@@ -247,7 +248,10 @@ private:
 class ProcEntityDetails : public EntityDetails, public WithPassArg {
 public:
   ProcEntityDetails() = default;
-  explicit ProcEntityDetails(EntityDetails &&d);
+  explicit ProcEntityDetails(EntityDetails &&);
+  ProcEntityDetails(const ProcEntityDetails &) = default;
+  ProcEntityDetails(ProcEntityDetails &&) = default;
+  ProcEntityDetails &operator=(const ProcEntityDetails &) = default;
 
   const ProcInterface &interface() const { return interface_; }
   ProcInterface &interface() { return interface_; }
@@ -621,28 +625,27 @@ public:
   bool IsSubprogram() const;
   bool IsFromModFile() const;
   bool HasExplicitInterface() const {
-    return common::visit(common::visitors{
-                             [](const SubprogramDetails &) { return true; },
-                             [](const SubprogramNameDetails &) { return true; },
-                             [&](const ProcEntityDetails &x) {
-                               return attrs_.test(Attr::INTRINSIC) ||
-                                   x.HasExplicitInterface();
-                             },
-                             [](const ProcBindingDetails &x) {
-                               return x.symbol().HasExplicitInterface();
-                             },
-                             [](const UseDetails &x) {
-                               return x.symbol().HasExplicitInterface();
-                             },
-                             [](const HostAssocDetails &x) {
-                               return x.symbol().HasExplicitInterface();
-                             },
-                             [](const GenericDetails &x) {
-                               return x.specific() &&
-                                   x.specific()->HasExplicitInterface();
-                             },
-                             [](const auto &) { return false; },
-                         },
+    return common::visit(
+        common::visitors{
+            [](const SubprogramDetails &) { return true; },
+            [](const SubprogramNameDetails &) { return true; },
+            [&](const ProcEntityDetails &x) {
+              return attrs_.test(Attr::INTRINSIC) || x.HasExplicitInterface();
+            },
+            [](const ProcBindingDetails &x) {
+              return x.symbol().HasExplicitInterface();
+            },
+            [](const UseDetails &x) {
+              return x.symbol().HasExplicitInterface();
+            },
+            [](const HostAssocDetails &x) {
+              return x.symbol().HasExplicitInterface();
+            },
+            [](const GenericDetails &x) {
+              return x.specific() && x.specific()->HasExplicitInterface();
+            },
+            [](const auto &) { return false; },
+        },
         details_);
   }
 

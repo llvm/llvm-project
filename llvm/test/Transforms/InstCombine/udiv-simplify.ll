@@ -106,8 +106,7 @@ define i32 @udiv_exact_demanded(i32 %a) {
 
 define <vscale x 1 x i32> @udiv_demanded3(<vscale x 1 x i32> %a) {
 ; CHECK-LABEL: @udiv_demanded3(
-; CHECK-NEXT:    [[O:%.*]] = or <vscale x 1 x i32> [[A:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 3, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
-; CHECK-NEXT:    [[U:%.*]] = udiv <vscale x 1 x i32> [[O]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[U:%.*]] = udiv <vscale x 1 x i32> [[A:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[U]]
 ;
   %o = or <vscale x 1 x i32> %a, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 3, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)

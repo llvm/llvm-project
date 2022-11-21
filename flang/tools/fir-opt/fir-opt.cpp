@@ -17,11 +17,19 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 
 using namespace mlir;
+namespace fir {
+namespace test {
+void registerTestFIRAliasAnalysisPass();
+} // namespace test
+} // namespace fir
 
 int main(int argc, char **argv) {
   fir::support::registerMLIRPassesForFortranTools();
   fir::registerOptCodeGenPasses();
   fir::registerOptTransformPasses();
+#ifdef FLANG_INCLUDE_TESTS
+  fir::test::registerTestFIRAliasAnalysisPass();
+#endif
   DialectRegistry registry;
   fir::support::registerDialects(registry);
   return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",

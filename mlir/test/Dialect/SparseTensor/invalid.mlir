@@ -551,6 +551,51 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 
 // -----
 
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
+  // expected-error@+1 {{Unmatched element type between input tensor and block argument}}
+  sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
+    ^bb0(%1: index, %2: index, %v: f32) :
+  }
+  return
+}
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
+  // expected-error@+1 {{Mismatch in number of init arguments and results}}
+  sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 do {
+    ^bb0(%1: index, %2: index, %v: f32, %r1 : i32) :
+  }
+  return
+}
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
+  // expected-error@+1 {{Mismatch in types of init arguments and results}}
+  %1 = sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 -> i32 do {
+    ^bb0(%1: index, %2: index, %v: f32, %r0 : f32) :
+  }
+  return
+}
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
+  // expected-error@+1 {{Mismatch in types of yield values and results}}
+  %1 = sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 -> f32 do {
+    ^bb0(%1: index, %2: index, %v: f32, %r0 : f32) :
+      sparse_tensor.yield %1 : index
+  }
+  return
+}
+
+// -----
+
 // TODO: a test case with empty xs doesn't work due to some parser issues.
 
 func.func @sparse_sort_x_type( %arg0: index, %arg1: memref<?xf32>) {
@@ -572,6 +617,32 @@ func.func @sparse_sort_dim_too_small(%arg0: memref<10xindex>) {
 func.func @sparse_sort_mismatch_x_type(%arg0: index, %arg1: memref<10xindex>, %arg2: memref<10xi8>) {
   // expected-error@+1 {{mismatch xs element types}}
   sparse_tensor.sort %arg0, %arg1, %arg2 : memref<10xindex>, memref<10xi8>
+  return
+}
+
+// -----
+
+func.func @sparse_sort_coo_x_type( %arg0: index, %arg1: memref<?xf32>) {
+  // expected-error@+1 {{operand #1 must be 1D memref of integer or index values}}
+  sparse_tensor.sort_coo %arg0, %arg1: memref<?xf32>
+  return
+}
+
+// -----
+
+func.func @sparse_sort_coo_x_too_small(%arg0: memref<50xindex>) {
+  %i20 = arith.constant 20 : index
+  // expected-error@+1 {{Expected dimension(xy) >= n * (nx + ny) got 50 < 60}}
+  sparse_tensor.sort_coo %i20, %arg0 {nx = 2 : index, ny = 1 : index} : memref<50xindex>
+  return
+}
+
+// -----
+
+func.func @sparse_sort_coo_y_too_small(%arg0: memref<60xindex>, %arg1: memref<10xf32>) {
+  %i20 = arith.constant 20 : index
+  // expected-error@+1 {{Expected dimension(y) >= n got 10 < 20}}
+  sparse_tensor.sort_coo %i20, %arg0 jointly %arg1 {nx = 2 : index, ny = 1 : index} : memref<60xindex> jointly memref<10xf32>
   return
 }
 

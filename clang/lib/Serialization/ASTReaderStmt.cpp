@@ -2412,6 +2412,13 @@ void ASTStmtReader::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
+void ASTStmtReader::VisitOMPErrorDirective(OMPErrorDirective *D) {
+  VisitStmt(D);
+  // The NumClauses field was read in ReadStmtFromStream.
+  Record.skipInts(1);
+  VisitOMPExecutableDirective(D);
+}
+
 void ASTStmtReader::VisitOMPTaskgroupDirective(OMPTaskgroupDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
@@ -3356,6 +3363,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case STMT_OMP_TASKWAIT_DIRECTIVE:
       S = OMPTaskwaitDirective::CreateEmpty(
+          Context, Record[ASTStmtReader::NumStmtFields], Empty);
+      break;
+
+    case STMT_OMP_ERROR_DIRECTIVE:
+      S = OMPErrorDirective::CreateEmpty(
           Context, Record[ASTStmtReader::NumStmtFields], Empty);
       break;
 

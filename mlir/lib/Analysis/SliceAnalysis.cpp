@@ -98,10 +98,11 @@ static void getBackwardSliceImpl(Operation *op,
       // TODO: determine whether we want to recurse backward into the other
       // blocks of parentOp, which are not technically backward unless they flow
       // into us. For now, just bail.
-      assert(parentOp->getNumRegions() == 1 &&
-             parentOp->getRegion(0).getBlocks().size() == 1);
-      if (backwardSlice->count(parentOp) == 0)
+      if (parentOp && backwardSlice->count(parentOp) == 0) {
+        assert(parentOp->getNumRegions() == 1 &&
+               parentOp->getRegion(0).getBlocks().size() == 1);
         getBackwardSliceImpl(parentOp, backwardSlice, filter);
+      }
     } else {
       llvm_unreachable("No definingOp and not a block argument.");
     }

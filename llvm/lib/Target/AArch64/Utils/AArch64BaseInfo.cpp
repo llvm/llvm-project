@@ -96,6 +96,13 @@ namespace llvm {
 }
 
 namespace llvm {
+namespace AArch64SVEVecLenSpecifier {
+#define GET_SVEVECLENSPECIFIER_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64SVEVecLenSpecifier
+} // namespace llvm
+
+namespace llvm {
   namespace AArch64ExactFPImm {
 #define GET_EXACTFPIMM_IMPL
 #include "AArch64GenSystemOperands.inc"

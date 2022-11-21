@@ -13,6 +13,7 @@
 #include "bolt/Passes/AsmDump.h"
 #include "bolt/Passes/CMOVConversion.h"
 #include "bolt/Passes/FrameOptimizer.h"
+#include "bolt/Passes/Hugify.h"
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/IndirectCallPromotion.h"
 #include "bolt/Passes/Inliner.h"
@@ -333,6 +334,8 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   if (opts::Instrument)
     Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
+  else if (opts::Hugify)
+    Manager.registerPass(std::make_unique<HugePage>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ShortenInstructions>(NeverPrint));
 

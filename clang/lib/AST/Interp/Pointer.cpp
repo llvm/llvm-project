@@ -202,5 +202,5 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
 }
 
 bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
-  return A.Base == B.Base && A.getFieldDesc()->IsArray;
+  return hasSameBase(A, B) && A.Base == B.Base && A.getFieldDesc()->IsArray;
 }

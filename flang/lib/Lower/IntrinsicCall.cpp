@@ -5004,7 +5004,7 @@ Fortran::lower::getIntrinsicArgumentLowering(llvm::StringRef specificName) {
 /// intrinsic function.
 Fortran::lower::ArgLoweringRule Fortran::lower::lowerIntrinsicArgumentAs(
     const IntrinsicArgumentLoweringRules &rules, unsigned position) {
-  assert(position < sizeof(rules.args) / sizeof(decltype(*rules.args)) &&
+  assert(position < sizeof(rules.args) / (sizeof(decltype(*rules.args))) &&
          "invalid argument");
   return {rules.args[position].lowerAs,
           rules.args[position].handleDynamicOptional};

@@ -13,7 +13,6 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -195,8 +194,9 @@ CommandMangler CommandMangler::detect() {
 
 CommandMangler CommandMangler::forTests() { return CommandMangler(); }
 
-void CommandMangler::adjust(std::vector<std::string> &Cmd,
-                            llvm::StringRef File) const {
+void CommandMangler::operator()(tooling::CompileCommand &Command,
+                                llvm::StringRef File) const {
+  std::vector<std::string> &Cmd = Command.CommandLine;
   trace::Span S("AdjustCompileFlags");
   // Most of the modifications below assumes the Cmd starts with a driver name.
   // We might consider injecting a generic driver name like "cc" or "c++", but
@@ -301,6 +301,17 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd,
   for (auto &Edit : Config::current().CompileFlags.Edits)
     Edit(Cmd);
 
+  // The system include extractor needs to run:
+  //  - AFTER transferCompileCommand(), because the -x flag it adds may be
+  //    necessary for the system include extractor to identify the file type
+  //  - AFTER applying CompileFlags.Edits, because the name of the compiler
+  //    that needs to be invoked may come from the CompileFlags->Compiler key
+  //  - BEFORE resolveDriver() because that can mess up the driver path,
+  //    e.g. changing gcc to /path/to/clang/bin/gcc
+  if (SystemIncludeExtractor) {
+    SystemIncludeExtractor(Command, File);
+  }
+
   // Check whether the flag exists, either as -flag or -flag=*
   auto Has = [&](llvm::StringRef Flag) {
     for (llvm::StringRef Arg : Cmd) {
@@ -338,16 +349,6 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd,
               return resolveDriver(Cmd.front(), FollowSymlink, ClangPath);
             });
   }
-}
-
-CommandMangler::operator clang::tooling::ArgumentsAdjuster() && {
-  // ArgumentsAdjuster is a std::function and so must be copyable.
-  return [Mangler = std::make_shared<CommandMangler>(std::move(*this))](
-             const std::vector<std::string> &Args, llvm::StringRef File) {
-    auto Result = Args;
-    Mangler->adjust(Result, File);
-    return Result;
-  };
 }
 
 // ArgStripper implementation

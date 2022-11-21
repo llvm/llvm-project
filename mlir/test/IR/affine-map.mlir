@@ -1,10 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
 
 // Identity maps used in trivial compositions in MemRefs are optimized away.
-// CHECK-NOT: #map{{[0-9]*}} = affine_map<(d0, d1) -> (d0, d1)>
 #map0 = affine_map<(i, j) -> (i, j)>
-
-// CHECK-NOT: #map{{[0-9]*}} = affine_map<(d0, d1)[s0] -> (d0, d1)>
 #map1 = affine_map<(i, j)[s0] -> (i, j)>
 
 // CHECK: #map{{[0-9]*}} = affine_map<() -> (0)>
@@ -194,7 +191,6 @@
 
 // Check if parser can parse affine_map with identifiers that collide with
 // integer types.
-// CHECK: #map{{[0-9]*}} = affine_map<(d0, d1) -> (d0, d1)>
 #map60 = affine_map<(i0, i1) -> (i0, i1)>
 
 // Check if parser can parse affine_map with identifiers that collide with

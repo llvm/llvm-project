@@ -29,7 +29,7 @@
 
 using namespace llvm;
 
-DEFINE_PPC_REGCLASSES;
+DEFINE_PPC_REGCLASSES
 
 // Evaluate an expression containing condition register
 // or condition register field symbols.  Returns positive
@@ -291,6 +291,26 @@ public:
     return (unsigned) Imm.Val;
   }
 
+  unsigned getDMRROWReg() const {
+    assert(isDMRROWRegNumber() && "Invalid access!");
+    return (unsigned)Imm.Val;
+  }
+
+  unsigned getDMRROWpReg() const {
+    assert(isDMRROWpRegNumber() && "Invalid access!");
+    return (unsigned)Imm.Val;
+  }
+
+  unsigned getDMRReg() const {
+    assert(isDMRRegNumber() && "Invalid access!");
+    return (unsigned)Imm.Val;
+  }
+
+  unsigned getDMRpReg() const {
+    assert(isDMRpRegNumber() && "Invalid access!");
+    return (unsigned)Imm.Val;
+  }
+
   unsigned getVSRpEvenReg() const {
     assert(isVSRpEvenRegNumber() && "Invalid access!");
     return (unsigned) Imm.Val >> 1;
@@ -390,6 +410,18 @@ public:
   bool isRegNumber() const { return Kind == Immediate && isUInt<5>(getImm()); }
   bool isACCRegNumber() const {
     return Kind == Immediate && isUInt<3>(getImm());
+  }
+  bool isDMRROWRegNumber() const {
+    return Kind == Immediate && isUInt<6>(getImm());
+  }
+  bool isDMRROWpRegNumber() const {
+    return Kind == Immediate && isUInt<5>(getImm());
+  }
+  bool isDMRRegNumber() const {
+    return Kind == Immediate && isUInt<3>(getImm());
+  }
+  bool isDMRpRegNumber() const {
+    return Kind == Immediate && isUInt<2>(getImm());
   }
   bool isVSRpEvenRegNumber() const {
     return Kind == Immediate && isUInt<6>(getImm()) && ((getImm() & 1) == 0);
@@ -505,6 +537,36 @@ public:
   void addRegACCRCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(ACCRegs[getACCReg()]));
+  }
+
+  void addRegDMRROWRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(DMRROWRegs[getDMRROWReg()]));
+  }
+
+  void addRegDMRROWpRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(DMRROWpRegs[getDMRROWpReg()]));
+  }
+
+  void addRegDMRRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(DMRRegs[getDMRReg()]));
+  }
+
+  void addRegDMRpRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(DMRpRegs[getDMRpReg()]));
+  }
+
+  void addRegWACCRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(WACCRegs[getACCReg()]));
+  }
+
+  void addRegWACC_HIRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(WACC_HIRegs[getACCReg()]));
   }
 
   void addRegVSRpRCOperands(MCInst &Inst, unsigned N) const {
@@ -1218,6 +1280,27 @@ bool PPCAsmParser::MatchRegisterName(unsigned &RegNo, int64_t &IntVal) {
   } else if (Name.startswith_insensitive("cr") &&
              !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = CRRegs[IntVal];
+  } else if (Name.startswith_insensitive("acc") &&
+             !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
+    RegNo = ACCRegs[IntVal];
+  } else if (Name.startswith_insensitive("wacc_hi") &&
+             !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 8) {
+    RegNo = ACCRegs[IntVal];
+  } else if (Name.startswith_insensitive("wacc") &&
+             !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 8) {
+    RegNo = WACCRegs[IntVal];
+  } else if (Name.startswith_insensitive("dmrrowp") &&
+             !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 32) {
+    RegNo = DMRROWpRegs[IntVal];
+  } else if (Name.startswith_insensitive("dmrrow") &&
+             !Name.substr(6).getAsInteger(10, IntVal) && IntVal < 64) {
+    RegNo = DMRROWRegs[IntVal];
+  } else if (Name.startswith_insensitive("dmrp") &&
+             !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 4) {
+    RegNo = DMRROWpRegs[IntVal];
+  } else if (Name.startswith_insensitive("dmr") &&
+             !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
+    RegNo = DMRRegs[IntVal];
   } else
     return true;
   getParser().Lex();

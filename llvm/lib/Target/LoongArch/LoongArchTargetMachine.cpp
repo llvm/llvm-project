@@ -104,6 +104,7 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
+  void addPreEmitPass() override;
   void addPreEmitPass2() override;
   void addPreRegAlloc() override;
 };
@@ -125,6 +126,8 @@ bool LoongArchPassConfig::addInstSelector() {
 
   return false;
 }
+
+void LoongArchPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
 
 void LoongArchPassConfig::addPreEmitPass2() {
   // Schedule the expansion of AtomicPseudos at the last possible moment,

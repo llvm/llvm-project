@@ -6,7 +6,7 @@
 %struct.test.a = type { %struct.test.b, i32, i8*}
 
 define void @foo(i8* %ptr) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@foo
 ; TUNIT-SAME: (i8* nocapture nofree readnone [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -17,7 +17,7 @@ define void @foo(i8* %ptr) {
 ; TUNIT-NEXT:    tail call void @bar(%struct.test.a* noalias nocapture nofree noundef nonnull readonly byval([[STRUCT_TEST_A]]) align 8 dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
 ; CGSCC-SAME: (i8* nocapture nofree writeonly [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -41,7 +41,7 @@ call.br:
 }
 
 define void @bar(%struct.test.a* noundef byval(%struct.test.a) align 8 %dev) {
-; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: (%struct.test.a* noalias nocapture nofree noundef nonnull writeonly byval([[STRUCT_TEST_A:%.*]]) align 8 dereferenceable(24) [[DEV:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_A]], %struct.test.a* [[DEV]], i64 0, i32 0
@@ -55,11 +55,11 @@ define void @bar(%struct.test.a* noundef byval(%struct.test.a) align 8 %dev) {
   ret void
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; TUNIT: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn writeonly }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn writeonly }
+; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
 ;.

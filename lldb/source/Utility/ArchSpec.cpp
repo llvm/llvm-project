@@ -220,6 +220,11 @@ static const CoreDefinition g_core_definitions[] = {
     {eByteOrderLittle, 8, 2, 4, llvm::Triple::riscv64, ArchSpec::eCore_riscv64,
      "riscv64"},
 
+    {eByteOrderLittle, 4, 4, 4, llvm::Triple::loongarch32,
+     ArchSpec::eCore_loongarch32, "loongarch32"},
+    {eByteOrderLittle, 8, 4, 4, llvm::Triple::loongarch64,
+     ArchSpec::eCore_loongarch64, "loongarch64"},
+
     {eByteOrderLittle, 4, 4, 4, llvm::Triple::UnknownArch,
      ArchSpec::eCore_uknownMach32, "unknown-mach-32"},
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::UnknownArch,
@@ -406,6 +411,12 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
      ArchSpec::eRISCVSubType_riscv32, 0xFFFFFFFFu, 0xFFFFFFFFu}, // riscv32
     {ArchSpec::eCore_riscv64, llvm::ELF::EM_RISCV,
      ArchSpec::eRISCVSubType_riscv64, 0xFFFFFFFFu, 0xFFFFFFFFu}, // riscv64
+    {ArchSpec::eCore_loongarch32, llvm::ELF::EM_LOONGARCH,
+     ArchSpec::eLoongArchSubType_loongarch32, 0xFFFFFFFFu,
+     0xFFFFFFFFu}, // loongarch32
+    {ArchSpec::eCore_loongarch64, llvm::ELF::EM_LOONGARCH,
+     ArchSpec::eLoongArchSubType_loongarch64, 0xFFFFFFFFu,
+     0xFFFFFFFFu}, // loongarch64
 };
 
 static const ArchDefinition g_elf_arch_def = {

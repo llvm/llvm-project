@@ -21,5 +21,18 @@ LANGOPT(Name, Bits, Default)
 
 ENUM_LANGOPT(FPContractMode, FPModeKind, 2, FPM_Off) ///< FP Contract Mode (off/fast)
 
+/// Permit floating point optimization without regard to infinities
+LANGOPT(NoHonorInfs, 1, false)
+/// Permit floating point optimization without regard to NaN
+LANGOPT(NoHonorNaNs, 1, false)
+/// Allow math functions to be replaced with an approximately equivalent calculation
+LANGOPT(ApproxFunc, 1, false)
+/// Allow optimizations that ignore the sign of floating point zeros
+LANGOPT(NoSignedZeros, 1, false)
+/// Allow reassociation transformations for floating-point instructions
+LANGOPT(AssociativeMath, 1, false)
+/// Allow division operations to be reassociated
+LANGOPT(ReciprocalMath, 1, false)
+
 #undef LANGOPT
 #undef ENUM_LANGOPT

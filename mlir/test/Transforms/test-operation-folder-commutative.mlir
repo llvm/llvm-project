@@ -1,4 +1,4 @@
-// RUN: mlir-opt --pass-pipeline="func.func(test-patterns)" %s | FileCheck %s
+// RUN: mlir-opt --pass-pipeline="builtin.module(func.func(test-patterns))" %s | FileCheck %s
 
 // CHECK-LABEL: func @test_reorder_constants_and_match
 func.func @test_reorder_constants_and_match(%arg0 : i32) -> (i32) {

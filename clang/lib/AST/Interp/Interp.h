@@ -112,8 +112,6 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   return true;
 }
 
-template <typename T> inline bool IsTrue(const T &V) { return !V.isZero(); }
-
 /// Interpreter entry point.
 bool Interpret(InterpState &S, APValue &Result);
 
@@ -466,6 +464,16 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   } else {
     unsigned VL = LHS.getByteOffset();
     unsigned VR = RHS.getByteOffset();
+
+    // In our Pointer class, a pointer to an array and a pointer to the first
+    // element in the same array are NOT equal. They have the same Base value,
+    // but a different Offset. This is a pretty rare case, so we fix this here
+    // by comparing pointers to the first elements.
+    if (LHS.inArray() && LHS.isRoot())
+      VL = LHS.atIndex(0).getByteOffset();
+    if (RHS.inArray() && RHS.isRoot())
+      VR = RHS.atIndex(0).getByteOffset();
+
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
     return true;
   }
@@ -725,12 +733,12 @@ bool InitThisFieldActive(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 /// 1) Pops the value from the stack
-/// 2) Pops a pointer from the stack
+/// 2) Peeks a pointer from the stack
 /// 3) Pushes the value to field I of the pointer on the stack
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Field = S.Stk.pop<Pointer>().atField(I);
+  const Pointer &Field = S.Stk.peek<Pointer>().atField(I);
   Field.deref<T>() = Value;
   Field.activate();
   Field.initialize();
@@ -991,23 +999,25 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
   // Fetch the pointer and the offset.
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckNull(S, OpPC, Ptr, CSK_ArrayIndex))
-    return false;
+
   if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
     return false;
 
-  // Get a version of the index comparable to the type.
-  T Index = T::from(Ptr.getIndex(), Offset.bitWidth());
-  // A zero offset does not change the pointer, but in the case of an array
-  // it has to be adjusted to point to the first element instead of the array.
+  // A zero offset does not change the pointer.
   if (Offset.isZero()) {
-    S.Stk.push<Pointer>(Index.isZero() ? Ptr.atIndex(0) : Ptr);
+    S.Stk.push<Pointer>(Ptr);
     return true;
   }
+
+  if (!CheckNull(S, OpPC, Ptr, CSK_ArrayIndex))
+    return false;
+
   // Arrays of unknown bounds cannot have pointers into them.
   if (!CheckArray(S, OpPC, Ptr))
     return false;
 
+  // Get a version of the index comparable to the type.
+  T Index = T::from(Ptr.getIndex(), Offset.bitWidth());
   // Compute the largest index into the array.
   unsigned MaxIndex = Ptr.getNumElems();
 
@@ -1061,6 +1071,23 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
   return OffsetHelper<T, false>(S, OpPC);
 }
 
+/// 1) Pops a Pointer from the stack.
+/// 2) Pops another Pointer from the stack.
+/// 3) Pushes the different of the indices of the two pointers on the stack.
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool SubPtr(InterpState &S, CodePtr OpPC) {
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+
+  if (!Pointer::hasSameArray(LHS, RHS)) {
+    // TODO: Diagnose.
+    return false;
+  }
+
+  T A = T::from(LHS.getIndex());
+  T B = T::from(RHS.getIndex());
+  return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, A.bitWidth(), A, B);
+}
 
 //===----------------------------------------------------------------------===//
 // Destroy

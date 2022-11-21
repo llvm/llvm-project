@@ -8,7 +8,7 @@
 declare dso_local fastcc float @bar(%struct.wobble* noalias, <8 x i32>) unnamed_addr
 
 define %struct.zot @widget(<8 x i32> %arg) local_unnamed_addr {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@widget
 ; CHECK-SAME: (<8 x i32> [[ARG:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
@@ -19,14 +19,14 @@ bb:
 }
 
 define void @baz(<8 x i32> %arg) local_unnamed_addr {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@baz
 ; TUNIT-SAME: (<8 x i32> [[ARG:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[TMP1:%.*]] = extractvalue [[STRUCT_ZOT:%.*]] undef, 0, 0
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@baz
 ; CGSCC-SAME: (<8 x i32> [[ARG:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  bb:
@@ -38,8 +38,8 @@ bb:
   ret void
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
 ;.

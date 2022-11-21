@@ -195,10 +195,10 @@ attributes #0 = { noinline nounwind sspstrong uwtable}
 ; TUNIT_: !0 = !{i32 0, i32 101}
 ; TUNIT_: !1 = !{i32 100, i32 201}
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone sspstrong willreturn uwtable }
-; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind sspstrong willreturn memory(none) uwtable }
+; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone sspstrong willreturn uwtable }
-; CGSCC: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone sspstrong willreturn uwtable }
-; CGSCC: attributes #[[ATTR2:[0-9]+]] = { readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind sspstrong willreturn memory(none) uwtable }
+; CGSCC: attributes #[[ATTR1]] = { nofree noinline nosync nounwind sspstrong willreturn memory(none) uwtable }
+; CGSCC: attributes #[[ATTR2:[0-9]+]] = { willreturn }
 ;.

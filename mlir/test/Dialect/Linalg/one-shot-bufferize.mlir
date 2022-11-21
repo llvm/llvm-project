@@ -388,6 +388,19 @@ func.func @transpose(%input: tensor<16x32x64xf32>,
 
 // -----
 
+// CHECK-LABEL: func @broadcast
+// CHECK-SAME:  %[[ARG0:.*]]: memref<8x32xf32
+func.func @broadcast(%input: tensor<8x32xf32>,
+                     %init: tensor<8x16x32xf32>) -> tensor<8x16x32xf32> {
+  %bcast = linalg.broadcast
+      ins(%input:tensor<8x32xf32>)
+      outs(%init:tensor<8x16x32xf32>)
+      dimensions = [0, 2]
+  func.return %bcast : tensor<8x16x32xf32>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // AllocTensorOp elimination would produce SSA violations for the example below.
 //===----------------------------------------------------------------------===//

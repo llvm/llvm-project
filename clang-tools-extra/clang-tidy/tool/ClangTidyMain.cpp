@@ -519,9 +519,9 @@ int clangTidyMain(int argc, const char **argv) {
     std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>
         RawOptions = OptionsProvider->getRawOptions(FilePath);
     for (const std::string &Check : EnabledChecks) {
-      for (auto It = RawOptions.rbegin(); It != RawOptions.rend(); ++It) {
-        if (It->first.Checks && GlobList(*It->first.Checks).contains(Check)) {
-          llvm::outs() << "'" << Check << "' is enabled in the " << It->second
+      for (const auto &[Opts, Source] : llvm::reverse(RawOptions)) {
+        if (Opts.Checks && GlobList(*Opts.Checks).contains(Check)) {
+          llvm::outs() << "'" << Check << "' is enabled in the " << Source
                        << ".\n";
           break;
         }
@@ -557,20 +557,16 @@ int clangTidyMain(int argc, const char **argv) {
     NamesAndOptions Valid =
         getAllChecksAndOptions(AllowEnablingAnalyzerAlphaCheckers);
     bool AnyInvalid = false;
-    for (const std::pair<ClangTidyOptions, std::string> &OptionWithSource :
-         RawOptions) {
-      const ClangTidyOptions &Opts = OptionWithSource.first;
+    for (const auto &[Opts, Source] : RawOptions) {
       if (Opts.Checks)
-        AnyInvalid |=
-            verifyChecks(Valid.Names, *Opts.Checks, OptionWithSource.second);
+        AnyInvalid |= verifyChecks(Valid.Names, *Opts.Checks, Source);
 
       for (auto Key : Opts.CheckOptions.keys()) {
         if (Valid.Options.contains(Key))
           continue;
         AnyInvalid = true;
-        auto &Output =
-            llvm::WithColor::warning(llvm::errs(), OptionWithSource.second)
-            << "unknown check option '" << Key << '\'';
+        auto &Output = llvm::WithColor::warning(llvm::errs(), Source)
+                       << "unknown check option '" << Key << '\'';
         llvm::StringRef Closest = closest(Key, Valid.Options);
         if (!Closest.empty())
           Output << "; did you mean '" << Closest << '\'';

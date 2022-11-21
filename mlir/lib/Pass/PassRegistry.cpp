@@ -12,6 +12,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -532,6 +533,13 @@ LogicalResult TextualPipeline::initialize(StringRef text,
 LogicalResult TextualPipeline::addToPipeline(
     OpPassManager &pm,
     function_ref<LogicalResult(const Twine &)> errorHandler) const {
+  // Temporarily disable implicit nesting while we append to the pipeline. We
+  // want the created pipeline to exactly match the parsed text pipeline, so
+  // it's preferrable to just error out if implicit nesting would be required.
+  OpPassManager::Nesting nesting = pm.getNesting();
+  pm.setNesting(OpPassManager::Nesting::Explicit);
+  auto restore = llvm::make_scope_exit([&]() { pm.setNesting(nesting); });
+
   return addToPipeline(pipeline, pm, errorHandler);
 }
 
@@ -730,10 +738,6 @@ struct PassArgData {
   /// This field is set when instance specific pass options have been provided
   /// on the command line.
   StringRef options;
-
-  /// This field is used when the parsed option corresponds to an explicit
-  /// pipeline.
-  TextualPipeline pipeline;
 };
 } // namespace
 
@@ -760,7 +764,7 @@ namespace {
 
 /// The name for the command line option used for parsing the textual pass
 /// pipeline.
-static constexpr StringLiteral passPipelineArg = "pass-pipeline";
+#define PASS_PIPELINE_ARG "pass-pipeline"
 
 /// Adds command line option for each registered pass or pass pipeline, as well
 /// as textual pass pipelines.
@@ -775,21 +779,14 @@ struct PassNameParser : public llvm::cl::parser<PassArgData> {
              PassArgData &value);
 
   /// If true, this parser only parses entries that correspond to a concrete
-  /// pass registry entry, and does not add a `pass-pipeline` argument, does not
-  /// include the options for pass entries, and does not include pass pipelines
-  /// entries.
+  /// pass registry entry, and does not include pipeline entries or the options
+  /// for pass entries.
   bool passNamesOnly = false;
 };
 } // namespace
 
 void PassNameParser::initialize() {
   llvm::cl::parser<PassArgData>::initialize();
-
-  /// Add an entry for the textual pass pipeline option.
-  if (!passNamesOnly) {
-    addLiteralOption(passPipelineArg, PassArgData(),
-                     "A textual description of a pass pipeline to run");
-  }
 
   /// Add the pass entries.
   for (const auto &kv : *passRegistry) {
@@ -822,11 +819,6 @@ void PassNameParser::printOptionInfo(const llvm::cl::Option &opt,
   } else {
     llvm::outs() << "  " << opt.HelpStr << '\n';
   }
-
-  // Print the top-level pipeline argument.
-  printOptionHelp(passPipelineArg,
-                  "A textual description of a pass pipeline to run",
-                  /*indent=*/4, globalWidth, /*isTopLevel=*/!opt.hasArgStr());
 
   // Functor used to print the ordered entries of a registration map.
   auto printOrderedEntries = [&](StringRef header, auto &map) {
@@ -865,11 +857,6 @@ size_t PassNameParser::getOptionWidth(const llvm::cl::Option &opt) const {
 
 bool PassNameParser::parse(llvm::cl::Option &opt, StringRef argName,
                            StringRef arg, PassArgData &value) {
-  // Handle the pipeline option explicitly.
-  if (argName == passPipelineArg)
-    return failed(value.pipeline.initialize(arg, llvm::errs()));
-
-  // Otherwise, default to the base for handling.
   if (llvm::cl::parser<PassArgData>::parse(opt, argName, arg, value))
     return true;
   value.options = arg;
@@ -907,12 +894,25 @@ struct PassPipelineCLParserImpl {
 /// Construct a pass pipeline parser with the given command line description.
 PassPipelineCLParser::PassPipelineCLParser(StringRef arg, StringRef description)
     : impl(std::make_unique<detail::PassPipelineCLParserImpl>(
-          arg, description, /*passNamesOnly=*/false)) {}
+          arg, description, /*passNamesOnly=*/false)),
+      passPipeline(
+          PASS_PIPELINE_ARG,
+          llvm::cl::desc("Textual description of the pass pipeline to run")) {}
+
+PassPipelineCLParser::PassPipelineCLParser(StringRef arg, StringRef description,
+                                           StringRef alias)
+    : PassPipelineCLParser(arg, description) {
+  passPipelineAlias.emplace(alias,
+                            llvm::cl::desc("Alias for --" PASS_PIPELINE_ARG),
+                            llvm::cl::aliasopt(passPipeline));
+}
+
 PassPipelineCLParser::~PassPipelineCLParser() = default;
 
 /// Returns true if this parser contains any valid options to add.
 bool PassPipelineCLParser::hasAnyOccurrences() const {
-  return impl->passList.getNumOccurrences() != 0;
+  return passPipeline.getNumOccurrences() != 0 ||
+         impl->passList.getNumOccurrences() != 0;
 }
 
 /// Returns true if the given pass registry entry was registered at the
@@ -925,19 +925,24 @@ bool PassPipelineCLParser::contains(const PassRegistryEntry *entry) const {
 LogicalResult PassPipelineCLParser::addToPipeline(
     OpPassManager &pm,
     function_ref<LogicalResult(const Twine &)> errorHandler) const {
+  if (passPipeline.getNumOccurrences()) {
+    if (impl->passList.getNumOccurrences())
+      return errorHandler(
+          "'-" PASS_PIPELINE_ARG
+          "' option can't be used with individual pass options");
+    std::string errMsg;
+    llvm::raw_string_ostream os(errMsg);
+    FailureOr<OpPassManager> parsed = parsePassPipeline(passPipeline, os);
+    if (failed(parsed))
+      return errorHandler(errMsg);
+    pm = std::move(*parsed);
+    return success();
+  }
+
   for (auto &passIt : impl->passList) {
-    if (passIt.registryEntry) {
-      if (failed(passIt.registryEntry->addToPipeline(pm, passIt.options,
-                                                     errorHandler)))
-        return failure();
-    } else {
-      OpPassManager::Nesting nesting = pm.getNesting();
-      pm.setNesting(OpPassManager::Nesting::Explicit);
-      LogicalResult status = passIt.pipeline.addToPipeline(pm, errorHandler);
-      pm.setNesting(nesting);
-      if (failed(status))
-        return failure();
-    }
+    if (failed(passIt.registryEntry->addToPipeline(pm, passIt.options,
+                                                   errorHandler)))
+      return failure();
   }
   return success();
 }

@@ -44,6 +44,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Listener.h"
@@ -1310,6 +1311,9 @@ static void PrivateReportDiagnostic(Debugger &debugger,
                                     bool debugger_specific) {
   uint32_t event_type = 0;
   switch (type) {
+  case DiagnosticEventData::Type::Info:
+    assert(false && "DiagnosticEventData::Type::Info should not be broadcast");
+    return;
   case DiagnosticEventData::Type::Warning:
     event_type = Debugger::eBroadcastBitWarning;
     break;
@@ -1338,6 +1342,15 @@ void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
                                     llvm::Optional<lldb::user_id_t> debugger_id,
                                     std::once_flag *once) {
   auto ReportDiagnosticLambda = [&]() {
+    // The diagnostic subsystem is optional but we still want to broadcast
+    // events when it's disabled.
+    if (Diagnostics::Enabled())
+      Diagnostics::Instance().Report(message);
+
+    // We don't broadcast info events.
+    if (type == DiagnosticEventData::Type::Info)
+      return;
+
     // Check if this diagnostic is for a specific debugger.
     if (debugger_id) {
       // It is debugger specific, grab it and deliver the event if the debugger
@@ -1373,6 +1386,13 @@ void Debugger::ReportError(std::string message,
                            llvm::Optional<lldb::user_id_t> debugger_id,
                            std::once_flag *once) {
   ReportDiagnosticImpl(DiagnosticEventData::Type::Error, std::move(message),
+                       debugger_id, once);
+}
+
+void Debugger::ReportInfo(std::string message,
+                          llvm::Optional<lldb::user_id_t> debugger_id,
+                          std::once_flag *once) {
+  ReportDiagnosticImpl(DiagnosticEventData::Type::Info, std::move(message),
                        debugger_id, once);
 }
 

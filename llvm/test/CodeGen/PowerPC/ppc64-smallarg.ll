@@ -50,7 +50,7 @@ entry:
   ret void
 }
 ; CHECK: @caller2
-; CHECK: std {{[0-9]+}}, 16(1)
+; CHECK: stw {{[0-9]+}}, 156(1)
 ; CHECK: bl test2
 
 declare float @test2(float, float, float, float, float, float, float, float, float, float, float, float, float, float)

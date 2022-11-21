@@ -67,7 +67,7 @@ static void spsSerializationRoundTrip(const T &Value) {
 template <typename T> static void testFixedIntegralTypeSerialization() {
   spsSerializationRoundTrip<T, T>(0);
   spsSerializationRoundTrip<T, T>(static_cast<T>(1));
-  if (std::is_signed<T>::value) {
+  if (std::is_signed_v<T>) {
     spsSerializationRoundTrip<T, T>(static_cast<T>(-1));
     spsSerializationRoundTrip<T, T>(std::numeric_limits<T>::min());
   }

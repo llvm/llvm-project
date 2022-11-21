@@ -5862,9 +5862,9 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 
   // C++2a [intro.execution]p5:
   //   A full-expression is [...] a constant-expression [...]
-  Result =
-      S.ActOnFinishFullExpr(Result.get(), From->getExprLoc(),
-                            /*DiscardedValue=*/false, /*IsConstexpr=*/true);
+  Result = S.ActOnFinishFullExpr(Result.get(), From->getExprLoc(),
+                                 /*DiscardedValue=*/false, /*IsConstexpr=*/true,
+                                 CCE == Sema::CCEKind::CCEK_TemplateArg);
   if (Result.isInvalid())
     return Result;
 
@@ -10289,7 +10289,7 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
     } else if (Cand->NotValidBecauseConstraintExprHasError()) {
       // This candidate has constraint that we were unable to evaluate because
       // it referenced an expression that contained an error. Rather than fall
-      // back onto a potentially unintended candidate (made worse by by
+      // back onto a potentially unintended candidate (made worse by
       // subsuming constraints), treat this as 'no viable candidate'.
       Best = end();
       return OR_No_Viable_Function;
@@ -13147,17 +13147,16 @@ DiagnoseTwoPhaseOperatorLookup(Sema &SemaRef, OverloadedOperatorKind Op,
 namespace {
 class BuildRecoveryCallExprRAII {
   Sema &SemaRef;
+  Sema::SatisfactionStackResetRAII SatStack;
+
 public:
-  BuildRecoveryCallExprRAII(Sema &S) : SemaRef(S) {
+  BuildRecoveryCallExprRAII(Sema &S) : SemaRef(S), SatStack(S) {
     assert(SemaRef.IsBuildingRecoveryCallExpr == false);
     SemaRef.IsBuildingRecoveryCallExpr = true;
   }
 
-  ~BuildRecoveryCallExprRAII() {
-    SemaRef.IsBuildingRecoveryCallExpr = false;
-  }
+  ~BuildRecoveryCallExprRAII() { SemaRef.IsBuildingRecoveryCallExpr = false; }
 };
-
 }
 
 /// Attempts to recover from a call where no functions were found.

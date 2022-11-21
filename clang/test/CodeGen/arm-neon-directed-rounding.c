@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu cortex-a57 \
 // RUN:     -ffreestanding -disable-O0-optnone -emit-llvm %s -o - | \
-// RUN:     opt -S -mem2reg | FileCheck -check-prefixes=CHECK,CHECK-A32 %s
+// RUN:     opt -S -passes=mem2reg | FileCheck -check-prefixes=CHECK,CHECK-A32 %s
 // RUN: %clang_cc1 -triple arm64-linux-gnueabihf -target-feature +neon \
 // RUN:     -ffreestanding -disable-O0-optnone -emit-llvm %s -o - | \
-// RUN:     opt -S -mem2reg | FileCheck -check-prefixes=CHECK,CHECK-A64 %s
+// RUN:     opt -S -passes=mem2reg | FileCheck -check-prefixes=CHECK,CHECK-A64 %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

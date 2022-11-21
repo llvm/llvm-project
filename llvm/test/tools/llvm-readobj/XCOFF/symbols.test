@@ -134,6 +134,33 @@ Symbols:
         LineNumHi: 2
         LineNumLo: 3
 
+##The C_WEAKEXT symbol with two Function auxiliary entries and a CSECT auxiliary entry.
+  - Name:               .fun7
+    Value:              0x0
+    Section:            .text
+    Type:               0x00
+    StorageClass:       C_WEAKEXT
+    NumberOfAuxEntries: 3
+    AuxEntries:
+      - Type:                 AUX_FCN
+        OffsetToExceptionTbl: 2
+        SizeOfFunction:       3
+        SymIdxOfNextBeyond:   4
+        PtrToLineNum:         5
+      - Type:                 AUX_FCN
+        OffsetToExceptionTbl: 8
+        SizeOfFunction:       5
+        SymIdxOfNextBeyond:   8
+        PtrToLineNum:         5
+      - Type:                   AUX_CSECT
+        ParameterHashIndex:     11
+        TypeChkSectNum:         22
+        SymbolAlignmentAndType: 33
+        StorageMappingClass:    XMC_PR
+        SectionOrLength:        256
+        StabInfoIndex:          44
+        StabSectNum:            55
+
 # SYMBOL32:      Symbols [
 # SYMBOL32-NEXT:   Symbol {
 # SYMBOL32-NEXT:     Index: 0
@@ -302,6 +329,40 @@ Symbols:
 # SYMBOL32-NEXT:       Index: 20
 # SYMBOL32-NEXT:       LineNumber (High 2 Bytes): 0x2
 # SYMBOL32-NEXT:       LineNumber (Low 2 Bytes): 0x3
+# SYMBOL32-NEXT:     }
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 21
+# SYMBOL32-NEXT:     Name: .fun7
+# SYMBOL32-NEXT:     Value (RelocatableAddress): 0x0
+# SYMBOL32-NEXT:     Section: .text
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_WEAKEXT (0x6F)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 3
+# SYMBOL32-NEXT:     Function Auxiliary Entry {
+# SYMBOL32-NEXT:       Index: 22
+# SYMBOL32-NEXT:       OffsetToExceptionTable: 0x2
+# SYMBOL32-NEXT:       SizeOfFunction: 0x3
+# SYMBOL32-NEXT:       PointerToLineNum: 0x5
+# SYMBOL32-NEXT:       SymbolIndexOfNextBeyond: 4
+# SYMBOL32-NEXT:     }
+# SYMBOL32-NEXT:     Function Auxiliary Entry {
+# SYMBOL32-NEXT:       Index: 23
+# SYMBOL32-NEXT:       OffsetToExceptionTable: 0x8
+# SYMBOL32-NEXT:       SizeOfFunction: 0x5
+# SYMBOL32-NEXT:       PointerToLineNum: 0x5
+# SYMBOL32-NEXT:       SymbolIndexOfNextBeyond: 8
+# SYMBOL32-NEXT:     }
+# SYMBOL32-NEXT:     CSECT Auxiliary Entry {
+# SYMBOL32-NEXT:       Index: 24
+# SYMBOL32-NEXT:       SectionLen: 256
+# SYMBOL32-NEXT:       ParameterHashIndex: 0xB
+# SYMBOL32-NEXT:       TypeChkSectNum: 0x16
+# SYMBOL32-NEXT:       SymbolAlignmentLog2: 4
+# SYMBOL32-NEXT:       SymbolType: XTY_SD (0x1)
+# SYMBOL32-NEXT:       StorageMappingClass: XMC_PR (0x0)
+# SYMBOL32-NEXT:       StabInfoIndex: 0x2C
+# SYMBOL32-NEXT:       StabSectNum: 0x37
 # SYMBOL32-NEXT:     }
 # SYMBOL32-NEXT:   }
 # SYMBOL32-NEXT: ]

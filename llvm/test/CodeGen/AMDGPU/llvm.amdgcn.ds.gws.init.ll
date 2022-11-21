@@ -1,9 +1,15 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -asm-verbose=0 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,NOLOOP-GISEL %s
 
 ; Minimum offset
 ; GCN-LABEL: {{^}}gws_init_offset0:

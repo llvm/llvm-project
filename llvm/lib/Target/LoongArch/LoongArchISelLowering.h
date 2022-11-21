@@ -171,6 +171,7 @@ private:
   SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;

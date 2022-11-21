@@ -10,6 +10,8 @@ add_header_library(
   builtin_wrappers
   HDRS
     builtin_wrappers.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
 )
 
 add_header_library(

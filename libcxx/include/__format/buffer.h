@@ -17,6 +17,7 @@
 #include <__algorithm/ranges_copy_n.h>
 #include <__algorithm/transform.h>
 #include <__algorithm/unwrap_iter.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__format/concepts.h>
 #include <__format/enable_insertable.h>
@@ -27,7 +28,6 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/wrap_iter.h>
 #include <__utility/move.h>
-#include <concepts>
 #include <cstddef>
 #include <string_view>
 #include <type_traits>

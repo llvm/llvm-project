@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -sparse-tensor-rewrite=enable-runtime-library=false | FileCheck %s
+// RUN: mlir-opt %s -sparse-tensor-rewrite="enable-runtime-library=false enable-convert=false" |\
+// RUN: FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
   dimLevelType = ["dense", "compressed"]
@@ -17,18 +18,19 @@
 // CHECK:         %[[T:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]])
 // CHECK:         %[[N:.*]] = call @getSparseTensorReaderNNZ(%[[R]])
 // CHECK:         %[[VB:.*]] = memref.alloca()
-// CHECK:         scf.for %{{.*}} = %[[C0]] to %[[N]] step %[[C1]] {
+// CHECK:         %[[T2:.*]] = scf.for %{{.*}} = %[[C0]] to %[[N]] step %[[C1]] iter_args(%[[A2:.*]] = %[[T]])
 // CHECK:           func.call @getSparseTensorReaderNextF32(%[[R]], %[[DS]], %[[VB]])
 // CHECK:           %[[E0:.*]] = memref.load %[[DS]]{{\[}}%[[C0]]]
 // CHECK:           %[[E1:.*]] = memref.load %[[DS]]{{\[}}%[[C1]]]
 // CHECK:           %[[V:.*]] = memref.load %[[VB]][]
-// CHECK:           sparse_tensor.insert %[[V]] into %[[T]]{{\[}}%[[E0]], %[[E1]]]
+// CHECK:           %[[T1:.*]] = sparse_tensor.insert %[[V]] into %[[A2]]{{\[}}%[[E0]], %[[E1]]]
+// CHECK:           scf.yield %[[T1]]
 // CHECK:         }
 // CHECK:         call @delSparseTensorReader(%[[R]])
-// CHECK:         %[[R:.*]] = sparse_tensor.convert %[[T]]
-// CHECK:         bufferization.dealloc_tensor %[[T]]
+// CHECK:         %[[T3:.*]] = sparse_tensor.load %[[T2]] hasInserts
+// CHECK:         %[[R:.*]] = sparse_tensor.convert %[[T3]]
+// CHECK:         bufferization.dealloc_tensor %[[T3]]
 // CHECK:         return %[[R]]
-// CHECK:         }
 func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSR> {
   %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #CSR>
   return %0 : tensor<?x?xf32, #CSR>

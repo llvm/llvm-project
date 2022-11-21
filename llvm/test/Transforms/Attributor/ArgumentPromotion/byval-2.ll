@@ -5,7 +5,7 @@
 %struct.ss = type { i32, i64 }
 
 define internal void @f(%struct.ss* byval(%struct.ss)  %b, i32* byval(i32) %X) nounwind  {
-; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -35,7 +35,7 @@ entry:
 
 define i32 @test(i32* %X) {
 ;
-; TUNIT: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@test
 ; TUNIT-SAME: (i32* nocapture nofree readonly [[X:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
@@ -51,7 +51,7 @@ define i32 @test(i32* %X) {
 ; TUNIT-NEXT:    call void @f(i32 [[TMP0]], i64 [[TMP1]], i32 [[TMP2]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 0
 ;
-; CGSCC: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@test
 ; CGSCC-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -72,10 +72,10 @@ entry:
   ret i32 0
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR1]] = { argmemonly nofree nosync nounwind willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
 ;.

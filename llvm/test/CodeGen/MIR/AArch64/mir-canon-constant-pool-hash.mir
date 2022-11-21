@@ -14,8 +14,8 @@ constants:
 body: |
   bb.0:
     ; Test that we no longer have hash collisions between two different consts:
-    ;CHECK: %bb{{[0-9]+}}_{{[0-9]+}}__1:gpr64common = ADR
-    ;CHECK: %bb{{[0-9]+}}_{{[0-9]+}}__1:gpr64common = ADR
+    ;CHECK: %bb{{[0-9a-f]+}}_{{[0-9a-f]+}}__1:gpr64common = ADR
+    ;CHECK: %bb{{[0-9a-f]+}}_{{[0-9a-f]+}}__1:gpr64common = ADR
     %vreg0:gpr64common = ADRP target-flags(aarch64-page) %const.0
     %vreg1:gpr64common = ADRP target-flags(aarch64-page) %const.1
 ...

@@ -234,8 +234,7 @@ struct TypeBuilder {
         translateLenParameters(params, tySpec->category(), ultimate);
         ty = genFIRType(context, tySpec->category(), kind, params);
       } else if (type->IsPolymorphic() &&
-                 !converter.getLoweringOptions()
-                      .isPolymorphicTypeImplEnabled()) {
+                 !converter.getLoweringOptions().getPolymorphicTypeImpl()) {
         // TODO is kept under experimental flag until feature is complete.
         TODO(loc, "support for polymorphic types");
       } else if (type->IsUnlimitedPolymorphic()) {

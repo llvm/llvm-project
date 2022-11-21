@@ -492,6 +492,41 @@ struct ConvertExtUI final : OpConversionPattern<arith::ExtUIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertSelect
+//===----------------------------------------------------------------------===//
+
+struct ConvertSelect final : OpConversionPattern<arith::SelectOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::SelectOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto newTy = getTypeConverter()
+                     ->convertType(op.getType())
+                     .dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {0}", op.getType()));
+
+    auto [trueElem0, trueElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getTrueValue());
+    auto [falseElem0, falseElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getFalseValue());
+    Value cond = appendX1Dim(rewriter, loc, adaptor.getCondition());
+
+    Value resElem0 =
+        rewriter.create<arith::SelectOp>(loc, cond, trueElem0, falseElem0);
+    Value resElem1 =
+        rewriter.create<arith::SelectOp>(loc, cond, trueElem1, falseElem1);
+    Value resultVec =
+        constructResultVector(rewriter, loc, newTy, {resElem0, resElem1});
+    rewriter.replaceOp(op, resultVec);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertShLI
 //===----------------------------------------------------------------------===//
 
@@ -828,7 +863,7 @@ void arith::populateArithWideIntEmulationPatterns(
   // Populate `arith.*` conversion patterns.
   patterns.add<
       // Misc ops.
-      ConvertConstant, ConvertVectorPrint,
+      ConvertConstant, ConvertVectorPrint, ConvertSelect,
       // Binary ops.
       ConvertAddI, ConvertMulI, ConvertShLI, ConvertShRUI,
       // Bitwise binary ops.

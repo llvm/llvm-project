@@ -7,7 +7,7 @@
 %0 = type { i32, i32 }
 
 define internal %0 @foo(i1 %Q) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (i1 [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    br i1 [[Q]], label [[T:%.*]], label [[F:%.*]]
@@ -34,7 +34,7 @@ F:                                                ; preds = %0
 }
 
 define internal %0 @bar(i1 %Q) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: (i1 [[Q:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = insertvalue [[TMP0:%.*]] undef, i32 21, 0
@@ -59,13 +59,13 @@ F:                                                ; preds = %0
 }
 
 define %0 @caller(i1 %Q) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@caller
 ; TUNIT-SAME: (i1 [[Q:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    ret [[TMP0]] [[X]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
 ; CGSCC-SAME: (i1 [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR2:[0-9]+]]
@@ -84,7 +84,7 @@ define %0 @caller(i1 %Q) {
 
 ; Similar to @caller but the result of both calls are actually used.
 define i32 @caller2(i1 %Q) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@caller2
 ; TUNIT-SAME: (i1 [[Q:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR1]]
@@ -98,7 +98,7 @@ define i32 @caller2(i1 %Q) {
 ; TUNIT-NEXT:    [[R:%.*]] = add i32 [[N]], [[M]]
 ; TUNIT-NEXT:    ret i32 [[R]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller2
 ; CGSCC-SAME: (i1 [[Q:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR2]]
@@ -125,10 +125,10 @@ define i32 @caller2(i1 %Q) {
   ret i32 %R
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2]] = { readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { willreturn }
 ;.

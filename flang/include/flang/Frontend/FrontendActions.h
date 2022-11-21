@@ -29,8 +29,12 @@ namespace Fortran::frontend {
 // TODO: This is a copy from f18.cpp. It doesn't really belong here and should
 // be moved to a more suitable place in future.
 struct MeasurementVisitor {
-  template <typename A> bool Pre(const A &) { return true; }
-  template <typename A> void Post(const A &) {
+  template <typename A>
+  bool Pre(const A &) {
+    return true;
+  }
+  template <typename A>
+  void Post(const A &) {
     ++objects;
     bytes += sizeof(A);
   }
@@ -148,8 +152,8 @@ public:
   /// \param extension  The extension to use for the output file (ignored when
   ///                   the user decides to print to stdout via `-o -`)
   /// \return           Null on error, ostream for the output file otherwise
-  std::unique_ptr<llvm::raw_pwrite_stream> createOutputFile(
-      llvm::StringRef extension);
+  std::unique_ptr<llvm::raw_pwrite_stream>
+  createOutputFile(llvm::StringRef extension);
 };
 
 //===----------------------------------------------------------------------===//
@@ -184,10 +188,10 @@ class DebugDumpAllAction : public PrescanAndSemaDebugAction {
 /// maintain some level of consistency/similarity between the drivers.
 enum class BackendActionTy {
   Backend_EmitAssembly, ///< Emit native assembly files
-  Backend_EmitObj, ///< Emit native object files
-  Backend_EmitBC, ///< Emit LLVM bitcode files
-  Backend_EmitLL, ///< Emit human-readable LLVM assembly
-  Backend_EmitMLIR ///< Emit MLIR files
+  Backend_EmitObj,      ///< Emit native object files
+  Backend_EmitBC,       ///< Emit LLVM bitcode files
+  Backend_EmitLL,       ///< Emit human-readable LLVM assembly
+  Backend_EmitMLIR      ///< Emit MLIR files
 };
 
 /// Abstract base class for actions that generate code (MLIR, LLVM IR, assembly
@@ -199,7 +203,7 @@ class CodeGenAction : public FrontendAction {
   void executeAction() override;
   /// Runs prescan, parsing, sema and lowers to MLIR.
   bool beginSourceFileAction() override;
-  /// Sets up LLVM's TargetMachine, configures llvmModule accordingly.
+  /// Sets up LLVM's TargetMachine.
   void setUpTargetMachine();
   /// Runs the optimization (aka middle-end) pipeline on the LLVM module
   /// associated with this action.

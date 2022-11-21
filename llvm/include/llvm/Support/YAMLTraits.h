@@ -2019,9 +2019,8 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
   namespace llvm {                                                             \
   namespace yaml {                                                             \
   static_assert(                                                               \
-      !std::is_fundamental<TYPE>::value &&                                     \
-      !std::is_same<TYPE, std::string>::value &&                               \
-      !std::is_same<TYPE, llvm::StringRef>::value,                             \
+      !std::is_fundamental_v<TYPE> && !std::is_same_v<TYPE, std::string> &&    \
+          !std::is_same_v<TYPE, llvm::StringRef>,                              \
       "only use LLVM_YAML_IS_SEQUENCE_VECTOR for types you control");          \
   template <> struct SequenceElementTraits<TYPE> {                             \
     static const bool flow = FLOW;                                             \

@@ -85,6 +85,40 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                           'variable "%s" in verify dictionary' % (name))
             self.verify_values(verify_dict[name], variable, varref_dict)
 
+    def darwin_dwarf_missing_obj(self, initCommands):
+        self.build(debug_info="dwarf")
+        program = self.getBuildArtifact("a.out")
+        main_obj = self.getBuildArtifact("main.o")
+        self.assertTrue(os.path.exists(main_obj))
+        # Delete the main.o file that contains the debug info so we force an
+        # error when we run to main and try to get variables
+        os.unlink(main_obj)
+
+        self.create_debug_adaptor()
+        self.assertTrue(os.path.exists(program), 'executable must exist')
+
+        self.launch(program=program,
+                    initCommands=initCommands)
+
+        functions = ['main']
+        breakpoint_ids = self.set_function_breakpoints(functions)
+        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        locals = self.vscode.get_local_variables()
+
+        verify_locals = {
+            '<error>': {
+                'equals': {'type': 'const char *'},
+                'contains': { 'value': [
+                    'debug map object file ',
+                    'main.o" containing debug info does not exist, debug info will not be loaded']
+                }
+            },
+        }
+        varref_dict = {}
+        self.verify_variables(verify_locals, locals, varref_dict)
+
     @skipIfWindows
     @skipIfRemote
     def test_scopes_variables_setVariable_evaluate(self):
@@ -529,33 +563,16 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             changing compiler options and are designed to give better feedback
             to the user.
         '''
-        self.build(debug_info="dwarf")
-        program = self.getBuildArtifact("a.out")
-        main_obj = self.getBuildArtifact("main.o")
-        self.assertTrue(os.path.exists(main_obj))
-        # Delete the main.o file that contains the debug info so we force an
-        # error when we run to main and try to get variables
-        os.unlink(main_obj)
+        self.darwin_dwarf_missing_obj(None)
 
-        self.create_debug_adaptor()
-        self.assertTrue(os.path.exists(program), 'executable must exist')
-        self.launch(program)
 
-        functions = ['main']
-        breakpoint_ids = self.set_function_breakpoints(functions)
-        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
-        self.continue_to_breakpoints(breakpoint_ids)
-
-        locals = self.vscode.get_local_variables()
-
-        verify_locals = {
-            '<error>': {
-                'equals': {'type': 'const char *'},
-                'contains': { 'value': [
-                    'debug map object file ',
-                    'main.o" containing debug info does not exist, debug info will not be loaded']
-                }
-            },
-        }
-        varref_dict = {}
-        self.verify_variables(verify_locals, locals, varref_dict)
+    @no_debug_info_test
+    @skipUnlessDarwin
+    def test_darwin_dwarf_missing_obj_with_symbol_ondemand_enabled(self):
+        '''
+            Test that if we build a binary with DWARF in .o files and we remove
+            the .o file for main.cpp, that we get a variable named "<error>"
+            whose value matches the appriopriate error. Test with symbol_ondemand_enabled.
+        '''
+        initCommands = ['settings set symbols.load-on-demand true']
+        self.darwin_dwarf_missing_obj(initCommands)

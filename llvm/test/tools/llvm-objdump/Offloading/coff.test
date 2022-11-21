@@ -1,0 +1,42 @@
+# RUN: yaml2obj %S/Inputs/binary.yaml -o %t.bin
+# RUN: yaml2obj %s -o %t.coff
+# RUN: llvm-objcopy --add-section .llvm.offloading=%t.bin %t.coff
+# RUN: llvm-objdump --offloading %t.coff | FileCheck %s --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: []
+sections:
+  - Name:            .rdata
+    Characteristics: []
+  - Name:            .llvm.offloading
+    Characteristics: [ IMAGE_SCN_LNK_REMOVE, IMAGE_SCN_MEM_DISCARDABLE ]
+    Alignment:       8
+symbols:
+
+#      CHECK:{{.*}}file format coff-x86-64
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [0]:
+# CHECK-NEXT:kind            llvm ir
+# CHECK-NEXT:arch            gfx908
+# CHECK-NEXT:triple          amdgcn-amd-amdhsa
+# CHECK-NEXT:producer        openmp
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [1]:
+# CHECK-NEXT:kind            llvm ir
+# CHECK-NEXT:arch            gfx90a
+# CHECK-NEXT:triple          amdgcn-amd-amdhsa
+# CHECK-NEXT:producer        openmp
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [2]:
+# CHECK-NEXT:kind            cubin
+# CHECK-NEXT:arch            sm_52
+# CHECK-NEXT:triple          nvptx64-nvidia-cuda
+# CHECK-NEXT:producer        openmp
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [3]:
+# CHECK-NEXT:kind            <none>
+# CHECK-NEXT:arch            sm_70
+# CHECK-NEXT:triple          nvptx64-nvidia-cuda
+# CHECK-NEXT:producer        none

@@ -2,6 +2,7 @@
 #define LLVM_INTRINSIC_OPS
 
 include "mlir/IR/OpBase.td"
+include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -12,38 +13,59 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 // "intr." to avoid potential name clashes.
 
 class LLVM_UnaryIntrOpBase<string func, Type element,
-                           list<Trait> traits = []> :
+                           list<Trait> traits = [],
+                           dag addAttrs = (ins)> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure, SameOperandsAndResultType], traits)> {
-  let arguments = (ins LLVM_ScalarOrVectorOf<element>:$in);
+  dag args = (ins LLVM_ScalarOrVectorOf<element>:$in);
+  let arguments = !con(args, addAttrs);
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
+      "functional-type(operands, results)";
 }
 
 class LLVM_UnaryIntrOpI<string func, list<Trait> traits = []> :
     LLVM_UnaryIntrOpBase<func, AnySignlessInteger, traits>;
 
 class LLVM_UnaryIntrOpF<string func, list<Trait> traits = []> :
-    LLVM_UnaryIntrOpBase<func, LLVM_AnyFloat, traits>;
+    LLVM_UnaryIntrOpBase<func, LLVM_AnyFloat,
+           !listconcat([DeclareOpInterfaceMethods<FastmathFlagsInterface>],
+                       traits),
+           (ins DefaultValuedAttr<LLVM_FastmathFlagsAttr,
+                                  "{}">:$fastmathFlags)>;
 
 class LLVM_BinarySameArgsIntrOpBase<string func, Type element,
-                                    list<Trait> traits = []> :
+                                    list<Trait> traits = [],
+                                    dag addAttrs = (ins)> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure, SameOperandsAndResultType], traits)> {
-  let arguments = (ins LLVM_ScalarOrVectorOf<element>:$a,
-                       LLVM_ScalarOrVectorOf<element>:$b);
+  dag args = (ins LLVM_ScalarOrVectorOf<element>:$a,
+                  LLVM_ScalarOrVectorOf<element>:$b);
+  let arguments = !con(args, addAttrs);
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
+      "functional-type(operands, results)";
 }
 
 class LLVM_BinarySameArgsIntrOpI<string func, list<Trait> traits = []> :
     LLVM_BinarySameArgsIntrOpBase<func, AnySignlessInteger, traits>;
 
 class LLVM_BinarySameArgsIntrOpF<string func, list<Trait> traits = []> :
-    LLVM_BinarySameArgsIntrOpBase<func, LLVM_AnyFloat, traits>;
+    LLVM_BinarySameArgsIntrOpBase<func, LLVM_AnyFloat,
+           !listconcat([DeclareOpInterfaceMethods<FastmathFlagsInterface>],
+                       traits),
+           (ins DefaultValuedAttr<LLVM_FastmathFlagsAttr,
+                                  "{}">:$fastmathFlags)>;
 
 class LLVM_TernarySameArgsIntrOpF<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([Pure, SameOperandsAndResultType], traits)> {
+           !listconcat([DeclareOpInterfaceMethods<FastmathFlagsInterface>,
+                        Pure, SameOperandsAndResultType], traits)> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnyFloat>:$a,
                        LLVM_ScalarOrVectorOf<AnyFloat>:$b,
-                       LLVM_ScalarOrVectorOf<AnyFloat>:$c);
+                       LLVM_ScalarOrVectorOf<AnyFloat>:$c,
+                       DefaultValuedAttr<LLVM_FastmathFlagsAttr,
+                                         "{}">:$fastmathFlags);
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
+      "functional-type(operands, results)";
 }
 
 class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
@@ -83,9 +105,14 @@ def LLVM_RoundOp : LLVM_UnaryIntrOpF<"round">;
 def LLVM_FTruncOp : LLVM_UnaryIntrOpF<"trunc">;
 def LLVM_SqrtOp : LLVM_UnaryIntrOpF<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrOpF<"pow">;
-def LLVM_PowIOp : LLVM_OneResultIntrOp<"powi"> {
-  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
-                   AnySignlessInteger:$power);
+def LLVM_PowIOp : LLVM_OneResultIntrOp<"powi", [], [0,1],
+    [DeclareOpInterfaceMethods<FastmathFlagsInterface>, Pure]> {
+  let arguments =
+      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+           AnySignlessInteger:$power,
+           DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
+      "functional-type(operands, results)";
 }
 def LLVM_BitReverseOp : LLVM_UnaryIntrOpI<"bitreverse">;
 def LLVM_CountLeadingZerosOp : LLVM_CountZerosIntrOp<"ctlz">;
@@ -677,6 +704,25 @@ def LLVM_vector_extract
     uint64_t getResVectorBitWidth() {
       return getVectorBitWidth(getRes().getType());
     }
+  }];
+}
+
+//===--------------------------------------------------------------------===//
+// CallIntrinsicOp
+//===--------------------------------------------------------------------===//
+def LLVM_CallIntrinsicOp : LLVM_Op<"call_intrinsic", [Pure]> {
+  let summary = "Call to an LLVM intrinsic function.";
+  let description = [{
+    Call the specified llvm intrinsic. If the intrinsic is overloaded, use
+    the MLIR function type of this op to determine which intrinsic to call.
+    }];
+  let arguments = (ins StrAttr:$intrin, Variadic<LLVM_Type>:$args);
+  let results = (outs Variadic<LLVM_Type>:$results);
+  let llvmBuilder = [{
+    return convertCallLLVMIntrinsicOp(op, builder, moduleTranslation);
+  }];
+  let assemblyFormat = [{
+    $intrin `(` $args `)` `:` functional-type($args, $results) attr-dict
   }];
 }
 

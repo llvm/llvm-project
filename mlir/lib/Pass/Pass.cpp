@@ -290,10 +290,14 @@ OpPassManager::OpPassManager(StringRef name, Nesting nesting)
     : impl(new OpPassManagerImpl(name, nesting)) {}
 OpPassManager::OpPassManager(OperationName name, Nesting nesting)
     : impl(new OpPassManagerImpl(name, nesting)) {}
-OpPassManager::OpPassManager(OpPassManager &&rhs) : impl(std::move(rhs.impl)) {}
+OpPassManager::OpPassManager(OpPassManager &&rhs) { *this = std::move(rhs); }
 OpPassManager::OpPassManager(const OpPassManager &rhs) { *this = rhs; }
 OpPassManager &OpPassManager::operator=(const OpPassManager &rhs) {
   impl = std::make_unique<OpPassManagerImpl>(*rhs.impl);
+  return *this;
+}
+OpPassManager &OpPassManager::operator=(OpPassManager &&rhs) {
+  impl = std::move(rhs.impl);
   return *this;
 }
 
@@ -773,9 +777,11 @@ void PassManager::enableVerifier(bool enabled) { verifyPasses = enabled; }
 /// Run the passes within this manager on the provided operation.
 LogicalResult PassManager::run(Operation *op) {
   MLIRContext *context = getContext();
-  assert(op->getName() == getOpName(*context) &&
-         "operation has a different name than the PassManager or is from a "
-         "different context");
+  Optional<OperationName> anchorOp = getOpName(*context);
+  if (anchorOp && anchorOp != op->getName())
+    return emitError(op->getLoc())
+           << "can't run '" << getOpAnchorName() << "' pass manager on '"
+           << op->getName() << "' op";
 
   // Register all dialects for the current pipeline.
   DialectRegistry dependentDialects;

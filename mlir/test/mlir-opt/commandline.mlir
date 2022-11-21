@@ -40,3 +40,6 @@
 // CHECK-NEXT: transform
 // CHECK-NEXT: vector
 // CHECK-NEXT: x86vector
+
+// RUN: mlir-opt --help-hidden | FileCheck %s -check-prefix=CHECK-HELP
+// CHECK-HELP: -p - Alias for --pass-pipeline

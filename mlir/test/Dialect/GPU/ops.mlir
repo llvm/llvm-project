@@ -265,8 +265,8 @@ module attributes {gpu.container_module} {
     return
   }
 
-  func.func @mmamatrix_valid_element_type(%src : memref<32x32xf16, affine_map<(d0, d1) -> (d0 * 64 + d1)>>){
-    // CHECK-LABEL: func @mmamatrix_valid_element_type
+  func.func @mmamatrix_valid_scalar_element_type(%src : memref<32x32xf16, affine_map<(d0, d1) -> (d0 * 64 + d1)>>){
+    // CHECK-LABEL: func @mmamatrix_valid_scalar_element_type
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
     // CHECK: %[[wg:.*]] = memref.alloca()
     %i = arith.constant 16 : index
@@ -282,6 +282,15 @@ module attributes {gpu.container_module} {
     %2 = gpu.subgroup_mma_elementwise addf %1, %1 : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
     // CHECK: gpu.subgroup_mma_elementwise maxf %{{.*}}, %{{.*}} : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
     %3 = gpu.subgroup_mma_elementwise maxf %2, %1 : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
+    return
+  }
+
+  // CHECK-LABEL: func @mmamatrix_valid_vector_element_type
+  func.func @mmamatrix_valid_vector_element_type(%src : memref<32x4xvector<4xf32>>, %i : index) {
+    // CHECK: gpu.subgroup_mma_load_matrix
+    %s = gpu.subgroup_mma_load_matrix %src[%i, %i] {leadDimension = 4 : index} : memref<32x4xvector<4xf32>> -> !gpu.mma_matrix<16x16xf16, "COp">
+    // CHECK: gpu.subgroup_mma_store_matrix
+    gpu.subgroup_mma_store_matrix %s, %src[%i, %i] {leadDimension = 4 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<32x4xvector<4xf32>>
     return
   }
 

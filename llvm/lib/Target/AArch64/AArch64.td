@@ -165,6 +165,9 @@ def FeatureSVE2BitPerm : SubtargetFeature<"sve2-bitperm", "HasSVE2BitPerm", "tru
 def FeatureSVE2p1: SubtargetFeature<"sve2p1", "HasSVE2p1", "true",
   "Enable Scalable Vector Extension 2.1 instructions", [FeatureSVE2]>;
 
+def FeatureB16B16 : SubtargetFeature<"b16b16", "HasB16B16", "true",
+  "Enable SVE2.1 or SME2.1 non-widening BFloat16 to BFloat16 instructions (FEAT_B16B16)", []>;
+
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
                                         "Has zero-cycle register moves">;
 
@@ -479,6 +482,9 @@ def FeatureSMEI16I64 : SubtargetFeature<"sme-i16i64", "HasSMEI16I64", "true",
 def FeatureSME2 : SubtargetFeature<"sme2", "HasSME2", "true",
   "Enable Scalable Matrix Extension 2 (SME2) instructions", [FeatureSME]>;
 
+def FeatureSME2p1 : SubtargetFeature<"sme2p1", "HasSME2p1", "true",
+  "Enable Scalable Matrix Extension 2.1 (FEAT_SME2p1) instructions", [FeatureSME2]>;
+
 def FeatureAppleA7SysReg  : SubtargetFeature<"apple-a7-sysreg", "HasAppleA7SysReg", "true",
   "Apple A7 (the CPU formerly known as Cyclone)">;
 
@@ -640,7 +646,7 @@ class AArch64Unsupported { list<Predicate> F; }
 
 def SVEUnsupported : AArch64Unsupported {
   let F = [HasSVE, HasSVE2, HasSVE2AES, HasSVE2SM4, HasSVE2SHA3,
-           HasSVE2BitPerm, HasSVEorSME, HasSVE2orSME];
+           HasSVE2BitPerm, HasSVEorSME, HasSVE2p1, HasSVE2orSME, HasSVE2p1_or_HasSME2p1];
 }
 
 def PAUnsupported : AArch64Unsupported {
@@ -648,7 +654,7 @@ def PAUnsupported : AArch64Unsupported {
 }
 
 def SMEUnsupported : AArch64Unsupported {
-  let F = [HasSME, HasSMEF64F64, HasSMEI16I64, HasSME2, HasSVE2p1_or_HasSME2];
+  let F = [HasSME, HasSMEF64F64, HasSMEI16I64, HasSME2, HasSVE2p1_or_HasSME2, HasSVE2p1_or_HasSME2p1];
 }
 
 include "AArch64SchedA53.td"
@@ -763,6 +769,14 @@ def TuneA710    : SubtargetFeature<"a710", "ARMProcFamily", "CortexA710",
                                    FeatureFuseAdrpAdd,
                                    FeatureLSLFast,
                                    FeaturePostRAScheduler]>;
+
+def TuneA715 : SubtargetFeature<"a715", "ARMProcFamily", "CortexA715",
+                                 "Cortex-A715 ARM processors", [
+                                 FeatureFuseAES,
+                                 FeaturePostRAScheduler,
+                                 FeatureCmpBccFusion,
+                                 FeatureLSLFast,
+                                 FeatureFuseAdrpAdd]>;
 
 def TuneR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
                                "CortexR82",
@@ -1093,6 +1107,10 @@ def ProcessorFeatures {
   list<SubtargetFeature> A710 = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
                                  FeatureETE, FeatureMTE, FeatureFP16FML,
                                  FeatureSVE2BitPerm, FeatureBF16, FeatureMatMulInt8];
+  list<SubtargetFeature> A715 = [HasV9_0aOps, FeatureNEON, FeatureMTE,
+                                 FeatureFP16FML, FeatureSVE, FeatureTRBE,
+                                 FeatureSVE2BitPerm, FeatureBF16, FeatureETE,
+                                 FeaturePerfMon, FeatureMatMulInt8, FeatureSPE];
   list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                  FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                  FeatureSB];
@@ -1231,6 +1249,8 @@ def : ProcessorModel<"cortex-a78c", CortexA57Model, ProcessorFeatures.A78C,
                      [TuneA78C]>;
 def : ProcessorModel<"cortex-a710", NeoverseN2Model, ProcessorFeatures.A710,
                      [TuneA710]>;
+def : ProcessorModel<"cortex-a715", NeoverseN2Model, ProcessorFeatures.A715,
+                     [TuneA715]>;
 def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
                      [TuneR82]>;
 def : ProcessorModel<"cortex-x1", CortexA57Model, ProcessorFeatures.X1,

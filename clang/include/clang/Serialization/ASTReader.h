@@ -2196,6 +2196,18 @@ public:
     return ReadSourceLocation(ModuleFile, Record[Idx++], Seq);
   }
 
+  /// Read a FileID.
+  FileID ReadFileID(ModuleFile &F, const RecordDataImpl &Record,
+                    unsigned &Idx) const {
+    return TranslateFileID(F, FileID::get(Record[Idx++]));
+  }
+
+  /// Translate a FileID from another module file's FileID space into ours.
+  FileID TranslateFileID(ModuleFile &F, FileID FID) const {
+    assert(FID.ID >= 0 && "Reading non-local FileID.");
+    return FileID::get(F.SLocEntryBaseID + FID.ID - 1);
+  }
+
   /// Read a source range.
   SourceRange ReadSourceRange(ModuleFile &F, const RecordData &Record,
                               unsigned &Idx, LocSeq *Seq = nullptr);

@@ -18,6 +18,11 @@ class CrashLogScriptedProcess(ScriptedProcess):
         self.crashed_thread_idx = crash_log.crashed_thread_idx
         self.loaded_images = []
         self.exception = crash_log.exception
+        self.app_specific_thread = None
+        if hasattr(crash_log, 'asi'):
+            self.metadata['asi'] = crash_log.asi
+        if hasattr(crash_log, 'asb'):
+            self.extended_thread_info = crash_log.asb
 
         def load_images(self, images):
             #TODO: Add to self.loaded_images and load images in lldb
@@ -40,7 +45,22 @@ class CrashLogScriptedProcess(ScriptedProcess):
                 for ident in thread.idents:
                     load_images(self, crash_log.find_images_with_identifier(ident))
 
+            if hasattr(thread, 'app_specific_backtrace') and thread.app_specific_backtrace:
+                # We don't want to include the Application Specific Backtrace
+                # Thread into the Scripted Process' Thread list.
+                # Instead, we will try to extract the stackframe pcs from the
+                # backtrace and inject that as the extended thread info.
+                self.app_specific_thread = thread
+                continue
+
             self.threads[thread.index] = CrashLogScriptedThread(self, None, thread)
+
+
+        if self.app_specific_thread:
+            self.extended_thread_info = \
+                    CrashLogScriptedThread.resolve_stackframes(self.app_specific_thread,
+                                                               self.addr_mask,
+                                                               self.target)
 
     def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
         super().__init__(target, args)
@@ -51,7 +71,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
 
         self.crashlog_path = None
 
-        crashlog_path = args.GetValueForKey("crashlog_path")
+        crashlog_path = args.GetValueForKey("file_path")
         if crashlog_path and crashlog_path.IsValid():
             if crashlog_path.GetType() == lldb.eStructuredDataTypeString:
                 self.crashlog_path = crashlog_path.GetStringValue(4096)
@@ -71,6 +91,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
         self.pid = super().get_process_id()
         self.crashed_thread_idx = 0
         self.exception = None
+        self.extended_thread_info = None
         self.parse_crashlog()
 
     def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
@@ -103,6 +124,9 @@ class CrashLogScriptedProcess(ScriptedProcess):
     def get_scripted_thread_plugin(self):
         return CrashLogScriptedThread.__module__ + "." + CrashLogScriptedThread.__name__
 
+    def get_process_metadata(self):
+        return self.metadata
+
 class CrashLogScriptedThread(ScriptedThread):
     def create_register_ctx(self):
         if not self.has_crashed:
@@ -120,6 +144,19 @@ class CrashLogScriptedThread(ScriptedThread):
 
         return self.register_ctx
 
+    def resolve_stackframes(thread, addr_mask, target):
+        frames = []
+        for frame in thread.frames:
+            frame_pc = frame.pc & addr_mask
+            pc = frame_pc if frame.index == 0  or frame_pc == 0 else frame_pc - 1
+            sym_addr = lldb.SBAddress()
+            sym_addr.SetLoadAddress(pc, target)
+            if not sym_addr.IsValid():
+                continue
+            frames.append({"idx": frame.index, "pc": pc})
+        return frames
+
+
     def create_stackframes(self):
         if not (self.scripted_process.load_all_images or self.has_crashed):
             return None
@@ -127,14 +164,9 @@ class CrashLogScriptedThread(ScriptedThread):
         if not self.backing_thread or not len(self.backing_thread.frames):
             return None
 
-        for frame in self.backing_thread.frames:
-            frame_pc = frame.pc & self.scripted_process.addr_mask
-            pc = frame_pc if frame.index == 0  or frame_pc == 0 else frame_pc - 1
-            sym_addr = lldb.SBAddress()
-            sym_addr.SetLoadAddress(pc, self.target)
-            if not sym_addr.IsValid():
-                continue
-            self.frames.append({"idx": frame.index, "pc": pc})
+        self.frames = CrashLogScriptedThread.resolve_stackframes(self.backing_thread,
+                                                                 self.scripted_process.addr_mask,
+                                                                 self.target)
 
         return self.frames
 
@@ -144,7 +176,10 @@ class CrashLogScriptedThread(ScriptedThread):
         self.backing_thread = crashlog_thread
         self.idx = self.backing_thread.index
         self.tid = self.backing_thread.id
-        self.name = self.backing_thread.name
+        if self.backing_thread.app_specific_backtrace:
+            self.name = "Application Specific Backtrace - " + str(self.idx)
+        else:
+            self.name = self.backing_thread.name
         self.queue = self.backing_thread.queue
         self.has_crashed = (self.scripted_process.crashed_thread_idx == self.idx)
         self.create_stackframes()
@@ -168,3 +203,9 @@ class CrashLogScriptedThread(ScriptedThread):
             self.register_ctx = self.create_register_ctx()
 
         return struct.pack("{}Q".format(len(self.register_ctx)), *self.register_ctx.values())
+
+    def get_extended_info(self):
+        if (self.has_crashed):
+            self.extended_info = self.scripted_process.extended_thread_info
+        return self.extended_info
+

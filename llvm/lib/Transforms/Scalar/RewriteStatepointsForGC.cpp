@@ -1430,10 +1430,7 @@ normalizeForInvokeSafepoint(BasicBlock *BB, BasicBlock *InvokeParent,
 // machine model for purposes of optimization.  We have to strip these on
 // both function declarations and call sites.
 static constexpr Attribute::AttrKind FnAttrsToStrip[] =
-  {Attribute::ReadNone, Attribute::ReadOnly, Attribute::WriteOnly,
-   Attribute::ArgMemOnly, Attribute::InaccessibleMemOnly,
-   Attribute::InaccessibleMemOrArgMemOnly,
-   Attribute::NoSync, Attribute::NoFree};
+  {Attribute::Memory, Attribute::NoSync, Attribute::NoFree};
 
 // Create new attribute set containing only attributes which can be transferred
 // from original call to the safepoint.

@@ -10,6 +10,21 @@
 #ifndef _LIBCPP___ITERATOR_CONCEPTS_H
 #define _LIBCPP___ITERATOR_CONCEPTS_H
 
+#include <__concepts/arithmetic.h>
+#include <__concepts/assignable.h>
+#include <__concepts/common_reference_with.h>
+#include <__concepts/constructible.h>
+#include <__concepts/copyable.h>
+#include <__concepts/derived_from.h>
+#include <__concepts/equality_comparable.h>
+#include <__concepts/invocable.h>
+#include <__concepts/movable.h>
+#include <__concepts/predicate.h>
+#include <__concepts/regular.h>
+#include <__concepts/relation.h>
+#include <__concepts/same_as.h>
+#include <__concepts/semiregular.h>
+#include <__concepts/totally_ordered.h>
 #include <__config>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
@@ -17,7 +32,6 @@
 #include <__iterator/readable_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__utility/forward.h>
-#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

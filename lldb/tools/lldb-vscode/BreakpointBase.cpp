@@ -25,6 +25,144 @@ void BreakpointBase::SetHitCondition() {
     bp.SetIgnoreCount(hitCount - 1);
 }
 
+lldb::SBError BreakpointBase::AppendLogMessagePart(llvm::StringRef part,
+                                                   bool is_expr) {
+  if (is_expr) {
+    logMessageParts.emplace_back(part, is_expr);
+  } else {
+    std::string formatted;
+    lldb::SBError error = FormatLogText(part, formatted);
+    if (error.Fail())
+      return error;
+    logMessageParts.emplace_back(formatted, is_expr);
+  }
+  return lldb::SBError();
+}
+
+// TODO: consolidate this code with the implementation in
+// FormatEntity::ParseInternal().
+lldb::SBError BreakpointBase::FormatLogText(llvm::StringRef text,
+                                            std::string &formatted) {
+  lldb::SBError error;
+  while (!text.empty()) {
+    size_t backslash_pos = text.find_first_of('\\');
+    if (backslash_pos == std::string::npos) {
+      formatted += text.str();
+      return error;
+    }
+
+    formatted += text.substr(0, backslash_pos).str();
+    // Skip the characters before and including '\'.
+    text = text.drop_front(backslash_pos + 1);
+
+    if (text.empty()) {
+      error.SetErrorString(
+          "'\\' character was not followed by another character");
+      return error;
+    }
+
+    const char desens_char = text[0];
+    text = text.drop_front(); // Skip the desensitized char character
+    switch (desens_char) {
+    case 'a':
+      formatted.push_back('\a');
+      break;
+    case 'b':
+      formatted.push_back('\b');
+      break;
+    case 'f':
+      formatted.push_back('\f');
+      break;
+    case 'n':
+      formatted.push_back('\n');
+      break;
+    case 'r':
+      formatted.push_back('\r');
+      break;
+    case 't':
+      formatted.push_back('\t');
+      break;
+    case 'v':
+      formatted.push_back('\v');
+      break;
+    case '\'':
+      formatted.push_back('\'');
+      break;
+    case '\\':
+      formatted.push_back('\\');
+      break;
+    case '0':
+      // 1 to 3 octal chars
+      {
+        if (text.empty()) {
+          error.SetErrorString("missing octal number following '\\0'");
+          return error;
+        }
+
+        // Make a string that can hold onto the initial zero char, up to 3
+        // octal digits, and a terminating NULL.
+        char oct_str[5] = {0, 0, 0, 0, 0};
+
+        size_t i;
+        for (i = 0;
+             i < text.size() && i < 4 && (text[i] >= '0' && text[i] <= '7');
+             ++i) {
+          oct_str[i] = text[i];
+        }
+
+        text = text.drop_front(i);
+        unsigned long octal_value = ::strtoul(oct_str, nullptr, 8);
+        if (octal_value <= UINT8_MAX) {
+          formatted.push_back((char)octal_value);
+        } else {
+          error.SetErrorString("octal number is larger than a single byte");
+          return error;
+        }
+      }
+      break;
+
+    case 'x': {
+      if (text.empty()) {
+        error.SetErrorString("missing hex number following '\\x'");
+        return error;
+      }
+      // hex number in the text
+      if (isxdigit(text[0])) {
+        // Make a string that can hold onto two hex chars plus a
+        // NULL terminator
+        char hex_str[3] = {0, 0, 0};
+        hex_str[0] = text[0];
+
+        text = text.drop_front();
+
+        if (!text.empty() && isxdigit(text[0])) {
+          hex_str[1] = text[0];
+          text = text.drop_front();
+        }
+
+        unsigned long hex_value = strtoul(hex_str, nullptr, 16);
+        if (hex_value <= UINT8_MAX) {
+          formatted.push_back((char)hex_value);
+        } else {
+          error.SetErrorString("hex number is larger than a single byte");
+          return error;
+        }
+      } else {
+        formatted.push_back(desens_char);
+      }
+      break;
+    }
+
+    default:
+      // Just desensitize any other character by just printing what came
+      // after the '\'
+      formatted.push_back(desens_char);
+      break;
+    }
+  }
+  return error;
+}
+
 // logMessage will be divided into array of LogMessagePart as two kinds:
 // 1. raw print text message, and
 // 2. interpolated expression for evaluation which is inside matching curly
@@ -43,6 +181,7 @@ void BreakpointBase::SetLogMessage() {
   // ascending order without any overlap between them.
   std::vector<std::pair<int, int>> matched_curly_braces_ranges;
 
+  lldb::SBError error;
   // Part1 - parse matched_curly_braces_ranges.
   // locating all curly braced expression ranges in logMessage.
   // The algorithm takes care of nested and imbalanced curly braces.
@@ -87,29 +226,51 @@ void BreakpointBase::SetLogMessage() {
     // Raw text before open curly brace.
     assert(curly_braces_range.first >= last_raw_text_start);
     size_t raw_text_len = curly_braces_range.first - last_raw_text_start;
-    if (raw_text_len > 0)
-      logMessageParts.emplace_back(
+    if (raw_text_len > 0) {
+      error = AppendLogMessagePart(
           llvm::StringRef(logMessage.c_str() + last_raw_text_start,
                           raw_text_len),
           /*is_expr=*/false);
+      if (error.Fail()) {
+        NotifyLogMessageError(error.GetCString());
+        return;
+      }
+    }
 
     // Expression between curly braces.
     assert(curly_braces_range.second > curly_braces_range.first);
     size_t expr_len = curly_braces_range.second - curly_braces_range.first - 1;
-    logMessageParts.emplace_back(
+    error = AppendLogMessagePart(
         llvm::StringRef(logMessage.c_str() + curly_braces_range.first + 1,
                         expr_len),
         /*is_expr=*/true);
+    if (error.Fail()) {
+      NotifyLogMessageError(error.GetCString());
+      return;
+    }
+
     last_raw_text_start = curly_braces_range.second + 1;
   }
   // Trailing raw text after close curly brace.
   assert(last_raw_text_start >= 0);
-  if (logMessage.size() > (size_t)last_raw_text_start)
-    logMessageParts.emplace_back(
+  if (logMessage.size() > (size_t)last_raw_text_start) {
+    error = AppendLogMessagePart(
         llvm::StringRef(logMessage.c_str() + last_raw_text_start,
                         logMessage.size() - last_raw_text_start),
         /*is_expr=*/false);
+    if (error.Fail()) {
+      NotifyLogMessageError(error.GetCString());
+      return;
+    }
+  }
+
   bp.SetCallback(BreakpointBase::BreakpointHitCallback, this);
+}
+
+void BreakpointBase::NotifyLogMessageError(llvm::StringRef error) {
+  std::string message = "Log message has error: ";
+  message += error;
+  g_vsc.SendOutput(OutputType::Console, message);
 }
 
 /*static*/
@@ -128,7 +289,7 @@ bool BreakpointBase::BreakpointHitCallback(
     if (messagePart.is_expr) {
       // Try local frame variables first before fall back to expression
       // evaluation
-      std::string expr_str = messagePart.text.str();
+      const std::string &expr_str = messagePart.text;
       const char *expr = expr_str.c_str();
       lldb::SBValue value =
           frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
@@ -138,9 +299,11 @@ bool BreakpointBase::BreakpointHitCallback(
       if (expr_val)
         output += expr_val;
     } else {
-      output += messagePart.text.str();
+      output += messagePart.text;
     }
   }
+  if (!output.empty() && output.back() != '\n')
+    output.push_back('\n'); // Ensure log message has line break.
   g_vsc.SendOutput(OutputType::Console, output.c_str());
 
   // Do not stop.

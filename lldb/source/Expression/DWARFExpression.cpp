@@ -847,10 +847,12 @@ bool DWARFExpression::Evaluate(
 
   Process *process = nullptr;
   StackFrame *frame = nullptr;
+  Target *target = nullptr;
 
   if (exe_ctx) {
     process = exe_ctx->GetProcessPtr();
     frame = exe_ctx->GetFramePtr();
+    target = exe_ctx->GetTargetPtr();
   }
   if (reg_ctx == nullptr && frame)
     reg_ctx = frame->GetRegisterContext().get();
@@ -906,12 +908,19 @@ bool DWARFExpression::Evaluate(
     // address and whose size is the size of an address on the target machine.
     case DW_OP_addr:
       stack.push_back(Scalar(opcodes.GetAddress(&offset)));
-      stack.back().SetValueType(Value::ValueType::FileAddress);
-      // Convert the file address to a load address, so subsequent
-      // DWARF operators can operate on it.
-      if (frame)
-        stack.back().ConvertToLoadAddress(module_sp.get(),
-                                          frame->CalculateTarget().get());
+      if (target &&
+          target->GetArchitecture().GetCore() == ArchSpec::eCore_wasm32) {
+        // wasm file sections aren't mapped into memory, therefore addresses can
+        // never point into a file section and are always LoadAddresses.
+        stack.back().SetValueType(Value::ValueType::LoadAddress);
+      } else {
+        stack.back().SetValueType(Value::ValueType::FileAddress);
+        // Convert the file address to a load address, so subsequent
+        // DWARF operators can operate on it.
+        if (frame)
+          stack.back().ConvertToLoadAddress(module_sp.get(),
+                                            frame->CalculateTarget().get());
+      }
       break;
 
     // The DW_OP_addr_sect_offset4 is used for any location expressions in
@@ -2507,7 +2516,14 @@ bool DWARFExpression::Evaluate(
       uint64_t index = opcodes.GetULEB128(&offset);
       lldb::addr_t value = dwarf_cu->ReadAddressFromDebugAddrSection(index);
       stack.push_back(Scalar(value));
-      stack.back().SetValueType(Value::ValueType::FileAddress);
+      if (target &&
+          target->GetArchitecture().GetCore() == ArchSpec::eCore_wasm32) {
+        // wasm file sections aren't mapped into memory, therefore addresses can
+        // never point into a file section and are always LoadAddresses.
+        stack.back().SetValueType(Value::ValueType::LoadAddress);
+      } else {
+        stack.back().SetValueType(Value::ValueType::FileAddress);
+      }
     } break;
 
     // OPCODE: DW_OP_GNU_const_index

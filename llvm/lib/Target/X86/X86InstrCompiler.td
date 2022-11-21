@@ -801,9 +801,9 @@ def X86lock_sub_nocf : PatFrag<(ops node:$lhs, node:$rhs),
   return hasNoCarryFlagUses(SDValue(N, 0));
 }]>;
 
-let Predicates = [UseIncDec] in {
-  let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
-      SchedRW = [WriteALURMW]  in {
+let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
+    SchedRW = [WriteALURMW]  in {
+  let Predicates = [UseIncDec] in {
     def LOCK_INC8m  : I<0xFE, MRM0m, (outs), (ins i8mem :$dst),
                         "inc{b}\t$dst",
                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i8 1)))]>,
@@ -816,10 +816,6 @@ let Predicates = [UseIncDec] in {
                         "inc{l}\t$dst",
                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i32 1)))]>,
                         OpSize32, LOCK;
-    def LOCK_INC64m : RI<0xFF, MRM0m, (outs), (ins i64mem:$dst),
-                         "inc{q}\t$dst",
-                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i64 1)))]>,
-                         LOCK;
 
     def LOCK_DEC8m  : I<0xFE, MRM1m, (outs), (ins i8mem :$dst),
                         "dec{b}\t$dst",
@@ -833,20 +829,33 @@ let Predicates = [UseIncDec] in {
                         "dec{l}\t$dst",
                         [(set EFLAGS, (X86lock_sub_nocf addr:$dst, (i32 1)))]>,
                         OpSize32, LOCK;
+  }
+
+  let Predicates = [UseIncDec, In64BitMode] in {
+    def LOCK_INC64m : RI<0xFF, MRM0m, (outs), (ins i64mem:$dst),
+                         "inc{q}\t$dst",
+                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i64 1)))]>,
+                         LOCK;
     def LOCK_DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst),
                          "dec{q}\t$dst",
                          [(set EFLAGS, (X86lock_sub_nocf addr:$dst, (i64 1)))]>,
                          LOCK;
   }
+}
 
+let Predicates = [UseIncDec] in {
   // Additional patterns for -1 constant.
   def : Pat<(X86lock_add addr:$dst, (i8  -1)), (LOCK_DEC8m  addr:$dst)>;
   def : Pat<(X86lock_add addr:$dst, (i16 -1)), (LOCK_DEC16m addr:$dst)>;
   def : Pat<(X86lock_add addr:$dst, (i32 -1)), (LOCK_DEC32m addr:$dst)>;
-  def : Pat<(X86lock_add addr:$dst, (i64 -1)), (LOCK_DEC64m addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i8  -1)), (LOCK_INC8m  addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i16 -1)), (LOCK_INC16m addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i32 -1)), (LOCK_INC32m addr:$dst)>;
+}
+
+let Predicates = [UseIncDec, In64BitMode] in {
+  // Additional patterns for -1 constant.
+  def : Pat<(X86lock_add addr:$dst, (i64 -1)), (LOCK_DEC64m addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i64 -1)), (LOCK_INC64m addr:$dst)>;
 }
 

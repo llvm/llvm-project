@@ -656,9 +656,9 @@ define void @test16d(i8 %v, i8** %P) {
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nofree nounwind }
 ; CHECK: attributes #[[ATTR4]] = { noreturn }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { allockind("free") }
-; CHECK: attributes #[[ATTR6:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #[[ATTR7:[0-9]+]] = { allockind("alloc,uninitialized,aligned") allocsize(1) }
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) }
-; CHECK: attributes #[[ATTR9:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
+; CHECK: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes #[[ATTR10]] = { nounwind }
 ;.

@@ -22,6 +22,7 @@
 ! HELP-NEXT: -E                     Only run the preprocessor
 ! HELP-NEXT: -falternative-parameter-statement
 ! HELP-NEXT: Enable the old style PARAMETER statement
+! HELP-NEXT: -fapprox-func          Allow certain math function calls to be replaced with an approximately equivalent calculation
 ! HELP-NEXT: -fbackslash            Specify that backslash in string introduces an escape character
 ! HELP-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
 ! HELP-NEXT: -fconvert=<value>      Set endian conversion of data for unformatted files
@@ -42,8 +43,10 @@
 ! HELP-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
 ! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
+! HELP-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
 ! HELP-NEXT: -fopenacc              Enable OpenACC
 ! HELP-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
+! HELP-NEXT: -freciprocal-math      Allow division operations to be reassociated
 ! HELP-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! HELP-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! HELP-NEXT: -help                  Display available options
@@ -79,6 +82,7 @@
 ! HELP-FC1-NEXT: -E                     Only run the preprocessor
 ! HELP-FC1-NEXT: -falternative-parameter-statement
 ! HELP-FC1-NEXT: Enable the old style PARAMETER statement
+! HELP-FC1-NEXT: -fapprox-func          Allow certain math function calls to be replaced with an approximately equivalent calculation
 ! HELP-FC1-NEXT: -fbackslash            Specify that backslash in string introduces an escape character
 ! HELP-FC1-NEXT: -fcolor-diagnostics     Enable colors in diagnostics
 ! HELP-FC1-NEXT: -fconvert=<value>      Set endian conversion of data for unformatted files
@@ -122,18 +126,23 @@
 ! HELP-FC1-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-FC1-NEXT: -fno-debug-pass-manager Disables debug printing for the new pass manager
 ! HELP-FC1-NEXT: -fno-reformat          Dump the cooked character stream in -E mode
+! HELP-FC1-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
 ! HELP-FC1-NEXT: -fopenacc              Enable OpenACC
 ! HELP-FC1-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
+! HELP-FC1-NEXT: -freciprocal-math      Allow division operations to be reassociated
 ! HELP-FC1-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! HELP-FC1-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! HELP-FC1-NEXT: -help                  Display available options
 ! HELP-FC1-NEXT: -init-only             Only execute frontend initialization
 ! HELP-FC1-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-FC1-NEXT: -load <dsopath>        Load the named plugin (dynamic shared object)
+! HELP-FC1-NEXT: -menable-no-infs       Allow optimization to assume there are no infinities.
+! HELP-FC1-NEXT: -menable-no-nans       Allow optimization to assume there are no NaNs.
 ! HELP-FC1-NEXT: -mllvm <value>         Additional arguments to forward to LLVM's option processing
 ! HELP-FC1-NEXT: -mmlir <value>         Additional arguments to forward to MLIR's option processing
 ! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-FC1-NEXT: -module-suffix <suffix> Use <suffix> as the suffix for module files (the default value is `.mod`)
+! HELP-FC1-NEXT: -mreassociate          Allow reassociation transformations for floating-point instructions
 ! HELP-FC1-NEXT: -mrelocation-model <value>
 ! HELP-FC1-NEXT:                        The relocation model to use
 ! HELP-FC1-NEXT: -nocpp                 Disable predefined and command line preprocessor macros

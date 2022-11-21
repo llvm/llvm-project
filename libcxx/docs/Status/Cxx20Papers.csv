@@ -53,7 +53,7 @@
 "`P0318R1 <https://wg21.link/P0318R1>`__","LWG","unwrap_ref_decay and unwrap_reference","San Diego","|Complete|","8.0"
 "`P0356R5 <https://wg21.link/P0356R5>`__","LWG","Simplified partial function application","San Diego","|Complete|","13.0"
 "`P0357R3 <https://wg21.link/P0357R3>`__","LWG","reference_wrapper for incomplete types","San Diego","|Complete|","8.0"
-"`P0482R6 <https://wg21.link/P0482R6>`__","CWG","char8_t: A type for UTF-8 characters and strings","San Diego","|Partial| [#note-P0482]_","16.0"
+"`P0482R6 <https://wg21.link/P0482R6>`__","CWG","char8_t: A type for UTF-8 characters and strings","San Diego","|Complete|","16.0"
 "`P0487R1 <https://wg21.link/P0487R1>`__","LWG","Fixing ``operator>>(basic_istream&, CharT*)``\  (LWG 2499)","San Diego","|Complete|","8.0"
 "`P0591R4 <https://wg21.link/P0591R4>`__","LWG","Utility functions to implement uses-allocator construction","San Diego","|Partial| [#note-P0591]_",""
 "`P0595R2 <https://wg21.link/P0595R2>`__","CWG","std::is_constant_evaluated()","San Diego","|Complete|","9.0"

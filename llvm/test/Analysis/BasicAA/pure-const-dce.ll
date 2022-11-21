@@ -50,5 +50,5 @@ declare i32 @TestPure(i32) readonly
 
 declare i32 @TestNone(i32)
 
-; CHECK: attributes [[READNONE]] = { readnone }
-; CHECK: attributes [[READONLY]] = { readonly }
+; CHECK: attributes [[READNONE]] = { memory(none) }
+; CHECK: attributes [[READONLY]] = { memory(read) }

@@ -19,7 +19,6 @@
 
 #include <memory_resource>
 #include <cassert>
-#include <cstdlib>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -38,13 +37,13 @@ int main(int, char**) {
     typedef default_constructible T;
     typedef std::pair<T, T> P;
     typedef std::pmr::polymorphic_allocator<void> A;
-    P* ptr = (P*)std::malloc(sizeof(P));
+    alignas(P) char buffer[sizeof(P)];
+    P* ptr = reinterpret_cast<P*>(buffer);
     A a;
     a.construct(ptr);
     assert(constructed == 2);
     assert(ptr->first.x == 42);
     assert(ptr->second.x == 42);
-    std::free(ptr);
   }
 
   return 0;

@@ -4,7 +4,7 @@
 ! CHECK-SAME:                           %[[VAL_0:.*]]: !fir.ref<f32> {fir.bindc_name = "a"},
 ! CHECK-SAME:                           %[[VAL_1:.*]]: !fir.ref<f32> {fir.bindc_name = "b"}) {
 ! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<f32>
-! CHECK:         %[[VAL_3:.*]] = "llvm.intr.round"(%[[VAL_2]]) : (f32) -> f32
+! CHECK:         %[[VAL_3:.*]] = llvm.intr.round(%[[VAL_2]]) : (f32) -> f32
 ! CHECK:         fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f32>
 ! CHECK:         return
 ! CHECK:       }
@@ -18,7 +18,7 @@ end subroutine
 ! CHECK-SAME:                                 %[[VAL_0:.*]]: !fir.ref<f64> {fir.bindc_name = "a"},
 ! CHECK-SAME:                                 %[[VAL_1:.*]]: !fir.ref<f64> {fir.bindc_name = "b"}) {
 ! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<f64>
-! CHECK:         %[[VAL_3:.*]] = "llvm.intr.round"(%[[VAL_2]]) : (f64) -> f64
+! CHECK:         %[[VAL_3:.*]] = llvm.intr.round(%[[VAL_2]]) : (f64) -> f64
 ! CHECK:         fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f64>
 ! CHECK:         return
 ! CHECK:       }
@@ -32,7 +32,7 @@ end subroutine
 ! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<f80> {fir.bindc_name = "a"},
 ! CHECK-SAME:                                  %[[VAL_1:.*]]: !fir.ref<f80> {fir.bindc_name = "b"}) {
 ! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<f80>
-! CHECK:         %[[VAL_3:.*]] = "llvm.intr.round"(%[[VAL_2]]) : (f80) -> f80
+! CHECK:         %[[VAL_3:.*]] = llvm.intr.round(%[[VAL_2]]) : (f80) -> f80
 ! CHECK:         fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f80>
 ! CHECK:         return
 ! CHECK:       }

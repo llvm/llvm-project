@@ -651,6 +651,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(readwrite);
   KEYWORD(argmem);
   KEYWORD(inaccessiblemem);
+  KEYWORD(argmemonly);
+  KEYWORD(inaccessiblememonly);
+  KEYWORD(inaccessiblemem_or_argmemonly);
 
   KEYWORD(type);
   KEYWORD(opaque);

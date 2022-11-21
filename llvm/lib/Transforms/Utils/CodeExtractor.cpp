@@ -904,24 +904,18 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       // Those attributes cannot be propagated safely. Explicitly list them
       // here so we get a warning if new attributes are added.
       case Attribute::AllocSize:
-      case Attribute::ArgMemOnly:
       case Attribute::Builtin:
       case Attribute::Convergent:
-      case Attribute::InaccessibleMemOnly:
-      case Attribute::InaccessibleMemOrArgMemOnly:
       case Attribute::JumpTable:
       case Attribute::Naked:
       case Attribute::NoBuiltin:
       case Attribute::NoMerge:
       case Attribute::NoReturn:
       case Attribute::NoSync:
-      case Attribute::ReadNone:
-      case Attribute::ReadOnly:
       case Attribute::ReturnsTwice:
       case Attribute::Speculatable:
       case Attribute::StackAlignment:
       case Attribute::WillReturn:
-      case Attribute::WriteOnly:
       case Attribute::AllocKind:
       case Attribute::PresplitCoroutine:
       case Attribute::Memory:
@@ -984,6 +978,8 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NoUndef:
       case Attribute::NonNull:
       case Attribute::Preallocated:
+      case Attribute::ReadNone:
+      case Attribute::ReadOnly:
       case Attribute::Returned:
       case Attribute::SExt:
       case Attribute::StructRet:
@@ -993,6 +989,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::ZExt:
       case Attribute::ImmArg:
       case Attribute::ByRef:
+      case Attribute::WriteOnly:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:

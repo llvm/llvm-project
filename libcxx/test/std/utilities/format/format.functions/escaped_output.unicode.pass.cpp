@@ -391,9 +391,9 @@ void test_format_functions(TestFunction check) {
   check(SV(R"("hello 🤷🏻\u{200d}♂\u{fe0f}"***)"), SV("{:*<30?}"), SV("hello 🤷🏻‍♂️"));
 
   // *** width ***
-  check(SV(R"(   "hellö")"), SV("{:10?}"), SV("hellö"));
-  check(SV(R"(   "hello\u{308}")"), SV("{:17?}"), SV("hello\u0308"));
-  check(SV(R"(   "hello 🤷🏻\u{200d}♂\u{fe0f}")"), SV("{:30?}"), SV("hello 🤷🏻‍♂️"));
+  check(SV(R"("hellö"   )"), SV("{:10?}"), SV("hellö"));
+  check(SV(R"("hello\u{308}"   )"), SV("{:17?}"), SV("hello\u0308"));
+  check(SV(R"("hello 🤷🏻\u{200d}♂\u{fe0f}"   )"), SV("{:30?}"), SV("hello 🤷🏻‍♂️"));
 
   // *** precision ***
   check(SV(R"("hell)"), SV("{:.5?}"), SV("hellö"));

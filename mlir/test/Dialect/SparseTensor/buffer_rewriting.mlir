@@ -92,28 +92,14 @@ func.func @sparse_push_back_inbound(%arg0: memref<?xindex>, %arg1: memref<?xf64>
 // CHECK:           return %[[C]]
 // CHECK:         }
 
-// CHECK-LABEL:   func.func private @_sparse_may_swap_1_i8_f32_index(
-// CHECK-SAME:                                                       %[[I:arg0]]: index,
-// CHECK-SAME:                                                       %[[J:.*]]: index,
-// CHECK-SAME:                                                       %[[X0:.*]]: memref<?xi8>,
-// CHECK-SAME:                                                       %[[Y0:.*]]: memref<?xf32>,
-// CHECK-SAME:                                                       %[[Y1:.*]]: memref<?xindex>) {
-// CHECK:           %[[C:.*]] = arith.cmpi ne, %[[I]], %[[J]]
-// CHECK:           scf.if %[[C]] {
-// CHECK:             %[[Vx0i:.*]] = memref.load %[[X0]]{{\[}}%[[I]]]
-// CHECK:             %[[Vx0j:.*]] = memref.load %[[X0]]{{\[}}%[[J]]]
-// CHECK:             memref.store %[[Vx0j]], %[[X0]]{{\[}}%[[I]]]
-// CHECK:             memref.store %[[Vx0i]], %[[X0]]{{\[}}%[[J]]]
-// CHECK:             %[[Vy0i:.*]] = memref.load %[[Y0]]{{\[}}%[[I]]]
-// CHECK:             %[[Vy0j:.*]] = memref.load %[[Y0]]{{\[}}%[[J]]]
-// CHECK:             memref.store %[[Vy0j]], %[[Y0]]{{\[}}%[[I]]]
-// CHECK:             memref.store %[[Vy0i]], %[[Y0]]{{\[}}%[[J]]]
-// CHECK:             %[[Vy1i:.*]] = memref.load %[[Y1]]{{\[}}%[[I]]]
-// CHECK:             %[[Vy1j:.*]] = memref.load %[[Y1]]{{\[}}%[[J]]]
-// CHECK:             memref.store %[[Vy1j]], %[[Y1]]{{\[}}%[[I]]]
-// CHECK:             memref.store %[[Vy1i]], %[[Y1]]{{\[}}%[[J]]]
-// CHECK:           }
-// CHECK:           return
+// CHECK-LABEL:   func.func private @_sparse_compare_eq_1_i8(
+// CHECK-SAME:                                               %[[I:arg0]]: index,
+// CHECK-SAME:                                               %[[J:.*]]: index,
+// CHECK-SAME:                                               %[[X0:.*]]: memref<?xi8>) -> i1 {
+// CHECK:           %[[VI:.*]] = memref.load %[[X0]]{{\[}}%[[I]]]
+// CHECK:           %[[VJ:.*]] = memref.load %[[X0]]{{\[}}%[[J]]]
+// CHECK:           %[[C:.*]] = arith.cmpi eq, %[[VI]], %[[VJ]]
+// CHECK:           return %[[C]]
 // CHECK:         }
 
 // CHECK-LABEL:   func.func private @_sparse_partition_1_i8_f32_index(
@@ -123,22 +109,27 @@ func.func @sparse_push_back_inbound(%arg0: memref<?xindex>, %arg1: memref<?xf64>
 // CHECK-SAME:                                                        %[[Y0:.*]]: memref<?xf32>,
 // CHECK-SAME:                                                        %[[Y1:.*]]: memref<?xindex>) -> index {
 // CHECK:           %[[C1:.*]] = arith.constant 1
-// CHECK:           %[[I:.*]] = arith.subi %[[L]], %[[C1]]
-// CHECK:           %[[Hm1:.*]] = arith.subi %[[H]], %[[C1]]
-// CHECK:           %[[I3:.*]] = scf.for %[[J:.*]] = %[[L]] to %[[Hm1]] step %[[C1]] iter_args(%[[I2:.*]] = %[[I]]) -> (index) {
-// CHECK:             %[[COND:.*]] = func.call @_sparse_less_than_1_i8(%[[J]], %[[Hm1]], %[[X0]])
-// CHECK:             %[[IF:.*]] = scf.if %[[COND]] -> (index) {
-// CHECK:               %[[Ip1:.*]] = arith.addi %[[I2]], %[[C1]]
-// CHECK:               func.call @_sparse_may_swap_1_i8_f32_index(%[[Ip1]], %[[J]], %[[X0]], %[[Y0]], %[[Y1]])
-// CHECK:               scf.yield %[[Ip1]]
+// CHECK:           %[[VAL_6:.*]] = arith.constant -
+// CHECK:           %[[SUM:.*]] = arith.addi %[[L]], %[[H]]
+// CHECK:           %[[P:.*]] = arith.shrui %[[SUM]], %[[C1]]
+// CHECK:           %[[J:.*]] = arith.subi %[[H]], %[[C1]]
+// CHECK:           %[[W:.*]]:3 = scf.while (%[[Ib:.*]] = %[[L]], %[[Jb:.*]] = %[[J]], %[[pb:.*]] = %[[P]]) : (index, index, index) -> (index, index, index) {
+// CHECK:             %[[Cn:.*]] = arith.cmpi ult, %[[Ib]], %[[Jb]]
+// CHECK:             scf.condition(%[[Cn]]) %[[Ib]], %[[Jb]], %[[pb]]
+// CHECK:           } do {
+// CHECK:           ^bb0(%[[Ia:.*]]: index, %[[Ja:.*]]: index, %[[Pa:.*]]: index):
+// CHECK:             %[[I2:.*]] = scf.while
+// CHECK:             %[[Ieq:.*]] = func.call @_sparse_compare_eq_1_i8(%[[I2:.*]], %[[Pa]], %[[X0]])
+// CHECK:             %[[J2:.*]] = scf.while
+// CHECK:             %[[Jeq:.*]] = func.call @_sparse_compare_eq_1_i8(%[[J2:.*]], %[[Pa]], %[[X0]])
+// CHECK:             %[[Cn2:.*]] = arith.cmpi ult, %[[I2]], %[[J2]]
+// CHECK:             %[[If:.*]]:3 = scf.if %[[Cn2]] -> (index, index, index) {
 // CHECK:             } else {
-// CHECK:               scf.yield %[[I2]]
+// CHECK:               scf.yield %[[I2]], %[[J2]], %[[Pa]]
 // CHECK:             }
-// CHECK:             scf.yield %[[IF:.*]]
+// CHECK:             scf.yield %[[If:.*]]#0, %[[If]]#1, %[[If]]#2
 // CHECK:           }
-// CHECK:           %[[I3p1:.*]] = arith.addi %[[I3:.*]], %[[C1]] : index
-// CHECK:           call @_sparse_may_swap_1_i8_f32_index(%[[I3p1]], %[[Hm1]], %[[X0]], %[[Y0]], %[[Y1]])
-// CHECK:           return %[[I3p1]]
+// CHECK:           return %[[W:.*]]#2
 // CHECK:         }
 
 // CHECK-LABEL:   func.func private @_sparse_sort_nonstable_1_i8_f32_index(
@@ -181,7 +172,7 @@ func.func @sparse_sort_1d2v(%arg0: index, %arg1: memref<10xi8>, %arg2: memref<?x
 // to verify correctness of the generated code.
 //
 // CHECK-DAG:     func.func private @_sparse_less_than_3_index(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xindex>, %arg4: memref<?xindex>) -> i1 {
-// CHECK-DAG:     func.func private @_sparse_may_swap_3_index(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xindex>, %arg4: memref<?xindex>) {
+// CHECK-DAG:     func.func private @_sparse_compare_eq_3_index(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xindex>, %arg4: memref<?xindex>) -> i1 {
 // CHECK-DAG:     func.func private @_sparse_partition_3_index(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xindex>, %arg4: memref<?xindex>) -> index {
 // CHECK-DAG:     func.func private @_sparse_sort_nonstable_3_index(%arg0: index, %arg1: index, %arg2: memref<?xindex>, %arg3: memref<?xindex>, %arg4: memref<?xindex>) {
 // CHECK-LABEL:   func.func @sparse_sort_3d

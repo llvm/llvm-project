@@ -60,35 +60,6 @@ void HugifyRuntimeLibrary::adjustCommandLineOptions(
   }
 }
 
-void HugifyRuntimeLibrary::emitBinary(BinaryContext &BC, MCStreamer &Streamer) {
-  const BinaryFunction *StartFunction =
-      BC.getBinaryFunctionAtAddress(*(BC.StartFunctionAddress));
-  assert(!StartFunction->isFragment() && "expected main function fragment");
-  if (!StartFunction) {
-    errs() << "BOLT-ERROR: failed to locate function at binary start address\n";
-    exit(1);
-  }
-
-  const auto Flags = BinarySection::getFlags(/*IsReadOnly=*/false,
-                                             /*IsText=*/false,
-                                             /*IsAllocatable=*/true);
-  MCSectionELF *Section =
-      BC.Ctx->getELFSection(".bolt.hugify.entries", ELF::SHT_PROGBITS, Flags);
-
-  // __bolt_hugify_init_ptr stores the poiter the hugify library needs to
-  // jump to after finishing the init code.
-  MCSymbol *InitPtr = BC.Ctx->getOrCreateSymbol("__bolt_hugify_init_ptr");
-
-  Section->setAlignment(llvm::Align(BC.RegularPageSize));
-  Streamer.switchSection(Section);
-
-  Streamer.emitLabel(InitPtr);
-  Streamer.emitSymbolAttribute(InitPtr, MCSymbolAttr::MCSA_Global);
-  Streamer.emitValue(
-      MCSymbolRefExpr::create(StartFunction->getSymbol(), *(BC.Ctx)),
-      /*Size=*/8);
-}
-
 void HugifyRuntimeLibrary::link(BinaryContext &BC, StringRef ToolPath,
                                 RuntimeDyld &RTDyld,
                                 std::function<void(RuntimeDyld &)> OnLoad) {

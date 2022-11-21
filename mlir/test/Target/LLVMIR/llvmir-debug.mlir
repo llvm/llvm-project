@@ -27,7 +27,18 @@ llvm.func @func_no_debug() {
   sourceLanguage = DW_LANG_C, file = #file, producer = "MLIR",
   isOptimized = true, emissionKind = Full
 >
-#spType = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #si64>
+#composite = #llvm.di_composite_type<
+  tag = DW_TAG_structure_type, name = "composite", file = #file,
+  line = 0, sizeInBits = 0, alignInBits = 0,
+  elements = #llvm.di_subrange<count = 4>
+>
+#vector = #llvm.di_composite_type<
+  tag = DW_TAG_array_type, name = "array", file = #file,
+  line = 0, baseType = #si64, sizeInBits = 0, alignInBits = 0,
+  flags = Vector,
+  elements = #llvm.di_subrange<count = 4>
+>
+#spType = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #si64, #composite, #vector>
 #sp = #llvm.di_subprogram<
   compileUnit = #cu, scope = #file, name = "intrinsics", linkageName = "intrinsics",
   file = #file, line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #spType
@@ -59,7 +70,7 @@ llvm.func @func_with_debug(%arg: i64) {
   llvm.call @func_no_debug() : () -> () loc("named"("foo.mlir":10:10))
 
   // CHECK: call void @func_no_debug(), !dbg ![[FUSED_LOC:[0-9]+]]
-  llvm.call @func_no_debug() : () -> () loc(fused[callsite("mysource.cc":1:1 at "mysource.cc":5:6), "mysource.cc":1:1])
+  llvm.call @func_no_debug() : () -> () loc(fused[callsite("mysource.cc":5:6 at "mysource.cc":1:1), "mysource.cc":1:1])
 
   llvm.return
 } loc(fused<#sp>["foo.mlir":1:1])
@@ -69,9 +80,12 @@ llvm.func @func_with_debug(%arg: i64) {
 
 // CHECK: ![[FUNC_LOC]] = distinct !DISubprogram(name: "intrinsics", linkageName: "intrinsics", scope: ![[CU_FILE_LOC]], file: ![[CU_FILE_LOC]], line: 3, type: ![[FUNC_TYPE:.*]], scopeLine: 3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: ![[CU_LOC]])
 // CHECK: ![[FUNC_TYPE]] = !DISubroutineType(cc: DW_CC_normal, types: ![[ARG_TYPES:.*]])
-// CHECK: ![[ARG_TYPES]] = !{![[ARG_TYPE:.*]]}
+// CHECK: ![[ARG_TYPES]] = !{![[ARG_TYPE:.*]], ![[COMPOSITE_TYPE:.*]], ![[VECTOR_TYPE:.*]]}
 // CHECK: ![[ARG_TYPE]] = !DIBasicType(name: "si64", encoding: DW_ATE_signed)
-
+// CHECK: ![[COMPOSITE_TYPE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "composite", file: ![[CU_FILE_LOC]], elements: ![[COMPOSITE_ELEMENTS:.*]])
+// CHECK: ![[COMPOSITE_ELEMENTS]] = !{![[COMPOSITE_ELEMENT:.*]]}
+// CHECK: ![[COMPOSITE_ELEMENT]] = !DISubrange(count: 4)
+// CHECK: ![[VECTOR_TYPE]] = !DICompositeType(tag: DW_TAG_array_type, name: "array", file: ![[CU_FILE_LOC]], baseType: ![[ARG_TYPE]], flags: DIFlagVector
 // CHECK: ![[VAR_LOC]] = !DILocalVariable(name: "arg", arg: 1, scope: ![[VAR_SCOPE:.*]], file: ![[CU_FILE_LOC]], line: 6, type: ![[ARG_TYPE]])
 // CHECK: ![[VAR_SCOPE]] = distinct !DILexicalBlockFile(scope: ![[FUNC_LOC]], file: ![[CU_FILE_LOC]], discriminator: 0)
 

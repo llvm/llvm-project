@@ -1,4 +1,4 @@
-// RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
+// RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   // CHECK-LABEL: @group_non_uniform_ballot

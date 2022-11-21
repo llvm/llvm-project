@@ -686,3 +686,106 @@ body:             |
   bb.3:
 
 ...
+
+# This was trying to extend the liverange of %0 farther than needed,
+# following %1's segment to %bb3
+
+---
+name:            cannot_create_empty_or_backwards_segment
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: cannot_create_empty_or_backwards_segment
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[COPY]], implicit $exec
+  ; CHECK-NEXT:   $vcc = S_ANDN2_B64 $exec, [[COPY]], implicit-def dead $scc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.2, implicit $vcc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit undef $vcc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit [[V_CNDMASK_B32_e64_]]
+  bb.0:
+    liveins: $sgpr4_sgpr5
+
+    %0:sreg_64_xexec = COPY $sgpr4_sgpr5
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    %2:sreg_64_xexec = V_CMP_NE_U32_e64 1, %1, implicit $exec
+    $vcc = S_AND_B64 $exec, %2, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+
+  bb.1:
+    S_CBRANCH_VCCNZ %bb.3, implicit killed undef $vcc
+
+  bb.2:
+    S_ENDPGM 0
+
+  bb.3:
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name:            cannot_create_empty_or_backwards_segment_2
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: cannot_create_empty_or_backwards_segment_2
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[COPY]], implicit $exec
+  ; CHECK-NEXT:   $vcc = S_ANDN2_B64 $exec, [[COPY]], implicit-def dead $scc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.2, implicit $vcc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def dead [[V_CNDMASK_B32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.4, implicit undef $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   S_ENDPGM 0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    liveins: $sgpr4_sgpr5
+
+  bb.1:
+    liveins: $sgpr4_sgpr5
+
+    %0:sreg_64_xexec = COPY $sgpr4_sgpr5
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    %2:sreg_64_xexec = V_CMP_NE_U32_e64 1, %1, implicit $exec
+    $vcc = S_AND_B64 $exec, %2, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+
+  bb.2:
+    liveins: $sgpr4_sgpr5
+    S_NOP 0, implicit-def %1, implicit %1
+    S_CBRANCH_VCCNZ %bb.4, implicit killed undef $vcc
+    S_BRANCH %bb.1
+
+  bb.3:
+    S_ENDPGM 0
+
+  bb.4:
+    S_ENDPGM 0
+...

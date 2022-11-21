@@ -464,7 +464,7 @@ public:
   ///   restricts the node types for \p Kind.
   DynTypedMatcher dynCastTo(const ASTNodeKind Kind) const;
 
-  /// Return a matcher that that points to the same implementation, but sets the
+  /// Return a matcher that points to the same implementation, but sets the
   ///   traversal kind.
   ///
   /// If the traversal kind is already set, then \c TK overrides it.

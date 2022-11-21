@@ -89,7 +89,7 @@ struct MultiStringType {
 // This helper is used in unit tests to make them generic. The input should be
 // valid ASCII which means the input is also valid UTF-8.
 #define MAKE_CSTRING(CharT, Str)                                               \
-  MKSTR(Str).as_ptr((const CharT*)0)
+  MKSTR(Str).as_ptr(static_cast<const CharT*>(nullptr))
 
 // Like MAKE_CSTRING but makes a basic_string<CharT>. Embedded nulls are OK.
 #define MAKE_STRING(CharT, Str)                                                \

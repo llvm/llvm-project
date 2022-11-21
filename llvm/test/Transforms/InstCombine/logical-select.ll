@@ -742,13 +742,11 @@ define <2 x i64> @bitcast_vec_cond(<16 x i1> %cond, <2 x i64> %c, <2 x i64> %d) 
 
 define <vscale x 2 x i64> @bitcast_vec_cond_scalable(<vscale x 16 x i1> %cond, <vscale x 2 x i64> %c, <vscale x 2 x i64> %d) {
 ; CHECK-LABEL: @bitcast_vec_cond_scalable(
-; CHECK-NEXT:    [[S:%.*]] = sext <vscale x 16 x i1> [[COND:%.*]] to <vscale x 16 x i8>
-; CHECK-NEXT:    [[T9:%.*]] = bitcast <vscale x 16 x i8> [[S]] to <vscale x 2 x i64>
-; CHECK-NEXT:    [[NOTT9:%.*]] = xor <vscale x 2 x i64> [[T9]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[T11:%.*]] = and <vscale x 2 x i64> [[NOTT9]], [[C:%.*]]
-; CHECK-NEXT:    [[T12:%.*]] = and <vscale x 2 x i64> [[T9]], [[D:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or <vscale x 2 x i64> [[T11]], [[T12]]
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i64> [[D:%.*]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 2 x i64> [[C:%.*]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <vscale x 16 x i1> [[COND:%.*]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <vscale x 16 x i8> [[TMP3]] to <vscale x 2 x i64>
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP4]]
 ;
   %s = sext <vscale x 16 x i1> %cond to <vscale x 16 x i8>
   %t9 = bitcast <vscale x 16 x i8> %s to <vscale x 2 x i64>

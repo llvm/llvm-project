@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "gtest/gtest.h"
@@ -3124,6 +3125,13 @@ TEST(APIntTest, ScaleBitMask) {
   EXPECT_EQ(APIntOps::ScaleBitMask(APInt(8, 0x00), 4, true), APInt(4, 0x00));
   EXPECT_EQ(APIntOps::ScaleBitMask(APInt(8, 0xFF), 4, true), APInt(4, 0x0F));
   EXPECT_EQ(APIntOps::ScaleBitMask(APInt(8, 0xE4), 4, true), APInt(4, 0x08));
+}
+
+TEST(APIntTest, DenseMap) {
+  DenseMap<APInt, int> Map;
+  APInt ZeroWidthInt(0, 0, false);
+  Map.insert({ZeroWidthInt, 0});
+  Map.find(ZeroWidthInt);
 }
 
 } // end anonymous namespace

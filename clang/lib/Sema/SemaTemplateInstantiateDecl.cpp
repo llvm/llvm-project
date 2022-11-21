@@ -2270,7 +2270,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
 
     // In C++, the previous declaration we find might be a tag type
     // (class or enum). In this case, the new declaration will hide the
-    // tag type. Note that this does does not apply if we're declaring a
+    // tag type. Note that this does not apply if we're declaring a
     // typedef (C++ [dcl.typedef]p4).
     if (Previous.isSingleTagDecl())
       Previous.clear();
@@ -2663,7 +2663,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
 
     // In C++, the previous declaration we find might be a tag type
     // (class or enum). In this case, the new declaration will hide the
-    // tag type. Note that this does does not apply if we're declaring a
+    // tag type. Note that this does not apply if we're declaring a
     // typedef (C++ [dcl.typedef]p4).
     if (Previous.isSingleTagDecl())
       Previous.clear();

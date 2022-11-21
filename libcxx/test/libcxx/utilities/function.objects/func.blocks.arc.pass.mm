@@ -12,7 +12,7 @@
 
 // This test requires the Blocks runtime, which is (only?) available on Darwin
 // out-of-the-box.
-// REQUIRES: has-fblocks && darwin
+// REQUIRES: has-fblocks && has-fobjc-arc && darwin
 
 // ADDITIONAL_COMPILE_FLAGS: -fblocks -fobjc-arc
 

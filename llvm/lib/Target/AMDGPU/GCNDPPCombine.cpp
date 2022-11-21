@@ -272,8 +272,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
              (0LL == (Mod0->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
       DPPInst.addImm(Mod0->getImm());
       ++NumOperands;
-    } else if (AMDGPU::getNamedOperandIdx(DPPOp,
-                   AMDGPU::OpName::src0_modifiers) != -1) {
+    } else if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src0_modifiers)) {
       DPPInst.addImm(0);
       ++NumOperands;
     }
@@ -296,8 +295,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
              (0LL == (Mod1->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
       DPPInst.addImm(Mod1->getImm());
       ++NumOperands;
-    } else if (AMDGPU::getNamedOperandIdx(DPPOp,
-                   AMDGPU::OpName::src1_modifiers) != -1) {
+    } else if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src1_modifiers)) {
       DPPInst.addImm(0);
       ++NumOperands;
     }
@@ -333,18 +331,16 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     }
     if (HasVOP3DPP) {
       auto *ClampOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::clamp);
-      if (ClampOpr &&
-          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::clamp) != -1) {
+      if (ClampOpr && AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::clamp)) {
         DPPInst.addImm(ClampOpr->getImm());
       }
       auto *VdstInOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::vdst_in);
       if (VdstInOpr &&
-          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::vdst_in) != -1) {
+          AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::vdst_in)) {
         DPPInst.add(*VdstInOpr);
       }
       auto *OmodOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::omod);
-      if (OmodOpr &&
-          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::omod) != -1) {
+      if (OmodOpr && AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::omod)) {
         DPPInst.addImm(OmodOpr->getImm());
       }
       // Validate OP_SEL has to be set to all 0 and OP_SEL_HI has to be set to
@@ -357,7 +353,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
           Fail = true;
           break;
         }
-        if (AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::op_sel) != -1)
+        if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::op_sel))
           DPPInst.addImm(OpSel);
       }
       if (auto *OpSelHiOpr =
@@ -371,17 +367,15 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
           Fail = true;
           break;
         }
-        if (AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::op_sel_hi) != -1)
+        if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::op_sel_hi))
           DPPInst.addImm(OpSelHi);
       }
       auto *NegOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::neg_lo);
-      if (NegOpr &&
-          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::neg_lo) != -1) {
+      if (NegOpr && AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::neg_lo)) {
         DPPInst.addImm(NegOpr->getImm());
       }
       auto *NegHiOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::neg_hi);
-      if (NegHiOpr &&
-          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::neg_hi) != -1) {
+      if (NegHiOpr && AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::neg_hi)) {
         DPPInst.addImm(NegHiOpr->getImm());
       }
     }

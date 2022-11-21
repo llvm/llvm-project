@@ -57,110 +57,6 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(clang::format::FormatStyle::RawStringFormat)
 
 namespace llvm {
 namespace yaml {
-template <> struct ScalarEnumerationTraits<FormatStyle::LanguageKind> {
-  static void enumeration(IO &IO, FormatStyle::LanguageKind &Value) {
-    IO.enumCase(Value, "Cpp", FormatStyle::LK_Cpp);
-    IO.enumCase(Value, "Java", FormatStyle::LK_Java);
-    IO.enumCase(Value, "JavaScript", FormatStyle::LK_JavaScript);
-    IO.enumCase(Value, "ObjC", FormatStyle::LK_ObjC);
-    IO.enumCase(Value, "Proto", FormatStyle::LK_Proto);
-    IO.enumCase(Value, "TableGen", FormatStyle::LK_TableGen);
-    IO.enumCase(Value, "TextProto", FormatStyle::LK_TextProto);
-    IO.enumCase(Value, "CSharp", FormatStyle::LK_CSharp);
-    IO.enumCase(Value, "Json", FormatStyle::LK_Json);
-  }
-};
-
-template <> struct ScalarEnumerationTraits<FormatStyle::LanguageStandard> {
-  static void enumeration(IO &IO, FormatStyle::LanguageStandard &Value) {
-    IO.enumCase(Value, "c++03", FormatStyle::LS_Cpp03);
-    IO.enumCase(Value, "C++03", FormatStyle::LS_Cpp03); // Legacy alias
-    IO.enumCase(Value, "Cpp03", FormatStyle::LS_Cpp03); // Legacy alias
-
-    IO.enumCase(Value, "c++11", FormatStyle::LS_Cpp11);
-    IO.enumCase(Value, "C++11", FormatStyle::LS_Cpp11); // Legacy alias
-
-    IO.enumCase(Value, "c++14", FormatStyle::LS_Cpp14);
-    IO.enumCase(Value, "c++17", FormatStyle::LS_Cpp17);
-    IO.enumCase(Value, "c++20", FormatStyle::LS_Cpp20);
-
-    IO.enumCase(Value, "Latest", FormatStyle::LS_Latest);
-    IO.enumCase(Value, "Cpp11", FormatStyle::LS_Latest); // Legacy alias
-    IO.enumCase(Value, "Auto", FormatStyle::LS_Auto);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<FormatStyle::LambdaBodyIndentationKind> {
-  static void enumeration(IO &IO,
-                          FormatStyle::LambdaBodyIndentationKind &Value) {
-    IO.enumCase(Value, "Signature", FormatStyle::LBI_Signature);
-    IO.enumCase(Value, "OuterScope", FormatStyle::LBI_OuterScope);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<FormatStyle::RequiresExpressionIndentationKind> {
-  static void
-  enumeration(IO &IO, FormatStyle::RequiresExpressionIndentationKind &Value) {
-    IO.enumCase(Value, "Keyword", FormatStyle::REI_Keyword);
-    IO.enumCase(Value, "OuterScope", FormatStyle::REI_OuterScope);
-  }
-};
-
-template <> struct ScalarEnumerationTraits<FormatStyle::UseTabStyle> {
-  static void enumeration(IO &IO, FormatStyle::UseTabStyle &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::UT_Never);
-    IO.enumCase(Value, "false", FormatStyle::UT_Never);
-    IO.enumCase(Value, "Always", FormatStyle::UT_Always);
-    IO.enumCase(Value, "true", FormatStyle::UT_Always);
-    IO.enumCase(Value, "ForIndentation", FormatStyle::UT_ForIndentation);
-    IO.enumCase(Value, "ForContinuationAndIndentation",
-                FormatStyle::UT_ForContinuationAndIndentation);
-    IO.enumCase(Value, "AlignWithSpaces", FormatStyle::UT_AlignWithSpaces);
-  }
-};
-
-template <> struct ScalarEnumerationTraits<FormatStyle::JavaScriptQuoteStyle> {
-  static void enumeration(IO &IO, FormatStyle::JavaScriptQuoteStyle &Value) {
-    IO.enumCase(Value, "Leave", FormatStyle::JSQS_Leave);
-    IO.enumCase(Value, "Single", FormatStyle::JSQS_Single);
-    IO.enumCase(Value, "Double", FormatStyle::JSQS_Double);
-  }
-};
-
-template <> struct ScalarEnumerationTraits<FormatStyle::ShortBlockStyle> {
-  static void enumeration(IO &IO, FormatStyle::ShortBlockStyle &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::SBS_Never);
-    IO.enumCase(Value, "false", FormatStyle::SBS_Never);
-    IO.enumCase(Value, "Always", FormatStyle::SBS_Always);
-    IO.enumCase(Value, "true", FormatStyle::SBS_Always);
-    IO.enumCase(Value, "Empty", FormatStyle::SBS_Empty);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<FormatStyle::QualifierAlignmentStyle> {
-  static void enumeration(IO &IO, FormatStyle::QualifierAlignmentStyle &Value) {
-    IO.enumCase(Value, "Leave", FormatStyle::QAS_Leave);
-    IO.enumCase(Value, "Left", FormatStyle::QAS_Left);
-    IO.enumCase(Value, "Right", FormatStyle::QAS_Right);
-    IO.enumCase(Value, "Custom", FormatStyle::QAS_Custom);
-  }
-};
-
-template <> struct ScalarEnumerationTraits<FormatStyle::ShortFunctionStyle> {
-  static void enumeration(IO &IO, FormatStyle::ShortFunctionStyle &Value) {
-    IO.enumCase(Value, "None", FormatStyle::SFS_None);
-    IO.enumCase(Value, "false", FormatStyle::SFS_None);
-    IO.enumCase(Value, "All", FormatStyle::SFS_All);
-    IO.enumCase(Value, "true", FormatStyle::SFS_All);
-    IO.enumCase(Value, "Inline", FormatStyle::SFS_Inline);
-    IO.enumCase(Value, "InlineOnly", FormatStyle::SFS_InlineOnly);
-    IO.enumCase(Value, "Empty", FormatStyle::SFS_Empty);
-  }
-};
-
 template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
   static void enumInput(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
     IO.enumCase(Value, "None",
@@ -214,47 +110,6 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::TrailingCommentsAlignmentKinds> {
-  static void enumeration(IO &IO,
-                          FormatStyle::TrailingCommentsAlignmentKinds &Value) {
-    IO.enumCase(Value, "Leave", FormatStyle::TCAS_Leave);
-    IO.enumCase(Value, "Always", FormatStyle::TCAS_Always);
-    IO.enumCase(Value, "Never", FormatStyle::TCAS_Never);
-  }
-};
-
-template <> struct MappingTraits<FormatStyle::TrailingCommentsAlignmentStyle> {
-  static void enumInput(IO &IO,
-                        FormatStyle::TrailingCommentsAlignmentStyle &Value) {
-    IO.enumCase(Value, "Leave",
-                FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Leave, 1}));
-
-    IO.enumCase(Value, "Always",
-                FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Always, 1}));
-
-    IO.enumCase(Value, "Never",
-                FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Never, 1}));
-
-    // For backwards compatibility
-    IO.enumCase(Value, "true",
-                FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Always, 1}));
-    IO.enumCase(Value, "false",
-                FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Never, 1}));
-  }
-
-  static void mapping(IO &IO,
-                      FormatStyle::TrailingCommentsAlignmentStyle &Value) {
-    IO.mapOptional("Kind", Value.Kind);
-    IO.mapOptional("OverEmptyLines", Value.OverEmptyLines);
-  }
-};
-
-template <>
 struct ScalarEnumerationTraits<FormatStyle::ArrayInitializerAlignmentStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::ArrayInitializerAlignmentStyle &Value) {
@@ -264,28 +119,13 @@ struct ScalarEnumerationTraits<FormatStyle::ArrayInitializerAlignmentStyle> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<FormatStyle::ShortIfStyle> {
-  static void enumeration(IO &IO, FormatStyle::ShortIfStyle &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::SIS_Never);
-    IO.enumCase(Value, "WithoutElse", FormatStyle::SIS_WithoutElse);
-    IO.enumCase(Value, "OnlyFirstIf", FormatStyle::SIS_OnlyFirstIf);
-    IO.enumCase(Value, "AllIfsAndElse", FormatStyle::SIS_AllIfsAndElse);
-
-    // For backward compatibility.
-    IO.enumCase(Value, "Always", FormatStyle::SIS_OnlyFirstIf);
-    IO.enumCase(Value, "false", FormatStyle::SIS_Never);
-    IO.enumCase(Value, "true", FormatStyle::SIS_WithoutElse);
-  }
-};
-
-template <> struct ScalarEnumerationTraits<FormatStyle::ShortLambdaStyle> {
-  static void enumeration(IO &IO, FormatStyle::ShortLambdaStyle &Value) {
-    IO.enumCase(Value, "None", FormatStyle::SLS_None);
-    IO.enumCase(Value, "false", FormatStyle::SLS_None);
-    IO.enumCase(Value, "Empty", FormatStyle::SLS_Empty);
-    IO.enumCase(Value, "Inline", FormatStyle::SLS_Inline);
-    IO.enumCase(Value, "All", FormatStyle::SLS_All);
-    IO.enumCase(Value, "true", FormatStyle::SLS_All);
+template <> struct ScalarEnumerationTraits<FormatStyle::BinaryOperatorStyle> {
+  static void enumeration(IO &IO, FormatStyle::BinaryOperatorStyle &Value) {
+    IO.enumCase(Value, "All", FormatStyle::BOS_All);
+    IO.enumCase(Value, "true", FormatStyle::BOS_All);
+    IO.enumCase(Value, "None", FormatStyle::BOS_None);
+    IO.enumCase(Value, "false", FormatStyle::BOS_None);
+    IO.enumCase(Value, "NonAssignment", FormatStyle::BOS_NonAssignment);
   }
 };
 
@@ -297,20 +137,14 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BinPackStyle> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<FormatStyle::TrailingCommaStyle> {
-  static void enumeration(IO &IO, FormatStyle::TrailingCommaStyle &Value) {
-    IO.enumCase(Value, "None", FormatStyle::TCS_None);
-    IO.enumCase(Value, "Wrapped", FormatStyle::TCS_Wrapped);
-  }
-};
-
-template <> struct ScalarEnumerationTraits<FormatStyle::BinaryOperatorStyle> {
-  static void enumeration(IO &IO, FormatStyle::BinaryOperatorStyle &Value) {
-    IO.enumCase(Value, "All", FormatStyle::BOS_All);
-    IO.enumCase(Value, "true", FormatStyle::BOS_All);
-    IO.enumCase(Value, "None", FormatStyle::BOS_None);
-    IO.enumCase(Value, "false", FormatStyle::BOS_None);
-    IO.enumCase(Value, "NonAssignment", FormatStyle::BOS_NonAssignment);
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BitFieldColonSpacingStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BitFieldColonSpacingStyle &Value) {
+    IO.enumCase(Value, "Both", FormatStyle::BFCS_Both);
+    IO.enumCase(Value, "None", FormatStyle::BFCS_None);
+    IO.enumCase(Value, "Before", FormatStyle::BFCS_Before);
+    IO.enumCase(Value, "After", FormatStyle::BFCS_After);
   }
 };
 
@@ -325,6 +159,42 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BraceBreakingStyle> {
     IO.enumCase(Value, "GNU", FormatStyle::BS_GNU);
     IO.enumCase(Value, "WebKit", FormatStyle::BS_WebKit);
     IO.enumCase(Value, "Custom", FormatStyle::BS_Custom);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
+  static void mapping(IO &IO, FormatStyle::BraceWrappingFlags &Wrapping) {
+    IO.mapOptional("AfterCaseLabel", Wrapping.AfterCaseLabel);
+    IO.mapOptional("AfterClass", Wrapping.AfterClass);
+    IO.mapOptional("AfterControlStatement", Wrapping.AfterControlStatement);
+    IO.mapOptional("AfterEnum", Wrapping.AfterEnum);
+    IO.mapOptional("AfterExternBlock", Wrapping.AfterExternBlock);
+    IO.mapOptional("AfterFunction", Wrapping.AfterFunction);
+    IO.mapOptional("AfterNamespace", Wrapping.AfterNamespace);
+    IO.mapOptional("AfterObjCDeclaration", Wrapping.AfterObjCDeclaration);
+    IO.mapOptional("AfterStruct", Wrapping.AfterStruct);
+    IO.mapOptional("AfterUnion", Wrapping.AfterUnion);
+    IO.mapOptional("BeforeCatch", Wrapping.BeforeCatch);
+    IO.mapOptional("BeforeElse", Wrapping.BeforeElse);
+    IO.mapOptional("BeforeLambdaBody", Wrapping.BeforeLambdaBody);
+    IO.mapOptional("BeforeWhile", Wrapping.BeforeWhile);
+    IO.mapOptional("IndentBraces", Wrapping.IndentBraces);
+    IO.mapOptional("SplitEmptyFunction", Wrapping.SplitEmptyFunction);
+    IO.mapOptional("SplitEmptyRecord", Wrapping.SplitEmptyRecord);
+    IO.mapOptional("SplitEmptyNamespace", Wrapping.SplitEmptyNamespace);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::BracketAlignmentStyle> {
+  static void enumeration(IO &IO, FormatStyle::BracketAlignmentStyle &Value) {
+    IO.enumCase(Value, "Align", FormatStyle::BAS_Align);
+    IO.enumCase(Value, "DontAlign", FormatStyle::BAS_DontAlign);
+    IO.enumCase(Value, "AlwaysBreak", FormatStyle::BAS_AlwaysBreak);
+    IO.enumCase(Value, "BlockIndent", FormatStyle::BAS_BlockIndent);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "true", FormatStyle::BAS_Align);
+    IO.enumCase(Value, "false", FormatStyle::BAS_DontAlign);
   }
 };
 
@@ -381,71 +251,6 @@ struct ScalarEnumerationTraits<FormatStyle::BreakInheritanceListStyle> {
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::PackConstructorInitializersStyle> {
-  static void
-  enumeration(IO &IO, FormatStyle::PackConstructorInitializersStyle &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::PCIS_Never);
-    IO.enumCase(Value, "BinPack", FormatStyle::PCIS_BinPack);
-    IO.enumCase(Value, "CurrentLine", FormatStyle::PCIS_CurrentLine);
-    IO.enumCase(Value, "NextLine", FormatStyle::PCIS_NextLine);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<FormatStyle::EmptyLineAfterAccessModifierStyle> {
-  static void
-  enumeration(IO &IO, FormatStyle::EmptyLineAfterAccessModifierStyle &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::ELAAMS_Never);
-    IO.enumCase(Value, "Leave", FormatStyle::ELAAMS_Leave);
-    IO.enumCase(Value, "Always", FormatStyle::ELAAMS_Always);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<
-    FormatStyle::EmptyLineBeforeAccessModifierStyle> {
-  static void
-  enumeration(IO &IO, FormatStyle::EmptyLineBeforeAccessModifierStyle &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::ELBAMS_Never);
-    IO.enumCase(Value, "Leave", FormatStyle::ELBAMS_Leave);
-    IO.enumCase(Value, "LogicalBlock", FormatStyle::ELBAMS_LogicalBlock);
-    IO.enumCase(Value, "Always", FormatStyle::ELBAMS_Always);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<FormatStyle::PPDirectiveIndentStyle> {
-  static void enumeration(IO &IO, FormatStyle::PPDirectiveIndentStyle &Value) {
-    IO.enumCase(Value, "None", FormatStyle::PPDIS_None);
-    IO.enumCase(Value, "AfterHash", FormatStyle::PPDIS_AfterHash);
-    IO.enumCase(Value, "BeforeHash", FormatStyle::PPDIS_BeforeHash);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
-  static void enumeration(IO &IO, FormatStyle::IndentExternBlockStyle &Value) {
-    IO.enumCase(Value, "AfterExternBlock", FormatStyle::IEBS_AfterExternBlock);
-    IO.enumCase(Value, "Indent", FormatStyle::IEBS_Indent);
-    IO.enumCase(Value, "NoIndent", FormatStyle::IEBS_NoIndent);
-    IO.enumCase(Value, "true", FormatStyle::IEBS_Indent);
-    IO.enumCase(Value, "false", FormatStyle::IEBS_NoIndent);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
-  static void enumeration(IO &IO, FormatStyle::ReturnTypeBreakingStyle &Value) {
-    IO.enumCase(Value, "None", FormatStyle::RTBS_None);
-    IO.enumCase(Value, "All", FormatStyle::RTBS_All);
-    IO.enumCase(Value, "TopLevel", FormatStyle::RTBS_TopLevel);
-    IO.enumCase(Value, "TopLevelDefinitions",
-                FormatStyle::RTBS_TopLevelDefinitions);
-    IO.enumCase(Value, "AllDefinitions", FormatStyle::RTBS_AllDefinitions);
-  }
-};
-
-template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakTemplateDeclarationsStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::BreakTemplateDeclarationsStyle &Value) {
@@ -474,29 +279,6 @@ struct ScalarEnumerationTraits<FormatStyle::DefinitionReturnTypeBreakingStyle> {
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::NamespaceIndentationKind> {
-  static void enumeration(IO &IO,
-                          FormatStyle::NamespaceIndentationKind &Value) {
-    IO.enumCase(Value, "None", FormatStyle::NI_None);
-    IO.enumCase(Value, "Inner", FormatStyle::NI_Inner);
-    IO.enumCase(Value, "All", FormatStyle::NI_All);
-  }
-};
-
-template <> struct ScalarEnumerationTraits<FormatStyle::BracketAlignmentStyle> {
-  static void enumeration(IO &IO, FormatStyle::BracketAlignmentStyle &Value) {
-    IO.enumCase(Value, "Align", FormatStyle::BAS_Align);
-    IO.enumCase(Value, "DontAlign", FormatStyle::BAS_DontAlign);
-    IO.enumCase(Value, "AlwaysBreak", FormatStyle::BAS_AlwaysBreak);
-    IO.enumCase(Value, "BlockIndent", FormatStyle::BAS_BlockIndent);
-
-    // For backward compatibility.
-    IO.enumCase(Value, "true", FormatStyle::BAS_Align);
-    IO.enumCase(Value, "false", FormatStyle::BAS_DontAlign);
-  }
-};
-
-template <>
 struct ScalarEnumerationTraits<FormatStyle::EscapedNewlineAlignmentStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::EscapedNewlineAlignmentStyle &Value) {
@@ -507,6 +289,99 @@ struct ScalarEnumerationTraits<FormatStyle::EscapedNewlineAlignmentStyle> {
     // For backward compatibility.
     IO.enumCase(Value, "true", FormatStyle::ENAS_Left);
     IO.enumCase(Value, "false", FormatStyle::ENAS_Right);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::EmptyLineAfterAccessModifierStyle> {
+  static void
+  enumeration(IO &IO, FormatStyle::EmptyLineAfterAccessModifierStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::ELAAMS_Never);
+    IO.enumCase(Value, "Leave", FormatStyle::ELAAMS_Leave);
+    IO.enumCase(Value, "Always", FormatStyle::ELAAMS_Always);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<
+    FormatStyle::EmptyLineBeforeAccessModifierStyle> {
+  static void
+  enumeration(IO &IO, FormatStyle::EmptyLineBeforeAccessModifierStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::ELBAMS_Never);
+    IO.enumCase(Value, "Leave", FormatStyle::ELBAMS_Leave);
+    IO.enumCase(Value, "LogicalBlock", FormatStyle::ELBAMS_LogicalBlock);
+    IO.enumCase(Value, "Always", FormatStyle::ELBAMS_Always);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
+  static void enumeration(IO &IO, FormatStyle::IndentExternBlockStyle &Value) {
+    IO.enumCase(Value, "AfterExternBlock", FormatStyle::IEBS_AfterExternBlock);
+    IO.enumCase(Value, "Indent", FormatStyle::IEBS_Indent);
+    IO.enumCase(Value, "NoIndent", FormatStyle::IEBS_NoIndent);
+    IO.enumCase(Value, "true", FormatStyle::IEBS_Indent);
+    IO.enumCase(Value, "false", FormatStyle::IEBS_NoIndent);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::JavaScriptQuoteStyle> {
+  static void enumeration(IO &IO, FormatStyle::JavaScriptQuoteStyle &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::JSQS_Leave);
+    IO.enumCase(Value, "Single", FormatStyle::JSQS_Single);
+    IO.enumCase(Value, "Double", FormatStyle::JSQS_Double);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::LanguageKind> {
+  static void enumeration(IO &IO, FormatStyle::LanguageKind &Value) {
+    IO.enumCase(Value, "Cpp", FormatStyle::LK_Cpp);
+    IO.enumCase(Value, "Java", FormatStyle::LK_Java);
+    IO.enumCase(Value, "JavaScript", FormatStyle::LK_JavaScript);
+    IO.enumCase(Value, "ObjC", FormatStyle::LK_ObjC);
+    IO.enumCase(Value, "Proto", FormatStyle::LK_Proto);
+    IO.enumCase(Value, "TableGen", FormatStyle::LK_TableGen);
+    IO.enumCase(Value, "TextProto", FormatStyle::LK_TextProto);
+    IO.enumCase(Value, "CSharp", FormatStyle::LK_CSharp);
+    IO.enumCase(Value, "Json", FormatStyle::LK_Json);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::LanguageStandard> {
+  static void enumeration(IO &IO, FormatStyle::LanguageStandard &Value) {
+    IO.enumCase(Value, "c++03", FormatStyle::LS_Cpp03);
+    IO.enumCase(Value, "C++03", FormatStyle::LS_Cpp03); // Legacy alias
+    IO.enumCase(Value, "Cpp03", FormatStyle::LS_Cpp03); // Legacy alias
+
+    IO.enumCase(Value, "c++11", FormatStyle::LS_Cpp11);
+    IO.enumCase(Value, "C++11", FormatStyle::LS_Cpp11); // Legacy alias
+
+    IO.enumCase(Value, "c++14", FormatStyle::LS_Cpp14);
+    IO.enumCase(Value, "c++17", FormatStyle::LS_Cpp17);
+    IO.enumCase(Value, "c++20", FormatStyle::LS_Cpp20);
+
+    IO.enumCase(Value, "Latest", FormatStyle::LS_Latest);
+    IO.enumCase(Value, "Cpp11", FormatStyle::LS_Latest); // Legacy alias
+    IO.enumCase(Value, "Auto", FormatStyle::LS_Auto);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::LambdaBodyIndentationKind> {
+  static void enumeration(IO &IO,
+                          FormatStyle::LambdaBodyIndentationKind &Value) {
+    IO.enumCase(Value, "Signature", FormatStyle::LBI_Signature);
+    IO.enumCase(Value, "OuterScope", FormatStyle::LBI_OuterScope);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::NamespaceIndentationKind> {
+  static void enumeration(IO &IO,
+                          FormatStyle::NamespaceIndentationKind &Value) {
+    IO.enumCase(Value, "None", FormatStyle::NI_None);
+    IO.enumCase(Value, "Inner", FormatStyle::NI_Inner);
+    IO.enumCase(Value, "All", FormatStyle::NI_All);
   }
 };
 
@@ -523,6 +398,17 @@ template <> struct ScalarEnumerationTraits<FormatStyle::OperandAlignmentStyle> {
   }
 };
 
+template <>
+struct ScalarEnumerationTraits<FormatStyle::PackConstructorInitializersStyle> {
+  static void
+  enumeration(IO &IO, FormatStyle::PackConstructorInitializersStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::PCIS_Never);
+    IO.enumCase(Value, "BinPack", FormatStyle::PCIS_BinPack);
+    IO.enumCase(Value, "CurrentLine", FormatStyle::PCIS_CurrentLine);
+    IO.enumCase(Value, "NextLine", FormatStyle::PCIS_NextLine);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<FormatStyle::PointerAlignmentStyle> {
   static void enumeration(IO &IO, FormatStyle::PointerAlignmentStyle &Value) {
     IO.enumCase(Value, "Middle", FormatStyle::PAS_Middle);
@@ -536,22 +422,31 @@ template <> struct ScalarEnumerationTraits<FormatStyle::PointerAlignmentStyle> {
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::SeparateDefinitionStyle> {
-  static void enumeration(IO &IO, FormatStyle::SeparateDefinitionStyle &Value) {
-    IO.enumCase(Value, "Leave", FormatStyle::SDS_Leave);
-    IO.enumCase(Value, "Always", FormatStyle::SDS_Always);
-    IO.enumCase(Value, "Never", FormatStyle::SDS_Never);
+struct ScalarEnumerationTraits<FormatStyle::PPDirectiveIndentStyle> {
+  static void enumeration(IO &IO, FormatStyle::PPDirectiveIndentStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::PPDIS_None);
+    IO.enumCase(Value, "AfterHash", FormatStyle::PPDIS_AfterHash);
+    IO.enumCase(Value, "BeforeHash", FormatStyle::PPDIS_BeforeHash);
   }
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::SpaceAroundPointerQualifiersStyle> {
-  static void
-  enumeration(IO &IO, FormatStyle::SpaceAroundPointerQualifiersStyle &Value) {
-    IO.enumCase(Value, "Default", FormatStyle::SAPQ_Default);
-    IO.enumCase(Value, "Before", FormatStyle::SAPQ_Before);
-    IO.enumCase(Value, "After", FormatStyle::SAPQ_After);
-    IO.enumCase(Value, "Both", FormatStyle::SAPQ_Both);
+struct ScalarEnumerationTraits<FormatStyle::QualifierAlignmentStyle> {
+  static void enumeration(IO &IO, FormatStyle::QualifierAlignmentStyle &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::QAS_Leave);
+    IO.enumCase(Value, "Left", FormatStyle::QAS_Left);
+    IO.enumCase(Value, "Right", FormatStyle::QAS_Right);
+    IO.enumCase(Value, "Custom", FormatStyle::QAS_Custom);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::RawStringFormat> {
+  static void mapping(IO &IO, FormatStyle::RawStringFormat &Format) {
+    IO.mapOptional("Language", Format.Language);
+    IO.mapOptional("Delimiters", Format.Delimiters);
+    IO.mapOptional("EnclosingFunctions", Format.EnclosingFunctions);
+    IO.mapOptional("CanonicalDelimiter", Format.CanonicalDelimiter);
+    IO.mapOptional("BasedOnStyle", Format.BasedOnStyle);
   }
 };
 
@@ -577,34 +472,79 @@ struct ScalarEnumerationTraits<FormatStyle::RequiresClausePositionStyle> {
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensStyle> {
-  static void enumeration(IO &IO, FormatStyle::SpaceBeforeParensStyle &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::SBPO_Never);
-    IO.enumCase(Value, "ControlStatements",
-                FormatStyle::SBPO_ControlStatements);
-    IO.enumCase(Value, "ControlStatementsExceptControlMacros",
-                FormatStyle::SBPO_ControlStatementsExceptControlMacros);
-    IO.enumCase(Value, "NonEmptyParentheses",
-                FormatStyle::SBPO_NonEmptyParentheses);
-    IO.enumCase(Value, "Always", FormatStyle::SBPO_Always);
-    IO.enumCase(Value, "Custom", FormatStyle::SBPO_Custom);
-
-    // For backward compatibility.
-    IO.enumCase(Value, "false", FormatStyle::SBPO_Never);
-    IO.enumCase(Value, "true", FormatStyle::SBPO_ControlStatements);
-    IO.enumCase(Value, "ControlStatementsExceptForEachMacros",
-                FormatStyle::SBPO_ControlStatementsExceptControlMacros);
+struct ScalarEnumerationTraits<FormatStyle::RequiresExpressionIndentationKind> {
+  static void
+  enumeration(IO &IO, FormatStyle::RequiresExpressionIndentationKind &Value) {
+    IO.enumCase(Value, "Keyword", FormatStyle::REI_Keyword);
+    IO.enumCase(Value, "OuterScope", FormatStyle::REI_OuterScope);
   }
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::BitFieldColonSpacingStyle> {
-  static void enumeration(IO &IO,
-                          FormatStyle::BitFieldColonSpacingStyle &Value) {
-    IO.enumCase(Value, "Both", FormatStyle::BFCS_Both);
-    IO.enumCase(Value, "None", FormatStyle::BFCS_None);
-    IO.enumCase(Value, "Before", FormatStyle::BFCS_Before);
-    IO.enumCase(Value, "After", FormatStyle::BFCS_After);
+struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
+  static void enumeration(IO &IO, FormatStyle::ReturnTypeBreakingStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::RTBS_None);
+    IO.enumCase(Value, "All", FormatStyle::RTBS_All);
+    IO.enumCase(Value, "TopLevel", FormatStyle::RTBS_TopLevel);
+    IO.enumCase(Value, "TopLevelDefinitions",
+                FormatStyle::RTBS_TopLevelDefinitions);
+    IO.enumCase(Value, "AllDefinitions", FormatStyle::RTBS_AllDefinitions);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::SeparateDefinitionStyle> {
+  static void enumeration(IO &IO, FormatStyle::SeparateDefinitionStyle &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::SDS_Leave);
+    IO.enumCase(Value, "Always", FormatStyle::SDS_Always);
+    IO.enumCase(Value, "Never", FormatStyle::SDS_Never);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::ShortBlockStyle> {
+  static void enumeration(IO &IO, FormatStyle::ShortBlockStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SBS_Never);
+    IO.enumCase(Value, "false", FormatStyle::SBS_Never);
+    IO.enumCase(Value, "Always", FormatStyle::SBS_Always);
+    IO.enumCase(Value, "true", FormatStyle::SBS_Always);
+    IO.enumCase(Value, "Empty", FormatStyle::SBS_Empty);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::ShortFunctionStyle> {
+  static void enumeration(IO &IO, FormatStyle::ShortFunctionStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::SFS_None);
+    IO.enumCase(Value, "false", FormatStyle::SFS_None);
+    IO.enumCase(Value, "All", FormatStyle::SFS_All);
+    IO.enumCase(Value, "true", FormatStyle::SFS_All);
+    IO.enumCase(Value, "Inline", FormatStyle::SFS_Inline);
+    IO.enumCase(Value, "InlineOnly", FormatStyle::SFS_InlineOnly);
+    IO.enumCase(Value, "Empty", FormatStyle::SFS_Empty);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::ShortIfStyle> {
+  static void enumeration(IO &IO, FormatStyle::ShortIfStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SIS_Never);
+    IO.enumCase(Value, "WithoutElse", FormatStyle::SIS_WithoutElse);
+    IO.enumCase(Value, "OnlyFirstIf", FormatStyle::SIS_OnlyFirstIf);
+    IO.enumCase(Value, "AllIfsAndElse", FormatStyle::SIS_AllIfsAndElse);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "Always", FormatStyle::SIS_OnlyFirstIf);
+    IO.enumCase(Value, "false", FormatStyle::SIS_Never);
+    IO.enumCase(Value, "true", FormatStyle::SIS_WithoutElse);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::ShortLambdaStyle> {
+  static void enumeration(IO &IO, FormatStyle::ShortLambdaStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::SLS_None);
+    IO.enumCase(Value, "false", FormatStyle::SLS_None);
+    IO.enumCase(Value, "Empty", FormatStyle::SLS_Empty);
+    IO.enumCase(Value, "Inline", FormatStyle::SLS_Inline);
+    IO.enumCase(Value, "All", FormatStyle::SLS_All);
+    IO.enumCase(Value, "true", FormatStyle::SLS_All);
   }
 };
 
@@ -629,6 +569,56 @@ struct ScalarEnumerationTraits<FormatStyle::SortJavaStaticImportOptions> {
   }
 };
 
+template <>
+struct ScalarEnumerationTraits<FormatStyle::SpaceAroundPointerQualifiersStyle> {
+  static void
+  enumeration(IO &IO, FormatStyle::SpaceAroundPointerQualifiersStyle &Value) {
+    IO.enumCase(Value, "Default", FormatStyle::SAPQ_Default);
+    IO.enumCase(Value, "Before", FormatStyle::SAPQ_Before);
+    IO.enumCase(Value, "After", FormatStyle::SAPQ_After);
+    IO.enumCase(Value, "Both", FormatStyle::SAPQ_Both);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::SpaceBeforeParensCustom> {
+  static void mapping(IO &IO, FormatStyle::SpaceBeforeParensCustom &Spacing) {
+    IO.mapOptional("AfterControlStatements", Spacing.AfterControlStatements);
+    IO.mapOptional("AfterForeachMacros", Spacing.AfterForeachMacros);
+    IO.mapOptional("AfterFunctionDefinitionName",
+                   Spacing.AfterFunctionDefinitionName);
+    IO.mapOptional("AfterFunctionDeclarationName",
+                   Spacing.AfterFunctionDeclarationName);
+    IO.mapOptional("AfterIfMacros", Spacing.AfterIfMacros);
+    IO.mapOptional("AfterOverloadedOperator", Spacing.AfterOverloadedOperator);
+    IO.mapOptional("AfterRequiresInClause", Spacing.AfterRequiresInClause);
+    IO.mapOptional("AfterRequiresInExpression",
+                   Spacing.AfterRequiresInExpression);
+    IO.mapOptional("BeforeNonEmptyParentheses",
+                   Spacing.BeforeNonEmptyParentheses);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensStyle> {
+  static void enumeration(IO &IO, FormatStyle::SpaceBeforeParensStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SBPO_Never);
+    IO.enumCase(Value, "ControlStatements",
+                FormatStyle::SBPO_ControlStatements);
+    IO.enumCase(Value, "ControlStatementsExceptControlMacros",
+                FormatStyle::SBPO_ControlStatementsExceptControlMacros);
+    IO.enumCase(Value, "NonEmptyParentheses",
+                FormatStyle::SBPO_NonEmptyParentheses);
+    IO.enumCase(Value, "Always", FormatStyle::SBPO_Always);
+    IO.enumCase(Value, "Custom", FormatStyle::SBPO_Custom);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "false", FormatStyle::SBPO_Never);
+    IO.enumCase(Value, "true", FormatStyle::SBPO_ControlStatements);
+    IO.enumCase(Value, "ControlStatementsExceptForEachMacros",
+                FormatStyle::SBPO_ControlStatementsExceptControlMacros);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<FormatStyle::SpacesInAnglesStyle> {
   static void enumeration(IO &IO, FormatStyle::SpacesInAnglesStyle &Value) {
     IO.enumCase(Value, "Never", FormatStyle::SIAS_Never);
@@ -641,11 +631,86 @@ template <> struct ScalarEnumerationTraits<FormatStyle::SpacesInAnglesStyle> {
   }
 };
 
+template <> struct MappingTraits<FormatStyle::SpacesInLineComment> {
+  static void mapping(IO &IO, FormatStyle::SpacesInLineComment &Space) {
+    // Transform the maximum to signed, to parse "-1" correctly
+    int signedMaximum = static_cast<int>(Space.Maximum);
+    IO.mapOptional("Minimum", Space.Minimum);
+    IO.mapOptional("Maximum", signedMaximum);
+    Space.Maximum = static_cast<unsigned>(signedMaximum);
+
+    if (Space.Maximum != -1u)
+      Space.Minimum = std::min(Space.Minimum, Space.Maximum);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::TrailingCommaStyle> {
+  static void enumeration(IO &IO, FormatStyle::TrailingCommaStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::TCS_None);
+    IO.enumCase(Value, "Wrapped", FormatStyle::TCS_Wrapped);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::TrailingCommentsAlignmentKinds> {
+  static void enumeration(IO &IO,
+                          FormatStyle::TrailingCommentsAlignmentKinds &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::TCAS_Leave);
+    IO.enumCase(Value, "Always", FormatStyle::TCAS_Always);
+    IO.enumCase(Value, "Never", FormatStyle::TCAS_Never);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::TrailingCommentsAlignmentStyle> {
+  static void enumInput(IO &IO,
+                        FormatStyle::TrailingCommentsAlignmentStyle &Value) {
+    IO.enumCase(Value, "Leave",
+                FormatStyle::TrailingCommentsAlignmentStyle(
+                    {FormatStyle::TCAS_Leave, 1}));
+
+    IO.enumCase(Value, "Always",
+                FormatStyle::TrailingCommentsAlignmentStyle(
+                    {FormatStyle::TCAS_Always, 1}));
+
+    IO.enumCase(Value, "Never",
+                FormatStyle::TrailingCommentsAlignmentStyle(
+                    {FormatStyle::TCAS_Never, 1}));
+
+    // For backwards compatibility
+    IO.enumCase(Value, "true",
+                FormatStyle::TrailingCommentsAlignmentStyle(
+                    {FormatStyle::TCAS_Always, 1}));
+    IO.enumCase(Value, "false",
+                FormatStyle::TrailingCommentsAlignmentStyle(
+                    {FormatStyle::TCAS_Never, 1}));
+  }
+
+  static void mapping(IO &IO,
+                      FormatStyle::TrailingCommentsAlignmentStyle &Value) {
+    IO.mapOptional("Kind", Value.Kind);
+    IO.mapOptional("OverEmptyLines", Value.OverEmptyLines);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::UseTabStyle> {
+  static void enumeration(IO &IO, FormatStyle::UseTabStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::UT_Never);
+    IO.enumCase(Value, "false", FormatStyle::UT_Never);
+    IO.enumCase(Value, "Always", FormatStyle::UT_Always);
+    IO.enumCase(Value, "true", FormatStyle::UT_Always);
+    IO.enumCase(Value, "ForIndentation", FormatStyle::UT_ForIndentation);
+    IO.enumCase(Value, "ForContinuationAndIndentation",
+                FormatStyle::UT_ForContinuationAndIndentation);
+    IO.enumCase(Value, "AlignWithSpaces", FormatStyle::UT_AlignWithSpaces);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle> {
   static void mapping(IO &IO, FormatStyle &Style) {
     // When reading, read the language first, we need it for getPredefinedStyle.
     IO.mapOptional("Language", Style.Language);
 
+    StringRef BasedOnStyle;
     if (IO.outputting()) {
       StringRef Styles[] = {"LLVM",   "Google", "Chromium", "Mozilla",
                             "WebKit", "GNU",    "Microsoft"};
@@ -654,11 +719,11 @@ template <> struct MappingTraits<FormatStyle> {
         if (getPredefinedStyle(StyleName, Style.Language, &PredefinedStyle) &&
             Style == PredefinedStyle) {
           IO.mapOptional("# BasedOnStyle", StyleName);
+          BasedOnStyle = StyleName;
           break;
         }
       }
     } else {
-      StringRef BasedOnStyle;
       IO.mapOptional("BasedOnStyle", BasedOnStyle);
       if (!BasedOnStyle.empty()) {
         FormatStyle::LanguageKind OldLanguage = Style.Language;
@@ -672,9 +737,35 @@ template <> struct MappingTraits<FormatStyle> {
       }
     }
 
+    // Initialize some variables used in the parsing. The using logic is at the
+    // end.
+
+    // For backward compatibility:
+    // The default value of ConstructorInitializerAllOnOneLineOrOnePerLine was
+    // false unless BasedOnStyle was Google or Chromium whereas that of
+    // AllowAllConstructorInitializersOnNextLine was always true, so the
+    // equivalent default value of PackConstructorInitializers is PCIS_NextLine
+    // for Google/Chromium or PCIS_BinPack otherwise. If the deprecated options
+    // had a non-default value while PackConstructorInitializers has a default
+    // value, set the latter to an equivalent non-default value if needed.
+    const bool IsGoogleOrChromium = BasedOnStyle.equals_insensitive("google") ||
+                                    BasedOnStyle.equals_insensitive("chromium");
+    bool OnCurrentLine = IsGoogleOrChromium;
+    bool OnNextLine = true;
+
+    bool BreakBeforeInheritanceComma = false;
+    bool BreakConstructorInitializersBeforeComma = false;
+
     // For backward compatibility.
     if (!IO.outputting()) {
       IO.mapOptional("AlignEscapedNewlinesLeft", Style.AlignEscapedNewlines);
+      IO.mapOptional("AllowAllConstructorInitializersOnNextLine", OnNextLine);
+      IO.mapOptional("BreakBeforeInheritanceComma",
+                     BreakBeforeInheritanceComma);
+      IO.mapOptional("BreakConstructorInitializersBeforeComma",
+                     BreakConstructorInitializersBeforeComma);
+      IO.mapOptional("ConstructorInitializerAllOnOneLineOrOnePerLine",
+                     OnCurrentLine);
       IO.mapOptional("DerivePointerBinding", Style.DerivePointerAlignment);
       IO.mapOptional("IndentFunctionDeclarationAfterType",
                      Style.IndentWrappedFunctionNames);
@@ -701,40 +792,24 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowAllArgumentsOnNextLine);
     IO.mapOptional("AllowAllParametersOfDeclarationOnNextLine",
                    Style.AllowAllParametersOfDeclarationOnNextLine);
-    IO.mapOptional("AllowShortEnumsOnASingleLine",
-                   Style.AllowShortEnumsOnASingleLine);
     IO.mapOptional("AllowShortBlocksOnASingleLine",
                    Style.AllowShortBlocksOnASingleLine);
     IO.mapOptional("AllowShortCaseLabelsOnASingleLine",
                    Style.AllowShortCaseLabelsOnASingleLine);
+    IO.mapOptional("AllowShortEnumsOnASingleLine",
+                   Style.AllowShortEnumsOnASingleLine);
     IO.mapOptional("AllowShortFunctionsOnASingleLine",
                    Style.AllowShortFunctionsOnASingleLine);
-    IO.mapOptional("AllowShortLambdasOnASingleLine",
-                   Style.AllowShortLambdasOnASingleLine);
     IO.mapOptional("AllowShortIfStatementsOnASingleLine",
                    Style.AllowShortIfStatementsOnASingleLine);
+    IO.mapOptional("AllowShortLambdasOnASingleLine",
+                   Style.AllowShortLambdasOnASingleLine);
     IO.mapOptional("AllowShortLoopsOnASingleLine",
                    Style.AllowShortLoopsOnASingleLine);
     IO.mapOptional("AlwaysBreakAfterDefinitionReturnType",
                    Style.AlwaysBreakAfterDefinitionReturnType);
     IO.mapOptional("AlwaysBreakAfterReturnType",
                    Style.AlwaysBreakAfterReturnType);
-
-    // If AlwaysBreakAfterDefinitionReturnType was specified but
-    // AlwaysBreakAfterReturnType was not, initialize the latter from the
-    // former for backwards compatibility.
-    if (Style.AlwaysBreakAfterDefinitionReturnType != FormatStyle::DRTBS_None &&
-        Style.AlwaysBreakAfterReturnType == FormatStyle::RTBS_None) {
-      if (Style.AlwaysBreakAfterDefinitionReturnType ==
-          FormatStyle::DRTBS_All) {
-        Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
-      } else if (Style.AlwaysBreakAfterDefinitionReturnType ==
-                 FormatStyle::DRTBS_TopLevel) {
-        Style.AlwaysBreakAfterReturnType =
-            FormatStyle::RTBS_TopLevelDefinitions;
-      }
-    }
-
     IO.mapOptional("AlwaysBreakBeforeMultilineStrings",
                    Style.AlwaysBreakBeforeMultilineStrings);
     IO.mapOptional("AlwaysBreakTemplateDeclarations",
@@ -742,56 +817,24 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("AttributeMacros", Style.AttributeMacros);
     IO.mapOptional("BinPackArguments", Style.BinPackArguments);
     IO.mapOptional("BinPackParameters", Style.BinPackParameters);
+    IO.mapOptional("BitFieldColonSpacing", Style.BitFieldColonSpacing);
     IO.mapOptional("BraceWrapping", Style.BraceWrapping);
+    IO.mapOptional("BreakAfterJavaFieldAnnotations",
+                   Style.BreakAfterJavaFieldAnnotations);
+    IO.mapOptional("BreakArrays", Style.BreakArrays);
     IO.mapOptional("BreakBeforeBinaryOperators",
                    Style.BreakBeforeBinaryOperators);
     IO.mapOptional("BreakBeforeConceptDeclarations",
                    Style.BreakBeforeConceptDeclarations);
     IO.mapOptional("BreakBeforeBraces", Style.BreakBeforeBraces);
-
-    bool BreakBeforeInheritanceComma = false;
-    IO.mapOptional("BreakBeforeInheritanceComma", BreakBeforeInheritanceComma);
-    IO.mapOptional("BreakInheritanceList", Style.BreakInheritanceList);
-    // If BreakBeforeInheritanceComma was specified but
-    // BreakInheritance was not, initialize the latter from the
-    // former for backwards compatibility.
-    if (BreakBeforeInheritanceComma &&
-        Style.BreakInheritanceList == FormatStyle::BILS_BeforeColon) {
-      Style.BreakInheritanceList = FormatStyle::BILS_BeforeComma;
-    }
-
     IO.mapOptional("BreakBeforeTernaryOperators",
                    Style.BreakBeforeTernaryOperators);
-
-    bool BreakConstructorInitializersBeforeComma = false;
-    IO.mapOptional("BreakConstructorInitializersBeforeComma",
-                   BreakConstructorInitializersBeforeComma);
     IO.mapOptional("BreakConstructorInitializers",
                    Style.BreakConstructorInitializers);
-    // If BreakConstructorInitializersBeforeComma was specified but
-    // BreakConstructorInitializers was not, initialize the latter from the
-    // former for backwards compatibility.
-    if (BreakConstructorInitializersBeforeComma &&
-        Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeColon) {
-      Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
-    }
-
-    IO.mapOptional("BreakAfterJavaFieldAnnotations",
-                   Style.BreakAfterJavaFieldAnnotations);
-    IO.mapOptional("BreakArrays", Style.BreakArrays);
+    IO.mapOptional("BreakInheritanceList", Style.BreakInheritanceList);
     IO.mapOptional("BreakStringLiterals", Style.BreakStringLiterals);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
-    IO.mapOptional("QualifierAlignment", Style.QualifierAlignment);
-
-    // Default Order for Left/Right based Qualifier alignment.
-    if (Style.QualifierAlignment == FormatStyle::QAS_Right)
-      Style.QualifierOrder = {"type", "const", "volatile"};
-    else if (Style.QualifierAlignment == FormatStyle::QAS_Left)
-      Style.QualifierOrder = {"const", "volatile", "type"};
-    else if (Style.QualifierAlignment == FormatStyle::QAS_Custom)
-      IO.mapOptional("QualifierOrder", Style.QualifierOrder);
-
     IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
     IO.mapOptional("ConstructorInitializerIndentWidth",
                    Style.ConstructorInitializerIndentWidth);
@@ -806,56 +849,20 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.EmptyLineBeforeAccessModifier);
     IO.mapOptional("ExperimentalAutoDetectBinPacking",
                    Style.ExperimentalAutoDetectBinPacking);
-
-    IO.mapOptional("PackConstructorInitializers",
-                   Style.PackConstructorInitializers);
-    // For backward compatibility:
-    // The default value of ConstructorInitializerAllOnOneLineOrOnePerLine was
-    // false unless BasedOnStyle was Google or Chromium whereas that of
-    // AllowAllConstructorInitializersOnNextLine was always true, so the
-    // equivalent default value of PackConstructorInitializers is PCIS_NextLine
-    // for Google/Chromium or PCIS_BinPack otherwise. If the deprecated options
-    // had a non-default value while PackConstructorInitializers has a default
-    // value, set the latter to an equivalent non-default value if needed.
-    StringRef BasedOn;
-    IO.mapOptional("BasedOnStyle", BasedOn);
-    const bool IsGoogleOrChromium = BasedOn.equals_insensitive("google") ||
-                                    BasedOn.equals_insensitive("chromium");
-    bool OnCurrentLine = IsGoogleOrChromium;
-    bool OnNextLine = true;
-    IO.mapOptional("ConstructorInitializerAllOnOneLineOrOnePerLine",
-                   OnCurrentLine);
-    IO.mapOptional("AllowAllConstructorInitializersOnNextLine", OnNextLine);
-    if (!IsGoogleOrChromium) {
-      if (Style.PackConstructorInitializers == FormatStyle::PCIS_BinPack &&
-          OnCurrentLine) {
-        Style.PackConstructorInitializers = OnNextLine
-                                                ? FormatStyle::PCIS_NextLine
-                                                : FormatStyle::PCIS_CurrentLine;
-      }
-    } else if (Style.PackConstructorInitializers ==
-               FormatStyle::PCIS_NextLine) {
-      if (!OnCurrentLine)
-        Style.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
-      else if (!OnNextLine)
-        Style.PackConstructorInitializers = FormatStyle::PCIS_CurrentLine;
-    }
-
     IO.mapOptional("FixNamespaceComments", Style.FixNamespaceComments);
     IO.mapOptional("ForEachMacros", Style.ForEachMacros);
     IO.mapOptional("IfMacros", Style.IfMacros);
-
     IO.mapOptional("IncludeBlocks", Style.IncludeStyle.IncludeBlocks);
     IO.mapOptional("IncludeCategories", Style.IncludeStyle.IncludeCategories);
     IO.mapOptional("IncludeIsMainRegex", Style.IncludeStyle.IncludeIsMainRegex);
     IO.mapOptional("IncludeIsMainSourceRegex",
                    Style.IncludeStyle.IncludeIsMainSourceRegex);
     IO.mapOptional("IndentAccessModifiers", Style.IndentAccessModifiers);
-    IO.mapOptional("IndentCaseLabels", Style.IndentCaseLabels);
     IO.mapOptional("IndentCaseBlocks", Style.IndentCaseBlocks);
+    IO.mapOptional("IndentCaseLabels", Style.IndentCaseLabels);
+    IO.mapOptional("IndentExternBlock", Style.IndentExternBlock);
     IO.mapOptional("IndentGotoLabels", Style.IndentGotoLabels);
     IO.mapOptional("IndentPPDirectives", Style.IndentPPDirectives);
-    IO.mapOptional("IndentExternBlock", Style.IndentExternBlock);
     IO.mapOptional("IndentRequiresClause", Style.IndentRequiresClause);
     IO.mapOptional("IndentWidth", Style.IndentWidth);
     IO.mapOptional("IndentWrappedFunctionNames",
@@ -880,6 +887,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ObjCSpaceAfterProperty", Style.ObjCSpaceAfterProperty);
     IO.mapOptional("ObjCSpaceBeforeProtocolList",
                    Style.ObjCSpaceBeforeProtocolList);
+    IO.mapOptional("PackConstructorInitializers",
+                   Style.PackConstructorInitializers);
     IO.mapOptional("PenaltyBreakAssignment", Style.PenaltyBreakAssignment);
     IO.mapOptional("PenaltyBreakBeforeFirstCallParameter",
                    Style.PenaltyBreakBeforeFirstCallParameter);
@@ -892,12 +901,20 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("PenaltyBreakTemplateDeclaration",
                    Style.PenaltyBreakTemplateDeclaration);
     IO.mapOptional("PenaltyExcessCharacter", Style.PenaltyExcessCharacter);
-    IO.mapOptional("PenaltyReturnTypeOnItsOwnLine",
-                   Style.PenaltyReturnTypeOnItsOwnLine);
     IO.mapOptional("PenaltyIndentedWhitespace",
                    Style.PenaltyIndentedWhitespace);
+    IO.mapOptional("PenaltyReturnTypeOnItsOwnLine",
+                   Style.PenaltyReturnTypeOnItsOwnLine);
     IO.mapOptional("PointerAlignment", Style.PointerAlignment);
     IO.mapOptional("PPIndentWidth", Style.PPIndentWidth);
+    IO.mapOptional("QualifierAlignment", Style.QualifierAlignment);
+    // Default Order for Left/Right based Qualifier alignment.
+    if (Style.QualifierAlignment == FormatStyle::QAS_Right)
+      Style.QualifierOrder = {"type", "const", "volatile"};
+    else if (Style.QualifierAlignment == FormatStyle::QAS_Left)
+      Style.QualifierOrder = {"const", "volatile", "type"};
+    else if (Style.QualifierAlignment == FormatStyle::QAS_Custom)
+      IO.mapOptional("QualifierOrder", Style.QualifierOrder);
     IO.mapOptional("RawStringFormats", Style.RawStringFormats);
     IO.mapOptional("ReferenceAlignment", Style.ReferenceAlignment);
     IO.mapOptional("ReflowComments", Style.ReflowComments);
@@ -915,6 +932,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("SpaceAfterLogicalNot", Style.SpaceAfterLogicalNot);
     IO.mapOptional("SpaceAfterTemplateKeyword",
                    Style.SpaceAfterTemplateKeyword);
+    IO.mapOptional("SpaceAroundPointerQualifiers",
+                   Style.SpaceAroundPointerQualifiers);
     IO.mapOptional("SpaceBeforeAssignmentOperators",
                    Style.SpaceBeforeAssignmentOperators);
     IO.mapOptional("SpaceBeforeCaseColon", Style.SpaceBeforeCaseColon);
@@ -926,10 +945,10 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpaceBeforeInheritanceColon);
     IO.mapOptional("SpaceBeforeParens", Style.SpaceBeforeParens);
     IO.mapOptional("SpaceBeforeParensOptions", Style.SpaceBeforeParensOptions);
-    IO.mapOptional("SpaceAroundPointerQualifiers",
-                   Style.SpaceAroundPointerQualifiers);
     IO.mapOptional("SpaceBeforeRangeBasedForLoopColon",
                    Style.SpaceBeforeRangeBasedForLoopColon);
+    IO.mapOptional("SpaceBeforeSquareBrackets",
+                   Style.SpaceBeforeSquareBrackets);
     IO.mapOptional("SpaceInEmptyBlock", Style.SpaceInEmptyBlock);
     IO.mapOptional("SpaceInEmptyParentheses", Style.SpaceInEmptyParentheses);
     IO.mapOptional("SpacesBeforeTrailingComments",
@@ -945,9 +964,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpacesInLineCommentPrefix);
     IO.mapOptional("SpacesInParentheses", Style.SpacesInParentheses);
     IO.mapOptional("SpacesInSquareBrackets", Style.SpacesInSquareBrackets);
-    IO.mapOptional("SpaceBeforeSquareBrackets",
-                   Style.SpaceBeforeSquareBrackets);
-    IO.mapOptional("BitFieldColonSpacing", Style.BitFieldColonSpacing);
     IO.mapOptional("Standard", Style.Standard);
     IO.mapOptional("StatementAttributeLikeMacros",
                    Style.StatementAttributeLikeMacros);
@@ -958,70 +974,51 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("UseTab", Style.UseTab);
     IO.mapOptional("WhitespaceSensitiveMacros",
                    Style.WhitespaceSensitiveMacros);
-  }
-};
 
-template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
-  static void mapping(IO &IO, FormatStyle::BraceWrappingFlags &Wrapping) {
-    IO.mapOptional("AfterCaseLabel", Wrapping.AfterCaseLabel);
-    IO.mapOptional("AfterClass", Wrapping.AfterClass);
-    IO.mapOptional("AfterControlStatement", Wrapping.AfterControlStatement);
-    IO.mapOptional("AfterEnum", Wrapping.AfterEnum);
-    IO.mapOptional("AfterFunction", Wrapping.AfterFunction);
-    IO.mapOptional("AfterNamespace", Wrapping.AfterNamespace);
-    IO.mapOptional("AfterObjCDeclaration", Wrapping.AfterObjCDeclaration);
-    IO.mapOptional("AfterStruct", Wrapping.AfterStruct);
-    IO.mapOptional("AfterUnion", Wrapping.AfterUnion);
-    IO.mapOptional("AfterExternBlock", Wrapping.AfterExternBlock);
-    IO.mapOptional("BeforeCatch", Wrapping.BeforeCatch);
-    IO.mapOptional("BeforeElse", Wrapping.BeforeElse);
-    IO.mapOptional("BeforeLambdaBody", Wrapping.BeforeLambdaBody);
-    IO.mapOptional("BeforeWhile", Wrapping.BeforeWhile);
-    IO.mapOptional("IndentBraces", Wrapping.IndentBraces);
-    IO.mapOptional("SplitEmptyFunction", Wrapping.SplitEmptyFunction);
-    IO.mapOptional("SplitEmptyRecord", Wrapping.SplitEmptyRecord);
-    IO.mapOptional("SplitEmptyNamespace", Wrapping.SplitEmptyNamespace);
-  }
-};
+    // If AlwaysBreakAfterDefinitionReturnType was specified but
+    // AlwaysBreakAfterReturnType was not, initialize the latter from the
+    // former for backwards compatibility.
+    if (Style.AlwaysBreakAfterDefinitionReturnType != FormatStyle::DRTBS_None &&
+        Style.AlwaysBreakAfterReturnType == FormatStyle::RTBS_None) {
+      if (Style.AlwaysBreakAfterDefinitionReturnType ==
+          FormatStyle::DRTBS_All) {
+        Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
+      } else if (Style.AlwaysBreakAfterDefinitionReturnType ==
+                 FormatStyle::DRTBS_TopLevel) {
+        Style.AlwaysBreakAfterReturnType =
+            FormatStyle::RTBS_TopLevelDefinitions;
+      }
+    }
 
-template <> struct MappingTraits<FormatStyle::SpaceBeforeParensCustom> {
-  static void mapping(IO &IO, FormatStyle::SpaceBeforeParensCustom &Spacing) {
-    IO.mapOptional("AfterControlStatements", Spacing.AfterControlStatements);
-    IO.mapOptional("AfterForeachMacros", Spacing.AfterForeachMacros);
-    IO.mapOptional("AfterFunctionDefinitionName",
-                   Spacing.AfterFunctionDefinitionName);
-    IO.mapOptional("AfterFunctionDeclarationName",
-                   Spacing.AfterFunctionDeclarationName);
-    IO.mapOptional("AfterIfMacros", Spacing.AfterIfMacros);
-    IO.mapOptional("AfterOverloadedOperator", Spacing.AfterOverloadedOperator);
-    IO.mapOptional("AfterRequiresInClause", Spacing.AfterRequiresInClause);
-    IO.mapOptional("AfterRequiresInExpression",
-                   Spacing.AfterRequiresInExpression);
-    IO.mapOptional("BeforeNonEmptyParentheses",
-                   Spacing.BeforeNonEmptyParentheses);
-  }
-};
+    // If BreakBeforeInheritanceComma was specified but BreakInheritance was
+    // not, initialize the latter from the former for backwards compatibility.
+    if (BreakBeforeInheritanceComma &&
+        Style.BreakInheritanceList == FormatStyle::BILS_BeforeColon) {
+      Style.BreakInheritanceList = FormatStyle::BILS_BeforeComma;
+    }
 
-template <> struct MappingTraits<FormatStyle::RawStringFormat> {
-  static void mapping(IO &IO, FormatStyle::RawStringFormat &Format) {
-    IO.mapOptional("Language", Format.Language);
-    IO.mapOptional("Delimiters", Format.Delimiters);
-    IO.mapOptional("EnclosingFunctions", Format.EnclosingFunctions);
-    IO.mapOptional("CanonicalDelimiter", Format.CanonicalDelimiter);
-    IO.mapOptional("BasedOnStyle", Format.BasedOnStyle);
-  }
-};
+    // If BreakConstructorInitializersBeforeComma was specified but
+    // BreakConstructorInitializers was not, initialize the latter from the
+    // former for backwards compatibility.
+    if (BreakConstructorInitializersBeforeComma &&
+        Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeColon) {
+      Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
+    }
 
-template <> struct MappingTraits<FormatStyle::SpacesInLineComment> {
-  static void mapping(IO &IO, FormatStyle::SpacesInLineComment &Space) {
-    // Transform the maximum to signed, to parse "-1" correctly
-    int signedMaximum = static_cast<int>(Space.Maximum);
-    IO.mapOptional("Minimum", Space.Minimum);
-    IO.mapOptional("Maximum", signedMaximum);
-    Space.Maximum = static_cast<unsigned>(signedMaximum);
-
-    if (Space.Maximum != -1u)
-      Space.Minimum = std::min(Space.Minimum, Space.Maximum);
+    if (!IsGoogleOrChromium) {
+      if (Style.PackConstructorInitializers == FormatStyle::PCIS_BinPack &&
+          OnCurrentLine) {
+        Style.PackConstructorInitializers = OnNextLine
+                                                ? FormatStyle::PCIS_NextLine
+                                                : FormatStyle::PCIS_CurrentLine;
+      }
+    } else if (Style.PackConstructorInitializers ==
+               FormatStyle::PCIS_NextLine) {
+      if (!OnCurrentLine)
+        Style.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
+      else if (!OnNextLine)
+        Style.PackConstructorInitializers = FormatStyle::PCIS_CurrentLine;
+    }
   }
 };
 
@@ -1249,10 +1246,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignTrailingComments.OverEmptyLines = 0;
   LLVMStyle.AllowAllArgumentsOnNextLine = true;
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
-  LLVMStyle.AllowShortEnumsOnASingleLine = true;
-  LLVMStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
   LLVMStyle.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
   LLVMStyle.AllowShortCaseLabelsOnASingleLine = false;
+  LLVMStyle.AllowShortEnumsOnASingleLine = true;
+  LLVMStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
   LLVMStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
@@ -1263,6 +1260,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AttributeMacros.push_back("__capability");
   LLVMStyle.BinPackArguments = true;
   LLVMStyle.BinPackParameters = true;
+  LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeTernaryOperators = true;
@@ -1285,7 +1283,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*SplitEmptyFunction=*/true,
                              /*SplitEmptyRecord=*/true,
                              /*SplitEmptyNamespace=*/true};
-  LLVMStyle.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
+  LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
@@ -1296,17 +1294,12 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ConstructorInitializerIndentWidth = 4;
   LLVMStyle.ContinuationIndentWidth = 4;
   LLVMStyle.Cpp11BracedListStyle = true;
-
-  // Off by default Qualifier ordering
-  LLVMStyle.QualifierAlignment = FormatStyle::QAS_Leave;
-
   LLVMStyle.DeriveLineEnding = true;
   LLVMStyle.DerivePointerAlignment = false;
+  LLVMStyle.DisableFormat = false;
   LLVMStyle.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Never;
   LLVMStyle.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_LogicalBlock;
   LLVMStyle.ExperimentalAutoDetectBinPacking = false;
-  LLVMStyle.BreakArrays = true;
-  LLVMStyle.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
   LLVMStyle.FixNamespaceComments = true;
   LLVMStyle.ForEachMacros.push_back("foreach");
   LLVMStyle.ForEachMacros.push_back("Q_FOREACH");
@@ -1321,46 +1314,40 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentAccessModifiers = false;
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentCaseBlocks = false;
+  LLVMStyle.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
   LLVMStyle.IndentGotoLabels = true;
   LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;
   LLVMStyle.IndentRequiresClause = true;
-  LLVMStyle.IndentWrappedFunctionNames = false;
   LLVMStyle.IndentWidth = 2;
-  LLVMStyle.PPIndentWidth = -1;
+  LLVMStyle.IndentWrappedFunctionNames = false;
   LLVMStyle.InsertBraces = false;
   LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
-  LLVMStyle.TabWidth = 8;
+  LLVMStyle.KeepEmptyLinesAtTheStartOfBlocks = true;
   LLVMStyle.LambdaBodyIndentation = FormatStyle::LBI_Signature;
   LLVMStyle.MaxEmptyLinesToKeep = 1;
-  LLVMStyle.KeepEmptyLinesAtTheStartOfBlocks = true;
   LLVMStyle.NamespaceIndentation = FormatStyle::NI_None;
   LLVMStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   LLVMStyle.ObjCBlockIndentWidth = 2;
   LLVMStyle.ObjCBreakBeforeNestedBlockParam = true;
   LLVMStyle.ObjCSpaceAfterProperty = false;
   LLVMStyle.ObjCSpaceBeforeProtocolList = true;
+  LLVMStyle.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
   LLVMStyle.PointerAlignment = FormatStyle::PAS_Right;
+  LLVMStyle.PPIndentWidth = -1;
+  LLVMStyle.QualifierAlignment = FormatStyle::QAS_Leave;
   LLVMStyle.ReferenceAlignment = FormatStyle::RAS_Pointer;
+  LLVMStyle.ReflowComments = true;
+  LLVMStyle.RemoveBracesLLVM = false;
+  LLVMStyle.RemoveSemicolon = false;
   LLVMStyle.RequiresClausePosition = FormatStyle::RCPS_OwnLine;
   LLVMStyle.RequiresExpressionIndentation = FormatStyle::REI_OuterScope;
   LLVMStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Leave;
   LLVMStyle.ShortNamespaceLines = 1;
-  LLVMStyle.SpacesBeforeTrailingComments = 1;
-  LLVMStyle.Standard = FormatStyle::LS_Latest;
-  LLVMStyle.UseCRLF = false;
-  LLVMStyle.UseTab = FormatStyle::UT_Never;
-  LLVMStyle.ReflowComments = true;
-  LLVMStyle.RemoveBracesLLVM = false;
-  LLVMStyle.RemoveSemicolon = false;
-  LLVMStyle.SpacesInParentheses = false;
-  LLVMStyle.SpacesInSquareBrackets = false;
-  LLVMStyle.SpaceInEmptyBlock = false;
-  LLVMStyle.SpaceInEmptyParentheses = false;
-  LLVMStyle.SpacesInContainerLiterals = true;
-  LLVMStyle.SpacesInCStyleCastParentheses = false;
-  LLVMStyle.SpacesInLineCommentPrefix = {/*Minimum=*/1, /*Maximum=*/-1u};
+  LLVMStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
+  LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
+  LLVMStyle.SortUsingDeclarations = true;
   LLVMStyle.SpaceAfterCStyleCast = false;
   LLVMStyle.SpaceAfterLogicalNot = false;
   LLVMStyle.SpaceAfterTemplateKeyword = true;
@@ -1377,9 +1364,28 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeAssignmentOperators = true;
   LLVMStyle.SpaceBeforeCpp11BracedList = false;
   LLVMStyle.SpaceBeforeSquareBrackets = false;
-  LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
+  LLVMStyle.SpaceInEmptyBlock = false;
+  LLVMStyle.SpaceInEmptyParentheses = false;
+  LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.SpacesInAngles = FormatStyle::SIAS_Never;
+  LLVMStyle.SpacesInContainerLiterals = true;
+  LLVMStyle.SpacesInCStyleCastParentheses = false;
+  LLVMStyle.SpacesInLineCommentPrefix = {/*Minimum=*/1, /*Maximum=*/-1u};
+  LLVMStyle.SpacesInParentheses = false;
+  LLVMStyle.SpacesInSquareBrackets = false;
   LLVMStyle.SpacesInConditionalStatement = false;
+  LLVMStyle.Standard = FormatStyle::LS_Latest;
+  LLVMStyle.StatementAttributeLikeMacros.push_back("Q_EMIT");
+  LLVMStyle.StatementMacros.push_back("Q_UNUSED");
+  LLVMStyle.StatementMacros.push_back("QT_REQUIRE_VERSION");
+  LLVMStyle.TabWidth = 8;
+  LLVMStyle.UseCRLF = false;
+  LLVMStyle.UseTab = FormatStyle::UT_Never;
+  LLVMStyle.WhitespaceSensitiveMacros.push_back("BOOST_PP_STRINGIZE");
+  LLVMStyle.WhitespaceSensitiveMacros.push_back("CF_SWIFT_NAME");
+  LLVMStyle.WhitespaceSensitiveMacros.push_back("NS_SWIFT_NAME");
+  LLVMStyle.WhitespaceSensitiveMacros.push_back("PP_STRINGIZE");
+  LLVMStyle.WhitespaceSensitiveMacros.push_back("STRINGIZE");
 
   LLVMStyle.PenaltyBreakAssignment = prec::Assignment;
   LLVMStyle.PenaltyBreakComment = 300;
@@ -1391,19 +1397,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.PenaltyBreakOpenParenthesis = 0;
   LLVMStyle.PenaltyBreakTemplateDeclaration = prec::Relational;
   LLVMStyle.PenaltyIndentedWhitespace = 0;
-
-  LLVMStyle.DisableFormat = false;
-  LLVMStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
-  LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
-  LLVMStyle.SortUsingDeclarations = true;
-  LLVMStyle.StatementAttributeLikeMacros.push_back("Q_EMIT");
-  LLVMStyle.StatementMacros.push_back("Q_UNUSED");
-  LLVMStyle.StatementMacros.push_back("QT_REQUIRE_VERSION");
-  LLVMStyle.WhitespaceSensitiveMacros.push_back("STRINGIZE");
-  LLVMStyle.WhitespaceSensitiveMacros.push_back("PP_STRINGIZE");
-  LLVMStyle.WhitespaceSensitiveMacros.push_back("BOOST_PP_STRINGIZE");
-  LLVMStyle.WhitespaceSensitiveMacros.push_back("NS_SWIFT_NAME");
-  LLVMStyle.WhitespaceSensitiveMacros.push_back("CF_SWIFT_NAME");
 
   // Defaults that differ when not C++.
   switch (Language) {

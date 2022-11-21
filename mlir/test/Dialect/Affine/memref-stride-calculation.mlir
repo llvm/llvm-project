@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="func.func(test-memref-stride-calculation)" -o /dev/null | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(test-memref-stride-calculation))" -o /dev/null | FileCheck %s
 
 func.func @f(%0: index) {
 // CHECK-LABEL: Testing: f

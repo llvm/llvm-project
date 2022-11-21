@@ -152,7 +152,8 @@ def SDT_RISCVVecCvtX2FOp_VL : SDTypeProfile<1, 4, [
   SDTCisVT<4, XLenVT>
 ]>;
 
-def riscv_vfcvt_x_f_vl : SDNode<"RISCVISD::VFCVT_X_F_VL", SDT_RISCVVecCvtX2FOp_VL>;
+def riscv_vfcvt_rm_x_f_vl : SDNode<"RISCVISD::VFCVT_RM_X_F_VL", SDT_RISCVVecCvtX2FOp_VL>;
+def riscv_vfcvt_x_f_vl : SDNode<"RISCVISD::VFCVT_X_F_VL", SDT_RISCVFP2IOp_VL>;
 
 def riscv_setcc_vl : SDNode<"RISCVISD::SETCC_VL",
                             SDTypeProfile<1, 6, [SDTCVecEltisVT<0, i1>,
@@ -1705,7 +1706,8 @@ foreach fvti = AllFloatVectors in {
              GPR:$vl, fvti.Log2SEW)>;
 
   // 14.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
-  defm : VPatConvertFP2I_RM_VL_V<riscv_vfcvt_x_f_vl,  "PseudoVFCVT_RM_X_F_V">;
+  defm : VPatConvertFP2I_RM_VL_V<riscv_vfcvt_rm_x_f_vl,  "PseudoVFCVT_RM_X_F_V">;
+  defm : VPatConvertFP2IVL_V<riscv_vfcvt_x_f_vl, "PseudoVFCVT_X_F_V">;
   defm : VPatConvertFP2IVL_V<riscv_vfcvt_rtz_x_f_vl, "PseudoVFCVT_RTZ_X_F_V">;
   defm : VPatConvertFP2IVL_V<riscv_vfcvt_rtz_xu_f_vl, "PseudoVFCVT_RTZ_XU_F_V">;
   defm : VPatConvertI2FPVL_V<riscv_sint_to_fp_vl, "PseudoVFCVT_F_X_V">;

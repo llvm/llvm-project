@@ -20,6 +20,8 @@
 // memory_resource *
 // polymorphic_allocator<T>::resource() const
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 #include <type_traits>
 #include <cassert>

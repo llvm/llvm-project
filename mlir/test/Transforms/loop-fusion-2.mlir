@@ -508,16 +508,16 @@ func.func @fuse_across_dim_mismatch(%arg0: memref<4x4x16x1xf32>, %arg1: memref<1
   }
   return
 }
-// MAXIMAL:      #map = affine_map<(d0, d1) -> (d0 * 16 + d1)>
+// MAXIMAL:      #[[$MAP:.*]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 // MAXIMAL-LABEL: func @fuse_across_dim_mismatch
 // MAXIMAL:        memref.alloc() : memref<1x1xf32>
 // MAXIMAL:        affine.for %{{.*}} = 0 to 9 {
 // MAXIMAL-NEXT:    affine.for %{{.*}} = 0 to 9 {
 // MAXIMAL-NEXT:      affine.for %{{.*}} = 0 to 4 {
 // MAXIMAL-NEXT:        affine.for %{{.*}} = 0 to 16 {
-// MAXIMAL-NEXT:          affine.apply #map(%{{.*}}, %{{.*}})
+// MAXIMAL-NEXT:          affine.apply #[[$MAP]](%{{.*}}, %{{.*}})
 // MAXIMAL-NEXT:          affine.store %{{.*}}, %{{.*}}[0, 0] : memref<1x1xf32>
-// MAXIMAL-NEXT:          affine.apply #map(%{{.*}}, %{{.*}})
+// MAXIMAL-NEXT:          affine.apply #[[$MAP]](%{{.*}}, %{{.*}})
 // MAXIMAL-NEXT:          affine.load %{{.*}}[0, 0] : memref<1x1xf32>
 // MAXIMAL-NEXT:        }
 // MAXIMAL-NEXT:      }

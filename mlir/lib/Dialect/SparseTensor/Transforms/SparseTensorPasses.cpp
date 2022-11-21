@@ -215,11 +215,14 @@ struct SparseBufferRewritePass
 
   SparseBufferRewritePass() = default;
   SparseBufferRewritePass(const SparseBufferRewritePass &pass) = default;
+  SparseBufferRewritePass(bool enableInit) {
+    enableBufferInitialization = enableInit;
+  }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseBufferRewriting(patterns);
+    populateSparseBufferRewriting(patterns, enableBufferInitialization);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -279,6 +282,7 @@ std::unique_ptr<Pass> mlir::createSparseTensorCodegenPass() {
   return std::make_unique<SparseTensorCodegenPass>();
 }
 
-std::unique_ptr<Pass> mlir::createSparseBufferRewritePass() {
-  return std::make_unique<SparseBufferRewritePass>();
+std::unique_ptr<Pass>
+mlir::createSparseBufferRewritePass(bool enableBufferInitialization) {
+  return std::make_unique<SparseBufferRewritePass>(enableBufferInitialization);
 }

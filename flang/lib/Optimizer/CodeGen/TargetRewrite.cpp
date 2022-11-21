@@ -841,17 +841,17 @@ public:
       auto argNo = newInTys.size();
       if (attr.isByVal()) {
         if (auto align = attr.getAlignment())
-          fixups.emplace_back(
-              FixupTy::Codes::ArgumentAsLoad, argNo,
-              [=](mlir::func::FuncOp func) {
-                auto elemType = fir::dyn_cast_ptrOrBoxEleTy(
-                    func.getFunctionType().getInput(argNo));
-                func.setArgAttr(argNo, "llvm.byval",
-                                mlir::TypeAttr::get(elemType));
-                func.setArgAttr(argNo, "llvm.align",
-                                rewriter->getIntegerAttr(
-                                    rewriter->getIntegerType(32), align));
-              });
+          fixups.emplace_back(FixupTy::Codes::ArgumentAsLoad, argNo,
+                              [=](mlir::func::FuncOp func) {
+                                auto elemType = fir::dyn_cast_ptrOrBoxEleTy(
+                                    func.getFunctionType().getInput(argNo));
+                                func.setArgAttr(argNo, "llvm.byval",
+                                                mlir::TypeAttr::get(elemType));
+                                func.setArgAttr(
+                                    argNo, "llvm.align",
+                                    rewriter->getIntegerAttr(
+                                        rewriter->getIntegerType(32), align));
+                              });
         else
           fixups.emplace_back(FixupTy::Codes::ArgumentAsLoad, newInTys.size(),
                               [=](mlir::func::FuncOp func) {

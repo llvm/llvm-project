@@ -30,7 +30,7 @@
 ; FOO: define void @foo
 ; FOO:   Function Attrs: nounwind
 ; FOO: define void @bar
-; FOO:   Function Attrs: nounwind readnone ssp
+; FOO:   Function Attrs: nounwind ssp memory(none)
 ; FOO: declare void @baz
 
 define void @foo() nounwind ssp {
@@ -49,6 +49,6 @@ attributes #0 = { nounwind "frame-pointer"="all" }
 attributes #1 = { nounwind readnone ssp "use-soft-float"="false" }
 ; FOO: attributes #{{[0-9]}} = { nounwind "frame-pointer"="all" }
 
-; FOO: attributes #{{[0-9]}} = { nounwind readnone ssp "use-soft-float"="false" }
+; FOO: attributes #{{[0-9]}} = { nounwind ssp memory(none) "use-soft-float"="false" }
 
 ; FOO-NOT: IR Dump After {{Simplify the CFG|SimplifyCFGPass}}

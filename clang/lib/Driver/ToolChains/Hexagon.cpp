@@ -40,7 +40,7 @@ static void handleHVXWarnings(const Driver &D, const ArgList &Args) {
     StringRef Val = A->getValue();
     if (!Val.equals_insensitive("64b") && !Val.equals_insensitive("128b"))
       D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Val;
+          << A->getSpelling() << Val;
   }
 }
 

@@ -388,7 +388,9 @@ void HeaderSearch::indexInitialHeaderMaps() {
       break;
 
     // Give earlier keys precedence over identical later keys.
-    auto Callback = [&](StringRef Filename) { Index.try_emplace(Filename, i); };
+    auto Callback = [&](StringRef Filename) {
+      Index.try_emplace(Filename.lower(), i);
+    };
     Dir.getHeaderMap()->forEachKey(Callback);
   }
 
@@ -1021,7 +1023,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
         // Handle cold misses of user includes in the presence of many header
         // maps.  We avoid searching perhaps thousands of header maps by
         // jumping directly to the correct one or jumping beyond all of them.
-        auto Iter = SearchDirHeaderMapIndex.find(Filename);
+        auto Iter = SearchDirHeaderMapIndex.find(Filename.lower());
         if (Iter == SearchDirHeaderMapIndex.end())
           // Not in index => Skip to first SearchDir after initial header maps
           It = search_dir_nth(FirstNonHeaderMapSearchDirIdx);

@@ -21,6 +21,8 @@
 // void polymorphic_allocator<T>::construct(pair<U1, U2>*, piecewise_construct_t
 //                                          tuple<Args1...>, tuple<Args2...>)
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 #include <tuple>
 #include <type_traits>

@@ -1328,6 +1328,17 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &CI) {
     return BinaryOperator::CreateXor(Builder.CreateAnd(X, ZC), ZC);
   }
 
+  // If we are truncating, masking, and then zexting back to the original type,
+  // that's just a mask. This is not handled by canEvaluateZextd if the
+  // intermediate values have extra uses. This could be generalized further for
+  // a non-constant mask operand.
+  // zext (and (trunc X), C) --> and X, (zext C)
+  if (match(Src, m_And(m_Trunc(m_Value(X)), m_Constant(C))) &&
+      X->getType() == DestTy) {
+    Constant *ZextC = ConstantExpr::getZExt(C, DestTy);
+    return BinaryOperator::CreateAnd(X, ZextC);
+  }
+
   if (match(Src, m_VScale(DL))) {
     if (CI.getFunction() &&
         CI.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {

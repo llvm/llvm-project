@@ -3180,11 +3180,24 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
 
   // Change br (not X), label True, label False to: br X, label False, True
   Value *Cond = BI.getCondition();
-  Value *X = nullptr;
+  Value *X;
   if (match(Cond, m_Not(m_Value(X))) && !isa<Constant>(X)) {
     // Swap Destinations and condition...
     BI.swapSuccessors();
     return replaceOperand(BI, 0, X);
+  }
+
+  // Canonicalize logical-and-with-invert as logical-or-with-invert.
+  // This is done by inverting the condition and swapping successors:
+  // br (X && !Y), T, F --> br !(X && !Y), F, T --> br (!X || Y), F, T
+  Value *Y;
+  if (isa<SelectInst>(Cond) &&
+      match(Cond,
+            m_OneUse(m_LogicalAnd(m_Value(X), m_OneUse(m_Not(m_Value(Y))))))) {
+    Value *NotX = Builder.CreateNot(X, "not." + X->getName());
+    Value *Or = Builder.CreateLogicalOr(NotX, Y);
+    BI.swapSuccessors();
+    return replaceOperand(BI, 0, Or);
   }
 
   // If the condition is irrelevant, remove the use so that other

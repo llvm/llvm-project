@@ -122,15 +122,15 @@ template <> struct CastInfo<T4, T3> {
 using namespace llvm;
 
 // Test the peculiar behavior of Use in simplify_type.
-static_assert(std::is_same<simplify_type<Use>::SimpleType, Value *>::value,
+static_assert(std::is_same_v<simplify_type<Use>::SimpleType, Value *>,
               "Use doesn't simplify correctly!");
-static_assert(std::is_same<simplify_type<Use *>::SimpleType, Value *>::value,
+static_assert(std::is_same_v<simplify_type<Use *>::SimpleType, Value *>,
               "Use doesn't simplify correctly!");
 
 // Test that a regular class behaves as expected.
-static_assert(std::is_same<simplify_type<foo>::SimpleType, int>::value,
+static_assert(std::is_same_v<simplify_type<foo>::SimpleType, int>,
               "Unexpected simplify_type result!");
-static_assert(std::is_same<simplify_type<foo *>::SimpleType, foo *>::value,
+static_assert(std::is_same_v<simplify_type<foo *>::SimpleType, foo *>,
               "Unexpected simplify_type result!");
 
 namespace {
@@ -177,7 +177,7 @@ TEST(CastingTest, cast) {
 
   std::unique_ptr<const bar> BP(B2);
   auto FP = cast<foo>(std::move(BP));
-  static_assert(std::is_same<std::unique_ptr<const foo>, decltype(FP)>::value,
+  static_assert(std::is_same_v<std::unique_ptr<const foo>, decltype(FP)>,
                 "Incorrect deduced return type!");
   EXPECT_NE(FP.get(), null_foo);
   FP.release();

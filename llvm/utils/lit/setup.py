@@ -1,5 +1,5 @@
-import lit
 import os
+import sys
 
 from setuptools import setup, find_packages
 
@@ -8,6 +8,9 @@ from setuptools import setup, find_packages
 #   python path/to/setup.py install
 # to work (for scripts, etc.)
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ".")
+
+import lit
 
 with open("README.rst", "r", encoding="utf-8") as f:
     long_description = f.read()

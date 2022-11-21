@@ -39,7 +39,7 @@ define i32 @caller2(i32 %x) {
 ; it is passed to @use_cb1. We cannot infer a range for the return value, no
 ; metadata should be added.
 
-declare void @use_cb1(i32 (i32)*)
+declare void @use_cb1(ptr)
 
 define internal noundef i32 @callee2(i32 %x) {
 ; CHECK-LABEL: @callee2(
@@ -54,12 +54,12 @@ define void @caller_cb1() {
 ; CHECK-NOT:   !range
 ; CHECK-NEXT:    [[C2:%.*]] = call i32 @callee2(i32 10)
 ; CHECK-NOT:   !range
-; CHECK-NEXT:    call void @use_cb1(i32 (i32)* @callee2)
+; CHECK-NEXT:    call void @use_cb1(ptr @callee2)
 ; CHECK-NEXT:    ret void
 ;
   %c1 = call i32 @callee2(i32 9)
   %c2 = call i32 @callee2(i32 10)
-  call void @use_cb1(i32 (i32)* @callee2)
+  call void @use_cb1(ptr @callee2)
   ret void
 }
 
@@ -68,7 +68,7 @@ define void @caller_cb1() {
 ; depend on the arguments, which cannot be tracked because @callee3 is passed
 ; to @use_cb2. The result range can be added to the call sites of @callee.
 
-declare void @use_cb2(i32 (i32)*)
+declare void @use_cb2(ptr)
 
 define internal noundef i32 @callee3(i32 %x) {
 ; CHECK-LABEL: @callee3(
@@ -85,12 +85,12 @@ define void @caller_cb2() {
 ; CHECK-LABEL: @caller_cb2(
 ; CHECK-NEXT:    [[C1:%.*]] = call i32 @callee3(i32 9), !range [[RANGE_500_601:![0-9]+]]
 ; CHECK-NEXT:    [[C2:%.*]] = call i32 @callee3(i32 10), !range [[RANGE_500_601]]
-; CHECK-NEXT:    call void @use_cb2(i32 (i32)* @callee3)
+; CHECK-NEXT:    call void @use_cb2(ptr @callee3)
 ; CHECK-NEXT:    ret void
 ;
   %c1 = call i32 @callee3(i32 9)
   %c2 = call i32 @callee3(i32 10)
-  call void @use_cb2(i32 (i32)* @callee3)
+  call void @use_cb2(ptr @callee3)
   ret void
 }
 
@@ -98,7 +98,7 @@ define void @caller_cb2() {
 ; The return value of @callee4 can be tracked, but depends on an argument which
 ; cannot be tracked. No result range can be inferred.
 
-declare void @use_cb3(i32 (i32, i32)*)
+declare void @use_cb3(ptr)
 
 define internal noundef i32 @callee4(i32 %x, i32 %y) {
 ; CHECK-LABEL: @callee4(
@@ -117,12 +117,12 @@ define void @caller_cb3() {
 ; CHECK-NOT:   !range
 ; CHECK-NEXT:    [[C2:%.*]] = call i32 @callee4(i32 12, i32 40)
 ; CHECK-NOT:   !range
-; CHECK-NEXT:    call void @use_cb3(i32 (i32, i32)* @callee4)
+; CHECK-NEXT:    call void @use_cb3(ptr @callee4)
 ; CHECK-NEXT:    ret void
 ;
   %c1 = call i32 @callee4(i32 11, i32 30)
   %c2 = call i32 @callee4(i32 12, i32 40)
-  call void @use_cb3(i32 (i32, i32)* @callee4)
+  call void @use_cb3(ptr @callee4)
   ret void
 }
 

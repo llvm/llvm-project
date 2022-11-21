@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect -pass-pipeline="func.func(linalg-detensorize)" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect -pass-pipeline="builtin.module(func.func(linalg-detensorize))" | FileCheck %s
 
 #map0 = affine_map<() -> ()>
 

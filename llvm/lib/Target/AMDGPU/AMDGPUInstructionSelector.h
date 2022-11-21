@@ -97,6 +97,7 @@ private:
   bool selectG_UADDO_USUBO_UADDE_USUBE(MachineInstr &I) const;
   bool selectG_AMDGPU_MAD_64_32(MachineInstr &I) const;
   bool selectG_EXTRACT(MachineInstr &I) const;
+  bool selectG_FMA_FMAD(MachineInstr &I) const;
   bool selectG_MERGE_VALUES(MachineInstr &I) const;
   bool selectG_UNMERGE_VALUES(MachineInstr &I) const;
   bool selectG_BUILD_VECTOR(MachineInstr &I) const;
@@ -292,6 +293,10 @@ private:
   ComplexRendererFns selectSMRDBufferImm(MachineOperand &Root) const;
   ComplexRendererFns selectSMRDBufferImm32(MachineOperand &Root) const;
   ComplexRendererFns selectSMRDBufferSgprImm(MachineOperand &Root) const;
+
+  std::pair<Register, unsigned> selectVOP3PMadMixModsImpl(MachineOperand &Root,
+                                                          bool &Matched) const;
+  ComplexRendererFns selectVOP3PMadMixMods(MachineOperand &Root) const;
 
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;

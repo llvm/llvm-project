@@ -21,8 +21,11 @@ using namespace llvm;
 // NVPTXTargetStreamer Implemenation
 //
 NVPTXTargetStreamer::NVPTXTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
-
 NVPTXTargetStreamer::~NVPTXTargetStreamer() = default;
+
+NVPTXAsmTargetStreamer::NVPTXAsmTargetStreamer(MCStreamer &S)
+    : NVPTXTargetStreamer(S) {}
+NVPTXAsmTargetStreamer::~NVPTXAsmTargetStreamer() = default;
 
 void NVPTXTargetStreamer::outputDwarfFileDirectives() {
   for (const std::string &S : DwarfFiles)

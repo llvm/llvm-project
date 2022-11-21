@@ -23,7 +23,6 @@
 #include <type_traits>
 #include <utility>
 #include <cassert>
-#include <cstdlib>
 
 #include "test_macros.h"
 
@@ -105,13 +104,12 @@ void test_evil() {
   PMA pma(std::pmr::new_delete_resource());
   {
     using Pair  = std::pair<W1, W2>;
-    void* where = std::malloc(sizeof(Pair));
-    Pair* p     = (Pair*)where;
+    alignas(Pair) char buffer[sizeof(Pair)];
+    Pair* p = reinterpret_cast<Pair*>(buffer);
     pma.construct(p, std::piecewise_construct, std::make_tuple(42), std::make_tuple(42));
     assert(p->first.holds(42, pma));
     assert(p->second.holds(42, pma));
     pma.destroy(p);
-    std::free(where);
   }
 }
 

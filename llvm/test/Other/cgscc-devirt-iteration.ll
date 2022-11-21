@@ -15,7 +15,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='default<O2>' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=AFTER --check-prefix=AFTER2
 
 declare void @readnone() readnone
-; CHECK: Function Attrs: nofree nosync readnone
+; CHECK: Function Attrs: nofree nosync memory(none)
 ; CHECK-NEXT: declare void @readnone()
 
 declare void @unknown()
@@ -28,7 +28,7 @@ declare void @unknown()
 
 define void @test1() {
 ; BEFORE-NOT: Function Attrs
-; AFTER: Function Attrs: nofree nosync readnone
+; AFTER: Function Attrs: nofree nosync memory(none)
 ; CHECK-LABEL: define void @test1()
 entry:
   %fptr = alloca void ()*
@@ -51,13 +51,13 @@ entry:
 ; devirtualize again, and then deduce readnone.
 
 declare void @readnone_with_arg(void ()**) readnone
-; CHECK: Function Attrs: nofree nosync readnone
+; CHECK: Function Attrs: nofree nosync memory(none)
 ; CHECK-LABEL: declare void @readnone_with_arg(void ()**)
 
 define void @test2_a(void ()** %ignore) {
 ; BEFORE-NOT: Function Attrs
-; AFTER1: Function Attrs: nofree readonly
-; AFTER2: Function Attrs: nofree nosync readnone
+; AFTER1: Function Attrs: nofree memory(read)
+; AFTER2: Function Attrs: nofree nosync memory(none)
 ; BEFORE: define void @test2_a(void ()** %ignore)
 ; AFTER: define void @test2_a(void ()** readnone %ignore)
 entry:
@@ -77,8 +77,8 @@ entry:
 
 define void @test2_b() {
 ; BEFORE-NOT: Function Attrs
-; AFTER1: Function Attrs: nofree readonly
-; AFTER2: Function Attrs: nofree nosync readnone
+; AFTER1: Function Attrs: nofree memory(read)
+; AFTER2: Function Attrs: nofree nosync memory(none)
 ; CHECK-LABEL: define void @test2_b()
 entry:
   %f2ptr = alloca void ()*

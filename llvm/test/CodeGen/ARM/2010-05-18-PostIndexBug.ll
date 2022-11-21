@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=armv7-apple-darwin   | FileCheck %s -check-prefix=ARM
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin | FileCheck %s -check-prefix=THUMB
+; RUN: llc < %s -mtriple=armv7-apple-darwin -arm-atomic-cfg-tidy=0 | FileCheck %s -check-prefix=ARM
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin -arm-atomic-cfg-tidy=0 | FileCheck %s -check-prefix=THUMB
 ; rdar://7998649
 
 %struct.foo = type { i64, i64 }

@@ -59,14 +59,14 @@ can follow up the build step with an install step:
 
   $> ninja install-llvmlibc
 
-Building the static archive as part of the runtimes build
----------------------------------------------------------
+Building the static archive as part of the bootstrap build
+----------------------------------------------------------
 
-The runtimes build is a build mode in which runtime components like libc++,
+The bootstrap build is a build mode in which runtime components like libc++,
 libcxx-abi, libc etc. are built using the ToT clang. The idea is that this build
 produces an in-sync toolchain of compiler + runtime libraries. Such a synchrony
 is not essential for the libc but can one still build the overlay static archive
-as part of the runtimes build if one wants to. The first step is to configure
+as part of the bootstrap build if one wants to. The first step is to configure
 appropriately:
 
 .. code-block:: sh

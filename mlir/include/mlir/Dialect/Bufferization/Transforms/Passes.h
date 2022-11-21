@@ -35,12 +35,25 @@ std::unique_ptr<Pass> createBufferHoistingPass();
 /// reallocations inside of loops.
 std::unique_ptr<Pass> createBufferLoopHoistingPass();
 
+// Options struct for BufferResultsToOutParams pass.
+// Note: defined only here, not in tablegen.
+struct BufferResultsToOutParamsOptions {
+  // Filter function; returns true if the function should be converted.
+  // Defaults to true, i.e. all functions are converted.
+  llvm::function_ref<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
+    return true;
+  };
+};
+
 /// Creates a pass that converts memref function results to out-params.
-std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
+std::unique_ptr<Pass> createBufferResultsToOutParamsPass(
+    const BufferResultsToOutParamsOptions &options = {});
 
 /// Replace buffers that are returned from a function with an out parameter.
 /// Also update all call sites.
-LogicalResult promoteBufferResultsToOutParams(ModuleOp module);
+LogicalResult
+promoteBufferResultsToOutParams(ModuleOp module,
+                                const BufferResultsToOutParamsOptions &options);
 
 /// Creates a pass that drops memref function results that are equivalent to a
 /// function argument.

@@ -571,6 +571,30 @@ mlir::Value fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc,
   return create<mlir::arith::SelectOp>(loc, cmp, div, zero);
 }
 
+void fir::FirOpBuilder::setCommonAttributes(mlir::Operation *op) const {
+  auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
+  if (!fmi)
+    return;
+  // TODO: use fmi.setFastMathFlagsAttr() after D137114 is merged.
+  //       For now set the attribute by the name.
+  llvm::StringRef arithFMFAttrName = fmi.getFastMathAttrName();
+  if (fastMathFlags != mlir::arith::FastMathFlags::none)
+    op->setAttr(arithFMFAttrName, mlir::arith::FastMathFlagsAttr::get(
+                                      op->getContext(), fastMathFlags));
+}
+
+void fir::FirOpBuilder::setFastMathFlags(
+    Fortran::common::MathOptionsBase options) {
+  mlir::arith::FastMathFlags arithFMF{};
+  if (options.getFPContractEnabled()) {
+    arithFMF = arithFMF | mlir::arith::FastMathFlags::contract;
+  }
+  if (options.getNoHonorInfs()) {
+    arithFMF = arithFMF | mlir::arith::FastMathFlags::ninf;
+  }
+  setFastMathFlags(arithFMF);
+}
+
 //===--------------------------------------------------------------------===//
 // ExtendedValue inquiry helper implementation
 //===--------------------------------------------------------------------===//
@@ -920,7 +944,7 @@ fir::ExtendedValue fir::factory::componentToExtendedValue(
   auto fieldTy = component.getType();
   if (auto ty = fir::dyn_cast_ptrEleTy(fieldTy))
     fieldTy = ty;
-  if (fieldTy.isa<fir::BoxType>()) {
+  if (fieldTy.isa<fir::BaseBoxType>()) {
     llvm::SmallVector<mlir::Value> nonDeferredTypeParams;
     auto eleTy = fir::unwrapSequenceType(fir::dyn_cast_ptrOrBoxEleTy(fieldTy));
     if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {

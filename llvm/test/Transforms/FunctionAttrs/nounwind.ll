@@ -3,7 +3,7 @@
 
 ; TEST 1
 define i32 @foo1() {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo1
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret i32 1
@@ -13,7 +13,7 @@ define i32 @foo1() {
 
 ; TEST 2
 define i32 @scc1_foo() {
-; CHECK: Function Attrs: nofree nosync nounwind readnone
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@scc1_foo
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @scc1_bar()
@@ -26,7 +26,7 @@ define i32 @scc1_foo() {
 
 ; TEST 3
 define i32 @scc1_bar() {
-; CHECK: Function Attrs: nofree nosync nounwind readnone
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@scc1_bar
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @scc1_foo()

@@ -23,6 +23,8 @@
 // template <class U, class ...Args>
 // void polymorphic_allocator<T>::construct(U *, Args &&...)
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 #include <type_traits>
 #include <cassert>

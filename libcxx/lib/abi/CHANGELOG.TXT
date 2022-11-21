@@ -16,6 +16,15 @@ New entries should be added directly below the "Version" header.
 Version 16.0
 ------------
 
+* [libc++][PMR] Move the pmr::memory_resource destructor into the dylib
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__13pmr15memory_resourceD0Ev
+  Symbol added: _ZNSt3__13pmr15memory_resourceD1Ev
+  Symbol added: _ZNSt3__13pmr15memory_resourceD2Ev
+  Symbol added: _ZTVNSt3__13pmr15memory_resourceE
+
 * [libc++] [C++17] Implement <memory_resource>.
 
   This commit adds <memory_resource> to the shared library.

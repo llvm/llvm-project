@@ -60,7 +60,7 @@ float *test7(void) {
   return &b.y;   // expected-warning {{incompatible pointer types returning 'int *' from a function with result type 'float *'}}
 }
 
-struct xyz test8(void) { return a; }  // a should be be marked invalid, no diag.
+struct xyz test8(void) { return a; }  // a should be marked invalid, no diag.
 
 
 // Verify that implicit int still works.

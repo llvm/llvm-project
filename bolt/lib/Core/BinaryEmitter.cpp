@@ -740,10 +740,12 @@ void BinaryEmitter::emitJumpTables(const BinaryFunction &BF) {
 
   for (auto &JTI : BF.jumpTables()) {
     JumpTable &JT = *JTI.second;
+    // Only emit shared jump tables once, when processing the first parent
+    if (JT.Parents.size() > 1 && JT.Parents[0] != &BF)
+      continue;
     if (opts::PrintJumpTables)
       JT.print(outs());
-    if ((opts::JumpTables == JTS_BASIC || !BF.isSimple()) &&
-        BC.HasRelocations) {
+    if (opts::JumpTables == JTS_BASIC && BC.HasRelocations) {
       JT.updateOriginal();
     } else {
       MCSection *HotSection, *ColdSection;

@@ -21,6 +21,7 @@ find_library(LibEdit_LIBRARIES NAMES edit HINTS ${PC_LIBEDIT_LIBRARY_DIRS})
 
 include(CheckIncludeFile)
 if(LibEdit_INCLUDE_DIRS AND EXISTS "${LibEdit_INCLUDE_DIRS}/histedit.h")
+  include(CMakePushCheckState)
   cmake_push_check_state()
   list(APPEND CMAKE_REQUIRED_INCLUDES ${LibEdit_INCLUDE_DIRS})
   list(APPEND CMAKE_REQUIRED_LIBRARIES ${LibEdit_LIBRARIES})

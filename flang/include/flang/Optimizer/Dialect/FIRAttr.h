@@ -38,7 +38,7 @@ public:
   using Base::Base;
   using ValueType = mlir::Type;
 
-  static constexpr llvm::StringRef getAttrName() { return "instance"; }
+  static constexpr llvm::StringRef getAttrName() { return "type_is"; }
   static ExactTypeAttr get(mlir::Type value);
 
   mlir::Type getType() const;
@@ -51,7 +51,7 @@ public:
   using Base::Base;
   using ValueType = mlir::Type;
 
-  static constexpr llvm::StringRef getAttrName() { return "subsumed"; }
+  static constexpr llvm::StringRef getAttrName() { return "class_is"; }
   static SubclassAttr get(mlir::Type value);
 
   mlir::Type getType() const;

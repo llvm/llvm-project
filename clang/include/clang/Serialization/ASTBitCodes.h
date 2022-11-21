@@ -41,7 +41,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 23;
+const unsigned VERSION_MAJOR = 24;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -1932,6 +1932,7 @@ enum StmtCode {
   STMT_OMP_PARALLEL_SECTIONS_DIRECTIVE,
   STMT_OMP_TASK_DIRECTIVE,
   STMT_OMP_TASKYIELD_DIRECTIVE,
+  STMT_OMP_ERROR_DIRECTIVE,
   STMT_OMP_BARRIER_DIRECTIVE,
   STMT_OMP_TASKWAIT_DIRECTIVE,
   STMT_OMP_FLUSH_DIRECTIVE,

@@ -234,7 +234,6 @@ Options:\n\
   --obj-root        Print the object root used to build LLVM.\n\
   --prefix          Print the installation prefix.\n\
   --shared-mode     Print how the provided components can be collectively linked (`shared` or `static`).\n\
-  --src-root        Print the source root LLVM was built from.\n\
   --system-libs     System Libraries needed to link against LLVM components.\n\
   --targets-built   List of all targets currently built.\n\
   --version         Print LLVM version.\n\
@@ -592,8 +591,6 @@ int main(int argc, char **argv) {
         PrintSharedMode = true;
       } else if (Arg == "--obj-root") {
         OS << ActivePrefix << '\n';
-      } else if (Arg == "--src-root") {
-        OS << LLVM_SRC_ROOT << '\n';
       } else if (Arg == "--ignore-libllvm") {
         LinkDyLib = false;
         LinkMode = BuiltSharedLibs ? LinkModeShared : LinkModeAuto;

@@ -818,8 +818,7 @@ define i32 @or_fshr_wrong_shift(i32 %x, i32 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr w8, w0, w1
 ; CHECK-NEXT:    lsr w8, w8, #26
-; CHECK-NEXT:    bfi w8, w0, #7, #25
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    orr w0, w8, w0, lsl #7
 ; CHECK-NEXT:    ret
   %or1 = or i32 %x, %y
   %sh1 = shl i32 %x, 7

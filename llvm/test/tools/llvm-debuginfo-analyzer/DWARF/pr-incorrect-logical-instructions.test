@@ -1,8 +1,5 @@
 ; REQUIRES: x86-registered-target
 
-; FIXME: Memory leak https://reviews.llvm.org/D125783
-; UNSUPPORTED: asan
-
 ; * Added incorrect logical instructions for: --print=lines,instructions
 ;   'bar' and 'foo' showing extra instruction from compiler generated functions:
 ;   '_cxx_global_var_init' and '_GLOBAL_sub_l_suite_lexical_01.cpp'

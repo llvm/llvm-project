@@ -321,7 +321,7 @@ void test_format_functions(TestFunction check) {
   check(SV("\"hello\u0308\"***"), SV("{:*<{}?}"), SV("hello\u0308"), sizeof(CharT) == 1 ? 12 : 11);
 
   // *** width ***
-  check(SV(R"(   "hello")"), SV("{:10?}"), SV("hello"));
+  check(SV(R"("hello"   )"), SV("{:10?}"), SV("hello"));
 
   // *** precision ***
   check(SV(R"("hell)"), SV("{:.5?}"), SV("hello"));

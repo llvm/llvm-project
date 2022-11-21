@@ -184,6 +184,7 @@ static BlockCtorFn getCtorArrayPrim(PrimType Type) {
 
 static BlockDtorFn getDtorArrayPrim(PrimType Type) {
   TYPE_SWITCH(Type, return dtorArrayTy<T>);
+  llvm_unreachable("unknown Expr");
 }
 
 static BlockMoveFn getMoveArrayPrim(PrimType Type) {

@@ -1,8 +1,8 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +crc \
-// RUN:  -disable-O0-optnone -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN:  -disable-O0-optnone -S -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64-windows -target-feature +crc \
-// RUN:  -disable-O0-optnone -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN:  -disable-O0-optnone -S -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s
 // RUN: %clang_cc1 -verify -emit-llvm-only -triple aarch64 -target-feature -crc %s
 
 #include <stdint.h>

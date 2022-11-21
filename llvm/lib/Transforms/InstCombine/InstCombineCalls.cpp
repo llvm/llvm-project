@@ -135,7 +135,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   // If we have a store to a location which is known constant, we can conclude
   // that the store must be storing the constant value (else the memory
   // wouldn't be constant), and this must be a noop.
-  if (AA->pointsToConstantMemory(MI->getDest())) {
+  if (!isModSet(AA->getModRefInfoMask(MI->getDest()))) {
     // Set the size of the copy to 0, it will be deleted on the next iteration.
     MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
     return MI;
@@ -252,7 +252,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   // If we have a store to a location which is known constant, we can conclude
   // that the store must be storing the constant value (else the memory
   // wouldn't be constant), and this must be a noop.
-  if (AA->pointsToConstantMemory(MI->getDest())) {
+  if (!isModSet(AA->getModRefInfoMask(MI->getDest()))) {
     // Set the size of the copy to 0, it will be deleted on the next iteration.
     MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
     return MI;

@@ -17,7 +17,7 @@
 ; CGSCC: @[[BAR_L:[a-zA-Z0-9_$"\\.-]+]] = internal constant [2 x i8*] [i8* blockaddress(@bar, [[LAB0:%.*]]), i8* blockaddress(@bar, [[END:%.*]])]
 ;.
 define internal void @foo(i32 %x) nounwind readnone {
-; CGSCC: Function Attrs: nounwind readnone
+; CGSCC: Function Attrs: nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
 ; CGSCC-SAME: (i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -32,7 +32,7 @@ entry:
 }
 
 define internal void @bar(i32* nocapture %pc) nounwind readonly {
-; CGSCC: Function Attrs: nounwind readonly
+; CGSCC: Function Attrs: nounwind memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
 ; CGSCC-SAME: (i32* nocapture [[PC:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -70,13 +70,13 @@ indirectgoto:                                     ; preds = %lab0, %entry
 }
 
 define i32 @main() nounwind readnone {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@main
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    ret i32 0
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@main
 ; CGSCC-SAME: () #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -86,9 +86,9 @@ entry:
   ret i32 0
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nounwind readnone }
-; CGSCC: attributes #[[ATTR1]] = { nounwind readonly }
-; CGSCC: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nounwind memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nounwind memory(read) }
+; CGSCC: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.

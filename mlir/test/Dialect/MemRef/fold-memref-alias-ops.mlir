@@ -416,7 +416,7 @@ func.func @fold_static_stride_subview_with_affine_load_store_expand_shape_when_a
 // CHECK-NEXT:    affine.for %[[ARG6:.*]] = 0 to 1 {
 // CHECK-NEXT:      %[[TMP1:.*]] = affine.apply #[[$MAP0]](%[[ARG3]], %[[ARG4]], %[[ARG5]], %[[ARG6]])
 // CHECK-NEXT:      %[[TMP2:.*]] = affine.apply #[[$MAP1]](%[[ARG3]], %[[TMP1]])
-// CHECK-NEXT:      %[[TMP3:.*]] = affine.apply #map2(%[[ARG5]], %[[ARG6]])
+// CHECK-NEXT:      %[[TMP3:.*]] = affine.apply #{{.*}}(%[[ARG5]], %[[ARG6]])
 // CHECK-NEXT:      affine.load %[[ARG0]][%[[TMP2]], %[[TMP3]]] : memref<1024x1024xf32>
 
 // -----

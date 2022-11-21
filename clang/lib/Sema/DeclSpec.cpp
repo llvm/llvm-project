@@ -1117,9 +1117,8 @@ void DeclSpec::SaveWrittenBuiltinSpecs() {
 }
 
 /// Finish - This does final analysis of the declspec, rejecting things like
-/// "_Imaginary" (lacking an FP type).  This returns a diagnostic to issue or
-/// diag::NUM_DIAGNOSTICS if there is no error.  After calling this method,
-/// DeclSpec is guaranteed self-consistent, even if an error occurred.
+/// "_Imaginary" (lacking an FP type). After calling this method, DeclSpec is
+/// guaranteed to be self-consistent, even if an error occurred.
 void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // Before possibly changing their values, save specs as written.
   SaveWrittenBuiltinSpecs();

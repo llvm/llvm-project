@@ -2828,17 +2828,10 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
       NumWithout = 2;
       break;
     }
-    // It is not safe to do PRE when P->CurrentBlock is a loop backedge, and
-    // when CurInst has operand defined in CurrentBlock (so it may be defined
-    // by phi in the loop header).
+    // It is not safe to do PRE when P->CurrentBlock is a loop backedge.
     assert(BlockRPONumber.count(P) && BlockRPONumber.count(CurrentBlock) &&
            "Invalid BlockRPONumber map.");
-    if (BlockRPONumber[P] >= BlockRPONumber[CurrentBlock] &&
-        llvm::any_of(CurInst->operands(), [&](const Use &U) {
-          if (auto *Inst = dyn_cast<Instruction>(U.get()))
-            return Inst->getParent() == CurrentBlock;
-          return false;
-        })) {
+    if (BlockRPONumber[P] >= BlockRPONumber[CurrentBlock]) {
       NumWithout = 2;
       break;
     }

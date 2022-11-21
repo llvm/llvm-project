@@ -26,6 +26,18 @@
 }>
 
 module {
+  /// uses foreach operator to print coords and values.
+  func.func @foreach_print_const() {
+    // Initialize a tensor.
+    %0 = arith.constant sparse<[[0, 0], [1, 6]], [1.0, 5.0]> : tensor<8x7xf32>
+    sparse_tensor.foreach in %0 : tensor<8x7xf32> do {
+      ^bb0(%1: index, %2: index, %v: f32) :
+        vector.print %1: index
+        vector.print %2: index
+        vector.print %v: f32
+     }
+     return
+  }
 
   /// uses foreach operator to print coords and values.
   func.func @foreach_print_1(%arg0: tensor<2x2xf64, #Row>) {
@@ -109,6 +121,13 @@ module {
     %s4 = sparse_tensor.convert %src : tensor<2x2xf64> to tensor<2x2xf64, #SortedCOO>
     %s5 = sparse_tensor.convert %src : tensor<2x2xf64> to tensor<2x2xf64, #SortedCOOPerm>
     // CHECK: 0
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 6
+    // CHECK-NEXT: 5
+    call @foreach_print_const() : () -> ()
+    // CHECK-NEXT: 0
     // CHECK-NEXT: 0
     // CHECK-NEXT: 1
     // CHECK-NEXT: 0

@@ -1012,7 +1012,8 @@ class MMXI64<bits<8> o, Format F, dag outs, dag ins, string asm,
       : I<o, F, outs, ins, asm, pattern>, PS, Requires<[HasMMX,In64BitMode]>;
 class MMXRI<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern>
-      : I<o, F, outs, ins, asm, pattern>, PS, REX_W, Requires<[HasMMX]>;
+      : I<o, F, outs, ins, asm, pattern>, PS, REX_W,
+        Requires<[HasMMX,In64BitMode]>;
 class MMX2I<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern>
       : I<o, F, outs, ins, asm, pattern>, PD, Requires<[HasMMX]>;

@@ -727,9 +727,9 @@ private:
   // hence strict duck-typing.
   template <typename CallLikeExpr,
             typename = std::enable_if_t<
-                std::is_base_of<CallExpr, CallLikeExpr>::value ||
-                std::is_base_of<CXXConstructExpr, CallLikeExpr>::value ||
-                std::is_base_of<ObjCMessageExpr, CallLikeExpr>::value>>
+                std::is_base_of_v<CallExpr, CallLikeExpr> ||
+                std::is_base_of_v<CXXConstructExpr, CallLikeExpr> ||
+                std::is_base_of_v<ObjCMessageExpr, CallLikeExpr>>>
   void findConstructionContextsForArguments(CallLikeExpr *E) {
     for (unsigned i = 0, e = E->getNumArgs(); i != e; ++i) {
       Expr *Arg = E->getArg(i);

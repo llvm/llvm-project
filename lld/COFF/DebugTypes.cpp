@@ -823,10 +823,9 @@ void UsePrecompSource::loadGHashes() {
   if (!pchSrc)
     return;
 
-  // To compute ghashes of a /Yu object file, we need to build on the the
-  // ghashes of the /Yc PCH object. After we are done hashing, discard the
-  // ghashes from the PCH source so we don't unnecessarily try to deduplicate
-  // them.
+  // To compute ghashes of a /Yu object file, we need to build on the ghashes of
+  // the /Yc PCH object. After we are done hashing, discard the ghashes from the
+  // PCH source so we don't unnecessarily try to deduplicate them.
   std::vector<GloballyHashedType> hashVec =
       pchSrc->ghashes.take_front(precompDependency.getTypesCount());
   forEachTypeChecked(file->debugTypes, [&](const CVType &ty) {

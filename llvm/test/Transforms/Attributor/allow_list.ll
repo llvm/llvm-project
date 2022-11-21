@@ -35,7 +35,7 @@ define internal i32 @range_test(i32 %a) #0 {
 ; CHECK_DISABLED_FUNCTION-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK_DISABLED_FUNCTION-NEXT:    ret i32 [[TMP2]]
 ;
-; CHECK_ENABLED_FUNCTION: Function Attrs: noinline nounwind readnone uwtable
+; CHECK_ENABLED_FUNCTION: Function Attrs: noinline nounwind memory(none) uwtable
 ; CHECK_ENABLED_FUNCTION-LABEL: define {{[^@]+}}@range_test
 ; CHECK_ENABLED_FUNCTION-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK_ENABLED_FUNCTION-NEXT:    ret i32 1
@@ -65,7 +65,7 @@ define i32 @range_use1() #0 {
 ; CHECK_DISABLED_FUNCTION-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 123)
 ; CHECK_DISABLED_FUNCTION-NEXT:    ret i32 [[TMP1]]
 ;
-; CHECK_ENABLED_FUNCTION: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
+; CHECK_ENABLED_FUNCTION: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK_ENABLED_FUNCTION-LABEL: define {{[^@]+}}@range_use1
 ; CHECK_ENABLED_FUNCTION-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK_ENABLED_FUNCTION-NEXT:    ret i32 1
@@ -112,7 +112,7 @@ attributes #0 = { nounwind uwtable noinline }
 ;.
 ; CHECK_DISABLED_FUNCTION: attributes #[[ATTR0]] = { noinline nounwind uwtable }
 ;.
-; CHECK_ENABLED_FUNCTION: attributes #[[ATTR0]] = { noinline nounwind readnone uwtable }
-; CHECK_ENABLED_FUNCTION: attributes #[[ATTR1]] = { nofree noinline norecurse nosync nounwind readnone willreturn uwtable }
+; CHECK_ENABLED_FUNCTION: attributes #[[ATTR0]] = { noinline nounwind memory(none) uwtable }
+; CHECK_ENABLED_FUNCTION: attributes #[[ATTR1]] = { nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
 ; CHECK_ENABLED_FUNCTION: attributes #[[ATTR2]] = { noinline nounwind uwtable }
 ;.

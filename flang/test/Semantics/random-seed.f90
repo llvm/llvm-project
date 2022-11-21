@@ -10,7 +10,8 @@ program test_random_seed
   call random_seed()
   call random_seed(size_arg)
   call random_seed(size=size_arg)
-  !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'size=' must be definable
+  !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'size=' is not definable
+  !BECAUSE: '343_4' is not a variable or pointer
   call random_seed(size_arg_const) ! error, size arg must be definable
   !ERROR: 'size=' argument has unacceptable rank 1
   call random_seed([1, 2, 3, 4]) ! Error, must be a scalar
@@ -21,7 +22,8 @@ program test_random_seed
   call random_seed(get=get_arg)
   !ERROR: 'get=' argument has unacceptable rank 0
   call random_seed(get=get_arg_scalar) ! Error, GET arg must be of rank 1
-  !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'get=' must be definable
+  !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'get=' is not definable
+  !BECAUSE: '[INTEGER(4)::8_4,7_4,6_4]' is not a variable or pointer
   call random_seed(get=get_arg_const) ! Error, GET arg must be definable
   !ERROR: RANDOM_SEED must have either 1 or no arguments
   call random_seed(size_arg, get_arg) ! Error, only 0 or 1 argument

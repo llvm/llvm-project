@@ -26,7 +26,7 @@ class StringFile : public __llvm_libc::File {
 
   static size_t str_read(__llvm_libc::File *f, void *data, size_t len);
   static size_t str_write(__llvm_libc::File *f, const void *data, size_t len);
-  static int str_seek(__llvm_libc::File *f, long offset, int whence);
+  static long str_seek(__llvm_libc::File *f, long offset, int whence);
   static int str_close(__llvm_libc::File *f) { return 0; }
   static int str_flush(__llvm_libc::File *f) { return 0; }
 
@@ -94,7 +94,7 @@ size_t StringFile::str_write(__llvm_libc::File *f, const void *data,
   return i;
 }
 
-int StringFile::str_seek(__llvm_libc::File *f, long offset, int whence) {
+long StringFile::str_seek(__llvm_libc::File *f, long offset, int whence) {
   StringFile *sf = static_cast<StringFile *>(f);
   if (whence == SEEK_SET)
     sf->pos = offset;
@@ -102,7 +102,7 @@ int StringFile::str_seek(__llvm_libc::File *f, long offset, int whence) {
     sf->pos += offset;
   if (whence == SEEK_END)
     sf->pos = SIZE + offset;
-  return 0;
+  return sf->pos;
 }
 
 StringFile *new_string_file(char *buffer, size_t buflen, int bufmode,

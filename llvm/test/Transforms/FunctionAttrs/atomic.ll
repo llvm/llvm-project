@@ -4,7 +4,7 @@
 ; Atomic load/store to local doesn't affect whether a function is
 ; readnone/readonly.
 define i32 @test1(i32 %x) uwtable ssp {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone ssp willreturn uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind ssp willreturn memory(none) uwtable
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -21,7 +21,7 @@ entry:
 
 ; A function with an Acquire load is not readonly.
 define i32 @test2(ptr %x) uwtable ssp {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind ssp willreturn uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind ssp willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X:%.*]] seq_cst, align 4

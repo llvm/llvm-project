@@ -429,19 +429,19 @@ entry:
 }
 
 
-; CHECK:      attributes #0 = { argmemonly nocallback nofree nounwind willreturn writeonly }
-; CHECK-NEXT: attributes #1 = { argmemonly nocallback nofree nounwind willreturn }
-; CHECK-NEXT: attributes #2 = { argmemonly nosync nounwind willreturn }
-; CHECK-NEXT: attributes #3 = { noinline nounwind readonly }
-; CHECK-NEXT: attributes #4 = { noinline nounwind writeonly }
+; CHECK:      attributes #0 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK-NEXT: attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK-NEXT: attributes #2 = { nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK-NEXT: attributes #3 = { noinline nounwind memory(read) }
+; CHECK-NEXT: attributes #4 = { noinline nounwind memory(write) }
 ; CHECK-NEXT: attributes #5 = { nounwind ssp }
-; CHECK-NEXT: attributes #6 = { inaccessiblememonly nounwind }
-; CHECK-NEXT: attributes #7 = { inaccessiblemem_or_argmemonly nounwind }
-; CHECK-NEXT: attributes #8 = { argmemonly nounwind }
-; CHECK-NEXT: attributes #9 = { readonly }
-; CHECK-NEXT: attributes #10 = { inaccessiblememonly }
-; CHECK-NEXT: attributes #11 = { inaccessiblemem_or_argmemonly }
-; CHECK-NEXT: attributes #12 = { argmemonly }
+; CHECK-NEXT: attributes #6 = { nounwind memory(inaccessiblemem: readwrite) }
+; CHECK-NEXT: attributes #7 = { nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK-NEXT: attributes #8 = { nounwind memory(argmem: readwrite) }
+; CHECK-NEXT: attributes #9 = { memory(read) }
+; CHECK-NEXT: attributes #10 = { memory(inaccessiblemem: readwrite) }
+; CHECK-NEXT: attributes #11 = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK-NEXT: attributes #12 = { memory(argmem: readwrite) }
 
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { noinline nounwind readonly }

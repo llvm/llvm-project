@@ -8,9 +8,7 @@
 define amdgpu_vs float @test_f16_f32_add_fma_ext_mul(float %x, float %y, float %z, half %u, half %v) {
 ; GFX9-DENORM-LABEL: test_f16_f32_add_fma_ext_mul:
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; GFX9-DENORM-NEXT:    v_mad_f32 v2, v3, v4, v2
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v2, v3, v4, v2 op_sel_hi:[1,1,0]
 ; GFX9-DENORM-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; GFX9-DENORM-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9-DENORM-NEXT:    ; return to shader part epilog
@@ -18,25 +16,22 @@ define amdgpu_vs float @test_f16_f32_add_fma_ext_mul(float %x, float %y, float %
 ; GFX10-LABEL: test_f16_f32_add_fma_ext_mul:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    v_mul_f16_e32 v3, v3, v4
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f32_e32 v3, v0, v1
-; GFX10-NEXT:    v_add_f32_e32 v0, v3, v2
+; GFX10-NEXT:    v_fma_mix_f32 v0, v0, v1, v3 op_sel_hi:[0,0,1]
+; GFX10-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-CONTRACT-LABEL: test_f16_f32_add_fma_ext_mul:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    v_mul_f16_e32 v3, v3, v4
-; GFX10-CONTRACT-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX10-CONTRACT-NEXT:    v_fmac_f32_e32 v3, v0, v1
-; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v0, v3, v2
+; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v0, v0, v1, v3 op_sel_hi:[0,0,1]
+; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX10-CONTRACT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-DENORM-LABEL: test_f16_f32_add_fma_ext_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    v_mul_f16_e32 v3, v3, v4
-; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX10-DENORM-NEXT:    v_fmac_f32_e32 v3, v0, v1
-; GFX10-DENORM-NEXT:    v_add_f32_e32 v0, v3, v2
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v0, v0, v1, v3 op_sel_hi:[0,0,1]
+; GFX10-DENORM-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX10-DENORM-NEXT:    ; return to shader part epilog
 .entry:
     %a = fmul half %u, %v
@@ -50,12 +45,8 @@ define amdgpu_vs float @test_f16_f32_add_fma_ext_mul(float %x, float %y, float %
 define amdgpu_vs float @test_f16_f32_add_ext_fma_mul(half %x, half %y, float %z, half %u, half %v) {
 ; GFX9-DENORM-LABEL: test_f16_f32_add_ext_fma_mul:
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v5, v0
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v0, v3
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v3, v4
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX9-DENORM-NEXT:    v_mad_f32 v0, v0, v3, v2
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v0, v5, v1
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v2, v3, v4, v2 op_sel_hi:[1,1,0]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0]
 ; GFX9-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: test_f16_f32_add_ext_fma_mul:
@@ -94,34 +85,29 @@ define amdgpu_vs float @test_f16_f32_add_ext_fma_mul(half %x, half %y, float %z,
 define amdgpu_vs float @test_f16_f32_add_fma_ext_mul_rhs(float %x, float %y, float %z, half %u, half %v) {
 ; GFX9-DENORM-LABEL: test_f16_f32_add_fma_ext_mul_rhs:
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v0, v3, v4
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, v3, v4, v0 op_sel_hi:[1,1,0]
 ; GFX9-DENORM-NEXT:    v_mac_f32_e32 v0, v1, v2
 ; GFX9-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: test_f16_f32_add_fma_ext_mul_rhs:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    v_mul_f16_e32 v3, v3, v4
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX10-NEXT:    v_fmac_f32_e32 v3, v1, v2
-; GFX10-NEXT:    v_add_f32_e32 v0, v0, v3
+; GFX10-NEXT:    v_fma_mix_f32 v1, v1, v2, v3 op_sel_hi:[0,0,1]
+; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-CONTRACT-LABEL: test_f16_f32_add_fma_ext_mul_rhs:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    v_mul_f16_e32 v3, v3, v4
-; GFX10-CONTRACT-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX10-CONTRACT-NEXT:    v_fmac_f32_e32 v3, v1, v2
-; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v0, v0, v3
+; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v1, v1, v2, v3 op_sel_hi:[0,0,1]
+; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-CONTRACT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-DENORM-LABEL: test_f16_f32_add_fma_ext_mul_rhs:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    v_mul_f16_e32 v3, v3, v4
-; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX10-DENORM-NEXT:    v_fmac_f32_e32 v3, v1, v2
-; GFX10-DENORM-NEXT:    v_add_f32_e32 v0, v0, v3
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v1, v1, v2, v3 op_sel_hi:[0,0,1]
+; GFX10-DENORM-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-DENORM-NEXT:    ; return to shader part epilog
 .entry:
     %a = fmul half %u, %v
@@ -135,12 +121,8 @@ define amdgpu_vs float @test_f16_f32_add_fma_ext_mul_rhs(float %x, float %y, flo
 define amdgpu_vs float @test_f16_f32_add_ext_fma_mul_rhs(float %x, half %y, half %z, half %u, half %v) {
 ; GFX9-DENORM-LABEL: test_f16_f32_add_ext_fma_mul_rhs:
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v0, v3, v4
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v0, v1, v2
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, v3, v4, v0 op_sel_hi:[1,1,0]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, v1, v2, v0 op_sel_hi:[1,1,0]
 ; GFX9-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: test_f16_f32_add_ext_fma_mul_rhs:
@@ -181,72 +163,56 @@ define amdgpu_vs <4 x float> @test_v4f16_v4f32_add_fma_ext_mul(<4 x float> %x, <
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v12, v12, v14
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v13, v13, v15
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v14, v12
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_sdwa v12, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v15, v13
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_sdwa v13, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v14, v0, v4
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v12, v1, v5
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v15, v2, v6
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v13, v3, v7
-; GFX9-DENORM-NEXT:    v_add_f32_e32 v0, v14, v8
-; GFX9-DENORM-NEXT:    v_add_f32_e32 v1, v12, v9
-; GFX9-DENORM-NEXT:    v_add_f32_e32 v2, v15, v10
-; GFX9-DENORM-NEXT:    v_add_f32_e32 v3, v13, v11
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, v0, v4, v12 op_sel_hi:[0,0,1]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v1, v1, v5, v12 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v2, v2, v6, v13 op_sel_hi:[0,0,1]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v3, v3, v7, v13 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX9-DENORM-NEXT:    v_add_f32_e32 v0, v0, v8
+; GFX9-DENORM-NEXT:    v_add_f32_e32 v1, v1, v9
+; GFX9-DENORM-NEXT:    v_add_f32_e32 v2, v2, v10
+; GFX9-DENORM-NEXT:    v_add_f32_e32 v3, v3, v11
 ; GFX9-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: test_v4f16_v4f32_add_fma_ext_mul:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    v_pk_mul_f16 v12, v12, v14
 ; GFX10-NEXT:    v_pk_mul_f16 v13, v13, v15
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v14, v12
-; GFX10-NEXT:    v_cvt_f32_f16_sdwa v12, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v15, v13
-; GFX10-NEXT:    v_cvt_f32_f16_sdwa v13, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_fmac_f32_e32 v14, v0, v4
-; GFX10-NEXT:    v_fmac_f32_e32 v12, v1, v5
-; GFX10-NEXT:    v_fmac_f32_e32 v15, v2, v6
-; GFX10-NEXT:    v_fmac_f32_e32 v13, v3, v7
-; GFX10-NEXT:    v_add_f32_e32 v0, v14, v8
-; GFX10-NEXT:    v_add_f32_e32 v1, v12, v9
-; GFX10-NEXT:    v_add_f32_e32 v2, v15, v10
-; GFX10-NEXT:    v_add_f32_e32 v3, v13, v11
+; GFX10-NEXT:    v_fma_mix_f32 v0, v0, v4, v12 op_sel_hi:[0,0,1]
+; GFX10-NEXT:    v_fma_mix_f32 v1, v1, v5, v12 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-NEXT:    v_fma_mix_f32 v2, v2, v6, v13 op_sel_hi:[0,0,1]
+; GFX10-NEXT:    v_fma_mix_f32 v3, v3, v7, v13 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-NEXT:    v_add_f32_e32 v0, v0, v8
+; GFX10-NEXT:    v_add_f32_e32 v1, v1, v9
+; GFX10-NEXT:    v_add_f32_e32 v2, v2, v10
+; GFX10-NEXT:    v_add_f32_e32 v3, v3, v11
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-CONTRACT-LABEL: test_v4f16_v4f32_add_fma_ext_mul:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    v_pk_mul_f16 v12, v12, v14
 ; GFX10-CONTRACT-NEXT:    v_pk_mul_f16 v13, v13, v15
-; GFX10-CONTRACT-NEXT:    v_cvt_f32_f16_e32 v14, v12
-; GFX10-CONTRACT-NEXT:    v_cvt_f32_f16_sdwa v12, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-CONTRACT-NEXT:    v_cvt_f32_f16_e32 v15, v13
-; GFX10-CONTRACT-NEXT:    v_cvt_f32_f16_sdwa v13, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-CONTRACT-NEXT:    v_fmac_f32_e32 v14, v0, v4
-; GFX10-CONTRACT-NEXT:    v_fmac_f32_e32 v12, v1, v5
-; GFX10-CONTRACT-NEXT:    v_fmac_f32_e32 v15, v2, v6
-; GFX10-CONTRACT-NEXT:    v_fmac_f32_e32 v13, v3, v7
-; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v0, v14, v8
-; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v1, v12, v9
-; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v2, v15, v10
-; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v3, v13, v11
+; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v0, v0, v4, v12 op_sel_hi:[0,0,1]
+; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v1, v1, v5, v12 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v2, v2, v6, v13 op_sel_hi:[0,0,1]
+; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v3, v3, v7, v13 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v0, v0, v8
+; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v1, v1, v9
+; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v2, v2, v10
+; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v3, v3, v11
 ; GFX10-CONTRACT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_v4f32_add_fma_ext_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    v_pk_mul_f16 v12, v12, v14
 ; GFX10-DENORM-NEXT:    v_pk_mul_f16 v13, v13, v15
-; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v14, v12
-; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v12, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v15, v13
-; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v13, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-DENORM-NEXT:    v_fmac_f32_e32 v14, v0, v4
-; GFX10-DENORM-NEXT:    v_fmac_f32_e32 v12, v1, v5
-; GFX10-DENORM-NEXT:    v_fmac_f32_e32 v15, v2, v6
-; GFX10-DENORM-NEXT:    v_fmac_f32_e32 v13, v3, v7
-; GFX10-DENORM-NEXT:    v_add_f32_e32 v0, v14, v8
-; GFX10-DENORM-NEXT:    v_add_f32_e32 v1, v12, v9
-; GFX10-DENORM-NEXT:    v_add_f32_e32 v2, v15, v10
-; GFX10-DENORM-NEXT:    v_add_f32_e32 v3, v13, v11
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v0, v0, v4, v12 op_sel_hi:[0,0,1]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v1, v1, v5, v12 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v2, v2, v6, v13 op_sel_hi:[0,0,1]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v3, v3, v7, v13 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-DENORM-NEXT:    v_add_f32_e32 v0, v0, v8
+; GFX10-DENORM-NEXT:    v_add_f32_e32 v1, v1, v9
+; GFX10-DENORM-NEXT:    v_add_f32_e32 v2, v2, v10
+; GFX10-DENORM-NEXT:    v_add_f32_e32 v3, v3, v11
 ; GFX10-DENORM-NEXT:    ; return to shader part epilog
 .entry:
     %a = fmul <4 x half> %u, %v
@@ -339,72 +305,56 @@ define amdgpu_vs <4 x float> @test_v4f16_v4f32_add_fma_ext_mul_rhs(<4 x float> %
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v12, v12, v14
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v13, v13, v15
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v14, v12
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_sdwa v12, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v15, v13
-; GFX9-DENORM-NEXT:    v_cvt_f32_f16_sdwa v13, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v14, v4, v8
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v12, v5, v9
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v15, v6, v10
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v13, v7, v11
-; GFX9-DENORM-NEXT:    v_add_f32_e32 v0, v0, v14
-; GFX9-DENORM-NEXT:    v_add_f32_e32 v1, v1, v12
-; GFX9-DENORM-NEXT:    v_add_f32_e32 v2, v2, v15
-; GFX9-DENORM-NEXT:    v_add_f32_e32 v3, v3, v13
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v4, v4, v8, v12 op_sel_hi:[0,0,1]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v5, v5, v9, v12 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v6, v6, v10, v13 op_sel_hi:[0,0,1]
+; GFX9-DENORM-NEXT:    v_mad_mix_f32 v7, v7, v11, v13 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX9-DENORM-NEXT:    v_add_f32_e32 v0, v0, v4
+; GFX9-DENORM-NEXT:    v_add_f32_e32 v1, v1, v5
+; GFX9-DENORM-NEXT:    v_add_f32_e32 v2, v2, v6
+; GFX9-DENORM-NEXT:    v_add_f32_e32 v3, v3, v7
 ; GFX9-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: test_v4f16_v4f32_add_fma_ext_mul_rhs:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    v_pk_mul_f16 v12, v12, v14
 ; GFX10-NEXT:    v_pk_mul_f16 v13, v13, v15
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v14, v12
-; GFX10-NEXT:    v_cvt_f32_f16_sdwa v12, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v15, v13
-; GFX10-NEXT:    v_cvt_f32_f16_sdwa v13, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_fmac_f32_e32 v14, v4, v8
-; GFX10-NEXT:    v_fmac_f32_e32 v12, v5, v9
-; GFX10-NEXT:    v_fmac_f32_e32 v15, v6, v10
-; GFX10-NEXT:    v_fmac_f32_e32 v13, v7, v11
-; GFX10-NEXT:    v_add_f32_e32 v0, v0, v14
-; GFX10-NEXT:    v_add_f32_e32 v1, v1, v12
-; GFX10-NEXT:    v_add_f32_e32 v2, v2, v15
-; GFX10-NEXT:    v_add_f32_e32 v3, v3, v13
+; GFX10-NEXT:    v_fma_mix_f32 v4, v4, v8, v12 op_sel_hi:[0,0,1]
+; GFX10-NEXT:    v_fma_mix_f32 v5, v5, v9, v12 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-NEXT:    v_fma_mix_f32 v6, v6, v10, v13 op_sel_hi:[0,0,1]
+; GFX10-NEXT:    v_fma_mix_f32 v7, v7, v11, v13 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-NEXT:    v_add_f32_e32 v0, v0, v4
+; GFX10-NEXT:    v_add_f32_e32 v1, v1, v5
+; GFX10-NEXT:    v_add_f32_e32 v2, v2, v6
+; GFX10-NEXT:    v_add_f32_e32 v3, v3, v7
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-CONTRACT-LABEL: test_v4f16_v4f32_add_fma_ext_mul_rhs:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    v_pk_mul_f16 v12, v12, v14
 ; GFX10-CONTRACT-NEXT:    v_pk_mul_f16 v13, v13, v15
-; GFX10-CONTRACT-NEXT:    v_cvt_f32_f16_e32 v14, v12
-; GFX10-CONTRACT-NEXT:    v_cvt_f32_f16_sdwa v12, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-CONTRACT-NEXT:    v_cvt_f32_f16_e32 v15, v13
-; GFX10-CONTRACT-NEXT:    v_cvt_f32_f16_sdwa v13, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-CONTRACT-NEXT:    v_fmac_f32_e32 v14, v4, v8
-; GFX10-CONTRACT-NEXT:    v_fmac_f32_e32 v12, v5, v9
-; GFX10-CONTRACT-NEXT:    v_fmac_f32_e32 v15, v6, v10
-; GFX10-CONTRACT-NEXT:    v_fmac_f32_e32 v13, v7, v11
-; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v0, v0, v14
-; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v1, v1, v12
-; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v2, v2, v15
-; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v3, v3, v13
+; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v4, v4, v8, v12 op_sel_hi:[0,0,1]
+; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v5, v5, v9, v12 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v6, v6, v10, v13 op_sel_hi:[0,0,1]
+; GFX10-CONTRACT-NEXT:    v_fma_mix_f32 v7, v7, v11, v13 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v0, v0, v4
+; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v1, v1, v5
+; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v2, v2, v6
+; GFX10-CONTRACT-NEXT:    v_add_f32_e32 v3, v3, v7
 ; GFX10-CONTRACT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_v4f32_add_fma_ext_mul_rhs:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    v_pk_mul_f16 v12, v12, v14
 ; GFX10-DENORM-NEXT:    v_pk_mul_f16 v13, v13, v15
-; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v14, v12
-; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v12, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v15, v13
-; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v13, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-DENORM-NEXT:    v_fmac_f32_e32 v14, v4, v8
-; GFX10-DENORM-NEXT:    v_fmac_f32_e32 v12, v5, v9
-; GFX10-DENORM-NEXT:    v_fmac_f32_e32 v15, v6, v10
-; GFX10-DENORM-NEXT:    v_fmac_f32_e32 v13, v7, v11
-; GFX10-DENORM-NEXT:    v_add_f32_e32 v0, v0, v14
-; GFX10-DENORM-NEXT:    v_add_f32_e32 v1, v1, v12
-; GFX10-DENORM-NEXT:    v_add_f32_e32 v2, v2, v15
-; GFX10-DENORM-NEXT:    v_add_f32_e32 v3, v3, v13
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v4, v4, v8, v12 op_sel_hi:[0,0,1]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v5, v5, v9, v12 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v6, v6, v10, v13 op_sel_hi:[0,0,1]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v7, v7, v11, v13 op_sel:[0,0,1] op_sel_hi:[0,0,1]
+; GFX10-DENORM-NEXT:    v_add_f32_e32 v0, v0, v4
+; GFX10-DENORM-NEXT:    v_add_f32_e32 v1, v1, v5
+; GFX10-DENORM-NEXT:    v_add_f32_e32 v2, v2, v6
+; GFX10-DENORM-NEXT:    v_add_f32_e32 v3, v3, v7
 ; GFX10-DENORM-NEXT:    ; return to shader part epilog
 .entry:
     %a = fmul <4 x half> %u, %v

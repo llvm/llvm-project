@@ -1,4 +1,4 @@
-// RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
+// RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
 // CHECK:      spirv.GlobalVariable @var0 bind(1, 0) : !spirv.ptr<f32, Input>
 // CHECK-NEXT: spirv.GlobalVariable @var1 bind(0, 1) : !spirv.ptr<f32, Output>

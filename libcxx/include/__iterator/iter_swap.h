@@ -9,6 +9,8 @@
 #ifndef _LIBCPP___ITERATOR_ITER_SWAP_H
 #define _LIBCPP___ITERATOR_ITER_SWAP_H
 
+#include <__concepts/class_or_enum.h>
+#include <__concepts/swappable.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/iter_move.h>
@@ -16,7 +18,6 @@
 #include <__iterator/readable_traits.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

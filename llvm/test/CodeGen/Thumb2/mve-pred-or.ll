@@ -123,7 +123,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @cmpulez_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: cmpulez_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.u32 cs, q1, zr
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vcmp.u32 cs, q2, q1
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vcmpt.i32 ne, q0, zr

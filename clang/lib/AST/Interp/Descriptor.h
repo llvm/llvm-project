@@ -113,15 +113,15 @@ public:
   const Expr *asExpr() const { return Source.dyn_cast<const Expr *>(); }
 
   const ValueDecl *asValueDecl() const {
-    return dyn_cast_or_null<ValueDecl>(asDecl());
+    return dyn_cast_if_present<ValueDecl>(asDecl());
   }
 
   const FieldDecl *asFieldDecl() const {
-    return dyn_cast_or_null<FieldDecl>(asDecl());
+    return dyn_cast_if_present<FieldDecl>(asDecl());
   }
 
   const RecordDecl *asRecordDecl() const {
-    return dyn_cast_or_null<RecordDecl>(asDecl());
+    return dyn_cast_if_present<RecordDecl>(asDecl());
   }
 
   /// Returns the size of the object without metadata.

@@ -559,6 +559,7 @@ void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
   Object Relationship;
   Relationship["source"] = Source.USR;
   Relationship["target"] = Target.USR;
+  Relationship["targetFallback"] = Target.Name;
   Relationship["kind"] = getRelationshipString(Kind);
 
   Relationships.emplace_back(std::move(Relationship));
@@ -637,7 +638,7 @@ void SymbolGraphSerializer::serializeObjCContainerRecord(
       serializeMembers(Record, Category->Methods);
       serializeMembers(Record, Category->Properties);
 
-      // Surface the protocols of the the category to the interface.
+      // Surface the protocols of the category to the interface.
       for (const auto &Protocol : Category->Protocols)
         serializeRelationship(RelationshipKind::ConformsTo, Record, Protocol);
     }

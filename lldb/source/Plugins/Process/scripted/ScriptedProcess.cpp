@@ -411,7 +411,7 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
   StructuredData::ArraySP loaded_images_sp = GetInterface().GetLoadedImages();
 
   if (!loaded_images_sp || !loaded_images_sp->GetSize())
-    return GetInterface().ErrorWithMessage<StructuredData::ObjectSP>(
+    return ScriptedInterface::ErrorWithMessage<StructuredData::ObjectSP>(
         LLVM_PRETTY_FUNCTION, "No loaded images.", error);
 
   ModuleList module_list;
@@ -477,12 +477,25 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
   };
 
   if (!loaded_images_sp->ForEach(reload_image))
-    return GetInterface().ErrorWithMessage<StructuredData::ObjectSP>(
+    return ScriptedInterface::ErrorWithMessage<StructuredData::ObjectSP>(
         LLVM_PRETTY_FUNCTION, "Couldn't reload all images.", error);
 
   target.ModulesDidLoad(module_list);
 
   return loaded_images_sp;
+}
+
+lldb_private::StructuredData::DictionarySP ScriptedProcess::GetMetadata() {
+  CheckInterpreterAndScriptObject();
+
+  StructuredData::DictionarySP metadata_sp = GetInterface().GetMetadata();
+
+  Status error;
+  if (!metadata_sp || !metadata_sp->GetSize())
+    return ScriptedInterface::ErrorWithMessage<StructuredData::DictionarySP>(
+        LLVM_PRETTY_FUNCTION, "No metadata.", error);
+
+  return metadata_sp;
 }
 
 ScriptedProcessInterface &ScriptedProcess::GetInterface() const {

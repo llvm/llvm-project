@@ -374,8 +374,10 @@ END-SCRIPT
 #include <__fwd/array.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/array.h'}}
 #include <__fwd/get.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/get.h'}}
 #include <__fwd/hash.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/hash.h'}}
+#include <__fwd/memory_resource.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/memory_resource.h'}}
 #include <__fwd/pair.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/pair.h'}}
 #include <__fwd/span.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/span.h'}}
+#include <__fwd/string.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/string.h'}}
 #include <__fwd/string_view.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/string_view.h'}}
 #include <__fwd/tuple.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/tuple.h'}}
 #include <__ios/fpos.h> // expected-error@*:* {{use of private header from outside its module: '__ios/fpos.h'}}
@@ -425,6 +427,7 @@ END-SCRIPT
 #include <__memory/allocation_guard.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocation_guard.h'}}
 #include <__memory/allocator.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocator.h'}}
 #include <__memory/allocator_arg_t.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocator_arg_t.h'}}
+#include <__memory/allocator_destructor.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocator_destructor.h'}}
 #include <__memory/allocator_traits.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocator_traits.h'}}
 #include <__memory/assume_aligned.h> // expected-error@*:* {{use of private header from outside its module: '__memory/assume_aligned.h'}}
 #include <__memory/auto_ptr.h> // expected-error@*:* {{use of private header from outside its module: '__memory/auto_ptr.h'}}

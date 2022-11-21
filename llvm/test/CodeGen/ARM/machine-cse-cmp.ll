@@ -80,3 +80,41 @@ return:
 %retval.0 = phi i8* [ %add.ptr, %if.end ], [ null, %entry ]
 ret i8* %retval.0
 }
+
+; The cmp of %val should not be hoisted above the preceding conditional branch
+define void @f4(i32** %ptr1, i64* %ptr2, i64 %val) {
+entry:
+; CHECK-LABEL: f4:
+; CHECK: cmp
+; CHECK: movne
+; CHECK: strne
+; CHECK: orrs
+; CHECK-NOT: subs
+; CHECK-NOT: sbcs
+; CHECK: beq
+  %tobool.not = icmp eq i32** %ptr1, null
+  br i1 %tobool.not, label %if.end, label %if.then
+
+if.then:
+  store i32* null, i32** %ptr1, align 4
+  br label %if.end
+
+if.end:
+; CHECK: subs
+; CHECK: sbcs
+; CHECK: bxlt lr
+  %tobool1 = icmp ne i64 %val, 0
+  %cmp = icmp slt i64 %val, 10
+  %or.cond = and i1 %tobool1, %cmp
+  br i1 %or.cond, label %cleanup, label %if.end3
+
+if.end3:
+; CHECK: subs
+; CHECK: sbc
+  %sub = add nsw i64 %val, -10
+  store i64 %sub, i64* %ptr2, align 8
+  br label %cleanup
+
+cleanup:
+  ret void
+}

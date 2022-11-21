@@ -1,0 +1,51 @@
+## Check that we can dump an offloading binary directly.
+# RUN: yaml2obj %S/Inputs/binary.yaml -o %t.bin
+# RUN: llvm-objdump --offloading %t.bin | FileCheck %s --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+## Check that we can dump an offloading binary inside of an ELF section.
+# RUN: yaml2obj %s -o %t -DTYPE=ET_EXEC
+# RUN: yaml2obj %s -o %t.so -DTYPE=ET_DYN
+# RUN: yaml2obj %s -o %t.o -DTYPE=ET_REL
+# RUN: llvm-objcopy --update-section .llvm.offloading=%t.bin %t
+# RUN: llvm-objcopy --update-section .llvm.offloading=%t.bin %t.so
+# RUN: llvm-objcopy --update-section .llvm.offloading=%t.bin %t.o
+# RUN: llvm-objdump --offloading %t | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+# RUN: llvm-objdump --offloading %t.so | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+# RUN: llvm-objdump --offloading %t.o | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            [[TYPE]]
+Sections:
+  - Name:            .llvm.offloading
+    Type:            SHT_LLVM_OFFLOADING
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x0000000000000008
+
+#        ELF:{{.*}}file format elf64-unknown
+#  ELF-EMPTY:
+#      CHECK:OFFLOADING IMAGE [0]:
+# CHECK-NEXT:kind            llvm ir
+# CHECK-NEXT:arch            gfx908
+# CHECK-NEXT:triple          amdgcn-amd-amdhsa
+# CHECK-NEXT:producer        openmp
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [1]:
+# CHECK-NEXT:kind            llvm ir
+# CHECK-NEXT:arch            gfx90a
+# CHECK-NEXT:triple          amdgcn-amd-amdhsa
+# CHECK-NEXT:producer        openmp
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [2]:
+# CHECK-NEXT:kind            cubin
+# CHECK-NEXT:arch            sm_52
+# CHECK-NEXT:triple          nvptx64-nvidia-cuda
+# CHECK-NEXT:producer        openmp
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [3]:
+# CHECK-NEXT:kind            <none>
+# CHECK-NEXT:arch            sm_70
+# CHECK-NEXT:triple          nvptx64-nvidia-cuda
+# CHECK-NEXT:producer        none

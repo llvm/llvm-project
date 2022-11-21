@@ -43,7 +43,7 @@ define i8* @return_noalias(){
 }
 
 define void @nocapture(i8* %a){
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@nocapture
 ; CHECK-SAME: (i8* nocapture nofree readnone [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -159,7 +159,7 @@ declare i8* @baz(...) nounwind uwtable
 
 ; Returning global pointer. Should not be noalias.
 define i8** @getter() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@getter
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    ret i8** @G
@@ -169,12 +169,12 @@ define i8** @getter() {
 
 ; Returning global pointer. Should not be noalias.
 define i8** @calle1(){
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@calle1
 ; TUNIT-SAME: () #[[ATTR0]] {
 ; TUNIT-NEXT:    ret i8** @G
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@calle1
 ; CGSCC-SAME: () #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:    [[TMP1:%.*]] = call noundef nonnull align 8 dereferenceable(8) i8** @getter() #[[ATTR11:[0-9]+]]
@@ -520,7 +520,7 @@ define void @test13_use_alias(){
 
 ; TEST 14 i2p casts
 define internal i32 @p2i(i32* %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@p2i
 ; CHECK-SAME: (i32* noalias nofree readnone [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[P2I:%.*]] = ptrtoint i32* [[ARG]] to i32
@@ -531,22 +531,22 @@ define internal i32 @p2i(i32* %arg) {
 }
 
 define i32 @i2p(i32* %arg) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@i2p
 ; TUNIT-SAME: (i32* nofree readonly [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
-; TUNIT-NEXT:    [[C:%.*]] = call i32 @p2i(i32* noalias nofree readnone [[ARG]]) #[[ATTR9:[0-9]+]]
+; TUNIT-NEXT:    [[C:%.*]] = call i32 @p2i(i32* noalias nofree readnone [[ARG]]) #[[ATTR10:[0-9]+]]
 ; TUNIT-NEXT:    [[I2P:%.*]] = inttoptr i32 [[C]] to i8*
 ; TUNIT-NEXT:    [[BC:%.*]] = bitcast i8* [[I2P]] to i32*
-; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nocapture nofree readonly align 4 [[BC]]) #[[ATTR10:[0-9]+]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nocapture nofree readonly align 4 [[BC]]) #[[ATTR10]]
 ; TUNIT-NEXT:    ret i32 [[CALL]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readonly willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@i2p
 ; CGSCC-SAME: (i32* nofree readonly [[ARG:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CGSCC-NEXT:    [[C:%.*]] = call i32 @p2i(i32* noalias nofree readnone [[ARG]]) #[[ATTR11]]
 ; CGSCC-NEXT:    [[I2P:%.*]] = inttoptr i32 [[C]] to i8*
 ; CGSCC-NEXT:    [[BC:%.*]] = bitcast i8* [[I2P]] to i32*
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[BC]]) #[[ATTR12:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[BC]]) #[[ATTR11]]
 ; CGSCC-NEXT:    ret i32 [[CALL]]
 ;
   %c = call i32 @p2i(i32* %arg)
@@ -556,13 +556,13 @@ define i32 @i2p(i32* %arg) {
   ret i32 %call
 }
 define internal i32 @ret(i32* %arg) {
-; TUNIT: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@ret
 ; TUNIT-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR5:[0-9]+]] {
 ; TUNIT-NEXT:    [[L:%.*]] = load i32, i32* [[ARG]], align 4
 ; TUNIT-NEXT:    ret i32 [[L]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@ret
 ; CGSCC-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CGSCC-NEXT:    [[L:%.*]] = load i32, i32* [[ARG]], align 4
@@ -599,7 +599,7 @@ define internal fastcc double @strtox(i8* %s, i8** %p, i32 %prec) unnamed_addr {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
 ; CGSCC-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 144, i8* nocapture nofree noundef nonnull align 8 dereferenceable(240) [[TMP0]]) #[[ATTR13:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 144, i8* nocapture nofree noundef nonnull align 8 dereferenceable(240) [[TMP0]]) #[[ATTR12:[0-9]+]]
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
 ; CGSCC-NEXT:    call void @__shlim(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
 ; CGSCC-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
@@ -652,13 +652,13 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 @alias_of_p = external global i32*
 
 define void @make_alias(i32* %p) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@make_alias
 ; TUNIT-SAME: (i32* nofree writeonly [[P:%.*]]) #[[ATTR7:[0-9]+]] {
 ; TUNIT-NEXT:    store i32* [[P]], i32** @alias_of_p, align 8
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@make_alias
 ; CGSCC-SAME: (i32* nofree writeonly [[P:%.*]]) #[[ATTR8:[0-9]+]] {
 ; CGSCC-NEXT:    store i32* [[P]], i32** @alias_of_p, align 8
@@ -669,13 +669,13 @@ define void @make_alias(i32* %p) {
 }
 
 define void @only_store(i32* %p) {
-; TUNIT: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@only_store
 ; TUNIT-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR8:[0-9]+]] {
 ; TUNIT-NEXT:    store i32 0, i32* [[P]], align 4
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@only_store
 ; CGSCC-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CGSCC-NEXT:    store i32 0, i32* [[P]], align 4
@@ -686,28 +686,28 @@ define void @only_store(i32* %p) {
 }
 
 define void @test15_caller(i32* noalias %p, i32 %c) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@test15_caller
 ; TUNIT-SAME: (i32* noalias nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR7]] {
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    tail call void @only_store(i32* noalias nocapture nofree writeonly align 4 [[P]]) #[[ATTR12:[0-9]+]]
+; TUNIT-NEXT:    tail call void @only_store(i32* noalias nocapture nofree writeonly align 4 [[P]]) #[[ATTR10]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
-; TUNIT-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR12]]
+; TUNIT-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR10]]
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind willreturn writeonly
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@test15_caller
 ; CGSCC-SAME: (i32* noalias nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR10:[0-9]+]] {
 ; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CGSCC:       if.then:
-; CGSCC-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR14:[0-9]+]]
+; CGSCC-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13:[0-9]+]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
-; CGSCC-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR14]]
+; CGSCC-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR13]]
 ; CGSCC-NEXT:    ret void
 ;
   %tobool = icmp eq i32 %c, 0
@@ -743,32 +743,32 @@ if.end:
 ;        Therefore, only one of the two conditions of if statementes will be fulfilled.
 
 define internal void @test16_sub(i32* noalias %p, i32 %c1, i32 %c2) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@test16_sub
 ; TUNIT-SAME: (i32* noalias nofree writeonly [[P:%.*]], i32 [[C1:%.*]], i32 [[C2:%.*]]) #[[ATTR7]] {
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C1]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    tail call void @only_store(i32* noalias nocapture nofree writeonly align 4 [[P]]) #[[ATTR12]]
-; TUNIT-NEXT:    tail call void @make_alias(i32* nofree writeonly align 4 [[P]]) #[[ATTR12]]
+; TUNIT-NEXT:    tail call void @only_store(i32* noalias nocapture nofree writeonly align 4 [[P]]) #[[ATTR10]]
+; TUNIT-NEXT:    tail call void @make_alias(i32* nofree writeonly align 4 [[P]]) #[[ATTR10]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
 ; TUNIT-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[C2]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; TUNIT:       if.then2:
-; TUNIT-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]]) #[[ATTR12]]
+; TUNIT-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]]) #[[ATTR10]]
 ; TUNIT-NEXT:    br label [[IF_END3]]
 ; TUNIT:       if.end3:
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind willreturn writeonly
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@test16_sub
 ; CGSCC-SAME: (i32* noalias nofree writeonly [[P:%.*]], i32 [[C1:%.*]], i32 [[C2:%.*]]) #[[ATTR10]] {
 ; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C1]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CGSCC:       if.then:
-; CGSCC-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR14]]
-; CGSCC-NEXT:    tail call void @make_alias(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR14]]
+; CGSCC-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR14:[0-9]+]]
+; CGSCC-NEXT:    tail call void @make_alias(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
 ; CGSCC-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[C2]], 0
@@ -800,16 +800,16 @@ if.end3:
 }
 
 define void @test16_caller(i32* %p, i32 %c) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@test16_caller
 ; TUNIT-SAME: (i32* nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR7]] {
-; TUNIT-NEXT:    tail call void @test16_sub(i32* noalias nofree writeonly [[P]], i32 [[C]], i32 [[C]]) #[[ATTR12]]
+; TUNIT-NEXT:    tail call void @test16_sub(i32* noalias nofree writeonly [[P]], i32 [[C]], i32 [[C]]) #[[ATTR10]]
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind willreturn writeonly
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@test16_caller
 ; CGSCC-SAME: (i32* nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR10]] {
-; CGSCC-NEXT:    tail call void @test16_sub(i32* noalias nofree writeonly [[P]], i32 [[C]], i32 [[C]]) #[[ATTR14]]
+; CGSCC-NEXT:    tail call void @test16_sub(i32* noalias nofree writeonly [[P]], i32 [[C]], i32 [[C]]) #[[ATTR13]]
 ; CGSCC-NEXT:    ret void
 ;
   tail call void @test16_sub(i32* %p, i32 %c, i32 %c)
@@ -836,32 +836,32 @@ define void @test16_caller(i32* %p, i32 %c) {
 ; }
 
 define void @test17_caller(i32* noalias %p, i32 %c) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@test17_caller
 ; TUNIT-SAME: (i32* noalias nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR7]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[L1:%.*]], label [[L2:%.*]]
 ; TUNIT:       l1:
-; TUNIT-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR12]]
+; TUNIT-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR10]]
 ; TUNIT-NEXT:    br label [[L3:%.*]]
 ; TUNIT:       l2:
-; TUNIT-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]]) #[[ATTR12]]
+; TUNIT-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]]) #[[ATTR10]]
 ; TUNIT-NEXT:    br label [[L3]]
 ; TUNIT:       l3:
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind willreturn writeonly
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@test17_caller
 ; CGSCC-SAME: (i32* noalias nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR10]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL]], label [[L1:%.*]], label [[L2:%.*]]
 ; CGSCC:       l1:
-; CGSCC-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR14]]
+; CGSCC-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR13]]
 ; CGSCC-NEXT:    br label [[L3:%.*]]
 ; CGSCC:       l2:
-; CGSCC-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR14]]
+; CGSCC-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13]]
 ; CGSCC-NEXT:    br label [[L3]]
 ; CGSCC:       l3:
 ; CGSCC-NEXT:    ret void
@@ -894,12 +894,12 @@ l3:
 ; }
 
 define void @noreturn() {
-; TUNIT: Function Attrs: nofree nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@noreturn
-; TUNIT-SAME: () #[[ATTR9]] {
+; TUNIT-SAME: () #[[ATTR9:[0-9]+]] {
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@noreturn
 ; CGSCC-SAME: () #[[ATTR2]] {
 ; CGSCC-NEXT:    ret void
@@ -909,30 +909,30 @@ define void @noreturn() {
 }
 
 define void @test18_caller(i32* noalias %p, i32 %c) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@test18_caller
 ; TUNIT-SAME: (i32* noalias nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR7]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[L1:%.*]], label [[L2:%.*]]
 ; TUNIT:       l1:
-; TUNIT-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR12]]
+; TUNIT-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR10]]
 ; TUNIT-NEXT:    br label [[L2]]
 ; TUNIT:       l2:
-; TUNIT-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]]) #[[ATTR12]]
+; TUNIT-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]]) #[[ATTR10]]
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind willreturn writeonly
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@test18_caller
 ; CGSCC-SAME: (i32* noalias nofree nonnull writeonly align 4 dereferenceable(4) [[P:%.*]], i32 [[C:%.*]]) #[[ATTR10]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL]], label [[L1:%.*]], label [[L2:%.*]]
 ; CGSCC:       l1:
-; CGSCC-NEXT:    tail call void @make_alias(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR14]]
+; CGSCC-NEXT:    tail call void @make_alias(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13]]
 ; CGSCC-NEXT:    br label [[L2]]
 ; CGSCC:       l2:
-; CGSCC-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR14]]
+; CGSCC-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -949,33 +949,32 @@ l2:
   ret void
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR1]] = { nounwind uwtable }
 ; TUNIT: attributes #[[ATTR2]] = { nounwind }
 ; TUNIT: attributes #[[ATTR3]] = { nounwind ssp uwtable }
-; TUNIT: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind readonly willreturn }
-; TUNIT: attributes #[[ATTR5]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; TUNIT: attributes #[[ATTR6:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind willreturn writeonly }
-; TUNIT: attributes #[[ATTR8]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; TUNIT: attributes #[[ATTR9]] = { nofree nosync nounwind readnone willreturn }
-; TUNIT: attributes #[[ATTR10]] = { nofree nosync nounwind readonly willreturn }
-; TUNIT: attributes #[[ATTR11]] = { willreturn }
-; TUNIT: attributes #[[ATTR12]] = { nofree nosync nounwind willreturn writeonly }
+; TUNIT: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind willreturn memory(read) }
+; TUNIT: attributes #[[ATTR5]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; TUNIT: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind willreturn memory(write) }
+; TUNIT: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR9]] = { nofree nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR10]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR11]] = { willreturn memory(readwrite) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { nounwind uwtable }
-; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR3]] = { nounwind }
 ; CGSCC: attributes #[[ATTR4]] = { nounwind ssp uwtable }
-; CGSCC: attributes #[[ATTR5]] = { nofree nosync nounwind readonly willreturn }
-; CGSCC: attributes #[[ATTR6]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; CGSCC: attributes #[[ATTR7:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind willreturn writeonly }
-; CGSCC: attributes #[[ATTR9]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; CGSCC: attributes #[[ATTR10]] = { nofree nosync nounwind willreturn writeonly }
-; CGSCC: attributes #[[ATTR11]] = { readnone willreturn }
-; CGSCC: attributes #[[ATTR12]] = { readonly willreturn }
-; CGSCC: attributes #[[ATTR13]] = { willreturn }
-; CGSCC: attributes #[[ATTR14]] = { nounwind willreturn writeonly }
+; CGSCC: attributes #[[ATTR5]] = { nofree nosync nounwind willreturn memory(read) }
+; CGSCC: attributes #[[ATTR6]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; CGSCC: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; CGSCC: attributes #[[ATTR10]] = { nofree nosync nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR11]] = { willreturn }
+; CGSCC: attributes #[[ATTR12]] = { willreturn memory(readwrite) }
+; CGSCC: attributes #[[ATTR13]] = { nounwind willreturn }
+; CGSCC: attributes #[[ATTR14]] = { nounwind willreturn memory(write) }
 ;.

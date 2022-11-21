@@ -6,49 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/span.h"
+#include "memory_utils/memory_check_utils.h"
 #include "src/string/memcpy.h"
 #include "utils/UnitTest/Test.h"
 
-using __llvm_libc::cpp::array;
-using __llvm_libc::cpp::span;
-using Data = array<char, 2048>;
+namespace __llvm_libc {
 
-static const span<const char> k_numbers("0123456789", 10);
-static const span<const char> k_deadcode("DEADC0DE", 8);
-
-// Returns a Data object filled with a repetition of `filler`.
-Data get_data(span<const char> filler) {
-  Data out;
-  for (size_t i = 0; i < out.size(); ++i)
-    out[i] = filler[i % filler.size()];
-  return out;
+// Adapt CheckMemcpy signature to op implementation signatures.
+template <auto FnImpl>
+void CopyAdaptor(cpp::span<char> dst, cpp::span<char> src, size_t size) {
+  FnImpl(dst.begin(), src.begin(), size);
 }
 
-TEST(LlvmLibcMemcpyTest, Thorough) {
-  const Data groundtruth = get_data(k_numbers);
-  const Data dirty = get_data(k_deadcode);
-  for (size_t count = 0; count < 1024; ++count) {
-    for (size_t align = 0; align < 64; ++align) {
-      auto buffer = dirty;
-      const char *const src = groundtruth.data();
-      void *const dst = &buffer[align];
-      void *const ret = __llvm_libc::memcpy(dst, src, count);
-      // Return value is `dst`.
-      ASSERT_EQ(ret, dst);
-      // Everything before copy is untouched.
-      for (size_t i = 0; i < align; ++i)
-        ASSERT_EQ(buffer[i], dirty[i]);
-      // Everything in between is copied.
-      for (size_t i = 0; i < count; ++i)
-        ASSERT_EQ(buffer[align + i], groundtruth[i]);
-      // Everything after copy is untouched.
-      for (size_t i = align + count; i < dirty.size(); ++i)
-        ASSERT_EQ(buffer[i], dirty[i]);
-    }
+TEST(LlvmLibcMemcpyTest, SizeSweep) {
+  static constexpr size_t kMaxSize = 1024;
+  static constexpr auto Impl = CopyAdaptor<__llvm_libc::memcpy>;
+  Buffer SrcBuffer(kMaxSize);
+  Buffer DstBuffer(kMaxSize);
+  Randomize(SrcBuffer.span());
+  for (size_t size = 0; size < kMaxSize; ++size) {
+    auto src = SrcBuffer.span().subspan(0, size);
+    auto dst = DstBuffer.span().subspan(0, size);
+    ASSERT_TRUE(CheckMemcpy<Impl>(dst, src, size));
   }
 }
 
-// FIXME: Add tests with reads and writes on the boundary of a read/write
-// protected page to check we're not reading nor writing prior/past the allowed
-// regions.
+} // namespace __llvm_libc

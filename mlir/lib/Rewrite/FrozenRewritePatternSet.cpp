@@ -16,7 +16,9 @@
 
 using namespace mlir;
 
-static LogicalResult convertPDLToPDLInterp(ModuleOp pdlModule) {
+static LogicalResult
+convertPDLToPDLInterp(ModuleOp pdlModule,
+                      DenseMap<Operation *, PDLPatternConfigSet *> &configMap) {
   // Skip the conversion if the module doesn't contain pdl.
   if (pdlModule.getOps<pdl::PatternOp>().empty())
     return success();
@@ -37,7 +39,7 @@ static LogicalResult convertPDLToPDLInterp(ModuleOp pdlModule) {
   // mode.
   pdlPipeline.enableVerifier(false);
 #endif
-  pdlPipeline.addPass(createPDLToPDLInterpPass());
+  pdlPipeline.addPass(createPDLToPDLInterpPass(configMap));
   if (failed(pdlPipeline.run(pdlModule)))
     return failure();
 
@@ -123,13 +125,16 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
   ModuleOp pdlModule = pdlPatterns.getModule();
   if (!pdlModule)
     return;
-  if (failed(convertPDLToPDLInterp(pdlModule)))
+  DenseMap<Operation *, PDLPatternConfigSet *> configMap =
+      pdlPatterns.takeConfigMap();
+  if (failed(convertPDLToPDLInterp(pdlModule, configMap)))
     llvm::report_fatal_error(
         "failed to lower PDL pattern module to the PDL Interpreter");
 
   // Generate the pdl bytecode.
   impl->pdlByteCode = std::make_unique<detail::PDLByteCode>(
-      pdlModule, pdlPatterns.takeConstraintFunctions(),
+      pdlModule, pdlPatterns.takeConfigs(), configMap,
+      pdlPatterns.takeConstraintFunctions(),
       pdlPatterns.takeRewriteFunctions());
 }
 

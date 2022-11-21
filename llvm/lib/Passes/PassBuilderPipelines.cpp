@@ -200,6 +200,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
   CallGraphProfile = true;
   MergeFunctions = EnableMergeFunctions;
+  InlinerThreshold = -1;
   EagerlyInvalidateAnalyses = EnableEagerlyInvalidateAnalyses;
 }
 
@@ -719,7 +720,11 @@ static InlineParams getInlineParamsFromOptLevel(OptimizationLevel Level) {
 ModuleInlinerWrapperPass
 PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
                                   ThinOrFullLTOPhase Phase) {
-  InlineParams IP = getInlineParamsFromOptLevel(Level);
+  InlineParams IP;
+  if (PTO.InlinerThreshold == -1)
+    IP = getInlineParamsFromOptLevel(Level);
+  else
+    IP = getInlineParams(PTO.InlinerThreshold);
   // For PreLinkThinLTO + SamplePGO, set hot-caller threshold to 0 to
   // disable hot callsite inline (as much as possible [1]) because it makes
   // profile annotation in the backend inaccurate.

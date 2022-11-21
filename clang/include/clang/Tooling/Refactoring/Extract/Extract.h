@@ -22,7 +22,7 @@ public:
   /// Initiates the extract function refactoring operation.
   ///
   /// \param Code     The selected set of statements.
-  /// \param DeclName The name name of the extract function. If None,
+  /// \param DeclName The name of the extract function. If None,
   ///                 "extracted" is used.
   static Expected<ExtractFunction> initiate(RefactoringRuleContext &Context,
                                             CodeRangeASTSelection Code,

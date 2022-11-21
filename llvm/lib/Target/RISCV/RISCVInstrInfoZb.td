@@ -101,12 +101,6 @@ def BSETINVTwoBitsMask : PatLeaf<(imm), [{
   return countPopulation(N->getZExtValue()) == 2;
 }]>;
 
-def TrailingZerosXForm : SDNodeXForm<imm, [{
-  uint64_t I = N->getZExtValue();
-  return CurDAG->getTargetConstant(countTrailingZeros(I), SDLoc(N),
-                                   N->getValueType(0));
-}]>;
-
 def BSETINVTwoBitsMaskHigh : SDNodeXForm<imm, [{
   uint64_t I = N->getZExtValue();
   return CurDAG->getTargetConstant(63 - countLeadingZeros(I), SDLoc(N),
@@ -247,6 +241,16 @@ def non_imm12 : PatLeaf<(XLenVT GPR:$a), [{
   auto *C = dyn_cast<ConstantSDNode>(N);
   return !C || !isInt<12>(C->getSExtValue());
 }]>;
+
+def Shifted32OnesMask : PatLeaf<(imm), [{
+  uint64_t Imm = N->getZExtValue();
+  if (!isShiftedMask_64(Imm))
+    return false;
+
+  unsigned TrailingZeros = countTrailingZeros(Imm);
+  return TrailingZeros > 0 && TrailingZeros < 32 &&
+         Imm == UINT64_C(0xFFFFFFFF) << TrailingZeros;
+}], TrailingZeros>;
 
 def sh1add_op : ComplexPattern<XLenVT, 1, "selectSH1ADDOp", [], [], 6>;
 def sh2add_op : ComplexPattern<XLenVT, 1, "selectSH2ADDOp", [], [], 6>;
@@ -562,10 +566,10 @@ def : Pat<(seteq (and GPR:$rs1, SingleBitSetMask:$mask), 0),
           (BEXTI (XORI GPR:$rs1, -1), SingleBitSetMask:$mask)>;
 
 def : Pat<(or GPR:$r, BSETINVTwoBitsMask:$i),
-          (BSETI (BSETI GPR:$r, (TrailingZerosXForm BSETINVTwoBitsMask:$i)),
+          (BSETI (BSETI GPR:$r, (TrailingZeros BSETINVTwoBitsMask:$i)),
                  (BSETINVTwoBitsMaskHigh BSETINVTwoBitsMask:$i))>;
 def : Pat<(xor GPR:$r, BSETINVTwoBitsMask:$i),
-          (BINVI (BINVI GPR:$r, (TrailingZerosXForm BSETINVTwoBitsMask:$i)),
+          (BINVI (BINVI GPR:$r, (TrailingZeros BSETINVTwoBitsMask:$i)),
                  (BSETINVTwoBitsMaskHigh BSETINVTwoBitsMask:$i))>;
 def : Pat<(or GPR:$r, BSETINVORIMask:$i),
           (BSETI (ORI GPR:$r, (BSETINVORIMaskLow BSETINVORIMask:$i)),
@@ -702,13 +706,13 @@ def : Pat<(add GPR:$r, CSImm12MulBy8:$i),
 
 def : Pat<(mul GPR:$r, C3LeftShift:$i),
           (SLLI (SH1ADD GPR:$r, GPR:$r),
-                (TrailingZerosXForm C3LeftShift:$i))>;
+                (TrailingZeros C3LeftShift:$i))>;
 def : Pat<(mul GPR:$r, C5LeftShift:$i),
           (SLLI (SH2ADD GPR:$r, GPR:$r),
-                (TrailingZerosXForm C5LeftShift:$i))>;
+                (TrailingZeros C5LeftShift:$i))>;
 def : Pat<(mul GPR:$r, C9LeftShift:$i),
           (SLLI (SH3ADD GPR:$r, GPR:$r),
-                (TrailingZerosXForm C9LeftShift:$i))>;
+                (TrailingZeros C9LeftShift:$i))>;
 
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 11)),
           (SH1ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r)>;
@@ -737,6 +741,12 @@ def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 81)),
 let Predicates = [HasStdExtZba, IsRV64] in {
 def : Pat<(i64 (shl (and GPR:$rs1, 0xFFFFFFFF), uimm5:$shamt)),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
+// Match a shifted 0xffffffff mask. Use SRLI to clear the LSBs and SLLI_UW to
+// mask and shift.
+def : Pat<(i64 (and GPR:$rs1, Shifted32OnesMask:$mask)),
+          (SLLI_UW (SRLI GPR:$rs1, Shifted32OnesMask:$mask),
+                   Shifted32OnesMask:$mask)>;
+
 def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFF), non_imm12:$rs2)),
           (ADD_UW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i64 (and GPR:$rs, 0xFFFFFFFF)), (ADD_UW GPR:$rs, X0)>;
@@ -771,14 +781,14 @@ def : Pat<(i64 (add (and GPR:$rs1, 0x7FFFFFFF8), non_imm12:$rs2)),
           (SH3ADD_UW (SRLI GPR:$rs1, 3), GPR:$rs2)>;
 
 def : Pat<(mul (binop_oneuse<and> GPR:$r, 0xFFFFFFFF), C3LeftShiftUW:$i),
-          (SH1ADD (SLLI_UW GPR:$r, (TrailingZerosXForm C3LeftShiftUW:$i)),
-                  (SLLI_UW GPR:$r, (TrailingZerosXForm C3LeftShiftUW:$i)))>;
+          (SH1ADD (SLLI_UW GPR:$r, (TrailingZeros C3LeftShiftUW:$i)),
+                  (SLLI_UW GPR:$r, (TrailingZeros C3LeftShiftUW:$i)))>;
 def : Pat<(mul (binop_oneuse<and> GPR:$r, 0xFFFFFFFF), C5LeftShiftUW:$i),
-          (SH2ADD (SLLI_UW GPR:$r, (TrailingZerosXForm C5LeftShiftUW:$i)),
-                  (SLLI_UW GPR:$r, (TrailingZerosXForm C5LeftShiftUW:$i)))>;
+          (SH2ADD (SLLI_UW GPR:$r, (TrailingZeros C5LeftShiftUW:$i)),
+                  (SLLI_UW GPR:$r, (TrailingZeros C5LeftShiftUW:$i)))>;
 def : Pat<(mul (binop_oneuse<and> GPR:$r, 0xFFFFFFFF), C9LeftShiftUW:$i),
-          (SH3ADD (SLLI_UW GPR:$r, (TrailingZerosXForm C9LeftShiftUW:$i)),
-                  (SLLI_UW GPR:$r, (TrailingZerosXForm C9LeftShiftUW:$i)))>;
+          (SH3ADD (SLLI_UW GPR:$r, (TrailingZeros C9LeftShiftUW:$i)),
+                  (SLLI_UW GPR:$r, (TrailingZeros C9LeftShiftUW:$i)))>;
 } // Predicates = [HasStdExtZba, IsRV64]
 
 let Predicates = [HasStdExtZbcOrZbkc] in {

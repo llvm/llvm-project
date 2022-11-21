@@ -678,6 +678,12 @@ def SchedWritePSADBW
  : X86SchedWriteWidths<WritePSADBW, WritePSADBWX,
                        WritePSADBWY, WritePSADBWZ>;
 
+def SchedWriteVecExtend
+ : X86SchedWriteWidths<WriteShuffle, WriteShuffleX,
+                       WriteVPMOV256, WriteVPMOV256>;
+def SchedWriteVecTruncate
+ : X86SchedWriteWidths<WriteVPMOV256, WriteVPMOV256,
+                       WriteVPMOV256, WriteVPMOV256>;
 def SchedWriteShuffle
  : X86SchedWriteWidths<WriteShuffle, WriteShuffleX,
                        WriteShuffleY, WriteShuffleZ>;

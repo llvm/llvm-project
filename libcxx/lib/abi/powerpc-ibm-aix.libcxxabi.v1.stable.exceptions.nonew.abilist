@@ -578,6 +578,9 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__134__construct_barrier_algorithm_baseERl', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13cinE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr19new_delete_resourceEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr20get_default_resourceEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr20null_memory_resourceEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -914,6 +917,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__120__codecvt_utf8_utf16IDiEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__120__codecvt_utf8_utf16IDsEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__120__codecvt_utf8_utf16IwEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__13pmr15memory_resourceE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__13pmr25monotonic_buffer_resourceE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__13pmr26synchronized_pool_resourceE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__13pmr28unsynchronized_pool_resourceE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
@@ -972,6 +976,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__120__codecvt_utf8_utf16IDiEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__120__codecvt_utf8_utf16IDsEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__120__codecvt_utf8_utf16IwEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__13pmr15memory_resourceE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__13pmr25monotonic_buffer_resourceE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__13pmr26synchronized_pool_resourceE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__13pmr28unsynchronized_pool_resourceE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
@@ -1033,6 +1038,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDiEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDsEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IwEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__13pmr15memory_resourceE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__13pmr25monotonic_buffer_resourceE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__13pmr26synchronized_pool_resourceE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__13pmr28unsynchronized_pool_resourceE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
@@ -1852,7 +1858,6 @@
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__120__time_get_c_storageIcEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__120__time_get_c_storageIwEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
-{'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__13pmr15memory_resourceE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__13pmr26__null_memory_resource_impE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__13pmr32__new_delete_memory_resource_impE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__17collateIcEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
@@ -1928,7 +1933,6 @@
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__120__time_get_c_storageIcEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__120__time_get_c_storageIwEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
-{'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__13pmr15memory_resourceE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__13pmr26__null_memory_resource_impE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__13pmr32__new_delete_memory_resource_impE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__17collateIcEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}

@@ -51,4 +51,4 @@ int f() {
 // CHECK-O1-NEXT:   store i32 %[[INC]], ptr %[[J_ADDR]]
 // CHECK-O1-NEXT:   ret i32 %[[INC]]
 //
-// CHECK: attributes #[[ATTR_NUM]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+// CHECK: attributes #[[ATTR_NUM]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

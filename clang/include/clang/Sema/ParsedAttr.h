@@ -432,7 +432,7 @@ private:
     return *getTrailingObjects<ParsedType>();
   }
 
-  /// The property data immediately follows the object is is mutually exclusive
+  /// The property data immediately follows the object is mutually exclusive
   /// with arguments.
   detail::PropertyData &getPropertyDataBuffer() {
     assert(IsProperty);

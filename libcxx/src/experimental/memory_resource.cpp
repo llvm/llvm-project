@@ -8,6 +8,8 @@
 
 #include <experimental/memory_resource>
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
+
 #ifndef _LIBCPP_HAS_NO_ATOMIC_HEADER
 #  include <atomic>
 #elif !defined(_LIBCPP_HAS_NO_THREADS)

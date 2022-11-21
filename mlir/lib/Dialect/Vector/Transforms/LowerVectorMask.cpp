@@ -46,9 +46,8 @@ struct MaskOpRewritePattern : OpRewritePattern<MaskOp> {
   using OpRewritePattern<MaskOp>::OpRewritePattern;
 
 private:
-  LogicalResult
-  matchAndRewrite(MaskOp maskOp,
-                  PatternRewriter &rewriter) const override final {
+  LogicalResult matchAndRewrite(MaskOp maskOp,
+                                PatternRewriter &rewriter) const final {
     MaskableOpInterface maskableOp = maskOp.getMaskableOp();
     SourceOp sourceOp = dyn_cast<SourceOp>(maskableOp.getOperation());
     if (!sourceOp)

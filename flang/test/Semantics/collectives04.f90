@@ -79,7 +79,8 @@ program test_co_broadcast
   !ERROR: missing mandatory 'source_image=' argument
   call co_broadcast(a=c, stat=status, errmsg=message)
 
-  !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'a=' must be definable
+  !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'a=' is not definable
+  !BECAUSE: '2_4' is not a variable or pointer
   call co_broadcast(a=1+1, source_image=1)
 
   !ERROR: 'a' argument to 'co_broadcast' may not be a coindexed object
@@ -93,7 +94,8 @@ program test_co_broadcast
   !ERROR: 'source_image=' argument has unacceptable rank 1
   call co_broadcast(c, source_image=integer_array)
 
-  !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'stat=' must be definable
+  !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'stat=' is not definable
+  !BECAUSE: '2_4' is not a variable or pointer
   call co_broadcast(a=i, source_image=1, stat=1+1, errmsg=message)
 
   !ERROR: 'stat' argument to 'co_broadcast' may not be a coindexed object
@@ -106,7 +108,8 @@ program test_co_broadcast
   !ERROR: 'stat=' argument has unacceptable rank 1
   call co_broadcast(i, stat=integer_array, source_image=1)
 
-  !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'errmsg=' must be definable
+  !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'errmsg=' is not definable
+  !BECAUSE: '"c"' is not a variable or pointer
   call co_broadcast(a=i, source_image=1, stat=status, errmsg='c')
 
   !ERROR: 'errmsg' argument to 'co_broadcast' may not be a coindexed object

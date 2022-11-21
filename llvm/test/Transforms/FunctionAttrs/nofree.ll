@@ -34,7 +34,7 @@ entry:
 declare void @free(ptr nocapture) local_unnamed_addr #2
 
 define i32 @_Z4foo3Pi(ptr nocapture readonly %a) local_unnamed_addr #3 {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind readonly willreturn uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; CHECK-LABEL: @_Z4foo3Pi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A:%.*]], align 4
@@ -81,8 +81,8 @@ define noalias ptr @_Z4foo6Pm(ptr nocapture %a) local_unnamed_addr #1 {
 ; CHECK: Function Attrs: nounwind uwtable
 ; CHECK-LABEL: @_Z4foo6Pm(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @realloc(ptr [[A]], i64 [[TMP1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @realloc(ptr [[A]], i64 [[TMP0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:

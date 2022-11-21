@@ -165,6 +165,23 @@ inline bool operator==(ArrayRef<Type> lhs, const ValueTypeRange<RangeT> &rhs) {
          std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
+//===----------------------------------------------------------------------===//
+// SubElementInterfaces
+//===----------------------------------------------------------------------===//
+
+/// Enable TypeRange to be introspected for sub-elements.
+template <>
+struct AttrTypeSubElementHandler<TypeRange> {
+  static void walk(TypeRange param, AttrTypeSubElementWalker &walker) {
+    walker.walkRange(param);
+  }
+  static TypeRange replace(TypeRange param,
+                           AttrSubElementReplacements &attrRepls,
+                           TypeSubElementReplacements &typeRepls) {
+    return typeRepls.take_front(param.size());
+  }
+};
+
 } // namespace mlir
 
 namespace llvm {

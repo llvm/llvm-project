@@ -131,7 +131,7 @@ public:
 
 class CFGStmt : public CFGElement {
 public:
-  explicit CFGStmt(Stmt *S, Kind K = Statement) : CFGElement(K, S) {
+  explicit CFGStmt(const Stmt *S, Kind K = Statement) : CFGElement(K, S) {
     assert(isKind(*this));
   }
 
@@ -155,7 +155,8 @@ protected:
 /// this is only used by the analyzer's CFG.
 class CFGConstructor : public CFGStmt {
 public:
-  explicit CFGConstructor(CXXConstructExpr *CE, const ConstructionContext *C)
+  explicit CFGConstructor(const CXXConstructExpr *CE,
+                          const ConstructionContext *C)
       : CFGStmt(CE, Constructor) {
     assert(C);
     Data2.setPointer(const_cast<ConstructionContext *>(C));
@@ -185,7 +186,7 @@ class CFGCXXRecordTypedCall : public CFGStmt {
 public:
   /// Returns true when call expression \p CE needs to be represented
   /// by CFGCXXRecordTypedCall, as opposed to a regular CFGStmt.
-  static bool isCXXRecordTypedCall(Expr *E) {
+  static bool isCXXRecordTypedCall(const Expr *E) {
     assert(isa<CallExpr>(E) || isa<ObjCMessageExpr>(E));
     // There is no such thing as reference-type expression. If the function
     // returns a reference, it'll return the respective lvalue or xvalue
@@ -194,7 +195,7 @@ public:
            E->getType().getCanonicalType()->getAsCXXRecordDecl();
   }
 
-  explicit CFGCXXRecordTypedCall(Expr *E, const ConstructionContext *C)
+  explicit CFGCXXRecordTypedCall(const Expr *E, const ConstructionContext *C)
       : CFGStmt(E, CXXRecordTypedCall) {
     assert(isCXXRecordTypedCall(E));
     assert(C && (isa<TemporaryObjectConstructionContext>(C) ||
@@ -225,7 +226,7 @@ private:
 /// list.
 class CFGInitializer : public CFGElement {
 public:
-  explicit CFGInitializer(CXXCtorInitializer *initializer)
+  explicit CFGInitializer(const CXXCtorInitializer *initializer)
       : CFGElement(Initializer, initializer) {}
 
   CXXCtorInitializer* getInitializer() const {
@@ -264,7 +265,7 @@ private:
 };
 
 /// Represents the point where a loop ends.
-/// This element is is only produced when building the CFG for the static
+/// This element is only produced when building the CFG for the static
 /// analyzer and hidden behind the 'cfg-loopexit' analyzer config flag.
 ///
 /// Note: a loop exit element can be reached even when the loop body was never
@@ -482,7 +483,7 @@ private:
 /// expression for temporary object.
 class CFGTemporaryDtor : public CFGImplicitDtor {
 public:
-  CFGTemporaryDtor(CXXBindTemporaryExpr *expr)
+  CFGTemporaryDtor(const CXXBindTemporaryExpr *expr)
       : CFGImplicitDtor(TemporaryDtor, expr, nullptr) {}
 
   const CXXBindTemporaryExpr *getBindTemporaryExpr() const {

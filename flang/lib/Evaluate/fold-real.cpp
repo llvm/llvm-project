@@ -127,15 +127,15 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             ? common::RoundingMode::ToZero
             : common::RoundingMode::TiesAwayFromZero};
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
-        ScalarFunc<T, T>([&name, &context, mode](
-                             const Scalar<T> &x) -> Scalar<T> {
-          ValueWithRealFlags<Scalar<T>> y{x.ToWholeNumber(mode)};
-          if (y.flags.test(RealFlag::Overflow)) {
-            context.messages().Say(
-                "%s intrinsic folding overflow"_warn_en_US, name);
-          }
-          return y.value;
-        }));
+        ScalarFunc<T, T>(
+            [&name, &context, mode](const Scalar<T> &x) -> Scalar<T> {
+              ValueWithRealFlags<Scalar<T>> y{x.ToWholeNumber(mode)};
+              if (y.flags.test(RealFlag::Overflow)) {
+                context.messages().Say(
+                    "%s intrinsic folding overflow"_warn_en_US, name);
+              }
+              return y.value;
+            }));
   } else if (name == "dim") {
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
         ScalarFunc<T, T, T>(

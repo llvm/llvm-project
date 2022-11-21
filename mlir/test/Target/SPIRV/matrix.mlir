@@ -1,4 +1,4 @@
-// RUN: mlir-translate -split-input-file -test-spirv-roundtrip %s | FileCheck %s
+// RUN: mlir-translate -no-implicit-module -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   // CHECK-LABEL: @matrix_access_chain

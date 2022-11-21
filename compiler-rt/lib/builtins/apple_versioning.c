@@ -138,13 +138,13 @@ NOT_HERE_BEFORE_10_6(__udivti3)
 NOT_HERE_BEFORE_10_6(__umoddi3)
 NOT_HERE_BEFORE_10_6(__umodti3)
 
-#if __ppc__
+#if __powerpc__
 NOT_HERE_BEFORE_10_6(__gcc_qadd)
 NOT_HERE_BEFORE_10_6(__gcc_qdiv)
 NOT_HERE_BEFORE_10_6(__gcc_qmul)
 NOT_HERE_BEFORE_10_6(__gcc_qsub)
 NOT_HERE_BEFORE_10_6(__trampoline_setup)
-#endif // __ppc__
+#endif // __powerpc__
 
 NOT_HERE_IN_10_8_AND_EARLIER(__atomic_compare_exchange)
 NOT_HERE_IN_10_8_AND_EARLIER(__atomic_compare_exchange_1)

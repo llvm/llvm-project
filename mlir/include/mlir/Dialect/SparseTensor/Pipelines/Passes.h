@@ -63,6 +63,10 @@ struct SparseCompilerOptions
       *this, "test-bufferization-analysis-only",
       desc("Run only the inplacability analysis"), init(false)};
 
+  PassOptions::Option<bool> enableBufferInitialization{
+      *this, "enable-buffer-initialization",
+      desc("Enable zero-initialization of memory buffers"), init(false)};
+
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
     return SparsificationOptions(parallelization);

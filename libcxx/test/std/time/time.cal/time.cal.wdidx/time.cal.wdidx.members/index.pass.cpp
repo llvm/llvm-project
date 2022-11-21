@@ -29,7 +29,8 @@ int main(int, char**)
 
     static_assert( weekday_indexed{}.index() == 0, "");
 
-    for (unsigned i = 1; i <= 5; ++i)
+    // This is the valid range of values defined in [time.cal.wdidx.members]/1.
+    for (unsigned i = 0; i <= 7; ++i)
     {
         weekday_indexed wdi(weekday{2}, i);
         assert( static_cast<unsigned>(wdi.index()) == i);

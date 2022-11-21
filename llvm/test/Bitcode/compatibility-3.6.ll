@@ -1168,8 +1168,8 @@ define void @intrinsics.codegen() {
 ; CHECK: attributes #15 = { nounwind }
 ; CHECK: attributes #16 = { noinline optnone }
 ; CHECK: attributes #17 = { optsize }
-; CHECK: attributes #18 = { readnone }
-; CHECK: attributes #19 = { readonly }
+; CHECK: attributes #18 = { memory(none) }
+; CHECK: attributes #19 = { memory(read) }
 ; CHECK: attributes #20 = { returns_twice }
 ; CHECK: attributes #21 = { sanitize_address }
 ; CHECK: attributes #22 = { sanitize_memory }
@@ -1179,12 +1179,12 @@ define void @intrinsics.codegen() {
 ; CHECK: attributes #26 = { sspstrong }
 ; CHECK: attributes #27 = { uwtable }
 ; CHECK: attributes #28 = { "cpu"="cortex-a8" }
-; CHECK: attributes #29 = { nocallback nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #29 = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #30 = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #31 = { argmemonly nounwind readonly }
-; CHECK: attributes #32 = { argmemonly nounwind }
-; CHECK: attributes #33 = { nounwind readonly }
-; CHECK: attributes #34 = { inaccessiblemem_or_argmemonly nocallback nofree nosync nounwind willreturn }
+; CHECK: attributes #31 = { nounwind memory(argmem: read) }
+; CHECK: attributes #32 = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #33 = { nounwind memory(read) }
+; CHECK: attributes #34 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #35 = { builtin }
 
 ;; Metadata

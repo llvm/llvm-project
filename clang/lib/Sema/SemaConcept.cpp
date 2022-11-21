@@ -146,6 +146,17 @@ bool Sema::CheckConstraintExpression(const Expr *ConstraintExpression,
   return true;
 }
 
+namespace {
+struct SatisfactionStackRAII {
+  Sema &SemaRef;
+  SatisfactionStackRAII(Sema &SemaRef, llvm::FoldingSetNodeID FSNID)
+      : SemaRef(SemaRef) {
+      SemaRef.PushSatisfactionStackEntry(FSNID);
+  }
+  ~SatisfactionStackRAII() { SemaRef.PopSatisfactionStackEntry(); }
+};
+} // namespace
+
 template <typename AtomicEvaluator>
 static ExprResult
 calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
@@ -258,6 +269,29 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
   return SubstitutedAtomicExpr;
 }
 
+static bool
+DiagRecursiveConstraintEval(Sema &S, llvm::FoldingSetNodeID &ID, const Expr *E,
+                            const MultiLevelTemplateArgumentList &MLTAL) {
+  E->Profile(ID, S.Context, /*Canonical=*/true);
+  for (const auto &List : MLTAL)
+    for (const auto &TemplateArg : List.Args)
+      TemplateArg.Profile(ID, S.Context);
+
+  // Note that we have to do this with our own collection, because there are
+  // times where a constraint-expression check can cause us to need to evaluate
+  // other constriants that are unrelated, such as when evaluating a recovery
+  // expression, or when trying to determine the constexpr-ness of special
+  // members. Otherwise we could just use the
+  // Sema::InstantiatingTemplate::isAlreadyBeingInstantiated function.
+  if (S.SatisfactionStackContains(ID)) {
+    S.Diag(E->getExprLoc(), diag::err_constraint_depends_on_self)
+        << const_cast<Expr *>(E) << E->getSourceRange();
+    return true;
+  }
+
+  return false;
+}
+
 static ExprResult calculateConstraintSatisfaction(
     Sema &S, const NamedDecl *Template, SourceLocation TemplateNameLoc,
     const MultiLevelTemplateArgumentList &MLTAL, const Expr *ConstraintExpr,
@@ -278,6 +312,16 @@ static ExprResult calculateConstraintSatisfaction(
               AtomicExpr->getSourceRange());
           if (Inst.isInvalid())
             return ExprError();
+
+          llvm::FoldingSetNodeID ID;
+          if (DiagRecursiveConstraintEval(S, ID, AtomicExpr, MLTAL)) {
+            Satisfaction.IsSatisfied = false;
+            Satisfaction.ContainsErrors = true;
+            return ExprEmpty();
+          }
+
+          SatisfactionStackRAII StackRAII(S, ID);
+
           // We do not want error diagnostics escaping here.
           Sema::SFINAETrap Trap(S);
           SubstitutedExpression =
@@ -414,6 +458,7 @@ bool Sema::CheckConstraintSatisfaction(
   if (::CheckConstraintSatisfaction(*this, Template, ConstraintExprs,
                                     ConvertedConstraints, TemplateArgsLists,
                                     TemplateIDRange, *Satisfaction)) {
+    OutSatisfaction = *Satisfaction;
     return true;
   }
 

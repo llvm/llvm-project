@@ -1537,8 +1537,9 @@ protected:
       StructuredData::DictionarySP crash_info_sp = *expected_crash_info;
 
       if (crash_info_sp) {
+        strm.EOL();
         strm.PutCString("Extended Crash Information:\n");
-        crash_info_sp->Dump(strm);
+        crash_info_sp->GetDescription(strm);
       }
     }
 

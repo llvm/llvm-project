@@ -133,8 +133,8 @@ func.func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: m
 // CHECK:       memref.dim %{{.*}}, %c0 : memref<?x?xf32>
 // CHECK-NEXT:  affine.for %{{.*}} = 0 to %{{.*}} step 32 {
 // CHECK-NEXT:    affine.for %{{.*}} = 0 to %{{.*}} step 32 {
-// CHECK-NEXT:      affine.for %{{.*}} = #map(%{{.*}}) to min [[$UBMAP]](%{{.*}})[%{{.*}}] {
-// CHECK-NEXT:        affine.for %{{.*}} = #map(%{{.*}}) to min [[$UBMAP]](%{{.*}})[%{{.*}}] {
+// CHECK-NEXT:      affine.for %{{.*}} = #[[$MAP:.*]](%{{.*}}) to min [[$UBMAP]](%{{.*}})[%{{.*}}] {
+// CHECK-NEXT:        affine.for %{{.*}} = #[[$MAP]](%{{.*}}) to min [[$UBMAP]](%{{.*}})[%{{.*}}] {
 // CHECK-NEXT:          affine.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
 // CHECK-NEXT:          affine.for %{{.*}} = 0 to %{{.*}} {
 // CHECK-NEXT:            affine.load

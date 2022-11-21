@@ -6561,10 +6561,9 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
       return None;
     RetI = RetI->user_back();
   }
-  if (match(RetI, m_Mul(m_Value(), m_Value())) &&
+
+  if (match(RetI, m_OneUse(m_Mul(m_Value(), m_Value()))) &&
       RetI->user_back()->getOpcode() == Instruction::Add) {
-    if (!RetI->hasOneUser())
-      return None;
     RetI = RetI->user_back();
   }
 

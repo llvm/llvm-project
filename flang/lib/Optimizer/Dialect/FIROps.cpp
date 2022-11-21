@@ -2970,8 +2970,11 @@ void fir::SelectTypeOp::print(mlir::OpAsmPrinter &p) {
 }
 
 mlir::LogicalResult fir::SelectTypeOp::verify() {
-  if (!(getSelector().getType().isa<fir::BoxType>()))
-    return emitOpError("must be a boxed type");
+  if (!(getSelector().getType().isa<fir::BaseBoxType>()))
+    return emitOpError("must be a fir.class or fir.box type");
+  if (auto boxType = getSelector().getType().dyn_cast<fir::BoxType>())
+    if (!boxType.getEleTy().isa<mlir::NoneType>())
+      return emitOpError("selector must be polymorphic");
   auto cases =
       getOperation()->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
   auto count = getNumDest();

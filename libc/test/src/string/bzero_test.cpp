@@ -6,44 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/span.h"
+#include "memory_utils/memory_check_utils.h"
 #include "src/string/bzero.h"
 #include "utils/UnitTest/Test.h"
 
-using __llvm_libc::cpp::array;
-using __llvm_libc::cpp::span;
-using Data = array<char, 2048>;
+namespace __llvm_libc {
 
-static const span<const char> k_deadcode("DEADC0DE", 8);
-
-// Returns a Data object filled with a repetition of `filler`.
-Data get_data(span<const char> filler) {
-  Data out;
-  for (size_t i = 0; i < out.size(); ++i)
-    out[i] = filler[i % filler.size()];
-  return out;
+// Adapt CheckMemset signature to op implementation signatures.
+template <auto FnImpl>
+void BzeroAdaptor(cpp::span<char> p1, uint8_t value, size_t size) {
+  assert(value == 0);
+  FnImpl(p1.begin(), size);
 }
 
-TEST(LlvmLibcBzeroTest, Thorough) {
-  const Data dirty = get_data(k_deadcode);
-  for (size_t count = 0; count < 1024; ++count) {
-    for (size_t align = 0; align < 64; ++align) {
-      auto buffer = dirty;
-      char *const dst = &buffer[align];
-      __llvm_libc::bzero(dst, count);
-      // Everything before copy is untouched.
-      for (size_t i = 0; i < align; ++i)
-        ASSERT_EQ(buffer[i], dirty[i]);
-      // Everything in between is copied.
-      for (size_t i = 0; i < count; ++i)
-        ASSERT_EQ(buffer[align + i], char(0));
-      // Everything after copy is untouched.
-      for (size_t i = align + count; i < dirty.size(); ++i)
-        ASSERT_EQ(buffer[i], dirty[i]);
-    }
+TEST(LlvmLibcBzeroTest, SizeSweep) {
+  static constexpr size_t kMaxSize = 1024;
+  static constexpr auto Impl = BzeroAdaptor<__llvm_libc::bzero>;
+  Buffer DstBuffer(kMaxSize);
+  for (size_t size = 0; size < kMaxSize; ++size) {
+    auto dst = DstBuffer.span().subspan(0, size);
+    ASSERT_TRUE((CheckMemset<Impl>(dst, 0, size)));
   }
 }
 
-// FIXME: Add tests with reads and writes on the boundary of a read/write
-// protected page to check we're not reading nor writing prior/past the allowed
-// regions.
+} // namespace __llvm_libc

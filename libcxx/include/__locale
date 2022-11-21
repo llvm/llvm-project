@@ -12,16 +12,18 @@
 
 #include <__availability>
 #include <__config>
-#include <__memory/shared_ptr.h>
 #include <cctype>
 #include <cstdint>
 #include <locale.h>
 #include <mutex>
 #include <string>
 
+// Some platforms require more includes than others. Keep the includes on all plaforms for now.
+#include <cstddef>
+#include <cstring>
+
 #if defined(_LIBCPP_MSVCRT_LIKE)
 # include <__support/win32/locale_win32.h>
-# include <cstring>
 #elif defined(_AIX) || defined(__MVS__)
 # include <__support/ibm/xlocale.h>
 #elif defined(__ANDROID__)

@@ -6127,6 +6127,33 @@ TEST_F(FormatTest, LayoutStatementsAroundPreprocessorDirectives) {
                "#endif\n"
                "  x;\n"
                "}");
+
+  verifyFormat("#if 0\n"
+               "#endif\n"
+               "#if X\n"
+               "int something_fairly_long; // Align here please\n"
+               "#endif                     // Should be aligned");
+
+  verifyFormat("#if 0\n"
+               "#endif\n"
+               "#if X\n"
+               "#else  // Align\n"
+               ";\n"
+               "#endif // Align");
+
+  verifyFormat("void SomeFunction(int param1,\n"
+               "                  template <\n"
+               "#ifdef A\n"
+               "#if 0\n"
+               "#endif\n"
+               "                      MyType<Some>>\n"
+               "#else\n"
+               "                      Type1, Type2>\n"
+               "#endif\n"
+               "                  param2,\n"
+               "                  param3) {\n"
+               "  f();\n"
+               "}");
 }
 
 TEST_F(FormatTest, GraciouslyHandleIncorrectPreprocessorConditions) {
@@ -23293,7 +23320,10 @@ TEST(FormatStyle, GetStyleOfFile) {
                          llvm::MemoryBuffer::getMemBuffer(
                              "BasedOnStyle: InheritParentConfig\n"
                              "WhitespaceSensitiveMacros: ['FOO', 'BAR']")));
-  std::vector<std::string> NonDefaultWhiteSpaceMacros{"FOO", "BAR"};
+  std::vector<std::string> NonDefaultWhiteSpaceMacros =
+      Style9->WhitespaceSensitiveMacros;
+  NonDefaultWhiteSpaceMacros[0] = "FOO";
+  NonDefaultWhiteSpaceMacros[1] = "BAR";
 
   ASSERT_NE(Style9->WhitespaceSensitiveMacros, NonDefaultWhiteSpaceMacros);
   Style9 = getStyle("file", "/e/sub/sub/code.cpp", "none", "", &FS);
@@ -23349,8 +23379,8 @@ TEST(FormatStyle, GetStyleOfFile) {
   ASSERT_EQ(*Style9, SubSubStyle);
 
   // Test 9.6: use command line style with inheritance
-  Style9 = getStyle("{BasedOnStyle: InheritParentConfig}", "/e/sub/code.cpp",
-                    "none", "", &FS);
+  Style9 = getStyle("{BasedOnStyle: InheritParentConfig}",
+                    "/e/sub/sub/code.cpp", "none", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, SubSubStyle);
 
@@ -25520,6 +25550,54 @@ TEST_F(FormatTest, ShortTemplatedArgumentLists) {
 
   verifyFormat("struct Z : X<decltype([] { return 0; }){}> {};", Style);
   verifyFormat("template <int N> struct Foo<char[N]> {};", Style);
+}
+
+TEST_F(FormatTest, MultilineLambdaInConditional) {
+  auto Style = getLLVMStyleWithColumns(70);
+  verifyFormat("auto aLengthyIdentifier = oneExpressionSoThatWeBreak ? []() {\n"
+               "  ;\n"
+               "  return 5;\n"
+               "}()\n"
+               "                                                     : 2;",
+               Style);
+  verifyFormat(
+      "auto aLengthyIdentifier = oneExpressionSoThatWeBreak ? 2 : []() {\n"
+      "  ;\n"
+      "  return 5;\n"
+      "}();",
+      Style);
+
+  Style = getLLVMStyleWithColumns(60);
+  verifyFormat("auto aLengthyIdentifier = oneExpressionSoThatWeBreak\n"
+               "                              ? []() {\n"
+               "                                  ;\n"
+               "                                  return 5;\n"
+               "                                }()\n"
+               "                              : 2;",
+               Style);
+  verifyFormat("auto aLengthyIdentifier =\n"
+               "    oneExpressionSoThatWeBreak ? 2 : []() {\n"
+               "      ;\n"
+               "      return 5;\n"
+               "    }();",
+               Style);
+
+  Style = getLLVMStyleWithColumns(40);
+  verifyFormat("auto aLengthyIdentifier =\n"
+               "    oneExpressionSoThatWeBreak ? []() {\n"
+               "      ;\n"
+               "      return 5;\n"
+               "    }()\n"
+               "                               : 2;",
+               Style);
+  verifyFormat("auto aLengthyIdentifier =\n"
+               "    oneExpressionSoThatWeBreak\n"
+               "        ? 2\n"
+               "        : []() {\n"
+               "            ;\n"
+               "            return 5;\n"
+               "          };",
+               Style);
 }
 
 TEST_F(FormatTest, AlignAfterOpenBracketBlockIndent) {

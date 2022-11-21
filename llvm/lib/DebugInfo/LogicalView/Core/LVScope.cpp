@@ -1192,7 +1192,8 @@ void LVScopeCompileUnit::addSize(LVScope *Scope, LVOffset Lower,
                                  LVOffset Upper) {
   LLVM_DEBUG({
     dbgs() << format(
-        "CU [0x%08x], Scope [0x%08x], Range [0x%08x:0x%08x], Size = %d\n",
+        "CU [0x%08" PRIx64 "], Scope [0x%08" PRIx64 "], Range [0x%08" PRIx64
+        ":0x%08" PRIx64 "], Size = %" PRId64 "\n",
         getOffset(), Scope->getOffset(), Lower, Upper, Upper - Lower);
   });
 
@@ -1548,7 +1549,7 @@ void LVScopeCompileUnit::printScopeSize(const LVScope *Scope, raw_ostream &OS) {
     // implementation-defined rounding inside printing functions.
     float Percentage =
         rint((float(Size) / CUContributionSize) * 100.0 * 100.0) / 100.0;
-    OS << format("%10d (%6.2f%%) : ", Size, Percentage);
+    OS << format("%10" PRId64 " (%6.2f%%) : ", Size, Percentage);
     Scope->print(OS);
 
     // Keep record of the total sizes at each lexical level.

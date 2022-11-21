@@ -662,7 +662,7 @@ not_entry:
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nofree nosync willreturn }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nofree nounwind }
 ; CHECK: attributes #[[ATTR3]] = { noreturn }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #[[ATTR5]] = { nounwind }
 ; CHECK: attributes #[[ATTR6]] = { nosync nounwind willreturn }
 ;.

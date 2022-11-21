@@ -67,6 +67,7 @@ cc_library(
     srcs = glob(
         [
             "lib/Analysis/*.cpp",
+            "lib/Analysis/*.h",
             "lib/Analysis/DataFlow/*.cpp",
         ],
     ),
@@ -433,6 +434,7 @@ cc_library(
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
+        ":TestDialectConversionPDLLPatternsIncGen",
         "//llvm:Support",
         "//mlir:AffineAnalysis",
         "//mlir:AffineDialect",
@@ -441,6 +443,9 @@ cc_library(
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:MathDialect",
+        "//mlir:PDLDialect",
+        "//mlir:PDLInterpDialect",
+        "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:SPIRVDialect",
@@ -788,6 +793,25 @@ gentbl_cc_library(
     deps = [
         ":TestDialect",
         ":TestOpTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TestDialectConversionPDLLPatternsIncGen",
+    includes = ["lib/Dialect/Test"],
+    strip_include_prefix = "lib",
+    tbl_outs = [
+        (
+            ["-x=cpp"],
+            "lib/TestDialectConversionPDLLPatterns.h.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-pdll",
+    td_file = "lib/Transforms/TestDialectConversion.pdll",
+    deps = [
+        ":TestDialect",
+        ":TestOpTdFiles",
+        "//mlir:DialectConversionPdllFiles",
     ],
 )
 

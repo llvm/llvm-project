@@ -18,6 +18,8 @@
 
 // <experimental/memory_resource>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 //-----------------------------------------------------------------------------
 // TESTING memory_resource * get_default_resource() noexcept;
 //         memory_resource * set_default_resource(memory_resource*) noexcept;

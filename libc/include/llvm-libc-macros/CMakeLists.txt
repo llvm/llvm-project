@@ -31,6 +31,12 @@ add_header(
 )
 
 add_header(
+  stdio_macros
+  HDR
+    stdio-macros.h
+)
+
+add_header(
   stdlib_macros
   HDR
     stdlib-macros.h

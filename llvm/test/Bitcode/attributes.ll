@@ -540,8 +540,8 @@ define void @f88() skipprofile { ret void }
 
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
-; CHECK: attributes #2 = { readnone }
-; CHECK: attributes #3 = { readonly }
+; CHECK: attributes #2 = { memory(none) }
+; CHECK: attributes #3 = { memory(read) }
 ; CHECK: attributes #4 = { noinline }
 ; CHECK: attributes #5 = { alwaysinline }
 ; CHECK: attributes #6 = { optsize }
@@ -564,13 +564,13 @@ define void @f88() skipprofile { ret void }
 ; CHECK: attributes #23 = { noinline optnone }
 ; CHECK: attributes #24 = { jumptable }
 ; CHECK: attributes #25 = { convergent }
-; CHECK: attributes #26 = { argmemonly }
+; CHECK: attributes #26 = { memory(argmem: readwrite) }
 ; CHECK: attributes #27 = { norecurse }
-; CHECK: attributes #28 = { inaccessiblememonly }
-; CHECK: attributes #29 = { inaccessiblemem_or_argmemonly }
+; CHECK: attributes #28 = { memory(inaccessiblemem: readwrite) }
+; CHECK: attributes #29 = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #30 = { allocsize(0) }
 ; CHECK: attributes #31 = { allocsize(0,1) }
-; CHECK: attributes #32 = { writeonly }
+; CHECK: attributes #32 = { memory(write) }
 ; CHECK: attributes #33 = { speculatable }
 ; CHECK: attributes #34 = { sanitize_hwaddress }
 ; CHECK: attributes #35 = { shadowcallstack }

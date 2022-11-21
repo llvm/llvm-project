@@ -67,7 +67,7 @@ smopa za0.d, p0/m, p0/z, z0.h, z0.h
 // expected: .s => .b, .d => .h
 
 smopa za0.s, p0/m, p0/m, z0.h, z0.b
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: smopa za0.s, p0/m, p0/m, z0.h, z0.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

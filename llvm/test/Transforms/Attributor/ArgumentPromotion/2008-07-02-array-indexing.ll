@@ -7,7 +7,7 @@
 ; because there is a load of %A in the entry block
 define internal i32 @callee(i1 %C, i32* %A) {
 ;
-; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@callee
 ; CHECK-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -36,13 +36,13 @@ F:
 }
 
 define i32 @foo(i32* %A) {
-; TUNIT: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@foo
 ; TUNIT-SAME: (i32* nocapture nofree readonly [[A:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    [[X:%.*]] = call i32 @callee(i32* nocapture nofree readonly align 4 [[A]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[X]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
 ; CGSCC-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[X:%.*]] = call i32 @callee(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]]) #[[ATTR2:[0-9]+]]
@@ -53,10 +53,10 @@ define i32 @foo(i32* %A) {
 }
 
 ;.
-; TUNIT: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind readonly willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; CGSCC: attributes #[[ATTR1]] = { argmemonly nofree nosync nounwind readonly willreturn }
-; CGSCC: attributes #[[ATTR2]] = { readonly willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(argmem: read) }
+; CGSCC: attributes #[[ATTR2]] = { willreturn }
 ;.
