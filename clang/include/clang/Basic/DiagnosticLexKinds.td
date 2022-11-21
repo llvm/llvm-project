@@ -461,7 +461,7 @@ def ext_pp_gnu_line_directive : Extension<
 def err_pp_invalid_directive : Error<
   "invalid preprocessing directive%select{|, did you mean '#%1'?}0">;
 def warn_pp_invalid_directive : Warning<
-  err_pp_invalid_directive.Text>, InGroup<DiagGroup<"unknown-directives">>;
+  err_pp_invalid_directive.Summary>, InGroup<DiagGroup<"unknown-directives">>;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;
@@ -704,7 +704,7 @@ def ext_pp_bad_paste_ms : ExtWarn<
 def err_pp_operator_used_as_macro_name : Error<
   "C++ operator %0 (aka %1) used as a macro name">;
 def ext_pp_operator_used_as_macro_name : Extension<
-  err_pp_operator_used_as_macro_name.Text>, InGroup<MicrosoftCppMacro>;
+  err_pp_operator_used_as_macro_name.Summary>, InGroup<MicrosoftCppMacro>;
 def err_pp_illegal_floating_literal : Error<
   "floating point literal in preprocessor expression">;
 def err_pp_line_requires_integer : Error<

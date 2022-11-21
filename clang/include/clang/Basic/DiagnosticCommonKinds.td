@@ -269,7 +269,7 @@ def note_constexpr_invalid_template_arg : Note<
   "%select{type_info object|string literal|temporary object|"
   "predefined '%3' variable}2 is not allowed in a template argument">;
 def err_constexpr_invalid_template_arg : Error<
-  note_constexpr_invalid_template_arg.Text>;
+  note_constexpr_invalid_template_arg.Summary>;
 
 // Sema && Frontend
 let CategoryName = "Inline Assembly Issue" in {
