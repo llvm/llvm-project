@@ -395,6 +395,27 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, UseAfterFree) {
   }
 }
 
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, FreeWithTagMismatch) {
+  auto *Allocator = this->Allocator.get();
+
+  if (!Allocator->useMemoryTaggingTestOnly())
+    return;
+
+  // Check that double free is detected.
+  for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
+    const scudo::uptr Size = 1U << SizeLog;
+    EXPECT_DEATH(
+        {
+          disableDebuggerdMaybe();
+          void *P = Allocator->allocate(Size, Origin);
+          scudo::uptr NewTag = (scudo::extractTag(reinterpret_cast<scudo::uptr>(P)) + 1) % 16;
+          void *Q = scudo::addFixedTag(scudo::untagPointer(P), NewTag);
+          Allocator->deallocate(Q, Origin);
+        },
+        "");
+  }
+}
+
 SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
   auto *Allocator = this->Allocator.get();
 
