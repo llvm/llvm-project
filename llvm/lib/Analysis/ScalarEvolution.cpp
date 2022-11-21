@@ -220,6 +220,11 @@ static cl::opt<unsigned>
                   cl::desc("Size of the expression which is considered huge"),
                   cl::init(4096));
 
+static cl::opt<unsigned> RangeIterThreshold(
+    "scev-range-iter-threshold", cl::Hidden,
+    cl::desc("Threshold for switching to iteratively computing SCEV ranges"),
+    cl::init(32));
+
 static cl::opt<bool>
 ClassifyExpressions("scalar-evolution-classify-expressions",
     cl::Hidden, cl::init(true),
@@ -6425,18 +6430,78 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   return FullSet;
 }
 
+const ConstantRange &
+ScalarEvolution::getRangeRefIter(const SCEV *S,
+                                 ScalarEvolution::RangeSignHint SignHint) {
+  DenseMap<const SCEV *, ConstantRange> &Cache =
+      SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED ? UnsignedRanges
+                                                       : SignedRanges;
+  SmallVector<const SCEV *> WorkList;
+  SmallPtrSet<const SCEV *, 8> Seen;
+
+  // Add Expr to the worklist, if Expr is either an N-ary expression or a
+  // SCEVUnknown PHI node.
+  auto AddToWorklist = [&WorkList, &Seen, &Cache](const SCEV *Expr) {
+    if (!Seen.insert(Expr).second)
+      return;
+    if (Cache.find(Expr) != Cache.end())
+      return;
+    if (isa<SCEVNAryExpr>(Expr) || isa<SCEVUDivExpr>(Expr))
+      WorkList.push_back(Expr);
+    else if (auto *UnknownS = dyn_cast<SCEVUnknown>(Expr))
+      if (isa<PHINode>(UnknownS->getValue()))
+        WorkList.push_back(Expr);
+  };
+  AddToWorklist(S);
+
+  // Build worklist by queuing operands of N-ary expressions and phi nodes.
+  for (unsigned I = 0; I != WorkList.size(); ++I) {
+    const SCEV *P = WorkList[I];
+    if (auto *NaryS = dyn_cast<SCEVNAryExpr>(P)) {
+      for (const SCEV *Op : NaryS->operands())
+        AddToWorklist(Op);
+    } else if (auto *UDiv = dyn_cast<SCEVUDivExpr>(P)) {
+      AddToWorklist(UDiv->getLHS());
+      AddToWorklist(UDiv->getRHS());
+    } else {
+      auto *UnknownS = cast<SCEVUnknown>(P);
+      if (const PHINode *P = dyn_cast<PHINode>(UnknownS->getValue())) {
+        if (!PendingPhiRangesIter.insert(P).second)
+          continue;
+        for (auto &Op : reverse(P->operands()))
+          AddToWorklist(getSCEV(Op));
+      }
+    }
+  }
+
+  if (!WorkList.empty()) {
+    // Use getRangeRef to compute ranges for items in the worklist in reverse
+    // order. This will force ranges for earlier operands to be computed before
+    // their users in most cases.
+    for (const SCEV *P :
+         reverse(make_range(WorkList.begin() + 1, WorkList.end()))) {
+      getRangeRef(P, SignHint);
+
+      if (auto *UnknownS = dyn_cast<SCEVUnknown>(P))
+        if (const PHINode *P = dyn_cast<PHINode>(UnknownS->getValue()))
+          PendingPhiRangesIter.erase(P);
+    }
+  }
+
+  return getRangeRef(S, SignHint, 0);
+}
+
 /// Determine the range for a particular SCEV.  If SignHint is
 /// HINT_RANGE_UNSIGNED (resp. HINT_RANGE_SIGNED) then getRange prefers ranges
 /// with a "cleaner" unsigned (resp. signed) representation.
-const ConstantRange &
-ScalarEvolution::getRangeRef(const SCEV *S,
-                             ScalarEvolution::RangeSignHint SignHint) {
+const ConstantRange &ScalarEvolution::getRangeRef(
+    const SCEV *S, ScalarEvolution::RangeSignHint SignHint, unsigned Depth) {
   DenseMap<const SCEV *, ConstantRange> &Cache =
       SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED ? UnsignedRanges
                                                        : SignedRanges;
   ConstantRange::PreferredRangeType RangeType =
-      SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED
-          ? ConstantRange::Unsigned : ConstantRange::Signed;
+      SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED ? ConstantRange::Unsigned
+                                                       : ConstantRange::Signed;
 
   // See if we've computed this range already.
   DenseMap<const SCEV *, ConstantRange>::iterator I = Cache.find(S);
@@ -6445,6 +6510,11 @@ ScalarEvolution::getRangeRef(const SCEV *S,
 
   if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S))
     return setRange(C, SignHint, ConstantRange(C->getAPInt()));
+
+  // Switch to iteratively computing the range for S, if it is part of a deeply
+  // nested expression.
+  if (Depth > RangeIterThreshold)
+    return getRangeRefIter(S, SignHint);
 
   unsigned BitWidth = getTypeSizeInBits(S->getType());
   ConstantRange ConservativeResult(BitWidth, /*isFullSet=*/true);
@@ -6465,23 +6535,23 @@ ScalarEvolution::getRangeRef(const SCEV *S,
   }
 
   if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
-    ConstantRange X = getRangeRef(Add->getOperand(0), SignHint);
+    ConstantRange X = getRangeRef(Add->getOperand(0), SignHint, Depth + 1);
     unsigned WrapType = OBO::AnyWrap;
     if (Add->hasNoSignedWrap())
       WrapType |= OBO::NoSignedWrap;
     if (Add->hasNoUnsignedWrap())
       WrapType |= OBO::NoUnsignedWrap;
     for (unsigned i = 1, e = Add->getNumOperands(); i != e; ++i)
-      X = X.addWithNoWrap(getRangeRef(Add->getOperand(i), SignHint),
+      X = X.addWithNoWrap(getRangeRef(Add->getOperand(i), SignHint, Depth + 1),
                           WrapType, RangeType);
     return setRange(Add, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
 
   if (const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(S)) {
-    ConstantRange X = getRangeRef(Mul->getOperand(0), SignHint);
+    ConstantRange X = getRangeRef(Mul->getOperand(0), SignHint, Depth + 1);
     for (unsigned i = 1, e = Mul->getNumOperands(); i != e; ++i)
-      X = X.multiply(getRangeRef(Mul->getOperand(i), SignHint));
+      X = X.multiply(getRangeRef(Mul->getOperand(i), SignHint, Depth + 1));
     return setRange(Mul, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
@@ -6507,41 +6577,42 @@ ScalarEvolution::getRangeRef(const SCEV *S,
     }
 
     const auto *NAry = cast<SCEVNAryExpr>(S);
-    ConstantRange X = getRangeRef(NAry->getOperand(0), SignHint);
+    ConstantRange X = getRangeRef(NAry->getOperand(0), SignHint, Depth + 1);
     for (unsigned i = 1, e = NAry->getNumOperands(); i != e; ++i)
-      X = X.intrinsic(ID, {X, getRangeRef(NAry->getOperand(i), SignHint)});
+      X = X.intrinsic(
+          ID, {X, getRangeRef(NAry->getOperand(i), SignHint, Depth + 1)});
     return setRange(S, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
 
   if (const SCEVUDivExpr *UDiv = dyn_cast<SCEVUDivExpr>(S)) {
-    ConstantRange X = getRangeRef(UDiv->getLHS(), SignHint);
-    ConstantRange Y = getRangeRef(UDiv->getRHS(), SignHint);
+    ConstantRange X = getRangeRef(UDiv->getLHS(), SignHint, Depth + 1);
+    ConstantRange Y = getRangeRef(UDiv->getRHS(), SignHint, Depth + 1);
     return setRange(UDiv, SignHint,
                     ConservativeResult.intersectWith(X.udiv(Y), RangeType));
   }
 
   if (const SCEVZeroExtendExpr *ZExt = dyn_cast<SCEVZeroExtendExpr>(S)) {
-    ConstantRange X = getRangeRef(ZExt->getOperand(), SignHint);
+    ConstantRange X = getRangeRef(ZExt->getOperand(), SignHint, Depth + 1);
     return setRange(ZExt, SignHint,
                     ConservativeResult.intersectWith(X.zeroExtend(BitWidth),
                                                      RangeType));
   }
 
   if (const SCEVSignExtendExpr *SExt = dyn_cast<SCEVSignExtendExpr>(S)) {
-    ConstantRange X = getRangeRef(SExt->getOperand(), SignHint);
+    ConstantRange X = getRangeRef(SExt->getOperand(), SignHint, Depth + 1);
     return setRange(SExt, SignHint,
                     ConservativeResult.intersectWith(X.signExtend(BitWidth),
                                                      RangeType));
   }
 
   if (const SCEVPtrToIntExpr *PtrToInt = dyn_cast<SCEVPtrToIntExpr>(S)) {
-    ConstantRange X = getRangeRef(PtrToInt->getOperand(), SignHint);
+    ConstantRange X = getRangeRef(PtrToInt->getOperand(), SignHint, Depth + 1);
     return setRange(PtrToInt, SignHint, X);
   }
 
   if (const SCEVTruncateExpr *Trunc = dyn_cast<SCEVTruncateExpr>(S)) {
-    ConstantRange X = getRangeRef(Trunc->getOperand(), SignHint);
+    ConstantRange X = getRangeRef(Trunc->getOperand(), SignHint, Depth + 1);
     return setRange(Trunc, SignHint,
                     ConservativeResult.intersectWith(X.truncate(BitWidth),
                                                      RangeType));
@@ -6671,12 +6742,13 @@ ScalarEvolution::getRangeRef(const SCEV *S,
           RangeType);
 
     // A range of Phi is a subset of union of all ranges of its input.
-    if (const PHINode *Phi = dyn_cast<PHINode>(U->getValue())) {
+    if (PHINode *Phi = dyn_cast<PHINode>(U->getValue())) {
       // Make sure that we do not run over cycled Phis.
       if (PendingPhiRanges.insert(Phi).second) {
         ConstantRange RangeFromOps(BitWidth, /*isFullSet=*/false);
+
         for (const auto &Op : Phi->operands()) {
-          auto OpRange = getRangeRef(getSCEV(Op), SignHint);
+          auto OpRange = getRangeRef(getSCEV(Op), SignHint, Depth + 1);
           RangeFromOps = RangeFromOps.unionWith(OpRange);
           // No point to continue if we already have a full set.
           if (RangeFromOps.isFullSet())
