@@ -139,6 +139,8 @@ public:
   // be reset to zero after uses.
   uint16_t bytesDropped = 0;
 
+  mutable bool compressed = false;
+
   // Whether the section needs to be padded with a NOP filler due to
   // deleteFallThruJmpInsn.
   bool nopFiller = false;
@@ -163,7 +165,7 @@ public:
   }
 
   ArrayRef<uint8_t> data() const {
-    if (uncompressedSize >= 0)
+    if (compressed)
       decompress();
     return rawData;
   }
@@ -240,7 +242,7 @@ protected:
   // or -1 if rawData is not compressed (either because the section wasn't
   // compressed in the first place, or because we ended up uncompressing it).
   // Since the feature is not used often, this is usually -1.
-  mutable int64_t uncompressedSize = -1;
+  mutable int64_t size = -1;
 };
 
 // SectionPiece represents a piece of splittable section contents.
