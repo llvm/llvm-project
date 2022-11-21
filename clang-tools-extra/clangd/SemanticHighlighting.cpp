@@ -809,6 +809,18 @@ public:
     return true;
   }
 
+  bool VisitAttr(Attr *A) {
+    switch (A->getKind()) {
+    case attr::Override:
+    case attr::Final:
+      H.addToken(A->getLocation(), HighlightingKind::Modifier);
+      break;
+    default:
+      break;
+    }
+    return true;
+  }
+
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc L) {
     H.addToken(L.getNameLoc(), HighlightingKind::Type)
         .addModifier(HighlightingModifier::DependentName)
@@ -985,6 +997,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "Primitive";
   case HighlightingKind::Macro:
     return OS << "Macro";
+  case HighlightingKind::Modifier:
+    return OS << "Modifier";
   case HighlightingKind::InactiveCode:
     return OS << "InactiveCode";
   }
@@ -1119,6 +1133,8 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
     return "type";
   case HighlightingKind::Macro:
     return "macro";
+  case HighlightingKind::Modifier:
+    return "modifier";
   case HighlightingKind::InactiveCode:
     return "comment";
   }
