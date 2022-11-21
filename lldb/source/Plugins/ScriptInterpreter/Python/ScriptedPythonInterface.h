@@ -101,34 +101,25 @@ protected:
 
   Status GetStatusFromMethod(llvm::StringRef method_name);
 
-  template <typename T> struct transformation { using type = T; };
-  template <typename T, typename U> struct reverse_transformation {
-    static void Apply(ScriptedPythonInterface &obj, T &original_arg,
-                      U transformed_arg, Status &error) {
-      // If U is not a PythonObject, don't touch it!
-      return;
-    }
-  };
-
-  template <> struct transformation<Status> {
-    using type = python::PythonObject;
-  };
-  template <typename T> struct reverse_transformation<T, python::PythonObject> {
-    static void Apply(ScriptedPythonInterface &obj, T &original_arg,
-                      python::PythonObject transformed_arg, Status &error) {
-      original_arg =
-          obj.ExtractValueFromPythonObject<T>(transformed_arg, error);
-    }
-  };
-
-  template <typename T> typename transformation<T>::type Transform(T object) {
+  template <typename T> T Transform(T object) {
     // No Transformation for generic usage
     return {object};
   }
 
-  template <> typename transformation<Status>::type Transform(Status arg) {
-    // Call SWIG Wrapper function
+  python::PythonObject Transform(Status arg) {
     return python::ToSWIGWrapper(arg);
+  }
+
+  template <typename T, typename U>
+  void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
+    // If U is not a PythonObject, don't touch it!
+    return;
+  }
+
+  template <typename T>
+  void ReverseTransform(T &original_arg, python::PythonObject transformed_arg,
+                        Status &error) {
+    original_arg = ExtractValueFromPythonObject<T>(transformed_arg, error);
   }
 
   template <std::size_t... I, typename... Args>
@@ -146,8 +137,7 @@ protected:
 
   template <typename T, typename U>
   void TransformBack(T &original_arg, U transformed_arg, Status &error) {
-    reverse_transformation<T, U>::Apply(*this, original_arg, transformed_arg,
-                                        error);
+    ReverseTransform(original_arg, transformed_arg, error);
   }
 
   template <std::size_t... I, typename... Ts, typename... Us>
