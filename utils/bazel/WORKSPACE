@@ -100,12 +100,13 @@ maybe(
     ],
 )
 
+# https://www.mpfr.org/mpfr-current/
 maybe(
     http_archive,
     name = "mpfr",
     build_file = "@llvm-raw//utils/bazel/third_party_build:mpfr.BUILD",
-    sha256 = "3127fe813218f3a1f0adf4e8899de23df33b4cf4b4b3831a5314f78e65ffa2d6",
-    strip_prefix = "mpfr-4.1.0",
-    urls = ["https://www.mpfr.org/mpfr-current/mpfr-4.1.0.tar.gz"],
+    sha256 = "9cbed5d0af0d9ed5e9f8dd013e17838eb15e1db9a6ae0d371d55d35f93a782a7",
+    strip_prefix = "mpfr-4.1.1",
+    urls = ["https://www.mpfr.org/mpfr-current/mpfr-4.1.1.tar.gz"],
 )
 
