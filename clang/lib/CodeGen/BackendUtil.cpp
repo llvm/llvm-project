@@ -1120,7 +1120,7 @@ static void runThinLTOBackend(
   if (!lto::initImportList(*M, *CombinedIndex, ImportList))
     return;
 
-  auto AddStream = [&](size_t Task) {
+  auto AddStream = [&](size_t Task, const Twine &ModuleName) {
     return std::make_unique<CachedFileStream>(std::move(OS),
                                               CGOpts.ObjectFilenameForDebug);
   };
