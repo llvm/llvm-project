@@ -85,6 +85,9 @@ private:
 
   InstructionWorklist Worklist;
 
+  // TODO: Direct calls from the top-level "run" loop use a plain "Instruction"
+  //       parameter. That should be updated to specific sub-classes because the
+  //       run loop was changed to dispatch on opcode.
   bool vectorizeLoadInsert(Instruction &I);
   bool widenSubvectorLoad(Instruction &I);
   ExtractElementInst *getShuffleExtract(ExtractElementInst *Ext0,
@@ -271,8 +274,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
 /// This removes a shuffle in IR and may allow combining of other loaded values.
 bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   // Match subvector insert of fixed vector.
-  auto *Shuf = dyn_cast<ShuffleVectorInst>(&I);
-  if (!Shuf || !Shuf->isIdentityWithPadding())
+  auto *Shuf = cast<ShuffleVectorInst>(&I);
+  if (!Shuf->isIdentityWithPadding())
     return false;
 
   // Allow a non-canonical shuffle mask that is choosing elements from op1.
@@ -1061,8 +1064,8 @@ static Align computeAlignmentAfterScalarization(Align VectorAlignment,
 //   %1 = getelementptr inbounds i32, i32* %0, i64 0, i64 1
 //   store i32 %b, i32* %1
 bool VectorCombine::foldSingleElementStore(Instruction &I) {
-  StoreInst *SI = dyn_cast<StoreInst>(&I);
-  if (!SI || !SI->isSimple() ||
+  auto *SI = cast<StoreInst>(&I);
+  if (!SI->isSimple() ||
       !isa<FixedVectorType>(SI->getValueOperand()->getType()))
     return false;
 
@@ -1371,10 +1374,7 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
 /// architectures with no obvious "select" shuffle, this can reduce the total
 /// number of operations if the target reports them as cheaper.
 bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
-  auto *SVI = dyn_cast<ShuffleVectorInst>(&I);
-  if (!SVI)
-    return false;
-
+  auto *SVI = cast<ShuffleVectorInst>(&I);
   auto *VT = cast<FixedVectorType>(I.getType());
   auto *Op0 = dyn_cast<Instruction>(SVI->getOperand(0));
   auto *Op1 = dyn_cast<Instruction>(SVI->getOperand(1));
@@ -1698,26 +1698,73 @@ bool VectorCombine::run() {
   bool MadeChange = false;
   auto FoldInst = [this, &MadeChange](Instruction &I) {
     Builder.SetInsertPoint(&I);
-    if (!TryEarlyFoldsOnly) {
-      if (isa<FixedVectorType>(I.getType())) {
-        MadeChange |= foldInsExtFNeg(I);
-        MadeChange |= foldBitcastShuf(I);
-        MadeChange |= foldShuffleOfBinops(I);
-        MadeChange |= foldSelectShuffle(I);
-      } else {
-        MadeChange |= foldExtractExtract(I);
-        MadeChange |= foldExtractedCmps(I);
-        MadeChange |= foldShuffleFromReductions(I);
+    bool IsFixedVectorType = isa<FixedVectorType>(I.getType());
+    auto Opcode = I.getOpcode();
+
+    // These folds should be beneficial regardless of when this pass is run
+    // in the optimization pipeline.
+    // The type checking is for run-time efficiency. We can avoid wasting time
+    // dispatching to folding functions if there's no chance of matching.
+    if (IsFixedVectorType) {
+      switch (Opcode) {
+      case Instruction::InsertElement:
+        MadeChange |= vectorizeLoadInsert(I);
+        break;
+      case Instruction::ShuffleVector:
+        MadeChange |= widenSubvectorLoad(I);
+        break;
+      case Instruction::Load:
+        MadeChange |= scalarizeLoadExtract(I);
+        break;
+      default:
+        MadeChange |= scalarizeBinopOrCmp(I);
+        break;
       }
     }
-    if (isa<FixedVectorType>(I.getType())) {
-      MadeChange |= vectorizeLoadInsert(I);
-      MadeChange |= widenSubvectorLoad(I);
-      MadeChange |= scalarizeBinopOrCmp(I);
-      MadeChange |= scalarizeLoadExtract(I);
+    if (Opcode == Instruction::Store)
+      MadeChange |= foldSingleElementStore(I);
+
+
+    // If this is an early pipeline invocation of this pass, we are done.
+    if (TryEarlyFoldsOnly)
+      return;
+
+    // Otherwise, try folds that improve codegen but may interfere with
+    // early IR canonicalizations.
+    // The type checking is for run-time efficiency. We can avoid wasting time
+    // dispatching to folding functions if there's no chance of matching.
+    if (IsFixedVectorType) {
+      switch (Opcode) {
+      case Instruction::InsertElement:
+        MadeChange |= foldInsExtFNeg(I);
+        break;
+      case Instruction::ShuffleVector:
+        MadeChange |= foldShuffleOfBinops(I);
+        MadeChange |= foldSelectShuffle(I);
+        break;
+      case Instruction::BitCast:
+        MadeChange |= foldBitcastShuf(I);
+        break;
+      }
+    } else {
+      switch (Opcode) {
+      case Instruction::Call:
+        MadeChange |= foldShuffleFromReductions(I);
+        break;
+      case Instruction::ICmp:
+      case Instruction::FCmp:
+        MadeChange |= foldExtractExtract(I);
+        break;
+      default:
+        if (I.isBinaryOp()) {
+          MadeChange |= foldExtractExtract(I);
+          MadeChange |= foldExtractedCmps(I);
+        }
+        break;
+      }
     }
-    MadeChange |= foldSingleElementStore(I);
   };
+
   for (BasicBlock &BB : F) {
     // Ignore unreachable basic blocks.
     if (!DT.isReachableFromEntry(&BB))
