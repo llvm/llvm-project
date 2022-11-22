@@ -1099,7 +1099,8 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
         std::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
 
-  auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
+  auto AddBuffer = [&](size_t Task, const Twine &moduleName,
+                       std::unique_ptr<MemoryBuffer> MB) {
     *AddStream(Task)->OS << MB->getBuffer();
   };
 
