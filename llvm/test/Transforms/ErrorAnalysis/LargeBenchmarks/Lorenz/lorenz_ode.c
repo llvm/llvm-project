@@ -44,7 +44,7 @@ int main ( )
   int i;
   int j;
   int m = 3;
-  int n = 200;
+  int n = 20;
   double *t;
   double t_final;
   double *x;
@@ -344,7 +344,7 @@ double *rk4vec ( double t0, int m, double u0[], double dt,
   {
     u[i] = u0[i] + dt * ( f0[i] + 2.0 * f1[i] + 2.0 * f2[i] + f3[i] ) / 6.0;
 //    fAFfp64markForResult(u[i]);
-    printf("Result = %lf\n", u[i]);
+//    printf("Result = %lf\n", u[i]);
   }
 
   /*
