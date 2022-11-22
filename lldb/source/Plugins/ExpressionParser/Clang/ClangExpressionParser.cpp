@@ -500,8 +500,6 @@ ClangExpressionParser::ClangExpressionParser(
   auto target_info = TargetInfo::CreateTargetInfo(
       m_compiler->getDiagnostics(), m_compiler->getInvocation().TargetOpts);
   if (log) {
-    LLDB_LOGF(log, "Using SIMD alignment: %d",
-              target_info->getSimdDefaultAlign());
     LLDB_LOGF(log, "Target datalayout string: '%s'",
               target_info->getDataLayoutString());
     LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());

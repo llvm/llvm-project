@@ -108,6 +108,9 @@ protected: // Can only create subclasses.
   std::unique_ptr<const MCInstrInfo> MII;
   std::unique_ptr<const MCSubtargetInfo> STI;
 
+  /// Simd target specific information
+  unsigned SimdDefaultAlignment = 0;
+
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
 
@@ -203,6 +206,9 @@ public:
   unsigned getAllocaPointerSize() const {
     return DL.getPointerSize(DL.getAllocaAddrSpace());
   }
+
+  /// Return default SIMD alignment
+  unsigned getSimdDefaultAlignment() const { return SimdDefaultAlignment; }
 
   /// Reset the target options based on the function's attributes.
   // FIXME: Remove TargetOptions that affect per-function code generation

@@ -502,6 +502,14 @@ public:
                                    ArrayRef<CanonicalLoopInfo *> Loops,
                                    InsertPointTy ComputeIP);
 
+  /// Get the alignment value for given target
+  ///
+  /// \param Triple         String which describes target triple
+  /// \param CPU            String which describes target CPU
+  /// \param Features       String which describes extra CPU features
+  static unsigned getSimdDefaultAlignment(const std::string &Triple,
+                                          StringRef CPU, StringRef Features);
+
 private:
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///

@@ -333,6 +333,7 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
       TLOF(createTLOF(getTargetTriple())),
       TargetABI(computeTargetABI(TT, Options)),
       Endianness(isLittleEndianTriple(TT) ? Endian::LITTLE : Endian::BIG) {
+  SimdDefaultAlignment = 128;
   initAsmInfo();
 }
 
