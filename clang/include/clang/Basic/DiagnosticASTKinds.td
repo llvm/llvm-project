@@ -960,8 +960,11 @@ def warn_padded_struct_size : Warning<
   InGroup<Padded>, DefaultIgnore;
 def warn_unnecessary_packed : Warning<
   "packed attribute is unnecessary for %0">, InGroup<Packed>, DefaultIgnore;
-def warn_unpacked_field : Warning<
-  "not packing field %0 as it is non-POD">, InGroup<PackedNonPod>, DefaultIgnore;
+def warn_unpacked_field
+    : Warning<
+          "not packing field %0 as it is non-POD for the purposes of layout">,
+      InGroup<PackedNonPod>,
+      DefaultIgnore;
 
 // -Wunaligned-access
 def warn_unaligned_access : Warning<
