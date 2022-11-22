@@ -1,3 +1,4 @@
 ee2a35ac4ab [X86] Add AVX-NE-CONVERT instruc
-
 b1fdeeec1a5a Revert "[LLD] Enable --no-undefined-version by default."
+Revert "[X86] Support -march=sierraforest, grandridge,
+
