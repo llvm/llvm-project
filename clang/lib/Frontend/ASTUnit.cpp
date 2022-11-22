@@ -708,7 +708,7 @@ void FilterAndStoreDiagnosticConsumer::HandleDiagnostic(
       llvm::Optional<StoredDiagnostic> StoredDiag;
       if (!ResultDiag) {
         StoredDiag.emplace(Level, Info);
-        ResultDiag = StoredDiag.getPointer();
+        ResultDiag = &*StoredDiag;
       }
       StandaloneDiags->push_back(
           makeStandaloneDiagnostic(*LangOpts, *ResultDiag));

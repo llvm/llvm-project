@@ -924,7 +924,7 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
   Changed |= Flatten(LN, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U,
-                     MSSAU ? MSSAU.getPointer() : nullptr);
+                     MSSAU ? &*MSSAU : nullptr);
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -989,8 +989,8 @@ bool LoopFlattenLegacyPass::runOnFunction(Function &F) {
   bool Changed = false;
   for (Loop *L : *LI) {
     auto LN = LoopNest::getLoopNest(*L, *SE);
-    Changed |= Flatten(*LN, DT, LI, SE, AC, TTI, nullptr,
-                       MSSAU ? MSSAU.getPointer() : nullptr);
+    Changed |=
+        Flatten(*LN, DT, LI, SE, AC, TTI, nullptr, MSSAU ? &*MSSAU : nullptr);
   }
   return Changed;
 }
