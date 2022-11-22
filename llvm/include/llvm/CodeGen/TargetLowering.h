@@ -999,7 +999,7 @@ public:
   /// register, this contains one step in the expansion to get to the smaller
   /// register. For illegal floating point types, this returns the integer type
   /// to transform to.
-  EVT getTypeToTransformTo(LLVMContext &Context, EVT VT) const {
+  virtual EVT getTypeToTransformTo(LLVMContext &Context, EVT VT) const {
     return getTypeConversion(Context, VT).second;
   }
 

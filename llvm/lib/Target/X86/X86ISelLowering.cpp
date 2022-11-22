@@ -21322,7 +21322,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, Ext);
   }
 
-  if (VT == MVT::f128)
+  if (VT == MVT::f128 || !Subtarget.hasX87())
     return SDValue();
 
   SDValue ValueToStore = Src;
