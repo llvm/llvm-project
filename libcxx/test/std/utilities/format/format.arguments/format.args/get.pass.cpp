@@ -13,40 +13,40 @@
 
 // <format>
 
-// template<class Visitor, class Context>
-//   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
+// basic_format_arg<Context> get(size_t i) const noexcept;
 
 #include <format>
 #include <cassert>
 #include <type_traits>
 
-#include "constexpr_char_traits.h"
 #include "test_macros.h"
 #include "make_string.h"
-#include "min_allocator.h"
 
 template <class Context, class To, class From>
 void test(From value) {
   auto store = std::make_format_args<Context>(value);
-  std::basic_format_args<Context> format_args{store};
+  const std::basic_format_args<Context> format_args{store};
 
-  assert(format_args.__size() == 1);
-  assert(format_args.get(0));
-
-  auto result = std::visit_format_arg(
-      [v = To(value)](auto a) -> To {
-        if constexpr (std::is_same_v<To, decltype(a)>) {
+  std::visit_format_arg(
+      [v = To(value)](auto a) {
+        if constexpr (std::is_same_v<To, decltype(a)>)
           assert(v == a);
-          return a;
-        } else {
+        else
           assert(false);
-          return {};
-        }
       },
       format_args.get(0));
+}
 
-  using ct = std::common_type_t<From, To>;
-  assert(static_cast<ct>(result) == static_cast<ct>(value));
+// Some types, as an extension, are stored in the variant. The Standard
+// requires them to be observed as a handle.
+template <class Context, class T>
+void test_handle(T value) {
+  auto store = std::make_format_args<Context>(value);
+  std::basic_format_args<Context> format_args{store};
+
+  std::visit_format_arg(
+      [](auto a) { assert((std::is_same_v<decltype(a), typename std::basic_format_arg<Context>::handle>)); },
+      format_args.get(0));
 }
 
 // Test specific for string and string_view.
@@ -56,67 +56,66 @@ void test(From value) {
 template <class Context, class From>
 void test_string_view(From value) {
   auto store = std::make_format_args<Context>(value);
-  std::basic_format_args<Context> format_args{store};
-
-  assert(format_args.__size() == 1);
-  assert(format_args.get(0));
+  const std::basic_format_args<Context> format_args{store};
 
   using CharT = typename Context::char_type;
   using To = std::basic_string_view<CharT>;
   using V = std::basic_string<CharT>;
-  auto result = std::visit_format_arg(
-      [v = V(value.begin(), value.end())](auto a) -> To {
-        if constexpr (std::is_same_v<To, decltype(a)>) {
+  std::visit_format_arg(
+      [v = V(value.begin(), value.end())](auto a) {
+        if constexpr (std::is_same_v<To, decltype(a)>)
           assert(v == a);
-          return a;
-        } else {
+        else
           assert(false);
-          return {};
-        }
       },
       format_args.get(0));
-
-  assert(std::equal(value.begin(), value.end(), result.begin(), result.end()));
 }
 
 template <class CharT>
 void test() {
   using Context = std::basic_format_context<CharT*, CharT>;
-  std::basic_string<CharT> empty;
-  std::basic_string<CharT> str = MAKE_STRING(CharT, "abc");
+  {
+    const std::basic_format_args<Context> format_args{};
+    ASSERT_NOEXCEPT(format_args.get(0));
+    assert(!format_args.get(0));
+  }
+
+  using char_type = typename Context::char_type;
+  std::basic_string<char_type> empty;
+  std::basic_string<char_type> str = MAKE_STRING(char_type, "abc");
 
   // Test boolean types.
 
   test<Context, bool>(true);
   test<Context, bool>(false);
 
-  // Test CharT types.
+  // Test char_type types.
 
-  test<Context, CharT, CharT>('a');
-  test<Context, CharT, CharT>('z');
-  test<Context, CharT, CharT>('0');
-  test<Context, CharT, CharT>('9');
+  test<Context, char_type, char_type>('a');
+  test<Context, char_type, char_type>('z');
+  test<Context, char_type, char_type>('0');
+  test<Context, char_type, char_type>('9');
 
   // Test char types.
 
-  if (std::is_same_v<CharT, char>) {
+  if (std::is_same_v<char_type, char>) {
     // char to char -> char
-    test<Context, CharT, char>('a');
-    test<Context, CharT, char>('z');
-    test<Context, CharT, char>('0');
-    test<Context, CharT, char>('9');
+    test<Context, char_type, char>('a');
+    test<Context, char_type, char>('z');
+    test<Context, char_type, char>('0');
+    test<Context, char_type, char>('9');
   } else {
-    if (std::is_same_v<CharT, wchar_t>) {
+    if (std::is_same_v<char_type, wchar_t>) {
       // char to wchar_t -> wchar_t
       test<Context, wchar_t, char>('a');
       test<Context, wchar_t, char>('z');
       test<Context, wchar_t, char>('0');
       test<Context, wchar_t, char>('9');
     } else if (std::is_signed_v<char>) {
-      // char to CharT -> int
-      // This happens when CharT is a char8_t, char16_t, or char32_t and char
-      // is a signed type.
-      // Note if sizeof(CharT) > sizeof(int) this test fails. If there are
+      // char to char_type -> int
+      // This happens when Context::char_type is a char8_t, char16_t, or
+      // char32_t and char is a signed type.
+      // Note if sizeof(char_type) > sizeof(int) this test fails. If there are
       // platforms where that occurs extra tests need to be added for char32_t
       // testing it against a long long.
       test<Context, int, char>('a');
@@ -124,12 +123,12 @@ void test() {
       test<Context, int, char>('0');
       test<Context, int, char>('9');
     } else {
-      // char to CharT -> unsigned
-      // This happens when CharT is a char8_t, char16_t, or char32_t and char
-      // is an unsigned type.
-      // Note if sizeof(CharT) > sizeof(unsigned) this test fails. If there are
-      // platforms where that occurs extra tests need to be added for char32_t
-      // testing it against an unsigned long long.
+      // char to char_type -> unsigned
+      // This happens when Context::char_type is a char8_t, char16_t, or
+      // char32_t and char is an unsigned type.
+      // Note if sizeof(char_type) > sizeof(unsigned) this test fails. If there
+      // are platforms where that occurs extra tests need to be added for
+      // char32_t testing it against an unsigned long long.
       test<Context, unsigned, char>('a');
       test<Context, unsigned, char>('z');
       test<Context, unsigned, char>('0');
@@ -183,22 +182,8 @@ void test() {
   test<Context, long long, long long>(std::numeric_limits<long long>::max());
 
 #ifndef TEST_HAS_NO_INT128
-  test<Context, __int128_t, __int128_t>(std::numeric_limits<__int128_t>::min());
-  test<Context, __int128_t, __int128_t>(std::numeric_limits<long long>::min());
-  test<Context, __int128_t, __int128_t>(std::numeric_limits<long>::min());
-  test<Context, __int128_t, __int128_t>(std::numeric_limits<int>::min());
-  test<Context, __int128_t, __int128_t>(std::numeric_limits<short>::min());
-  test<Context, __int128_t, __int128_t>(
-      std::numeric_limits<signed char>::min());
-  test<Context, __int128_t, __int128_t>(0);
-  test<Context, __int128_t, __int128_t>(
-      std::numeric_limits<signed char>::max());
-  test<Context, __int128_t, __int128_t>(std::numeric_limits<short>::max());
-  test<Context, __int128_t, __int128_t>(std::numeric_limits<int>::max());
-  test<Context, __int128_t, __int128_t>(std::numeric_limits<long>::max());
-  test<Context, __int128_t, __int128_t>(std::numeric_limits<long long>::max());
-  test<Context, __int128_t, __int128_t>(std::numeric_limits<__int128_t>::max());
-#endif
+  test_handle<Context, __int128_t>(0);
+#endif // TEST_HAS_NO_INT128
 
   // Test unsigned integer types.
 
@@ -244,20 +229,8 @@ void test() {
       std::numeric_limits<unsigned long long>::max());
 
 #ifndef TEST_HAS_NO_INT128
-  test<Context, __uint128_t, __uint128_t>(0);
-  test<Context, __uint128_t, __uint128_t>(
-      std::numeric_limits<unsigned char>::max());
-  test<Context, __uint128_t, __uint128_t>(
-      std::numeric_limits<unsigned short>::max());
-  test<Context, __uint128_t, __uint128_t>(
-      std::numeric_limits<unsigned int>::max());
-  test<Context, __uint128_t, __uint128_t>(
-      std::numeric_limits<unsigned long>::max());
-  test<Context, __uint128_t, __uint128_t>(
-      std::numeric_limits<unsigned long long>::max());
-  test<Context, __uint128_t, __uint128_t>(
-      std::numeric_limits<__uint128_t>::max());
-#endif
+  test_handle<Context, __uint128_t>(0);
+#endif // TEST_HAS_NO_INT128
 
   // Test floating point types.
 
@@ -286,80 +259,43 @@ void test() {
   test<Context, long double, long double>(
       std::numeric_limits<long double>::max());
 
-  // Test const CharT pointer types.
+  // Test const char_type pointer types.
 
-  test<Context, const CharT*, const CharT*>(empty.c_str());
-  test<Context, const CharT*, const CharT*>(str.c_str());
+  test<Context, const char_type*, const char_type*>(empty.c_str());
+  test<Context, const char_type*, const char_type*>(str.c_str());
 
   // Test string_view types.
 
-  {
-    using From = std::basic_string_view<CharT>;
-
-    test_string_view<Context>(From());
-    test_string_view<Context>(From(empty.c_str()));
-    test_string_view<Context>(From(str.c_str()));
-  }
-
-  {
-    using From = std::basic_string_view<CharT, constexpr_char_traits<CharT>>;
-
-    test_string_view<Context>(From());
-    test_string_view<Context>(From(empty.c_str()));
-    test_string_view<Context>(From(str.c_str()));
-  }
+  test<Context, std::basic_string_view<char_type>>(
+      std::basic_string_view<char_type>());
+  test<Context, std::basic_string_view<char_type>,
+       std::basic_string_view<char_type>>(empty);
+  test<Context, std::basic_string_view<char_type>,
+       std::basic_string_view<char_type>>(str);
 
   // Test string types.
 
-  {
-    using From = std::basic_string<CharT>;
-
-    test_string_view<Context>(From());
-    test_string_view<Context>(From(empty.c_str()));
-    test_string_view<Context>(From(str.c_str()));
-  }
-
-  {
-    using From = std::basic_string<CharT, constexpr_char_traits<CharT>,
-                                   std::allocator<CharT>>;
-
-    test_string_view<Context>(From());
-    test_string_view<Context>(From(empty.c_str()));
-    test_string_view<Context>(From(str.c_str()));
-  }
-
-  {
-    using From =
-        std::basic_string<CharT, std::char_traits<CharT>, min_allocator<CharT>>;
-
-    test_string_view<Context>(From());
-    test_string_view<Context>(From(empty.c_str()));
-    test_string_view<Context>(From(str.c_str()));
-  }
-
-  {
-    using From = std::basic_string<CharT, constexpr_char_traits<CharT>,
-                                   min_allocator<CharT>>;
-
-    test_string_view<Context>(From());
-    test_string_view<Context>(From(empty.c_str()));
-    test_string_view<Context>(From(str.c_str()));
-  }
+  test<Context, std::basic_string_view<char_type>>(
+      std::basic_string<char_type>());
+  test<Context, std::basic_string_view<char_type>,
+       std::basic_string<char_type>>(empty);
+  test<Context, std::basic_string_view<char_type>,
+       std::basic_string<char_type>>(str);
 
   // Test pointer types.
 
   test<Context, const void*>(nullptr);
-  int i = 0;
-  test<Context, const void*>(static_cast<void*>(&i));
-  const int ci = 0;
-  test<Context, const void*>(static_cast<const void*>(&ci));
 }
 
-int main(int, char**) {
+void test() {
   test<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
 #endif
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }
