@@ -369,7 +369,7 @@ float nanf(const char *__tagp __attribute__((nonnull))) {
 }
 
 __DEVICE__
-float nearbyintf(float __x) { return __ocml_nearbyint_f32(__x); }
+float nearbyintf(float __x) { return __builtin_nearbyintf(__x); }
 
 __DEVICE__
 float nextafterf(float __x, float __y) {
@@ -925,7 +925,7 @@ double nan(const char *__tagp) {
 }
 
 __DEVICE__
-double nearbyint(double __x) { return __ocml_nearbyint_f64(__x); }
+double nearbyint(double __x) { return __builtin_nearbyint(__x); }
 
 __DEVICE__
 double nextafter(double __x, double __y) {
