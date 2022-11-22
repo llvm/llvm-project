@@ -256,19 +256,23 @@ SDValue LoongArchTargetLowering::lowerFRAMEADDR(SDValue Op,
     return SDValue();
   }
 
-  // Currently only support lowering frame address for current frame.
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
-    DAG.getContext()->emitError(
-        "frame address can only be determined for the current frame");
-    return SDValue();
-  }
-
   MachineFunction &MF = DAG.getMachineFunction();
   MF.getFrameInfo().setFrameAddressIsTaken(true);
+  Register FrameReg = Subtarget.getRegisterInfo()->getFrameRegister(MF);
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+  SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), DL, FrameReg, VT);
+  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  int GRLenInBytes = Subtarget.getGRLen() / 8;
 
-  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op),
-                            Subtarget.getRegisterInfo()->getFrameRegister(MF),
-                            Op.getValueType());
+  while (Depth--) {
+    int Offset = -(GRLenInBytes * 2);
+    SDValue Ptr = DAG.getNode(ISD::ADD, DL, VT, FrameAddr,
+                              DAG.getIntPtrConstant(Offset, DL));
+    FrameAddr =
+        DAG.getLoad(VT, DL, DAG.getEntryNode(), Ptr, MachinePointerInfo());
+  }
+  return FrameAddr;
 }
 
 SDValue LoongArchTargetLowering::lowerRETURNADDR(SDValue Op,
