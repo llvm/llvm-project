@@ -24,12 +24,11 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
   char *st_beg = buffer + off_begin;
   char *st_end = st_beg + capacity;
   char *end = poison_buffer ? st_beg : st_end;
-  char *old_end;
 
   for (int i = 0; i < 1000; i++) {
     size_t size = rand() % (capacity + 1);
     assert(size <= capacity);
-    old_end = end;
+    char *old_end = end;
     end = st_beg + size;
     __sanitizer_annotate_contiguous_container(st_beg, st_end, old_end, end);
 
@@ -51,7 +50,7 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
   }
 
   for (int i = 0; i <= capacity; i++) {
-    old_end = end;
+    char *old_end = end;
     end = st_beg + i;
     __sanitizer_annotate_contiguous_container(st_beg, st_end, old_end, end);
 
@@ -80,6 +79,38 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
   delete[] buffer;
 }
 
+void TestDoubleEndedContainer(size_t capacity) {
+  char *st_beg = new char[capacity];
+  char *st_end = st_beg + capacity;
+  char *beg = st_beg;
+  char *end = st_beg + capacity;
+
+  for (int i = 0; i < 10000; i++) {
+    size_t size = rand() % (capacity + 1);
+    size_t skipped = rand() % (capacity - size + 1);
+    assert(size <= capacity);
+    char *old_beg = beg;
+    char *old_end = end;
+    beg = st_beg + skipped;
+    end = beg + size;
+
+    __sanitizer_annotate_double_ended_contiguous_container(
+        st_beg, st_end, old_beg, old_end, beg, end);
+    for (size_t idx = 0; idx < RoundDown(skipped); idx++)
+      assert(__asan_address_is_poisoned(st_beg + idx));
+    for (size_t idx = 0; idx < size; idx++)
+      assert(!__asan_address_is_poisoned(st_beg + skipped + idx));
+    for (size_t idx = skipped + size; idx < capacity; idx++)
+      assert(__asan_address_is_poisoned(st_beg + idx));
+
+    assert(__sanitizer_verify_double_ended_contiguous_container(st_beg, beg,
+                                                                end, st_end));
+  }
+
+  __asan_unpoison_memory_region(st_beg, st_end - st_beg);
+  delete[] st_beg;
+}
+
 __attribute__((noinline)) void Throw() { throw 1; }
 
 __attribute__((noinline)) void ThrowAndCatch() {
@@ -104,9 +135,13 @@ void TestThrow() {
 
 int main(int argc, char **argv) {
   int n = argc == 1 ? 64 : atoi(argv[1]);
-  for (int i = 0; i <= n; i++)
-    for (int j = 0; j < kGranularity * 2; j++)
-      for (int poison = 0; poison < 2; ++poison)
+  for (int i = 0; i <= n; i++) {
+    for (int j = 0; j < kGranularity * 2; j++) {
+      for (int poison = 0; poison < 2; ++poison) {
         TestContainer(i, j, poison);
+      }
+    }
+    TestDoubleEndedContainer(i);
+  }
   TestThrow();
 }

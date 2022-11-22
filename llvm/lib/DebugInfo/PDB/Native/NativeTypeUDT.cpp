@@ -20,12 +20,12 @@ using namespace llvm::pdb;
 NativeTypeUDT::NativeTypeUDT(NativeSession &Session, SymIndexId Id,
                              codeview::TypeIndex TI, codeview::ClassRecord CR)
     : NativeRawSymbol(Session, PDB_SymType::UDT, Id), Index(TI),
-      Class(std::move(CR)), Tag(Class.getPointer()) {}
+      Class(std::move(CR)), Tag(&*Class) {}
 
 NativeTypeUDT::NativeTypeUDT(NativeSession &Session, SymIndexId Id,
                              codeview::TypeIndex TI, codeview::UnionRecord UR)
     : NativeRawSymbol(Session, PDB_SymType::UDT, Id), Index(TI),
-      Union(std::move(UR)), Tag(Union.getPointer()) {}
+      Union(std::move(UR)), Tag(&*Union) {}
 
 NativeTypeUDT::NativeTypeUDT(NativeSession &Session, SymIndexId Id,
                              NativeTypeUDT &UnmodifiedType,

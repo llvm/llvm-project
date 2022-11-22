@@ -576,12 +576,6 @@ void AArch64FrameLowering::emitCalleeSavedSVELocations(
   }
 }
 
-void AArch64FrameLowering::emitCalleeSavedFrameMoves(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
-  emitCalleeSavedGPRLocations(MBB, MBBI);
-  emitCalleeSavedSVELocations(MBB, MBBI);
-}
-
 static void insertCFISameValue(const MCInstrDesc &Desc, MachineFunction &MF,
                                MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator InsertPt,

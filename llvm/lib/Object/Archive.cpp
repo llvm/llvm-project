@@ -1158,7 +1158,7 @@ Expected<Optional<Archive::Child>> Archive::findSym(StringRef name) const {
         return MemberOrErr.takeError();
     }
   }
-  return Optional<Child>();
+  return None;
 }
 
 // Returns true if archive file contains no member file.

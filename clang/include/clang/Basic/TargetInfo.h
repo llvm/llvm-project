@@ -1671,8 +1671,7 @@ public:
   /// Returns the darwin target variant triple, the variant of the deployment
   /// target for which the code is being compiled.
   const llvm::Triple *getDarwinTargetVariantTriple() const {
-    return DarwinTargetVariantTriple ? DarwinTargetVariantTriple.getPointer()
-                                     : nullptr;
+    return DarwinTargetVariantTriple ? &*DarwinTargetVariantTriple : nullptr;
   }
 
   /// Returns the version of the darwin target variant SDK which was used during

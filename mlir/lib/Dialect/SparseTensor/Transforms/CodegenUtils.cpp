@@ -152,7 +152,7 @@ void SparseTensorLoopEmitter::initializeLoopEmit(
     auto rank = rtp.getRank();
     auto shape = rtp.getShape();
     auto enc = getSparseTensorEncoding(rtp);
-    auto dynShape = {ShapedType::kDynamicSize};
+    auto dynShape = {ShapedType::kDynamic};
     // Scan all dimensions of current tensor.
     for (int64_t d = 0; d < rank; d++) {
       // This should be called only once at beginning.
@@ -203,7 +203,7 @@ void SparseTensorLoopEmitter::initializeLoopEmit(
     } else {
       // Annotated sparse tensors.
       // We also need the value buffer for annotated all dense `sparse` tensor.
-      auto dynShape = {ShapedType::kDynamicSize};
+      auto dynShape = {ShapedType::kDynamic};
       auto sparseTp = MemRefType::get(dynShape, elementType);
       valBuffer[t] = builder.create<ToValuesOp>(loc, sparseTp, tensor);
     }
@@ -327,6 +327,13 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
   emitExtraLocalsForTensorsAtDenseDims(builder, loc, extraTids, extraDims);
 
   return loop;
+}
+
+void SparseTensorLoopEmitter::genDenseAffineAddressAtCurLevel(
+    OpBuilder &builder, Location loc, size_t tid, size_t dim,
+    AffineExpr affine) {
+  Value affineV = genAffine(builder, affine, loc);
+  pidxs[tid][dim] = genAddress(builder, loc, tid, dim, affineV);
 }
 
 Operation *SparseTensorLoopEmitter::enterCoIterationOverTensorsAtDims(
@@ -846,12 +853,12 @@ void mlir::sparse_tensor::genReshapeDstShape(
       // expanded from the i-th dimension in srcShape.
       // For example, if srcDim = 8, then the expanded shape could be <2x?x2>,
       // but not <2x?x?>.
-      if (staticDstShape[j] == ShapedType::kDynamicSize) {
+      if (staticDstShape[j] == ShapedType::kDynamic) {
         // The expanded dimension has dynamic size. We compute the dimension
         // by dividing srcDim by the product of the static dimensions.
         int64_t product = 1;
         for (unsigned k = start; k < start + map.size(); k++) {
-          if (staticDstShape[k] != ShapedType::kDynamicSize) {
+          if (staticDstShape[k] != ShapedType::kDynamic) {
             product *= staticDstShape[k];
           }
         }
@@ -959,7 +966,7 @@ Value mlir::sparse_tensor::genAlloca(OpBuilder &builder, Location loc,
 
 Value mlir::sparse_tensor::genAlloca(OpBuilder &builder, Location loc, Value sz,
                                      Type tp) {
-  auto memTp = MemRefType::get({ShapedType::kDynamicSize}, tp);
+  auto memTp = MemRefType::get({ShapedType::kDynamic}, tp);
   return builder.create<memref::AllocaOp>(loc, memTp, ValueRange{sz});
 }
 
@@ -976,7 +983,7 @@ Value mlir::sparse_tensor::allocDenseTensor(OpBuilder &builder, Location loc,
   auto memTp = MemRefType::get(shape, elemTp);
   SmallVector<Value> dynamicSizes;
   for (unsigned i = 0, rank = tensorTp.getRank(); i < rank; i++) {
-    if (shape[i] == ShapedType::kDynamicSize)
+    if (shape[i] == ShapedType::kDynamic)
       dynamicSizes.push_back(sizes[i]);
   }
   Value mem = builder.create<memref::AllocOp>(loc, memTp, dynamicSizes);

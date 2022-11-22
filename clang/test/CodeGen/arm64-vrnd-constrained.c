@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -flax-vector-conversions=none -emit-llvm -o - %s \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=UNCONSTRAINED %s
-// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -flax-vector-conversions=none -fexperimental-strict-floating-point -ffp-exception-behavior=strict -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -flax-vector-conversions=none -ffp-exception-behavior=strict -emit-llvm -o - %s \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=CONSTRAINED %s
 // RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -flax-vector-conversions=none -emit-llvm -o - %s | llc -o=- - \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
-// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -flax-vector-conversions=none -fexperimental-strict-floating-point -ffp-exception-behavior=strict -emit-llvm -o - %s | llc -o=- - \
+// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -flax-vector-conversions=none -ffp-exception-behavior=strict -emit-llvm -o - %s | llc -o=- - \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
 
 // REQUIRES: aarch64-registered-target

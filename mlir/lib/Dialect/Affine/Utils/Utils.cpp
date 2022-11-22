@@ -1794,7 +1794,7 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
     bool isDynDim =
         isNormalizedMemRefDynamicDim(d, layoutMap, memrefTypeDynDims, context);
     if (isDynDim) {
-      newShape[d] = ShapedType::kDynamicSize;
+      newShape[d] = ShapedType::kDynamic;
     } else {
       // The lower bound for the shape is always zero.
       Optional<int64_t> ubConst =

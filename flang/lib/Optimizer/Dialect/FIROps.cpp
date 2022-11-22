@@ -380,7 +380,7 @@ mlir::LogicalResult fir::ArrayCoorOp::verify() {
     } else {
       auto s = shapeTy.cast<fir::ShiftType>();
       shapeTyRank = s.getRank();
-      if (!getMemref().getType().isa<fir::BoxType>())
+      if (!getMemref().getType().isa<fir::BaseBoxType>())
         return emitOpError("shift can only be provided with fir.box memref");
     }
     if (arrDim && arrDim != shapeTyRank)
@@ -449,7 +449,7 @@ mlir::LogicalResult fir::ArrayLoadOp::verify() {
     } else {
       auto s = shapeTy.cast<fir::ShiftType>();
       shapeTyRank = s.getRank();
-      if (!getMemref().getType().isa<fir::BoxType>())
+      if (!getMemref().getType().isa<fir::BaseBoxType>())
         return emitOpError("shift can only be provided with fir.box memref");
     }
     if (arrDim && arrDim != shapeTyRank)

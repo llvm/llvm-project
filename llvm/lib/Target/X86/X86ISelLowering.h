@@ -1514,6 +1514,12 @@ namespace llvm {
 
     Align getPrefLoopAlignment(MachineLoop *ML) const override;
 
+    EVT getTypeToTransformTo(LLVMContext &Context, EVT VT) const override {
+      if (VT == MVT::f80)
+        return EVT::getIntegerVT(Context, 96);
+      return TargetLoweringBase::getTypeToTransformTo(Context, VT);
+    }
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,

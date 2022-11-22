@@ -488,6 +488,13 @@ config("clang_code") {
   ]
 }
 
+config("bolt_code") {
+  include_dirs = [
+    "//bolt/include",
+    "$root_gen_dir/bolt/include",
+  ]
+}
+
 config("crt_code") {
   include_dirs = [ "//compiler-rt/lib" ]
   cflags = [

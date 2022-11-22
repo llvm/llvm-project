@@ -33,7 +33,7 @@ using namespace mlir;
 namespace {
 
 bool isStaticStrideOrOffset(int64_t strideOrOffset) {
-  return !ShapedType::isDynamicStrideOrOffset(strideOrOffset);
+  return !ShapedType::isDynamic(strideOrOffset);
 }
 
 LLVM::LLVMFuncOp getFreeFn(LLVMTypeConverter *typeConverter, ModuleOp module) {
@@ -145,7 +145,7 @@ struct ReallocOpLoweringBase : public AllocationOpLLVMLowering {
         [&](MemRefType type, function_ref<Value()> getDynamicSize) -> Value {
       // Compute number of elements.
       int64_t size = type.getShape()[0];
-      Value numElements = ((size == ShapedType::kDynamicSize)
+      Value numElements = ((size == ShapedType::kDynamic)
                                ? getDynamicSize()
                                : createIndexConstant(rewriter, loc, size));
       Type indexType = getIndexType();
@@ -1219,7 +1219,7 @@ private:
       Value stride = nullptr;
       int64_t targetRank = targetMemRefType.getRank();
       for (auto i : llvm::reverse(llvm::seq<int64_t>(0, targetRank))) {
-        if (!ShapedType::isDynamicStrideOrOffset(strides[i])) {
+        if (!ShapedType::isDynamic(strides[i])) {
           // If the stride for this dimension is dynamic, then use the product
           // of the sizes of the inner dimensions.
           stride = createIndexConstant(rewriter, loc, strides[i]);
@@ -1761,7 +1761,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<memref::SubViewOp> {
 
     // Offset.
     auto llvmIndexType = typeConverter->convertType(rewriter.getIndexType());
-    if (!ShapedType::isDynamicStrideOrOffset(offset)) {
+    if (!ShapedType::isDynamic(offset)) {
       targetMemRef.setConstantOffset(rewriter, loc, offset);
     } else {
       Value baseOffset = sourceMemRef.offset(rewriter, loc);
@@ -1806,7 +1806,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<memref::SubViewOp> {
         // constants.
         int64_t staticSize =
             subViewOp.getSource().getType().cast<MemRefType>().getShape()[i];
-        if (staticSize != ShapedType::kDynamicSize) {
+        if (staticSize != ShapedType::kDynamic) {
           size = rewriter.create<LLVM::ConstantOp>(
               loc, llvmIndexType, rewriter.getI64IntegerAttr(staticSize));
         } else {
@@ -1828,7 +1828,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<memref::SubViewOp> {
                 : rewriter.create<LLVM::ConstantOp>(
                       loc, llvmIndexType,
                       rewriter.getI64IntegerAttr(subViewOp.getStaticSize(i)));
-        if (!ShapedType::isDynamicStrideOrOffset(strides[i])) {
+        if (!ShapedType::isDynamic(strides[i])) {
           stride = rewriter.create<LLVM::ConstantOp>(
               loc, llvmIndexType, rewriter.getI64IntegerAttr(strides[i]));
         } else {
@@ -1932,7 +1932,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
                   ArrayRef<int64_t> strides, Value nextSize,
                   Value runningStride, unsigned idx) const {
     assert(idx < strides.size());
-    if (!ShapedType::isDynamicStrideOrOffset(strides[idx]))
+    if (!ShapedType::isDynamic(strides[idx]))
       return createIndexConstant(rewriter, loc, strides[idx]);
     if (nextSize)
       return runningStride

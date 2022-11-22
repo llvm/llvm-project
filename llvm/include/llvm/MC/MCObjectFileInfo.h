@@ -484,8 +484,7 @@ public:
   }
 
   const Triple *getDarwinTargetVariantTriple() const {
-    return DarwinTargetVariantTriple ? DarwinTargetVariantTriple.getPointer()
-                                     : nullptr;
+    return DarwinTargetVariantTriple ? &*DarwinTargetVariantTriple : nullptr;
   }
 
   void setDarwinTargetVariantSDKVersion(const VersionTuple &TheSDKVersion) {

@@ -525,7 +525,7 @@ func.func @broadcast_static_sizes(%input: tensor<8x32xf32>,
   %bcast = linalg.broadcast
       ins(%input:tensor<8x32xf32>)
       outs(%init:tensor<8x16x32xf32>)
-      dimensions = [0, 2]
+      dimensions = [1]
   func.return %bcast : tensor<8x16x32xf32>
 }
 // CHECK-LABEL: func @broadcast_static_sizes
@@ -542,7 +542,7 @@ func.func @broadcast_with_dynamic_sizes(
   %bcast = linalg.broadcast
       ins(%input:tensor<8x?xf32>)
       outs(%init:tensor<8x16x?xf32>)
-      dimensions = [0, 2]
+      dimensions = [1]
   func.return %bcast : tensor<8x16x?xf32>
 }
 // CHECK-LABEL: func @broadcast_with_dynamic_sizes
@@ -558,7 +558,7 @@ func.func @broadcast_memref(%input: memref<8x32xf32>,
   linalg.broadcast
       ins(%input:memref<8x32xf32>)
       outs(%init:memref<8x16x32xf32>)
-      dimensions = [0, 2]
+      dimensions = [1]
   func.return
 }
 

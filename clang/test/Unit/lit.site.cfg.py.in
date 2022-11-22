@@ -8,7 +8,6 @@ config.llvm_tools_dir = lit_config.substitute(path(r"@LLVM_TOOLS_DIR@"))
 config.llvm_libs_dir = lit_config.substitute(path(r"@LLVM_LIBS_DIR@"))
 config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
 config.clang_obj_root = path(r"@CLANG_BINARY_DIR@")
-config.enable_shared = @ENABLE_SHARED@
 config.shlibdir = lit_config.substitute(path(r"@SHLIBDIR@"))
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 

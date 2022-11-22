@@ -111,14 +111,14 @@ struct ValueKnowledge {
       return result;
 
     result.hasRank = true;
-    result.sizes.resize(lhs.sizes.size(), ShapedType::kDynamicSize);
+    result.sizes.resize(lhs.sizes.size(), ShapedType::kDynamic);
     for (auto i : llvm::seq<unsigned>(0, result.sizes.size())) {
       int64_t lhsSize = lhs.sizes[i];
       int64_t rhsSize = rhs.sizes[i];
       int64_t &resultSize = result.sizes[i];
-      if (lhsSize == ShapedType::kDynamicSize) {
+      if (lhsSize == ShapedType::kDynamic) {
         resultSize = rhsSize;
-      } else if (rhsSize == ShapedType::kDynamicSize) {
+      } else if (rhsSize == ShapedType::kDynamic) {
         resultSize = lhsSize;
       } else if (lhsSize == rhsSize) {
         resultSize = lhsSize;
@@ -155,7 +155,7 @@ struct ValueKnowledge {
     }
 
     result.hasRank = true;
-    result.sizes.resize(lhs.sizes.size(), ShapedType::kDynamicSize);
+    result.sizes.resize(lhs.sizes.size(), ShapedType::kDynamic);
     for (int i = 0, e = lhs.sizes.size(); i < e; i++) {
       if (lhs.sizes[i] == rhs.sizes[i]) {
         result.sizes[i] = lhs.sizes[i];
@@ -170,7 +170,7 @@ struct ValueKnowledge {
   // Whether the value has known rank.
   bool hasRank;
   // If `hasRank`, the sizes along each rank. Unknown sizes are represented as
-  // `ShapedType::kDynamicSize`.
+  // `ShapedType::kDynamic`.
   llvm::SmallVector<int64_t> sizes;
   // The dtype of a tensor.
   // This is equal to nullptr if we don't know that it is a specific concrete

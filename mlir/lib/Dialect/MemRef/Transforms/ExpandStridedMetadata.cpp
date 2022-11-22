@@ -1,4 +1,4 @@
-//===- SimplifyExtractStridedMetadata.cpp - Simplify this operation -------===//
+//===- ExpandStridedMetadata.cpp - Simplify this operation -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// This pass simplifies extract_strided_metadata(other_op(memref) to
-/// extract_strided_metadata(memref) when it is possible to express the effect
-// of other_op using affine apply on the results of
-// extract_strided_metadata(memref).
+/// The pass expands memref operations that modify the metadata of a memref
+/// (sizes, offset, strides) into a sequence of easier to analyze constructs.
+/// In particular, this pass transforms operations into explicit sequence of
+/// operations that model the effect of this operation on the different
+/// metadata. This pass uses affine constructs to materialize these effects.
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -23,7 +24,7 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_SIMPLIFYEXTRACTSTRIDEDMETADATA
+#define GEN_PASS_DEF_EXPANDSTRIDEDMETADATA
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -81,7 +82,7 @@ public:
 
     detail::bindSymbolsList(rewriter.getContext(), symbols);
     AffineExpr expr = symbols.front();
-    values[0] = ShapedType::isDynamicStrideOrOffset(sourceOffset)
+    values[0] = ShapedType::isDynamic(sourceOffset)
                     ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
                     : rewriter.getIndexAttr(sourceOffset);
     SmallVector<OpFoldResult> subOffsets = subview.getMixedOffsets();
@@ -91,7 +92,7 @@ public:
     for (unsigned i = 0; i < sourceRank; ++i) {
       // Compute the stride.
       OpFoldResult origStride =
-          ShapedType::isDynamicStrideOrOffset(sourceStrides[i])
+          ShapedType::isDynamic(sourceStrides[i])
               ? origStrides[i]
               : OpFoldResult(rewriter.getIndexAttr(sourceStrides[i]));
       strides.push_back(makeComposedFoldedAffineApply(
@@ -273,7 +274,7 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
          "getStridesAndOffset must work on valid expand_shape");
 
   OpFoldResult origStride =
-      ShapedType::isDynamicStrideOrOffset(strides[groupId])
+      ShapedType::isDynamic(strides[groupId])
           ? origStrides[groupId]
           : builder.getIndexAttr(strides[groupId]);
 
@@ -425,7 +426,7 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
   int64_t innerMostDimForGroup = reassocGroup.back();
   int64_t innerMostStrideForGroup = strides[innerMostDimForGroup];
   collapsedStride.push_back(
-      ShapedType::isDynamicStrideOrOffset(innerMostStrideForGroup)
+      ShapedType::isDynamic(innerMostStrideForGroup)
           ? origStrides[innerMostDimForGroup]
           : builder.getIndexAttr(innerMostStrideForGroup));
 
@@ -483,7 +484,7 @@ public:
     unsigned reshapeRank = reshapeType.getRank();
 
     OpFoldResult offsetOfr =
-        ShapedType::isDynamicStrideOrOffset(offset)
+        ShapedType::isDynamic(offset)
             ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
             : rewriter.getIndexAttr(offset);
 
@@ -736,7 +737,7 @@ class ExtractStridedMetadataOpExtractStridedMetadataFolder
 };
 } // namespace
 
-void memref::populateSimplifyExtractStridedMetadataOpPatterns(
+void memref::populateExpandStridedMetadataPatterns(
     RewritePatternSet &patterns) {
   patterns.add<SubviewFolder,
                ReshapeFolder<memref::ExpandShapeOp, getExpandedSizes,
@@ -757,21 +758,21 @@ void memref::populateSimplifyExtractStridedMetadataOpPatterns(
 
 namespace {
 
-struct SimplifyExtractStridedMetadataPass final
-    : public memref::impl::SimplifyExtractStridedMetadataBase<
-          SimplifyExtractStridedMetadataPass> {
+struct ExpandStridedMetadataPass final
+    : public memref::impl::ExpandStridedMetadataBase<
+          ExpandStridedMetadataPass> {
   void runOnOperation() override;
 };
 
 } // namespace
 
-void SimplifyExtractStridedMetadataPass::runOnOperation() {
+void ExpandStridedMetadataPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  memref::populateSimplifyExtractStridedMetadataOpPatterns(patterns);
+  memref::populateExpandStridedMetadataPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(),
                                      std::move(patterns));
 }
 
-std::unique_ptr<Pass> memref::createSimplifyExtractStridedMetadataPass() {
-  return std::make_unique<SimplifyExtractStridedMetadataPass>();
+std::unique_ptr<Pass> memref::createExpandStridedMetadataPass() {
+  return std::make_unique<ExpandStridedMetadataPass>();
 }

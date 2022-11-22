@@ -7,15 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__need_malloc_and_calloc)
-
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
-
-#include_next <stdlib.h>
-
-#elif !defined(_LIBCPP_STDLIB_H)
+#ifndef _LIBCPP_STDLIB_H
 #define _LIBCPP_STDLIB_H
 
 /*

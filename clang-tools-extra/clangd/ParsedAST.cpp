@@ -482,7 +482,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
     CTContext->setSelfContainedDiags(true);
-    CTChecks = CTFactories.createChecksForLanguage(CTContext.getPointer());
+    CTChecks = CTFactories.createChecksForLanguage(&*CTContext);
     Preprocessor *PP = &Clang->getPreprocessor();
     for (const auto &Check : CTChecks) {
       Check->registerPPCallbacks(Clang->getSourceManager(), PP, PP);
@@ -663,7 +663,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                     Preamble->Diags.end());
     // Finally, add diagnostics coming from the AST.
     {
-      std::vector<Diag> D = ASTDiags.take(CTContext.getPointer());
+      std::vector<Diag> D = ASTDiags.take(&*CTContext);
       Diags->insert(Diags->end(), D.begin(), D.end());
     }
   }
