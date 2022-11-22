@@ -87,18 +87,21 @@ define void @select_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x1]
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    fcmeq v5.8h, v3.8h, v0.8h
-; CHECK-NEXT:    fcmeq v4.8h, v2.8h, v1.8h
-; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI3_0]
-; CHECK-NEXT:    and z3.d, z3.d, z5.d
-; CHECK-NEXT:    and z2.d, z2.d, z4.d
-; CHECK-NEXT:    eor z4.d, z4.d, z6.d
-; CHECK-NEXT:    eor z6.d, z5.d, z6.d
-; CHECK-NEXT:    and z1.d, z1.d, z4.d
-; CHECK-NEXT:    and z0.d, z0.d, z6.d
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI3_0]
+; CHECK-NEXT:    fcmeq p1.h, p0/z, z2.h, z1.h
+; CHECK-NEXT:    fcmeq p0.h, p0/z, z3.h, z0.h
+; CHECK-NEXT:    mov z5.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z6.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    and z2.d, z2.d, z5.d
+; CHECK-NEXT:    eor z5.d, z5.d, z4.d
+; CHECK-NEXT:    eor z4.d, z6.d, z4.d
+; CHECK-NEXT:    and z3.d, z3.d, z6.d
+; CHECK-NEXT:    and z0.d, z0.d, z4.d
+; CHECK-NEXT:    and z1.d, z1.d, z5.d
 ; CHECK-NEXT:    orr z0.d, z3.d, z0.d
+; CHECK-NEXT:    orr z1.d, z2.d, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -161,18 +164,21 @@ define void @select_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x1]
 ; CHECK-NEXT:    adrp x8, .LCPI6_0
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    fcmeq v5.4s, v3.4s, v0.4s
-; CHECK-NEXT:    fcmeq v4.4s, v2.4s, v1.4s
-; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI6_0]
-; CHECK-NEXT:    and z3.d, z3.d, z5.d
-; CHECK-NEXT:    and z2.d, z2.d, z4.d
-; CHECK-NEXT:    eor z4.d, z4.d, z6.d
-; CHECK-NEXT:    eor z6.d, z5.d, z6.d
-; CHECK-NEXT:    and z1.d, z1.d, z4.d
-; CHECK-NEXT:    and z0.d, z0.d, z6.d
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z3.s, z0.s
+; CHECK-NEXT:    mov z5.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z6.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    and z2.d, z2.d, z5.d
+; CHECK-NEXT:    eor z5.d, z5.d, z4.d
+; CHECK-NEXT:    eor z4.d, z6.d, z4.d
+; CHECK-NEXT:    and z3.d, z3.d, z6.d
+; CHECK-NEXT:    and z0.d, z0.d, z4.d
+; CHECK-NEXT:    and z1.d, z1.d, z5.d
 ; CHECK-NEXT:    orr z0.d, z3.d, z0.d
+; CHECK-NEXT:    orr z1.d, z2.d, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
@@ -232,18 +238,21 @@ define void @select_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x1]
 ; CHECK-NEXT:    adrp x8, .LCPI9_0
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    fcmeq v5.2d, v3.2d, v0.2d
-; CHECK-NEXT:    fcmeq v4.2d, v2.2d, v1.2d
-; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI9_0]
-; CHECK-NEXT:    and z3.d, z3.d, z5.d
-; CHECK-NEXT:    and z2.d, z2.d, z4.d
-; CHECK-NEXT:    eor z4.d, z4.d, z6.d
-; CHECK-NEXT:    eor z6.d, z5.d, z6.d
-; CHECK-NEXT:    and z1.d, z1.d, z4.d
-; CHECK-NEXT:    and z0.d, z0.d, z6.d
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI9_0]
+; CHECK-NEXT:    fcmeq p1.d, p0/z, z2.d, z1.d
+; CHECK-NEXT:    fcmeq p0.d, p0/z, z3.d, z0.d
+; CHECK-NEXT:    mov z5.d, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z6.d, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    and z2.d, z2.d, z5.d
+; CHECK-NEXT:    eor z5.d, z5.d, z4.d
+; CHECK-NEXT:    eor z4.d, z6.d, z4.d
+; CHECK-NEXT:    and z3.d, z3.d, z6.d
+; CHECK-NEXT:    and z0.d, z0.d, z4.d
+; CHECK-NEXT:    and z1.d, z1.d, z5.d
 ; CHECK-NEXT:    orr z0.d, z3.d, z0.d
+; CHECK-NEXT:    orr z1.d, z2.d, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
