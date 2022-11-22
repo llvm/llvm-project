@@ -9,7 +9,19 @@
 #ifndef LLVM_LIBC_SUPPORT_ARCHITECTURES_H
 #define LLVM_LIBC_SUPPORT_ARCHITECTURES_H
 
-#if defined(__pnacl__) || defined(__CLR_VER)
+#if defined(__AMDGPU__)
+#define LLVM_LIBC_ARCH_AMDGPU
+#endif
+
+#if defined(__NVPTX__)
+#define LLVM_LIBC_ARCH_NVPTX
+#endif
+
+#if defined(LLVM_LIBC_ARCH_NVPTX) || defined(LLVM_LIBC_ARCH_AMDGPU)
+#define LLVM_LIBC_ARCH_GPU
+#endif
+
+#if defined(__pnacl__) || defined(__CLR_VER) || defined(LLVM_LIBC_ARCH_GPU)
 #define LLVM_LIBC_ARCH_VM
 #endif
 
