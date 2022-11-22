@@ -1103,7 +1103,7 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
 
   auto AddBuffer = [&](size_t Task, const Twine &moduleName,
                        std::unique_ptr<MemoryBuffer> MB) {
-    *AddStream(Task)->OS << MB->getBuffer();
+    *AddStream(Task, moduleName)->OS << MB->getBuffer();
   };
 
   FileCache Cache;
