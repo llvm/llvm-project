@@ -5,7 +5,7 @@
   dimLevelType = ["dense", "compressed"]
 }>
 
-// CHECK-LABEL:   func.func @sparse_new(
+// CHECK-LABEL:   func.func @sparse_new_symmetry(
 // CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ] }>> {
 // CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
@@ -38,6 +38,37 @@
 // CHECK:         %[[T5:.*]] = sparse_tensor.load %[[T2]] hasInserts
 // CHECK:         %[[R:.*]] = sparse_tensor.convert %[[T5]]
 // CHECK:         bufferization.dealloc_tensor %[[T5]]
+// CHECK:         return %[[R]]
+func.func @sparse_new_symmetry(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSR> {
+  %0 = sparse_tensor.new expand_symmetry %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #CSR>
+  return %0 : tensor<?x?xf32, #CSR>
+}
+
+// CHECK-LABEL:   func.func @sparse_new(
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ] }>> {
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK:         %[[R:.*]] = call @createSparseTensorReader(%[[A]])
+// CHECK:         %[[DS:.*]] = memref.alloca(%[[C2]]) : memref<?xindex>
+// CHECK:         call @getSparseTensorReaderDimSizes(%[[R]], %[[DS]])
+// CHECK:         %[[D0:.*]] = memref.load %[[DS]]{{\[}}%[[C0]]]
+// CHECK:         %[[D1:.*]] = memref.load %[[DS]]{{\[}}%[[C1]]]
+// CHECK:         %[[T:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]])
+// CHECK:         %[[N:.*]] = call @getSparseTensorReaderNNZ(%[[R]])
+// CHECK:         %[[VB:.*]] = memref.alloca()
+// CHECK:         %[[T2:.*]] = scf.for %{{.*}} = %[[C0]] to %[[N]] step %[[C1]] iter_args(%[[A2:.*]] = %[[T]])
+// CHECK:           func.call @getSparseTensorReaderNextF32(%[[R]], %[[DS]], %[[VB]])
+// CHECK:           %[[E0:.*]] = memref.load %[[DS]]{{\[}}%[[C0]]]
+// CHECK:           %[[E1:.*]] = memref.load %[[DS]]{{\[}}%[[C1]]]
+// CHECK:           %[[V:.*]] = memref.load %[[VB]][]
+// CHECK:           %[[T1:.*]] = sparse_tensor.insert %[[V]] into %[[A2]]{{\[}}%[[E0]], %[[E1]]]
+// CHECK:           scf.yield %[[T1]]
+// CHECK:         }
+// CHECK:         call @delSparseTensorReader(%[[R]])
+// CHECK:         %[[T4:.*]] = sparse_tensor.load %[[T2]] hasInserts
+// CHECK:         %[[R:.*]] = sparse_tensor.convert %[[T4]]
+// CHECK:         bufferization.dealloc_tensor %[[T4]]
 // CHECK:         return %[[R]]
 func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSR> {
   %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #CSR>

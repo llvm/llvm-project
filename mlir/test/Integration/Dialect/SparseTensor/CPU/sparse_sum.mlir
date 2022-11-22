@@ -63,7 +63,7 @@ module {
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
-    %a = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #SparseMatrix>
+    %a = sparse_tensor.new expand_symmetry %fileName : !Filename to tensor<?x?xf64, #SparseMatrix>
 
     // Call the kernel.
     %0 = call @kernel_sum_reduce(%a, %x)
