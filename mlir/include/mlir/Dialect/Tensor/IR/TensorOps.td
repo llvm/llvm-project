@@ -1753,8 +1753,7 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     (`outer_dims_perm` `=` $outer_dims_perm^)?  
     `inner_dims_pos` `=` $inner_dims_pos
     `inner_tiles` `=`
-    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles,
-                             "ShapedType::kDynamic")
+    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles)
     `into` $dest attr-dict `:` type($source) `->` type($dest)
   }];
 
@@ -1808,8 +1807,7 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
     (`outer_dims_perm` `=` $outer_dims_perm^)?
     `inner_dims_pos` `=` $inner_dims_pos
     `inner_tiles` `=`
-    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles,
-                             "ShapedType::kDynamic")
+    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles)
     `into` $dest attr-dict `:` type($source) `->` type($dest)
   }];
 
