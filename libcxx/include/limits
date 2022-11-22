@@ -428,7 +428,7 @@ protected:
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {return __builtin_nansl("");}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type denorm_min() _NOEXCEPT {return __LDBL_DENORM_MIN__;}
 
-#if (defined(__ppc__) || defined(__ppc64__))
+#if defined(__powerpc__) && defined(__LONG_DOUBLE_IBM128__)
     static _LIBCPP_CONSTEXPR const bool is_iec559 = false;
 #else
     static _LIBCPP_CONSTEXPR const bool is_iec559 = true;
