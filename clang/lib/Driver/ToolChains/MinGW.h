@@ -113,7 +113,7 @@ private:
   std::string SubdirName;
   mutable std::unique_ptr<tools::gcc::Preprocessor> Preprocessor;
   mutable std::unique_ptr<tools::gcc::Compiler> Compiler;
-  void findGccLibDir();
+  void findGccLibDir(const llvm::Triple &LiteralTriple);
 
   bool NativeLLVMSupport;
 };
