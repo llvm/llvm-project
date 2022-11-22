@@ -14721,7 +14721,8 @@ ScalarEvolution::computeSymbolicMaxBackedgeTakenCount(const Loop *L) {
   // getConstantMaxBackedgeTakenCount which isn't restricted to just constants.
   SmallVector<const SCEV*, 4> ExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
-    const SCEV *ExitCount = getExitCount(L, ExitingBB);
+    const SCEV *ExitCount =
+        getExitCount(L, ExitingBB, ScalarEvolution::SymbolicMaximum);
     if (isa<SCEVCouldNotCompute>(ExitCount))
       ExitCount = getExitCount(L, ExitingBB,
                                   ScalarEvolution::ConstantMaximum);
