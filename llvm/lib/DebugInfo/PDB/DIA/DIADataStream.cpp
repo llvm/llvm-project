@@ -30,11 +30,11 @@ DIADataStream::getItemAtIndex(uint32_t Index) const {
   DWORD RecordSize = 0;
   StreamData->Item(Index, 0, &RecordSize, nullptr);
   if (RecordSize == 0)
-    return llvm::Optional<RecordType>();
+    return llvm::None;
 
   Record.resize(RecordSize);
   if (S_OK != StreamData->Item(Index, RecordSize, &RecordSize, &Record[0]))
-    return llvm::Optional<RecordType>();
+    return llvm::None;
   return Record;
 }
 

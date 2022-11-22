@@ -3535,7 +3535,7 @@ getContiguousRangeOfSetBits(const APInt &A) {
   unsigned FirstOne = A.getBitWidth() - A.countLeadingZeros() - 1;
   unsigned LastOne = A.countTrailingZeros();
   if (A.countPopulation() != (FirstOne - LastOne + 1))
-    return Optional<std::pair<unsigned,unsigned>>();
+    return None;
   return std::make_pair(FirstOne, LastOne);
 }
 
