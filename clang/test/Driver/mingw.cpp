@@ -39,6 +39,10 @@
 // CHECK_MINGW_OPENSUSE_TREE: "[[BASE]]/Inputs/mingw_opensuse_tree/usr{{/|\\\\}}x86_64-w64-mingw32/sys-root/mingw/include"
 
 
+// RUN: %clang -target x86_64-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_fedora_tree/usr %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_FEDORA_TREE %s
+// CHECK_MINGW_FEDORA_TREE: "[[BASE:[^"]+]]/Inputs/mingw_fedora_tree/usr{{/|\\\\}}x86_64-w64-mingw32ucrt/sys-root/mingw/include"
+
+
 // RUN: %clang -target i686-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_arch_tree/usr %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_ARCH_TREE %s
 // CHECK_MINGW_ARCH_TREE: "[[BASE:[^"]+]]/Inputs/mingw_arch_tree/usr{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}5.1.0"
 // CHECK_MINGW_ARCH_TREE: "[[BASE]]/Inputs/mingw_arch_tree/usr{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}5.1.0{{/|\\\\}}i686-w64-mingw32"
