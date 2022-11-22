@@ -7,7 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_WCHAR_H
+#if defined(__need_wint_t) || defined(__need_mbstate_t)
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+#include_next <wchar.h>
+
+#elif !defined(_LIBCPP_WCHAR_H)
 #define _LIBCPP_WCHAR_H
 
 /*
