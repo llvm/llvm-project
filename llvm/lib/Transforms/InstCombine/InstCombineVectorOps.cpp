@@ -398,6 +398,20 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
                                             SQ.getWithInstruction(&EI)))
     return replaceInstUsesWith(EI, V);
 
+  // extractelt (select %x, %vec1, %vec2), %const ->
+  // select %x, %vec1[%const], %vec2[%const]
+  // TODO: Support constant folding of multiple select operands:
+  // extractelt (select %x, %vec1, %vec2), (select %x, %c1, %c2)
+  // If the extractelement will for instance try to do out of bounds accesses
+  // because of the values of %c1 and/or %c2, the sequence could be optimized
+  // early. This is currently not possible because constant folding will reach
+  // an unreachable assertion if it doesn't find a constant operand.
+  if (SelectInst *SI = dyn_cast<SelectInst>(EI.getVectorOperand()))
+    if (SI->getCondition()->getType()->isIntegerTy() &&
+        isa<Constant>(EI.getIndexOperand()))
+      if (Instruction *R = FoldOpIntoSelect(EI, SI))
+        return R;
+
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   auto *IndexC = dyn_cast<ConstantInt>(Index);

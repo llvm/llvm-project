@@ -1069,6 +1069,9 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
     return Builder.CreateBinaryIntrinsic(IID, SO, II->getArgOperand(1));
   }
 
+  if (auto *EI = dyn_cast<ExtractElementInst>(&I))
+    return Builder.CreateExtractElement(SO, EI->getIndexOperand());
+
   assert(I.isBinaryOp() && "Unexpected opcode for select folding");
 
   // Figure out if the constant is the left or the right argument.

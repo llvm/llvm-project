@@ -1462,6 +1462,10 @@ private:
     /// Get the symbolic max backedge taken count for the loop.
     const SCEV *getSymbolicMax(const Loop *L, ScalarEvolution *SE);
 
+    /// Get the symbolic max backedge taken count for the particular loop exit.
+    const SCEV *getSymbolicMax(const BasicBlock *ExitingBlock,
+                               ScalarEvolution *SE) const;
+
     /// Return true if the number of times this backedge is taken is either the
     /// value returned by getConstantMax or zero.
     bool isConstantMaxOrZero(ScalarEvolution *SE) const;

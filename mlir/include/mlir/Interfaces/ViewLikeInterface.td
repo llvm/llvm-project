@@ -165,8 +165,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::getMixedStridesOrOffsets($_op.getStaticOffsets(),
-                                                $_op.getOffsets());
+        return ::mlir::getMixedValues($_op.getStaticOffsets(),
+                                      $_op.getOffsets());
       }]
     >,
     InterfaceMethod<
@@ -178,7 +178,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::getMixedSizes($_op.getStaticSizes(), $_op.sizes());
+        return ::mlir::getMixedValues($_op.getStaticSizes(), $_op.sizes());
       }]
     >,
     InterfaceMethod<
@@ -190,15 +190,13 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::getMixedStridesOrOffsets($_op.getStaticStrides(),
-                                                $_op.getStrides());
+        return ::mlir::getMixedValues($_op.getStaticStrides(),
+                                      $_op.getStrides());
       }]
     >,
 
     InterfaceMethod<
-      /*desc=*/[{
-        Return true if the offset `idx` is dynamic.
-      }],
+      /*desc=*/"Return true if the offset `idx` is dynamic.",
       /*retTy=*/"bool",
       /*methodName=*/"isDynamicOffset",
       /*args=*/(ins "unsigned":$idx),
@@ -210,9 +208,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       }]
     >,
     InterfaceMethod<
-      /*desc=*/[{
-        Return true if the size `idx` is dynamic.
-      }],
+      /*desc=*/"Return true if the size `idx` is dynamic.",
       /*retTy=*/"bool",
       /*methodName=*/"isDynamicSize",
       /*args=*/(ins "unsigned":$idx),
@@ -224,9 +220,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       }]
     >,
     InterfaceMethod<
-      /*desc=*/[{
-       Return true if the stride `idx` is dynamic.
-      }],
+      /*desc=*/"Return true if the stride `idx` is dynamic.",
       /*retTy=*/"bool",
       /*methodName=*/"isDynamicStride",
       /*args=*/(ins "unsigned":$idx),

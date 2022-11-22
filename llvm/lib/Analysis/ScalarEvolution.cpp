@@ -8223,8 +8223,9 @@ const SCEV *ScalarEvolution::getExitCount(const Loop *L,
                                           ExitCountKind Kind) {
   switch (Kind) {
   case Exact:
-  case SymbolicMaximum:
     return getBackedgeTakenInfo(L).getExact(ExitingBlock, this);
+  case SymbolicMaximum:
+    return getBackedgeTakenInfo(L).getSymbolicMax(ExitingBlock, this);
   case ConstantMaximum:
     return getBackedgeTakenInfo(L).getConstantMax(ExitingBlock, this);
   };
@@ -8554,6 +8555,12 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
       return ENT.MaxNotTaken;
 
   return SE->getCouldNotCompute();
+}
+
+const SCEV *ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(
+    const BasicBlock *ExitingBlock, ScalarEvolution *SE) const {
+  // FIXME: Need to implement this. Return exact for now.
+  return getExact(ExitingBlock, SE);
 }
 
 /// getConstantMax - Get the constant max backedge taken count for the loop.
@@ -14721,7 +14728,8 @@ ScalarEvolution::computeSymbolicMaxBackedgeTakenCount(const Loop *L) {
   // getConstantMaxBackedgeTakenCount which isn't restricted to just constants.
   SmallVector<const SCEV*, 4> ExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
-    const SCEV *ExitCount = getExitCount(L, ExitingBB);
+    const SCEV *ExitCount =
+        getExitCount(L, ExitingBB, ScalarEvolution::SymbolicMaximum);
     if (isa<SCEVCouldNotCompute>(ExitCount))
       ExitCount = getExitCount(L, ExitingBB,
                                   ScalarEvolution::ConstantMaximum);
