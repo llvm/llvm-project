@@ -647,7 +647,7 @@ float __frcp_rn(float __x) { return 1.0f / __x; }
 #endif
 
 __DEVICE__
-float __frsqrt_rn(float __x) { return __llvm_amdgcn_rsq_f32(__x); }
+float __frsqrt_rn(float __x) { return __builtin_amdgcn_rsqf(__x); }
 
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
