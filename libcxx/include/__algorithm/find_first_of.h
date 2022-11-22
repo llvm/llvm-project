@@ -44,9 +44,7 @@ find_first_of(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIte
 template <class _ForwardIterator1, class _ForwardIterator2>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator1 find_first_of(
     _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2, _ForwardIterator2 __last2) {
-  typedef typename iterator_traits<_ForwardIterator1>::value_type __v1;
-  typedef typename iterator_traits<_ForwardIterator2>::value_type __v2;
-  return _VSTD::__find_first_of_ce(__first1, __last1, __first2, __last2, __equal_to<__v1, __v2>());
+  return std::__find_first_of_ce(__first1, __last1, __first2, __last2, __equal_to());
 }
 
 _LIBCPP_END_NAMESPACE_STD
