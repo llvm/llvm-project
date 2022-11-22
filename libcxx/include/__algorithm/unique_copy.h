@@ -114,8 +114,7 @@ unique_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __res
 template <class _InputIterator, class _OutputIterator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 unique_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
-  typedef typename iterator_traits<_InputIterator>::value_type __v;
-  return std::unique_copy(std::move(__first), std::move(__last), std::move(__result), __equal_to<__v>());
+  return std::unique_copy(std::move(__first), std::move(__last), std::move(__result), __equal_to());
 }
 
 _LIBCPP_END_NAMESPACE_STD

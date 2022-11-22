@@ -24,6 +24,24 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
+template <class Iter1, class Iter2 = Iter1>
+void test_equal() {
+  int a[]          = {0, 1, 2, 3, 4, 5};
+  const unsigned s = sizeof(a) / sizeof(a[0]);
+  int b[s]         = {0, 1, 2, 5, 4, 5};
+
+  assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a)));
+  assert(std::equal(Iter2(a), Iter2(a + s), Iter1(a)));
+  assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b)));
+
+#if TEST_STD_VER >= 14
+  assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s)));
+  assert(std::equal(Iter2(a), Iter2(a + s), Iter1(a), Iter1(a + s)));
+  assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s - 1)));
+  assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b), Iter2(b + s)));
+#endif
+}
+
 #if TEST_STD_VER > 17
 TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 3, 6, 7};
@@ -46,44 +64,20 @@ TEST_CONSTEXPR bool test_constexpr() {
 
 int main(int, char**)
 {
-    int ia[] = {0, 1, 2, 3, 4, 5};
-    const unsigned s = sizeof(ia)/sizeof(ia[0]);
-    int ib[s] = {0, 1, 2, 5, 4, 5};
-    assert(std::equal(cpp17_input_iterator<const int*>(ia),
-                      cpp17_input_iterator<const int*>(ia+s),
-                      cpp17_input_iterator<const int*>(ia)));
-#if TEST_STD_VER >= 14
-    assert(std::equal(cpp17_input_iterator<const int*>(ia),
-                      cpp17_input_iterator<const int*>(ia+s),
-                      cpp17_input_iterator<const int*>(ia),
-                      cpp17_input_iterator<const int*>(ia+s)));
-    assert(std::equal(random_access_iterator<const int*>(ia),
-                      random_access_iterator<const int*>(ia+s),
-                      random_access_iterator<const int*>(ia),
-                      random_access_iterator<const int*>(ia+s)));
-#endif
-    assert(!std::equal(cpp17_input_iterator<const int*>(ia),
-                       cpp17_input_iterator<const int*>(ia+s),
-                       cpp17_input_iterator<const int*>(ib)));
-#if TEST_STD_VER >= 14
-    assert(!std::equal(cpp17_input_iterator<const int*>(ia),
-                       cpp17_input_iterator<const int*>(ia+s),
-                       cpp17_input_iterator<const int*>(ib),
-                       cpp17_input_iterator<const int*>(ib+s)));
-    assert(!std::equal(random_access_iterator<const int*>(ia),
-                       random_access_iterator<const int*>(ia+s),
-                       random_access_iterator<const int*>(ib),
-                       random_access_iterator<const int*>(ib+s)));
-    assert(!std::equal(cpp17_input_iterator<const int*>(ia),
-                       cpp17_input_iterator<const int*>(ia+s),
-                       cpp17_input_iterator<const int*>(ia),
-                       cpp17_input_iterator<const int*>(ia+s-1)));
-    assert(!std::equal(random_access_iterator<const int*>(ia),
-                       random_access_iterator<const int*>(ia+s),
-                       random_access_iterator<const int*>(ia),
-                       random_access_iterator<const int*>(ia+s-1)));
+  test_equal<cpp17_input_iterator<const int*> >();
+  test_equal<random_access_iterator<const int*> >();
 
-#endif
+  // Test all combinations of cv-qualifiers:
+  test_equal<int*>();
+  test_equal<int*, const int*>();
+  test_equal<int*, volatile int*>();
+  test_equal<int*, const volatile int*>();
+  test_equal<const int*>();
+  test_equal<const int*, volatile int*>();
+  test_equal<const int*, const volatile int*>();
+  test_equal<volatile int*>();
+  test_equal<volatile int*, const volatile int*>();
+  test_equal<const volatile int*>();
 
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
