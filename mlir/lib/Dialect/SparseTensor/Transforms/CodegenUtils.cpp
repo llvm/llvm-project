@@ -329,6 +329,13 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
   return loop;
 }
 
+void SparseTensorLoopEmitter::genDenseAffineAddressAtCurLevel(
+    OpBuilder &builder, Location loc, size_t tid, size_t dim,
+    AffineExpr affine) {
+  Value affineV = genAffine(builder, affine, loc);
+  pidxs[tid][dim] = genAddress(builder, loc, tid, dim, affineV);
+}
+
 Operation *SparseTensorLoopEmitter::enterCoIterationOverTensorsAtDims(
     OpBuilder &builder, Location loc, ArrayRef<size_t> tids,
     ArrayRef<size_t> dims, bool needsUniv, MutableArrayRef<Value> reduc,
