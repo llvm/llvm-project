@@ -258,6 +258,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
 #if FAF_DEBUG>=2
   printf("\nCreating AFItem\n");
   printf("\tACId: %d\n", (*AC)->ItemId);
+  printf("\tNumber of Operands: %d\n", NumOperands);
   printf("\tRootNode: %s\n", (*AC)->ResultVar);
   printf("\tComponents:\n");
   for (int I = 0; I < NumOperands; ++I) {
@@ -270,23 +271,31 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
   printf("\n");
 #endif
 
-  // Computing the number of Components/AFPaths that contribute to the Relative
-  // Error of this instruction.
-  int TotalAFComponents = 0;
-  for (int I = 0; I < NumOperands; ++I) {
-    if (AFItemWRTOperands[I] != NULL)
-      TotalAFComponents+=(*AFItemWRTOperands[I])->NumAFComponents;
-    else
-      TotalAFComponents+=1;
-  }
-
-
   //  Create a new AF record and initialize data members and allocate memory for
   //    AFComponents array.
   AFItem *NewAFItem = NULL;
   fAFCreateAFItem(&NewAFItem);
   NewAFItem->ItemId = AFItemCounter;
   NewAFItem->NumAFComponents=0;
+
+  int TotalAFComponents = 0;
+
+#if MEMORY_OPT
+  TotalAFComponents+=NumOperands;
+#else
+  // Computing the number of Components/AFPaths that contribute to the Relative
+  // Error of this instruction.
+  for (int I = 0; I < NumOperands; ++I) {
+    if (AFItemWRTOperands[I] != NULL)
+      TotalAFComponents+=(*AFItemWRTOperands[I])->NumAFComponents;
+    else
+      TotalAFComponents++;
+  }
+#endif
+#if FAF_DEBUG>=2
+  printf("\tTotalAFComponents: %d\n\n", TotalAFComponents);
+#endif
+
   if((NewAFItem->Components =
            (AFProduct **)malloc(sizeof(AFProduct*)*TotalAFComponents)) == NULL) {
     printf("#fAF: Not enough memory for AFProduct Array!");
@@ -300,7 +309,25 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
   // Loop over the AF Records corresponding to each operand and for each operand:
   for (int I = 0; I < NumOperands; ++I) {
     if(AFItemWRTOperands[I] != NULL) {
+#if MEMORY_OPT
+      assert((*AFItemWRTOperands[I])->Components[0] != NULL);
+      double GreatestAF = (*AFItemWRTOperands[I])->Components[0]->AF *
+                          (*AC)->ACWRTOperands[I];
+      int CandidateIndex = 0;
+#endif
+
+      // Loop through all Components of this child. Do not skip 0 to optimize
+      //  getting the greatest AF or you will miss some components.
       for (int J = 0; J < (*AFItemWRTOperands[I])->NumAFComponents; ++J) {
+#if MEMORY_OPT
+        // Get the greatest AF and index of the corresponding component.
+        if(GreatestAF > (*AFItemWRTOperands[I])->Components[J]->AF *
+                             (*AC)->ACWRTOperands[I]) {
+          GreatestAF = (*AFItemWRTOperands[I])->Components[J]->AF *
+                       (*AC)->ACWRTOperands[I];
+          CandidateIndex = J;
+        }
+#else
         // Create a new AFProduct and copy the corresponding AFProduct from
         // the AFItem for that operand and also the ACItem and set the AF.
         AFProduct *NewAFComponent = NULL;
@@ -318,7 +345,28 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
         // Add this new AFProduct to the new AFItem
         NewAFItem->Components[NewAFItem->NumAFComponents] = NewAFComponent;
         NewAFItem->NumAFComponents++;
+#endif
       }
+
+#if MEMORY_OPT
+      // Create a new AFProduct and copy the corresponding AFProduct from
+      // the AFItem for that operand and also the ACItem and set the AF.
+      AFProduct *NewAFComponent = NULL;
+      fAFCreateAFComponent(&NewAFComponent);
+      NewAFComponent->Input = (*AFItemWRTOperands[I])->Components[CandidateIndex]->Input;
+      NewAFComponent->ItemId = AFComponentCounter;
+      NewAFComponent->Factor = *AC;
+      NewAFComponent->ProductTail = (*AFItemWRTOperands[I])->Components[CandidateIndex];
+      NewAFComponent->Height = (*AFItemWRTOperands[I])->Components[CandidateIndex]->Height+1;
+      NewAFComponent->AF = (*AFItemWRTOperands[I])->Components[CandidateIndex]->AF *
+                           (*AC)->ACWRTOperands[I];
+
+      AFComponentCounter++;
+
+      // Add this new AFProduct to the new AFItem
+      NewAFItem->Components[NewAFItem->NumAFComponents] = NewAFComponent;
+      NewAFItem->NumAFComponents++;
+#endif
     } else {
       // Create a new AFProduct and copy the ACItem and set the AF.
       AFProduct *NewAFComponent = NULL;
