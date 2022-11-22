@@ -29,6 +29,8 @@ protected:
   enum PartialMappingIdx {
     PMI_None = -1,
     PMI_GPR64 = 1,
+    PMI_FPR32 = 2,
+    PMI_FPR64 = 3,
     PMI_Min = PMI_GPR64,
   };
 
