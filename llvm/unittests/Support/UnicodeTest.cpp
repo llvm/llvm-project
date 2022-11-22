@@ -45,6 +45,11 @@ TEST(Unicode, columnWidthUTF8) {
   EXPECT_EQ(3, columnWidthUTF8("q\344\270\200"));
   EXPECT_EQ(3, columnWidthUTF8("\314\200\340\270\201\344\270\200"));
 
+  EXPECT_EQ(2, columnWidthUTF8("\u231A")); // WATCH (emoji)
+  EXPECT_EQ(2, columnWidthUTF8("\U0001FADB")); // PEA POD (Unicode 15 emoji)
+  EXPECT_EQ(2, columnWidthUTF8("\U0001B132")); // HIRAGANA LETTER SMALL KO
+  EXPECT_EQ(2, columnWidthUTF8("\U00017042")); // TANGUT IDEOGRAPH
+
   // Invalid UTF-8 strings, columnWidthUTF8 should error out.
   EXPECT_EQ(-2, columnWidthUTF8("\344"));
   EXPECT_EQ(-2, columnWidthUTF8("\344\270"));
