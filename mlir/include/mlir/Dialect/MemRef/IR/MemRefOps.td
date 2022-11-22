@@ -1267,14 +1267,11 @@ def MemRef_ReinterpretCastOp
 
   let assemblyFormat = [{
     $source `to` `offset` `` `:`
-    custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamic")
+    custom<DynamicIndexList>($offsets, $static_offsets)
     `` `,` `sizes` `` `:`
-    custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamic")
+    custom<DynamicIndexList>($sizes, $static_sizes)
     `` `,` `strides` `` `:`
-    custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamic")
+    custom<DynamicIndexList>($strides, $static_strides)
     attr-dict `:` type($source) `to` type($result)
   }];
 
@@ -1865,12 +1862,9 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
 
   let assemblyFormat = [{
     $source ``
-    custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamic")
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    custom<DynamicIndexList>($sizes, $static_sizes)
+    custom<DynamicIndexList>($strides, $static_strides)
     attr-dict `:` type($source) `to` type($result)
   }];
 

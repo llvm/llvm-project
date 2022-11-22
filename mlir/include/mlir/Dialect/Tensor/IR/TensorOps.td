@@ -334,12 +334,9 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
 
   let assemblyFormat = [{
     $source ``
-    custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamic")
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    custom<DynamicIndexList>($sizes, $static_sizes)
+    custom<DynamicIndexList>($strides, $static_strides)
     attr-dict `:` type($source) `to` type($result)
   }];
 
@@ -818,12 +815,9 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
 
   let assemblyFormat = [{
     $source `into` $dest ``
-    custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamic")
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    custom<DynamicIndexList>($sizes, $static_sizes)
+    custom<DynamicIndexList>($strides, $static_strides)
     attr-dict `:` type($source) `into` type($dest)
   }];
 
@@ -1221,10 +1215,8 @@ def Tensor_PadOp : Tensor_Op<"pad", [
   let assemblyFormat = [{
     $source
     (`nofold` $nofold^)?
-    `low` `` custom<DynamicIndexList>($low, $static_low,
-                                        "ShapedType::kDynamic")
-    `high` `` custom<DynamicIndexList>($high, $static_high,
-                                         "ShapedType::kDynamic")
+    `low` `` custom<DynamicIndexList>($low, $static_low)
+    `high` `` custom<DynamicIndexList>($high, $static_high)
     $region attr-dict `:` type($source) `to` type($result)
   }];
 
@@ -1411,12 +1403,9 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
   );
   let assemblyFormat = [{
     $source `into` $dest ``
-    custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamic")
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    custom<DynamicIndexList>($sizes, $static_sizes)
+    custom<DynamicIndexList>($strides, $static_strides)
     attr-dict `:` type($source) `into` type($dest)
   }];
 
