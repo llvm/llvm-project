@@ -76,11 +76,11 @@ define i32 @cmp_and4(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32
 ; GISEL-NEXT:    cmp w0, w1
 ; GISEL-NEXT:    cset w9, lo
 ; GISEL-NEXT:    cmp w4, w5
-; GISEL-NEXT:    cset w10, ne
-; GISEL-NEXT:    cmp w6, w7
-; GISEL-NEXT:    cset w11, eq
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    and w9, w10, w11
+; GISEL-NEXT:    cset w9, ne
+; GISEL-NEXT:    cmp w6, w7
+; GISEL-NEXT:    and w8, w8, w9
+; GISEL-NEXT:    cset w9, eq
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
   %9 = icmp ugt i32 %2, %3
@@ -166,11 +166,11 @@ define i32 @cmp_or4(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 
 ; GISEL-NEXT:    cmp w2, w3
 ; GISEL-NEXT:    cset w9, hi
 ; GISEL-NEXT:    cmp w4, w5
-; GISEL-NEXT:    cset w10, ne
-; GISEL-NEXT:    cmp w6, w7
-; GISEL-NEXT:    cset w11, eq
 ; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    orr w9, w10, w11
+; GISEL-NEXT:    cset w9, ne
+; GISEL-NEXT:    cmp w6, w7
+; GISEL-NEXT:    orr w8, w8, w9
+; GISEL-NEXT:    cset w9, eq
 ; GISEL-NEXT:    orr w0, w8, w9
 ; GISEL-NEXT:    ret
   %9 = icmp ult i32 %0, %1
