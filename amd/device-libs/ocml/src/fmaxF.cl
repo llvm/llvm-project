@@ -10,15 +10,6 @@
 CONSTATTR float
 MATH_MANGLE(fmax)(float x, float y)
 {
-    float ret;
-
-    if (DAZ_OPT() & !FINITE_ONLY_OPT()) {
-        // XXX revist this later
-        ret = BUILTIN_CMAX_F32(x, y);
-    } else {
-        ret = BUILTIN_MAX_F32(x, y);
-    }
-
-    return ret;
+    return BUILTIN_MAX_F32(x, y);
 }
 
