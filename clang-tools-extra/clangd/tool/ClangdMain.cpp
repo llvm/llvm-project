@@ -993,8 +993,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   } else {
     log("Starting LSP over stdin/stdout");
     TransportLayer = newJSONTransport(
-        stdin, llvm::outs(),
-        InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
+        stdin, llvm::outs(), InputMirrorStream ? &*InputMirrorStream : nullptr,
         PrettyPrint, InputStyle);
   }
   if (!PathMappingsArg.empty()) {

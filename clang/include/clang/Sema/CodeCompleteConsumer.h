@@ -424,7 +424,7 @@ public:
 
   llvm::Optional<const CXXScopeSpec *> getCXXScopeSpecifier() {
     if (ScopeSpecifier)
-      return ScopeSpecifier.getPointer();
+      return &*ScopeSpecifier;
     return llvm::None;
   }
 };
