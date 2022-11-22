@@ -940,8 +940,8 @@ SomeExpr RuntimeTableBuilder::PackageIntValueExpr(
   return StructureExpr(PackageIntValue(genre, n));
 }
 
-SymbolVector CollectBindings(const Scope &dtScope) {
-  SymbolVector result;
+std::vector<const Symbol *> CollectBindings(const Scope &dtScope) {
+  std::vector<const Symbol *> result;
   std::map<SourceName, const Symbol *> localBindings;
   // Collect local bindings
   for (auto pair : dtScope) {
@@ -957,14 +957,14 @@ SymbolVector CollectBindings(const Scope &dtScope) {
       const Symbol &symbol{**iter};
       auto overridden{localBindings.find(symbol.name())};
       if (overridden != localBindings.end()) {
-        *iter = *overridden->second;
+        *iter = overridden->second;
         localBindings.erase(overridden);
       }
     }
   }
   // Add remaining (non-overriding) local bindings in name order to the result
   for (auto pair : localBindings) {
-    result.push_back(*pair.second);
+    result.push_back(pair.second);
   }
   return result;
 }
@@ -972,13 +972,13 @@ SymbolVector CollectBindings(const Scope &dtScope) {
 std::vector<evaluate::StructureConstructor>
 RuntimeTableBuilder::DescribeBindings(const Scope &dtScope, Scope &scope) {
   std::vector<evaluate::StructureConstructor> result;
-  for (const SymbolRef ref : CollectBindings(dtScope)) {
+  for (const Symbol *symbol : CollectBindings(dtScope)) {
     evaluate::StructureConstructorValues values;
     AddValue(values, bindingSchema_, "proc"s,
         SomeExpr{evaluate::ProcedureDesignator{
-            ref.get().get<ProcBindingDetails>().symbol()}});
+            symbol->get<ProcBindingDetails>().symbol()}});
     AddValue(values, bindingSchema_, "name"s,
-        SaveNameAsPointerTarget(scope, ref.get().name().ToString()));
+        SaveNameAsPointerTarget(scope, symbol->name().ToString()));
     result.emplace_back(DEREF(bindingSchema_.AsDerived()), std::move(values));
   }
   return result;

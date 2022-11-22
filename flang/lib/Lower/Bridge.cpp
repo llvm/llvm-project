@@ -223,21 +223,21 @@ public:
           parent ? Fortran::lower::mangle::mangleName(*parent) : "");
       auto insertPt = builder.saveInsertionPoint();
 
-      Fortran::semantics::SymbolVector bindings =
+      std::vector<const Fortran::semantics::Symbol *> bindings =
           Fortran::semantics::CollectBindings(*info.typeSpec->scope());
 
       if (!bindings.empty())
         builder.createBlock(&dt.getRegion());
 
-      for (const Fortran::semantics::SymbolRef binding : bindings) {
+      for (const Fortran::semantics::Symbol *binding : bindings) {
         const auto *details =
-            binding.get().detailsIf<Fortran::semantics::ProcBindingDetails>();
+            binding->detailsIf<Fortran::semantics::ProcBindingDetails>();
         std::string bindingName =
             Fortran::lower::mangle::mangleName(details->symbol());
         builder.create<fir::DTEntryOp>(
             info.loc,
             mlir::StringAttr::get(builder.getContext(),
-                                  binding.get().name().ToString()),
+                                  binding->name().ToString()),
             mlir::SymbolRefAttr::get(builder.getContext(), bindingName));
       }
       if (!bindings.empty())
