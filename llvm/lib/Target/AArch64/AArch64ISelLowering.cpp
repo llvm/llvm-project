@@ -13920,38 +13920,116 @@ static void createTblShuffleForZExt(ZExtInst *ZExt, bool IsLittleEndian) {
 static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
   IRBuilder<> Builder(TI);
   SmallVector<Value *> Parts;
+  int NumElements = cast<FixedVectorType>(TI->getType())->getNumElements();
+  auto *SrcTy = cast<FixedVectorType>(TI->getOperand(0)->getType());
+  auto *DstTy = cast<FixedVectorType>(TI->getType());
+  assert(SrcTy->getElementType()->isIntegerTy() &&
+         "Non-integer type source vector element is not supported");
+  assert(DstTy->getElementType()->isIntegerTy(8) &&
+         "Unsupported destination vector element type");
+  unsigned SrcElemTySz =
+      cast<IntegerType>(SrcTy->getElementType())->getBitWidth();
+  unsigned TruncFactor =
+      SrcElemTySz / cast<IntegerType>(DstTy->getElementType())->getBitWidth();
+  assert((SrcElemTySz == 16 || SrcElemTySz == 32 || SrcElemTySz == 64) &&
+         "Unsupported source vector element type size");
   Type *VecTy = FixedVectorType::get(Builder.getInt8Ty(), 16);
-  Parts.push_back(Builder.CreateBitCast(
-      Builder.CreateShuffleVector(TI->getOperand(0), {0, 1, 2, 3}), VecTy));
-  Parts.push_back(Builder.CreateBitCast(
-      Builder.CreateShuffleVector(TI->getOperand(0), {4, 5, 6, 7}), VecTy));
 
-  Intrinsic::ID TblID = Intrinsic::aarch64_neon_tbl2;
-  unsigned NumElements = cast<FixedVectorType>(TI->getType())->getNumElements();
-  if (NumElements == 16) {
-    Parts.push_back(Builder.CreateBitCast(
-        Builder.CreateShuffleVector(TI->getOperand(0), {8, 9, 10, 11}), VecTy));
-    Parts.push_back(Builder.CreateBitCast(
-        Builder.CreateShuffleVector(TI->getOperand(0), {12, 13, 14, 15}),
-        VecTy));
-    TblID = Intrinsic::aarch64_neon_tbl4;
-  }
+  // Create a mask to choose every nth byte from the source vector table of
+  // bytes to create the truncated destination vector, where 'n' is the truncate
+  // ratio. For example, for a truncate from Yxi64 to Yxi8, choose
+  // 0,8,16,..Y*8th bytes for the little-endian format
   SmallVector<Constant *, 16> MaskConst;
-  for (unsigned Idx = 0; Idx < NumElements * 4; Idx += 4)
-    MaskConst.push_back(
-        ConstantInt::get(Builder.getInt8Ty(), IsLittleEndian ? Idx : Idx + 3));
+  for (int Itr = 0; Itr < 16; Itr++) {
+    if (Itr < NumElements)
+      MaskConst.push_back(ConstantInt::get(
+          Builder.getInt8Ty(), IsLittleEndian
+                                   ? Itr * TruncFactor
+                                   : Itr * TruncFactor + (TruncFactor - 1)));
+    else
+      MaskConst.push_back(ConstantInt::get(Builder.getInt8Ty(), 255));
+  }
 
-  for (unsigned Idx = NumElements * 4; Idx < 64; Idx += 4)
-    MaskConst.push_back(ConstantInt::get(Builder.getInt8Ty(), 255));
+  int MaxTblSz = 128 * 4;
+  int MaxSrcSz = SrcElemTySz * NumElements;
+  int ElemsPerTbl =
+      (MaxTblSz > MaxSrcSz) ? NumElements : (MaxTblSz / SrcElemTySz);
+  assert(ElemsPerTbl <= 16 &&
+         "Maximum elements selected using TBL instruction cannot exceed 16!");
 
-  Parts.push_back(ConstantVector::get(MaskConst));
-  auto *F =
-      Intrinsic::getDeclaration(TI->getModule(), TblID, Parts[0]->getType());
-  Value *Res = Builder.CreateCall(F, Parts);
+  int ShuffleCount = 128 / SrcElemTySz;
+  SmallVector<int> ShuffleLanes;
+  for (int i = 0; i < ShuffleCount; ++i)
+    ShuffleLanes.push_back(i);
 
-  if (NumElements == 8)
-    Res = Builder.CreateShuffleVector(Res, {0, 1, 2, 3, 4, 5, 6, 7});
-  TI->replaceAllUsesWith(Res);
+  // Create TBL's table of bytes in 1,2,3 or 4 FP/SIMD registers using shuffles
+  // over the source vector. If TBL's maximum 4 FP/SIMD registers are saturated,
+  // call TBL & save the result in a vector of TBL results for combining later.
+  SmallVector<Value *> Results;
+  while (ShuffleLanes.back() < NumElements) {
+    Parts.push_back(Builder.CreateBitCast(
+        Builder.CreateShuffleVector(TI->getOperand(0), ShuffleLanes), VecTy));
+
+    if (Parts.size() >= 4) {
+      auto *F = Intrinsic::getDeclaration(TI->getModule(),
+                                          Intrinsic::aarch64_neon_tbl4, VecTy);
+      Parts.push_back(ConstantVector::get(MaskConst));
+      Results.push_back(Builder.CreateCall(F, Parts));
+      Parts.clear();
+    }
+
+    for (int i = 0; i < ShuffleCount; ++i)
+      ShuffleLanes[i] += ShuffleCount;
+  }
+
+  assert((Parts.empty() || Results.empty()) &&
+         "Lowering trunc for vectors requiring different TBL instructions is "
+         "not supported!");
+  // Call TBL for the residual table bytes present in 1,2, or 3 FP/SIMD
+  // registers
+  if (!Parts.empty()) {
+    Intrinsic::ID TblID;
+    switch (Parts.size()) {
+    case 1:
+      TblID = Intrinsic::aarch64_neon_tbl1;
+      break;
+    case 2:
+      TblID = Intrinsic::aarch64_neon_tbl2;
+      break;
+    case 3:
+      TblID = Intrinsic::aarch64_neon_tbl3;
+      break;
+    }
+
+    auto *F = Intrinsic::getDeclaration(TI->getModule(), TblID, VecTy);
+    Parts.push_back(ConstantVector::get(MaskConst));
+    Results.push_back(Builder.CreateCall(F, Parts));
+  }
+
+  // Extract the destination vector from TBL result(s) after combining them
+  // where applicable. Currently, at most two TBLs are supported.
+  assert(Results.size() <= 2 && "Trunc lowering does not support generation of "
+                                "more than 2 tbl instructions!");
+  Value *FinalResult = Results[0];
+  if (Results.size() == 1) {
+    if (ElemsPerTbl < 16) {
+      SmallVector<int> FinalMask(ElemsPerTbl);
+      std::iota(FinalMask.begin(), FinalMask.end(), 0);
+      FinalResult = Builder.CreateShuffleVector(Results[0], FinalMask);
+    }
+  } else {
+    SmallVector<int> FinalMask(ElemsPerTbl * Results.size());
+    if (ElemsPerTbl < 16) {
+      std::iota(FinalMask.begin(), FinalMask.begin() + ElemsPerTbl, 0);
+      std::iota(FinalMask.begin() + ElemsPerTbl, FinalMask.end(), 16);
+    } else {
+      std::iota(FinalMask.begin(), FinalMask.end(), 0);
+    }
+    FinalResult =
+        Builder.CreateShuffleVector(Results[0], Results[1], FinalMask);
+  }
+
+  TI->replaceAllUsesWith(FinalResult);
   TI->eraseFromParent();
 }
 
@@ -14013,13 +14091,15 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(Instruction *I,
     return true;
   }
 
-  // Convert 'trunc <(8|16) x i32> %x to <(8|16) x i8>' to a single tbl.4
-  // instruction selecting the lowest 8 bits per lane of the input interpreted
-  // as 2 or 4 <4 x i32> vectors.
+  // Convert 'trunc <(8|16) x (i32|i64)> %x to <(8|16) x i8>' to an appropriate
+  // tbl instruction selecting the lowest/highest (little/big endian) 8 bits
+  // per lane of the input that is represented using 1,2,3 or 4 128-bit table
+  // registers
   auto *TI = dyn_cast<TruncInst>(I);
-  if (TI && (SrcTy->getNumElements() == 8 || SrcTy->getNumElements() == 16) &&
-      SrcTy->getElementType()->isIntegerTy(32) &&
-      DstTy->getElementType()->isIntegerTy(8)) {
+  if (TI && DstTy->getElementType()->isIntegerTy(8) &&
+      ((SrcTy->getElementType()->isIntegerTy(32) ||
+        SrcTy->getElementType()->isIntegerTy(64)) &&
+       (SrcTy->getNumElements() == 16 || SrcTy->getNumElements() == 8))) {
     createTblForTrunc(TI, Subtarget->isLittleEndian());
     return true;
   }
