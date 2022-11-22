@@ -79,6 +79,7 @@ group("test") {
   deps = [
     ":lit_site_cfg",
     ":lit_unit_site_cfg",
+    "//bolt/tools/bat-dump:llvm-bat-dump",
     "//bolt/tools/driver:symlinks",
     "//bolt/tools/heatmap:llvm-bolt-heatmap",
     "//bolt/tools/merge-fdata",
