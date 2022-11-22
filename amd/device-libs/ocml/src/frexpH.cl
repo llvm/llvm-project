@@ -23,8 +23,14 @@ MATH_MANGLE(frexp)(half x, __private int *ep)
 {
     int e = (int)BUILTIN_FREXP_EXP_F16(x);
     half r = BUILTIN_FREXP_MANT_F16(x);
-    bool c = BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF|CLASS_SNAN|CLASS_QNAN);
-    *ep = c ? 0 : e;
-    return c ? x : r;
+
+    if (HAVE_BUGGY_FREXP_INSTRUCTIONS()) {
+        bool isfinite = BUILTIN_ISFINITE_F16(x);
+        *ep = isfinite ? e : 0;
+        return isfinite ? r : x;
+    }
+
+    *ep = e;
+    return r;
 }
 

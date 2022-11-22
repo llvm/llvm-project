@@ -57,3 +57,7 @@ endforeach()
 foreach(gpu gfx700 gfx803)
   add_isa_test(asin ${gpu})
 endforeach()
+
+foreach(gpu gfx600 gfx700)
+  add_isa_test(frexp ${gpu})
+endforeach()
