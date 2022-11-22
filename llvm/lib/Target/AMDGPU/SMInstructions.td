@@ -313,6 +313,8 @@ defm S_LOAD_DWORDX2  : SM_Pseudo_Loads <"s_load_dwordx2", SReg_64, SReg_64_XEXEC
 defm S_LOAD_DWORDX4  : SM_Pseudo_Loads <"s_load_dwordx4", SReg_64, SReg_128>;
 defm S_LOAD_DWORDX8  : SM_Pseudo_Loads <"s_load_dwordx8", SReg_64, SReg_256>;
 defm S_LOAD_DWORDX16 : SM_Pseudo_Loads <"s_load_dwordx16", SReg_64, SReg_512>;
+defm S_LOAD_I8       : SM_Pseudo_Loads <"s_load_i8", SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_U8       : SM_Pseudo_Loads <"s_load_u8", SReg_64, SReg_32_XM0_XEXEC>;
 
 let is_buffer = 1 in {
 defm S_BUFFER_LOAD_DWORD : SM_Pseudo_Loads <
@@ -335,6 +337,14 @@ defm S_BUFFER_LOAD_DWORDX8 : SM_Pseudo_Loads <
 
 defm S_BUFFER_LOAD_DWORDX16 : SM_Pseudo_Loads <
   "s_buffer_load_dwordx16", SReg_128, SReg_512
+>;
+
+defm S_BUFFER_LOAD_I8 : SM_Pseudo_Loads <
+  "s_buffer_load_i8", SReg_128, SReg_32_XM0_XEXEC
+>;
+
+defm S_BUFFER_LOAD_U8 : SM_Pseudo_Loads <
+  "s_buffer_load_u8", SReg_128, SReg_32_XM0_XEXEC
 >;
 }
 
@@ -1327,3 +1337,19 @@ def S_PREFETCH_INST_PC_REL_gfx12 : SMEM_Real_Prefetch_gfx12<0x25, S_PREFETCH_INS
 def S_PREFETCH_DATA_gfx12        : SMEM_Real_Prefetch_gfx12<0x26, S_PREFETCH_DATA>;
 def S_BUFFER_PREFETCH_DATA_gfx12 : SMEM_Real_Prefetch_gfx12<0x27, S_BUFFER_PREFETCH_DATA>;
 def S_PREFETCH_DATA_PC_REL_gfx12 : SMEM_Real_Prefetch_gfx12<0x28, S_PREFETCH_DATA_PC_REL>;
+
+class SMEM_Real_Load_gfx12<bits<8> op, string ps, string opName, OffsetMode offsets> :
+    SMEM_Real_gfx12<op, !cast<SM_Pseudo>(ps # offsets.Variant), opName> {
+  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
+  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
+}
+
+multiclass SM_Real_Loads_gfx12<bits<8> op, string ps, string opName> {
+  def _IMM_gfx12 : SMEM_Real_Load_gfx12<op, ps, opName, IMM_Offset>;
+  def _SGPR_IMM_gfx12 : SMEM_Real_Load_gfx12<op, ps, opName, SGPR_IMM_Offset>;
+}
+
+defm S_LOAD_I8  : SM_Real_Loads_gfx12<0x8, "S_LOAD_I8", "s_load_i8">;
+defm S_LOAD_U8  : SM_Real_Loads_gfx12<0x9, "S_LOAD_U8", "s_load_u8">;
+defm S_BUFFER_LOAD_I8 : SM_Real_Loads_gfx12<0x18, "S_BUFFER_LOAD_I8", "s_buffer_load_i8">;
+defm S_BUFFER_LOAD_U8 : SM_Real_Loads_gfx12<0x19, "S_BUFFER_LOAD_U8", "s_buffer_load_u8">;
