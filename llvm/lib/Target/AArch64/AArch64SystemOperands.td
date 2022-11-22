@@ -288,6 +288,26 @@ def : SVEPRFM<"pstl3strm", 0x0d>;
 }
 
 //===----------------------------------------------------------------------===//
+// RPRFM (prefetch) instruction options.
+//===----------------------------------------------------------------------===//
+
+class RPRFM<string name, bits<1> type_encoding, bits<5> policy_encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<6> Encoding;
+  let Encoding{0} = type_encoding;
+  let Encoding{5-1} = policy_encoding;
+  code Requires = [{ {} }];
+}
+
+def : RPRFM<"pldkeep", 0b0, 0b00000>;
+def : RPRFM<"pstkeep", 0b1, 0b00000>;
+def : RPRFM<"pldstrm", 0b0, 0b00010>;
+def : RPRFM<"pststrm", 0b1, 0b00010>;
+
+//===----------------------------------------------------------------------===//
 // SVE Predicate patterns
 //===----------------------------------------------------------------------===//
 
