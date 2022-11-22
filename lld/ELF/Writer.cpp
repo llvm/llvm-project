@@ -1862,26 +1862,26 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       addOptionalRegular("__global_pointer$", sec ? sec : Out::elfHeader, 0x800,
                          STV_DEFAULT);
     }
-  }
 
-  if (config->emachine == EM_386 || config->emachine == EM_X86_64) {
-    // On targets that support TLSDESC, _TLS_MODULE_BASE_ is defined in such a
-    // way that:
-    //
-    // 1) Without relaxation: it produces a dynamic TLSDESC relocation that
-    // computes 0.
-    // 2) With LD->LE relaxation: _TLS_MODULE_BASE_@tpoff = 0 (lowest address in
-    // the TLS block).
-    //
-    // 2) is special cased in @tpoff computation. To satisfy 1), we define it as
-    // an absolute symbol of zero. This is different from GNU linkers which
-    // define _TLS_MODULE_BASE_ relative to the first TLS section.
-    Symbol *s = symtab.find("_TLS_MODULE_BASE_");
-    if (s && s->isUndefined()) {
-      s->resolve(Defined{/*file=*/nullptr, StringRef(), STB_GLOBAL, STV_HIDDEN,
-                         STT_TLS, /*value=*/0, 0,
-                         /*section=*/nullptr});
-      ElfSym::tlsModuleBase = cast<Defined>(s);
+    if (config->emachine == EM_386 || config->emachine == EM_X86_64) {
+      // On targets that support TLSDESC, _TLS_MODULE_BASE_ is defined in such a
+      // way that:
+      //
+      // 1) Without relaxation: it produces a dynamic TLSDESC relocation that
+      // computes 0.
+      // 2) With LD->LE relaxation: _TLS_MODULE_BASE_@tpoff = 0 (lowest address
+      // in the TLS block).
+      //
+      // 2) is special cased in @tpoff computation. To satisfy 1), we define it
+      // as an absolute symbol of zero. This is different from GNU linkers which
+      // define _TLS_MODULE_BASE_ relative to the first TLS section.
+      Symbol *s = symtab.find("_TLS_MODULE_BASE_");
+      if (s && s->isUndefined()) {
+        s->resolve(Defined{/*file=*/nullptr, StringRef(), STB_GLOBAL,
+                           STV_HIDDEN, STT_TLS, /*value=*/0, 0,
+                           /*section=*/nullptr});
+        ElfSym::tlsModuleBase = cast<Defined>(s);
+      }
     }
   }
 
