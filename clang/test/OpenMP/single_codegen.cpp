@@ -417,7 +417,7 @@ void array_func(int n, int a[n], St s[2]) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK1-SAME: (ptr [[TMP0:%.*]]) #[[ATTR8:[0-9]+]] comdat {
+// CHECK1-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR8:[0-9]+]] comdat {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR3]]
 // CHECK1-NEXT:    call void @_ZSt9terminatev() #[[ATTR13]]
 // CHECK1-NEXT:    unreachable
@@ -1301,7 +1301,7 @@ void array_func(int n, int a[n], St s[2]) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK2-SAME: (ptr [[TMP0:%.*]]) #[[ATTR8:[0-9]+]] comdat {
+// CHECK2-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR8:[0-9]+]] comdat {
 // CHECK2-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR3]]
 // CHECK2-NEXT:    call void @_ZSt9terminatev() #[[ATTR13]]
 // CHECK2-NEXT:    unreachable
@@ -2193,7 +2193,7 @@ void array_func(int n, int a[n], St s[2]) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK4-SAME: (ptr [[TMP0:%.*]]) #[[ATTR8:[0-9]+]] comdat {
+// CHECK4-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR8:[0-9]+]] comdat {
 // CHECK4-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR3]]
 // CHECK4-NEXT:    call void @_ZSt9terminatev() #[[ATTR13]]
 // CHECK4-NEXT:    unreachable
@@ -3115,7 +3115,7 @@ void array_func(int n, int a[n], St s[2]) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK5-SAME: (ptr [[TMP0:%.*]]) #[[ATTR8:[0-9]+]] {
+// CHECK5-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK5-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR3]]
 // CHECK5-NEXT:    call void @_ZSt9terminatev() #[[ATTR13]]
 // CHECK5-NEXT:    unreachable
