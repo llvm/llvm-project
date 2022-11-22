@@ -1768,8 +1768,8 @@ private:
         assert(IdentifierResult);
         C.Name = IdentifierResult->Name;
       }
-      if (auto OverloadSet = C.overloadSet(
-              Opts, FileName, Inserter ? Inserter.getPointer() : nullptr)) {
+      if (auto OverloadSet =
+              C.overloadSet(Opts, FileName, Inserter ? &*Inserter : nullptr)) {
         auto Ret = BundleLookup.try_emplace(OverloadSet, Bundles.size());
         if (Ret.second)
           Bundles.emplace_back();
@@ -1863,9 +1863,9 @@ private:
     Relevance.Name = Bundle.front().Name;
     Relevance.FilterLength = HeuristicPrefix.Name.size();
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
-    Relevance.FileProximityMatch = FileProximity.getPointer();
+    Relevance.FileProximityMatch = &*FileProximity;
     if (ScopeProximity)
-      Relevance.ScopeProximityMatch = ScopeProximity.getPointer();
+      Relevance.ScopeProximityMatch = &*ScopeProximity;
     if (PreferredType)
       Relevance.HadContextType = true;
     Relevance.ContextWords = &ContextWords;
