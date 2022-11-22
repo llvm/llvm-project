@@ -225,3 +225,64 @@ func.func @mul_affine_dense_dim_2d(%arga: tensor<34x16xf64, #CSR>,
   } -> tensor<32x16xf64>
   return %0 : tensor<32x16xf64>
 }
+
+#trait5 = {
+  indexing_maps = [
+    affine_map<(i,j) -> (2,j)>,  // a
+    affine_map<(i,j) -> (i,3)>,  // b
+    affine_map<(i,j) -> (i,j)>     // x (out)
+  ],
+  iterator_types = ["parallel","parallel"],
+  doc = "x(i,j) += a(2,j) * b(i,3)"
+}
+
+// CHECK-LABEL:   func.func @mul_const_affine_dense_dim_2d(
+// CHECK-SAME:                                             %[[VAL_0:.*]]: tensor<34x16xf64, 
+// CHECK-SAME:                                             %[[VAL_1:.*]]: tensor<32x19xf64, #sparse_tensor.encoding<{{{.*}}}>>,
+// CHECK-SAME:                                             %[[VAL_2:.*]]: tensor<32x16xf64>) -> tensor<32x16xf64> {
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 19 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 2 : index
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 3 : index
+// CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 1 : index} : tensor<34x16xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<34x16xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<34x16xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf64>
+// CHECK:           %[[VAL_11:.*]] = sparse_tensor.pointers %[[VAL_1]] {dimension = 0 : index} : tensor<32x19xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_12:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 0 : index} : tensor<32x19xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x19xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf64>
+// CHECK:           %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32x16xf64>
+// CHECK:           %[[VAL_15:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_5]]] : memref<?xindex>
+// CHECK:           %[[VAL_16:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_6]]] : memref<?xindex>
+// CHECK:           scf.for %[[VAL_17:.*]] = %[[VAL_15]] to %[[VAL_16]] step %[[VAL_6]] {
+// CHECK:             %[[VAL_18:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_17]]] : memref<?xindex>
+// CHECK:             %[[VAL_19:.*]] = arith.muli %[[VAL_17]], %[[VAL_3]] : index
+// CHECK:             %[[VAL_20:.*]] = arith.addi %[[VAL_19]], %[[VAL_7]] : index
+// CHECK:             %[[VAL_21:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_20]]] : memref<?xf64>
+// CHECK:             %[[VAL_22:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_4]]] : memref<?xindex>
+// CHECK:             %[[VAL_23:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_7]]] : memref<?xindex>
+// CHECK:             scf.for %[[VAL_24:.*]] = %[[VAL_22]] to %[[VAL_23]] step %[[VAL_6]] {
+// CHECK:               %[[VAL_25:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_24]]] : memref<?xindex>
+// CHECK:               %[[VAL_26:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_18]], %[[VAL_25]]] : memref<32x16xf64>
+// CHECK:               %[[VAL_27:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_24]]] : memref<?xf64>
+// CHECK:               %[[VAL_28:.*]] = arith.mulf %[[VAL_27]], %[[VAL_21]] : f64
+// CHECK:               %[[VAL_29:.*]] = arith.addf %[[VAL_26]], %[[VAL_28]] : f64
+// CHECK:               memref.store %[[VAL_29]], %[[VAL_14]]{{\[}}%[[VAL_18]], %[[VAL_25]]] : memref<32x16xf64>
+// CHECK:             } 
+// CHECK:           } 
+// CHECK:           %[[VAL_30:.*]] = bufferization.to_tensor %[[VAL_14]] : memref<32x16xf64>
+// CHECK:           return %[[VAL_30]] : tensor<32x16xf64>
+// CHECK:         }
+func.func @mul_const_affine_dense_dim_2d(%arga: tensor<34x16xf64, #CSR>,
+                                         %argb: tensor<32x19xf64, #Row>,
+                                         %argx: tensor<32x16xf64>) -> tensor<32x16xf64> {
+  %0 = linalg.generic #trait5
+     ins(%arga, %argb: tensor<34x16xf64, #CSR>, tensor<32x19xf64, #Row>)
+    outs(%argx: tensor<32x16xf64>) {
+      ^bb(%a: f64, %b: f64, %x: f64):
+        %0 = arith.mulf %a, %b : f64
+        %1 = arith.addf %x, %0 : f64
+        linalg.yield %1 : f64
+  } -> tensor<32x16xf64>
+  return %0 : tensor<32x16xf64>
+}
