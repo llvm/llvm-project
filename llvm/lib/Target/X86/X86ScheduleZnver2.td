@@ -299,9 +299,6 @@ defm : X86WriteResPairUnsupported<WriteFBlendZ>;
 defm : Zn2WriteResFpuPair<WriteFVarBlend, [Zn2FPU01], 1>;
 defm : Zn2WriteResFpuPair<WriteFVarBlendY,[Zn2FPU01], 1>;
 defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
-defm : Zn2WriteResFpuPair<WriteVarBlend,  [Zn2FPU0],  1>;
-defm : Zn2WriteResFpuPair<WriteVarBlendY, [Zn2FPU0],  1>;
-defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
 defm : Zn2WriteResFpuPair<WriteCvtSS2I,   [Zn2FPU3],  5>;
 defm : Zn2WriteResFpuPair<WriteCvtPS2I,   [Zn2FPU3],  5>;
 defm : Zn2WriteResFpuPair<WriteCvtPS2IY,  [Zn2FPU3],  5>;
@@ -436,9 +433,12 @@ defm : Zn2WriteResFpuPair<WriteVarShuffle, [Zn2FPU12],   1>;
 defm : Zn2WriteResFpuPair<WriteVarShuffleX,[Zn2FPU12],   1>;
 defm : Zn2WriteResFpuPair<WriteVarShuffleY,[Zn2FPU12],   1>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
-defm : Zn2WriteResFpuPair<WriteBlend,      [Zn2FPU01], 1>;
-defm : Zn2WriteResFpuPair<WriteBlendY,     [Zn2FPU01], 1>;
+defm : Zn2WriteResFpuPair<WriteBlend,      [Zn2FPU013], 1>;
+defm : Zn2WriteResFpuPair<WriteBlendY,     [Zn2FPU013], 1>;
 defm : X86WriteResPairUnsupported<WriteBlendZ>;
+defm : Zn2WriteResFpuPair<WriteVarBlend,   [Zn2FPU0],  1>;
+defm : Zn2WriteResFpuPair<WriteVarBlendY,  [Zn2FPU0],  1>;
+defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
 defm : Zn2WriteResFpuPair<WriteShuffle256, [Zn2FPU12],   2>;
 defm : Zn2WriteResFpuPair<WriteVPMOV256,   [Zn2FPU12],  4, [1], 2, 4>;
 defm : Zn2WriteResFpuPair<WriteVarShuffle256, [Zn2FPU12],   2>;
@@ -963,8 +963,6 @@ def Zn2WriteFPU013LdY : SchedWriteRes<[Zn2AGU, Zn2FPU013]> {
 }
 
 // PBLENDW.
-// x,x,i / v,v,v,i
-def : InstRW<[Zn2WriteFPU013], (instregex "(V?)PBLENDWrri")>;
 // ymm
 def : InstRW<[Zn2WriteFPU013Y], (instrs VPBLENDWYrri)>;
 
