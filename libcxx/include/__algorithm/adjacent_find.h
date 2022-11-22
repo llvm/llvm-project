@@ -45,8 +45,7 @@ adjacent_find(_ForwardIterator __first, _ForwardIterator __last, _BinaryPredicat
 template <class _ForwardIterator>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 adjacent_find(_ForwardIterator __first, _ForwardIterator __last) {
-  typedef typename iterator_traits<_ForwardIterator>::value_type __v;
-  return std::adjacent_find(std::move(__first), std::move(__last), __equal_to<__v>());
+  return std::adjacent_find(std::move(__first), std::move(__last), __equal_to());
 }
 
 _LIBCPP_END_NAMESPACE_STD
