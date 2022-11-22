@@ -1375,6 +1375,12 @@ void Editline::ConfigureEditor(bool multiline) {
   AddFunctionToEditLine(EditLineConstString("lldb_complete"),
                         EditLineConstString("Invoke completion"),
                         complete_callback);
+  AddFunctionToEditLine(EditLineConstString("rl_complete"),
+                        EditLineConstString("Invoke completion"),
+                        complete_callback);
+  AddFunctionToEditLine(EditLineConstString("complete"),
+                        EditLineConstString("Invoke completion"),
+                        complete_callback);
 
   // General bindings we don't mind being overridden
   if (!multiline) {
