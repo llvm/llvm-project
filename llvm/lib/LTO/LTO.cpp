@@ -1313,7 +1313,7 @@ public:
     computeLTOCacheKey(Key, Conf, CombinedIndex, ModuleID, ImportList,
                        ExportList, ResolvedODR, DefinedGlobals, CfiFunctionDefs,
                        CfiFunctionDecls);
-    Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
+    Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key);
     if (Error Err = CacheAddStreamOrErr.takeError())
       return Err;
     AddStreamFn &CacheAddStream = *CacheAddStreamOrErr;
