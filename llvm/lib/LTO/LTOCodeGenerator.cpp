@@ -301,7 +301,9 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
   // make unique temp output file to put generated code
   SmallString<128> Filename;
 
-  auto AddStream = [&](size_t Task) -> std::unique_ptr<CachedFileStream> {
+  auto AddStream =
+      [&](size_t Task,
+          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
     StringRef Extension(Config.CGFileType == CGFT_AssemblyFile ? "s" : "o");
 
     int FD;

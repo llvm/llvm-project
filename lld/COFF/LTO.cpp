@@ -165,22 +165,25 @@ std::vector<InputFile *> BitcodeCompiler::compile(COFFLinkerContext &ctx) {
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);
+  file_names.resize(maxTasks);
 
   // The /lldltocache option specifies the path to a directory in which to cache
   // native object files for ThinLTO incremental builds. If a path was
   // specified, configure LTO to use it as the cache directory.
   FileCache cache;
   if (!config->ltoCache.empty())
-    cache =
-        check(localCache("ThinLTO", "Thin", config->ltoCache,
-                         [&](size_t task, std::unique_ptr<MemoryBuffer> mb) {
-                           files[task] = std::move(mb);
-                         }));
+    cache = check(localCache("ThinLTO", "Thin", config->ltoCache,
+                             [&](size_t task, const Twine &moduleName,
+                                 std::unique_ptr<MemoryBuffer> mb) {
+                               files[task] = std::move(mb);
+                               file_names[task] = moduleName.str();
+                             }));
 
   checkError(ltoObj->run(
-      [&](size_t task) {
+      [&](size_t task, const Twine &moduleName) {
+        buf[task].first = moduleName.str();
         return std::make_unique<CachedFileStream>(
-            std::make_unique<raw_svector_ostream>(buf[task]));
+            std::make_unique<raw_svector_ostream>(buf[task].second));
       },
       cache));
 
@@ -197,7 +200,7 @@ std::vector<InputFile *> BitcodeCompiler::compile(COFFLinkerContext &ctx) {
   // distributed environment.
   if (config->thinLTOIndexOnly) {
     if (!config->ltoObjPath.empty())
-      saveBuffer(buf[0], config->ltoObjPath);
+      saveBuffer(buf[0].second, config->ltoObjPath);
     if (indexFile)
       indexFile->close();
     return {};
@@ -208,28 +211,40 @@ std::vector<InputFile *> BitcodeCompiler::compile(COFFLinkerContext &ctx) {
 
   std::vector<InputFile *> ret;
   for (unsigned i = 0; i != maxTasks; ++i) {
-    // Assign unique names to LTO objects. This ensures they have unique names
-    // in the PDB if one is produced. The names should look like:
-    // - foo.exe.lto.obj
-    // - foo.exe.lto.1.obj
-    // - ...
-    StringRef ltoObjName =
-        saver().save(Twine(config->outputFile) + ".lto" +
-                     (i == 0 ? Twine("") : Twine('.') + Twine(i)) + ".obj");
-
+    StringRef bitcodeFilePath;
     // Get the native object contents either from the cache or from memory.  Do
     // not use the cached MemoryBuffer directly, or the PDB will not be
     // deterministic.
     StringRef objBuf;
-    if (files[i])
+    if (files[i]) {
       objBuf = files[i]->getBuffer();
-    else
-      objBuf = buf[i];
+      bitcodeFilePath = file_names[i];
+    } else {
+      objBuf = buf[i].second;
+      bitcodeFilePath = buf[i].first;
+    }
     if (objBuf.empty())
       continue;
 
+    // If the input bitcode file is path/to/a.obj, then the corresponding lto
+    // object file name will soemthing like: path/to/main.exe.lto.a.obj.
+    StringRef ltoObjName;
+    if (bitcodeFilePath == "ld-temp.o") {
+      ltoObjName =
+          saver().save(Twine(config->outputFile) + ".lto" +
+                       (i == 0 ? Twine("") : Twine('.') + Twine(i)) + ".obj");
+    } else {
+      StringRef directory = sys::path::parent_path(bitcodeFilePath);
+      StringRef baseName = sys::path::filename(bitcodeFilePath);
+      StringRef outputFileBaseName = sys::path::filename(config->outputFile);
+      SmallString<64> path;
+      sys::path::append(path, directory,
+                        outputFileBaseName + ".lto." + baseName);
+      sys::path::remove_dots(path, true);
+      ltoObjName = saver().save(path.str());
+    }
     if (config->saveTemps)
-      saveBuffer(buf[i], ltoObjName);
+      saveBuffer(buf[i].second, ltoObjName);
     ret.push_back(make<ObjFile>(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
 
