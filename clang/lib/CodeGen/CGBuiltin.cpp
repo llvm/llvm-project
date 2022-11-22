@@ -19171,7 +19171,7 @@ getIntrinsicForHexagonNonClangBuiltin(unsigned BuiltinID) {
     Intrinsic::ID IntrinsicID;
     unsigned VecLen;
   };
-  Info Infos[] = {
+  static Info Infos[] = {
 #define CUSTOM_BUILTIN_MAPPING(x,s) \
   { Hexagon::BI__builtin_HEXAGON_##x, Intrinsic::hexagon_##x, s },
     CUSTOM_BUILTIN_MAPPING(L2_loadrub_pci, 0)
