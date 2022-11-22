@@ -497,10 +497,8 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
   if (!ST.is64Bit())
     return false;
 
-  SmallPtrSet<MachineInstr *, 4> SExtWRemovalCands;
+  bool MadeChange = false;
 
-  // Replacing instructions invalidates the MI iterator
-  // we collect the candidates, then iterate over them separately.
   for (MachineBasicBlock &MBB : MF) {
     for (auto I = MBB.begin(), IE = MBB.end(); I != IE;) {
       MachineInstr *MI = &*I++;
@@ -514,41 +512,36 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
       if (!SrcReg.isVirtual())
         continue;
 
-      SExtWRemovalCands.insert(MI);
+      SmallPtrSet<MachineInstr *, 4> FixableDef;
+      MachineInstr &SrcMI = *MRI.getVRegDef(SrcReg);
+
+      // If all definitions reaching MI sign-extend their output,
+      // then sext.w is redundant
+      if (!isSignExtendedW(SrcMI, MRI, FixableDef))
+        continue;
+
+      Register DstReg = MI->getOperand(0).getReg();
+      if (!MRI.constrainRegClass(SrcReg, MRI.getRegClass(DstReg)))
+        continue;
+
+      // Convert Fixable instructions to their W versions.
+      for (MachineInstr *Fixable : FixableDef) {
+        LLVM_DEBUG(dbgs() << "Replacing " << *Fixable);
+        Fixable->setDesc(TII.get(getWOp(Fixable->getOpcode())));
+        Fixable->clearFlag(MachineInstr::MIFlag::NoSWrap);
+        Fixable->clearFlag(MachineInstr::MIFlag::NoUWrap);
+        Fixable->clearFlag(MachineInstr::MIFlag::IsExact);
+        LLVM_DEBUG(dbgs() << "     with " << *Fixable);
+        ++NumTransformedToWInstrs;
+      }
+
+      LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
+      MRI.replaceRegWith(DstReg, SrcReg);
+      MRI.clearKillFlags(SrcReg);
+      MI->eraseFromParent();
+      ++NumRemovedSExtW;
+      MadeChange = true;
     }
-  }
-
-  bool MadeChange = false;
-  for (auto *MI : SExtWRemovalCands) {
-    SmallPtrSet<MachineInstr *, 4> FixableDef;
-    Register SrcReg = MI->getOperand(1).getReg();
-    MachineInstr &SrcMI = *MRI.getVRegDef(SrcReg);
-
-    // If all definitions reaching MI sign-extend their output,
-    // then sext.w is redundant
-    if (!isSignExtendedW(SrcMI, MRI, FixableDef))
-      continue;
-
-    Register DstReg = MI->getOperand(0).getReg();
-    if (!MRI.constrainRegClass(SrcReg, MRI.getRegClass(DstReg)))
-      continue;
-    // Convert Fixable instructions to their W versions.
-    for (MachineInstr *Fixable : FixableDef) {
-      LLVM_DEBUG(dbgs() << "Replacing " << *Fixable);
-      Fixable->setDesc(TII.get(getWOp(Fixable->getOpcode())));
-      Fixable->clearFlag(MachineInstr::MIFlag::NoSWrap);
-      Fixable->clearFlag(MachineInstr::MIFlag::NoUWrap);
-      Fixable->clearFlag(MachineInstr::MIFlag::IsExact);
-      LLVM_DEBUG(dbgs() << "     with " << *Fixable);
-      ++NumTransformedToWInstrs;
-    }
-
-    LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
-    MRI.replaceRegWith(DstReg, SrcReg);
-    MRI.clearKillFlags(SrcReg);
-    MI->eraseFromParent();
-    ++NumRemovedSExtW;
-    MadeChange = true;
   }
 
   return MadeChange;
