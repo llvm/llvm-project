@@ -692,6 +692,7 @@ def : ROSysReg<"ID_PFR2_EL1",        0b11, 0b000, 0b0000, 0b0011, 0b100> {
     let Requires = [{ {AArch64::FeatureSpecRestrict} }];
 }
 def : ROSysReg<"ID_DFR0_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b010>;
+def : ROSysReg<"ID_DFR1_EL1",        0b11, 0b000, 0b0000, 0b0011, 0b101>;
 def : ROSysReg<"ID_AFR0_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b011>;
 def : ROSysReg<"ID_MMFR0_EL1",       0b11, 0b000, 0b0000, 0b0001, 0b100>;
 def : ROSysReg<"ID_MMFR1_EL1",       0b11, 0b000, 0b0000, 0b0001, 0b101>;
@@ -1632,6 +1633,8 @@ def : ROSysReg<"TRBIDR_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b111>;
 
 // v8.6a Activity Monitors Virtualization Support
 let Requires = [{ {AArch64::FeatureAMVS} }] in {
+//              Name            Op0   Op1    CRn     CRm     Op2
+def : ROSysReg<"AMCG1IDR_EL0",  0b11, 0b011, 0b1101, 0b0010, 0b110>;
 foreach n = 0-15 in {
   foreach x = 0-1 in {
   def : RWSysReg<"AMEVCNTVOFF"#x#n#"_EL2",
@@ -1651,6 +1654,7 @@ def : RWSysReg<"HFGWTR_EL2",       0b11, 0b100, 0b0001, 0b0001, 0b101>;
 def : RWSysReg<"HFGITR_EL2",       0b11, 0b100, 0b0001, 0b0001, 0b110>;
 def : RWSysReg<"HDFGRTR_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b100>;
 def : RWSysReg<"HDFGWTR_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b101>;
+def : RWSysReg<"HAFGRTR_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b110>;
 
 // v8.9a/v9.4a additions to Fine Grained Traps (FEAT_FGT2)
 //                                 Op0   Op1    CRn     CRm     Op2
