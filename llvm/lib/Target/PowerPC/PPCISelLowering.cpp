@@ -1306,7 +1306,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::v256i1, Custom);
   }
   if (Subtarget.hasMMA()) {
-    addRegisterClass(MVT::v512i1, &PPC::UACCRCRegClass);
+    if (Subtarget.isISAFuture())
+      addRegisterClass(MVT::v512i1, &PPC::WACCRCRegClass);
+    else
+      addRegisterClass(MVT::v512i1, &PPC::UACCRCRegClass);
     setOperationAction(ISD::LOAD, MVT::v512i1, Custom);
     setOperationAction(ISD::STORE, MVT::v512i1, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v512i1, Custom);
@@ -10490,7 +10493,46 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getRegister(PPC::X13, MVT::i64);
     return DAG.getRegister(PPC::R2, MVT::i32);
 
-  case Intrinsic::ppc_mma_disassemble_acc:
+  case Intrinsic::ppc_mma_disassemble_acc: {
+    if (Subtarget.isISAFuture()) {
+      EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
+      SDValue WideVec = SDValue(DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl,
+                                                   makeArrayRef(ReturnTypes, 2),
+                                                   Op.getOperand(1)),
+                                0);
+      SmallVector<SDValue, 4> RetOps;
+      SDValue Value = SDValue(WideVec.getNode(), 0);
+      SDValue Value2 = SDValue(WideVec.getNode(), 1);
+
+      SDValue Extract;
+      Extract = DAG.getNode(
+          PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8,
+          Subtarget.isLittleEndian() ? Value2 : Value,
+          DAG.getConstant(Subtarget.isLittleEndian() ? 1 : 0,
+                          dl, getPointerTy(DAG.getDataLayout())));
+      RetOps.push_back(Extract);
+      Extract = DAG.getNode(
+          PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8,
+          Subtarget.isLittleEndian() ? Value2 : Value,
+          DAG.getConstant(Subtarget.isLittleEndian() ? 0 : 1,
+                          dl, getPointerTy(DAG.getDataLayout())));
+      RetOps.push_back(Extract);
+      Extract = DAG.getNode(
+          PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8,
+          Subtarget.isLittleEndian() ? Value : Value2,
+          DAG.getConstant(Subtarget.isLittleEndian() ? 1 : 0,
+                          dl, getPointerTy(DAG.getDataLayout())));
+      RetOps.push_back(Extract);
+      Extract = DAG.getNode(
+          PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8,
+          Subtarget.isLittleEndian() ? Value : Value2,
+          DAG.getConstant(Subtarget.isLittleEndian() ? 0 : 1,
+                          dl, getPointerTy(DAG.getDataLayout())));
+      RetOps.push_back(Extract);
+      return DAG.getMergeValues(RetOps, dl);
+    }
+    LLVM_FALLTHROUGH;
+  }
   case Intrinsic::ppc_vsx_disassemble_pair: {
     int NumVecs = 2;
     SDValue WideVec = Op.getOperand(1);
@@ -10944,6 +10986,7 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
   SDValue StoreChain = SN->getChain();
   SDValue BasePtr = SN->getBasePtr();
   SDValue Value = SN->getValue();
+  SDValue Value2 = SN->getValue();
   EVT StoreVT = Value.getValueType();
 
   if (StoreVT != MVT::v256i1 && StoreVT != MVT::v512i1)
@@ -10960,13 +11003,30 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
   SmallVector<SDValue, 4> Stores;
   unsigned NumVecs = 2;
   if (StoreVT == MVT::v512i1) {
-    Value = DAG.getNode(PPCISD::XXMFACC, dl, MVT::v512i1, Value);
+    if (Subtarget.isISAFuture()) {
+      EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
+      MachineSDNode *ExtNode = DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl,
+                          makeArrayRef(ReturnTypes, 2),
+                          Op.getOperand(1));
+
+      Value = SDValue(ExtNode, 0);
+      Value2 = SDValue(ExtNode, 1);
+    } else
+      Value = DAG.getNode(PPCISD::XXMFACC, dl, MVT::v512i1, Value);
     NumVecs = 4;
   }
   for (unsigned Idx = 0; Idx < NumVecs; ++Idx) {
     unsigned VecNum = Subtarget.isLittleEndian() ? NumVecs - 1 - Idx : Idx;
-    SDValue Elt = DAG.getNode(PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8, Value,
-                              DAG.getConstant(VecNum, dl, getPointerTy(DAG.getDataLayout())));
+    SDValue Elt;
+    if (Subtarget.isISAFuture()) {
+      VecNum = Subtarget.isLittleEndian() ? 1 - (Idx % 2) : (Idx % 2);
+      Elt = DAG.getNode(PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8,
+                        Idx > 1 ? Value2 : Value,
+                        DAG.getConstant(VecNum, dl, getPointerTy(DAG.getDataLayout())));
+    } else
+      Elt = DAG.getNode(PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8, Value,
+                        DAG.getConstant(VecNum, dl, getPointerTy(DAG.getDataLayout())));
+
     SDValue Store =
         DAG.getStore(StoreChain, dl, Elt, BasePtr,
                      SN->getPointerInfo().getWithOffset(Idx * 16),
