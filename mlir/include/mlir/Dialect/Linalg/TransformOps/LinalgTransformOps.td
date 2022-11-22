@@ -69,9 +69,9 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
 def FuseIntoContainingOp :
     Op<Transform_Dialect, "structured.fuse_into_containing_op",
       [DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let description = [{Fuse a producer into a containing operation.}];
+  let summary = "Fuse a producer into a containing operation.";
 
-  let summary = [{
+  let description = [{
     Fuses the `producer_op` into the `containing_op`.
     Returns a handle to the fused ops.
 
