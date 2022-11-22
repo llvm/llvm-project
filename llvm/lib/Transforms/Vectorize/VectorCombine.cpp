@@ -1756,7 +1756,7 @@ bool VectorCombine::run() {
         MadeChange |= foldExtractExtract(I);
         break;
       default:
-        if (I.isBinaryOp()) {
+        if (Instruction::isBinaryOp(Opcode)) {
           MadeChange |= foldExtractExtract(I);
           MadeChange |= foldExtractedCmps(I);
         }

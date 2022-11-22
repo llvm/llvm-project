@@ -534,10 +534,9 @@ define <2 x float> @test11(<4 x i16> %x, i32 %y) {
 ; heuristic for making a deterministic decision.
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[Y:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[A_SROA_0_4_VEC_EXPAND:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
-; CHECK-NEXT:    [[A_SROA_0_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x i16> [[A_SROA_0_4_VEC_EXPAND]], <4 x i16> [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[A_SROA_0_4_VECBLEND]] to <2 x float>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[A_SROA_0_4_VEC_INSERT:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[A_SROA_0_4_VEC_INSERT]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
 entry:

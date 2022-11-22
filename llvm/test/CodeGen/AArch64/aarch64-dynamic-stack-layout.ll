@@ -90,7 +90,7 @@ entry:
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
   %l1.0.l1.0. = load volatile i32, i32* %l1, align 4
-  %add1 = or i32 %add, %l1.0.l1.0.
+  %add1 = add nsw i32 %add, %l1.0.l1.0.
   %call = tail call i32 @g()
   %add2 = add nsw i32 %add1, %call
   ret i32 %add2
@@ -172,7 +172,7 @@ entry:
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
   %l1.0.l1.0. = load volatile i32, i32* %l1, align 128
-  %add1 = or i32 %add, %l1.0.l1.0.
+  %add1 = add nsw i32 %add, %l1.0.l1.0.
   %call = tail call i32 @g()
   %add2 = add nsw i32 %add1, %call
   ret i32 %add2
@@ -276,7 +276,7 @@ entry:
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
   %l1.0.l1.0. = load volatile i32, i32* %l1, align 4
-  %add1 = or i32 %add, %l1.0.l1.0.
+  %add1 = add nsw i32 %add, %l1.0.l1.0.
   %call = tail call i32 @g()
   %add2 = add nsw i32 %add1, %call
   %1 = load volatile i32, i32* %vla, align 4, !tbaa !1
@@ -376,7 +376,7 @@ entry:
   %conv = fptosi double %d10 to i32
   %add = add nsw i32 %conv, %i10
   %l1.0.l1.0. = load volatile i32, i32* %l1, align 128
-  %add1 = or i32 %add, %l1.0.l1.0.
+  %add1 = add nsw i32 %add, %l1.0.l1.0.
   %call = tail call i32 @g()
   %add2 = add nsw i32 %add1, %call
   %1 = load volatile i32, i32* %vla, align 4, !tbaa !1
