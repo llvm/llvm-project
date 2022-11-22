@@ -413,6 +413,10 @@ public:
     return false;
   }
 
+  AMDGPU::Waitcnt allZeroWaitcnt() const {
+    return AMDGPU::Waitcnt::allZero(ST->hasVscnt());
+  }
+
   void setForceEmitWaitcnt() {
 // For non-debug builds, ForceEmitWaitcnt has been initialized to false;
 // For debug builds, get the debug counter info and adjust if need be
@@ -1020,7 +1024,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       MI.getOpcode() == AMDGPU::SI_RETURN ||
       MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
-    Wait = Wait.combined(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
+    Wait = Wait.combined(allZeroWaitcnt());
   }
   // Resolve vm waits before gs-done.
   else if ((MI.getOpcode() == AMDGPU::S_SENDMSG ||
@@ -1200,7 +1204,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // cause an exception. Otherwise, insert an explicit S_WAITCNT 0 here.
   if (MI.getOpcode() == AMDGPU::S_BARRIER &&
       !ST->hasAutoWaitcntBeforeBarrier() && !ST->supportsBackOffBarrier()) {
-    Wait = Wait.combined(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
+    Wait = Wait.combined(allZeroWaitcnt());
   }
 
   // TODO: Remove this work-around, enable the assert for Bug 457939
@@ -1216,7 +1220,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   ScoreBrackets.simplifyWaitcnt(Wait);
 
   if (ForceEmitZeroWaitcnts)
-    Wait = AMDGPU::Waitcnt::allZero(ST->hasVscnt());
+    Wait = allZeroWaitcnt();
 
   if (ForceEmitWaitcnt[VM_CNT])
     Wait.VmCnt = 0;
@@ -1422,7 +1426,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   } else if (Inst.isCall()) {
     if (callWaitsOnFunctionReturn(Inst)) {
       // Act as a wait on everything
-      ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
+      ScoreBrackets->applyWaitcnt(allZeroWaitcnt());
     } else {
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
