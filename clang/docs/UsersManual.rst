@@ -365,7 +365,7 @@ output format of the diagnostics that it generates.
    * ``clang -fsave-optimization-record -c in.c -o out.o`` will generate
      ``out.opt.yaml``
 
-   * ``clang -fsave-optimization-record -c in.c `` will generate
+   * ``clang -fsave-optimization-record -c in.c`` will generate
      ``in.opt.yaml``
 
    When targeting (Thin)LTO, the base is derived from the output filename, and
