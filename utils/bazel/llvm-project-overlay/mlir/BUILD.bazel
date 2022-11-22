@@ -5313,6 +5313,7 @@ cc_library(
         ":ParallelCombiningOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":Support",
         ":TensorOpsIncGen",
         ":TilingInterface",
         ":ViewLikeInterface",
