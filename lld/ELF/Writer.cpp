@@ -1852,17 +1852,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
     // Define __rel[a]_iplt_{start,end} symbols if needed.
     addRelIpltSymbols();
-  }
 
-  // RISC-V's gp can address +/- 2 KiB, set it to .sdata + 0x800. This symbol
-  // should only be defined in an executable. If .sdata does not exist, its
-  // value/section does not matter but it has to be relative, so set its
-  // st_shndx arbitrarily to 1 (Out::elfHeader).
-  if (config->emachine == EM_RISCV && !config->shared) {
-    OutputSection *sec = findSection(".sdata");
-    ElfSym::riscvGlobalPointer =
-        addOptionalRegular("__global_pointer$", sec ? sec : Out::elfHeader,
-                           0x800, STV_DEFAULT);
+    // RISC-V's gp can address +/- 2 KiB, set it to .sdata + 0x800. This symbol
+    // should only be defined in an executable. If .sdata does not exist, its
+    // value/section does not matter but it has to be relative, so set its
+    // st_shndx arbitrarily to 1 (Out::elfHeader).
+    if (config->emachine == EM_RISCV && !config->shared) {
+      OutputSection *sec = findSection(".sdata");
+      addOptionalRegular("__global_pointer$", sec ? sec : Out::elfHeader, 0x800,
+                         STV_DEFAULT);
+    }
   }
 
   if (config->emachine == EM_386 || config->emachine == EM_X86_64) {
