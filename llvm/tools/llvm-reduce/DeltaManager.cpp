@@ -75,6 +75,7 @@ static cl::list<std::string>
     DELTA_PASS("function-bodies", reduceFunctionBodiesDeltaPass)               \
     DELTA_PASS("special-globals", reduceSpecialGlobalsDeltaPass)               \
     DELTA_PASS("aliases", reduceAliasesDeltaPass)                              \
+    DELTA_PASS("ifuncs", reduceIFuncsDeltaPass)                                \
     DELTA_PASS("simplify-conditionals-true", reduceConditionalsTrueDeltaPass)  \
     DELTA_PASS("simplify-conditionals-false", reduceConditionalsFalseDeltaPass)\
     DELTA_PASS("invokes", reduceInvokesDeltaPass)                              \
