@@ -1953,17 +1953,12 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
     CandidateTys.clear();
     CandidateTys.push_back(CommonVecPtrTy);
   } else if (!HaveCommonEltTy && !HaveVecPtrTy) {
-    // Remove non-integer vector types if we had multiple common element types.
-    // FIXME: It'd be nice to replace them with integer vector types, but we
-    // can't do that until all the backends are known to produce good code for
-    // all integer vector types.
-    llvm::erase_if(CandidateTys, [](VectorType *VTy) {
-      return !VTy->getElementType()->isIntegerTy();
-    });
-
-    // If there were no integer vector types, give up.
-    if (CandidateTys.empty())
-      return nullptr;
+    // Integer-ify vector types.
+    for (VectorType *&VTy : CandidateTys) {
+      if (!VTy->getElementType()->isIntegerTy())
+        VTy = cast<VectorType>(VTy->getWithNewType(IntegerType::getIntNTy(
+            VTy->getContext(), VTy->getScalarSizeInBits())));
+    }
 
     // Rank the remaining candidate vector types. This is easy because we know
     // they're all integer vectors. We sort by ascending number of elements.
