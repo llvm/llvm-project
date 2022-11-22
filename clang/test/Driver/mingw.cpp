@@ -40,7 +40,10 @@
 
 
 // RUN: %clang -target x86_64-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_fedora_tree/usr %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_FEDORA_TREE %s
-// CHECK_MINGW_FEDORA_TREE: "[[BASE:[^"]+]]/Inputs/mingw_fedora_tree/usr{{/|\\\\}}x86_64-w64-mingw32ucrt/sys-root/mingw/include"
+// CHECK_MINGW_FEDORA_TREE: "[[BASE:[^"]+]]/Inputs/mingw_fedora_tree/usr{{/|\\\\}}x86_64-w64-mingw32ucrt/sys-root/mingw/include/c++"
+// CHECK_MINGW_FEDORA_TREE: "[[BASE]]/Inputs/mingw_fedora_tree/usr{{/|\\\\}}x86_64-w64-mingw32ucrt/sys-root/mingw/include/c++/x86_64-w64-mingw32ucrt"
+// CHECK_MINGW_FEDORA_TREE: "[[BASE]]/Inputs/mingw_fedora_tree/usr{{/|\\\\}}x86_64-w64-mingw32ucrt/sys-root/mingw/include/c++/backward"
+// CHECK_MINGW_FEDORA_TREE: "[[BASE]]/Inputs/mingw_fedora_tree/usr{{/|\\\\}}x86_64-w64-mingw32ucrt/sys-root/mingw/include"
 
 
 // RUN: %clang -target i686-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_arch_tree/usr %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_ARCH_TREE %s

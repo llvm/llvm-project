@@ -470,9 +470,16 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
 
   Base += llvm::sys::path::get_separator();
   findGccLibDir(LiteralTriple);
+  TripleDirName = SubdirName;
   // GccLibDir must precede Base/lib so that the
   // correct crtbegin.o ,cetend.o would be found.
   getFilePaths().push_back(GccLibDir);
+
+  // openSUSE/Fedora
+  std::string CandidateSubdir = SubdirName + "/sys-root/mingw";
+  if (getDriver().getVFS().exists(Base + CandidateSubdir))
+    SubdirName = CandidateSubdir;
+
   getFilePaths().push_back(
       (Base + SubdirName + llvm::sys::path::get_separator() + "lib").str());
 
@@ -481,8 +488,6 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
       (Base + SubdirName + llvm::sys::path::get_separator() + "mingw/lib").str());
 
   getFilePaths().push_back(Base + "lib");
-  // openSUSE
-  getFilePaths().push_back(Base + SubdirName + "/sys-root/mingw/lib");
 
   NativeLLVMSupport =
       Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
@@ -636,12 +641,6 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  if (GetRuntimeLibType(DriverArgs) == ToolChain::RLT_Libgcc) {
-    // openSUSE
-    addSystemInclude(DriverArgs, CC1Args,
-                     Base + SubdirName + "/sys-root/mingw/include");
-  }
-
   addSystemInclude(DriverArgs, CC1Args,
                    Base + SubdirName + llvm::sys::path::get_separator() +
                        "include");
@@ -719,7 +718,7 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
     for (auto &CppIncludeBase : CppIncludeBases) {
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase);
       CppIncludeBase += Slash;
-      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + SubdirName);
+      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + TripleDirName);
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + "backward");
     }
     break;
