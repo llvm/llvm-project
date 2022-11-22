@@ -295,6 +295,8 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
 /// Define libm extensions
 /// Bessel functions are defined in POSIX.1-2001.
 
+// Remove float bessel funcitons for AIX as they are not supported
+#ifndef _AIX
 template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<float, float>;
   using FN = FuncPointer<float, int, float>;
@@ -309,6 +311,7 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
+#endif
 
 template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<double, double>;
