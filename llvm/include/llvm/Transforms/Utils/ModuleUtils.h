@@ -27,6 +27,7 @@ template <typename T> class ArrayRef;
 class Module;
 class Function;
 class FunctionCallee;
+class GlobalIFunc;
 class GlobalValue;
 class Constant;
 class Value;
