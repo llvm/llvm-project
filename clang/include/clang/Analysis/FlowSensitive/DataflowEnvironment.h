@@ -26,6 +26,7 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -88,11 +89,7 @@ public:
                                      const Environment &Env2) {
       // FIXME: Consider adding QualType to StructValue and removing the Type
       // argument here.
-      //
-      // FIXME: default to a sound comparison (`Unknown`) and/or expand the
-      // comparison logic built into the framework to support broader forms of
-      // equivalence than strict pointer equality.
-      return ComparisonResult::Same;
+      return ComparisonResult::Unknown;
     }
 
     /// Modifies `MergedVal` to approximate both `Val1` and `Val2`. This could
@@ -117,6 +114,50 @@ public:
                        const Environment &Env2, Value &MergedVal,
                        Environment &MergedEnv) {
       return true;
+    }
+
+    /// This function may widen the current value -- replace it with an
+    /// approximation that can reach a fixed point more quickly than iterated
+    /// application of the transfer function alone. The previous value is
+    /// provided to inform the choice of widened value. The function must also
+    /// serve as a comparison operation, by indicating whether the widened value
+    /// is equivalent to the previous value.
+    ///
+    /// Returns either:
+    ///
+    ///   `nullptr`, if this value is not of interest to the model, or
+    ///
+    ///   `&Prev`, if the widened value is equivalent to `Prev`, or
+    ///
+    ///   A non-null value that approximates `Current`. `Prev` is available to
+    ///   inform the chosen approximation.
+    ///
+    /// `PrevEnv` and `CurrentEnv` can be used to query child values and path
+    /// condition implications of `Prev` and `Current`, respectively.
+    ///
+    /// Requirements:
+    ///
+    ///  `Prev` must precede `Current` in the value ordering. Widening is *not*
+    ///  called when the current value is already equivalent to the previous
+    ///  value.
+    ///
+    ///  `Prev` and `Current` must model values of type `Type`.
+    ///
+    ///  `Prev` and `Current` must be assigned to the same storage location in
+    ///  `PrevEnv` and `CurrentEnv`, respectively.
+    virtual Value *widen(QualType Type, Value &Prev, const Environment &PrevEnv,
+                         Value &Current, Environment &CurrentEnv) {
+      // The default implementation reduces to just comparison, since comparison
+      // is required by the API, even if no widening is performed.
+      switch (compare(Type, Prev, PrevEnv, Current, CurrentEnv)) {
+        case ComparisonResult::Same:
+          return &Prev;
+        case ComparisonResult::Different:
+          return &Current;
+        case ComparisonResult::Unknown:
+          return nullptr;
+      }
+      llvm_unreachable("all cases in switch covered");
     }
   };
 
@@ -181,6 +222,17 @@ public:
   ///  `Other` and `this` must use the same `DataflowAnalysisContext`.
   LatticeJoinEffect join(const Environment &Other,
                          Environment::ValueModel &Model);
+
+
+  /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
+  /// approximation.
+  ///
+  /// Requirements:
+  ///
+  ///  `PrevEnv` must precede `this` in the environment ordering.
+  ///  `PrevEnv` and `this` must use the same `DataflowAnalysisContext`.
+  LatticeJoinEffect widen(const Environment &PrevEnv,
+                          Environment::ValueModel &Model);
 
   // FIXME: Rename `createOrGetStorageLocation` to `getOrCreateStorageLocation`,
   // `getStableStorageLocation`, or something more appropriate.
@@ -406,6 +458,11 @@ private:
 
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
+
+
+  // FIXME: move the fields `CallStack`, `ReturnLoc` and `ThisPointeeLoc` into a
+  // separate call-context object, shared between environments in the same call.
+  // https://github.com/llvm/llvm-project/issues/59005
 
   // `DeclContext` of the block being analysed if provided.
   std::vector<const DeclContext *> CallStack;

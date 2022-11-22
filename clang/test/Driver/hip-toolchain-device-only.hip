@@ -12,7 +12,7 @@
 // CHECK-SAME: "-target-cpu" "gfx803"
 // CHECK-SAME: {{.*}} "-o" [[OBJ_DEV_A_803:".*o"]] "-x" "hip"
 
-// CHECK: [[LLD: ".*lld.*"]] "-flavor" "gnu" "--no-undefined" "-shared"
+// CHECK: [[LLD: ".*lld.*"]] "-flavor" "gnu" "-m" "elf64_amdgpu" "--no-undefined" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV_A_803:.*out]]" [[OBJ_DEV_A_803]]
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa"
@@ -21,7 +21,7 @@
 // CHECK-SAME: "-target-cpu" "gfx900"
 // CHECK-SAME: {{.*}} "-o" [[OBJ_DEV_A_900:".*o"]] "-x" "hip"
 
-// CHECK: [[LLD]] "-flavor" "gnu" "--no-undefined" "-shared"
+// CHECK: [[LLD]] "-flavor" "gnu" "-m" "elf64_amdgpu" "--no-undefined" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV_A_900:.*out]]" [[OBJ_DEV_A_900]]
 
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"

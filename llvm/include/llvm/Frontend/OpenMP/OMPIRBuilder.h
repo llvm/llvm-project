@@ -73,13 +73,62 @@ BasicBlock *splitBB(IRBuilder<> &Builder, bool CreateBranch, llvm::Twine Name);
 BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
                               llvm::Twine Suffix = ".split");
 
+/// Captures attributes that affect generating LLVM-IR using the
+/// OpenMPIRBuilder and related classes. Note that not all attributes are
+/// required for all classes or functions. In some use cases the configuration
+/// is not necessary at all, because because the only functions that are called
+/// are ones that are not dependent on the configuration.
+class OpenMPIRBuilderConfig {
+public:
+  /// Flag for specifying if the compilation is done for embedded device code
+  /// or host code.
+  Optional<bool> IsEmbedded;
+
+  /// Flag for specifying if the compilation is done for an offloading target,
+  /// like GPU.
+  Optional<bool> IsTargetCodegen;
+
+  /// Flag for specifying weather a requires unified_shared_memory
+  /// directive is present or not.
+  Optional<bool> HasRequiresUnifiedSharedMemory;
+
+  OpenMPIRBuilderConfig() {}
+  OpenMPIRBuilderConfig(bool IsEmbedded, bool IsTargetCodegen,
+                        bool HasRequiresUnifiedSharedMemory)
+      : IsEmbedded(IsEmbedded), IsTargetCodegen(IsTargetCodegen),
+        HasRequiresUnifiedSharedMemory(HasRequiresUnifiedSharedMemory) {}
+
+  // Convenience getter functions that assert if the value is not present.
+  bool isEmbedded() {
+    assert(IsEmbedded.has_value() && "IsEmbedded is not set");
+    return IsEmbedded.value();
+  }
+
+  bool isTargetCodegen() {
+    assert(IsTargetCodegen.has_value() && "IsTargetCodegen is not set");
+    return IsTargetCodegen.value();
+  }
+
+  bool hasRequiresUnifiedSharedMemory() {
+    assert(HasRequiresUnifiedSharedMemory.has_value() &&
+           "HasUnifiedSharedMemory is not set");
+    return HasRequiresUnifiedSharedMemory.value();
+  }
+
+  void setIsEmbedded(bool Value) { IsEmbedded = Value; }
+  void setIsTargetCodegen(bool Value) { IsTargetCodegen = Value; }
+  void setHasRequiresUnifiedSharedMemory(bool Value) {
+    HasRequiresUnifiedSharedMemory = Value;
+  }
+};
+
 /// An interface to create LLVM-IR for OpenMP directives.
 ///
 /// Each OpenMP directive has a corresponding public generator method.
 class OpenMPIRBuilder {
 public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
-  /// not have an effect on \p M (see initialize).
+  /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M) : M(M), Builder(M.getContext()) {}
   ~OpenMPIRBuilder();
 
@@ -87,6 +136,8 @@ public:
   /// potentially other helpers into the underlying module. Must be called
   /// before any other method and only once!
   void initialize();
+
+  void setConfig(OpenMPIRBuilderConfig C) { Config = C; }
 
   /// Finalize the underlying module, e.g., by outlining regions.
   /// \param Fn                    The function to be finalized. If not used,
@@ -942,6 +993,9 @@ public:
   /// \param Ident The ident (ident_t*) describing the query origin.
   Value *getOrCreateThreadID(Value *Ident);
 
+  /// The OpenMPIRBuilder Configuration
+  OpenMPIRBuilderConfig Config;
+
   /// The underlying LLVM-IR module
   Module &M;
 
@@ -1094,11 +1148,10 @@ public:
                                     bool EmitDebug = false,
                                     bool ForEndCall = false);
 
-  /// Creates offloading entry for the provided entry ID \a ID,
-  /// address \a Addr, size \a Size, and flags \a Flags.
-  void createOffloadEntry(bool IsTargetCodegen, Constant *ID, Constant *Addr,
-                          uint64_t Size, int32_t Flags,
-                          GlobalValue::LinkageTypes);
+  /// Creates offloading entry for the provided entry ID \a ID, address \a
+  /// Addr, size \a Size, and flags \a Flags.
+  void createOffloadEntry(Constant *ID, Constant *Addr, uint64_t Size,
+                          int32_t Flags, GlobalValue::LinkageTypes);
 
   /// The kind of errors that can occur when emitting the offload entries and
   /// metadata.
@@ -1121,8 +1174,6 @@ public:
   // We only generate metadata for function that contain target regions.
   void createOffloadEntriesAndInfoMetadata(
       OffloadEntriesInfoManager &OffloadEntriesInfoManager,
-      bool IsTargetCodegen, bool IsEmbedded,
-      bool HasRequiresUnifiedSharedMemory,
       EmitMetadataErrorReportFunctionTy &ErrorReportFunction);
 
 public:
@@ -1759,9 +1810,12 @@ struct TargetRegionEntryInfo {
 /// Class that manages information about offload code regions and data
 class OffloadEntriesInfoManager {
   /// Number of entries registered so far.
+  OpenMPIRBuilderConfig Config;
   unsigned OffloadingEntriesNum = 0;
 
 public:
+  void setConfig(OpenMPIRBuilderConfig C) { Config = C; }
+
   /// Base class of the entries info.
   class OffloadEntryInfo {
   public:
@@ -1813,7 +1867,8 @@ public:
   bool empty() const;
   /// Return number of entries defined so far.
   unsigned size() const { return OffloadingEntriesNum; }
-  explicit OffloadEntriesInfoManager() {}
+
+  OffloadEntriesInfoManager() : Config() {}
 
   //
   // Target region entries related.
@@ -1862,8 +1917,7 @@ public:
   /// Register target region entry.
   void registerTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
                                      Constant *Addr, Constant *ID,
-                                     OMPTargetRegionEntryKind Flags,
-                                     bool IsDevice);
+                                     OMPTargetRegionEntryKind Flags);
   /// Return true if a target region entry with the provided information
   /// exists.
   bool hasTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
@@ -1932,8 +1986,7 @@ public:
   void registerDeviceGlobalVarEntryInfo(StringRef VarName, Constant *Addr,
                                         int64_t VarSize,
                                         OMPTargetGlobalVarEntryKind Flags,
-                                        GlobalValue::LinkageTypes Linkage,
-                                        bool IsDevice);
+                                        GlobalValue::LinkageTypes Linkage);
   /// Checks if the variable with the given name has been registered already.
   bool hasDeviceGlobalVarEntryInfo(StringRef VarName) const {
     return OffloadEntriesDeviceGlobalVar.count(VarName) > 0;

@@ -335,9 +335,7 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
 LogicalResult
 mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
                                      OneShotAnalysisState &state) {
-  OneShotBufferizationOptions options =
-      static_cast<const OneShotBufferizationOptions &>(state.getOptions());
-  assert(options.bufferizeFunctionBoundaries &&
+  assert(state.getOptions().bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
   BufferizationAliasInfo &aliasInfo = state.getAliasInfo();

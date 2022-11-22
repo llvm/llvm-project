@@ -53,6 +53,8 @@ public:
 protected:
   bool printSysAlias(const MCInst *MI, const MCSubtargetInfo &STI,
                      raw_ostream &O);
+  bool printRangePrefetchAlias(const MCInst *MI, const MCSubtargetInfo &STI,
+                               raw_ostream &O, StringRef Annot);
   // Operand printers
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
@@ -137,6 +139,9 @@ protected:
   template <bool IsSVEPrefetch = false>
   void printPrefetchOp(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+
+  void printRPRFMOperand(const MCInst *MI, unsigned OpNum,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
 
   void printPSBHintOp(const MCInst *MI, unsigned OpNum,
                       const MCSubtargetInfo &STI, raw_ostream &O);
