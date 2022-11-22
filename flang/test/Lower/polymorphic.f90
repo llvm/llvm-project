@@ -90,4 +90,13 @@ module polymorphic_test
 ! CHECK: }
 ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %{{.*}}[%{{.*}}] : !fir.array<?xi32>, !fir.array<?xi32>, !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>, !fir.slice<1>
 
+  subroutine polymorphic_to_nonpolymorphic(p)
+    class(p1), pointer :: p(:)
+    type(p1), allocatable, target :: t(:)
+    t = p
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPpolymorphic_to_nonpolymorphic
+! Just checking that FIR is generated without error.
+
 end module
