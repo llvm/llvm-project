@@ -2330,9 +2330,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           return false;
         }
 
-        bool NeedSaveSCC =
-            RS->isRegUsed(AMDGPU::SCC) && !MI->definesRegister(AMDGPU::SCC);
-
         Register TmpSReg =
             UseSGPR ? TmpReg
                     : RS->scavengeRegister(&AMDGPU::SReg_32_XM0RegClass, MI, 0,
@@ -2350,24 +2347,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           FIOp.setIsKill(false);
         }
 
-        if (NeedSaveSCC) {
-          // This trick relies on Offset being even so that we can save SCC in
-          // the LSB.
-          assert((Offset & 1) == 0 && "Offset is odd!");
-          BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADDC_U32), TmpSReg)
-              .addReg(FrameReg)
-              .addImm(Offset);
-          BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_BITCMP1_B32))
-              .addReg(TmpSReg)
-              .addImm(0);
-          BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_BITSET0_B32), TmpSReg)
-              .addImm(0)
-              .addReg(TmpSReg);
-        } else {
-          BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), TmpSReg)
-              .addReg(FrameReg)
-              .addImm(Offset);
-        }
+        BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), TmpSReg)
+            .addReg(FrameReg)
+            .addImm(Offset);
 
         if (!UseSGPR)
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpReg)
@@ -2375,25 +2357,10 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
         if (TmpSReg == FrameReg) {
           // Undo frame register modification.
-          if (NeedSaveSCC && !MI->registerDefIsDead(AMDGPU::SCC)) {
-            MachineBasicBlock::iterator I =
-                BuildMI(*MBB, std::next(MI), DL, TII->get(AMDGPU::S_ADDC_U32),
-                        TmpSReg)
-                    .addReg(FrameReg)
-                    .addImm(-Offset);
-            I = BuildMI(*MBB, std::next(I), DL, TII->get(AMDGPU::S_BITCMP1_B32))
-                    .addReg(TmpSReg)
-                    .addImm(0);
-            BuildMI(*MBB, std::next(I), DL, TII->get(AMDGPU::S_BITSET0_B32),
-                    TmpSReg)
-                .addImm(0)
-                .addReg(TmpSReg);
-          } else {
-            BuildMI(*MBB, std::next(MI), DL, TII->get(AMDGPU::S_ADD_I32),
-                    FrameReg)
-                .addReg(FrameReg)
-                .addImm(-Offset);
-          }
+          BuildMI(*MBB, std::next(MI), DL, TII->get(AMDGPU::S_ADD_I32),
+                  FrameReg)
+              .addReg(FrameReg)
+              .addImm(-Offset);
         }
 
         return false;
