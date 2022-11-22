@@ -315,18 +315,12 @@ extern "C++" {
 // signbit
 
 #    ifdef signbit
-
-template <class _A1>
-_LIBCPP_HIDE_FROM_ABI bool __libcpp_signbit(_A1 __x) _NOEXCEPT {
-  return __builtin_signbit(__x);
-}
-
 #      undef signbit
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 signbit(_A1 __x) _NOEXCEPT {
-  return __libcpp_signbit(__x);
+  return __builtin_signbit(__x);
 }
 
 template <class _A1>
@@ -370,18 +364,12 @@ inline _LIBCPP_HIDE_FROM_ABI
 // fpclassify
 
 #    ifdef fpclassify
-
-template <class _A1>
-_LIBCPP_HIDE_FROM_ABI int __libcpp_fpclassify(_A1 __x) _NOEXCEPT {
-  return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
-}
-
 #      undef fpclassify
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI typename std::enable_if<std::is_floating_point<_A1>::value, int>::type
 fpclassify(_A1 __x) _NOEXCEPT {
-  return __libcpp_fpclassify(__x);
+  return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
 }
 
 template <class _A1>
@@ -409,19 +397,13 @@ fpclassify(_A1 __x) _NOEXCEPT {
 // isfinite
 
 #    ifdef isfinite
-
-template <class _A1>
-_LIBCPP_HIDE_FROM_ABI bool __libcpp_isfinite(_A1 __x) _NOEXCEPT {
-  return __builtin_isfinite(__x);
-}
-
 #      undef isfinite
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
     typename std::enable_if< std::is_arithmetic<_A1>::value && std::numeric_limits<_A1>::has_infinity, bool>::type
     isfinite(_A1 __x) _NOEXCEPT {
-  return __libcpp_isfinite((typename std::__promote<_A1>::type)__x);
+  return __builtin_isfinite((typename std::__promote<_A1>::type)__x);
 }
 
 template <class _A1>
@@ -436,19 +418,13 @@ inline _LIBCPP_HIDE_FROM_ABI
 // isinf
 
 #    ifdef isinf
-
-template <class _A1>
-_LIBCPP_HIDE_FROM_ABI bool __libcpp_isinf(_A1 __x) _NOEXCEPT {
-  return __builtin_isinf(__x);
-}
-
 #      undef isinf
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
     typename std::enable_if< std::is_arithmetic<_A1>::value && std::numeric_limits<_A1>::has_infinity, bool>::type
     isinf(_A1 __x) _NOEXCEPT {
-  return __libcpp_isinf((typename std::__promote<_A1>::type)__x);
+  return __builtin_isinf((typename std::__promote<_A1>::type)__x);
 }
 
 template <class _A1>
@@ -459,11 +435,11 @@ inline _LIBCPP_HIDE_FROM_ABI
 }
 
 #      ifdef _LIBCPP_PREFERRED_OVERLOAD
-inline _LIBCPP_HIDE_FROM_ABI bool isinf(float __x) _NOEXCEPT { return __libcpp_isinf(__x); }
+inline _LIBCPP_HIDE_FROM_ABI bool isinf(float __x) _NOEXCEPT { return __builtin_isinf(__x); }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool isinf(double __x) _NOEXCEPT { return __libcpp_isinf(__x); }
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool isinf(double __x) _NOEXCEPT { return __builtin_isinf(__x); }
 
-inline _LIBCPP_HIDE_FROM_ABI bool isinf(long double __x) _NOEXCEPT { return __libcpp_isinf(__x); }
+inline _LIBCPP_HIDE_FROM_ABI bool isinf(long double __x) _NOEXCEPT { return __builtin_isinf(__x); }
 #      endif
 
 #    endif // isinf
@@ -471,18 +447,12 @@ inline _LIBCPP_HIDE_FROM_ABI bool isinf(long double __x) _NOEXCEPT { return __li
 // isnan
 
 #    ifdef isnan
-
-template <class _A1>
-_LIBCPP_HIDE_FROM_ABI bool __libcpp_isnan(_A1 __x) _NOEXCEPT {
-  return __builtin_isnan(__x);
-}
-
 #      undef isnan
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 isnan(_A1 __x) _NOEXCEPT {
-  return __libcpp_isnan(__x);
+  return __builtin_isnan(__x);
 }
 
 template <class _A1>
@@ -491,11 +461,11 @@ inline _LIBCPP_HIDE_FROM_ABI typename std::enable_if<std::is_integral<_A1>::valu
 }
 
 #      ifdef _LIBCPP_PREFERRED_OVERLOAD
-inline _LIBCPP_HIDE_FROM_ABI bool isnan(float __x) _NOEXCEPT { return __libcpp_isnan(__x); }
+inline _LIBCPP_HIDE_FROM_ABI bool isnan(float __x) _NOEXCEPT { return __builtin_isnan(__x); }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool isnan(double __x) _NOEXCEPT { return __libcpp_isnan(__x); }
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool isnan(double __x) _NOEXCEPT { return __builtin_isnan(__x); }
 
-inline _LIBCPP_HIDE_FROM_ABI bool isnan(long double __x) _NOEXCEPT { return __libcpp_isnan(__x); }
+inline _LIBCPP_HIDE_FROM_ABI bool isnan(long double __x) _NOEXCEPT { return __builtin_isnan(__x); }
 #      endif
 
 #    endif // isnan
@@ -503,18 +473,12 @@ inline _LIBCPP_HIDE_FROM_ABI bool isnan(long double __x) _NOEXCEPT { return __li
 // isnormal
 
 #    ifdef isnormal
-
-template <class _A1>
-_LIBCPP_HIDE_FROM_ABI bool __libcpp_isnormal(_A1 __x) _NOEXCEPT {
-  return __builtin_isnormal(__x);
-}
-
 #      undef isnormal
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 isnormal(_A1 __x) _NOEXCEPT {
-  return __libcpp_isnormal(__x);
+  return __builtin_isnormal(__x);
 }
 
 template <class _A1>
@@ -528,12 +492,6 @@ isnormal(_A1 __x) _NOEXCEPT {
 // isgreater
 
 #    ifdef isgreater
-
-template <class _A1, class _A2>
-_LIBCPP_HIDE_FROM_ABI bool __libcpp_isgreater(_A1 __x, _A2 __y) _NOEXCEPT {
-  return isgreater(__x, __y);
-}
-
 #      undef isgreater
 
 template <class _A1, class _A2>
@@ -541,7 +499,7 @@ inline _LIBCPP_HIDE_FROM_ABI
     typename std::enable_if< std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, bool >::type
     isgreater(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename std::__promote<_A1, _A2>::type type;
-  return __libcpp_isgreater((type)__x, (type)__y);
+  return __builtin_isgreater((type)__x, (type)__y);
 }
 
 #    endif // isgreater
@@ -549,12 +507,6 @@ inline _LIBCPP_HIDE_FROM_ABI
 // isgreaterequal
 
 #    ifdef isgreaterequal
-
-template <class _A1, class _A2>
-_LIBCPP_HIDE_FROM_ABI bool __libcpp_isgreaterequal(_A1 __x, _A2 __y) _NOEXCEPT {
-  return isgreaterequal(__x, __y);
-}
-
 #      undef isgreaterequal
 
 template <class _A1, class _A2>
@@ -562,7 +514,7 @@ inline _LIBCPP_HIDE_FROM_ABI
     typename std::enable_if< std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, bool >::type
     isgreaterequal(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename std::__promote<_A1, _A2>::type type;
-  return __libcpp_isgreaterequal((type)__x, (type)__y);
+  return __builtin_isgreaterequal((type)__x, (type)__y);
 }
 
 #    endif // isgreaterequal
@@ -570,12 +522,6 @@ inline _LIBCPP_HIDE_FROM_ABI
 // isless
 
 #    ifdef isless
-
-template <class _A1, class _A2>
-_LIBCPP_HIDE_FROM_ABI bool __libcpp_isless(_A1 __x, _A2 __y) _NOEXCEPT {
-  return isless(__x, __y);
-}
-
 #      undef isless
 
 template <class _A1, class _A2>
@@ -583,7 +529,7 @@ inline _LIBCPP_HIDE_FROM_ABI
     typename std::enable_if< std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, bool >::type
     isless(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename std::__promote<_A1, _A2>::type type;
-  return __libcpp_isless((type)__x, (type)__y);
+  return __builtin_isless((type)__x, (type)__y);
 }
 
 #    endif // isless
@@ -591,12 +537,6 @@ inline _LIBCPP_HIDE_FROM_ABI
 // islessequal
 
 #    ifdef islessequal
-
-template <class _A1, class _A2>
-_LIBCPP_HIDE_FROM_ABI bool __libcpp_islessequal(_A1 __x, _A2 __y) _NOEXCEPT {
-  return islessequal(__x, __y);
-}
-
 #      undef islessequal
 
 template <class _A1, class _A2>
@@ -604,7 +544,7 @@ inline _LIBCPP_HIDE_FROM_ABI
     typename std::enable_if< std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, bool >::type
     islessequal(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename std::__promote<_A1, _A2>::type type;
-  return __libcpp_islessequal((type)__x, (type)__y);
+  return __builtin_islessequal((type)__x, (type)__y);
 }
 
 #    endif // islessequal
@@ -612,12 +552,6 @@ inline _LIBCPP_HIDE_FROM_ABI
 // islessgreater
 
 #    ifdef islessgreater
-
-template <class _A1, class _A2>
-_LIBCPP_HIDE_FROM_ABI bool __libcpp_islessgreater(_A1 __x, _A2 __y) _NOEXCEPT {
-  return islessgreater(__x, __y);
-}
-
 #      undef islessgreater
 
 template <class _A1, class _A2>
@@ -625,7 +559,7 @@ inline _LIBCPP_HIDE_FROM_ABI
     typename std::enable_if< std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, bool >::type
     islessgreater(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename std::__promote<_A1, _A2>::type type;
-  return __libcpp_islessgreater((type)__x, (type)__y);
+  return __builtin_islessgreater((type)__x, (type)__y);
 }
 
 #    endif // islessgreater
@@ -633,12 +567,6 @@ inline _LIBCPP_HIDE_FROM_ABI
 // isunordered
 
 #    ifdef isunordered
-
-template <class _A1, class _A2>
-_LIBCPP_HIDE_FROM_ABI bool __libcpp_isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
-  return isunordered(__x, __y);
-}
-
 #      undef isunordered
 
 template <class _A1, class _A2>
@@ -646,7 +574,7 @@ inline _LIBCPP_HIDE_FROM_ABI
     typename std::enable_if< std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, bool >::type
     isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename std::__promote<_A1, _A2>::type type;
-  return __libcpp_isunordered((type)__x, (type)__y);
+  return __builtin_isunordered((type)__x, (type)__y);
 }
 
 #    endif // isunordered
