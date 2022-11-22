@@ -331,6 +331,28 @@ struct ErrorBadParamsToAnnotateContiguousContainer : ErrorBase {
   void Print();
 };
 
+struct ErrorBadParamsToAnnotateDoubleEndedContiguousContainer : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr storage_beg, storage_end, old_container_beg, old_container_end,
+      new_container_beg, new_container_end;
+
+  ErrorBadParamsToAnnotateDoubleEndedContiguousContainer() = default;  // (*)
+  ErrorBadParamsToAnnotateDoubleEndedContiguousContainer(
+      u32 tid, BufferedStackTrace *stack_, uptr storage_beg_, uptr storage_end_,
+      uptr old_container_beg_, uptr old_container_end_, uptr new_container_beg_,
+      uptr new_container_end_)
+      : ErrorBase(tid, 10,
+                  "bad-__sanitizer_annotate_double_ended_contiguous_container"),
+        stack(stack_),
+        storage_beg(storage_beg_),
+        storage_end(storage_end_),
+        old_container_beg(old_container_beg_),
+        old_container_end(old_container_end_),
+        new_container_beg(new_container_beg_),
+        new_container_end(new_container_end_) {}
+  void Print();
+};
+
 struct ErrorODRViolation : ErrorBase {
   __asan_global global1, global2;
   u32 stack_id1, stack_id2;
@@ -398,6 +420,7 @@ struct ErrorGeneric : ErrorBase {
   macro(StringFunctionMemoryRangesOverlap)                 \
   macro(StringFunctionSizeOverflow)                        \
   macro(BadParamsToAnnotateContiguousContainer)            \
+  macro(BadParamsToAnnotateDoubleEndedContiguousContainer) \
   macro(ODRViolation)                                      \
   macro(InvalidPointerPair)                                \
   macro(Generic)
