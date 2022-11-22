@@ -24,12 +24,11 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
   char *st_beg = buffer + off_begin;
   char *st_end = st_beg + capacity;
   char *end = poison_buffer ? st_beg : st_end;
-  char *old_end;
 
   for (int i = 0; i < 1000; i++) {
     size_t size = rand() % (capacity + 1);
     assert(size <= capacity);
-    old_end = end;
+    char *old_end = end;
     end = st_beg + size;
     __sanitizer_annotate_contiguous_container(st_beg, st_end, old_end, end);
 
@@ -51,7 +50,7 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
   }
 
   for (int i = 0; i <= capacity; i++) {
-    old_end = end;
+    char *old_end = end;
     end = st_beg + i;
     __sanitizer_annotate_contiguous_container(st_beg, st_end, old_end, end);
 
