@@ -204,10 +204,11 @@ void ACInstrumentation::instrumentCallsForAFComputation(
   std::vector<Value *> AFArray;
 
   int NumOperands = (int)BaseInstruction->getNumOperands();
-  if (BaseInstruction->getOpcode() == Instruction::Call &&
-      static_cast<CallInst *>(BaseInstruction)
-          ->getCalledFunction()
-          ->isIntrinsic())
+//  if (BaseInstruction->getOpcode() == Instruction::Call &&
+//      static_cast<CallInst *>(BaseInstruction)
+//          ->getCalledFunction()
+//          ->isIntrinsic())
+  if (BaseInstruction->getOpcode() == Instruction::Call)
     NumOperands--;
 
   // Incomplete phi nodes are those that are to be assigned an incoming value
