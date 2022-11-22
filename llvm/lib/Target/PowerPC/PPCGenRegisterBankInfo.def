@@ -16,6 +16,10 @@ RegisterBankInfo::PartialMapping PPCGenRegisterBankInfo::PartMappings[]{
     /* StartIdx, Length, RegBank */
     // 0: GPR 64-bit value.
     {0, 64, PPC::GPRRegBank},
+    // 1: FPR 32-bit value
+    {0, 32, PPC::FPRRegBank},
+    // 2: FPR 64-bit value
+    {0, 64, PPC::FPRRegBank},
 };
 
 // ValueMappings.
@@ -37,6 +41,14 @@ RegisterBankInfo::ValueMapping PPCGenRegisterBankInfo::ValMappings[]{
     {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
+    // 4: FPR 32-bit value.
+    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
+    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
+    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
+    // 7: FPR 64-bit value.
+    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
+    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
+    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
 };
 
 // TODO Too simple!
