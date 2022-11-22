@@ -413,7 +413,8 @@ static bool findLoopComponents(
   // increment variable.
   Increment =
       cast<BinaryOperator>(InductionPHI->getIncomingValueForBlock(Latch));
-  if (Increment->hasNUsesOrMore(3)) {
+  if ((Compare->getOperand(0) != Increment || !Increment->hasNUses(2)) &&
+      !Increment->hasNUses(1)) {
     LLVM_DEBUG(dbgs() << "Could not find valid increment\n");
     return false;
   }

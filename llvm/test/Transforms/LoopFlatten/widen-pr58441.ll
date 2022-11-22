@@ -8,27 +8,22 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define i32 @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FLATTEN_TRIPCOUNT:%.*]] = mul i64 6, 6
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_I:%.*]]
 ; CHECK:       for.cond1.preheader.i:
-; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i64 [ [[INDVAR_NEXT2:%.*]], [[FOR_INC5_I:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[L_011_I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD6_I:%.*]], [[FOR_INC5_I:%.*]] ]
 ; CHECK-NEXT:    br label [[WHILE_COND_I_PREHEADER_I:%.*]]
 ; CHECK:       while.cond.i.preheader.i:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER_I]] ]
-; CHECK-NEXT:    [[STOREMERGE9_I:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_I]] ]
-; CHECK-NEXT:    [[INDVAR_NEXT:%.*]] = add i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[ADD_I:%.*]] = add nuw nsw i32 [[STOREMERGE9_I]], 1
-; CHECK-NEXT:    [[CMP2_I:%.*]] = icmp ult i64 [[INDVAR]], 5
-; CHECK-NEXT:    br label [[FOR_INC5_I]]
+; CHECK-NEXT:    [[STOREMERGE9_I:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_I]] ], [ [[ADD_I:%.*]], [[WHILE_COND_I_PREHEADER_I]] ]
+; CHECK-NEXT:    [[ADD_I]] = add nuw nsw i32 [[STOREMERGE9_I]], 1
+; CHECK-NEXT:    [[CMP2_I:%.*]] = icmp ult i32 [[STOREMERGE9_I]], 5
+; CHECK-NEXT:    br i1 [[CMP2_I]], label [[WHILE_COND_I_PREHEADER_I]], label [[FOR_INC5_I]]
 ; CHECK:       for.inc5.i:
-; CHECK-NEXT:    [[ADD_I_LCSSA_WIDE:%.*]] = phi i64 [ [[INDVAR_NEXT]], [[WHILE_COND_I_PREHEADER_I]] ]
 ; CHECK-NEXT:    [[ADD_I_LCSSA:%.*]] = phi i32 [ [[ADD_I]], [[WHILE_COND_I_PREHEADER_I]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[ADD_I_LCSSA_WIDE]] to i32
-; CHECK-NEXT:    [[INDVAR_NEXT2]] = add i64 [[INDVAR1]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i64 [[INDVAR_NEXT2]], [[FLATTEN_TRIPCOUNT]]
+; CHECK-NEXT:    [[ADD6_I]] = add nuw nsw i32 [[L_011_I]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i32 [[ADD6_I]], 6
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT_I]], label [[E_EXIT:%.*]], label [[FOR_COND1_PREHEADER_I]]
 ; CHECK:       e.exit:
-; CHECK-NEXT:    [[ADD_I_LCSSA_LCSSA:%.*]] = phi i32 [ [[TMP0]], [[FOR_INC5_I]] ]
+; CHECK-NEXT:    [[ADD_I_LCSSA_LCSSA:%.*]] = phi i32 [ [[ADD_I_LCSSA]], [[FOR_INC5_I]] ]
 ; CHECK-NEXT:    ret i32 [[ADD_I_LCSSA_LCSSA]]
 ;
 entry:
@@ -59,21 +54,20 @@ e.exit:                                           ; preds = %for.inc5.i
 define i32 @test64() {
 ; CHECK-LABEL: @test64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FLATTEN_TRIPCOUNT:%.*]] = mul i64 6, 6
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_I:%.*]]
 ; CHECK:       for.cond1.preheader.i:
 ; CHECK-NEXT:    [[L_011_I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD6_I:%.*]], [[FOR_INC5_I:%.*]] ]
 ; CHECK-NEXT:    br label [[WHILE_COND_I_PREHEADER_I:%.*]]
 ; CHECK:       while.cond.i.preheader.i:
-; CHECK-NEXT:    [[STOREMERGE9_I:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER_I]] ]
-; CHECK-NEXT:    [[ADD_I:%.*]] = add nuw nsw i64 [[STOREMERGE9_I]], 1
+; CHECK-NEXT:    [[STOREMERGE9_I:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER_I]] ], [ [[ADD_I:%.*]], [[WHILE_COND_I_PREHEADER_I]] ]
+; CHECK-NEXT:    [[ADD_I]] = add nuw nsw i64 [[STOREMERGE9_I]], 1
 ; CHECK-NEXT:    [[CMP2_I:%.*]] = icmp ult i64 [[STOREMERGE9_I]], 5
-; CHECK-NEXT:    br label [[FOR_INC5_I]]
+; CHECK-NEXT:    br i1 [[CMP2_I]], label [[WHILE_COND_I_PREHEADER_I]], label [[FOR_INC5_I]]
 ; CHECK:       for.inc5.i:
 ; CHECK-NEXT:    [[ADD_I_LCSSA_WIDEN:%.*]] = phi i64 [ [[ADD_I]], [[WHILE_COND_I_PREHEADER_I]] ]
 ; CHECK-NEXT:    [[ADD_I_LCSSA:%.*]] = trunc i64 [[ADD_I_LCSSA_WIDEN]] to i32
 ; CHECK-NEXT:    [[ADD6_I]] = add nuw nsw i64 [[L_011_I]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i64 [[ADD6_I]], [[FLATTEN_TRIPCOUNT]]
+; CHECK-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i64 [[ADD6_I]], 6
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT_I]], label [[E_EXIT:%.*]], label [[FOR_COND1_PREHEADER_I]]
 ; CHECK:       e.exit:
 ; CHECK-NEXT:    [[ADD_I_LCSSA_LCSSA:%.*]] = phi i32 [ [[ADD_I_LCSSA]], [[FOR_INC5_I]] ]
