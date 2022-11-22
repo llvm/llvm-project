@@ -563,7 +563,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::SRC_EXECZ);
   reserveRegisterTuples(Reserved, AMDGPU::SRC_SCC);
 
-  // Reserve the memory aperture registers.
+  // Reserve the memory aperture registers
   reserveRegisterTuples(Reserved, AMDGPU::SRC_SHARED_BASE);
   reserveRegisterTuples(Reserved, AMDGPU::SRC_SHARED_LIMIT);
   reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_BASE);
