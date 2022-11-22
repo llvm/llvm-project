@@ -8223,8 +8223,9 @@ const SCEV *ScalarEvolution::getExitCount(const Loop *L,
                                           ExitCountKind Kind) {
   switch (Kind) {
   case Exact:
-  case SymbolicMaximum:
     return getBackedgeTakenInfo(L).getExact(ExitingBlock, this);
+  case SymbolicMaximum:
+    return getBackedgeTakenInfo(L).getSymbolicMax(ExitingBlock, this);
   case ConstantMaximum:
     return getBackedgeTakenInfo(L).getConstantMax(ExitingBlock, this);
   };
@@ -8554,6 +8555,12 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
       return ENT.MaxNotTaken;
 
   return SE->getCouldNotCompute();
+}
+
+const SCEV *ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(
+    const BasicBlock *ExitingBlock, ScalarEvolution *SE) const {
+  // FIXME: Need to implement this. Return exact for now.
+  return getExact(ExitingBlock, SE);
 }
 
 /// getConstantMax - Get the constant max backedge taken count for the loop.
