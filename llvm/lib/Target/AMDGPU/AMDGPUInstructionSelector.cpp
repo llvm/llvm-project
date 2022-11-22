@@ -1093,9 +1093,10 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_div_scale:
     return selectDivScale(I);
   case Intrinsic::amdgcn_icmp:
+  case Intrinsic::amdgcn_fcmp:
     if (selectImpl(I, *CoverageInfo))
       return true;
-    return selectIntrinsicIcmp(I);
+    return selectIntrinsicCmp(I);
   case Intrinsic::amdgcn_ballot:
     return selectBallot(I);
   case Intrinsic::amdgcn_reloc_constant:
@@ -1174,6 +1175,55 @@ static int getV_CMPOpcode(CmpInst::Predicate P, unsigned Size,
   case CmpInst::ICMP_ULE:
     return Select(AMDGPU::V_CMP_LE_U16_e64, AMDGPU::V_CMP_LE_U16_t16_e64,
                   AMDGPU::V_CMP_LE_U32_e64, AMDGPU::V_CMP_LE_U64_e64);
+
+  case CmpInst::FCMP_OEQ:
+    return Select(AMDGPU::V_CMP_EQ_F16_e64, AMDGPU::V_CMP_EQ_F16_t16_e64,
+                  AMDGPU::V_CMP_EQ_F32_e64, AMDGPU::V_CMP_EQ_F64_e64);
+  case CmpInst::FCMP_OGT:
+    return Select(AMDGPU::V_CMP_GT_F16_e64, AMDGPU::V_CMP_GT_F16_t16_e64,
+                  AMDGPU::V_CMP_GT_F32_e64, AMDGPU::V_CMP_GT_F64_e64);
+  case CmpInst::FCMP_OGE:
+    return Select(AMDGPU::V_CMP_GE_F16_e64, AMDGPU::V_CMP_GE_F16_t16_e64,
+                  AMDGPU::V_CMP_GE_F32_e64, AMDGPU::V_CMP_GE_F64_e64);
+  case CmpInst::FCMP_OLT:
+    return Select(AMDGPU::V_CMP_LT_F16_e64, AMDGPU::V_CMP_LT_F16_t16_e64,
+                  AMDGPU::V_CMP_LT_F32_e64, AMDGPU::V_CMP_LT_F64_e64);
+  case CmpInst::FCMP_OLE:
+    return Select(AMDGPU::V_CMP_LE_F16_e64, AMDGPU::V_CMP_LE_F16_t16_e64,
+                  AMDGPU::V_CMP_LE_F32_e64, AMDGPU::V_CMP_LE_F64_e64);
+  case CmpInst::FCMP_ONE:
+    return Select(AMDGPU::V_CMP_NEQ_F16_e64, AMDGPU::V_CMP_NEQ_F16_t16_e64,
+                  AMDGPU::V_CMP_NEQ_F32_e64, AMDGPU::V_CMP_NEQ_F64_e64);
+  case CmpInst::FCMP_ORD:
+    return Select(AMDGPU::V_CMP_O_F16_e64, AMDGPU::V_CMP_O_F16_t16_e64,
+                  AMDGPU::V_CMP_O_F32_e64, AMDGPU::V_CMP_O_F64_e64);
+  case CmpInst::FCMP_UNO:
+    return Select(AMDGPU::V_CMP_U_F16_e64, AMDGPU::V_CMP_U_F16_t16_e64,
+                  AMDGPU::V_CMP_U_F32_e64, AMDGPU::V_CMP_U_F64_e64);
+  case CmpInst::FCMP_UEQ:
+    return Select(AMDGPU::V_CMP_NLG_F16_e64, AMDGPU::V_CMP_NLG_F16_t16_e64,
+                  AMDGPU::V_CMP_NLG_F32_e64, AMDGPU::V_CMP_NLG_F64_e64);
+  case CmpInst::FCMP_UGT:
+    return Select(AMDGPU::V_CMP_NLE_F16_e64, AMDGPU::V_CMP_NLE_F16_t16_e64,
+                  AMDGPU::V_CMP_NLE_F32_e64, AMDGPU::V_CMP_NLE_F64_e64);
+  case CmpInst::FCMP_UGE:
+    return Select(AMDGPU::V_CMP_NLT_F16_e64, AMDGPU::V_CMP_NLT_F16_t16_e64,
+                  AMDGPU::V_CMP_NLT_F32_e64, AMDGPU::V_CMP_NLT_F64_e64);
+  case CmpInst::FCMP_ULT:
+    return Select(AMDGPU::V_CMP_NGE_F16_e64, AMDGPU::V_CMP_NGE_F16_t16_e64,
+                  AMDGPU::V_CMP_NGE_F32_e64, AMDGPU::V_CMP_NGE_F64_e64);
+  case CmpInst::FCMP_ULE:
+    return Select(AMDGPU::V_CMP_NGT_F16_e64, AMDGPU::V_CMP_NGT_F16_t16_e64,
+                  AMDGPU::V_CMP_NGT_F32_e64, AMDGPU::V_CMP_NGT_F64_e64);
+  case CmpInst::FCMP_UNE:
+    return Select(AMDGPU::V_CMP_NEQ_F16_e64, AMDGPU::V_CMP_NEQ_F16_t16_e64,
+                  AMDGPU::V_CMP_NEQ_F32_e64, AMDGPU::V_CMP_NEQ_F64_e64);
+  case CmpInst::FCMP_TRUE:
+    return Select(AMDGPU::V_CMP_TRU_F16_e64, AMDGPU::V_CMP_TRU_F16_t16_e64,
+                  AMDGPU::V_CMP_TRU_F32_e64, AMDGPU::V_CMP_TRU_F64_e64);
+  case CmpInst::FCMP_FALSE:
+    return Select(AMDGPU::V_CMP_F_F16_e64, AMDGPU::V_CMP_F_F16_t16_e64,
+                  AMDGPU::V_CMP_F_F32_e64, AMDGPU::V_CMP_F_F64_e64);
   }
 }
 
@@ -1263,12 +1313,13 @@ bool AMDGPUInstructionSelector::selectG_ICMP(MachineInstr &I) const {
   return Ret;
 }
 
-bool AMDGPUInstructionSelector::selectIntrinsicIcmp(MachineInstr &I) const {
+bool AMDGPUInstructionSelector::selectIntrinsicCmp(MachineInstr &I) const {
   Register Dst = I.getOperand(0).getReg();
   if (isVCC(Dst, *MRI))
     return false;
 
-  if (MRI->getType(Dst).getSizeInBits() != STI.getWavefrontSize())
+  LLT DstTy = MRI->getType(Dst);
+  if (DstTy.getSizeInBits() != STI.getWavefrontSize())
     return false;
 
   MachineBasicBlock *BB = I.getParent();
@@ -1281,22 +1332,44 @@ bool AMDGPUInstructionSelector::selectIntrinsicIcmp(MachineInstr &I) const {
     return false;
 
   auto Pred = static_cast<CmpInst::Predicate>(I.getOperand(4).getImm());
-  if (!CmpInst::isIntPredicate(Pred)) {
+  if (!CmpInst::isIntPredicate(Pred) && !CmpInst::isFPPredicate(Pred)) {
     BuildMI(*BB, &I, DL, TII.get(AMDGPU::IMPLICIT_DEF), Dst);
     I.eraseFromParent();
     return RBI.constrainGenericRegister(Dst, *TRI.getBoolRC(), *MRI);
   }
 
-  int Opcode = getV_CMPOpcode(Pred, Size, *Subtarget);
+  const int Opcode = getV_CMPOpcode(Pred, Size, *Subtarget);
   if (Opcode == -1)
     return false;
 
-  MachineInstr *ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), Dst)
-                           .add(I.getOperand(2))
-                           .add(I.getOperand(3));
+  MachineInstr *SelectedMI;
+  if (CmpInst::isFPPredicate(Pred)) {
+    MachineOperand &LHS = I.getOperand(2);
+    MachineOperand &RHS = I.getOperand(3);
+    auto [Src0, Src0Mods] = selectVOP3ModsImpl(LHS);
+    auto [Src1, Src1Mods] = selectVOP3ModsImpl(RHS);
+    Register Src0Reg =
+        copyToVGPRIfSrcFolded(Src0, Src0Mods, LHS, &I, /*ForceVGPR*/ true);
+    Register Src1Reg =
+        copyToVGPRIfSrcFolded(Src1, Src1Mods, RHS, &I, /*ForceVGPR*/ true);
+    SelectedMI = BuildMI(*BB, &I, DL, TII.get(Opcode), Dst)
+                     .addImm(Src0Mods)
+                     .addReg(Src0Reg)
+                     .addImm(Src1Mods)
+                     .addReg(Src1Reg)
+                     .addImm(0); // clamp
+  } else {
+    SelectedMI = BuildMI(*BB, &I, DL, TII.get(Opcode), Dst)
+                     .add(I.getOperand(2))
+                     .add(I.getOperand(3));
+  }
+
   RBI.constrainGenericRegister(Dst, *TRI.getBoolRC(), *MRI);
+  if (!constrainSelectedInstRegOperands(*SelectedMI, TII, TRI, RBI))
+    return false;
+
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI);
+  return true;
 }
 
 bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
