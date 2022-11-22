@@ -2338,9 +2338,13 @@ void AMDGPUOperand::addRegOperands(MCInst &Inst, unsigned N) const {
 
 static bool isInlineValue(unsigned Reg) {
   switch (Reg) {
+  case AMDGPU::SRC_SHARED_BASE_LO:
   case AMDGPU::SRC_SHARED_BASE:
+  case AMDGPU::SRC_SHARED_LIMIT_LO:
   case AMDGPU::SRC_SHARED_LIMIT:
+  case AMDGPU::SRC_PRIVATE_BASE_LO:
   case AMDGPU::SRC_PRIVATE_BASE:
+  case AMDGPU::SRC_PRIVATE_LIMIT_LO:
   case AMDGPU::SRC_PRIVATE_LIMIT:
   case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
     return true;
@@ -5737,9 +5741,13 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
     return hasSGPR104_SGPR105();
 
   switch (RegNo) {
+  case AMDGPU::SRC_SHARED_BASE_LO:
   case AMDGPU::SRC_SHARED_BASE:
+  case AMDGPU::SRC_SHARED_LIMIT_LO:
   case AMDGPU::SRC_SHARED_LIMIT:
+  case AMDGPU::SRC_PRIVATE_BASE_LO:
   case AMDGPU::SRC_PRIVATE_BASE:
+  case AMDGPU::SRC_PRIVATE_LIMIT_LO:
   case AMDGPU::SRC_PRIVATE_LIMIT:
     return isGFX9Plus();
   case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
