@@ -15,21 +15,19 @@
 // [BEWARE: be really careful with the sed commands, as this test can be run
 //  from different environments with different shells and seds]
 //
-// RUN: cat                                                                    \
+// RUN: sed ':a;N;$!ba;s/[\n ]//g;s/)/)\n/g'                                   \
 // RUN:  %p/../../../../lib/asan/asan_interface.inc                            \
 // RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                          \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc    \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_coverage_interface.inc  \
-// RUN:  | tr '\n' ' ' | sed "s/ //g" | sed "s/)/)\n/g"                        \
 // RUN:  | grep -e "^INTERFACE_FUNCTION"                                       \
 // RUN:  | sed -e "s/.*(//" -e "s/).*//" > %t.imports1
 //
-// RUN: cat                                                                    \
+// RUN: sed ':a;N;$!ba;s/[\n ]//g;s/)/)\n/g'                                   \
 // RUN:  %p/../../../../lib/asan/asan_interface.inc                            \
 // RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                          \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc    \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_coverage_interface.inc  \
-// RUN:  | tr '\n' ' ' | sed "s/ //g" | sed "s/)/)\n/g"                        \
 // RUN:  | grep -e "^INTERFACE_WEAK_FUNCTION"                                  \
 // RUN:  | sed -e "s/.*(//" -e "s/).*/__dll/" > %t.imports2
 //

@@ -13,12 +13,12 @@
 // RUN:  | sed -e "s/__asan_version_mismatch_check_v[0-9]+/__asan_version_mismatch_check/" \
 // RUN:  > %t.exports
 //
-// RUN:  cat %t.asan_interface.inc                                                 \
+// RUN:  sed ':a;N;$!ba;s/[\n ]//g;s/)/)\n/g'                                      \
+// RUN:  %t.asan_interface.inc                                                     \
 // RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                              \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc        \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface_posix.inc  \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_coverage_interface.inc      \
-// RUN:  | tr '\n' ' ' | sed "s/ //g" | sed "s/)/)\n/g"                            \
 // RUN:  | grep -e "INTERFACE_\(WEAK_\)\?FUNCTION"                                 \
 // RUN:  | grep -v "__sanitizer_weak_hook"                                         \
 // RUN:  | sed -e "s/.*(//" -e "s/).*//" > %t.imports
