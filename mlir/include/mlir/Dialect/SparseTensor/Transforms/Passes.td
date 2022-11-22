@@ -225,4 +225,64 @@ def SparseBufferRewrite : Pass<"sparse-buffer-rewrite", "ModuleOp"> {
   ];
 }
 
+def SparseVectorization : Pass<"sparse-vectorization", "ModuleOp"> {
+  let summary = "Vectorizes loops after sparsification";
+  let description = [{
+    A pass that converts loops after sparsification into vector loops.
+    The vector dialect is used as target to provide an architectural
+    neutral way of exploiting any platform that supports SIMD instructions.
+
+    The vector length (viz. `vl`) describes the number of packed data elements
+    (e.g. both vector<16xf32> and vector<16xf64> have a vector length of 16 even
+    though the actual bitwidths differ). A small multiple of the actual lengths
+    supported in hardware typically results in efficient SIMD code, since the
+    backend will map longer vectors to multiple vector registers, thereby
+    effectively unrolling an addition level within the generated for-loop.
+
+    Example of the conversion:
+
+    ```mlir
+      Before:
+        %3 = memref.load %2[] : memref<f32>
+        %4 = scf.for %arg3 = %c0 to %c1024 step %c1 iter_args(%arg4 = %3) -> (f32) {
+          %6 = memref.load %0[%arg3] : memref<?xf32>
+          %7 = memref.load %1[%arg3] : memref<1024xf32>
+          %8 = arith.mulf %6, %7 : f32
+          %9 = arith.addf %arg4, %8 : f32
+          scf.yield %9 : f32
+        }
+        memref.store %4, %2[] : memref<f32>
+
+      After:
+        %3 = memref.load %2[] : memref<f32>
+        %4 = vector.insertelement %3, %cst[%c0 : index] : vector<32xf32>
+        %5 = scf.for %arg3 = %c0 to %c1024 step %c32 iter_args(%arg4 = %4) -> (vector<32xf32>) {
+          %8 = vector.load %0[%arg3] : memref<?xf32>, vector<32xf32>
+          %9 = vector.load %1[%arg3] : memref<1024xf32>, vector<32xf32>
+          %10 = arith.mulf %8, %9 : vector<32xf32>
+          %11 = arith.addf %arg4, %10 : vector<32xf32>
+          scf.yield %11 : vector<32xf32>
+        }
+        %6 = vector.reduction <add>, %5 : vector<32xf32> into f32
+        memref.store %6, %2[] : memref<f32>
+    ```
+  }];
+  let constructor = "mlir::createSparseVectorizationPass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+    "vector::VectorDialect",
+  ];
+  let options = [
+    Option<"vectorLength", "vl", "int32_t", "0",
+           "Set the vector length (use 0 to disable vectorization)">,
+    Option<"enableVLAVectorization", "enable-vla-vectorization", "bool",
+           "false", "Enable vector length agnostic vectorization">,
+    Option<"enableSIMDIndex32", "enable-simd-index32", "bool", "false",
+           "Enable i32 indexing into vectors (for efficient gather/scatter)">,
+  ];
+}
+
 #endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES
