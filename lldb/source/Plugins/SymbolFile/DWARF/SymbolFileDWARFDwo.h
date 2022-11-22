@@ -42,6 +42,16 @@ public:
 
   llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
 
+  lldb::offset_t
+  GetVendorDWARFOpcodeSize(const lldb_private::DataExtractor &data,
+                           const lldb::offset_t data_offset,
+                           const uint8_t op) const override;
+
+  bool ParseVendorDWARFOpcode(
+      uint8_t op, const lldb_private::DataExtractor &opcodes,
+      lldb::offset_t &offset,
+      std::vector<lldb_private::Value> &stack) const override;
+
 protected:
   DIEToTypePtr &GetDIEToType() override;
 
@@ -60,7 +70,7 @@ protected:
       const DWARFDIE &die, lldb_private::ConstString type_name,
       bool must_be_implementation) override;
 
-  SymbolFileDWARF &GetBaseSymbolFile() { return m_base_symbol_file; }
+  SymbolFileDWARF &GetBaseSymbolFile() const { return m_base_symbol_file; }
 
   /// If this file contains exactly one compile unit, this function will return
   /// it. Otherwise it returns nullptr.

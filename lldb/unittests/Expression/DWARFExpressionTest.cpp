@@ -9,9 +9,11 @@
 #include "lldb/Expression/DWARFExpression.h"
 #include "Plugins/Platform/Linux/PlatformLinux.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Host/HostInfo.h"
@@ -513,4 +515,243 @@ DWARF:
 
   ASSERT_EQ(result.GetValueType(), Value::ValueType::LoadAddress);
   ASSERT_EQ(result.GetScalar().UInt(), 0x5678u);
+}
+
+class CustomSymbolFileDWARF : public SymbolFileDWARF {
+  static char ID;
+
+public:
+  using SymbolFileDWARF::SymbolFileDWARF;
+
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || SymbolFile::isA(ClassID);
+  }
+  static bool classof(const SymbolFile *obj) { return obj->isA(&ID); }
+
+  static llvm::StringRef GetPluginNameStatic() { return "custom_dwarf"; }
+
+  static llvm::StringRef GetPluginDescriptionStatic() {
+    return "Symbol file reader with expression extensions.";
+  }
+
+  static void Initialize() {
+    PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                  GetPluginDescriptionStatic(), CreateInstance,
+                                  SymbolFileDWARF::DebuggerInitialize);
+  }
+
+  static void Terminate() { PluginManager::UnregisterPlugin(CreateInstance); }
+
+  static lldb_private::SymbolFile *
+  CreateInstance(lldb::ObjectFileSP objfile_sp) {
+    return new CustomSymbolFileDWARF(std::move(objfile_sp),
+                                     /*dwo_section_list*/ nullptr);
+  }
+
+  lldb::offset_t
+  GetVendorDWARFOpcodeSize(const lldb_private::DataExtractor &data,
+                           const lldb::offset_t data_offset,
+                           const uint8_t op) const final {
+    auto offset = data_offset;
+    if (op != DW_OP_WASM_location) {
+      return LLDB_INVALID_OFFSET;
+    }
+
+    // DW_OP_WASM_location WASM_GLOBAL:0x03 index:u32
+    // Called with "arguments" 0x03 and 0x04
+    // Location type:
+    if (data.GetU8(&offset) != /* global */ 0x03) {
+      return LLDB_INVALID_OFFSET;
+    }
+
+    // Index
+    if (data.GetU32(&offset) != 0x04) {
+      return LLDB_INVALID_OFFSET;
+    }
+
+    // Report the skipped distance:
+    return offset - data_offset;
+  }
+
+  bool
+  ParseVendorDWARFOpcode(uint8_t op, const lldb_private::DataExtractor &opcodes,
+                         lldb::offset_t &offset,
+                         std::vector<lldb_private::Value> &stack) const final {
+    if (op != DW_OP_WASM_location) {
+      return false;
+    }
+
+    // DW_OP_WASM_location WASM_GLOBAL:0x03 index:u32
+    // Called with "arguments" 0x03 and  0x04
+    // Location type:
+    if (opcodes.GetU8(&offset) != /* global */ 0x03) {
+      return false;
+    }
+
+    // Index:
+    if (opcodes.GetU32(&offset) != 0x04) {
+      return false;
+    }
+
+    // Return some value:
+    stack.push_back({GetScalar(32, 42, false)});
+    return true;
+  }
+};
+
+char CustomSymbolFileDWARF::ID;
+
+static auto testExpressionVendorExtensions(lldb::ModuleSP module_sp,
+                                           DWARFUnit &dwarf_unit) {
+  // Test that expression extensions can be evaluated, for example
+  // DW_OP_WASM_location which is not currently handled by DWARFExpression:
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_WASM_location, 0x03, // WASM_GLOBAL:0x03
+                                 0x04, 0x00, 0x00,          // index:u32
+                                 0x00, DW_OP_stack_value},
+                                module_sp, &dwarf_unit),
+                       llvm::HasValue(GetScalar(32, 42, false)));
+
+  // Test that searches for opcodes work in the presence of extensions:
+  uint8_t expr[] = {DW_OP_WASM_location,   0x03, 0x04, 0x00, 0x00, 0x00,
+                    DW_OP_form_tls_address};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 4);
+  DWARFExpression dwarf_expr(extractor);
+  ASSERT_TRUE(dwarf_expr.ContainsThreadLocalStorage(&dwarf_unit));
+}
+
+TEST(DWARFExpression, Extensions) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+  debug_info:
+    - Version:         4
+      AddrSize:        4
+      Entries:
+        - AbbrCode:        0x1
+        - AbbrCode:        0x0
+)";
+
+  SubsystemRAII<FileSystem, HostInfo, TypeSystemClang, ObjectFileELF,
+                CustomSymbolFileDWARF>
+      subsystems;
+
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
+
+  auto module_sp = std::make_shared<Module>(file->moduleSpec());
+  auto &symfile =
+      *llvm::cast<CustomSymbolFileDWARF>(module_sp->GetSymbolFile());
+  auto *dwarf_unit = symfile.DebugInfo().GetUnitAtIndex(0);
+
+  testExpressionVendorExtensions(module_sp, *dwarf_unit);
+}
+
+TEST(DWARFExpression, ExtensionsDWO) {
+  const char *skeleton_yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_skeleton_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_dwo_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_dwo_id
+              Form:            DW_FORM_data4
+  debug_info:
+    - Version:         4
+      AddrSize:        4
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - CStr:           "dwo_unit"
+            - Value:           0x01020304
+        - AbbrCode:        0x0
+)";
+
+  // .dwo sections aren't currently supported by dwarfyaml. The dwo_yamldata
+  // contents where generated by roundtripping the following yaml through
+  // yaml2obj | obj2yaml and renaming the sections. This works because the
+  // structure of the .dwo and non-.dwo sections is identical.
+  //
+  // --- !ELF
+  // FileHeader:
+  //   Class:   ELFCLASS64
+  //   Data:    ELFDATA2LSB
+  //   Type:    ET_EXEC
+  //   Machine: EM_386
+  // DWARF:
+  //   debug_abbrev: #.dwo
+  //     - Table:
+  //         - Code:            0x00000001
+  //           Tag:             DW_TAG_compile_unit
+  //           Children:        DW_CHILDREN_no
+  //           Attributes:
+  //             - Attribute:       DW_AT_dwo_id
+  //               Form:            DW_FORM_data4
+  //   debug_info: #.dwo
+  //     - Version:         4
+  //       AddrSize:        4
+  //       Entries:
+  //         - AbbrCode:        0x1
+  //           Values:
+  //             - Value:           0x01020304
+  //         - AbbrCode:        0x0
+  const char *dwo_yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_386
+Sections:
+  - Name:            .debug_abbrev.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '0111007506000000'
+  - Name:            .debug_info.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0D00000004000000000004010403020100
+)";
+
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, CustomSymbolFileDWARF>
+      subsystems;
+
+  llvm::Expected<TestFile> skeleton_file =
+      TestFile::fromYaml(skeleton_yamldata);
+  EXPECT_THAT_EXPECTED(skeleton_file, llvm::Succeeded());
+  llvm::Expected<TestFile> dwo_file = TestFile::fromYaml(dwo_yamldata);
+  EXPECT_THAT_EXPECTED(dwo_file, llvm::Succeeded());
+
+  auto skeleton_module_sp =
+      std::make_shared<Module>(skeleton_file->moduleSpec());
+  auto &skeleton_symfile =
+      *llvm::cast<CustomSymbolFileDWARF>(skeleton_module_sp->GetSymbolFile());
+
+  auto dwo_module_sp = std::make_shared<Module>(dwo_file->moduleSpec());
+  SymbolFileDWARFDwo dwo_symfile(
+      skeleton_symfile, dwo_module_sp->GetObjectFile()->shared_from_this(),
+      0x01020304);
+  auto *dwo_dwarf_unit = dwo_symfile.DebugInfo().GetUnitAtIndex(0);
+
+  testExpressionVendorExtensions(dwo_module_sp, *dwo_dwarf_unit);
 }
