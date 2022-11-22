@@ -57,6 +57,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 
+MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::OneShotAnalysisState)
+
 // Run mlir-opt with `-debug-only="one-shot-analysis"` for detailed debug
 // output.
 #define DEBUG_TYPE "one-shot-analysis"
@@ -193,7 +195,8 @@ BufferizationAliasInfo::getAliases(Value v) const {
 
 OneShotAnalysisState::OneShotAnalysisState(
     Operation *op, const OneShotBufferizationOptions &options)
-    : AnalysisState(options), aliasInfo(op) {
+    : AnalysisState(options, TypeID::get<OneShotAnalysisState>()),
+      aliasInfo(op) {
   // Set up alias sets for OpResults that must bufferize in-place. This should
   // be done before making any other bufferization decisions.
   op->walk([&](BufferizableOpInterface bufferizableOp) {
@@ -324,6 +327,8 @@ bool OneShotAnalysisState::isWritable(Value value) const {
   // Not a bufferizable op: The conservative answer is "not writable".
   return false;
 }
+
+OneShotAnalysisState::Extension::~Extension() = default;
 
 //===----------------------------------------------------------------------===//
 // Bufferization-specific alias analysis.
@@ -1137,11 +1142,6 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
   const auto &options =
       static_cast<const OneShotBufferizationOptions &>(state.getOptions());
-
-  // Catch incorrect API usage.
-  assert((state.hasDialectState(func::FuncDialect::getDialectNamespace()) ||
-          !options.bufferizeFunctionBoundaries) &&
-         "must use ModuleBufferize to bufferize function boundaries");
 
   if (failed(checkAliasInfoConsistency(op, domInfo, state, aliasInfo)))
     return failure();

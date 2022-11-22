@@ -32,6 +32,8 @@ namespace bufferization {
 } // namespace bufferization
 } // namespace mlir
 
+MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::AnalysisState)
+
 #define DEBUG_TYPE "bufferizable-op-interface"
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << (X))
@@ -297,12 +299,6 @@ BufferizationOptions::dynCastBufferizableOp(Value value) const {
   return nullptr;
 }
 
-void BufferizationOptions::addDialectStateInitializer(
-    StringRef name, const DialectStateInitFn &fn) {
-  stateInitializers.push_back(
-      [=](AnalysisState &state) { state.insertDialectState(name, fn()); });
-}
-
 //===----------------------------------------------------------------------===//
 // Helper functions for BufferizableOpInterface
 //===----------------------------------------------------------------------===//
@@ -451,7 +447,10 @@ AnalysisState::findLastPrecedingWrite(Value value) const {
 }
 
 AnalysisState::AnalysisState(const BufferizationOptions &options)
-    : options(options) {
+    : AnalysisState(options, TypeID::get<AnalysisState>()) {}
+
+AnalysisState::AnalysisState(const BufferizationOptions &options, TypeID type)
+    : options(options), type(type) {
   for (const BufferizationOptions::AnalysisStateInitFn &fn :
        options.stateInitializers)
     fn(*this);
