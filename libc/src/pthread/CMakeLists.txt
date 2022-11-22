@@ -407,5 +407,5 @@ add_entrypoint_object(
   DEPENDS
     libc.include.errno
     libc.include.pthread
-    libc.src.__support.fork_callbacks
+    libc.src.__support.threads.fork_callbacks
 )

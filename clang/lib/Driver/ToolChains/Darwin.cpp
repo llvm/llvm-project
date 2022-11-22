@@ -381,11 +381,10 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       D.Diag(diag::err_drv_bitcode_unsupported_on_toolchain);
   }
 
-  // GlobalISel is enabled by default on AArch64 Darwin.
-  if (getToolChain().getArch() == llvm::Triple::aarch64) {
-    Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
-                             options::OPT_fno_global_isel);
-    if (!A || !A->getOption().matches(options::OPT_fno_global_isel)) {
+  // If GlobalISel is enabled, pass it through to LLVM.
+  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
+                               options::OPT_fno_global_isel)) {
+    if (A->getOption().matches(options::OPT_fglobal_isel)) {
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-global-isel");
       // Disable abort and fall back to SDAG silently.

@@ -1128,43 +1128,6 @@ define double @vreduce_ord_fadd_v32f64(<32 x double>* %x, double %s) {
 }
 
 define double @vreduce_fwadd_v32f64(<32 x float>* %x, double %s) {
-; RV32-LABEL: vreduce_fwadd_v32f64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 32
-; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
-; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, mu
-; RV32-NEXT:    vslidedown.vi v16, v8, 16
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
-; RV32-NEXT:    vfwadd.vv v24, v8, v16
-; RV32-NEXT:    fcvt.d.w ft0, zero
-; RV32-NEXT:    fneg.d ft0, ft0
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
-; RV32-NEXT:    vfmv.s.f v8, ft0
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV32-NEXT:    vfredusum.vs v8, v24, v8
-; RV32-NEXT:    vfmv.f.s ft0, v8
-; RV32-NEXT:    fadd.d fa0, fa0, ft0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vreduce_fwadd_v32f64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 32
-; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
-; RV64-NEXT:    vle32.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, mu
-; RV64-NEXT:    vslidedown.vi v16, v8, 16
-; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
-; RV64-NEXT:    vfwadd.vv v24, v8, v16
-; RV64-NEXT:    fmv.d.x ft0, zero
-; RV64-NEXT:    fneg.d ft0, ft0
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
-; RV64-NEXT:    vfmv.s.f v8, ft0
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV64-NEXT:    vfredusum.vs v8, v24, v8
-; RV64-NEXT:    vfmv.f.s ft0, v8
-; RV64-NEXT:    fadd.d fa0, fa0, ft0
-; RV64-NEXT:    ret
 ; CHECK-LABEL: vreduce_fwadd_v32f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32

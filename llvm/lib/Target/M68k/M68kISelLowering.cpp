@@ -157,9 +157,40 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
 
   computeRegisterProperties(STI.getRegisterInfo());
 
+  // We lower the `atomic-compare-and-swap` to `__sync_val_compare_and_swap`
+  // for subtarget < M68020
+  setMaxAtomicSizeInBitsSupported(32);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, {MVT::i8, MVT::i16, MVT::i32},
+                     Subtarget.atLeastM68020() ? Legal : LibCall);
+
+  // M68k does not have native read-modify-write support, so expand all of them
+  // to `__sync_fetch_*` for target < M68020, otherwise expand to CmpxChg.
+  // See `shouldExpandAtomicRMWInIR` below.
+  setOperationAction(
+      {
+          ISD::ATOMIC_LOAD_ADD,
+          ISD::ATOMIC_LOAD_SUB,
+          ISD::ATOMIC_LOAD_AND,
+          ISD::ATOMIC_LOAD_OR,
+          ISD::ATOMIC_LOAD_XOR,
+          ISD::ATOMIC_LOAD_NAND,
+          ISD::ATOMIC_LOAD_MIN,
+          ISD::ATOMIC_LOAD_MAX,
+          ISD::ATOMIC_LOAD_UMIN,
+          ISD::ATOMIC_LOAD_UMAX,
+      },
+      {MVT::i8, MVT::i16, MVT::i32}, LibCall);
+
   // 2^2 bytes
   // FIXME can it be just 2^1?
   setMinFunctionAlignment(Align::Constant<2>());
+}
+
+TargetLoweringBase::AtomicExpansionKind
+M68kTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  return Subtarget.atLeastM68020()
+             ? TargetLoweringBase::AtomicExpansionKind::CmpXChg
+             : TargetLoweringBase::AtomicExpansionKind::None;
 }
 
 EVT M68kTargetLowering::getSetCCResultType(const DataLayout &DL,

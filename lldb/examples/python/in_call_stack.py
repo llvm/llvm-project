@@ -3,7 +3,7 @@
 
 def __lldb_init_module(debugger, internal_dict):
   debugger.HandleCommand(
-      'command alias in_call_stack breakpoint command add --python-function in_call_stack.in_call_stack -k name -v %1'
+      f'command alias in_call_stack breakpoint command add --python-function {__name__}.in_call_stack -k name -v %1'
   )
 
 

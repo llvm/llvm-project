@@ -46,6 +46,9 @@ protected:
 class CodeGenOptions : public CodeGenOptionsBase {
 
 public:
+  /// The paths to the pass plugins that were registered using -fpass-plugin.
+  std::vector<std::string> LLVMPassPlugins;
+
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default)                             \

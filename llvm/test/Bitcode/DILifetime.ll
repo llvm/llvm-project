@@ -1,7 +1,5 @@
 ; RUN: llvm-dis -o - %s.bc | FileCheck %s
 
-; XFAIL: *
-
 ; CHECK: !named = !{!0, !2, !3, !8, !11}
 !named = !{!0, !2, !3, !8, !11}
 
@@ -29,4 +27,4 @@
 ; CHECK: !11 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpArg(0, i32)), argObjects: {!9})
 !11 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpArg(0, i32)), argObjects: {!9})
 
-!12 = !{i32 2, !"Debug Info Version", i32 3}
+!12 = !{i32 2, !"Debug Info Version", i32 4}

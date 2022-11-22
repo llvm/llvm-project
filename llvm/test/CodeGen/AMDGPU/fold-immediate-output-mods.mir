@@ -60,13 +60,13 @@ body:             |
     %17 = REG_SEQUENCE killed %6, 17, %13, 18
     %18 = REG_SEQUENCE killed %4, 17, %13, 18
     %20 = COPY %29
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
     %22 = COPY %29
-    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, 0, implicit $exec
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
     %23 = V_MOV_B32_e32 1090519040, implicit $exec
     %24 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
     %26 = COPY %29
-    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -131,13 +131,13 @@ body:             |
     %17 = REG_SEQUENCE killed %6, 17, %13, 18
     %18 = REG_SEQUENCE killed %4, 17, %13, 18
     %20 = COPY %29
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
     %22 = COPY %29
-    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, 0, implicit $exec
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
     %23 = V_MOV_B32_e32 1090519040, implicit $exec
     %24 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 2, implicit $mode, implicit $exec
     %26 = COPY %29
-    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -202,13 +202,13 @@ body:             |
     %17 = REG_SEQUENCE killed %6, 17, %13, 18
     %18 = REG_SEQUENCE killed %4, 17, %13, 18
     %20 = COPY %29
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
     %22 = COPY %29
-    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, 0, implicit $exec
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
     %23 = V_MOV_B32_e32 1090519040, implicit $exec
     %24 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
     %26 = COPY %29
-    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -273,13 +273,13 @@ body:             |
     %17 = REG_SEQUENCE killed %6, 17, %13, 18
     %18 = REG_SEQUENCE killed %4, 17, %13, 18
     %20 = COPY %29
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
     %22 = COPY %29
-    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, 0, implicit $exec
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
     %23 = V_MOV_B32_e32 1090519040, implicit $exec
     %24 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit $mode, implicit $exec
     %26 = COPY %29
-    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

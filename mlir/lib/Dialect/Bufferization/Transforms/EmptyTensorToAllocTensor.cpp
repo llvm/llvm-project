@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -50,10 +51,15 @@ struct EmptyTensorToAllocTensor
 };
 } // namespace
 
+void bufferization::populateEmptyTensorToAllocTensorPattern(
+    RewritePatternSet &patterns) {
+  patterns.insert<EmptyTensorLoweringPattern>(patterns.getContext());
+}
+
 void EmptyTensorToAllocTensor::runOnOperation() {
   Operation *op = getOperation();
   RewritePatternSet patterns(op->getContext());
-  patterns.insert<EmptyTensorLoweringPattern>(op->getContext());
+  populateEmptyTensorToAllocTensorPattern(patterns);
   if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
     signalPassFailure();
 }

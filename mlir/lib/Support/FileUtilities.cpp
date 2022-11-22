@@ -10,17 +10,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/FileUtilities.h"
-#include "mlir/Support/LLVM.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/LLVM.h"
 
 using namespace mlir;
 
-std::unique_ptr<llvm::MemoryBuffer>
-mlir::openInputFile(StringRef inputFilename, std::string *errorMessage) {
-  auto fileOrErr = llvm::MemoryBuffer::getFileOrSTDIN(inputFilename);
+static std::unique_ptr<llvm::MemoryBuffer>
+openInputFileImpl(StringRef inputFilename, std::string *errorMessage,
+                  Optional<llvm::Align> alignment) {
+  auto fileOrErr = llvm::MemoryBuffer::getFileOrSTDIN(
+      inputFilename, /*IsText=*/false, /*RequiresNullTerminator=*/true,
+      alignment);
   if (std::error_code error = fileOrErr.getError()) {
     if (errorMessage)
       *errorMessage = "cannot open input file '" + inputFilename.str() +
@@ -29,6 +33,16 @@ mlir::openInputFile(StringRef inputFilename, std::string *errorMessage) {
   }
 
   return std::move(*fileOrErr);
+}
+std::unique_ptr<llvm::MemoryBuffer>
+mlir::openInputFile(StringRef inputFilename, std::string *errorMessage) {
+  return openInputFileImpl(inputFilename, errorMessage,
+                           /*alignment=*/llvm::None);
+}
+std::unique_ptr<llvm::MemoryBuffer>
+mlir::openInputFile(llvm::StringRef inputFilename, llvm::Align alignment,
+                    std::string *errorMessage) {
+  return openInputFileImpl(inputFilename, errorMessage, alignment);
 }
 
 std::unique_ptr<llvm::ToolOutputFile>

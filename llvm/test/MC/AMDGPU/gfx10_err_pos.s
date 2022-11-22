@@ -1,10 +1,10 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64 %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
 
 //==============================================================================
-// dim modifier is required on this GPU
+// operands are not valid for this GPU or mode
 
 image_atomic_add v252, v2, s[8:15]
-// CHECK: error: dim modifier is required on this GPU
+// CHECK: error: operands are not valid for this GPU or mode
 // CHECK-NEXT:{{^}}image_atomic_add v252, v2, s[8:15]
 // CHECK-NEXT:{{^}}^
 
@@ -830,10 +830,10 @@ v_div_fmas_f32 v5, s3, s4, v3
 //==============================================================================
 // invalid operand for instruction
 
-buffer_load_dword v5, off, s[8:11], s3 tfe lds
+buffer_load_dword v[5:6], off, s[8:11], s3 tfe lds
 // CHECK: error: invalid operand for instruction
-// CHECK-NEXT:{{^}}buffer_load_dword v5, off, s[8:11], s3 tfe lds
-// CHECK-NEXT:{{^}}                                           ^
+// CHECK-NEXT:{{^}}buffer_load_dword v[5:6], off, s[8:11], s3 tfe lds
+// CHECK-NEXT:{{^}}                                               ^
 
 exp mrt0 0x12345678, v0, v0, v0
 // CHECK: error: invalid operand for instruction
@@ -965,19 +965,6 @@ s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
 // CHECK: error: message operation does not support streams
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
 // CHECK-NEXT:{{^}}                                          ^
-
-//==============================================================================
-// missing dst operand or lds modifier
-
-buffer_load_dword off, s[8:11], s3
-// CHECK: error: missing dst operand or lds modifier
-// CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3
-// CHECK-NEXT:{{^}}^
-
-buffer_load_dword off, s[8:11], s3 offset:1
-// CHECK: error: missing dst operand or lds modifier
-// CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3 offset:1
-// CHECK-NEXT:{{^}}^
 
 //==============================================================================
 // missing message operation
@@ -1191,6 +1178,16 @@ v_add_f32_e64 v0, v1
 // CHECK-NEXT:{{^}}v_add_f32_e64 v0, v1
 // CHECK-NEXT:{{^}}^
 
+buffer_load_dword off, s[8:11], s3
+// CHECK: error: too few operands for instruction
+// CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3
+// CHECK-NEXT:{{^}}^
+
+buffer_load_dword off, s[8:11], s3 offset:1
+// CHECK: error: too few operands for instruction
+// CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3 offset:1
+// CHECK-NEXT:{{^}}^
+
 //==============================================================================
 // too large value for expcnt
 
@@ -1352,3 +1349,11 @@ v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PRESERV
 // CHECK: error: not a valid operand.
 // CHECK-NEXT:{{^}}v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
 // CHECK-NEXT:{{^}}                           ^
+
+//==============================================================================
+// TFE modifier has no meaning for store instructions
+
+buffer_store_dword v[1:2], off, s[12:15], s4 tfe
+// CHECK: error: TFE modifier has no meaning for store instructions
+// CHECK-NEXT:{{^}}buffer_store_dword v[1:2], off, s[12:15], s4 tfe
+// CHECK-NEXT:{{^}}                                             ^

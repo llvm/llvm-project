@@ -17,12 +17,12 @@ namespace clang {
 namespace driver {
 namespace tools {
 namespace loongarch {
-StringRef getLoongArchABI(const llvm::opt::ArgList &Args,
-                          const llvm::Triple &Triple);
-
 void getLoongArchTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                 const llvm::opt::ArgList &Args,
                                 std::vector<llvm::StringRef> &Features);
+
+StringRef getLoongArchABI(const Driver &D, const llvm::opt::ArgList &Args,
+                          const llvm::Triple &Triple);
 } // end namespace loongarch
 } // end namespace tools
 } // end namespace driver

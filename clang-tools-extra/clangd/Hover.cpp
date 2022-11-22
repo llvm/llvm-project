@@ -777,6 +777,17 @@ HoverInfo getDeducedTypeHoverContents(QualType QT, const syntax::Token &Tok,
   return HI;
 }
 
+HoverInfo getStringLiteralContents(const StringLiteral *SL,
+                                   const PrintingPolicy &PP) {
+  HoverInfo HI;
+
+  HI.Name = "string-literal";
+  HI.Size = (SL->getLength() + 1) * SL->getCharByteWidth();
+  HI.Type = SL->getType().getAsString(PP).c_str();
+
+  return HI;
+}
+
 bool isLiteral(const Expr *E) {
   // Unfortunately there's no common base Literal classes inherits from
   // (apart from Expr), therefore these exclusions.
@@ -785,7 +796,7 @@ bool isLiteral(const Expr *E) {
          llvm::isa<CXXNullPtrLiteralExpr>(E) ||
          llvm::isa<FixedPointLiteral>(E) || llvm::isa<FloatingLiteral>(E) ||
          llvm::isa<ImaginaryLiteral>(E) || llvm::isa<IntegerLiteral>(E) ||
-         llvm::isa<StringLiteral>(E) || llvm::isa<UserDefinedLiteral>(E);
+         llvm::isa<UserDefinedLiteral>(E);
 }
 
 llvm::StringLiteral getNameForExpr(const Expr *E) {
@@ -810,6 +821,9 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
     return llvm::None;
 
   HoverInfo HI;
+  // Print the type and the size for string literals
+  if (const StringLiteral *SL = dyn_cast<StringLiteral>(E))
+    return getStringLiteralContents(SL, PP);
   // For `this` expr we currently generate hover with pointee type.
   if (const CXXThisExpr *CTE = dyn_cast<CXXThisExpr>(E))
     return getThisExprHoverContents(CTE, AST.getASTContext(), PP);

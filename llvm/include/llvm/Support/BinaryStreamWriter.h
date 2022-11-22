@@ -56,7 +56,7 @@ public:
   /// \returns a success error code if the data was successfully written,
   /// otherwise returns an appropriate error code.
   template <typename T> Error writeInteger(T Value) {
-    static_assert(std::is_integral<T>::value,
+    static_assert(std::is_integral_v<T>,
                   "Cannot call writeInteger with non-integral value!");
     uint8_t Buffer[sizeof(T)];
     llvm::support::endian::write<T, llvm::support::unaligned>(

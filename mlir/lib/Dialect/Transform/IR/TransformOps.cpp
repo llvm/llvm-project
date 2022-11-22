@@ -155,6 +155,12 @@ void transform::AlternativesOp::getRegionInvocationBounds(
   bounds.resize(getNumRegions(), InvocationBounds(0, 1));
 }
 
+static void forwardEmptyOperands(Block *block, transform::TransformState &state,
+                                 transform::TransformResults &results) {
+  for (const auto &res : block->getParentOp()->getOpResults())
+    results.set(res, {});
+}
+
 static void forwardTerminatorOperands(Block *block,
                                       transform::TransformState &state,
                                       transform::TransformResults &results) {
@@ -594,8 +600,11 @@ transform::SequenceOp::apply(transform::TransformResults &results,
       return result;
 
     if (result.isSilenceableFailure()) {
-      if (getFailurePropagationMode() == FailurePropagationMode::Propagate)
+      if (getFailurePropagationMode() == FailurePropagationMode::Propagate) {
+        // Propagate empty results in case of early exit.
+        forwardEmptyOperands(getBodyBlock(), state, results);
         return result;
+      }
       (void)result.silence();
     }
   }

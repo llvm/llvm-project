@@ -216,10 +216,8 @@ class ExprFormattersTestCase(TestBase):
         a_data = frozen.GetPointeeData()
 
         error = lldb.SBError()
-        self.assertTrue(
-            a_data.GetUnsignedInt32(
-                error,
-                0) == 122,
+        self.assertEqual(
+            a_data.GetUnsignedInt32(error, 0), 122,
             '*a_ptr = 122')
 
         ret = line_number("main.cpp", "Done initializing")
@@ -235,58 +233,38 @@ class ExprFormattersTestCase(TestBase):
 
         a_data = frozen.GetPointeeData(0, 1)
 
-        self.assertTrue(
-            a_data.GetUnsignedInt32(
-                error,
-                0) == 1,
+        self.assertEqual(
+            a_data.GetUnsignedInt32(error, 0), 1,
             'numbers[0] == 1')
-        self.assertTrue(
-            a_data.GetUnsignedInt32(
-                error,
-                4) == 2,
+        self.assertEqual(
+            a_data.GetUnsignedInt32(error, 4), 2,
             'numbers[1] == 2')
-        self.assertTrue(
-            a_data.GetUnsignedInt32(
-                error,
-                8) == 3,
+        self.assertEqual(
+            a_data.GetUnsignedInt32(error, 8), 3,
             'numbers[2] == 3')
-        self.assertTrue(
-            a_data.GetUnsignedInt32(
-                error,
-                12) == 4,
+        self.assertEqual(
+            a_data.GetUnsignedInt32(error, 12), 4,
             'numbers[3] == 4')
-        self.assertTrue(
-            a_data.GetUnsignedInt32(
-                error,
-                16) == 5,
+        self.assertEqual(
+            a_data.GetUnsignedInt32(error, 16), 5,
             'numbers[4] == 5')
 
         frozen = frame.EvaluateExpression("numbers")
 
         a_data = frozen.GetData()
 
-        self.assertTrue(
-            a_data.GetUnsignedInt32(
-                error,
-                0) == 1,
+        self.assertEqual(
+            a_data.GetUnsignedInt32(error, 0), 1,
             'numbers[0] == 1')
-        self.assertTrue(
-            a_data.GetUnsignedInt32(
-                error,
-                4) == 2,
+        self.assertEqual(
+            a_data.GetUnsignedInt32(error, 4), 2,
             'numbers[1] == 2')
-        self.assertTrue(
-            a_data.GetUnsignedInt32(
-                error,
-                8) == 3,
+        self.assertEqual(
+            a_data.GetUnsignedInt32(error, 8), 3,
             'numbers[2] == 3')
-        self.assertTrue(
-            a_data.GetUnsignedInt32(
-                error,
-                12) == 4,
+        self.assertEqual(
+            a_data.GetUnsignedInt32(error, 12), 4,
             'numbers[3] == 4')
-        self.assertTrue(
-            a_data.GetUnsignedInt32(
-                error,
-                16) == 5,
+        self.assertEqual(
+            a_data.GetUnsignedInt32(error, 16), 5,
             'numbers[4] == 5')

@@ -33,7 +33,7 @@ define <16 x i8> @bitreverse_v16i8(<16 x i8> %op) vscale_range(2,0) #0 {
   ret <16 x i8> %res
 }
 
-define void @bitreverse_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
+define void @bitreverse_v32i8(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -41,13 +41,13 @@ define void @bitreverse_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %op)
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v64i8(<64 x i8>* %a) #0 {
+define void @bitreverse_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bitreverse_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -67,13 +67,13 @@ define void @bitreverse_v64i8(<64 x i8>* %a) #0 {
 ; VBITS_GE_512-NEXT:    rbit z0.b, p0/m, z0.b
 ; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <64 x i8>, <64 x i8>* %a
+  %op = load <64 x i8>, ptr %a
   %res = call <64 x i8> @llvm.bitreverse.v64i8(<64 x i8> %op)
-  store <64 x i8> %res, <64 x i8>* %a
+  store <64 x i8> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
+define void @bitreverse_v128i8(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: bitreverse_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -81,13 +81,13 @@ define void @bitreverse_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <128 x i8>, <128 x i8>* %a
+  %op = load <128 x i8>, ptr %a
   %res = call <128 x i8> @llvm.bitreverse.v128i8(<128 x i8> %op)
-  store <128 x i8> %res, <128 x i8>* %a
+  store <128 x i8> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
+define void @bitreverse_v256i8(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: bitreverse_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -95,9 +95,9 @@ define void @bitreverse_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <256 x i8>, <256 x i8>* %a
+  %op = load <256 x i8>, ptr %a
   %res = call <256 x i8> @llvm.bitreverse.v256i8(<256 x i8> %op)
-  store <256 x i8> %res, <256 x i8>* %a
+  store <256 x i8> %res, ptr %a
   ret void
 }
 
@@ -125,7 +125,7 @@ define <8 x i16> @bitreverse_v8i16(<8 x i16> %op) vscale_range(2,0) #0 {
   ret <8 x i16> %res
 }
 
-define void @bitreverse_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
+define void @bitreverse_v16i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -133,13 +133,13 @@ define void @bitreverse_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %op)
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v32i16(<32 x i16>* %a) #0 {
+define void @bitreverse_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bitreverse_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -159,13 +159,13 @@ define void @bitreverse_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_GE_512-NEXT:    rbit z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x i16>, <32 x i16>* %a
+  %op = load <32 x i16>, ptr %a
   %res = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %op)
-  store <32 x i16> %res, <32 x i16>* %a
+  store <32 x i16> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
+define void @bitreverse_v64i16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: bitreverse_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -173,13 +173,13 @@ define void @bitreverse_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x i16>, <64 x i16>* %a
+  %op = load <64 x i16>, ptr %a
   %res = call <64 x i16> @llvm.bitreverse.v64i16(<64 x i16> %op)
-  store <64 x i16> %res, <64 x i16>* %a
+  store <64 x i16> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
+define void @bitreverse_v128i16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: bitreverse_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -187,9 +187,9 @@ define void @bitreverse_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <128 x i16>, <128 x i16>* %a
+  %op = load <128 x i16>, ptr %a
   %res = call <128 x i16> @llvm.bitreverse.v128i16(<128 x i16> %op)
-  store <128 x i16> %res, <128 x i16>* %a
+  store <128 x i16> %res, ptr %a
   ret void
 }
 
@@ -217,7 +217,7 @@ define <4 x i32> @bitreverse_v4i32(<4 x i32> %op) vscale_range(2,0) #0 {
   ret <4 x i32> %res
 }
 
-define void @bitreverse_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
+define void @bitreverse_v8i32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -225,13 +225,13 @@ define void @bitreverse_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %op)
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v16i32(<16 x i32>* %a) #0 {
+define void @bitreverse_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bitreverse_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -251,13 +251,13 @@ define void @bitreverse_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_GE_512-NEXT:    rbit z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x i32>, <16 x i32>* %a
+  %op = load <16 x i32>, ptr %a
   %res = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %op)
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
+define void @bitreverse_v32i32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: bitreverse_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -265,13 +265,13 @@ define void @bitreverse_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x i32>, <32 x i32>* %a
+  %op = load <32 x i32>, ptr %a
   %res = call <32 x i32> @llvm.bitreverse.v32i32(<32 x i32> %op)
-  store <32 x i32> %res, <32 x i32>* %a
+  store <32 x i32> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
+define void @bitreverse_v64i32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: bitreverse_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -279,9 +279,9 @@ define void @bitreverse_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x i32>, <64 x i32>* %a
+  %op = load <64 x i32>, ptr %a
   %res = call <64 x i32> @llvm.bitreverse.v64i32(<64 x i32> %op)
-  store <64 x i32> %res, <64 x i32>* %a
+  store <64 x i32> %res, ptr %a
   ret void
 }
 
@@ -309,7 +309,7 @@ define <2 x i64> @bitreverse_v2i64(<2 x i64> %op) vscale_range(2,0) #0 {
   ret <2 x i64> %res
 }
 
-define void @bitreverse_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
+define void @bitreverse_v4i64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bitreverse_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -317,13 +317,13 @@ define void @bitreverse_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %op)
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v8i64(<8 x i64>* %a) #0 {
+define void @bitreverse_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bitreverse_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -343,13 +343,13 @@ define void @bitreverse_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_GE_512-NEXT:    rbit z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x i64>, <8 x i64>* %a
+  %op = load <8 x i64>, ptr %a
   %res = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %op)
-  store <8 x i64> %res, <8 x i64>* %a
+  store <8 x i64> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
+define void @bitreverse_v16i64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: bitreverse_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -357,13 +357,13 @@ define void @bitreverse_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x i64>, <16 x i64>* %a
+  %op = load <16 x i64>, ptr %a
   %res = call <16 x i64> @llvm.bitreverse.v16i64(<16 x i64> %op)
-  store <16 x i64> %res, <16 x i64>* %a
+  store <16 x i64> %res, ptr %a
   ret void
 }
 
-define void @bitreverse_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
+define void @bitreverse_v32i64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: bitreverse_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -371,9 +371,9 @@ define void @bitreverse_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x i64>, <32 x i64>* %a
+  %op = load <32 x i64>, ptr %a
   %res = call <32 x i64> @llvm.bitreverse.v32i64(<32 x i64> %op)
-  store <32 x i64> %res, <32 x i64>* %a
+  store <32 x i64> %res, ptr %a
   ret void
 }
 
@@ -401,7 +401,7 @@ define <8 x i16> @bswap_v8i16(<8 x i16> %op) vscale_range(2,0) #0 {
   ret <8 x i16> %res
 }
 
-define void @bswap_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
+define void @bswap_v16i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bswap_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -409,13 +409,13 @@ define void @bswap_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call <16 x i16> @llvm.bswap.v16i16(<16 x i16> %op)
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
-define void @bswap_v32i16(<32 x i16>* %a) #0 {
+define void @bswap_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bswap_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -435,13 +435,13 @@ define void @bswap_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_GE_512-NEXT:    revb z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x i16>, <32 x i16>* %a
+  %op = load <32 x i16>, ptr %a
   %res = call <32 x i16> @llvm.bswap.v32i16(<32 x i16> %op)
-  store <32 x i16> %res, <32 x i16>* %a
+  store <32 x i16> %res, ptr %a
   ret void
 }
 
-define void @bswap_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
+define void @bswap_v64i16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: bswap_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -449,13 +449,13 @@ define void @bswap_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x i16>, <64 x i16>* %a
+  %op = load <64 x i16>, ptr %a
   %res = call <64 x i16> @llvm.bswap.v64i16(<64 x i16> %op)
-  store <64 x i16> %res, <64 x i16>* %a
+  store <64 x i16> %res, ptr %a
   ret void
 }
 
-define void @bswap_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
+define void @bswap_v128i16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: bswap_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -463,9 +463,9 @@ define void @bswap_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <128 x i16>, <128 x i16>* %a
+  %op = load <128 x i16>, ptr %a
   %res = call <128 x i16> @llvm.bswap.v128i16(<128 x i16> %op)
-  store <128 x i16> %res, <128 x i16>* %a
+  store <128 x i16> %res, ptr %a
   ret void
 }
 
@@ -489,7 +489,7 @@ define <4 x i32> @bswap_v4i32(<4 x i32> %op) vscale_range(2,0) #0 {
   ret <4 x i32> %res
 }
 
-define void @bswap_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
+define void @bswap_v8i32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bswap_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -497,13 +497,13 @@ define void @bswap_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    revb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> %op)
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
-define void @bswap_v16i32(<16 x i32>* %a) #0 {
+define void @bswap_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bswap_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -523,13 +523,13 @@ define void @bswap_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_GE_512-NEXT:    revb z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x i32>, <16 x i32>* %a
+  %op = load <16 x i32>, ptr %a
   %res = call <16 x i32> @llvm.bswap.v16i32(<16 x i32> %op)
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
-define void @bswap_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
+define void @bswap_v32i32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: bswap_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -537,13 +537,13 @@ define void @bswap_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    revb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x i32>, <32 x i32>* %a
+  %op = load <32 x i32>, ptr %a
   %res = call <32 x i32> @llvm.bswap.v32i32(<32 x i32> %op)
-  store <32 x i32> %res, <32 x i32>* %a
+  store <32 x i32> %res, ptr %a
   ret void
 }
 
-define void @bswap_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
+define void @bswap_v64i32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: bswap_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -551,9 +551,9 @@ define void @bswap_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    revb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x i32>, <64 x i32>* %a
+  %op = load <64 x i32>, ptr %a
   %res = call <64 x i32> @llvm.bswap.v64i32(<64 x i32> %op)
-  store <64 x i32> %res, <64 x i32>* %a
+  store <64 x i32> %res, ptr %a
   ret void
 }
 
@@ -577,7 +577,7 @@ define <2 x i64> @bswap_v2i64(<2 x i64> %op) vscale_range(2,0) #0 {
   ret <2 x i64> %res
 }
 
-define void @bswap_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
+define void @bswap_v4i64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: bswap_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -585,13 +585,13 @@ define void @bswap_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    revb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> %op)
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
-define void @bswap_v8i64(<8 x i64>* %a) #0 {
+define void @bswap_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: bswap_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -611,13 +611,13 @@ define void @bswap_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_GE_512-NEXT:    revb z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x i64>, <8 x i64>* %a
+  %op = load <8 x i64>, ptr %a
   %res = call <8 x i64> @llvm.bswap.v8i64(<8 x i64> %op)
-  store <8 x i64> %res, <8 x i64>* %a
+  store <8 x i64> %res, ptr %a
   ret void
 }
 
-define void @bswap_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
+define void @bswap_v16i64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: bswap_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -625,13 +625,13 @@ define void @bswap_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    revb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x i64>, <16 x i64>* %a
+  %op = load <16 x i64>, ptr %a
   %res = call <16 x i64> @llvm.bswap.v16i64(<16 x i64> %op)
-  store <16 x i64> %res, <16 x i64>* %a
+  store <16 x i64> %res, ptr %a
   ret void
 }
 
-define void @bswap_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
+define void @bswap_v32i64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: bswap_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -639,9 +639,9 @@ define void @bswap_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    revb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x i64>, <32 x i64>* %a
+  %op = load <32 x i64>, ptr %a
   %res = call <32 x i64> @llvm.bswap.v32i64(<32 x i64> %op)
-  store <32 x i64> %res, <32 x i64>* %a
+  store <32 x i64> %res, ptr %a
   ret void
 }
 

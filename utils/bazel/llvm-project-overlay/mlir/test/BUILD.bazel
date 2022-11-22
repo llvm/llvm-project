@@ -132,14 +132,6 @@ gentbl_cc_library(
             "lib/Dialect/Test/TestOpsDialect.cpp.inc",
         ),
         (
-            ["-gen-enum-decls"],
-            "lib/Dialect/Test/TestOpEnums.h.inc",
-        ),
-        (
-            ["-gen-enum-defs"],
-            "lib/Dialect/Test/TestOpEnums.cpp.inc",
-        ),
-        (
             ["-gen-rewriters"],
             "lib/Dialect/Test/TestPatterns.inc",
         ),
@@ -205,6 +197,27 @@ gentbl_cc_library(
     ],
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Test/TestOps.td",
+    test = True,
+    deps = [
+        ":TestOpTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TestEnumDefsIncGen",
+    strip_include_prefix = "lib/Dialect/Test",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "lib/Dialect/Test/TestOpEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "lib/Dialect/Test/TestOpEnums.cpp.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "lib/Dialect/Test/TestEnumDefs.td",
     test = True,
     deps = [
         ":TestOpTdFiles",
@@ -318,6 +331,7 @@ cc_library(
     ],
     deps = [
         ":TestAttrDefsIncGen",
+        ":TestEnumDefsIncGen",
         ":TestInterfacesIncGen",
         ":TestOpsIncGen",
         ":TestTypeDefsIncGen",
@@ -330,6 +344,7 @@ cc_library(
         "//mlir:DerivedAttributeOpInterface",
         "//mlir:DestinationStyleOpInterface",
         "//mlir:Dialect",
+        "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:FuncTransforms",
         "//mlir:IR",

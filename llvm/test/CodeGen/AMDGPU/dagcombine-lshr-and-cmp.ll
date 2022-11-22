@@ -69,7 +69,7 @@ define amdgpu_kernel void @uniform_opt_lshr_and_cmp(i1 addrspace(1)* %out, i32 %
   ; GCN-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
   ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY5]], %subreg.sub0, killed [[COPY4]], %subreg.sub1, killed [[S_MOV_B32_3]], %subreg.sub2, killed [[S_MOV_B32_2]], %subreg.sub3
   ; GCN-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed [[S_XOR_B64_]], implicit $exec
-  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET killed [[V_CNDMASK_B32_e64_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.out.load, addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET killed [[V_CNDMASK_B32_e64_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.out.load, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.out.else:
@@ -79,7 +79,7 @@ define amdgpu_kernel void @uniform_opt_lshr_and_cmp(i1 addrspace(1)* %out, i32 %
   ; GCN-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
   ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY7]], %subreg.sub0, killed [[COPY6]], %subreg.sub1, killed [[S_MOV_B32_5]], %subreg.sub2, killed [[S_MOV_B32_4]], %subreg.sub3
   ; GCN-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[COPY3]], implicit $exec
-  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET killed [[V_CNDMASK_B32_e64_1]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.out.load, addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET killed [[V_CNDMASK_B32_e64_1]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.out.load, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
 entry:
   %0 = and i32 %x, 2

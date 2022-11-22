@@ -92,6 +92,12 @@ SmallVector<Value>
 getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                 ArrayRef<OpFoldResult> valueOrAttrVec);
 
+/// Converts a scalar value `operand` to type `toType`. If the value doesn't
+/// convert, a warning will be issued and the operand is returned as is (which
+/// will presumably yield a verification issue downstream).
+Value convertScalarToDtype(OpBuilder &b, Location loc, Value operand,
+                           Type toType, bool isUnsignedCast);
+
 /// Helper struct to build simple arithmetic quantities with minimal type
 /// inference support.
 struct ArithBuilder {

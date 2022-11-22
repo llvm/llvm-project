@@ -60,6 +60,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTPOP, GRLenVT, Expand);
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
   setOperationAction({ISD::GlobalAddress, ISD::BlockAddress, ISD::ConstantPool,
                       ISD::JumpTable},
@@ -88,6 +89,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTL, MVT::i32, Custom);
     setOperationAction(ISD::CTTZ, MVT::i32, Custom);
     setOperationAction(ISD::CTLZ, MVT::i32, Custom);
+    setOperationAction(ISD::INTRINSIC_VOID, MVT::i32, Custom);
+    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i32, Custom);
     if (Subtarget.hasBasicF() && !Subtarget.hasBasicD())
       setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
     if (Subtarget.hasBasicF())
@@ -112,6 +115,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
   } else {
     setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
+    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
   }
 
   static const ISD::CondCode FPCCToExpand[] = {
@@ -208,6 +212,10 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerGlobalTLSAddress(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return lowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::INTRINSIC_W_CHAIN:
+    return lowerINTRINSIC_W_CHAIN(Op, DAG);
+  case ISD::INTRINSIC_VOID:
+    return lowerINTRINSIC_VOID(Op, DAG);
   case ISD::BlockAddress:
     return lowerBlockAddress(Op, DAG);
   case ISD::JumpTable:
@@ -552,6 +560,54 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
 }
 
+SDValue
+LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
+                                                SelectionDAG &DAG) const {
+
+  switch (Op.getConstantOperandVal(1)) {
+  default:
+    return Op;
+  case Intrinsic::loongarch_crc_w_d_w: {
+    DAG.getContext()->emitError(
+        "llvm.loongarch.crc.w.d.w requires target: loongarch64");
+    return DAG.getMergeValues(
+        {DAG.getUNDEF(Op.getValueType()), Op.getOperand(0)}, SDLoc(Op));
+  }
+  }
+}
+
+SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT GRLenVT = Subtarget.getGRLenVT();
+
+  switch (Op.getConstantOperandVal(1)) {
+  default:
+    // TODO: Add more Intrinsics.
+    return SDValue();
+  case Intrinsic::loongarch_dbar: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op2 = Op.getOperand(2);
+    if (!isa<ConstantSDNode>(Op2)) {
+      DAG.getContext()->emitError("argument to '__builtin_loongarch_dbar' must "
+                                  "be a constant integer");
+      return Op.getOperand(0);
+    }
+    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    if (!isUInt<15>(Imm)) {
+      DAG.getContext()->emitError(
+          "argument to '__builtin_loongarch_dbar' out of range");
+      return Op0;
+    }
+
+    if (GRLenVT == MVT::i32)
+      return Op;
+    return DAG.getNode(LoongArchISD::DBAR, DL, MVT::Other, Op0,
+                       DAG.getConstant(Imm, DL, GRLenVT));
+  }
+  }
+}
+
 SDValue LoongArchTargetLowering::lowerShiftLeftParts(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -819,6 +875,25 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     Results.push_back(customLegalizeToWOp(N, DAG, 1));
+    break;
+  }
+  case ISD::INTRINSIC_W_CHAIN: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+
+    switch (N->getConstantOperandVal(1)) {
+    default:
+      llvm_unreachable("Unexpected Intrinsic.");
+    case Intrinsic::loongarch_crc_w_d_w: {
+      Results.push_back(DAG.getNode(
+          ISD::TRUNCATE, DL, N->getValueType(0),
+          DAG.getNode(
+              LoongArchISD::CRC_W_D_W, DL, MVT::i64, N->getOperand(2),
+              DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(3)))));
+      Results.push_back(N->getOperand(0));
+      break;
+    }
+    }
     break;
   }
   }
@@ -1275,6 +1350,8 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(ROTL_W)
     NODE_NAME_CASE(CLZ_W)
     NODE_NAME_CASE(CTZ_W)
+    NODE_NAME_CASE(DBAR)
+    NODE_NAME_CASE(CRC_W_D_W)
   }
 #undef NODE_NAME_CASE
   return nullptr;
@@ -2085,6 +2162,12 @@ bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 TargetLowering::AtomicExpansionKind
 LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // TODO: Add more AtomicRMWInst that needs to be extended.
+
+  // Since floating-point operation requires a non-trivial set of data
+  // operations, use CmpXChg to expand.
+  if (AI->isFloatingPointOperation())
+    return AtomicExpansionKind::CmpXChg;
+
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size == 8 || Size == 16)
     return AtomicExpansionKind::MaskedIntrinsic;

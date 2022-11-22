@@ -14,10 +14,10 @@ define i32 @foo(double* noalias nocapture %A, double* noalias nocapture %B, doub
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp une <2 x double> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[G:%.*]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[G]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP2]], <2 x double> [[TMP4]], <2 x double> <double 1.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP6]], align 8
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP2]], <2 x double> [[SHUFFLE]], <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 8
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:

@@ -371,16 +371,16 @@ def TensorCopyInsertion : Pass<"tensor-copy-insertion"> {
   let constructor = "mlir::bufferization::createTensorCopyInsertionPass()";
 }
 
-def AllocTensorElimination : Pass<"eliminate-alloc-tensors"> {
-  let summary = "Try to eliminate all alloc_tensor ops.";
+def EmptyTensorElimination : Pass<"eliminate-empty-tensors"> {
+  let summary = "Try to eliminate all tensor.empty ops.";
   let description = [{
-    This pass tries to eliminate all insert_slice op-anchored alloc_tensor ops.
-    I.e., when a value that is equivalent to an alloc_tensor op is inserted into
+    This pass tries to eliminate all insert_slice op-anchored tensor.empty ops.
+    I.e., when a value that is equivalent to an tensor.empty op is inserted into
     another tensor, this pass tries to rewrite the IR in such a way that the
     destination tensor of the insert_slice op is used directly instead of the
-    alloc_tensor result.
+    tensor.empty result.
   }];
-  let constructor = "mlir::bufferization::createAllocTensorEliminationPass()";
+  let constructor = "mlir::bufferization::createEmptyTensorEliminationPass()";
 }
 
 #endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES

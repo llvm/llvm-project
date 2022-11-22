@@ -107,6 +107,59 @@ Consult the `Getting Started with LLVM`_ section for detailed information on
 configuring and compiling LLVM.  Go to `Directory Layout`_ to learn about the
 layout of the source code tree.
 
+Stand-alone Builds
+------------------
+
+Stand-alone builds allow you to build a sub-project against a pre-built
+version of the clang or llvm libraries that is already present on your
+system.
+
+You can use the source code from a standard checkout of the llvm-project
+(as described above) to do stand-alone builds, but you may also build
+from a :ref:`sparse checkout<workflow-multicheckout-nocommit>` or from the
+tarballs available on the `releases <https://github.com/llvm/llvm-project/releases/>`_
+page.
+
+For stand-alone builds, you must have an llvm install that is configured
+properly to be consumable by stand-alone builds of the other projects.
+This could be a distro provided LLVM install, or you can build it yourself,
+like this:
+
+.. code-block:: console
+
+  cmake -G Ninja -S llvm -B $builddir \
+        -DLLVM_INSTALL_UTILS=ON \
+        -DCMAKE_INSTALL_PREFIX=/path/to/llvm/install/prefix \
+        < other options >
+
+  ninja -C $builddir install
+
+Once llvm is installed, to configure a project for a stand-alone build, invoke CMake like this:
+
+.. code-block:: console
+
+  cmake -G Ninja -S $subproj -B $buildir \
+        -DLLVM_EXTERNAL_LIT=/path/to/lit \
+        -DLLVM_ROOT=/path/to/llvm/install/prefix
+
+``LLVM_ROOT`` should point to the prefix of your llvm installation, so for example,
+if llvm is installed into ``/usr/bin`` and ``/usr/lib64``, then you should pass
+``-DLLVM_ROOT=/usr/``.  Both the ``LLVM_ROOT`` and ``LLVM_EXTERNAL_LIT`` options
+are required to do stand-alone builds for all sub-projects.  Additional required
+options for each sub-project can be found in the table below.
+
+The ``check-$subproj`` and ``install`` build targets are supported for the
+sub-projects listed in the table below.
+
+============ ======================== ======================
+Sub-Project  Required Sub-Directories Required CMake Options
+============ ======================== ======================
+llvm         llvm, cmake, third-party LLVM_INSTALL_UTILS=ON
+clang        clang, cmake             CLANG_INCLUDE_TESTS=ON (Required for check-clang only)
+lld          lld, cmake
+============ ======================== ======================
+
+
 Requirements
 ============
 

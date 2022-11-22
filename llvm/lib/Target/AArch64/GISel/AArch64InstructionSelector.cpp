@@ -1682,6 +1682,15 @@ bool AArch64InstructionSelector::tryOptCompareBranchFedByICmp(
       I.eraseFromParent();
       return true;
     }
+
+    // Inversely, if we have a signed greater-than-or-equal comparison to zero,
+    // we can test if the msb is zero.
+    if (C == 0 && Pred == CmpInst::ICMP_SGE) {
+      uint64_t Bit = MRI.getType(LHS).getSizeInBits() - 1;
+      emitTestBit(LHS, Bit, /*IsNegative = */ false, DestMBB, MIB);
+      I.eraseFromParent();
+      return true;
+    }
   }
 
   // Attempt to handle commutative condition codes. Right now, that's only
@@ -2829,7 +2838,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         static constexpr unsigned LDAROpcodes[] = {
             AArch64::LDARB, AArch64::LDARH, AArch64::LDARW, AArch64::LDARX};
         ArrayRef<unsigned> Opcodes =
-            STI.hasLDAPR() && Order != AtomicOrdering::SequentiallyConsistent
+            STI.hasRCPC() && Order != AtomicOrdering::SequentiallyConsistent
                 ? LDAPROpcodes
                 : LDAROpcodes;
         I.setDesc(TII.get(Opcodes[Log2_32(MemSizeInBytes)]));

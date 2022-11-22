@@ -39,7 +39,7 @@ class ExecTestCase(TestBase):
         # Set a breakpoint by file and line, this doesn't require anything from
         # the .dwo file.
         bp = target.BreakpointCreateByLocation('main.cpp', 6)
-        self.assertTrue(bp.GetNumLocations() == 1)
+        self.assertEqual(bp.GetNumLocations(), 1)
         bp_loc = bp.GetLocationAtIndex(0)
         self.assertTrue(bp_loc.IsValid())
 

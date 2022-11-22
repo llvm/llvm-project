@@ -286,3 +286,43 @@ entry:
   %ret = atomicrmw min i16* %arg, i16 %val seq_cst
   ret i16 %ret
 }
+
+define half @test_atomicrmw_fadd_f16(half* %ptr, half %value) {
+; CHECK-LABEL: @test_atomicrmw_fadd_f16(
+; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call half* @llvm.ptrmask.p0f16.i64(half* [[PTR:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint half* [[PTR]] to i64
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[PTRLSB]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 3
+; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast half* [[ALIGNEDADDR]] to i32*
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED]] to half
+; CHECK-NEXT:    [[NEW:%.*]] = fadd half [[TMP5]], [[VALUE:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast half [[NEW]] to i16
+; CHECK-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP6]] to i32
+; CHECK-NEXT:    [[SHIFTED2:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; CHECK-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = cmpxchg i32* [[ALIGNEDADDR1]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP7]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[SHIFTED3:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[EXTRACTED4:%.*]] = trunc i32 [[SHIFTED3]] to i16
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i16 [[EXTRACTED4]] to half
+; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    ret half [[TMP8]]
+;
+  %res = atomicrmw fadd half* %ptr, half %value seq_cst
+  ret half %res
+}

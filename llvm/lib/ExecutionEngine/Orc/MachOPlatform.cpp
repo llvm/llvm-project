@@ -479,7 +479,7 @@ void MachOPlatform::pushInitializersLoop(
 
   // Otherwise issue a lookup and re-run this phase when it completes.
   lookupInitSymbolsAsync(
-      [this, SendResult = std::move(SendResult), &JD](Error Err) mutable {
+      [this, SendResult = std::move(SendResult), JD](Error Err) mutable {
         if (Err)
           SendResult(std::move(Err));
         else

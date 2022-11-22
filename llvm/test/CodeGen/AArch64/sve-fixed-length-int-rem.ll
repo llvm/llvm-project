@@ -161,7 +161,7 @@ define <16 x i8> @srem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
   ret <16 x i8> %res
 }
 
-define void @srem_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(8,0) #0 {
+define void @srem_v32i8(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: srem_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -178,14 +178,14 @@ define void @srem_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = srem <32 x i8> %op1, %op2
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
-define void @srem_v64i8(<64 x i8>* %a, <64 x i8>* %b) vscale_range(16,0) #0 {
+define void @srem_v64i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: srem_v64i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
@@ -202,14 +202,14 @@ define void @srem_v64i8(<64 x i8>* %a, <64 x i8>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i8>, <64 x i8>* %a
-  %op2 = load <64 x i8>, <64 x i8>* %b
+  %op1 = load <64 x i8>, ptr %a
+  %op2 = load <64 x i8>, ptr %b
   %res = srem <64 x i8> %op1, %op2
-  store <64 x i8> %res, <64 x i8>* %a
+  store <64 x i8> %res, ptr %a
   ret void
 }
 
-define void @srem_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(16,0) #0 {
+define void @srem_v128i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: srem_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -229,14 +229,14 @@ define void @srem_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i8>, <128 x i8>* %a
-  %op2 = load <128 x i8>, <128 x i8>* %b
+  %op1 = load <128 x i8>, ptr %a
+  %op2 = load <128 x i8>, ptr %b
   %res = srem <128 x i8> %op1, %op2
-  store <128 x i8> %res, <128 x i8>* %a
+  store <128 x i8> %res, ptr %a
   ret void
 }
 
-define void @srem_v256i8(<256 x i8>* %a, <256 x i8>* %b) vscale_range(16,0) #0 {
+define void @srem_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: srem_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -265,10 +265,10 @@ define void @srem_v256i8(<256 x i8>* %a, <256 x i8>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <256 x i8>, <256 x i8>* %a
-  %op2 = load <256 x i8>, <256 x i8>* %b
+  %op1 = load <256 x i8>, ptr %a
+  %op2 = load <256 x i8>, ptr %b
   %res = srem <256 x i8> %op1, %op2
-  store <256 x i8> %res, <256 x i8>* %a
+  store <256 x i8> %res, ptr %a
   ret void
 }
 
@@ -367,7 +367,7 @@ define <8 x i16> @srem_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
   ret <8 x i16> %res
 }
 
-define void @srem_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+define void @srem_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-LABEL: srem_v16i16:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q2, q0, [x0]
@@ -423,14 +423,14 @@ define void @srem_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; VBITS_GE_512-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = srem <16 x i16> %op1, %op2
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
-define void @srem_v32i16(<32 x i16>* %a, <32 x i16>* %b) vscale_range(8,0) #0 {
+define void @srem_v32i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: srem_v32i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
@@ -444,14 +444,14 @@ define void @srem_v32i16(<32 x i16>* %a, <32 x i16>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
-  %op2 = load <32 x i16>, <32 x i16>* %b
+  %op1 = load <32 x i16>, ptr %a
+  %op2 = load <32 x i16>, ptr %b
   %res = srem <32 x i16> %op1, %op2
-  store <32 x i16> %res, <32 x i16>* %a
+  store <32 x i16> %res, ptr %a
   ret void
 }
 
-define void @srem_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(16,0) #0 {
+define void @srem_v64i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: srem_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -465,14 +465,14 @@ define void @srem_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i16>, <64 x i16>* %a
-  %op2 = load <64 x i16>, <64 x i16>* %b
+  %op1 = load <64 x i16>, ptr %a
+  %op2 = load <64 x i16>, ptr %b
   %res = srem <64 x i16> %op1, %op2
-  store <64 x i16> %res, <64 x i16>* %a
+  store <64 x i16> %res, ptr %a
   ret void
 }
 
-define void @srem_v128i16(<128 x i16>* %a, <128 x i16>* %b) vscale_range(16,0) #0 {
+define void @srem_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: srem_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -490,10 +490,10 @@ define void @srem_v128i16(<128 x i16>* %a, <128 x i16>* %b) vscale_range(16,0) #
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i16>, <128 x i16>* %a
-  %op2 = load <128 x i16>, <128 x i16>* %b
+  %op1 = load <128 x i16>, ptr %a
+  %op2 = load <128 x i16>, ptr %b
   %res = srem <128 x i16> %op1, %op2
-  store <128 x i16> %res, <128 x i16>* %a
+  store <128 x i16> %res, ptr %a
   ret void
 }
 
@@ -529,7 +529,7 @@ define <4 x i32> @srem_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(1,0) #
   ret <4 x i32> %res
 }
 
-define void @srem_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
+define void @srem_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: srem_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -540,14 +540,14 @@ define void @srem_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mls z0.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = srem <8 x i32> %op1, %op2
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
-define void @srem_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
+define void @srem_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-LABEL: srem_v16i32:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q0, q1, [x0, #32]
@@ -599,14 +599,14 @@ define void @srem_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
 ; VBITS_GE_512-NEXT:    mls z0.s, p0/m, z2.s, z1.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %res = srem <16 x i32> %op1, %op2
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
-define void @srem_v32i32(<32 x i32>* %a, <32 x i32>* %b) vscale_range(8,0) #0 {
+define void @srem_v32i32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: srem_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -617,14 +617,14 @@ define void @srem_v32i32(<32 x i32>* %a, <32 x i32>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    mls z0.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
-  %op2 = load <32 x i32>, <32 x i32>* %b
+  %op1 = load <32 x i32>, ptr %a
+  %op2 = load <32 x i32>, ptr %b
   %res = srem <32 x i32> %op1, %op2
-  store <32 x i32> %res, <32 x i32>* %a
+  store <32 x i32> %res, ptr %a
   ret void
 }
 
-define void @srem_v64i32(<64 x i32>* %a, <64 x i32>* %b) vscale_range(16,0) #0 {
+define void @srem_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: srem_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -635,10 +635,10 @@ define void @srem_v64i32(<64 x i32>* %a, <64 x i32>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i32>, <64 x i32>* %a
-  %op2 = load <64 x i32>, <64 x i32>* %b
+  %op1 = load <64 x i32>, ptr %a
+  %op2 = load <64 x i32>, ptr %b
   %res = srem <64 x i32> %op1, %op2
-  store <64 x i32> %res, <64 x i32>* %a
+  store <64 x i32> %res, ptr %a
   ret void
 }
 
@@ -676,7 +676,7 @@ define <2 x i64> @srem_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(1,0) #
   ret <2 x i64> %res
 }
 
-define void @srem_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
+define void @srem_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: srem_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -687,14 +687,14 @@ define void @srem_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = srem <4 x i64> %op1, %op2
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
-define void @srem_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
+define void @srem_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-LABEL: srem_v8i64:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q4, q5, [x1]
@@ -750,14 +750,14 @@ define void @srem_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
 ; VBITS_GE_512-NEXT:    mls z0.d, p0/m, z2.d, z1.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
-  %op2 = load <8 x i64>, <8 x i64>* %b
+  %op1 = load <8 x i64>, ptr %a
+  %op2 = load <8 x i64>, ptr %b
   %res = srem <8 x i64> %op1, %op2
-  store <8 x i64> %res, <8 x i64>* %a
+  store <8 x i64> %res, ptr %a
   ret void
 }
 
-define void @srem_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #0 {
+define void @srem_v16i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: srem_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -768,14 +768,14 @@ define void @srem_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
-  %op2 = load <16 x i64>, <16 x i64>* %b
+  %op1 = load <16 x i64>, ptr %a
+  %op2 = load <16 x i64>, ptr %b
   %res = srem <16 x i64> %op1, %op2
-  store <16 x i64> %res, <16 x i64>* %a
+  store <16 x i64> %res, ptr %a
   ret void
 }
 
-define void @srem_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #0 {
+define void @srem_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: srem_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -786,10 +786,10 @@ define void @srem_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
-  %op2 = load <32 x i64>, <32 x i64>* %b
+  %op1 = load <32 x i64>, ptr %a
+  %op2 = load <32 x i64>, ptr %b
   %res = srem <32 x i64> %op1, %op2
-  store <32 x i64> %res, <32 x i64>* %a
+  store <32 x i64> %res, ptr %a
   ret void
 }
 
@@ -948,7 +948,7 @@ define <16 x i8> @urem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
   ret <16 x i8> %res
 }
 
-define void @urem_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(8,0) #0 {
+define void @urem_v32i8(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: urem_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -965,14 +965,14 @@ define void @urem_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = urem <32 x i8> %op1, %op2
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
-define void @urem_v64i8(<64 x i8>* %a, <64 x i8>* %b) vscale_range(16,0) #0 {
+define void @urem_v64i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: urem_v64i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
@@ -989,14 +989,14 @@ define void @urem_v64i8(<64 x i8>* %a, <64 x i8>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i8>, <64 x i8>* %a
-  %op2 = load <64 x i8>, <64 x i8>* %b
+  %op1 = load <64 x i8>, ptr %a
+  %op2 = load <64 x i8>, ptr %b
   %res = urem <64 x i8> %op1, %op2
-  store <64 x i8> %res, <64 x i8>* %a
+  store <64 x i8> %res, ptr %a
   ret void
 }
 
-define void @urem_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(16,0) #0 {
+define void @urem_v128i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: urem_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -1016,14 +1016,14 @@ define void @urem_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i8>, <128 x i8>* %a
-  %op2 = load <128 x i8>, <128 x i8>* %b
+  %op1 = load <128 x i8>, ptr %a
+  %op2 = load <128 x i8>, ptr %b
   %res = urem <128 x i8> %op1, %op2
-  store <128 x i8> %res, <128 x i8>* %a
+  store <128 x i8> %res, ptr %a
   ret void
 }
 
-define void @urem_v256i8(<256 x i8>* %a, <256 x i8>* %b) vscale_range(16,0) #0 {
+define void @urem_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: urem_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -1052,10 +1052,10 @@ define void @urem_v256i8(<256 x i8>* %a, <256 x i8>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <256 x i8>, <256 x i8>* %a
-  %op2 = load <256 x i8>, <256 x i8>* %b
+  %op1 = load <256 x i8>, ptr %a
+  %op2 = load <256 x i8>, ptr %b
   %res = urem <256 x i8> %op1, %op2
-  store <256 x i8> %res, <256 x i8>* %a
+  store <256 x i8> %res, ptr %a
   ret void
 }
 
@@ -1154,7 +1154,7 @@ define <8 x i16> @urem_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
   ret <8 x i16> %res
 }
 
-define void @urem_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+define void @urem_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-LABEL: urem_v16i16:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q2, q0, [x0]
@@ -1210,14 +1210,14 @@ define void @urem_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; VBITS_GE_512-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = urem <16 x i16> %op1, %op2
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
-define void @urem_v32i16(<32 x i16>* %a, <32 x i16>* %b) vscale_range(8,0) #0 {
+define void @urem_v32i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: urem_v32i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
@@ -1231,14 +1231,14 @@ define void @urem_v32i16(<32 x i16>* %a, <32 x i16>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
-  %op2 = load <32 x i16>, <32 x i16>* %b
+  %op1 = load <32 x i16>, ptr %a
+  %op2 = load <32 x i16>, ptr %b
   %res = urem <32 x i16> %op1, %op2
-  store <32 x i16> %res, <32 x i16>* %a
+  store <32 x i16> %res, ptr %a
   ret void
 }
 
-define void @urem_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(16,0) #0 {
+define void @urem_v64i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: urem_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -1252,14 +1252,14 @@ define void @urem_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i16>, <64 x i16>* %a
-  %op2 = load <64 x i16>, <64 x i16>* %b
+  %op1 = load <64 x i16>, ptr %a
+  %op2 = load <64 x i16>, ptr %b
   %res = urem <64 x i16> %op1, %op2
-  store <64 x i16> %res, <64 x i16>* %a
+  store <64 x i16> %res, ptr %a
   ret void
 }
 
-define void @urem_v128i16(<128 x i16>* %a, <128 x i16>* %b) vscale_range(16,0) #0 {
+define void @urem_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: urem_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -1277,10 +1277,10 @@ define void @urem_v128i16(<128 x i16>* %a, <128 x i16>* %b) vscale_range(16,0) #
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i16>, <128 x i16>* %a
-  %op2 = load <128 x i16>, <128 x i16>* %b
+  %op1 = load <128 x i16>, ptr %a
+  %op2 = load <128 x i16>, ptr %b
   %res = urem <128 x i16> %op1, %op2
-  store <128 x i16> %res, <128 x i16>* %a
+  store <128 x i16> %res, ptr %a
   ret void
 }
 
@@ -1316,7 +1316,7 @@ define <4 x i32> @urem_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(1,0) #
   ret <4 x i32> %res
 }
 
-define void @urem_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
+define void @urem_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: urem_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -1327,14 +1327,14 @@ define void @urem_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mls z0.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = urem <8 x i32> %op1, %op2
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
-define void @urem_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
+define void @urem_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-LABEL: urem_v16i32:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q0, q1, [x0, #32]
@@ -1386,14 +1386,14 @@ define void @urem_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
 ; VBITS_GE_512-NEXT:    mls z0.s, p0/m, z2.s, z1.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %res = urem <16 x i32> %op1, %op2
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
-define void @urem_v32i32(<32 x i32>* %a, <32 x i32>* %b) vscale_range(8,0) #0 {
+define void @urem_v32i32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: urem_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1404,14 +1404,14 @@ define void @urem_v32i32(<32 x i32>* %a, <32 x i32>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    mls z0.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
-  %op2 = load <32 x i32>, <32 x i32>* %b
+  %op1 = load <32 x i32>, ptr %a
+  %op2 = load <32 x i32>, ptr %b
   %res = urem <32 x i32> %op1, %op2
-  store <32 x i32> %res, <32 x i32>* %a
+  store <32 x i32> %res, ptr %a
   ret void
 }
 
-define void @urem_v64i32(<64 x i32>* %a, <64 x i32>* %b) vscale_range(16,0) #0 {
+define void @urem_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: urem_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -1422,10 +1422,10 @@ define void @urem_v64i32(<64 x i32>* %a, <64 x i32>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i32>, <64 x i32>* %a
-  %op2 = load <64 x i32>, <64 x i32>* %b
+  %op1 = load <64 x i32>, ptr %a
+  %op2 = load <64 x i32>, ptr %b
   %res = urem <64 x i32> %op1, %op2
-  store <64 x i32> %res, <64 x i32>* %a
+  store <64 x i32> %res, ptr %a
   ret void
 }
 
@@ -1463,7 +1463,7 @@ define <2 x i64> @urem_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(1,0) #
   ret <2 x i64> %res
 }
 
-define void @urem_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
+define void @urem_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: urem_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -1474,14 +1474,14 @@ define void @urem_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = urem <4 x i64> %op1, %op2
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
-define void @urem_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
+define void @urem_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-LABEL: urem_v8i64:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q4, q5, [x1]
@@ -1537,14 +1537,14 @@ define void @urem_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
 ; VBITS_GE_512-NEXT:    mls z0.d, p0/m, z2.d, z1.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
-  %op2 = load <8 x i64>, <8 x i64>* %b
+  %op1 = load <8 x i64>, ptr %a
+  %op2 = load <8 x i64>, ptr %b
   %res = urem <8 x i64> %op1, %op2
-  store <8 x i64> %res, <8 x i64>* %a
+  store <8 x i64> %res, ptr %a
   ret void
 }
 
-define void @urem_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #0 {
+define void @urem_v16i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: urem_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -1555,14 +1555,14 @@ define void @urem_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
-  %op2 = load <16 x i64>, <16 x i64>* %b
+  %op1 = load <16 x i64>, ptr %a
+  %op2 = load <16 x i64>, ptr %b
   %res = urem <16 x i64> %op1, %op2
-  store <16 x i64> %res, <16 x i64>* %a
+  store <16 x i64> %res, ptr %a
   ret void
 }
 
-define void @urem_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #0 {
+define void @urem_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: urem_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -1573,10 +1573,10 @@ define void @urem_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
-  %op2 = load <32 x i64>, <32 x i64>* %b
+  %op1 = load <32 x i64>, ptr %a
+  %op2 = load <32 x i64>, ptr %b
   %res = urem <32 x i64> %op1, %op2
-  store <32 x i64> %res, <32 x i64>* %a
+  store <32 x i64> %res, ptr %a
   ret void
 }
 

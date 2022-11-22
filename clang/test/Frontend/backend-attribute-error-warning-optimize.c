@@ -8,7 +8,7 @@ int x(void) {
   return 8 % 2 == 1;
 }
 void baz(void) {
-  foo(); // expected-error {{call to foo declared with 'error' attribute: oh no foo}}
+  foo(); // expected-error {{call to 'foo' declared with 'error' attribute: oh no foo}}
   if (x())
     bar();
 }

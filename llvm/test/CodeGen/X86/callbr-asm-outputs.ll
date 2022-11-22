@@ -21,7 +21,7 @@ define i32 @test1(i32 %x) {
 ; CHECK-NEXT:    retl
 entry:
   %add = add nsw i32 %x, 4
-  %ret = callbr i32 asm "xorl $1, $0; jmp ${2:l}", "=r,r,!i,~{dirflag},~{fpsr},~{flags}"(i32 %add)
+  %ret = callbr i32 asm "xorl $1, $0; jmp ${2:l}", "=r,r,!i"(i32 %add)
           to label %normal [label %abnormal]
 
 normal:
@@ -31,15 +31,11 @@ abnormal:
   ret i32 1
 }
 
-define i32 @test2(i32 %out1, i32 %out2) {
+define i32 @test2(i32 %out1, i32 %out2) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %edi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .cfi_offset %esi, -12
-; CHECK-NEXT:    .cfi_offset %edi, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    movl $-1, %eax
@@ -65,14 +61,11 @@ define i32 @test2(i32 %out1, i32 %out2) {
 ; CHECK-NEXT:    # %return
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    popl %edi
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB1_4: # Block address taken
 ; CHECK-NEXT:    # %label_true
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    movl $-2, %eax
 ; CHECK-NEXT:    jmp .LBB1_5
 entry:
@@ -80,11 +73,11 @@ entry:
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %0 = callbr { i32, i32 } asm sideeffect "testl $0, $0; testl $1, $2; jne ${3:l}", "={si},={di},r,!i,!i,0,1,~{dirflag},~{fpsr},~{flags}"(i32 %out1, i32 %out1, i32 %out2)
+  %0 = callbr { i32, i32 } asm sideeffect "testl $0, $0; testl $1, $2; jne ${3:l}", "={si},={di},r,!i,!i,0,1"(i32 %out1, i32 %out1, i32 %out2)
           to label %if.end [label %label_true, label %return]
 
 if.else:                                          ; preds = %entry
-  %1 = callbr { i32, i32 } asm sideeffect "testl $0, $1; testl $2, $3; jne ${5:l}", "={si},={di},r,r,!i,!i,0,1,~{dirflag},~{fpsr},~{flags}"(i32 %out1, i32 %out2, i32 %out1, i32 %out2)
+  %1 = callbr { i32, i32 } asm sideeffect "testl $0, $1; testl $2, $3; jne ${5:l}", "={si},={di},r,r,!i,!i,0,1"(i32 %out1, i32 %out2, i32 %out1, i32 %out2)
           to label %if.end [label %label_true, label %return]
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -102,15 +95,11 @@ return:                                           ; preds = %if.then, %if.else, 
   ret i32 %retval.0
 }
 
-define i32 @test3(i1 %cmp) {
+define i32 @test3(i1 %cmp) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %edi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .cfi_offset %esi, -12
-; CHECK-NEXT:    .cfi_offset %edi, -8
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB2_3
 ; CHECK-NEXT:  # %bb.1: # %true
@@ -130,14 +119,11 @@ define i32 @test3(i1 %cmp) {
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:  .LBB2_5: # %asm.fallthrough
 ; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    popl %edi
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB2_6: # Block address taken
 ; CHECK-NEXT:    # %indirect
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    jmp .LBB2_5
 entry:
@@ -188,13 +174,13 @@ define i32 @test4(i32 %out1, i32 %out2) {
 ; CHECK-NEXT:    movl $-2, %eax
 ; CHECK-NEXT:    jmp .LBB3_4
 entry:
-  %0 = callbr { i32, i32 } asm sideeffect "testl $0, $0; testl $1, $2; jne ${3:l}", "=r,=r,r,!i,!i,~{dirflag},~{fpsr},~{flags}"(i32 %out1)
+  %0 = callbr { i32, i32 } asm sideeffect "testl $0, $0; testl $1, $2; jne ${3:l}", "=r,=r,r,!i,!i"(i32 %out1)
           to label %asm.fallthrough [label %label_true, label %return]
 
 asm.fallthrough:                                  ; preds = %entry
   %asmresult = extractvalue { i32, i32 } %0, 0
   %asmresult1 = extractvalue { i32, i32 } %0, 1
-  %1 = callbr { i32, i32 } asm sideeffect "testl $0, $1; testl $2, $3; jne ${5:l}", "=r,=r,r,r,!i,!i,~{dirflag},~{fpsr},~{flags}"(i32 %asmresult, i32 %asmresult1)
+  %1 = callbr { i32, i32 } asm sideeffect "testl $0, $1; testl $2, $3; jne ${5:l}", "=r,=r,r,r,!i,!i"(i32 %asmresult, i32 %asmresult1)
           to label %asm.fallthrough2 [label %label_true, label %return]
 
 asm.fallthrough2:                                 ; preds = %asm.fallthrough
@@ -224,7 +210,7 @@ define dso_local void @test5() {
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    retl
   %1 = call i32 @llvm.read_register.i32(metadata !3)
-  %2 = callbr i32 asm "", "={esp},!i,{esp},~{dirflag},~{fpsr},~{flags}"(i32 %1)
+  %2 = callbr i32 asm "", "={esp},!i,{esp}"(i32 %1)
           to label %3 [label %4]
 
 3:

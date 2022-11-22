@@ -390,6 +390,15 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
          " only takes effect when used with --guard-cf");
   }
 
+  if (auto *a = args.getLastArg(OPT_error_limit)) {
+    int n;
+    StringRef s = a->getValue();
+    if (s.getAsInteger(10, n))
+      error(a->getSpelling() + ": number expected, but got " + s);
+    else
+      add("-errorlimit:" + s);
+  }
+
   for (auto *a : args.filtered(OPT_mllvm))
     add("-mllvm:" + StringRef(a->getValue()));
 

@@ -66,25 +66,14 @@ class SubElementInterfaceBase<string interfaceName, string attrOrType,
                          llvm::function_ref<void(mlir::Type)> walkTypesFn);
 
     /// Recursively replace all of the nested sub-attributes and sub-types using the
-    /// provided map functions. Returns nullptr in the case of failure.
-    }] # attrOrType # [{ replaceSubElements(
-      mlir::SubElementReplFn<mlir::Attribute> replaceAttrFn,
-      mlir::SubElementReplFn<mlir::Type> replaceTypeFn
-    ) {
-      return replaceSubElements(
-        [&](Attribute attr) { return std::make_pair(replaceAttrFn(attr), WalkResult::advance()); },
-        [&](Type type) { return std::make_pair(replaceTypeFn(type), WalkResult::advance()); }
-      );
+    /// provided map functions. Returns nullptr in the case of failure. See
+    /// `AttrTypeReplacer` for information on the support replacement function types.
+    template <typename... ReplacementFns>
+    }] # attrOrType # [{ replaceSubElements(ReplacementFns &&... replacementFns) {
+      AttrTypeReplacer replacer;
+      (replacer.addReplacement(std::forward<ReplacementFns>(replacementFns)), ...);
+      return replacer.replace(*this);
     }
-    /// Recursively replace all of the nested sub-attributes and sub-types using the
-    /// provided map functions. This variant allows for the map function to return an
-    /// additional walk result. Returns nullptr in the case of failure.
-    }] # attrOrType # [{ replaceSubElements(
-      llvm::function_ref<
-        std::pair<mlir::Attribute, mlir::WalkResult>(mlir::Attribute)> replaceAttrFn,
-      llvm::function_ref<
-        std::pair<mlir::Type, mlir::WalkResult>(mlir::Type)> replaceTypeFn
-    );
   }];
   code extraTraitClassDeclaration = [{
     /// Walk all of the held sub-attributes and sub-types.
@@ -95,18 +84,13 @@ class SubElementInterfaceBase<string interfaceName, string attrOrType,
     }
 
     /// Recursively replace all of the nested sub-attributes and sub-types using the
-    /// provided map functions. Returns nullptr in the case of failure.
-    }] # attrOrType # [{ replaceSubElements(
-      mlir::SubElementReplFn<mlir::Attribute> replaceAttrFn,
-      mlir::SubElementReplFn<mlir::Type> replaceTypeFn) {
-      }] # interfaceName # " interface(" # derivedValue # [{);
-      return interface.replaceSubElements(replaceAttrFn, replaceTypeFn);
-    }
-    }] # attrOrType # [{ replaceSubElements(
-      mlir::SubElementResultReplFn<mlir::Attribute> replaceAttrFn,
-      mlir::SubElementResultReplFn<mlir::Type> replaceTypeFn) {
-      }] # interfaceName # " interface(" # derivedValue # [{);
-      return interface.replaceSubElements(replaceAttrFn, replaceTypeFn);
+    /// provided map functions. Returns nullptr in the case of failure. See
+    /// `AttrTypeReplacer` for information on the support replacement function types.
+    template <typename... ReplacementFns>
+    }] # attrOrType # [{ replaceSubElements(ReplacementFns &&... replacementFns) {
+      AttrTypeReplacer replacer;
+      (replacer.addReplacement(std::forward<ReplacementFns>(replacementFns)), ...);
+      return replacer.replace(}] # derivedValue # [{);
     }
   }];
   code extraSharedClassDeclaration = [{
@@ -117,35 +101,6 @@ class SubElementInterfaceBase<string interfaceName, string attrOrType,
     /// Walk all of the held sub-types.
     void walkSubTypes(llvm::function_ref<void(mlir::Type)> walkFn) {
       walkSubElements(/*walkAttrsFn=*/[](mlir::Attribute) {}, walkFn);
-    }
-
-    /// Recursively replace all of the nested sub-attributes using the provided
-    /// map function. Returns nullptr in the case of failure.
-    }] # attrOrType # [{ replaceSubElements(
-      mlir::SubElementReplFn<mlir::Attribute> replaceAttrFn) {
-      return replaceSubElements(
-        replaceAttrFn, [](mlir::Type type) { return type; });
-    }
-    }] # attrOrType # [{ replaceSubElements(
-      mlir::SubElementResultReplFn<mlir::Attribute> replaceAttrFn) {
-      return replaceSubElements(
-        replaceAttrFn,
-        [](mlir::Type type) { return std::make_pair(type, WalkResult::advance()); }
-      );
-    }
-    /// Recursively replace all of the nested sub-types using the provided map
-    /// function. Returns nullptr in the case of failure.
-    }] # attrOrType # [{ replaceSubElements(
-      mlir::SubElementReplFn<mlir::Type> replaceTypeFn) {
-      return replaceSubElements(
-        [](mlir::Attribute attr) { return attr; }, replaceTypeFn);
-    }
-    }] # attrOrType # [{ replaceSubElements(
-      mlir::SubElementResultReplFn<mlir::Type> replaceTypeFn) {
-      return replaceSubElements(
-        [](mlir::Attribute attr) { return std::make_pair(attr, WalkResult::advance()); },
-        replaceTypeFn
-      );
     }
   }];
 }

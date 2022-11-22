@@ -344,3 +344,15 @@ MDNode *MDBuilder::createPseudoProbeDesc(uint64_t GUID, uint64_t Hash,
   Ops[2] = createString(F->getName());
   return MDNode::get(Context, Ops);
 }
+
+MDNode *
+MDBuilder::createLLVMStats(ArrayRef<std::pair<StringRef, uint64_t>> LLVMStats) {
+  auto *Int64Ty = Type::getInt64Ty(Context);
+  SmallVector<Metadata *, 4> Ops(LLVMStats.size() * 2);
+  for (size_t I = 0; I < LLVMStats.size(); I++) {
+    Ops[I * 2] = createString(LLVMStats[I].first);
+    Ops[I * 2 + 1] =
+        createConstant(ConstantInt::get(Int64Ty, LLVMStats[I].second));
+  }
+  return MDNode::get(Context, Ops);
+}

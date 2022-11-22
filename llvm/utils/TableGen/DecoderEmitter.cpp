@@ -1918,55 +1918,29 @@ static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
           if (OpBit->getValue())
             OpInfo.InitValue |= 1ULL << I;
 
-  unsigned Base = ~0U;
-  unsigned Width = 0;
-  unsigned Offset = 0;
-
-  for (unsigned bi = 0; bi < Bits.getNumBits(); ++bi) {
-    VarInit *Var = nullptr;
-    VarBitInit *BI = dyn_cast<VarBitInit>(Bits.getBit(bi));
-    if (BI)
-      Var = dyn_cast<VarInit>(BI->getBitVar());
+  for (unsigned I = 0, J = 0; I != Bits.getNumBits(); I = J) {
+    VarInit *Var;
+    unsigned Offset = 0;
+    for (; J != Bits.getNumBits(); ++J) {
+      VarBitInit *BJ = dyn_cast<VarBitInit>(Bits.getBit(J));
+      if (BJ) {
+        Var = dyn_cast<VarInit>(BJ->getBitVar());
+        if (I == J)
+          Offset = BJ->getBitNum();
+        else if (BJ->getBitNum() != Offset + J - I)
+          break;
+      } else {
+        Var = dyn_cast<VarInit>(Bits.getBit(J));
+      }
+      if (!Var || (Var->getName() != OpName &&
+                   Var->getName() != TiedNames[std::string(OpName)]))
+        break;
+    }
+    if (I == J)
+      ++J;
     else
-      Var = dyn_cast<VarInit>(Bits.getBit(bi));
-
-    if (!Var) {
-      if (Base != ~0U) {
-        OpInfo.addField(Base, Width, Offset);
-        Base = ~0U;
-        Width = 0;
-        Offset = 0;
-      }
-      continue;
-    }
-
-    if ((Var->getName() != OpName &&
-         Var->getName() != TiedNames[std::string(OpName)])) {
-      if (Base != ~0U) {
-        OpInfo.addField(Base, Width, Offset);
-        Base = ~0U;
-        Width = 0;
-        Offset = 0;
-      }
-      continue;
-    }
-
-    if (Base == ~0U) {
-      Base = bi;
-      Width = 1;
-      Offset = BI ? BI->getBitNum() : 0;
-    } else if (BI && BI->getBitNum() != Offset + Width) {
-      OpInfo.addField(Base, Width, Offset);
-      Base = bi;
-      Width = 1;
-      Offset = BI->getBitNum();
-    } else {
-      ++Width;
-    }
+      OpInfo.addField(I, J - I, Offset);
   }
-
-  if (Base != ~0U)
-    OpInfo.addField(Base, Width, Offset);
 }
 
 static unsigned
@@ -2528,7 +2502,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS,
 // DecodeStatus'.)
 static void emitCheck(formatted_raw_ostream &OS) {
   OS << "static bool Check(DecodeStatus &Out, DecodeStatus In) {\n"
-     << "  Out = static_cast<DecodeStatus>(Out & In);"
+     << "  Out = static_cast<DecodeStatus>(Out & In);\n"
      << "  return Out != MCDisassembler::Fail;\n"
      << "}\n\n";
 }
@@ -2685,7 +2659,6 @@ void DecoderEmitter::run(raw_ostream &o) {
 
     // Print the table to the output stream.
     emitTable(OS, TableInfo.Table, 0, FC.getBitWidth(), Opc.first.first);
-    OS.flush();
   }
 
   // For variable instruction, we emit a instruction length table

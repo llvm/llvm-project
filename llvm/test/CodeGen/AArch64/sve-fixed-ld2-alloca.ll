@@ -3,7 +3,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @st1d_fixed(<8 x double>* %ptr) #0 {
+define void @st1d_fixed(ptr %ptr) #0 {
 ; CHECK-LABEL: st1d_fixed:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
@@ -17,10 +17,9 @@ define void @st1d_fixed(<8 x double>* %ptr) #0 {
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %alloc = alloca [16 x double], i32 0
-  %bc = bitcast [16 x double]* %alloc to <8 x double>*
-  %load = load <8 x double>, <8 x double>* %bc
+  %load = load <8 x double>, ptr %alloc
   %strided.vec = shufflevector <8 x double> %load, <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-  store <8 x double> zeroinitializer, <8 x double>* %ptr
+  store <8 x double> zeroinitializer, ptr %ptr
   ret void
 }
 

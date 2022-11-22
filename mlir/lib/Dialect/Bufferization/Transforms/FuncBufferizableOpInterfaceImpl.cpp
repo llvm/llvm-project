@@ -69,7 +69,7 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
 
   BaseMemRefType memrefType;
   if (options.functionBoundaryTypeConversion ==
-      BufferizationOptions::LayoutMapOption::IdentityLayoutMap) {
+      LayoutMapOption::IdentityLayoutMap) {
     memrefType = getMemRefTypeWithStaticIdentityLayout(tensorType);
   } else {
     // Note: Layout maps on function parameters cannot be inferred. The best we
@@ -471,7 +471,7 @@ struct FuncOpInterface
 
       BaseMemRefType resultType;
       if (options.functionBoundaryTypeConversion ==
-          BufferizationOptions::LayoutMapOption::IdentityLayoutMap) {
+          LayoutMapOption::IdentityLayoutMap) {
         resultType = getMemRefTypeWithStaticIdentityLayout(tensorType);
       } else {
         // Note: If `InferLayoutMap`, cast are later folded away.

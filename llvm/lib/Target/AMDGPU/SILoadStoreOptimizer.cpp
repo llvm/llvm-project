@@ -1441,7 +1441,6 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
         .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset))
         .addImm(MergedOffset) // offset
         .addImm(CI.CPol)      // cpol
-        .addImm(0)            // tfe
         .addImm(0)            // swz
         .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
@@ -1501,7 +1500,6 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
           .addImm(MergedOffset) // offset
           .addImm(JoinedFormat) // format
           .addImm(CI.CPol)      // cpol
-          .addImm(0)            // tfe
           .addImm(0)            // swz
           .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
@@ -1573,7 +1571,6 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
           .addImm(std::min(CI.Offset, Paired.Offset)) // offset
           .addImm(JoinedFormat)                     // format
           .addImm(CI.CPol)                          // cpol
-          .addImm(0)                                // tfe
           .addImm(0)                                // swz
           .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
@@ -1894,7 +1891,6 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
         .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset))
         .addImm(std::min(CI.Offset, Paired.Offset)) // offset
         .addImm(CI.CPol)      // cpol
-        .addImm(0)            // tfe
         .addImm(0)            // swz
         .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 

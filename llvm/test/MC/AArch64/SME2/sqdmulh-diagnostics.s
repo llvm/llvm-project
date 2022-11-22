@@ -73,7 +73,7 @@ sqdmulh {z0.s,z1.s}, {z2.s,z3.s}, z15.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 sqdmulh {z0.s,z1.s}, {z0.s,z2.s}, z15.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: sqdmulh {z0.s,z1.s}, {z0.s,z2.s}, z15.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

@@ -15,6 +15,8 @@
 
 // To get the test dialect definition.
 include "TestDialect.td"
+include "TestEnumDefs.td"
+include "mlir/Dialect/Utils/StructuredOpsUtils.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
@@ -227,6 +229,14 @@ def TestAttrSelfTypeParameterFormat
   let assemblyFormat = "`<` $a `>`";
 }
 
+def TestAttrSelfTypeParameterStructFormat
+    : Test_Attr<"TestAttrSelfTypeParameterStructFormat", [TypedAttrInterface]> {
+  let parameters = (ins "int":$a, AttributeSelfTypeParameter<"">:$type);
+
+  let mnemonic = "attr_self_type_struct_format";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 // Test overridding attribute builders with a custom builder.
 def TestOverrideBuilderAttr : Test_Attr<"TestOverrideBuilder"> {
   let mnemonic = "override_builder";
@@ -277,13 +287,6 @@ def TestArrayOfInts : ArrayOfAttr<Test_Dialect, "ArrayOfInts",
     "array_of_ints", "int32_t">;
 
 // An array of enum attributes.
-def TestSimpleEnum : I32EnumAttr<"SimpleEnum", "", [
-    I32EnumAttrCase<"a", 0>,
-    I32EnumAttrCase<"b", 1>
-  ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::test";
-}
 def TestSimpleEnumAttr : EnumAttr<Test_Dialect, TestSimpleEnum, "simple_enum"> {
   let assemblyFormat = "`` $value";
 }
@@ -296,5 +299,15 @@ def TestCustomAnchor : Test_Attr<"TestCustomAnchor"> {
   let mnemonic = "custom_anchor";
   let assemblyFormat = "`<` $a (`>`) : (`,` ` ` custom<TrueFalse>($b)^ `>`)?";
 }
+
+def Test_IteratorTypeEnum
+    : EnumAttr<Test_Dialect, IteratorType, "iterator_type"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def Test_IteratorTypeArrayAttr
+    : TypedArrayAttrBase<Test_IteratorTypeEnum,
+  "Iterator type should be an enum.">;
+
 
 #endif // TEST_ATTRDEFS

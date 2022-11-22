@@ -13,7 +13,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -31,7 +31,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -50,7 +50,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_64 = IMAGE_SAMPLE_L_V2_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 3, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 16, addrspace 4)
     %7:vreg_64 = IMAGE_SAMPLE_L_V2_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 12, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 16, addrspace 4)
 ...
@@ -69,7 +69,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_64 = IMAGE_SAMPLE_L_V2_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 12, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 16, addrspace 4)
     %7:vreg_64 = IMAGE_SAMPLE_L_V2_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 3, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 16, addrspace 4)
 ...
@@ -88,7 +88,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
     %7:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
 ...
@@ -107,7 +107,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
     %7:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
 ...
@@ -124,12 +124,12 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
-    %8:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %7:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %8:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %9:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %7:vgpr_32, %7:vgpr_32, %7:vgpr_32, %3:sgpr_256, %2:sgpr_128, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
-    %10:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %10:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %11:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
 ---
@@ -146,7 +146,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vreg_128 = COPY %2
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     IMAGE_STORE_V4_V2_nsa_gfx10 %4:vreg_128, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -165,7 +165,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 4, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -183,7 +183,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 4, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 11, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -201,8 +201,8 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
-    %6:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 1, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %6:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 1, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %7:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5, %5, %5, %3, %2, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %8:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %6, %6, %6, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -221,7 +221,7 @@ body:             |
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %5:vgpr_32 = COPY %2.sub3
-    %6:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %6:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %7:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %6, %6, %6, %3, %2, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %8:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %6, %6, %6, %4, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -240,7 +240,7 @@ body:             |
     %3:sgpr_128 = COPY $sgpr92_sgpr93_sgpr94_sgpr95
     %4:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %5:vgpr_32 = COPY %2.sub3
-    %6:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %6:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %7:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %6, %6, %6, %4, %2, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %8:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %6, %6, %6, %4, %3, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -258,7 +258,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5, %5, %5, %3, %2, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5, %5, %5, %3, %2, 7, 1, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -276,7 +276,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5, %5, %5, %3, %2, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5, %5, %5, %3, %2, 7, 1, -1, 0, 1, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -294,7 +294,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5, %5, %5, %3, %2, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5, %5, %5, %3, %2, 7, 1, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -312,7 +312,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5, %5, %5, %3, %2, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5, %5, %5, %3, %2, 7, 1, -1, 0, 1, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -330,7 +330,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V2_nsa_gfx10 %5, %5, %3, %2, 8, 1, -1, 0, 0, 1, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5, %5, %5, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -348,7 +348,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_64 = IMAGE_SAMPLE_L_V2_V3_nsa_gfx10 %5, %5, %5, %3, %2, 8, 1, -1, 0, 0, 0, 1, 0, 0, implicit $exec :: (dereferenceable load (s64), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5, %5, %5, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -366,7 +366,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_64 = IMAGE_SAMPLE_L_V2_V3_nsa_gfx10 %5, %5, %5, %3, %2, 8, 1, -1, 0, 0, 0, 0, 1, 0, implicit $exec :: (dereferenceable load (s64), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5, %5, %5, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -384,7 +384,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V3_nsa_gfx10 %5, %5, %5, %3, %2, 8, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V3_nsa_gfx10 %5, %5, %5, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 1, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -406,7 +406,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_V1_V2_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_V3_V2_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -426,7 +426,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_B_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_B_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -446,7 +446,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_B_CL_V1_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_B_CL_V3_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -466,7 +466,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_B_CL_O_V1_V5_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_B_CL_O_V3_V5_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -486,7 +486,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_B_O_V1_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_B_O_V3_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -506,7 +506,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -526,7 +526,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CD_V1_V6_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CD_V3_V6_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -546,7 +546,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CD_CL_V1_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CD_CL_V3_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -566,7 +566,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CD_CL_O_V1_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CD_CL_O_V3_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -586,7 +586,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CD_O_V1_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CD_O_V3_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -606,7 +606,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CL_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CL_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -626,7 +626,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CL_O_V1_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CL_O_V3_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -646,7 +646,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_B_V1_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_B_V3_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -666,7 +666,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_B_CL_V1_V5_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_B_CL_V3_V5_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -686,7 +686,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_B_CL_O_V1_V6_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_B_CL_O_V3_V6_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -706,7 +706,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_B_O_V1_V5_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_B_O_V3_V5_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -726,7 +726,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CD_V1_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CD_V3_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -746,7 +746,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CD_CL_V1_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CD_CL_V3_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -766,7 +766,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CD_CL_O_V1_V9_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CD_CL_O_V3_V9_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -786,7 +786,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CD_O_V1_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CD_O_V3_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -806,7 +806,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CL_V1_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CL_V3_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -826,7 +826,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CL_O_V1_V5_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CL_O_V3_V5_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -846,7 +846,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_D_V1_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_D_V3_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -866,7 +866,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_D_CL_V1_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_D_CL_V3_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -886,7 +886,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_D_CL_O_V1_V9_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_D_CL_O_V3_V9_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -906,7 +906,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_D_O_V1_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_D_O_V3_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -926,7 +926,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_L_V1_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_L_V3_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -946,7 +946,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_LZ_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_LZ_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -966,7 +966,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_LZ_O_V1_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_LZ_O_V3_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -986,7 +986,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_L_O_V1_V5_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_L_O_V3_V5_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -1006,7 +1006,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_O_V1_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_O_V3_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -1026,7 +1026,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_D_V1_V6_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_D_V3_V6_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -1046,7 +1046,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_D_CL_V1_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_D_CL_V3_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -1066,7 +1066,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_D_CL_O_V1_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_D_CL_O_V3_V8_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -1086,7 +1086,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_D_O_V1_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_D_O_V3_V7_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -1106,7 +1106,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_LZ_V1_V2_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -1126,7 +1126,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_LZ_O_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_LZ_O_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -1146,7 +1146,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_O_V1_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_O_V3_V4_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...
@@ -1166,7 +1166,7 @@ body:             |
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:vgpr_32 = COPY %2.sub3
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_O_V1_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_O_V3_V3_nsa_gfx10 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 ...

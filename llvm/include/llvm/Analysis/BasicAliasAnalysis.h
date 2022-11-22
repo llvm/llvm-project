@@ -98,22 +98,6 @@ public:
 private:
   struct DecomposedGEP;
 
-  /// Tracks whether the accesses may be on different cycle iterations.
-  ///
-  /// When interpret "Value" pointer equality as value equality we need to make
-  /// sure that the "Value" is not part of a cycle. Otherwise, two uses could
-  /// come from different "iterations" of a cycle and see different values for
-  /// the same "Value" pointer.
-  ///
-  /// The following example shows the problem:
-  ///   %p = phi(%alloca1, %addr2)
-  ///   %l = load %ptr
-  ///   %addr1 = gep, %alloca2, 0, %l
-  ///   %addr2 = gep  %alloca2, 0, (%l + 1)
-  ///      alias(%p, %addr1) -> MayAlias !
-  ///   store %l, ...
-  bool MayBeCrossIteration = false;
-
   /// Tracks instructions visited by pointsToConstantMemory.
   SmallPtrSet<const Value *, 16> Visited;
 
@@ -129,15 +113,16 @@ private:
   /// will therefore conservatively refuse to decompose these expressions.
   /// However, we know that, for all %x, zext(%x) != zext(%x + 1), even if
   /// the addition overflows.
-  bool
-  constantOffsetHeuristic(const DecomposedGEP &GEP, LocationSize V1Size,
-                          LocationSize V2Size, AssumptionCache *AC,
-                          DominatorTree *DT);
+  bool constantOffsetHeuristic(const DecomposedGEP &GEP, LocationSize V1Size,
+                               LocationSize V2Size, AssumptionCache *AC,
+                               DominatorTree *DT, const AAQueryInfo &AAQI);
 
-  bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2);
+  bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2,
+                                     const AAQueryInfo &AAQI);
 
   void subtractDecomposedGEPs(DecomposedGEP &DestGEP,
-                              const DecomposedGEP &SrcGEP);
+                              const DecomposedGEP &SrcGEP,
+                              const AAQueryInfo &AAQI);
 
   AliasResult aliasGEP(const GEPOperator *V1, LocationSize V1Size,
                        const Value *V2, LocationSize V2Size,

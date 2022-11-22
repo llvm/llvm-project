@@ -915,7 +915,10 @@ struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
 /// Pattern to move out vector.extractelement of 0-D tensors. Those don't
 /// need to be distributed and can just be propagated outside of the region.
 struct WarpOpExtractElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+  WarpOpExtractElement(MLIRContext *ctx, WarpShuffleFromIdxFn fn,
+                       PatternBenefit b = 1)
+      : OpRewritePattern<WarpExecuteOnLane0Op>(ctx, b),
+        warpShuffleFromIdxFn(std::move(fn)) {}
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand = getWarpResult(warpOp, [](Operation *op) {
@@ -925,19 +928,60 @@ struct WarpOpExtractElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
       return failure();
     unsigned int operandNumber = operand->getOperandNumber();
     auto extractOp = operand->get().getDefiningOp<vector::ExtractElementOp>();
-    if (extractOp.getVectorType().getRank() != 0)
-      return failure();
+    VectorType extractSrcType = extractOp.getVectorType();
+    bool is0dExtract = extractSrcType.getRank() == 0;
+    Type elType = extractSrcType.getElementType();
+    VectorType distributedVecType;
+    if (!is0dExtract) {
+      assert(extractSrcType.getRank() == 1 &&
+             "expected that extractelement src rank is 0 or 1");
+      int64_t elementsPerLane =
+          extractSrcType.getShape()[0] / warpOp.getWarpSize();
+      distributedVecType = VectorType::get({elementsPerLane}, elType);
+    } else {
+      distributedVecType = extractSrcType;
+    }
+
+    // Yield source vector from warp op.
     Location loc = extractOp.getLoc();
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {extractOp.getVector()}, {extractOp.getVectorType()},
+        rewriter, warpOp, {extractOp.getVector()}, {distributedVecType},
         newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
-    Value newExtract = rewriter.create<vector::ExtractElementOp>(
-        loc, newWarpOp->getResult(newRetIndices[0]));
-    newWarpOp->getResult(operandNumber).replaceAllUsesWith(newExtract);
+    Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
+
+    // 0d extract: The new warp op broadcasts the source vector to all lanes.
+    // All lanes extract the scalar.
+    if (is0dExtract) {
+      Value newExtract =
+          rewriter.create<vector::ExtractElementOp>(loc, distributedVec);
+      newWarpOp->getResult(operandNumber).replaceAllUsesWith(newExtract);
+      return success();
+    }
+
+    // 1d extract: Distribute the source vector. One lane extracts and shuffles
+    // the value to all other lanes.
+    int64_t elementsPerLane = distributedVecType.getShape()[0];
+    AffineExpr sym0 = getAffineSymbolExpr(0, rewriter.getContext());
+    // tid of extracting thread: pos / elementsPerLane
+    Value broadcastFromTid = rewriter.create<AffineApplyOp>(
+        loc, sym0.ceilDiv(elementsPerLane), extractOp.getPosition());
+    // Extract at position: pos % elementsPerLane
+    Value pos = rewriter.create<AffineApplyOp>(loc, sym0 % elementsPerLane,
+                                               extractOp.getPosition());
+    Value extracted =
+        rewriter.create<vector::ExtractElementOp>(loc, distributedVec, pos);
+
+    // Shuffle the extracted value to all lanes.
+    Value shuffled = warpShuffleFromIdxFn(
+        loc, rewriter, extracted, broadcastFromTid, newWarpOp.getWarpSize());
+    newWarpOp->getResult(operandNumber).replaceAllUsesWith(shuffled);
     return success();
   }
+
+private:
+  WarpShuffleFromIdxFn warpShuffleFromIdxFn;
 };
 
 /// Sink scf.for region out of WarpExecuteOnLane0Op. This can be done only if
@@ -1135,12 +1179,13 @@ struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
     if (vectorType.getShape()[0] % warpOp.getWarpSize() != 0)
       return rewriter.notifyMatchFailure(
           warpOp, "Reduction vector dimension must match was size.");
-    // Only f32 and i32 element types are supported.
+    // Only f32, i32, f16, i8 element types are supported.
     if (!reductionOp.getType().isF32() &&
-        !reductionOp.getType().isSignlessInteger(32))
+        !reductionOp.getType().isSignlessInteger(32) &&
+        !reductionOp.getType().isF16() && !reductionOp.getType().isInteger(8))
       return rewriter.notifyMatchFailure(
-          warpOp,
-          "Reduction distribution currently only supports 32bits types.");
+          warpOp, "Reduction distribution currently only supports 32bits, f16, "
+                  "and i8 types.");
 
     int64_t numElements = vectorType.getShape()[0] / warpOp.getWarpSize();
     // Return vector that will be reduced from the WarpExecuteOnLane0Op.
@@ -1157,13 +1202,11 @@ struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
         rewriter, warpOp, yieldValues, retTypes, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
 
+    // Obtain data to reduce for a single lane.
     Value laneValVec = newWarpOp.getResult(newRetIndices[0]);
-    // First reduce on a single thread.
-    Value perLaneReduction = rewriter.create<vector::ReductionOp>(
-        reductionOp.getLoc(), reductionOp.getKind(), laneValVec);
-    // Then distribute across threads.
+    // Distribute and reduce across threads.
     Value fullReduce =
-        distributedReductionFn(reductionOp.getLoc(), rewriter, perLaneReduction,
+        distributedReductionFn(reductionOp.getLoc(), rewriter, laneValVec,
                                reductionOp.getKind(), newWarpOp.getWarpSize());
     if (reductionOp.getAcc()) {
       fullReduce = vector::makeArithReduction(
@@ -1195,11 +1238,12 @@ void mlir::vector::populateDistributeTransferWriteOpPatterns(
 
 void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn,
-    PatternBenefit benefit) {
+    const WarpShuffleFromIdxFn &warpShuffleFromIdxFn, PatternBenefit benefit) {
   patterns.add<WarpOpElementwise, WarpOpTransferRead, WarpOpDeadResult,
-               WarpOpBroadcast, WarpOpExtract, WarpOpExtractElement,
-               WarpOpForwardOperand, WarpOpConstant>(patterns.getContext(),
-                                                     benefit);
+               WarpOpBroadcast, WarpOpExtract, WarpOpForwardOperand,
+               WarpOpConstant>(patterns.getContext(), benefit);
+  patterns.add<WarpOpExtractElement>(patterns.getContext(),
+                                     warpShuffleFromIdxFn, benefit);
   patterns.add<WarpOpScfForOp>(patterns.getContext(), distributionMapFn,
                                benefit);
 }

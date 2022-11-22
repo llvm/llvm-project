@@ -1,5 +1,5 @@
 import("//llvm/lib/Target/targets.gni")
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("LLVMMCATests") {
   deps = [

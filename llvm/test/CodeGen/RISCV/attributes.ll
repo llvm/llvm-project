@@ -76,6 +76,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zicbop %s -o - | FileCheck --check-prefix=RV64ZICBOP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+svnapot %s -o - | FileCheck --check-prefix=RV64SVNAPOT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+svinval %s -o - | FileCheck --check-prefix=RV64SVINVAL %s
+; RUN: llc -mtriple=riscv64 -mattr=+xventanacondops %s -o - | FileCheck --check-prefix=RV64XVENTANACONDOPS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zawrs %s -o - | FileCheck --check-prefix=RV64ZAWRS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-ztso %s -o - | FileCheck --check-prefix=RV64ZTSO %s
 
@@ -157,6 +158,7 @@
 ; RV64ZICBOP: .attribute 5, "rv64i2p0_zicbop1p0"
 ; RV64SVNAPOT: .attribute 5, "rv64i2p0_svnapot1p0"
 ; RV64SVINVAL: .attribute 5, "rv64i2p0_svinval1p0"
+; RV64XVENTANACONDOPS: .attribute 5, "rv64i2p0_xventanacondops1p0"
 ; RV64ZTSO: .attribute 5, "rv64i2p0_ztso0p1"
 
 define i32 @addi(i32 %a) {

@@ -8,7 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; too many extra vregs during frame lowering, when we don't have an emergency
 ; spill slot.
 
-define dso_local void @func1(i64* %v1, i64* %v2, i64* %v3, i64* %v4, i64* %v5, i64* %v6, i64* %v7, i64* %v8,
+define dso_local void @func1(ptr %v1, ptr %v2, ptr %v3, ptr %v4, ptr %v5, ptr %v6, ptr %v7, ptr %v8,
 ; CHECK-LABEL: func1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x25, [sp, #-64]! // 8-byte Folded Spill
@@ -63,28 +63,28 @@ define dso_local void @func1(i64* %v1, i64* %v2, i64* %v3, i64* %v4, i64* %v5, i
 ; CHECK-NEXT:    str x8, [sp, #352]
 ; CHECK-NEXT:    ldr x25, [sp], #64 // 8-byte Folded Reload
 ; CHECK-NEXT:    b func2
-                             i64* %v9, i64* %v10, i64* %v11, i64* %v12, i64* %v13, i64* %v14,  i64* %v15, i64* %v16,
-                             i64* %v17, i64* %v18, i64* %v19, i64* %v20, i64* %v21, i64* %v22, i64* %v23, i64* %v24,
-                             i64* %v25, i64* %v26, i64* %v27, i64* %v28, i64* %v29, i64* %v30, i64* %v31, i64* %v32,
-                             i64* %v33, i64* %v34, i64* %v35, i64* %v36, i64* %v37, i64* %v38, i64* %v39, i64* %v40,
-                             i64* %v41, i64* %v42, i64* %v43, i64* %v44, i64* %v45, i64* %v46, i64* %v47, i64* %v48,
+                             ptr %v9, ptr %v10, ptr %v11, ptr %v12, ptr %v13, ptr %v14,  ptr %v15, ptr %v16,
+                             ptr %v17, ptr %v18, ptr %v19, ptr %v20, ptr %v21, ptr %v22, ptr %v23, ptr %v24,
+                             ptr %v25, ptr %v26, ptr %v27, ptr %v28, ptr %v29, ptr %v30, ptr %v31, ptr %v32,
+                             ptr %v33, ptr %v34, ptr %v35, ptr %v36, ptr %v37, ptr %v38, ptr %v39, ptr %v40,
+                             ptr %v41, ptr %v42, ptr %v43, ptr %v44, ptr %v45, ptr %v46, ptr %v47, ptr %v48,
                              i64 %v49) #0 {
-  tail call void @func2(i64* %v1, i64* %v2, i64* %v3, i64* %v4, i64* %v5, i64* %v6, i64* %v7, i64* %v8,
-                        i64* %v9, i64* %v10, i64* %v11, i64* %v12, i64* undef, i64* %v14, i64* %v15, i64* %v16,
-                        i64* %v17, i64* %v18, i64* %v19, i64* %v20, i64* %v21, i64* %v22, i64* %v23, i64* %v24,
-                        i64* %v25, i64* %v26, i64* %v27, i64* %v28, i64* %v29, i64* %v30, i64* undef, i64* undef,
-                        i64* undef, i64* undef, i64* undef, i64* undef, i64* %v37, i64* %v38, i64* %v39, i64* %v40,
-                        i64* %v41, i64* %v42, i64* %v43, i64* %v44, i64* %v45, i64* undef, i64* %v47, i64* %v48,
+  tail call void @func2(ptr %v1, ptr %v2, ptr %v3, ptr %v4, ptr %v5, ptr %v6, ptr %v7, ptr %v8,
+                        ptr %v9, ptr %v10, ptr %v11, ptr %v12, ptr undef, ptr %v14, ptr %v15, ptr %v16,
+                        ptr %v17, ptr %v18, ptr %v19, ptr %v20, ptr %v21, ptr %v22, ptr %v23, ptr %v24,
+                        ptr %v25, ptr %v26, ptr %v27, ptr %v28, ptr %v29, ptr %v30, ptr undef, ptr undef,
+                        ptr undef, ptr undef, ptr undef, ptr undef, ptr %v37, ptr %v38, ptr %v39, ptr %v40,
+                        ptr %v41, ptr %v42, ptr %v43, ptr %v44, ptr %v45, ptr undef, ptr %v47, ptr %v48,
                         i64 undef)
   ret void
 }
 
-declare dso_local void @func2(i64*, i64*, i64*, i64*, i64*, i64*, i64*, i64*,
-                              i64*, i64*, i64*, i64*, i64*, i64*, i64*, i64*,
-                              i64*, i64*, i64*, i64*, i64*, i64*, i64*, i64*,
-                              i64*, i64*, i64*, i64*, i64*, i64*, i64*, i64*,
-                              i64*, i64*, i64*, i64*, i64*, i64*, i64*, i64*,
-                              i64*, i64*, i64*, i64*, i64*, i64*, i64*, i64*,
+declare dso_local void @func2(ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr,
+                              ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr,
+                              ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr,
+                              ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr,
+                              ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr,
+                              ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr,
                               i64)
 
 attributes #0 = { "target-features"="+sve" vscale_range(2,2) }

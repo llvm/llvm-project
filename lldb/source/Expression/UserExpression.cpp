@@ -194,16 +194,22 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
   Process *process = exe_ctx.GetProcessPtr();
 
-  if (process == nullptr || process->GetState() != lldb::eStateStopped) {
-    if (execution_policy == eExecutionPolicyAlways) {
-      LLDB_LOG(log, "== [UserExpression::Evaluate] Expression may not run, but "
-                    "is not constant ==");
+  if (process == nullptr && execution_policy == eExecutionPolicyAlways) {
+    LLDB_LOG(log, "== [UserExpression::Evaluate] No process, but the policy is "
+                  "eExecutionPolicyAlways");
 
-      error.SetErrorString("expression needed to run but couldn't");
+    error.SetErrorString("expression needed to run but couldn't: no process");
 
-      return execution_results;
-    }
+    return execution_results;
   }
+  // Since we might need to call allocate memory and maybe call code to make
+  // the caller, we need to be stopped.
+  if (process != nullptr && process->GetState() != lldb::eStateStopped) {
+    error.SetErrorString("Can't make a function caller while the process is " 
+                          "running");
+    return execution_results;
+  }
+
 
   // Explicitly force the IR interpreter to evaluate the expression when the
   // there is no process that supports running the expression for us. Don't

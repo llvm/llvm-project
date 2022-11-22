@@ -31,7 +31,7 @@ define <16 x i8> @icmp_eq_v16i8(<16 x i8> %op1, <16 x i8> %op2) vscale_range(2,0
   ret <16 x i8> %sext
 }
 
-define void @icmp_eq_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(2,0) #0 {
+define void @icmp_eq_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: icmp_eq_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -41,15 +41,15 @@ define void @icmp_eq_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %cmp = icmp eq <32 x i8> %op1, %op2
   %sext = sext <32 x i1> %cmp to <32 x i8>
-  store <32 x i8> %sext, <32 x i8>* %a
+  store <32 x i8> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
+define void @icmp_eq_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: icmp_eq_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -75,15 +75,15 @@ define void @icmp_eq_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 ; VBITS_GE_512-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <64 x i8>, <64 x i8>* %a
-  %op2 = load <64 x i8>, <64 x i8>* %b
+  %op1 = load <64 x i8>, ptr %a
+  %op2 = load <64 x i8>, ptr %b
   %cmp = icmp eq <64 x i8> %op1, %op2
   %sext = sext <64 x i1> %cmp to <64 x i8>
-  store <64 x i8> %sext, <64 x i8>* %a
+  store <64 x i8> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(8,0) #0 {
+define void @icmp_eq_v128i8(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: icmp_eq_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -93,15 +93,15 @@ define void @icmp_eq_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(8,0) #0
 ; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i8>, <128 x i8>* %a
-  %op2 = load <128 x i8>, <128 x i8>* %b
+  %op1 = load <128 x i8>, ptr %a
+  %op2 = load <128 x i8>, ptr %b
   %cmp = icmp eq <128 x i8> %op1, %op2
   %sext = sext <128 x i1> %cmp to <128 x i8>
-  store <128 x i8> %sext, <128 x i8>* %a
+  store <128 x i8> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v256i8(<256 x i8>* %a, <256 x i8>* %b) vscale_range(16,0) #0 {
+define void @icmp_eq_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: icmp_eq_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -111,11 +111,11 @@ define void @icmp_eq_v256i8(<256 x i8>* %a, <256 x i8>* %b) vscale_range(16,0) #
 ; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <256 x i8>, <256 x i8>* %a
-  %op2 = load <256 x i8>, <256 x i8>* %b
+  %op1 = load <256 x i8>, ptr %a
+  %op2 = load <256 x i8>, ptr %b
   %cmp = icmp eq <256 x i8> %op1, %op2
   %sext = sext <256 x i1> %cmp to <256 x i8>
-  store <256 x i8> %sext, <256 x i8>* %a
+  store <256 x i8> %sext, ptr %a
   ret void
 }
 
@@ -141,7 +141,7 @@ define <8 x i16> @icmp_eq_v8i16(<8 x i16> %op1, <8 x i16> %op2) vscale_range(2,0
   ret <8 x i16> %sext
 }
 
-define void @icmp_eq_v16i16(<16 x i16>* %a, <16 x i16>* %b) vscale_range(2,0) #0 {
+define void @icmp_eq_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: icmp_eq_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -151,15 +151,15 @@ define void @icmp_eq_v16i16(<16 x i16>* %a, <16 x i16>* %b) vscale_range(2,0) #0
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %cmp = icmp eq <16 x i16> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %a
+  store <16 x i16> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
+define void @icmp_eq_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: icmp_eq_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -185,15 +185,15 @@ define void @icmp_eq_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 ; VBITS_GE_512-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
-  %op2 = load <32 x i16>, <32 x i16>* %b
+  %op1 = load <32 x i16>, ptr %a
+  %op2 = load <32 x i16>, ptr %b
   %cmp = icmp eq <32 x i16> %op1, %op2
   %sext = sext <32 x i1> %cmp to <32 x i16>
-  store <32 x i16> %sext, <32 x i16>* %a
+  store <32 x i16> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(8,0) #0 {
+define void @icmp_eq_v64i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: icmp_eq_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -203,15 +203,15 @@ define void @icmp_eq_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(8,0) #0
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i16>, <64 x i16>* %a
-  %op2 = load <64 x i16>, <64 x i16>* %b
+  %op1 = load <64 x i16>, ptr %a
+  %op2 = load <64 x i16>, ptr %b
   %cmp = icmp eq <64 x i16> %op1, %op2
   %sext = sext <64 x i1> %cmp to <64 x i16>
-  store <64 x i16> %sext, <64 x i16>* %a
+  store <64 x i16> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v128i16(<128 x i16>* %a, <128 x i16>* %b) vscale_range(16,0) #0 {
+define void @icmp_eq_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: icmp_eq_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -221,11 +221,11 @@ define void @icmp_eq_v128i16(<128 x i16>* %a, <128 x i16>* %b) vscale_range(16,0
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i16>, <128 x i16>* %a
-  %op2 = load <128 x i16>, <128 x i16>* %b
+  %op1 = load <128 x i16>, ptr %a
+  %op2 = load <128 x i16>, ptr %b
   %cmp = icmp eq <128 x i16> %op1, %op2
   %sext = sext <128 x i1> %cmp to <128 x i16>
-  store <128 x i16> %sext, <128 x i16>* %a
+  store <128 x i16> %sext, ptr %a
   ret void
 }
 
@@ -251,7 +251,7 @@ define <4 x i32> @icmp_eq_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(2,0
   ret <4 x i32> %sext
 }
 
-define void @icmp_eq_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
+define void @icmp_eq_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: icmp_eq_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -261,15 +261,15 @@ define void @icmp_eq_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %cmp = icmp eq <8 x i32> %op1, %op2
   %sext = sext <8 x i1> %cmp to <8 x i32>
-  store <8 x i32> %sext, <8 x i32>* %a
+  store <8 x i32> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
+define void @icmp_eq_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: icmp_eq_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -295,15 +295,15 @@ define void @icmp_eq_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
 ; VBITS_GE_512-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %cmp = icmp eq <16 x i32> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i32>
-  store <16 x i32> %sext, <16 x i32>* %a
+  store <16 x i32> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v32i32(<32 x i32>* %a, <32 x i32>* %b) vscale_range(8,0) #0 {
+define void @icmp_eq_v32i32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: icmp_eq_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -313,15 +313,15 @@ define void @icmp_eq_v32i32(<32 x i32>* %a, <32 x i32>* %b) vscale_range(8,0) #0
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
-  %op2 = load <32 x i32>, <32 x i32>* %b
+  %op1 = load <32 x i32>, ptr %a
+  %op2 = load <32 x i32>, ptr %b
   %cmp = icmp eq <32 x i32> %op1, %op2
   %sext = sext <32 x i1> %cmp to <32 x i32>
-  store <32 x i32> %sext, <32 x i32>* %a
+  store <32 x i32> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v64i32(<64 x i32>* %a, <64 x i32>* %b) vscale_range(16,0) #0 {
+define void @icmp_eq_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: icmp_eq_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -331,11 +331,11 @@ define void @icmp_eq_v64i32(<64 x i32>* %a, <64 x i32>* %b) vscale_range(16,0) #
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i32>, <64 x i32>* %a
-  %op2 = load <64 x i32>, <64 x i32>* %b
+  %op1 = load <64 x i32>, ptr %a
+  %op2 = load <64 x i32>, ptr %b
   %cmp = icmp eq <64 x i32> %op1, %op2
   %sext = sext <64 x i1> %cmp to <64 x i32>
-  store <64 x i32> %sext, <64 x i32>* %a
+  store <64 x i32> %sext, ptr %a
   ret void
 }
 
@@ -361,7 +361,7 @@ define <2 x i64> @icmp_eq_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(2,0
   ret <2 x i64> %sext
 }
 
-define void @icmp_eq_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
+define void @icmp_eq_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: icmp_eq_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -371,15 +371,15 @@ define void @icmp_eq_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %cmp = icmp eq <4 x i64> %op1, %op2
   %sext = sext <4 x i1> %cmp to <4 x i64>
-  store <4 x i64> %sext, <4 x i64>* %a
+  store <4 x i64> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
+define void @icmp_eq_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: icmp_eq_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -405,15 +405,15 @@ define void @icmp_eq_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
 ; VBITS_GE_512-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
-  %op2 = load <8 x i64>, <8 x i64>* %b
+  %op1 = load <8 x i64>, ptr %a
+  %op2 = load <8 x i64>, ptr %b
   %cmp = icmp eq <8 x i64> %op1, %op2
   %sext = sext <8 x i1> %cmp to <8 x i64>
-  store <8 x i64> %sext, <8 x i64>* %a
+  store <8 x i64> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #0 {
+define void @icmp_eq_v16i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: icmp_eq_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -423,15 +423,15 @@ define void @icmp_eq_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #0
 ; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
-  %op2 = load <16 x i64>, <16 x i64>* %b
+  %op1 = load <16 x i64>, ptr %a
+  %op2 = load <16 x i64>, ptr %b
   %cmp = icmp eq <16 x i64> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i64>
-  store <16 x i64> %sext, <16 x i64>* %a
+  store <16 x i64> %sext, ptr %a
   ret void
 }
 
-define void @icmp_eq_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #0 {
+define void @icmp_eq_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: icmp_eq_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -441,11 +441,11 @@ define void @icmp_eq_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #
 ; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
-  %op2 = load <32 x i64>, <32 x i64>* %b
+  %op1 = load <32 x i64>, ptr %a
+  %op2 = load <32 x i64>, ptr %b
   %cmp = icmp eq <32 x i64> %op1, %op2
   %sext = sext <32 x i1> %cmp to <32 x i64>
-  store <32 x i64> %sext, <32 x i64>* %a
+  store <32 x i64> %sext, ptr %a
   ret void
 }
 
@@ -453,7 +453,7 @@ define void @icmp_eq_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #
 ; ICMP NE
 ;
 
-define void @icmp_ne_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(2,0) #0 {
+define void @icmp_ne_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: icmp_ne_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -463,11 +463,11 @@ define void @icmp_ne_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %cmp = icmp ne <32 x i8> %op1, %op2
   %sext = sext <32 x i1> %cmp to <32 x i8>
-  store <32 x i8> %sext, <32 x i8>* %a
+  store <32 x i8> %sext, ptr %a
   ret void
 }
 
@@ -475,7 +475,7 @@ define void @icmp_ne_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(2,0) #0 {
 ; ICMP SGE
 ;
 
-define void @icmp_sge_v32i16(<32 x i16>* %a, <32 x i16>* %b) vscale_range(4,0) #0 {
+define void @icmp_sge_v32i16(ptr %a, ptr %b) vscale_range(4,0) #0 {
 ; CHECK-LABEL: icmp_sge_v32i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
@@ -485,11 +485,11 @@ define void @icmp_sge_v32i16(<32 x i16>* %a, <32 x i16>* %b) vscale_range(4,0) #
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
-  %op2 = load <32 x i16>, <32 x i16>* %b
+  %op1 = load <32 x i16>, ptr %a
+  %op2 = load <32 x i16>, ptr %b
   %cmp = icmp sge <32 x i16> %op1, %op2
   %sext = sext <32 x i1> %cmp to <32 x i16>
-  store <32 x i16> %sext, <32 x i16>* %a
+  store <32 x i16> %sext, ptr %a
   ret void
 }
 
@@ -497,7 +497,7 @@ define void @icmp_sge_v32i16(<32 x i16>* %a, <32 x i16>* %b) vscale_range(4,0) #
 ; ICMP SGT
 ;
 
-define void @icmp_sgt_v16i16(<16 x i16>* %a, <16 x i16>* %b) vscale_range(2,0) #0 {
+define void @icmp_sgt_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: icmp_sgt_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -507,11 +507,11 @@ define void @icmp_sgt_v16i16(<16 x i16>* %a, <16 x i16>* %b) vscale_range(2,0) #
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %cmp = icmp sgt <16 x i16> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %a
+  store <16 x i16> %sext, ptr %a
   ret void
 }
 
@@ -519,7 +519,7 @@ define void @icmp_sgt_v16i16(<16 x i16>* %a, <16 x i16>* %b) vscale_range(2,0) #
 ; ICMP SLE
 ;
 
-define void @icmp_sle_v16i32(<16 x i32>* %a, <16 x i32>* %b) vscale_range(4,0) #0 {
+define void @icmp_sle_v16i32(ptr %a, ptr %b) vscale_range(4,0) #0 {
 ; CHECK-LABEL: icmp_sle_v16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
@@ -529,11 +529,11 @@ define void @icmp_sle_v16i32(<16 x i32>* %a, <16 x i32>* %b) vscale_range(4,0) #
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %cmp = icmp sle <16 x i32> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i32>
-  store <16 x i32> %sext, <16 x i32>* %a
+  store <16 x i32> %sext, ptr %a
   ret void
 }
 
@@ -541,7 +541,7 @@ define void @icmp_sle_v16i32(<16 x i32>* %a, <16 x i32>* %b) vscale_range(4,0) #
 ; ICMP SLT
 ;
 
-define void @icmp_slt_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
+define void @icmp_slt_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: icmp_slt_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -551,11 +551,11 @@ define void @icmp_slt_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %cmp = icmp slt <8 x i32> %op1, %op2
   %sext = sext <8 x i1> %cmp to <8 x i32>
-  store <8 x i32> %sext, <8 x i32>* %a
+  store <8 x i32> %sext, ptr %a
   ret void
 }
 
@@ -563,7 +563,7 @@ define void @icmp_slt_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
 ; ICMP UGE
 ;
 
-define void @icmp_uge_v8i64(<8 x i64>* %a, <8 x i64>* %b) vscale_range(4,0) #0 {
+define void @icmp_uge_v8i64(ptr %a, ptr %b) vscale_range(4,0) #0 {
 ; CHECK-LABEL: icmp_uge_v8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl8
@@ -573,11 +573,11 @@ define void @icmp_uge_v8i64(<8 x i64>* %a, <8 x i64>* %b) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
-  %op2 = load <8 x i64>, <8 x i64>* %b
+  %op1 = load <8 x i64>, ptr %a
+  %op2 = load <8 x i64>, ptr %b
   %cmp = icmp uge <8 x i64> %op1, %op2
   %sext = sext <8 x i1> %cmp to <8 x i64>
-  store <8 x i64> %sext, <8 x i64>* %a
+  store <8 x i64> %sext, ptr %a
   ret void
 }
 
@@ -585,7 +585,7 @@ define void @icmp_uge_v8i64(<8 x i64>* %a, <8 x i64>* %b) vscale_range(4,0) #0 {
 ; ICMP UGT
 ;
 
-define void @icmp_ugt_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
+define void @icmp_ugt_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: icmp_ugt_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -595,11 +595,11 @@ define void @icmp_ugt_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %cmp = icmp ugt <4 x i64> %op1, %op2
   %sext = sext <4 x i1> %cmp to <4 x i64>
-  store <4 x i64> %sext, <4 x i64>* %a
+  store <4 x i64> %sext, ptr %a
   ret void
 }
 
@@ -607,7 +607,7 @@ define void @icmp_ugt_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
 ; ICMP ULE
 ;
 
-define void @icmp_ule_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #0 {
+define void @icmp_ule_v16i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: icmp_ule_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -617,11 +617,11 @@ define void @icmp_ule_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #
 ; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
-  %op2 = load <16 x i64>, <16 x i64>* %b
+  %op1 = load <16 x i64>, ptr %a
+  %op2 = load <16 x i64>, ptr %b
   %cmp = icmp ule <16 x i64> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i64>
-  store <16 x i64> %sext, <16 x i64>* %a
+  store <16 x i64> %sext, ptr %a
   ret void
 }
 
@@ -629,7 +629,7 @@ define void @icmp_ule_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #
 ; ICMP ULT
 ;
 
-define void @icmp_ult_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #0 {
+define void @icmp_ult_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: icmp_ult_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -639,11 +639,11 @@ define void @icmp_ult_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) 
 ; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
-  %op2 = load <32 x i64>, <32 x i64>* %b
+  %op1 = load <32 x i64>, ptr %a
+  %op2 = load <32 x i64>, ptr %b
   %cmp = icmp ult <32 x i64> %op1, %op2
   %sext = sext <32 x i1> %cmp to <32 x i64>
-  store <32 x i64> %sext, <32 x i64>* %a
+  store <32 x i64> %sext, ptr %a
   ret void
 }
 

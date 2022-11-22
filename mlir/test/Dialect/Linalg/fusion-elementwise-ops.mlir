@@ -1017,6 +1017,30 @@ func.func @fold_fill_generic_basic(%arg0: tensor<?xf32>) -> (tensor<?xf32>) {
 
 // -----
 
+// CHECK-LABEL: func @fold_fill_generic_different_dtype
+//  CHECK-SAME: (%[[ARG0:.*]]: tensor<?xf16>) -> tensor<?xf16> { 
+//   CHECK-NOT: linalg.fill
+//       CHECK: %[[GENERIC_OP:.*]] = linalg.generic
+//  CHECK-SAME: ins(%[[ARG0]] : tensor<?xf16>)
+//  CHECK-SAME: outs({{.*}} : tensor<?xf16>) {
+#map0 = affine_map<(d0) -> (d0)>
+func.func @fold_fill_generic_different_dtype(%arg0: tensor<?xf16>) -> (tensor<?xf16>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 7.0 : f32
+  %0 = tensor.dim %arg0, %c0 : tensor<?xf16>
+  %1 = tensor.empty(%0) : tensor<?xf16>
+  %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<?xf16>) -> tensor<?xf16>
+  %3 = tensor.empty(%0) : tensor<?xf16>
+  %4 = linalg.generic {indexing_maps = [#map0, #map0, #map0], iterator_types=["parallel"]} ins(%arg0, %2 : tensor<?xf16>, tensor<?xf16>) outs (%3:tensor<?xf16>) {
+  ^bb0(%arg1: f16, %arg2: f16, %arg3: f16):
+    %5 = arith.addf  %arg1, %arg2 : f16
+        linalg.yield %5 : f16
+  } -> tensor<?xf16>
+  return %4 : tensor<?xf16>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_fill_generic_mixedaccess
 //   CHECK-NOT: linalg.fill
 //       CHECK: %[[GENERIC_OP:.*]] = linalg.generic

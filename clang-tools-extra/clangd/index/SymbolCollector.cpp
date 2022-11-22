@@ -28,6 +28,7 @@
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
+#include "clang/Tooling/Inclusions/HeaderAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileSystem.h"
@@ -419,8 +420,8 @@ private:
                 getFrameworkHeaderIncludeSpelling(FE, HFI->Framework, HS))
           return *Spelling;
 
-    if (!isSelfContainedHeader(FE, FID, PP->getSourceManager(),
-                               PP->getHeaderSearchInfo())) {
+    if (!tooling::isSelfContainedHeader(FE, PP->getSourceManager(),
+                                        PP->getHeaderSearchInfo())) {
       // A .inc or .def file is often included into a real header to define
       // symbols (e.g. LLVM tablegen files).
       if (Filename.endswith(".inc") || Filename.endswith(".def"))

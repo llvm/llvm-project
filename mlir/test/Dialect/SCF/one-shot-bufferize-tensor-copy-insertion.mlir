@@ -128,7 +128,7 @@ func.func @scf_foreach_thread_out_of_place(%in: tensor<100xf32>,
         tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
-  // CHECK: } {thread_dim_mapping = [5]}
-  } {thread_dim_mapping = [5]}
+  // CHECK: } {mapping = [#gpu.thread<x>]}
+  } {mapping = [#gpu.thread<x>]}
   return
 }

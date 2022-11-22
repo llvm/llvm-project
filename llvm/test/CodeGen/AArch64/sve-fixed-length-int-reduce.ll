@@ -31,7 +31,7 @@ define i8 @uaddv_v16i8(<16 x i8> %a) vscale_range(2,0) #0 {
   ret i8 %res
 }
 
-define i8 @uaddv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
+define i8 @uaddv_v32i8(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: uaddv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -40,12 +40,12 @@ define i8 @uaddv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.add.v32i8(<32 x i8> %op)
   ret i8 %res
 }
 
-define i8 @uaddv_v64i8(<64 x i8>* %a) #0 {
+define i8 @uaddv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: uaddv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -66,12 +66,12 @@ define i8 @uaddv_v64i8(<64 x i8>* %a) #0 {
 ; VBITS_GE_512-NEXT:    fmov x0, d0
 ; VBITS_GE_512-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <64 x i8>, <64 x i8>* %a
+  %op = load <64 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.add.v64i8(<64 x i8> %op)
   ret i8 %res
 }
 
-define i8 @uaddv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
+define i8 @uaddv_v128i8(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: uaddv_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -80,12 +80,12 @@ define i8 @uaddv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <128 x i8>, <128 x i8>* %a
+  %op = load <128 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.add.v128i8(<128 x i8> %op)
   ret i8 %res
 }
 
-define i8 @uaddv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
+define i8 @uaddv_v256i8(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: uaddv_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -94,7 +94,7 @@ define i8 @uaddv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <256 x i8>, <256 x i8>* %a
+  %op = load <256 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.add.v256i8(<256 x i8> %op)
   ret i8 %res
 }
@@ -121,7 +121,7 @@ define i16 @uaddv_v8i16(<8 x i16> %a) vscale_range(2,0) #0 {
   ret i16 %res
 }
 
-define i16 @uaddv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
+define i16 @uaddv_v16i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: uaddv_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -130,12 +130,12 @@ define i16 @uaddv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %op)
   ret i16 %res
 }
 
-define i16 @uaddv_v32i16(<32 x i16>* %a) #0 {
+define i16 @uaddv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: uaddv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -156,12 +156,12 @@ define i16 @uaddv_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_GE_512-NEXT:    fmov x0, d0
 ; VBITS_GE_512-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x i16>, <32 x i16>* %a
+  %op = load <32 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.add.v32i16(<32 x i16> %op)
   ret i16 %res
 }
 
-define i16 @uaddv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
+define i16 @uaddv_v64i16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: uaddv_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -170,12 +170,12 @@ define i16 @uaddv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <64 x i16>, <64 x i16>* %a
+  %op = load <64 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.add.v64i16(<64 x i16> %op)
   ret i16 %res
 }
 
-define i16 @uaddv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
+define i16 @uaddv_v128i16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: uaddv_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -184,7 +184,7 @@ define i16 @uaddv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <128 x i16>, <128 x i16>* %a
+  %op = load <128 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.add.v128i16(<128 x i16> %op)
   ret i16 %res
 }
@@ -211,7 +211,7 @@ define i32 @uaddv_v4i32(<4 x i32> %a) vscale_range(2,0) #0 {
   ret i32 %res
 }
 
-define i32 @uaddv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
+define i32 @uaddv_v8i32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: uaddv_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -220,12 +220,12 @@ define i32 @uaddv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %op)
   ret i32 %res
 }
 
-define i32 @uaddv_v16i32(<16 x i32>* %a) #0 {
+define i32 @uaddv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: uaddv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -246,12 +246,12 @@ define i32 @uaddv_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_GE_512-NEXT:    fmov x0, d0
 ; VBITS_GE_512-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x i32>, <16 x i32>* %a
+  %op = load <16 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %op)
   ret i32 %res
 }
 
-define i32 @uaddv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
+define i32 @uaddv_v32i32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: uaddv_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -260,12 +260,12 @@ define i32 @uaddv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i32>, <32 x i32>* %a
+  %op = load <32 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %op)
   ret i32 %res
 }
 
-define i32 @uaddv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
+define i32 @uaddv_v64i32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: uaddv_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -274,7 +274,7 @@ define i32 @uaddv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <64 x i32>, <64 x i32>* %a
+  %op = load <64 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> %op)
   ret i32 %res
 }
@@ -301,7 +301,7 @@ define i64 @uaddv_v2i64(<2 x i64> %a) vscale_range(2,0) #0 {
   ret i64 %res
 }
 
-define i64 @uaddv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
+define i64 @uaddv_v4i64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: uaddv_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -309,12 +309,12 @@ define i64 @uaddv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    uaddv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %op)
   ret i64 %res
 }
 
-define i64 @uaddv_v8i64(<8 x i64>* %a) #0 {
+define i64 @uaddv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: uaddv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -333,12 +333,12 @@ define i64 @uaddv_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_GE_512-NEXT:    uaddv d0, p0, z0.d
 ; VBITS_GE_512-NEXT:    fmov x0, d0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x i64>, <8 x i64>* %a
+  %op = load <8 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %op)
   ret i64 %res
 }
 
-define i64 @uaddv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
+define i64 @uaddv_v16i64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: uaddv_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -346,12 +346,12 @@ define i64 @uaddv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    uaddv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i64>, <16 x i64>* %a
+  %op = load <16 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %op)
   ret i64 %res
 }
 
-define i64 @uaddv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
+define i64 @uaddv_v32i64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: uaddv_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -359,7 +359,7 @@ define i64 @uaddv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    uaddv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i64>, <32 x i64>* %a
+  %op = load <32 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.add.v32i64(<32 x i64> %op)
   ret i64 %res
 }
@@ -390,7 +390,7 @@ define i8 @smaxv_v16i8(<16 x i8> %a) vscale_range(2,0) #0 {
   ret i8 %res
 }
 
-define i8 @smaxv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
+define i8 @smaxv_v32i8(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smaxv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -398,12 +398,12 @@ define i8 @smaxv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    smaxv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.smax.v32i8(<32 x i8> %op)
   ret i8 %res
 }
 
-define i8 @smaxv_v64i8(<64 x i8>* %a) #0 {
+define i8 @smaxv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: smaxv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -422,12 +422,12 @@ define i8 @smaxv_v64i8(<64 x i8>* %a) #0 {
 ; VBITS_GE_512-NEXT:    smaxv b0, p0, z0.b
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <64 x i8>, <64 x i8>* %a
+  %op = load <64 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.smax.v64i8(<64 x i8> %op)
   ret i8 %res
 }
 
-define i8 @smaxv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
+define i8 @smaxv_v128i8(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: smaxv_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -435,12 +435,12 @@ define i8 @smaxv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    smaxv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <128 x i8>, <128 x i8>* %a
+  %op = load <128 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.smax.v128i8(<128 x i8> %op)
   ret i8 %res
 }
 
-define i8 @smaxv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
+define i8 @smaxv_v256i8(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: smaxv_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -448,7 +448,7 @@ define i8 @smaxv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    smaxv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <256 x i8>, <256 x i8>* %a
+  %op = load <256 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.smax.v256i8(<256 x i8> %op)
   ret i8 %res
 }
@@ -475,7 +475,7 @@ define i16 @smaxv_v8i16(<8 x i16> %a) vscale_range(2,0) #0 {
   ret i16 %res
 }
 
-define i16 @smaxv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
+define i16 @smaxv_v16i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smaxv_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -483,12 +483,12 @@ define i16 @smaxv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    smaxv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.smax.v16i16(<16 x i16> %op)
   ret i16 %res
 }
 
-define i16 @smaxv_v32i16(<32 x i16>* %a) #0 {
+define i16 @smaxv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: smaxv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -507,12 +507,12 @@ define i16 @smaxv_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_GE_512-NEXT:    smaxv h0, p0, z0.h
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x i16>, <32 x i16>* %a
+  %op = load <32 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.smax.v32i16(<32 x i16> %op)
   ret i16 %res
 }
 
-define i16 @smaxv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
+define i16 @smaxv_v64i16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: smaxv_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -520,12 +520,12 @@ define i16 @smaxv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    smaxv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <64 x i16>, <64 x i16>* %a
+  %op = load <64 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.smax.v64i16(<64 x i16> %op)
   ret i16 %res
 }
 
-define i16 @smaxv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
+define i16 @smaxv_v128i16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: smaxv_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -533,7 +533,7 @@ define i16 @smaxv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    smaxv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <128 x i16>, <128 x i16>* %a
+  %op = load <128 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.smax.v128i16(<128 x i16> %op)
   ret i16 %res
 }
@@ -560,7 +560,7 @@ define i32 @smaxv_v4i32(<4 x i32> %a) vscale_range(2,0) #0 {
   ret i32 %res
 }
 
-define i32 @smaxv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
+define i32 @smaxv_v8i32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smaxv_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -568,12 +568,12 @@ define i32 @smaxv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    smaxv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> %op)
   ret i32 %res
 }
 
-define i32 @smaxv_v16i32(<16 x i32>* %a) #0 {
+define i32 @smaxv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: smaxv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -592,12 +592,12 @@ define i32 @smaxv_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_GE_512-NEXT:    smaxv s0, p0, z0.s
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x i32>, <16 x i32>* %a
+  %op = load <16 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.smax.v16i32(<16 x i32> %op)
   ret i32 %res
 }
 
-define i32 @smaxv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
+define i32 @smaxv_v32i32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: smaxv_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -605,12 +605,12 @@ define i32 @smaxv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    smaxv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i32>, <32 x i32>* %a
+  %op = load <32 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.smax.v32i32(<32 x i32> %op)
   ret i32 %res
 }
 
-define i32 @smaxv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
+define i32 @smaxv_v64i32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: smaxv_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -618,7 +618,7 @@ define i32 @smaxv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    smaxv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <64 x i32>, <64 x i32>* %a
+  %op = load <64 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.smax.v64i32(<64 x i32> %op)
   ret i32 %res
 }
@@ -647,7 +647,7 @@ define i64 @smaxv_v2i64(<2 x i64> %a) vscale_range(2,0) #0 {
   ret i64 %res
 }
 
-define i64 @smaxv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
+define i64 @smaxv_v4i64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smaxv_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -655,12 +655,12 @@ define i64 @smaxv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    smaxv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> %op)
   ret i64 %res
 }
 
-define i64 @smaxv_v8i64(<8 x i64>* %a) #0 {
+define i64 @smaxv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: smaxv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -679,12 +679,12 @@ define i64 @smaxv_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_GE_512-NEXT:    smaxv d0, p0, z0.d
 ; VBITS_GE_512-NEXT:    fmov x0, d0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x i64>, <8 x i64>* %a
+  %op = load <8 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.smax.v8i64(<8 x i64> %op)
   ret i64 %res
 }
 
-define i64 @smaxv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
+define i64 @smaxv_v16i64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: smaxv_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -692,12 +692,12 @@ define i64 @smaxv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    smaxv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i64>, <16 x i64>* %a
+  %op = load <16 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.smax.v16i64(<16 x i64> %op)
   ret i64 %res
 }
 
-define i64 @smaxv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
+define i64 @smaxv_v32i64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: smaxv_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -705,7 +705,7 @@ define i64 @smaxv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    smaxv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i64>, <32 x i64>* %a
+  %op = load <32 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.smax.v32i64(<32 x i64> %op)
   ret i64 %res
 }
@@ -736,7 +736,7 @@ define i8 @sminv_v16i8(<16 x i8> %a) vscale_range(2,0) #0 {
   ret i8 %res
 }
 
-define i8 @sminv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
+define i8 @sminv_v32i8(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sminv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -744,12 +744,12 @@ define i8 @sminv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    sminv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.smin.v32i8(<32 x i8> %op)
   ret i8 %res
 }
 
-define i8 @sminv_v64i8(<64 x i8>* %a) #0 {
+define i8 @sminv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sminv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -768,12 +768,12 @@ define i8 @sminv_v64i8(<64 x i8>* %a) #0 {
 ; VBITS_GE_512-NEXT:    sminv b0, p0, z0.b
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <64 x i8>, <64 x i8>* %a
+  %op = load <64 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.smin.v64i8(<64 x i8> %op)
   ret i8 %res
 }
 
-define i8 @sminv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
+define i8 @sminv_v128i8(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: sminv_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -781,12 +781,12 @@ define i8 @sminv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    sminv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <128 x i8>, <128 x i8>* %a
+  %op = load <128 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.smin.v128i8(<128 x i8> %op)
   ret i8 %res
 }
 
-define i8 @sminv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
+define i8 @sminv_v256i8(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: sminv_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -794,7 +794,7 @@ define i8 @sminv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    sminv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <256 x i8>, <256 x i8>* %a
+  %op = load <256 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.smin.v256i8(<256 x i8> %op)
   ret i8 %res
 }
@@ -821,7 +821,7 @@ define i16 @sminv_v8i16(<8 x i16> %a) vscale_range(2,0) #0 {
   ret i16 %res
 }
 
-define i16 @sminv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
+define i16 @sminv_v16i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sminv_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -829,12 +829,12 @@ define i16 @sminv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    sminv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.smin.v16i16(<16 x i16> %op)
   ret i16 %res
 }
 
-define i16 @sminv_v32i16(<32 x i16>* %a) #0 {
+define i16 @sminv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sminv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -853,12 +853,12 @@ define i16 @sminv_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_GE_512-NEXT:    sminv h0, p0, z0.h
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x i16>, <32 x i16>* %a
+  %op = load <32 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.smin.v32i16(<32 x i16> %op)
   ret i16 %res
 }
 
-define i16 @sminv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
+define i16 @sminv_v64i16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: sminv_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -866,12 +866,12 @@ define i16 @sminv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    sminv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <64 x i16>, <64 x i16>* %a
+  %op = load <64 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.smin.v64i16(<64 x i16> %op)
   ret i16 %res
 }
 
-define i16 @sminv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
+define i16 @sminv_v128i16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: sminv_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -879,7 +879,7 @@ define i16 @sminv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    sminv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <128 x i16>, <128 x i16>* %a
+  %op = load <128 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.smin.v128i16(<128 x i16> %op)
   ret i16 %res
 }
@@ -906,7 +906,7 @@ define i32 @sminv_v4i32(<4 x i32> %a) vscale_range(2,0) #0 {
   ret i32 %res
 }
 
-define i32 @sminv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
+define i32 @sminv_v8i32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sminv_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -914,12 +914,12 @@ define i32 @sminv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    sminv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.smin.v8i32(<8 x i32> %op)
   ret i32 %res
 }
 
-define i32 @sminv_v16i32(<16 x i32>* %a) #0 {
+define i32 @sminv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sminv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -938,12 +938,12 @@ define i32 @sminv_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_GE_512-NEXT:    sminv s0, p0, z0.s
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x i32>, <16 x i32>* %a
+  %op = load <16 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.smin.v16i32(<16 x i32> %op)
   ret i32 %res
 }
 
-define i32 @sminv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
+define i32 @sminv_v32i32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: sminv_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -951,12 +951,12 @@ define i32 @sminv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    sminv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i32>, <32 x i32>* %a
+  %op = load <32 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.smin.v32i32(<32 x i32> %op)
   ret i32 %res
 }
 
-define i32 @sminv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
+define i32 @sminv_v64i32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: sminv_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -964,7 +964,7 @@ define i32 @sminv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    sminv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <64 x i32>, <64 x i32>* %a
+  %op = load <64 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.smin.v64i32(<64 x i32> %op)
   ret i32 %res
 }
@@ -993,7 +993,7 @@ define i64 @sminv_v2i64(<2 x i64> %a) vscale_range(2,0) #0 {
   ret i64 %res
 }
 
-define i64 @sminv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
+define i64 @sminv_v4i64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sminv_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -1001,12 +1001,12 @@ define i64 @sminv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    sminv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> %op)
   ret i64 %res
 }
 
-define i64 @sminv_v8i64(<8 x i64>* %a) #0 {
+define i64 @sminv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sminv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -1025,12 +1025,12 @@ define i64 @sminv_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_GE_512-NEXT:    sminv d0, p0, z0.d
 ; VBITS_GE_512-NEXT:    fmov x0, d0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x i64>, <8 x i64>* %a
+  %op = load <8 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.smin.v8i64(<8 x i64> %op)
   ret i64 %res
 }
 
-define i64 @sminv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
+define i64 @sminv_v16i64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: sminv_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -1038,12 +1038,12 @@ define i64 @sminv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    sminv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i64>, <16 x i64>* %a
+  %op = load <16 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.smin.v16i64(<16 x i64> %op)
   ret i64 %res
 }
 
-define i64 @sminv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
+define i64 @sminv_v32i64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: sminv_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -1051,7 +1051,7 @@ define i64 @sminv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    sminv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i64>, <32 x i64>* %a
+  %op = load <32 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.smin.v32i64(<32 x i64> %op)
   ret i64 %res
 }
@@ -1082,7 +1082,7 @@ define i8 @umaxv_v16i8(<16 x i8> %a) vscale_range(2,0) #0 {
   ret i8 %res
 }
 
-define i8 @umaxv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
+define i8 @umaxv_v32i8(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umaxv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -1090,12 +1090,12 @@ define i8 @umaxv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    umaxv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.umax.v32i8(<32 x i8> %op)
   ret i8 %res
 }
 
-define i8 @umaxv_v64i8(<64 x i8>* %a) #0 {
+define i8 @umaxv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: umaxv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -1114,12 +1114,12 @@ define i8 @umaxv_v64i8(<64 x i8>* %a) #0 {
 ; VBITS_GE_512-NEXT:    umaxv b0, p0, z0.b
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <64 x i8>, <64 x i8>* %a
+  %op = load <64 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.umax.v64i8(<64 x i8> %op)
   ret i8 %res
 }
 
-define i8 @umaxv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
+define i8 @umaxv_v128i8(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: umaxv_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -1127,12 +1127,12 @@ define i8 @umaxv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    umaxv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <128 x i8>, <128 x i8>* %a
+  %op = load <128 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.umax.v128i8(<128 x i8> %op)
   ret i8 %res
 }
 
-define i8 @umaxv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
+define i8 @umaxv_v256i8(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: umaxv_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -1140,7 +1140,7 @@ define i8 @umaxv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    umaxv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <256 x i8>, <256 x i8>* %a
+  %op = load <256 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.umax.v256i8(<256 x i8> %op)
   ret i8 %res
 }
@@ -1167,7 +1167,7 @@ define i16 @umaxv_v8i16(<8 x i16> %a) vscale_range(2,0) #0 {
   ret i16 %res
 }
 
-define i16 @umaxv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
+define i16 @umaxv_v16i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umaxv_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -1175,12 +1175,12 @@ define i16 @umaxv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    umaxv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.umax.v16i16(<16 x i16> %op)
   ret i16 %res
 }
 
-define i16 @umaxv_v32i16(<32 x i16>* %a) #0 {
+define i16 @umaxv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: umaxv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -1199,12 +1199,12 @@ define i16 @umaxv_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_GE_512-NEXT:    umaxv h0, p0, z0.h
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x i16>, <32 x i16>* %a
+  %op = load <32 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.umax.v32i16(<32 x i16> %op)
   ret i16 %res
 }
 
-define i16 @umaxv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
+define i16 @umaxv_v64i16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: umaxv_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -1212,12 +1212,12 @@ define i16 @umaxv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    umaxv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <64 x i16>, <64 x i16>* %a
+  %op = load <64 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.umax.v64i16(<64 x i16> %op)
   ret i16 %res
 }
 
-define i16 @umaxv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
+define i16 @umaxv_v128i16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: umaxv_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -1225,7 +1225,7 @@ define i16 @umaxv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    umaxv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <128 x i16>, <128 x i16>* %a
+  %op = load <128 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.umax.v128i16(<128 x i16> %op)
   ret i16 %res
 }
@@ -1252,7 +1252,7 @@ define i32 @umaxv_v4i32(<4 x i32> %a) vscale_range(2,0) #0 {
   ret i32 %res
 }
 
-define i32 @umaxv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
+define i32 @umaxv_v8i32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umaxv_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -1260,12 +1260,12 @@ define i32 @umaxv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    umaxv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.umax.v8i32(<8 x i32> %op)
   ret i32 %res
 }
 
-define i32 @umaxv_v16i32(<16 x i32>* %a) #0 {
+define i32 @umaxv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: umaxv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -1284,12 +1284,12 @@ define i32 @umaxv_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_GE_512-NEXT:    umaxv s0, p0, z0.s
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x i32>, <16 x i32>* %a
+  %op = load <16 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.umax.v16i32(<16 x i32> %op)
   ret i32 %res
 }
 
-define i32 @umaxv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
+define i32 @umaxv_v32i32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: umaxv_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1297,12 +1297,12 @@ define i32 @umaxv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    umaxv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i32>, <32 x i32>* %a
+  %op = load <32 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.umax.v32i32(<32 x i32> %op)
   ret i32 %res
 }
 
-define i32 @umaxv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
+define i32 @umaxv_v64i32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: umaxv_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -1310,7 +1310,7 @@ define i32 @umaxv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    umaxv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <64 x i32>, <64 x i32>* %a
+  %op = load <64 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.umax.v64i32(<64 x i32> %op)
   ret i32 %res
 }
@@ -1339,7 +1339,7 @@ define i64 @umaxv_v2i64(<2 x i64> %a) vscale_range(2,0) #0 {
   ret i64 %res
 }
 
-define i64 @umaxv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
+define i64 @umaxv_v4i64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umaxv_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -1347,12 +1347,12 @@ define i64 @umaxv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    umaxv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> %op)
   ret i64 %res
 }
 
-define i64 @umaxv_v8i64(<8 x i64>* %a) #0 {
+define i64 @umaxv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: umaxv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -1371,12 +1371,12 @@ define i64 @umaxv_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_GE_512-NEXT:    umaxv d0, p0, z0.d
 ; VBITS_GE_512-NEXT:    fmov x0, d0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x i64>, <8 x i64>* %a
+  %op = load <8 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.umax.v8i64(<8 x i64> %op)
   ret i64 %res
 }
 
-define i64 @umaxv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
+define i64 @umaxv_v16i64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: umaxv_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -1384,12 +1384,12 @@ define i64 @umaxv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    umaxv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i64>, <16 x i64>* %a
+  %op = load <16 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.umax.v16i64(<16 x i64> %op)
   ret i64 %res
 }
 
-define i64 @umaxv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
+define i64 @umaxv_v32i64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: umaxv_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -1397,7 +1397,7 @@ define i64 @umaxv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    umaxv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i64>, <32 x i64>* %a
+  %op = load <32 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.umax.v32i64(<32 x i64> %op)
   ret i64 %res
 }
@@ -1428,7 +1428,7 @@ define i8 @uminv_v16i8(<16 x i8> %a) vscale_range(2,0) #0 {
   ret i8 %res
 }
 
-define i8 @uminv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
+define i8 @uminv_v32i8(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: uminv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -1436,12 +1436,12 @@ define i8 @uminv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    uminv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.umin.v32i8(<32 x i8> %op)
   ret i8 %res
 }
 
-define i8 @uminv_v64i8(<64 x i8>* %a) #0 {
+define i8 @uminv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: uminv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -1460,12 +1460,12 @@ define i8 @uminv_v64i8(<64 x i8>* %a) #0 {
 ; VBITS_GE_512-NEXT:    uminv b0, p0, z0.b
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <64 x i8>, <64 x i8>* %a
+  %op = load <64 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.umin.v64i8(<64 x i8> %op)
   ret i8 %res
 }
 
-define i8 @uminv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
+define i8 @uminv_v128i8(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: uminv_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -1473,12 +1473,12 @@ define i8 @uminv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    uminv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <128 x i8>, <128 x i8>* %a
+  %op = load <128 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.umin.v128i8(<128 x i8> %op)
   ret i8 %res
 }
 
-define i8 @uminv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
+define i8 @uminv_v256i8(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: uminv_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -1486,7 +1486,7 @@ define i8 @uminv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    uminv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <256 x i8>, <256 x i8>* %a
+  %op = load <256 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.umin.v256i8(<256 x i8> %op)
   ret i8 %res
 }
@@ -1513,7 +1513,7 @@ define i16 @uminv_v8i16(<8 x i16> %a) vscale_range(2,0) #0 {
   ret i16 %res
 }
 
-define i16 @uminv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
+define i16 @uminv_v16i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: uminv_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -1521,12 +1521,12 @@ define i16 @uminv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    uminv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.umin.v16i16(<16 x i16> %op)
   ret i16 %res
 }
 
-define i16 @uminv_v32i16(<32 x i16>* %a) #0 {
+define i16 @uminv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: uminv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -1545,12 +1545,12 @@ define i16 @uminv_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_GE_512-NEXT:    uminv h0, p0, z0.h
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x i16>, <32 x i16>* %a
+  %op = load <32 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.umin.v32i16(<32 x i16> %op)
   ret i16 %res
 }
 
-define i16 @uminv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
+define i16 @uminv_v64i16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: uminv_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -1558,12 +1558,12 @@ define i16 @uminv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    uminv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <64 x i16>, <64 x i16>* %a
+  %op = load <64 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.umin.v64i16(<64 x i16> %op)
   ret i16 %res
 }
 
-define i16 @uminv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
+define i16 @uminv_v128i16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: uminv_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -1571,7 +1571,7 @@ define i16 @uminv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    uminv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <128 x i16>, <128 x i16>* %a
+  %op = load <128 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.umin.v128i16(<128 x i16> %op)
   ret i16 %res
 }
@@ -1598,7 +1598,7 @@ define i32 @uminv_v4i32(<4 x i32> %a) vscale_range(2,0) #0 {
   ret i32 %res
 }
 
-define i32 @uminv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
+define i32 @uminv_v8i32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: uminv_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -1606,12 +1606,12 @@ define i32 @uminv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    uminv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> %op)
   ret i32 %res
 }
 
-define i32 @uminv_v16i32(<16 x i32>* %a) #0 {
+define i32 @uminv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: uminv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -1630,12 +1630,12 @@ define i32 @uminv_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_GE_512-NEXT:    uminv s0, p0, z0.s
 ; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x i32>, <16 x i32>* %a
+  %op = load <16 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.umin.v16i32(<16 x i32> %op)
   ret i32 %res
 }
 
-define i32 @uminv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
+define i32 @uminv_v32i32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: uminv_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1643,12 +1643,12 @@ define i32 @uminv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    uminv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i32>, <32 x i32>* %a
+  %op = load <32 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.umin.v32i32(<32 x i32> %op)
   ret i32 %res
 }
 
-define i32 @uminv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
+define i32 @uminv_v64i32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: uminv_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -1656,7 +1656,7 @@ define i32 @uminv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    uminv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <64 x i32>, <64 x i32>* %a
+  %op = load <64 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.umin.v64i32(<64 x i32> %op)
   ret i32 %res
 }
@@ -1685,7 +1685,7 @@ define i64 @uminv_v2i64(<2 x i64> %a) vscale_range(2,0) #0 {
   ret i64 %res
 }
 
-define i64 @uminv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
+define i64 @uminv_v4i64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: uminv_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -1693,12 +1693,12 @@ define i64 @uminv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    uminv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> %op)
   ret i64 %res
 }
 
-define i64 @uminv_v8i64(<8 x i64>* %a) #0 {
+define i64 @uminv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: uminv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -1717,12 +1717,12 @@ define i64 @uminv_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_GE_512-NEXT:    uminv d0, p0, z0.d
 ; VBITS_GE_512-NEXT:    fmov x0, d0
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x i64>, <8 x i64>* %a
+  %op = load <8 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> %op)
   ret i64 %res
 }
 
-define i64 @uminv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
+define i64 @uminv_v16i64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: uminv_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -1730,12 +1730,12 @@ define i64 @uminv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    uminv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i64>, <16 x i64>* %a
+  %op = load <16 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.umin.v16i64(<16 x i64> %op)
   ret i64 %res
 }
 
-define i64 @uminv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
+define i64 @uminv_v32i64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: uminv_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -1743,7 +1743,7 @@ define i64 @uminv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    uminv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i64>, <32 x i64>* %a
+  %op = load <32 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.umin.v32i64(<32 x i64> %op)
   ret i64 %res
 }

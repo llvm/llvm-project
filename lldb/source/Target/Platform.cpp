@@ -1939,6 +1939,14 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     }
   } break;
 
+  case llvm::Triple::loongarch32:
+  case llvm::Triple::loongarch64: {
+    static const uint8_t g_loongarch_opcode[] = {0x05, 0x00, 0x2a,
+                                                 0x00}; // break 0x5
+    trap_opcode = g_loongarch_opcode;
+    trap_opcode_size = sizeof(g_loongarch_opcode);
+  } break;
+
   default:
     return 0;
   }

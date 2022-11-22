@@ -340,7 +340,13 @@ __attribute__((constructor(0))) void __hwasan_init() {
   DisableCoreDumperIfNecessary();
 
   InitInstrumentation();
-  InitLoadedGlobals();
+  if constexpr (!SANITIZER_FUCHSIA) {
+    // Fuchsia's libc provides a hook (__sanitizer_module_loaded) that runs on
+    // the startup path which calls into __hwasan_library_loaded on all
+    // initially loaded modules, so explicitly registering the globals here
+    // isn't needed.
+    InitLoadedGlobals();
+  }
 
   // Needs to be called here because flags()->random_tags might not have been
   // initialized when InitInstrumentation() was called.

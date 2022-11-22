@@ -1150,16 +1150,11 @@ def PdWriteVPMACS : SchedWriteRes<[PdFPU0, PdFPMMA, PdFPMAL]> {
 def : InstRW<[PdWriteVPMACS], (instrs VPMACSDQHrr, VPMACSDQLrr, VPMACSSDQHrr,
                                       VPMACSSDQLrr)>;
 
-defm : PdWriteResXMMPair<WriteMPSAD,         [PdFPU0, PdFPMMA], 9, [1, 4], 8>;
+// FIXME: Investigate RR vs RM differences.
+defm : PdWriteRes<WriteMPSAD,   [PdFPU0, PdFPMMA], 8, [1, 4], 8>;
+defm : PdWriteRes<WriteMPSADLd, [PdFPU0, PdFPMMA, PdLoad], 14, [1, 4, 3],  8>;
 defm : X86WriteResPairUnsupported<WriteMPSADY>;
 defm : X86WriteResPairUnsupported<WriteMPSADZ>;
-
-def PdWriteVMPSADBW : SchedWriteRes<[PdFPU0, PdFPMMA]> {
-  let Latency = 8;
-  let ResourceCycles = [1, 4];
-  let NumMicroOps = 10;
-}
-def : InstRW<[PdWriteVMPSADBW], (instrs VMPSADBWrri)>;
 
 defm : PdWriteResXMMPair<WritePSADBW,        [PdFPU01, PdFPMAL], 4, [1, 2], 2>;
 defm : PdWriteResXMMPair<WritePSADBWX,       [PdFPU01, PdFPMAL], 4, [1, 2], 2>;

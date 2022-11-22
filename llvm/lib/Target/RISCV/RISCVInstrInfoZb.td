@@ -252,9 +252,9 @@ def Shifted32OnesMask : PatLeaf<(imm), [{
          Imm == UINT64_C(0xFFFFFFFF) << TrailingZeros;
 }], TrailingZeros>;
 
-def sh1add_op : ComplexPattern<XLenVT, 1, "selectSH1ADDOp", [], [], 6>;
-def sh2add_op : ComplexPattern<XLenVT, 1, "selectSH2ADDOp", [], [], 6>;
-def sh3add_op : ComplexPattern<XLenVT, 1, "selectSH3ADDOp", [], [], 6>;
+def sh1add_op : ComplexPattern<XLenVT, 1, "selectSHXADDOp<1>", [], [], 6>;
+def sh2add_op : ComplexPattern<XLenVT, 1, "selectSHXADDOp<2>", [], [], 6>;
+def sh3add_op : ComplexPattern<XLenVT, 1, "selectSHXADDOp<3>", [], [], 6>;
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -633,27 +633,29 @@ def : Pat<(i64 (bswap GPR:$rs1)), (REV8_RV64 GPR:$rs1)>;
 
 let Predicates = [HasStdExtZbkb] in {
 def : Pat<(or (and (shl GPR:$rs2, (XLenVT 8)), 0xFFFF),
-              (and GPR:$rs1, 0x00FF)),
+              (zexti8 GPR:$rs1)),
           (PACKH GPR:$rs1, GPR:$rs2)>;
-def : Pat<(or (shl (and GPR:$rs2, 0x00FF), (XLenVT 8)),
-              (and GPR:$rs1, 0x00FF)),
+def : Pat<(or (shl (zexti8 GPR:$rs2), (XLenVT 8)),
+              (zexti8 GPR:$rs1)),
+          (PACKH GPR:$rs1, GPR:$rs2)>;
+def : Pat<(and (or (shl GPR:$rs2, (XLenVT 8)),
+                   (zexti8 GPR:$rs1)), 0xFFFF),
           (PACKH GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbkb]
 
 let Predicates = [HasStdExtZbkb, IsRV32] in
-def : Pat<(i32 (or (and GPR:$rs1, 0x0000FFFF), (shl GPR:$rs2, (i32 16)))),
+def : Pat<(i32 (or (zexti16 GPR:$rs1), (shl GPR:$rs2, (i32 16)))),
           (PACK GPR:$rs1, GPR:$rs2)>;
 
 let Predicates = [HasStdExtZbkb, IsRV64] in {
-def : Pat<(i64 (or (and GPR:$rs1, 0x00000000FFFFFFFF), (shl GPR:$rs2, (i64 32)))),
+def : Pat<(i64 (or (zexti32 GPR:$rs1), (shl GPR:$rs2, (i64 32)))),
           (PACK GPR:$rs1, GPR:$rs2)>;
 
-def : Pat<(i64 (sext_inreg (or (shl GPR:$rs2, (i64 16)),
-                               (and GPR:$rs1, 0x000000000000FFFF)),
-                           i32)),
+def : Pat<(binop_allwusers<or> (shl GPR:$rs2, (i64 16)),
+                               (zexti16 GPR:$rs1)),
           (PACKW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i64 (or (sext_inreg (shl GPR:$rs2, (i64 16)), i32),
-                   (and GPR:$rs1, 0x000000000000FFFF))),
+                   (zexti16 GPR:$rs1))),
           (PACKW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbkb, IsRV64]
 

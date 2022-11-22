@@ -68,7 +68,7 @@ getExplicitTypeParams(fir::FortranVariableOpInterface var) {
 
 std::pair<fir::ExtendedValue, llvm::Optional<hlfir::CleanupFunction>>
 hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &,
-                                hlfir::FortranEntity entity) {
+                                hlfir::EntityWithAttributes entity) {
   if (auto variable = entity.getIfVariable())
     return {hlfir::translateToExtendedValue(variable), {}};
   if (entity.getType().isa<hlfir::ExprType>())
@@ -98,11 +98,10 @@ hlfir::translateToExtendedValue(fir::FortranVariableOpInterface variable) {
   return variable.getBase();
 }
 
-hlfir::FortranEntity hlfir::genDeclare(mlir::Location loc,
-                                       fir::FirOpBuilder &builder,
-                                       const fir::ExtendedValue &exv,
-                                       llvm::StringRef name,
-                                       fir::FortranVariableFlagsAttr flags) {
+hlfir::EntityWithAttributes
+hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
+                  const fir::ExtendedValue &exv, llvm::StringRef name,
+                  fir::FortranVariableFlagsAttr flags) {
 
   mlir::Value base = fir::getBase(exv);
   assert(fir::isa_passbyref_type(base.getType()) &&

@@ -29,7 +29,7 @@ def MapNestedForeachToThreads :
       The operation searches for `scf.foreach_thread` ops nested under `target` 
       and maps each such op to GPU threads. Mapping is one-to-one and the 
       induction variables of `scf.foreach_thread` are rewritten to 
-      `gpu.thread_id` according to the `thread_dim_mapping` attribute. 
+      `gpu.thread_id` according to the `mapping` attribute. 
       
       Sibling `scf.foreach_thread` are supported in which case, the union of 
       the number of threads is computed and may result in predication.
@@ -73,10 +73,10 @@ def MapNestedForeachToThreads :
                  threads(%tx, %ty, %tz) in (%tx = %3, %ty = %4, %tz = %5) {
         scf.foreach_thread (%i, %j) in (7, 9) {
           ... // body 1
-        } {thread_dim_mapping = [1, 0, 2]}
+        } {mapping = [#gpu.thread<x>, #gpu.thread<y>, #gpu.thread<z>]}
         scf.foreach_thread (%i) in (12) {
           ... // body 2
-        }
+        } {mapping = [#gpu.thread<x>]}
         gpu.terminator
       }
       ```

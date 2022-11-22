@@ -32,11 +32,10 @@ class AbstractConverter;
 class StatementContext;
 class SymMap;
 
-hlfir::FortranEntity convertExprToHLFIR(mlir::Location loc,
-                                        Fortran::lower::AbstractConverter &,
-                                        const Fortran::lower::SomeExpr &,
-                                        Fortran::lower::SymMap &,
-                                        Fortran::lower::StatementContext &);
+hlfir::EntityWithAttributes
+convertExprToHLFIR(mlir::Location loc, Fortran::lower::AbstractConverter &,
+                   const Fortran::lower::SomeExpr &, Fortran::lower::SymMap &,
+                   Fortran::lower::StatementContext &);
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTEXPRTOHLFIR_H

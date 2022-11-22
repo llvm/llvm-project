@@ -101,6 +101,7 @@ static_library("Support") {
     "LineIterator.cpp",
     "Locale.cpp",
     "LockFileManager.cpp",
+    "LoongArchTargetParser.cpp",
     "LowLevelType.cpp",
     "MD5.cpp",
     "MSP430AttributeParser.cpp",

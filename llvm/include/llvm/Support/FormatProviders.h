@@ -355,7 +355,6 @@ struct range_item_has_provider
 
 template <typename IterT> class format_provider<llvm::iterator_range<IterT>> {
   using value = typename std::iterator_traits<IterT>::value_type;
-  using reference = typename std::iterator_traits<IterT>::reference;
 
   static StringRef consumeOneOption(StringRef &Style, char Indicator,
                                     StringRef Default) {
@@ -403,15 +402,13 @@ public:
     auto Begin = V.begin();
     auto End = V.end();
     if (Begin != End) {
-      auto Adapter =
-          detail::build_format_adapter(std::forward<reference>(*Begin));
+      auto Adapter = detail::build_format_adapter(*Begin);
       Adapter.format(Stream, ArgStyle);
       ++Begin;
     }
     while (Begin != End) {
       Stream << Sep;
-      auto Adapter =
-          detail::build_format_adapter(std::forward<reference>(*Begin));
+      auto Adapter = detail::build_format_adapter(*Begin);
       Adapter.format(Stream, ArgStyle);
       ++Begin;
     }

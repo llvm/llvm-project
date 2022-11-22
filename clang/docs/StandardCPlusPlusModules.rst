@@ -270,6 +270,40 @@ we can't compile them by the original command lines. But we are still able to do
   $ ./Hello.out
   Hello World!
 
+Module name requirement
+~~~~~~~~~~~~~~~~~~~~~~~
+
+[module.unit]p1 says:
+
+> All module-names either beginning with an identifier consisting of std followed by zero
+  or more digits or containing a reserved identifier ([lex.name]) are reserved and shall not
+  be specified in a module-declaration; no diagnostic is required. If any identifier in a reserved
+  module-name is a reserved identifier, the module name is reserved for use by C++ implementations;
+  otherwise it is reserved for future standardization.
+
+So all of the following name is not valid by default:
+
+.. code-block:: text
+
+    std
+    std1
+    std.foo
+    __test
+    // and so on ...
+
+If you still want to use the reserved module names for any reason, currently you can add a special line marker
+in the front of the module declaration like:
+
+.. code-block:: c++
+
+  # __LINE_NUMBER__ __FILE__ 1 3
+  export moudle std;
+
+Here the `__LINE_NUMBER__` is the actual line number of the corresponding line. The `__FILE__` means the filename
+of the translation unit. The `1` means the following is a new file. And `3` means this is a system header/file so
+the certain warnings should be suppressed. You could find more details at:
+https://gcc.gnu.org/onlinedocs/gcc-3.0.2/cpp_9.html.
+
 How to specify the dependent BMIs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

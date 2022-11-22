@@ -59,6 +59,7 @@ class VOP3Interp<string OpName, VOPProfile P, list<dag> pattern = []> :
 }
 
 def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
+  let Src0Mod = FPVRegInputMods;
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    Attr:$attr, AttrChan:$attrchan,
                    clampmod0:$clamp, omod0:$omod);
@@ -107,6 +108,9 @@ class VOP3_INTERP16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
 
   let HasOMod = !ne(DstVT.Value, f16.Value);
   let HasHigh = 1;
+
+  let Src0Mod = FPVRegInputMods;
+  let Src2Mod = FPVRegInputMods;
 
   let Outs64 = (outs DstRC.RegClass:$vdst);
   let Ins64 = getInterp16Ins<HasSrc2, HasOMod, Src0Mod, Src2Mod>.ret;
@@ -258,7 +262,7 @@ let SchedRW = [Write64Bit] in {
 } // End isReMaterializable = 1
 
 def : GCNPat<
-  (i32 (getDivergentFrag<sext>.ret i16:$src)),
+  (i32 (DivergentUnaryFrag<sext> i16:$src)),
   (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10))))
 >;
 
@@ -364,7 +368,7 @@ def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32
 } // End SubtargetPredicate = Has16BitInsts, isCommutable = 1
 
 def : GCNPat<
-  (i64 (getDivergentFrag<sext>.ret i16:$src)),
+  (i64 (DivergentUnaryFrag<sext> i16:$src)),
     (REG_SEQUENCE VReg_64,
       (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10)))), sub0,
       (i32 (COPY_TO_REGCLASS
@@ -611,7 +615,7 @@ def : GCNPat<
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;
 def : VOPBinOpClampPat<ssubsat, V_SUB_I32_e64, i32>;
 
-def : GCNPat<(getDivergentFrag<or>.ret (or_oneuse i64:$src0, i64:$src1), i64:$src2),
+def : GCNPat<(DivergentBinFrag<or> (or_oneuse i64:$src0, i64:$src1), i64:$src2),
              (REG_SEQUENCE VReg_64,
                (V_OR3_B32_e64 (i32 (EXTRACT_SUBREG $src0, sub0)),
                               (i32 (EXTRACT_SUBREG $src1, sub0)),

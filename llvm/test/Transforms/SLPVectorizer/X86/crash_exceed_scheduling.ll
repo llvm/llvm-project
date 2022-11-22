@@ -5,19 +5,19 @@ define void @exceed(double %0, double %1) {
 ; CHECK-LABEL: @exceed(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[TMP1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = fdiv fast <2 x double> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
-; CHECK-NEXT:    [[IX:%.*]] = fmul double [[TMP7]], undef
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[TMP1:%.*]], i32 0
+; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = fdiv fast <2 x double> [[SHUFFLE]], [[SHUFFLE1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; CHECK-NEXT:    [[IX:%.*]] = fmul double [[TMP5]], undef
 ; CHECK-NEXT:    [[IXX0:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX1:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX2:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX3:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX4:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX5:%.*]] = fsub double undef, undef
-; CHECK-NEXT:    [[IX1:%.*]] = fmul double [[TMP7]], undef
+; CHECK-NEXT:    [[IX1:%.*]] = fmul double [[TMP5]], undef
 ; CHECK-NEXT:    [[IXX10:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX11:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX12:%.*]] = fsub double undef, undef
@@ -27,16 +27,16 @@ define void @exceed(double %0, double %1) {
 ; CHECK-NEXT:    [[IXX20:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX21:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[IXX22:%.*]] = fsub double undef, undef
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i32 0
-; CHECK-NEXT:    [[IX2:%.*]] = fmul double [[TMP8]], [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <2 x double> [[TMP11]], [[TMP9]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
+; CHECK-NEXT:    [[IX2:%.*]] = fmul double [[TMP6]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[SHUFFLE]], [[SHUFFLE1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast <2 x double> [[TMP9]], [[TMP7]]
 ; CHECK-NEXT:    [[IXX101:%.*]] = fsub double undef, undef
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x double> [[TMP13]], <2 x double> [[TMP6]], <2 x i32> <i32 3, i32 1>
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <2 x double> [[TMP14]], undef
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> [[TMP4]], <2 x i32> <i32 3, i32 1>
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul fast <2 x double> [[TMP12]], undef
 ; CHECK-NEXT:    switch i32 undef, label [[BB1:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[BB2:%.*]]
 ; CHECK-NEXT:    ]
@@ -45,7 +45,7 @@ define void @exceed(double %0, double %1) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[LABEL]]
 ; CHECK:       label:
-; CHECK-NEXT:    [[TMP16:%.*]] = phi <2 x double> [ [[TMP12]], [[BB1]] ], [ [[TMP15]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x double> [ [[TMP10]], [[BB1]] ], [ [[TMP13]], [[BB2]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

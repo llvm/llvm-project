@@ -865,6 +865,35 @@ void Instruction::applyMergedLocation(const DILocation *LocA,
   setDebugLoc(DILocation::getMergedLocation(LocA, LocB));
 }
 
+void Instruction::mergeDIAssignID(
+    ArrayRef<const Instruction *> SourceInstructions) {
+  // Replace all uses (and attachments) of all the DIAssignIDs
+  // on SourceInstructions with a single merged value.
+  assert(getFunction() && "Uninserted instruction merged");
+  // Collect up the DIAssignID tags.
+  SmallVector<DIAssignID *, 4> IDs;
+  for (const Instruction *I : SourceInstructions) {
+    if (auto *MD = I->getMetadata(LLVMContext::MD_DIAssignID))
+      IDs.push_back(cast<DIAssignID>(MD));
+    assert(getFunction() == I->getFunction() &&
+           "Merging with instruction from another function not allowed");
+  }
+
+  // Add this instruction's DIAssignID too, if it has one.
+  if (auto *MD = getMetadata(LLVMContext::MD_DIAssignID))
+    IDs.push_back(cast<DIAssignID>(MD));
+
+  if (IDs.empty())
+    return; // No DIAssignID tags to process.
+
+  DIAssignID *MergeID = IDs[0];
+  for (auto It = std::next(IDs.begin()), End = IDs.end(); It != End; ++It) {
+    if (*It != MergeID)
+      at::RAUW(*It, MergeID);
+  }
+  setMetadata(LLVMContext::MD_DIAssignID, MergeID);
+}
+
 void Instruction::updateLocationAfterHoist() { dropLocation(); }
 
 void Instruction::dropLocation() {
@@ -1942,10 +1971,9 @@ void AssignmentTrackingPass::runOnFunction(Function &F) {
       // Assert that the alloca that DDI uses is now linked to a dbg.assign
       // describing the same variable (i.e. check that this dbg.declare
       // has been replaced by a dbg.assign).
-      assert(std::find_if(Markers.begin(), Markers.end(),
-                          [DDI](DbgAssignIntrinsic *DAI) {
-                            return DebugVariable(DAI) == DebugVariable(DDI);
-                          }) != Markers.end());
+      assert(llvm::any_of(Markers, [DDI](DbgAssignIntrinsic *DAI) {
+        return DebugVariable(DAI) == DebugVariable(DDI);
+      }));
       // Delete DDI because the variable location is now tracked using
       // assignment tracking.
       DDI->eraseFromParent();

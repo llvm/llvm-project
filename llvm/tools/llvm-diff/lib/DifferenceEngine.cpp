@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -119,13 +120,98 @@ class FunctionDifferenceEngine {
   const Value *SavedLHS;
   const Value *SavedRHS;
 
-  /// The current mapping from old local values to new local values.
+  // The current mapping from old local values to new local values.
   DenseMap<const Value *, const Value *> Values;
 
-  /// The current mapping from old blocks to new blocks.
+  // The current mapping from old blocks to new blocks.
   DenseMap<const BasicBlock *, const BasicBlock *> Blocks;
 
+  // The tentative mapping from old local values while comparing a pair of
+  // basic blocks. Once the pair has been processed, the tentative mapping is
+  // committed to the Values map.
   DenseSet<std::pair<const Value *, const Value *>> TentativeValues;
+
+  // Equivalence Assumptions
+  //
+  // For basic blocks in loops, some values in phi nodes may depend on
+  // values from not yet processed basic blocks in the loop. When encountering
+  // such values, we optimistically asssume their equivalence and store this
+  // assumption in a BlockDiffCandidate for the pair of compared BBs.
+  //
+  // Once we have diffed all BBs, for every BlockDiffCandidate, we check all
+  // stored assumptions using the Values map that stores proven equivalences
+  // between the old and new values, and report a diff if an assumption cannot
+  // be proven to be true.
+  //
+  // Note that after having made an assumption, all further determined
+  // equivalences implicitly depend on that assumption. These will not be
+  // reverted or reported if the assumption proves to be false, because these
+  // are considered indirect diffs caused by earlier direct diffs.
+  //
+  // We aim to avoid false negatives in llvm-diff, that is, ensure that
+  // whenever no diff is reported, the functions are indeed equal. If
+  // assumptions were made, this is not entirely clear, because in principle we
+  // could end up with a circular proof where the proof of equivalence of two
+  // nodes is depending on the assumption of their equivalence.
+  //
+  // To see that assumptions do not add false negatives, note that if we do not
+  // report a diff, this means that there is an equivalence mapping between old
+  // and new values that is consistent with all assumptions made. The circular
+  // dependency that exists on an IR value level does not exist at run time,
+  // because the values selected by the phi nodes must always already have been
+  // computed. Hence, we can prove equivalence of the old and new functions by
+  // considering step-wise parallel execution, and incrementally proving
+  // equivalence of every new computed value. Another way to think about it is
+  // to imagine cloning the loop BBs for every iteration, turning the loops
+  // into (possibly infinite) DAGs, and proving equivalence by induction on the
+  // iteration, using the computed value mapping.
+
+  // The class BlockDiffCandidate stores pairs which either have already been
+  // proven to differ, or pairs whose equivalence depends on assumptions to be
+  // verified later.
+  struct BlockDiffCandidate {
+    const BasicBlock *LBB;
+    const BasicBlock *RBB;
+    // Maps old values to assumed-to-be-equivalent new values
+    SmallDenseMap<const Value *, const Value *> EquivalenceAssumptions;
+    // If set, we already know the blocks differ.
+    bool KnownToDiffer;
+  };
+
+  // List of block diff candidates in the order found by processing.
+  // We generate reports in this order.
+  // For every LBB, there may only be one corresponding RBB.
+  SmallVector<BlockDiffCandidate> BlockDiffCandidates;
+  // Maps LBB to the index of its BlockDiffCandidate, if existing.
+  DenseMap<const BasicBlock *, uint64_t> BlockDiffCandidateIndices;
+
+  // Note: Every LBB must always be queried together with the same RBB.
+  // The returned reference is not permanently valid and should not be stored.
+  BlockDiffCandidate &getOrCreateBlockDiffCandidate(const BasicBlock *LBB,
+                                                    const BasicBlock *RBB) {
+    auto It = BlockDiffCandidateIndices.find(LBB);
+    // Check if LBB already has a diff candidate
+    if (It == BlockDiffCandidateIndices.end()) {
+      // Add new one
+      BlockDiffCandidateIndices[LBB] = BlockDiffCandidates.size();
+      BlockDiffCandidates.push_back(
+          {LBB, RBB, SmallDenseMap<const Value *, const Value *>(), false});
+      return BlockDiffCandidates.back();
+    }
+    // Use existing one
+    BlockDiffCandidate &Result = BlockDiffCandidates[It->second];
+    assert(Result.RBB == RBB && "Inconsistent basic block pairing!");
+    return Result;
+  }
+
+  // Optionally passed to equivalence checker functions, so these can add
+  // assumptions in BlockDiffCandidates. Its presence controls whether
+  // assumptions are generated.
+  struct AssumptionContext {
+    // The two basic blocks that need the two compared values to be equivalent.
+    const BasicBlock *LBB;
+    const BasicBlock *RBB;
+  };
 
   unsigned getUnprocPredCount(const BasicBlock *Block) const {
     unsigned Count = 0;
@@ -180,7 +266,7 @@ class FunctionDifferenceEngine {
   void unify(const Instruction *L, const Instruction *R) {
     DifferenceEngine::Context C(Engine, L, R);
 
-    bool Result = diff(L, R, true, true);
+    bool Result = diff(L, R, true, true, true);
     assert(!Result && "structural differences second time around?");
     (void) Result;
     if (!L->use_empty())
@@ -191,6 +277,26 @@ class FunctionDifferenceEngine {
     while (!Queue.empty()) {
       BlockPair Pair = Queue.remove_min();
       diff(Pair.first, Pair.second);
+    }
+  }
+
+  void checkAndReportDiffCandidates() {
+    for (BlockDiffCandidate &BDC : BlockDiffCandidates) {
+
+      // Check assumptions
+      for (const auto &[L, R] : BDC.EquivalenceAssumptions) {
+        auto It = Values.find(L);
+        if (It == Values.end() || It->second != R) {
+          BDC.KnownToDiffer = true;
+          break;
+        }
+      }
+
+      // Run block diff if the BBs differ
+      if (BDC.KnownToDiffer) {
+        DifferenceEngine::Context C(Engine, BDC.LBB, BDC.RBB);
+        runBlockDiff(BDC.LBB->begin(), BDC.RBB->begin());
+      }
     }
   }
 
@@ -206,9 +312,14 @@ class FunctionDifferenceEngine {
 
       // If the instructions differ, start the more sophisticated diff
       // algorithm at the start of the block.
-      if (diff(LeftI, RightI, false, false)) {
+      if (diff(LeftI, RightI, false, false, true)) {
         TentativeValues.clear();
-        return runBlockDiff(L->begin(), R->begin());
+        // Register (L, R) as diffing pair. Note that we could directly emit a
+        // block diff here, but this way we ensure all diffs are emitted in one
+        // consistent order, independent of whether the diffs were detected
+        // immediately or via invalid assumptions.
+        getOrCreateBlockDiffCandidate(L, R).KnownToDiffer = true;
+        return;
       }
 
       // Otherwise, tentatively unify them.
@@ -232,7 +343,9 @@ class FunctionDifferenceEngine {
 
   bool diffCallSites(const CallBase &L, const CallBase &R, bool Complain) {
     // FIXME: call attributes
-    if (!equivalentAsOperands(L.getCalledOperand(), R.getCalledOperand())) {
+    AssumptionContext AC = {L.getParent(), R.getParent()};
+    if (!equivalentAsOperands(L.getCalledOperand(), R.getCalledOperand(),
+                              &AC)) {
       if (Complain) Engine.log("called functions differ");
       return true;
     }
@@ -241,7 +354,7 @@ class FunctionDifferenceEngine {
       return true;
     }
     for (unsigned I = 0, E = L.arg_size(); I != E; ++I)
-      if (!equivalentAsOperands(L.getArgOperand(I), R.getArgOperand(I))) {
+      if (!equivalentAsOperands(L.getArgOperand(I), R.getArgOperand(I), &AC)) {
         if (Complain)
           Engine.logf("arguments %l and %r differ")
               << L.getArgOperand(I) << R.getArgOperand(I);
@@ -250,9 +363,15 @@ class FunctionDifferenceEngine {
     return false;
   }
 
+  // If AllowAssumptions is enabled, whenever we encounter a pair of values
+  // that we cannot prove to be equivalent, we assume equivalence and store that
+  // assumption to be checked later in BlockDiffCandidates.
   bool diff(const Instruction *L, const Instruction *R, bool Complain,
-            bool TryUnify) {
+            bool TryUnify, bool AllowAssumptions) {
     // FIXME: metadata (if Complain is set)
+    AssumptionContext ACValue = {L->getParent(), R->getParent()};
+    // nullptr AssumptionContext disables assumption generation.
+    const AssumptionContext *AC = AllowAssumptions ? &ACValue : nullptr;
 
     // Different opcodes always imply different operations.
     if (L->getOpcode() != R->getOpcode()) {
@@ -291,7 +410,7 @@ class FunctionDifferenceEngine {
           tryUnify(LI.getIncomingBlock(I), RI.getIncomingBlock(I));
 
         if (!equivalentAsOperands(LI.getIncomingValue(I),
-                                  RI.getIncomingValue(I))) {
+                                  RI.getIncomingValue(I), AC)) {
           if (Complain)
             Engine.log("PHI node incoming values differ");
           return true;
@@ -343,7 +462,7 @@ class FunctionDifferenceEngine {
       }
 
       if (LI->isConditional()) {
-        if (!equivalentAsOperands(LI->getCondition(), RI->getCondition())) {
+        if (!equivalentAsOperands(LI->getCondition(), RI->getCondition(), AC)) {
           if (Complain) Engine.log("branch conditions differ");
           return true;
         }
@@ -360,7 +479,7 @@ class FunctionDifferenceEngine {
         return true;
       }
 
-      if (!equivalentAsOperands(LI->getAddress(), RI->getAddress())) {
+      if (!equivalentAsOperands(LI->getAddress(), RI->getAddress(), AC)) {
         if (Complain) Engine.log("indirectbr addresses differ");
         return true;
       }
@@ -375,7 +494,7 @@ class FunctionDifferenceEngine {
     } else if (isa<SwitchInst>(L)) {
       const SwitchInst *LI = cast<SwitchInst>(L);
       const SwitchInst *RI = cast<SwitchInst>(R);
-      if (!equivalentAsOperands(LI->getCondition(), RI->getCondition())) {
+      if (!equivalentAsOperands(LI->getCondition(), RI->getCondition(), AC)) {
         if (Complain) Engine.log("switch conditions differ");
         return true;
       }
@@ -421,7 +540,7 @@ class FunctionDifferenceEngine {
 
     for (unsigned I = 0, E = L->getNumOperands(); I != E; ++I) {
       Value *LO = L->getOperand(I), *RO = R->getOperand(I);
-      if (!equivalentAsOperands(LO, RO)) {
+      if (!equivalentAsOperands(LO, RO, AC)) {
         if (Complain) Engine.logf("operands %l and %r differ") << LO << RO;
         return true;
       }
@@ -431,7 +550,8 @@ class FunctionDifferenceEngine {
   }
 
 public:
-  bool equivalentAsOperands(const Constant *L, const Constant *R) {
+  bool equivalentAsOperands(const Constant *L, const Constant *R,
+                            const AssumptionContext *AC) {
     // Use equality as a preliminary filter.
     if (L == R)
       return true;
@@ -446,8 +566,8 @@ public:
 
     // Compare constant expressions structurally.
     if (isa<ConstantExpr>(L))
-      return equivalentAsOperands(cast<ConstantExpr>(L),
-                                  cast<ConstantExpr>(R));
+      return equivalentAsOperands(cast<ConstantExpr>(L), cast<ConstantExpr>(R),
+                                  AC);
 
     // Constants of the "same type" don't always actually have the same
     // type; I don't know why.  Just white-list them.
@@ -467,7 +587,7 @@ public:
       if (CVL->getType()->getNumElements() != CVR->getType()->getNumElements())
         return false;
       for (unsigned i = 0; i < CVL->getType()->getNumElements(); i++) {
-        if (!equivalentAsOperands(CVL->getOperand(i), CVR->getOperand(i)))
+        if (!equivalentAsOperands(CVL->getOperand(i), CVR->getOperand(i), AC))
           return false;
       }
       return true;
@@ -484,7 +604,7 @@ public:
 
       for (unsigned I = 0; I < CAL->getType()->getNumElements(); ++I) {
         if (!equivalentAsOperands(CAL->getAggregateElement(I),
-                                  CAR->getAggregateElement(I)))
+                                  CAR->getAggregateElement(I), AC))
           return false;
       }
 
@@ -520,7 +640,7 @@ public:
           continue;
         }
 
-        if (!equivalentAsOperands(LAgg, RAgg)) {
+        if (!equivalentAsOperands(LAgg, RAgg, AC)) {
           return false;
         }
       }
@@ -531,7 +651,8 @@ public:
     return false;
   }
 
-  bool equivalentAsOperands(const ConstantExpr *L, const ConstantExpr *R) {
+  bool equivalentAsOperands(const ConstantExpr *L, const ConstantExpr *R,
+                            const AssumptionContext *AC) {
     if (L == R)
       return true;
 
@@ -570,14 +691,25 @@ public:
         continue;
       }
 
-      if (!equivalentAsOperands(LOp, ROp))
+      if (!equivalentAsOperands(LOp, ROp, AC))
         return false;
     }
 
     return true;
   }
 
-  bool equivalentAsOperands(const Value *L, const Value *R) {
+  // There are cases where we cannot determine whether two values are
+  // equivalent, because it depends on not yet processed basic blocks -- see the
+  // documentation on assumptions.
+  //
+  // AC is the context in which we are currently performing a diff.
+  // When we encounter a pair of values for which we can neither prove
+  // equivalence nor the opposite, we do the following:
+  //  * If AC is nullptr, we treat the pair as non-equivalent.
+  //  * If AC is set, we add an assumption for the basic blocks given by AC,
+  //    and treat the pair as equivalent. The assumption is checked later.
+  bool equivalentAsOperands(const Value *L, const Value *R,
+                            const AssumptionContext *AC) {
     // Fall out if the values have different kind.
     // This possibly shouldn't take priority over oracles.
     if (L->getValueID() != R->getValueID())
@@ -587,10 +719,38 @@ public:
     //                  InlineAsm, MDNode, MDString, PseudoSourceValue
 
     if (isa<Constant>(L))
-      return equivalentAsOperands(cast<Constant>(L), cast<Constant>(R));
+      return equivalentAsOperands(cast<Constant>(L), cast<Constant>(R), AC);
 
-    if (isa<Instruction>(L))
-      return Values[L] == R || TentativeValues.count(std::make_pair(L, R));
+    if (isa<Instruction>(L)) {
+      auto It = Values.find(L);
+      if (It != Values.end())
+        return It->second == R;
+
+      if (TentativeValues.count(std::make_pair(L, R)))
+        return true;
+
+      // L and R might be equivalent, this could depend on not yet processed
+      // basic blocks, so we cannot decide here.
+      if (AC) {
+        // Add an assumption, unless there is a conflict with an existing one
+        BlockDiffCandidate &BDC =
+            getOrCreateBlockDiffCandidate(AC->LBB, AC->RBB);
+        auto InsertionResult = BDC.EquivalenceAssumptions.insert({L, R});
+        if (!InsertionResult.second && InsertionResult.first->second != R) {
+          // We already have a conflicting equivalence assumption for L, so at
+          // least one must be wrong, and we know that there is a diff.
+          BDC.KnownToDiffer = true;
+          BDC.EquivalenceAssumptions.clear();
+          return false;
+        }
+        // Optimistically assume equivalence, and check later once all BBs
+        // have been processed.
+        return true;
+      }
+
+      // Assumptions disabled, so pessimistically assume non-equivalence.
+      return false;
+    }
 
     if (isa<Argument>(L))
       return Values[L] == R;
@@ -613,6 +773,8 @@ public:
         Queue(QueueSorter(*this_())) {}
 
   void diff(const Function *L, const Function *R) {
+    assert(Values.empty() && "Multiple diffs per engine are not supported!");
+
     if (L->arg_size() != R->arg_size())
       Engine.log("different argument counts");
 
@@ -624,6 +786,7 @@ public:
 
     tryUnify(&*L->begin(), &*R->begin());
     processQueue();
+    checkAndReportDiffCandidates();
   }
 };
 
@@ -636,7 +799,7 @@ struct DiffEntry {
 
 bool FunctionDifferenceEngine::matchForBlockDiff(const Instruction *L,
                                                  const Instruction *R) {
-  return !diff(L, R, false, false);
+  return !diff(L, R, false, false, false);
 }
 
 void FunctionDifferenceEngine::runBlockDiff(BasicBlock::const_iterator LStart,
@@ -764,7 +927,7 @@ void FunctionDifferenceEngine::runBlockDiff(BasicBlock::const_iterator LStart,
     const CallInst *LCall = cast<CallInst>(&*I);
     const InvokeInst *RInvoke = cast<InvokeInst>(RTerm);
     if (!equivalentAsOperands(LCall->getCalledOperand(),
-                              RInvoke->getCalledOperand()))
+                              RInvoke->getCalledOperand(), nullptr))
       return;
     if (!LCall->use_empty())
       Values[LCall] = RInvoke;
@@ -778,7 +941,7 @@ void FunctionDifferenceEngine::runBlockDiff(BasicBlock::const_iterator LStart,
     const CallInst *RCall = cast<CallInst>(I);
     const InvokeInst *LInvoke = cast<InvokeInst>(LTerm);
     if (!equivalentAsOperands(LInvoke->getCalledOperand(),
-                              RCall->getCalledOperand()))
+                              RCall->getCalledOperand(), nullptr))
       return;
     if (!LInvoke->use_empty())
       Values[LInvoke] = RCall;
@@ -867,7 +1030,8 @@ bool DifferenceEngine::equivalentAsOperands(const GlobalValue *L,
     if (GVL->hasLocalLinkage() && GVL->hasUniqueInitializer() &&
         GVR->hasLocalLinkage() && GVR->hasUniqueInitializer())
       return FunctionDifferenceEngine(*this, GVL, GVR)
-          .equivalentAsOperands(GVL->getInitializer(), GVR->getInitializer());
+          .equivalentAsOperands(GVL->getInitializer(), GVR->getInitializer(),
+                                nullptr);
   }
 
   return L->getName() == R->getName();

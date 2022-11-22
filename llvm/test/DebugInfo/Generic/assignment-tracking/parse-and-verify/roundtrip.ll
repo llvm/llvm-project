@@ -1,8 +1,6 @@
-; RUN: opt %s -verify -experimental-assignment-tracking   \
-; RUN: | opt -verify -S -experimental-assignment-tracking \
+; RUN: opt -opaque-pointers=0 %s -verify -experimental-assignment-tracking   \
+; RUN: | opt -opaque-pointers=0 -verify -S -experimental-assignment-tracking \
 ; RUN: | FileCheck %s
-
-; XFAIL: *
 
 ;; Roundtrip test (text -> bitcode -> text) for DIAssignID metadata and
 ;; llvm.dbg.assign intrinsics.

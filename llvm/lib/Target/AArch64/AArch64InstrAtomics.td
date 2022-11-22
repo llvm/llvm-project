@@ -49,8 +49,7 @@ class seq_cst_load<PatFrags base>
   let IsAtomicOrderingSequentiallyConsistent = 1;
 }
 
-// RCPC extension, currently opt-in under a separate feature.
-let Predicates = [HasLDAPR] in {
+let Predicates = [HasRCPC] in {
   // v8.3 Release Consistent Processor Consistent support, optional in v8.2.
   // 8-bit loads
   def : Pat<(acquiring_load<atomic_load_8> GPR64sp:$ptr), (LDAPRB GPR64sp:$ptr)>;

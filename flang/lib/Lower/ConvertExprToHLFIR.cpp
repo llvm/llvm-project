@@ -32,44 +32,50 @@ public:
   using CharacterDesignators =
       decltype(Fortran::evaluate::Designator<Fortran::evaluate::Type<
                    Fortran::evaluate::TypeCategory::Character, 1>>::u);
-  hlfir::FortranEntity gen(const CharacterDesignators &designatorVariant) {
+  hlfir::EntityWithAttributes
+  gen(const CharacterDesignators &designatorVariant) {
     return std::visit([&](const auto &x) { return gen(x); }, designatorVariant);
   }
   // Character designators variant contains complex parts
   using RealDesignators =
       decltype(Fortran::evaluate::Designator<Fortran::evaluate::Type<
                    Fortran::evaluate::TypeCategory::Real, 4>>::u);
-  hlfir::FortranEntity gen(const RealDesignators &designatorVariant) {
+  hlfir::EntityWithAttributes gen(const RealDesignators &designatorVariant) {
     return std::visit([&](const auto &x) { return gen(x); }, designatorVariant);
   }
   // All other designators are similar
   using OtherDesignators =
       decltype(Fortran::evaluate::Designator<Fortran::evaluate::Type<
                    Fortran::evaluate::TypeCategory::Integer, 4>>::u);
-  hlfir::FortranEntity gen(const OtherDesignators &designatorVariant) {
+  hlfir::EntityWithAttributes gen(const OtherDesignators &designatorVariant) {
     return std::visit([&](const auto &x) { return gen(x); }, designatorVariant);
   }
 
 private:
-  hlfir::FortranEntity gen(const Fortran::evaluate::SymbolRef &symbolRef) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::SymbolRef &symbolRef) {
     if (llvm::Optional<fir::FortranVariableOpInterface> varDef =
             getSymMap().lookupVariableDefinition(symbolRef))
       return *varDef;
     TODO(getLoc(), "lowering symbol to HLFIR");
   }
-  hlfir::FortranEntity gen(const Fortran::evaluate::Component &component) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::Component &component) {
     TODO(getLoc(), "lowering component to HLFIR");
   }
-  hlfir::FortranEntity gen(const Fortran::evaluate::ArrayRef &arrayRef) {
+  hlfir::EntityWithAttributes gen(const Fortran::evaluate::ArrayRef &arrayRef) {
     TODO(getLoc(), "lowering ArrayRef to HLFIR");
   }
-  hlfir::FortranEntity gen(const Fortran::evaluate::CoarrayRef &coarrayRef) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::CoarrayRef &coarrayRef) {
     TODO(getLoc(), "lowering CoarrayRef to HLFIR");
   }
-  hlfir::FortranEntity gen(const Fortran::evaluate::ComplexPart &complexPart) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::ComplexPart &complexPart) {
     TODO(getLoc(), "lowering complex part to HLFIR");
   }
-  hlfir::FortranEntity gen(const Fortran::evaluate::Substring &substring) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::Substring &substring) {
     TODO(getLoc(), "lowering substrings to HLFIR");
   }
 
@@ -94,38 +100,42 @@ public:
       : converter{converter}, symMap{symMap}, stmtCtx{stmtCtx}, loc{loc} {}
 
   template <typename T>
-  hlfir::FortranEntity gen(const Fortran::evaluate::Expr<T> &expr) {
+  hlfir::EntityWithAttributes gen(const Fortran::evaluate::Expr<T> &expr) {
     return std::visit([&](const auto &x) { return gen(x); }, expr.u);
   }
 
 private:
-  hlfir::FortranEntity gen(const Fortran::evaluate::BOZLiteralConstant &expr) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::BOZLiteralConstant &expr) {
     fir::emitFatalError(loc, "BOZ literal must be replaced by semantics");
   }
-  hlfir::FortranEntity gen(const Fortran::evaluate::NullPointer &expr) {
+  hlfir::EntityWithAttributes gen(const Fortran::evaluate::NullPointer &expr) {
     TODO(getLoc(), "lowering NullPointer to HLFIR");
   }
-  hlfir::FortranEntity gen(const Fortran::evaluate::ProcedureDesignator &expr) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::ProcedureDesignator &expr) {
     TODO(getLoc(), "lowering ProcDes to HLFIR");
   }
-  hlfir::FortranEntity gen(const Fortran::evaluate::ProcedureRef &expr) {
+  hlfir::EntityWithAttributes gen(const Fortran::evaluate::ProcedureRef &expr) {
     TODO(getLoc(), "lowering ProcRef to HLFIR");
   }
 
   template <typename T>
-  hlfir::FortranEntity gen(const Fortran::evaluate::Designator<T> &designator) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::Designator<T> &designator) {
     return HlfirDesignatorBuilder(getLoc(), getConverter(), getSymMap(),
                                   getStmtCtx())
         .gen(designator.u);
   }
 
   template <typename T>
-  hlfir::FortranEntity gen(const Fortran::evaluate::FunctionRef<T> &expr) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::FunctionRef<T> &expr) {
     TODO(getLoc(), "lowering funcRef to HLFIR");
   }
 
   template <typename T>
-  hlfir::FortranEntity gen(const Fortran::evaluate::Constant<T> &expr) {
+  hlfir::EntityWithAttributes gen(const Fortran::evaluate::Constant<T> &expr) {
     mlir::Location loc = getLoc();
     if constexpr (std::is_same_v<T, Fortran::evaluate::SomeDerived>) {
       TODO(loc, "lowering derived type constant to HLFIR");
@@ -136,7 +146,7 @@ private:
               builder, loc, expr, /*outlineBigConstantInReadOnlyMemory=*/true);
       if (const auto *scalarBox = exv.getUnboxed())
         if (fir::isa_trivial(scalarBox->getType()))
-          return hlfir::FortranEntity(*scalarBox);
+          return hlfir::EntityWithAttributes(*scalarBox);
       if (auto addressOf = fir::getBase(exv).getDefiningOp<fir::AddrOfOp>()) {
         auto flags = fir::FortranVariableFlagsAttr::get(
             builder.getContext(), fir::FortranVariableFlagsEnum::parameter);
@@ -149,47 +159,52 @@ private:
   }
 
   template <typename T>
-  hlfir::FortranEntity gen(const Fortran::evaluate::ArrayConstructor<T> &expr) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::ArrayConstructor<T> &expr) {
     TODO(getLoc(), "lowering ArrayCtor to HLFIR");
   }
 
   template <Fortran::common::TypeCategory TC1, int KIND,
             Fortran::common::TypeCategory TC2>
-  hlfir::FortranEntity
+  hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>, TC2>
           &convert) {
     TODO(getLoc(), "lowering convert to HLFIR");
   }
 
   template <typename D, typename R, typename O>
-  hlfir::FortranEntity gen(const Fortran::evaluate::Operation<D, R, O> &op) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::Operation<D, R, O> &op) {
     TODO(getLoc(), "lowering unary op to HLFIR");
   }
 
   template <typename D, typename R, typename LO, typename RO>
-  hlfir::FortranEntity
+  hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Operation<D, R, LO, RO> &op) {
     TODO(getLoc(), "lowering binary op to HLFIR");
   }
 
-  hlfir::FortranEntity
+  hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &op) {
     return std::visit([&](const auto &x) { return gen(x); }, op.u);
   }
 
-  hlfir::FortranEntity gen(const Fortran::evaluate::TypeParamInquiry &) {
+  hlfir::EntityWithAttributes gen(const Fortran::evaluate::TypeParamInquiry &) {
     TODO(getLoc(), "lowering type parameter inquiry to HLFIR");
   }
 
-  hlfir::FortranEntity gen(const Fortran::evaluate::DescriptorInquiry &desc) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::DescriptorInquiry &desc) {
     TODO(getLoc(), "lowering descriptor inquiry to HLFIR");
   }
 
-  hlfir::FortranEntity gen(const Fortran::evaluate::ImpliedDoIndex &var) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::ImpliedDoIndex &var) {
     TODO(getLoc(), "lowering implied do index to HLFIR");
   }
 
-  hlfir::FortranEntity gen(const Fortran::evaluate::StructureConstructor &var) {
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::StructureConstructor &var) {
     TODO(getLoc(), "lowering structure constructor to HLFIR");
   }
 
@@ -207,7 +222,7 @@ private:
 
 } // namespace
 
-hlfir::FortranEntity Fortran::lower::convertExprToHLFIR(
+hlfir::EntityWithAttributes Fortran::lower::convertExprToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
     Fortran::lower::StatementContext &stmtCtx) {

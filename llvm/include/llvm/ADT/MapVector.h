@@ -39,7 +39,7 @@ class MapVector {
   VectorType Vector;
 
   static_assert(
-      std::is_integral<typename MapType::mapped_type>::value,
+      std::is_integral_v<typename MapType::mapped_type>,
       "The mapped_type of the specified Map must be an integral type");
 
 public:

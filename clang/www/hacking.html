@@ -30,6 +30,7 @@
         <li><a href="#testingNonWindows">Testing on Unix-like Systems</a></li>
         <li><a href="#testingWindows">Testing using Visual Studio on Windows</a></li>
         <li><a href="#testingCommands">Testing on the Command Line</a></li>
+        <li><a href="#testingLibc++">Testing changes affecting libc++</a></li>
       </ul>
       </li>
       <li><a href="#patches">Creating Patch Files</a></li>
@@ -270,6 +271,41 @@ Testing Time: 81.52s
 </pre>
 
   <p>The statistic, "Failed" (not shown if all tests pass), is the important one.</p>
+
+  <!--=====================================================================-->
+  <h3 id="testingLibc++">Testing changes affecting libc++</h3>
+  <!--=====================================================================-->
+
+  <p>Some changes in Clang affect <a href="https://libcxx.llvm.org">libc++</a>,
+  for example:</p>
+  <ul>
+      <li>Changing the output of Clang's diagnostics.</li>
+      <li>Changing compiler builtins, especially the builtins used for type traits
+      or replacements of library functions like <tt>std::move</tt> or
+      <tt>std::forward</tt>.</li>
+  </ul>
+
+  <p>After adjusting libc++ to work with the changes, the next revision will be
+  tested by libc++'s
+  <a href="https://buildkite.com/llvm-project/libcxx-ci">pre-commit CI</a>.
+
+  <p>For most configurations, the pre-commit CI uses a recent
+  <a href="https://apt.llvm.org/">nightly build</a> of Clang from LLVM's main
+  branch. These configurations do <em>not</em> use the Clang changes in the
+  patch. They only use the libc++ changes.</p>
+
+  <p>The &quot;Bootstrapping build&quot; builds Clang and uses it to build and
+  test libc++. This build <em>does</em> use the Clang changes in the patch.</p>
+
+  <p>Libc++ supports multiple versions of Clang. Therefore when a patch changes
+  the diagnostics it might be required to use a regex in the
+  &quot;expected&quot; tests to make it pass the CI.</p>
+
+  <p>Libc++ has more
+  <a href="https://libcxx.llvm.org/Contributing.html#pre-commit-ci">
+  documentation</a> about the pre-commit CI. For questions regarding
+  libc++, the best place to ask is the <tt>#libcxx</tt> channel on
+  <a href="https://discord.gg/jzUbyP26tQ">LLVM's Discord server</a>.</p>
 
   <!--=====================================================================-->
   <h2 id="patches">Creating Patch Files</h2>

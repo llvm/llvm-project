@@ -22,7 +22,7 @@ float spscalardiv(float a, float b) {
   // NORMAL: fdiv float
   // FAST: fdiv fast float
   // FINITE: fdiv nnan ninf float
-  // UNSAFE: fdiv reassoc nsz arcp afn float
+  // UNSAFE: fdiv reassoc nsz arcp contract afn float
   // MAD: fdiv float
   // NOSIGNED: fdiv nsz float
   return a / b;

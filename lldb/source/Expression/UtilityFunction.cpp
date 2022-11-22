@@ -64,6 +64,13 @@ FunctionCaller *UtilityFunction::MakeFunctionCaller(
     error.SetErrorString("Can't make a function caller without a process.");
     return nullptr;
   }
+  // Since we might need to call allocate memory and maybe call code to make
+  // the caller, we need to be stopped.
+  if (process_sp->GetState() != lldb::eStateStopped) {
+    error.SetErrorString("Can't make a function caller while the process is " 
+                         "running");
+    return nullptr;
+  }
 
   Address impl_code_address;
   impl_code_address.SetOffset(StartAddress());

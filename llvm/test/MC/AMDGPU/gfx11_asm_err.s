@@ -101,3 +101,6 @@ v_fma_mixhi_f16_e64_dpp v5, v1, 0, v4 quad_perm:[3,2,1,0]
 
 v_fma_mixlo_f16_e64_dpp v5, v1, 1, v4 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_store_d16_hi_format_x v[1:2], off, s[12:15], s4 offset:4095 glc slc dlc tfe
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: TFE modifier has no meaning for store instructions

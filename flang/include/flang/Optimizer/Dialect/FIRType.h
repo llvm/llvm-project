@@ -335,6 +335,16 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
   return fir::BoxType::get(eleTy);
 }
 
+/// Is `t` an address to fir.box or class type?
+inline bool isBoxAddress(mlir::Type t) {
+  return fir::isa_ref_type(t) && fir::unwrapRefType(t).isa<fir::BaseBoxType>();
+}
+
+/// Is `t` a fir.box or class address or value type?
+inline bool isBoxAddressOrValue(mlir::Type t) {
+  return fir::unwrapRefType(t).isa<fir::BaseBoxType>();
+}
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H

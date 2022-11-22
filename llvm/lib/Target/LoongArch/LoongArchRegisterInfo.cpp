@@ -94,6 +94,13 @@ LoongArchRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (TFI->hasBP(MF))
     markSuperRegs(Reserved, LoongArchABI::getBPReg()); // bp
 
+  // FIXME: To avoid generating COPY instructions between CFRs, only use $fcc0.
+  // This is required to work around the fact that COPY instruction between CFRs
+  // is not provided in LoongArch.
+  if (MF.getSubtarget<LoongArchSubtarget>().hasBasicF())
+    for (size_t Reg = LoongArch::FCC1; Reg <= LoongArch::FCC7; ++Reg)
+      markSuperRegs(Reserved, Reg);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
@@ -124,6 +131,8 @@ void LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const LoongArchInstrInfo *TII = STI.getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   DebugLoc DL = MI.getDebugLoc();
+  bool IsLA64 = STI.is64Bit();
+  unsigned MIOpc = MI.getOpcode();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   Register FrameReg;
@@ -134,14 +143,14 @@ void LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   bool FrameRegIsKill = false;
 
   if (!isInt<12>(Offset.getFixed())) {
-    unsigned Addi = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
-    unsigned Add = STI.is64Bit() ? LoongArch::ADD_D : LoongArch::ADD_W;
+    unsigned Addi = IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+    unsigned Add = IsLA64 ? LoongArch::ADD_D : LoongArch::ADD_W;
 
     // The offset won't fit in an immediate, so use a scratch register instead.
     // Modify Offset and FrameReg appropriately.
     Register ScratchReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
     TII->movImm(MBB, II, DL, ScratchReg, Offset.getFixed());
-    if (MI.getOpcode() == Addi) {
+    if (MIOpc == Addi) {
       BuildMI(MBB, II, DL, TII->get(Add), MI.getOperand(0).getReg())
           .addReg(FrameReg)
           .addReg(ScratchReg, RegState::Kill);
@@ -154,6 +163,33 @@ void LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     Offset = StackOffset::getFixed(0);
     FrameReg = ScratchReg;
     FrameRegIsKill = true;
+  }
+
+  // Spill CFRs.
+  if (MIOpc == LoongArch::PseudoST_CFR) {
+    Register ScratchReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
+    BuildMI(MBB, II, DL, TII->get(LoongArch::MOVCF2GR), ScratchReg)
+        .add(MI.getOperand(0));
+    BuildMI(MBB, II, DL, TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
+        .addReg(ScratchReg, RegState::Kill)
+        .addReg(FrameReg)
+        .addImm(Offset.getFixed());
+    MI.eraseFromParent();
+    return;
+  }
+
+  // Reload CFRs.
+  if (MIOpc == LoongArch::PseudoLD_CFR) {
+    Register ScratchReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
+    BuildMI(MBB, II, DL, TII->get(IsLA64 ? LoongArch::LD_D : LoongArch::LD_W),
+            ScratchReg)
+        .addReg(FrameReg)
+        .addImm(Offset.getFixed());
+    BuildMI(MBB, II, DL, TII->get(LoongArch::MOVGR2CF))
+        .add(MI.getOperand(0))
+        .addReg(ScratchReg, RegState::Kill);
+    MI.eraseFromParent();
+    return;
   }
 
   MI.getOperand(FIOperandNum)

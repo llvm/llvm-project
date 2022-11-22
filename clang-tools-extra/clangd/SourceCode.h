@@ -325,11 +325,6 @@ bool isHeaderFile(llvm::StringRef FileName,
 /// Returns true if the given location is in a generated protobuf file.
 bool isProtoFile(SourceLocation Loc, const SourceManager &SourceMgr);
 
-/// This scans source code, and should not be called when using a preamble.
-/// Prefer to access the cache in IncludeStructure::isSelfContained if you can.
-bool isSelfContainedHeader(const FileEntry *FE, FileID ID,
-                           const SourceManager &SM, HeaderSearch &HeaderInfo);
-
 /// Returns true if Name is reserved, like _Foo or __Vector_base.
 inline bool isReservedName(llvm::StringRef Name) {
   // This doesn't catch all cases, but the most common.

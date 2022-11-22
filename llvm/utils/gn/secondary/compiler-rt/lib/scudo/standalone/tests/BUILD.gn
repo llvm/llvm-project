@@ -1,5 +1,5 @@
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 test_cflags = [ "-DSCUDO_DEBUG=1" ]
 

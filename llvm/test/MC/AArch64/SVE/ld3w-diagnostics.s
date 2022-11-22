@@ -86,7 +86,7 @@ ld3w { z0.s, z1.s, z2.d }, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld3w { z0.s, z1.s, z3.s }, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must have the same sequential stride
 // CHECK-NEXT: ld3w { z0.s, z1.s, z3.s }, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

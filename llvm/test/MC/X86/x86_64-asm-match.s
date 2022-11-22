@@ -1,6 +1,8 @@
 // REQUIRES: asserts
 // RUN: llvm-mc -triple x86_64-unknown-unknown  -debug-only=asm-matcher  %s 2>&1 | FileCheck %s
 
+; XFAIL: *
+
 // CHECK: AsmMatcher: found 4 encodings with mnemonic 'pshufb'
 // CHECK: Trying to match opcode MMX_PSHUFBrr
 // CHECK:   Matching formal operand class MCK_VR64 against actual operand at index 1 (Memory: ModeSize=64,BaseReg=rip,Scale=1,Disp=CPI1_0): Opcode result: multiple operand mismatches, ignoring this opcode

@@ -16,6 +16,16 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.mutex)
     DEPENDS
       .${LIBC_TARGET_OS}.mutex
   )
+
+  add_object_library(
+    fork_callbacks
+    SRCS
+      fork_callbacks.cpp
+    HDRS
+      fork_callbacks.h
+    DEPENDS
+      .mutex
+  )
 endif()
 
 add_header_library(

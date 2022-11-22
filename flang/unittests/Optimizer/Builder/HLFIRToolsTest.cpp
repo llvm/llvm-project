@@ -86,7 +86,7 @@ TEST_F(HLFIRToolsTest, testScalarRoundTrip) {
   mlir::Type scalarf32Type = builder.getRefType(f32Type);
   mlir::Value scalarf32Addr = builder.create<fir::UndefOp>(loc, scalarf32Type);
   fir::ExtendedValue scalarf32{scalarf32Addr};
-  hlfir::FortranEntity scalarf32Entity(createDeclare(scalarf32));
+  hlfir::EntityWithAttributes scalarf32Entity(createDeclare(scalarf32));
   auto [scalarf32Result, cleanup] =
       hlfir::translateToExtendedValue(loc, builder, scalarf32Entity);
   auto *unboxed = scalarf32Result.getUnboxed();
@@ -110,7 +110,7 @@ TEST_F(HLFIRToolsTest, testArrayRoundTrip) {
   mlir::Type arrayf32Type = builder.getRefType(seqf32Type);
   mlir::Value arrayf32Addr = builder.create<fir::UndefOp>(loc, arrayf32Type);
   fir::ArrayBoxValue arrayf32{arrayf32Addr, extents, lbounds};
-  hlfir::FortranEntity arrayf32Entity(createDeclare(arrayf32));
+  hlfir::EntityWithAttributes arrayf32Entity(createDeclare(arrayf32));
   auto [arrayf32Result, cleanup] =
       hlfir::translateToExtendedValue(loc, builder, arrayf32Entity);
   auto *res = arrayf32Result.getBoxOf<fir::ArrayBoxValue>();
@@ -138,7 +138,7 @@ TEST_F(HLFIRToolsTest, testScalarCharRoundTrip) {
   mlir::Value scalarCharAddr =
       builder.create<fir::UndefOp>(loc, scalarCharType);
   fir::CharBoxValue scalarChar{scalarCharAddr, len};
-  hlfir::FortranEntity scalarCharEntity(createDeclare(scalarChar));
+  hlfir::EntityWithAttributes scalarCharEntity(createDeclare(scalarChar));
   auto [scalarCharResult, cleanup] =
       hlfir::translateToExtendedValue(loc, builder, scalarCharEntity);
   auto *res = scalarCharResult.getBoxOf<fir::CharBoxValue>();
@@ -163,7 +163,7 @@ TEST_F(HLFIRToolsTest, testArrayCharRoundTrip) {
   mlir::Type arrayCharType = builder.getRefType(seqCharType);
   mlir::Value arrayCharAddr = builder.create<fir::UndefOp>(loc, arrayCharType);
   fir::CharArrayBoxValue arrayChar{arrayCharAddr, len, extents, lbounds};
-  hlfir::FortranEntity arrayCharEntity(createDeclare(arrayChar));
+  hlfir::EntityWithAttributes arrayCharEntity(createDeclare(arrayChar));
   auto [arrayCharResult, cleanup] =
       hlfir::translateToExtendedValue(loc, builder, arrayCharEntity);
   auto *res = arrayCharResult.getBoxOf<fir::CharArrayBoxValue>();
@@ -196,7 +196,7 @@ TEST_F(HLFIRToolsTest, testArrayCharBoxRoundTrip) {
       builder.create<fir::UndefOp>(loc, arrayCharBoxType);
   llvm::SmallVector<mlir::Value> explicitTypeParams{len};
   fir::BoxValue arrayChar{arrayCharAddr, lbounds, explicitTypeParams};
-  hlfir::FortranEntity arrayCharEntity(createDeclare(arrayChar));
+  hlfir::EntityWithAttributes arrayCharEntity(createDeclare(arrayChar));
   auto [arrayCharResult, cleanup] =
       hlfir::translateToExtendedValue(loc, builder, arrayCharEntity);
   auto *res = arrayCharResult.getBoxOf<fir::BoxValue>();

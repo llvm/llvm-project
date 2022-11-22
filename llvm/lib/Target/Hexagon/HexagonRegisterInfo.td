@@ -513,7 +513,7 @@ def HvxVR : RegisterClass<"Hexagon", [VecI8, VecI16, VecI32, VecF16, VecF32], 51
 def HvxWR : RegisterClass<"Hexagon", [VecPI8, VecPI16, VecPI32, VecPF16, VecPF32], 1024,
   (add (sequence "W%u", 0, 15), (sequence "WR%u", 0, 15))> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
-    [RegInfo<1024,1024,1024>, RegInfo<2048,2048,2048>, RegInfo<1024,1024,1024>]>;
+    [RegInfo<1024,1024,512>, RegInfo<2048,2048,1024>, RegInfo<1024,1024,512>]>;
 }
 
 def HvxQR : RegisterClass<"Hexagon", [VecI1, VecQ8, VecQ16, VecQ32], 128,
@@ -525,7 +525,7 @@ def HvxQR : RegisterClass<"Hexagon", [VecI1, VecQ8, VecQ16, VecQ32], 128,
 def HvxVQR : RegisterClass<"Hexagon", [untyped], 2048,
   (add (sequence "VQ%u", 0, 7))> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
-    [RegInfo<2048,2048,2048>, RegInfo<4096,4096,4096>, RegInfo<2048,2048,2048>]>;
+    [RegInfo<2048,2048,512>, RegInfo<4096,4096,1024>, RegInfo<2048,2048,512>]>;
 }
 
 // Core register classes

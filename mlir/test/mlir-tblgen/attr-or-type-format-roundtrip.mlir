@@ -17,10 +17,12 @@ attributes {
   attr4 = #test.attr_with_type<i32, vector<4xi32>>,
   // CHECK: #test.attr_self_type_format<5> : i32
   attr5 = #test.attr_self_type_format<5> : i32,
+  // CHECK: #test.attr_self_type_struct_format<a = 5> : i32
+  attr6 = #test.attr_self_type_struct_format<a = 5> : i32,
   // CHECK: #test.custom_anchor<5>
-  attr6 = #test.custom_anchor<5>,
+  attr7 = #test.custom_anchor<5>,
   // CHECK: #test.custom_anchor<5, true>
-  attr7 = #test.custom_anchor<5, true>
+  attr8 = #test.custom_anchor<5, true>
 }
 
 // CHECK-LABEL: @test_roundtrip_default_parsers_struct

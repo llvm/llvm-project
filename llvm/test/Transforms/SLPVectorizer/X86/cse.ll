@@ -246,22 +246,22 @@ define i32 @partial_mrg(double* nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[CONV]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[CONV]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[A]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 8
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[SHUFFLE]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[A]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds double, double* [[A]], i64 2
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[N]], 4
 ; CHECK-NEXT:    [[CONV12:%.*]] = sitofp i32 [[ADD]] to double
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[ARRAYIDX7]] to <2 x double>*
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, <2 x double>* [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP2]], double [[CONV12]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast double* [[ARRAYIDX7]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP9]], <2 x double>* [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[ARRAYIDX7]] to <2 x double>*
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, <2 x double>* [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP2]], double [[CONV12]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[ARRAYIDX7]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[TMP9]], align 8
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 0
@@ -352,18 +352,18 @@ define void @cse_for_hoisted_instructions_in_preheader(i32* %dst, i32 %a, i1 %c)
 ; CHECK-LABEL: @cse_for_hoisted_instructions_in_preheader(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[A]], i32 1
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> <i32 22, i32 22>, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> <i32 22, i32 22>, [[SHUFFLE]]
 ; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> [[TMP2]], <i32 3, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[GEP_0]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP3]], <2 x i32>* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP1]], <i32 3, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> [[TMP1]], <i32 3, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[GEP_0]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], <2 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[SHUFFLE]], <i32 3, i32 3>
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 10
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[GEP_2]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], <2 x i32>* [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[GEP_2]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], <2 x i32>* [[TMP5]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

@@ -15,6 +15,7 @@
 ! RUN:     -fno-signed-zeros \
 ! RUN:     -fassociative-math \
 ! RUN:     -freciprocal-math \
+! RUN:     -fpass-plugin=Bye%pluginext \
 ! RUN:     -mllvm -print-before-all\
 ! RUN:     -P \
 ! RUN:   | FileCheck %s
@@ -33,4 +34,5 @@
 ! CHECK: "-mreassociate"
 ! CHECK: "-freciprocal-math"
 ! CHECK: "-fconvert=little-endian"
-! CHECK:  "-mllvm" "-print-before-all"
+! CHECK: "-fpass-plugin=Bye
+! CHECK: "-mllvm" "-print-before-all"

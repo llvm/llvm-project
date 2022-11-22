@@ -41,7 +41,7 @@
 
 using namespace mlir;
 
-static LogicalResult runMLIRPasses(Operation *op) {
+static LogicalResult runMLIRPasses(Operation *op, JitRunnerOptions &options) {
   auto module = dyn_cast<ModuleOp>(op);
   if (!module)
     return op->emitOpError("expected a 'builtin.module' op");

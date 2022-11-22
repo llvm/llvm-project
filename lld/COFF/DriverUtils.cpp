@@ -855,8 +855,13 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   }
 
   // Save the command line after response file expansion so we can write it to
-  // the PDB if necessary.
-  config->argv = {expandedArgv.begin(), expandedArgv.end()};
+  // the PDB if necessary. Mimic MSVC, which skips input files.
+  config->argv = {argv[0]};
+  for (opt::Arg *arg : args) {
+    if (arg->getOption().getKind() != opt::Option::InputClass) {
+      config->argv.push_back(args.getArgString(arg->getIndex()));
+    }
+  }
 
   // Handle /WX early since it converts missing argument warnings to errors.
   errorHandler().fatalWarnings = args.hasFlag(OPT_WX, OPT_WX_no, false);

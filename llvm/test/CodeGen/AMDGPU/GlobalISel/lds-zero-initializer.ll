@@ -27,7 +27,7 @@ define amdgpu_kernel void @load_zeroinit_lds_global(i32 addrspace(1)* %out, i1 %
   ; GFX8:  [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
   ; GFX8:  [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
   ; GFX8:  [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_LOAD_DWORDX2_IMM]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
-  ; GFX8:  BUFFER_STORE_DWORD_OFFSET [[DS_READ_B32_]], [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, implicit $exec
+  ; GFX8:  BUFFER_STORE_DWORD_OFFSET [[DS_READ_B32_]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec
   ; GFX9:  [[COPY2:%[0-9]+]]:vreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
   ; GFX9:  FLAT_STORE_DWORD [[COPY2]], [[DS_READ_B32_]], 0, 0, implicit $exec, implicit $flat_scr
   ; GCN:   S_ENDPGM 0

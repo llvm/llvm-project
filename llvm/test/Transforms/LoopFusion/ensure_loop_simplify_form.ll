@@ -33,3 +33,44 @@ for.body6:                                        ; preds = %for.body6, %for.con
   %v_loop_2.0.v_loop_2.0.v_loop_2.0.18 = load volatile i32, i32* %dummy, align 1
   br label %for.body6
 }
+
+define void @f943(i8* %dummy) {
+; CHECK-LABEL: @f943(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND32_I_I:%.*]]
+; CHECK:       for.cond32.i.i:
+; CHECK-NEXT:    br label [[FOR_BODY37_I_I:%.*]]
+; CHECK:       for.cond42.preheader.i.i:
+; CHECK-NEXT:    br i1 true, label [[FOR_BODY44_I_I_PREHEADER:%.*]], label [[FOR_END47_I_I:%.*]]
+; CHECK:       for.body44.i.i.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY44_I_I:%.*]]
+; CHECK:       for.body37.i.i:
+; CHECK-NEXT:    br i1 true, label [[FOR_BODY37_I_I]], label [[FOR_COND42_PREHEADER_I_I:%.*]]
+; CHECK:       for.body44.i.i:
+; CHECK-NEXT:    store volatile i8 poison, i8* [[DUMMY:%.*]], align 1
+; CHECK-NEXT:    br i1 true, label [[FOR_BODY44_I_I]], label [[FOR_END47_I_I_LOOPEXIT:%.*]]
+; CHECK:       for.end47.i.i.loopexit:
+; CHECK-NEXT:    br label [[FOR_END47_I_I]]
+; CHECK:       for.end47.i.i:
+; CHECK-NEXT:    br label [[FOR_COND32_I_I]]
+;
+entry:
+  br label %for.cond32.i.i
+
+for.cond32.i.i:                                   ; preds = %for.end47.i.i, %entry
+  br label %for.body37.i.i
+
+for.cond42.preheader.i.i:                         ; preds = %for.body37.i.i
+  br i1 true, label %for.body44.i.i, label %for.end47.i.i
+
+for.body37.i.i:                                   ; preds = %for.body37.i.i, %for.cond32.i.i
+  br i1 true, label %for.body37.i.i, label %for.cond42.preheader.i.i
+
+for.body44.i.i:                                   ; preds = %for.body44.i.i, %for.cond42.preheader.i.i
+  store volatile i8 poison, i8* %dummy, align 1
+  br i1 true, label %for.body44.i.i, label %for.end47.i.i
+
+for.end47.i.i:                                    ; preds = %for.body44.i.i, %for.cond42.preheader.i.i
+  br label %for.cond32.i.i
+}
+

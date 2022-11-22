@@ -282,10 +282,10 @@ body:             |
     %80:vgpr_32 = IMPLICIT_DEF
     %81:vgpr_32 = IMPLICIT_DEF
     %84:vgpr_32 = IMPLICIT_DEF
-    BUFFER_STORE_DWORD_OFFEN %84, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 108, 0, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %81, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 104, 0, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %80, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 100, 0, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %78, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 96, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %84, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 108, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %81, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 104, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %80, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 100, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %78, %stack.0.tmp5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr101, 96, 0, 0, implicit $exec
     %85:vgpr_32 = IMPLICIT_DEF
     %86:vgpr_32 = IMPLICIT_DEF
     %87:vgpr_32 = IMPLICIT_DEF

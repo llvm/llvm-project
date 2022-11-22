@@ -1,8 +1,6 @@
 ; RUN: opt %s -S -verify -experimental-assignment-tracking 2>&1 \
 ; RUN: | FileCheck %s
 
-; XFAIL: *
-
 ;; Check that badly formed assignment tracking metadata is caught either
 ;; while parsing or by the verifier.
 ;;

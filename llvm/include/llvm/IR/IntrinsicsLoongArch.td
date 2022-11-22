@@ -45,4 +45,11 @@ defm int_loongarch_masked_atomicrmw_umin : MaskedAtomicRMWIntrinsics;
 // @llvm.loongarch.masked.cmpxchg.i64.<p>(
 //   ptr addr, grlen cmpval, grlen newval, grlen mask, grlenimm ordering)
 defm int_loongarch_masked_cmpxchg : MaskedAtomicRMWFiveOpIntrinsics;
+
+//===----------------------------------------------------------------------===//
+// LoongArch BASE
+
+def int_loongarch_dbar : Intrinsic<[], [llvm_i32_ty]>;
+def int_loongarch_crc_w_d_w : Intrinsic<[llvm_i32_ty],
+                                        [llvm_i64_ty, llvm_i32_ty]>;
 } // TargetPrefix = "loongarch"

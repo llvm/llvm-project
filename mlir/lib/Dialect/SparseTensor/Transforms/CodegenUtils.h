@@ -145,6 +145,9 @@ Value genAllocaScalar(OpBuilder &builder, Location loc, Type tp);
 Value allocDenseTensor(OpBuilder &builder, Location loc,
                        RankedTensorType tensorTp, ValueRange sizes);
 
+/// Generates code to deallocate a dense buffer.
+void deallocDenseTensor(OpBuilder &builder, Location loc, Value buffer);
+
 /// Generates the code to read the value from tensor[ivs]. The generated code
 /// looks like the following and the insertion point after this routine is
 /// inside the if-then branch behind the assignment to ind.

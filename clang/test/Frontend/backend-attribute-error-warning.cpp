@@ -23,14 +23,14 @@ void                                            // expected-note@-1 {{previous a
 duplicate_warnings(void);
 
 void baz(void) {
-  foo(); // expected-error {{call to foo() declared with 'error' attribute: oh no foo}}
+  foo(); // expected-error {{call to 'foo()' declared with 'error' attribute: oh no foo}}
   if (x())
-    bar(); // expected-error {{call to bar() declared with 'error' attribute: oh no bar}}
+    bar(); // expected-error {{call to 'bar()' declared with 'error' attribute: oh no bar}}
 
-  quux();                     // enabled-warning {{call to quux() declared with 'warning' attribute: oh no quux}}
-  __compiletime_assert_455(); // expected-error {{call to __compiletime_assert_455() declared with 'error' attribute: demangle me}}
-  duplicate_errors();         // expected-error {{call to duplicate_errors() declared with 'error' attribute: two}}
-  duplicate_warnings();       // enabled-warning {{call to duplicate_warnings() declared with 'warning' attribute: two}}
+  quux();                     // enabled-warning {{call to 'quux()' declared with 'warning' attribute: oh no quux}}
+  __compiletime_assert_455(); // expected-error {{call to '__compiletime_assert_455()' declared with 'error' attribute: demangle me}}
+  duplicate_errors();         // expected-error {{call to 'duplicate_errors()' declared with 'error' attribute: two}}
+  duplicate_warnings();       // enabled-warning {{call to 'duplicate_warnings()' declared with 'warning' attribute: two}}
 }
 
 #ifdef __cplusplus
@@ -45,16 +45,16 @@ struct Widget {
 };
 
 void baz_cpp(void) {
-  foo(); // expected-error {{call to foo() declared with 'error' attribute: oh no foo}}
+  foo(); // expected-error {{call to 'foo()' declared with 'error' attribute: oh no foo}}
   if (x())
-    bar(); // expected-error {{call to bar() declared with 'error' attribute: oh no bar}}
-  quux();  // enabled-warning {{call to quux() declared with 'warning' attribute: oh no quux}}
+    bar(); // expected-error {{call to 'bar()' declared with 'error' attribute: oh no bar}}
+  quux();  // enabled-warning {{call to 'quux()' declared with 'warning' attribute: oh no quux}}
 
   // Test that we demangle correctly in the diagnostic for C++.
-  __compiletime_assert_455(); // expected-error {{call to __compiletime_assert_455() declared with 'error' attribute: demangle me}}
-  nocall<int>(42);            // expected-error {{call to int nocall<int>(int) declared with 'error' attribute: demangle me, too}}
+  __compiletime_assert_455(); // expected-error {{call to '__compiletime_assert_455()' declared with 'error' attribute: demangle me}}
+  nocall<int>(42);            // expected-error {{call to 'int nocall<int>(int)' declared with 'error' attribute: demangle me, too}}
 
   Widget W;
-  int w = W; // enabled-warning {{Widget::operator int() declared with 'warning' attribute: don't call me!}}
+  int w = W; // enabled-warning {{call to 'Widget::operator int()' declared with 'warning' attribute: don't call me!}}
 }
 #endif

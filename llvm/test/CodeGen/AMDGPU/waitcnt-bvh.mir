@@ -24,10 +24,10 @@ body: |
     ; GCN-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx10 killed $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, renamable $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
     ; GCN-NEXT: S_WAITCNT 16240
-    ; GCN-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr16, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr16, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx10 killed $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, renamable $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr16, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr16, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -52,11 +52,11 @@ body: |
     ; GCN-LABEL: name: waitcnt-check-vs-vmem-reverse
     ; GCN: S_WAITCNT 0
     ; GCN-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
-    ; GCN-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr20, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr20, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT 16240
     ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx10 killed $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
     ; GCN-NEXT: S_ENDPGM 0
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr20, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr20, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx10 killed $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
     S_ENDPGM 0
 ...

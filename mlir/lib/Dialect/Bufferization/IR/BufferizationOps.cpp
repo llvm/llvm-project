@@ -282,14 +282,22 @@ LogicalResult AllocTensorOp::verify() {
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes) {
   build(builder, result, type, dynamicSizes, /*copy=*/Value(),
+        /*size_hint=*/Value(),
         /*memory_space=*/IntegerAttr());
 }
 
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes,
                           Value copy) {
-  build(builder, result, type, dynamicSizes, copy,
+  build(builder, result, type, dynamicSizes, copy, /*size_hint=*/Value(),
         /*memory_space=*/IntegerAttr());
+}
+
+void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
+                          TensorType type, ValueRange dynamicSizes, Value copy,
+                          IntegerAttr memorySpace) {
+  build(builder, result, type, dynamicSizes, copy, /*size_hint=*/Value(),
+        memorySpace);
 }
 
 namespace {
@@ -383,6 +391,11 @@ ParseResult AllocTensorOp::parse(OpAsmParser &parser, OperationState &result) {
     if (parser.parseLParen() || parser.parseOperand(copyOperand) ||
         parser.parseRParen())
       return failure();
+  ParseResult sizeHintKeyword = parser.parseOptionalKeyword("size_hint");
+  OpAsmParser::UnresolvedOperand sizeHintOperand;
+  if (sizeHintKeyword.succeeded())
+    if (parser.parseEqual() || parser.parseOperand(sizeHintOperand))
+      return failure();
   if (parser.parseOptionalAttrDict(result.attributes) || parser.parseColon())
     return failure();
 
@@ -397,10 +410,14 @@ ParseResult AllocTensorOp::parse(OpAsmParser &parser, OperationState &result) {
   if (copyKeyword.succeeded())
     if (parser.resolveOperand(copyOperand, type, result.operands))
       return failure();
+  if (sizeHintKeyword.succeeded())
+    if (parser.resolveOperand(sizeHintOperand, indexType, result.operands))
+      return failure();
   result.addAttribute(AllocTensorOp::getOperandSegmentSizeAttr(),
                       parser.getBuilder().getDenseI32ArrayAttr(
                           {static_cast<int32_t>(dynamicSizesOperands.size()),
-                           static_cast<int32_t>(copyKeyword.succeeded())}));
+                           static_cast<int32_t>(copyKeyword.succeeded()),
+                           static_cast<int32_t>(sizeHintKeyword.succeeded())}));
   return success();
 }
 
@@ -408,6 +425,8 @@ void AllocTensorOp::print(OpAsmPrinter &p) {
   p << "(" << getDynamicSizes() << ")";
   if (getCopy())
     p << " copy(" << getCopy() << ")";
+  if (getSizeHint())
+    p << " size_hint=" << getSizeHint();
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
                               AllocTensorOp::getOperandSegmentSizeAttr()});
   p << " : ";

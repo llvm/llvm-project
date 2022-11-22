@@ -184,10 +184,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// or return type
   bool IsSVECC = false;
 
-  /// The virtual register that is the pointer to the lazy save buffer.
-  /// This value is used during ISelLowering.
-  Register LazySaveBufferReg = 0;
-
   /// The frame-index for the TPIDR2 object used for lazy saves.
   Register LazySaveTPIDR2Obj = 0;
 
@@ -208,9 +204,6 @@ public:
 
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
-
-  unsigned getLazySaveBufferReg() const { return LazySaveBufferReg; }
-  void setLazySaveBufferReg(unsigned Reg) { LazySaveBufferReg = Reg; }
 
   unsigned getLazySaveTPIDR2Obj() const { return LazySaveTPIDR2Obj; }
   void setLazySaveTPIDR2Obj(unsigned Reg) { LazySaveTPIDR2Obj = Reg; }

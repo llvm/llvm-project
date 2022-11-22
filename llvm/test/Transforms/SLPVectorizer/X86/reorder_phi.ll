@@ -9,8 +9,8 @@ define  void @foo (%struct.complex* %A, %struct.complex* %B, %struct.complex* %R
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 256, 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[TMP20:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x float> [ zeroinitializer, [[ENTRY]] ], [ [[TMP19:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[TMP18:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x float> [ zeroinitializer, [[ENTRY]] ], [ [[TMP17:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX:%.*]], %struct.complex* [[A:%.*]], i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[B:%.*]], i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[TMP4]], align 4
@@ -19,23 +19,23 @@ define  void @foo (%struct.complex* %A, %struct.complex* %B, %struct.complex* %R
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP3]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x float>, <2 x float>* [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> poison, float [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> [[TMP10]], float [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul <2 x float> [[TMP9]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> [[TMP13]], float [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul <2 x float> [[TMP9]], [[TMP14]]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP15]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP16:%.*]] = fsub <2 x float> [[TMP12]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x float> [[TMP12]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> [[TMP17]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP19]] = fadd <2 x float> [[TMP2]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[TMP20]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[TMP21]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x float> [[TMP9]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i32 0
+; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP9]], [[SHUFFLE1]]
+; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <2 x float> [[TMP13]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP14:%.*]] = fsub <2 x float> [[TMP11]], [[SHUFFLE2]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x float> [[TMP11]], [[SHUFFLE2]]
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x float> [[TMP14]], <2 x float> [[TMP15]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP17]] = fadd <2 x float> [[TMP2]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18]] = add nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP18]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[TMP19]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[RESULT:%.*]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = bitcast float* [[TMP22]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP19]], <2 x float>* [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[RESULT:%.*]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast float* [[TMP20]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP17]], <2 x float>* [[TMP21]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

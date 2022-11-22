@@ -229,7 +229,7 @@ OpenMP conformance
 OpenCL conformance
 ~~~~~~~~~~~~~~~~~~
 | Anastasia Stulova
-| anastasia.stulova\@arm.com (email), Anastasia (Phabricator), AnastasiaStulova (GitHub)
+| anastasia\@compiler-experts.com (email), Anastasia (Phabricator), AnastasiaStulova (GitHub)
 
 
 SYCL conformance

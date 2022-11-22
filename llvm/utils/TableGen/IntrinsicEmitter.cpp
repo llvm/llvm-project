@@ -642,8 +642,8 @@ Optional<bool> compareFnAttributes(const CodeGenIntrinsic *L,
     return R->hasSideEffects;
 
   // Try to order by readonly/readnone attribute.
-  CodeGenIntrinsic::ModRefBehavior LK = L->ModRef;
-  CodeGenIntrinsic::ModRefBehavior RK = R->ModRef;
+  uint32_t LK = L->ME.toIntValue();
+  uint32_t RK = R->ME.toIntValue();
   if (LK != RK) return (LK > RK);
 
   return None;
@@ -772,60 +772,13 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
     if (Intrinsic.isSpeculatable)
       OS << "      Attribute::get(C, Attribute::Speculatable),\n";
 
-    switch (Intrinsic.ModRef) {
-    case CodeGenIntrinsic::NoMem:
-      if (Intrinsic.hasSideEffects)
-        break;
+    MemoryEffects ME = Intrinsic.ME;
+    // TODO: IntrHasSideEffects should affect not only readnone intrinsics.
+    if (ME.doesNotAccessMemory() && Intrinsic.hasSideEffects)
+      ME = MemoryEffects::unknown();
+    if (ME != MemoryEffects::unknown()) {
       OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::none()),\n";
-      break;
-    case CodeGenIntrinsic::ReadArgMem:
-      OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::argMemOnly(ModRefInfo::Ref)),\n";
-      break;
-    case CodeGenIntrinsic::ReadMem:
-      OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::readOnly()),\n";
-      break;
-    case CodeGenIntrinsic::ReadInaccessibleMem:
-      OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::inaccessibleMemOnly(ModRefInfo::Ref)),\n";
-      break;
-    case CodeGenIntrinsic::ReadInaccessibleMemOrArgMem:
-      OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::inaccessibleOrArgMemOnly(ModRefInfo::Ref)),\n";
-      break;
-      break;
-    case CodeGenIntrinsic::WriteArgMem:
-      OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::argMemOnly(ModRefInfo::Mod)),\n";
-      break;
-    case CodeGenIntrinsic::WriteMem:
-      OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::writeOnly()),\n";
-      break;
-    case CodeGenIntrinsic::WriteInaccessibleMem:
-      OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::inaccessibleMemOnly(ModRefInfo::Mod)),\n";
-      break;
-    case CodeGenIntrinsic::WriteInaccessibleMemOrArgMem:
-      OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::inaccessibleOrArgMemOnly(ModRefInfo::Mod)),\n";
-      break;
-    case CodeGenIntrinsic::ReadWriteArgMem:
-      OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::argMemOnly(ModRefInfo::ModRef)),\n";
-      break;
-    case CodeGenIntrinsic::ReadWriteInaccessibleMem:
-      OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef)),\n";
-      break;
-    case CodeGenIntrinsic::ReadWriteInaccessibleMemOrArgMem:
-      OS << "      Attribute::getWithMemoryEffects(C, "
-         << "MemoryEffects::inaccessibleOrArgMemOnly(ModRefInfo::ModRef)),\n";
-      break;
-    case CodeGenIntrinsic::ReadWriteMem:
-      break;
+         << "MemoryEffects::createFromIntValue(" << ME.toIntValue() << ")),\n";
     }
     OS << "    });\n";
   }
@@ -885,7 +838,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
     }
 
     if (!Intrinsic.canThrow ||
-        (Intrinsic.ModRef != CodeGenIntrinsic::ReadWriteMem &&
+        (Intrinsic.ME != MemoryEffects::unknown() &&
          !Intrinsic.hasSideEffects) ||
         Intrinsic.isNoReturn || Intrinsic.isNoCallback || Intrinsic.isNoSync ||
         Intrinsic.isNoFree || Intrinsic.isWillReturn || Intrinsic.isCold ||

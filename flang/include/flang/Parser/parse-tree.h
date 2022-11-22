@@ -3494,6 +3494,14 @@ struct OmpDependClause {
   std::variant<Source, Sink, InOut> u;
 };
 
+// OMP 5.0 2.4 atomic-default-mem-order-clause ->
+//                 ATOMIC_DEFAULT_MEM_ORDER (SEQ_CST | ACQ_REL |
+//                                           RELAXED)
+struct OmpAtomicDefaultMemOrderClause {
+  ENUM_CLASS(Type, SeqCst, AcqRel, Relaxed)
+  WRAPPER_CLASS_BOILERPLATE(OmpAtomicDefaultMemOrderClause, Type);
+};
+
 // OpenMP Clauses
 struct OmpClause {
   UNION_CLASS_BOILERPLATE(OmpClause);
@@ -3611,6 +3619,13 @@ struct OpenMPDeclareSimdConstruct {
   std::tuple<Verbatim, std::optional<Name>, OmpClauseList> t;
 };
 
+// 2.4 requires -> REQUIRES requires-clause[ [ [,] requires-clause]...]
+struct OpenMPRequiresConstruct {
+  TUPLE_CLASS_BOILERPLATE(OpenMPRequiresConstruct);
+  CharBlock source;
+  std::tuple<Verbatim, OmpClauseList> t;
+};
+
 // 2.15.2 threadprivate -> THREADPRIVATE (variable-name-list)
 struct OpenMPThreadprivate {
   TUPLE_CLASS_BOILERPLATE(OpenMPThreadprivate);
@@ -3630,7 +3645,7 @@ struct OpenMPDeclarativeConstruct {
   CharBlock source;
   std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareReductionConstruct,
       OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
-      OpenMPThreadprivate>
+      OpenMPThreadprivate, OpenMPRequiresConstruct>
       u;
 };
 

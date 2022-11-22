@@ -60,6 +60,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  gettimeofday
+  SRCS
+    gettimeofday.cpp
+  HDRS
+    gettimeofday.h
+  DEPENDS
+    .clock_gettime
+    libc.include.errno
+    libc.include.time
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   gmtime
   SRCS
     gmtime.cpp

@@ -9,6 +9,10 @@ buffer_load_ubyte_d16_hi v1, off, s[4:7], s1
 // GFX9: buffer_load_ubyte_d16_hi v1, off, s[4:7], s1 ; encoding: [0x00,0x00,0x84,0xe0,0x00,0x01,0x01,0x01]
 // VI-ERR: error: instruction not supported on this GPU
 
+buffer_load_ubyte_d16_hi v[1:2], off, s[4:7], s1 tfe
+// GFX9: buffer_load_ubyte_d16_hi v[1:2], off, s[4:7], s1 tfe ; encoding: [0x00,0x00,0x84,0xe0,0x00,0x01,0x81,0x01]
+// VI-ERR: error: instruction not supported on this GPU
+
 buffer_load_sbyte_d16 v1, off, s[4:7], s1
 // GFX9: buffer_load_sbyte_d16 v1, off, s[4:7], s1 ; encoding: [0x00,0x00,0x88,0xe0,0x00,0x01,0x01,0x01]
 // VI-ERR: error: instruction not supported on this GPU

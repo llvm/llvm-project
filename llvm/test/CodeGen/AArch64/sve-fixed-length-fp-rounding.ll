@@ -29,7 +29,7 @@ define <8 x half> @frintp_v8f16(<8 x half> %op) vscale_range(2,0) #0 {
   ret <8 x half> %res
 }
 
-define void @frintp_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
+define void @frintp_v16f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintp_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -37,13 +37,13 @@ define void @frintp_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintp z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.ceil.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
-define void @frintp_v32f16(<32 x half>* %a) #0 {
+define void @frintp_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintp_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -63,13 +63,13 @@ define void @frintp_v32f16(<32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintp z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x half>, <32 x half>* %a
+  %op = load <32 x half>, ptr %a
   %res = call <32 x half> @llvm.ceil.v32f16(<32 x half> %op)
-  store <32 x half> %res, <32 x half>* %a
+  store <32 x half> %res, ptr %a
   ret void
 }
 
-define void @frintp_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
+define void @frintp_v64f16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintp_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -77,13 +77,13 @@ define void @frintp_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintp z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x half>, <64 x half>* %a
+  %op = load <64 x half>, ptr %a
   %res = call <64 x half> @llvm.ceil.v64f16(<64 x half> %op)
-  store <64 x half> %res, <64 x half>* %a
+  store <64 x half> %res, ptr %a
   ret void
 }
 
-define void @frintp_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
+define void @frintp_v128f16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintp_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -91,9 +91,9 @@ define void @frintp_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintp z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <128 x half>, <128 x half>* %a
+  %op = load <128 x half>, ptr %a
   %res = call <128 x half> @llvm.ceil.v128f16(<128 x half> %op)
-  store <128 x half> %res, <128 x half>* %a
+  store <128 x half> %res, ptr %a
   ret void
 }
 
@@ -117,7 +117,7 @@ define <4 x float> @frintp_v4f32(<4 x float> %op) vscale_range(2,0) #0 {
   ret <4 x float> %res
 }
 
-define void @frintp_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
+define void @frintp_v8f32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintp_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -125,13 +125,13 @@ define void @frintp_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintp z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.ceil.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
-define void @frintp_v16f32(<16 x float>* %a) #0 {
+define void @frintp_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintp_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -151,13 +151,13 @@ define void @frintp_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintp z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x float>, <16 x float>* %a
+  %op = load <16 x float>, ptr %a
   %res = call <16 x float> @llvm.ceil.v16f32(<16 x float> %op)
-  store <16 x float> %res, <16 x float>* %a
+  store <16 x float> %res, ptr %a
   ret void
 }
 
-define void @frintp_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
+define void @frintp_v32f32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintp_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -165,13 +165,13 @@ define void @frintp_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintp z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x float>, <32 x float>* %a
+  %op = load <32 x float>, ptr %a
   %res = call <32 x float> @llvm.ceil.v32f32(<32 x float> %op)
-  store <32 x float> %res, <32 x float>* %a
+  store <32 x float> %res, ptr %a
   ret void
 }
 
-define void @frintp_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
+define void @frintp_v64f32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintp_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -179,9 +179,9 @@ define void @frintp_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintp z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x float>, <64 x float>* %a
+  %op = load <64 x float>, ptr %a
   %res = call <64 x float> @llvm.ceil.v64f32(<64 x float> %op)
-  store <64 x float> %res, <64 x float>* %a
+  store <64 x float> %res, ptr %a
   ret void
 }
 
@@ -205,7 +205,7 @@ define <2 x double> @frintp_v2f64(<2 x double> %op) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @frintp_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
+define void @frintp_v4f64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintp_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -213,13 +213,13 @@ define void @frintp_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintp z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.ceil.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
-define void @frintp_v8f64(<8 x double>* %a) #0 {
+define void @frintp_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintp_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -239,13 +239,13 @@ define void @frintp_v8f64(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintp z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x double>, <8 x double>* %a
+  %op = load <8 x double>, ptr %a
   %res = call <8 x double> @llvm.ceil.v8f64(<8 x double> %op)
-  store <8 x double> %res, <8 x double>* %a
+  store <8 x double> %res, ptr %a
   ret void
 }
 
-define void @frintp_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
+define void @frintp_v16f64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintp_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -253,13 +253,13 @@ define void @frintp_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintp z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x double>, <16 x double>* %a
+  %op = load <16 x double>, ptr %a
   %res = call <16 x double> @llvm.ceil.v16f64(<16 x double> %op)
-  store <16 x double> %res, <16 x double>* %a
+  store <16 x double> %res, ptr %a
   ret void
 }
 
-define void @frintp_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
+define void @frintp_v32f64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintp_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -267,9 +267,9 @@ define void @frintp_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintp z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x double>, <32 x double>* %a
+  %op = load <32 x double>, ptr %a
   %res = call <32 x double> @llvm.ceil.v32f64(<32 x double> %op)
-  store <32 x double> %res, <32 x double>* %a
+  store <32 x double> %res, ptr %a
   ret void
 }
 
@@ -297,7 +297,7 @@ define <8 x half> @frintm_v8f16(<8 x half> %op) vscale_range(2,0) #0 {
   ret <8 x half> %res
 }
 
-define void @frintm_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
+define void @frintm_v16f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintm_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -305,13 +305,13 @@ define void @frintm_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintm z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.floor.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
-define void @frintm_v32f16(<32 x half>* %a) #0 {
+define void @frintm_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintm_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -331,13 +331,13 @@ define void @frintm_v32f16(<32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintm z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x half>, <32 x half>* %a
+  %op = load <32 x half>, ptr %a
   %res = call <32 x half> @llvm.floor.v32f16(<32 x half> %op)
-  store <32 x half> %res, <32 x half>* %a
+  store <32 x half> %res, ptr %a
   ret void
 }
 
-define void @frintm_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
+define void @frintm_v64f16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintm_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -345,13 +345,13 @@ define void @frintm_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintm z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x half>, <64 x half>* %a
+  %op = load <64 x half>, ptr %a
   %res = call <64 x half> @llvm.floor.v64f16(<64 x half> %op)
-  store <64 x half> %res, <64 x half>* %a
+  store <64 x half> %res, ptr %a
   ret void
 }
 
-define void @frintm_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
+define void @frintm_v128f16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintm_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -359,9 +359,9 @@ define void @frintm_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintm z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <128 x half>, <128 x half>* %a
+  %op = load <128 x half>, ptr %a
   %res = call <128 x half> @llvm.floor.v128f16(<128 x half> %op)
-  store <128 x half> %res, <128 x half>* %a
+  store <128 x half> %res, ptr %a
   ret void
 }
 
@@ -385,7 +385,7 @@ define <4 x float> @frintm_v4f32(<4 x float> %op) vscale_range(2,0) #0 {
   ret <4 x float> %res
 }
 
-define void @frintm_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
+define void @frintm_v8f32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintm_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -393,13 +393,13 @@ define void @frintm_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintm z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.floor.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
-define void @frintm_v16f32(<16 x float>* %a) #0 {
+define void @frintm_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintm_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -419,13 +419,13 @@ define void @frintm_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintm z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x float>, <16 x float>* %a
+  %op = load <16 x float>, ptr %a
   %res = call <16 x float> @llvm.floor.v16f32(<16 x float> %op)
-  store <16 x float> %res, <16 x float>* %a
+  store <16 x float> %res, ptr %a
   ret void
 }
 
-define void @frintm_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
+define void @frintm_v32f32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintm_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -433,13 +433,13 @@ define void @frintm_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintm z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x float>, <32 x float>* %a
+  %op = load <32 x float>, ptr %a
   %res = call <32 x float> @llvm.floor.v32f32(<32 x float> %op)
-  store <32 x float> %res, <32 x float>* %a
+  store <32 x float> %res, ptr %a
   ret void
 }
 
-define void @frintm_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
+define void @frintm_v64f32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintm_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -447,9 +447,9 @@ define void @frintm_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintm z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x float>, <64 x float>* %a
+  %op = load <64 x float>, ptr %a
   %res = call <64 x float> @llvm.floor.v64f32(<64 x float> %op)
-  store <64 x float> %res, <64 x float>* %a
+  store <64 x float> %res, ptr %a
   ret void
 }
 
@@ -473,7 +473,7 @@ define <2 x double> @frintm_v2f64(<2 x double> %op) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @frintm_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
+define void @frintm_v4f64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintm_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -481,13 +481,13 @@ define void @frintm_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintm z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.floor.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
-define void @frintm_v8f64(<8 x double>* %a) #0 {
+define void @frintm_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintm_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -507,13 +507,13 @@ define void @frintm_v8f64(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintm z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x double>, <8 x double>* %a
+  %op = load <8 x double>, ptr %a
   %res = call <8 x double> @llvm.floor.v8f64(<8 x double> %op)
-  store <8 x double> %res, <8 x double>* %a
+  store <8 x double> %res, ptr %a
   ret void
 }
 
-define void @frintm_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
+define void @frintm_v16f64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintm_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -521,13 +521,13 @@ define void @frintm_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintm z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x double>, <16 x double>* %a
+  %op = load <16 x double>, ptr %a
   %res = call <16 x double> @llvm.floor.v16f64(<16 x double> %op)
-  store <16 x double> %res, <16 x double>* %a
+  store <16 x double> %res, ptr %a
   ret void
 }
 
-define void @frintm_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
+define void @frintm_v32f64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintm_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -535,9 +535,9 @@ define void @frintm_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintm z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x double>, <32 x double>* %a
+  %op = load <32 x double>, ptr %a
   %res = call <32 x double> @llvm.floor.v32f64(<32 x double> %op)
-  store <32 x double> %res, <32 x double>* %a
+  store <32 x double> %res, ptr %a
   ret void
 }
 
@@ -565,7 +565,7 @@ define <8 x half> @frinti_v8f16(<8 x half> %op) vscale_range(2,0) #0 {
   ret <8 x half> %res
 }
 
-define void @frinti_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
+define void @frinti_v16f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frinti_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -573,13 +573,13 @@ define void @frinti_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frinti z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.nearbyint.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
-define void @frinti_v32f16(<32 x half>* %a) #0 {
+define void @frinti_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinti_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -599,13 +599,13 @@ define void @frinti_v32f16(<32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frinti z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x half>, <32 x half>* %a
+  %op = load <32 x half>, ptr %a
   %res = call <32 x half> @llvm.nearbyint.v32f16(<32 x half> %op)
-  store <32 x half> %res, <32 x half>* %a
+  store <32 x half> %res, ptr %a
   ret void
 }
 
-define void @frinti_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
+define void @frinti_v64f16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frinti_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -613,13 +613,13 @@ define void @frinti_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frinti z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x half>, <64 x half>* %a
+  %op = load <64 x half>, ptr %a
   %res = call <64 x half> @llvm.nearbyint.v64f16(<64 x half> %op)
-  store <64 x half> %res, <64 x half>* %a
+  store <64 x half> %res, ptr %a
   ret void
 }
 
-define void @frinti_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
+define void @frinti_v128f16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frinti_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -627,9 +627,9 @@ define void @frinti_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frinti z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <128 x half>, <128 x half>* %a
+  %op = load <128 x half>, ptr %a
   %res = call <128 x half> @llvm.nearbyint.v128f16(<128 x half> %op)
-  store <128 x half> %res, <128 x half>* %a
+  store <128 x half> %res, ptr %a
   ret void
 }
 
@@ -653,7 +653,7 @@ define <4 x float> @frinti_v4f32(<4 x float> %op) vscale_range(2,0) #0 {
   ret <4 x float> %res
 }
 
-define void @frinti_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
+define void @frinti_v8f32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frinti_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -661,13 +661,13 @@ define void @frinti_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frinti z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.nearbyint.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
-define void @frinti_v16f32(<16 x float>* %a) #0 {
+define void @frinti_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinti_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -687,13 +687,13 @@ define void @frinti_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frinti z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x float>, <16 x float>* %a
+  %op = load <16 x float>, ptr %a
   %res = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %op)
-  store <16 x float> %res, <16 x float>* %a
+  store <16 x float> %res, ptr %a
   ret void
 }
 
-define void @frinti_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
+define void @frinti_v32f32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frinti_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -701,13 +701,13 @@ define void @frinti_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frinti z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x float>, <32 x float>* %a
+  %op = load <32 x float>, ptr %a
   %res = call <32 x float> @llvm.nearbyint.v32f32(<32 x float> %op)
-  store <32 x float> %res, <32 x float>* %a
+  store <32 x float> %res, ptr %a
   ret void
 }
 
-define void @frinti_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
+define void @frinti_v64f32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frinti_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -715,9 +715,9 @@ define void @frinti_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frinti z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x float>, <64 x float>* %a
+  %op = load <64 x float>, ptr %a
   %res = call <64 x float> @llvm.nearbyint.v64f32(<64 x float> %op)
-  store <64 x float> %res, <64 x float>* %a
+  store <64 x float> %res, ptr %a
   ret void
 }
 
@@ -741,7 +741,7 @@ define <2 x double> @frinti_v2f64(<2 x double> %op) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @frinti_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
+define void @frinti_v4f64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frinti_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -749,13 +749,13 @@ define void @frinti_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frinti z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
-define void @frinti_v8f64(<8 x double>* %a) #0 {
+define void @frinti_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinti_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -775,13 +775,13 @@ define void @frinti_v8f64(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frinti z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x double>, <8 x double>* %a
+  %op = load <8 x double>, ptr %a
   %res = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %op)
-  store <8 x double> %res, <8 x double>* %a
+  store <8 x double> %res, ptr %a
   ret void
 }
 
-define void @frinti_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
+define void @frinti_v16f64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frinti_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -789,13 +789,13 @@ define void @frinti_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frinti z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x double>, <16 x double>* %a
+  %op = load <16 x double>, ptr %a
   %res = call <16 x double> @llvm.nearbyint.v16f64(<16 x double> %op)
-  store <16 x double> %res, <16 x double>* %a
+  store <16 x double> %res, ptr %a
   ret void
 }
 
-define void @frinti_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
+define void @frinti_v32f64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frinti_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -803,9 +803,9 @@ define void @frinti_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frinti z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x double>, <32 x double>* %a
+  %op = load <32 x double>, ptr %a
   %res = call <32 x double> @llvm.nearbyint.v32f64(<32 x double> %op)
-  store <32 x double> %res, <32 x double>* %a
+  store <32 x double> %res, ptr %a
   ret void
 }
 
@@ -833,7 +833,7 @@ define <8 x half> @frintx_v8f16(<8 x half> %op) vscale_range(2,0) #0 {
   ret <8 x half> %res
 }
 
-define void @frintx_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
+define void @frintx_v16f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintx_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -841,13 +841,13 @@ define void @frintx_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.rint.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
-define void @frintx_v32f16(<32 x half>* %a) #0 {
+define void @frintx_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintx_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -867,13 +867,13 @@ define void @frintx_v32f16(<32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintx z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x half>, <32 x half>* %a
+  %op = load <32 x half>, ptr %a
   %res = call <32 x half> @llvm.rint.v32f16(<32 x half> %op)
-  store <32 x half> %res, <32 x half>* %a
+  store <32 x half> %res, ptr %a
   ret void
 }
 
-define void @frintx_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
+define void @frintx_v64f16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintx_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -881,13 +881,13 @@ define void @frintx_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x half>, <64 x half>* %a
+  %op = load <64 x half>, ptr %a
   %res = call <64 x half> @llvm.rint.v64f16(<64 x half> %op)
-  store <64 x half> %res, <64 x half>* %a
+  store <64 x half> %res, ptr %a
   ret void
 }
 
-define void @frintx_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
+define void @frintx_v128f16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintx_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -895,9 +895,9 @@ define void @frintx_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <128 x half>, <128 x half>* %a
+  %op = load <128 x half>, ptr %a
   %res = call <128 x half> @llvm.rint.v128f16(<128 x half> %op)
-  store <128 x half> %res, <128 x half>* %a
+  store <128 x half> %res, ptr %a
   ret void
 }
 
@@ -921,7 +921,7 @@ define <4 x float> @frintx_v4f32(<4 x float> %op) vscale_range(2,0) #0 {
   ret <4 x float> %res
 }
 
-define void @frintx_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
+define void @frintx_v8f32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintx_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -929,13 +929,13 @@ define void @frintx_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.rint.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
-define void @frintx_v16f32(<16 x float>* %a) #0 {
+define void @frintx_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintx_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -955,13 +955,13 @@ define void @frintx_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintx z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x float>, <16 x float>* %a
+  %op = load <16 x float>, ptr %a
   %res = call <16 x float> @llvm.rint.v16f32(<16 x float> %op)
-  store <16 x float> %res, <16 x float>* %a
+  store <16 x float> %res, ptr %a
   ret void
 }
 
-define void @frintx_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
+define void @frintx_v32f32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintx_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -969,13 +969,13 @@ define void @frintx_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x float>, <32 x float>* %a
+  %op = load <32 x float>, ptr %a
   %res = call <32 x float> @llvm.rint.v32f32(<32 x float> %op)
-  store <32 x float> %res, <32 x float>* %a
+  store <32 x float> %res, ptr %a
   ret void
 }
 
-define void @frintx_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
+define void @frintx_v64f32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintx_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -983,9 +983,9 @@ define void @frintx_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x float>, <64 x float>* %a
+  %op = load <64 x float>, ptr %a
   %res = call <64 x float> @llvm.rint.v64f32(<64 x float> %op)
-  store <64 x float> %res, <64 x float>* %a
+  store <64 x float> %res, ptr %a
   ret void
 }
 
@@ -1009,7 +1009,7 @@ define <2 x double> @frintx_v2f64(<2 x double> %op) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @frintx_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
+define void @frintx_v4f64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintx_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -1017,13 +1017,13 @@ define void @frintx_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.rint.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
-define void @frintx_v8f64(<8 x double>* %a) #0 {
+define void @frintx_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintx_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -1043,13 +1043,13 @@ define void @frintx_v8f64(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintx z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x double>, <8 x double>* %a
+  %op = load <8 x double>, ptr %a
   %res = call <8 x double> @llvm.rint.v8f64(<8 x double> %op)
-  store <8 x double> %res, <8 x double>* %a
+  store <8 x double> %res, ptr %a
   ret void
 }
 
-define void @frintx_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
+define void @frintx_v16f64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintx_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -1057,13 +1057,13 @@ define void @frintx_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x double>, <16 x double>* %a
+  %op = load <16 x double>, ptr %a
   %res = call <16 x double> @llvm.rint.v16f64(<16 x double> %op)
-  store <16 x double> %res, <16 x double>* %a
+  store <16 x double> %res, ptr %a
   ret void
 }
 
-define void @frintx_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
+define void @frintx_v32f64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintx_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -1071,9 +1071,9 @@ define void @frintx_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x double>, <32 x double>* %a
+  %op = load <32 x double>, ptr %a
   %res = call <32 x double> @llvm.rint.v32f64(<32 x double> %op)
-  store <32 x double> %res, <32 x double>* %a
+  store <32 x double> %res, ptr %a
   ret void
 }
 
@@ -1101,7 +1101,7 @@ define <8 x half> @frinta_v8f16(<8 x half> %op) vscale_range(2,0) #0 {
   ret <8 x half> %res
 }
 
-define void @frinta_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
+define void @frinta_v16f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frinta_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -1109,13 +1109,13 @@ define void @frinta_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frinta z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.round.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
-define void @frinta_v32f16(<32 x half>* %a) #0 {
+define void @frinta_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinta_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -1135,13 +1135,13 @@ define void @frinta_v32f16(<32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frinta z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x half>, <32 x half>* %a
+  %op = load <32 x half>, ptr %a
   %res = call <32 x half> @llvm.round.v32f16(<32 x half> %op)
-  store <32 x half> %res, <32 x half>* %a
+  store <32 x half> %res, ptr %a
   ret void
 }
 
-define void @frinta_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
+define void @frinta_v64f16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frinta_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -1149,13 +1149,13 @@ define void @frinta_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frinta z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x half>, <64 x half>* %a
+  %op = load <64 x half>, ptr %a
   %res = call <64 x half> @llvm.round.v64f16(<64 x half> %op)
-  store <64 x half> %res, <64 x half>* %a
+  store <64 x half> %res, ptr %a
   ret void
 }
 
-define void @frinta_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
+define void @frinta_v128f16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frinta_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -1163,9 +1163,9 @@ define void @frinta_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frinta z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <128 x half>, <128 x half>* %a
+  %op = load <128 x half>, ptr %a
   %res = call <128 x half> @llvm.round.v128f16(<128 x half> %op)
-  store <128 x half> %res, <128 x half>* %a
+  store <128 x half> %res, ptr %a
   ret void
 }
 
@@ -1189,7 +1189,7 @@ define <4 x float> @frinta_v4f32(<4 x float> %op) vscale_range(2,0) #0 {
   ret <4 x float> %res
 }
 
-define void @frinta_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
+define void @frinta_v8f32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frinta_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -1197,13 +1197,13 @@ define void @frinta_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frinta z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.round.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
-define void @frinta_v16f32(<16 x float>* %a) #0 {
+define void @frinta_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinta_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -1223,13 +1223,13 @@ define void @frinta_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frinta z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x float>, <16 x float>* %a
+  %op = load <16 x float>, ptr %a
   %res = call <16 x float> @llvm.round.v16f32(<16 x float> %op)
-  store <16 x float> %res, <16 x float>* %a
+  store <16 x float> %res, ptr %a
   ret void
 }
 
-define void @frinta_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
+define void @frinta_v32f32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frinta_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1237,13 +1237,13 @@ define void @frinta_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frinta z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x float>, <32 x float>* %a
+  %op = load <32 x float>, ptr %a
   %res = call <32 x float> @llvm.round.v32f32(<32 x float> %op)
-  store <32 x float> %res, <32 x float>* %a
+  store <32 x float> %res, ptr %a
   ret void
 }
 
-define void @frinta_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
+define void @frinta_v64f32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frinta_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -1251,9 +1251,9 @@ define void @frinta_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frinta z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x float>, <64 x float>* %a
+  %op = load <64 x float>, ptr %a
   %res = call <64 x float> @llvm.round.v64f32(<64 x float> %op)
-  store <64 x float> %res, <64 x float>* %a
+  store <64 x float> %res, ptr %a
   ret void
 }
 
@@ -1277,7 +1277,7 @@ define <2 x double> @frinta_v2f64(<2 x double> %op) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @frinta_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
+define void @frinta_v4f64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frinta_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -1285,13 +1285,13 @@ define void @frinta_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frinta z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.round.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
-define void @frinta_v8f64(<8 x double>* %a) #0 {
+define void @frinta_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frinta_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -1311,13 +1311,13 @@ define void @frinta_v8f64(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frinta z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x double>, <8 x double>* %a
+  %op = load <8 x double>, ptr %a
   %res = call <8 x double> @llvm.round.v8f64(<8 x double> %op)
-  store <8 x double> %res, <8 x double>* %a
+  store <8 x double> %res, ptr %a
   ret void
 }
 
-define void @frinta_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
+define void @frinta_v16f64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frinta_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -1325,13 +1325,13 @@ define void @frinta_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frinta z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x double>, <16 x double>* %a
+  %op = load <16 x double>, ptr %a
   %res = call <16 x double> @llvm.round.v16f64(<16 x double> %op)
-  store <16 x double> %res, <16 x double>* %a
+  store <16 x double> %res, ptr %a
   ret void
 }
 
-define void @frinta_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
+define void @frinta_v32f64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frinta_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -1339,9 +1339,9 @@ define void @frinta_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frinta z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x double>, <32 x double>* %a
+  %op = load <32 x double>, ptr %a
   %res = call <32 x double> @llvm.round.v32f64(<32 x double> %op)
-  store <32 x double> %res, <32 x double>* %a
+  store <32 x double> %res, ptr %a
   ret void
 }
 
@@ -1369,7 +1369,7 @@ define <8 x half> @frintn_v8f16(<8 x half> %op) vscale_range(2,0) #0 {
   ret <8 x half> %res
 }
 
-define void @frintn_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
+define void @frintn_v16f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintn_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -1377,13 +1377,13 @@ define void @frintn_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintn z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.roundeven.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
-define void @frintn_v32f16(<32 x half>* %a) #0 {
+define void @frintn_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintn_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -1403,13 +1403,13 @@ define void @frintn_v32f16(<32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintn z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x half>, <32 x half>* %a
+  %op = load <32 x half>, ptr %a
   %res = call <32 x half> @llvm.roundeven.v32f16(<32 x half> %op)
-  store <32 x half> %res, <32 x half>* %a
+  store <32 x half> %res, ptr %a
   ret void
 }
 
-define void @frintn_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
+define void @frintn_v64f16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintn_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -1417,13 +1417,13 @@ define void @frintn_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintn z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x half>, <64 x half>* %a
+  %op = load <64 x half>, ptr %a
   %res = call <64 x half> @llvm.roundeven.v64f16(<64 x half> %op)
-  store <64 x half> %res, <64 x half>* %a
+  store <64 x half> %res, ptr %a
   ret void
 }
 
-define void @frintn_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
+define void @frintn_v128f16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintn_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -1431,9 +1431,9 @@ define void @frintn_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintn z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <128 x half>, <128 x half>* %a
+  %op = load <128 x half>, ptr %a
   %res = call <128 x half> @llvm.roundeven.v128f16(<128 x half> %op)
-  store <128 x half> %res, <128 x half>* %a
+  store <128 x half> %res, ptr %a
   ret void
 }
 
@@ -1457,7 +1457,7 @@ define <4 x float> @frintn_v4f32(<4 x float> %op) vscale_range(2,0) #0 {
   ret <4 x float> %res
 }
 
-define void @frintn_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
+define void @frintn_v8f32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintn_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -1465,13 +1465,13 @@ define void @frintn_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintn z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.roundeven.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
-define void @frintn_v16f32(<16 x float>* %a) #0 {
+define void @frintn_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintn_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -1491,13 +1491,13 @@ define void @frintn_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintn z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x float>, <16 x float>* %a
+  %op = load <16 x float>, ptr %a
   %res = call <16 x float> @llvm.roundeven.v16f32(<16 x float> %op)
-  store <16 x float> %res, <16 x float>* %a
+  store <16 x float> %res, ptr %a
   ret void
 }
 
-define void @frintn_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
+define void @frintn_v32f32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintn_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1505,13 +1505,13 @@ define void @frintn_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintn z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x float>, <32 x float>* %a
+  %op = load <32 x float>, ptr %a
   %res = call <32 x float> @llvm.roundeven.v32f32(<32 x float> %op)
-  store <32 x float> %res, <32 x float>* %a
+  store <32 x float> %res, ptr %a
   ret void
 }
 
-define void @frintn_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
+define void @frintn_v64f32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintn_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -1519,9 +1519,9 @@ define void @frintn_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintn z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x float>, <64 x float>* %a
+  %op = load <64 x float>, ptr %a
   %res = call <64 x float> @llvm.roundeven.v64f32(<64 x float> %op)
-  store <64 x float> %res, <64 x float>* %a
+  store <64 x float> %res, ptr %a
   ret void
 }
 
@@ -1545,7 +1545,7 @@ define <2 x double> @frintn_v2f64(<2 x double> %op) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @frintn_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
+define void @frintn_v4f64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintn_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -1553,13 +1553,13 @@ define void @frintn_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintn z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
-define void @frintn_v8f64(<8 x double>* %a) #0 {
+define void @frintn_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintn_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -1579,13 +1579,13 @@ define void @frintn_v8f64(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintn z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x double>, <8 x double>* %a
+  %op = load <8 x double>, ptr %a
   %res = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %op)
-  store <8 x double> %res, <8 x double>* %a
+  store <8 x double> %res, ptr %a
   ret void
 }
 
-define void @frintn_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
+define void @frintn_v16f64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintn_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -1593,13 +1593,13 @@ define void @frintn_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintn z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x double>, <16 x double>* %a
+  %op = load <16 x double>, ptr %a
   %res = call <16 x double> @llvm.roundeven.v16f64(<16 x double> %op)
-  store <16 x double> %res, <16 x double>* %a
+  store <16 x double> %res, ptr %a
   ret void
 }
 
-define void @frintn_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
+define void @frintn_v32f64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintn_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -1607,9 +1607,9 @@ define void @frintn_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintn z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x double>, <32 x double>* %a
+  %op = load <32 x double>, ptr %a
   %res = call <32 x double> @llvm.roundeven.v32f64(<32 x double> %op)
-  store <32 x double> %res, <32 x double>* %a
+  store <32 x double> %res, ptr %a
   ret void
 }
 
@@ -1637,7 +1637,7 @@ define <8 x half> @frintz_v8f16(<8 x half> %op) vscale_range(2,0) #0 {
   ret <8 x half> %res
 }
 
-define void @frintz_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
+define void @frintz_v16f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintz_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -1645,13 +1645,13 @@ define void @frintz_v16f16(<16 x half>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintz z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.trunc.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
-define void @frintz_v32f16(<32 x half>* %a) #0 {
+define void @frintz_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintz_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -1671,13 +1671,13 @@ define void @frintz_v32f16(<32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintz z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <32 x half>, <32 x half>* %a
+  %op = load <32 x half>, ptr %a
   %res = call <32 x half> @llvm.trunc.v32f16(<32 x half> %op)
-  store <32 x half> %res, <32 x half>* %a
+  store <32 x half> %res, ptr %a
   ret void
 }
 
-define void @frintz_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
+define void @frintz_v64f16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintz_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -1685,13 +1685,13 @@ define void @frintz_v64f16(<64 x half>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintz z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x half>, <64 x half>* %a
+  %op = load <64 x half>, ptr %a
   %res = call <64 x half> @llvm.trunc.v64f16(<64 x half> %op)
-  store <64 x half> %res, <64 x half>* %a
+  store <64 x half> %res, ptr %a
   ret void
 }
 
-define void @frintz_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
+define void @frintz_v128f16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintz_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -1699,9 +1699,9 @@ define void @frintz_v128f16(<128 x half>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintz z0.h, p0/m, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <128 x half>, <128 x half>* %a
+  %op = load <128 x half>, ptr %a
   %res = call <128 x half> @llvm.trunc.v128f16(<128 x half> %op)
-  store <128 x half> %res, <128 x half>* %a
+  store <128 x half> %res, ptr %a
   ret void
 }
 
@@ -1725,7 +1725,7 @@ define <4 x float> @frintz_v4f32(<4 x float> %op) vscale_range(2,0) #0 {
   ret <4 x float> %res
 }
 
-define void @frintz_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
+define void @frintz_v8f32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintz_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -1733,13 +1733,13 @@ define void @frintz_v8f32(<8 x float>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintz z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.trunc.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
-define void @frintz_v16f32(<16 x float>* %a) #0 {
+define void @frintz_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintz_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -1759,13 +1759,13 @@ define void @frintz_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintz z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <16 x float>, <16 x float>* %a
+  %op = load <16 x float>, ptr %a
   %res = call <16 x float> @llvm.trunc.v16f32(<16 x float> %op)
-  store <16 x float> %res, <16 x float>* %a
+  store <16 x float> %res, ptr %a
   ret void
 }
 
-define void @frintz_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
+define void @frintz_v32f32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintz_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1773,13 +1773,13 @@ define void @frintz_v32f32(<32 x float>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintz z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x float>, <32 x float>* %a
+  %op = load <32 x float>, ptr %a
   %res = call <32 x float> @llvm.trunc.v32f32(<32 x float> %op)
-  store <32 x float> %res, <32 x float>* %a
+  store <32 x float> %res, ptr %a
   ret void
 }
 
-define void @frintz_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
+define void @frintz_v64f32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintz_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -1787,9 +1787,9 @@ define void @frintz_v64f32(<64 x float>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintz z0.s, p0/m, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <64 x float>, <64 x float>* %a
+  %op = load <64 x float>, ptr %a
   %res = call <64 x float> @llvm.trunc.v64f32(<64 x float> %op)
-  store <64 x float> %res, <64 x float>* %a
+  store <64 x float> %res, ptr %a
   ret void
 }
 
@@ -1813,7 +1813,7 @@ define <2 x double> @frintz_v2f64(<2 x double> %op) vscale_range(2,0) #0 {
   ret <2 x double> %res
 }
 
-define void @frintz_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
+define void @frintz_v4f64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: frintz_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -1821,13 +1821,13 @@ define void @frintz_v4f64(<4 x double>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    frintz z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.trunc.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
-define void @frintz_v8f64(<8 x double>* %a) #0 {
+define void @frintz_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: frintz_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -1847,13 +1847,13 @@ define void @frintz_v8f64(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT:    frintz z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op = load <8 x double>, <8 x double>* %a
+  %op = load <8 x double>, ptr %a
   %res = call <8 x double> @llvm.trunc.v8f64(<8 x double> %op)
-  store <8 x double> %res, <8 x double>* %a
+  store <8 x double> %res, ptr %a
   ret void
 }
 
-define void @frintz_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
+define void @frintz_v16f64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: frintz_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -1861,13 +1861,13 @@ define void @frintz_v16f64(<16 x double>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    frintz z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x double>, <16 x double>* %a
+  %op = load <16 x double>, ptr %a
   %res = call <16 x double> @llvm.trunc.v16f64(<16 x double> %op)
-  store <16 x double> %res, <16 x double>* %a
+  store <16 x double> %res, ptr %a
   ret void
 }
 
-define void @frintz_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
+define void @frintz_v32f64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: frintz_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -1875,9 +1875,9 @@ define void @frintz_v32f64(<32 x double>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    frintz z0.d, p0/m, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x double>, <32 x double>* %a
+  %op = load <32 x double>, ptr %a
   %res = call <32 x double> @llvm.trunc.v32f64(<32 x double> %op)
-  store <32 x double> %res, <32 x double>* %a
+  store <32 x double> %res, ptr %a
   ret void
 }
 

@@ -149,6 +149,7 @@ void PPCSubtarget::initializeEnvironment() {
   UsePPCPostRASchedStrategy = false;
   PairedVectorMemops = false;
   PredictableSelectIsExpensive = false;
+  HasFastMFLR = false;
   HasModernAIXAs = false;
   IsAIX = false;
 

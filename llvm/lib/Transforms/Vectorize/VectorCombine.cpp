@@ -86,6 +86,7 @@ private:
   InstructionWorklist Worklist;
 
   bool vectorizeLoadInsert(Instruction &I);
+  bool widenSubvectorLoad(Instruction &I);
   ExtractElementInst *getShuffleExtract(ExtractElementInst *Ext0,
                                         ExtractElementInst *Ext1,
                                         unsigned PreferredExtractIndex) const;
@@ -260,6 +261,66 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
   VecLd = Builder.CreateShuffleVector(VecLd, Mask);
 
+  replaceValue(I, *VecLd);
+  ++NumVecLoad;
+  return true;
+}
+
+/// If we are loading a vector and then inserting it into a larger vector with
+/// undefined elements, try to load the larger vector and eliminate the insert.
+/// This removes a shuffle in IR and may allow combining of other loaded values.
+bool VectorCombine::widenSubvectorLoad(Instruction &I) {
+  // Match subvector insert of fixed vector.
+  auto *Ty = dyn_cast<FixedVectorType>(I.getType());
+  auto *Shuf = dyn_cast<ShuffleVectorInst>(&I);
+  if (!Ty || !Shuf || !Shuf->isIdentityWithPadding())
+    return false;
+
+  // Allow a non-canonical shuffle mask that is choosing elements from op1.
+  unsigned NumOpElts =
+      cast<FixedVectorType>(Shuf->getOperand(0)->getType())->getNumElements();
+  unsigned OpIndex = any_of(Shuf->getShuffleMask(), [&NumOpElts](int M) {
+    return M >= (int)(NumOpElts);
+  });
+
+  auto *Load = dyn_cast<LoadInst>(Shuf->getOperand(OpIndex));
+  if (!canWidenLoad(Load, TTI))
+    return false;
+
+  // We use minimal alignment (maximum flexibility) because we only care about
+  // the dereferenceable region. When calculating cost and creating a new op,
+  // we may use a larger value based on alignment attributes.
+  const DataLayout &DL = I.getModule()->getDataLayout();
+  Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
+  assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
+  Align Alignment = Load->getAlign();
+  if (!isSafeToLoadUnconditionally(SrcPtr, Ty, Align(1), DL, Load, &AC, &DT))
+    return false;
+
+  Alignment = std::max(SrcPtr->getPointerAlignment(DL), Alignment);
+  Type *LoadTy = Load->getType();
+  unsigned AS = Load->getPointerAddressSpace();
+
+  // Original pattern: insert_subvector (load PtrOp)
+  // This conservatively assumes that the cost of a subvector insert into an
+  // undef value is 0. We could add that cost if the cost model accurately
+  // reflects the real cost of that operation.
+  InstructionCost OldCost =
+      TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS);
+
+  // New pattern: load PtrOp
+  InstructionCost NewCost =
+      TTI.getMemoryOpCost(Instruction::Load, Ty, Alignment, AS);
+
+  // We can aggressively convert to the vector form because the backend can
+  // invert this transform if it does not result in a performance win.
+  if (OldCost < NewCost || !NewCost.isValid())
+    return false;
+
+  IRBuilder<> Builder(Load);
+  Value *CastedPtr =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Ty->getPointerTo(AS));
+  Value *VecLd = Builder.CreateAlignedLoad(Ty, CastedPtr, Alignment);
   replaceValue(I, *VecLd);
   ++NumVecLoad;
   return true;
@@ -1646,6 +1707,7 @@ bool VectorCombine::run() {
     Builder.SetInsertPoint(&I);
     if (!ScalarizationOnly) {
       MadeChange |= vectorizeLoadInsert(I);
+      MadeChange |= widenSubvectorLoad(I);
       MadeChange |= foldExtractExtract(I);
       MadeChange |= foldInsExtFNeg(I);
       MadeChange |= foldBitcastShuf(I);

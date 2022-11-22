@@ -385,13 +385,13 @@ def MOV8cd  : MxMoveToCCRPseudo<MxOp8AddrMode_d.Op>;
 let Uses = [CCR] in {
 class MxMoveFromCCR_R
     : MxInst<(outs MxDRD16:$dst), (ins CCRC:$src), "move.w\t$src, $dst", []>,
-      Requires<[ IsM68010 ]> {
+      Requires<[ AtLeastM68010 ]> {
   let Inst = (descend 0b0100001011, MxEncAddrMode_d<"dst">.EA);
 }
 
 class MxMoveFromCCR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
     : MxInst<(outs), (ins MEMOp:$dst, CCRC:$src), "move.w\t$src, $dst", []>,
-      Requires<[ IsM68010 ]> {
+      Requires<[ AtLeastM68010 ]> {
   let Inst = (ascend
     (descend 0b0100001011, DST_ENC.EA),
     DST_ENC.Supplement

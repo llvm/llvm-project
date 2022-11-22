@@ -22,10 +22,11 @@ body:             |
     ;
     ; CHECK-LABEL: name: use_xro_cannot_encode_add_lsl
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64sp = COPY $x0
-    ; CHECK: %cst:gpr64 = MOVi64imm 4580179968
-    ; CHECK: %load:gpr64 = LDRXroX %copy, %cst, 0, 0 :: (volatile load (s64))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %cst:gpr64 = MOVi64imm 4580179968
+    ; CHECK-NEXT: %load:gpr64 = LDRXroX %copy, %cst, 0, 0 :: (volatile load (s64))
+    ; CHECK-NEXT: RET_ReallyLR
     %copy:gpr(p0) = COPY $x0
     %cst:gpr(s64) = G_CONSTANT i64 4580179968
     %addr:gpr(p0) = G_PTR_ADD %copy, %cst(s64)
@@ -51,11 +52,12 @@ body:             |
     ;
     ; CHECK-LABEL: name: use_xro_preferred_mov
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64sp = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 61440
-    ; CHECK: %cst:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
-    ; CHECK: %load:gpr64 = LDRXroX %copy, %cst, 0, 0 :: (volatile load (s64))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 61440
+    ; CHECK-NEXT: %cst:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: %load:gpr64 = LDRXroX %copy, %cst, 0, 0 :: (volatile load (s64))
+    ; CHECK-NEXT: RET_ReallyLR
     %copy:gpr(p0) = COPY $x0
     %cst:gpr(s64) = G_CONSTANT i64 61440
     %addr:gpr(p0) = G_PTR_ADD %copy, %cst(s64)
@@ -76,10 +78,11 @@ body:             |
     ;
     ; CHECK-LABEL: name: use_xro_negative_imm
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64sp = COPY $x0
-    ; CHECK: %cst:gpr64 = MOVi64imm -61440
-    ; CHECK: %load:gpr64 = LDRXroX %copy, %cst, 0, 0 :: (volatile load (s64))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %cst:gpr64 = MOVi64imm -61440
+    ; CHECK-NEXT: %load:gpr64 = LDRXroX %copy, %cst, 0, 0 :: (volatile load (s64))
+    ; CHECK-NEXT: RET_ReallyLR
     %copy:gpr(p0) = COPY $x0
     %cst:gpr(s64) = G_CONSTANT i64 -61440
     %addr:gpr(p0) = G_PTR_ADD %copy, %cst(s64)
@@ -100,9 +103,10 @@ body:             |
     ;
     ; CHECK-LABEL: name: dont_use_xro_selectable_imm
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64sp = COPY $x0
-    ; CHECK: %load:gpr64 = LDRXui %copy, 2 :: (volatile load (s64))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %load:gpr64 = LDRXui %copy, 2 :: (volatile load (s64))
+    ; CHECK-NEXT: RET_ReallyLR
     %copy:gpr(p0) = COPY $x0
     %cst:gpr(s64) = G_CONSTANT i64 16
     %addr:gpr(p0) = G_PTR_ADD %copy, %cst(s64)
@@ -123,9 +127,10 @@ body:             |
     ;
     ; CHECK-LABEL: name: dont_use_xro_selectable_negative_imm
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64sp = COPY $x0
-    ; CHECK: %load:gpr64 = LDURXi %copy, -16 :: (volatile load (s64))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %load:gpr64 = LDURXi %copy, -16 :: (volatile load (s64))
+    ; CHECK-NEXT: RET_ReallyLR
     %copy:gpr(p0) = COPY $x0
     %cst:gpr(s64) = G_CONSTANT i64 -16
     %addr:gpr(p0) = G_PTR_ADD %copy, %cst(s64)
@@ -146,9 +151,10 @@ body:             |
     ;
     ; CHECK-LABEL: name: dont_use_xro_zero
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64sp = COPY $x0
-    ; CHECK: %load:gpr64 = LDRXui %copy, 0 :: (volatile load (s64))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %load:gpr64 = LDRXui %copy, 0 :: (volatile load (s64))
+    ; CHECK-NEXT: RET_ReallyLR
     %copy:gpr(p0) = COPY $x0
     %cst:gpr(s64) = G_CONSTANT i64 0
     %addr:gpr(p0) = G_PTR_ADD %copy, %cst(s64)
@@ -170,9 +176,10 @@ body:             |
     ;
     ; CHECK-LABEL: name: dont_use_xro_in_range
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64sp = COPY $x0
-    ; CHECK: %load:gpr64 = LDURXi %copy, 17 :: (volatile load (s64))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %load:gpr64 = LDURXi %copy, 17 :: (volatile load (s64))
+    ; CHECK-NEXT: RET_ReallyLR
     %copy:gpr(p0) = COPY $x0
     %cst:gpr(s64) = G_CONSTANT i64 17
     %addr:gpr(p0) = G_PTR_ADD %copy, %cst(s64)
@@ -199,11 +206,12 @@ body:             |
     ;
     ; CHECK-LABEL: name: dont_use_xro_add_lsl
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64 = COPY $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64common = COPY %copy
-    ; CHECK: %addr:gpr64sp = ADDXri [[COPY]], 273, 12
-    ; CHECK: %load:gpr64 = LDRXui %addr, 0 :: (volatile load (s64))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY %copy
+    ; CHECK-NEXT: %addr:gpr64sp = ADDXri [[COPY]], 273, 12
+    ; CHECK-NEXT: %load:gpr64 = LDRXui %addr, 0 :: (volatile load (s64))
+    ; CHECK-NEXT: RET_ReallyLR
     %copy:gpr(p0) = COPY $x0
     %cst:gpr(s64) = G_CONSTANT i64 1118208
     %addr:gpr(p0) = G_PTR_ADD %copy, %cst(s64)

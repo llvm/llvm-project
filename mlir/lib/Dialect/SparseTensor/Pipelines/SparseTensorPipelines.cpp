@@ -32,8 +32,7 @@ getBufferizationOptions(bool analysisOnly) {
   // TODO(springerm): To spot memory leaks more easily, returning dense allocs
   // should be disallowed.
   options.allowReturnAllocs = true;
-  options.functionBoundaryTypeConversion =
-      BufferizationOptions::LayoutMapOption::IdentityLayoutMap;
+  options.functionBoundaryTypeConversion = LayoutMapOption::IdentityLayoutMap;
   options.unknownTypeConverterFn = [](Value value, unsigned memorySpace,
                                       const BufferizationOptions &options) {
     return getMemRefTypeWithStaticIdentityLayout(
@@ -64,7 +63,8 @@ void mlir::sparse_tensor::buildSparseCompiler(
     pm.addPass(createSparseTensorConversionPass(
         options.sparseTensorConversionOptions()));
   else
-    pm.addPass(createSparseTensorCodegenPass());
+    pm.addPass(
+        createSparseTensorCodegenPass(options.enableBufferInitialization));
   pm.addPass(createSparseBufferRewritePass(options.enableBufferInitialization));
   pm.addPass(createDenseBufferizationPass(
       getBufferizationOptions(/*analysisOnly=*/false)));

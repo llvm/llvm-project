@@ -1,5 +1,5 @@
 import("//clang-tools-extra/clangd/quality/gen_decision_forest.gni")
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 gen_decision_forest("DecisionForestRuntimeTest") {
   model = "decision_forest_model"

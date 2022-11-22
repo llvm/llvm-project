@@ -12,7 +12,7 @@ body:            |
     S_BRANCH %bb.1
 
   bb.1:
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -24,7 +24,7 @@ name:            hazard_buf_branch_lds
 body:            |
   bb.0:
     successors: %bb.1
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -56,11 +56,11 @@ name:            no_hazard_buf_branch_buf
 body:            |
   bb.0:
     successors: %bb.1
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -75,7 +75,7 @@ body:            |
     $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
 
   bb.1:
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -87,7 +87,7 @@ name:            no_hazard_lds_branch_buf_samebb
 body:            |
   bb.0:
     $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -101,7 +101,7 @@ body:            |
   bb.0:
     successors: %bb.0
     $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_BRANCH %bb.0
 ...
 
@@ -118,8 +118,8 @@ body:            |
     S_BRANCH %bb.1
 
   bb.1:
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -137,7 +137,7 @@ body:            |
 
   bb.1:
     $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -150,11 +150,11 @@ body:            |
   bb.0:
     successors: %bb.1
     $vgpr1 = DS_READ_B32 undef $vgpr0, 0, 0, implicit $m0, implicit $exec
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -171,7 +171,7 @@ body:            |
 
   bb.1:
     S_WAITCNT_VSCNT undef $sgpr_null, 1
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -189,7 +189,7 @@ body:            |
 
   bb.1:
     S_WAITCNT_VSCNT undef $sgpr_null, 0
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -206,7 +206,7 @@ body:            |
 
   bb.1:
     S_WAITCNT_VSCNT undef $sgpr0, 0
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -223,7 +223,7 @@ body:            |
     S_BRANCH %bb.1
 
   bb.1:
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 

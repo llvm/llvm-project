@@ -1752,6 +1752,35 @@ struct FormatStyle {
   /// \version 12
   BreakBeforeConceptDeclarationsStyle BreakBeforeConceptDeclarations;
 
+  /// Different ways to break ASM parameters.
+  enum BreakBeforeInlineASMColonStyle : int8_t {
+    /// No break before inline ASM colon.
+    /// \code
+    ///    asm volatile("string", : : val);
+    /// \endcode
+    BBIAS_Never,
+    /// Break before inline ASM colon if the line length is longer than column
+    /// limit.
+    /// \code
+    ///    asm volatile("string", : : val);
+    ///    asm("cmoveq %1, %2, %[result]"
+    ///        : [result] "=r"(result)
+    ///        : "r"(test), "r"(new), "[result]"(old));
+    /// \endcode
+    BBIAS_OnlyMultiline,
+    /// Always break before inline ASM colon.
+    /// \code
+    ///    asm volatile("string",
+    ///                 :
+    ///                 : val);
+    /// \endcode
+    BBIAS_Always,
+  };
+
+  /// The inline ASM colon style to use.
+  /// \version 16
+  BreakBeforeInlineASMColonStyle BreakBeforeInlineASMColon;
+
   /// If ``true``, ternary operators will be placed after line breaks.
   /// \code
   ///    true:
@@ -4016,6 +4045,7 @@ struct FormatStyle {
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
+           BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
            BreakInheritanceList == R.BreakInheritanceList &&

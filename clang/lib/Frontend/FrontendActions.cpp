@@ -938,6 +938,20 @@ void DumpModuleInfoAction::ExecuteAction() {
         }
       }
     }
+
+    // Emit the macro definitions in the module file so that we can know how
+    // much definitions in the module file quickly.
+    // TODO: Emit the macro definition bodies completely.
+    if (auto FilteredMacros = llvm::make_filter_range(
+            R->getPreprocessor().macros(),
+            [](const auto &Macro) { return Macro.first->isFromAST(); });
+        !FilteredMacros.empty()) {
+      Out << "   Macro Definitions:\n";
+      for (/*<IdentifierInfo *, MacroState> pair*/ const auto &Macro :
+           FilteredMacros)
+        Out << "     " << Macro.first->getName() << "\n";
+    }
+
     // Now let's print out any modules we did not see as part of the Primary.
     for (auto SM : SubModMap) {
       if (!SM.second.Seen && SM.second.Mod) {

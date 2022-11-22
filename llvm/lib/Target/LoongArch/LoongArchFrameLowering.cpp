@@ -406,6 +406,29 @@ LoongArchFrameLowering::eliminateCallFramePseudoInstr(
   return MBB.erase(MI);
 }
 
+bool LoongArchFrameLowering::spillCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+  if (CSI.empty())
+    return true;
+
+  MachineFunction *MF = MBB.getParent();
+  const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
+
+  // Insert the spill to the stack frame.
+  for (auto &CS : CSI) {
+    Register Reg = CS.getReg();
+    // If the register is RA and the return address is taken by method
+    // LoongArchTargetLowering::lowerRETURNADDR, don't set kill flag.
+    bool IsKill =
+        !(Reg == LoongArch::R1 && MF->getFrameInfo().isReturnAddressTaken());
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, CS.getFrameIdx(), RC, TRI);
+  }
+
+  return true;
+}
+
 StackOffset LoongArchFrameLowering::getFrameIndexReference(
     const MachineFunction &MF, int FI, Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();

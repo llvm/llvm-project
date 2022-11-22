@@ -19,6 +19,13 @@ Many of the examples below are written assuming specific CMake Generators.
 Unless otherwise explicitly called out these commands should work with any CMake
 generator.
 
+Many of the build configurations mentioned on this documentation page can be
+utilized by using a CMake cache. A CMake cache is essentially a configuration
+file that sets the necessary flags for a specific build configuration. The caches
+for Clang are located in :code:`/clang/cmake/caches` within the monorepo. They
+can be passed to CMake using the :code:`-C` flag as demonstrated in the examples
+below along with additional configuration flags.
+
 Bootstrap Builds
 ================
 
@@ -110,12 +117,34 @@ performance counters (.profraw files). After generating all the profraw files
 you use llvm-profdata to merge the files into a single profdata file that you
 can feed into the LLVM_PROFDATA_FILE option.
 
-Our PGO.cmake cache script automates that whole process. You can use it by
-running:
+Our PGO.cmake cache automates that whole process. You can use it for
+configuration with CMake with the following command:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake <path to source>
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake \
+      <path to source>/llvm
+
+There are several additional options that the cache file also accepts to modify
+the build, particularly the PGO_INSTRUMENT_LTO option. Setting this option to
+Thin or Full will enable ThinLTO or full LTO respectively, further enhancing
+the performance gains from a PGO build by enabling interprocedural
+optimizations. For example, to run a CMake configuration for a PGO build
+that also enables ThinTLO, use the following command:
+
+.. code-block:: console
+
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake \
+      -DPGO_INSTRUMENT_LTO=Thin \
+      <path to source>/llvm
+
+After configuration, building the stage2-instrumented-generate-profdata target
+will automatically build the stage1 compiler, build the instrumented compiler
+with the stage1 compiler, and then run the instrumented compiler against the
+perf training data:
+
+.. code-block:: console
+
   $ ninja stage2-instrumented-generate-profdata
 
 If you let that run for a few hours or so, it will place a profdata file in your
@@ -125,7 +154,7 @@ and you *must* have compiler-rt in your build tree.
 This process uses any source files under the perf-training directory as training
 data as long as the source files are marked up with LIT-style RUN lines.
 
-After it finishes you can use “find . -name clang.profdata” to find it, but it
+After it finishes you can use :code:`find . -name clang.profdata` to find it, but it
 should be at a path something like:
 
 .. code-block:: console
@@ -135,22 +164,22 @@ should be at a path something like:
 You can feed that file into the LLVM_PROFDATA_FILE option when you build your
 optimized compiler.
 
-The PGO came cache has a slightly different stage naming scheme than other
-multi-stage builds. It generates three stages; stage1, stage2-instrumented, and
+The PGO cache has a slightly different stage naming scheme than other
+multi-stage builds. It generates three stages: stage1, stage2-instrumented, and
 stage2. Both of the stage2 builds are built using the stage1 compiler.
 
-The PGO came cache generates the following additional targets:
+The PGO cache generates the following additional targets:
 
 **stage2-instrumented**
-  Builds a stage1 x86 compiler, runtime, and required tools (llvm-config,
+  Builds a stage1 compiler, runtime, and required tools (llvm-config,
   llvm-profdata) then uses that compiler to build an instrumented stage2 compiler.
 
 **stage2-instrumented-generate-profdata**
-  Depends on "stage2-instrumented" and will use the instrumented compiler to
+  Depends on stage2-instrumented and will use the instrumented compiler to
   generate profdata based on the training files in clang/utils/perf-training
 
 **stage2**
-  Depends of "stage2-instrumented-generate-profdata" and will use the stage1
+  Depends on stage2-instrumented-generate-profdata and will use the stage1
   compiler with the stage2 profdata to build a PGO-optimized compiler.
 
 **stage2-check-llvm**
@@ -163,8 +192,55 @@ The PGO came cache generates the following additional targets:
   Depends on stage2 and runs check-all using the stage2 compiler.
 
 **stage2-test-suite**
-  Depends on stage2 and runs the test-suite using the stage3 compiler (requires
+  Depends on stage2 and runs the test-suite using the stage2 compiler (requires
   in-tree test-suite).
+
+BOLT
+====
+
+`BOLT <https://github.com/llvm/llvm-project/blob/main/bolt/README.md>`_
+(Binary Optimization and Layout Tool) is a tool that optimizes binaries
+post-link by profiling them at runtime and then using that information to
+optimize the layout of the final binary among other optimizations performed
+at the binary level. There are also CMake caches available to build
+LLVM/Clang with BOLT.
+
+To configure a single-stage build that builds LLVM/Clang and then optimizes
+it with BOLT, use the following CMake configuration:
+
+.. code-block:: console
+
+  $ cmake <path to source>/llvm -C <path to source>/clang/cmake/caches/BOLT.cmake
+
+Then, build the BOLT-optimized binary by running the following ninja command:
+
+.. code-block:: console
+
+  $ ninja clang++-bolt
+
+If you're seeing errors in the build process, try building with a recent
+version of Clang/LLVM by setting the CMAKE_C_COMPILER and
+CMAKE_CXX_COMPILER flags to the appropriate values.
+
+It is also possible to use BOLT on top of PGO and (Thin)LTO for an even more
+significant runtime speedup. To configure a three stage PGO build with ThinLTO
+that optimizes the resulting binary with BOLT, use the following CMake
+configuration command:
+
+.. code-block:: console
+
+  $ cmake -G Ninja <path to source>/llvm \
+      -C <path to source>/clang/cmake/caches/BOLT-PGO.cmake \
+      -DBOOTSTRAP_LLVM_ENABLE_LLD=ON \
+      -DBOOTSTRAP_BOOTSTRAP_LLVM_ENABLE_LLD=ON \
+      -DPGO_INSTRUMENT_LTO=Thin
+
+Then, to build the final optimized binary, build the stage2-clang++-bolt
+target:
+
+.. code-block:: console
+
+  $ ninja stage2-clang++-bolt
 
 3-Stage Non-Determinism
 =======================

@@ -304,7 +304,6 @@ define i1 @fcmp_fast_oeq(float %a, float %b, i1 %c) nounwind {
 ; LA32-NEXT:  # %bb.1: # %if.then
 ; LA32-NEXT:    ret
 ; LA32-NEXT:  .LBB17_2: # %if.else
-; LA32-NEXT:    fcmp.ceq.s $fcc0, $fa0, $fa1
 ; LA32-NEXT:    movcf2gr $a0, $fcc0
 ; LA32-NEXT:    ret
 ;
@@ -318,7 +317,6 @@ define i1 @fcmp_fast_oeq(float %a, float %b, i1 %c) nounwind {
 ; LA64-NEXT:  # %bb.1: # %if.then
 ; LA64-NEXT:    ret
 ; LA64-NEXT:  .LBB17_2: # %if.else
-; LA64-NEXT:    fcmp.ceq.s $fcc0, $fa0, $fa1
 ; LA64-NEXT:    movcf2gr $a0, $fcc0
 ; LA64-NEXT:    ret
   %cmp = fcmp fast oeq float %a, 0.000000e+00

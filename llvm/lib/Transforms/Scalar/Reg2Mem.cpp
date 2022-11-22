@@ -40,6 +40,9 @@ STATISTIC(NumRegsDemoted, "Number of registers demoted");
 STATISTIC(NumPhisDemoted, "Number of phi-nodes demoted");
 
 static bool valueEscapes(const Instruction &Inst) {
+  if (!Inst.getType()->isSized())
+    return false;
+
   const BasicBlock *BB = Inst.getParent();
   for (const User *U : Inst.users()) {
     const Instruction *UI = cast<Instruction>(U);

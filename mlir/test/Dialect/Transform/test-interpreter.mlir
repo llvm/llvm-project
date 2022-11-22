@@ -920,3 +920,20 @@ transform.with_pdl_patterns {
 }
 
 "test.some_op"() : () -> ()
+// -----
+
+func.func @split_handles(%a: index, %b: index, %c: index) {
+  %0 = arith.muli %a, %b : index  
+  %1 = arith.muli %a, %c : index  
+  return
+}
+
+transform.sequence -> !pdl.operation failures(propagate) {
+^bb1(%fun: !pdl.operation):
+  %muli = transform.structured.match ops{["arith.muli"]} in %fun
+  // expected-error @below {{expected to contain 3 operation handles but it only contains 2 handles}}
+  %h_2:3 = split_handles %muli in [3] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
+  /// Test that yield does not crash in the presence of silenceable error in
+  /// propagate mode.
+  yield %fun : !pdl.operation
+}

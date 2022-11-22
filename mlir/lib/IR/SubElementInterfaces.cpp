@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/SubElementInterfaces.h"
+#include "mlir/IR/Operation.h"
 
 #include "llvm/ADT/DenseSet.h"
 
@@ -91,116 +92,146 @@ void SubElementTypeInterface::walkSubElements(
 }
 
 //===----------------------------------------------------------------------===//
-// ReplaceSubElements
+/// AttrTypeReplacer
+//===----------------------------------------------------------------------===//
 
-template <typename InterfaceT, typename T, typename ReplaceSubElementFnT>
-static void updateSubElementImpl(
-    T element, function_ref<std::pair<T, WalkResult>(T)> walkFn,
-    DenseMap<T, T> &visited, SmallVectorImpl<T> &newElements,
-    FailureOr<bool> &changed, ReplaceSubElementFnT &&replaceSubElementFn) {
-  // Bail early if we failed at any point.
-  if (failed(changed))
+void AttrTypeReplacer::replaceElementsIn(Operation *op, bool replaceLocs,
+                                         bool replaceTypes) {
+  // Functor that replaces the given element if the new value is different,
+  // otherwise returns nullptr.
+  auto replaceIfDifferent = [&](auto element) {
+    auto replacement = replace(element);
+    return (replacement && replacement != element) ? replacement : nullptr;
+  };
+  // Check the attribute dictionary for replacements.
+  if (auto newAttrs = replaceIfDifferent(op->getAttrDictionary()))
+    op->setAttrs(cast<DictionaryAttr>(newAttrs));
+
+  // If we aren't updating locations or types, we're done.
+  if (!replaceTypes && !replaceLocs)
     return;
-  newElements.push_back(element);
 
-  // Guard against potentially null inputs. We always map null to null.
-  if (!element)
-    return;
+  // Update the location.
+  if (replaceLocs) {
+    if (Attribute newLoc = replaceIfDifferent(op->getLoc()))
+      op->setLoc(cast<LocationAttr>(newLoc));
+  }
 
-  // Check for an existing mapping for this element, and walk it if we haven't
-  // yet.
-  T *mappedElement = &visited[element];
-  if (!*mappedElement) {
-    WalkResult result = WalkResult::advance();
-    std::tie(*mappedElement, result) = walkFn(element);
+  // Update the result types.
+  if (replaceTypes) {
+    for (OpResult result : op->getResults())
+      if (Type newType = replaceIfDifferent(result.getType()))
+        result.setType(newType);
+  }
 
-    // Try walking this element.
-    if (result.wasInterrupted() || !*mappedElement) {
-      changed = failure();
-      return;
-    }
-
-    // Handle replacing sub-elements if this element is also a container.
-    if (!result.wasSkipped()) {
-      if (auto interface = mappedElement->template dyn_cast<InterfaceT>()) {
-        // Cache the size of the `visited` map since it may grow when calling
-        // `replaceSubElementFn` and we would need to fetch again the (now
-        // invalidated) reference to `mappedElement`.
-        size_t visitedSize = visited.size();
-        auto replacedElement = replaceSubElementFn(interface);
-        if (!replacedElement) {
-          changed = failure();
-          return;
+  // Update any nested block arguments.
+  for (Region &region : op->getRegions()) {
+    for (Block &block : region) {
+      for (BlockArgument &arg : block.getArguments()) {
+        if (replaceLocs) {
+          if (Attribute newLoc = replaceIfDifferent(arg.getLoc()))
+            arg.setLoc(cast<LocationAttr>(newLoc));
         }
-        if (visitedSize != visited.size())
-          mappedElement = &visited[element];
-        *mappedElement = replacedElement;
+
+        if (replaceTypes) {
+          if (Type newType = replaceIfDifferent(arg.getType()))
+            arg.setType(newType);
+        }
       }
     }
   }
+}
 
-  // Update to the mapped element.
-  if (*mappedElement != element) {
-    newElements.back() = *mappedElement;
-    changed = true;
+template <typename T>
+static void updateSubElementImpl(T element, AttrTypeReplacer &replacer,
+                                 DenseMap<T, T> &elementMap,
+                                 SmallVectorImpl<T> &newElements,
+                                 FailureOr<bool> &changed) {
+  // Bail early if we failed at any point.
+  if (failed(changed))
+    return;
+
+  // Guard against potentially null inputs. We always map null to null.
+  if (!element) {
+    newElements.push_back(nullptr);
+    return;
+  }
+
+  // Replace the element.
+  if (T result = replacer.replace(element)) {
+    newElements.push_back(result);
+    if (result != element)
+      changed = true;
+  } else {
+    changed = failure();
   }
 }
 
-template <typename InterfaceT>
-static typename InterfaceT::ValueType
-replaceSubElementsImpl(InterfaceT interface,
-                       SubElementResultReplFn<Attribute> walkAttrsFn,
-                       SubElementResultReplFn<Type> walkTypesFn,
-                       DenseMap<Attribute, Attribute> &visitedAttrs,
-                       DenseMap<Type, Type> &visitedTypes) {
+template <typename InterfaceT, typename T>
+T AttrTypeReplacer::replaceSubElements(InterfaceT interface,
+                                       DenseMap<T, T> &interfaceMap) {
   // Walk the current sub-elements, replacing them as necessary.
   SmallVector<Attribute, 16> newAttrs;
   SmallVector<Type, 16> newTypes;
   FailureOr<bool> changed = false;
-  auto replaceSubElementFn = [&](auto subInterface) {
-    return replaceSubElementsImpl(subInterface, walkAttrsFn, walkTypesFn,
-                                  visitedAttrs, visitedTypes);
-  };
   interface.walkImmediateSubElements(
       [&](Attribute element) {
-        updateSubElementImpl<SubElementAttrInterface>(
-            element, walkAttrsFn, visitedAttrs, newAttrs, changed,
-            replaceSubElementFn);
+        updateSubElementImpl(element, *this, attrMap, newAttrs, changed);
       },
       [&](Type element) {
-        updateSubElementImpl<SubElementTypeInterface>(
-            element, walkTypesFn, visitedTypes, newTypes, changed,
-            replaceSubElementFn);
+        updateSubElementImpl(element, *this, typeMap, newTypes, changed);
       });
   if (failed(changed))
-    return {};
+    return nullptr;
 
-  // If the sub-elements didn't change, just return the original value.
-  if (!*changed)
-    return interface;
-
-  // Use the new elements during the replacement.
-  return interface.replaceImmediateSubElements(newAttrs, newTypes);
+  // If any sub-elements changed, use the new elements during the replacement.
+  T result = interface;
+  if (*changed)
+    result = interface.replaceImmediateSubElements(newAttrs, newTypes);
+  return result;
 }
 
-Attribute SubElementAttrInterface::replaceSubElements(
-    SubElementResultReplFn<Attribute> replaceAttrFn,
-    SubElementResultReplFn<Type> replaceTypeFn) {
-  assert(replaceAttrFn && replaceTypeFn && "expected valid replace functions");
-  DenseMap<Attribute, Attribute> visitedAttrs;
-  DenseMap<Type, Type> visitedTypes;
-  return replaceSubElementsImpl(*this, replaceAttrFn, replaceTypeFn,
-                                visitedAttrs, visitedTypes);
+/// Shared implementation of replacing a given attribute or type element.
+template <typename InterfaceT, typename ReplaceFns, typename T>
+T AttrTypeReplacer::replaceImpl(T element, ReplaceFns &replaceFns,
+                                DenseMap<T, T> &map) {
+  auto [it, inserted] = map.try_emplace(element, element);
+  if (!inserted)
+    return it->second;
+
+  T result = element;
+  WalkResult walkResult = WalkResult::advance();
+  for (auto &replaceFn : llvm::reverse(replaceFns)) {
+    if (Optional<std::pair<T, WalkResult>> newRes = replaceFn(element)) {
+      std::tie(result, walkResult) = *newRes;
+      break;
+    }
+  }
+
+  // If an error occurred, return nullptr to indicate failure.
+  if (walkResult.wasInterrupted() || !result)
+    return map[element] = nullptr;
+
+  // Handle replacing sub-elements if this element is also a container.
+  if (!walkResult.wasSkipped()) {
+    if (auto interface = dyn_cast<InterfaceT>(result)) {
+      // Replace the sub elements of this element, bailing if we fail.
+      if (!(result = replaceSubElements(interface, map)))
+        return map[element] = nullptr;
+    }
+  }
+
+  return map[element] = result;
 }
 
-Type SubElementTypeInterface::replaceSubElements(
-    SubElementResultReplFn<Attribute> replaceAttrFn,
-    SubElementResultReplFn<Type> replaceTypeFn) {
-  assert(replaceAttrFn && replaceTypeFn && "expected valid replace functions");
-  DenseMap<Attribute, Attribute> visitedAttrs;
-  DenseMap<Type, Type> visitedTypes;
-  return replaceSubElementsImpl(*this, replaceAttrFn, replaceTypeFn,
-                                visitedAttrs, visitedTypes);
+Attribute AttrTypeReplacer::replace(Attribute attr) {
+  return replaceImpl<SubElementAttrInterface>(attr, attrReplacementFns,
+                                              attrMap);
+}
+
+Type AttrTypeReplacer::replace(Type type) {
+  return replaceImpl<SubElementTypeInterface>(type, typeReplacementFns,
+                                              typeMap);
 }
 
 //===----------------------------------------------------------------------===//

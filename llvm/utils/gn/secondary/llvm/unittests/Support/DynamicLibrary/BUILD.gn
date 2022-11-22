@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 # FIXME: If we add -Wl,-z,nodelete to the global ldflags, we need to remove
 # it again for these tests (cf CMake).

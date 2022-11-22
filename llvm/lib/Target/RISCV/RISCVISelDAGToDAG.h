@@ -60,17 +60,14 @@ public:
   }
 
   bool selectSExti32(SDValue N, SDValue &Val);
-  bool selectZExti32(SDValue N, SDValue &Val);
+  bool selectZExtBits(SDValue N, unsigned Bits, SDValue &Val);
+  template <unsigned Bits> bool selectZExtBits(SDValue N, SDValue &Val) {
+    return selectZExtBits(N, Bits, Val);
+  }
 
   bool selectSHXADDOp(SDValue N, unsigned ShAmt, SDValue &Val);
-  bool selectSH1ADDOp(SDValue N, SDValue &Val) {
-    return selectSHXADDOp(N, 1, Val);
-  }
-  bool selectSH2ADDOp(SDValue N, SDValue &Val) {
-    return selectSHXADDOp(N, 2, Val);
-  }
-  bool selectSH3ADDOp(SDValue N, SDValue &Val) {
-    return selectSHXADDOp(N, 3, Val);
+  template <unsigned ShAmt> bool selectSHXADDOp(SDValue N, SDValue &Val) {
+    return selectSHXADDOp(N, ShAmt, Val);
   }
 
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits) const;

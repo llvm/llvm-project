@@ -337,11 +337,6 @@ static Value genGetNextCall(OpBuilder &builder, Location loc, Value iter,
       .getResult(0);
 }
 
-/// Generates code to deallocate a dense buffer.
-static void deallocDenseTensor(OpBuilder &builder, Location loc, Value buffer) {
-  builder.create<memref::DeallocOp>(loc, buffer);
-}
-
 /// Converts a pointer to COO (from calls to iter->next()) into a vector of
 /// indices, apply (optional) `offset` on `offsetDim`.
 static SmallVector<Value, 4> loadIndices(OpBuilder &builder, Location loc,

@@ -1141,10 +1141,11 @@ struct ForeachThreadOpInterface
     // Create new ForeachThreadOp without any results and drop the automatically
     // introduced terminator.
     rewriter.setInsertionPoint(foreachThreadOp);
-    auto newForeachThreadOp = rewriter.create<ForeachThreadOp>(
+    ForeachThreadOp newForeachThreadOp;
+    newForeachThreadOp = rewriter.create<ForeachThreadOp>(
         foreachThreadOp.getLoc(), /*outputs=*/ValueRange(),
-        foreachThreadOp.getNumThreads(),
-        extractFromI64ArrayAttr(foreachThreadOp.getThreadDimMapping()));
+        foreachThreadOp.getNumThreads(), foreachThreadOp.getMapping());
+
     newForeachThreadOp.getBody()->getTerminator()->erase();
 
     // Move over block contents of the old op.

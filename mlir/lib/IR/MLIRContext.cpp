@@ -481,7 +481,7 @@ DynamicDialect *MLIRContext::getOrLoadDynamicDialect(
   auto dialectIt = impl.loadedDialects.find(dialectNamespace);
 
   if (dialectIt != impl.loadedDialects.end()) {
-    if (auto dynDialect = dyn_cast<DynamicDialect>(dialectIt->second.get()))
+    if (auto *dynDialect = dyn_cast<DynamicDialect>(dialectIt->second.get()))
       return dynDialect;
     llvm::report_fatal_error("a dialect with namespace '" + dialectNamespace +
                              "' has already been registered");

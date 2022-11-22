@@ -1,6 +1,10 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 // RUN: mlir-opt %s --mlir-print-op-generic | mlir-opt | FileCheck %s
 
+#CSR = #sparse_tensor.encoding<{
+  dimLevelType = ["dense", "compressed"]
+}>
+
 // CHECK-LABEL: func @test_clone
 func.func @test_clone(%buf : memref<*xf32>) -> memref<*xf32> {
   %clone = bufferization.clone %buf : memref<*xf32> to memref<*xf32>
@@ -39,6 +43,9 @@ func.func @test_alloc_tensor_op(%t: tensor<?x5xf32>, %sz: index)
   %4 = bufferization.alloc_tensor() copy(%t) {escape = true} : tensor<?x5xf32>
   // CHECK: bufferization.alloc_tensor() copy(%{{.*}}) {escape = false} : tensor<?x5xf32>
   %5 = bufferization.alloc_tensor() copy(%t) {escape = false} : tensor<?x5xf32>
+  %c100 = arith.constant 100 : index
+  // CHECK: bufferization.alloc_tensor() size_hint=
+  %6 = bufferization.alloc_tensor() size_hint=%c100 : tensor<100x100xf64, #CSR>
   return %1 : tensor<?x5xf32>
 }
 

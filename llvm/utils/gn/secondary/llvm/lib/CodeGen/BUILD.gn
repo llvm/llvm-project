@@ -38,6 +38,7 @@ static_library("CodeGen") {
     "CodeGenPassBuilder.cpp",
     "CodeGenPrepare.cpp",
     "CommandFlags.cpp",
+    "ComplexDeinterleavingPass.cpp",
     "CriticalAntiDepBreaker.cpp",
     "DFAPacketizer.cpp",
     "DeadMachineInstructionElim.cpp",

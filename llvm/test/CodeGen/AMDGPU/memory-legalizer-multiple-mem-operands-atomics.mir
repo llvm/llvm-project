@@ -23,13 +23,13 @@ body:             |
     $sgpr10 = S_MOV_B32 4294967295, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
     $sgpr11 = S_MOV_B32 15204352, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 4, 0, 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(5)* undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 4, 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(5)* undef`)
     S_WAITCNT 127
     S_CMP_LG_U32 killed $sgpr2, 0, implicit-def $scc
     S_WAITCNT 3855
     $vgpr0 = V_MOV_B32_e32 2, implicit $exec
     $vgpr1 = V_MOV_B32_e32 32772, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN killed $vgpr0, killed $vgpr1, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(5)* undef`)
+    BUFFER_STORE_DWORD_OFFEN killed $vgpr0, killed $vgpr1, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(5)* undef`)
     S_CBRANCH_SCC0 %bb.1, implicit killed $scc
 
   bb.2:
@@ -55,7 +55,7 @@ body:             |
     S_WAITCNT 127
     $sgpr0 = S_LSHL_B32 killed $sgpr0, 2, implicit-def dead $scc
     $vgpr0 = V_ADD_CO_U32_e32 killed $sgpr0, killed $vgpr0, implicit-def dead $vcc, implicit $exec
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr0, killed $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, 0, implicit $exec :: (load syncscope("agent-one-as") unordered (s32) from `i32 addrspace(1)* undef`), (load syncscope("workgroup-one-as") seq_cst (s32) from `[8192 x i32] addrspace(5)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr0, killed $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, implicit $exec :: (load syncscope("agent-one-as") unordered (s32) from `i32 addrspace(1)* undef`), (load syncscope("workgroup-one-as") seq_cst (s32) from `[8192 x i32] addrspace(5)* undef`)
     $vgpr1 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $sgpr4_sgpr5
     $vgpr2 = V_MOV_B32_e32 killed $sgpr5, implicit $exec, implicit $sgpr4_sgpr5, implicit $exec
     S_WAITCNT 3952

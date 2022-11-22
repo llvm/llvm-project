@@ -447,15 +447,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   uint64_t DType = TII->get(Opcode).TSFlags & AArch64::DestructiveInstTypeMask;
   uint64_t FalseLanes = MI.getDesc().TSFlags & AArch64::FalseLanesMask;
   bool FalseZero = FalseLanes == AArch64::FalseLanesZero;
-
   Register DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
-
-  if (DType == AArch64::DestructiveBinary)
-    assert(DstReg != MI.getOperand(3).getReg());
-
   bool UseRev = false;
   unsigned PredIdx, DOPIdx, SrcIdx, Src2Idx;
+
   switch (DType) {
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
@@ -489,12 +485,14 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     llvm_unreachable("Unsupported Destructive Operand type");
   }
 
-#ifndef NDEBUG
   // MOVPRFX can only be used if the destination operand
   // is the destructive operand, not as any other operand,
   // so the Destructive Operand must be unique.
   bool DOPRegIsUnique = false;
   switch (DType) {
+  case AArch64::DestructiveBinary:
+    DOPRegIsUnique = DstReg != MI.getOperand(SrcIdx).getReg();
+    break;
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
     DOPRegIsUnique =
@@ -512,7 +510,6 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
          MI.getOperand(DOPIdx).getReg() != MI.getOperand(Src2Idx).getReg());
     break;
   }
-#endif
 
   // Resolve the reverse opcode
   if (UseRev) {
@@ -527,23 +524,27 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
 
   // Get the right MOVPRFX
   uint64_t ElementSize = TII->getElementSizeForOpcode(Opcode);
-  unsigned MovPrfx, MovPrfxZero;
+  unsigned MovPrfx, LSLZero, MovPrfxZero;
   switch (ElementSize) {
   case AArch64::ElementSizeNone:
   case AArch64::ElementSizeB:
     MovPrfx = AArch64::MOVPRFX_ZZ;
+    LSLZero = AArch64::LSL_ZPmI_B;
     MovPrfxZero = AArch64::MOVPRFX_ZPzZ_B;
     break;
   case AArch64::ElementSizeH:
     MovPrfx = AArch64::MOVPRFX_ZZ;
+    LSLZero = AArch64::LSL_ZPmI_H;
     MovPrfxZero = AArch64::MOVPRFX_ZPzZ_H;
     break;
   case AArch64::ElementSizeS:
     MovPrfx = AArch64::MOVPRFX_ZZ;
+    LSLZero = AArch64::LSL_ZPmI_S;
     MovPrfxZero = AArch64::MOVPRFX_ZPzZ_S;
     break;
   case AArch64::ElementSizeD:
     MovPrfx = AArch64::MOVPRFX_ZZ;
+    LSLZero = AArch64::LSL_ZPmI_D;
     MovPrfxZero = AArch64::MOVPRFX_ZPzZ_D;
     break;
   default:
@@ -555,9 +556,10 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   //
   MachineInstrBuilder PRFX, DOP;
   if (FalseZero) {
-#ifndef NDEBUG
-    assert(DOPRegIsUnique && "The destructive operand should be unique");
-#endif
+    // If we cannot prefix the requested instruction we'll instead emit a
+    // prefixed_zeroing_mov for DestructiveBinary.
+    assert((DOPRegIsUnique || AArch64::DestructiveBinary == DType) &&
+           "The destructive operand should be unique");
     assert(ElementSize != AArch64::ElementSizeNone &&
            "This instruction is unpredicated");
 
@@ -569,10 +571,19 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
 
     // After the movprfx, the destructive operand is same as Dst
     DOPIdx = 0;
+
+    // Create the additional LSL to zero the lanes when the DstReg is not
+    // unique. Zeros the lanes in z0 that aren't active in p0 with sequence
+    // movprfx z0.b, p0/z, z0.b; lsl z0.b, p0/m, z0.b, #0;
+    if (DType == AArch64::DestructiveBinary && !DOPRegIsUnique) {
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(LSLZero))
+          .addReg(DstReg, RegState::Define)
+          .add(MI.getOperand(PredIdx))
+          .addReg(DstReg)
+          .addImm(0);
+    }
   } else if (DstReg != MI.getOperand(DOPIdx).getReg()) {
-#ifndef NDEBUG
     assert(DOPRegIsUnique && "The destructive operand should be unique");
-#endif
     PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfx))
                .addReg(DstReg, RegState::Define)
                .addReg(MI.getOperand(DOPIdx).getReg());
@@ -591,6 +602,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
         .add(MI.getOperand(PredIdx))
         .add(MI.getOperand(SrcIdx));
     break;
+  case AArch64::DestructiveBinary:
   case AArch64::DestructiveBinaryImm:
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:

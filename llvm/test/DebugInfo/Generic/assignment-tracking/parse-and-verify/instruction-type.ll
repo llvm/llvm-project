@@ -1,8 +1,6 @@
 ; RUN: opt -S %s -verify -experimental-assignment-tracking 2>&1 \
 ; RUN: | FileCheck %s
 
-; XFAIL: *
-
 ;; NOTE: Expect opt to return zero because the badly formed debug info
 ;; is going to be stripped.
 

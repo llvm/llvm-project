@@ -48,3 +48,19 @@
 # CHECK-BE: dmxor 6, 7                    # encoding: [0x7f,0x07,0xe1,0x62]
 # CHECK-LE: dmxor 6, 7                    # encoding: [0x62,0xe1,0x07,0x7f]
             dmxor 6, 7
+
+# CHECK-BE: subfus 3, 0, 4, 5          # encoding: [0x7c,0x64,0x28,0x90]
+# CHECK-LE: subfus 3, 0, 4, 5          # encoding: [0x90,0x28,0x64,0x7c]
+            subfus 3, 0, 4, 5
+
+# CHECK-BE: subfus 3, 1, 4, 5          # encoding: [0x7c,0x64,0x2c,0x90]
+# CHECK-LE: subfus 3, 1, 4, 5          # encoding: [0x90,0x2c,0x64,0x7c]
+            subfus 3, 1, 4, 5
+
+# CHECK-BE: subfus. 3, 0, 4, 5         # encoding: [0x7c,0x64,0x28,0x91]
+# CHECK-LE: subfus. 3, 0, 4, 5         # encoding: [0x91,0x28,0x64,0x7c]
+            subfus. 3, 0, 4, 5
+
+# CHECK-BE: subfus. 3, 1, 4, 5         # encoding: [0x7c,0x64,0x2c,0x91]
+# CHECK-LE: subfus. 3, 1, 4, 5         # encoding: [0x91,0x2c,0x64,0x7c]
+            subfus. 3, 1, 4, 5

@@ -1495,7 +1495,8 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
   if (MRI.getRegClass(AArch64::DDRegClassID).contains(Reg) ||
       MRI.getRegClass(AArch64::ZPR2RegClassID).contains(Reg) ||
       MRI.getRegClass(AArch64::QQRegClassID).contains(Reg) ||
-      MRI.getRegClass(AArch64::PPR2RegClassID).contains(Reg))
+      MRI.getRegClass(AArch64::PPR2RegClassID).contains(Reg) ||
+      MRI.getRegClass(AArch64::ZPR2StridedRegClassID).contains(Reg))
     NumRegs = 2;
   else if (MRI.getRegClass(AArch64::DDDRegClassID).contains(Reg) ||
            MRI.getRegClass(AArch64::ZPR3RegClassID).contains(Reg) ||
@@ -1503,8 +1504,15 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
     NumRegs = 3;
   else if (MRI.getRegClass(AArch64::DDDDRegClassID).contains(Reg) ||
            MRI.getRegClass(AArch64::ZPR4RegClassID).contains(Reg) ||
-           MRI.getRegClass(AArch64::QQQQRegClassID).contains(Reg))
+           MRI.getRegClass(AArch64::QQQQRegClassID).contains(Reg) ||
+           MRI.getRegClass(AArch64::ZPR4StridedRegClassID).contains(Reg))
     NumRegs = 4;
+
+  unsigned Stride = 1;
+  if (MRI.getRegClass(AArch64::ZPR2StridedRegClassID).contains(Reg))
+    Stride = 8;
+  else if (MRI.getRegClass(AArch64::ZPR4StridedRegClassID).contains(Reg))
+    Stride = 4;
 
   // Now forget about the list and find out what the first register is.
   if (unsigned FirstReg = MRI.getSubReg(Reg, AArch64::dsub0))
@@ -1526,7 +1534,7 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
 
   if ((MRI.getRegClass(AArch64::ZPRRegClassID).contains(Reg) ||
        MRI.getRegClass(AArch64::PPRRegClassID).contains(Reg)) &&
-      NumRegs > 1 &&
+      NumRegs > 1 && Stride == 1 &&
       // Do not print the range when the last register is lower than the first.
       // Because it is a wrap-around register.
       Reg < getNextVectorRegister(Reg, NumRegs - 1)) {
@@ -1540,7 +1548,8 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
       O << LayoutSuffix;
     }
   } else {
-    for (unsigned i = 0; i < NumRegs; ++i, Reg = getNextVectorRegister(Reg)) {
+    for (unsigned i = 0; i < NumRegs;
+         ++i, Reg = getNextVectorRegister(Reg, Stride)) {
       // wrap-around sve register
       if (MRI.getRegClass(AArch64::ZPRRegClassID).contains(Reg) ||
           MRI.getRegClass(AArch64::PPRRegClassID).contains(Reg))

@@ -202,7 +202,7 @@ std::vector<InputFile *> BitcodeCompiler::compile(COFFLinkerContext &ctx) {
   }
 
   if (!config->ltoCache.empty())
-    pruneCache(config->ltoCache, config->ltoCachePolicy);
+    pruneCache(config->ltoCache, config->ltoCachePolicy, files);
 
   std::vector<InputFile *> ret;
   for (unsigned i = 0; i != maxTasks; ++i) {

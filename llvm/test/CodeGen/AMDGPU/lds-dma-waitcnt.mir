@@ -28,7 +28,7 @@ body:             |
   bb.0:
     $m0 = S_MOV_B32 0
     BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `i32 addrspace(1)* undef`), (store (s32) into `i32 addrspace(3)* undef`)
-    $vgpr10 = BUFFER_LOAD_DWORD_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `i32 addrspace(1)* undef`)
+    $vgpr10 = BUFFER_LOAD_DWORD_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `i32 addrspace(1)* undef`)
     $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `i32 addrspace(3)* undef`)
     S_ENDPGM 0
 

@@ -905,7 +905,7 @@ private:
   void addQRTypeForNEON(MVT VT);
 
   unsigned allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
-                                  SelectionDAG &DAG, Register &Reg) const;
+                                  SelectionDAG &DAG) const;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,

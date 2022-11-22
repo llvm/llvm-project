@@ -390,10 +390,22 @@ private:
 
     SmallVector<OptimizedStructLayoutField, 8> LayoutFields;
     LayoutFields.reserve(LDSVarsToTransform.size());
-    for (GlobalVariable *GV : LDSVarsToTransform) {
-      OptimizedStructLayoutField F(GV, DL.getTypeAllocSize(GV->getValueType()),
-                                   AMDGPU::getAlign(DL, GV));
-      LayoutFields.emplace_back(F);
+    {
+      // The order of fields in this struct depends on the order of
+      // varables in the argument which varies when changing how they
+      // are identified, leading to spurious test breakage.
+      std::vector<GlobalVariable *> Sorted(LDSVarsToTransform.begin(),
+                                           LDSVarsToTransform.end());
+      llvm::sort(Sorted.begin(), Sorted.end(),
+                 [](const GlobalVariable *lhs, const GlobalVariable *rhs) {
+                   return lhs->getName() < rhs->getName();
+                 });
+      for (GlobalVariable *GV : Sorted) {
+        OptimizedStructLayoutField F(GV,
+                                     DL.getTypeAllocSize(GV->getValueType()),
+                                     AMDGPU::getAlign(DL, GV));
+        LayoutFields.emplace_back(F);
+      }
     }
 
     performOptimizedStructLayout(LayoutFields);

@@ -19,6 +19,9 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 #include "clang-include-cleaner/Types.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -35,6 +38,7 @@ class Decl;
 class FileEntry;
 class Preprocessor;
 class PPCallbacks;
+class FileManager;
 
 namespace include_cleaner {
 
@@ -61,6 +65,11 @@ public:
   /// Returns "" if there is none.
   llvm::StringRef getPublic(const FileEntry *File) const;
 
+  /// Returns all direct exporter headers for the given header file.
+  /// Returns empty if there is none.
+  llvm::SmallVector<const FileEntry *> getExporters(const FileEntry *File,
+                                                    FileManager &FM) const;
+
 private:
   class RecordPragma;
   /// 1-based Line numbers for the #include directives of the main file that
@@ -73,10 +82,21 @@ private:
   // !!NOTE: instead of using a FileEntry* to identify the physical file, we
   // deliberately use the UniqueID to ensure the result is stable across
   // FileManagers (for clangd's preamble and main-file builds).
-  llvm::DenseMap<llvm::sys::fs::UniqueID, std::string /*VerbatimSpelling*/>
+  llvm::DenseMap<llvm::sys::fs::UniqueID, llvm::StringRef /*VerbatimSpelling*/>
       IWYUPublic;
 
-  // FIXME: add other IWYU supports (export etc)
+  /// A reverse map from the underlying header to its exporter headers.
+  //
+  //  There's no way to get a FileEntry from a UniqueID, especially when it
+  //  hasn't been opened before. So store the full path and convert it to a
+  //  FileEntry by opening the file again through a FileManager.
+  llvm::DenseMap<llvm::sys::fs::UniqueID,
+                 llvm::SmallVector</*RealPathNames*/ llvm::StringRef>>
+      IWYUExportBy;
+
+  /// Owns the strings.
+  llvm::BumpPtrAllocator Arena;
+
   // FIXME: add support for clang use_instead pragma
   // FIXME: add selfcontained file.
 };

@@ -24,7 +24,7 @@ class SynthProvider:
         return None
 
 
-def __lldb_init_module(debugger, dict):
+def register_formatters(debugger):
     cat = debugger.CreateCategory("callback_formatters")
     cat.AddTypeSummary(
         lldb.SBTypeNameSpecifier("formatters_with_callback.derives_from_base",

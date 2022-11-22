@@ -529,10 +529,10 @@ def SparseTensor_SortCooOp : SparseTensor_Op<"sort_coo">,
     Sparse_tensor.sort_coo is similar to sparse_tensor.sort, except that all the
     `xs` values and some `ys` values are put in the linear buffer `xy`. The
     optional index attribute `nx` provides the number of `xs` values in `xy`.
-    When `ns` is not explicitly specified, its value is 1. The optional index
+    When `nx` is not explicitly specified, its value is 1. The optional index
     attribute `ny` provides the number of `ys` values in `xy`. When `ny` is not
-    explicitly specified, its value is 0. This instruction supports the TACO
-    COO style storage format for better sorting performance.
+    explicitly specified, its value is 0. This instruction supports a more
+    efficient way to store the COO definition in sparse tensor type.
 
     The buffer xy should have a dimension not less than n * (nx + ny) while the
     buffers in `ys` should have a dimension not less than `n`. The behavior of

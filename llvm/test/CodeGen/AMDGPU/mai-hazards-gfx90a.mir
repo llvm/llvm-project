@@ -401,7 +401,7 @@ name:            smfma4x4_write_vgpr_vm_read
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfma4x4_write_vgpr_flat_read
 # GCN:      V_MFMA
@@ -1318,7 +1318,8 @@ body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $agpr0_agpr1 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $agpr0_agpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORDX2_OFFEN_exact $vgpr2_vgpr3, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+
+    BUFFER_STORE_DWORDX2_OFFEN_exact $vgpr2_vgpr3, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
 ...
 # GCN-LABEL: name: dgemm_between_valu_write_buffer_load
 # GCN:      V_MOV_B32_e32
@@ -1330,7 +1331,7 @@ body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $agpr0_agpr1 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $agpr0_agpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr0, killed $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr0, killed $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, implicit $exec
 ...
 # GCN-LABEL: name: dgemm_between_valu_write_global_store
 # GCN:      V_MOV_B32_e32
@@ -1448,7 +1449,7 @@ body:             |
     $agpr0_agpr1 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $agpr0_agpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
 
   bb.1:
-    BUFFER_STORE_DWORDX2_OFFEN_exact $vgpr2_vgpr3, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX2_OFFEN_exact $vgpr2_vgpr3, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
 ...
 # GCN-LABEL: name: dgemm_between_valu_write_buffer_store_fallthrough2
 # GCN:      V_MOV_B32_e32
@@ -1463,7 +1464,7 @@ body:             |
 
   bb.1:
     $agpr0_agpr1 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $agpr0_agpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORDX2_OFFEN_exact $vgpr2_vgpr3, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX2_OFFEN_exact $vgpr2_vgpr3, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
 ...
 # GCN-LABEL: name: dgemm_between_valu_write_buffer_store_fallthrough3
 # GCN:      V_MOV_B32_e32
@@ -1481,5 +1482,5 @@ body:             |
 
   bb.2:
     $agpr0_agpr1 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $agpr0_agpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORDX2_OFFEN_exact $vgpr2_vgpr3, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX2_OFFEN_exact $vgpr2_vgpr3, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
 ...

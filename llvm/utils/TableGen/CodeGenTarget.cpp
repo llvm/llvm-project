@@ -668,7 +668,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   TheDef = R;
   std::string DefName = std::string(R->getName());
   ArrayRef<SMLoc> DefLoc = R->getLoc();
-  ModRef = ReadWriteMem;
   Properties = 0;
   isOverloaded = false;
   isCommutative = false;
@@ -842,26 +841,25 @@ void CodeGenIntrinsic::setDefaultProperties(
 
 void CodeGenIntrinsic::setProperty(Record *R) {
   if (R->getName() == "IntrNoMem")
-    ModRef = NoMem;
+    ME = MemoryEffects::none();
   else if (R->getName() == "IntrReadMem") {
-    if (!(ModRef & MR_Ref))
+    if (ME.onlyWritesMemory())
       PrintFatalError(TheDef->getLoc(),
                       Twine("IntrReadMem cannot be used after IntrNoMem or "
                             "IntrWriteMem. Default is ReadWrite"));
-    ModRef = ModRefBehavior(ModRef & ~MR_Mod);
+    ME &= MemoryEffects::readOnly();
   } else if (R->getName() == "IntrWriteMem") {
-    if (!(ModRef & MR_Mod))
+    if (ME.onlyReadsMemory())
       PrintFatalError(TheDef->getLoc(),
                       Twine("IntrWriteMem cannot be used after IntrNoMem or "
                             "IntrReadMem. Default is ReadWrite"));
-    ModRef = ModRefBehavior(ModRef & ~MR_Ref);
+    ME &= MemoryEffects::writeOnly();
   } else if (R->getName() == "IntrArgMemOnly")
-    ModRef = ModRefBehavior((ModRef & ~MR_Anywhere) | MR_ArgMem);
+    ME &= MemoryEffects::argMemOnly();
   else if (R->getName() == "IntrInaccessibleMemOnly")
-    ModRef = ModRefBehavior((ModRef & ~MR_Anywhere) | MR_InaccessibleMem);
+    ME &= MemoryEffects::inaccessibleMemOnly();
   else if (R->getName() == "IntrInaccessibleMemOrArgMemOnly")
-    ModRef = ModRefBehavior((ModRef & ~MR_Anywhere) | MR_ArgMem |
-                            MR_InaccessibleMem);
+    ME &= MemoryEffects::inaccessibleOrArgMemOnly();
   else if (R->getName() == "Commutative")
     isCommutative = true;
   else if (R->getName() == "Throws")

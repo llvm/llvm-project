@@ -971,3 +971,178 @@ define signext i32 @test14d(i31 zeroext %0, i32 signext %1) {
   %13 = phi i32 [ %zext, %2 ], [ -1, %4 ], [ %9, %8 ]
   ret i32 %13
 }
+
+define signext i32 @test15(i64 %arg1, i64 %arg2, i64 %arg3, i32* %arg4)  {
+; CHECK-LABEL: test15:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    li a4, 256
+; CHECK-NEXT:  .LBB17_1: # %bb2
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    andi a0, a0, 1234
+; CHECK-NEXT:    addw a0, a0, a1
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    sw a0, 0(a3)
+; CHECK-NEXT:    bltu a2, a4, .LBB17_1
+; CHECK-NEXT:  # %bb.2: # %bb7
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test15:
+; NOREMOVAL:       # %bb.0: # %entry
+; NOREMOVAL-NEXT:    addi a2, a2, -1
+; NOREMOVAL-NEXT:    li a4, 256
+; NOREMOVAL-NEXT:  .LBB17_1: # %bb2
+; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    andi a0, a0, 1234
+; NOREMOVAL-NEXT:    add a0, a0, a1
+; NOREMOVAL-NEXT:    addi a2, a2, 1
+; NOREMOVAL-NEXT:    sw a0, 0(a3)
+; NOREMOVAL-NEXT:    bltu a2, a4, .LBB17_1
+; NOREMOVAL-NEXT:  # %bb.2: # %bb7
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    ret
+entry:
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %entry
+  %i1 = phi i64 [ %arg1, %entry ], [ %i5, %bb2 ]
+  %i2 = phi i64 [ %arg3, %entry ], [ %i3, %bb2 ]
+  %i3 = add i64 %i2, 1
+  %i4 = and i64 %i1, 1234
+  %i5 = add i64 %i4, %arg2
+  %i8 = trunc i64 %i5 to i32
+  store i32 %i8, i32* %arg4
+  %i6 = icmp ugt i64 %i2, 255
+  br i1 %i6, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  %i7 = trunc i64 %i5 to i32
+  ret i32 %i7
+}
+
+; This test previously removed a sext.w without converting a slli to slliw.
+define signext i32 @bug(i32 signext %x) {
+; CHECK-LABEL: bug:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    beqz a0, .LBB18_10
+; CHECK-NEXT:  # %bb.1: # %if.end
+; CHECK-NEXT:    srliw a1, a0, 16
+; CHECK-NEXT:    beqz a1, .LBB18_3
+; CHECK-NEXT:  # %bb.2: # %if.end
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    srliw a2, a0, 24
+; CHECK-NEXT:    beqz a2, .LBB18_4
+; CHECK-NEXT:    j .LBB18_5
+; CHECK-NEXT:  .LBB18_3:
+; CHECK-NEXT:    slliw a0, a0, 16
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    srliw a2, a0, 24
+; CHECK-NEXT:    bnez a2, .LBB18_5
+; CHECK-NEXT:  .LBB18_4:
+; CHECK-NEXT:    slliw a0, a0, 8
+; CHECK-NEXT:    addi a1, a1, -8
+; CHECK-NEXT:  .LBB18_5: # %if.end
+; CHECK-NEXT:    srliw a2, a0, 28
+; CHECK-NEXT:    beqz a2, .LBB18_11
+; CHECK-NEXT:  # %bb.6: # %if.end
+; CHECK-NEXT:    srliw a2, a0, 30
+; CHECK-NEXT:    beqz a2, .LBB18_12
+; CHECK-NEXT:  .LBB18_7: # %if.end
+; CHECK-NEXT:    bnez a2, .LBB18_9
+; CHECK-NEXT:  .LBB18_8:
+; CHECK-NEXT:    addi a1, a1, -2
+; CHECK-NEXT:  .LBB18_9: # %if.end
+; CHECK-NEXT:    not a0, a0
+; CHECK-NEXT:    srli a0, a0, 31
+; CHECK-NEXT:    addw a0, a1, a0
+; CHECK-NEXT:  .LBB18_10: # %cleanup
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB18_11:
+; CHECK-NEXT:    slliw a0, a0, 4
+; CHECK-NEXT:    addi a1, a1, -4
+; CHECK-NEXT:    srliw a2, a0, 30
+; CHECK-NEXT:    bnez a2, .LBB18_7
+; CHECK-NEXT:  .LBB18_12:
+; CHECK-NEXT:    slliw a0, a0, 2
+; CHECK-NEXT:    beqz a2, .LBB18_8
+; CHECK-NEXT:    j .LBB18_9
+;
+; NOREMOVAL-LABEL: bug:
+; NOREMOVAL:       # %bb.0: # %entry
+; NOREMOVAL-NEXT:    beqz a0, .LBB18_10
+; NOREMOVAL-NEXT:  # %bb.1: # %if.end
+; NOREMOVAL-NEXT:    srliw a1, a0, 16
+; NOREMOVAL-NEXT:    beqz a1, .LBB18_3
+; NOREMOVAL-NEXT:  # %bb.2: # %if.end
+; NOREMOVAL-NEXT:    li a1, 32
+; NOREMOVAL-NEXT:    srliw a2, a0, 24
+; NOREMOVAL-NEXT:    beqz a2, .LBB18_4
+; NOREMOVAL-NEXT:    j .LBB18_5
+; NOREMOVAL-NEXT:  .LBB18_3:
+; NOREMOVAL-NEXT:    slliw a0, a0, 16
+; NOREMOVAL-NEXT:    li a1, 16
+; NOREMOVAL-NEXT:    srliw a2, a0, 24
+; NOREMOVAL-NEXT:    bnez a2, .LBB18_5
+; NOREMOVAL-NEXT:  .LBB18_4:
+; NOREMOVAL-NEXT:    slliw a0, a0, 8
+; NOREMOVAL-NEXT:    addi a1, a1, -8
+; NOREMOVAL-NEXT:  .LBB18_5: # %if.end
+; NOREMOVAL-NEXT:    srliw a2, a0, 28
+; NOREMOVAL-NEXT:    beqz a2, .LBB18_11
+; NOREMOVAL-NEXT:  # %bb.6: # %if.end
+; NOREMOVAL-NEXT:    srliw a2, a0, 30
+; NOREMOVAL-NEXT:    beqz a2, .LBB18_12
+; NOREMOVAL-NEXT:  .LBB18_7: # %if.end
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    bnez a2, .LBB18_9
+; NOREMOVAL-NEXT:  .LBB18_8:
+; NOREMOVAL-NEXT:    addi a1, a1, -2
+; NOREMOVAL-NEXT:  .LBB18_9: # %if.end
+; NOREMOVAL-NEXT:    not a0, a0
+; NOREMOVAL-NEXT:    srli a0, a0, 31
+; NOREMOVAL-NEXT:    addw a0, a1, a0
+; NOREMOVAL-NEXT:  .LBB18_10: # %cleanup
+; NOREMOVAL-NEXT:    ret
+; NOREMOVAL-NEXT:  .LBB18_11:
+; NOREMOVAL-NEXT:    slliw a0, a0, 4
+; NOREMOVAL-NEXT:    addi a1, a1, -4
+; NOREMOVAL-NEXT:    srliw a2, a0, 30
+; NOREMOVAL-NEXT:    bnez a2, .LBB18_7
+; NOREMOVAL-NEXT:  .LBB18_12:
+; NOREMOVAL-NEXT:    slli a0, a0, 2
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    beqz a2, .LBB18_8
+; NOREMOVAL-NEXT:    j .LBB18_9
+entry:
+  %tobool.not = icmp eq i32 %x, 0
+  br i1 %tobool.not, label %cleanup, label %if.end
+
+if.end:                                           ; preds = %entry
+  %tobool1.not = icmp ult i32 %x, 65536
+  %shl = shl i32 %x, 16
+  %spec.select = select i1 %tobool1.not, i32 %shl, i32 %x
+  %spec.select43 = select i1 %tobool1.not, i32 16, i32 32
+  %tobool5.not = icmp ult i32 %spec.select, 16777216
+  %shl7 = shl i32 %spec.select, 8
+  %sub8 = add nsw i32 %spec.select43, -8
+  %x.addr.1 = select i1 %tobool5.not, i32 %shl7, i32 %spec.select
+  %r.1 = select i1 %tobool5.not, i32 %sub8, i32 %spec.select43
+  %tobool11.not = icmp ult i32 %x.addr.1, 268435456
+  %shl13 = shl i32 %x.addr.1, 4
+  %sub14 = add nsw i32 %r.1, -4
+  %x.addr.2 = select i1 %tobool11.not, i32 %shl13, i32 %x.addr.1
+  %r.2 = select i1 %tobool11.not, i32 %sub14, i32 %r.1
+  %tobool17.not = icmp ult i32 %x.addr.2, 1073741824
+  %shl19 = shl i32 %x.addr.2, 2
+  %sub20 = add nsw i32 %r.2, -2
+  %x.addr.3 = select i1 %tobool17.not, i32 %shl19, i32 %x.addr.2
+  %r.3 = select i1 %tobool17.not, i32 %sub20, i32 %r.2
+  %x.addr.3.lobit = ashr i32 %x.addr.3, 31
+  %x.addr.3.lobit.not = xor i32 %x.addr.3.lobit, -1
+  %r.4 = add nsw i32 %r.3, %x.addr.3.lobit.not
+  br label %cleanup
+
+cleanup:                                          ; preds = %entry, %if.end
+  %retval.0 = phi i32 [ %r.4, %if.end ], [ 0, %entry ]
+  ret i32 %retval.0
+}

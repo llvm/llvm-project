@@ -160,10 +160,10 @@ flat_atomic_add a2, v[2:3], v2 glc
 // GFX90A: error: invalid register class: data and dst should be all VGPR or AGPR
 
 tbuffer_store_format_xyzw v[0:3], off, s[4:7],  dfmt:15,  nfmt:2, s1 tfe
-// GFX90A: error: operands are not valid for this GPU or mode
+// GFX90A: error: invalid operand for instruction
 
 buffer_store_dwordx4 v[0:3], off, s[12:15], s4 offset:4095 glc tfe
-// GFX90A: error: operands are not valid for this GPU or mode
+// GFX90A: error: invalid operand for instruction
 
 ds_write2_b64 v1, a[4:5], v[2:3] offset1:255
 // GFX90A: error: invalid register class: data and dst should be all VGPR or AGPR

@@ -150,6 +150,15 @@ OpFoldResult SubOp::fold(ArrayRef<Attribute> operands) {
     if (getRhs() == add.getRhs())
       return add.getLhs();
 
+  // complex.sub(a, complex.constant<0.0, 0.0>) -> a
+  if (auto constantOp = getRhs().getDefiningOp<ConstantOp>()) {
+    auto arrayAttr = constantOp.getValue();
+    if (arrayAttr[0].cast<FloatAttr>().getValue().isZero() &&
+        arrayAttr[1].cast<FloatAttr>().getValue().isZero()) {
+      return getLhs();
+    }
+  }
+
   return {};
 }
 

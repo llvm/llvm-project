@@ -439,11 +439,71 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("loongarch32-unknown-linux-gnu");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
+
+  T = Triple("loongarch32-unknown-linux-gnuf32");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUF32, T.getEnvironment());
+
+  T = Triple("loongarch32-unknown-linux-gnuf64");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUF64, T.getEnvironment());
+
+  T = Triple("loongarch32-unknown-linux-gnusf");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUSF, T.getEnvironment());
+
+  T = Triple("loongarch32-unknown-linux-musl");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::Musl, T.getEnvironment());
+
   T = Triple("loongarch64-unknown-linux");
   EXPECT_EQ(Triple::loongarch64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("loongarch64-unknown-linux-gnu");
+  EXPECT_EQ(Triple::loongarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
+
+  T = Triple("loongarch64-unknown-linux-gnuf32");
+  EXPECT_EQ(Triple::loongarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUF32, T.getEnvironment());
+
+  T = Triple("loongarch64-unknown-linux-gnuf64");
+  EXPECT_EQ(Triple::loongarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUF64, T.getEnvironment());
+
+  T = Triple("loongarch64-unknown-linux-gnusf");
+  EXPECT_EQ(Triple::loongarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUSF, T.getEnvironment());
+
+  T = Triple("loongarch64-unknown-linux-musl");
+  EXPECT_EQ(Triple::loongarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::Musl, T.getEnvironment());
 
   T = Triple("riscv32-unknown-unknown");
   EXPECT_EQ(Triple::riscv32, T.getArch());
@@ -1853,70 +1913,6 @@ TEST(TripleTest, NormalizeAndroid) {
             Triple::normalize("armv7a-linux-androideabi"));
   EXPECT_EQ("aarch64-unknown-linux-android21",
             Triple::normalize("aarch64-linux-android21"));
-}
-
-TEST(TripleTest, getARMCPUForArch) {
-  // Platform specific defaults.
-  {
-    llvm::Triple Triple("arm--nacl");
-    EXPECT_EQ("cortex-a8", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("arm--openbsd");
-    EXPECT_EQ("cortex-a8", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armv6-unknown-freebsd");
-    EXPECT_EQ("arm1176jzf-s", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("thumbv6-unknown-freebsd");
-    EXPECT_EQ("arm1176jzf-s", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armebv6-unknown-freebsd");
-    EXPECT_EQ("arm1176jzf-s", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("arm--win32");
-    EXPECT_EQ("cortex-a9", Triple.getARMCPUForArch());
-    EXPECT_EQ("generic", Triple.getARMCPUForArch("armv8-a"));
-  }
-  // Some alternative architectures
-  {
-    llvm::Triple Triple("armv7k-apple-ios9");
-    EXPECT_EQ("cortex-a7", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armv7k-apple-watchos3");
-    EXPECT_EQ("cortex-a7", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armv7k-apple-tvos9");
-    EXPECT_EQ("cortex-a7", Triple.getARMCPUForArch());
-  }
-  // armeb is permitted, but armebeb is not
-  {
-    llvm::Triple Triple("armeb-none-eabi");
-    EXPECT_EQ("arm7tdmi", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armebeb-none-eabi");
-    EXPECT_EQ("", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armebv6eb-none-eabi");
-    EXPECT_EQ("", Triple.getARMCPUForArch());
-  }
-  // xscaleeb is permitted, but armebxscale is not
-  {
-    llvm::Triple Triple("xscaleeb-none-eabi");
-    EXPECT_EQ("xscale", Triple.getARMCPUForArch());
-  }
-  {
-    llvm::Triple Triple("armebxscale-none-eabi");
-    EXPECT_EQ("", Triple.getARMCPUForArch());
-  }
 }
 
 TEST(TripleTest, NormalizeARM) {

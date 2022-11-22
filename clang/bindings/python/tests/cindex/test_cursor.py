@@ -219,6 +219,64 @@ class TestCursor(unittest.TestCase):
         self.assertTrue(xc.is_default_method())
         self.assertFalse(yc.is_default_method())
 
+    def test_is_move_assignment_operator_method(self):
+        """Ensure Cursor.is_move_assignment_operator_method works."""
+        source_with_move_assignment_operators = """
+        struct Foo {
+           // Those are move-assignment operators
+           bool operator=(const Foo&&);
+           bool operator=(Foo&&);
+           bool operator=(volatile Foo&&);
+           bool operator=(const volatile Foo&&);
+
+        // Positive-check that the recognition works for templated classes too
+        template <typename T>
+        class Bar {
+            bool operator=(const Bar&&);
+            bool operator=(Bar<T>&&);
+            bool operator=(volatile Bar&&);
+            bool operator=(const volatile Bar<T>&&);
+        };
+        """
+        source_without_move_assignment_operators = """
+        struct Foo {
+            // Those are not move-assignment operators
+            template<typename T>
+            bool operator=(const T&&);
+            bool operator=(const bool&&);
+            bool operator=(char&&);
+            bool operator=(volatile unsigned int&&);
+            bool operator=(const volatile unsigned char&&);
+            bool operator=(int);
+            bool operator=(Foo);
+        };
+        """
+        tu_with_move_assignment_operators = get_tu(
+            source_with_move_assignment_operators, lang="cpp"
+        )
+        tu_without_move_assignment_operators = get_tu(
+            source_without_move_assignment_operators, lang="cpp"
+        )
+
+        move_assignment_operators_cursors = get_cursors(
+            tu_with_move_assignment_operators, "operator="
+        )
+        non_move_assignment_operators_cursors = get_cursors(
+            tu_without_move_assignment_operators, "operator="
+        )
+
+        self.assertEqual(len(move_assignment_operators_cursors), 8)
+        self.assertTrue(len(non_move_assignment_operators_cursors), 7)
+
+        self.assertTrue(all([
+            cursor.is_move_assignment_operator_method()
+            for cursor in move_assignment_operators_cursors
+        ]))
+        self.assertFalse(any([
+            cursor.is_move_assignment_operator_method()
+            for cursor in non_move_assignment_operators_cursors
+        ]))
+
     def test_is_mutable_field(self):
         """Ensure Cursor.is_mutable_field works."""
         source = 'class X { int x_; mutable int y_; };'

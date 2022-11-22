@@ -146,6 +146,8 @@ defm guard_cf : B<"guard-cf", "Enable Control Flow Guard" ,
 defm guard_longjmp : B<"guard-longjmp",
   "Enable Control Flow Guard long jump hardening (default for --guard-cf)" ,
   "Do not enable Control Flow Guard long jump hardening">;
+defm error_limit:
+  EqLong<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;

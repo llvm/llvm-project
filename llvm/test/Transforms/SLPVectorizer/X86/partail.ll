@@ -17,23 +17,24 @@ define void @get_block(i32 %y_pos) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[SUB14]], i32 1
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[SHUFFLE]], <i32 0, i32 -1, i32 -5, i32 -9>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP0]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i32> [[TMP3]], undef
-; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> [[TMP3]], <4 x i32> undef
-; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i32> [[TMP5]] to <4 x i64>
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i64> [[TMP6]] to <4 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP8]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP10]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31_1:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP7]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = sext i32 [[TMP12]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31_2:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP7]], i32 3
-; CHECK-NEXT:    [[TMP15:%.*]] = sext i32 [[TMP14]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31_3:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i32> [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i32> [[TMP4]], undef
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP4]], <4 x i32> undef
+; CHECK-NEXT:    [[TMP7:%.*]] = sext <4 x i32> [[TMP6]] to <4 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i64> [[TMP7]] to <4 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = sext i32 [[TMP9]] to i64
+; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP11]] to i64
+; CHECK-NEXT:    [[ARRAYIDX31_1:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP8]], i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP13]] to i64
+; CHECK-NEXT:    [[ARRAYIDX31_2:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP8]], i32 3
+; CHECK-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP15]] to i64
+; CHECK-NEXT:    [[ARRAYIDX31_3:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP16]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
