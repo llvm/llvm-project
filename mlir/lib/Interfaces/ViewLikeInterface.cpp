@@ -20,15 +20,15 @@ using namespace mlir;
 LogicalResult mlir::verifyListOfOperandsOrIntegers(Operation *op,
                                                    StringRef name,
                                                    unsigned numElements,
-                                                   ArrayAttr attr,
+                                                   ArrayRef<int64_t> staticVals,
                                                    ValueRange values) {
-  /// Check static and dynamic offsets/sizes/strides does not overflow type.
-  if (attr.size() != numElements)
+  // Check static and dynamic offsets/sizes/strides does not overflow type.
+  if (staticVals.size() != numElements)
     return op->emitError("expected ")
            << numElements << " " << name << " values";
   unsigned expectedNumDynamicEntries =
-      llvm::count_if(attr.getValue(), [&](Attribute attr) {
-        return ShapedType::isDynamic(attr.cast<IntegerAttr>().getInt());
+      llvm::count_if(staticVals, [&](int64_t staticVal) {
+        return ShapedType::isDynamic(staticVal);
       });
   if (values.size() != expectedNumDynamicEntries)
     return op->emitError("expected ")
@@ -70,19 +70,19 @@ mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
 }
 
 void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
-                                 OperandRange values, ArrayAttr integers) {
+                                 OperandRange values,
+                                 ArrayRef<int64_t> integers) {
   printer << '[';
   if (integers.empty()) {
     printer << "]";
     return;
   }
   unsigned idx = 0;
-  llvm::interleaveComma(integers, printer, [&](Attribute a) {
-    int64_t val = a.cast<IntegerAttr>().getInt();
-    if (ShapedType::isDynamic(val))
+  llvm::interleaveComma(integers, printer, [&](int64_t integer) {
+    if (ShapedType::isDynamic(integer))
       printer << values[idx++];
     else
-      printer << val;
+      printer << integer;
   });
   printer << ']';
 }
@@ -90,28 +90,28 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
 ParseResult mlir::parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    ArrayAttr &integers) {
+    DenseI64ArrayAttr &integers) {
   if (failed(parser.parseLSquare()))
     return failure();
   // 0-D.
   if (succeeded(parser.parseOptionalRSquare())) {
-    integers = parser.getBuilder().getArrayAttr({});
+    integers = parser.getBuilder().getDenseI64ArrayAttr({});
     return success();
   }
 
-  SmallVector<int64_t, 4> attrVals;
+  SmallVector<int64_t, 4> integerVals;
   while (true) {
     OpAsmParser::UnresolvedOperand operand;
     auto res = parser.parseOptionalOperand(operand);
     if (res.has_value() && succeeded(res.value())) {
       values.push_back(operand);
-      attrVals.push_back(ShapedType::kDynamic);
+      integerVals.push_back(ShapedType::kDynamic);
     } else {
-      IntegerAttr attr;
-      if (failed(parser.parseAttribute<IntegerAttr>(attr)))
+      int64_t integer;
+      if (failed(parser.parseInteger(integer)))
         return parser.emitError(parser.getNameLoc())
                << "expected SSA value or integer";
-      attrVals.push_back(attr.getInt());
+      integerVals.push_back(integer);
     }
 
     if (succeeded(parser.parseOptionalComma()))
@@ -120,7 +120,7 @@ ParseResult mlir::parseDynamicIndexList(
       return failure();
     break;
   }
-  integers = parser.getBuilder().getI64ArrayAttr(attrVals);
+  integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
   return success();
 }
 
@@ -143,35 +143,4 @@ bool mlir::detail::sameOffsetsSizesAndStrides(
     if (!cmp(std::get<0>(it), std::get<1>(it)))
       return false;
   return true;
-}
-
-SmallVector<OpFoldResult, 4> mlir::getMixedValues(ArrayAttr staticValues,
-                                                  ValueRange dynamicValues) {
-  SmallVector<OpFoldResult, 4> res;
-  res.reserve(staticValues.size());
-  unsigned numDynamic = 0;
-  unsigned count = static_cast<unsigned>(staticValues.size());
-  for (unsigned idx = 0; idx < count; ++idx) {
-    APInt value = staticValues[idx].cast<IntegerAttr>().getValue();
-    res.push_back(ShapedType::isDynamic(value.getSExtValue())
-                      ? OpFoldResult{dynamicValues[numDynamic++]}
-                      : OpFoldResult{staticValues[idx]});
-  }
-  return res;
-}
-
-std::pair<ArrayAttr, SmallVector<Value>>
-mlir::decomposeMixedValues(Builder &b,
-                           const SmallVectorImpl<OpFoldResult> &mixedValues) {
-  SmallVector<int64_t> staticValues;
-  SmallVector<Value> dynamicValues;
-  for (const auto &it : mixedValues) {
-    if (it.is<Attribute>()) {
-      staticValues.push_back(it.get<Attribute>().cast<IntegerAttr>().getInt());
-    } else {
-      staticValues.push_back(ShapedType::kDynamic);
-      dynamicValues.push_back(it.get<Value>());
-    }
-  }
-  return {b.getI64ArrayAttr(staticValues), dynamicValues};
 }

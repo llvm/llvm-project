@@ -87,6 +87,18 @@ bool isEqualConstantIntOrValue(OpFoldResult ofr1, OpFoldResult ofr2);
 SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
                                ArrayRef<OpFoldResult> valueOrAttrVec);
 
+/// Return a vector of OpFoldResults with the same size a staticValues, but all
+/// elements for which ShapedType::isDynamic is true, will be replaced by
+/// dynamicValues.
+SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
+                                         ValueRange dynamicValues, Builder &b);
+
+/// Decompose a vector of mixed static or dynamic values into the corresponding
+/// pair of arrays. This is the inverse function of `getMixedValues`.
+std::pair<ArrayAttr, SmallVector<Value>>
+decomposeMixedValues(Builder &b,
+                     const SmallVectorImpl<OpFoldResult> &mixedValues);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_STATICVALUEUTILS_H
