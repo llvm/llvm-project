@@ -43,11 +43,15 @@ define amdgpu_kernel void @test_memset() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x float>, ptr undef, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x half>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[TMP0]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -235,25 +239,23 @@ bb:
 define amdgpu_kernel void @test_half_array() #0 {
 ; CHECK-LABEL: @test_half_array(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0:%.*]] = alloca float, align 16
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4:%.*]] = alloca float, align 4
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_0]], i8 0, i32 4, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[B_BLOCKWISE_COPY_SROA_4]], i8 0, i32 4, i1 false)
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float undef to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float undef to i32
 ; CHECK-NEXT:    [[DATA:%.*]] = load [4 x float], ptr undef, align 4
 ; CHECK-NEXT:    [[DATA_FCA_0_EXTRACT:%.*]] = extractvalue [4 x float] [[DATA]], 0
-; CHECK-NEXT:    store float [[DATA_FCA_0_EXTRACT]], ptr [[B_BLOCKWISE_COPY_SROA_0]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[DATA_FCA_0_EXTRACT]] to <4 x i8>
 ; CHECK-NEXT:    [[DATA_FCA_1_EXTRACT:%.*]] = extractvalue [4 x float] [[DATA]], 1
-; CHECK-NEXT:    store float [[DATA_FCA_1_EXTRACT]], ptr [[B_BLOCKWISE_COPY_SROA_4]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[DATA_FCA_1_EXTRACT]] to <4 x i8>
 ; CHECK-NEXT:    [[DATA_FCA_2_EXTRACT:%.*]] = extractvalue [4 x float] [[DATA]], 2
 ; CHECK-NEXT:    [[DATA_FCA_3_EXTRACT:%.*]] = extractvalue [4 x float] [[DATA]], 3
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_B_BLOCKWISE_COPY_SROA_0_0_LOAD1:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_SROA_0]], align 16
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_PTR2_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[B_BLOCKWISE_COPY_SROA_0]], i64 2
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_B_BLOCKWISE_COPY_SROA_0_2_LOAD2:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_SROA_0_2_PTR2_SROA_IDX1]], align 2
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_0_B_BLOCKWISE_COPY_SROA_4_4_LOAD3:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_SROA_4]], align 4
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_0_VEC_EXTRACT:%.*]] = shufflevector <4 x i8> [[TMP2]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i8> [[B_BLOCKWISE_COPY_SROA_0_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_2_VEC_EXTRACT:%.*]] = shufflevector <4 x i8> [[TMP2]], <4 x i8> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i8> [[B_BLOCKWISE_COPY_SROA_0_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_SROA_0_0_VEC_EXTRACT:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i8> [[B_BLOCKWISE_COPY_SROA_4_SROA_0_0_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -275,15 +277,17 @@ bb:
 define amdgpu_kernel void @test_array_vector() #0 {
 ; CHECK-LABEL: @test_array_vector(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5:%.*]] = alloca <8 x half>, align 16
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_5]], i8 0, i32 16, i1 false)
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x float>, ptr undef, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x half>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[TMP0]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -305,15 +309,17 @@ bb:
 define amdgpu_kernel void @test_array_vector2() #0 {
 ; CHECK-LABEL: @test_array_vector2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5:%.*]] = alloca <8 x half>, align 16
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_5]], i8 0, i32 16, i1 false)
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x float>, ptr undef, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x half>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[TMP0]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x half> [[TMP0]], i32 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16 [[B_BLOCKWISE_COPY_SROA_0_SROA_0_4_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -335,38 +341,32 @@ bb:
 define amdgpu_kernel void @test_array_vector_no_vector_common_type() #0 {
 ; CHECK-LABEL: @test_array_vector_no_vector_common_type(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0:%.*]] = alloca float, align 16
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4:%.*]] = alloca float, align 4
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_7:%.*]] = alloca float, align 8
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_10:%.*]] = alloca float, align 4
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_13:%.*]] = alloca <8 x half>, align 16
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_0]], i8 0, i32 4, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[B_BLOCKWISE_COPY_SROA_4]], i8 0, i32 4, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 8 [[B_BLOCKWISE_COPY_SROA_7]], i8 0, i32 4, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[B_BLOCKWISE_COPY_SROA_10]], i8 0, i32 4, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_13]], i8 0, i32 16, i1 false)
 ; CHECK-NEXT:    [[DATA1:%.*]] = load float, ptr undef, align 4
 ; CHECK-NEXT:    [[DATA2:%.*]] = load float, ptr undef, align 4
 ; CHECK-NEXT:    [[DATA3:%.*]] = load float, ptr undef, align 4
 ; CHECK-NEXT:    [[DATA4:%.*]] = load float, ptr undef, align 4
-; CHECK-NEXT:    store float [[DATA1]], ptr [[B_BLOCKWISE_COPY_SROA_0]], align 16
-; CHECK-NEXT:    store float [[DATA2]], ptr [[B_BLOCKWISE_COPY_SROA_4]], align 4
-; CHECK-NEXT:    store float [[DATA3]], ptr [[B_BLOCKWISE_COPY_SROA_7]], align 8
-; CHECK-NEXT:    store float [[DATA4]], ptr [[B_BLOCKWISE_COPY_SROA_10]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[DATA1]] to <4 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[DATA2]] to <4 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[DATA3]] to <4 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[DATA4]] to <4 x i8>
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_B_BLOCKWISE_COPY_SROA_0_0_LOAD1:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_SROA_0]], align 16
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_PTR2_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[B_BLOCKWISE_COPY_SROA_0]], i64 2
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_B_BLOCKWISE_COPY_SROA_0_2_LOAD2:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_SROA_0_2_PTR2_SROA_IDX1]], align 2
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_0_B_BLOCKWISE_COPY_SROA_4_4_LOAD3:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_SROA_4]], align 4
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_2_PTR4_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[B_BLOCKWISE_COPY_SROA_4]], i64 2
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_2_B_BLOCKWISE_COPY_SROA_4_6_LOAD4:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_SROA_4_2_PTR4_SROA_IDX]], align 2
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_7_0_B_BLOCKWISE_COPY_SROA_7_8_LOAD5:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_SROA_7]], align 8
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_7_2_PTR6_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[B_BLOCKWISE_COPY_SROA_7]], i64 2
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_7_2_B_BLOCKWISE_COPY_SROA_7_10_LOAD6:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_SROA_7_2_PTR6_SROA_IDX]], align 2
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_10_0_B_BLOCKWISE_COPY_SROA_10_12_LOAD7:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_SROA_10]], align 4
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_10_2_PTR8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[B_BLOCKWISE_COPY_SROA_10]], i64 2
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_10_2_B_BLOCKWISE_COPY_SROA_10_14_LOAD8:%.*]] = load half, ptr [[B_BLOCKWISE_COPY_SROA_10_2_PTR8_SROA_IDX]], align 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_0_VEC_EXTRACT:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i8> [[B_BLOCKWISE_COPY_SROA_0_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_SROA_0_2_VEC_EXTRACT:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i8> [[B_BLOCKWISE_COPY_SROA_0_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_SROA_0_0_VEC_EXTRACT:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i8> [[B_BLOCKWISE_COPY_SROA_4_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_SROA_0_2_VEC_EXTRACT:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i8> [[B_BLOCKWISE_COPY_SROA_4_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_7_SROA_0_0_VEC_EXTRACT:%.*]] = shufflevector <4 x i8> [[TMP2]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <2 x i8> [[B_BLOCKWISE_COPY_SROA_7_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_7_SROA_0_2_VEC_EXTRACT:%.*]] = shufflevector <4 x i8> [[TMP2]], <4 x i8> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <2 x i8> [[B_BLOCKWISE_COPY_SROA_7_SROA_0_2_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_10_SROA_0_0_VEC_EXTRACT:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <2 x i8> [[B_BLOCKWISE_COPY_SROA_10_SROA_0_0_VEC_EXTRACT]] to half
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_10_SROA_0_2_VEC_EXTRACT:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <2 x i8> [[B_BLOCKWISE_COPY_SROA_10_SROA_0_2_VEC_EXTRACT]] to half
 ; CHECK-NEXT:    ret void
 ;
 entry:

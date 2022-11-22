@@ -139,100 +139,83 @@ L2:
 define void @test3(ptr %dst, ptr align 8 %src) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [42 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_3:%.*]] = alloca [99 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_32:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_15:%.*]] = alloca [42 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_16:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_235:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_31:%.*]] = alloca [85 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_0]], ptr align 8 [[SRC:%.*]], i32 42, i1 false), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_0_SROA_0_0_COPYLOAD:%.*]] = load <42 x i8>, ptr [[SRC:%.*]], align 8, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[A_SROA_2_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 42
 ; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load i8, ptr [[A_SROA_2_0_SRC_SROA_IDX]], align 2, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 43
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_3]], ptr align 1 [[A_SROA_3_0_SRC_SROA_IDX]], i32 99, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_3_SROA_0_0_COPYLOAD:%.*]] = load <99 x i8>, ptr [[A_SROA_3_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_32_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 142
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_32]], ptr align 2 [[A_SROA_32_0_SRC_SROA_IDX]], i32 16, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_0_COPYLOAD:%.*]] = load <16 x i8>, ptr [[A_SROA_32_0_SRC_SROA_IDX]], align 2, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_15_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 158
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_15]], ptr align 2 [[A_SROA_15_0_SRC_SROA_IDX]], i32 42, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_15_SROA_0_0_COPYLOAD:%.*]] = load <42 x i8>, ptr [[A_SROA_15_0_SRC_SROA_IDX]], align 2, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_16_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 200
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_16]], ptr align 8 [[A_SROA_16_0_SRC_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_16_SROA_0_0_COPYLOAD:%.*]] = load <7 x i8>, ptr [[A_SROA_16_0_SRC_SROA_IDX]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_23_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 207
 ; CHECK-NEXT:    [[A_SROA_23_0_COPYLOAD:%.*]] = load i8, ptr [[A_SROA_23_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_235_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 208
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_235]], ptr align 8 [[A_SROA_235_0_SRC_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_0_COPYLOAD:%.*]] = load <7 x i8>, ptr [[A_SROA_235_0_SRC_SROA_IDX]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_31_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 215
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31]], ptr align 1 [[A_SROA_31_0_SRC_SROA_IDX]], i32 85, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    store i8 1, ptr [[A_SROA_32]], align 1, !tbaa [[TBAA3:![0-9]+]]
-; CHECK-NEXT:    store i16 1, ptr [[A_SROA_32]], align 1, !tbaa [[TBAA5:![0-9]+]]
-; CHECK-NEXT:    store i32 1, ptr [[A_SROA_32]], align 1, !tbaa [[TBAA7:![0-9]+]]
-; CHECK-NEXT:    store i64 1, ptr [[A_SROA_32]], align 1, !tbaa [[TBAA9:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_32_1_OVERLAP_2_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 1
-; CHECK-NEXT:    store i64 2, ptr [[A_SROA_32_1_OVERLAP_2_I8_SROA_IDX]], align 1, !tbaa [[TBAA11:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_32_2_OVERLAP_3_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 2
-; CHECK-NEXT:    store i64 3, ptr [[A_SROA_32_2_OVERLAP_3_I8_SROA_IDX]], align 1, !tbaa [[TBAA13:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_32_3_OVERLAP_4_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 3
-; CHECK-NEXT:    store i64 4, ptr [[A_SROA_32_3_OVERLAP_4_I8_SROA_IDX]], align 1, !tbaa [[TBAA15:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_32_4_OVERLAP_5_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 4
-; CHECK-NEXT:    store i64 5, ptr [[A_SROA_32_4_OVERLAP_5_I8_SROA_IDX]], align 1, !tbaa [[TBAA17:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_32_5_OVERLAP_6_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 5
-; CHECK-NEXT:    store i64 6, ptr [[A_SROA_32_5_OVERLAP_6_I8_SROA_IDX]], align 1, !tbaa [[TBAA19:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_32_6_OVERLAP_7_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 6
-; CHECK-NEXT:    store i64 7, ptr [[A_SROA_32_6_OVERLAP_7_I8_SROA_IDX]], align 1, !tbaa [[TBAA21:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_32_7_OVERLAP_8_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 7
-; CHECK-NEXT:    store i64 8, ptr [[A_SROA_32_7_OVERLAP_8_I8_SROA_IDX]], align 1, !tbaa [[TBAA23:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_32_8_OVERLAP_9_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_32]], i64 8
-; CHECK-NEXT:    store i64 9, ptr [[A_SROA_32_8_OVERLAP_9_I8_SROA_IDX]], align 1, !tbaa [[TBAA25:![0-9]+]]
-; CHECK-NEXT:    store i8 1, ptr [[A_SROA_16]], align 1, !tbaa [[TBAA27:![0-9]+]]
-; CHECK-NEXT:    store i16 1, ptr [[A_SROA_16]], align 1, !tbaa [[TBAA29:![0-9]+]]
-; CHECK-NEXT:    store i32 1, ptr [[A_SROA_16]], align 1, !tbaa [[TBAA31:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_16_1_OVERLAP2_1_1_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_16]], i64 1
-; CHECK-NEXT:    store i32 2, ptr [[A_SROA_16_1_OVERLAP2_1_1_I8_SROA_IDX]], align 1, !tbaa [[TBAA33:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_16_2_OVERLAP2_1_2_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_16]], i64 2
-; CHECK-NEXT:    store i32 3, ptr [[A_SROA_16_2_OVERLAP2_1_2_I8_SROA_IDX]], align 1, !tbaa [[TBAA35:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_16_3_OVERLAP2_1_3_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_16]], i64 3
-; CHECK-NEXT:    store i32 4, ptr [[A_SROA_16_3_OVERLAP2_1_3_I8_SROA_IDX]], align 1, !tbaa [[TBAA37:![0-9]+]]
-; CHECK-NEXT:    store i32 1, ptr [[A_SROA_235]], align 1, !tbaa [[TBAA39:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX11:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 1
-; CHECK-NEXT:    store i8 1, ptr [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX11]], align 1, !tbaa [[TBAA41:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX10:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 1
-; CHECK-NEXT:    store i16 1, ptr [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX10]], align 1, !tbaa [[TBAA43:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 1
-; CHECK-NEXT:    store i32 1, ptr [[A_SROA_235_1_OVERLAP2_2_1_I8_SROA_IDX]], align 1, !tbaa [[TBAA45:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_235_2_OVERLAP2_2_2_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 2
-; CHECK-NEXT:    store i32 3, ptr [[A_SROA_235_2_OVERLAP2_2_2_I8_SROA_IDX]], align 1, !tbaa [[TBAA47:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_235_3_OVERLAP2_2_3_I8_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 3
-; CHECK-NEXT:    store i32 4, ptr [[A_SROA_235_3_OVERLAP2_2_3_I8_SROA_IDX]], align 1, !tbaa [[TBAA49:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_15_197_OVERLAP2_PREFIX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_15]], i64 39
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_15_197_OVERLAP2_PREFIX_SROA_IDX]], ptr align 1 [[SRC]], i32 3, i1 false), !tbaa [[TBAA51:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_31_SROA_0_0_COPYLOAD:%.*]] = load <85 x i8>, ptr [[A_SROA_31_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_0_VEC_INSERT:%.*]] = insertelement <16 x i8> [[A_SROA_32_SROA_0_0_COPYLOAD]], i8 1, i32 0
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_0_VECBLEND30:%.*]] = select <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x i8> <i8 extractelement (<2 x i8> bitcast (<1 x i16> <i16 1> to <2 x i8>), i32 0), i8 extractelement (<2 x i8> bitcast (<1 x i16> <i16 1> to <2 x i8>), i32 1), i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i8> [[A_SROA_32_SROA_0_0_VEC_INSERT]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_0_VECBLEND28:%.*]] = select <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x i8> <i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 0), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 1), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 2), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 3), i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i8> [[A_SROA_32_SROA_0_0_VECBLEND30]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_0_VECBLEND:%.*]] = select <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x i8> <i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 1> to <8 x i8>), i32 0), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 1> to <8 x i8>), i32 1), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 1> to <8 x i8>), i32 2), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 1> to <8 x i8>), i32 3), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 1> to <8 x i8>), i32 4), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 1> to <8 x i8>), i32 5), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 1> to <8 x i8>), i32 6), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 1> to <8 x i8>), i32 7), i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i8> [[A_SROA_32_SROA_0_0_VECBLEND28]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_1_VECBLEND:%.*]] = select <16 x i1> <i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x i8> <i8 undef, i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 2> to <8 x i8>), i32 0), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 2> to <8 x i8>), i32 1), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 2> to <8 x i8>), i32 2), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 2> to <8 x i8>), i32 3), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 2> to <8 x i8>), i32 4), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 2> to <8 x i8>), i32 5), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 2> to <8 x i8>), i32 6), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 2> to <8 x i8>), i32 7), i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i8> [[A_SROA_32_SROA_0_0_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_2_VECBLEND:%.*]] = select <16 x i1> <i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x i8> <i8 undef, i8 undef, i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 3> to <8 x i8>), i32 0), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 3> to <8 x i8>), i32 1), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 3> to <8 x i8>), i32 2), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 3> to <8 x i8>), i32 3), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 3> to <8 x i8>), i32 4), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 3> to <8 x i8>), i32 5), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 3> to <8 x i8>), i32 6), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 3> to <8 x i8>), i32 7), i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i8> [[A_SROA_32_SROA_0_1_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_3_VECBLEND:%.*]] = select <16 x i1> <i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x i8> <i8 undef, i8 undef, i8 undef, i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 4> to <8 x i8>), i32 0), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 4> to <8 x i8>), i32 1), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 4> to <8 x i8>), i32 2), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 4> to <8 x i8>), i32 3), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 4> to <8 x i8>), i32 4), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 4> to <8 x i8>), i32 5), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 4> to <8 x i8>), i32 6), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 4> to <8 x i8>), i32 7), i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i8> [[A_SROA_32_SROA_0_2_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_4_VECBLEND:%.*]] = select <16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 5> to <8 x i8>), i32 0), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 5> to <8 x i8>), i32 1), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 5> to <8 x i8>), i32 2), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 5> to <8 x i8>), i32 3), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 5> to <8 x i8>), i32 4), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 5> to <8 x i8>), i32 5), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 5> to <8 x i8>), i32 6), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 5> to <8 x i8>), i32 7), i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i8> [[A_SROA_32_SROA_0_3_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_5_VECBLEND:%.*]] = select <16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>, <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 6> to <8 x i8>), i32 0), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 6> to <8 x i8>), i32 1), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 6> to <8 x i8>), i32 2), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 6> to <8 x i8>), i32 3), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 6> to <8 x i8>), i32 4), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 6> to <8 x i8>), i32 5), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 6> to <8 x i8>), i32 6), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 6> to <8 x i8>), i32 7), i8 undef, i8 undef, i8 undef>, <16 x i8> [[A_SROA_32_SROA_0_4_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_6_VECBLEND:%.*]] = select <16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 7> to <8 x i8>), i32 0), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 7> to <8 x i8>), i32 1), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 7> to <8 x i8>), i32 2), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 7> to <8 x i8>), i32 3), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 7> to <8 x i8>), i32 4), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 7> to <8 x i8>), i32 5), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 7> to <8 x i8>), i32 6), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 7> to <8 x i8>), i32 7), i8 undef, i8 undef>, <16 x i8> [[A_SROA_32_SROA_0_5_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_7_VECBLEND:%.*]] = select <16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>, <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 8> to <8 x i8>), i32 0), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 8> to <8 x i8>), i32 1), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 8> to <8 x i8>), i32 2), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 8> to <8 x i8>), i32 3), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 8> to <8 x i8>), i32 4), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 8> to <8 x i8>), i32 5), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 8> to <8 x i8>), i32 6), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 8> to <8 x i8>), i32 7), i8 undef>, <16 x i8> [[A_SROA_32_SROA_0_6_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_32_SROA_0_8_VECBLEND:%.*]] = select <16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 9> to <8 x i8>), i32 0), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 9> to <8 x i8>), i32 1), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 9> to <8 x i8>), i32 2), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 9> to <8 x i8>), i32 3), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 9> to <8 x i8>), i32 4), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 9> to <8 x i8>), i32 5), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 9> to <8 x i8>), i32 6), i8 extractelement (<8 x i8> bitcast (<1 x i64> <i64 9> to <8 x i8>), i32 7)>, <16 x i8> [[A_SROA_32_SROA_0_7_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_16_SROA_0_0_VEC_INSERT:%.*]] = insertelement <7 x i8> [[A_SROA_16_SROA_0_0_COPYLOAD]], i8 1, i32 0
+; CHECK-NEXT:    [[A_SROA_16_SROA_0_0_VECBLEND20:%.*]] = select <7 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <7 x i8> <i8 extractelement (<2 x i8> bitcast (<1 x i16> <i16 1> to <2 x i8>), i32 0), i8 extractelement (<2 x i8> bitcast (<1 x i16> <i16 1> to <2 x i8>), i32 1), i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <7 x i8> [[A_SROA_16_SROA_0_0_VEC_INSERT]]
+; CHECK-NEXT:    [[A_SROA_16_SROA_0_0_VECBLEND:%.*]] = select <7 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>, <7 x i8> <i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 0), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 1), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 2), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 3), i8 undef, i8 undef, i8 undef>, <7 x i8> [[A_SROA_16_SROA_0_0_VECBLEND20]]
+; CHECK-NEXT:    [[A_SROA_16_SROA_0_1_VECBLEND:%.*]] = select <7 x i1> <i1 false, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <7 x i8> <i8 undef, i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 2> to <4 x i8>), i32 0), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 2> to <4 x i8>), i32 1), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 2> to <4 x i8>), i32 2), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 2> to <4 x i8>), i32 3), i8 undef, i8 undef>, <7 x i8> [[A_SROA_16_SROA_0_0_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_16_SROA_0_2_VECBLEND:%.*]] = select <7 x i1> <i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 false>, <7 x i8> <i8 undef, i8 undef, i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 3> to <4 x i8>), i32 0), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 3> to <4 x i8>), i32 1), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 3> to <4 x i8>), i32 2), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 3> to <4 x i8>), i32 3), i8 undef>, <7 x i8> [[A_SROA_16_SROA_0_1_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_16_SROA_0_3_VECBLEND:%.*]] = select <7 x i1> <i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <7 x i8> <i8 undef, i8 undef, i8 undef, i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 4> to <4 x i8>), i32 0), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 4> to <4 x i8>), i32 1), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 4> to <4 x i8>), i32 2), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 4> to <4 x i8>), i32 3)>, <7 x i8> [[A_SROA_16_SROA_0_2_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_0_VECBLEND:%.*]] = select <7 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>, <7 x i8> <i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 0), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 1), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 2), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 3), i8 undef, i8 undef, i8 undef>, <7 x i8> [[A_SROA_235_SROA_0_0_COPYLOAD]]
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_1_VEC_INSERT:%.*]] = insertelement <7 x i8> [[A_SROA_235_SROA_0_0_VECBLEND]], i8 1, i32 1
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_1_VECBLEND15:%.*]] = select <7 x i1> <i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <7 x i8> <i8 undef, i8 extractelement (<2 x i8> bitcast (<1 x i16> <i16 1> to <2 x i8>), i32 0), i8 extractelement (<2 x i8> bitcast (<1 x i16> <i16 1> to <2 x i8>), i32 1), i8 undef, i8 undef, i8 undef, i8 undef>, <7 x i8> [[A_SROA_235_SROA_0_1_VEC_INSERT]]
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_1_VECBLEND:%.*]] = select <7 x i1> <i1 false, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <7 x i8> <i8 undef, i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 0), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 1), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 2), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 1> to <4 x i8>), i32 3), i8 undef, i8 undef>, <7 x i8> [[A_SROA_235_SROA_0_1_VECBLEND15]]
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_2_VECBLEND:%.*]] = select <7 x i1> <i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 false>, <7 x i8> <i8 undef, i8 undef, i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 3> to <4 x i8>), i32 0), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 3> to <4 x i8>), i32 1), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 3> to <4 x i8>), i32 2), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 3> to <4 x i8>), i32 3), i8 undef>, <7 x i8> [[A_SROA_235_SROA_0_1_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_3_VECBLEND:%.*]] = select <7 x i1> <i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <7 x i8> <i8 undef, i8 undef, i8 undef, i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 4> to <4 x i8>), i32 0), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 4> to <4 x i8>), i32 1), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 4> to <4 x i8>), i32 2), i8 extractelement (<4 x i8> bitcast (<1 x i32> <i32 4> to <4 x i8>), i32 3)>, <7 x i8> [[A_SROA_235_SROA_0_2_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_15_SROA_0_39_COPYLOAD:%.*]] = load <3 x i8>, ptr [[SRC]], align 1, !tbaa [[TBAA3:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_15_SROA_0_39_VEC_EXPAND:%.*]] = shufflevector <3 x i8> [[A_SROA_15_SROA_0_39_COPYLOAD]], <3 x i8> poison, <42 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[A_SROA_15_SROA_0_39_VECBLEND:%.*]] = select <42 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true>, <42 x i8> [[A_SROA_15_SROA_0_39_VEC_EXPAND]], <42 x i8> [[A_SROA_15_SROA_0_0_COPYLOAD]]
 ; CHECK-NEXT:    [[A_SROA_16_197_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_16]], ptr align 1 [[A_SROA_16_197_SRC_SROA_IDX]], i32 5, i1 false), !tbaa [[TBAA51]]
-; CHECK-NEXT:    [[A_SROA_16_2_OVERLAP2_1_2_I8_SROA_IDX12:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_16]], i64 2
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_16_2_OVERLAP2_1_2_I8_SROA_IDX12]], i8 42, i32 5, i1 false), !tbaa [[TBAA53:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_235]], i8 42, i32 2, i1 false), !tbaa [[TBAA53]]
-; CHECK-NEXT:    [[A_SROA_235_209_OVERLAP2_2_1_I8_SROA_IDX8:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_235_209_OVERLAP2_2_1_I8_SROA_IDX8]], ptr align 1 [[SRC]], i32 5, i1 false), !tbaa [[TBAA55:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_235_210_OVERLAP2_2_2_I8_SROA_IDX9:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_235]], i64 2
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_235_210_OVERLAP2_2_2_I8_SROA_IDX9]], ptr align 1 [[SRC]], i32 5, i1 false), !tbaa [[TBAA57:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_16_SROA_0_0_COPYLOAD23:%.*]] = load <5 x i8>, ptr [[A_SROA_16_197_SRC_SROA_IDX]], align 1, !tbaa [[TBAA3]]
+; CHECK-NEXT:    [[A_SROA_16_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <5 x i8> [[A_SROA_16_SROA_0_0_COPYLOAD23]], <5 x i8> poison, <7 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 undef, i32 undef>
+; CHECK-NEXT:    [[A_SROA_16_SROA_0_0_VECBLEND24:%.*]] = select <7 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <7 x i8> [[A_SROA_16_SROA_0_0_VEC_EXPAND]], <7 x i8> [[A_SROA_16_SROA_0_3_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_16_SROA_0_2_VECBLEND25:%.*]] = select <7 x i1> <i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true>, <7 x i8> <i8 undef, i8 undef, i8 42, i8 42, i8 42, i8 42, i8 42>, <7 x i8> [[A_SROA_16_SROA_0_0_VECBLEND24]]
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_0_VECBLEND13:%.*]] = select <7 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <7 x i8> <i8 42, i8 42, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <7 x i8> [[A_SROA_235_SROA_0_3_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_1_COPYLOAD:%.*]] = load <5 x i8>, ptr [[SRC]], align 1, !tbaa [[TBAA5:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_1_VEC_EXPAND:%.*]] = shufflevector <5 x i8> [[A_SROA_235_SROA_0_1_COPYLOAD]], <5 x i8> poison, <7 x i32> <i32 undef, i32 0, i32 1, i32 2, i32 3, i32 4, i32 undef>
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_1_VECBLEND17:%.*]] = select <7 x i1> <i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>, <7 x i8> [[A_SROA_235_SROA_0_1_VEC_EXPAND]], <7 x i8> [[A_SROA_235_SROA_0_0_VECBLEND13]]
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_2_COPYLOAD:%.*]] = load <5 x i8>, ptr [[SRC]], align 1, !tbaa [[TBAA7:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_2_VEC_EXPAND:%.*]] = shufflevector <5 x i8> [[A_SROA_235_SROA_0_2_COPYLOAD]], <5 x i8> poison, <7 x i32> <i32 undef, i32 undef, i32 0, i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[A_SROA_235_SROA_0_2_VECBLEND18:%.*]] = select <7 x i1> <i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true>, <7 x i8> [[A_SROA_235_SROA_0_2_VEC_EXPAND]], <7 x i8> [[A_SROA_235_SROA_0_1_VECBLEND17]]
 ; CHECK-NEXT:    [[A_SROA_31_210_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 5
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31]], ptr align 1 [[A_SROA_31_210_SRC_SROA_IDX]], i32 3, i1 false), !tbaa [[TBAA57]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[A_SROA_0]], i32 42, i1 false), !tbaa [[TBAA59:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_31_SROA_0_0_COPYLOAD11:%.*]] = load <3 x i8>, ptr [[A_SROA_31_210_SRC_SROA_IDX]], align 1, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_31_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <3 x i8> [[A_SROA_31_SROA_0_0_COPYLOAD11]], <3 x i8> poison, <85 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[A_SROA_31_SROA_0_0_VECBLEND:%.*]] = select <85 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <85 x i8> [[A_SROA_31_SROA_0_0_VEC_EXPAND]], <85 x i8> [[A_SROA_31_SROA_0_0_COPYLOAD]]
+; CHECK-NEXT:    store <42 x i8> [[A_SROA_0_SROA_0_0_COPYLOAD]], ptr [[DST:%.*]], align 1, !tbaa [[TBAA9:![0-9]+]]
 ; CHECK-NEXT:    [[A_SROA_2_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 42
-; CHECK-NEXT:    store i8 0, ptr [[A_SROA_2_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA59]]
+; CHECK-NEXT:    store i8 0, ptr [[A_SROA_2_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA9]]
 ; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 43
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_3_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_3]], i32 99, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    store <99 x i8> [[A_SROA_3_SROA_0_0_COPYLOAD]], ptr [[A_SROA_3_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA9]]
 ; CHECK-NEXT:    [[A_SROA_32_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 142
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_32_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_32]], i32 16, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    store <16 x i8> [[A_SROA_32_SROA_0_8_VECBLEND]], ptr [[A_SROA_32_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA9]]
 ; CHECK-NEXT:    [[A_SROA_15_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 158
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_15_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_15]], i32 42, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    store <42 x i8> [[A_SROA_15_SROA_0_39_VECBLEND]], ptr [[A_SROA_15_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA9]]
 ; CHECK-NEXT:    [[A_SROA_16_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 200
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_16_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_16]], i32 7, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    store <7 x i8> [[A_SROA_16_SROA_0_2_VECBLEND25]], ptr [[A_SROA_16_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA9]]
 ; CHECK-NEXT:    [[A_SROA_23_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 207
-; CHECK-NEXT:    store i8 42, ptr [[A_SROA_23_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA59]]
+; CHECK-NEXT:    store i8 42, ptr [[A_SROA_23_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA9]]
 ; CHECK-NEXT:    [[A_SROA_235_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 208
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_235_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_235]], i32 7, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    store <7 x i8> [[A_SROA_235_SROA_0_2_VECBLEND18]], ptr [[A_SROA_235_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA9]]
 ; CHECK-NEXT:    [[A_SROA_31_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 215
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_31]], i32 85, i1 false), !tbaa [[TBAA59]]
+; CHECK-NEXT:    store <85 x i8> [[A_SROA_31_SROA_0_0_VECBLEND]], ptr [[A_SROA_31_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA9]]
 ; CHECK-NEXT:    ret void
 ;
 
@@ -315,60 +298,29 @@ entry:
 define void @test4(ptr %dst, ptr %src) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [20 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_2_SROA_4:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_3:%.*]] = alloca [10 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_31_SROA_5:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_6_SROA_4:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_7:%.*]] = alloca [40 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_0]], ptr align 1 [[SRC:%.*]], i32 20, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_0_SROA_0_0_COPYLOAD:%.*]] = load <20 x i8>, ptr [[SRC:%.*]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_2_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 20
-; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[A_SROA_2_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_2_SROA_3_0_A_SROA_2_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_2_0_SRC_SROA_IDX]], i64 2
-; CHECK-NEXT:    [[A_SROA_2_SROA_3_0_COPYLOAD:%.*]] = load i8, ptr [[A_SROA_2_SROA_3_0_A_SROA_2_0_SRC_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_2_SROA_4_0_A_SROA_2_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_2_0_SRC_SROA_IDX]], i64 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_2_SROA_4]], ptr align 1 [[A_SROA_2_SROA_4_0_A_SROA_2_0_SRC_SROA_IDX_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_COPYLOAD:%.*]] = load <10 x i8>, ptr [[A_SROA_2_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 30
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_3]], ptr align 1 [[A_SROA_3_0_SRC_SROA_IDX]], i32 10, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_3_SROA_0_0_COPYLOAD:%.*]] = load <10 x i8>, ptr [[A_SROA_3_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_31_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 40
-; CHECK-NEXT:    [[A_SROA_31_SROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[A_SROA_31_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_31_SROA_4_0_A_SROA_31_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_31_0_SRC_SROA_IDX]], i64 2
-; CHECK-NEXT:    [[A_SROA_31_SROA_4_0_COPYLOAD:%.*]] = load i8, ptr [[A_SROA_31_SROA_4_0_A_SROA_31_0_SRC_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_31_SROA_5_0_A_SROA_31_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_31_0_SRC_SROA_IDX]], i64 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31_SROA_5]], ptr align 1 [[A_SROA_31_SROA_5_0_A_SROA_31_0_SRC_SROA_IDX_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_31_SROA_0_0_COPYLOAD:%.*]] = load <10 x i8>, ptr [[A_SROA_31_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_6_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 50
-; CHECK-NEXT:    [[A_SROA_6_SROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[A_SROA_6_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_6_SROA_3_0_A_SROA_6_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_6_0_SRC_SROA_IDX]], i64 2
-; CHECK-NEXT:    [[A_SROA_6_SROA_3_0_COPYLOAD:%.*]] = load i8, ptr [[A_SROA_6_SROA_3_0_A_SROA_6_0_SRC_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_6_SROA_4_0_A_SROA_6_0_SRC_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_6_0_SRC_SROA_IDX]], i64 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_6_SROA_4]], ptr align 1 [[A_SROA_6_SROA_4_0_A_SROA_6_0_SRC_SROA_IDX_SROA_IDX]], i32 7, i1 false), !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_6_SROA_0_0_COPYLOAD:%.*]] = load <10 x i8>, ptr [[A_SROA_6_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_7_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 60
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_7]], ptr align 1 [[A_SROA_7_0_SRC_SROA_IDX]], i32 40, i1 false), !tbaa [[TBAA0]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31_SROA_5]], ptr align 1 [[A_SROA_2_SROA_4]], i32 7, i1 false), !tbaa [[TBAA3]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31_SROA_5]], ptr align 1 [[A_SROA_6_SROA_4]], i32 7, i1 false), !tbaa [[TBAA5]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[A_SROA_0]], i32 20, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A_SROA_7_SROA_0_0_COPYLOAD:%.*]] = load <40 x i8>, ptr [[A_SROA_7_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_31_SROA_0_2_VEC_INSERT:%.*]] = insertelement <10 x i8> [[A_SROA_2_SROA_0_0_COPYLOAD]], i8 0, i32 2
+; CHECK-NEXT:    store <20 x i8> [[A_SROA_0_SROA_0_0_COPYLOAD]], ptr [[DST:%.*]], align 1, !tbaa [[TBAA11:![0-9]+]]
 ; CHECK-NEXT:    [[A_SROA_2_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 20
-; CHECK-NEXT:    store i16 [[A_SROA_2_SROA_0_0_COPYLOAD]], ptr [[A_SROA_2_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_2_SROA_3_0_A_SROA_2_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_2_0_DST_SROA_IDX]], i64 2
-; CHECK-NEXT:    store i8 [[A_SROA_2_SROA_3_0_COPYLOAD]], ptr [[A_SROA_2_SROA_3_0_A_SROA_2_0_DST_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_2_SROA_4_0_A_SROA_2_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_2_0_DST_SROA_IDX]], i64 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_2_SROA_4_0_A_SROA_2_0_DST_SROA_IDX_SROA_IDX]], ptr align 1 [[A_SROA_2_SROA_4]], i32 7, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    store <10 x i8> [[A_SROA_2_SROA_0_0_COPYLOAD]], ptr [[A_SROA_2_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA11]]
 ; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 30
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_3_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_3]], i32 10, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    store <10 x i8> [[A_SROA_3_SROA_0_0_COPYLOAD]], ptr [[A_SROA_3_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA11]]
 ; CHECK-NEXT:    [[A_SROA_31_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 40
-; CHECK-NEXT:    store i16 [[A_SROA_6_SROA_0_0_COPYLOAD]], ptr [[A_SROA_31_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_31_SROA_4_0_A_SROA_31_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_31_0_DST_SROA_IDX]], i64 2
-; CHECK-NEXT:    store i8 [[A_SROA_6_SROA_3_0_COPYLOAD]], ptr [[A_SROA_31_SROA_4_0_A_SROA_31_0_DST_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_31_SROA_5_0_A_SROA_31_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_31_0_DST_SROA_IDX]], i64 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31_SROA_5_0_A_SROA_31_0_DST_SROA_IDX_SROA_IDX]], ptr align 1 [[A_SROA_31_SROA_5]], i32 7, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    store <10 x i8> [[A_SROA_6_SROA_0_0_COPYLOAD]], ptr [[A_SROA_31_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA11]]
 ; CHECK-NEXT:    [[A_SROA_6_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 50
-; CHECK-NEXT:    store i16 [[A_SROA_6_SROA_0_0_COPYLOAD]], ptr [[A_SROA_6_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_6_SROA_3_0_A_SROA_6_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_6_0_DST_SROA_IDX]], i64 2
-; CHECK-NEXT:    store i8 [[A_SROA_6_SROA_3_0_COPYLOAD]], ptr [[A_SROA_6_SROA_3_0_A_SROA_6_0_DST_SROA_IDX_SROA_IDX]], align 1, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[A_SROA_6_SROA_4_0_A_SROA_6_0_DST_SROA_IDX_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_6_0_DST_SROA_IDX]], i64 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_6_SROA_4_0_A_SROA_6_0_DST_SROA_IDX_SROA_IDX]], ptr align 1 [[A_SROA_6_SROA_4]], i32 7, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    store <10 x i8> [[A_SROA_6_SROA_0_0_COPYLOAD]], ptr [[A_SROA_6_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA11]]
 ; CHECK-NEXT:    [[A_SROA_7_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 60
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_7_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_7]], i32 40, i1 false), !tbaa [[TBAA7]]
+; CHECK-NEXT:    store <40 x i8> [[A_SROA_7_SROA_0_0_COPYLOAD]], ptr [[A_SROA_7_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA11]]
 ; CHECK-NEXT:    ret void
 ;
 
@@ -455,8 +407,8 @@ define void @test7(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load volatile i32, ptr [[SRC:%.*]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_COPYLOAD]], ptr [[A_SROA_0]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 4, !tbaa [[TBAA3]]
-; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1]], ptr [[DST:%.*]], align 1, !tbaa [[TBAA3]]
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 4, !tbaa [[TBAA13:![0-9]+]]
+; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1]], ptr [[DST:%.*]], align 1, !tbaa [[TBAA13]]
 ; CHECK-NEXT:    ret void
 ;
 
@@ -476,9 +428,9 @@ define %S2 @test8(ptr %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S2_NEXT_PTR:%.*]] = getelementptr [[S2:%.*]], ptr [[ARG:%.*]], i64 0, i32 1
 ; CHECK-NEXT:    [[S2_NEXT:%.*]] = load ptr, ptr [[S2_NEXT_PTR]], align 8, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[S2_NEXT_S1:%.*]] = load ptr, ptr [[S2_NEXT]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    [[S2_NEXT_S1:%.*]] = load ptr, ptr [[S2_NEXT]], align 8, !tbaa [[TBAA13]]
 ; CHECK-NEXT:    [[S2_NEXT_NEXT_PTR:%.*]] = getelementptr [[S2]], ptr [[S2_NEXT]], i64 0, i32 1
-; CHECK-NEXT:    [[S2_NEXT_NEXT:%.*]] = load ptr, ptr [[S2_NEXT_NEXT_PTR]], align 8, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[S2_NEXT_NEXT:%.*]] = load ptr, ptr [[S2_NEXT_NEXT_PTR]], align 8, !tbaa [[TBAA11]]
 ; CHECK-NEXT:    [[RESULT1:%.*]] = insertvalue [[S2]] poison, ptr [[S2_NEXT_S1]], 0
 ; CHECK-NEXT:    [[RESULT2:%.*]] = insertvalue [[S2]] [[RESULT1]], ptr [[S2_NEXT_NEXT]], 1
 ; CHECK-NEXT:    ret [[S2]] [[RESULT2]]
@@ -725,7 +677,7 @@ define void @test16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i24, ptr [[SRC:%.*]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    store i24 0, ptr [[DST:%.*]], align 1, !tbaa [[TBAA5]]
+; CHECK-NEXT:    store i24 0, ptr [[DST:%.*]], align 1, !tbaa [[TBAA15:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 
@@ -744,7 +696,7 @@ define void @test17(ptr %src, ptr %dst) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [3 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[A]], ptr [[SRC:%.*]], i32 4, i1 true), !tbaa [[TBAA0]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DST:%.*]], ptr [[A]], i32 4, i1 true), !tbaa [[TBAA3]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DST:%.*]], ptr [[A]], i32 4, i1 true), !tbaa [[TBAA13]]
 ; CHECK-NEXT:    ret void
 ;
 
@@ -765,12 +717,12 @@ define void @test18(ptr %src, ptr %dst, i32 %size) {
 ; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i32, ptr [[SRC:%.*]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    [[A_SROA_3_0_COPYLOAD:%.*]] = load i32, ptr [[A_SROA_3_0_SRC_SROA_IDX]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_33]], ptr [[SRC]], i32 [[SIZE:%.*]], i1 false), !tbaa [[TBAA3]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_33]], i8 42, i32 [[SIZE]], i1 false), !tbaa [[TBAA5]]
-; CHECK-NEXT:    store i32 42, ptr [[DST:%.*]], align 1, !tbaa [[TBAA9]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_33]], ptr [[SRC]], i32 [[SIZE:%.*]], i1 false), !tbaa [[TBAA13]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_33]], i8 42, i32 [[SIZE]], i1 false), !tbaa [[TBAA15]]
+; CHECK-NEXT:    store i32 42, ptr [[DST:%.*]], align 1, !tbaa [[TBAA17:![0-9]+]]
 ; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
-; CHECK-NEXT:    store i32 [[A_SROA_3_0_COPYLOAD]], ptr [[A_SROA_3_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA9]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DST]], ptr align 1 [[A_SROA_33]], i32 [[SIZE]], i1 false), !tbaa [[TBAA11]]
+; CHECK-NEXT:    store i32 [[A_SROA_3_0_COPYLOAD]], ptr [[A_SROA_3_0_DST_SROA_IDX]], align 1, !tbaa [[TBAA17]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DST]], ptr align 1 [[A_SROA_33]], i32 [[SIZE]], i1 false), !tbaa [[TBAA19:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 
@@ -1005,8 +957,7 @@ define void @PR14034(ptr %ptr, ptr %ptr2) {
 ; thing is to handle empty structs gracefully.
 ; CHECK-LABEL: @PR14034(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [12 x i8], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[PTR2:%.*]], ptr align 8 [[A_SROA_0]], i32 12, i1 false)
+; CHECK-NEXT:    store <12 x i8> undef, ptr [[PTR2:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
 
@@ -1227,8 +1178,6 @@ define void @PR14465() {
 ; Ensure that we don't crash when analyzing a alloca larger than the maximum
 ; integer type width (MAX_INT_BITS) supported by llvm (1048576*32 > (1<<23)-1).
 ; CHECK-LABEL: @PR14465(
-; CHECK-NEXT:    [[STACK:%.*]] = alloca [1048576 x i32], align 16
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[STACK]], i8 -2, i64 4194304, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -1547,8 +1496,8 @@ define void @test24(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 16
 ; CHECK-NEXT:    [[A_0_COPYLOAD:%.*]] = load volatile i64, ptr [[SRC:%.*]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    store volatile i64 [[A_0_COPYLOAD]], ptr [[A]], align 16, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_0_COPYLOAD1:%.*]] = load volatile i64, ptr [[A]], align 16, !tbaa [[TBAA3]]
-; CHECK-NEXT:    store volatile i64 [[A_0_COPYLOAD1]], ptr [[DST:%.*]], align 1, !tbaa [[TBAA3]]
+; CHECK-NEXT:    [[A_0_COPYLOAD1:%.*]] = load volatile i64, ptr [[A]], align 16, !tbaa [[TBAA13]]
+; CHECK-NEXT:    store volatile i64 [[A_0_COPYLOAD1]], ptr [[DST:%.*]], align 1, !tbaa [[TBAA13]]
 ; CHECK-NEXT:    ret void
 ;
 
