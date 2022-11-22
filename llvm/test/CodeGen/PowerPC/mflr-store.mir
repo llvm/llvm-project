@@ -25,8 +25,8 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: test
     ; CHECK: $x0 = MFLR8 implicit $lr8
+    ; CHECK-NEXT: STD killed $x0, 16, $x1
     ; CHECK-NEXT: $x1 = STDU $x1, -32752, $x1
-    ; CHECK-NEXT: STD killed $x0, 32768, $x1
     ; CHECK-NEXT: BL8 @test_callee, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x2, implicit-def $r1, implicit-def $x3
     ; CHECK-NEXT: $x1 = ADDI8 $x1, 32752
     ; CHECK-NEXT: $x0 = LD 16, $x1
