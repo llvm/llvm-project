@@ -908,9 +908,7 @@ void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
 }
 
 Optional<int64_t> DimOp::getConstantIndex() {
-  if (auto constantOp = getIndex().getDefiningOp<arith::ConstantOp>())
-    return constantOp.getValue().cast<IntegerAttr>().getInt();
-  return {};
+  return getConstantIntValue(getIndex());
 }
 
 Speculation::Speculatability DimOp::getSpeculatability() {

@@ -1051,7 +1051,10 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     }]>
   ];
 
-  let extraClassDeclaration = commonExtraClassDeclaration;
+  let extraClassDeclaration = commonExtraClassDeclaration # [{
+    int64_t getCorrespondingSourceDim(int64_t resultDim);
+  }];
+
   let hasVerifier = 1;
 }
 
