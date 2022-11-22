@@ -29,11 +29,10 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test1.next(i64 %start) {
 ; CHECK-LABEL: @test1.next(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[START:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END:%.*]], label [[LOOP]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -77,11 +76,10 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test2.next(i64 %start) {
 ; CHECK-LABEL: @test2.next(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[START:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sle i64 [[INDVARS_IV_NEXT]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sle i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END:%.*]], label [[LOOP]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -138,15 +136,16 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test3.next(i64 %start) {
 ; CHECK-LABEL: @test3.next(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[START:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 25
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BACKEDGE]], label [[FOR_END:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END]], label [[LOOP]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -209,15 +208,16 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test4.next(i64 %start) {
 ; CHECK-LABEL: @test4.next(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[START:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 25
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BACKEDGE]], label [[FOR_END:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i64 [[INDVARS_IV_NEXT]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP]], label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -279,15 +279,16 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test5.next(i64 %start) {
 ; CHECK-LABEL: @test5.next(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[START:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 25
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BACKEDGE]], label [[FOR_END:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[INDVARS_IV_NEXT]], 101
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[TMP0]], 101
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP]], label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -350,15 +351,16 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test6.next(i64 %start) {
 ; CHECK-LABEL: @test6.next(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[START:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 25
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BACKEDGE]], label [[FOR_END:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], 101
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[TMP0]], 101
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END]], label [[LOOP]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -420,11 +422,10 @@ define void @test7.next(i64 %start, i64* %inc_ptr) {
 ; CHECK-NEXT:    [[OK:%.*]] = icmp sge i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[OK]], label [[LOOP_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       loop.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INC]], [[START:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ [[START:%.*]], [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[INC]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END_LOOPEXIT:%.*]], label [[LOOP]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
