@@ -142,6 +142,12 @@ public:
     return base->getType() == TypeID::get<OneShotAnalysisState>();
   }
 
+  /// Return a reference to the BufferizationOptions.
+  const OneShotBufferizationOptions &getOptions() const {
+    return static_cast<const OneShotBufferizationOptions &>(
+        AnalysisState::getOptions());
+  }
+
   /// Return a reference to the BufferizationAliasInfo.
   BufferizationAliasInfo &getAliasInfo() { return aliasInfo; }
 
