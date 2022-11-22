@@ -1004,6 +1004,11 @@ void AsmPrinter::emitFunctionHeader() {
                        HI.TimerGroupDescription, TimePassesIsEnabled);
     HI.Handler->beginFunction(MF);
   }
+  for (const HandlerInfo &HI : Handlers) {
+    NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
+                       HI.TimerGroupDescription, TimePassesIsEnabled);
+    HI.Handler->beginBasicBlockSection(MF->front());
+  }
 
   // Emit the prologue data.
   if (F.hasPrologueData())
@@ -1803,6 +1808,15 @@ void AsmPrinter::emitFunctionBody() {
       OutStreamer->emitELFSize(CurrentFnBeginLocal, SizeExp);
   }
 
+  // Call endBasicBlockSection on the last block now, if it wasn't already
+  // called.
+  if (!MF->back().isEndSection()) {
+    for (const HandlerInfo &HI : Handlers) {
+      NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
+                         HI.TimerGroupDescription, TimePassesIsEnabled);
+      HI.Handler->endBasicBlockSection(MF->back());
+    }
+  }
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
@@ -3719,11 +3733,11 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   }
 
   // With BB sections, each basic block must handle CFI information on its own
-  // if it begins a section (Entry block is handled separately by
-  // AsmPrinterHandler::beginFunction).
+  // if it begins a section (Entry block call is handled separately, next to
+  // beginFunction).
   if (MBB.isBeginSection() && !MBB.isEntryBlock())
     for (const HandlerInfo &HI : Handlers)
-      HI.Handler->beginBasicBlock(MBB);
+      HI.Handler->beginBasicBlockSection(MBB);
 }
 
 void AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
@@ -3731,7 +3745,7 @@ void AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
   // sections.
   if (MBB.isEndSection())
     for (const HandlerInfo &HI : Handlers)
-      HI.Handler->endBasicBlock(MBB);
+      HI.Handler->endBasicBlockSection(MBB);
 }
 
 void AsmPrinter::emitVisibility(MCSymbol *Sym, unsigned Visibility,
