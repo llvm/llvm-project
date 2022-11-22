@@ -949,11 +949,9 @@ def TileToForeachThreadOp :
   let assemblyFormat = [{
     $target oilist(
         `num_threads` custom<DynamicIndexList>($num_threads,
-                                               $static_num_threads,
-                                               "ShapedType::kDynamic") |
+                                               $static_num_threads) |
          `tile_sizes` custom<DynamicIndexList>($tile_sizes,
-                                               $static_tile_sizes,
-                                               "ShapedType::kDynamic"))
+                                               $static_tile_sizes))
     (`(` `mapping` `=` $mapping^ `)`)? attr-dict
   }];
   let hasVerifier = 1;

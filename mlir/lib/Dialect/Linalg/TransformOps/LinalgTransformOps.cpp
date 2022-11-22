@@ -1321,8 +1321,7 @@ ParseResult transform::TileOp::parse(OpAsmParser &parser,
   auto pdlOperationType = pdl::OperationType::get(parser.getContext());
   if (parser.parseOperand(target) ||
       parser.resolveOperand(target, pdlOperationType, result.operands) ||
-      parseDynamicIndexList(parser, dynamicSizes, staticSizes,
-                            ShapedType::kDynamic) ||
+      parseDynamicIndexList(parser, dynamicSizes, staticSizes) ||
       parser.resolveOperands(dynamicSizes, pdlOperationType, result.operands) ||
       parser.parseOptionalAttrDict(result.attributes))
     return ParseResult::failure();
@@ -1336,8 +1335,7 @@ ParseResult transform::TileOp::parse(OpAsmParser &parser,
 
 void TileOp::print(OpAsmPrinter &p) {
   p << ' ' << getTarget();
-  printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes(),
-                        ShapedType::kDynamic);
+  printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes());
   p.printOptionalAttrDict((*this)->getAttrs(), {getStaticSizesAttrName()});
 }
 
@@ -1549,11 +1547,11 @@ void transform::TileToForeachThreadOp::getEffects(
 }
 
 SmallVector<OpFoldResult> TileToForeachThreadOp::getMixedNumThreads() {
-  return getMixedSizes(getStaticNumThreads(), getNumThreads());
+  return getMixedValues(getStaticNumThreads(), getNumThreads());
 }
 
 SmallVector<OpFoldResult> TileToForeachThreadOp::getMixedTileSizes() {
-  return getMixedSizes(getStaticTileSizes(), getTileSizes());
+  return getMixedValues(getStaticTileSizes(), getTileSizes());
 }
 
 LogicalResult TileToForeachThreadOp::verify() {
@@ -1680,8 +1678,7 @@ ParseResult transform::TileToScfForOp::parse(OpAsmParser &parser,
   auto pdlOperationType = pdl::OperationType::get(parser.getContext());
   if (parser.parseOperand(target) ||
       parser.resolveOperand(target, pdlOperationType, result.operands) ||
-      parseDynamicIndexList(parser, dynamicSizes, staticSizes,
-                            ShapedType::kDynamic) ||
+      parseDynamicIndexList(parser, dynamicSizes, staticSizes) ||
       parser.resolveOperands(dynamicSizes, pdlOperationType, result.operands) ||
       parser.parseOptionalAttrDict(result.attributes))
     return ParseResult::failure();
@@ -1695,8 +1692,7 @@ ParseResult transform::TileToScfForOp::parse(OpAsmParser &parser,
 
 void TileToScfForOp::print(OpAsmPrinter &p) {
   p << ' ' << getTarget();
-  printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes(),
-                        ShapedType::kDynamic);
+  printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes());
   p.printOptionalAttrDict((*this)->getAttrs(), {getStaticSizesAttrName()});
 }
 
