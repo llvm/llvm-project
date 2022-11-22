@@ -245,6 +245,13 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
   setSupportsDebugEntryValues(true);
 
   initAsmInfo();
+
+  if (FS.contains("+avx512f"))
+    SimdDefaultAlignment = 512;
+  else if (FS.contains("+avx"))
+    SimdDefaultAlignment = 256;
+  else
+    SimdDefaultAlignment = 128;
 }
 
 X86TargetMachine::~X86TargetMachine() = default;

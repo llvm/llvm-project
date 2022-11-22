@@ -79,6 +79,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -93,6 +94,7 @@
 #include <cstdlib>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -2463,7 +2465,16 @@ unsigned ASTContext::getTypeUnadjustedAlign(const Type *T) const {
 }
 
 unsigned ASTContext::getOpenMPDefaultSimdAlign(QualType T) const {
-  unsigned SimdAlign = getTargetInfo().getSimdDefaultAlign();
+  const std::vector<std::string> &TargetFeatures =
+      Target->getTargetOpts().Features;
+  std::string TargetFeaturesString = std::accumulate(
+      TargetFeatures.cbegin(), TargetFeatures.cend(), std::string(),
+      [](const std::string &s1, const std::string &s2) {
+        return s1.empty() ? s2 : s1 + "," + s2;
+      });
+  unsigned SimdAlign = llvm::OpenMPIRBuilder ::getSimdDefaultAlignment(
+      getTargetInfo().getTriple().str(), Target->getTargetOpts().CPU,
+      TargetFeaturesString);
   return SimdAlign;
 }
 
