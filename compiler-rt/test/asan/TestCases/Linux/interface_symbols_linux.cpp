@@ -13,7 +13,7 @@
 // RUN:  | sed -e "s/__asan_version_mismatch_check_v[0-9]+/__asan_version_mismatch_check/" \
 // RUN:  > %t.exports
 //
-// RUN:  sed ':a;N;$!ba;s/[\n ]//g;s/)/)\n/g'                                      \
+// RUN: sed ':a;N;$!ba;s/([\n ]*/(/g'                                              \
 // RUN:  %t.asan_interface.inc                                                     \
 // RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                              \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc        \
