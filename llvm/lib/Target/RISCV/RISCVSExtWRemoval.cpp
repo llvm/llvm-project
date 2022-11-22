@@ -492,6 +492,7 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVInstrInfo &TII = *ST.getInstrInfo();
 
   if (!ST.is64Bit())
     return false;
@@ -531,22 +532,14 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
     Register DstReg = MI->getOperand(0).getReg();
     if (!MRI.constrainRegClass(SrcReg, MRI.getRegClass(DstReg)))
       continue;
-    // Replace Fixable instructions with their W versions.
+    // Convert Fixable instructions to their W versions.
     for (MachineInstr *Fixable : FixableDef) {
-      MachineBasicBlock &MBB = *Fixable->getParent();
-      const DebugLoc &DL = Fixable->getDebugLoc();
-      unsigned Code = getWOp(Fixable->getOpcode());
-      MachineInstrBuilder Replacement =
-          BuildMI(MBB, Fixable, DL, ST.getInstrInfo()->get(Code));
-      for (auto Op : Fixable->operands())
-        Replacement.add(Op);
-      for (auto *Op : Fixable->memoperands())
-        Replacement.addMemOperand(Op);
-
       LLVM_DEBUG(dbgs() << "Replacing " << *Fixable);
-      LLVM_DEBUG(dbgs() << "     with " << *Replacement);
-
-      Fixable->eraseFromParent();
+      Fixable->setDesc(TII.get(getWOp(Fixable->getOpcode())));
+      Fixable->clearFlag(MachineInstr::MIFlag::NoSWrap);
+      Fixable->clearFlag(MachineInstr::MIFlag::NoUWrap);
+      Fixable->clearFlag(MachineInstr::MIFlag::IsExact);
+      LLVM_DEBUG(dbgs() << "     with " << *Fixable);
       ++NumTransformedToWInstrs;
     }
 
