@@ -1005,7 +1005,7 @@ void PhdrEntry::add(OutputSection *sec) {
 // need these symbols, since IRELATIVE relocs are resolved through GOT
 // and PLT. For details, see http://www.airs.com/blog/archives/403.
 template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
-  if (config->relocatable || config->isPic)
+  if (config->isPic)
     return;
 
   // By default, __rela_iplt_{start,end} belong to a dummy section 0
@@ -1826,30 +1826,33 @@ static void removeUnusedSyntheticSections() {
 
 // Create output section objects and add them to OutputSections.
 template <class ELFT> void Writer<ELFT>::finalizeSections() {
-  Out::preinitArray = findSection(".preinit_array");
-  Out::initArray = findSection(".init_array");
-  Out::finiArray = findSection(".fini_array");
-
-  // The linker needs to define SECNAME_start, SECNAME_end and SECNAME_stop
-  // symbols for sections, so that the runtime can get the start and end
-  // addresses of each section by section name. Add such symbols.
   if (!config->relocatable) {
+    Out::preinitArray = findSection(".preinit_array");
+    Out::initArray = findSection(".init_array");
+    Out::finiArray = findSection(".fini_array");
+
+    // The linker needs to define SECNAME_start, SECNAME_end and SECNAME_stop
+    // symbols for sections, so that the runtime can get the start and end
+    // addresses of each section by section name. Add such symbols.
     addStartEndSymbols();
     for (SectionCommand *cmd : script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
         addStartStopSymbols(osd->osec);
+
+    // Add _DYNAMIC symbol. Unlike GNU gold, our _DYNAMIC symbol has no type.
+    // It should be okay as no one seems to care about the type.
+    // Even the author of gold doesn't remember why gold behaves that way.
+    // https://sourceware.org/ml/binutils/2002-03/msg00360.html
+    if (mainPart->dynamic->parent) {
+      Symbol *s = symtab.addSymbol(Defined{
+          /*file=*/nullptr, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
+          /*value=*/0, /*size=*/0, mainPart->dynamic.get()});
+      s->isUsedInRegularObj = true;
+    }
+
+    // Define __rel[a]_iplt_{start,end} symbols if needed.
+    addRelIpltSymbols();
   }
-
-  // Add _DYNAMIC symbol. Unlike GNU gold, our _DYNAMIC symbol has no type.
-  // It should be okay as no one seems to care about the type.
-  // Even the author of gold doesn't remember why gold behaves that way.
-  // https://sourceware.org/ml/binutils/2002-03/msg00360.html
-  if (mainPart->dynamic->parent)
-    symtab.addSymbol(Defined{/*file=*/nullptr, "_DYNAMIC", STB_WEAK, STV_HIDDEN,
-        STT_NOTYPE, /*value=*/0, /*size=*/0, mainPart->dynamic.get()})->isUsedInRegularObj = true;
-
-  // Define __rel[a]_iplt_{start,end} symbols if needed.
-  addRelIpltSymbols();
 
   // RISC-V's gp can address +/- 2 KiB, set it to .sdata + 0x800. This symbol
   // should only be defined in an executable. If .sdata does not exist, its
@@ -1883,67 +1886,66 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     }
   }
 
-  {
+  if (!config->relocatable) {
     llvm::TimeTraceScope timeScope("Finalize .eh_frame");
     // This responsible for splitting up .eh_frame section into
     // pieces. The relocation scan uses those pieces, so this has to be
     // earlier.
     for (Partition &part : partitions)
       finalizeSynthetic(part.ehFrame.get());
-  }
 
-  if (config->hasDynSymTab) {
-    parallelForEach(symtab.getSymbols(), [](Symbol *sym) {
-      sym->isPreemptible = computeIsPreemptible(*sym);
-    });
+    if (config->hasDynSymTab) {
+      parallelForEach(symtab.getSymbols(), [](Symbol *sym) {
+        sym->isPreemptible = computeIsPreemptible(*sym);
+      });
+    }
   }
 
   // Change values of linker-script-defined symbols from placeholders (assigned
   // by declareSymbols) to actual definitions.
   script->processSymbolAssignments();
 
-  {
+  if (!config->relocatable) {
     llvm::TimeTraceScope timeScope("Scan relocations");
     // Scan relocations. This must be done after every symbol is declared so
     // that we can correctly decide if a dynamic relocation is needed. This is
     // called after processSymbolAssignments() because it needs to know whether
     // a linker-script-defined symbol is absolute.
     ppc64noTocRelax.clear();
-    if (!config->relocatable) {
-      scanRelocations<ELFT>();
-      reportUndefinedSymbols();
-      postScanRelocations();
-    }
-  }
+    scanRelocations<ELFT>();
+    reportUndefinedSymbols();
+    postScanRelocations();
 
-  if (in.plt && in.plt->isNeeded())
-    in.plt->addSymbols();
-  if (in.iplt && in.iplt->isNeeded())
-    in.iplt->addSymbols();
+    if (in.plt && in.plt->isNeeded())
+      in.plt->addSymbols();
+    if (in.iplt && in.iplt->isNeeded())
+      in.iplt->addSymbols();
 
-  if (config->unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore) {
-    auto diagnose =
-        config->unresolvedSymbolsInShlib == UnresolvedPolicy::ReportError
-            ? errorOrWarn
-            : warn;
-    // Error on undefined symbols in a shared object, if all of its DT_NEEDED
-    // entries are seen. These cases would otherwise lead to runtime errors
-    // reported by the dynamic linker.
-    //
-    // ld.bfd traces all DT_NEEDED to emulate the logic of the dynamic linker to
-    // catch more cases. That is too much for us. Our approach resembles the one
-    // used in ld.gold, achieves a good balance to be useful but not too smart.
-    for (SharedFile *file : ctx.sharedFiles) {
-      bool allNeededIsKnown =
-          llvm::all_of(file->dtNeeded, [&](StringRef needed) {
-            return symtab.soNames.count(CachedHashStringRef(needed));
-          });
-      if (!allNeededIsKnown)
-        continue;
-      for (Symbol *sym : file->requiredSymbols)
-        if (sym->isUndefined() && !sym->isWeak())
-          diagnose("undefined reference due to --no-allow-shlib-undefined: " +
-                   toString(*sym) + "\n>>> referenced by " + toString(file));
+    if (config->unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore) {
+      auto diagnose =
+          config->unresolvedSymbolsInShlib == UnresolvedPolicy::ReportError
+              ? errorOrWarn
+              : warn;
+      // Error on undefined symbols in a shared object, if all of its DT_NEEDED
+      // entries are seen. These cases would otherwise lead to runtime errors
+      // reported by the dynamic linker.
+      //
+      // ld.bfd traces all DT_NEEDED to emulate the logic of the dynamic linker
+      // to catch more cases. That is too much for us. Our approach resembles
+      // the one used in ld.gold, achieves a good balance to be useful but not
+      // too smart.
+      for (SharedFile *file : ctx.sharedFiles) {
+        bool allNeededIsKnown =
+            llvm::all_of(file->dtNeeded, [&](StringRef needed) {
+              return symtab.soNames.count(CachedHashStringRef(needed));
+            });
+        if (!allNeededIsKnown)
+          continue;
+        for (Symbol *sym : file->requiredSymbols)
+          if (sym->isUndefined() && !sym->isWeak())
+            diagnose("undefined reference due to --no-allow-shlib-undefined: " +
+                     toString(*sym) + "\n>>> referenced by " + toString(file));
+      }
     }
   }
 
