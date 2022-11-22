@@ -45,6 +45,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/RWMutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <iterator>
@@ -1166,7 +1167,7 @@ public:
 
     MCSymbol *&FunctionEndLabel = FunctionEndLabels[LabelIndex];
     if (!FunctionEndLabel) {
-      std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
+      std::unique_lock<llvm::sys::RWMutex> Lock(BC.CtxMutex);
       if (Fragment == FragmentNum::main())
         FunctionEndLabel = BC.Ctx->createNamedTempSymbol("func_end");
       else
@@ -1490,7 +1491,7 @@ public:
   std::unique_ptr<BinaryBasicBlock>
   createBasicBlock(MCSymbol *Label = nullptr) {
     if (!Label) {
-      std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
+      std::unique_lock<llvm::sys::RWMutex> Lock(BC.CtxMutex);
       Label = BC.Ctx->createNamedTempSymbol("BB");
     }
     auto BB =

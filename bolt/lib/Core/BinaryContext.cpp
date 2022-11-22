@@ -1316,9 +1316,8 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
   assert(!ChildBF.isMultiEntry() && !ParentBF.isMultiEntry() &&
          "cannot merge functions with multiple entry points");
 
-  std::unique_lock<std::shared_timed_mutex> WriteCtxLock(CtxMutex,
-                                                         std::defer_lock);
-  std::unique_lock<std::shared_timed_mutex> WriteSymbolMapLock(
+  std::unique_lock<llvm::sys::RWMutex> WriteCtxLock(CtxMutex, std::defer_lock);
+  std::unique_lock<llvm::sys::RWMutex> WriteSymbolMapLock(
       SymbolToFunctionMapMutex, std::defer_lock);
 
   const StringRef ChildName = ChildBF.getOneName();
@@ -1343,10 +1342,10 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
     // continue to exist and either one can be executed.
     ChildBF.mergeProfileDataInto(ParentBF);
 
-    std::shared_lock<std::shared_timed_mutex> ReadBfsLock(BinaryFunctionsMutex,
-                                                          std::defer_lock);
-    std::unique_lock<std::shared_timed_mutex> WriteBfsLock(BinaryFunctionsMutex,
-                                                           std::defer_lock);
+    std::shared_lock<llvm::sys::RWMutex> ReadBfsLock(BinaryFunctionsMutex,
+                                                     std::defer_lock);
+    std::unique_lock<llvm::sys::RWMutex> WriteBfsLock(BinaryFunctionsMutex,
+                                                      std::defer_lock);
     // Remove ChildBF from the global set of functions in relocs mode.
     ReadBfsLock.lock();
     auto FI = BinaryFunctions.find(ChildBF.getAddress());
@@ -2157,7 +2156,7 @@ void BinaryContext::markAmbiguousRelocations(BinaryData &BD,
 
 BinaryFunction *BinaryContext::getFunctionForSymbol(const MCSymbol *Symbol,
                                                     uint64_t *EntryDesc) {
-  std::shared_lock<std::shared_timed_mutex> Lock(SymbolToFunctionMapMutex);
+  std::shared_lock<llvm::sys::RWMutex> Lock(SymbolToFunctionMapMutex);
   auto BFI = SymbolToFunctionMap.find(Symbol);
   if (BFI == SymbolToFunctionMap.end())
     return nullptr;
