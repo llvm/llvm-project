@@ -166,18 +166,28 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // instruction. We have only two-address instructions, thus we need to
   // expand it into move + add.
   if (MI.getOpcode() == AVR::FRMIDX) {
-    MI.setDesc(TII.get(AVR::MOVWRdRr));
-    MI.getOperand(FIOperandNum).ChangeToRegister(AVR::R29R28, false);
-    MI.removeOperand(2);
+    Register DstReg = MI.getOperand(0).getReg();
+    assert(DstReg != AVR::R29R28 && "Dest reg cannot be the frame pointer");
+
+    // Copy the frame pointer.
+    if (STI.hasMOVW()) {
+      BuildMI(MBB, MI, dl, TII.get(AVR::MOVWRdRr), DstReg)
+          .addReg(AVR::R29R28);
+    } else {
+      Register DstLoReg, DstHiReg;
+      splitReg(DstReg, DstLoReg, DstHiReg);
+      BuildMI(MBB, MI, dl, TII.get(AVR::MOVRdRr), DstLoReg)
+          .addReg(AVR::R28);
+      BuildMI(MBB, MI, dl, TII.get(AVR::MOVRdRr), DstHiReg)
+          .addReg(AVR::R29);
+    }
 
     assert(Offset > 0 && "Invalid offset");
 
     // We need to materialize the offset via an add instruction.
     unsigned Opcode;
-    Register DstReg = MI.getOperand(0).getReg();
-    assert(DstReg != AVR::R29R28 && "Dest reg cannot be the frame pointer");
 
-    II++; // Skip over the FRMIDX (and now MOVW) instruction.
+    II++; // Skip over the FRMIDX instruction.
 
     // Generally, to load a frame address two add instructions are emitted that
     // could get folded into a single one:
@@ -195,7 +205,7 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     case AVR::R25R24:
     case AVR::R27R26:
     case AVR::R31R30: {
-      if (isUInt<6>(Offset)) {
+      if (isUInt<6>(Offset) && STI.hasADDSUBIW()) {
         Opcode = AVR::ADIWRdK;
         break;
       }
@@ -214,19 +224,28 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                             .addImm(Offset);
     New->getOperand(3).setIsDead();
 
+    MI.eraseFromParent(); // remove FRMIDX
+
     return false;
   }
+
+  // On most AVRs, we can use an offset up to 62 for load/store with
+  // displacement (63 for byte values, 62 for word values). However, the
+  // "reduced tiny" cores don't support load/store with displacement. So for
+  // them, we force an offset of 0 meaning that any positive offset will require
+  // adjusting the frame pointer.
+  int MaxOffset = STI.hasTinyEncoding() ? 0 : 62;
 
   // If the offset is too big we have to adjust and restore the frame pointer
   // to materialize a valid load/store with displacement.
   //: TODO: consider using only one adiw/sbiw chain for more than one frame
   //: index
-  if (Offset > 62) {
+  if (Offset > MaxOffset) {
     unsigned AddOpc = AVR::ADIWRdK, SubOpc = AVR::SBIWRdK;
-    int AddOffset = Offset - 63 + 1;
+    int AddOffset = Offset - MaxOffset;
 
     // For huge offsets where adiw/sbiw cannot be used use a pair of subi/sbci.
-    if ((Offset - 63 + 1) > 63) {
+    if ((Offset - MaxOffset) > 63 || !STI.hasADDSUBIW()) {
       AddOpc = AVR::SUBIWRdK;
       SubOpc = AVR::SUBIWRdK;
       AddOffset = -AddOffset;
@@ -253,9 +272,9 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // cond branch it will be using a dead register.
     BuildMI(MBB, std::next(II), dl, TII.get(SubOpc), AVR::R29R28)
         .addReg(AVR::R29R28, RegState::Kill)
-        .addImm(Offset - 63 + 1);
+        .addImm(Offset - MaxOffset);
 
-    Offset = 62;
+    Offset = MaxOffset;
   }
 
   MI.getOperand(FIOperandNum).ChangeToRegister(AVR::R29R28, false);

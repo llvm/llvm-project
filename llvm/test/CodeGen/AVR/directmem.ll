@@ -1,4 +1,5 @@
 ; RUN: llc -mattr=sram,addsubiw < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=sram,avrtiny < %s -march=avr | FileCheck %s --check-prefix=CHECK-TINY
 
 @char = common global i8 0
 @char.array = common global [3 x i8] zeroinitializer
@@ -20,6 +21,11 @@ define void @global8_store() {
 ; CHECK-LABEL: global8_store:
 ; CHECK: ldi [[REG:r[0-9]+]], 6
 ; CHECK: sts char, [[REG]]
+; CHECK-TINY-LABEL: global8_store:
+; CHECK-TINY: ldi [[REG1:r[0-9]+]], 6
+; CHECK-TINY: ldi [[REG2:r[0-9]+]], lo8(char)
+; CHECK-TINY: ldi [[REG3:r[0-9]+]], hi8(char)
+; CHECK-TINY: st [[REG4:[X-Z]]], [[REG1]]
   store i8 6, i8* @char
   ret void
 }
@@ -27,6 +33,10 @@ define void @global8_store() {
 define i8 @global8_load() {
 ; CHECK-LABEL: global8_load:
 ; CHECK: lds r24, char
+; CHECK-TINY-LABEL: global8_load:
+; CHECK-TINY: ldi [[REG1:r[0-9]+]], lo8(char)
+; CHECK-TINY: ldi [[REG2:r[0-9]+]], hi8(char)
+; CHECK-TINY: ld [[REG3:r[0-9]+]], [[REG4:[X-Z]]]
   %result = load i8, i8* @char
   ret i8 %result
 }
