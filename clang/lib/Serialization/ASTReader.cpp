@@ -1452,9 +1452,10 @@ bool ASTReader::ReadSLocEntry(int ID) {
     unsigned RecCode = MaybeRecCode.get();
 
     if (RecCode == SM_SLOC_BUFFER_BLOB_COMPRESSED) {
-      // Inspect the first two bytes to differentiate zlib (\x1f\x8b) and zstd.
+      // Inspect the first byte to differentiate zlib (\x78) and zstd
+      // (little-endian 0xFD2FB528).
       const llvm::compression::Format F =
-          Blob.size() >= 2 && memcmp(Blob.data(), "\x1f\x8b", 2) == 0
+          Blob.size() > 0 && Blob.data()[0] == 0x78
               ? llvm::compression::Format::Zlib
               : llvm::compression::Format::Zstd;
       if (const char *Reason = llvm::compression::getReasonIfUnsupported(F)) {
