@@ -444,31 +444,21 @@ protected:
 /// implement the necessary virtual function members.
 struct GenericPluginTy {
 
-  /// Construct a plugin instance. The number of active instances should be
-  /// always be either zero or one.
-  GenericPluginTy() : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr) {
-    ++NumActiveInstances;
-  }
+  /// Construct a plugin instance.
+  GenericPluginTy()
+      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr) {}
 
-  /// Destroy the plugin instance and release all its resources. Also decrease
-  /// the number of instances.
-  virtual ~GenericPluginTy() {
-    // There is no global handler if no device is available.
-    if (GlobalHandler)
-      delete GlobalHandler;
+  virtual ~GenericPluginTy() {}
 
-    // Deinitialize all active devices.
-    for (int32_t DeviceId = 0; DeviceId < NumDevices; ++DeviceId) {
-      if (Devices[DeviceId]) {
-        if (auto Err = deinitDevice(DeviceId))
-          REPORT("Failure to deinitialize device %d: %s\n", DeviceId,
-                 toString(std::move(Err)).data());
-      }
-      assert(!Devices[DeviceId] && "Device was not deinitialized");
-    }
+  /// Initialize the plugin.
+  Error init();
 
-    --NumActiveInstances;
-  }
+  /// Initialize the plugin and return the number of available devices.
+  virtual Expected<int32_t> initImpl() = 0;
+
+  /// Deinitialize the plugin and release the resources.
+  Error deinit();
+  virtual Error deinitImpl() = 0;
 
   /// Get the reference to the device with a certain device id.
   GenericDeviceTy &getDevice(int32_t DeviceId) {
@@ -522,26 +512,7 @@ struct GenericPluginTy {
   /// Indicate whether the plugin supports empty images.
   virtual bool supportsEmptyImages() const { return false; }
 
-  /// Indicate whether there is any active plugin instance.
-  static bool hasAnyActiveInstance() {
-    assert(NumActiveInstances <= 1 && "Invalid number of instances");
-    return (NumActiveInstances > 0);
-  }
-
 protected:
-  /// Initialize the plugin and prepare for initializing its devices.
-  void init(int NumDevices, GenericGlobalHandlerTy *GlobalHandler) {
-    this->NumDevices = NumDevices;
-    this->GlobalHandler = GlobalHandler;
-
-    assert(Devices.size() == 0 && "Plugin already intialized");
-
-    Devices.resize(NumDevices, nullptr);
-  }
-
-  /// Create a new device with a specific device id.
-  virtual GenericDeviceTy &createDevice(int32_t DeviceId) = 0;
-
   /// Indicate whether a device id is valid.
   bool isValidDeviceId(int32_t DeviceId) const {
     return (DeviceId >= 0 && DeviceId < getNumDevices());
@@ -565,41 +536,98 @@ private:
 
   /// Internal allocator for different structures.
   BumpPtrAllocator Allocator;
-
-  /// Indicates the number of active plugin instances. Actually, we should only
-  /// have one active instance per plugin library. But we use a counter for
-  /// simplicity.
-  static uint32_t NumActiveInstances;
 };
 
 /// Class for simplifying the getter operation of the plugin. Anywhere on the
-/// code, the current plugin can be retrieved by Plugin::get(). The init(),
-/// deinit(), get() and check() functions should be defined by each plugin
-/// implementation.
+/// code, the current plugin can be retrieved by Plugin::get(). The class also
+/// declares functions to create plugin-specific object instances. The check(),
+/// createPlugin(), createDevice() and createGlobalHandler() functions should be
+/// defined by each plugin implementation.
 class Plugin {
-  /// Avoid instances of this class.
-  Plugin() {}
+  // Reference to the plugin instance.
+  static GenericPluginTy *SpecificPlugin;
+
+  Plugin() {
+    if (auto Err = init())
+      REPORT("Failed to initialize plugin: %s\n",
+             toString(std::move(Err)).data());
+  }
+
+  ~Plugin() {
+    if (auto Err = deinit())
+      REPORT("Failed to deinitialize plugin: %s\n",
+             toString(std::move(Err)).data());
+  }
+
   Plugin(const Plugin &) = delete;
   void operator=(const Plugin &) = delete;
 
-public:
-  /// Initialize the plugin if it was not initialized yet.
-  static Error init();
+  /// Create and intialize the plugin instance.
+  static Error init() {
+    assert(!SpecificPlugin && "Plugin already created");
 
-  /// Deinitialize the plugin if it was not deinitialized yet.
-  static Error deinit();
+    // Create the specific plugin.
+    SpecificPlugin = createPlugin();
+    assert(SpecificPlugin && "Plugin was not created");
+
+    // Initialize the plugin.
+    return SpecificPlugin->init();
+  }
+
+  // Deinitialize and destroy the plugin instance.
+  static Error deinit() {
+    assert(SpecificPlugin && "Plugin no longer valid");
+
+    // Deinitialize the plugin.
+    if (auto Err = SpecificPlugin->deinit())
+      return Err;
+
+    // Delete the plugin instance.
+    delete SpecificPlugin;
+
+    // Invalidate the plugin reference.
+    SpecificPlugin = nullptr;
+
+    return Plugin::success();
+  }
+
+public:
+  /// Initialize the plugin if needed. The plugin could have been initialized by
+  /// a previous call to Plugin::get().
+  static Error initIfNeeded() {
+    // Trigger the initialization if needed.
+    get();
+
+    return Error::success();
+  }
+
+  // Deinitialize the plugin if needed. The plugin could have been deinitialized
+  // because the plugin library was exiting.
+  static Error deinitIfNeeded() {
+    // Do nothing. The plugin is deinitialized automatically.
+    return Plugin::success();
+  }
 
   /// Get a reference (or create if it was not created) to the plugin instance.
-  static GenericPluginTy &get();
+  static GenericPluginTy &get() {
+    // This static variable will initialize the underlying plugin instance in
+    // case there was no previous explicit initialization. The initialization is
+    // thread safe.
+    static Plugin Plugin;
+
+    assert(SpecificPlugin && "Plugin is not active");
+    return *SpecificPlugin;
+  }
 
   /// Get a reference to the plugin with a specific plugin-specific type.
   template <typename Ty> static Ty &get() { return static_cast<Ty &>(get()); }
 
-  /// Indicate if the plugin is currently active. Actually, we check if there is
-  /// any active instances.
-  static bool isActive() { return GenericPluginTy::hasAnyActiveInstance(); }
+  /// Indicate whether the plugin is active.
+  static bool isActive() { return SpecificPlugin != nullptr; }
 
-  /// Create a success error.
+  /// Create a success error. This is the same as calling Error::success(), but
+  /// it is recommended to use this one for consistency with Plugin::error() and
+  /// Plugin::check().
   static Error success() { return Error::success(); }
 
   /// Create a string error.
@@ -617,6 +645,15 @@ public:
   /// the plugin-specific code.
   template <typename... ArgsTy>
   static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
+
+  /// Create a plugin instance.
+  static GenericPluginTy *createPlugin();
+
+  /// Create a plugin-specific device.
+  static GenericDeviceTy *createDevice(int32_t DeviceId, int32_t NumDevices);
+
+  /// Create a plugin-specific global handler.
+  static GenericGlobalHandlerTy *createGlobalHandler();
 };
 
 /// Auxiliary interface class for GenericDeviceResourcePoolTy. This class acts
