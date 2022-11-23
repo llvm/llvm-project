@@ -16,7 +16,6 @@
 #include "llvm/IR/Metadata.h"
 
 namespace llvm {
-class Module;
 class GlobalVariable;
 
 namespace hlsl {

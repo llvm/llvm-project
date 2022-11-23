@@ -3687,7 +3687,12 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR128RegClass.contains(DestReg) &&
       AArch64::FPR128RegClass.contains(SrcReg)) {
-    if (Subtarget.hasNEON()) {
+    if (Subtarget.forceStreamingCompatibleSVE()) {
+      BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ))
+          .addReg(AArch64::Z0 + (DestReg - AArch64::Q0), RegState::Define)
+          .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0))
+          .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0));
+    } else if (Subtarget.hasNEON()) {
       BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestReg)
           .addReg(SrcReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
@@ -4960,19 +4965,6 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(
     return Inst.getParent()->getParent()->getTarget().Options.UnsafeFPMath ||
            (Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
             Inst.getFlag(MachineInstr::MIFlag::FmNsz));
-  case AArch64::ADDXrr:
-  case AArch64::ANDXrr:
-  case AArch64::ORRXrr:
-  case AArch64::EORXrr:
-  case AArch64::EONXrr:
-  case AArch64::ADDWrr:
-  case AArch64::ANDWrr:
-  case AArch64::ORRWrr:
-  case AArch64::EORWrr:
-  case AArch64::EONWrr:
-  case AArch64::ANDSXrr:
-  case AArch64::ANDSWrr:
-    return true;
   default:
     return false;
   }

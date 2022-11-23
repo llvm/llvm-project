@@ -51,3 +51,38 @@ defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
                                "subfus",  "$RT, $L, $RA, $RB", []>;
 }
 
+let Predicates = [HasVSX, IsISAFuture] in {
+  let mayLoad = 1 in {
+    def LXVRL : XX1Form_memOp<31, 525, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
+                              "lxvrl $XT, $src, $rB", IIC_LdStLoad, []>;
+
+    def LXVRLL : XX1Form_memOp<31, 557, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
+                           "lxvrll $XT, $src, $rB", IIC_LdStLoad, []>;
+
+    def LXVPRL : XForm_XTp5_XAB5<31, 589, (outs vsrprc:$XTp),
+                                 (ins memr:$src, g8rc:$rB),
+                                 "lxvprl $XTp, $src, $rB", IIC_LdStLFD, []>;
+
+    def LXVPRLL : XForm_XTp5_XAB5<31, 621, (outs vsrprc:$XTp),
+                                  (ins memr:$src, g8rc:$rB),
+                                  "lxvprll $XTp, $src, $rB", IIC_LdStLFD, []>;
+  }
+
+  let mayStore = 1 in {
+    def STXVRL : XX1Form_memOp<31, 653, (outs),
+                               (ins vsrc:$XT, memr:$dst, g8rc:$rB),
+                               "stxvrl $XT, $dst, $rB", IIC_LdStLoad, []>;
+
+    def STXVRLL : XX1Form_memOp<31, 685, (outs),
+                                (ins vsrc:$XT, memr:$dst, g8rc:$rB),
+                                "stxvrll $XT, $dst, $rB", IIC_LdStLoad, []>;
+
+    def STXVPRL : XForm_XTp5_XAB5<31, 717, (outs),
+                                  (ins vsrprc:$XTp, memr:$src, g8rc:$rB),
+                                  "stxvprl $XTp, $src, $rB", IIC_LdStLFD, []>;
+
+    def STXVPRLL : XForm_XTp5_XAB5<31, 749, (outs),
+                                   (ins vsrprc:$XTp, memr:$src, g8rc:$rB),
+                                   "stxvprll $XTp, $src, $rB", IIC_LdStLFD, []>;
+  }
+}

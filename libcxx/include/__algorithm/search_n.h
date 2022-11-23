@@ -173,8 +173,7 @@ _ForwardIterator search_n(_ForwardIterator __first, _ForwardIterator __last,
 template <class _ForwardIterator, class _Size, class _Tp>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _ForwardIterator search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value) {
-  typedef typename iterator_traits<_ForwardIterator>::value_type __v;
-  return std::search_n(__first, __last, std::__convert_to_integral(__count), __value, __equal_to<__v, _Tp>());
+  return std::search_n(__first, __last, std::__convert_to_integral(__count), __value, __equal_to());
 }
 
 _LIBCPP_END_NAMESPACE_STD

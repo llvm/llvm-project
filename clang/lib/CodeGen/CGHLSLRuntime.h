@@ -37,7 +37,6 @@ class VarDecl;
 class ParmVarDecl;
 class HLSLBufferDecl;
 class HLSLResourceBindingAttr;
-class CallExpr;
 class Type;
 class DeclContext;
 

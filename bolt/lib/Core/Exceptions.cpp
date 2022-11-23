@@ -406,7 +406,7 @@ void BinaryFunction::updateEHRanges() {
         const MCSymbol *EHSymbol;
         MCInst EHLabel;
         {
-          std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
+          std::unique_lock<llvm::sys::RWMutex> Lock(BC.CtxMutex);
           EHSymbol = BC.Ctx->createNamedTempSymbol("EH");
           BC.MIB->createEHLabel(EHLabel, EHSymbol, BC.Ctx.get());
         }

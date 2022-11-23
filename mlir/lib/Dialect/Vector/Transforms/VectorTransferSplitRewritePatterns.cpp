@@ -170,13 +170,13 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
       resStrides(bT.getRank(), 0);
   for (int64_t idx = 0, e = aT.getRank(); idx < e; ++idx) {
     resShape[idx] =
-        (aShape[idx] == bShape[idx]) ? aShape[idx] : ShapedType::kDynamicSize;
+        (aShape[idx] == bShape[idx]) ? aShape[idx] : ShapedType::kDynamic;
     resStrides[idx] = (aStrides[idx] == bStrides[idx])
                           ? aStrides[idx]
-                          : ShapedType::kDynamicStrideOrOffset;
+                          : ShapedType::kDynamic;
   }
   resOffset =
-      (aOffset == bOffset) ? aOffset : ShapedType::kDynamicStrideOrOffset;
+      (aOffset == bOffset) ? aOffset : ShapedType::kDynamic;
   return MemRefType::get(
       resShape, aT.getElementType(),
       StridedLayoutAttr::get(aT.getContext(), resOffset, resStrides));
@@ -525,7 +525,9 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   SmallVector<bool, 4> bools(xferOp.getTransferRank(), true);
   auto inBoundsAttr = b.getBoolArrayAttr(bools);
   if (options.vectorTransferSplit == VectorTransferSplit::ForceInBounds) {
-    xferOp->setAttr(xferOp.getInBoundsAttrStrName(), inBoundsAttr);
+    b.updateRootInPlace(xferOp, [&]() {
+      xferOp->setAttr(xferOp.getInBoundsAttrStrName(), inBoundsAttr);
+    });
     return success();
   }
 
@@ -596,7 +598,9 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
     for (unsigned i = 0, e = returnTypes.size(); i != e; ++i)
       xferReadOp.setOperand(i, fullPartialIfOp.getResult(i));
 
-    xferOp->setAttr(xferOp.getInBoundsAttrStrName(), inBoundsAttr);
+    b.updateRootInPlace(xferOp, [&]() {
+      xferOp->setAttr(xferOp.getInBoundsAttrStrName(), inBoundsAttr);
+    });
 
     return success();
   }
@@ -623,7 +627,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   else
     createFullPartialLinalgCopy(b, xferWriteOp, inBoundsCond, alloc);
 
-  xferOp->erase();
+  b.eraseOp(xferOp);
 
   return success();
 }
@@ -634,11 +638,5 @@ LogicalResult mlir::vector::VectorTransferFullPartialRewriter::matchAndRewrite(
   if (!xferOp || failed(splitFullAndPartialTransferPrecondition(xferOp)) ||
       failed(filter(xferOp)))
     return failure();
-  rewriter.startRootUpdate(xferOp);
-  if (succeeded(splitFullAndPartialTransfer(rewriter, xferOp, options))) {
-    rewriter.finalizeRootUpdate(xferOp);
-    return success();
-  }
-  rewriter.cancelRootUpdate(xferOp);
-  return failure();
+  return splitFullAndPartialTransfer(rewriter, xferOp, options);
 }

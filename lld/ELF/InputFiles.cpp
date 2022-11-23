@@ -809,8 +809,9 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // simply handle such sections as non-mergeable ones. Degrading like this
       // is acceptable because section merging is optional.
       if (auto *ms = dyn_cast<MergeInputSection>(s)) {
-        s = makeThreadLocal<InputSection>(ms->file, ms->flags, ms->type,
-                                          ms->alignment, ms->data(), ms->name);
+        s = makeThreadLocal<InputSection>(
+            ms->file, ms->flags, ms->type, ms->alignment,
+            ms->contentMaybeDecompress(), ms->name);
         sections[info] = s;
       }
 
@@ -877,10 +878,10 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
   using Elf_Note = typename ELFT::Note;
 
   uint32_t featuresSet = 0;
-  ArrayRef<uint8_t> data = sec.rawData;
+  ArrayRef<uint8_t> data = sec.content();
   auto reportFatal = [&](const uint8_t *place, const char *msg) {
     fatal(toString(sec.file) + ":(" + sec.name + "+0x" +
-          Twine::utohexstr(place - sec.rawData.data()) + "): " + msg);
+          Twine::utohexstr(place - sec.content().data()) + "): " + msg);
   };
   while (!data.empty()) {
     // Read one NOTE record.
@@ -1035,7 +1036,10 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
 template <class ELFT>
 void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
-  symbols.resize(eSyms.size());
+  if (numSymbols == 0) {
+    numSymbols = eSyms.size();
+    symbols = std::make_unique<Symbol *[]>(numSymbols);
+  }
 
   // Some entries have been filled by LazyObjFile.
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
@@ -1674,7 +1678,10 @@ void BitcodeFile::parse() {
             .second);
   }
 
-  symbols.resize(obj->symbols().size());
+  if (numSymbols == 0) {
+    numSymbols = obj->symbols().size();
+    symbols = std::make_unique<Symbol *[]>(numSymbols);
+  }
   // Process defined symbols first. See the comment in
   // ObjFile<ELFT>::initializeSymbols.
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
@@ -1689,7 +1696,8 @@ void BitcodeFile::parse() {
 }
 
 void BitcodeFile::parseLazy() {
-  symbols.resize(obj->symbols().size());
+  numSymbols = obj->symbols().size();
+  symbols = std::make_unique<Symbol *[]>(numSymbols);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined()) {
       auto *sym = symtab.insert(saver().save(irSym.getName()));
@@ -1765,7 +1773,8 @@ ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,
 
 template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   const ArrayRef<typename ELFT::Sym> eSyms = this->getELFSyms<ELFT>();
-  symbols.resize(eSyms.size());
+  numSymbols = eSyms.size();
+  symbols = std::make_unique<Symbol *[]>(numSymbols);
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
     if (eSyms[i].st_shndx != SHN_UNDEF)
       symbols[i] = symtab.insert(CHECK(eSyms[i].getName(stringTable), this));
@@ -1775,7 +1784,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   // resolve() may trigger this->extract() if an existing symbol is an undefined
   // symbol. If that happens, this function has served its purpose, and we can
   // exit from the loop early.
-  for (Symbol *sym : makeArrayRef(symbols).slice(firstGlobal))
+  for (Symbol *sym : getGlobalSymbols())
     if (sym) {
       sym->resolve(LazyObject{*this});
       if (!lazy)

@@ -2079,7 +2079,7 @@ define arm_aapcs_vfpcc <4 x i32> @multi_user_zext(<4 x i16> *%dest, <4 x i32> %a
 ; CHECK-LE-NEXT:    vmov r0, r1, d8
 ; CHECK-LE-NEXT:    vmov r2, r3, d9
 ; CHECK-LE-NEXT:    bl foo
-; CHECK-LE-NEXT:    vmovlb.u16 q0, q4
+; CHECK-LE-NEXT:    vmov q0, q4
 ; CHECK-LE-NEXT:    vpop {d8, d9}
 ; CHECK-LE-NEXT:    pop {r7, pc}
 ;
@@ -2091,13 +2091,12 @@ define arm_aapcs_vfpcc <4 x i32> @multi_user_zext(<4 x i16> *%dest, <4 x i32> %a
 ; CHECK-BE-NEXT:    vpush {d8, d9}
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
 ; CHECK-BE-NEXT:    vpt.s32 gt, q1, zr
-; CHECK-BE-NEXT:    vldrht.u32 q4, [r0]
-; CHECK-BE-NEXT:    vrev64.32 q0, q4
-; CHECK-BE-NEXT:    vmov r1, r0, d0
-; CHECK-BE-NEXT:    vmov r3, r2, d1
+; CHECK-BE-NEXT:    vldrht.u32 q0, [r0]
+; CHECK-BE-NEXT:    vrev64.32 q4, q0
+; CHECK-BE-NEXT:    vmov r1, r0, d8
+; CHECK-BE-NEXT:    vmov r3, r2, d9
 ; CHECK-BE-NEXT:    bl foo
-; CHECK-BE-NEXT:    vmovlb.u16 q1, q4
-; CHECK-BE-NEXT:    vrev64.32 q0, q1
+; CHECK-BE-NEXT:    vmov q0, q4
 ; CHECK-BE-NEXT:    vpop {d8, d9}
 ; CHECK-BE-NEXT:    pop {r7, pc}
 entry:

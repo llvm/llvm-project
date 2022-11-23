@@ -70,3 +70,188 @@ func.func @bad_assign_array_2(%arg0: !fir.ref<!fir.array<10xi32>>, %arg1: !hlfir
   hlfir.assign %arg0 to %arg1 : !fir.ref<!fir.array<10xi32>>, !hlfir.expr<?xi32>
   return
 }
+
+// -----
+func.func @bad_designate_component(%arg0 : !fir.ref<i32>) {
+  // expected-error@+1 {{'hlfir.designate' op component must be provided only when the memref is a derived type}}
+  %0 = hlfir.designate %arg0 {"some_component"} :  (!fir.ref<i32>) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_designate_component_2(%arg0 : !fir.ref<!fir.type<t{i:i32}>>) {
+  // expected-error@+1 {{'hlfir.designate' op component "bad_comp" is not a component of memref element type '!fir.type<t{i:i32}>'}}
+  %0 = hlfir.designate %arg0 {"bad_comp"} :  (!fir.ref<!fir.type<t{i:i32}>>) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_designate_component_3(%arg0 : !fir.ref<!fir.array<20x!fir.type<t{i:!fir.array<100xi32>}>>>) {
+  // expected-error@+1 {{'hlfir.designate' op indices must be provided and must not contain triplets when both memref and component are arrays}}
+  %0 = hlfir.designate %arg0 {"i"} :  (!fir.ref<!fir.array<20x!fir.type<t{i:!fir.array<100xi32>}>>>) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_designate_component_4(%arg0 : !fir.ref<!fir.array<20x!fir.type<t{i:!fir.array<100xi32>}>>>) {
+  %component_shape = fir.undefined !fir.shape<1>
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op indices must be provided and must not contain triplets when both memref and component are arrays}}
+  %0 = hlfir.designate %arg0 {"i"}<%component_shape>(%c1:%c1:%c1):  (!fir.ref<!fir.array<20x!fir.type<t{i:!fir.array<100xi32>}>>>, !fir.shape<1>, index, index, index) -> !fir.ref<!fir.array<20xi32>>
+  return
+}
+
+// -----
+func.func @bad_designate_component_5(%arg0 : !fir.ref<!fir.array<20x!fir.type<t{i:!fir.array<100xi32>}>>>) {
+  %component_shape = fir.undefined !fir.shape<2>
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op component_shape must be a fir.shape or fir.shapeshift with the rank of the component}}
+  %0 = hlfir.designate %arg0 {"i"}<%component_shape>(%c1):  (!fir.ref<!fir.array<20x!fir.type<t{i:!fir.array<100xi32>}>>>, !fir.shape<2>, index) -> !fir.ref<!fir.array<20xi32>>
+  return
+}
+
+// -----
+func.func @bad_designate_component_6(%arg0 : !fir.ref<!fir.array<20x!fir.type<t{i:!fir.array<100xi32>}>>>) {
+  %component_shape = fir.undefined !fir.shift<1>
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op component_shape must be a fir.shape or fir.shapeshift with the rank of the component}}
+  %0 = hlfir.designate %arg0 {"i"}<%component_shape>(%c1):  (!fir.ref<!fir.array<20x!fir.type<t{i:!fir.array<100xi32>}>>>, !fir.shift<1>, index) -> !fir.ref<!fir.array<20xi32>>
+  return
+}
+
+// -----
+func.func @bad_designate_component_7(%arg0 : !fir.ref<!fir.array<20x!fir.type<t{i:!fir.array<100xi32>}>>>) {
+  %component_shape = fir.undefined !fir.shapeshift<2>
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op component_shape must be a fir.shape or fir.shapeshift with the rank of the component}}
+  %0 = hlfir.designate %arg0 {"i"}<%component_shape>(%c1):  (!fir.ref<!fir.array<20x!fir.type<t{i:!fir.array<100xi32>}>>>, !fir.shapeshift<2>, index) -> !fir.ref<!fir.array<20xi32>>
+  return
+}
+
+// -----
+func.func @bad_designate_component_8(%arg0 : !fir.ref<!fir.type<t{i:!fir.array<100xi32>}>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op component_shape must be provided when indexing a component}}
+  %0 = hlfir.designate %arg0 {"i"}(%c1):  (!fir.ref<!fir.type<t{i:!fir.array<100xi32>}>>, index) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_designate_component_9(%arg0 : !fir.ref<!fir.array<20x!fir.type<t{i:i32}>>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op indices must not be provided if component appears and is not an array component}}
+  %0 = hlfir.designate %arg0 {"i"}(%c1):  (!fir.ref<!fir.array<20x!fir.type<t{i:i32}>>>, index) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_designate_component_10(%arg0 : !fir.ref<!fir.type<t{i:!fir.array<100xi32>}>>) {
+  %component_shape = fir.undefined !fir.shapeshift<1>
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op indices number must match array component rank}}
+  %0 = hlfir.designate %arg0 {"i"}<%component_shape>(%c1, %c1):  (!fir.ref<!fir.type<t{i:!fir.array<100xi32>}>>, !fir.shapeshift<1>, index, index) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_designate_substring_1(%arg0 : !fir.ref<!fir.char<1,20>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op substring must contain 2 indices when provided}}
+  %0 = hlfir.designate %arg0 substr %c1, %c1, %c1:  (!fir.ref<!fir.char<1,20>>, index, index, index) -> !fir.boxchar<1>
+  return
+}
+
+// -----
+func.func @bad_designate_indices_1(%arg0 : !fir.ref<i32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op indices number must match memref rank}}
+  %0 = hlfir.designate %arg0 (%c1, %c1):  (!fir.ref<i32>, index, index) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_designate_indices_2(%arg0 : !fir.ref<!fir.array<10xi32>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op indices number must match memref rank}}
+  %0 = hlfir.designate %arg0 (%c1, %c1):  (!fir.ref<!fir.array<10xi32>>, index, index) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_designate_substring_2(%arg0 : !fir.ref<i32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op memref or component must have character type if substring indices are provided}}
+  %0 = hlfir.designate %arg0 substr %c1, %c1:  (!fir.ref<i32>, index, index) -> !fir.boxchar<1>
+  return
+}
+
+// -----
+func.func @bad_designate_cmplx_part(%arg0 : !fir.ref<!fir.array<10xi32>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op memref or component must have complex type if complex_part is provided}}
+  %0 = hlfir.designate %arg0 (%c1) imag:  (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_designate_out_rank(%arg0 : !fir.ref<!fir.array<10xi32>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op result type rank is not consistent with operands, expected rank 1}}
+  %0 = hlfir.designate %arg0 (%c1:%c1:%c1):  (!fir.ref<!fir.array<10xi32>>, index, index, index) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_designate_out_type(%arg0 : !fir.ref<!fir.complex<4>>) {
+  // expected-error@+1 {{'hlfir.designate' op result element type is not consistent with operands, expected '!fir.real<4>'}}
+  %0 = hlfir.designate %arg0 imag:  (!fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>>
+  return
+}
+
+// -----
+func.func @bad_designate_out_type(%arg0 : !fir.ref<!fir.box<!fir.complex<4>>>) {
+  // expected-error@+1 {{'hlfir.designate' op result type must only be a box address type if it designates a component that is a fir.box or fir.class and if there are no indices, substrings, and complex part}}
+  %0 = hlfir.designate %arg0 imag:  (!fir.ref<!fir.box<!fir.complex<4>>>) -> !fir.ref<!fir.box<!fir.real<4>>>
+  return
+}
+
+// -----
+func.func @bad_designate_shape(%arg0 : !fir.ref<!fir.array<10xi32>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op shape must be provided if and only if the result is an array that is not a box address}}
+  %0 = hlfir.designate %arg0 (%c1:%c1:%c1):  (!fir.ref<!fir.array<10xi32>>, index, index, index) -> !fir.box<!fir.array<?xi32>>
+  return
+}
+
+// -----
+func.func @bad_designate_shape_2(%arg0 : !fir.ref<!fir.array<10xi32>>) {
+  %c1 = arith.constant 1 : index
+  %shape = fir.undefined !fir.shape<1>
+  // expected-error@+1 {{'hlfir.designate' op shape must be provided if and only if the result is an array that is not a box address}}
+  %0 = hlfir.designate %arg0 (%c1) shape %shape:  (!fir.ref<!fir.array<10xi32>>, index, !fir.shape<1>) -> !fir.ref<i32>
+  return
+}
+
+// -----
+func.func @bad_designate_len_params(%arg0 : !fir.ref<!fir.char<1,10>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op must be provided one length parameter when the result is a character}}
+  %0 = hlfir.designate %arg0 substr %c1, %c1:  (!fir.ref<!fir.char<1,10>>, index, index) -> !fir.boxchar<1>
+  return
+}
+
+// -----
+func.func @bad_designate_len_params_2(%arg0 : !fir.box<!fir.array<?x!fir.type<pdt(param:i32){field:i32}>>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op must be provided the same number of length parameters as in the result derived type}}
+  %0 = hlfir.designate %arg0(%c1) typeparams %c1, %c1 :  (!fir.box<!fir.array<?x!fir.type<pdt(param:i32){field:i32}>>>, index, index, index) -> !fir.box<!fir.type<pdt(param:i32){field:i32}>>
+  return
+}
+
+// -----
+func.func @bad_designate_len_params_3(%arg0 : !fir.box<!fir.array<?xi32>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.designate' op must not be provided length parameters if the result type does not have length parameters}}
+  %0 = hlfir.designate %arg0(%c1) typeparams %c1 :  (!fir.box<!fir.array<?xi32>>, index, index) -> !fir.ref<i32>
+  return
+}

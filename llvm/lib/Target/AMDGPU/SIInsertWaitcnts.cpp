@@ -413,6 +413,10 @@ public:
     return false;
   }
 
+  AMDGPU::Waitcnt allZeroWaitcnt() const {
+    return AMDGPU::Waitcnt::allZero(ST->hasVscnt());
+  }
+
   void setForceEmitWaitcnt() {
 // For non-debug builds, ForceEmitWaitcnt has been initialized to false;
 // For debug builds, get the debug counter info and adjust if need be
@@ -1020,7 +1024,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       MI.getOpcode() == AMDGPU::SI_RETURN ||
       MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
-    Wait = Wait.combined(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
+    Wait = Wait.combined(allZeroWaitcnt());
   }
   // Resolve vm waits before gs-done.
   else if ((MI.getOpcode() == AMDGPU::S_SENDMSG ||
@@ -1200,7 +1204,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // cause an exception. Otherwise, insert an explicit S_WAITCNT 0 here.
   if (MI.getOpcode() == AMDGPU::S_BARRIER &&
       !ST->hasAutoWaitcntBeforeBarrier() && !ST->supportsBackOffBarrier()) {
-    Wait = Wait.combined(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
+    Wait = Wait.combined(allZeroWaitcnt());
   }
 
   // TODO: Remove this work-around, enable the assert for Bug 457939
@@ -1216,7 +1220,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   ScoreBrackets.simplifyWaitcnt(Wait);
 
   if (ForceEmitZeroWaitcnts)
-    Wait = AMDGPU::Waitcnt::allZero(ST->hasVscnt());
+    Wait = allZeroWaitcnt();
 
   if (ForceEmitWaitcnt[VM_CNT])
     Wait.VmCnt = 0;
@@ -1422,7 +1426,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   } else if (Inst.isCall()) {
     if (callWaitsOnFunctionReturn(Inst)) {
       // Act as a wait on everything
-      ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
+      ScoreBrackets->applyWaitcnt(allZeroWaitcnt());
     } else {
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
@@ -1501,27 +1505,19 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
     StrictDom |= mergeScore(M, LastFlat[T], Other.LastFlat[T]);
 
-    bool RegStrictDom = false;
-    for (int J = 0; J <= VgprUB; J++) {
-      RegStrictDom |= mergeScore(M, VgprScores[T][J], Other.VgprScores[T][J]);
-    }
-
-    if (T == VM_CNT) {
-      for (int J = 0; J <= VgprUB; J++) {
-        unsigned char NewVmemTypes = VgprVmemTypes[J] | Other.VgprVmemTypes[J];
-        RegStrictDom |= NewVmemTypes != VgprVmemTypes[J];
-        VgprVmemTypes[J] = NewVmemTypes;
-      }
-    }
+    for (int J = 0; J <= VgprUB; J++)
+      StrictDom |= mergeScore(M, VgprScores[T][J], Other.VgprScores[T][J]);
 
     if (T == LGKM_CNT) {
-      for (int J = 0; J <= SgprUB; J++) {
-        RegStrictDom |= mergeScore(M, SgprScores[J], Other.SgprScores[J]);
-      }
+      for (int J = 0; J <= SgprUB; J++)
+        StrictDom |= mergeScore(M, SgprScores[J], Other.SgprScores[J]);
     }
+  }
 
-    if (RegStrictDom)
-      StrictDom = true;
+  for (int J = 0; J <= VgprUB; J++) {
+    unsigned char NewVmemTypes = VgprVmemTypes[J] | Other.VgprVmemTypes[J];
+    StrictDom |= NewVmemTypes != VgprVmemTypes[J];
+    VgprVmemTypes[J] = NewVmemTypes;
   }
 
   return StrictDom;

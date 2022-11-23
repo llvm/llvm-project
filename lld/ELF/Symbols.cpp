@@ -73,7 +73,6 @@ Defined *ElfSym::mipsGpDisp;
 Defined *ElfSym::mipsLocalGp;
 Defined *ElfSym::relaIpltStart;
 Defined *ElfSym::relaIpltEnd;
-Defined *ElfSym::riscvGlobalPointer;
 Defined *ElfSym::tlsModuleBase;
 SmallVector<SymbolAux, 0> elf::symAux;
 

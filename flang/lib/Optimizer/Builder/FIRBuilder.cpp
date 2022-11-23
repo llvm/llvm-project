@@ -504,7 +504,8 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
         mlir::ValueRange emptyRange;
         mlir::Value s = createShape(loc, exv);
         return create<fir::EmboxOp>(loc, boxTy, itemAddr, s, /*slice=*/empty,
-                                    /*typeparams=*/emptyRange, box.getTdesc());
+                                    /*typeparams=*/emptyRange,
+                                    isPolymorphic ? box.getTdesc() : tdesc);
       },
       [&](const fir::CharArrayBoxValue &box) -> mlir::Value {
         mlir::Value s = createShape(loc, exv);
@@ -532,7 +533,8 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
         mlir::Value empty;
         mlir::ValueRange emptyRange;
         return create<fir::EmboxOp>(loc, boxTy, itemAddr, empty, empty,
-                                    emptyRange, p.getTdesc());
+                                    emptyRange,
+                                    isPolymorphic ? p.getTdesc() : tdesc);
       },
       [&](const auto &) -> mlir::Value {
         mlir::Value empty;

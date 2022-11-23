@@ -44,7 +44,7 @@ SmallVector<Value> mlir::tensor::createDynamicDimValues(OpBuilder &b,
   auto tensorTy = rankedTensor.getType().cast<RankedTensorType>();
   SmallVector<Value> dynamicDims;
   for (const auto &en : llvm::enumerate(tensorTy.getShape())) {
-    if (en.value() == ShapedType::kDynamicSize)
+    if (en.value() == ShapedType::kDynamic)
       dynamicDims.push_back(
           b.create<tensor::DimOp>(loc, rankedTensor, en.index()));
   }

@@ -943,6 +943,21 @@ public:
   SDValue getVPLogicalNOT(const SDLoc &DL, SDValue Val, SDValue Mask,
                           SDValue EVL, EVT VT);
 
+  /// Convert a vector-predicated Op, which must be an integer vector, to the
+  /// vector-type VT, by performing either vector-predicated zext or truncating
+  /// it. The Op will be returned as-is if Op and VT are vectors containing
+  /// integer with same width.
+  SDValue getVPZExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op, SDValue Mask,
+                           SDValue EVL);
+
+  /// Convert a vector-predicated Op, which must be of integer type, to the
+  /// vector-type integer type VT, by either truncating it or performing either
+  /// vector-predicated zero or sign extension as appropriate extension for the
+  /// pointer's semantics. This function just redirects to getVPZExtOrTrunc
+  /// right now.
+  SDValue getVPPtrExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op, SDValue Mask,
+                             SDValue EVL);
+
   /// Returns sum of the base pointer and offset.
   /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap by default.
   SDValue getMemBasePlusOffset(SDValue Base, TypeSize Offset, const SDLoc &DL,

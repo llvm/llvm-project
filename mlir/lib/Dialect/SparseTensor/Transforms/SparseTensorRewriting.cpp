@@ -117,7 +117,7 @@ static void sizesForTensor(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                            Location loc, ShapedType stp, Value tensor) {
   for (const auto &d : enumerate(stp.getShape())) {
     Value dim;
-    if (d.value() == ShapedType::kDynamicSize)
+    if (d.value() == ShapedType::kDynamic)
       dim = builder.create<tensor::DimOp>(loc, tensor, d.index());
     else
       dim = constantIndex(builder, loc, d.value());
@@ -165,7 +165,7 @@ static void getDynamicSizes(RankedTensorType tp,
                             const SmallVectorImpl<Value> &sizes,
                             SmallVectorImpl<Value> &dynSizes) {
   for (const auto &d : enumerate(tp.getShape())) {
-    if (d.value() == ShapedType::kDynamicSize)
+    if (d.value() == ShapedType::kDynamic)
       dynSizes.push_back(sizes[d.index()]);
   }
 }
@@ -375,7 +375,7 @@ public:
       genReshapeDstShape(loc, rewriter, dstSizes, srcSizes, dstShape,
                          op.getReassociationIndices());
       for (auto &d : llvm::enumerate(dstShape)) {
-        if (d.value() == ShapedType::kDynamicSize)
+        if (d.value() == ShapedType::kDynamic)
           dstDynSizes.push_back(dstSizes[d.index()]);
       }
     }
@@ -465,13 +465,16 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
     if (!rtp.hasStaticShape()) {
       ArrayRef<int64_t> rShape = rtp.getShape();
       for (const auto &d : llvm::enumerate(rShape)) {
-        if (d.value() == ShapedType::kDynamicSize) {
+        if (d.value() == ShapedType::kDynamic) {
           Value v =
               createOrFoldDimOp(rewriter, loc, op.getOperand(0), d.index());
           rewriter.create<tensor::DimOp>(loc, op.getOperand(0), d.index());
-          for (const auto &opnd : op.getOperands().drop_front()) {
-            Value t = createOrFoldDimOp(rewriter, loc, opnd, d.index());
-            v = rewriter.create<arith::AddIOp>(loc, v, t);
+          if (conDim == d.index()) {
+            // Adding the size of the concatenating dimension.
+            for (const auto &opnd : op.getOperands().drop_front()) {
+              Value t = createOrFoldDimOp(rewriter, loc, opnd, d.index());
+              v = rewriter.create<arith::AddIOp>(loc, v, t);
+            }
           }
           dynSizes.push_back(v);
         }
@@ -705,7 +708,7 @@ private:
     // Sort the COO tensor so that its elements are ordered via increasing
     // indices for the storage ordering of the dst tensor.
     SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
-    auto dynShape = {ShapedType::kDynamicSize};
+    auto dynShape = {ShapedType::kDynamic};
     auto indTp =
         MemRefType::get(dynShape, getIndexOverheadType(rewriter, encSrc));
     uint64_t rank = dstTp.getRank();
@@ -888,7 +891,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
           .getResult(0);
       ArrayRef<int64_t> dstShape = dstTp.getShape();
       for (auto &d : llvm::enumerate(dstShape)) {
-        if (d.value() == ShapedType::kDynamicSize) {
+        if (d.value() == ShapedType::kDynamic) {
           dynSizesArray.push_back(rewriter.create<memref::LoadOp>(
               loc, dimSizes, constantIndex(rewriter, loc, d.index())));
         }

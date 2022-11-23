@@ -710,13 +710,6 @@ def : InstRW<[PdWriteRCL8ri], (instrs RCL8ri)>;
 defm : PdWriteRes<WriteSHDrri,       [PdEX01],         3, [6], 6>;
 defm : PdWriteRes<WriteSHDrrcl,      [PdEX01],         3, [8], 7>;
 
-def PdWriteSHLD32rri8SHRD16rri8 : SchedWriteRes<[PdEX01]> {
-  let Latency = 3;
-  let ResourceCycles = [6];
-  let NumMicroOps = 6;
-}
-def : InstRW<[PdWriteSHLD32rri8SHRD16rri8 ], (instrs SHLD32rri8, SHRD16rri8)>;
-
 def PdWriteSHLD16rrCLSHLD32rrCLSHRD32rrCL : SchedWriteRes<[PdEX01]> {
   let Latency = 3;
   let ResourceCycles = [6];

@@ -224,7 +224,7 @@ Expected<std::string> getCachedOrDownloadArtifact(
   FileCache Cache = *CacheOrErr;
   // We choose an arbitrary Task parameter as we do not make use of it.
   unsigned Task = 0;
-  Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, UniqueKey);
+  Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, UniqueKey, "");
   if (!CacheAddStreamOrErr)
     return CacheAddStreamOrErr.takeError();
   AddStreamFn &CacheAddStream = *CacheAddStreamOrErr;
@@ -251,8 +251,8 @@ Expected<std::string> getCachedOrDownloadArtifact(
 
     // Perform the HTTP request and if successful, write the response body to
     // the cache.
-    StreamedHTTPResponseHandler Handler([&]() { return CacheAddStream(Task); },
-                                        Client);
+    StreamedHTTPResponseHandler Handler(
+        [&]() { return CacheAddStream(Task, ""); }, Client);
     HTTPRequest Request(ArtifactUrl);
     Request.Headers = getHeaders();
     Error Err = Client.perform(Request, Handler);

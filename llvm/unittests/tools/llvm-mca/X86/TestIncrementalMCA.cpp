@@ -32,13 +32,15 @@ TEST_F(X86TestBase, TestResumablePipeline) {
                                           PO.DispatchWidth);
   P->addEventListener(SV.get());
 
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
+  auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM);
 
+  const SmallVector<mca::SharedInstrument> Instruments;
   // Tile size = 7
   for (unsigned i = 0U, E = MCIs.size(); i < E;) {
     for (unsigned TE = i + 7; i < TE && i < E; ++i) {
       Expected<std::unique_ptr<mca::Instruction>> InstOrErr =
-          IB.createInstruction(MCIs[i]);
+          IB.createInstruction(MCIs[i], Instruments);
       ASSERT_TRUE(bool(InstOrErr));
       ISM.addInst(std::move(InstOrErr.get()));
     }
@@ -119,14 +121,18 @@ TEST_F(X86TestBase, TestInstructionRecycling) {
                                           PO.DispatchWidth);
   P->addEventListener(SV.get());
 
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
+  // Default InstrumentManager
+  auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
+
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM);
   IB.setInstRecycleCallback(GetRecycledInst);
 
+  const SmallVector<mca::SharedInstrument> Instruments;
   // Tile size = 7
   for (unsigned i = 0U, E = MCIs.size(); i < E;) {
     for (unsigned TE = i + 7; i < TE && i < E; ++i) {
       Expected<std::unique_ptr<mca::Instruction>> InstOrErr =
-          IB.createInstruction(MCIs[i]);
+          IB.createInstruction(MCIs[i], Instruments);
 
       if (!InstOrErr) {
         mca::Instruction *RecycledInst = nullptr;

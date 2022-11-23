@@ -390,5 +390,21 @@ TEST_F(PragmaIncludeTest, IWYUExportBlock) {
   EXPECT_TRUE(PI.getExporters(FM.getFile("bar.h").get(), FM).empty());
 }
 
+TEST_F(PragmaIncludeTest, SelfContained) {
+  Inputs.Code = R"cpp(
+  #include "guarded.h"
+
+  #include "unguarded.h"
+  )cpp";
+  Inputs.ExtraFiles["guarded.h"] = R"cpp(
+  #pragma once
+  )cpp";
+  Inputs.ExtraFiles["unguarded.h"] = "";
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+  EXPECT_TRUE(PI.isSelfContained(FM.getFile("guarded.h").get()));
+  EXPECT_FALSE(PI.isSelfContained(FM.getFile("unguarded.h").get()));
+}
+
 } // namespace
 } // namespace clang::include_cleaner

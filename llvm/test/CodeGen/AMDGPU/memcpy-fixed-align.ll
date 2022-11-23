@@ -10,6 +10,7 @@ define void @memcpy_fixed_align(i8 addrspace(5)*  %dst, i8 addrspace(1)* %src) {
 ; MUBUF-NEXT:    global_load_dwordx2 v[11:12], v[1:2], off offset:32
 ; MUBUF-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off offset:16
 ; MUBUF-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off
+; MUBUF-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
 ; MUBUF-NEXT:    s_waitcnt vmcnt(2)
 ; MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:36
 ; MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:32
@@ -23,6 +24,9 @@ define void @memcpy_fixed_align(i8 addrspace(5)*  %dst, i8 addrspace(1)* %src) {
 ; MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:8
 ; MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:4
 ; MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], s32
+; MUBUF-NEXT:    ;;#ASMSTART
+; MUBUF-NEXT:    ; use v0
+; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -32,17 +36,22 @@ define void @memcpy_fixed_align(i8 addrspace(5)*  %dst, i8 addrspace(1)* %src) {
 ; FLATSCR-NEXT:    global_load_dwordx2 v[11:12], v[1:2], off offset:32
 ; FLATSCR-NEXT:    global_load_dwordx4 v[3:6], v[1:2], off offset:16
 ; FLATSCR-NEXT:    global_load_dwordx4 v[7:10], v[1:2], off
+; FLATSCR-NEXT:    v_mov_b32_e32 v0, s32
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(2)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[11:12], s32 offset:32
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(2)
 ; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[3:6], s32 offset:16
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(2)
 ; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[7:10], s32
+; FLATSCR-NEXT:    ;;#ASMSTART
+; FLATSCR-NEXT:    ; use v0
+; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca [40 x i8], addrspace(5)
   %cast = bitcast [40 x i8] addrspace(5)* %alloca to i8 addrspace(5)*
   call void @llvm.memcpy.p5i8.p1i8.i64(i8 addrspace(5)* align 4 dereferenceable(40) %cast, i8 addrspace(1)* align 4 dereferenceable(40) %src, i64 40, i1 false)
+  call void asm sideeffect "; use $0", "s"([40 x i8] addrspace(5)* %alloca) #0
   ret void
 }
 

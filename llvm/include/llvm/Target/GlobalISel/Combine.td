@@ -169,6 +169,22 @@ def sext_inreg_of_load : GICombineRule<
          [{ return Helper.matchSextInRegOfLoad(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applySextInRegOfLoad(*${root}, ${matchinfo}); }])>;
 
+def sext_inreg_to_zext_inreg : GICombineRule<
+  (defs root:$dst),
+  (match
+    (G_SEXT_INREG $dst, $src, $imm):$root,
+      [{
+        unsigned BitWidth = MRI.getType(${src}.getReg()).getScalarSizeInBits();
+        return Helper.getKnownBits()->maskedValueIsZero(${src}.getReg(),
+                 APInt::getOneBitSet(BitWidth, ${imm}.getImm() - 1)); }]),
+    (apply [{
+      Helper.getBuilder().setInstrAndDebugLoc(*${root});
+      Helper.getBuilder().buildZExtInReg(${dst}, ${src}, ${imm}.getImm());
+      ${root}->eraseFromParent();
+      return true;
+  }])
+>;
+
 def combine_indexed_load_store : GICombineRule<
   (defs root:$root, indexed_load_store_matchdata:$matchinfo),
   (match (wip_match_opcode G_LOAD, G_SEXTLOAD, G_ZEXTLOAD, G_STORE):$root,
@@ -1030,7 +1046,8 @@ def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p,
 
 def known_bits_simplifications : GICombineGroup<[
   redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,
-  zext_trunc_fold, icmp_to_true_false_known_bits, icmp_to_lhs_known_bits]>;
+  zext_trunc_fold, icmp_to_true_false_known_bits, icmp_to_lhs_known_bits,
+  sext_inreg_to_zext_inreg]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend,
                                                narrow_binop_feeding_and]>;

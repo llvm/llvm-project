@@ -604,6 +604,10 @@ bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     TLI->emitBitTestAtomicRMWIntrinsic(AI);
     return true;
   }
+  case TargetLoweringBase::AtomicExpansionKind::CmpArithIntrinsic: {
+    TLI->emitCmpArithAtomicRMWIntrinsic(AI);
+    return true;
+  }
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicRMWInst(AI);
   case TargetLoweringBase::AtomicExpansionKind::Expand:

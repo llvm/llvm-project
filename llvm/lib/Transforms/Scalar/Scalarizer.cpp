@@ -848,7 +848,7 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
   if (!ScalarizeVariableInsertExtract)
     return false;
 
-  Value *Res = UndefValue::get(VT->getElementType());
+  Value *Res = PoisonValue::get(VT->getElementType());
   for (unsigned I = 0; I < NumSrcElems; ++I) {
     Value *ShouldExtract =
         Builder.CreateICmpEQ(ExtIdx, ConstantInt::get(ExtIdx->getType(), I),

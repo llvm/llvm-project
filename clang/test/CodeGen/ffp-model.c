@@ -36,9 +36,9 @@ float mymuladd(float x, float y, float z) {
 
   // CHECK-STRICT-FAST: load float, ptr
   // CHECK-STRICT-FAST: load float, ptr
-  // CHECK-STRICT-FAST: call fast float @llvm.experimental.constrained.fmul.f32(float {{.*}}, float {{.*}}, {{.*}})
+  // CHECK-STRICT-FAST: fmul fast float {{.*}}, {{.*}}
   // CHECK-STRICT-FAST: load float, ptr
-  // CHECK-STRICT-FAST: call fast float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float {{.*}}, {{.*}}
+  // CHECK-STRICT-FAST: fadd fast float {{.*}}, {{.*}}
 
   // CHECK-FAST1: load float, ptr
   // CHECK-FAST1: load float, ptr

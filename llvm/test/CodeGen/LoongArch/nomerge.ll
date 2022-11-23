@@ -32,4 +32,4 @@ attributes #0 = { nomerge }
 ; CHECK: .LBB0_3: # %if.then2
 ; CHECK-NEXT: bl %plt(bar)
 ; CHECK: .LBB0_4: # %if.end3
-; CHECK: bl %plt(bar)
+; CHECK: b %plt(bar)

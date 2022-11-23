@@ -615,10 +615,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // Delete small array after loop unroll.
   FPM.addPass(SROAPass());
 
-  // The matrix extension can introduce large vector operations early, which can
-  // benefit from running vector-combine early on.
-  if (EnableMatrix)
-    FPM.addPass(VectorCombinePass(/*ScalarizationOnly=*/true));
+  // Try vectorization/scalarization transforms that are both improvements
+  // themselves and can allow further folds with GVN and InstCombine.
+  FPM.addPass(VectorCombinePass(/*TryEarlyFoldsOnly=*/true));
 
   // Eliminate redundancies.
   FPM.addPass(MergedLoadStoreMotionPass());
@@ -676,8 +675,12 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
+  // Don't add CHR pass for CSIRInstr build in PostLink as the profile
+  // is still the same as the PreLink compilation.
   if (EnableCHR && Level == OptimizationLevel::O3 && PGOOpt &&
-      (PGOOpt->Action == PGOOptions::IRUse ||
+      ((PGOOpt->Action == PGOOptions::IRUse &&
+        (Phase != ThinOrFullLTOPhase::ThinLTOPostLink ||
+         PGOOpt->CSAction != PGOOptions::CSIRInstr)) ||
        PGOOpt->Action == PGOOptions::SampleUse))
     FPM.addPass(ControlHeightReductionPass());
 

@@ -279,6 +279,12 @@ def FeatureImageGather4D16Bug : SubtargetFeature<"image-gather4-d16-bug",
   "Image Gather4 D16 hardware bug"
 >;
 
+def FeatureMADIntraFwdBug : SubtargetFeature<"mad-intra-fwd-bug",
+  "HasMADIntraFwdBug",
+  "true",
+  "MAD_U64/I64 intra instruction forwarding bug"
+>;
+
 def FeatureMSAALoadDstSelBug : SubtargetFeature<"msaa-load-dst-sel-bug",
   "HasMSAALoadDstSelBug",
   "true",
@@ -1337,7 +1343,8 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
-   FeatureBackOffBarrier]>;
+   FeatureBackOffBarrier,
+   FeatureMADIntraFwdBug]>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
@@ -1871,6 +1878,10 @@ def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
 
 def HasUnalignedAccessMode : Predicate<"Subtarget->hasUnalignedAccessMode()">,
   AssemblerPredicate<(all_of FeatureUnalignedAccessMode)>;
+
+def HasMADIntraFwdBug : Predicate<"Subtarget->hasMADIntraFwdBug()">;
+
+def HasNotMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
 def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of FeatureSALUFloatInsts)>;

@@ -416,16 +416,11 @@ void DebugHandlerBase::endFunction(const MachineFunction *MF) {
   InstOrdering.clear();
 }
 
-void DebugHandlerBase::beginBasicBlock(const MachineBasicBlock &MBB) {
-  if (!MBB.isBeginSection())
-    return;
-
-  PrevLabel = MBB.getSymbol();
+void DebugHandlerBase::beginBasicBlockSection(const MachineBasicBlock &MBB) {
+  if (!MBB.isEntryBlock())
+    PrevLabel = MBB.getSymbol();
 }
 
-void DebugHandlerBase::endBasicBlock(const MachineBasicBlock &MBB) {
-  if (!MBB.isEndSection())
-    return;
-
+void DebugHandlerBase::endBasicBlockSection(const MachineBasicBlock &MBB) {
   PrevLabel = nullptr;
 }

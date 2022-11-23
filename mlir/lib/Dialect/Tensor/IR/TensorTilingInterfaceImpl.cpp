@@ -113,7 +113,7 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
     if (auto constInt = getConstantIntValue(val)) {
       staticIndices.push_back(*constInt);
     } else {
-      staticIndices.push_back(ShapedType::kDynamicSize);
+      staticIndices.push_back(ShapedType::kDynamic);
       dynIndices.push_back(val);
     }
   };
@@ -216,7 +216,7 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
   // The shape of the result can be obtained from the sizes passed in.
   SmallVector<Value> dynDims;
   SmallVector<int64_t> shape;
-  dispatchIndexOpFoldResults(sizes, dynDims, shape, ShapedType::kDynamicSize);
+  dispatchIndexOpFoldResults(sizes, dynDims, shape, ShapedType::kDynamic);
   RankedTensorType resultType =
       RankedTensorType::get(shape, padOp.getResultType().getElementType());
 

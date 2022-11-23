@@ -157,6 +157,11 @@
 								"description": "Automatically stop after launch.",
 								"default": false
 							},
+							"runToBinaryEntry": {
+								"type": "boolean",
+								"description": "run to program entry one-shot breakpoint during launch to ensure dependency modules are loaded.",
+								"default": false
+							},
 							"disableASLR": {
 								"type": "boolean",
 								"description": "Enable or disable Address space layout randomization if the debugger supports it.",

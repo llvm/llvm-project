@@ -85,7 +85,7 @@ static Value sizeFromPtrAtDim(OpBuilder &builder, Location loc,
                               SparseTensorEncodingAttr &enc, ShapedType stp,
                               Value src, unsigned i) {
   auto shape = stp.getShape();
-  if (shape[i] == ShapedType::kDynamicSize)
+  if (shape[i] == ShapedType::kDynamic)
     return genLvlSizeCall(builder, loc, enc, src, i);
   return constantIndex(builder, loc, shape[i]);
 }
@@ -104,7 +104,7 @@ static void sizesFromType(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                           Location loc, ShapedType stp) {
   auto shape = stp.getShape();
   for (unsigned i = 0, rank = stp.getRank(); i < rank; i++) {
-    uint64_t s = shape[i] == ShapedType::kDynamicSize ? 0 : shape[i];
+    uint64_t s = shape[i] == ShapedType::kDynamic ? 0 : shape[i];
     sizes.push_back(constantIndex(builder, loc, s));
   }
 }
@@ -129,7 +129,7 @@ static void concatSizesFromInputs(OpBuilder &builder,
     sizesFromSrc(builder, sizes, loc, srcs[0]);
 
   // Sum up on the `dim` if the dimension is dynamic.
-  if (dstShape[dim] != ShapedType::kDynamicSize) {
+  if (dstShape[dim] != ShapedType::kDynamic) {
     // Faithfully take the static size.
     sizes[dim] = constantIndex(builder, loc, dstShape[dim]);
   } else {
@@ -151,7 +151,7 @@ static void concatSizesFromInputs(OpBuilder &builder,
 /// `memref<$sz x $tp>`). Unlike temporary buffers on the stack,
 /// this buffer must be explicitly deallocated by client.
 static Value genAlloc(RewriterBase &rewriter, Location loc, Value sz, Type tp) {
-  auto memTp = MemRefType::get({ShapedType::kDynamicSize}, tp);
+  auto memTp = MemRefType::get({ShapedType::kDynamic}, tp);
   return rewriter.create<memref::AllocOp>(loc, memTp, ValueRange{sz});
 }
 
@@ -1037,7 +1037,7 @@ public:
     Location loc = op.getLoc();
     // Query values array size for the actually stored values size.
     Type eltType = op.getTensor().getType().cast<ShapedType>().getElementType();
-    auto resTp = MemRefType::get({ShapedType::kDynamicSize}, eltType);
+    auto resTp = MemRefType::get({ShapedType::kDynamic}, eltType);
     Value values = genValuesCall(rewriter, loc, resTp, adaptor.getOperands());
     rewriter.replaceOpWithNewOp<memref::DimOp>(op, values,
                                                constantIndex(rewriter, loc, 0));

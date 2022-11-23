@@ -491,7 +491,7 @@ void BinaryBasicBlock::addBranchInstruction(const BinaryBasicBlock *Successor) {
   assert(isSuccessor(Successor));
   BinaryContext &BC = Function->getBinaryContext();
   MCInst NewInst;
-  std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
+  std::unique_lock<llvm::sys::RWMutex> Lock(BC.CtxMutex);
   BC.MIB->createUncondBranch(NewInst, Successor->getLabel(), BC.Ctx.get());
   Instructions.emplace_back(std::move(NewInst));
 }

@@ -706,20 +706,21 @@ TEST(FormatVariadicTest, FormatFilterRange) {
 
 namespace {
 
+enum class Base { First };
+
 class IntegerValuesRange final
-    : public indexed_accessor_range<IntegerValuesRange, NoneType, int, int *,
-                                    int> {
+    : public indexed_accessor_range<IntegerValuesRange, Base, int, int *, int> {
 public:
-  using indexed_accessor_range<IntegerValuesRange, NoneType, int, int *,
+  using indexed_accessor_range<IntegerValuesRange, Base, int, int *,
                                int>::indexed_accessor_range;
 
-  static int dereference(const NoneType &, ptrdiff_t Index) {
+  static int dereference(const Base &, ptrdiff_t Index) {
     return static_cast<int>(Index);
   }
 };
 
 TEST(FormatVariadicTest, FormatRangeNonRef) {
-  IntegerValuesRange Range(None, 0, 3);
+  IntegerValuesRange Range(Base(), 0, 3);
   EXPECT_EQ("0, 1, 2",
             formatv("{0}", make_range(Range.begin(), Range.end())).str());
 }

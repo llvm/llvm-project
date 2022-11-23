@@ -1766,6 +1766,11 @@ def ParseWrappedKeywordOp : TEST_Op<"parse_wrapped_keyword"> {
   let hasCustomAssemblyFormat = 1;
 }
 
+def ParseB64BytesOp : TEST_Op<"parse_b64"> {
+  let arguments = (ins StrAttr:$b64);
+  let hasCustomAssemblyFormat = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Test region argument list parsing.
 

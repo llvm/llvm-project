@@ -3492,7 +3492,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                   if (exe_file_addr != LLDB_INVALID_ADDRESS) {
                     DWARFExpression *location =
                         location_list.GetMutableExpressionAtAddress();
-                    if (location->Update_DW_OP_addr(exe_file_addr)) {
+                    if (location->Update_DW_OP_addr(die.GetCU(),
+                                                    exe_file_addr)) {
                       linked_oso_file_addr = true;
                       symbol_context_scope = exe_symbol;
                     }
@@ -3512,7 +3513,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             // Update the file address for this variable
             DWARFExpression *location =
                 location_list.GetMutableExpressionAtAddress();
-            location->Update_DW_OP_addr(exe_file_addr);
+            location->Update_DW_OP_addr(die.GetCU(), exe_file_addr);
           } else {
             // Variable didn't make it into the final executable
             return nullptr;

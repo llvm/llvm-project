@@ -48,8 +48,20 @@ static void replaceBranchTerminator(BasicBlock &BB,
   bool IsBranch = isa<BranchInst>(Term);
   if (InvokeInst *Invoke = dyn_cast<InvokeInst>(Term)) {
     LandingPadInst *LP = Invoke->getLandingPadInst();
-    LP->replaceAllUsesWith(getDefaultValue(LP->getType()));
-    LP->eraseFromParent();
+    // Remove landingpad instruction if the containing block isn't used by other
+    // invokes.
+    if (none_of(LP->getParent()->users(), [Invoke](User *U) {
+          return U != Invoke && isa<InvokeInst>(U);
+        })) {
+      LP->replaceAllUsesWith(getDefaultValue(LP->getType()));
+      LP->eraseFromParent();
+    } else if (!ChunkSuccessors.empty() &&
+               ChunkSuccessors[0] == LP->getParent()) {
+      // If the selected successor is the landing pad, clear the chunk
+      // successors to avoid creating a regular branch to the landing pad which
+      // would result in invalid IR.
+      ChunkSuccessors.clear();
+    }
     IsBranch = true;
   }
 

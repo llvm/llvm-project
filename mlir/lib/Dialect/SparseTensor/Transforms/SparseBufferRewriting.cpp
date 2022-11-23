@@ -722,7 +722,7 @@ LogicalResult matchAndRewriteSortOp(OpTy op, ValueRange xys, uint64_t nx,
     auto mtp = v.getType().cast<MemRefType>();
     if (!mtp.isDynamicDim(0)) {
       auto newMtp =
-          MemRefType::get({ShapedType::kDynamicSize}, mtp.getElementType());
+          MemRefType::get({ShapedType::kDynamic}, mtp.getElementType());
       v = rewriter.create<memref::CastOp>(loc, newMtp, v);
     }
     operands.push_back(v);
@@ -786,7 +786,7 @@ public:
 
       Value c2 = constantIndex(rewriter, loc, 2);
       auto bufferType =
-          MemRefType::get({ShapedType::kDynamicSize}, value.getType());
+          MemRefType::get({ShapedType::kDynamic}, value.getType());
       scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, bufferType, cond,
                                                   /*else=*/true);
       // True branch.

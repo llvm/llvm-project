@@ -280,7 +280,7 @@ struct LinalgOpPartialReductionInterface
     for (int64_t idx : llvm::seq<int64_t>(0, oldShape.size() + 1)) {
       if (idx == insertSplitDimension) {
         dispatchIndexOpFoldResults(sizes[idx], dynamicDims, newOutputShape,
-                                   ShapedType::kDynamicStrideOrOffset);
+                                   ShapedType::kDynamic);
         continue;
       }
       int64_t oldIdx = idx < insertSplitDimension ? idx : idx - 1;
