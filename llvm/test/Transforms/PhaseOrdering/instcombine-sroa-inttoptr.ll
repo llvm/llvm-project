@@ -68,12 +68,13 @@ define dso_local i32* @_Z3foo1S(%0* byval(%0) align 8 %arg) {
 ; CHECK-LABEL: @_Z3foo1S(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I2:%.*]] = alloca [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[I1_SROA_0_0_I5_SROA_IDX:%.*]] = getelementptr inbounds [[TMP0]], %0* [[ARG:%.*]], i64 0, i32 0
-; CHECK-NEXT:    [[I1_SROA_0_0_COPYLOAD:%.*]] = load i32*, i32** [[I1_SROA_0_0_I5_SROA_IDX]], align 8
+; CHECK-NEXT:    [[TMP0]] = bitcast %0* [[ARG:%.*]] to i64*
+; CHECK-NEXT:    [[I11_SROA_0_0_VEC_EXTRACT_EXTRACT:%.*]] = load i64, i64* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[I11_SROA_0_0_VEC_EXTRACT_EXTRACT]] to i32*
 ; CHECK-NEXT:    [[I_SROA_0_0_I6_SROA_IDX:%.*]] = getelementptr inbounds [[TMP0]], %0* [[I2]], i64 0, i32 0
-; CHECK-NEXT:    store i32* [[I1_SROA_0_0_COPYLOAD]], i32** [[I_SROA_0_0_I6_SROA_IDX]], align 8
+; CHECK-NEXT:    store i32* [[TMP1]], i32** [[I_SROA_0_0_I6_SROA_IDX]], align 8
 ; CHECK-NEXT:    tail call void @_Z7escape01S(%0* nonnull byval([[TMP0]]) align 8 [[I2]])
-; CHECK-NEXT:    ret i32* [[I1_SROA_0_0_COPYLOAD]]
+; CHECK-NEXT:    ret i32* [[TMP1]]
 ;
 bb:
   %i = alloca %0, align 8
@@ -107,21 +108,22 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 define dso_local i32* @_Z3bar1S(%0* byval(%0) align 8 %arg) {
 ; CHECK-LABEL: @_Z3bar1S(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I1_SROA_0_0_I4_SROA_IDX:%.*]] = getelementptr inbounds [[TMP0:%.*]], %0* [[ARG:%.*]], i64 0, i32 0
-; CHECK-NEXT:    [[I1_SROA_0_0_COPYLOAD:%.*]] = load i32*, i32** [[I1_SROA_0_0_I4_SROA_IDX]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %0* [[ARG:%.*]] to i64*
+; CHECK-NEXT:    [[I13_SROA_0_0_VEC_EXTRACT_EXTRACT:%.*]] = load i64, i64* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[I13_SROA_0_0_VEC_EXTRACT_EXTRACT]] to i32*
 ; CHECK-NEXT:    [[I5:%.*]] = tail call i32 @_Z4condv()
 ; CHECK-NEXT:    [[I6_NOT:%.*]] = icmp eq i32 [[I5]], 0
 ; CHECK-NEXT:    br i1 [[I6_NOT]], label [[BB10:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    tail call void @_Z5sync0v()
-; CHECK-NEXT:    tail call void @_Z7escape0Pi(i32* [[I1_SROA_0_0_COPYLOAD]])
+; CHECK-NEXT:    tail call void @_Z7escape0Pi(i32* [[TMP1]])
 ; CHECK-NEXT:    br label [[BB13:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    tail call void @_Z5sync1v()
-; CHECK-NEXT:    tail call void @_Z7escape1Pi(i32* [[I1_SROA_0_0_COPYLOAD]])
+; CHECK-NEXT:    tail call void @_Z7escape1Pi(i32* [[TMP1]])
 ; CHECK-NEXT:    br label [[BB13]]
 ; CHECK:       bb13:
-; CHECK-NEXT:    ret i32* [[I1_SROA_0_0_COPYLOAD]]
+; CHECK-NEXT:    ret i32* [[TMP1]]
 ;
 bb:
   %i = alloca %0, align 8

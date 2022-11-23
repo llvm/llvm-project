@@ -9,12 +9,11 @@ declare double @subcall(double %g, i32 %m)
 
 define double @bar(ptr %wishart) {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:    [[TMP_SROA_3:%.*]] = alloca [4 x i8], align 4
 ; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load double, ptr [[WISHART:%.*]], align 8, !tbaa.struct !0
 ; CHECK-NEXT:    [[TMP_SROA_2_0_WISHART_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[WISHART]], i64 8
 ; CHECK-NEXT:    [[TMP_SROA_2_0_COPYLOAD:%.*]] = load i32, ptr [[TMP_SROA_2_0_WISHART_SROA_IDX]], align 8, !tbaa.struct !7
 ; CHECK-NEXT:    [[TMP_SROA_3_0_WISHART_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[WISHART]], i64 12
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP_SROA_3]], ptr align 4 [[TMP_SROA_3_0_WISHART_SROA_IDX]], i64 4, i1 false), !tbaa.struct !8
+; CHECK-NEXT:    [[TMP_SROA_3_SROA_0_0_COPYLOAD:%.*]] = load <4 x i8>, ptr [[TMP_SROA_3_0_WISHART_SROA_IDX]], align 4, !tbaa.struct !8
 ; CHECK-NEXT:    [[CALL:%.*]] = call double @subcall(double [[TMP_SROA_0_0_COPYLOAD]], i32 [[TMP_SROA_2_0_COPYLOAD]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
