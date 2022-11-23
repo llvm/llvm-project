@@ -554,3 +554,105 @@ loop:
 exit:
   ret void
 }
+
+define void @trunc_v16i16_to_v16i8_in_loop(ptr %A, ptr %dst) {
+; CHECK-LABEL:  trunc_v16i16_to_v16i8_in_loop:
+; CHECK:    ; %bb.0:                                ; %entry
+; CHECK-NEXT:   mov	x8, xzr
+; CHECK-NEXT:  LBB7_1:                                 ; %loop
+; CHECK-NEXT:                                          ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  	add	x9, x0, x8, lsl #5
+; CHECK-NEXT:  	ldp	q1, q0, [x9]
+; CHECK-NEXT:  	uzp1.16b	v0, v1, v0
+; CHECK-NEXT:  	str	q0, [x1, x8, lsl  #4]
+; CHECK-NEXT:  	add	x8, x8, #1
+; CHECK-NEXT:  	cmp	x8, #1000
+; CHECK-NEXT:  	b.eq	LBB7_1
+; CHECK-NEXT:  ; %bb.2:                                ; %exit
+; CHECK-NEXT:  	ret
+
+; CHECK-BE-LABEL:  trunc_v16i16_to_v16i8_in_loop:
+; CHECK-BE:  // %bb.0:                               // %entry
+; CHECK-BE-NEXT:    	mov	x8, xzr
+; CHECK-BE-NEXT:  .LBB7_1:                                // %loop
+; CHECK-BE-NEXT:                                          // =>This Inner Loop Header: Depth=1
+; CHECK-BE-NEXT:  	add	x9, x0, x8, lsl #5
+; CHECK-BE-NEXT:  	add	x10, x9, #16
+; CHECK-BE-NEXT:  	ld1	{ v0.8h }, [x9]
+; CHECK-BE-NEXT:  	add	x9, x1, x8, lsl #4
+; CHECK-BE-NEXT:  	add	x8, x8, #1
+; CHECK-BE-NEXT:  	ld1	{ v1.8h }, [x10]
+; CHECK-BE-NEXT:  	cmp	x8, #1000
+; CHECK-BE-NEXT:  	uzp1	v0.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:  	st1	{ v0.16b }, [x9]
+; CHECK-BE-NEXT:  	b.eq	.LBB7_1
+; CHECK-BE-NEXT:  // %bb.2:                               // %exit
+; CHECK-BE-NEXT:  	ret
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.A = getelementptr inbounds <16 x i16>, ptr %A, i64 %iv
+  %l.A = load <16 x i16>, ptr %gep.A
+  %trunc = trunc <16 x i16> %l.A to <16 x i8>
+  %gep.dst = getelementptr inbounds <16 x i8>, ptr %dst, i64 %iv
+  store <16 x i8> %trunc, ptr %gep.dst
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1000
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @trunc_v8i16_to_v8i8_in_loop(ptr %A, ptr %dst) {
+; CHECK-LABEL:	trunc_v8i16_to_v8i8_in_loop:
+; CHECK:		; %bb.0:                                ; %entry
+; CHECK-NEXT:  	mov	x8, xzr
+; CHECK-NEXT:  LBB8_1:                                 ; %loop
+; CHECK-NEXT:                                          ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  	ldr	q0, [x0, x8, lsl  #4]
+; CHECK-NEXT:  	xtn.8b	v0, v0
+; CHECK-NEXT:  	str	d0, [x1, x8, lsl  #3]
+; CHECK-NEXT:  	add	x8, x8, #1
+; CHECK-NEXT:  	cmp	x8, #1000
+; CHECK-NEXT:  	b.eq	LBB8_1
+; CHECK-NEXT:  ; %bb.2:                                ; %exit
+; CHECK-NEXT:  	ret
+
+; CHECK-BE-LABEL:  trunc_v8i16_to_v8i8_in_loop:
+; CHECK-BE:  // %bb.0:                               // %entry
+; CHECK-BE-NEXT:  	mov	x8, xzr
+; CHECK-BE-NEXT:  .LBB8_1:                                // %loop
+; CHECK-BE-NEXT:                                          // =>This Inner Loop Header: Depth=1
+; CHECK-BE-NEXT:  	add	x9, x0, x8, lsl #4
+; CHECK-BE-NEXT:  	ld1	{ v0.8h }, [x9]
+; CHECK-BE-NEXT:  	add	x9, x1, x8, lsl #3
+; CHECK-BE-NEXT:  	add	x8, x8, #1
+; CHECK-BE-NEXT:  	cmp	x8, #1000
+; CHECK-BE-NEXT:  	xtn	v0.8b, v0.8h
+; CHECK-BE-NEXT:  	st1	{ v0.8b }, [x9]
+; CHECK-BE-NEXT:  	b.eq	.LBB8_1
+; CHECK-BE-NEXT:  // %bb.2:                               // %exit
+; CHECK-BE-NEXT:  	ret
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.A = getelementptr inbounds <8 x i16>, ptr %A, i64 %iv
+  %l.A = load <8 x i16>, ptr %gep.A
+  %trunc = trunc <8 x i16> %l.A to <8 x i8>
+  %gep.dst = getelementptr inbounds <8 x i8>, ptr %dst, i64 %iv
+  store <8 x i8> %trunc, ptr %gep.dst
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1000
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
