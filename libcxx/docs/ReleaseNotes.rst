@@ -144,7 +144,7 @@ ABI Affecting Changes
 - When building libc++ against newlib/picolibc, the type of ``regex_type_traits::char_class_type`` was changed to
   ``uint16_t`` since all values of ``ctype_base::mask`` are taken. This is technically an ABI break, but including
   ``<regex> `` has triggered a ``static_assert`` failure since libc++ 14, so it is unlikely that this causes
-   problems for existing users.
+  problems for existing users.
 
 Build System Changes
 --------------------
