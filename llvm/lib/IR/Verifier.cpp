@@ -888,6 +888,10 @@ void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
   // Check that the immediate resolver operand (prior to any bitcasts) has the
   // correct type.
   const Type *ResolverTy = GI.getResolver()->getType();
+
+  Check(isa<PointerType>(Resolver->getFunctionType()->getReturnType()),
+        "IFunc resolver must return a pointer", &GI);
+
   const Type *ResolverFuncTy =
       GlobalIFunc::getResolverFunctionType(GI.getValueType());
   Check(ResolverTy == ResolverFuncTy->getPointerTo(GI.getAddressSpace()),
