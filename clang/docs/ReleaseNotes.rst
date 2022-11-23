@@ -181,6 +181,9 @@ code bases.
   ``$prefix/lib/clang/$CLANG_MAJOR_VERSION`` and can be queried using
   ``clang -print-resource-dir``, just like before.
 
+- To match GCC, ``__ppc64__`` is no longer defined on PowerPC64 targets. Use
+  ``__powerpc64__`` instead.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed

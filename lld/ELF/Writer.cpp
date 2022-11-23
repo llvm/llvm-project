@@ -398,13 +398,12 @@ template <class ELFT> void elf::createSyntheticSections() {
       }
       part.ehFrame = std::make_unique<EhFrameSection>();
       add(*part.ehFrame);
-    }
 
-    if (config->emachine == EM_ARM && !config->relocatable) {
-      // The ARMExidxsyntheticsection replaces all the individual .ARM.exidx
-      // InputSections.
-      part.armExidx = std::make_unique<ARMExidxSyntheticSection>();
-      add(*part.armExidx);
+      if (config->emachine == EM_ARM) {
+        // This section replaces all the individual .ARM.exidx InputSections.
+        part.armExidx = std::make_unique<ARMExidxSyntheticSection>();
+        add(*part.armExidx);
+      }
     }
 
     if (!config->packageMetadata.empty()) {

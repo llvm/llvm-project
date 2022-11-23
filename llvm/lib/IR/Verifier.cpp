@@ -889,7 +889,7 @@ void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
   const Type *ResolverTy = GI.getResolver()->getType();
   const Type *ResolverFuncTy =
       GlobalIFunc::getResolverFunctionType(GI.getValueType());
-  Check(ResolverTy == ResolverFuncTy->getPointerTo(),
+  Check(ResolverTy == ResolverFuncTy->getPointerTo(GI.getAddressSpace()),
         "IFunc resolver has incorrect type", &GI);
 }
 

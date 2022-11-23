@@ -704,11 +704,10 @@ define amdgpu_kernel void @orxor2or1(i32 addrspace(1)* %in, i32 %a, i32 %b) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_lshl_b32 s0, s2, 7
-; SI-NEXT:    s_mov_b32 s5, s1
-; SI-NEXT:    s_xor_b32 s1, s0, s3
-; SI-NEXT:    s_or_b32 s0, s0, s1
+; SI-NEXT:    s_or_b32 s0, s3, s0
 ; SI-NEXT:    s_cmp_eq_u32 s0, 0
 ; SI-NEXT:    s_cselect_b32 s0, s2, s3
+; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -718,8 +717,7 @@ define amdgpu_kernel void @orxor2or1(i32 addrspace(1)* %in, i32 %a, i32 %b) {
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshl_b32 s4, s2, 7
-; VI-NEXT:    s_xor_b32 s5, s4, s3
-; VI-NEXT:    s_or_b32 s4, s4, s5
+; VI-NEXT:    s_or_b32 s4, s3, s4
 ; VI-NEXT:    s_cmp_eq_u32 s4, 0
 ; VI-NEXT:    s_cselect_b32 s2, s2, s3
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -734,8 +732,7 @@ define amdgpu_kernel void @orxor2or1(i32 addrspace(1)* %in, i32 %a, i32 %b) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_lshl_b32 s4, s2, 7
-; GFX9-NEXT:    s_xor_b32 s5, s4, s3
-; GFX9-NEXT:    s_or_b32 s4, s4, s5
+; GFX9-NEXT:    s_or_b32 s4, s3, s4
 ; GFX9-NEXT:    s_cmp_eq_u32 s4, 0
 ; GFX9-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
@@ -744,15 +741,14 @@ define amdgpu_kernel void @orxor2or1(i32 addrspace(1)* %in, i32 %a, i32 %b) {
 ;
 ; R600-LABEL: orxor2or1:
 ; R600:       ; %bb.0:
-; R600-NEXT:    ALU 6, @4, KC0[CB0:0-32], KC1[]
+; R600-NEXT:    ALU 5, @4, KC0[CB0:0-32], KC1[]
 ; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; R600-NEXT:    CF_END
 ; R600-NEXT:    PAD
 ; R600-NEXT:    ALU clause starting at 4:
 ; R600-NEXT:     LSHL * T0.W, KC0[2].Z, literal.x,
 ; R600-NEXT:    7(9.809089e-45), 0(0.000000e+00)
-; R600-NEXT:     XOR_INT * T1.W, PV.W, KC0[2].W,
-; R600-NEXT:     OR_INT * T0.W, T0.W, PV.W,
+; R600-NEXT:     OR_INT * T0.W, KC0[2].W, PV.W,
 ; R600-NEXT:     CNDE_INT T0.X, PV.W, KC0[2].Z, KC0[2].W,
 ; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
@@ -763,8 +759,7 @@ define amdgpu_kernel void @orxor2or1(i32 addrspace(1)* %in, i32 %a, i32 %b) {
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_lshl_b32 s4, s2, 7
-; GFX10-NEXT:    s_xor_b32 s5, s4, s3
-; GFX10-NEXT:    s_or_b32 s4, s4, s5
+; GFX10-NEXT:    s_or_b32 s4, s3, s4
 ; GFX10-NEXT:    s_cmp_eq_u32 s4, 0
 ; GFX10-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s2
@@ -777,11 +772,10 @@ define amdgpu_kernel void @orxor2or1(i32 addrspace(1)* %in, i32 %a, i32 %b) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl_b32 s4, s2, 7
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b32 s5, s4, s3
-; GFX11-NEXT:    s_or_b32 s4, s4, s5
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_or_b32 s4, s3, s4
 ; GFX11-NEXT:    s_cmp_eq_u32 s4, 0
 ; GFX11-NEXT:    s_cselect_b32 s2, s2, s3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
