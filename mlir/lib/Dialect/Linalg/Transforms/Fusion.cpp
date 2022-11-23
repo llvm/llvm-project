@@ -165,7 +165,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
         staticStridesVector));
   }
 
-  Operation *clonedOp = producer.clone(b, loc, resultTypes, clonedShapes);
+  Operation *clonedOp = clone(b, producer, resultTypes, clonedShapes);
 
   // Shift all IndexOp results by the tile offset.
   SmallVector<OpFoldResult> allIvs = llvm::to_vector(

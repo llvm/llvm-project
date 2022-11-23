@@ -28,6 +28,8 @@
 namespace mlir {
 
 class OpBuilder;
+class TypeRange;
+class ValueRange;
 
 /// Tests whether the given maps describe a row major matmul. The test is
 /// permutation-invariant. Note that this only checks the affine maps from an
@@ -107,6 +109,16 @@ protected:
   SmallVector<AffineMap, 4> maps;
   Operation *op;
 };
+
+// Clone the current operation with the operands. This is used to abstract away
+// the optional underlying region creation.
+Operation *clone(OpBuilder &b, Operation *op, TypeRange newResultTypes,
+                 ValueRange newOperands);
+
+// Clone the current operation with the operands but leave the regions empty.
+Operation *cloneWithoutRegions(OpBuilder &b, Operation *op,
+                               TypeRange newResultTypes,
+                               ValueRange newOperands);
 
 } // namespace mlir
 
