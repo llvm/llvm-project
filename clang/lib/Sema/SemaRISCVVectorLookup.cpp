@@ -132,6 +132,7 @@ class RISCVIntrinsicManagerImpl : public sema::RISCVIntrinsicManager {
 private:
   Sema &S;
   ASTContext &Context;
+  RVVTypeCache TypeCache;
 
   // List of all RVV intrinsic.
   std::vector<RVVIntrinsicDef> IntrinsicList;
@@ -247,16 +248,16 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
           continue;
 
         Optional<RVVTypes> Types =
-            RVVType::computeTypes(BaseType, Log2LMUL, Record.NF, ProtoSeq);
+            TypeCache.computeTypes(BaseType, Log2LMUL, Record.NF, ProtoSeq);
 
         // Ignored to create new intrinsic if there are any illegal types.
         if (!Types.has_value())
           continue;
 
-        std::string SuffixStr =
-            RVVIntrinsic::getSuffixStr(BaseType, Log2LMUL, SuffixProto);
+        std::string SuffixStr = RVVIntrinsic::getSuffixStr(
+            TypeCache, BaseType, Log2LMUL, SuffixProto);
         std::string OverloadedSuffixStr = RVVIntrinsic::getSuffixStr(
-            BaseType, Log2LMUL, OverloadedSuffixProto);
+            TypeCache, BaseType, Log2LMUL, OverloadedSuffixProto);
 
         // Create non-masked intrinsic.
         InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr, false, *Types,
@@ -271,7 +272,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
                     BasicProtoSeq, /*IsMasked=*/false,
                     /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
                     Record.IsPrototypeDefaultTU, UnMaskedPolicyScheme, P);
-            Optional<RVVTypes> PolicyTypes = RVVType::computeTypes(
+            Optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
                 BaseType, Log2LMUL, Record.NF, PolicyPrototype);
             InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,
                              /*IsMask=*/false, *PolicyTypes, UnMaskedHasPolicy,
@@ -282,7 +283,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
           continue;
         // Create masked intrinsic.
         Optional<RVVTypes> MaskTypes =
-            RVVType::computeTypes(BaseType, Log2LMUL, Record.NF, ProtoMaskSeq);
+            TypeCache.computeTypes(BaseType, Log2LMUL, Record.NF, ProtoMaskSeq);
         InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr, true,
                          *MaskTypes, MaskedHasPolicy, Policy::PolicyNone,
                          Record.IsPrototypeDefaultTU);
@@ -295,7 +296,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
                   BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
                   Record.HasVL, Record.NF, Record.IsPrototypeDefaultTU,
                   MaskedPolicyScheme, P);
-          Optional<RVVTypes> PolicyTypes = RVVType::computeTypes(
+          Optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
               BaseType, Log2LMUL, Record.NF, PolicyPrototype);
           InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,
                            /*IsMask=*/true, *PolicyTypes, MaskedHasPolicy, P,

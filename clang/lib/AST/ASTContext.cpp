@@ -12234,11 +12234,7 @@ unsigned ASTContext::getTargetAddressSpace(QualType T) const {
   // the best address space based on the type information
   return T->isFunctionType() && !T.hasAddressSpace()
              ? getTargetInfo().getProgramAddressSpace()
-             : getTargetAddressSpace(T.getQualifiers());
-}
-
-unsigned ASTContext::getTargetAddressSpace(Qualifiers Q) const {
-  return getTargetAddressSpace(Q.getAddressSpace());
+             : getTargetAddressSpace(T.getAddressSpace());
 }
 
 unsigned ASTContext::getTargetAddressSpace(LangAS AS) const {
