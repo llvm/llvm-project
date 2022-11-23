@@ -270,17 +270,6 @@ void* __aligned_malloc_with_fallback(size_t size) {
   return fallback_malloc(size);
 }
 
-void* __calloc_with_fallback(size_t count, size_t size) {
-  void* ptr = ::calloc(count, size);
-  if (NULL != ptr)
-    return ptr;
-  // if calloc fails, fall back to emergency stash
-  ptr = fallback_malloc(size * count);
-  if (NULL != ptr)
-    ::memset(ptr, 0, size * count);
-  return ptr;
-}
-
 void __aligned_free_with_fallback(void* ptr) {
   if (is_fallback_ptr(ptr))
     fallback_free(ptr);
