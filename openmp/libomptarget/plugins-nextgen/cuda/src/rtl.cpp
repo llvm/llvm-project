@@ -848,58 +848,49 @@ public:
 
 /// Class implementing the CUDA-specific functionalities of the plugin.
 struct CUDAPluginTy final : public GenericPluginTy {
-  /// Create a CUDA plugin and initialize the CUDA driver.
-  CUDAPluginTy() : GenericPluginTy() {
-    CUresult Res = cuInit(0);
-    if (Res == CUDA_ERROR_INVALID_HANDLE) {
-      // Cannot call cuGetErrorString if dlsym failed.
-      DP("Failed to load CUDA shared library\n");
-      return;
-    }
-
-    if (Res == CUDA_ERROR_NO_DEVICE) {
-      // Do not initialize if there are no devices.
-      DP("There are no devices supporting CUDA.\n");
-      return;
-    }
-
-    if (auto Err = Plugin::check(Res, "Error in cuInit: %s")) {
-      REPORT("%s\n", toString(std::move(Err)).data());
-      return;
-    }
-
-    // Get the number of devices.
-    int NumDevices;
-    Res = cuDeviceGetCount(&NumDevices);
-    if (auto Err = Plugin::check(Res, "Error in cuDeviceGetCount: %s")) {
-      REPORT("%s\n", toString(std::move(Err)).data());
-      return;
-    }
-
-    // Do not initialize if there are no devices.
-    if (NumDevices == 0) {
-      DP("There are no devices supporting CUDA.\n");
-      return;
-    }
-
-    // Initialize the generic plugin structure.
-    GenericPluginTy::init(NumDevices, new CUDAGlobalHandlerTy());
-  }
+  /// Create a CUDA plugin.
+  CUDAPluginTy() : GenericPluginTy() {}
 
   /// This class should not be copied.
   CUDAPluginTy(const CUDAPluginTy &) = delete;
   CUDAPluginTy(CUDAPluginTy &&) = delete;
 
-  ~CUDAPluginTy() {}
+  /// Initialize the plugin and return the number of devices.
+  Expected<int32_t> initImpl() override {
+    CUresult Res = cuInit(0);
+    if (Res == CUDA_ERROR_INVALID_HANDLE) {
+      // Cannot call cuGetErrorString if dlsym failed.
+      DP("Failed to load CUDA shared library\n");
+      return 0;
+    }
+
+    if (Res == CUDA_ERROR_NO_DEVICE) {
+      // Do not initialize if there are no devices.
+      DP("There are no devices supporting CUDA.\n");
+      return 0;
+    }
+
+    if (auto Err = Plugin::check(Res, "Error in cuInit: %s"))
+      return std::move(Err);
+
+    // Get the number of devices.
+    int NumDevices;
+    Res = cuDeviceGetCount(&NumDevices);
+    if (auto Err = Plugin::check(Res, "Error in cuDeviceGetCount: %s"))
+      return std::move(Err);
+
+    // Do not initialize if there are no devices.
+    if (NumDevices == 0)
+      DP("There are no devices supporting CUDA.\n");
+
+    return NumDevices;
+  }
+
+  /// Deinitialize the plugin.
+  Error deinitImpl() override { return Plugin::success(); }
 
   /// Get the ELF code for recognizing the compatible image binary.
   uint16_t getMagicElfBits() const override { return ELF::EM_CUDA; }
-
-  /// Create a CUDA device with a specific id.
-  CUDADeviceTy &createDevice(int32_t DeviceId) override {
-    CUDADeviceTy *Device = new CUDADeviceTy(DeviceId, getNumDevices());
-    return *Device;
-  }
 
   /// Check whether the image is compatible with the available CUDA devices.
   Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
@@ -1002,32 +993,14 @@ Error CUDADeviceTy::dataExchangeImpl(const void *SrcPtr,
   return Plugin::check(Res, "Error in cuMemcpyDtoDAsync: %s");
 }
 
-Error Plugin::init() {
-  // Call the getter to intialize the CUDA plugin.
-  get();
-  return Plugin::success();
+GenericPluginTy *Plugin::createPlugin() { return new CUDAPluginTy(); }
+
+GenericDeviceTy *Plugin::createDevice(int32_t DeviceId, int32_t NumDevices) {
+  return new CUDADeviceTy(DeviceId, NumDevices);
 }
 
-Error Plugin::deinit() {
-  // The CUDA plugin and the CUDA driver should already be deinitialized
-  // at this point. So do nothing for this plugin.
-  if (Plugin::isActive())
-    return Plugin::error("CUDA plugin is not deinitialized");
-
-  return Plugin::success();
-}
-
-GenericPluginTy &Plugin::get() {
-  // The CUDA plugin instance is built the first time that Plugin::get() is
-  // called thanks to the following static variable. The ideal implementation
-  // would initialize the plugin in Plugin::init() (__tgt_rtl_plugin_init) and
-  // destroy it in Plugin::deinit() (__tgt_rtl_plugin_deinit). However, at the
-  // time Plugin::deinit() is called, the CUDA driver is already shut down. That
-  // is caused by the fact that __tgt_rtl_plugin_deinit is called from a dtor
-  // in libomptarget. Thus, this is a workaround until that aspect is fixed.
-  static CUDAPluginTy CUDAPlugin;
-  assert(Plugin::isActive() && "Plugin is not active");
-  return CUDAPlugin;
+GenericGlobalHandlerTy *Plugin::createGlobalHandler() {
+  return new CUDAGlobalHandlerTy();
 }
 
 template <typename... ArgsTy>
