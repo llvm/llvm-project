@@ -44,8 +44,8 @@ define i16 @foo1(i16 %a, i16 %b) {
 ; CHECK-NEXT:    movw r30, r22
 ; CHECK-NEXT:    ldi r18, 1
 ; CHECK-NEXT:    out 59, r18
-; CHECK-NEXT:    elpm r18, Z+
-; CHECK-NEXT:    elpm r19, Z
+; CHECK-NEXT:    elpm r20, Z+
+; CHECK-NEXT:    elpm r21, Z
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
 ; CHECK-NEXT:    subi r24, -lo8(arr0)
@@ -53,8 +53,8 @@ define i16 @foo1(i16 %a, i16 %b) {
 ; CHECK-NEXT:    movw r30, r24
 ; CHECK-NEXT:    lpm r24, Z+
 ; CHECK-NEXT:    lpm r25, Z
-; CHECK-NEXT:    sub r24, r18
-; CHECK-NEXT:    sbc r25, r19
+; CHECK-NEXT:    sub r24, r20
+; CHECK-NEXT:    sbc r25, r21
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(1)* @arr0, i16 0, i16 %a
@@ -73,8 +73,8 @@ define i16 @foo2(i16 %a, i16 %b) {
 ; CHECK-NEXT:    subi r24, -lo8(arr2)
 ; CHECK-NEXT:    sbci r25, -hi8(arr2)
 ; CHECK-NEXT:    movw r30, r24
-; CHECK-NEXT:    ldi r24, 2
-; CHECK-NEXT:    out 59, r24
+; CHECK-NEXT:    ldi r18, 2
+; CHECK-NEXT:    out 59, r18
 ; CHECK-NEXT:    elpm r24, Z+
 ; CHECK-NEXT:    elpm r25, Z
 ; CHECK-NEXT:    lsl r22
@@ -106,19 +106,19 @@ define i16 @foo3(i16 %a, i16 %b) {
 ; CHECK-NEXT:    movw r30, r22
 ; CHECK-NEXT:    ldi r18, 1
 ; CHECK-NEXT:    out 59, r18
-; CHECK-NEXT:    elpm r18, Z+
-; CHECK-NEXT:    elpm r19, Z
+; CHECK-NEXT:    elpm r20, Z+
+; CHECK-NEXT:    elpm r21, Z
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
 ; CHECK-NEXT:    subi r24, -lo8(arr2)
 ; CHECK-NEXT:    sbci r25, -hi8(arr2)
 ; CHECK-NEXT:    movw r30, r24
-; CHECK-NEXT:    ldi r24, 2
-; CHECK-NEXT:    out 59, r24
+; CHECK-NEXT:    ldi r18, 2
+; CHECK-NEXT:    out 59, r18
 ; CHECK-NEXT:    elpm r24, Z+
 ; CHECK-NEXT:    elpm r25, Z
-; CHECK-NEXT:    sub r24, r18
-; CHECK-NEXT:    sbc r25, r19
+; CHECK-NEXT:    sub r24, r20
+; CHECK-NEXT:    sbc r25, r21
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(3)* @arr2, i16 0, i16 %a
