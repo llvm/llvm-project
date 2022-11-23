@@ -86,6 +86,9 @@ def SDT_PPCst_vec_be : SDTypeProfile<0, 2, [
   SDTCisVec<0>, SDTCisPtrTy<1>
 ]>;
 
+def SDT_PPCxxperm : SDTypeProfile<1, 3, [
+  SDTCisVT<0, v2f64>, SDTCisVT<1, v2f64>,
+  SDTCisVT<2, v2f64>, SDTCisVT<3, v4i32>]>;
 //--------------------------- Custom PPC nodes -------------------------------//
 def PPClxvd2x  : SDNode<"PPCISD::LXVD2X", SDT_PPClxvd2x,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -116,6 +119,7 @@ def PPCsextldsplat : SDNode<"PPCISD::SEXT_LD_SPLAT", SDT_PPCldsplat,
 def PPCSToV : SDNode<"PPCISD::SCALAR_TO_VECTOR_PERMUTED",
                      SDTypeProfile<1, 1, []>, []>;
 
+def PPCxxperm : SDNode<"PPCISD::XXPERM", SDT_PPCxxperm, []>;
 //-------------------------- Predicate definitions ---------------------------//
 def HasVSX : Predicate<"Subtarget->hasVSX()">;
 def IsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
@@ -1643,13 +1647,14 @@ let Predicates = [HasVSX, HasP9Vector] in {
   def XXBRQ : XX2_XT6_XO5_XB6<60, 31, 475, "xxbrq", vsrc, []>;
 
   // Vector Permute
-  // FIXME: Setting the hasSideEffects flag here to match current behaviour.
-  let hasSideEffects = 1 in {
-    def XXPERM  : XX3_XT5_XA5_XB5<60, 26, "xxperm" , vsrc, vsrc, vsrc,
-                                  IIC_VecPerm, []>;
-    def XXPERMR : XX3_XT5_XA5_XB5<60, 58, "xxpermr", vsrc, vsrc, vsrc,
-                                  IIC_VecPerm, []>;
-  }
+  def XXPERM  : XX3Form<60, 26, (outs vsrc:$XT),
+                                (ins vsrc:$XA, vsrc:$XTi, vsrc:$XB),
+                        "xxperm $XT, $XA, $XB", IIC_VecPerm, []>,
+                        RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
+  def XXPERMR : XX3Form<60, 58, (outs vsrc:$XT),
+                                (ins vsrc:$XA, vsrc:$XTi, vsrc:$XB),
+                        "xxpermr $XT, $XA, $XB", IIC_VecPerm, []>,
+                        RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
 
   // Vector Splat Immediate Byte
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
@@ -4143,6 +4148,8 @@ def : Pat<(v8i16 (PPCldsplat ForceXForm:$A)),
           (v8i16 (VSPLTHs 3, (LXSIHZX ForceXForm:$A)))>;
 def : Pat<(v16i8 (PPCldsplat ForceXForm:$A)),
           (v16i8 (VSPLTBs 7, (LXSIBZX ForceXForm:$A)))>;
+def : Pat<(v2f64 (PPCxxperm v2f64:$XT, v2f64:$XB, v4i32:$C)),
+          (XXPERM v2f64:$XT, v2f64:$XB, v4i32:$C)>;
 } // HasVSX, HasP9Vector
 
 // Any Power9 VSX subtarget with equivalent length but better Power10 VSX

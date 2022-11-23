@@ -215,11 +215,11 @@ define dso_local void @test4(ptr nocapture %c, ptr nocapture readonly %a) local_
 ; P9-AIX32-NEXT:    stw r4, -16(r1)
 ; P9-AIX32-NEXT:    lwz r4, L..C0(r2) # %const.0
 ; P9-AIX32-NEXT:    stw r5, -32(r1)
-; P9-AIX32-NEXT:    lxv v3, -16(r1)
-; P9-AIX32-NEXT:    lxv v4, -32(r1)
-; P9-AIX32-NEXT:    lxv v2, 0(r4)
-; P9-AIX32-NEXT:    vperm v2, v4, v3, v2
-; P9-AIX32-NEXT:    stxv v2, 0(r3)
+; P9-AIX32-NEXT:    lxv vs1, -16(r1)
+; P9-AIX32-NEXT:    lxv vs2, -32(r1)
+; P9-AIX32-NEXT:    lxv vs0, 0(r4)
+; P9-AIX32-NEXT:    xxperm vs1, vs2, vs0
+; P9-AIX32-NEXT:    stxv vs1, 0(r3)
 ; P9-AIX32-NEXT:    blr
 ;
 ; P8-AIX32-LABEL: test4:
@@ -291,12 +291,12 @@ define void @test5(ptr %a, ptr %in) {
 ; P9-AIX32-NEXT:    srawi r5, r4, 31
 ; P9-AIX32-NEXT:    stw r4, -16(r1)
 ; P9-AIX32-NEXT:    lwz r4, L..C1(r2) # %const.0
-; P9-AIX32-NEXT:    lxv v3, -16(r1)
+; P9-AIX32-NEXT:    lxv vs1, -16(r1)
 ; P9-AIX32-NEXT:    stw r5, -32(r1)
-; P9-AIX32-NEXT:    lxv v4, -32(r1)
-; P9-AIX32-NEXT:    lxv v2, 0(r4)
-; P9-AIX32-NEXT:    vperm v2, v4, v3, v2
-; P9-AIX32-NEXT:    stxv v2, 0(r3)
+; P9-AIX32-NEXT:    lxv vs2, -32(r1)
+; P9-AIX32-NEXT:    lxv vs0, 0(r4)
+; P9-AIX32-NEXT:    xxperm vs1, vs2, vs0
+; P9-AIX32-NEXT:    stxv vs1, 0(r3)
 ; P9-AIX32-NEXT:    blr
 ;
 ; P8-AIX32-LABEL: test5:
@@ -367,13 +367,13 @@ define void @test6(ptr %a, ptr %in) {
 ; P9-AIX32-NEXT:    lwz r4, 0(r4)
 ; P9-AIX32-NEXT:    li r5, 0
 ; P9-AIX32-NEXT:    stw r5, -32(r1)
-; P9-AIX32-NEXT:    lxv v3, -32(r1)
+; P9-AIX32-NEXT:    lxv vs1, -32(r1)
 ; P9-AIX32-NEXT:    stw r4, -16(r1)
 ; P9-AIX32-NEXT:    lwz r4, L..C2(r2) # %const.0
-; P9-AIX32-NEXT:    lxv v4, -16(r1)
-; P9-AIX32-NEXT:    lxv v2, 0(r4)
-; P9-AIX32-NEXT:    vperm v2, v3, v4, v2
-; P9-AIX32-NEXT:    stxv v2, 0(r3)
+; P9-AIX32-NEXT:    lxv vs2, -16(r1)
+; P9-AIX32-NEXT:    lxv vs0, 0(r4)
+; P9-AIX32-NEXT:    xxperm vs2, vs1, vs0
+; P9-AIX32-NEXT:    stxv vs2, 0(r3)
 ; P9-AIX32-NEXT:    blr
 ;
 ; P8-AIX32-LABEL: test6:

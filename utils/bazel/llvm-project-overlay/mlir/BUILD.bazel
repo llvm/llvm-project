@@ -8301,6 +8301,7 @@ cc_library(
         ":LinalgUtils",
         ":MathDialect",
         ":MemRefDialect",
+        ":MemRefTransforms",
         ":Pass",
         ":SCFDialect",
         ":SCFTransforms",
