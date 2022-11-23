@@ -141,8 +141,13 @@ enum VmemType {
   VMEM_BVH
 };
 
+static bool updateVMCntOnly(const MachineInstr &Inst) {
+  return SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLATGlobal(Inst) ||
+         SIInstrInfo::isFLATScratch(Inst);
+}
+
 VmemType getVmemType(const MachineInstr &Inst) {
-  assert(SIInstrInfo::isVMEM(Inst));
+  assert(updateVMCntOnly(Inst));
   if (!SIInstrInfo::isMIMG(Inst))
     return VMEM_NOSAMPLER;
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
@@ -683,7 +688,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       if (T == VM_CNT) {
         if (Interval.first >= NUM_ALL_VGPRS)
           continue;
-        if (SIInstrInfo::isVMEM(Inst)) {
+        if (updateVMCntOnly(Inst)) {
           VmemType V = getVmemType(Inst);
           for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo)
             VgprVmemTypes[RegNo] |= 1 << V;
@@ -1182,7 +1187,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
             // previous write and this write are the same type of VMEM
             // instruction, in which case they're guaranteed to write their
             // results in order anyway.
-            if (Op.isUse() || !SIInstrInfo::isVMEM(MI) ||
+            if (Op.isUse() || !updateVMCntOnly(MI) ||
                 ScoreBrackets.hasOtherPendingVmemTypes(RegNo,
                                                        getVmemType(MI))) {
               ScoreBrackets.determineWait(VM_CNT, RegNo, Wait);

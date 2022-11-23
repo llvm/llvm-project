@@ -8605,7 +8605,7 @@ ScalarEvolution::ExitLimit::ExitLimit(
     : ExactNotTaken(E), MaxNotTaken(M), MaxOrZero(MaxOrZero) {
   // If we prove the max count is zero, so is the symbolic bound.  This happens
   // in practice due to differences in a) how context sensitive we've chosen
-  // to be and b) how we reason about bounds impied by UB.
+  // to be and b) how we reason about bounds implied by UB.
   if (MaxNotTaken->isZero())
     ExactNotTaken = MaxNotTaken;
 
