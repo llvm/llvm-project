@@ -191,6 +191,78 @@ template <size_t Bits> struct UInt {
     }
   }
 
+  // Return the full product.
+  template <size_t OtherBits>
+  constexpr UInt<Bits + OtherBits> ful_mul(const UInt<OtherBits> &other) const {
+    UInt<Bits + OtherBits> result(0);
+    UInt<128> partial_sum(0);
+    uint64_t carry = 0;
+    constexpr size_t OtherWordCount = UInt<OtherBits>::WordCount;
+    for (size_t i = 0; i <= WordCount + OtherWordCount - 2; ++i) {
+      const size_t lower_idx = i < OtherWordCount ? 0 : i - OtherWordCount + 1;
+      const size_t upper_idx = i < WordCount ? i : WordCount - 1;
+      for (size_t j = lower_idx; j <= upper_idx; ++j) {
+        NumberPair<uint64_t> prod = full_mul(val[j], other.val[i - j]);
+        UInt<128> tmp({prod.lo, prod.hi});
+        carry += partial_sum.add(tmp);
+      }
+      result.val[i] = partial_sum.val[0];
+      partial_sum.val[0] = partial_sum.val[1];
+      partial_sum.val[1] = carry;
+      carry = 0;
+    }
+    result.val[WordCount + OtherWordCount - 1] = partial_sum.val[0];
+    return result;
+  }
+
+  // Fast hi part of the full product.  The normal product `operator*` returns
+  // `Bits` least significant bits of the full product, while this function will
+  // approximate `Bits` most significant bits of the full product with errors
+  // bounded by:
+  //   0 <= (a.full_mul(b) >> Bits) - a.quick_mul_hi(b)) <= WordCount - 1.
+  //
+  // An example usage of this is to quickly (but less accurately) compute the
+  // product of (normalized) mantissas of floating point numbers:
+  //   (mant_1, mant_2) -> quick_mul_hi -> normalize leading bit
+  // is much more efficient than:
+  //   (mant_1, mant_2) -> ful_mul -> normalize leading bit
+  //                    -> convert back to same Bits width by shifting/rounding,
+  // especially for higher precisions.
+  //
+  // Performance summary:
+  //   Number of 64-bit x 64-bit -> 128-bit multiplications performed.
+  //   Bits  WordCount  ful_mul  quick_mul_hi  Error bound
+  //    128      2         4           3            1
+  //    196      3         9           6            2
+  //    256      4        16          10            3
+  //    512      8        64          36            7
+  constexpr UInt<Bits> quick_mul_hi(const UInt<Bits> &other) const {
+    UInt<Bits> result(0);
+    UInt<128> partial_sum(0);
+    uint64_t carry = 0;
+    // First round of accumulation for those at WordCount - 1 in the full
+    // product.
+    for (size_t i = 0; i < WordCount; ++i) {
+      NumberPair<uint64_t> prod =
+          full_mul(val[i], other.val[WordCount - 1 - i]);
+      UInt<128> tmp({prod.lo, prod.hi});
+      carry += partial_sum.add(tmp);
+    }
+    for (size_t i = WordCount; i < 2 * WordCount - 1; ++i) {
+      partial_sum.val[0] = partial_sum.val[1];
+      partial_sum.val[1] = carry;
+      carry = 0;
+      for (size_t j = i - WordCount + 1; j < WordCount; ++j) {
+        NumberPair<uint64_t> prod = full_mul(val[j], other.val[i - j]);
+        UInt<128> tmp({prod.lo, prod.hi});
+        carry += partial_sum.add(tmp);
+      }
+      result.val[i - WordCount] = partial_sum.val[0];
+    }
+    result.val[WordCount - 1] = partial_sum.val[1];
+    return result;
+  }
+
   // pow takes a power and sets this to its starting value to that power. Zero
   // to the zeroth power returns 1.
   constexpr void pow_n(uint64_t power) {
