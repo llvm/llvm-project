@@ -130,6 +130,11 @@ ABI Affecting Changes
   This ABI break only affects users that compile with ``-ffreestanding``, and only for ``atomic<T>`` where ``T``
   is a non-builtin type that could be lockfree on the platform. See https://llvm.org/D133377 for more details.
 
+- When building libc++ against newlib/picolibc, the type of ``regex_type_traits::char_class_type`` was changed to
+  ``uint16_t`` since all values of ``ctype_base::mask`` are taken. This is technically an ABI break, but including
+  ``<regex> `` has triggered a ``static_assert`` failure since libc++ 14, so it is unlikely that this causes
+   problems for existing users.
+
 Build System Changes
 --------------------
 - Support for ``libcxx``, ``libcxxabi`` and ``libunwind`` in ``LLVM_ENABLE_PROJECTS`` has officially
