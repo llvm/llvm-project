@@ -528,8 +528,7 @@ void VSCode::RegisterRequestCallback(std::string request,
   request_handlers[request] = callback;
 }
 
-lldb::SBError VSCode::WaitForProcessToStop(uint32_t seconds,
-                                           uint32_t old_stop_id) {
+lldb::SBError VSCode::WaitForProcessToStop(uint32_t seconds) {
   lldb::SBError error;
   lldb::SBProcess process = target.GetProcess();
   if (!process.IsValid()) {
@@ -539,33 +538,28 @@ lldb::SBError VSCode::WaitForProcessToStop(uint32_t seconds,
   auto timeout_time =
       std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
   while (std::chrono::steady_clock::now() < timeout_time) {
-    // Wait for stop id changed before checking for stopped state.
-    // This is needed to make sure we are not checking old stopped state in
-    // async mode.
-    if (old_stop_id > 0 && process.GetStopID() <= old_stop_id)
-      continue;
     const auto state = process.GetState();
     switch (state) {
-    case lldb::eStateAttaching:
-    case lldb::eStateConnected:
-    case lldb::eStateInvalid:
-    case lldb::eStateLaunching:
-    case lldb::eStateRunning:
-    case lldb::eStateStepping:
-    case lldb::eStateSuspended:
-      break;
-    case lldb::eStateDetached:
-      error.SetErrorString("process detached during launch or attach");
-      return error;
-    case lldb::eStateExited:
-      error.SetErrorString("process exited during launch or attach");
-      return error;
-    case lldb::eStateUnloaded:
-      error.SetErrorString("process unloaded during launch or attach");
-      return error;
-    case lldb::eStateCrashed:
-    case lldb::eStateStopped:
-      return lldb::SBError(); // Success!
+      case lldb::eStateAttaching:
+      case lldb::eStateConnected:
+      case lldb::eStateInvalid:
+      case lldb::eStateLaunching:
+      case lldb::eStateRunning:
+      case lldb::eStateStepping:
+      case lldb::eStateSuspended:
+        break;
+      case lldb::eStateDetached:
+        error.SetErrorString("process detached during launch or attach");
+        return error;
+      case lldb::eStateExited:
+        error.SetErrorString("process exited during launch or attach");
+        return error;
+      case lldb::eStateUnloaded:
+        error.SetErrorString("process unloaded during launch or attach");
+        return error;
+      case lldb::eStateCrashed:
+      case lldb::eStateStopped:
+        return lldb::SBError(); // Success!
     }
     std::this_thread::sleep_for(std::chrono::microseconds(250));
   }
