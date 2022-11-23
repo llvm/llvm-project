@@ -19,8 +19,6 @@ configure_compiler_rt_lit_site_cfg(
 # BlocksRuntime (and most of builtins) testsuites are not yet ported to lit.
 # add_subdirectory(BlocksRuntime)
 
-add_subdirectory(scudo/standalone)
-
 set(SANITIZER_COMMON_LIT_TEST_DEPS)
 
 if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
