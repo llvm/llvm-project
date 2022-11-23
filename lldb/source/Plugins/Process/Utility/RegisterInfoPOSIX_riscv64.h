@@ -31,7 +31,7 @@ public:
   };
 
   struct FPR {
-    uint64_t f[32];
+    uint64_t fpr[32];
     uint32_t fcsr;
   };
 
