@@ -1576,6 +1576,7 @@ auto HvxIdioms::createMul16(IRBuilderBase &Builder, SValue X, SValue Y) const
   if (X.Sgn == Signed) {
     V6_vmpyh = HVC.HST.getIntrinsicId(Hexagon::V6_vmpyhv);
   } else if (Y.Sgn == Signed) {
+    // In vmpyhus the second operand is unsigned
     V6_vmpyh = HVC.HST.getIntrinsicId(Hexagon::V6_vmpyhus);
   } else {
     V6_vmpyh = HVC.HST.getIntrinsicId(Hexagon::V6_vmpyuhv);
@@ -1583,7 +1584,7 @@ auto HvxIdioms::createMul16(IRBuilderBase &Builder, SValue X, SValue Y) const
 
   // i16*i16 -> i32 / interleaved
   Value *P =
-      HVC.createHvxIntrinsic(Builder, V6_vmpyh, HvxP32Ty, {X.Val, Y.Val});
+      HVC.createHvxIntrinsic(Builder, V6_vmpyh, HvxP32Ty, {Y.Val, X.Val});
   // Deinterleave
   return HVC.vdeal(Builder, HVC.sublo(Builder, P), HVC.subhi(Builder, P));
 }
