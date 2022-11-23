@@ -1414,19 +1414,20 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     return UnknownVal();
   }
 
-  if (!isa<TypedValueRegion>(MR)) {
-    if (T.isNull()) {
-      if (const TypedRegion *TR = dyn_cast<TypedRegion>(MR))
-        T = TR->getLocationType()->getPointeeType();
-      else if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(MR))
-        T = SR->getPointeeStaticType();
-    }
-    assert(!T.isNull() && "Unable to auto-detect binding type!");
-    assert(!T->isVoidType() && "Attempting to dereference a void pointer!");
-    MR = GetElementZeroRegion(cast<SubRegion>(MR), T);
-  } else {
-    T = cast<TypedValueRegion>(MR)->getValueType();
+  // Auto-detect the binding type.
+  if (T.isNull()) {
+    if (const auto *TVR = dyn_cast<TypedValueRegion>(MR))
+      T = TVR->getValueType();
+    else if (const auto *TR = dyn_cast<TypedRegion>(MR))
+      T = TR->getLocationType()->getPointeeType();
+    else if (const auto *SR = dyn_cast<SymbolicRegion>(MR))
+      T = SR->getPointeeStaticType();
   }
+  assert(!T.isNull() && "Unable to auto-detect binding type!");
+  assert(!T->isVoidType() && "Attempting to dereference a void pointer!");
+
+  if (!isa<TypedValueRegion>(MR))
+    MR = GetElementZeroRegion(cast<SubRegion>(MR), T);
 
   // FIXME: Perhaps this method should just take a 'const MemRegion*' argument
   //  instead of 'Loc', and have the other Loc cases handled at a higher level.
