@@ -1367,7 +1367,7 @@ private:
                               const SCEV *MaxNotTaken,
                               const SmallPtrSet<const SCEVPredicate *, 4> &Predicates)
       : ExitingBlock(ExitingBlock), ExactNotTaken(ExactNotTaken),
-        MaxNotTaken(ExactNotTaken), Predicates(Predicates) {}
+        MaxNotTaken(MaxNotTaken), Predicates(Predicates) {}
 
     bool hasAlwaysTruePredicate() const {
       return Predicates.empty();
