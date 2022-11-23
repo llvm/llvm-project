@@ -1,19 +1,13 @@
 #!/bin/sh
 
 FILE=$1
+BIN_DIR=$2
 if [ ! -f $FILE ]; then
 	echo "ERROR: Not a file: $FILE"
 	exit 3
 fi
 ret=0
-if [ "x$LLVM_CONFIG" = "x" ]; then
-	LLVM_CONFIG=llvm-config
-	echo 'WARNING: $LLVM_CONFIG not set, falling back to $PATH llvm-config'
-	ret=2
-fi
 
-
-BIN_DIR=$($LLVM_CONFIG --bindir)
 DIS="$BIN_DIR/llvm-dis"
 if [ ! -x $DIS ]; then
 	echo "ERROR: Disassembler '$DIS' is not executable"
