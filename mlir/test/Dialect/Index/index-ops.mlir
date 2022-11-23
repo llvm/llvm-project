@@ -33,6 +33,12 @@ func.func @binary_ops(%a: index, %b: index) {
   %13 = index.shrs %a, %b
   // CHECK-NEXT: index.shru %[[A]], %[[B]]
   %14 = index.shru %a, %b
+  // CHECK-NEXT: index.and %[[A]], %[[B]]
+  %15 = index.and %a, %b
+  // CHECK-NEXT: index.or %[[A]], %[[B]]
+  %16 = index.or %a, %b
+  // CHECK-NEXT: index.xor %[[A]], %[[B]]
+  %17 = index.xor %a, %b
   return
 }
 
