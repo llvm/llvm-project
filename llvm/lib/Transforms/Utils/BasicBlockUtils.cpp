@@ -85,7 +85,7 @@ void llvm::detachDeadBlocks(
       BB->getInstList().pop_back();
     }
     new UnreachableInst(BB->getContext(), BB);
-    assert(BB->getInstList().size() == 1 &&
+    assert(BB->size() == 1 &&
            isa<UnreachableInst>(BB->getTerminator()) &&
            "The successor list of BB isn't empty before "
            "applying corresponding DTU updates.");

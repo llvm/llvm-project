@@ -106,8 +106,7 @@ bool DomTreeUpdater::forceFlushDeletedBB() {
     // validateDeleteBB() removes all instructions of DelBB and adds an
     // UnreachableInst as its terminator. So we check whether the BasicBlock to
     // delete only has an UnreachableInst inside.
-    assert(BB->getInstList().size() == 1 &&
-           isa<UnreachableInst>(BB->getTerminator()) &&
+    assert(BB->size() == 1 && isa<UnreachableInst>(BB->getTerminator()) &&
            "DelBB has been modified while awaiting deletion.");
     BB->removeFromParent();
     eraseDelBBNode(BB);
