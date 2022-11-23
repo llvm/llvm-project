@@ -1635,6 +1635,14 @@ void AArch64TargetLowering::addTypeForStreamingSVE(MVT VT) {
   setOperationAction(ISD::FSQRT, VT, Custom);
   setOperationAction(ISD::FSUB, VT, Custom);
   setOperationAction(ISD::FABS, VT, Custom);
+  setOperationAction(ISD::SMIN, VT, Custom);
+  setOperationAction(ISD::SMAX, VT, Custom);
+  setOperationAction(ISD::UMIN, VT, Custom);
+  setOperationAction(ISD::UMAX, VT, Custom);
+  setOperationAction(ISD::FMAXNUM, VT, Custom);
+  setOperationAction(ISD::FMINNUM, VT, Custom);
+  setOperationAction(ISD::FMAXIMUM, VT, Custom);
+  setOperationAction(ISD::FMINIMUM, VT, Custom);
 }
 
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {

@@ -10,7 +10,11 @@ target triple = "aarch64-unknown-linux-gnu"
 define <8 x i8> @smax_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-LABEL: smax_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smax v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smax z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x i8> @llvm.smax.v8i8(<8 x i8> %op1, <8 x i8> %op2)
   ret <8 x i8> %res
@@ -19,7 +23,11 @@ define <8 x i8> @smax_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 define <16 x i8> @smax_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; CHECK-LABEL: smax_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smax v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smax z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <16 x i8> @llvm.smax.v16i8(<16 x i8> %op1, <16 x i8> %op2)
   ret <16 x i8> %res
@@ -29,9 +37,10 @@ define void @smax_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-LABEL: smax_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    smax v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    smax v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    smax z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    smax z1.b, p0/m, z1.b, z3.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, <32 x i8>* %a
@@ -44,7 +53,11 @@ define void @smax_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 define <4 x i16> @smax_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: smax_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smax v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smax z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x i16> @llvm.smax.v4i16(<4 x i16> %op1, <4 x i16> %op2)
   ret <4 x i16> %res
@@ -53,7 +66,11 @@ define <4 x i16> @smax_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 define <8 x i16> @smax_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 ; CHECK-LABEL: smax_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smax v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smax z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %op1, <8 x i16> %op2)
   ret <8 x i16> %res
@@ -63,9 +80,10 @@ define void @smax_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-LABEL: smax_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    smax v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    smax v1.8h, v1.8h, v3.8h
+; CHECK-NEXT:    smax z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    smax z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
@@ -78,7 +96,11 @@ define void @smax_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 define <2 x i32> @smax_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 ; CHECK-LABEL: smax_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smax v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x i32> @llvm.smax.v2i32(<2 x i32> %op1, <2 x i32> %op2)
   ret <2 x i32> %res
@@ -87,7 +109,11 @@ define <2 x i32> @smax_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 define <4 x i32> @smax_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
 ; CHECK-LABEL: smax_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %op1, <4 x i32> %op2)
   ret <4 x i32> %res
@@ -97,9 +123,10 @@ define void @smax_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-LABEL: smax_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    smax v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    smax v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    smax z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, <8 x i32>* %a
@@ -161,7 +188,11 @@ define void @smax_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 define <8 x i8> @smin_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-LABEL: smin_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smin v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smin z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x i8> @llvm.smin.v8i8(<8 x i8> %op1, <8 x i8> %op2)
   ret <8 x i8> %res
@@ -170,7 +201,11 @@ define <8 x i8> @smin_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 define <16 x i8> @smin_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; CHECK-LABEL: smin_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smin v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smin z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <16 x i8> @llvm.smin.v16i8(<16 x i8> %op1, <16 x i8> %op2)
   ret <16 x i8> %res
@@ -180,9 +215,10 @@ define void @smin_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-LABEL: smin_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    smin v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    smin v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    smin z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    smin z1.b, p0/m, z1.b, z3.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, <32 x i8>* %a
@@ -195,7 +231,11 @@ define void @smin_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 define <4 x i16> @smin_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: smin_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smin v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smin z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x i16> @llvm.smin.v4i16(<4 x i16> %op1, <4 x i16> %op2)
   ret <4 x i16> %res
@@ -204,7 +244,11 @@ define <4 x i16> @smin_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 define <8 x i16> @smin_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 ; CHECK-LABEL: smin_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smin v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smin z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %op1, <8 x i16> %op2)
   ret <8 x i16> %res
@@ -214,9 +258,10 @@ define void @smin_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-LABEL: smin_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    smin v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    smin v1.8h, v1.8h, v3.8h
+; CHECK-NEXT:    smin z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    smin z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
@@ -229,7 +274,11 @@ define void @smin_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 define <2 x i32> @smin_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 ; CHECK-LABEL: smin_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smin v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x i32> @llvm.smin.v2i32(<2 x i32> %op1, <2 x i32> %op2)
   ret <2 x i32> %res
@@ -238,7 +287,11 @@ define <2 x i32> @smin_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 define <4 x i32> @smin_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
 ; CHECK-LABEL: smin_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %op1, <4 x i32> %op2)
   ret <4 x i32> %res
@@ -248,9 +301,10 @@ define void @smin_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-LABEL: smin_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    smin v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    smin v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    smin z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, <8 x i32>* %a
@@ -312,7 +366,11 @@ define void @smin_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 define <8 x i8> @umax_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-LABEL: umax_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umax v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umax z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x i8> @llvm.umax.v8i8(<8 x i8> %op1, <8 x i8> %op2)
   ret <8 x i8> %res
@@ -321,7 +379,11 @@ define <8 x i8> @umax_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 define <16 x i8> @umax_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; CHECK-LABEL: umax_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umax v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umax z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <16 x i8> @llvm.umax.v16i8(<16 x i8> %op1, <16 x i8> %op2)
   ret <16 x i8> %res
@@ -331,9 +393,10 @@ define void @umax_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-LABEL: umax_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    umax v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    umax v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    umax z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    umax z1.b, p0/m, z1.b, z3.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, <32 x i8>* %a
@@ -346,7 +409,11 @@ define void @umax_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 define <4 x i16> @umax_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: umax_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umax v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umax z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x i16> @llvm.umax.v4i16(<4 x i16> %op1, <4 x i16> %op2)
   ret <4 x i16> %res
@@ -355,7 +422,11 @@ define <4 x i16> @umax_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 define <8 x i16> @umax_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 ; CHECK-LABEL: umax_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umax v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umax z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x i16> @llvm.umax.v8i16(<8 x i16> %op1, <8 x i16> %op2)
   ret <8 x i16> %res
@@ -365,9 +436,10 @@ define void @umax_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-LABEL: umax_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    umax v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    umax v1.8h, v1.8h, v3.8h
+; CHECK-NEXT:    umax z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    umax z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
@@ -380,7 +452,11 @@ define void @umax_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 define <2 x i32> @umax_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 ; CHECK-LABEL: umax_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umax v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umax z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x i32> @llvm.umax.v2i32(<2 x i32> %op1, <2 x i32> %op2)
   ret <2 x i32> %res
@@ -389,7 +465,11 @@ define <2 x i32> @umax_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 define <4 x i32> @umax_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
 ; CHECK-LABEL: umax_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umax v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umax z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %op1, <4 x i32> %op2)
   ret <4 x i32> %res
@@ -399,9 +479,10 @@ define void @umax_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-LABEL: umax_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    umax v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    umax v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    umax z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    umax z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, <8 x i32>* %a
@@ -463,7 +544,11 @@ define void @umax_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 define <8 x i8> @umin_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-LABEL: umin_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umin v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umin z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x i8> @llvm.umin.v8i8(<8 x i8> %op1, <8 x i8> %op2)
   ret <8 x i8> %res
@@ -472,7 +557,11 @@ define <8 x i8> @umin_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 define <16 x i8> @umin_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; CHECK-LABEL: umin_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umin v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umin z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <16 x i8> @llvm.umin.v16i8(<16 x i8> %op1, <16 x i8> %op2)
   ret <16 x i8> %res
@@ -482,9 +571,10 @@ define void @umin_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-LABEL: umin_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    umin v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    umin v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    umin z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    umin z1.b, p0/m, z1.b, z3.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, <32 x i8>* %a
@@ -497,7 +587,11 @@ define void @umin_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 define <4 x i16> @umin_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: umin_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umin v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x i16> @llvm.umin.v4i16(<4 x i16> %op1, <4 x i16> %op2)
   ret <4 x i16> %res
@@ -506,7 +600,11 @@ define <4 x i16> @umin_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 define <8 x i16> @umin_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 ; CHECK-LABEL: umin_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umin v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x i16> @llvm.umin.v8i16(<8 x i16> %op1, <8 x i16> %op2)
   ret <8 x i16> %res
@@ -516,9 +614,10 @@ define void @umin_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-LABEL: umin_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    umin v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    umin v1.8h, v1.8h, v3.8h
+; CHECK-NEXT:    umin z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    umin z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
@@ -531,7 +630,11 @@ define void @umin_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 define <2 x i32> @umin_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 ; CHECK-LABEL: umin_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umin v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umin z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x i32> @llvm.umin.v2i32(<2 x i32> %op1, <2 x i32> %op2)
   ret <2 x i32> %res
@@ -540,7 +643,11 @@ define <2 x i32> @umin_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 define <4 x i32> @umin_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
 ; CHECK-LABEL: umin_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umin z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %op1, <4 x i32> %op2)
   ret <4 x i32> %res
@@ -550,9 +657,10 @@ define void @umin_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-LABEL: umin_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    umin v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    umin v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    umin z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    umin z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, <8 x i32>* %a
