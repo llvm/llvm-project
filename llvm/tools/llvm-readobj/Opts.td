@@ -90,6 +90,7 @@ def grp_xcoff : OptionGroup<"kind">, HelpText<"OPTIONS (XCOFF specific)">;
 def auxiliary_header : FF<"auxiliary-header" , "Display the auxiliary header">, Group<grp_xcoff>;
 def exception_section : FF<"exception-section" , "Display the exception section entries">, Group<grp_xcoff>;
 def loader_section_header : FF<"loader-section-header" , "Display the loader section header">, Group<grp_xcoff>;
+def loader_section_symbols : FF<"loader-section-symbols" , "Display the loader section symbol table">, Group<grp_xcoff>;
 
 def help : FF<"help", "Display this help">;
 def version : FF<"version", "Display the version">;

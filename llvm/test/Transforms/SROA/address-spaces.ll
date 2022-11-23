@@ -11,8 +11,8 @@ declare void @llvm.memcpy.p1.p1.i32(ptr addrspace(1) nocapture, ptr addrspace(1)
 ; Make sure an illegal bitcast isn't introduced
 define void @test_address_space_1_1(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-LABEL: @test_address_space_1_1(
-; CHECK-NEXT:    [[AA_0_COPYLOAD:%.*]] = load <2 x i64>, ptr addrspace(1) [[A:%.*]], align 2
-; CHECK-NEXT:    store <2 x i64> [[AA_0_COPYLOAD]], ptr addrspace(1) [[B:%.*]], align 2
+; CHECK-NEXT:    [[AA_SROA_0_0_COPYLOAD:%.*]] = load <16 x i8>, ptr addrspace(1) [[A:%.*]], align 2
+; CHECK-NEXT:    store <16 x i8> [[AA_SROA_0_0_COPYLOAD]], ptr addrspace(1) [[B:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %aa = alloca <2 x i64>, align 16
@@ -23,8 +23,8 @@ define void @test_address_space_1_1(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 
 define void @test_address_space_1_0(ptr addrspace(1) %a, ptr %b) {
 ; CHECK-LABEL: @test_address_space_1_0(
-; CHECK-NEXT:    [[AA_0_COPYLOAD:%.*]] = load <2 x i64>, ptr addrspace(1) [[A:%.*]], align 2
-; CHECK-NEXT:    store <2 x i64> [[AA_0_COPYLOAD]], ptr [[B:%.*]], align 2
+; CHECK-NEXT:    [[AA_SROA_0_0_COPYLOAD:%.*]] = load <16 x i8>, ptr addrspace(1) [[A:%.*]], align 2
+; CHECK-NEXT:    store <16 x i8> [[AA_SROA_0_0_COPYLOAD]], ptr [[B:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %aa = alloca <2 x i64>, align 16
@@ -35,8 +35,8 @@ define void @test_address_space_1_0(ptr addrspace(1) %a, ptr %b) {
 
 define void @test_address_space_0_1(ptr %a, ptr addrspace(1) %b) {
 ; CHECK-LABEL: @test_address_space_0_1(
-; CHECK-NEXT:    [[AA_0_COPYLOAD:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 2
-; CHECK-NEXT:    store <2 x i64> [[AA_0_COPYLOAD]], ptr addrspace(1) [[B:%.*]], align 2
+; CHECK-NEXT:    [[AA_SROA_0_0_COPYLOAD:%.*]] = load <16 x i8>, ptr [[A:%.*]], align 2
+; CHECK-NEXT:    store <16 x i8> [[AA_SROA_0_0_COPYLOAD]], ptr addrspace(1) [[B:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %aa = alloca <2 x i64>, align 16

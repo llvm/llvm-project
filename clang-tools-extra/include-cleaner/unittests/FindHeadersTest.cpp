@@ -8,71 +8,149 @@
 
 #include "AnalysisInternal.h"
 #include "clang-include-cleaner/Record.h"
+#include "clang/Basic/FileEntry.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Testing/TestAST.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
 
 namespace clang::include_cleaner {
 namespace {
 using testing::UnorderedElementsAre;
 
-TEST(FindIncludeHeaders, IWYU) {
+std::string guard(llvm::StringRef Code) {
+  return "#pragma once\n" + Code.str();
+}
+
+class FindHeadersTest : public testing::Test {
+protected:
   TestInputs Inputs;
   PragmaIncludes PI;
-  Inputs.MakeAction = [&PI] {
-    struct Hook : public PreprocessOnlyAction {
-    public:
-      Hook(PragmaIncludes *Out) : Out(Out) {}
-      bool BeginSourceFileAction(clang::CompilerInstance &CI) override {
-        Out->record(CI);
-        return true;
-      }
+  std::unique_ptr<TestAST> AST;
+  FindHeadersTest() {
+    Inputs.MakeAction = [this] {
+      struct Hook : public PreprocessOnlyAction {
+      public:
+        Hook(PragmaIncludes *Out) : Out(Out) {}
+        bool BeginSourceFileAction(clang::CompilerInstance &CI) override {
+          Out->record(CI);
+          return true;
+        }
 
-      PragmaIncludes *Out;
+        PragmaIncludes *Out;
+      };
+      return std::make_unique<Hook>(&PI);
     };
-    return std::make_unique<Hook>(&PI);
-  };
+  }
+  void buildAST() { AST = std::make_unique<TestAST>(Inputs); }
 
+  llvm::SmallVector<Header> findHeaders(llvm::StringRef FileName) {
+    return include_cleaner::findHeaders(
+        AST->sourceManager().translateFileLineCol(
+            AST->fileManager().getFile(FileName).get(),
+            /*Line=*/1, /*Col=*/1),
+        AST->sourceManager(), &PI);
+  }
+  const FileEntry *physicalHeader(llvm::StringRef FileName) {
+    return AST->fileManager().getFile(FileName).get();
+  };
+};
+
+TEST_F(FindHeadersTest, IWYUPrivateToPublic) {
   Inputs.Code = R"cpp(
-    #include "header1.h"
-    #include "header2.h"
+    #include "private.h"
   )cpp";
-  Inputs.ExtraFiles["header1.h"] = R"cpp(
+  Inputs.ExtraFiles["private.h"] = guard(R"cpp(
     // IWYU pragma: private, include "path/public.h"
+  )cpp");
+  buildAST();
+  EXPECT_THAT(findHeaders("private.h"),
+              UnorderedElementsAre(physicalHeader("private.h"),
+                                   Header("\"path/public.h\"")));
+}
+
+TEST_F(FindHeadersTest, IWYUExport) {
+  Inputs.Code = R"cpp(
+    #include "exporter.h"
   )cpp";
-  Inputs.ExtraFiles["header2.h"] = R"cpp(
-    #include "detail1.h" // IWYU pragma: export
+  Inputs.ExtraFiles["exporter.h"] = guard(R"cpp(
+    #include "exported1.h" // IWYU pragma: export
 
     // IWYU pragma: begin_exports
-    #include "detail2.h"
+    #include "exported2.h"
     // IWYU pragma: end_exports
 
     #include "normal.h"
+  )cpp");
+  Inputs.ExtraFiles["exported1.h"] = guard("");
+  Inputs.ExtraFiles["exported2.h"] = guard("");
+  Inputs.ExtraFiles["normal.h"] = guard("");
+
+  buildAST();
+  EXPECT_THAT(findHeaders("exported1.h"),
+              UnorderedElementsAre(physicalHeader("exported1.h"),
+                                   physicalHeader("exporter.h")));
+  EXPECT_THAT(findHeaders("exported2.h"),
+              UnorderedElementsAre(physicalHeader("exported2.h"),
+                                   physicalHeader("exporter.h")));
+  EXPECT_THAT(findHeaders("normal.h"),
+              UnorderedElementsAre(physicalHeader("normal.h")));
+  EXPECT_THAT(findHeaders("exporter.h"),
+              UnorderedElementsAre(physicalHeader("exporter.h")));
+}
+
+TEST_F(FindHeadersTest, SelfContained) {
+  Inputs.Code = R"cpp(
+    #include "header.h"
   )cpp";
-  Inputs.ExtraFiles["normal.h"] = Inputs.ExtraFiles["detail1.h"] =
-      Inputs.ExtraFiles["detail2.h"] = "";
-  TestAST AST(Inputs);
-  const auto &SM = AST.sourceManager();
-  auto &FM = SM.getFileManager();
-  // Returns the source location for the start of the file.
-  auto SourceLocFromFile = [&](llvm::StringRef FileName) {
-    return SM.translateFileLineCol(FM.getFile(FileName).get(),
-                                   /*Line=*/1, /*Col=*/1);
-  };
+  Inputs.ExtraFiles["header.h"] = guard(R"cpp(
+    #include "fragment.inc"
+  )cpp");
+  Inputs.ExtraFiles["fragment.inc"] = "";
+  buildAST();
+  EXPECT_THAT(findHeaders("fragment.inc"),
+              UnorderedElementsAre(physicalHeader("fragment.inc"),
+                                   physicalHeader("header.h")));
+}
 
-  EXPECT_THAT(findHeaders(SourceLocFromFile("header1.h"), SM, &PI),
-              UnorderedElementsAre(Header("\"path/public.h\"")));
+TEST_F(FindHeadersTest, NonSelfContainedTraversePrivate) {
+  Inputs.Code = R"cpp(
+    #include "header.h"
+  )cpp";
+  Inputs.ExtraFiles["header.h"] = guard(R"cpp(
+    #include "fragment.inc"
+  )cpp");
+  Inputs.ExtraFiles["fragment.inc"] = R"cpp(
+    // IWYU pragma: private, include "public.h"
+  )cpp";
 
-  EXPECT_THAT(findHeaders(SourceLocFromFile("detail1.h"), SM, &PI),
-              UnorderedElementsAre(Header(FM.getFile("header2.h").get()),
-                                   Header(FM.getFile("detail1.h").get())));
-  EXPECT_THAT(findHeaders(SourceLocFromFile("detail2.h"), SM, &PI),
-              UnorderedElementsAre(Header(FM.getFile("header2.h").get()),
-                                   Header(FM.getFile("detail2.h").get())));
+  buildAST();
+  // There is a IWYU private mapping in the non self-contained header, verify
+  // that we don't emit its includer.
+  EXPECT_THAT(findHeaders("fragment.inc"),
+              UnorderedElementsAre(physicalHeader("fragment.inc"),
+                                   Header("\"public.h\"")));
+}
 
-  EXPECT_THAT(findHeaders(SourceLocFromFile("normal.h"), SM, &PI),
-              UnorderedElementsAre(Header(FM.getFile("normal.h").get())));
+TEST_F(FindHeadersTest, NonSelfContainedTraverseExporter) {
+  Inputs.Code = R"cpp(
+    #include "exporter.h"
+  )cpp";
+  Inputs.ExtraFiles["exporter.h"] = guard(R"cpp(
+    #include "exported.h" // IWYU pragma: export
+  )cpp");
+  Inputs.ExtraFiles["exported.h"] = guard(R"cpp(
+    #include "fragment.inc"
+  )cpp");
+  Inputs.ExtraFiles["fragment.inc"] = "";
+  buildAST();
+  // Verify that we emit exporters for each header on the path.
+  EXPECT_THAT(findHeaders("fragment.inc"),
+              UnorderedElementsAre(physicalHeader("fragment.inc"),
+                                   physicalHeader("exported.h"),
+                                   physicalHeader("exporter.h")));
 }
 
 } // namespace

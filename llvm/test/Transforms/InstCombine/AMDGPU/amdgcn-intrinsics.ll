@@ -644,7 +644,7 @@ define i1 @test_class_isnan_f32(float %x) nounwind {
 
 define i1 @test_class_isnan_f32_strict(float %x) nounwind {
 ; CHECK-LABEL: @test_class_isnan_f32_strict(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.amdgcn.class.f32(float [[X:%.*]], i32 3) #[[ATTR15:[0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.amdgcn.class.f32(float [[X:%.*]], i32 3) #[[ATTR16:[0-9]+]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 3) strictfp
@@ -662,7 +662,7 @@ define i1 @test_class_is_p0_n0_f32(float %x) nounwind {
 
 define i1 @test_class_is_p0_n0_f32_strict(float %x) nounwind {
 ; CHECK-LABEL: @test_class_is_p0_n0_f32_strict(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.amdgcn.class.f32(float [[X:%.*]], i32 96) #[[ATTR15]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.amdgcn.class.f32(float [[X:%.*]], i32 96) #[[ATTR16]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 96) strictfp
@@ -1793,7 +1793,7 @@ define i64 @icmp_constant_inputs_false() {
 
 define i64 @icmp_constant_inputs_true() {
 ; CHECK-LABEL: @icmp_constant_inputs_true(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0:![0-9]+]]) #[[ATTR16:[0-9]+]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0:![0-9]+]]) #[[ATTR17:[0-9]+]]
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 9, i32 8, i32 34)
@@ -2500,7 +2500,7 @@ define i64 @fcmp_constant_inputs_false() {
 
 define i64 @fcmp_constant_inputs_true() {
 ; CHECK-LABEL: @fcmp_constant_inputs_true(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR16]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR17]]
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float 2.0, float 4.0, i32 4)
@@ -2542,7 +2542,7 @@ define i64 @ballot_zero_64() {
 
 define i64 @ballot_one_64() {
 ; CHECK-LABEL: @ballot_one_64(
-; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR16]]
+; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR17]]
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %b = call i64 @llvm.amdgcn.ballot.i64(i1 1)
@@ -2568,7 +2568,7 @@ define i32 @ballot_zero_32() {
 
 define i32 @ballot_one_32() {
 ; CHECK-LABEL: @ballot_one_32(
-; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.read_register.i32(metadata [[META1:![0-9]+]]) #[[ATTR16]]
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.read_register.i32(metadata [[META1:![0-9]+]]) #[[ATTR17]]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %b = call i32 @llvm.amdgcn.ballot.i32(i1 1)
@@ -5467,4 +5467,209 @@ define i1 @test_is_private_undef() nounwind {
 ;
   %val = call i1 @llvm.amdgcn.is.private(ptr undef)
   ret i1 %val
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.trig.preop
+; --------------------------------------------------------------------
+
+declare double @llvm.amdgcn.trig.preop.f64(double, i32)
+declare float @llvm.amdgcn.trig.preop.f32(float, i32)
+
+define double @trig_preop_constfold_variable_undef_arg(i32 %arg) {
+; CHECK-LABEL: @trig_preop_constfold_variable_undef_arg(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double undef, i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double undef, i32 %arg)
+  ret double %val
+}
+
+define double @trig_preop_constfold_variable_poison_arg(i32 %arg) {
+; CHECK-LABEL: @trig_preop_constfold_variable_poison_arg(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double poison, i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double poison, i32 %arg)
+  ret double %val
+}
+
+define double @trig_preop_constfold_variable_arg_undef(double %arg) {
+; CHECK-LABEL: @trig_preop_constfold_variable_arg_undef(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[ARG:%.*]], i32 undef)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double %arg, i32 undef)
+  ret double %val
+}
+
+define double @trig_preop_constfold_variable_arg_poison(double %arg) {
+; CHECK-LABEL: @trig_preop_constfold_variable_arg_poison(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[ARG:%.*]], i32 poison)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double %arg, i32 poison)
+  ret double %val
+}
+
+define double @trig_preop_constfold_variable_int(i32 %arg) {
+; CHECK-LABEL: @trig_preop_constfold_variable_int(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 %arg)
+  ret double %val
+}
+
+define double @trig_preop_qnan(i32 %arg) {
+; CHECK-LABEL: @trig_preop_qnan(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF8000000000000, i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF8000000000000, i32 %arg)
+  ret double %val
+}
+
+define double @trig_preop_snan(i32 %arg) {
+; CHECK-LABEL: @trig_preop_snan(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF0000000000001, i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF0000000000001, i32 %arg)
+  ret double %val
+}
+
+define double @trig_preop_inf_0() {
+; CHECK-LABEL: @trig_preop_inf_0(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF0000000000000, i32 0)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF0000000000000, i32 0)
+  ret double %val
+}
+
+define double @trig_preop_ninf_0() {
+; CHECK-LABEL: @trig_preop_ninf_0(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0xFFF0000000000000, i32 0)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0xFFF0000000000000, i32 0)
+  ret double %val
+}
+
+define double @trig_preop_variable_fp(double %arg) {
+; CHECK-LABEL: @trig_preop_variable_fp(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[ARG:%.*]], i32 5)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double %arg, i32 5)
+  ret double %val
+}
+
+define double @trig_preop_variable_args(double %arg0, i32 %arg1) {
+; CHECK-LABEL: @trig_preop_variable_args(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[ARG0:%.*]], i32 [[ARG1:%.*]])
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double %arg0, i32 %arg1)
+  ret double %val
+}
+
+define double @trig_preop_constfold() {
+; CHECK-LABEL: @trig_preop_constfold(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 5)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 5)
+  ret double %val
+}
+
+define double @trig_preop_constfold_strictfp() {
+; CHECK-LABEL: @trig_preop_constfold_strictfp(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 5) #[[ATTR16]]
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 5) strictfp
+  ret double %val
+}
+
+define double @trig_preop_constfold_0.0__0() {
+; CHECK-LABEL: @trig_preop_constfold_0.0__0(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0.000000e+00, i32 0)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0.0, i32 0)
+  ret double %val
+}
+
+define double @trig_preop_constfold_0.0__1() {
+; CHECK-LABEL: @trig_preop_constfold_0.0__1(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0.000000e+00, i32 1)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0.0, i32 1)
+  ret double %val
+}
+
+define double @trig_preop_constfold_0.0__neg1() {
+; CHECK-LABEL: @trig_preop_constfold_0.0__neg1(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0.000000e+00, i32 -1)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0.0, i32 -1)
+  ret double %val
+}
+
+define double @trig_preop_constfold_0.0__9999999() {
+; CHECK-LABEL: @trig_preop_constfold_0.0__9999999(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0.000000e+00, i32 9999999)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0.0, i32 9999999)
+  ret double %val
+}
+
+define double @trig_preop_constfold_0.0__neg999999() {
+; CHECK-LABEL: @trig_preop_constfold_0.0__neg999999(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0.000000e+00, i32 -999999)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0.0, i32 -999999)
+  ret double %val
+}
+
+define double @trig_preop_constfold_0x0020000000000000_0() {
+; CHECK-LABEL: @trig_preop_constfold_0x0020000000000000_0(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0x10000000000000, i32 0)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x0010000000000000, i32 0)
+  ret double %val
+}
+
+define double @trig_preop_constfold_0x001fffffffffffff_0() {
+; CHECK-LABEL: @trig_preop_constfold_0x001fffffffffffff_0(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0xFFFFFFFFFFFFF, i32 0)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x000fffffffffffff, i32 0)
+  ret double %val
+}
+
+define double @trig_preop_constfold_0x8020000000000000_0() {
+; CHECK-LABEL: @trig_preop_constfold_0x8020000000000000_0(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0x8020000000000000, i32 0)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x8020000000000000, i32 0)
+  ret double %val
+}
+
+define double @trig_preop_constfold_0x801fffffffffffff_0() {
+; CHECK-LABEL: @trig_preop_constfold_0x801fffffffffffff_0(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 0x801FFFFFFFFFFFFF, i32 0)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x801fffffffffffff, i32 0)
+  ret double %val
 }

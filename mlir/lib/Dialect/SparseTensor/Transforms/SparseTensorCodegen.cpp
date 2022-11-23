@@ -237,16 +237,16 @@ convertSparseTensorType(Type type, SmallVectorImpl<Type> &fields) {
     // order. Clients of this type know what field is what from the sparse
     // tensor type.
     if (isCompressedDim(rType, r)) {
-      fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, ptrType));
-      fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, idxType));
+      fields.push_back(MemRefType::get({ShapedType::kDynamic}, ptrType));
+      fields.push_back(MemRefType::get({ShapedType::kDynamic}, idxType));
     } else if (isSingletonDim(rType, r)) {
-      fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, idxType));
+      fields.push_back(MemRefType::get({ShapedType::kDynamic}, idxType));
     } else {
       assert(isDenseDim(rType, r)); // no fields
     }
   }
   // The values array.
-  fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, eltType));
+  fields.push_back(MemRefType::get({ShapedType::kDynamic}, eltType));
   assert(fields.size() == lastField);
   return success();
 }
@@ -272,14 +272,12 @@ static void allocSchemeForRank(OpBuilder &builder, Location loc,
     }
     if (isSingletonDim(rtp, r)) {
       return; // nothing to do
-    } else {
-      // Keep compounding the size, but nothing needs to be initialized
+    }         // Keep compounding the size, but nothing needs to be initialized
       // at this level. We will eventually reach a compressed level or
       // otherwise the values array for the from-here "all-dense" case.
       assert(isDenseDim(rtp, r));
       Value size = sizeAtStoredDim(builder, loc, rtp, fields, r);
       linear = builder.create<arith::MulIOp>(loc, linear, size);
-    }
   }
   // Reached values array so prepare for an insertion.
   Value valZero = constantZero(builder, loc, rtp.getElementType());
@@ -290,7 +288,7 @@ static void allocSchemeForRank(OpBuilder &builder, Location loc,
 /// Creates allocation operation.
 static Value createAllocation(OpBuilder &builder, Location loc, Type type,
                               Value sz, bool enableInit) {
-  auto memType = MemRefType::get({ShapedType::kDynamicSize}, type);
+  auto memType = MemRefType::get({ShapedType::kDynamic}, type);
   Value buffer = builder.create<memref::AllocOp>(loc, memType, sz);
   if (enableInit) {
     Value fillValue =
@@ -794,7 +792,7 @@ public:
     assert(sz); // This for sure is a sparse tensor
     // Generate a memref for `sz` elements of type `t`.
     auto genAlloc = [&](Type t) {
-      auto memTp = MemRefType::get({ShapedType::kDynamicSize}, t);
+      auto memTp = MemRefType::get({ShapedType::kDynamic}, t);
       return rewriter.create<memref::AllocOp>(loc, memTp, ValueRange{*sz});
     };
     // Allocate temporary buffers for values/filled-switch and added.

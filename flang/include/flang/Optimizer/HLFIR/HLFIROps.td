@@ -133,4 +133,79 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
   }];
 }
 
+def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
+  let summary = "Designate a Fortran variable";
+
+  let description = [{
+    This operation represents a Fortran "part-ref", except that it can embed a
+    substring or or complex part directly, and that vector subscripts cannot be
+    used. It returns a Fortran variable that is a part of the input variable.
+
+    The operands are as follow:
+      - memref is the variable being designated.
+      - component may be provided if the memref is a derived type to
+        represent a reference to a component. It must be the name of a
+        component of memref derived type.
+      - component_shape represents the shape of the component and must be
+        provided if and only if both component and indices appear.
+      - indices can be provided to index arrays. The indices may be simple
+        indices or triplets.
+        If indices are provided and there is a component, the component must be
+        an array component and the indices index the array component.
+        If memref is an array, and component is provided and is an array
+        component, indices must be provided and must not be triplets. This
+        ensures hlfir.designate does not create arrays of arrays (which is not
+        possible in Fortran).
+      - substring may contain two values to represent a substring lower and
+        upper bounds.
+      - complex_part may be provided to represent a complex part (true
+        represents the imaginary part, and false the real part).
+      - shape represents the shape of the result and must be provided if the
+        result is an array that is not a box address.
+      - typeparams represents the length parameters of the result and must be
+        provided if the result type has length parameters and is not a box
+        address.
+  }];
+
+  let arguments = (ins AnyFortranVariable:$memref,
+                   OptionalAttr<Builtin_StringAttr>:$component,
+                   Optional<AnyShapeOrShiftType>:$component_shape,
+                   Variadic<AnyIntegerType>:$indices,
+                   DenseBoolArrayAttr:$is_triplet,
+                   Variadic<AnyIntegerType>:$substring,
+                   OptionalAttr<BoolAttr>:$complex_part,
+                   Optional<AnyShapeOrShiftType>:$shape,
+                   Variadic<AnyIntegerType>:$typeparams,
+                   OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs
+                );
+
+  let results = (outs AnyFortranVariable);
+
+  let assemblyFormat = [{
+    $memref (`{` $component^ `}`)? (`<` $component_shape^ `>`)?
+    custom<DesignatorIndices>($indices, $is_triplet)
+    (`substr` $substring^)?
+    custom<DesignatorComplexPart>($complex_part)
+    (`shape` $shape^)? (`typeparams` $typeparams^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    using Triplet = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
+    using Subscript = std::variant<mlir::Value, Triplet>;
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$memref,
+      "llvm::StringRef":$component, "mlir::Value":$component_shape,
+      "llvm::ArrayRef<std::variant<mlir::Value, std::tuple<mlir::Value, mlir::Value, mlir::Value>>>":$subscripts,
+      CArg<"mlir::ValueRange", "{}">:$substring,
+      CArg<"llvm::Optional<bool>", "{}">:$complex_part,
+      CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>];
+
+  let hasVerifier = 1;
+}
+
 #endif // FORTRAN_DIALECT_HLFIR_OPS

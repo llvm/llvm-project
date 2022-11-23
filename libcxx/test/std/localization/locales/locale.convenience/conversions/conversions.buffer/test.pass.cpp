@@ -14,30 +14,28 @@
 
 // XFAIL: no-wide-characters
 
-#include <fstream>
-#include <locale>
-#include <codecvt>
 #include <cassert>
+#include <codecvt>
+#include <locale>
+#include <sstream>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+int main(int, char**) {
+    std::string storage;
     {
-        std::ofstream bytestream("myfile.txt");
+        std::ostringstream bytestream;
         std::wbuffer_convert<std::codecvt_utf8<wchar_t> > mybuf(bytestream.rdbuf());
         std::wostream mystr(&mybuf);
         mystr << L"Hello" << std::endl;
+        storage = bytestream.str();
     }
     {
-        std::ifstream bytestream("myfile.txt");
+        std::istringstream bytestream(storage);
         std::wbuffer_convert<std::codecvt_utf8<wchar_t> > mybuf(bytestream.rdbuf());
         std::wistream mystr(&mybuf);
         std::wstring ws;
         mystr >> ws;
         assert(ws == L"Hello");
     }
-    std::remove("myfile.txt");
 
-  return 0;
+    return 0;
 }

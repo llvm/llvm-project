@@ -183,11 +183,11 @@ define i32 @test_rev16_w(i32 %X) nounwind {
 ; GISEL-NEXT:    lsl w9, w0, #8
 ; GISEL-NEXT:    and w10, w8, #0xff0000
 ; GISEL-NEXT:    and w11, w9, #0xff000000
-; GISEL-NEXT:    and w8, w8, #0xff
 ; GISEL-NEXT:    and w9, w9, #0xff00
 ; GISEL-NEXT:    orr w10, w11, w10
-; GISEL-NEXT:    orr w8, w9, w8
-; GISEL-NEXT:    orr w0, w10, w8
+; GISEL-NEXT:    and w8, w8, #0xff
+; GISEL-NEXT:    orr w9, w10, w9
+; GISEL-NEXT:    orr w0, w9, w8
 ; GISEL-NEXT:    ret
 entry:
   %tmp1 = lshr i32 %X, 8
@@ -729,16 +729,16 @@ define i64 @test_rev16_x_hwbyteswaps_complex1(i64 %a) nounwind {
 ; GISEL-NEXT:    lsl x9, x0, #8
 ; GISEL-NEXT:    and x10, x8, #0xff000000000000
 ; GISEL-NEXT:    and x11, x9, #0xff00000000000000
-; GISEL-NEXT:    and x12, x8, #0xff00000000
-; GISEL-NEXT:    and x13, x9, #0xff0000000000
 ; GISEL-NEXT:    orr x10, x10, x11
-; GISEL-NEXT:    orr x11, x12, x13
-; GISEL-NEXT:    and x12, x8, #0xff0000
-; GISEL-NEXT:    and x13, x9, #0xff000000
-; GISEL-NEXT:    orr x12, x12, x13
+; GISEL-NEXT:    and x11, x8, #0xff00000000
+; GISEL-NEXT:    orr x10, x10, x11
+; GISEL-NEXT:    and x11, x9, #0xff0000000000
+; GISEL-NEXT:    orr x10, x10, x11
+; GISEL-NEXT:    and x11, x8, #0xff0000
+; GISEL-NEXT:    orr x10, x10, x11
+; GISEL-NEXT:    and x11, x9, #0xff000000
+; GISEL-NEXT:    orr x10, x10, x11
 ; GISEL-NEXT:    and x8, x8, #0xff
-; GISEL-NEXT:    orr x10, x10, x11
-; GISEL-NEXT:    orr x8, x12, x8
 ; GISEL-NEXT:    orr x8, x10, x8
 ; GISEL-NEXT:    and x9, x9, #0xff00
 ; GISEL-NEXT:    orr x0, x8, x9
@@ -782,21 +782,21 @@ define i64 @test_rev16_x_hwbyteswaps_complex2(i64 %a) nounwind {
 ; GISEL-LABEL: test_rev16_x_hwbyteswaps_complex2:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    lsr x8, x0, #8
-; GISEL-NEXT:    lsl x9, x0, #8
-; GISEL-NEXT:    and x10, x8, #0xff000000000000
+; GISEL-NEXT:    lsl x10, x0, #8
+; GISEL-NEXT:    and x9, x8, #0xff000000000000
 ; GISEL-NEXT:    and x11, x8, #0xff00000000
-; GISEL-NEXT:    and x12, x8, #0xff0000
+; GISEL-NEXT:    orr x9, x9, x11
+; GISEL-NEXT:    and x11, x8, #0xff0000
+; GISEL-NEXT:    orr x9, x9, x11
 ; GISEL-NEXT:    and x8, x8, #0xff
-; GISEL-NEXT:    orr x10, x10, x11
-; GISEL-NEXT:    orr x8, x12, x8
-; GISEL-NEXT:    and x11, x9, #0xff00000000000000
-; GISEL-NEXT:    and x12, x9, #0xff0000000000
-; GISEL-NEXT:    orr x11, x11, x12
-; GISEL-NEXT:    and x12, x9, #0xff000000
-; GISEL-NEXT:    orr x8, x10, x8
-; GISEL-NEXT:    orr x10, x11, x12
-; GISEL-NEXT:    orr x8, x8, x10
-; GISEL-NEXT:    and x9, x9, #0xff00
+; GISEL-NEXT:    orr x8, x9, x8
+; GISEL-NEXT:    and x9, x10, #0xff00000000000000
+; GISEL-NEXT:    orr x8, x8, x9
+; GISEL-NEXT:    and x9, x10, #0xff0000000000
+; GISEL-NEXT:    orr x8, x8, x9
+; GISEL-NEXT:    and x9, x10, #0xff000000
+; GISEL-NEXT:    orr x8, x8, x9
+; GISEL-NEXT:    and x9, x10, #0xff00
 ; GISEL-NEXT:    orr x0, x8, x9
 ; GISEL-NEXT:    ret
 entry:
@@ -847,17 +847,17 @@ define i64 @test_rev16_x_hwbyteswaps_complex3(i64 %a) nounwind {
 ; GISEL-NEXT:    lsl x9, x0, #8
 ; GISEL-NEXT:    and x10, x8, #0xff000000000000
 ; GISEL-NEXT:    and x11, x9, #0xff00000000000000
-; GISEL-NEXT:    and x12, x8, #0xff00000000
-; GISEL-NEXT:    and x13, x9, #0xff0000000000
 ; GISEL-NEXT:    orr x10, x11, x10
-; GISEL-NEXT:    orr x11, x12, x13
-; GISEL-NEXT:    and x12, x8, #0xff0000
-; GISEL-NEXT:    and x13, x9, #0xff000000
-; GISEL-NEXT:    orr x12, x12, x13
+; GISEL-NEXT:    and x11, x8, #0xff00000000
+; GISEL-NEXT:    orr x10, x11, x10
+; GISEL-NEXT:    and x11, x9, #0xff0000000000
+; GISEL-NEXT:    orr x10, x11, x10
+; GISEL-NEXT:    and x11, x8, #0xff0000
+; GISEL-NEXT:    orr x10, x11, x10
+; GISEL-NEXT:    and x11, x9, #0xff000000
+; GISEL-NEXT:    orr x10, x11, x10
 ; GISEL-NEXT:    and x8, x8, #0xff
-; GISEL-NEXT:    orr x10, x10, x11
-; GISEL-NEXT:    orr x8, x12, x8
-; GISEL-NEXT:    orr x8, x10, x8
+; GISEL-NEXT:    orr x8, x8, x10
 ; GISEL-NEXT:    and x9, x9, #0xff00
 ; GISEL-NEXT:    orr x0, x9, x8
 ; GISEL-NEXT:    ret
@@ -918,24 +918,24 @@ define i64 @test_or_and_combine2(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_or_and_combine2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsr x8, x0, #8
-; CHECK-NEXT:    lsl x9, x0, #8
-; CHECK-NEXT:    and x10, x8, #0xff000000000000
-; CHECK-NEXT:    and x11, x9, #0xff00000000
+; CHECK-NEXT:    lsl x10, x0, #8
+; CHECK-NEXT:    and x9, x8, #0xff000000000000
 ; CHECK-NEXT:    and x8, x8, #0xff0000
-; CHECK-NEXT:    orr x9, x10, x9
-; CHECK-NEXT:    orr x8, x11, x8
+; CHECK-NEXT:    orr x9, x9, x10
+; CHECK-NEXT:    and x10, x10, #0xff00000000
+; CHECK-NEXT:    orr x9, x9, x10
 ; CHECK-NEXT:    orr x0, x9, x8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_or_and_combine2:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    lsr x8, x0, #8
-; GISEL-NEXT:    lsl x9, x0, #8
-; GISEL-NEXT:    and x10, x8, #0xff000000000000
-; GISEL-NEXT:    and x11, x9, #0xff00000000
+; GISEL-NEXT:    lsl x10, x0, #8
+; GISEL-NEXT:    and x9, x8, #0xff000000000000
 ; GISEL-NEXT:    and x8, x8, #0xff0000
-; GISEL-NEXT:    orr x9, x10, x9
-; GISEL-NEXT:    orr x8, x11, x8
+; GISEL-NEXT:    orr x9, x9, x10
+; GISEL-NEXT:    and x10, x10, #0xff00000000
+; GISEL-NEXT:    orr x9, x9, x10
 ; GISEL-NEXT:    orr x0, x9, x8
 ; GISEL-NEXT:    ret
 entry:

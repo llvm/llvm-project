@@ -2318,11 +2318,14 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
   // Construct the list of identifiers with macro directives that need to be
   // serialized.
   SmallVector<const IdentifierInfo *, 128> MacroIdentifiers;
-  for (auto &Id : PP.getIdentifierTable())
-    if (Id.second->hadMacroDefinition() &&
-        (!Id.second->isFromAST() ||
-         Id.second->hasChangedSinceDeserialization()))
-      MacroIdentifiers.push_back(Id.second);
+  // It is meaningless to emit macros for named modules. It only wastes times
+  // and spaces.
+  if (!isWritingStdCXXNamedModules())
+    for (auto &Id : PP.getIdentifierTable())
+      if (Id.second->hadMacroDefinition() &&
+          (!Id.second->isFromAST() ||
+          Id.second->hasChangedSinceDeserialization()))
+        MacroIdentifiers.push_back(Id.second);
   // Sort the set of macro definitions that need to be serialized by the
   // name of the macro, to provide a stable ordering.
   llvm::sort(MacroIdentifiers, llvm::deref<std::less<>>());
@@ -6787,13 +6790,17 @@ void OMPClauseWriter::VisitOMPPriorityClause(OMPPriorityClause *C) {
 
 void OMPClauseWriter::VisitOMPGrainsizeClause(OMPGrainsizeClause *C) {
   VisitOMPClauseWithPreInit(C);
+  Record.writeEnum(C->getModifier());
   Record.AddStmt(C->getGrainsize());
+  Record.AddSourceLocation(C->getModifierLoc());
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
 void OMPClauseWriter::VisitOMPNumTasksClause(OMPNumTasksClause *C) {
   VisitOMPClauseWithPreInit(C);
+  Record.writeEnum(C->getModifier());
   Record.AddStmt(C->getNumTasks());
+  Record.AddSourceLocation(C->getModifierLoc());
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
@@ -6991,6 +6998,11 @@ void OMPClauseWriter::VisitOMPSeverityClause(OMPSeverityClause *C) {
   Record.push_back(C->getSeverityKind());
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getSeverityKindKwLoc());
+}
+
+void OMPClauseWriter::VisitOMPMessageClause(OMPMessageClause *C) {
+  Record.AddStmt(C->getMessageString());
+  Record.AddSourceLocation(C->getLParenLoc());
 }
 
 void OMPClauseWriter::VisitOMPNontemporalClause(OMPNontemporalClause *C) {

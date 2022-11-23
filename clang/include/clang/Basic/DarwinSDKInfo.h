@@ -142,7 +142,7 @@ public:
     auto Mapping = VersionMappings.find(Kind.Value);
     if (Mapping == VersionMappings.end())
       return nullptr;
-    return Mapping->getSecond() ? Mapping->getSecond().getPointer() : nullptr;
+    return Mapping->getSecond() ? &*Mapping->getSecond() : nullptr;
   }
 
   static Optional<DarwinSDKInfo>

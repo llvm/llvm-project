@@ -3,6 +3,11 @@
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+c < %s \
 # RUN:     | llvm-objdump -d -M no-aliases - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
+# RUN: llvm-mc -triple=riscv64 -mattr=+experimental-zca -riscv-no-aliases < %s \
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
+# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+experimental-zca < %s \
+# RUN:     | llvm-objdump --mattr=+experimental-zca -d -M no-aliases - \
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 
 # The following check prefixes are used in this test:
 # CHECK-INST.....Match the canonical instr (tests alias to instr. mapping)

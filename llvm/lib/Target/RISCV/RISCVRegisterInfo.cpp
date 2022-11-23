@@ -155,7 +155,7 @@ bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
   return true;
 }
 
-void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
   assert(SPAdj == 0 && "Unexpected non-zero SPAdj value");
@@ -163,7 +163,8 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const RISCVInstrInfo *TII = MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVInstrInfo *TII = ST.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
@@ -173,6 +174,19 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   bool IsRVVSpill = RISCV::isRVVSpill(MI);
   if (!IsRVVSpill)
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
+
+  if (Offset.getScalable() &&
+      ST.getRealMinVLen() == ST.getRealMaxVLen()) {
+    // For an exact VLEN value, scalable offsets become constant and thus
+    // can be converted entirely into fixed offsets.
+    int64_t FixedValue = Offset.getFixed();
+    int64_t ScalableValue = Offset.getScalable();
+    assert(ScalableValue % 8 == 0 &&
+           "Scalable offset is not a multiple of a single vector size.");
+    int64_t NumOfVReg = ScalableValue / 8;
+    int64_t VLENB = ST.getRealMinVLen() / 8;
+    Offset = StackOffset::getFixed(FixedValue + NumOfVReg * VLENB);
+  }
 
   if (!isInt<32>(Offset.getFixed())) {
     report_fatal_error(
@@ -231,7 +245,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       assert(MI.getOperand(0).getReg() == ScratchReg &&
              "Expected to have written ADDI destination register");
       MI.eraseFromParent();
-      return;
+      return true;
     }
 
     Offset = StackOffset::get(0, Offset.getScalable());
@@ -250,7 +264,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       assert(MI.getOperand(0).getReg() == DestReg &&
              "Expected to have written ADDI destination register");
       MI.eraseFromParent();
-      return;
+      return true;
     }
     FrameReg = DestReg;
     FrameRegIsKill = true;
@@ -293,6 +307,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // the length of vint32m2_t.
     MI.getOperand(FIOperandNum + 1).ChangeToRegister(VL, /*isDef=*/false);
   }
+  return false;
 }
 
 Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {

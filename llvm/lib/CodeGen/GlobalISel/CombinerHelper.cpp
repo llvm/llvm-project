@@ -1598,6 +1598,13 @@ void CombinerHelper::applyShiftOfShiftedLogic(MachineInstr &MI,
   Register Shift1 =
       Builder.buildInstr(Opcode, {DestType}, {Shift1Base, Const}).getReg(0);
 
+  // If LogicNonShiftReg is the same to Shift1Base, and shift1 const is the same
+  // to MatchInfo.Shift2 const, CSEMIRBuilder will reuse the old shift1 when
+  // build shift2. So, if we erase MatchInfo.Shift2 at the end, actually we
+  // remove old shift1. And it will cause crash later. So erase it earlier to
+  // avoid the crash.
+  MatchInfo.Shift2->eraseFromParent();
+
   Register Shift2Const = MI.getOperand(2).getReg();
   Register Shift2 = Builder
                         .buildInstr(Opcode, {DestType},
@@ -1607,8 +1614,7 @@ void CombinerHelper::applyShiftOfShiftedLogic(MachineInstr &MI,
   Register Dest = MI.getOperand(0).getReg();
   Builder.buildInstr(MatchInfo.Logic->getOpcode(), {Dest}, {Shift1, Shift2});
 
-  // These were one use so it's safe to remove them.
-  MatchInfo.Shift2->eraseFromParent();
+  // This was one use so it's safe to remove it.
   MatchInfo.Logic->eraseFromParent();
 
   MI.eraseFromParent();

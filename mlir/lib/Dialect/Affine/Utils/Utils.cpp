@@ -1199,8 +1199,6 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 
   // Prepend 'extraIndices' in 'newMapOperands'.
   for (Value extraIndex : extraIndices) {
-    assert(extraIndex.getDefiningOp()->getNumResults() == 1 &&
-           "single result op's expected to generate these indices");
     assert((isValidDim(extraIndex) || isValidSymbol(extraIndex)) &&
            "invalid memory op index");
     newMapOperands.push_back(extraIndex);
@@ -1796,7 +1794,7 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
     bool isDynDim =
         isNormalizedMemRefDynamicDim(d, layoutMap, memrefTypeDynDims, context);
     if (isDynDim) {
-      newShape[d] = ShapedType::kDynamicSize;
+      newShape[d] = ShapedType::kDynamic;
     } else {
       // The lower bound for the shape is always zero.
       Optional<int64_t> ubConst =

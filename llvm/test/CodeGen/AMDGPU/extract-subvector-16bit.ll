@@ -534,7 +534,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16(<16 x i16> addrspace(1) * %p0, <16 x 
 ; GFX9-NEXT:  .LBB3_2:
 ; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX9-NEXT:  .LBB3_3: ; %T
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc
@@ -706,7 +705,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(<16 x i16> addrspace(1) * %p0, <16 
 ; GFX9-NEXT:  .LBB4_2:
 ; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX9-NEXT:  .LBB4_3: ; %T
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc
@@ -878,7 +876,6 @@ define <4 x half> @vec_16xf16_extract_4xf16(<16 x half> addrspace(1) * %p0, <16 
 ; GFX9-NEXT:  .LBB5_2:
 ; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX9-NEXT:  .LBB5_3: ; %T
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc

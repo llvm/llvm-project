@@ -875,8 +875,16 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
 
   if (Operation == QuickAppend || Members.empty())
     return IA_AddOldMember;
-  auto MI = find_if(
-      Members, [Name](StringRef Path) { return comparePaths(Name, Path); });
+
+  auto MI = find_if(Members, [Name](StringRef Path) {
+    if (Thin && !sys::path::is_absolute(Path)) {
+      Expected<std::string> PathOrErr =
+          computeArchiveRelativePath(ArchiveName, Path);
+      return comparePaths(Name, PathOrErr ? *PathOrErr : Path);
+    } else {
+      return comparePaths(Name, Path);
+    }
+  });
 
   if (MI == Members.end())
     return IA_AddOldMember;

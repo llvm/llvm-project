@@ -128,10 +128,20 @@ def ZeroOffsetMemOpOperand : AsmOperandClass {
   let ParserMethod = "parseZeroOffsetMemOp";
 }
 
-def GPRMemZeroOffset : RegisterOperand<GPR> {
+class MemOperand<RegisterClass regClass> : RegisterOperand<regClass>{
+  let OperandType = "OPERAND_MEMORY";
+}
+
+def GPRMemZeroOffset : MemOperand<GPR> {
   let ParserMatchClass = ZeroOffsetMemOpOperand;
   let PrintMethod = "printZeroOffsetMemOp";
 }
+
+def GPRMem : MemOperand<GPR>;
+
+def SPMem : MemOperand<SP>;
+
+def GPRCMem : MemOperand<GPRC>;
 
 class SImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"S", width, suffix> {
@@ -496,7 +506,7 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class Load_ri<bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_LOAD, (outs GPR:$rd), (ins GPR:$rs1, simm12:$imm12),
+    : RVInstI<funct3, OPC_LOAD, (outs GPR:$rd), (ins GPRMem:$rs1, simm12:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">;
 
 class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
@@ -512,7 +522,7 @@ class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class Store_rri<bits<3> funct3, string opcodestr>
     : RVInstS<funct3, OPC_STORE, (outs),
-              (ins GPR:$rs2, GPR:$rs1, simm12:$imm12),
+              (ins GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">;
 
 class HStore_rr<bits<7> funct7, string opcodestr>

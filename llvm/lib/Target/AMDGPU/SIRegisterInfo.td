@@ -232,12 +232,36 @@ def SGPR_NULL64 :
   let isConstant = true;
 }
 
-let isConstant = true in {
-defm SRC_SHARED_BASE : SIRegLoHi16<"src_shared_base", 235>;
-defm SRC_SHARED_LIMIT : SIRegLoHi16<"src_shared_limit", 236>;
-defm SRC_PRIVATE_BASE : SIRegLoHi16<"src_private_base", 237>;
-defm SRC_PRIVATE_LIMIT : SIRegLoHi16<"src_private_limit", 238>;
-} // isConstant = true
+// Aperture registers are 64 bit registers with a LO/HI 32 bit.
+// HI 32 bit cannot be used, and LO 32 is used by instructions
+// with 32 bit sources.
+//
+// Note that the low 32 bits are essentially useless as they
+// don't contain the lower 32 bits of the address - they are in
+// the high 32 bits. The lower 32 bits are always zero (for base) or
+// -1 (for limit). Since we cannot access the high 32 bits, when we
+// need them, we need to do a 64 bit load and extract the bits manually.
+multiclass ApertureRegister<string name, bits<16> regIdx> {
+  let isConstant = true in {
+    // FIXME: We shouldn't need to define subregisters for these (nor add them to any 16 bit
+    //  register classes), but if we don't it seems to confuse the TableGen
+    //  backend and we end up with a lot of weird register pressure sets and classes.
+    defm _LO : SIRegLoHi16 <name, regIdx>;
+    defm _HI : SIRegLoHi16 <"", regIdx>;
+
+    def "" : RegisterWithSubRegs<name, [!cast<Register>(NAME#_LO), !cast<Register>(NAME#_HI)]> {
+      let Namespace = "AMDGPU";
+      let SubRegIndices = [sub0, sub1];
+      let HWEncoding = !cast<Register>(NAME#_LO).HWEncoding;
+    }
+  } // isConstant = true
+}
+
+defm SRC_SHARED_BASE   : ApertureRegister<"src_shared_base",   235>;
+defm SRC_SHARED_LIMIT  : ApertureRegister<"src_shared_limit",  236>;
+defm SRC_PRIVATE_BASE  : ApertureRegister<"src_private_base",  237>;
+defm SRC_PRIVATE_LIMIT : ApertureRegister<"src_private_limit", 238>;
+
 defm SRC_POPS_EXITING_WAVE_ID : SIRegLoHi16<"src_pops_exiting_wave_id", 239>;
 
 // Not addressable
@@ -664,8 +688,9 @@ let GeneratePressureSet = 0, HasSGPR = 1 in {
 // See comments in SIInstructions.td for more info.
 def SReg_32_XM0_XEXEC : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
   (add SGPR_32, VCC_LO, VCC_HI, FLAT_SCR_LO, FLAT_SCR_HI, XNACK_MASK_LO, XNACK_MASK_HI,
-   SGPR_NULL, SGPR_NULL_HI, TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE,
-   SRC_SHARED_LIMIT, SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT, SRC_POPS_EXITING_WAVE_ID,
+   SGPR_NULL, SGPR_NULL_HI, TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE_LO,
+   SRC_SHARED_LIMIT_LO, SRC_PRIVATE_BASE_LO, SRC_PRIVATE_LIMIT_LO, SRC_SHARED_BASE_HI,
+   SRC_SHARED_LIMIT_HI, SRC_PRIVATE_BASE_HI, SRC_PRIVATE_LIMIT_HI, SRC_POPS_EXITING_WAVE_ID,
    SRC_VCCZ, SRC_EXECZ, SRC_SCC)> {
   let AllocationPriority = 0;
 }
@@ -673,9 +698,11 @@ def SReg_32_XM0_XEXEC : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2
 def SReg_LO16_XM0_XEXEC : SIRegisterClass<"AMDGPU", [i16, f16], 16,
   (add SGPR_LO16, VCC_LO_LO16, VCC_HI_LO16, FLAT_SCR_LO_LO16, FLAT_SCR_HI_LO16,
    XNACK_MASK_LO_LO16, XNACK_MASK_HI_LO16, SGPR_NULL_LO16, SGPR_NULL_HI_LO16, TTMP_LO16,
-   TMA_LO_LO16, TMA_HI_LO16, TBA_LO_LO16, TBA_HI_LO16, SRC_SHARED_BASE_LO16,
-   SRC_SHARED_LIMIT_LO16, SRC_PRIVATE_BASE_LO16, SRC_PRIVATE_LIMIT_LO16,
-   SRC_POPS_EXITING_WAVE_ID_LO16, SRC_VCCZ_LO16, SRC_EXECZ_LO16, SRC_SCC_LO16)> {
+   TMA_LO_LO16, TMA_HI_LO16, TBA_LO_LO16, TBA_HI_LO16, SRC_SHARED_BASE_LO_LO16,
+   SRC_SHARED_LIMIT_LO_LO16, SRC_PRIVATE_BASE_LO_LO16, SRC_PRIVATE_LIMIT_LO_LO16,
+   SRC_SHARED_BASE_HI_LO16, SRC_SHARED_LIMIT_HI_LO16, SRC_PRIVATE_BASE_HI_LO16,
+   SRC_PRIVATE_LIMIT_HI_LO16, SRC_POPS_EXITING_WAVE_ID_LO16, SRC_VCCZ_LO16,
+   SRC_EXECZ_LO16, SRC_SCC_LO16)> {
   let Size = 16;
   let AllocationPriority = 0;
 }
@@ -737,7 +764,8 @@ def TTMP_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16], 32,
 }
 
 def SReg_64_XEXEC : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16], 32,
-  (add SGPR_64, VCC, FLAT_SCR, XNACK_MASK, SGPR_NULL64, TTMP_64, TBA, TMA)> {
+  (add SGPR_64, VCC, FLAT_SCR, XNACK_MASK, SGPR_NULL64, SRC_SHARED_BASE,
+       SRC_SHARED_LIMIT, SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT, TTMP_64, TBA, TMA)> {
   let CopyCost = 1;
   let AllocationPriority = 1;
   let HasSGPR = 1;

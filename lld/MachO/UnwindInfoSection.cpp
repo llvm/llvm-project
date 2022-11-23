@@ -179,6 +179,9 @@ private:
   DenseMap<size_t, uint32_t> lsdaIndex;
   std::vector<SecondLevelPage> secondLevelPages;
   uint64_t level2PagesOffset = 0;
+  // The highest-address function plus its size. The unwinder needs this to
+  // determine the address range that is covered by unwind info.
+  uint64_t cueEndBoundary = 0;
 };
 
 UnwindInfoSection::UnwindInfoSection()
@@ -458,6 +461,10 @@ void UnwindInfoSectionImpl::finalize() {
     return cuEntries[a].functionAddress < cuEntries[b].functionAddress;
   });
 
+  // Record the ending boundary before we fold the entries.
+  cueEndBoundary = cuEntries[cuIndices.back()].functionAddress +
+                   cuEntries[cuIndices.back()].functionLength;
+
   // Fold adjacent entries with matching encoding+personality and without LSDA
   // We use three iterators on the same cuIndices to fold in-situ:
   // (1) `foldBegin` is the first of a potential sequence of matching entries
@@ -631,6 +638,9 @@ void UnwindInfoSectionImpl::writeTo(uint8_t *buf) const {
   for (const Symbol *personality : personalities)
     *i32p++ = personality->getGotVA() - in.header->addr;
 
+  // FIXME: LD64 checks and warns aboutgaps or overlapse in cuEntries address
+  // ranges. We should do the same too
+
   // Level-1 index
   uint32_t lsdaOffset =
       uip->indexSectionOffset +
@@ -648,9 +658,10 @@ void UnwindInfoSectionImpl::writeTo(uint8_t *buf) const {
     l2PagesOffset += SECOND_LEVEL_PAGE_BYTES;
   }
   // Level-1 sentinel
-  const CompactUnwindEntry &cuEnd = cuEntries[cuIndices.back()];
-  iep->functionOffset =
-      cuEnd.functionAddress - in.header->addr + cuEnd.functionLength;
+  // XXX(vyng): Note that LD64 adds +1 here.
+  // Unsure whether it's a bug or it's their workaround for something else.
+  // See comments from https://reviews.llvm.org/D138320.
+  iep->functionOffset = cueEndBoundary - in.header->addr;
   iep->secondLevelPagesSectionOffset = 0;
   iep->lsdaIndexArraySectionOffset =
       lsdaOffset + entriesWithLsda.size() *

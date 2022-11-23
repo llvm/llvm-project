@@ -121,31 +121,6 @@ transform.sequence failures(propagate) {
 
 // -----
 
-func.func @map_nested_foreach_to_threads_4d_loop(%x: memref<2x32x32x32xf32>, %y: memref<2x32x32x32xf32>, %stream : !gpu.async.token) -> memref<2x32x32x32xf32> {
-  %one = arith.constant 1 : index
-  %c2 = arith.constant 1 : index
-  %c32 = arith.constant 32 : index
-  %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
-            threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
-  {
-    scf.foreach_thread (%i, %j, %k, %l) in (%c2, %c32,%c32,%c32) {
-        %4 = memref.load %x[%i, %j, %k, %l] : memref<2x32x32x32xf32>        
-        memref.store %4, %y[%i, %j, %k, %l] : memref<2x32x32x32xf32>
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z>, #gpu.thread<z>] }
-    gpu.terminator
-  }
-  return %y : memref<2x32x32x32xf32>
-}
-
-transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
-  // expected-error @below {{scf.foreach_thread with rank > 3 does not lower to gpu.thread_id}}
-  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [128, 4, 1] }
-}
-
-// -----
-
 func.func @map_nested_foreach_to_threads_not_buffer(%x: tensor<32x32xf32>, %y: tensor<32x32xf32>, %z: tensor<32x32xf32>, %stream : !gpu.async.token) {
   %one = arith.constant 1 : index
   %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
@@ -273,3 +248,56 @@ transform.sequence failures(propagate) {
 }
 
 // -----
+
+!type = memref<32x32xf32>
+func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) -> !type {
+  %c32 = arith.constant 32 : index
+  %one = arith.constant 1 : index
+  %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
+            threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
+  {
+    scf.foreach_thread (%i, %j) in (%c32, %c32) {
+        %4 = memref.load %x[%i, %j] : !type
+        %5 = memref.load %y[%i, %j] : !type
+        %6 = arith.mulf %4, %5 : f32
+        memref.store %6, %y[%i, %j] : !type
+     }  { mapping = [#gpu.thread<x>, #gpu.thread<x>] }
+    gpu.terminator
+  }
+  return %y : !type
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !pdl.operation):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  // expected-error @below {{#gpu.thread<x> is duplicated, cannot map different loops to the same processor}}
+  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [32, 32]}
+}
+
+// -----
+
+!type = memref<32x32xf32>
+func.func @saxpy2d_wrong_mapping(%x: !type, %y: !type, %stream : !gpu.async.token) -> !type {
+  %c32 = arith.constant 32 : index
+  %one = arith.constant 1 : index
+  %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
+            threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
+  {
+    scf.foreach_thread (%i, %j) in (%c32, %c32) {
+        %4 = memref.load %x[%i, %j] : !type
+        %5 = memref.load %y[%i, %j] : !type
+        %6 = arith.mulf %4, %5 : f32
+        memref.store %6, %y[%i, %j] : !type
+     }  { mapping = [#gpu.block<x>, #gpu.block<x>] }
+    gpu.terminator
+  }
+  return %y : !type
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !pdl.operation):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  // expected-error @below {{mapping must be one of #gpu.thread<x>, #gpu.thread<y>, #gpu.thread<z>}}
+  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [32, 32]}
+}
+

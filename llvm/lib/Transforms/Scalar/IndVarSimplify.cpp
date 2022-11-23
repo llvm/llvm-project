@@ -1292,6 +1292,8 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 static void replaceExitCond(BranchInst *BI, Value *NewCond,
                             SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   auto *OldCond = BI->getCondition();
+  LLVM_DEBUG(dbgs() << "Replacing condition of loop-exiting branch " << *BI
+                    << " with " << *NewCond << "\n");
   BI->setCondition(NewCond);
   if (OldCond->use_empty())
     DeadInsts.emplace_back(OldCond);

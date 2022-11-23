@@ -6275,6 +6275,10 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
   // FIXME: it tries to fix a problem with MSVC buildbots.
   TargetTransformInfo *TTI = this->TTI;
   auto AdjustExtractsCost = [=](InstructionCost &Cost) {
+    // If the resulting type is scalarized, do not adjust the cost.
+    unsigned VecNumParts = TTI->getNumberOfParts(VecTy);
+    if (VecNumParts == VecTy->getNumElements())
+      return;
     DenseMap<Value *, int> ExtractVectorsTys;
     SmallPtrSet<Value *, 4> CheckedExtracts;
     for (auto *V : VL) {
@@ -6296,8 +6300,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       if (!EEIdx)
         continue;
       unsigned Idx = *EEIdx;
-      if (TTI->getNumberOfParts(VecTy) !=
-          TTI->getNumberOfParts(EE->getVectorOperandType())) {
+      if (VecNumParts != TTI->getNumberOfParts(EE->getVectorOperandType())) {
         auto It =
             ExtractVectorsTys.try_emplace(EE->getVectorOperand(), Idx).first;
         It->getSecond() = std::min<int>(It->second, Idx);
@@ -6328,7 +6331,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       unsigned NumElts = VecTy->getNumElements();
       if (Data.second % NumElts == 0)
         continue;
-      if (TTI->getNumberOfParts(EEVTy) > TTI->getNumberOfParts(VecTy)) {
+      if (TTI->getNumberOfParts(EEVTy) > VecNumParts) {
         unsigned Idx = (Data.second / NumElts) * NumElts;
         unsigned EENumElts = EEVTy->getNumElements();
         if (Idx + NumElts <= EENumElts) {
@@ -11873,23 +11876,36 @@ public:
           Value *V = Candidates[Cnt];
           ++NumUses.try_emplace(V, 0).first->getSecond();
         }
+        SmallPtrSet<Value *, 4> VLScalars(VL.begin(), VL.end());
         // Gather externally used values.
         SmallPtrSet<Value *, 4> Visited;
         for (unsigned Cnt = 0; Cnt < Pos; ++Cnt) {
-          Value *V = Candidates[Cnt];
-          if (!Visited.insert(V).second)
+          Value *RdxVal = Candidates[Cnt];
+          if (!Visited.insert(RdxVal).second)
             continue;
-          unsigned NumOps = VectorizedVals.lookup(V) + NumUses[V];
-          if (NumOps != ReducedValsToOps.find(V)->second.size())
-            LocalExternallyUsedValues[V];
+          // Check if the scalar was vectorized as part of the vectorization
+          // tree but not the top node.
+          if (!VLScalars.contains(RdxVal) && V.isVectorized(RdxVal)) {
+            LocalExternallyUsedValues[RdxVal];
+            continue;
+          }
+          unsigned NumOps = VectorizedVals.lookup(RdxVal) + NumUses[RdxVal];
+          if (NumOps != ReducedValsToOps.find(RdxVal)->second.size())
+            LocalExternallyUsedValues[RdxVal];
         }
         for (unsigned Cnt = Pos + ReduxWidth; Cnt < NumReducedVals; ++Cnt) {
-          Value *V = Candidates[Cnt];
-          if (!Visited.insert(V).second)
+          Value *RdxVal = Candidates[Cnt];
+          if (!Visited.insert(RdxVal).second)
             continue;
-          unsigned NumOps = VectorizedVals.lookup(V) + NumUses[V];
-          if (NumOps != ReducedValsToOps.find(V)->second.size())
-            LocalExternallyUsedValues[V];
+          // Check if the scalar was vectorized as part of the vectorization
+          // tree but not the top node.
+          if (!VLScalars.contains(RdxVal) && V.isVectorized(RdxVal)) {
+            LocalExternallyUsedValues[RdxVal];
+            continue;
+          }
+          unsigned NumOps = VectorizedVals.lookup(RdxVal) + NumUses[RdxVal];
+          if (NumOps != ReducedValsToOps.find(RdxVal)->second.size())
+            LocalExternallyUsedValues[RdxVal];
         }
         for (Value *RdxVal : VL)
           if (RequiredExtract.contains(RdxVal))

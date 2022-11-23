@@ -33,7 +33,7 @@ getBufferizationOptions(bool analysisOnly) {
   // should be disallowed.
   options.allowReturnAllocs = true;
   options.functionBoundaryTypeConversion = LayoutMapOption::IdentityLayoutMap;
-  options.unknownTypeConverterFn = [](Value value, unsigned memorySpace,
+  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
                                       const BufferizationOptions &options) {
     return getMemRefTypeWithStaticIdentityLayout(
         value.getType().cast<TensorType>(), memorySpace);

@@ -477,7 +477,7 @@ void EliminateFrameIndex::processMI(MachineInstr &MI, Register FrameReg,
   replaceFI(MI, FrameReg, Offset, FIOperandNum);
 }
 
-void VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                          int SPAdj, unsigned FIOperandNum,
                                          RegScavenger *RS) const {
   assert(SPAdj == 0 && "Unexpected");
@@ -500,6 +500,7 @@ void VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Offset += MI.getOperand(FIOperandNum + offsetToDisp(MI)).getImm();
 
   EFI.processMI(MI, FrameReg, Offset, FIOperandNum);
+  return false;
 }
 
 Register VERegisterInfo::getFrameRegister(const MachineFunction &MF) const {

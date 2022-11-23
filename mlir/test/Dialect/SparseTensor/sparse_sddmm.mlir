@@ -22,7 +22,7 @@
 
 // CHECK-LABEL: func.func @fold_yield_arg_zero() -> tensor<1024x1024xf64> {
 // CHECK:         %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : tensor<1024x1024xf64>
-// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) {bufferization.escape = [false], memory_space = 0 : ui64} : tensor<1024x1024xf64>
+// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) {bufferization.escape = [false], memory_space = 0 : i64} : tensor<1024x1024xf64>
 // CHECK:         return %[[VAL_1]] : tensor<1024x1024xf64>
 // CHECK:       }
 func.func @fold_yield_arg_zero() -> tensor<1024x1024xf64> {
@@ -41,7 +41,7 @@ func.func @fold_yield_arg_zero() -> tensor<1024x1024xf64> {
 
 // CHECK-LABEL: func.func @fold_yield_direct_zero() -> tensor<32xf64> {
 // CHECK:         %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : tensor<32xf64>
-// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) {bufferization.escape = [false], memory_space = 0 : ui64} : tensor<32xf64>
+// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) {bufferization.escape = [false], memory_space = 0 : i64} : tensor<32xf64>
 // CHECK:         return %[[VAL_1]] : tensor<32xf64>
 // CHECK:       }
 func.func @fold_yield_direct_zero() -> tensor<32xf64> {
@@ -65,7 +65,7 @@ func.func @fold_yield_direct_zero() -> tensor<32xf64> {
 // CHECK-DAG:     %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-DAG:     %[[VAL_6:.*]] = arith.constant dense<0.000000e+00> : tensor<8x8xf64>
 // CHECK:         %[[VAL_7:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) {bufferization.escape = [false]} : tensor<8x8xf64>
-// CHECK:         %[[VAL_8:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) {bufferization.escape = [false], memory_space = 0 : ui64} : tensor<8x8xf64>
+// CHECK:         %[[VAL_8:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) {bufferization.escape = [false], memory_space = 0 : i64} : tensor<8x8xf64>
 // CHECK:         %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<8x8xf64>
 // CHECK:         %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<8x8xf64>
 // CHECK:         %[[VAL_11:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 0 : index} : tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>

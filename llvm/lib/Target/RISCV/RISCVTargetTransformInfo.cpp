@@ -46,6 +46,33 @@ InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                     getST()->getFeatureBits());
 }
 
+// Look for patterns of shift followed by AND that can be turned into a pair of
+// shifts. We won't need to materialize an immediate for the AND so these can
+// be considered free.
+static bool canUseShiftPair(Instruction *Inst, const APInt &Imm) {
+  uint64_t Mask = Imm.getZExtValue();
+  auto *BO = dyn_cast<BinaryOperator>(Inst->getOperand(0));
+  if (!BO || !BO->hasOneUse())
+    return false;
+
+  if (BO->getOpcode() != Instruction::Shl)
+    return false;
+
+  if (!isa<ConstantInt>(BO->getOperand(1)))
+    return false;
+
+  unsigned ShAmt = cast<ConstantInt>(BO->getOperand(1))->getZExtValue();
+  // (and (shl x, c2), c1) will be matched to (srli (slli x, c2+c3), c3) if c1
+  // is a mask shifted by c2 bits with c3 leading zeros.
+  if (isShiftedMask_64(Mask)) {
+    unsigned Trailing = countTrailingZeros(Mask);
+    if (ShAmt == Trailing)
+      return true;
+  }
+
+  return false;
+}
+
 InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                                 const APInt &Imm, Type *Ty,
                                                 TTI::TargetCostKind CostKind,
@@ -74,6 +101,9 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
       return TTI::TCC_Free;
     // zext.w
     if (Imm == UINT64_C(0xffffffff) && ST->hasStdExtZba())
+      return TTI::TCC_Free;
+    if (Inst && Idx == 1 && Imm.getBitWidth() <= ST->getXLen() &&
+        canUseShiftPair(Inst, Imm))
       return TTI::TCC_Free;
     [[fallthrough]];
   case Instruction::Add:
@@ -961,6 +991,40 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     BaseCost = Opcode == Instruction::InsertElement ? 3 : 4;
   }
   return BaseCost + SlideCost;
+}
+
+InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+    TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
+    ArrayRef<const Value *> Args, const Instruction *CxtI) {
+
+  // TODO: Handle more cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
+
+  if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
+
+  // Skip if scalar size of Ty is bigger than ELEN.
+  if (isa<VectorType>(Ty) && Ty->getScalarSizeInBits() > ST->getELEN())
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
+
+  // Legalize the type.
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+
+  // TODO: Handle scalar type.
+  if (!LT.second.isVector())
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
+
+  // TODO: Put a real cost model here, the plumbing change was landed without
+  // one to simplify review and fault isolation.
+
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                       Args, CxtI);
 }
 
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

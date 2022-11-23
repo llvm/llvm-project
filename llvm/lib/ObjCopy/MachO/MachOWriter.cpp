@@ -569,7 +569,15 @@ void MachOWriter::writeChainedFixupsData() {
 }
 
 void MachOWriter::writeExportsTrieData() {
-  return writeLinkData(O.ExportsTrieCommandIndex, O.ExportsTrie);
+  if (!O.ExportsTrieCommandIndex)
+    return;
+  const MachO::linkedit_data_command &ExportsTrieCmd =
+      O.LoadCommands[*O.ExportsTrieCommandIndex]
+          .MachOLoadCommand.linkedit_data_command_data;
+  char *Out = (char *)Buf->getBufferStart() + ExportsTrieCmd.dataoff;
+  assert((ExportsTrieCmd.datasize == O.Exports.Trie.size()) &&
+         "Incorrect export trie size");
+  memcpy(Out, O.Exports.Trie.data(), O.Exports.Trie.size());
 }
 
 void MachOWriter::writeTail() {

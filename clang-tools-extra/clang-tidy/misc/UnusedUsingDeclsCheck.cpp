@@ -107,9 +107,6 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     } else if (const auto *Specialization =
                    dyn_cast<ClassTemplateSpecializationDecl>(Used)) {
       removeFromFoundDecls(Specialization->getSpecializedTemplate());
-    } else if (const auto *FD = dyn_cast<FunctionDecl>(Used)) {
-      if (const auto *FDT = FD->getPrimaryTemplate())
-        removeFromFoundDecls(FDT);
     } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Used)) {
       if (const auto *ET = ECD->getType()->getAs<EnumType>())
         removeFromFoundDecls(ET->getDecl());

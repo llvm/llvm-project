@@ -75,14 +75,15 @@ public:
   lldb::addr_t GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu,
                                       uint32_t op_addr_idx, bool &error) const;
 
-  bool Update_DW_OP_addr(lldb::addr_t file_addr);
+  bool Update_DW_OP_addr(const DWARFUnit *dwarf_cu, lldb::addr_t file_addr);
 
   void UpdateValue(uint64_t const_value, lldb::offset_t const_value_byte_size,
                    uint8_t addr_byte_size);
 
-  bool ContainsThreadLocalStorage() const;
+  bool ContainsThreadLocalStorage(const DWARFUnit *dwarf_cu) const;
 
   bool LinkThreadLocalStorage(
+      const DWARFUnit *dwarf_cu,
       std::function<lldb::addr_t(lldb::addr_t file_addr)> const
           &link_address_callback);
 

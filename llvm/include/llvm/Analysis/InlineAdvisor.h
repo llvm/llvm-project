@@ -200,7 +200,7 @@ public:
 
 protected:
   InlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
-                Optional<InlineContext> IC = NoneType::None);
+                Optional<InlineContext> IC = llvm::None);
   virtual std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) = 0;
   virtual std::unique_ptr<InlineAdvice> getMandatoryAdvice(CallBase &CB,
                                                            bool Advice);

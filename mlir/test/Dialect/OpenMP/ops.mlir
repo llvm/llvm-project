@@ -398,6 +398,16 @@ func.func @omp_simdloop_pretty_if(%lb : index, %ub : index, %step : index, %if_c
   return
 }
 
+// CHECK-LABEL: omp_simdloop_pretty_order
+func.func @omp_simdloop_pretty_order(%lb : index, %ub : index, %step : index) -> () {
+  // CHECK: omp.simdloop order(concurrent)
+  // CHECK-SAME: for (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
+  omp.simdloop order(concurrent) for (%iv): index = (%lb) to (%ub) step (%step) {
+    omp.yield
+  }
+  return
+}
+
 // CHECK-LABEL: omp_simdloop_pretty_simdlen
 func.func @omp_simdloop_pretty_simdlen(%lb : index, %ub : index, %step : index) -> () {
   // CHECK: omp.simdloop simdlen(2) for (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})

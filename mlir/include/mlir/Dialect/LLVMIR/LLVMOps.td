@@ -810,7 +810,7 @@ def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [Pure]> {
       builder.CreateRetVoid();
   }];
   string mlirBuilder = [{
-    $_builder.create<LLVM::ReturnOp>($_location, processValues(llvmOperands));
+    $_builder.create<LLVM::ReturnOp>($_location, convertValues(llvmOperands));
   }];
 }
 
