@@ -29,7 +29,7 @@ AsyncInfoWrapperTy::~AsyncInfoWrapperTy() {
   // If we used a local async info object we want synchronous behavior.
   // In that case, and assuming the current status code is OK, we will
   // synchronize explicitly when the object is deleted.
-  if (AsyncInfoPtr == &LocalAsyncInfo && !Err)
+  if (AsyncInfoPtr == &LocalAsyncInfo && LocalAsyncInfo.Queue && !Err)
     Err = Device.synchronize(&LocalAsyncInfo);
 }
 
@@ -236,12 +236,17 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
   DeviceEnvironment.DynamicMemSize = OMPX_SharedMemorySize;
 
   // Create the metainfo of the device environment global.
-  GlobalTy DeviceEnvGlobal("omptarget_device_environment",
-                           sizeof(DeviceEnvironmentTy), &DeviceEnvironment);
+  GlobalTy DevEnvGlobal("omptarget_device_environment",
+                        sizeof(DeviceEnvironmentTy), &DeviceEnvironment);
 
   // Write device environment values to the device.
-  GenericGlobalHandlerTy &GlobalHandler = Plugin.getGlobalHandler();
-  return GlobalHandler.writeGlobalToDevice(*this, Image, DeviceEnvGlobal);
+  GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
+  if (auto Err = GHandler.writeGlobalToDevice(*this, Image, DevEnvGlobal)) {
+    DP("Missing symbol %s, continue execution anyway.\n",
+       DevEnvGlobal.getName().data());
+    consumeError(std::move(Err));
+  }
+  return Plugin::success();
 }
 
 Error GenericDeviceTy::registerOffloadEntries(DeviceImageTy &Image) {
