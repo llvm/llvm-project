@@ -25,6 +25,8 @@ private:
   Function *AFStoreFunction;
   Function *AFPrintTopAmplificationPaths;
 
+  Function *AFStoreInFile;
+
   // Instruction to AC/AF Maps
   ValueMap<Value*, Value*> InstructionACMap;
   ValueMap<Value*, Value*> InstructionAFMap;
@@ -52,6 +54,10 @@ public:
   Value *instrumentSelectForAF(Value *OriginalSelInstr,
                                 BasicBlock::iterator *InstructionIterator,
                                 long *NumInstrumentedInstructions);
+
+  void instrumentForMarkedVariable(Value *BaseInstruction,
+                                   BasicBlock::iterator *InstructionIterator,
+                                   long int *NumInstrumentedInstructions);
 
   void instrumentBasicBlock(BasicBlock *BB,
                             long int *NumInstrumentedInstructions);

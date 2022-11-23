@@ -569,6 +569,7 @@ void fACGenerateExecutionID(char* ExecutionId) {
 //  File: char* - Pointer to an empty memory block allocated for the File String.
 //                File is the absolute path to the file in question
 //  FileNamePrefix: char* - A pointer to the Prefix for the file.
+//  Extension: char* - A pointer to the Extension string of the file.
 // Output:
 
 void fAFGenerateFileString(char *File,
@@ -924,22 +925,12 @@ ACItem **fACComputeAC(const char *ResultVar,
 }
 
 void fACStoreACs() {
+#if NO_DATA_DUMP
+#else
   printf("\nWriting Atomic Conditions to file.\n");
   // Generate a file path + file name string to store the AC Records
   char File[5000];
   fAFGenerateFileString(File, "fAC_", ".json");
-
-  // TODO: Build analysis functions with arguments and print the arguments
-  // Get program name and input
-//  int str_size = 0;
-//  for (int i=0; i < _FPC_PROG_INPUTS; ++i)
-//    str_size += strlen(_FPC_PROG_ARGS[i]) + 1;
-//  char *prog_input = (char *)malloc((sizeof(char) * str_size) + 1);
-//  prog_input[0] = '\0';
-//  for (int i=0; i < _FPC_PROG_INPUTS; ++i) {
-//    strcat(prog_input, _FPC_PROG_ARGS[i]);
-//    strcat(prog_input, " ");
-//  }
 
   // Table Output
   FILE *FP = fopen(File, "w");
@@ -999,6 +990,7 @@ void fACStoreACs() {
   fclose(FP);
 
   printf("Atomic Conditions written to file: %s\n", File);
+#endif
 }
 
 

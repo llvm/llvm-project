@@ -55,6 +55,10 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction)
                std::string::npos) {
       confFunction(CurrentFunction, &AFStoreFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    } else if (CurrentFunction->getName().str().find("fAFStoreInFile") !=
+               std::string::npos) {
+      confFunction(CurrentFunction, &AFStoreInFile,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
     //    else if (CurrentFunction->getName().str().find("fAFPrintTopAmplificationPaths") != std::string::npos) {
     else if (CurrentFunction->getName().str().find(
@@ -369,6 +373,24 @@ Value *ACInstrumentation::instrumentSelectForAF(
   return AFSel;
 }
 
+void ACInstrumentation::instrumentForMarkedVariable(
+    Value *BaseInstruction, BasicBlock::iterator *InstructionIterator,
+    long *NumInstrumentedInstructions) {
+  assert((AFStoreInFile != nullptr) && "Function not initialized!");
+
+  IRBuilder<> InstructionBuilder((*InstructionIterator)->getNextNode());
+  std::vector<Value *> Args;
+
+  Args.push_back(InstructionAFMap[BaseInstruction]);
+
+  // Creating a call to AFStoreInFile function with above parameters
+  ArrayRef<Value *> ArgsRef(Args);
+  Value *StoreInFileCall =
+      InstructionBuilder.CreateCall(AFStoreInFile, ArgsRef);
+
+  assert((StoreInFileCall != nullptr) && "Function not initialized!");
+}
+
 void ACInstrumentation::instrumentBasicBlock(
     BasicBlock *BB, long *NumInstrumentedInstructions) {
   if (ACInstrumentation::isUnwantedFunction(BB->getParent()))
@@ -406,6 +428,26 @@ void ACInstrumentation::instrumentBasicBlock(
     // want to avoid using the instrumented instructions as base for further
     // instrumentation.
     CurrentInstruction = &*I;
+
+    if(CurrentInstruction->getOpcode() == Instruction::Call) {
+      string FunctionName = "";
+      if(static_cast<CallInst*>(CurrentInstruction)->getCalledFunction() &&
+          static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->hasName())
+        FunctionName = static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->getName().str();
+      transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(), ::tolower);
+      if(FunctionName.find("markforresult") != std::string::npos) {
+        if(!isa<Constant>(static_cast<CallInst*>(CurrentInstruction)->data_operands_begin()->get()) &&
+            static_cast<CallInst*>(static_cast<CallInst*>(CurrentInstruction)->data_operands_begin()->get())->getOpcode() !=
+                Instruction::Load) {
+          instrumentForMarkedVariable(static_cast<CallInst *>(CurrentInstruction)
+                                          ->data_operands_begin()
+                                          ->get(), &I,
+                                      NumInstrumentedInstructions);
+        } else {
+          errs() << "Value to be analyzed has been optimized into a constant\n";
+        }
+      }
+    }
   }
 
   return;

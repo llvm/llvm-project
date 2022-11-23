@@ -12,8 +12,6 @@
 /* Constants                                                                  */
 /*----------------------------------------------------------------------------*/
 #define AF_ITEM_LIST_SIZE 10000
-#define MAX_AF_PATH_LENGTH 150
-#define MAX_AF_STRING_LENGTH 3000
 
 // ULP error introduced by each operation on x86_64 architecture as given in
 // https://www.gnu.org/software/libc/manual/html_node/Errors-in-Math-Functions.html
@@ -130,6 +128,7 @@ void fAFCreateAFTable(AFTable **AddressToAllocateAt) {
 
 int AFItemCounter;
 int AFComponentCounter;
+int PlotDataCounter;
 AFTable *AFs;
 AFProduct **Paths;
 
@@ -191,6 +190,68 @@ AFProduct **fAFFlattenAllComponentPaths() {
   return Paths;
 }
 
+void fAFStoreInFile(AFItem **ObjectToStore) {
+//  printf("\nCollecting Data for Plot\n");
+  char File[5000];
+  // Create a directory if not present
+  const int DirectoryNameLen = sizeof LOG_DIRECTORY_NAME;
+  char DirectoryName[DirectoryNameLen];
+  strcpy(DirectoryName, LOG_DIRECTORY_NAME);
+  fAFcreateLogDirectory(DirectoryName);
+
+  File[0] = '\0';
+  strcat(
+      strcpy(
+          File,
+          DirectoryName),
+      "/PlotData.json");
+
+  char ExecutionId[5000];
+  fACGenerateExecutionID(ExecutionId);
+
+  // Table Output
+  FILE *FP = fopen(File, "a");
+
+  fprintf(FP, "\t\"%s_%d\": [\n", ExecutionId, PlotDataCounter);
+
+  for (int J = 0; J < (*ObjectToStore)->NumAFComponents; ++J) {
+    AFProduct **ProductPath= fAFFlattenAFComponentsPath((*ObjectToStore)->Components[J]);
+    if (fprintf(FP,
+                "\t\t{\n"
+                "\t\t\t\"ProductItemId\": %d,\n"
+                "\t\t\t\"ACItemId\":%d,\n"
+                "\t\t\t\"ACItemString\": \"%s\",\n"
+                "\t\t\t\"ProductTailItemId\": %d,\n"
+                "\t\t\t\"Input\": \"%s\",\n"
+                "\t\t\t\"AF\": %lf,\n",
+                (*ObjectToStore)->Components[J]->ItemId,
+                (*ObjectToStore)->Components[J]->Factor->ItemId,
+                (*ObjectToStore)->Components[J]->Factor->ResultVar,
+                (*ObjectToStore)->Components[J]->
+                        ProductTail!=NULL?(*ObjectToStore)->Components[J]->ProductTail->ItemId:
+                    -1,
+                (*ObjectToStore)->Components[J]->Input,
+                (*ObjectToStore)->Components[J]->AF) > 0) {
+
+      fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
+      for (int K = 1; K < (*ObjectToStore)->Components[J]->Height; ++K)
+        fprintf(FP, ", %d", ProductPath[K]->ItemId);
+
+      if (J == (*ObjectToStore)->NumAFComponents-1)
+        fprintf(FP, "]\n\t\t}\n");
+      else
+        fprintf(FP, "]\n\t\t},\n");
+    }
+  }
+
+  fprintf(FP, "\t],\n");
+
+  fclose(FP);
+
+  PlotDataCounter++;
+  return ;
+}
+
 int fAFisMemoryOpInstruction(char *InstructionString) {
   if(strstr(InstructionString, "load")!=NULL ||
       strstr(InstructionString, "alloca")!=NULL)
@@ -218,6 +279,7 @@ void fAFInitialize() {
   fACCreate();
   AFItemCounter = 0;
   AFComponentCounter = 0;
+  PlotDataCounter = 0;
 
   // Allocating Memory to the AF table itself
   fAFCreateAFTable(&AFs);
@@ -453,22 +515,12 @@ void fAFPrintTopFromAllAmplificationPaths() {
 }
 
 void fAFStoreAFs() {
+#if NO_DATA_DUMP
+#else
   printf("\nWriting Amplification Factors to file.\n");
   // Generate a file path + file name string to store the AF Records
   char File[5000];
   fAFGenerateFileString(File, "fAF_", ".json");
-
-  // TODO: Build analysis functions with arguments and print the arguments
-  // Get program name and input
-  //  int str_size = 0;
-  //  for (int i=0; i < _FPC_PROG_INPUTS; ++i)
-  //    str_size += strlen(_FPC_PROG_ARGS[i]) + 1;
-  //  char *prog_input = (char *)malloc((sizeof(char) * str_size) + 1);
-  //  prog_input[0] = '\0';
-  //  for (int i=0; i < _FPC_PROG_INPUTS; ++i) {
-  //    strcat(prog_input, _FPC_PROG_ARGS[i]);
-  //    strcat(prog_input, " ");
-  //  }
 
   // Table Output
   FILE *FP = fopen(File, "w");
@@ -517,6 +569,7 @@ void fAFStoreAFs() {
   fclose(FP);
 
   printf("Amplification Factors written to file: %s\n", File);
+#endif
 }
 
 #endif // LLVM_AMPLIFICATIONFACTOR_H
