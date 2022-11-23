@@ -417,7 +417,7 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     // Split the basic block before the div/rem.
     BasicBlock *SuccessorBB = MainBB->splitBasicBlock(SlowDivOrRem);
     // Remove the unconditional branch from MainBB to SuccessorBB.
-    MainBB->getInstList().back().eraseFromParent();
+    MainBB->back().eraseFromParent();
     QuotRemWithBB Long;
     Long.BB = MainBB;
     Long.Quotient = ConstantInt::get(getSlowType(), 0);
@@ -434,7 +434,7 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     // Split the basic block before the div/rem.
     BasicBlock *SuccessorBB = MainBB->splitBasicBlock(SlowDivOrRem);
     // Remove the unconditional branch from MainBB to SuccessorBB.
-    MainBB->getInstList().back().eraseFromParent();
+    MainBB->back().eraseFromParent();
     QuotRemWithBB Fast = createFastBB(SuccessorBB);
     QuotRemWithBB Slow = createSlowBB(SuccessorBB);
     QuotRemPair Result = createDivRemPhiNodes(Fast, Slow, SuccessorBB);
