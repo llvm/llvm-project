@@ -1191,7 +1191,7 @@ def loadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
   if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
-    return LD->getAlignment() >= 2 && LD->isSimple();
+    return LD->getAlign() >= 2 && LD->isSimple();
   return false;
 }]>;
 
@@ -1201,7 +1201,7 @@ def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
   if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
-    return LD->getAlignment() >= 4 && LD->isSimple();
+    return LD->getAlign() >= 4 && LD->isSimple();
   return false;
 }]>;
 
@@ -1213,12 +1213,12 @@ def loadf80  : PatFrag<(ops node:$ptr), (f80 (load node:$ptr))>;
 def loadf128 : PatFrag<(ops node:$ptr), (f128 (load node:$ptr))>;
 def alignedloadf128 : PatFrag<(ops node:$ptr), (f128 (load node:$ptr)), [{
   LoadSDNode *Ld = cast<LoadSDNode>(N);
-  return Ld->getAlignment() >= Ld->getMemoryVT().getStoreSize();
+  return Ld->getAlign() >= Ld->getMemoryVT().getStoreSize();
 }]>;
 def memopf128 : PatFrag<(ops node:$ptr), (f128 (load node:$ptr)), [{
   LoadSDNode *Ld = cast<LoadSDNode>(N);
   return Subtarget->hasSSEUnalignedMem() ||
-         Ld->getAlignment() >= Ld->getMemoryVT().getStoreSize();
+         Ld->getAlign() >= Ld->getMemoryVT().getStoreSize();
 }]>;
 
 def sextloadi16i8  : PatFrag<(ops node:$ptr), (i16 (sextloadi8 node:$ptr))>;
@@ -1259,7 +1259,7 @@ def extloadi64i32  : PatFrag<(ops node:$ptr), (i64 (unindexedload node:$ptr)), [
   if (LD->getMemoryVT() == MVT::i32)
     return true;
 
-  return LD->getAlignment() >= 4 && LD->isSimple();
+  return LD->getAlign() >= 4 && LD->isSimple();
 }]>;
 
 
