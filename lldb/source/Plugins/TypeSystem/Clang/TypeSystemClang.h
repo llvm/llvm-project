@@ -1157,7 +1157,7 @@ public:
   /// Alias for requesting the default scratch TypeSystemClang in GetForTarget.
   // This isn't constexpr as gtest/llvm::Optional comparison logic is trying
   // to get the address of this for pretty-printing.
-  static const llvm::NoneType DefaultAST;
+  static const std::nullopt_t DefaultAST;
 
   /// Infers the appropriate sub-AST from Clang's LangOptions.
   static llvm::Optional<IsolatedASTKind>
