@@ -1,0 +1,204 @@
+# RUN: yaml2obj %s -o=%t
+# RUN: obj2yaml %t | FileCheck %s
+# RUN: llvm-objdump --macho --exports-trie %t | FileCheck %s --check-prefix=OBJDUMP-VERIFY
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           16
+  sizeofcmds:      1408
+  flags:           0x00218085
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         552
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          8192
+    fileoff:         0
+    filesize:        8192
+    maxprot:         7
+    initprot:        5
+    nsects:          6
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         __DATA
+    vmaddr:          4294975488
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        4096
+    maxprot:         7
+    initprot:        3
+    nsects:          3
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294979584
+    vmsize:          4096
+    fileoff:         12288
+    filesize:        1884
+    maxprot:         7
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_CHAINED_FIXUPS
+    cmdsize:         16
+    dataoff:         12288
+    datasize:        104
+  - cmd:             LC_DYLD_EXPORTS_TRIE
+    cmdsize:         16
+    dataoff:         12392
+    datasize:        48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          12456
+    nsyms:           30
+    stroff:          13076
+    strsize:         1096
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       9
+    iextdefsym:      9
+    nextdefsym:      2
+    iundefsym:       11
+    nundefsym:       19
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  12936
+    nindirectsyms:   35
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         /usr/lib/dyld
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            461A1B28-822F-3F38-B670-645419E636F5
+  - cmd:             LC_VERSION_MIN_MACOSX
+    cmdsize:         16
+    version:         658176
+    sdk:             658176
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        4448
+    stacksize:       0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         48
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 7864576
+      compatibility_version: 65536
+    Content:         '/usr/lib/libc++.1.dylib'
+    ZeroPadBytes:    1
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 80349697
+      compatibility_version: 65536
+    Content:         /usr/lib/libSystem.B.dylib
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         12440
+    datasize:        16
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         12456
+    datasize:        0
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0000000000000000
+    Address:         0x0000000000000000
+    Other:           0x0000000000000000
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      5
+        Name:            _
+        Flags:           0x0000000000000000
+        Address:         0x0000000000000000
+        Other:           0x0000000000000000
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      33
+            Name:            _mh_execute_header
+            Flags:           0x0000000000000000
+            Address:         0x0000000000000000
+            Other:           0x0000000000000000
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      37
+            Name:            main
+            Flags:           0x0000000000000000
+            Address:         0x0000000000003FA0
+            Other:           0x0000000000000000
+            ImportName:      ''
+  ChainedFixups:   [ 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0x0, 0x0, 0x50, 0x0,
+                     0x0, 0x0, 0x58, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0,
+                     0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x4, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x18, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x18, 0x0, 0x0, 0x0,
+                     0x0, 0x10, 0x6, 0x0, 0x0, 0x40, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
+                     0x1, 0x2, 0x0, 0x0, 0xFD, 0xC, 0x0, 0x0, 0x0, 0x5F,
+                     0x66, 0x6F, 0x6F, 0x0, 0x5F, 0x77, 0x65, 0x61, 0x6B,
+                     0x5F, 0x66, 0x6F, 0x6F, 0x0 ]
+...
+
+#CHECK: ExportTrie:
+#CHECK:     TerminalSize:    0
+#CHECK:     NodeOffset:      0
+#CHECK:     Name:            ''
+#CHECK:     Children:
+#CHECK:       - TerminalSize:    0
+#CHECK:         NodeOffset:      5
+#CHECK:         Name:            _
+#CHECK:         Children:
+#CHECK:           - TerminalSize:    2
+#CHECK:             NodeOffset:      33
+#CHECK:             Name:            _mh_execute_header
+#CHECK:             Address:         0x0
+#CHECK:           - TerminalSize:    3
+#CHECK:             NodeOffset:      37
+#CHECK:             Name:            main
+#CHECK:             Address:         0x3FA0
+
+# OBJDUMP-VERIFY: Exports trie:
+# OBJDUMP-VERIFY: 0x100000000  __mh_execute_header
+# OBJDUMP-VERIFY: 0x100003FA0  _main
