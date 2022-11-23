@@ -1943,12 +1943,24 @@ TSAN_INTERCEPTOR(int, epoll_pwait, int epfd, void *ev, int cnt, int timeout,
   return res;
 }
 
-#define TSAN_MAYBE_INTERCEPT_EPOLL \
-    TSAN_INTERCEPT(epoll_create); \
-    TSAN_INTERCEPT(epoll_create1); \
-    TSAN_INTERCEPT(epoll_ctl); \
-    TSAN_INTERCEPT(epoll_wait); \
-    TSAN_INTERCEPT(epoll_pwait)
+TSAN_INTERCEPTOR(int, epoll_pwait2, int epfd, void *ev, int cnt, void *timeout,
+                 void *sigmask) {
+  SCOPED_TSAN_INTERCEPTOR(epoll_pwait2, epfd, ev, cnt, timeout, sigmask);
+  if (epfd >= 0)
+    FdAccess(thr, pc, epfd);
+  int res = BLOCK_REAL(epoll_pwait2)(epfd, ev, cnt, timeout, sigmask);
+  if (res > 0 && epfd >= 0)
+    FdAcquire(thr, pc, epfd);
+  return res;
+}
+
+#  define TSAN_MAYBE_INTERCEPT_EPOLL \
+    TSAN_INTERCEPT(epoll_create);    \
+    TSAN_INTERCEPT(epoll_create1);   \
+    TSAN_INTERCEPT(epoll_ctl);       \
+    TSAN_INTERCEPT(epoll_wait);      \
+    TSAN_INTERCEPT(epoll_pwait);     \
+    TSAN_INTERCEPT(epoll_pwait2)
 #else
 #define TSAN_MAYBE_INTERCEPT_EPOLL
 #endif
