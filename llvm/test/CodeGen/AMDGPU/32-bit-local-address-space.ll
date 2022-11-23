@@ -58,7 +58,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}null_32bit_lds_ptr:
 ; GFX7 v_cmp_ne_u32
-; GFX7: v_cndmask_b32
+; GFX7: s_cselect_b32
 ; GFX8: s_cmp_lg_u32
 ; GFX8-NOT: v_cmp_ne_u32
 ; GFX8: s_cselect_b32

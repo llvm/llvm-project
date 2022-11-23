@@ -10,8 +10,7 @@
 ; EG: CNDE_INT
 ; SI: v_cmp_eq_u64
 ; VI: s_cmp_eq_u64
-; GCN: v_cndmask
-; GCN: v_cndmask
+; GCN: s_cselect_b32
 define amdgpu_kernel void @selectcc_i64(i64 addrspace(1) * %out, i64 %lhs, i64 %rhs, i64 %true, i64 %false) {
 entry:
   %0 = icmp eq i64 %lhs, %rhs
