@@ -8579,6 +8579,10 @@ isOrXorChain(SDValue N, unsigned &Num,
   if (Num == MaxXors)
     return false;
 
+  // Skip the one-use zext
+  if (N->getOpcode() == ISD::ZERO_EXTEND && N->hasOneUse())
+    N = N->getOperand(0);
+
   // The leaf node must be XOR
   if (N->getOpcode() == ISD::XOR) {
     WorkList.push_back(std::make_pair(N->getOperand(0), N->getOperand(1)));
@@ -8615,29 +8619,18 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
   if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) && isNullConstant(RHS) &&
       LHS->getOpcode() == ISD::OR && LHS->hasOneUse() &&
       isOrXorChain(LHS, NumXors, WorkList)) {
-    SDValue CCVal = DAG.getConstant(AArch64CC::EQ, DL, MVT_CC);
-    EVT TstVT = LHS->getValueType(0);
     SDValue XOR0, XOR1;
     std::tie(XOR0, XOR1) = WorkList[0];
-    SDValue Cmp = DAG.getNode(AArch64ISD::SUBS, DL,
-                              DAG.getVTList(TstVT, MVT::i32), XOR0, XOR1);
-    SDValue Overflow = Cmp.getValue(1);
-    SDValue CCmp;
+    unsigned LogicOp = (Cond == ISD::SETEQ) ? ISD::AND : ISD::OR;
+    SDValue Cmp = DAG.getSetCC(DL, VT, XOR0, XOR1, Cond);
     for (unsigned I = 1; I < WorkList.size(); I++) {
       std::tie(XOR0, XOR1) = WorkList[I];
-      SDValue NZCVOp = DAG.getConstant(0, DL, MVT::i32);
-      CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, XOR0, XOR1, NZCVOp,
-                         CCVal, Overflow);
-      Overflow = CCmp;
+      SDValue CmpChain = DAG.getSetCC(DL, VT, XOR0, XOR1, Cond);
+      Cmp = DAG.getNode(LogicOp, DL, VT, Cmp, CmpChain);
     }
 
     // Exit early by inverting the condition, which help reduce indentations.
-    SDValue TVal = DAG.getConstant(1, DL, VT);
-    SDValue FVal = DAG.getConstant(0, DL, VT);
-    AArch64CC::CondCode CC = changeIntCCToAArch64CC(Cond);
-    AArch64CC::CondCode InvCC = AArch64CC::getInvertedCondCode(CC);
-    return DAG.getNode(AArch64ISD::CSEL, DL, VT, FVal, TVal,
-                       DAG.getConstant(InvCC, DL, MVT::i32), CCmp);
+    return Cmp;
   }
 
   return SDValue();
@@ -8677,11 +8670,6 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
       return IsStrict ? DAG.getMergeValues({LHS, Chain}, dl) : LHS;
     }
   }
-
-  // Address some cases folded And in the stage of `Optimized type-legalized
-  // selection`
-  if (SDValue V = performOrXorChainCombine(Op.getNode(), DAG))
-    return V;
 
   if (LHS.getValueType().isInteger()) {
     SDValue CCVal;
@@ -19755,9 +19743,8 @@ static SDValue performSETCCCombine(SDNode *N,
   }
 
   // Try to perform the memcmp when the result is tested for [in]equality with 0
-  if (!DCI.isBeforeLegalize())
-    if (SDValue V = performOrXorChainCombine(N, DAG))
-      return V;
+  if (SDValue V = performOrXorChainCombine(N, DAG))
+    return V;
 
   return SDValue();
 }

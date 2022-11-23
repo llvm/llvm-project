@@ -650,7 +650,7 @@ class DebugCommunication(object):
                        terminateCommands=None ,sourcePath=None,
                        debuggerRoot=None, launchCommands=None, sourceMap=None,
                        runInTerminal=False, expectFailure=False,
-                       postRunCommands=None, runToBinaryEntry=False):
+                       postRunCommands=None):
         args_dict = {
             'program': program
         }
@@ -662,8 +662,6 @@ class DebugCommunication(object):
             args_dict['env'] = env
         if stopOnEntry:
             args_dict['stopOnEntry'] = stopOnEntry
-        if runToBinaryEntry:
-            args_dict['runToBinaryEntry'] = runToBinaryEntry
         if disableASLR:
             args_dict['disableASLR'] = disableASLR
         if disableSTDIO:

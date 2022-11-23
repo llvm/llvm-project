@@ -10,8 +10,7 @@ declare <2 x float> @foo(ptr %0)
 define void @bar(ptr %y2) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[X14:%.*]] = call <2 x float> @foo(ptr [[Y2:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x float> [[X14]] to <2 x i32>
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[Y2]], align 4, !tbaa.struct !0
+; CHECK-NEXT:    store <2 x float> [[X14]], ptr [[Y2]], align 4, !tbaa.struct !0
 ; CHECK-NEXT:    ret void
 ;
   %x7 = alloca %vector

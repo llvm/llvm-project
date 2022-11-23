@@ -1610,68 +1610,6 @@ llvm::Error request_runInTerminal(const llvm::json::Object &launch_request) {
                                  error.GetCString());
 }
 
-lldb::SBError RunToBinaryEntry() {
-  lldb::SBError error;
-  if (!g_vsc.run_to_binary_entry)
-    return error;
-
-  if (g_vsc.stop_at_entry) {
-    g_vsc.SendOutput(OutputType::Console,
-                     "RunToBinaryEntry is ignored due to StopOnEntry\n");
-    return error;
-  }
-
-  lldb::SBTarget target = g_vsc.debugger.GetSelectedTarget();
-  if (!target.IsValid())
-    return error;
-  lldb::SBFileSpec exe_file = target.GetExecutable();
-  if (!exe_file.IsValid())
-    return error;
-  lldb::SBModule exe_module = target.FindModule(exe_file);
-  if (!exe_module.IsValid()) {
-    g_vsc.SendOutput(OutputType::Console,
-                     "RunToBinaryEntry failed: invalid executable module\n");
-    return error;
-  }
-
-  lldb::SBAddress entry_point = exe_module.GetObjectFileEntryPointAddress();
-  if (!entry_point.IsValid()) {
-    g_vsc.SendOutput(OutputType::Console,
-                     "RunToBinaryEntry failed: can't find entry point\n");
-    return error;
-  }
-  lldb::SBBreakpoint entry_breakpoint =
-      target.BreakpointCreateBySBAddress(entry_point);
-  if (!entry_breakpoint.IsValid() || entry_breakpoint.GetNumLocations() == 0) {
-    g_vsc.SendOutput(OutputType::Console,
-                     "RunToBinaryEntry failed: can't resolve the entry point breakpoint\n");
-    return error;
-  }
-
-  uint32_t old_stop_id = target.GetProcess().GetStopID();
-  entry_breakpoint.SetOneShot(true);
-  error = target.GetProcess().Continue();
-  if (error.Fail())
-    return error;
-
-  const uint64_t timeout_seconds = 600;
-  error = g_vsc.WaitForProcessToStop(timeout_seconds, old_stop_id);
-  if (error.Fail())
-    return error;
-
-  // Successfully got a process stop; we still need to check if the stop is what
-  // we expected.
-  if (entry_breakpoint.GetHitCount() == 0)
-    g_vsc.SendOutput(OutputType::Telemetry,
-                     "RunToBinaryEntry failed: process stopped not at the "
-                     "binary's entry point\n");
-  else
-    g_vsc.SendOutput(OutputType::Telemetry,
-                     "RunToBinaryEntry success: Process stopped successfully "
-                     "at the binary's entry point\n");
-  return error;
-}
-
 // "LaunchRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -1721,7 +1659,6 @@ void request_launch(const llvm::json::Object &request) {
   std::vector<std::string> postRunCommands =
       GetStrings(arguments, "postRunCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
-  g_vsc.run_to_binary_entry = GetBoolean(arguments, "runToBinaryEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
   const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
 
@@ -1803,9 +1740,6 @@ void request_launch(const llvm::json::Object &request) {
     // mode.
     error = g_vsc.WaitForProcessToStop(timeout_seconds);
   }
-
-  if (error.Success())
-    error = RunToBinaryEntry();
 
   if (error.Fail()) {
     response["success"] = llvm::json::Value(false);

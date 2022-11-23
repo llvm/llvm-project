@@ -144,7 +144,6 @@ struct VSCode {
   lldb::tid_t focus_tid;
   bool sent_terminated_event;
   bool stop_at_entry;
-  bool run_to_binary_entry = false;
   bool is_attach;
   bool configuration_done_sent;
   uint32_t reverse_request_seq;
@@ -262,14 +261,9 @@ struct VSCode {
   ///
   /// \param[in] seconds
   ///   The number of seconds to poll the process to wait until it is stopped.
-  /// \param[in] old_stop_id
-  ///   Optional old stop id which we should only check for stopped state if
-  ///   the new stop id is greater than it. This is needed if the previous state
-  ///   is stopped so that we can ensure we are checking new stopped state not
-  ///   the old one in async mode.
   ///
   /// \return Error if waiting for the process fails, no error if succeeds.
-  lldb::SBError WaitForProcessToStop(uint32_t seconds, uint32_t old_stop_id = 0);
+  lldb::SBError WaitForProcessToStop(uint32_t seconds);
 
 private:
   // Send the JSON in "json_str" to the "out" stream. Correctly send the
