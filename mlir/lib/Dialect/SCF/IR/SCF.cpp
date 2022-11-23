@@ -1323,6 +1323,31 @@ ForeachThreadOp mlir::scf::getForeachThreadOpThreadIndexOwner(Value val) {
   return dyn_cast<ForeachThreadOp>(containingOp);
 }
 
+namespace {
+/// Fold tensor.dim(foreach_thread shared_outs(... = %t)) to tensor.dim(%t).
+struct DimOfForeachThreadOp : public OpRewritePattern<tensor::DimOp> {
+  using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::DimOp dimOp,
+                                PatternRewriter &rewriter) const final {
+    auto foreachThreadOp = dimOp.getSource().getDefiningOp<ForeachThreadOp>();
+    if (!foreachThreadOp)
+      return failure();
+    Value sharedOut =
+        foreachThreadOp.getTiedOpOperand(dimOp.getSource().cast<OpResult>())
+            ->get();
+    rewriter.updateRootInPlace(
+        dimOp, [&]() { dimOp.getSourceMutable().assign(sharedOut); });
+    return success();
+  }
+};
+} // namespace
+
+void ForeachThreadOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.add<DimOfForeachThreadOp>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // PerformConcurrentlyOp
 //===----------------------------------------------------------------------===//

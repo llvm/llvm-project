@@ -516,12 +516,12 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  2      9     0.50    *                   mulsd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.33                        orpd	%xmm0, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   orpd	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00                        packssdw	%xmm0, %xmm2
-# CHECK-NEXT:  2      7     1.00    *                   packssdw	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00                        packsswb	%xmm0, %xmm2
-# CHECK-NEXT:  2      7     1.00    *                   packsswb	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00                        packuswb	%xmm0, %xmm2
-# CHECK-NEXT:  2      7     1.00    *                   packuswb	(%rax), %xmm2
+# CHECK-NEXT:  1      3     1.00                        packssdw	%xmm0, %xmm2
+# CHECK-NEXT:  2      10    1.00    *                   packssdw	(%rax), %xmm2
+# CHECK-NEXT:  1      3     1.00                        packsswb	%xmm0, %xmm2
+# CHECK-NEXT:  2      10    1.00    *                   packsswb	(%rax), %xmm2
+# CHECK-NEXT:  1      3     1.00                        packuswb	%xmm0, %xmm2
+# CHECK-NEXT:  2      10    1.00    *                   packuswb	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.33                        paddb	%xmm0, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   paddb	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.33                        paddd	%xmm0, %xmm2

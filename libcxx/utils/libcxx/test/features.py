@@ -206,6 +206,7 @@ macros = {
   '_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY': 'no-filesystem',
   '_LIBCPP_HAS_NO_RANDOM_DEVICE': 'no-random-device',
   '_LIBCPP_HAS_NO_LOCALIZATION': 'no-localization',
+  '_LIBCPP_HAS_NO_FSTREAM': 'no-fstream',
   '_LIBCPP_HAS_NO_WIDE_CHARACTERS': 'no-wide-characters',
   '_LIBCPP_HAS_NO_UNICODE': 'libcpp-has-no-unicode',
   '_LIBCPP_ENABLE_DEBUG_MODE': 'libcpp-has-debug-mode',

@@ -109,7 +109,7 @@ private:
   bool selectInterpP1F16(MachineInstr &MI) const;
   bool selectWritelane(MachineInstr &MI) const;
   bool selectDivScale(MachineInstr &MI) const;
-  bool selectIntrinsicIcmp(MachineInstr &MI) const;
+  bool selectIntrinsicCmp(MachineInstr &MI) const;
   bool selectBallot(MachineInstr &I) const;
   bool selectRelocConstant(MachineInstr &I) const;
   bool selectGroupStaticSize(MachineInstr &I) const;
@@ -148,7 +148,11 @@ private:
 
   std::pair<Register, unsigned>
   selectVOP3ModsImpl(MachineOperand &Root, bool AllowAbs = true,
-                     bool OpSel = false, bool ForceVGPR = false) const;
+                     bool OpSel = false) const;
+
+  Register copyToVGPRIfSrcFolded(Register Src, unsigned Mods,
+                                 MachineOperand Root, MachineInstr *InsertPt,
+                                 bool ForceVGPR = false) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;

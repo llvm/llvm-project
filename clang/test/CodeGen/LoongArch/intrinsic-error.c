@@ -7,10 +7,26 @@ int crc_w_d_w(long int a, int b) {
   return __builtin_loongarch_crc_w_d_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
 }
 
-void dbar_out_of_hi_range() {
-  return __builtin_loongarch_dbar(32768); // expected-error {{argument value 32768 is outside the valid range [0, 32767]}}
+void dbar(int a) {
+  __builtin_loongarch_dbar(32768); // expected-error {{argument value 32768 is outside the valid range [0, 32767]}}
+  __builtin_loongarch_dbar(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 32767]}}
+  __builtin_loongarch_dbar(a); // expected-error {{argument to '__builtin_loongarch_dbar' must be a constant integer}}
 }
 
-void dbar_out_of_lo_range() {
-  return __builtin_loongarch_dbar(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 32767]}}
+void ibar(int a) {
+  __builtin_loongarch_ibar(32769); // expected-error {{argument value 32769 is outside the valid range [0, 32767]}}
+  __builtin_loongarch_ibar(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 32767]}}
+  __builtin_loongarch_ibar(a); // expected-error {{argument to '__builtin_loongarch_ibar' must be a constant integer}}
+}
+
+void loongarch_break(int a) {
+  __builtin_loongarch_break(32769); // expected-error {{argument value 32769 is outside the valid range [0, 32767]}}
+  __builtin_loongarch_break(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 32767]}}
+  __builtin_loongarch_break(a); // expected-error {{argument to '__builtin_loongarch_break' must be a constant integer}}
+}
+
+void syscall(int a) {
+  __builtin_loongarch_syscall(32769); // expected-error {{argument value 32769 is outside the valid range [0, 32767]}}
+  __builtin_loongarch_syscall(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 32767]}}
+  __builtin_loongarch_syscall(a); // expected-error {{argument to '__builtin_loongarch_syscall' must be a constant integer}}
 }

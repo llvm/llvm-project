@@ -310,12 +310,12 @@ define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_pstate_za_shared" nounwi
 ; CHECK-COMMON-NEXT:    sub x9, x9, x8
 ; CHECK-COMMON-NEXT:    mov sp, x9
 ; CHECK-COMMON-NEXT:    sub x10, x29, #16
-; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
 ; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
+; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-COMMON-NEXT:    bl __addtf3
 ; CHECK-COMMON-NEXT:    smstart za
-; CHECK-COMMON-NEXT:    add x0, x29, #0
+; CHECK-COMMON-NEXT:    sub x0, x29, #16
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-COMMON-NEXT:    cbnz x8, .LBB8_2
 ; CHECK-COMMON-NEXT:  // %bb.1:

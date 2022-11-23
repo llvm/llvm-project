@@ -25,7 +25,9 @@
   ; CHECK-NEXT:    mul a0, a0, a1
   ; CHECK-NEXT:    ld a1, 0(sp)
   ; CHECK-NEXT:    sub sp, sp, a0
+  ; CHECK-NEXT:    ld a0, 8(sp)
   ; CHECK-NEXT:    andi sp, sp, -128
+  ; CHECK-NEXT:    sd a0, 8(sp)
   ; CHECK-NEXT:    lui a0, 1
   ; CHECK-NEXT:    addiw a0, a0, -1808
   ; CHECK-NEXT:    add a0, sp, a0

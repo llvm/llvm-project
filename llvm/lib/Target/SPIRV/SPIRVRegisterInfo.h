@@ -24,9 +24,11 @@ struct SPIRVRegisterInfo : public SPIRVGenRegisterInfo {
   SPIRVRegisterInfo();
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
   BitVector getReservedRegs(const MachineFunction &MF) const override;
-  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
+  bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
-                           RegScavenger *RS = nullptr) const override {}
+                           RegScavenger *RS = nullptr) const override {
+    return false;
+  }
   Register getFrameRegister(const MachineFunction &MF) const override {
     return 0;
   }

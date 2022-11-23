@@ -31,6 +31,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loongarch-isel-lowering"
 
+STATISTIC(NumTailCalls, "Number of tail calls");
+
 static cl::opt<bool> ZeroDivCheck(
     "loongarch-check-zero-division", cl::Hidden,
     cl::desc("Trap on integer division by zero."),
@@ -254,19 +256,23 @@ SDValue LoongArchTargetLowering::lowerFRAMEADDR(SDValue Op,
     return SDValue();
   }
 
-  // Currently only support lowering frame address for current frame.
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
-    DAG.getContext()->emitError(
-        "frame address can only be determined for the current frame");
-    return SDValue();
-  }
-
   MachineFunction &MF = DAG.getMachineFunction();
   MF.getFrameInfo().setFrameAddressIsTaken(true);
+  Register FrameReg = Subtarget.getRegisterInfo()->getFrameRegister(MF);
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+  SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), DL, FrameReg, VT);
+  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  int GRLenInBytes = Subtarget.getGRLen() / 8;
 
-  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op),
-                            Subtarget.getRegisterInfo()->getFrameRegister(MF),
-                            Op.getValueType());
+  while (Depth--) {
+    int Offset = -(GRLenInBytes * 2);
+    SDValue Ptr = DAG.getNode(ISD::ADD, DL, VT, FrameAddr,
+                              DAG.getIntPtrConstant(Offset, DL));
+    FrameAddr =
+        DAG.getLoad(VT, DL, DAG.getEntryNode(), Ptr, MachinePointerInfo());
+  }
+  return FrameAddr;
 }
 
 SDValue LoongArchTargetLowering::lowerRETURNADDR(SDValue Op,
@@ -576,33 +582,58 @@ LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
   }
 }
 
+// Helper function that emits error message for intrinsics with void return
+// value.
+static SDValue emitIntrinsicErrorMessage(SDValue Op, StringRef ErrorMsg,
+                                         SelectionDAG &DAG) {
+
+  DAG.getContext()->emitError("argument to '" + Op->getOperationName(0) + "' " +
+                              ErrorMsg);
+  return Op.getOperand(0);
+}
+
 SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
   MVT GRLenVT = Subtarget.getGRLenVT();
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Op2 = Op.getOperand(2);
+  const StringRef ErrorMsgOOR = "out of range";
 
   switch (Op.getConstantOperandVal(1)) {
   default:
     // TODO: Add more Intrinsics.
     return SDValue();
   case Intrinsic::loongarch_dbar: {
-    SDValue Op0 = Op.getOperand(0);
-    SDValue Op2 = Op.getOperand(2);
-    if (!isa<ConstantSDNode>(Op2)) {
-      DAG.getContext()->emitError("argument to '__builtin_loongarch_dbar' must "
-                                  "be a constant integer");
-      return Op.getOperand(0);
-    }
     unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
-    if (!isUInt<15>(Imm)) {
-      DAG.getContext()->emitError(
-          "argument to '__builtin_loongarch_dbar' out of range");
-      return Op0;
-    }
+    if (!isUInt<15>(Imm))
+      return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
 
-    if (GRLenVT == MVT::i32)
-      return Op;
     return DAG.getNode(LoongArchISD::DBAR, DL, MVT::Other, Op0,
+                       DAG.getConstant(Imm, DL, GRLenVT));
+  }
+  case Intrinsic::loongarch_ibar: {
+    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    if (!isUInt<15>(Imm))
+      return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
+
+    return DAG.getNode(LoongArchISD::IBAR, DL, MVT::Other, Op0,
+                       DAG.getConstant(Imm, DL, GRLenVT));
+  }
+  case Intrinsic::loongarch_break: {
+    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    if (!isUInt<15>(Imm))
+      return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
+
+    return DAG.getNode(LoongArchISD::BREAK, DL, MVT::Other, Op0,
+                       DAG.getConstant(Imm, DL, GRLenVT));
+  }
+  case Intrinsic::loongarch_syscall: {
+    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    if (!isUInt<15>(Imm))
+      return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
+
+    return DAG.getNode(LoongArchISD::SYSCALL, DL, MVT::Other, Op0,
                        DAG.getConstant(Imm, DL, GRLenVT));
   }
   }
@@ -1334,6 +1365,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     // TODO: Add more target-dependent nodes later.
     NODE_NAME_CASE(CALL)
     NODE_NAME_CASE(RET)
+    NODE_NAME_CASE(TAIL)
     NODE_NAME_CASE(SLL_W)
     NODE_NAME_CASE(SRA_W)
     NODE_NAME_CASE(SRL_W)
@@ -1351,6 +1383,9 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(CLZ_W)
     NODE_NAME_CASE(CTZ_W)
     NODE_NAME_CASE(DBAR)
+    NODE_NAME_CASE(IBAR)
+    NODE_NAME_CASE(BREAK)
+    NODE_NAME_CASE(SYSCALL)
     NODE_NAME_CASE(CRC_W_D_W)
   }
 #undef NODE_NAME_CASE
@@ -1808,6 +1843,48 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
   return Chain;
 }
 
+// Check whether the call is eligible for tail call optimization.
+bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
+    CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
+    const SmallVectorImpl<CCValAssign> &ArgLocs) const {
+
+  auto CalleeCC = CLI.CallConv;
+  auto &Outs = CLI.Outs;
+  auto &Caller = MF.getFunction();
+  auto CallerCC = Caller.getCallingConv();
+
+  // Do not tail call opt if the stack is used to pass parameters.
+  if (CCInfo.getNextStackOffset() != 0)
+    return false;
+
+  // Do not tail call opt if any parameters need to be passed indirectly.
+  for (auto &VA : ArgLocs)
+    if (VA.getLocInfo() == CCValAssign::Indirect)
+      return false;
+
+  // Do not tail call opt if either caller or callee uses struct return
+  // semantics.
+  auto IsCallerStructRet = Caller.hasStructRetAttr();
+  auto IsCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
+  if (IsCallerStructRet || IsCalleeStructRet)
+    return false;
+
+  // Do not tail call opt if either the callee or caller has a byval argument.
+  for (auto &Arg : Outs)
+    if (Arg.Flags.isByVal())
+      return false;
+
+  // The callee has to preserve all registers the caller needs to preserve.
+  const LoongArchRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
+  if (CalleeCC != CallerCC) {
+    const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
+    if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
+      return false;
+  }
+  return true;
+}
+
 static Align getPrefTypeAlign(EVT VT, SelectionDAG &DAG) {
   return DAG.getDataLayout().getPrefTypeAlign(
       VT.getTypeForEVT(*DAG.getContext()));
@@ -1829,7 +1906,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool IsVarArg = CLI.IsVarArg;
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   MVT GRLenVT = Subtarget.getGRLenVT();
-  CLI.IsTailCall = false;
+  bool &IsTailCall = CLI.IsTailCall;
 
   MachineFunction &MF = DAG.getMachineFunction();
 
@@ -1838,6 +1915,16 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
   analyzeOutputArgs(MF, ArgCCInfo, Outs, /*IsRet=*/false, &CLI, CC_LoongArch);
+
+  // Check if it's really possible to do a tail call.
+  if (IsTailCall)
+    IsTailCall = isEligibleForTailCallOptimization(ArgCCInfo, CLI, MF, ArgLocs);
+
+  if (IsTailCall)
+    ++NumTailCalls;
+  else if (CLI.CB && CLI.CB->isMustTailCall())
+    report_fatal_error("failed to perform tail call elimination on a call "
+                       "site marked musttail");
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = ArgCCInfo.getNextStackOffset();
@@ -1860,12 +1947,13 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
                           /*IsVolatile=*/false,
-                          /*AlwaysInline=*/false, /*isTailCall=*/false,
+                          /*AlwaysInline=*/false, /*isTailCall=*/IsTailCall,
                           MachinePointerInfo(), MachinePointerInfo());
     ByValArgs.push_back(FIPtr);
   }
 
-  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
+  if (!IsTailCall)
+    Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
 
   // Copy argument values to their designated locations.
   SmallVector<std::pair<Register, SDValue>> RegsToPass;
@@ -1932,6 +2020,8 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
+      assert(!IsTailCall && "Tail call not allowed if stack is used "
+                            "for passing parameters");
 
       // Work out the address of the stack slot.
       if (!StackPtr.getNode())
@@ -1986,11 +2076,13 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   for (auto &Reg : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
 
-  // Add a register mask operand representing the call-preserved registers.
-  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
-  assert(Mask && "Missing call preserved mask for calling convention");
-  Ops.push_back(DAG.getRegisterMask(Mask));
+  if (!IsTailCall) {
+    // Add a register mask operand representing the call-preserved registers.
+    const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+    const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
+    assert(Mask && "Missing call preserved mask for calling convention");
+    Ops.push_back(DAG.getRegisterMask(Mask));
+  }
 
   // Glue the call to the argument copies, if any.
   if (Glue.getNode())
@@ -1998,6 +2090,11 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+
+  if (IsTailCall) {
+    MF.getFrameInfo().setHasTailCall();
+    return DAG.getNode(LoongArchISD::TAIL, DL, NodeTys, Ops);
+  }
 
   Chain = DAG.getNode(LoongArchISD::CALL, DL, NodeTys, Ops);
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);

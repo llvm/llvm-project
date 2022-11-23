@@ -449,24 +449,10 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
   return true;
 }
 
-// If the use operand doesn't care about the value, this may be an operand only
-// used for register indexing, in which case it is unsafe to fold.
 bool SIFoldOperands::isUseSafeToFold(const MachineInstr &MI,
                                      const MachineOperand &UseMO) const {
-  if (UseMO.isUndef() || TII->isSDWA(MI))
-    return false;
-
-  switch (MI.getOpcode()) {
-  case AMDGPU::V_MOV_B32_e32:
-  case AMDGPU::V_MOV_B32_e64:
-  case AMDGPU::V_MOV_B64_PSEUDO:
-  case AMDGPU::V_MOV_B64_e32:
-  case AMDGPU::V_MOV_B64_e64:
-    // Do not fold into an indirect mov.
-    return !MI.hasRegisterImplicitUseOperand(AMDGPU::M0);
-  }
-
-  return true;
+  // Operands of SDWA instructions must be registers.
+  return !TII->isSDWA(MI);
 }
 
 // Find a def of the UseReg, check if it is a reg_sequence and find initializers

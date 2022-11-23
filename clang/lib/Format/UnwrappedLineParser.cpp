@@ -197,6 +197,7 @@ public:
     PreBlockLine = std::move(Parser.Line);
     Parser.Line = std::make_unique<UnwrappedLine>();
     Parser.Line->Level = PreBlockLine->Level;
+    Parser.Line->PPLevel = PreBlockLine->PPLevel;
     Parser.Line->InPPDirective = PreBlockLine->InPPDirective;
     Parser.Line->InMacroBody = PreBlockLine->InMacroBody;
   }
@@ -833,6 +834,9 @@ bool UnwrappedLineParser::mightFitOnOneLine(
     delete SavedToken.Tok;
   }
 
+  // If these change PPLevel needs to be used for get correct indentation.
+  assert(!Line.InMacroBody);
+  assert(!Line.InPPDirective);
   return Line.Level * Style.IndentWidth + Length <= ColumnLimit;
 }
 
@@ -1270,6 +1274,9 @@ void UnwrappedLineParser::parsePPDefine() {
     Line->Level += PPBranchLevel + 1;
   addUnwrappedLine();
   ++Line->Level;
+
+  Line->PPLevel = PPBranchLevel + (IncludeGuard == IG_Defined ? 0 : 1);
+  assert((int)Line->PPLevel >= 0);
   Line->InMacroBody = true;
 
   // Errors during a preprocessor directive can only affect the layout of the

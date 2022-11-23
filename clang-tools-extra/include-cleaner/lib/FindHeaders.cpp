@@ -19,27 +19,30 @@ llvm::SmallVector<Header> findHeaders(const SymbolLocation &Loc,
   switch (Loc.kind()) {
   case SymbolLocation::Physical: {
     // FIXME: Handle macro locations.
-    // FIXME: Handle non self-contained files.
     FileID FID = SM.getFileID(Loc.physical());
-    const auto *FE = SM.getFileEntryForID(FID);
-    if (!FE)
-      return {};
-
-    Results = {Header(FE)};
-    if (PI) {
-      // We treat the spelling header in the IWYU pragma as the final public
-      // header.
-      // FIXME: look for exporters if the public header is exported by another
-      // header.
-      llvm::StringRef VerbatimSpelling = PI->getPublic(FE);
-      if (!VerbatimSpelling.empty())
-        return {Header(VerbatimSpelling)};
-
+    const FileEntry *FE = SM.getFileEntryForID(FID);
+    if (!PI) {
+      return FE ? llvm::SmallVector<Header>{Header(FE)}
+                : llvm::SmallVector<Header>();
+    }
+    while (FE) {
+      Results.push_back(Header(FE));
       // FIXME: compute transitive exporter headers.
       for (const auto *Export : PI->getExporters(FE, SM.getFileManager()))
-        Results.push_back(Export);
-    }
+        Results.push_back(Header(Export));
 
+      llvm::StringRef VerbatimSpelling = PI->getPublic(FE);
+      if (!VerbatimSpelling.empty()) {
+        Results.push_back(VerbatimSpelling);
+        break;
+      }
+      if (PI->isSelfContained(FE) || FID == SM.getMainFileID())
+        break;
+
+      // Walkup the include stack for non self-contained headers.
+      FID = SM.getDecomposedIncludedLoc(FID).first;
+      FE = SM.getFileEntryForID(FID);
+    }
     return Results;
   }
   case SymbolLocation::Standard: {

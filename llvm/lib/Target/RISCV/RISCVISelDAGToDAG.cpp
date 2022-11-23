@@ -2234,6 +2234,43 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
   return false;
 }
 
+/// Look for various patterns that can be done with a SHL that can be folded
+/// into a SHXADD_UW. \p ShAmt contains 1, 2, or 3 and is set based on which
+/// SHXADD_UW we are trying to match.
+bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
+                                          SDValue &Val) {
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
+      N.hasOneUse()) {
+    SDValue N0 = N.getOperand(0);
+    if (N0.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N0.getOperand(1)) &&
+        N0.hasOneUse()) {
+      uint64_t Mask = N.getConstantOperandVal(1);
+      unsigned C2 = N0.getConstantOperandVal(1);
+
+      Mask &= maskTrailingZeros<uint64_t>(C2);
+
+      // Look for (and (shl y, c2), c1) where c1 is a shifted mask with
+      // 32-ShAmt leading zeros and c2 trailing zeros. We can use SLLI by
+      // c2-ShAmt followed by SHXADD_UW with ShAmt for the X amount.
+      if (isShiftedMask_64(Mask)) {
+        unsigned Leading = countLeadingZeros(Mask);
+        unsigned Trailing = countTrailingZeros(Mask);
+        if (Leading == 32 - ShAmt && Trailing == C2 && Trailing > ShAmt) {
+          SDLoc DL(N);
+          EVT VT = N.getValueType();
+          Val = SDValue(CurDAG->getMachineNode(
+                            RISCV::SLLI, DL, VT, N0.getOperand(0),
+                            CurDAG->getTargetConstant(C2 - ShAmt, DL, VT)),
+                        0);
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 // Return true if all users of this SDNode* only consume the lower \p Bits.
 // This can be used to form W instructions for add/sub/mul/shl even when the
 // root isn't a sext_inreg. This can allow the ADDW/SUBW/MULW/SLLIW to CSE if

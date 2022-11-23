@@ -70,9 +70,8 @@ struct CastOpInterface
         layout = rankedMemRefType.getLayout();
 
     // Compute the new memref type.
-    Type resultMemRefType =
-        getMemRefType(castOp.getResult(), options, layout,
-                      sourceMemRefType.getMemorySpaceAsInt());
+    Type resultMemRefType = getMemRefType(castOp.getResult(), options, layout,
+                                          sourceMemRefType.getMemorySpace());
 
     // Replace the op with a memref.cast.
     assert(memref::CastOp::areCastCompatible(resultBuffer->getType(),
@@ -127,7 +126,7 @@ struct CollapseShapeOpInterface
       // If dims cannot be collapsed, this op bufferizes to a new allocation.
       RankedTensorType tensorResultType = collapseShapeOp.getResultType();
       return bufferization::getMemRefTypeWithStaticIdentityLayout(
-          tensorResultType, srcBufferType.getMemorySpaceAsInt());
+          tensorResultType, srcBufferType.getMemorySpace());
     }
 
     return memref::CollapseShapeOp::computeCollapsedType(
@@ -188,7 +187,7 @@ struct CollapseShapeOpInterface
       auto memrefType =
           MemRefType::get(collapseShapeOp.getSrcType().getShape(),
                           collapseShapeOp.getSrcType().getElementType(),
-                          AffineMap(), bufferType.getMemorySpaceAsInt());
+                          AffineMap(), bufferType.getMemorySpace());
       buffer = rewriter.create<bufferization::ToMemrefOp>(
           op->getLoc(), memrefType, *tensorAlloc);
     }
@@ -436,7 +435,7 @@ struct FromElementsOpInterface
         fromElementsOp.getResult().cast<OpResult>(), options);
 
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpace != static_cast<unsigned>(0))
+    if (options.defaultMemorySpace != Attribute())
       return op->emitError("memory space not implemented yet");
 
     // Allocate a buffer for the result.
@@ -556,7 +555,7 @@ struct GenerateOpInterface
         generateOp.getResult().cast<OpResult>(), options);
 
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpace != static_cast<unsigned>(0))
+    if (options.defaultMemorySpace != Attribute())
       return op->emitError("memory space not implemented yet");
 
     // Allocate memory.
@@ -951,7 +950,7 @@ struct ReshapeOpInterface
       return failure();
     auto resultMemRefType = getMemRefType(
         reshapeOp.getResult(), options, /*layout=*/{},
-        srcBuffer->getType().cast<BaseMemRefType>().getMemorySpaceAsInt());
+        srcBuffer->getType().cast<BaseMemRefType>().getMemorySpace());
     replaceOpWithNewBufferizedOp<memref::ReshapeOp>(
         rewriter, op, resultMemRefType, *srcBuffer, *shapeBuffer);
     return success();

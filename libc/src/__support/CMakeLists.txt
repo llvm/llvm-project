@@ -7,10 +7,17 @@ add_header_library(
 )
 
 add_header_library(
+  named_pair
+  HDRS
+    named_pair.h
+)
+
+add_header_library(
   builtin_wrappers
   HDRS
     builtin_wrappers.h
   DEPENDS
+    .named_pair
     libc.src.__support.CPP.type_traits
 )
 
@@ -111,6 +118,7 @@ add_header_library(
   HDRS
     number_pair.h
   DEPENDS
+    .named_pair
     libc.src.__support.CPP.type_traits
 )
 

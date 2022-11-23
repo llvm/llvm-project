@@ -395,7 +395,7 @@ func.func @broadcast(%input: tensor<8x32xf32>,
   %bcast = linalg.broadcast
       ins(%input:tensor<8x32xf32>)
       outs(%init:tensor<8x16x32xf32>)
-      dimensions = [0, 2]
+      dimensions = [1]
   func.return %bcast : tensor<8x16x32xf32>
 }
 

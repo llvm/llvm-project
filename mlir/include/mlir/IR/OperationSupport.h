@@ -768,10 +768,11 @@ public:
   /// elements.
   OpPrintingFlags &elideLargeElementsAttrs(int64_t largeElementLimit = 16);
 
-  /// Enable printing of debug information. If 'prettyForm' is set to true,
-  /// debug information is printed in a more readable 'pretty' form. Note: The
-  /// IR generated with 'prettyForm' is not parsable.
-  OpPrintingFlags &enableDebugInfo(bool prettyForm = false);
+  /// Enable or disable printing of debug information (based on `enable`). If
+  /// 'prettyForm' is set to true, debug information is printed in a more
+  /// readable 'pretty' form. Note: The IR generated with 'prettyForm' is not
+  /// parsable.
+  OpPrintingFlags &enableDebugInfo(bool enable = true, bool prettyForm = false);
 
   /// Always print operations in the generic form.
   OpPrintingFlags &printGenericOpForm();

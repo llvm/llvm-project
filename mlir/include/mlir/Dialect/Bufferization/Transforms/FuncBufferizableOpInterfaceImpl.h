@@ -10,6 +10,8 @@
 #define MLIR_BUFFERIZATION_TRANSFORMS_FUNCBUFFERIZABLEOPINTERFACEIMPL_H
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
 namespace mlir {
 class DialectRegistry;
@@ -27,7 +29,10 @@ using func::FuncOp;
 
 /// Extra analysis state that is required for bufferization of function
 /// boundaries.
-struct FuncAnalysisState : public DialectAnalysisState {
+struct FuncAnalysisState : public OneShotAnalysisState::Extension {
+  FuncAnalysisState(OneShotAnalysisState &state)
+      : OneShotAnalysisState::Extension(state) {}
+
   // Note: Function arguments and/or function return values may disappear during
   // bufferization. Functions and their CallOps are analyzed and bufferized
   // separately. To ensure that a CallOp analysis/bufferization can access an

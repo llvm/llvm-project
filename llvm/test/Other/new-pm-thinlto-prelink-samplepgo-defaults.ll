@@ -122,6 +122,7 @@
 ; CHECK-O-NEXT: Running pass: IndVarSimplifyPass
 ; CHECK-O-NEXT: Running pass: LoopDeletionPass
 ; CHECK-O-NEXT: Running pass: SROAPass on foo
+; CHECK-O23SZ-NEXT: Running pass: VectorCombinePass
 ; CHECK-O23SZ-NEXT: Running pass: MergedLoadStoreMotionPass
 ; CHECK-O23SZ-NEXT: Running pass: GVNPass
 ; CHECK-O23SZ-NEXT: Running analysis: MemoryDependenceAnalysis

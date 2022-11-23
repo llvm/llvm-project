@@ -910,10 +910,10 @@ Parser::parseMatcherExpression(StringRef &Code, Sema *S,
                                Diagnostics *Error) {
   VariantValue Value;
   if (!parseExpression(Code, S, NamedValues, &Value, Error))
-    return llvm::Optional<DynTypedMatcher>();
+    return llvm::None;
   if (!Value.isMatcher()) {
     Error->addError(SourceRange(), Error->ET_ParserNotAMatcher);
-    return llvm::Optional<DynTypedMatcher>();
+    return llvm::None;
   }
   llvm::Optional<DynTypedMatcher> Result =
       Value.getMatcher().getSingleMatcher();

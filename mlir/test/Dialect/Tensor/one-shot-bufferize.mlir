@@ -261,7 +261,7 @@ func.func @pad_memory_space(%t: tensor<?xf32>, %h1: index, %f: f32, %pos: index)
   // CHECK: %[[alloc_tensor:.*]] = memref.alloc{{.*}} : memref<?xf32, 3>
   // CHECK: memref.copy %[[t]], %[[alloc_tensor]]
   %0 = bufferization.alloc_tensor() copy(%t)
-      {memory_space = 3 : ui64} : tensor<?xf32>
+      {memory_space = 3 : i64} : tensor<?xf32>
   // CHECK: %[[padded_alloc:.*]] = memref.alloc() {{.*}} : memref<15xf32, 3>
   // CHECK: linalg.map
   // CHECK:     outs(%[[padded_alloc]] : memref<15xf32, 3>)

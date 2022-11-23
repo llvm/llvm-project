@@ -828,6 +828,14 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
   if (Begin)
     Begin->setFragment(F);
 
+  // We might miss calculating the symbols difference as absolute value before
+  // adding fixups when symbol_A without the fragment set is the csect itself
+  // and symbol_B is in it.
+  // TODO: Currently we only set the fragment for XMC_PR csects because we don't
+  // have other cases that hit this problem yet.
+  if (!IsDwarfSec && CsectProp->MappingClass == XCOFF::XMC_PR)
+    QualName->setFragment(F);
+
   return Result;
 }
 

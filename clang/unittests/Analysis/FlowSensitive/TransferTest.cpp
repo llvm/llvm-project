@@ -9,7 +9,6 @@
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
@@ -63,7 +62,7 @@ void runDataflow(llvm::StringRef Code, Matcher Match,
                  LangStandard::Kind Std = LangStandard::lang_cxx17,
                  bool ApplyBuiltinTransfer = true,
                  llvm::StringRef TargetFun = "target") {
-  runDataflow(Code, Match,
+  runDataflow(Code, std::move(Match),
               {ApplyBuiltinTransfer ? TransferOptions{}
                                     : llvm::Optional<TransferOptions>()},
               Std, TargetFun);
@@ -3255,8 +3254,7 @@ TEST(TransferTest, CorrelatedBranches) {
 
 TEST(TransferTest, LoopWithAssignmentConverges) {
   std::string Code = R"(
-
-    bool &foo();
+    bool foo();
 
     void target() {
        do {
@@ -3285,9 +3283,45 @@ TEST(TransferTest, LoopWithAssignmentConverges) {
       });
 }
 
+TEST(TransferTest, LoopWithStagedAssignments) {
+  std::string Code = R"(
+    bool foo();
+
+    void target() {
+      bool Bar = false;
+      bool Err = false;
+      while (foo()) {
+        if (Bar)
+          Err = true;
+        Bar = true;
+        /*[[p]]*/
+      }
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+        const ValueDecl *ErrDecl = findValueDecl(ASTCtx, "Err");
+        ASSERT_THAT(ErrDecl, NotNull());
+
+        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
+        auto &ErrVal = *cast<BoolValue>(Env.getValue(*ErrDecl, SkipPast::None));
+        EXPECT_TRUE(Env.flowConditionImplies(BarVal));
+        // An unsound analysis, for example only evaluating the loop once, can
+        // conclude that `Err` is false. So, we test that this conclusion is not
+        // reached.
+        EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(ErrVal)));
+      });
+}
+
 TEST(TransferTest, LoopWithReferenceAssignmentConverges) {
   std::string Code = R"(
-
     bool &foo();
 
     void target() {
@@ -3299,9 +3333,8 @@ TEST(TransferTest, LoopWithReferenceAssignmentConverges) {
       } while (true);
     }
   )";
-  // The key property that we are verifying is implicit in `runDataflow` --
-  // namely, that the analysis succeeds, rather than hitting the maximum number
-  // of iterations.
+  // The key property that we are verifying is that the analysis succeeds,
+  // rather than hitting the maximum number of iterations.
   runDataflow(
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
