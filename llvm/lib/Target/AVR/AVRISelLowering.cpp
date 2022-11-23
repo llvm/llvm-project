@@ -838,12 +838,12 @@ SDValue AVRTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
                       MachinePointerInfo(SV));
 }
 
-// Modify the existing ISD::INLINEASM node to add the implicit register r1.
+// Modify the existing ISD::INLINEASM node to add the implicit zero register.
 SDValue AVRTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
-  SDValue R1Reg = DAG.getRegister(AVR::R1, MVT::i8);
-  if (Op.getOperand(Op.getNumOperands() - 1) == R1Reg ||
-      Op.getOperand(Op.getNumOperands() - 2) == R1Reg) {
-    // R1 has already been added. Don't add it again.
+  SDValue ZeroReg = DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8);
+  if (Op.getOperand(Op.getNumOperands() - 1) == ZeroReg ||
+      Op.getOperand(Op.getNumOperands() - 2) == ZeroReg) {
+    // Zero register has already been added. Don't add it again.
     // If this isn't handled, we get called over and over again.
     return Op;
   }
@@ -852,8 +852,8 @@ SDValue AVRTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   // with some edits.
   // Add the following operands at the end (but before the glue node, if it's
   // there):
-  //  - The flags of the implicit R1 register operand.
-  //  - The implicit R1 register operand itself.
+  //  - The flags of the implicit zero register operand.
+  //  - The implicit zero register operand itself.
   SDLoc dl(Op);
   SmallVector<SDValue, 8> Ops;
   SDNode *N = Op.getNode();
@@ -870,13 +870,13 @@ SDValue AVRTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   }
   unsigned Flags = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, 1);
   Ops.push_back(DAG.getTargetConstant(Flags, dl, MVT::i32));
-  Ops.push_back(R1Reg);
+  Ops.push_back(ZeroReg);
   if (Glue) {
     Ops.push_back(Glue);
   }
 
-  // Replace the current INLINEASM node with a new one that has R1 as implicit
-  // parameter.
+  // Replace the current INLINEASM node with a new one that has the zero
+  // register as implicit parameter.
   SDValue New = DAG.getNode(N->getOpcode(), dl, N->getVTList(), Ops);
   DAG.ReplaceAllUsesOfValueWith(Op, New);
   DAG.ReplaceAllUsesOfValueWith(Op.getValue(1), New.getValue(1));
@@ -1505,9 +1505,9 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
   }
 
-  // The R1 register must be passed as an implicit register so that R1 is
-  // correctly zeroed in interrupts.
-  Ops.push_back(DAG.getRegister(AVR::R1, MVT::i8));
+  // The zero register (usually R1) must be passed as an implicit register so
+  // that this register is correctly zeroed in interrupts.
+  Ops.push_back(DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8));
 
   // Add a register mask operand representing the call-preserved registers.
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
@@ -1630,11 +1630,11 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
 
   if (!AFI->isInterruptOrSignalHandler()) {
-    // The return instruction has an implicit R1 operand: it must contain zero
-    // on return.
-    // This is not needed in interrupts however, where R1 is handled specially
-    // (only pushed/popped when needed).
-    RetOps.push_back(DAG.getRegister(AVR::R1, MVT::i8));
+    // The return instruction has an implicit zero register operand: it must
+    // contain zero on return.
+    // This is not needed in interrupts however, where the zero register is
+    // handled specially (only pushed/popped when needed).
+    RetOps.push_back(DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8));
   }
 
   unsigned RetOpc =
@@ -1658,6 +1658,7 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   unsigned Opc;
   const TargetRegisterClass *RC;
   bool HasRepeatedOperand = false;
+  bool HasZeroOperand = false;
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &RI = F->getRegInfo();
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
@@ -1694,6 +1695,7 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   case AVR::Rol8:
     Opc = AVR::ROLBRd;
     RC = &AVR::GPR8RegClass;
+    HasZeroOperand = true;
     break;
   case AVR::Rol16:
     Opc = AVR::ROLWRd;
@@ -1755,6 +1757,8 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   auto ShiftMI = BuildMI(LoopBB, dl, TII.get(Opc), ShiftReg2).addReg(ShiftReg);
   if (HasRepeatedOperand)
     ShiftMI.addReg(ShiftReg);
+  if (HasZeroOperand)
+    ShiftMI.addReg(Subtarget.getZeroRegister());
 
   // CheckBB:
   // ShiftReg = phi [%SrcReg, BB], [%ShiftReg2, LoopBB]
@@ -1812,14 +1816,15 @@ MachineBasicBlock *AVRTargetLowering::insertMul(MachineInstr &MI,
   return BB;
 }
 
-// Insert a read from R1, which almost always contains the value 0.
+// Insert a read from the zero register.
 MachineBasicBlock *
-AVRTargetLowering::insertCopyR1(MachineInstr &MI, MachineBasicBlock *BB) const {
+AVRTargetLowering::insertCopyZero(MachineInstr &MI,
+                                  MachineBasicBlock *BB) const {
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   MachineBasicBlock::iterator I(MI);
   BuildMI(*BB, I, MI.getDebugLoc(), TII.get(AVR::COPY))
       .add(MI.getOperand(0))
-      .addReg(AVR::R1);
+      .addReg(Subtarget.getZeroRegister());
   MI.eraseFromParent();
   return BB;
 }
@@ -1831,7 +1836,6 @@ MachineBasicBlock *AVRTargetLowering::insertAtomicArithmeticOp(
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   MachineBasicBlock::iterator I(MI);
-  const Register SCRATCH_REGISTER = AVR::R0;
   DebugLoc dl = MI.getDebugLoc();
 
   // Example instruction sequence, for an atomic 8-bit add:
@@ -1849,7 +1853,7 @@ MachineBasicBlock *AVRTargetLowering::insertAtomicArithmeticOp(
   unsigned StoreOpcode = (Width == 8) ? AVR::STPtrRr : AVR::STWPtrRr;
 
   // Disable interrupts.
-  BuildMI(*BB, I, dl, TII.get(AVR::INRdA), SCRATCH_REGISTER)
+  BuildMI(*BB, I, dl, TII.get(AVR::INRdA), Subtarget.getTmpRegister())
       .addImm(Subtarget.getIORegSREG());
   BuildMI(*BB, I, dl, TII.get(AVR::BCLRs)).addImm(7);
 
@@ -1871,7 +1875,7 @@ MachineBasicBlock *AVRTargetLowering::insertAtomicArithmeticOp(
   // Restore interrupts.
   BuildMI(*BB, I, dl, TII.get(AVR::OUTARr))
       .addImm(Subtarget.getIORegSREG())
-      .addReg(SCRATCH_REGISTER);
+      .addReg(Subtarget.getTmpRegister());
 
   // Remove the pseudo instruction.
   MI.eraseFromParent();
@@ -1900,8 +1904,8 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AVR::MULRdRr:
   case AVR::MULSRdRr:
     return insertMul(MI, MBB);
-  case AVR::CopyR1:
-    return insertCopyR1(MI, MBB);
+  case AVR::CopyZero:
+    return insertCopyZero(MI, MBB);
   case AVR::AtomicLoadAdd8:
     return insertAtomicArithmeticOp(MI, MBB, AVR::ADDRdRr, 8);
   case AVR::AtomicLoadAdd16:
@@ -2206,7 +2210,8 @@ AVRTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       break;
     case 't': // Temporary register: r0.
       if (VT == MVT::i8)
-        return std::make_pair(unsigned(AVR::R0), &AVR::GPR8RegClass);
+        return std::make_pair(unsigned(Subtarget.getTmpRegister()),
+                              &AVR::GPR8RegClass);
       break;
     case 'w': // Special upper register pairs: r24, r26, r28, r30.
       if (VT == MVT::i8 || VT == MVT::i16)
