@@ -1290,8 +1290,6 @@ public:
   /// Returns alignment and volatility of the memory access
   Align getOriginalAlign() const { return MMO->getBaseAlign(); }
   Align getAlign() const { return MMO->getAlign(); }
-  // FIXME: Remove once transition to getAlign is over.
-  unsigned getAlignment() const { return MMO->getAlign().value(); }
 
   /// Return the SubclassData value, without HasDebugValue. This contains an
   /// encoding of the volatile flag, as well as bits used by subclasses. This
