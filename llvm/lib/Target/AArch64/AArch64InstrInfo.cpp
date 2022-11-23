@@ -3687,7 +3687,12 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR128RegClass.contains(DestReg) &&
       AArch64::FPR128RegClass.contains(SrcReg)) {
-    if (Subtarget.hasNEON()) {
+    if (Subtarget.forceStreamingCompatibleSVE()) {
+      BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ))
+          .addReg(AArch64::Z0 + (DestReg - AArch64::Q0), RegState::Define)
+          .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0))
+          .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0));
+    } else if (Subtarget.hasNEON()) {
       BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestReg)
           .addReg(SrcReg)
           .addReg(SrcReg, getKillRegState(KillSrc));

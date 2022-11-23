@@ -57,6 +57,9 @@ class ThreadContextBase;
 struct DTLS;
 }
 
+// This section defines function and class prototypes which must be implemented
+// by the parent tool linking in LSan. There are implementations provided by the
+// LSan library which will be linked in when LSan is used as a standalone tool.
 namespace __lsan {
 
 // Chunk tags.
@@ -65,6 +68,98 @@ enum ChunkTag {
   kIndirectlyLeaked = 1,
   kReachable = 2,
   kIgnored = 3
+};
+
+enum IgnoreObjectResult {
+  kIgnoreObjectSuccess,
+  kIgnoreObjectAlreadyIgnored,
+  kIgnoreObjectInvalid
+};
+
+//// --------------------------------------------------------------------------
+//// Poisoning prototypes.
+//// --------------------------------------------------------------------------
+
+// Returns true if [addr, addr + sizeof(void *)) is poisoned.
+bool WordIsPoisoned(uptr addr);
+
+//// --------------------------------------------------------------------------
+//// Thread prototypes.
+//// --------------------------------------------------------------------------
+
+// Wrappers for ThreadRegistry access.
+void LockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
+void UnlockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
+ThreadRegistry *GetThreadRegistryLocked();
+// If called from the main thread, updates the main thread's TID in the thread
+// registry. We need this to handle processes that fork() without a subsequent
+// exec(), which invalidates the recorded TID. To update it, we must call
+// gettid() from the main thread. Our solution is to call this function before
+// leak checking and also before every call to pthread_create() (to handle cases
+// where leak checking is initiated from a non-main thread).
+void EnsureMainThreadIDIsCorrect();
+
+bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
+                           uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
+                           uptr *cache_end, DTLS **dtls);
+void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches);
+void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
+                            void *arg);
+
+//// --------------------------------------------------------------------------
+//// Allocator prototypes.
+//// --------------------------------------------------------------------------
+
+// Wrappers for allocator's ForceLock()/ForceUnlock().
+void LockAllocator();
+void UnlockAllocator();
+
+// Returns the address range occupied by the global allocator object.
+void GetAllocatorGlobalRange(uptr *begin, uptr *end);
+// If p points into a chunk that has been allocated to the user, returns its
+// user-visible address. Otherwise, returns 0.
+uptr PointsIntoChunk(void *p);
+// Returns address of user-visible chunk contained in this allocator chunk.
+uptr GetUserBegin(uptr chunk);
+
+// Wrapper for chunk metadata operations.
+class LsanMetadata {
+ public:
+  // Constructor accepts address of user-visible chunk.
+  explicit LsanMetadata(uptr chunk);
+  bool allocated() const;
+  ChunkTag tag() const;
+  void set_tag(ChunkTag value);
+  uptr requested_size() const;
+  u32 stack_trace_id() const;
+
+ private:
+  void *metadata_;
+};
+
+// Iterate over all existing chunks. Allocator must be locked.
+void ForEachChunk(ForEachChunkCallback callback, void *arg);
+
+// Helper for __lsan_ignore_object().
+IgnoreObjectResult IgnoreObjectLocked(const void *p);
+
+void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs);
+
+// The rest of the LSan interface which is implemented by library.
+
+struct ScopedStopTheWorldLock {
+  ScopedStopTheWorldLock() {
+    LockThreadRegistry();
+    LockAllocator();
+  }
+
+  ~ScopedStopTheWorldLock() {
+    UnlockAllocator();
+    UnlockThreadRegistry();
+  }
+
+  ScopedStopTheWorldLock &operator=(const ScopedStopTheWorldLock &) = delete;
+  ScopedStopTheWorldLock(const ScopedStopTheWorldLock &) = delete;
 };
 
 struct Flags {
@@ -153,8 +248,7 @@ struct CheckForLeaksParam {
 InternalMmapVectorNoCtor<RootRegion> const *GetRootRegions();
 void ScanRootRegion(Frontier *frontier, RootRegion const &region,
                     uptr region_begin, uptr region_end, bool is_readable);
-void ForEachExtraStackRangeCb(uptr begin, uptr end, void* arg);
-void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs);
+void ForEachExtraStackRangeCb(uptr begin, uptr end, void *arg);
 // Run stoptheworld while holding any platform-specific locks, as well as the
 // allocator and thread registry locks.
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
@@ -164,12 +258,6 @@ void ScanRangeForPointers(uptr begin, uptr end,
                           Frontier *frontier,
                           const char *region_type, ChunkTag tag);
 void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier);
-
-enum IgnoreObjectResult {
-  kIgnoreObjectSuccess,
-  kIgnoreObjectAlreadyIgnored,
-  kIgnoreObjectInvalid
-};
 
 // Functions called from the parent tool.
 const char *MaybeCallLsanDefaultOptions();
@@ -221,57 +309,6 @@ inline bool IsSpecialCaseOfOperatorNew0(uptr chunk_beg, uptr chunk_size,
 #endif
 }
 
-// The following must be implemented in the parent tool.
-
-void ForEachChunk(ForEachChunkCallback callback, void *arg);
-// Returns the address range occupied by the global allocator object.
-void GetAllocatorGlobalRange(uptr *begin, uptr *end);
-// Wrappers for allocator's ForceLock()/ForceUnlock().
-void LockAllocator();
-void UnlockAllocator();
-// Returns true if [addr, addr + sizeof(void *)) is poisoned.
-bool WordIsPoisoned(uptr addr);
-// Wrappers for ThreadRegistry access.
-void LockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
-void UnlockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
-
-struct ScopedStopTheWorldLock {
-  ScopedStopTheWorldLock() {
-    LockThreadRegistry();
-    LockAllocator();
-  }
-
-  ~ScopedStopTheWorldLock() {
-    UnlockAllocator();
-    UnlockThreadRegistry();
-  }
-
-  ScopedStopTheWorldLock &operator=(const ScopedStopTheWorldLock &) = delete;
-  ScopedStopTheWorldLock(const ScopedStopTheWorldLock &) = delete;
-};
-
-ThreadRegistry *GetThreadRegistryLocked();
-bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
-                           uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
-                           uptr *cache_end, DTLS **dtls);
-void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches);
-void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
-                            void *arg);
-// If called from the main thread, updates the main thread's TID in the thread
-// registry. We need this to handle processes that fork() without a subsequent
-// exec(), which invalidates the recorded TID. To update it, we must call
-// gettid() from the main thread. Our solution is to call this function before
-// leak checking and also before every call to pthread_create() (to handle cases
-// where leak checking is initiated from a non-main thread).
-void EnsureMainThreadIDIsCorrect();
-// If p points into a chunk that has been allocated to the user, returns its
-// user-visible address. Otherwise, returns 0.
-uptr PointsIntoChunk(void *p);
-// Returns address of user-visible chunk contained in this allocator chunk.
-uptr GetUserBegin(uptr chunk);
-// Helper for __lsan_ignore_object().
-IgnoreObjectResult IgnoreObjectLocked(const void *p);
-
 // Return the linker module, if valid for the platform.
 LoadedModule *GetLinker();
 
@@ -280,20 +317,6 @@ bool HasReportedLeaks();
 
 // Run platform-specific leak handlers.
 void HandleLeaks();
-
-// Wrapper for chunk metadata operations.
-class LsanMetadata {
- public:
-  // Constructor accepts address of user-visible chunk.
-  explicit LsanMetadata(uptr chunk);
-  bool allocated() const;
-  ChunkTag tag() const;
-  void set_tag(ChunkTag value);
-  uptr requested_size() const;
-  u32 stack_trace_id() const;
- private:
-  void *metadata_;
-};
 
 }  // namespace __lsan
 

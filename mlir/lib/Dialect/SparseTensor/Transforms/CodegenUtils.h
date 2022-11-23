@@ -338,7 +338,6 @@ inline bool isZeroRankedTensorOrScalar(Type type) {
 // loopEmiter.exitCurrentLoop(); // exit i
 //===----------------------------------------------------------------------===//
 
-// TODO: Sparsification should also rely on this class to generate loops.
 class SparseTensorLoopEmitter {
 public:
   /// Optional callback function to setup dense output tensors when
@@ -351,15 +350,23 @@ public:
   /// tensor id (tid) used in related functions.
   /// If isSparseOut is set, loop emitter assume that the sparse output tensor
   /// is empty, and will always generate loops on it based on the dim sizes.
+  /// An optional array could be provided (by sparsification) to indicate the
+  /// loop id sequence that will be generated. It is used to establish the
+  /// mapping between affineDimExpr to the corresponding loop index in the loop
+  /// stack that are maintained by the loop emitter.
   explicit SparseTensorLoopEmitter(ValueRange tensors,
                                    StringAttr loopTag = nullptr,
                                    bool hasOutput = false,
-                                   bool isSparseOut = false);
+                                   bool isSparseOut = false,
+                                   ArrayRef<unsigned> topSort = {});
 
   /// Starts a loop emitting session by generating all the buffers needed to
   /// iterate tensors.
   void initializeLoopEmit(OpBuilder &builder, Location loc,
                           OutputUpdater updater = nullptr);
+
+  /// Generates a list of operations to compute the affine expression.
+  Value genAffine(OpBuilder &builder, AffineExpr a, Location loc);
 
   /// Enters a new loop sequence, the loops within the same sequence starts from
   /// the break points of previous loop instead of starting over from 0.
@@ -398,6 +405,10 @@ public:
                                       bool isParallel = false,
                                       ArrayRef<size_t> extraTids = {},
                                       ArrayRef<size_t> extraDims = {});
+
+  void genDenseAffineAddressAtCurLevel(OpBuilder &builder, Location loc,
+                                       size_t tid, size_t dim,
+                                       AffineExpr affine);
 
   /// Emits a co-iteration loop over a set of tensors.
   Operation *enterCoIterationOverTensorsAtDims(
@@ -543,6 +554,11 @@ private:
   // Loop Sequence Stack, stores the unversial index for the current loop
   // sequence.
   std::vector<Value> loopSeqStack;
+
+  // Maps AffineDimExpr to the index of the loop in loopStack.
+  // TODO: We should probably use a callback function here to make it more
+  // general.
+  std::vector<unsigned> sparsiferLoopLvlMap;
 
   // TODO: not yet used, it should track the current level for each tensor
   // to help eliminate `dim` paramters from above APIs.

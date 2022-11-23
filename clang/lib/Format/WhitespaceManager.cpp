@@ -1049,7 +1049,7 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
               Changes[i].StartOfBlockComment->StartOfTokenColumn -
               Changes[i].StartOfTokenColumn;
     }
-    if (Shift < 0)
+    if (Shift <= 0)
       continue;
     Changes[i].Spaces += Shift;
     if (i + 1 != Changes.size())

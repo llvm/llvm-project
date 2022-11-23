@@ -487,6 +487,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
+  let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
@@ -510,9 +511,18 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
           opOperand->getOperandNumber() - getRank());
     }
 
+    /// Return the num_threads operand that is tied to the given thread id
+    /// block argument.
     OpOperand *getTiedOpOperand(BlockArgument bbArg) {
       assert(bbArg.getArgNumber() >= getRank() && "invalid bbArg");
       return &getOperation()->getOpOperand(bbArg.getArgNumber());
+    }
+
+    /// Return the shared_outs operand that is tied to the given OpResult.
+    OpOperand *getTiedOpOperand(OpResult opResult) {
+      assert(opResult.getDefiningOp() == getOperation() && "invalid OpResult");
+      return &getOperation()->getOpOperand(
+          opResult.getResultNumber() + getRank());
     }
 
     BlockArgument getTiedBlockArgument(OpOperand *opOperand) {

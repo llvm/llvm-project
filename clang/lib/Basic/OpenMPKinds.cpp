@@ -149,6 +149,24 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
 #define OPENMP_BIND_KIND(Name) .Case(#Name, OMPC_BIND_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_BIND_unknown);
+  case OMPC_grainsize: {
+    unsigned Type = llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_GRAINSIZE_MODIFIER(Name) .Case(#Name, OMPC_GRAINSIZE_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+                        .Default(OMPC_GRAINSIZE_unknown);
+    if (LangOpts.OpenMP < 51)
+      return OMPC_GRAINSIZE_unknown;
+    return Type;
+  }
+  case OMPC_num_tasks: {
+    unsigned Type = llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_NUMTASKS_MODIFIER(Name) .Case(#Name, OMPC_NUMTASKS_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+                        .Default(OMPC_NUMTASKS_unknown);
+    if (LangOpts.OpenMP < 51)
+      return OMPC_NUMTASKS_unknown;
+    return Type;
+  }
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -188,9 +206,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_num_teams:
   case OMPC_thread_limit:
   case OMPC_priority:
-  case OMPC_grainsize:
   case OMPC_nogroup:
-  case OMPC_num_tasks:
   case OMPC_hint:
   case OMPC_uniform:
   case OMPC_use_device_ptr:
@@ -436,6 +452,26 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'bind' clause type");
+  case OMPC_grainsize:
+    switch (Type) {
+    case OMPC_GRAINSIZE_unknown:
+      return "unknown";
+#define OPENMP_GRAINSIZE_MODIFIER(Name)                                        \
+  case OMPC_GRAINSIZE_##Name:                                                  \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'grainsize' clause modifier");
+  case OMPC_num_tasks:
+    switch (Type) {
+    case OMPC_NUMTASKS_unknown:
+      return "unknown";
+#define OPENMP_NUMTASKS_MODIFIER(Name)                                         \
+  case OMPC_NUMTASKS_##Name:                                                   \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'num_tasks' clause modifier");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -475,9 +511,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_num_teams:
   case OMPC_thread_limit:
   case OMPC_priority:
-  case OMPC_grainsize:
   case OMPC_nogroup:
-  case OMPC_num_tasks:
   case OMPC_hint:
   case OMPC_uniform:
   case OMPC_use_device_ptr:

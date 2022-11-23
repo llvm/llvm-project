@@ -156,6 +156,8 @@ cpp_template = """// -*- C++ -*-
 #include <string_view>
 #include <vector>
 
+#include "test_macros.h"
+
 template <class CharT>
 struct data {{
   /// The input to parse.
@@ -179,6 +181,7 @@ std::array<data<char>, {0}> data_utf8 = {{{{
 /// Note that most of the data for the UTF-16 and UTF-32 are identical. However
 /// since the size of the code units differ the breaks can contain different
 /// values.
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 std::array<data<wchar_t>, {0}> data_utf16 = {{{{
 {2}}}}};
 
@@ -189,6 +192,7 @@ std::array<data<wchar_t>, {0}> data_utf16 = {{{{
 /// values.
 std::array<data<wchar_t>, {0}> data_utf32 = {{{{
 {3}}}}};
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
 #endif // LIBCXX_TEST_STD_UTILITIES_FORMAT_FORMAT_STRING_FORMAT_STRING_STD_EXTENDED_GRAPHEME_CLUSTER_H"""
 

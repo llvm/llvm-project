@@ -248,16 +248,22 @@ bool OptionValueProperties::GetPropertyAtIndexAsArgs(
     return false;
 
   const OptionValueArgs *arguments = value->GetAsArgs();
-  if (arguments)
-    return arguments->GetArgs(args);
+  if (arguments) {
+    arguments->GetArgs(args);
+    return true;
+  }
 
   const OptionValueArray *array = value->GetAsArray();
-  if (array)
-    return array->GetArgs(args);
+  if (array) {
+    array->GetArgs(args);
+    return true;
+  }
 
   const OptionValueDictionary *dict = value->GetAsDictionary();
-  if (dict)
-    return dict->GetArgs(args);
+  if (dict) {
+    dict->GetArgs(args);
+    return true;
+  }
 
   return false;
 }

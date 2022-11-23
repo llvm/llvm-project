@@ -4683,11 +4683,10 @@ void OpenMPIRBuilder::OutlineInfo::collectBlocks(
   }
 }
 
-void OpenMPIRBuilder::createOffloadEntry(bool IsTargetCodegen, Constant *ID,
-                                         Constant *Addr, uint64_t Size,
-                                         int32_t Flags,
+void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
+                                         uint64_t Size, int32_t Flags,
                                          GlobalValue::LinkageTypes) {
-  if (!IsTargetCodegen) {
+  if (!Config.isTargetCodegen()) {
     emitOffloadingEntry(ID, Addr->getName(), Size, Flags);
     return;
   }
@@ -4715,8 +4714,7 @@ void OpenMPIRBuilder::createOffloadEntry(bool IsTargetCodegen, Constant *ID,
 
 // We only generate metadata for function that contain target regions.
 void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
-    OffloadEntriesInfoManager &OffloadEntriesInfoManager, bool IsTargetCodegen,
-    bool IsEmbedded, bool HasRequiresUnifiedSharedMemory,
+    OffloadEntriesInfoManager &OffloadEntriesInfoManager,
     EmitMetadataErrorReportFunctionTy &ErrorFn) {
 
   // If there are no entries, we don't need to do anything.
@@ -4809,7 +4807,7 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
         ErrorFn(EMIT_MD_TARGET_REGION_ERROR, EntryInfo);
         continue;
       }
-      createOffloadEntry(IsTargetCodegen, CE->getID(), CE->getAddress(),
+      createOffloadEntry(CE->getID(), CE->getAddress(),
                          /*Size=*/0, CE->getFlags(),
                          GlobalValue::WeakAnyLinkage);
     } else if (const auto *CE = dyn_cast<
@@ -4820,7 +4818,7 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
               CE->getFlags());
       switch (Flags) {
       case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo: {
-        if (IsEmbedded && HasRequiresUnifiedSharedMemory)
+        if (Config.isEmbedded() && Config.hasRequiresUnifiedSharedMemory())
           continue;
         if (!CE->getAddress()) {
           ErrorFn(EMIT_MD_DECLARE_TARGET_ERROR, E.second);
@@ -4832,10 +4830,10 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
         break;
       }
       case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink:
-        assert(((IsEmbedded && !CE->getAddress()) ||
-                (!IsEmbedded && CE->getAddress())) &&
+        assert(((Config.isEmbedded() && !CE->getAddress()) ||
+                (!Config.isEmbedded() && CE->getAddress())) &&
                "Declaret target link address is set.");
-        if (IsEmbedded)
+        if (Config.isEmbedded())
           continue;
         if (!CE->getAddress()) {
           ErrorFn(EMIT_MD_GLOBAL_VAR_LINK_ERROR, TargetRegionEntryInfo());
@@ -4851,8 +4849,8 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
         if (GV->hasLocalLinkage() || GV->hasHiddenVisibility())
           continue;
 
-      createOffloadEntry(IsTargetCodegen, CE->getAddress(), CE->getAddress(),
-                         CE->getVarSize(), Flags, CE->getLinkage());
+      createOffloadEntry(CE->getAddress(), CE->getAddress(), CE->getVarSize(),
+                         Flags, CE->getLinkage());
 
     } else {
       llvm_unreachable("Unsupported entry kind.");
@@ -4958,7 +4956,7 @@ void OffloadEntriesInfoManager::initializeTargetRegionEntryInfo(
 
 void OffloadEntriesInfoManager::registerTargetRegionEntryInfo(
     TargetRegionEntryInfo EntryInfo, Constant *Addr, Constant *ID,
-    OMPTargetRegionEntryKind Flags, bool IsDevice) {
+    OMPTargetRegionEntryKind Flags) {
   assert(EntryInfo.Count == 0 && "expected default EntryInfo");
 
   // Update the EntryInfo with the next available count for this location.
@@ -4966,7 +4964,7 @@ void OffloadEntriesInfoManager::registerTargetRegionEntryInfo(
 
   // If we are emitting code for a target, the entry is already initialized,
   // only has to be registered.
-  if (IsDevice) {
+  if (Config.isEmbedded()) {
     // This could happen if the device compilation is invoked standalone.
     if (!hasTargetRegionEntryInfo(EntryInfo)) {
       return;
@@ -5020,9 +5018,8 @@ void OffloadEntriesInfoManager::initializeDeviceGlobalVarEntryInfo(
 
 void OffloadEntriesInfoManager::registerDeviceGlobalVarEntryInfo(
     StringRef VarName, Constant *Addr, int64_t VarSize,
-    OMPTargetGlobalVarEntryKind Flags, GlobalValue::LinkageTypes Linkage,
-    bool IsDevice) {
-  if (IsDevice) {
+    OMPTargetGlobalVarEntryKind Flags, GlobalValue::LinkageTypes Linkage) {
+  if (Config.isEmbedded()) {
     // This could happen if the device compilation is invoked standalone.
     if (!hasDeviceGlobalVarEntryInfo(VarName))
       return;

@@ -189,15 +189,16 @@ def ResolveShapedTypeResultDims : Pass<"resolve-shaped-type-result-dims"> {
   ];
 }
 
-def SimplifyExtractStridedMetadata : Pass<"simplify-extract-strided-metadata"> {
-  let summary = "Simplify extract_strided_metadata ops";
+def ExpandStridedMetadata : Pass<"expand-strided-metadata"> {
+  let summary = "Expand memref operations into easier to analyze constructs";
   let description = [{
-    The pass simplifies extract_strided_metadata(other_op(memref)) to
-    extract_strided_metadata(memref) when it is possible to model the effect
-    of other_op directly with affine maps applied to the result of
-    extract_strided_metadata.
+    The pass expands memref operations that modify the metadata of a memref
+    (sizes, offset, strides) into a sequence of easier to analyze constructs.
+    In particular, this pass transforms operations into explicit sequence of
+    operations that model the effect of this operation on the different metadata.
+    This pass uses affine constructs to materialize these effects.
   }];
-  let constructor = "mlir::memref::createSimplifyExtractStridedMetadataPass()";
+  let constructor = "mlir::memref::createExpandStridedMetadataPass()";
   let dependentDialects = [
       "AffineDialect", "memref::MemRefDialect"
   ];

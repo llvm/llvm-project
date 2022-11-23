@@ -907,7 +907,7 @@ public:
     } else {
       // Otherwise, we need to compute it.
       LazilyComputedDomTree.emplace(F);
-      DT = LazilyComputedDomTree.getPointer();
+      DT = &*LazilyComputedDomTree;
       ShouldPreserveDominatorTree = false;
     }
 

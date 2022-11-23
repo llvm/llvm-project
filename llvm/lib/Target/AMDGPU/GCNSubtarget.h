@@ -195,6 +195,7 @@ protected:
   bool HasImageGather4D16Bug = false;
   bool HasMSAALoadDstSelBug = false;
   bool HasGFX11FullVGPRs = false;
+  bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
 
   // Dummy feature to use for assembler in tablegen.
@@ -911,6 +912,8 @@ public:
   bool hasImageStoreD16Bug() const { return HasImageStoreD16Bug; }
 
   bool hasImageGather4D16Bug() const { return HasImageGather4D16Bug; }
+
+  bool hasMADIntraFwdBug() const { return HasMADIntraFwdBug; }
 
   bool hasMSAALoadDstSelBug() const { return HasMSAALoadDstSelBug; }
 

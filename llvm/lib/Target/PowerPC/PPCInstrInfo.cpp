@@ -1116,6 +1116,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::CRSET:
   case PPC::CRUNSET:
   case PPC::XXSETACCZ:
+  case PPC::XXSETACCZW:
     return true;
   }
   return false;
@@ -1897,6 +1898,10 @@ unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
     assert(Subtarget.pairedVectorMemops() &&
            "Register unexpected when paired memops are disabled.");
     OpcodeIndex = SOK_UAccumulatorSpill;
+  } else if (PPC::WACCRCRegClass.hasSubClassEq(RC)) {
+    assert(Subtarget.pairedVectorMemops() &&
+           "Register unexpected when paired memops are disabled.");
+    OpcodeIndex = SOK_WAccumulatorSpill;
   } else if (PPC::VSRpRCRegClass.hasSubClassEq(RC)) {
     assert(Subtarget.pairedVectorMemops() &&
            "Register unexpected when paired memops are disabled.");
@@ -3442,7 +3447,9 @@ unsigned PPCInstrInfo::getSpillTarget() const {
   // With P10, we may need to spill paired vector registers or accumulator
   // registers. MMA implies paired vectors, so we can just check that.
   bool IsP10Variant = Subtarget.isISA3_1() || Subtarget.pairedVectorMemops();
-  return IsP10Variant ? 2 : Subtarget.hasP9Vector() ? 1 : 0;
+  return Subtarget.isISAFuture() ? 3 : IsP10Variant ?
+                                   2 : Subtarget.hasP9Vector() ?
+                                   1 : 0;
 }
 
 ArrayRef<unsigned> PPCInstrInfo::getStoreOpcodesForSpillArray() const {

@@ -151,9 +151,9 @@ static JmpInsnOpcode getJmpInsnType(const uint8_t *first,
 // Returns the maximum size of the vector if no such relocation is found.
 static unsigned getRelocationWithOffset(const InputSection &is,
                                         uint64_t offset) {
-  unsigned size = is.relocations.size();
+  unsigned size = is.relocs().size();
   for (unsigned i = size - 1; i + 1 > 0; --i) {
-    if (is.relocations[i].offset == offset && is.relocations[i].expr != R_NONE)
+    if (is.relocs()[i].offset == offset && is.relocs()[i].expr != R_NONE)
       return i;
   }
   return size;
@@ -247,13 +247,13 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   // If this jmp insn can be removed, it is the last insn and the
   // relocation is 4 bytes before the end.
   unsigned rIndex = getRelocationWithOffset(is, is.getSize() - 4);
-  if (rIndex == is.relocations.size())
+  if (rIndex == is.relocs().size())
     return false;
 
-  Relocation &r = is.relocations[rIndex];
+  Relocation &r = is.relocs()[rIndex];
 
   // Check if the relocation corresponds to a direct jmp.
-  const uint8_t *secContents = is.rawData.data();
+  const uint8_t *secContents = is.content().data();
   // If it is not a direct jmp instruction, there is nothing to do here.
   if (*(secContents + r.offset - 1) != 0xe9)
     return false;
@@ -275,10 +275,10 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
 
   unsigned rbIndex =
       getRelocationWithOffset(is, (is.getSize() - sizeOfDirectJmpInsn - 4));
-  if (rbIndex == is.relocations.size())
+  if (rbIndex == is.relocs().size())
     return false;
 
-  Relocation &rB = is.relocations[rbIndex];
+  Relocation &rB = is.relocs()[rbIndex];
 
   const uint8_t *jmpInsnB = secContents + rB.offset - 1;
   JmpInsnOpcode jmpOpcodeB = getJmpInsnType(jmpInsnB - 1, jmpInsnB);
@@ -989,7 +989,7 @@ void X86_64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
-  for (const Relocation &rel : sec.relocations) {
+  for (const Relocation &rel : sec.relocs()) {
     if (rel.expr == R_NONE) // See deleteFallThruJmpInsn
       continue;
     uint8_t *loc = buf + rel.offset;

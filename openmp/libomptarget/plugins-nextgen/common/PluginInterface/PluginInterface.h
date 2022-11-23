@@ -630,6 +630,9 @@ struct GenericDeviceResourceRef {
 
   /// Destroy and release the resources pointed by the reference.
   virtual Error destroy() = 0;
+
+protected:
+  ~GenericDeviceResourceRef() = default;
 };
 
 /// Class that implements a resource pool belonging to a device. This class

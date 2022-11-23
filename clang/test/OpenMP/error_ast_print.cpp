@@ -13,16 +13,16 @@
 void foo() {}
 // CHECK: template <typename T, int N> int tmain(T argc, char **argv)
 // CHECK: static int a;
-// CHECK-NEXT: #pragma omp error at(execution) severity(fatal)
+// CHECK-NEXT: #pragma omp error at(execution) severity(fatal) message("GNU compiler required.")
 // CHECK-NEXT: a = argv[0][0];
 // CHECK-NEXT: ++a;
-// CHECK-NEXT: #pragma omp error at(execution) severity(warning)
+// CHECK-NEXT: #pragma omp error at(execution) severity(warning) message("Notice: add for loop.")
 // CHECK-NEXT: {
 // CHECK-NEXT: int b = 10;
 // CHECK-NEXT: T c = 100;
 // CHECK-NEXT: a = b + c;
 // CHECK-NEXT: }
-// CHECK-NEXT: #pragma omp error at(execution) severity(fatal)
+// CHECK-NEXT: #pragma omp error at(execution) severity(fatal) message("GPU compiler required.")
 // CHECK-NEXT: foo();
 // CHECK-NEXT: return N;
 
@@ -30,16 +30,16 @@ template <typename T, int N>
 int tmain(T argc, char **argv) {
   T b = argc, c, d, e, f, g;
   static int a;
-#pragma omp error at(execution) severity(fatal)
+#pragma omp error at(execution) severity(fatal) message("GNU compiler required.")
   a = argv[0][0];
   ++a;
-#pragma omp error at(execution) severity(warning)
+#pragma omp error at(execution) severity(warning) message("Notice: add for loop.")
   {
     int b = 10;
     T c = 100;
     a = b + c;
   }
-#pragma omp  error at(execution) severity(fatal)
+#pragma omp  error at(execution) severity(fatal) message("GPU compiler required.")
   foo();
 return N;
 }
@@ -47,16 +47,16 @@ return N;
 // CHECK: int main(int argc, char **argv)
 // CHECK-NEXT: int b = argc, c, d, e, f, g;
 // CHECK-NEXT: static int a;
-// CHECK-NEXT: #pragma omp error at(execution) severity(fatal)
+// CHECK-NEXT: #pragma omp error at(execution) severity(fatal) message("GPU compiler required.")
 // CHECK-NEXT: a = 2;
-// CHECK-NEXT: #pragma omp error at(execution) severity(warning)
+// CHECK-NEXT: #pragma omp error at(execution) severity(warning) message("Note this is functioncall.")
 // CHECK-NEXT: foo();
 int main (int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
-#pragma omp error at(execution) severity(fatal)
+#pragma omp error at(execution) severity(fatal) message("GPU compiler required.")
    a=2;
-#pragma omp error at(execution) severity(warning)
+#pragma omp error at(execution) severity(warning) message("Note this is functioncall.")
   foo();
 }
 #endif

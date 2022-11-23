@@ -137,6 +137,11 @@ public:
   void lowerACCRestore(MachineBasicBlock::iterator II,
                        unsigned FrameIndex) const;
 
+  void lowerWACCSpilling(MachineBasicBlock::iterator II,
+                         unsigned FrameIndex) const;
+  void lowerWACCRestore(MachineBasicBlock::iterator II,
+                        unsigned FrameIndex) const;
+
   void lowerQuadwordSpilling(MachineBasicBlock::iterator II,
                              unsigned FrameIndex) const;
   void lowerQuadwordRestore(MachineBasicBlock::iterator II,
@@ -147,7 +152,7 @@ public:
 
   bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                             int &FrameIdx) const override;
-  void eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
+  bool eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 

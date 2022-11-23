@@ -1,4 +1,4 @@
-; RUN: llc < %s -O3 -mtriple=aarch64-linux-gnu | FileCheck %s
+; RUN: llc < %s -O3 -mtriple=aarch64-linux-gnu -aarch64-enable-gep-opt | FileCheck %s
 
 %struct = type { i32, i32, i32 }
 

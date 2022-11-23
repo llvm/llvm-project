@@ -101,22 +101,20 @@ template <size_t Bits> struct UInt {
   // property of unsigned integers:
   //   x + (~x) = 2^(sizeof(x)) - 1.
   constexpr uint64_t add(const UInt<Bits> &x) {
-    uint64_t carry_in = 0;
-    uint64_t carry_out = 0;
+    SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WordCount; ++i) {
-      val[i] = add_with_carry(val[i], x.val[i], carry_in, carry_out);
-      carry_in = carry_out;
+      s = add_with_carry(val[i], x.val[i], s.carry);
+      val[i] = s.sum;
     }
-    return carry_out;
+    return s.carry;
   }
 
   constexpr UInt<Bits> operator+(const UInt<Bits> &other) const {
     UInt<Bits> result;
-    uint64_t carry_in = 0;
-    uint64_t carry_out = 0;
+    SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WordCount; ++i) {
-      result.val[i] = add_with_carry(val[i], other.val[i], carry_in, carry_out);
-      carry_in = carry_out;
+      s = add_with_carry(val[i], other.val[i], s.carry);
+      result.val[i] = s.sum;
     }
     return result;
   }
@@ -494,40 +492,6 @@ template <size_t Bits> struct UInt {
 
   const uint64_t *data() const { return val; }
 };
-
-template <>
-constexpr UInt<128> UInt<128>::operator*(const UInt<128> &other) const {
-  // temp low covers bits 0-63, middle covers 32-95, high covers 64-127, and
-  // high overflow covers 96-159.
-  uint64_t temp_low = low(val[0]) * low(other[0]);
-  uint64_t temp_middle_1 = low(val[0]) * high(other[0]);
-  uint64_t temp_middle_2 = high(val[0]) * low(other[0]);
-
-  // temp_middle is split out so that overflows can be handled, but since
-  // but since the result will be truncated to 128 bits any overflow from here
-  // on doesn't matter.
-  uint64_t temp_high = low(val[0]) * low(other[1]) +
-                       high(val[0]) * high(other[0]) +
-                       low(val[1]) * low(other[0]);
-
-  uint64_t temp_high_overflow =
-      low(val[0]) * high(other[1]) + high(val[0]) * low(other[1]) +
-      low(val[1]) * high(other[0]) + high(val[1]) * low(other[0]);
-
-  // temp_low_middle has just the high 32 bits of low, as well as any
-  // overflow.
-  uint64_t temp_low_middle =
-      high(temp_low) + low(temp_middle_1) + low(temp_middle_2);
-
-  uint64_t new_low = low(temp_low) + (low(temp_low_middle) << 32);
-  uint64_t new_high = high(temp_low_middle) + high(temp_middle_1) +
-                      high(temp_middle_2) + temp_high +
-                      (low(temp_high_overflow) << 32);
-  UInt<128> result(0);
-  result[0] = new_low;
-  result[1] = new_high;
-  return result;
-}
 
 // Provides limits of UInt<128>.
 template <> class numeric_limits<UInt<128>> {

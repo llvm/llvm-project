@@ -1546,47 +1546,63 @@ def: Pat<(v2i32 (mulhu V2I32:$Rss, V2I32:$Rtt)),
          (Combinew (M2_mpyu_up (HiReg $Rss), (HiReg $Rtt)),
                    (M2_mpyu_up (LoReg $Rss), (LoReg $Rtt)))>;
 
-def: Pat<(v2i32 (mulhs V2I32:$Rs, V2I32:$Rt)),
-         (Combinew (M2_mpy_up (HiReg $Rs), (HiReg $Rt)),
-                   (M2_mpy_up (LoReg $Rt), (LoReg $Rt)))>;
+def: Pat<(v2i32 (mulhs V2I32:$Rss, V2I32:$Rtt)),
+         (Combinew (M2_mpy_up (HiReg $Rss), (HiReg $Rtt)),
+                   (M2_mpy_up (LoReg $Rss), (LoReg $Rtt)))>;
 
-def Mulhub:
+def Mulhub4:
+  OutPatFrag<(ops node:$Rs, node:$Rt), (S2_vtrunohb (M5_vmpybuu $Rs, $Rt))>;
+def Mulhub8:
   OutPatFrag<(ops node:$Rss, node:$Rtt),
-             (Combinew (S2_vtrunohb (M5_vmpybuu (HiReg $Rss), (HiReg $Rtt))),
-                       (S2_vtrunohb (M5_vmpybuu (LoReg $Rss), (LoReg $Rtt))))>;
+             (Combinew (Mulhub4 (HiReg $Rss), (HiReg $Rtt)),
+                       (Mulhub4 (LoReg $Rss), (LoReg $Rtt)))>;
 
-// Equivalent of byte-wise arithmetic shift right by 7 in v8i8.
-def Asr7:
-  OutPatFrag<(ops node:$Rss), (C2_mask (C2_not (A4_vcmpbgti $Rss, 0)))>;
+// (mux (x >= 0), 0, y)
+def Negbytes8:
+  OutPatFrag<(ops node:$Rss, node:$Rtt),
+             (C2_vmux (A4_vcmpbgti $Rss, -1), (A2_tfrpi 0), $Rtt)>;
 
-def: Pat<(v8i8 (mulhu V8I8:$Rss, V8I8:$Rtt)),
-         (Mulhub $Rss, $Rtt)>;
+def: Pat<(v4i8 (mulhu  V4I8:$Rs,  V4I8:$Rt)), (Mulhub4  $Rs,  $Rt)>;
+def: Pat<(v8i8 (mulhu V8I8:$Rss, V8I8:$Rtt)), (Mulhub8 $Rss, $Rtt)>;
 
-def: Pat<(v8i8 (mulhs V8I8:$Rss, V8I8:$Rtt)),
-         (A2_vsubub
-           (Mulhub $Rss, $Rtt),
-           (A2_vaddub (A2_andp V8I8:$Rss, (Asr7 $Rtt)),
-                      (A2_andp V8I8:$Rtt, (Asr7 $Rss))))>;
+// (Mulhs x, y) = (Mulhu x, y) - (x < 0 ? y : 0) - (y < 0 ? x : 0)
+def Mulhsb8:
+  OutPatFrag<(ops node:$Rss, node:$Rtt),
+             (A2_vsubub (Mulhub8 $Rss, $Rtt),
+                        (A2_vaddub (Negbytes8 $Rss, $Rtt),
+                                   (Negbytes8 $Rtt, $Rss)))>;
 
-def Mpysh:
+def: Pat<(v4i8 (mulhs V4I8:$Rs, V4I8:$Rt)),
+         (LoReg (Mulhsb8 (v8i8 (ToAext64 $Rs)), (v8i8 (ToAext64 $Rt))))>;
+def: Pat<(v8i8 (mulhs V8I8:$Rss, V8I8:$Rtt)), (Mulhsb8 $Rss, $Rtt)>;
+
+// v2i16 *s v2i16 -> v2i32
+def Muli16:
   OutPatFrag<(ops node:$Rs, node:$Rt), (M2_vmpy2s_s0 $Rs, $Rt)>;
-def Mpyshh:
-  OutPatFrag<(ops node:$Rss, node:$Rtt), (Mpysh (HiReg $Rss), (HiReg $Rtt))>;
-def Mpyshl:
-  OutPatFrag<(ops node:$Rss, node:$Rtt), (Mpysh (LoReg $Rss), (LoReg $Rtt))>;
 
-def Mulhsh:
+def Mulhsh2:
+  OutPatFrag<(ops node:$Rs, node:$Rt),
+             (A2_combine_hh (HiReg (Muli16 $Rs, $Rt)),
+                            (LoReg (Muli16 $Rs, $Rt)))>;
+def Mulhsh4:
   OutPatFrag<(ops node:$Rss, node:$Rtt),
-             (Combinew (A2_combine_hh (HiReg (Mpyshh $Rss, $Rtt)),
-                                      (LoReg (Mpyshh $Rss, $Rtt))),
-                       (A2_combine_hh (HiReg (Mpyshl $Rss, $Rtt)),
-                                      (LoReg (Mpyshl $Rss, $Rtt))))>;
+             (Combinew (Mulhsh2 (HiReg $Rss), (HiReg $Rtt)),
+                       (Mulhsh2 (LoReg $Rss), (LoReg $Rtt)))>;
 
-def: Pat<(v4i16 (mulhs V4I16:$Rss, V4I16:$Rtt)), (Mulhsh $Rss, $Rtt)>;
+def: Pat<(v2i16 (mulhs  V2I16:$Rs,  V2I16:$Rt)), (Mulhsh2  $Rs,  $Rt)>;
+def: Pat<(v4i16 (mulhs V4I16:$Rss, V4I16:$Rtt)), (Mulhsh4 $Rss, $Rtt)>;
+
+def: Pat<(v2i16 (mulhu V2I16:$Rs, V2I16:$Rt)),
+  (A2_svaddh
+     (Mulhsh2 $Rs, $Rt),
+     (A2_svaddh (LoReg (A2_andp (Combinew $Rt, $Rs),
+                                (S2_asr_i_vh (Combinew $Rs, $Rt), 15))),
+                (HiReg (A2_andp (Combinew $Rt, $Rs),
+                                (S2_asr_i_vh (Combinew $Rs, $Rt), 15)))))>;
 
 def: Pat<(v4i16 (mulhu V4I16:$Rss, V4I16:$Rtt)),
          (A2_vaddh
-           (Mulhsh $Rss, $Rtt),
+           (Mulhsh4 $Rss, $Rtt),
            (A2_vaddh (A2_andp V4I16:$Rss, (S2_asr_i_vh $Rtt, 15)),
                      (A2_andp V4I16:$Rtt, (S2_asr_i_vh $Rss, 15))))>;
 
@@ -1783,7 +1799,7 @@ def: Pat<(sub V4I8:$Rs, V4I8:$Rt),
 // half-words, and saturates the result to a 32-bit value, except the
 // saturation never happens (it can only occur with scaling).
 def: Pat<(v2i16 (mul V2I16:$Rs, V2I16:$Rt)),
-         (LoReg (S2_vtrunewh (A2_combineii 0, 0),
+         (LoReg (S2_vtrunewh (IMPLICIT_DEF),
                              (M2_vmpy2s_s0 V2I16:$Rs, V2I16:$Rt)))>;
 def: Pat<(v4i16 (mul V4I16:$Rs, V4I16:$Rt)),
          (S2_vtrunewh (M2_vmpy2s_s0 (HiReg $Rs), (HiReg $Rt)),

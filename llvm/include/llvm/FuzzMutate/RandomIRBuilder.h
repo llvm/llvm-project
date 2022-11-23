@@ -63,6 +63,6 @@ struct RandomIRBuilder {
                    fuzzerop::SourcePred Pred);
 };
 
-} // end llvm namespace
+} // namespace llvm
 
 #endif // LLVM_FUZZMUTATE_RANDOMIRBUILDER_H

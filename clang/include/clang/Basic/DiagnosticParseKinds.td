@@ -1316,6 +1316,7 @@ def warn_pragma_unsupported_extension : Warning<
 def warn_pragma_extension_is_core : Warning<
   "OpenCL extension %0 is core feature or supported optional core feature - ignoring">,
   InGroup<OpenCLCoreFeaturesDiagGroup>, DefaultIgnore;
+def err_modifier_expected_colon : Error<"missing ':' after %0 modifier">;
 
 // OpenCL errors.
 def err_opencl_taking_function_address_parser : Error<
@@ -1341,6 +1342,8 @@ def err_omp_unexpected_directive : Error<
   "unexpected OpenMP directive %select{|'#pragma omp %1'}0">;
 def err_omp_expected_punc : Error<
   "expected ',' or ')' in '%0' %select{clause|directive}1">;
+def warn_clause_expected_string : Warning<
+  "expected string literal in 'clause %0' - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unexpected_clause : Error<
   "unexpected OpenMP clause '%0' in directive '#pragma omp %1'">;
 def err_omp_immediate_directive : Error<

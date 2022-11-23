@@ -325,7 +325,7 @@ int main(int, char**) { return 0; }
 #endif
 
 // RUN: %{build} -DTEST_51
-#if defined(TEST_51) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if defined(TEST_51) && !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_FSTREAM)
 #   include <fstream>
     using HandlerType = decltype(std::__libcpp_verbose_abort);
 #endif

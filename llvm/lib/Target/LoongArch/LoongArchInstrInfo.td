@@ -35,7 +35,8 @@ def SDT_LoongArchBStrPick: SDTypeProfile<1, 3, [
   SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<2, 3>
 ]>;
 
-def SDT_LoongArchDBAR : SDTypeProfile<0, 1, [SDTCisVT<0, GRLenVT>]>;
+// "VI" means no output and an integer input.
+def SDT_LoongArchVI : SDTypeProfile<0, 1, [SDTCisVT<0, GRLenVT>]>;
 
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
@@ -50,6 +51,9 @@ def loongarch_call : SDNode<"LoongArchISD::CALL", SDT_LoongArchCall,
                              SDNPVariadic]>;
 def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def loongarch_tail : SDNode<"LoongArchISD::TAIL", SDT_LoongArchCall,
+                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                             SDNPVariadic]>;
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
@@ -67,8 +71,14 @@ def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
 def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
 def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
 def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
-def loongarch_dbar : SDNode<"LoongArchISD::DBAR", SDT_LoongArchDBAR,
+def loongarch_dbar : SDNode<"LoongArchISD::DBAR", SDT_LoongArchVI,
                              [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_ibar : SDNode<"LoongArchISD::IBAR", SDT_LoongArchVI,
+                             [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_break : SDNode<"LoongArchISD::BREAK", SDT_LoongArchVI,
+                              [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_syscall : SDNode<"LoongArchISD::SYSCALL", SDT_LoongArchVI,
+                                [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -91,6 +101,9 @@ class UImmAsmOperand<int width, string suffix = "">
 
 // A parameterized register class alternative to i32imm/i64imm from Target.td.
 def grlenimm : Operand<GRLenVT>;
+def imm32 : Operand<GRLenVT> {
+  let ParserMatchClass = ImmAsmOperand<"", 32, "">;
+}
 
 def uimm2 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<2>;
@@ -232,11 +245,23 @@ def SImm26OperandBL: AsmOperandClass {
   let ParserMethod = "parseSImm26Operand";
 }
 
-// A symbol or an imm used in BL/PseudoCALL.
-def simm26_bl : Operand<GRLenVT> {
+// A symbol or an imm used in BL/PseudoCALL/PseudoTAIL.
+def simm26_symbol : Operand<GRLenVT> {
   let ParserMatchClass = SImm26OperandBL;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<26, 2>";
+}
+
+def BareSymbol : AsmOperandClass {
+  let Name = "BareSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidBareSymbol";
+  let ParserMethod = "parseImmediate";
+}
+
+// A bare symbol used in "PseudoLA_*" instructions.
+def bare_symbol : Operand<GRLenVT> {
+  let ParserMatchClass = BareSymbol;
 }
 
 // Standalone (codegen-only) immleaf patterns.
@@ -455,7 +480,7 @@ def BNEZ : BrCCZ_1RI21<0b010001, "bnez">;
 def B : Br_I26<0b010100, "b">;
 
 let isCall = 1, Defs=[R1] in
-def BL : FmtI26<0b010101, (outs), (ins simm26_bl:$imm26), "bl", "$imm26">;
+def BL : FmtI26<0b010101, (outs), (ins simm26_symbol:$imm26), "bl", "$imm26">;
 def JIRL : Fmt2RI16<0b010011, (outs GPR:$rd),
                     (ins GPR:$rj, simm16_lsl2:$imm16), "jirl",
                     "$rd, $rj, $imm16">;
@@ -934,7 +959,7 @@ def : Pat<(brind (add GPR:$rj, simm16_lsl2:$imm16)),
           (PseudoBRIND GPR:$rj, simm16_lsl2:$imm16)>;
 
 let isCall = 1, Defs = [R1] in
-def PseudoCALL : Pseudo<(outs), (ins simm26_bl:$func)>;
+def PseudoCALL : Pseudo<(outs), (ins simm26_symbol:$func)>;
 
 def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
@@ -953,23 +978,124 @@ let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
                 PseudoInstExpansion<(JIRL R0, R1, 0)>;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def PseudoLA_PCREL : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
+def PseudoTAIL : Pseudo<(outs), (ins simm26_symbol:$dst)>;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def PseudoLA_GOT : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+def : Pat<(loongarch_tail (iPTR tglobaladdr:$dst)),
+          (PseudoTAIL tglobaladdr:$dst)>;
+def : Pat<(loongarch_tail (iPTR texternalsym:$dst)),
+          (PseudoTAIL texternalsym:$dst)>;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def PseudoLA_TLS_LE : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
+def PseudoTAILIndirect : Pseudo<(outs), (ins GPRT:$rj),
+                                [(loongarch_tail GPRT:$rj)]>,
+                         PseudoInstExpansion<(JIRL R0, GPR:$rj, 0)>;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
+def PseudoB_TAIL : Pseudo<(outs), (ins simm26_b:$imm26)>,
+                   PseudoInstExpansion<(B simm26_b:$imm26)>;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
+def PseudoJIRL_TAIL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
+                      PseudoInstExpansion<(JIRL R0, GPR:$rj,
+                                           simm16_lsl2:$imm16)>;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+/// Load address (la*) macro instructions.
+
+// Define isCodeGenOnly = 0 to expose them to tablegened assembly parser.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
+    isAsmParserOnly = 1 in {
+def PseudoLA_ABS : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                          "la.abs", "$dst, $src">;
+def PseudoLA_ABS_LARGE : Pseudo<(outs GPR:$dst),
+                                (ins GPR:$tmp, bare_symbol:$src), [],
+                                "la.abs", "$dst, $src">;
+def PseudoLA_PCREL : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                            "la.pcrel", "$dst, $src">;
+def PseudoLA_PCREL_LARGE : Pseudo<(outs GPR:$dst),
+                                  (ins GPR:$tmp, bare_symbol:$src), [],
+                                  "la.pcrel", "$dst, $tmp, $src">,
+                           Requires<[IsLA64]>;
+def PseudoLA_TLS_LE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.le", "$dst, $src">;
+}
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
+    isAsmParserOnly = 1 in {
+def PseudoLA_GOT : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                          "la.got", "$dst, $src">;
+def PseudoLA_GOT_LARGE : Pseudo<(outs GPR:$dst),
+                                (ins GPR:$tmp, bare_symbol:$src), [],
+                                "la.got", "$dst, $tmp, $src">,
+                         Requires<[IsLA64]>;
+def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.ie", "$dst, $src">;
+def PseudoLA_TLS_IE_LARGE : Pseudo<(outs GPR:$dst),
+                                   (ins GPR:$tmp, bare_symbol:$src), [],
+                                   "la.tls.ie", "$dst, $tmp, $src">,
+                            Requires<[IsLA64]>;
+def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.ld", "$dst, $src">;
+def PseudoLA_TLS_LD_LARGE : Pseudo<(outs GPR:$dst),
+                                   (ins GPR:$tmp, bare_symbol:$src), [],
+                                   "la.tls.ld", "$dst, $tmp, $src">,
+                            Requires<[IsLA64]>;
+def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.gd", "$dst, $src">;
+def PseudoLA_TLS_GD_LARGE : Pseudo<(outs GPR:$dst),
+                                   (ins GPR:$tmp, bare_symbol:$src), [],
+                                   "la.tls.gd", "$dst, $tmp, $src">,
+                            Requires<[IsLA64]>;
+}
+
+// Load address inst alias: "la", "la.global" and "la.local".
+// Default:
+//     la = la.global = la.got
+//     la.local = la.pcrel
+// With feature "+la-global-with-pcrel":
+//     la = la.global = la.pcrel
+// With feature "+la-global-with-abs":
+//     la = la.global = la.abs
+// With feature "+la-local-with-abs":
+//     la.local = la.abs
+// With features "+la-global-with-pcrel,+la-global-with-abs"(disorder):
+//     la = la.global = la.pcrel
+// Note: To keep consistent with gnu-as behavior, the "la" can only have one
+//       register operand.
+def : InstAlias<"la $dst, $src", (PseudoLA_GOT GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $src",
+                (PseudoLA_GOT GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $tmp, $src",
+                (PseudoLA_GOT_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
+def : InstAlias<"la.local $dst, $src",
+                (PseudoLA_PCREL GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.local $dst, $tmp, $src",
+                (PseudoLA_PCREL_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
+
+// Note: Keep HasLaGlobalWithPcrel before HasLaGlobalWithAbs to ensure
+// "la-global-with-pcrel" takes effect when bose "la-global-with-pcrel" and
+// "la-global-with-abs" are enabled.
+let Predicates = [HasLaGlobalWithPcrel] in {
+def : InstAlias<"la $dst, $src", (PseudoLA_PCREL GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $src",
+                (PseudoLA_PCREL GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $tmp, $src",
+                (PseudoLA_PCREL_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
+} // Predicates = [HasLaGlobalWithPcrel]
+
+let Predicates = [HasLaGlobalWithAbs] in {
+def : InstAlias<"la $dst, $src", (PseudoLA_ABS GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $src",
+                (PseudoLA_ABS GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.global $dst, $tmp, $src",
+                (PseudoLA_ABS_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
+} // Predicates = [HasLaGlobalWithAbs]
+
+let Predicates = [HasLaLocalWithAbs] in {
+def : InstAlias<"la.local $dst, $src",
+                (PseudoLA_ABS GPR:$dst, bare_symbol:$src)>;
+def : InstAlias<"la.local $dst, $tmp, $src",
+                (PseudoLA_ABS_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
+} // Predicates = [HasLaLocalWithAbs]
 
 /// BSTRINS and BSTRPICK
 
@@ -1316,13 +1442,12 @@ def : Pat<(atomic_load_xor_32 GPR:$addr, GPR:$incr),
 
 /// Intrinsics
 
-let Predicates = [IsLA32] in {
-def : Pat<(int_loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
-} // Predicates = [IsLA32]
+def : Pat<(loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
+def : Pat<(loongarch_ibar uimm15:$imm15), (IBAR uimm15:$imm15)>;
+def : Pat<(loongarch_break uimm15:$imm15), (BREAK uimm15:$imm15)>;
+def : Pat<(loongarch_syscall uimm15:$imm15), (SYSCALL uimm15:$imm15)>;
 
 let Predicates = [IsLA64] in {
-def : Pat<(loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
-
 // CRC Check Instructions
 def : PatGprGpr<loongarch_crc_w_d_w, CRC_W_D_W>;
 } // Predicates = [IsLA64]
@@ -1347,6 +1472,37 @@ def : InstAlias<"move $dst, $src", (OR GPR:$dst, GPR:$src, R0)>;
 // later).
 def : InstAlias<"ret", (JIRL R0, R1, 0)>;
 def : InstAlias<"jr $rj", (JIRL R0, GPR:$rj, 0)>;
+
+// Branches implemented with alias.
+// Always output the canonical mnemonic for the pseudo branch instructions.
+// The GNU tools emit the canonical mnemonic for the branch pseudo instructions
+// as well (e.g. "bgt" will be recognised by the assembler but never printed by
+// objdump). Match this behaviour by setting a zero weight.
+def : InstAlias<"bgt $rj, $rd, $imm16",
+                (BLT GPR:$rd, GPR:$rj, simm16_lsl2_br:$imm16), 0>;
+def : InstAlias<"bgtu $rj, $rd, $imm16",
+                (BLTU GPR:$rd, GPR:$rj, simm16_lsl2_br:$imm16), 0>;
+def : InstAlias<"ble $rj, $rd, $imm16",
+                (BGE GPR:$rd, GPR:$rj, simm16_lsl2_br:$imm16), 0>;
+def : InstAlias<"bleu $rj, $rd, $imm16",
+                (BGEU GPR:$rd, GPR:$rj, simm16_lsl2_br:$imm16), 0>;
+def : InstAlias<"bltz $rd, $imm16",
+                (BLT GPR:$rd, R0, simm16_lsl2_br:$imm16), 0>;
+def : InstAlias<"bgtz $rj, $imm16",
+                (BLT R0, GPR:$rj, simm16_lsl2_br:$imm16), 0>;
+def : InstAlias<"blez $rj, $imm16",
+                (BGE R0, GPR:$rj, simm16_lsl2_br:$imm16), 0>;
+def : InstAlias<"bgez $rd, $imm16",
+                (BGE GPR:$rd, R0, simm16_lsl2_br:$imm16), 0>;
+
+// Load immediate.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
+    isAsmParserOnly = 1 in {
+def PseudoLI_W : Pseudo<(outs GPR:$rd), (ins imm32:$imm), [],
+                        "li.w", "$rd, $imm">;
+def PseudoLI_D : Pseudo<(outs GPR:$rd), (ins grlenimm:$imm), [],
+                        "li.d", "$rd, $imm">, Requires<[IsLA64]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Basic Floating-Point Instructions

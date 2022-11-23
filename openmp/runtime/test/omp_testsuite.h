@@ -104,7 +104,8 @@ static int pthread_create(pthread_t *thread, void *attr,
   info->arg = arg;
   pthread = CreateThread(NULL, 0, __thread_func_wrapper, info, 0, NULL);
   if (pthread == NULL) {
-    fprintf(stderr, "CreateThread() failed: Error #%u.\n", GetLastError());
+    fprintf(stderr, "CreateThread() failed: Error #%u.\n",
+            (unsigned) GetLastError());
     exit(1);
   }
   *thread = pthread;
@@ -116,12 +117,13 @@ static int pthread_join(pthread_t thread, void **retval) {
   rc = WaitForSingleObject(thread, INFINITE);
   if (rc == WAIT_FAILED) {
     fprintf(stderr, "WaitForSingleObject() failed: Error #%u.\n",
-            GetLastError());
+            (unsigned) GetLastError());
     exit(1);
   }
   rc = CloseHandle(thread);
   if (rc == 0) {
-    fprintf(stderr, "CloseHandle() failed: Error #%u.\n", GetLastError());
+    fprintf(stderr, "CloseHandle() failed: Error #%u.\n",
+            (unsigned) GetLastError());
     exit(1);
   }
   return 0;

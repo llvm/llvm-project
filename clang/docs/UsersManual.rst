@@ -165,7 +165,8 @@ output format of the diagnostics that it generates.
 
 .. _opt_fshow-column:
 
-**-f[no-]show-column**
+.. option:: -f[no-]show-column
+
    Print column number in diagnostic.
 
    This option, which defaults to on, controls whether or not Clang
@@ -187,7 +188,8 @@ output format of the diagnostics that it generates.
 
 .. _opt_fshow-source-location:
 
-**-f[no-]show-source-location**
+.. option:: -f[no-]show-source-location
+
    Print source file/line/column information in diagnostic.
 
    This option, which defaults to on, controls whether or not Clang
@@ -206,7 +208,8 @@ output format of the diagnostics that it generates.
 
 .. _opt_fcaret-diagnostics:
 
-**-f[no-]caret-diagnostics**
+.. option:: -f[no-]caret-diagnostics
+
    Print source line and ranges from source code in diagnostic.
    This option, which defaults to on, controls whether or not Clang
    prints the source line, source ranges, and caret when emitting a
@@ -220,7 +223,8 @@ output format of the diagnostics that it generates.
                 ^
                 //
 
-**-f[no-]color-diagnostics**
+.. option:: -f[no-]color-diagnostics
+
    This option, which defaults to on when a color-capable terminal is
    detected, controls whether or not Clang prints diagnostics in color.
 
@@ -247,7 +251,8 @@ output format of the diagnostics that it generates.
                 ^
                 //
 
-**-fansi-escape-codes**
+.. option:: -fansi-escape-codes
+
    Controls whether ANSI escape codes are used instead of the Windows Console
    API to output colored diagnostics. This option is only used on Windows and
    defaults to off.
@@ -277,7 +282,8 @@ output format of the diagnostics that it generates.
 
 .. _opt_fdiagnostics-show-option:
 
-**-f[no-]diagnostics-show-option**
+.. option:: -f[no-]diagnostics-show-option
+
    Enable ``[-Woption]`` information in diagnostic line.
 
    This option, which defaults to on, controls whether or not Clang
@@ -293,12 +299,10 @@ output format of the diagnostics that it generates.
                 //
 
    Passing **-fno-diagnostics-show-option** will prevent Clang from
-   printing the [:ref:`-Wextra-tokens <opt_Wextra-tokens>`] information in
+   printing the [:option:`-Wextra-tokens`] information in
    the diagnostic. This information tells you the flag needed to enable
    or disable the diagnostic, either from the command line or through
    :ref:`#pragma GCC diagnostic <pragma_GCC_diagnostic>`.
-
-.. _opt_fdiagnostics-show-category:
 
 .. option:: -fdiagnostics-show-category=none/id/name
 
@@ -347,7 +351,7 @@ output format of the diagnostics that it generates.
       ``-fsave-optimization-record=bitstream``: A binary format based on LLVM
       Bitstream.
 
-   The output file is controlled by :ref:`-foptimization-record-file <opt_foptimization-record-file>`.
+   The output file is controlled by :option:`-foptimization-record-file`.
 
    In the absence of an explicit output file, the file is chosen using the
    following scheme:
@@ -361,7 +365,7 @@ output format of the diagnostics that it generates.
    * ``clang -fsave-optimization-record -c in.c -o out.o`` will generate
      ``out.opt.yaml``
 
-   * ``clang -fsave-optimization-record -c in.c `` will generate
+   * ``clang -fsave-optimization-record -c in.c`` will generate
      ``in.opt.yaml``
 
    When targeting (Thin)LTO, the base is derived from the output filename, and
@@ -395,20 +399,18 @@ output format of the diagnostics that it generates.
    ``<base>-<arch>.opt.<format>``
 
    Note that this is incompatible with passing the
-   :ref:`-foptimization-record-file <opt_foptimization-record-file>` option.
+   :option:`-foptimization-record-file` option.
 
-.. _opt_foptimization-record-file:
+.. option:: -foptimization-record-file
 
-**-foptimization-record-file**
    Control the file to which optimization reports are written. This implies
    :ref:`-fsave-optimization-record <opt_fsave-optimization-record>`.
 
     On Darwin platforms, this is incompatible with passing multiple
     ``-arch <arch>`` options.
 
-.. _opt_foptimization-record-passes:
+.. option:: -foptimization-record-passes
 
-**-foptimization-record-passes**
    Only include passes which match a specified regular expression.
 
    When optimization reports are being output (see
@@ -420,7 +422,8 @@ output format of the diagnostics that it generates.
 
 .. _opt_fdiagnostics-show-hotness:
 
-**-f[no-]diagnostics-show-hotness**
+.. option:: -f[no-]diagnostics-show-hotness
+
    Enable profile hotness information in diagnostic line.
 
    This option controls whether Clang prints the profile hotness associated
@@ -443,9 +446,8 @@ output format of the diagnostics that it generates.
    :ref:`-fsave-optimization-record <opt_fsave-optimization-record>` is used.
    Otherwise, it defaults to off.
 
-.. _opt_fdiagnostics-hotness-threshold:
+.. option:: -fdiagnostics-hotness-threshold
 
-**-fdiagnostics-hotness-threshold**
    Prevent optimization remarks from being output if they do not have at least
    this hotness value.
 
@@ -458,7 +460,8 @@ output format of the diagnostics that it generates.
 
 .. _opt_fdiagnostics-fixit-info:
 
-**-f[no-]diagnostics-fixit-info**
+.. option:: -f[no-]diagnostics-fixit-info
+
    Enable "FixIt" information in the diagnostics output.
 
    This option, which defaults to on, controls whether or not Clang
@@ -479,7 +482,8 @@ output format of the diagnostics that it generates.
 
 .. _opt_fdiagnostics-print-source-range-info:
 
-**-fdiagnostics-print-source-range-info**
+.. option:: -fdiagnostics-print-source-range-info
+
    Print machine parsable information about source ranges.
    This option makes Clang print information about source ranges in a machine
    parsable format after the file/line/column number information. The
@@ -576,8 +580,6 @@ Individual Warning Groups
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 TODO: Generate this from tblgen. Define one anchor per warning group.
-
-.. _opt_wextra-tokens:
 
 .. option:: -Wextra-tokens
 
@@ -679,8 +681,8 @@ control the crash diagnostics.
 
   Disable auto-generation of preprocessed source files during a clang crash.
 
-The -fno-crash-diagnostics flag can be helpful for speeding the process
-of generating a delta reduced test case.
+  The -fno-crash-diagnostics flag can be helpful for speeding the process
+  of generating a delta reduced test case.
 
 .. option:: -fcrash-diagnostics-dir=<dir>
 
@@ -847,14 +849,14 @@ Clang options that don't fit neatly into other categories.
   for NMake or Jom. Ignored unless another option causes Clang to emit a
   dependency file.
 
-When Clang emits a dependency file (e.g., you supplied the -M option)
-most filenames can be written to the file without any special formatting.
-Different Make tools will treat different sets of characters as "special"
-and use different conventions for telling the Make tool that the character
-is actually part of the filename. Normally Clang uses backslash to "escape"
-a special character, which is the convention used by GNU Make. The -MV
-option tells Clang to put double-quotes around the entire filename, which
-is the convention used by NMake and Jom.
+  When Clang emits a dependency file (e.g., you supplied the -M option)
+  most filenames can be written to the file without any special formatting.
+  Different Make tools will treat different sets of characters as "special"
+  and use different conventions for telling the Make tool that the character
+  is actually part of the filename. Normally Clang uses backslash to "escape"
+  a special character, which is the convention used by GNU Make. The -MV
+  option tells Clang to put double-quotes around the entire filename, which
+  is the convention used by NMake and Jom.
 
 .. option:: -femit-dwarf-unwind=<value>
 
@@ -868,10 +870,10 @@ is the convention used by NMake and Jom.
   * ``default`` - Use the platform-specific default (``always`` for all
     non-arm64-platforms).
 
-``no-compact-unwind`` is a performance optimization -- Clang will emit smaller
-object files that are more quickly processed by the linker. This may cause
-binary compatibility issues on older x86_64 targets, however, so use it with
-caution.
+  ``no-compact-unwind`` is a performance optimization -- Clang will emit smaller
+  object files that are more quickly processed by the linker. This may cause
+  binary compatibility issues on older x86_64 targets, however, so use it with
+  caution.
 
 .. _configuration-files:
 
@@ -1036,7 +1038,7 @@ the options that control it:
 #. A :ref:`high-level category <diagnostics_categories>` for the diagnostic
    for clients that want to group diagnostics by class (for diagnostics
    that support it)
-   [:ref:`-fdiagnostics-show-category <opt_fdiagnostics-show-category>`].
+   [:option:`-fdiagnostics-show-category`].
 #. The line of source code that the issue occurs on, along with a caret
    and ranges that indicate the important locations
    [:ref:`-fcaret-diagnostics <opt_fcaret-diagnostics>`].
@@ -1073,7 +1075,7 @@ triage builds that produce a large number of errors or warnings in a
 grouped way.
 
 Categories are not shown by default, but they can be turned on with the
-:ref:`-fdiagnostics-show-category <opt_fdiagnostics-show-category>` option.
+:option:`-fdiagnostics-show-category` option.
 When set to "``name``", the category is printed textually in the
 diagnostic output. When it is set to "``id``", a category number is
 printed. The mapping of category names to category id's can be obtained
@@ -1429,7 +1431,7 @@ floating point semantic models: precise (the default), strict, and fast.
    below to disable any of the individual optimizations in ``-ffast-math``
    will cause ``__FAST_MATH__`` to no longer be set.
 
-  This option implies:
+   This option implies:
 
    * ``-fno-honor-infinities``
 
@@ -1516,9 +1518,7 @@ floating point semantic models: precise (the default), strict, and fast.
 
    Defaults to ``ieee``.
 
-.. _opt_fstrict-float-cast-overflow:
-
-**-f[no-]strict-float-cast-overflow**
+.. option:: -f[no-]strict-float-cast-overflow
 
    When a floating-point value is not representable in a destination integer
    type, the code has undefined behavior according to the language standard.
@@ -1526,9 +1526,7 @@ floating point semantic models: precise (the default), strict, and fast.
    With the 'no-strict' option, Clang will saturate towards the smallest and
    largest representable integer values instead. NaNs will be converted to zero.
 
-.. _opt_fmath-errno:
-
-**-f[no-]math-errno**
+.. option:: -f[no-]math-errno
 
    Require math functions to indicate errors by setting errno.
    The default varies by ToolChain.  ``-fno-math-errno`` allows optimizations
@@ -1544,14 +1542,12 @@ floating point semantic models: precise (the default), strict, and fast.
    ``-fno-math-errno`` is the default. This includes most BSD-derived
    systems, including Darwin.
 
-.. _opt_ftrapping-math:
-
-**-f[no-]trapping-math**
+.. option:: -f[no-]trapping-math
 
    Control floating point exception behavior. ``-fno-trapping-math`` allows optimizations that assume that floating point operations cannot generate traps such as divide-by-zero, overflow and underflow.
 
-- The option ``-ftrapping-math`` behaves identically to ``-ffp-exception-behavior=strict``.
-- The option ``-fno-trapping-math`` behaves identically to ``-ffp-exception-behavior=ignore``.   This is the default.
+   - The option ``-ftrapping-math`` behaves identically to ``-ffp-exception-behavior=strict``.
+   - The option ``-fno-trapping-math`` behaves identically to ``-ffp-exception-behavior=ignore``.   This is the default.
 
 .. option:: -ffp-contract=<value>
 
@@ -1574,23 +1570,17 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``off`` (never fuse)
    * ``fast-honor-pragmas`` (fuse across statements unless dictated by pragmas, default for HIP)
 
-.. _opt_fhonor-infinities:
-
-**-f[no-]honor-infinities**
+.. option:: -f[no-]honor-infinities
 
    If both ``-fno-honor-infinities`` and ``-fno-honor-nans`` are used,
    has the same effect as specifying ``-ffinite-math-only``.
 
-.. _opt_fhonor-nans:
-
-**-f[no-]honor-nans**
+.. option:: -f[no-]honor-nans
 
    If both ``-fno-honor-infinities`` and ``-fno-honor-nans`` are used,
    has the same effect as specifying ``-ffinite-math-only``.
 
-.. _opt_fapprox-func:
-
-**-f[no-]approx-func**
+.. option:: -f[no-]approx-func
 
    Allow certain math function calls (such as ``log``, ``sqrt``, ``pow``, etc)
    to be replaced with an approximately equivalent set of instructions
@@ -1599,32 +1589,24 @@ floating point semantic models: precise (the default), strict, and fast.
    in cases where ``x`` is ``-0.0`` or ``-inf``.
    Defaults to ``-fno-approx-func``.
 
-.. _opt_fsigned-zeros:
-
-**-f[no-]signed-zeros**
+.. option:: -f[no-]signed-zeros
 
    Allow optimizations that ignore the sign of floating point zeros.
    Defaults to ``-fno-signed-zeros``.
 
-.. _opt_fassociative-math:
-
-**-f[no-]associative-math**
+.. option:: -f[no-]associative-math
 
   Allow floating point operations to be reassociated.
   Defaults to ``-fno-associative-math``.
 
-.. _opt_freciprocal-math:
-
-**-f[no-]reciprocal-math**
+.. option:: -f[no-]reciprocal-math
 
   Allow division operations to be transformed into multiplication by a
   reciprocal. This can be significantly faster than an ordinary division
   but can also have significantly less precision. Defaults to
   ``-fno-reciprocal-math``.
 
-.. _opt_funsafe-math-optimizations:
-
-**-f[no-]unsafe-math-optimizations**
+.. option:: -f[no-]unsafe-math-optimizations
 
    Allow unsafe floating-point optimizations. Also implies:
 
@@ -1635,9 +1617,7 @@ floating point semantic models: precise (the default), strict, and fast.
 
    Defaults to ``-fno-unsafe-math-optimizations``.
 
-.. _opt_ffinite-math-only:
-
-**-f[no-]finite-math-only**
+.. option:: -f[no-]finite-math-only
 
    Allow floating-point optimizations that assume arguments and results are
    not NaNs or +-Inf.  This defines the ``__FINITE_MATH_ONLY__`` preprocessor macro.
@@ -1648,18 +1628,16 @@ floating point semantic models: precise (the default), strict, and fast.
 
    Defaults to ``-fno-finite-math-only``.
 
-.. _opt_frounding-math:
+.. option:: -f[no-]rounding-math
 
-**-f[no-]rounding-math**
+   Force floating-point operations to honor the dynamically-set rounding mode by default.
 
-Force floating-point operations to honor the dynamically-set rounding mode by default.
+   The result of a floating-point operation often cannot be exactly represented in the result type and therefore must be rounded.  IEEE 754 describes different rounding modes that control how to perform this rounding, not all of which are supported by all implementations.  C provides interfaces (``fesetround`` and ``fesetenv``) for dynamically controlling the rounding mode, and while it also recommends certain conventions for changing the rounding mode, these conventions are not typically enforced in the ABI.  Since the rounding mode changes the numerical result of operations, the compiler must understand something about it in order to optimize floating point operations.
 
-The result of a floating-point operation often cannot be exactly represented in the result type and therefore must be rounded.  IEEE 754 describes different rounding modes that control how to perform this rounding, not all of which are supported by all implementations.  C provides interfaces (``fesetround`` and ``fesetenv``) for dynamically controlling the rounding mode, and while it also recommends certain conventions for changing the rounding mode, these conventions are not typically enforced in the ABI.  Since the rounding mode changes the numerical result of operations, the compiler must understand something about it in order to optimize floating point operations.
+   Note that floating-point operations performed as part of constant initialization are formally performed prior to the start of the program and are therefore not subject to the current rounding mode.  This includes the initialization of global variables and local ``static`` variables.  Floating-point operations in these contexts will be rounded using ``FE_TONEAREST``.
 
-Note that floating-point operations performed as part of constant initialization are formally performed prior to the start of the program and are therefore not subject to the current rounding mode.  This includes the initialization of global variables and local ``static`` variables.  Floating-point operations in these contexts will be rounded using ``FE_TONEAREST``.
-
-- The option ``-fno-rounding-math`` allows the compiler to assume that the rounding mode is set to ``FE_TONEAREST``.  This is the default.
-- The option ``-frounding-math`` forces the compiler to honor the dynamically-set rounding mode.  This prevents optimizations which might affect results if the rounding mode changes or is different from the default; for example, it prevents floating-point operations from being reordered across most calls and prevents constant-folding when the result is not exactly representable.
+   - The option ``-fno-rounding-math`` allows the compiler to assume that the rounding mode is set to ``FE_TONEAREST``.  This is the default.
+   - The option ``-frounding-math`` forces the compiler to honor the dynamically-set rounding mode.  This prevents optimizations which might affect results if the rounding mode changes or is different from the default; for example, it prevents floating-point operations from being reordered across most calls and prevents constant-folding when the result is not exactly representable.
 
 .. option:: -ffp-model=<value>
 
@@ -1799,7 +1777,8 @@ Controlling Code Generation
 Clang provides a number of ways to control code generation. The options
 are listed below.
 
-**-f[no-]sanitize=check1,check2,...**
+.. option:: -f[no-]sanitize=check1,check2,...
+
    Turn on runtime checks for various forms of undefined or suspicious
    behavior.
 
@@ -1847,9 +1826,9 @@ are listed below.
    ``-fsanitize=thread``, and ``-fsanitize=memory`` checkers in the same
    program.
 
-**-f[no-]sanitize-recover=check1,check2,...**
+.. option:: -f[no-]sanitize-recover=check1,check2,...
 
-**-f[no-]sanitize-recover[=all]**
+.. option:: -f[no-]sanitize-recover[=all]
 
    Controls which checks enabled by ``-fsanitize=`` flag are non-fatal.
    If the check is fatal, program will halt after the first error
@@ -1873,9 +1852,9 @@ are listed below.
    will have no effect on its own; it will need to be accompanied by
    ``-fno-sanitize-trap=alignment``.
 
-**-f[no-]sanitize-trap=check1,check2,...**
+.. option:: -f[no-]sanitize-trap=check1,check2,...
 
-**-f[no-]sanitize-trap[=all]**
+.. option:: -f[no-]sanitize-trap[=all]
 
    Controls which checks enabled by the ``-fsanitize=`` flag trap. This
    option is intended for use in cases where the sanitizer runtime cannot
@@ -1898,12 +1877,12 @@ are listed below.
 
    Don't use ignorelist file, if it was specified earlier in the command line.
 
-**-f[no-]sanitize-coverage=[type,features,...]**
+.. option:: -f[no-]sanitize-coverage=[type,features,...]
 
    Enable simple code coverage in addition to certain sanitizers.
    See :doc:`SanitizerCoverage` for more details.
 
-**-f[no-]sanitize-address-outline-instrumentation**
+.. option:: -f[no-]sanitize-address-outline-instrumentation
 
    Controls how address sanitizer code is generated. If enabled will always use
    a function call instead of inlining the code. Turning this option on could
@@ -1911,7 +1890,7 @@ are listed below.
 
    See :doc: `AddressSanitizer` for more details.
 
-**-f[no-]sanitize-stats**
+.. option:: -f[no-]sanitize-stats
 
    Enable simple statistics gathering for the enabled sanitizers.
    See :doc:`SanitizerStats` for more details.
@@ -2027,7 +2006,8 @@ are listed below.
    compact branches and ``always`` generates compact branches whenever
    possible.
 
-**-f[no-]max-type-align=[number]**
+.. option:: -f[no-]max-type-align=[number]
+
    Instruct the code generator to not enforce a higher alignment than the given
    number (of bytes) when accessing memory via an opaque pointer or reference.
    This cap is ignored when directly accessing a variable or when the pointee
@@ -2068,7 +2048,7 @@ are listed below.
    on ELF targets when using the integrated assembler. This flag currently
    only has an effect on ELF targets.
 
-**-f[no]-unique-internal-linkage-names**
+.. option:: -f[no]-unique-internal-linkage-names
 
    Controls whether Clang emits a unique (best-effort) symbol name for internal
    linkage symbols.  When this option is set, compiler hashes the main source
@@ -2089,7 +2069,7 @@ are listed below.
      $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
      $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 
-**-fbasic-block-sections=[labels, all, list=<arg>, none]**
+.. option:: -fbasic-block-sections=[labels, all, list=<arg>, none]
 
   Controls how Clang emits text sections for basic blocks. With values ``all``
   and ``list=<arg>``, each basic block or a subset of basic blocks can be placed
@@ -2517,14 +2497,14 @@ programs using the same instrumentation method as ``-fprofile-generate``.
   To generate the profile data file with the compiler readable format, the
   ``llvm-profdata`` tool can be used with the profile directory as the input:
 
-   .. code-block:: console
+  .. code-block:: console
 
-     $ llvm-profdata merge -output=code.profdata yyy/zzz/
+    $ llvm-profdata merge -output=code.profdata yyy/zzz/
 
- If the user wants to turn off the auto-merging feature, or simply override the
- the profile dumping path specified at command line, the environment variable
- ``LLVM_PROFILE_FILE`` can still be used to override
- the directory and filename for the profile file at runtime.
+  If the user wants to turn off the auto-merging feature, or simply override the
+  the profile dumping path specified at command line, the environment variable
+  ``LLVM_PROFILE_FILE`` can still be used to override
+  the directory and filename for the profile file at runtime.
 
 .. option:: -fcs-profile-generate[=<dirname>]
 
@@ -2855,15 +2835,15 @@ below. If multiple flags are present, the last one is used.
   the debug type information can be spread out over multiple
   compilation units.  Specifically, the optimizations are:
 
-- will not emit type definitions for types that are not needed by a
-  module and could be replaced with a forward declaration.
-- will only emit type info for a dynamic C++ class in the module that
-  contains the vtable for the class.
-- will only emit type info for a C++ class (non-trivial, non-aggregate)
-  in the modules that contain a definition for one of its constructors.
-- will only emit type definitions for types that are the subject of explicit
-  template instantiation declarations in the presence of an explicit
-  instantiation definition for the type.
+  - will not emit type definitions for types that are not needed by a
+    module and could be replaced with a forward declaration.
+  - will only emit type info for a dynamic C++ class in the module that
+    contains the vtable for the class.
+  - will only emit type info for a C++ class (non-trivial, non-aggregate)
+    in the modules that contain a definition for one of its constructors.
+  - will only emit type definitions for types that are the subject of explicit
+    template instantiation declarations in the presence of an explicit
+    instantiation definition for the type.
 
   The **-fstandalone-debug** option turns off these optimizations.
   This is useful when working with 3rd-party libraries that don't come
@@ -3295,14 +3275,12 @@ compiling for OpenCL, examples: ``-c``, ``-O<1-4|s>``, ``-o``, ``-emit-llvm``, e
 
 Some extra options are available to support special OpenCL features.
 
-.. _opencl_cl_no_stdinc:
-
 .. option:: -cl-no-stdinc
 
-Allows to disable all extra types and functions that are not native to the compiler.
-This might reduce the compilation speed marginally but many declarations from the
-OpenCL standard will not be accessible. For example, the following will fail to
-compile.
+   Allows to disable all extra types and functions that are not native to the compiler.
+   This might reduce the compilation speed marginally but many declarations from the
+   OpenCL standard will not be accessible. For example, the following will fail to
+   compile.
 
    .. code-block:: console
 
@@ -3311,36 +3289,36 @@ compile.
      error: use of undeclared identifier 'get_enqueued_local_size'
      error: use of undeclared identifier 'get_local_size'
 
-More information about the standard types and functions is provided in :ref:`the
-section on the OpenCL Header <opencl_header>`.
+   More information about the standard types and functions is provided in :ref:`the
+   section on the OpenCL Header <opencl_header>`.
 
 .. _opencl_cl_ext:
 
 .. option:: -cl-ext
 
-Enables/Disables support of OpenCL extensions and optional features. All OpenCL
-targets set a list of extensions that they support. Clang allows to amend this using
-the ``-cl-ext`` flag with a comma-separated list of extensions prefixed with
-``'+'`` or ``'-'``. The syntax: ``-cl-ext=<(['-'|'+']<extension>[,])+>``,  where
-extensions can be either one of `the OpenCL published extensions
-<https://www.khronos.org/registry/OpenCL>`_
-or any vendor extension. Alternatively, ``'all'`` can be used to enable
-or disable all known extensions.
+   Enables/Disables support of OpenCL extensions and optional features. All OpenCL
+   targets set a list of extensions that they support. Clang allows to amend this using
+   the ``-cl-ext`` flag with a comma-separated list of extensions prefixed with
+   ``'+'`` or ``'-'``. The syntax: ``-cl-ext=<(['-'|'+']<extension>[,])+>``,  where
+   extensions can be either one of `the OpenCL published extensions
+   <https://www.khronos.org/registry/OpenCL>`_
+   or any vendor extension. Alternatively, ``'all'`` can be used to enable
+   or disable all known extensions.
 
-Example disabling double support for the 64-bit SPIR-V target:
+   Example disabling double support for the 64-bit SPIR-V target:
 
    .. code-block:: console
 
      $ clang -c -target spirv64 -cl-ext=-cl_khr_fp64 test.cl
 
-Enabling all extensions except double support in R600 AMD GPU can be done using:
+   Enabling all extensions except double support in R600 AMD GPU can be done using:
 
    .. code-block:: console
 
      $ clang -target r600 -cl-ext=-all,+cl_khr_fp16 test.cl
 
-Note that some generic targets e.g. SPIR/SPIR-V enable all extensions/features in
-clang by default.
+   Note that some generic targets e.g. SPIR/SPIR-V enable all extensions/features in
+   clang by default.
 
 OpenCL Targets
 --------------
@@ -3416,7 +3394,7 @@ OpenCL Header
 By default Clang will include standard headers and therefore most of OpenCL
 builtin functions and types are available during compilation. The
 default declarations of non-native compiler types and functions can be disabled
-by using flag :ref:`-cl-no-stdinc <opencl_cl_no_stdinc>`.
+by using flag :option:`-cl-no-stdinc`.
 
 The following example demonstrates that OpenCL kernel sources with various
 standard builtin functions can be compiled without the need for an explicit

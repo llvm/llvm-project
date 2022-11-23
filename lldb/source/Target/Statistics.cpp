@@ -206,6 +206,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
   const uint64_t num_modules = Module::GetNumberAllocatedModules();
   uint32_t num_debug_info_enabled_modules = 0;
   uint32_t num_modules_has_debug_info = 0;
+  uint32_t num_modules_with_variable_errors = 0;
   uint32_t num_stripped_modules = 0;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = Module::GetAllocatedModuleAtIndex(image_idx);
@@ -261,6 +262,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
         ++num_debug_info_enabled_modules;
       if (module_stat.debug_info_size > 0)
         ++num_modules_has_debug_info;
+      if (module_stat.debug_info_had_variable_errors)
+        ++num_modules_with_variable_errors;
     }
     symtab_parse_time += module_stat.symtab_parse_time;
     symtab_index_time += module_stat.symtab_index_time;
@@ -295,6 +298,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
       {"totalDebugInfoByteSize", debug_info_size},
       {"totalModuleCount", num_modules},
       {"totalModuleCountHasDebugInfo", num_modules_has_debug_info},
+      {"totalModuleCountWithVariableErrors", num_modules_with_variable_errors},
       {"totalDebugInfoEnabled", num_debug_info_enabled_modules},
       {"totalSymbolTableStripped", num_stripped_modules},
   };

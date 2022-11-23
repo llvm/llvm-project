@@ -23,7 +23,6 @@ namespace bufferization {
 
 class AnalysisState;
 class BufferizableOpInterface;
-struct DialectAnalysisState;
 
 class OpFilter {
 public:
@@ -181,13 +180,10 @@ struct BufferizationOptions {
       std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
   /// Initializer function for analysis state.
   using AnalysisStateInitFn = std::function<void(AnalysisState &)>;
-  /// Initializer function for dialect-specific analysis state.
-  using DialectStateInitFn =
-      std::function<std::unique_ptr<DialectAnalysisState>()>;
   /// Tensor -> MemRef type converter.
   /// Parameters: Value, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(
-      Value, unsigned, const BufferizationOptions &)>;
+      Value, Attribute memorySpace, const BufferizationOptions &)>;
 
   BufferizationOptions();
 
@@ -234,9 +230,9 @@ struct BufferizationOptions {
   bool bufferizeFunctionBoundaries = false;
 
   /// The default memory space that should be used when it cannot be inferred
-  /// from the context. If no default memory space is specified, bufferization
-  /// fails when the memory space cannot be inferred at any point.
-  Optional<unsigned> defaultMemorySpace = 0;
+  /// from the context. If case of llvm::None, bufferization fails when the
+  /// memory space cannot be inferred at any point.
+  Optional<Attribute> defaultMemorySpace = Attribute();
 
   /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
   /// If this flag is set to `false`, those invariants are no longer enforced
@@ -301,10 +297,6 @@ struct BufferizationOptions {
   /// Initializer functions for analysis state. These can be used to
   /// initialize dialect-specific analysis state.
   SmallVector<AnalysisStateInitFn> stateInitializers;
-
-  /// Add a analysis state initializer that initializes the specified
-  /// dialect-specific analysis state.
-  void addDialectStateInitializer(StringRef name, const DialectStateInitFn &fn);
 };
 
 /// Specify fine-grain relationship between buffers to enable more analysis.
@@ -317,18 +309,6 @@ enum class BufferRelation {
 
 /// Return `true` if the given value is a BlockArgument of a func::FuncOp.
 bool isFunctionArgument(Value value);
-
-/// Dialect-specific analysis state. Analysis/bufferization information
-/// that is specific to ops from a certain dialect can be stored in derived
-/// variants of this struct.
-struct DialectAnalysisState {
-  DialectAnalysisState() = default;
-
-  virtual ~DialectAnalysisState() = default;
-
-  // Copying state is forbidden. Always pass as reference.
-  DialectAnalysisState(const DialectAnalysisState &) = delete;
-};
 
 /// AnalysisState provides a variety of helper functions for dealing with
 /// tensor values.
@@ -422,52 +402,29 @@ public:
   /// any given tensor.
   virtual bool isTensorYielded(Value tensor) const;
 
-  /// Return `true` if the given dialect state exists.
-  bool hasDialectState(StringRef name) const {
-    auto it = dialectState.find(name);
-    return it != dialectState.end();
-  }
-
-  /// Return dialect-specific bufferization state.
-  template <typename StateT>
-  Optional<const StateT *> getDialectState(StringRef name) const {
-    auto it = dialectState.find(name);
-    if (it == dialectState.end())
-      return None;
-    return static_cast<const StateT *>(it->getSecond().get());
-  }
-
-  /// Return dialect-specific analysis state or create one if none exists.
-  template <typename StateT>
-  StateT &getOrCreateDialectState(StringRef name) {
-    // Create state if it does not exist yet.
-    if (!hasDialectState(name))
-      dialectState[name] = std::make_unique<StateT>();
-    return static_cast<StateT &>(*dialectState[name]);
-  }
-
-  void insertDialectState(StringRef name,
-                          std::unique_ptr<DialectAnalysisState> state) {
-    assert(!dialectState.count(name) && "dialect state already initialized");
-    dialectState[name] = std::move(state);
-  }
-
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const { return options; }
 
-  explicit AnalysisState(const BufferizationOptions &options);
+  AnalysisState(const BufferizationOptions &options);
 
   // AnalysisState should be passed as a reference.
   AnalysisState(const AnalysisState &) = delete;
 
   virtual ~AnalysisState() = default;
 
-private:
-  /// Dialect-specific analysis state.
-  DenseMap<StringRef, std::unique_ptr<DialectAnalysisState>> dialectState;
+  static bool classof(const AnalysisState *base) { return true; }
 
+  TypeID getType() const { return type; }
+
+protected:
+  AnalysisState(const BufferizationOptions &options, TypeID type);
+
+private:
   /// A reference to current bufferization options.
   const BufferizationOptions &options;
+
+  /// The type of analysis.
+  TypeID type;
 };
 
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).
@@ -547,17 +504,19 @@ bool shouldDeallocateOpResult(OpResult opResult,
 /// canonicalizations are currently not implemented.
 BaseMemRefType getMemRefType(Value value, const BufferizationOptions &options,
                              MemRefLayoutAttrInterface layout = {},
-                             unsigned memorySpace = 0);
+                             Attribute memorySpace = nullptr);
 
 /// Return a MemRef type with fully dynamic layout. If the given tensor type
 /// is unranked, return an unranked MemRef type.
-BaseMemRefType getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
-                                                   unsigned memorySpace = 0);
+BaseMemRefType
+getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
+                                    Attribute memorySpace = nullptr);
 
 /// Return a MemRef type with a static identity layout (i.e., no layout map). If
 /// the given tensor type is unranked, return an unranked MemRef type.
-BaseMemRefType getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
-                                                     unsigned memorySpace = 0);
+BaseMemRefType
+getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
+                                      Attribute memorySpace = nullptr);
 
 /// Return the owner of the given value. In case of a BlockArgument that is the
 /// owner of the block. In case of an OpResult that is the defining op.
@@ -580,6 +539,8 @@ bool defaultIsRepetitiveRegion(BufferizableOpInterface bufferizableOp,
 
 } // namespace bufferization
 } // namespace mlir
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::bufferization::AnalysisState)
 
 //===----------------------------------------------------------------------===//
 // Bufferization Interfaces

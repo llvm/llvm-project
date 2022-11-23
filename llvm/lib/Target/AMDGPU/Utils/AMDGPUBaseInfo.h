@@ -540,26 +540,39 @@ public:
   ComponentProps() = default;
   ComponentProps(const MCInstrDesc &OpDesc);
 
-  unsigned getSrcOperandsNum() const { return SrcOperandsNum; }
-  unsigned getParsedSrcOperandsNum() const {
+  // Return the total number of src operands this component has.
+  unsigned getCompSrcOperandsNum() const { return SrcOperandsNum; }
+
+  // Return the number of src operands of this component visible to the parser.
+  unsigned getCompParsedSrcOperandsNum() const {
     return SrcOperandsNum - HasSrc2Acc;
   }
+
+  // Return true iif this component has a mandatory literal.
   bool hasMandatoryLiteral() const { return MandatoryLiteralIdx.has_value(); }
-  unsigned getMandatoryLiteralIndex() const {
+
+  // If this component has a mandatory literal, return component operand
+  // index of this literal (i.e. either Component::SRC1 or Component::SRC2).
+  unsigned getMandatoryLiteralCompOperandIndex() const {
     assert(hasMandatoryLiteral());
     return *MandatoryLiteralIdx;
   }
-  bool hasRegSrcOperand(unsigned SrcIdx) const {
-    assert(SrcIdx < Component::MAX_SRC_NUM);
-    return SrcOperandsNum > SrcIdx && !hasMandatoryLiteralAt(SrcIdx);
+
+  // Return true iif this component has operand
+  // with component index CompSrcIdx and this operand may be a register.
+  bool hasRegSrcOperand(unsigned CompSrcIdx) const {
+    assert(CompSrcIdx < Component::MAX_SRC_NUM);
+    return SrcOperandsNum > CompSrcIdx && !hasMandatoryLiteralAt(CompSrcIdx);
   }
+
+  // Return true iif this component has tied src2.
   bool hasSrc2Acc() const { return HasSrc2Acc; }
 
 private:
-  bool hasMandatoryLiteralAt(unsigned SrcIdx) const {
-    assert(SrcIdx < Component::MAX_SRC_NUM);
+  bool hasMandatoryLiteralAt(unsigned CompSrcIdx) const {
+    assert(CompSrcIdx < Component::MAX_SRC_NUM);
     return hasMandatoryLiteral() &&
-           *MandatoryLiteralIdx == Component::DST_NUM + SrcIdx;
+           *MandatoryLiteralIdx == Component::DST_NUM + CompSrcIdx;
   }
 };
 
@@ -570,8 +583,36 @@ enum ComponentKind : unsigned {
   MAX = COMPONENT_Y
 };
 
-// Location of operands in a MachineInstr/MCInst
-// and position of operands in parsed operands array.
+// Interface functions of this class map VOPD component operand indices
+// to indices of operands in MachineInstr/MCInst or parsed operands array.
+//
+// Note that this class operates with 3 kinds of indices:
+// - VOPD component operand indices (Component::DST, Component::SRC0, etc.);
+// - MC operand indices (they refer operands in a MachineInstr/MCInst);
+// - parsed operand indices (they refer operands in parsed operands array).
+//
+// For SINGLE components mapping between these indices is trivial.
+// But things get more complicated for COMPONENT_X and
+// COMPONENT_Y because these components share the same
+// MachineInstr/MCInst and the same parsed operands array.
+// Below is an example of component operand to parsed operand
+// mapping for the following instruction:
+//
+//   v_dual_add_f32 v255, v4, v5 :: v_dual_mov_b32 v6, v1
+//
+//                          PARSED        COMPONENT         PARSED
+// COMPONENT               OPERANDS     OPERAND INDEX    OPERAND INDEX
+// -------------------------------------------------------------------
+//                     "v_dual_add_f32"                        0
+// v_dual_add_f32            v255          0 (DST)    -->      1
+//                           v4            1 (SRC0)   -->      2
+//                           v5            2 (SRC1)   -->      3
+//                          "::"                               4
+//                     "v_dual_mov_b32"                        5
+// v_dual_mov_b32            v6            0 (DST)    -->      6
+//                           v1            1 (SRC0)   -->      7
+// -------------------------------------------------------------------
+//
 class ComponentLayout {
 private:
   // Regular MachineInstr/MCInst operands are ordered as follows:
@@ -580,7 +621,7 @@ private:
   //   dstX, dstY, src0X [, other OpX operands], src0Y [, other OpY operands]
   // Each ComponentKind has operand indices defined below.
   static constexpr unsigned MC_DST_IDX[] = {0, 0, 1};
-  static constexpr unsigned FIRST_MC_SRC_IDX[] = {1, 2, 2 /* + OpX.SrcNum */};
+  static constexpr unsigned FIRST_MC_SRC_IDX[] = {1, 2, 2 /* + OpX.MCSrcNum */};
 
   // Parsed operands of regular instructions are ordered as follows:
   //   Mnemo dst src0 [vsrc1 ...]
@@ -595,56 +636,63 @@ private:
 
 private:
   const ComponentKind Kind;
-  const ComponentProps PrevOp;
+  const ComponentProps PrevComp;
 
 public:
-  // Create layout for COMPONENT_X or SINGLE component
+  // Create layout for COMPONENT_X or SINGLE component.
   ComponentLayout(ComponentKind Kind) : Kind(Kind) {
     assert(Kind == ComponentKind::SINGLE || Kind == ComponentKind::COMPONENT_X);
   }
 
-  // Create layout for COMPONENT_Y which depends on COMPONENT_X layout
+  // Create layout for COMPONENT_Y which depends on COMPONENT_X layout.
   ComponentLayout(const ComponentProps &OpXProps)
-      : Kind(ComponentKind::COMPONENT_Y), PrevOp(OpXProps) {}
+      : Kind(ComponentKind::COMPONENT_Y), PrevComp(OpXProps) {}
 
 public:
-  unsigned getDstIndex() const { return MC_DST_IDX[Kind]; }
-  unsigned getSrcIndex(unsigned SrcIdx) const {
-    assert(SrcIdx < Component::MAX_SRC_NUM);
-    return FIRST_MC_SRC_IDX[Kind] + getPrevOpSrcNum() + SrcIdx;
+  // Return the index of dst operand in MCInst operands.
+  unsigned getIndexOfDstInMCOperands() const { return MC_DST_IDX[Kind]; }
+
+  // Return the index of the specified src operand in MCInst operands.
+  unsigned getIndexOfSrcInMCOperands(unsigned CompSrcIdx) const {
+    assert(CompSrcIdx < Component::MAX_SRC_NUM);
+    return FIRST_MC_SRC_IDX[Kind] + getPrevCompSrcNum() + CompSrcIdx;
   }
 
-  unsigned getParsedDstIndex() const {
-    return PARSED_DST_IDX[Kind] + getPrevOpParsedSrcNum();
+  // Return the index of dst operand in the parsed operands array.
+  unsigned getIndexOfDstInParsedOperands() const {
+    return PARSED_DST_IDX[Kind] + getPrevCompParsedSrcNum();
   }
-  unsigned getParsedSrcIndex(unsigned SrcIdx) const {
-    assert(SrcIdx < Component::MAX_SRC_NUM);
-    return FIRST_PARSED_SRC_IDX[Kind] + getPrevOpParsedSrcNum() + SrcIdx;
+
+  // Return the index of the specified src operand in the parsed operands array.
+  unsigned getIndexOfSrcInParsedOperands(unsigned CompSrcIdx) const {
+    assert(CompSrcIdx < Component::MAX_SRC_NUM);
+    return FIRST_PARSED_SRC_IDX[Kind] + getPrevCompParsedSrcNum() + CompSrcIdx;
   }
 
 private:
-  unsigned getPrevOpSrcNum() const { return PrevOp.getSrcOperandsNum(); }
-  unsigned getPrevOpParsedSrcNum() const {
-    return PrevOp.getParsedSrcOperandsNum();
+  unsigned getPrevCompSrcNum() const {
+    return PrevComp.getCompSrcOperandsNum();
+  }
+  unsigned getPrevCompParsedSrcNum() const {
+    return PrevComp.getCompParsedSrcOperandsNum();
   }
 };
 
 // Layout and properties of VOPD components.
 class ComponentInfo : public ComponentLayout, public ComponentProps {
 public:
-  // Create ComponentInfo for COMPONENT_X or SINGLE component
+  // Create ComponentInfo for COMPONENT_X or SINGLE component.
   ComponentInfo(const MCInstrDesc &OpDesc,
                 ComponentKind Kind = ComponentKind::SINGLE)
       : ComponentLayout(Kind), ComponentProps(OpDesc) {}
 
-  // Create ComponentInfo for COMPONENT_Y which depends on COMPONENT_X layout
-  ComponentInfo(const MCInstrDesc &OpDesc,
-                const ComponentProps &OpXProps)
+  // Create ComponentInfo for COMPONENT_Y which depends on COMPONENT_X layout.
+  ComponentInfo(const MCInstrDesc &OpDesc, const ComponentProps &OpXProps)
       : ComponentLayout(OpXProps), ComponentProps(OpDesc) {}
 
-  // Map MC operand index to parsed operand index.
+  // Map component operand index to parsed operand index.
   // Return 0 if the specified operand does not exist.
-  unsigned getParsedOperandIndex(unsigned OprIdx) const;
+  unsigned getIndexInParsedOperands(unsigned CompOprIdx) const;
 };
 
 // Properties of VOPD instructions.
@@ -667,17 +715,17 @@ public:
   }
 
   // Check VOPD operands constraints.
-  // GetRegIdx(Component, OperandIdx) must return a VGPR register index
-  // for the specified component and operand. The callback must return 0
+  // GetRegIdx(Component, MCOperandIdx) must return a VGPR register index
+  // for the specified component and MC operand. The callback must return 0
   // if the operand is not a register or not a VGPR.
   bool hasInvalidOperand(
       std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
-    return getInvalidOperandIndex(GetRegIdx).has_value();
+    return getInvalidCompOperandIndex(GetRegIdx).has_value();
   }
 
   // Check VOPD operands constraints.
   // Return the index of an invalid component operand, if any.
-  Optional<unsigned> getInvalidOperandIndex(
+  Optional<unsigned> getInvalidCompOperandIndex(
       std::function<unsigned(unsigned, unsigned)> GetRegIdx) const;
 
 private:

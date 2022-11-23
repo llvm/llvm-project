@@ -218,7 +218,7 @@ SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b) {
   SmallVector<Value, 4> dynOperands;
   auto shapedType = val.getType().cast<ShapedType>();
   for (const auto &dim : llvm::enumerate(shapedType.getShape())) {
-    if (dim.value() == ShapedType::kDynamicSize)
+    if (dim.value() == ShapedType::kDynamic)
       dynOperands.push_back(createOrFoldDimOp(b, loc, val, dim.index()));
   }
   return dynOperands;

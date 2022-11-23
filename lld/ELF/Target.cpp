@@ -101,7 +101,7 @@ ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
     const uint8_t *isecLoc =
         Out::bufferStart
             ? (Out::bufferStart + isec->getParent()->offset + isec->outSecOff)
-            : isec->data().data();
+            : isec->contentMaybeDecompress().data();
     if (isecLoc == nullptr) {
       assert(isa<SyntheticSection>(isec) && "No data but not synthetic?");
       continue;
@@ -157,7 +157,7 @@ void TargetInfo::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
-  for (const Relocation &rel : sec.relocations) {
+  for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = SignExtend64(
         sec.getRelocTargetVA(sec.file, rel.type, rel.addend,

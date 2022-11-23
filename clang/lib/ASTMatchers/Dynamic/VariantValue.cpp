@@ -126,7 +126,7 @@ public:
 
   llvm::Optional<DynTypedMatcher> getSingleMatcher() const override {
     if (Matchers.size() != 1)
-      return llvm::Optional<DynTypedMatcher>();
+      return llvm::None;
     return Matchers[0];
   }
 
@@ -190,7 +190,7 @@ public:
       : Op(Op), Args(std::move(Args)) {}
 
   llvm::Optional<DynTypedMatcher> getSingleMatcher() const override {
-    return llvm::Optional<DynTypedMatcher>();
+    return llvm::None;
   }
 
   std::string getTypeAsString() const override {
