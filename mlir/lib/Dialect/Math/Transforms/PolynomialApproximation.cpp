@@ -127,15 +127,13 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 
   // Iterate over all outer dimensions of the compute shape vector type.
   auto iterationDims = ArrayRef<int64_t>(expandedShape).drop_back();
-  int64_t maxLinearIndex = computeMaxLinearIndex(iterationDims);
-
-  SmallVector<int64_t> ones(iterationDims.size(), 1);
-  auto strides = computeStrides(iterationDims, ones);
+  int64_t maxIndex = computeMaxLinearIndex(iterationDims);
+  auto strides = computeStrides(iterationDims);
 
   // Compute results for each one dimensional vector.
-  SmallVector<Value> results(maxLinearIndex);
+  SmallVector<Value> results(maxIndex);
 
-  for (int64_t i = 0; i < maxLinearIndex; ++i) {
+  for (int64_t i = 0; i < maxIndex; ++i) {
     auto offsets = delinearize(strides, i);
 
     SmallVector<Value> extracted(expandedOperands.size());
@@ -152,7 +150,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
   Value result = builder.create<arith::ConstantOp>(
       resultExpandedType, builder.getZeroAttr(resultExpandedType));
 
-  for (int64_t i = 0; i < maxLinearIndex; ++i)
+  for (int64_t i = 0; i < maxIndex; ++i)
     result = builder.create<vector::InsertOp>(results[i], result,
                                               delinearize(strides, i));
 

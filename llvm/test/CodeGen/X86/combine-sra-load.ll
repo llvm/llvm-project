@@ -93,11 +93,11 @@ define i32 @sra_to_sextload_multiple_sra_uses(ptr %p) {
 ; CHECK-NEXT:    movswl 2(%rdi), %ecx
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    xorl $6, %eax
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    imull %ecx, %eax
 ; CHECK-NEXT:    retq
   %load = load i32, ptr %p
   %shift = ashr i32 %load, 16
   %use1 = xor i32 %shift, 6
-  %use2 = or i32 %shift, %use1
+  %use2 = mul i32 %shift, %use1
   ret i32 %use2
 }

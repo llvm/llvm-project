@@ -31421,36 +31421,47 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
   AtomicRMWInst::BinOp Opc = AI->getOperation();
   if (Opc == AtomicRMWInst::Add) {
     if (match(I, m_c_ICmp(Pred, m_Sub(m_ZeroInt(), m_Specific(Op)), m_Value())))
-      return Pred == CmpInst::ICMP_EQ;
-    if (match(I, m_OneUse(m_c_Add(m_Specific(Op), m_Value()))) &&
-        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-      return Pred == CmpInst::ICMP_SLT;
+      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
+    if (match(I, m_OneUse(m_c_Add(m_Specific(Op), m_Value())))) {
+      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+        return Pred == CmpInst::ICMP_SLT;
+      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
+        return Pred == CmpInst::ICMP_SGT;
+    }
     return false;
   }
   if (Opc == AtomicRMWInst::Sub) {
     if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
-      return Pred == CmpInst::ICMP_EQ;
-    if (match(I, m_OneUse(m_Sub(m_Value(), m_Specific(Op)))) &&
-        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-      return Pred == CmpInst::ICMP_SLT;
+      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
+    if (match(I, m_OneUse(m_Sub(m_Value(), m_Specific(Op))))) {
+      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+        return Pred == CmpInst::ICMP_SLT;
+      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
+        return Pred == CmpInst::ICMP_SGT;
+    }
     return false;
   }
-  if (Opc == AtomicRMWInst::Or) {
-    if (match(I, m_OneUse(m_c_Or(m_Specific(Op), m_Value()))) &&
-        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SLT;
-  }
-  if (Opc == AtomicRMWInst::And) {
-    if (match(I, m_OneUse(m_c_And(m_Specific(Op), m_Value()))) &&
-        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SLT;
+  if ((Opc == AtomicRMWInst::Or &&
+       match(I, m_OneUse(m_c_Or(m_Specific(Op), m_Value())))) ||
+      (Opc == AtomicRMWInst::And &&
+       match(I, m_OneUse(m_c_And(m_Specific(Op), m_Value()))))) {
+    if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE ||
+             Pred == CmpInst::ICMP_SLT;
+    if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
+      return Pred == CmpInst::ICMP_SGT;
+    return false;
   }
   if (Opc == AtomicRMWInst::Xor) {
     if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
-      return Pred == CmpInst::ICMP_EQ;
-    if (match(I, m_OneUse(m_c_Xor(m_Specific(Op), m_Value()))) &&
-        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-      return Pred == CmpInst::ICMP_SLT;
+      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
+    if (match(I, m_OneUse(m_c_Xor(m_Specific(Op), m_Value())))) {
+      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+        return Pred == CmpInst::ICMP_SLT;
+      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
+        return Pred == CmpInst::ICMP_SGT;
+    }
+    return false;
   }
 
   return false;
@@ -31467,10 +31478,24 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     assert(TempI->hasOneUse() && "Must have one use");
     ICI = cast<ICmpInst>(TempI->user_back());
   }
+  X86::CondCode CC = X86::COND_INVALID;
   ICmpInst::Predicate Pred = ICI->getPredicate();
-  assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SLT) &&
-         "Not supported Pred");
-  X86::CondCode CC = Pred == CmpInst::ICMP_EQ ? X86::COND_E : X86::COND_S;
+  switch (Pred) {
+  default:
+    llvm_unreachable("Not supported Pred");
+  case CmpInst::ICMP_EQ:
+    CC = X86::COND_E;
+    break;
+  case CmpInst::ICMP_NE:
+    CC = X86::COND_NE;
+    break;
+  case CmpInst::ICMP_SLT:
+    CC = X86::COND_S;
+    break;
+  case CmpInst::ICMP_SGT:
+    CC = X86::COND_NS;
+    break;
+  }
   Intrinsic::ID IID = Intrinsic::not_intrinsic;
   switch (AI->getOperation()) {
   default:
