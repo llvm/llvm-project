@@ -79,9 +79,7 @@ define i32 @mand32(i32 %x, i32 %y) {
 ; CHECK-LABEL: mand32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl %esi, %eax
-; CHECK-NEXT:    xorl %esi, %edi
-; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    orl %esi, %eax
 ; CHECK-NEXT:    retq
   %ma = bitcast i32 %x to <32 x i1>
   %mb = bitcast i32 %y to <32 x i1>
@@ -97,9 +95,7 @@ define i32 @mand32_mem(ptr %x, ptr %y) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd (%rdi), %k0
 ; CHECK-NEXT:    kmovd (%rsi), %k1
-; CHECK-NEXT:    kandd %k1, %k0, %k2
-; CHECK-NEXT:    kxord %k1, %k0, %k0
-; CHECK-NEXT:    kord %k0, %k2, %k0
+; CHECK-NEXT:    kord %k1, %k0, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    retq
   %ma = load <32 x i1>, ptr %x
@@ -115,9 +111,7 @@ define i64 @mand64(i64 %x, i64 %y) {
 ; CHECK-LABEL: mand64:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    andq %rsi, %rax
-; CHECK-NEXT:    xorq %rsi, %rdi
-; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    retq
   %ma = bitcast i64 %x to <64 x i1>
   %mb = bitcast i64 %y to <64 x i1>
@@ -133,9 +127,7 @@ define i64 @mand64_mem(ptr %x, ptr %y) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq (%rdi), %k0
 ; CHECK-NEXT:    kmovq (%rsi), %k1
-; CHECK-NEXT:    kandq %k1, %k0, %k2
-; CHECK-NEXT:    kxorq %k1, %k0, %k0
-; CHECK-NEXT:    korq %k0, %k2, %k0
+; CHECK-NEXT:    korq %k1, %k0, %k0
 ; CHECK-NEXT:    kmovq %k0, %rax
 ; CHECK-NEXT:    retq
   %ma = load <64 x i1>, ptr %x
