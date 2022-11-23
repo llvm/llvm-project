@@ -406,6 +406,11 @@ public:
                                       ArrayRef<size_t> extraTids = {},
                                       ArrayRef<size_t> extraDims = {});
 
+  Operation *enterFilterLoopOverTensorAtDim(OpBuilder &builder, Location loc,
+                                            size_t tid, size_t dim,
+                                            AffineExpr affine,
+                                            MutableArrayRef<Value> reduc = {});
+
   void genDenseAffineAddressAtCurLevel(OpBuilder &builder, Location loc,
                                        size_t tid, size_t dim,
                                        AffineExpr affine);
@@ -424,6 +429,9 @@ public:
     for (auto &l : loopStack)
       coords.push_back(l.iv);
   }
+
+  /// Gets loop induction variable at the given level.
+  unsigned getCurrentDepth() const { return loopStack.size(); }
 
   /// Gets loop induction variable at the given level.
   Value getLoopIV(size_t level) const {

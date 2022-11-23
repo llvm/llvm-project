@@ -123,8 +123,8 @@ public:
   void beginFunction(const MachineFunction *MF) override;
   void endFunction(const MachineFunction *MF) override;
 
-  void beginBasicBlock(const MachineBasicBlock &MBB) override;
-  void endBasicBlock(const MachineBasicBlock &MBB) override;
+  void beginBasicBlockSection(const MachineBasicBlock &MBB) override;
+  void endBasicBlockSection(const MachineBasicBlock &MBB) override;
 
   /// Return Label preceding the instruction.
   MCSymbol *getLabelBeforeInsn(const MachineInstr *MI);

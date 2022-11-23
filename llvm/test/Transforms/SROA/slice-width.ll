@@ -46,8 +46,7 @@ load_i1:
 
 define void @memcpy_fp80_padding() {
 ; CHECK-LABEL: @memcpy_fp80_padding(
-; CHECK-NEXT:    [[X_SROA_0:%.*]] = alloca x86_fp80, align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[X_SROA_0]], ptr align 16 @foo_copy_source, i32 16, i1 false)
+; CHECK-NEXT:    [[X_SROA_0_SROA_0_0_COPYLOAD:%.*]] = load <16 x i8>, ptr @foo_copy_source, align 16
 ; CHECK-NEXT:    [[X_SROA_1_0_COPYLOAD:%.*]] = load i64, ptr getelementptr inbounds (i8, ptr @foo_copy_source, i64 16), align 16
 ; CHECK-NEXT:    [[X_SROA_2_0_COPYLOAD:%.*]] = load i64, ptr getelementptr inbounds (i8, ptr @foo_copy_source, i64 24), align 8
 ; CHECK-NEXT:    store i64 [[X_SROA_1_0_COPYLOAD]], ptr @i64_sink, align 4
@@ -67,8 +66,6 @@ define void @memcpy_fp80_padding() {
 
 define void @memset_fp80_padding() {
 ; CHECK-LABEL: @memset_fp80_padding(
-; CHECK-NEXT:    [[X_SROA_0:%.*]] = alloca x86_fp80, align 16
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[X_SROA_0]], i8 -1, i32 16, i1 false)
 ; CHECK-NEXT:    store i64 -1, ptr @i64_sink, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -136,8 +133,7 @@ define void @PR50888() {
 
 define void @PR50910() {
 ; CHECK-LABEL: @PR50910(
-; CHECK-NEXT:    [[T1:%.*]] = alloca i8, i64 1, align 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[T1]], i8 0, i64 1, i1 false)
+; CHECK-NEXT:    [[T1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i8> undef, i8 0, i32 0
 ; CHECK-NEXT:    ret void
 ;
   %t1 = alloca i8, i64 1, align 8
