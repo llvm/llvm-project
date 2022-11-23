@@ -9890,7 +9890,7 @@ public:
 } // namespace
 
 char ScratchTypeSystemClang::ID;
-const llvm::NoneType ScratchTypeSystemClang::DefaultAST = llvm::None;
+const std::nullopt_t ScratchTypeSystemClang::DefaultAST = llvm::None;
 
 ScratchTypeSystemClang::ScratchTypeSystemClang(Target &target,
                                                llvm::Triple triple)

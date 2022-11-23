@@ -57,7 +57,7 @@ private:
 public:
   /// Create a fully general source predicate.
   SourcePred(PredT Pred, MakeT Make) : Pred(Pred), Make(Make) {}
-  SourcePred(PredT Pred, NoneType) : Pred(Pred) {
+  SourcePred(PredT Pred, std::nullopt_t) : Pred(Pred) {
     Make = [Pred](ArrayRef<Value *> Cur, ArrayRef<Type *> BaseTypes) {
       // Default filter just calls Pred on each of the base types.
       std::vector<Constant *> Result;
