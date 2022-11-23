@@ -1586,7 +1586,7 @@ auto HvxIdioms::createMul16(IRBuilderBase &Builder, SValue X, SValue Y) const
   Value *P =
       HVC.createHvxIntrinsic(Builder, V6_vmpyh, HvxP32Ty, {Y.Val, X.Val});
   // Deinterleave
-  return HVC.vdeal(Builder, HVC.sublo(Builder, P), HVC.subhi(Builder, P));
+  return HVC.vshuff(Builder, HVC.sublo(Builder, P), HVC.subhi(Builder, P));
 }
 
 auto HvxIdioms::createMulH16(IRBuilderBase &Builder, SValue X, SValue Y) const
