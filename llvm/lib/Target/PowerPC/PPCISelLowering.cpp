@@ -10264,15 +10264,17 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
 
   ShufflesHandledWithVPERM++;
   SDValue VPermMask = DAG.getBuildVector(MVT::v16i8, dl, ResultMask);
-  ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(Op);
-  if (Opcode == PPCISD::XXPERM) {
-    LLVM_DEBUG(dbgs() << "Emitting a XXPERM for the following shuffle:\n");
-  } else {
-    LLVM_DEBUG(dbgs() << "Emitting a VPERM for the following shuffle:\n");
-  }
-  LLVM_DEBUG(SVOp->dump());
-  LLVM_DEBUG(dbgs() << "With the following permute control vector:\n");
-  LLVM_DEBUG(VPermMask.dump());
+  LLVM_DEBUG({
+    ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(Op);
+    if (Opcode == PPCISD::XXPERM) {
+      dbgs() << "Emitting a XXPERM for the following shuffle:\n";
+    } else {
+      dbgs() << "Emitting a VPERM for the following shuffle:\n";
+    }
+    SVOp->dump();
+    dbgs() << "With the following permute control vector:\n";
+    VPermMask.dump();
+  });
 
   if (Opcode == PPCISD::XXPERM)
     VPermMask = DAG.getBitcast(MVT::v4i32, VPermMask);
