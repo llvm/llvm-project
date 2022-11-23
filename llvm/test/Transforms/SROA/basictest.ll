@@ -1178,6 +1178,8 @@ define void @PR14465() {
 ; Ensure that we don't crash when analyzing a alloca larger than the maximum
 ; integer type width (MAX_INT_BITS) supported by llvm (1048576*32 > (1<<23)-1).
 ; CHECK-LABEL: @PR14465(
+; CHECK-NEXT:    [[STACK:%.*]] = alloca [1048576 x i32], align 16
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[STACK]], i8 -2, i64 4194304, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 
