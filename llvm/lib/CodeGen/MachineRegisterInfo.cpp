@@ -79,10 +79,10 @@ constrainRegClass(MachineRegisterInfo &MRI, Register Reg,
   return NewRC;
 }
 
-const TargetRegisterClass *
-MachineRegisterInfo::constrainRegClass(Register Reg,
-                                       const TargetRegisterClass *RC,
-                                       unsigned MinNumRegs) {
+const TargetRegisterClass *MachineRegisterInfo::constrainRegClass(
+    Register Reg, const TargetRegisterClass *RC, unsigned MinNumRegs) {
+  if (Reg.isPhysical())
+    return nullptr;
   return ::constrainRegClass(*this, Reg, getRegClass(Reg), RC, MinNumRegs);
 }
 

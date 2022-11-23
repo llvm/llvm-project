@@ -38,13 +38,12 @@ define amdgpu_kernel void @sint_to_fp_i1_f64(double addrspace(1)* %out, i32 %in)
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; CI-NEXT:    v_mov_b32_e32 v1, 0xbff00000
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_cmp_eq_u32 s2, 0
-; CI-NEXT:    s_cselect_b64 vcc, -1, 0
+; CI-NEXT:    s_cselect_b32 s2, 0xbff00000, 0
 ; CI-NEXT:    v_mov_b32_e32 v3, s1
-; CI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vc
+; CI-NEXT:    v_mov_b32_e32 v1, s2
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CI-NEXT:    s_endpgm
@@ -233,13 +232,12 @@ define amdgpu_kernel void @s_select_sint_to_fp_i1_vals_f64(double addrspace(1)* 
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; CI-NEXT:    v_mov_b32_e32 v1, 0xbff00000
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_cmp_eq_u32 s2, 0
-; CI-NEXT:    s_cselect_b64 vcc, -1, 0
+; CI-NEXT:    s_cselect_b32 s2, 0xbff00000, 0
 ; CI-NEXT:    v_mov_b32_e32 v3, s1
-; CI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CI-NEXT:    v_mov_b32_e32 v1, s2
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CI-NEXT:    s_endpgm
@@ -285,13 +283,12 @@ define amdgpu_kernel void @s_select_sint_to_fp_i1_vals_i64(i64 addrspace(1)* %ou
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; CI-NEXT:    v_mov_b32_e32 v1, 0xbff00000
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_cmp_eq_u32 s2, 0
-; CI-NEXT:    s_cselect_b64 vcc, -1, 0
+; CI-NEXT:    s_cselect_b32 s2, 0xbff00000, 0
 ; CI-NEXT:    v_mov_b32_e32 v3, s1
-; CI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CI-NEXT:    v_mov_b32_e32 v1, s2
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CI-NEXT:    s_endpgm
@@ -356,13 +353,12 @@ define amdgpu_kernel void @s_swap_select_sint_to_fp_i1_vals_f64(double addrspace
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; CI-NEXT:    v_mov_b32_e32 v1, 0xbff00000
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_cmp_eq_u32 s2, 0
-; CI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; CI-NEXT:    s_cselect_b32 s2, 0, 0xbff00000
 ; CI-NEXT:    v_mov_b32_e32 v3, s1
-; CI-NEXT:    v_cndmask_b32_e64 v1, v1, 0, s[2:3]
+; CI-NEXT:    v_mov_b32_e32 v1, s2
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CI-NEXT:    s_endpgm

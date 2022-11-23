@@ -479,6 +479,11 @@ public:
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
   bool denormalsEnabledForType(LLT Ty, MachineFunction &MF) const;
 
+  bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
+                                 const TargetRegisterInfo *TRI,
+                                 const TargetInstrInfo *TII, unsigned &PhysReg,
+                                 int &Cost) const override;
+
   bool isKnownNeverNaNForTargetNode(SDValue Op,
                                     const SelectionDAG &DAG,
                                     bool SNaN = false,

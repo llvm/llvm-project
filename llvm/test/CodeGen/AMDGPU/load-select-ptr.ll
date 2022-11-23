@@ -9,8 +9,8 @@
 ; GCN: s_load_dwordx2
 
 ; GCN: s_cmp_eq_u32
-; GCN: v_cndmask_b32
-; GCN: v_cndmask_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
 
 ; GCN-NOT: load_dword
 ; GCN: flat_load_dwordx2
@@ -35,8 +35,8 @@ define amdgpu_kernel void @select_ptr_crash_i64_flat(i32 %tmp, [8 x i32], i64* %
 ; GCN: s_load_dwordx2
 ; GCN: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0{{$}}
 ; GCN: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0{{$}}
-; GCN: v_cndmask_b32
-; GCN: v_cndmask_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
 ; GCN: flat_store_dwordx2
 define amdgpu_kernel void @select_ptr_crash_i64_global(i32 %tmp, [8 x i32], i64 addrspace(1)* %ptr0, [8 x i32], i64 addrspace(1)* %ptr1, [8 x i32], i64 addrspace(1)* %ptr2) {
   %tmp2 = icmp eq i32 %tmp, 0

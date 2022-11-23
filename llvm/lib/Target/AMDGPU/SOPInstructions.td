@@ -532,8 +532,7 @@ def S_MAX_U32 : SOP2_32 <"s_max_u32",
 def SelectPat : PatFrag <
   (ops node:$src1, node:$src2),
   (select SCC, $src1, $src2),
-  [{ return Subtarget->hasScalarCompareEq64() &&
-            N->getOperand(0)->hasOneUse() && !N->isDivergent(); }]
+  [{ return !N->isDivergent(); }]
 >;
 
 let Uses = [SCC] in {

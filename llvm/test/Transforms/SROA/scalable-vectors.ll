@@ -67,7 +67,7 @@ define <vscale x 4 x i32> @cast_alloca_to_svint32_t(<vscale x 4 x i32> %type.coe
 define <vscale x 4 x i32> @cast_alloca_from_svint32_t() {
 ; CHECK-LABEL: @cast_alloca_from_svint32_t(
 ; CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 4 x i32>, align 16
-; CHECK-NEXT:    store <64 x i8> undef, ptr [[RETVAL_COERCE]], align 16
+; CHECK-NEXT:    store <16 x i32> undef, ptr [[RETVAL_COERCE]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, ptr [[RETVAL_COERCE]], align 16
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;

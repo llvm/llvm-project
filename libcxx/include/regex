@@ -1026,7 +1026,7 @@ public:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
     typedef locale                  locale_type;
-#ifdef __BIONIC__
+#if defined(__BIONIC__) || defined(_NEWLIB_VERSION)
     // Originally bionic's ctype_base used its own ctype masks because the
     // builtin ctype implementation wasn't in libc++ yet. Bionic's ctype mask
     // was only 8 bits wide and already saturated, so it used a wider type here
@@ -1035,6 +1035,11 @@ public:
     // implementation, but this was not updated to match. Since then Android has
     // needed to maintain a stable libc++ ABI, and this can't be changed without
     // an ABI break.
+    // We also need this workaround for newlib since _NEWLIB_VERSION is not
+    // defined yet inside __config, so we can't set the
+    // _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE macro. Additionally, newlib is
+    // often used for space constrained environments, so it makes sense not to
+    // duplicate the ctype table.
     typedef uint16_t char_class_type;
 #else
     typedef ctype_base::mask        char_class_type;
