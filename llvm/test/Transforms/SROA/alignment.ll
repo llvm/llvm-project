@@ -92,15 +92,15 @@ define void @PR13920(ptr %a, ptr %b) {
 ; Test that alignments on memcpy intrinsics get propagated to loads and stores.
 ; CHECK-LABEL: @PR13920(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[AA_SROA_0_0_COPYLOAD:%.*]] = load <16 x i8>, ptr [[A:%.*]], align 2
-; CHECK-NEXT:    store <16 x i8> [[AA_SROA_0_0_COPYLOAD]], ptr [[B:%.*]], align 2
+; CHECK-NEXT:    [[AA_0_COPYLOAD:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 2
+; CHECK-NEXT:    store <2 x i64> [[AA_0_COPYLOAD]], ptr [[B:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUGLOC-LABEL: @PR13920(
 ; DEBUGLOC-NEXT:  entry:
 ; DEBUGLOC-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META37:![0-9]+]], metadata !DIExpression()), !dbg [[DBG38:![0-9]+]]
-; DEBUGLOC-NEXT:    [[AA_SROA_0_0_COPYLOAD:%.*]] = load <16 x i8>, ptr [[A:%.*]], align 2, !dbg [[DBG39:![0-9]+]]
-; DEBUGLOC-NEXT:    store <16 x i8> [[AA_SROA_0_0_COPYLOAD]], ptr [[B:%.*]], align 2, !dbg [[DBG40:![0-9]+]]
+; DEBUGLOC-NEXT:    [[AA_0_COPYLOAD:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 2, !dbg [[DBG39:![0-9]+]]
+; DEBUGLOC-NEXT:    store <2 x i64> [[AA_0_COPYLOAD]], ptr [[B:%.*]], align 2, !dbg [[DBG40:![0-9]+]]
 ; DEBUGLOC-NEXT:    ret void, !dbg [[DBG41:![0-9]+]]
 ;
 
@@ -118,17 +118,21 @@ define void @test3(ptr %x) {
 ; reduce the alignment.
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load <22 x i8>, ptr [[X:%.*]], align 8
-; CHECK-NEXT:    [[B_SROA_0_6_COPYLOAD:%.*]] = load <18 x i8>, ptr [[X]], align 2
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [22 x i8], align 8
+; CHECK-NEXT:    [[B_SROA_0:%.*]] = alloca [18 x i8], align 2
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[A_SROA_0]], ptr align 8 [[X:%.*]], i32 22, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[B_SROA_0]], ptr align 2 [[X]], i32 18, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUGLOC-LABEL: @test3(
 ; DEBUGLOC-NEXT:  entry:
-; DEBUGLOC-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META44:![0-9]+]], metadata !DIExpression()), !dbg [[DBG47:![0-9]+]]
-; DEBUGLOC-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META45:![0-9]+]], metadata !DIExpression()), !dbg [[DBG48:![0-9]+]]
-; DEBUGLOC-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load <22 x i8>, ptr [[X:%.*]], align 8, !dbg [[DBG49:![0-9]+]]
+; DEBUGLOC-NEXT:    [[A_SROA_0:%.*]] = alloca [22 x i8], align 8, !dbg [[DBG47:![0-9]+]]
+; DEBUGLOC-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META44:![0-9]+]], metadata !DIExpression()), !dbg [[DBG47]]
+; DEBUGLOC-NEXT:    [[B_SROA_0:%.*]] = alloca [18 x i8], align 2, !dbg [[DBG48:![0-9]+]]
+; DEBUGLOC-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META45:![0-9]+]], metadata !DIExpression()), !dbg [[DBG48]]
+; DEBUGLOC-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[A_SROA_0]], ptr align 8 [[X:%.*]], i32 22, i1 false), !dbg [[DBG49:![0-9]+]]
 ; DEBUGLOC-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META46:![0-9]+]], metadata !DIExpression()), !dbg [[DBG50:![0-9]+]]
-; DEBUGLOC-NEXT:    [[B_SROA_0_6_COPYLOAD:%.*]] = load <18 x i8>, ptr [[X]], align 2, !dbg [[DBG51:![0-9]+]]
+; DEBUGLOC-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[B_SROA_0]], ptr align 2 [[X]], i32 18, i1 false), !dbg [[DBG51:![0-9]+]]
 ; DEBUGLOC-NEXT:    ret void, !dbg [[DBG52:![0-9]+]]
 ;
 
