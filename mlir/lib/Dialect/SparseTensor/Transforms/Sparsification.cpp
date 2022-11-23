@@ -181,8 +181,7 @@ static bool isInvariantAffine(const CodeGen &codegen, AffineExpr a,
 /// that adheres to the given topological sort.
 static AffineMap permute(const Merger &merger, MLIRContext *context,
                          AffineMap m, ArrayRef<unsigned> topSort) {
-  unsigned sz = topSort.size();
-  assert(m.getNumDims() + merger.getNumFilterLoops() == sz &&
+  assert(m.getNumDims() + merger.getNumFilterLoops() == topSort.size() &&
          "TopoSort/AffineMap size mismatch");
   // Construct the inverse of `m`; to avoid the asymptotic complexity
   // of calling `m.getPermutedPosition` repeatedly.
