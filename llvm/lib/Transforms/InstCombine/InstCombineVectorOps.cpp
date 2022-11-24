@@ -192,8 +192,7 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
 
   // If we are casting an integer to vector and extracting a portion, that is
   // a shift-right and truncate.
-  if (X->getType()->isIntegerTy() &&
-      isDesirableIntType(X->getType()->getPrimitiveSizeInBits())) {
+  if (X->getType()->isIntegerTy()) {
     assert(isa<FixedVectorType>(Ext.getVectorOperand()->getType()) &&
            "Expected fixed vector type for bitcast from scalar integer");
 
@@ -203,14 +202,17 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
     if (IsBigEndian)
       ExtIndexC = NumElts.getKnownMinValue() - 1 - ExtIndexC;
     unsigned ShiftAmountC = ExtIndexC * DestWidth;
-    if (!ShiftAmountC || Ext.getVectorOperand()->hasOneUse()) {
-      Value *Lshr = Builder.CreateLShr(X, ShiftAmountC, "extelt.offset");
+    if (!ShiftAmountC ||
+        (isDesirableIntType(X->getType()->getPrimitiveSizeInBits()) &&
+        Ext.getVectorOperand()->hasOneUse())) {
+      if (ShiftAmountC)
+        X = Builder.CreateLShr(X, ShiftAmountC, "extelt.offset");
       if (DestTy->isFloatingPointTy()) {
-        Type *DstIntTy = IntegerType::getIntNTy(Lshr->getContext(), DestWidth);
-        Value *Trunc = Builder.CreateTrunc(Lshr, DstIntTy);
+        Type *DstIntTy = IntegerType::getIntNTy(X->getContext(), DestWidth);
+        Value *Trunc = Builder.CreateTrunc(X, DstIntTy);
         return new BitCastInst(Trunc, DestTy);
       }
-      return new TruncInst(Lshr, DestTy);
+      return new TruncInst(X, DestTy);
     }
   }
 
