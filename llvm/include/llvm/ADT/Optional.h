@@ -277,32 +277,16 @@ public:
   constexpr const T *getPointer() const { return &Storage.value(); }
   T *getPointer() { return &Storage.value(); }
   constexpr const T &value() const & { return Storage.value(); }
-  LLVM_DEPRECATED("Use value instead.", "value")
-  constexpr const T &getValue() const & {
-    return Storage.value();
-  }
   T &value() & { return Storage.value(); }
-  LLVM_DEPRECATED("Use value instead.", "value") T &getValue() & {
-    return Storage.value();
-  }
 
   constexpr explicit operator bool() const { return has_value(); }
   constexpr bool has_value() const { return Storage.has_value(); }
-  LLVM_DEPRECATED("Use has_value instead.", "has_value")
-  constexpr bool hasValue() const {
-    return Storage.has_value();
-  }
   constexpr const T *operator->() const { return getPointer(); }
   T *operator->() { return getPointer(); }
   constexpr const T &operator*() const & { return value(); }
   T &operator*() & { return value(); }
 
   template <typename U> constexpr T value_or(U &&alt) const & {
-    return has_value() ? value() : std::forward<U>(alt);
-  }
-  template <typename U>
-  LLVM_DEPRECATED("Use value_or instead.", "value_or")
-  constexpr T getValueOr(U &&alt) const & {
     return has_value() ? value() : std::forward<U>(alt);
   }
 
@@ -313,26 +297,11 @@ public:
       return F(value());
     return None;
   }
-  template <class Function>
-  LLVM_DEPRECATED("Use transform instead.", "transform")
-  auto map(const Function &F) const & -> Optional<decltype(F(value()))> {
-    if (*this)
-      return F(value());
-    return None;
-  }
 
   T &&value() && { return std::move(Storage.value()); }
-  LLVM_DEPRECATED("Use value instead.", "value") T &&getValue() && {
-    return std::move(Storage.value());
-  }
   T &&operator*() && { return std::move(Storage.value()); }
 
   template <typename U> T value_or(U &&alt) && {
-    return has_value() ? std::move(value()) : std::forward<U>(alt);
-  }
-  template <typename U>
-  LLVM_DEPRECATED("Use value_or instead.", "value_or")
-  T getValueOr(U &&alt) && {
     return has_value() ? std::move(value()) : std::forward<U>(alt);
   }
 
@@ -340,14 +309,6 @@ public:
   template <class Function>
   auto transform(
       const Function &F) && -> Optional<decltype(F(std::move(*this).value()))> {
-    if (*this)
-      return F(std::move(*this).value());
-    return None;
-  }
-  template <class Function>
-  LLVM_DEPRECATED("Use transform instead.", "transform")
-  auto map(const Function &F)
-      && -> Optional<decltype(F(std::move(*this).value()))> {
     if (*this)
       return F(std::move(*this).value());
     return None;
