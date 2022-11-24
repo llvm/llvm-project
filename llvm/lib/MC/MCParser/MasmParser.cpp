@@ -4747,7 +4747,7 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
                                       /*MaxBytesToEmit=*/0);
     } else {
       // FIXME: Target specific behavior about how the "extra" bytes are filled.
-      getStreamer().emitValueToAlignment(Alignment, /*Value=*/0,
+      getStreamer().emitValueToAlignment(Align(Alignment), /*Value=*/0,
                                          /*ValueSize=*/1,
                                          /*MaxBytesToEmit=*/0);
     }

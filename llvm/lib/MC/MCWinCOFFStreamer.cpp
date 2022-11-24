@@ -300,7 +300,7 @@ void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
   pushSection();
   switchSection(Section);
-  emitValueToAlignment(ByteAlignment, 0, 1, 0);
+  emitValueToAlignment(Align(ByteAlignment), 0, 1, 0);
   emitLabel(Symbol);
   Symbol->setExternal(false);
   emitZeros(Size);

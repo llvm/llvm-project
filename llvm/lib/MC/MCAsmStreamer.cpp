@@ -252,7 +252,7 @@ public:
   void emitAlignmentDirective(unsigned ByteAlignment, Optional<int64_t> Value,
                               unsigned ValueSize, unsigned MaxBytesToEmit);
 
-  void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
+  void emitValueToAlignment(Align Alignment, int64_t Value = 0,
                             unsigned ValueSize = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
@@ -1482,10 +1482,10 @@ void MCAsmStreamer::emitAlignmentDirective(unsigned ByteAlignment,
   EmitEOL();
 }
 
-void MCAsmStreamer::emitValueToAlignment(unsigned ByteAlignment, int64_t Value,
+void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
                                          unsigned ValueSize,
                                          unsigned MaxBytesToEmit) {
-  emitAlignmentDirective(ByteAlignment, Value, ValueSize, MaxBytesToEmit);
+  emitAlignmentDirective(Alignment.value(), Value, ValueSize, MaxBytesToEmit);
 }
 
 void MCAsmStreamer::emitCodeAlignment(Align Alignment,

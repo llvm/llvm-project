@@ -76,7 +76,7 @@ public:
 
   void emitIdent(StringRef IdentString) override;
 
-  void emitValueToAlignment(unsigned, int64_t, unsigned, unsigned) override;
+  void emitValueToAlignment(Align, int64_t, unsigned, unsigned) override;
 
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override;

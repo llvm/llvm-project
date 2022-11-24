@@ -472,7 +472,7 @@ public:
 } // end anonymous namespace
 
 bool DarwinAsmParser::parseSectionSwitch(StringRef Segment, StringRef Section,
-                                         unsigned TAA, unsigned Align,
+                                         unsigned TAA, unsigned Alignment,
                                          unsigned StubSize) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in section switching directive");
@@ -492,8 +492,8 @@ bool DarwinAsmParser::parseSectionSwitch(StringRef Segment, StringRef Section,
   // the section. However, this is arguably more reasonable behavior, and there
   // is no good reason for someone to intentionally emit incorrectly sized
   // values into the implicitly aligned sections.
-  if (Align)
-    getStreamer().emitValueToAlignment(Align);
+  if (Alignment)
+    getStreamer().emitValueToAlignment(Align(Alignment));
 
   return false;
 }

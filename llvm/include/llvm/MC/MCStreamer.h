@@ -854,15 +854,14 @@ public:
   ///
   /// This used to implement the .align assembler directive.
   ///
-  /// \param ByteAlignment - The alignment to reach. This must be a power of
-  /// two on some targets.
+  /// \param Alignment - The alignment to reach.
   /// \param Value - The value to use when filling bytes.
   /// \param ValueSize - The size of the integer (in bytes) to emit for
   /// \p Value. This must match a native machine width.
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
+  virtual void emitValueToAlignment(Align Alignment, int64_t Value = 0,
                                     unsigned ValueSize = 1,
                                     unsigned MaxBytesToEmit = 0);
 

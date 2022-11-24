@@ -795,7 +795,7 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
     LabelCounts[CurrentLabel] = CurrentLabelCount;
   } else {
     Streamer.switchSection(JT.Count > 0 ? HotSection : ColdSection);
-    Streamer.emitValueToAlignment(JT.EntrySize);
+    Streamer.emitValueToAlignment(Align(JT.EntrySize));
   }
   MCSymbol *LastLabel = nullptr;
   uint64_t Offset = 0;
@@ -815,7 +815,7 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
           Streamer.switchSection(HotSection);
         else
           Streamer.switchSection(ColdSection);
-        Streamer.emitValueToAlignment(JT.EntrySize);
+        Streamer.emitValueToAlignment(Align(JT.EntrySize));
       }
       // Emit all labels registered at the address of this jump table
       // to sync with our global symbol table.  We may have two labels
@@ -925,7 +925,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   const uint16_t TTypeAlignment = 4;
 
   // Type tables have to be aligned at 4 bytes.
-  Streamer.emitValueToAlignment(TTypeAlignment);
+  Streamer.emitValueToAlignment(Align(TTypeAlignment));
 
   // Emit the LSDA label.
   MCSymbol *LSDASymbol = BF.getLSDASymbol(FF.getFragmentNum());
