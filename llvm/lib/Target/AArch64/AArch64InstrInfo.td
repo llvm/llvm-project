@@ -166,7 +166,7 @@ def HasSME2p1        : Predicate<"Subtarget->hasSME2p1()">,
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorSME
-    : Predicate<"Subtarget->hasSVE() || Subtarget->hasSME()">,
+    : Predicate<"Subtarget->hasSVEorSME()">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
 def HasSVE2orSME
