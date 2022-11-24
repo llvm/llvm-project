@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   MC
   MCJIT
   Object
+  Passes
   RuntimeDyld
   SelectionDAG
   Support
