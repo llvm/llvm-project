@@ -461,6 +461,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasMOPS)
     Builder.defineMacro("__ARM_FEATURE_MOPS", "1");
 
+  if (HasD128)
+    Builder.defineMacro("__ARM_FEATURE_SYSREG128", "1");
+
   switch (ArchKind) {
   default:
     break;
@@ -596,6 +599,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasMatmulFP32 = false;
   HasLSE = false;
   HasMOPS = false;
+  HasD128 = false;
   HasRCPC = false;
 
   ArchKind = llvm::AArch64::ArchKind::INVALID;
@@ -719,6 +723,16 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFlagM = true;
     if (Feature == "+mops")
       HasMOPS = true;
+    if (Feature == "+d128")
+      HasD128 = true;
+  }
+
+  // Check features that are manually disabled by command line options.
+  // This needs to be checked after architecture-related features are handled,
+  // making sure they are properly disabled when required.
+  for (const auto &Feature : Features) {
+    if (Feature == "-d128")
+      HasD128 = false;
   }
 
   setDataLayout();
