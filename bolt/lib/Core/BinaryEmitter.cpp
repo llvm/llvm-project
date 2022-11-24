@@ -300,7 +300,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     // Set section alignment to at least maximum possible object alignment.
     // We need this to support LongJmp and other passes that calculates
     // tentative layout.
-    if (Section->getAlignment() < opts::AlignFunctions)
+    if (Section->getAlign() < opts::AlignFunctions)
       Section->setAlignment(Align(opts::AlignFunctions));
 
     Streamer.emitCodeAlignment(BinaryFunction::MinAlign, &*BC.STI);
