@@ -673,9 +673,8 @@ ELFObjectFileBase::getPltAddresses() const {
 }
 
 template <class ELFT>
-Expected<std::vector<BBAddrMap>>
-readBBAddrMapImpl(const ELFFile<ELFT> &EF,
-                  Optional<unsigned> TextSectionIndex) {
+Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
+    const ELFFile<ELFT> &EF, Optional<unsigned> TextSectionIndex) {
   using Elf_Shdr = typename ELFT::Shdr;
   std::vector<BBAddrMap> BBAddrMaps;
   const auto &Sections = cantFail(EF.sections());
