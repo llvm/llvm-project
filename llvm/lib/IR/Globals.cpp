@@ -584,9 +584,7 @@ void GlobalIFunc::eraseFromParent() {
 }
 
 const Function *GlobalIFunc::getResolverFunction() const {
-  DenseSet<const GlobalAlias *> Aliases;
-  return dyn_cast<Function>(
-      findBaseObject(getResolver(), Aliases, [](const GlobalValue &) {}));
+  return dyn_cast<Function>(getResolver()->stripPointerCastsAndAliases());
 }
 
 void GlobalIFunc::applyAlongResolverPath(
