@@ -83,7 +83,7 @@ public:
 
   void finishImpl() override;
 
-  void emitBundleAlignMode(unsigned AlignPow2) override;
+  void emitBundleAlignMode(Align Alignment) override;
   void emitBundleLock(bool AlignToEnd) override;
   void emitBundleUnlock() override;
 

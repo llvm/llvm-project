@@ -1110,9 +1110,8 @@ public:
                                MCSymbol *FnSym);
 
   /// Set the bundle alignment mode from now on in the section.
-  /// The argument is the power of 2 to which the alignment is set. The
-  /// value 0 means turn the bundle alignment off.
-  virtual void emitBundleAlignMode(unsigned AlignPow2);
+  /// The value 1 means turn the bundle alignment off.
+  virtual void emitBundleAlignMode(Align Alignment);
 
   /// The following instructions are a bundle-locked group.
   ///

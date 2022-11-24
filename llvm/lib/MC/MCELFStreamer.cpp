@@ -635,12 +635,12 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   }
 }
 
-void MCELFStreamer::emitBundleAlignMode(unsigned AlignPow2) {
-  assert(AlignPow2 <= 30 && "Invalid bundle alignment");
+void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
+  assert(Log2(Alignment) <= 30 && "Invalid bundle alignment");
   MCAssembler &Assembler = getAssembler();
-  if (AlignPow2 > 0 && (Assembler.getBundleAlignSize() == 0 ||
-                        Assembler.getBundleAlignSize() == 1U << AlignPow2))
-    Assembler.setBundleAlignSize(1U << AlignPow2);
+  if (Alignment > 1 && (Assembler.getBundleAlignSize() == 0 ||
+                        Assembler.getBundleAlignSize() == Alignment.value()))
+    Assembler.setBundleAlignSize(Alignment.value());
   else
     report_fatal_error(".bundle_align_mode cannot be changed once set");
 }
