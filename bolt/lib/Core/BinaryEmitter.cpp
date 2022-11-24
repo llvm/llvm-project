@@ -300,8 +300,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     // Set section alignment to at least maximum possible object alignment.
     // We need this to support LongJmp and other passes that calculates
     // tentative layout.
-    if (Section->getAlign() < opts::AlignFunctions)
-      Section->setAlignment(Align(opts::AlignFunctions));
+    Section->ensureMinAlignment(Align(opts::AlignFunctions));
 
     Streamer.emitCodeAlignment(Align(BinaryFunction::MinAlign), &*BC.STI);
     uint16_t MaxAlignBytes = FF.isSplitFragment()
