@@ -21,7 +21,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: %i.0.ext = sext i16 %i.0 to i32
 ; CHECK-NEXT:  -->  (sext i16 {0,+,1}<%bb3> to i32)
 ; CHECK:      Loop %bb3: Unpredictable backedge-taken count.
-; CHECK-NEXT: Loop %bb3: Unpredictable max backedge-taken count.
+; CHECK-NEXT: Loop %bb3: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT: Loop %bb3: Predicated backedge-taken count is (1 + (-1 smax %M))
 ; CHECK-NEXT: Predicates:
 ; CHECK-NEXT:    {0,+,1}<%bb3> Added Flags: <nssw>
@@ -79,7 +79,7 @@ return:         ; preds = %bb5
 ; CHECK:      %i.0.ext = sext i16 %i.0 to i32
 ; CHECK-NEXT:    -->  (sext i16 {%Start,+,-1}<%bb3> to i32)
 ; CHECK:       Loop %bb3: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %bb3: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %bb3: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %bb3: Predicated backedge-taken count is (1 + (sext i16 %Start to i32) + (-1 * ((1 + (sext i16 %Start to i32))<nsw> smin %M)))
 ; CHECK-NEXT:  Predicates:
 ; CHECK-NEXT:    {%Start,+,-1}<%bb3> Added Flags: <nssw>
