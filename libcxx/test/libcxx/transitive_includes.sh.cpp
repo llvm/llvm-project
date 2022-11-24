@@ -27,9 +27,6 @@
 // This test uses --trace-includes, which is not supported by GCC.
 // UNSUPPORTED: gcc
 
-// This test uses -fshow-skipped-includes, which isn't supported on older Clangs
-// UNSUPPORTED: apple-clang-13
-
 // This test doesn't work on AIX, but it should. Needs investigation.
 // XFAIL: buildhost=aix
 
