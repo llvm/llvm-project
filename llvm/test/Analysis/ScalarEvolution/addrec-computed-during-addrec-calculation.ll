@@ -28,14 +28,17 @@ define void @test(i32* %p) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test
 ; CHECK-NEXT:  Loop %loop2: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop2: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop2: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop2: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %loop3: backedge-taken count is false
 ; CHECK-NEXT:  Loop %loop3: constant max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop3: symbolic max backedge-taken count is false
 ; CHECK-NEXT:  Loop %loop3: Predicated backedge-taken count is false
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop3: Trip multiple is 1
 ; CHECK-NEXT:  Loop %loop.header: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop.header: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop.header: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop.header: Unpredictable predicated backedge-taken count.
 ;
 entry:

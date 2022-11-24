@@ -13382,6 +13382,27 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
   OS << ": ";
 
+  auto *SymbolicBTC = SE->getSymbolicMaxBackedgeTakenCount(L);
+  if (!isa<SCEVCouldNotCompute>(SymbolicBTC)) {
+    OS << "symbolic max backedge-taken count is " << *SymbolicBTC;
+    if (SE->isBackedgeTakenCountMaxOrZero(L))
+      OS << ", actual taken count either this or zero.";
+  } else {
+    OS << "Unpredictable symbolic max backedge-taken count. ";
+  }
+
+  if (ExitingBlocks.size() > 1)
+    for (BasicBlock *ExitingBlock : ExitingBlocks) {
+      OS << "  symbolic max exit count for " << ExitingBlock->getName() << ": "
+         << *SE->getExitCount(L, ExitingBlock, ScalarEvolution::SymbolicMaximum)
+         << "\n";
+    }
+
+  OS << "\n"
+        "Loop ";
+  L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
+  OS << ": ";
+
   SmallVector<const SCEVPredicate *, 4> Preds;
   auto PBT = SE->getPredicatedBackedgeTakenCount(L, Preds);
   if (!isa<SCEVCouldNotCompute>(PBT)) {
