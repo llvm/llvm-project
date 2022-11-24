@@ -13369,11 +13369,12 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   OS << ": ";
 
   if (!isa<SCEVCouldNotCompute>(SE->getConstantMaxBackedgeTakenCount(L))) {
-    OS << "max backedge-taken count is " << *SE->getConstantMaxBackedgeTakenCount(L);
+    OS << "constant max backedge-taken count is "
+       << *SE->getConstantMaxBackedgeTakenCount(L);
     if (SE->isBackedgeTakenCountMaxOrZero(L))
       OS << ", actual taken count either this or zero.";
   } else {
-    OS << "Unpredictable max backedge-taken count. ";
+    OS << "Unpredictable constant max backedge-taken count. ";
   }
 
   OS << "\n"

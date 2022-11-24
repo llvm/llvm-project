@@ -27,7 +27,7 @@ bb4:                                              ; preds = %bb4, %bb2, %bb
   br i1 %tmp12, label %bb3, label %bb4
 
 ; CHECK: Loop %bb4: backedge-taken count is 20
-; CHECK: Loop %bb4: max backedge-taken count is 20
+; CHECK: Loop %bb4: constant max backedge-taken count is 20
 
 bb13:                                             ; preds = %bb13, %bb3
   %tmp14 = phi i64 [ 0, %bb3 ], [ %tmp15, %bb13 ]
@@ -64,7 +64,7 @@ bb4:                                              ; preds = %bb4, %bb2, %bb
   br i1 %tmp12, label %bb3, label %bb4
 
 ; CHECK: Loop %bb4: Unpredictable backedge-taken count.
-; CHECK: Loop %bb4: Unpredictable max backedge-taken count.
+; CHECK: Loop %bb4: Unpredictable constant max backedge-taken count.
 
 bb13:                                             ; preds = %bb13, %bb3
   %tmp14 = phi i64 [ 0, %bb3 ], [ %tmp15, %bb13 ]

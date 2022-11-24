@@ -9,7 +9,7 @@ define i8 @f() {
 ; CHECK-NEXT:  Loop %bb: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for bb: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for bb2: 1
-; CHECK-NEXT:  Loop %bb: max backedge-taken count is 1
+; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %bb: Unpredictable predicated backedge-taken count.
 ;
 entry:

@@ -114,7 +114,7 @@ declare void @use(i1)
 declare void @llvm.experimental.guard(i1, ...)
 
 ; This tests getRangeRef acts as intended with different idx size.
-; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+; CHECK: Loop %loop: Unpredictable constant max backedge-taken count.
 define void @test_range_ref1(i8 %t) {
  entry:
   %t.ptr = inttoptr i8 %t to i8*

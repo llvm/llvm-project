@@ -25,12 +25,12 @@ define void @subrecurrences(i32 %outer_l, i32 %inner_l, i32 %val) {
 ; NOTE: Line deleted from autogen output due to format confusing regex matcher
 ; CHECK-NEXT:  Determining loop execution counts for: @subrecurrences
 ; CHECK-NEXT:  Loop %inner: backedge-taken count is %inner_l
-; CHECK-NEXT:  Loop %inner: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is -1
 ; CHECK-NEXT:  Loop %inner: Predicated backedge-taken count is %inner_l
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %inner: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer: backedge-taken count is %outer_l
-; CHECK-NEXT:  Loop %outer: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %outer: constant max backedge-taken count is -1
 ; CHECK-NEXT:  Loop %outer: Predicated backedge-taken count is %outer_l
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %outer: Trip multiple is 1
