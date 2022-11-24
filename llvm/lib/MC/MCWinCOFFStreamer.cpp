@@ -71,13 +71,13 @@ void MCWinCOFFStreamer::initSections(bool NoExecStack,
   // This emulates the same behavior of GNU as. This makes it easier
   // to compare the output as the major sections are in the same order.
   switchSection(getContext().getObjectFileInfo()->getTextSection());
-  emitCodeAlignment(4, &STI);
+  emitCodeAlignment(Align(4), &STI);
 
   switchSection(getContext().getObjectFileInfo()->getDataSection());
-  emitCodeAlignment(4, &STI);
+  emitCodeAlignment(Align(4), &STI);
 
   switchSection(getContext().getObjectFileInfo()->getBSSSection());
-  emitCodeAlignment(4, &STI);
+  emitCodeAlignment(Align(4), &STI);
 
   switchSection(getContext().getObjectFileInfo()->getTextSection());
 }

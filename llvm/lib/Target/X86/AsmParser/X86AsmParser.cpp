@@ -4727,7 +4727,7 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
     Section = getStreamer().getCurrentSectionOnly();
   }
   if (Section->useCodeAlign())
-    getStreamer().emitCodeAlignment(2, &getSTI(), 0);
+    getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
   else
     getStreamer().emitValueToAlignment(2, 0, 1, 0);
   return false;

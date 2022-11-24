@@ -656,10 +656,10 @@ void MCObjectStreamer::emitValueToAlignment(unsigned ByteAlignment,
     CurSec->setAlignment(Align(ByteAlignment));
 }
 
-void MCObjectStreamer::emitCodeAlignment(unsigned ByteAlignment,
+void MCObjectStreamer::emitCodeAlignment(Align Alignment,
                                          const MCSubtargetInfo *STI,
                                          unsigned MaxBytesToEmit) {
-  emitValueToAlignment(ByteAlignment, 0, 1, MaxBytesToEmit);
+  emitValueToAlignment(Alignment.value(), 0, 1, MaxBytesToEmit);
   cast<MCAlignFragment>(getCurrentFragment())->setEmitNops(true, STI);
 }
 
