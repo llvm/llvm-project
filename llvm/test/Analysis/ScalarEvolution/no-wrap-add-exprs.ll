@@ -305,6 +305,7 @@ define i1 @test2_a(i32 %a, i32 %b, i1 %will_overflow) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test2_a
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -341,6 +342,7 @@ define i1 @test2_b(i32 %a, i32 %b, i1 %will_overflow) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test2_b
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:

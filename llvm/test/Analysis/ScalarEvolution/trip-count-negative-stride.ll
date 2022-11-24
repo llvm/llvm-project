@@ -14,6 +14,7 @@ define void @ult_wrap() {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_wrap
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -36,6 +37,7 @@ define void @ult_infinite() {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_infinite
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -58,6 +60,7 @@ define void @ult_infinite_ub() mustprogress {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_infinite_ub
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 2
@@ -82,6 +85,7 @@ define void @ult_129_not_taken() {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_129_not_taken
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -104,6 +108,7 @@ define void @ult_129_unknown_start(i8 %start) mustprogress {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_129_unknown_start
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -128,6 +133,7 @@ define void @ult_not_taken(i8 %step) {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_not_taken
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -154,6 +160,7 @@ define void @ult_ub1() {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_ub1
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 2
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 2
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 2
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 3
@@ -178,6 +185,7 @@ define void @ult_ub2() {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_ub2
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -202,6 +210,7 @@ define void @ult_129_preinc() {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_129_preinc
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 2
@@ -224,6 +233,7 @@ define void @ult_preinc(i8 %step) {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_preinc
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 2
@@ -248,6 +258,7 @@ define void @ult_129_varying_rhs(i8* %n_p) {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_129_varying_rhs
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -269,6 +280,7 @@ define void @ult_symbolic_varying_rhs(i8* %n_p, i8 %step) {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_symbolic_varying_rhs
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -298,6 +310,7 @@ define void @slt_wrap() {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_wrap
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 63
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 63
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 63
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 63
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 64
@@ -322,6 +335,7 @@ define void @slt_infinite() {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_infinite
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -344,6 +358,7 @@ define void @slt_infinite_ub() mustprogress {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_infinite_ub
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -368,6 +383,7 @@ define void @slt_129_not_taken() {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_129_not_taken
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -391,6 +407,7 @@ define void @slt_not_taken(i8 %step) {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_not_taken
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -413,6 +430,7 @@ define void @slt_129_unknown_start(i8 %start) mustprogress {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_129_unknown_start
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((127 + (-1 * (1 umin (127 + (-1 * %start) + (0 smax (-127 + %start)<nsw>))))<nuw><nsw> + (-1 * %start) + (0 smax (-127 + %start)<nsw>)) /u -127) + (1 umin (127 + (-1 * %start) + (0 smax (-127 + %start)<nsw>))))
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((127 + (-1 * (1 umin (127 + (-1 * %start) + (0 smax (-127 + %start)<nsw>))))<nuw><nsw> + (-1 * %start) + (0 smax (-127 + %start)<nsw>)) /u -127) + (1 umin (127 + (-1 * %start) + (0 smax (-127 + %start)<nsw>))))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (((127 + (-1 * (1 umin (127 + (-1 * %start) + (0 smax (-127 + %start)<nsw>))))<nuw><nsw> + (-1 * %start) + (0 smax (-127 + %start)<nsw>)) /u -127) + (1 umin (127 + (-1 * %start) + (0 smax (-127 + %start)<nsw>))))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -438,6 +456,7 @@ define void @slt_ub1() {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_ub1
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is false
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is false
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is false
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is false
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -462,6 +481,7 @@ define void @slt_ub2() {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_ub2
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is false
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is false
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is false
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is false
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -486,6 +506,7 @@ define void @slt_129_preinc() {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_129_preinc
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 2
@@ -508,6 +529,7 @@ define void @slt_preinc(i8 %step) {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_preinc
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 2
@@ -532,6 +554,7 @@ define void @slt_129_varying_rhs(i8* %n_p) {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_129_varying_rhs
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -553,6 +576,7 @@ define void @slt_symbolic_varying_rhs(i8* %n_p, i8 %step) {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_symbolic_varying_rhs
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -579,11 +603,13 @@ define void @step_is_neg_addrec_slt_8(i64 %n) {
 ; CHECK-NEXT:  Determining loop execution counts for: @step_is_neg_addrec_slt_8
 ; CHECK-NEXT:  Loop %inner: backedge-taken count is (7 /u {0,+,-1}<nuw><nsw><%outer.header>)
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is -2147483640
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is (7 /u {0,+,-1}<nuw><nsw><%outer.header>)
 ; CHECK-NEXT:  Loop %inner: Predicated backedge-taken count is (7 /u {0,+,-1}<nuw><nsw><%outer.header>)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %inner: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer.header: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is 0
+; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:  Loop %outer.header: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %outer.header: Trip multiple is 1
@@ -619,11 +645,13 @@ define void @step_is_neg_addrec_slt_var(i32 %n) {
 ; CHECK-NEXT:  Determining loop execution counts for: @step_is_neg_addrec_slt_var
 ; CHECK-NEXT:  Loop %inner: backedge-taken count is ((((-1 * (1 umin ({0,+,1}<nuw><%outer.header> + ({0,+,-1}<nuw><nsw><%outer.header> smax %n))))<nuw><nsw> + {0,+,1}<nuw><%outer.header> + ({0,+,-1}<nuw><nsw><%outer.header> smax %n)) /u (1 umax {0,+,-1}<nuw><nsw><%outer.header>)) + (1 umin ({0,+,1}<nuw><%outer.header> + ({0,+,-1}<nuw><nsw><%outer.header> smax %n))))
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ((((-1 * (1 umin ({0,+,1}<nuw><%outer.header> + ({0,+,-1}<nuw><nsw><%outer.header> smax %n))))<nuw><nsw> + {0,+,1}<nuw><%outer.header> + ({0,+,-1}<nuw><nsw><%outer.header> smax %n)) /u (1 umax {0,+,-1}<nuw><nsw><%outer.header>)) + (1 umin ({0,+,1}<nuw><%outer.header> + ({0,+,-1}<nuw><nsw><%outer.header> smax %n))))
 ; CHECK-NEXT:  Loop %inner: Predicated backedge-taken count is ((((-1 * (1 umin ({0,+,1}<nuw><%outer.header> + ({0,+,-1}<nuw><nsw><%outer.header> smax %n))))<nuw><nsw> + {0,+,1}<nuw><%outer.header> + ({0,+,-1}<nuw><nsw><%outer.header> smax %n)) /u (1 umax {0,+,-1}<nuw><nsw><%outer.header>)) + (1 umin ({0,+,1}<nuw><%outer.header> + ({0,+,-1}<nuw><nsw><%outer.header> smax %n))))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %inner: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer.header: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is 0
+; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:  Loop %outer.header: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %outer.header: Trip multiple is 1
@@ -659,11 +687,13 @@ define void @step_is_neg_addrec_unknown_start(i32 %n) {
 ; CHECK-NEXT:  Determining loop execution counts for: @step_is_neg_addrec_unknown_start
 ; CHECK-NEXT:  Loop %inner: backedge-taken count is ((((-1 * (1 umin ({(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nuw><nsw><%outer.header>))))<nuw><nsw> + {(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nuw><nsw><%outer.header>)) /u (1 umax {0,+,-1}<%outer.header>)) + (1 umin ({(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nuw><nsw><%outer.header>))))
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is -2147483640
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ((((-1 * (1 umin ({(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nuw><nsw><%outer.header>))))<nuw><nsw> + {(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nuw><nsw><%outer.header>)) /u (1 umax {0,+,-1}<%outer.header>)) + (1 umin ({(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nuw><nsw><%outer.header>))))
 ; CHECK-NEXT:  Loop %inner: Predicated backedge-taken count is ((((-1 * (1 umin ({(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nuw><nsw><%outer.header>))))<nuw><nsw> + {(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nuw><nsw><%outer.header>)) /u (1 umax {0,+,-1}<%outer.header>)) + (1 umin ({(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nuw><nsw><%outer.header>))))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %inner: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer.header: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is 0
+; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:  Loop %outer.header: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %outer.header: Trip multiple is 1

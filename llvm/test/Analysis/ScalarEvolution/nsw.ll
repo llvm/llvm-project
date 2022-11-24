@@ -29,6 +29,7 @@ define void @test1(double* %p) nounwind {
 ; CHECK-NEXT:  Determining loop execution counts for: @test1
 ; CHECK-NEXT:  Loop %bb: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %bb: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %bb: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %bb: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -77,6 +78,7 @@ define void @test2(i32* %begin, i32* %end) ssp {
 ; CHECK-NEXT:  Determining loop execution counts for: @test2
 ; CHECK-NEXT:  Loop %for.body.i.i: backedge-taken count is ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4)
 ; CHECK-NEXT:  Loop %for.body.i.i: constant max backedge-taken count is 4611686018427387903
+; CHECK-NEXT:  Loop %for.body.i.i: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4)
 ; CHECK-NEXT:  Loop %for.body.i.i: Predicated backedge-taken count is ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body.i.i: Trip multiple is 1
@@ -117,6 +119,7 @@ define void @test3(i32* %begin, i32* %end) nounwind ssp {
 ; CHECK-NEXT:  Determining loop execution counts for: @test3
 ; CHECK-NEXT:  Loop %for.body.i.i: backedge-taken count is ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4)
 ; CHECK-NEXT:  Loop %for.body.i.i: constant max backedge-taken count is 4611686018427387903
+; CHECK-NEXT:  Loop %for.body.i.i: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4)
 ; CHECK-NEXT:  Loop %for.body.i.i: Predicated backedge-taken count is ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body.i.i: Trip multiple is 1
@@ -179,6 +182,7 @@ define i32 @PR12375(i32* readnone %arg) {
 ; CHECK-NEXT:  Determining loop execution counts for: @PR12375
 ; CHECK-NEXT:  Loop %bb1: backedge-taken count is 1
 ; CHECK-NEXT:  Loop %bb1: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %bb1: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %bb1: Trip multiple is 2
@@ -209,6 +213,7 @@ define void @PR12376(i32* nocapture %arg, i32* nocapture %arg1)  {
 ; CHECK-NEXT:  Determining loop execution counts for: @PR12376
 ; CHECK-NEXT:  Loop %bb2: backedge-taken count is ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64))<nuw> umax (ptrtoint i32* %arg1 to i64))) /u 4)
 ; CHECK-NEXT:  Loop %bb2: constant max backedge-taken count is 4611686018427387902
+; CHECK-NEXT:  Loop %bb2: symbolic max backedge-taken count is ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64))<nuw> umax (ptrtoint i32* %arg1 to i64))) /u 4)
 ; CHECK-NEXT:  Loop %bb2: Predicated backedge-taken count is ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64))<nuw> umax (ptrtoint i32* %arg1 to i64))) /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %bb2: Trip multiple is 1
@@ -244,6 +249,7 @@ define void @nswnowrap(i32 %v, i32* %buf) {
 ; CHECK-NEXT:  Determining loop execution counts for: @nswnowrap
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 * %v) + ((1 + %v)<nsw> smax %v))
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 1, actual taken count either this or zero.
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 * %v) + ((1 + %v)<nsw> smax %v)), actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-1 * %v) + ((1 + %v)<nsw> smax %v))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -286,6 +292,7 @@ define void @test4(i32 %arg) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test4
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2147483638
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -319,6 +326,7 @@ define void @bad_postinc_nsw_a(i32 %n) {
 ; CHECK-NEXT:  Determining loop execution counts for: @bad_postinc_nsw_a
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 613566756
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -350,6 +358,7 @@ define void @postinc_poison_prop_through_and(i32 %n) {
 ; CHECK-NEXT:  Determining loop execution counts for: @postinc_poison_prop_through_and
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -378,6 +387,7 @@ define void @pr28012(i32 %n) {
 ; CHECK-NEXT:  Determining loop execution counts for: @pr28012
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + (7 umax %n)) /u 7)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 613566755
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + (7 umax %n)) /u 7)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-1 + (7 umax %n)) /u 7)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -410,6 +420,7 @@ define void @select_cond_poison_propagation(double* %p, i32 %x) nounwind {
 ; CHECK-NEXT:  Determining loop execution counts for: @select_cond_poison_propagation
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:

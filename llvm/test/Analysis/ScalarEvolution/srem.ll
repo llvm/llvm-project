@@ -32,6 +32,7 @@ define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 ; CHECK-NEXT:  Determining loop execution counts for: @_Z4loopi
 ; CHECK-NEXT:  Loop %for.cond: backedge-taken count is %width
 ; CHECK-NEXT:  Loop %for.cond: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.cond: symbolic max backedge-taken count is %width
 ; CHECK-NEXT:  Loop %for.cond: Predicated backedge-taken count is %width
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.cond: Trip multiple is 1

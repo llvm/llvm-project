@@ -19,6 +19,7 @@ define void @f0() {
 ; CHECK-NEXT:  Determining loop execution counts for: @f0
 ; CHECK-NEXT:  Loop %b1: backedge-taken count is 1
 ; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %b1: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %b1: Trip multiple is 2
@@ -65,9 +66,11 @@ define void @f1() #0 {
 ; CHECK-NEXT:  Determining loop execution counts for: @f1
 ; CHECK-NEXT:  Loop %b3: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %b3: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %b3: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %b3: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %b1: backedge-taken count is 2
 ; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is 2
+; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is 2
 ; CHECK-NEXT:  Loop %b1: Predicated backedge-taken count is 2
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %b1: Trip multiple is 3
