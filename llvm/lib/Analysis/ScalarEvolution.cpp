@@ -13368,9 +13368,9 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
   OS << ": ";
 
-  if (!isa<SCEVCouldNotCompute>(SE->getConstantMaxBackedgeTakenCount(L))) {
-    OS << "constant max backedge-taken count is "
-       << *SE->getConstantMaxBackedgeTakenCount(L);
+  auto *ConstantBTC = SE->getConstantMaxBackedgeTakenCount(L);
+  if (!isa<SCEVCouldNotCompute>(ConstantBTC)) {
+    OS << "constant max backedge-taken count is " << *ConstantBTC;
     if (SE->isBackedgeTakenCountMaxOrZero(L))
       OS << ", actual taken count either this or zero.";
   } else {
