@@ -134,7 +134,9 @@ kmp_uint64 __kmp_test_then_and64(volatile kmp_uint64 *p, kmp_uint64 d) {
   return old_value;
 }
 
-#if KMP_ARCH_AARCH64
+#if KMP_ARCH_AARCH64 && KMP_COMPILER_MSVC
+// For !KMP_COMPILER_MSVC, this function is provided in assembly form
+// by z_Linux_asm.S.
 int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
                            void *p_argv[]
 #if OMPT_SUPPORT
