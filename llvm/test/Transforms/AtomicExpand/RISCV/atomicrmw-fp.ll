@@ -17,7 +17,7 @@ define float @test_atomicrmw_fadd_f32(float* %ptr, float %value) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(i8* [[TMP3]], i8* [[TMP4]], i32 [[TMP5]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[TMP1]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP4]])
-; CHECK-NEXT:    [[TMP8:%.*]] = insertvalue { float, i1 } undef, float [[TMP7]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertvalue { float, i1 } poison, float [[TMP7]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertvalue { float, i1 } [[TMP8]], i1 [[TMP6]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { float, i1 } [[TMP9]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { float, i1 } [[TMP9]], 0
@@ -45,7 +45,7 @@ define float @test_atomicrmw_fsub_f32(float* %ptr, float %value) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(i8* [[TMP3]], i8* [[TMP4]], i32 [[TMP5]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[TMP1]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP4]])
-; CHECK-NEXT:    [[TMP8:%.*]] = insertvalue { float, i1 } undef, float [[TMP7]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertvalue { float, i1 } poison, float [[TMP7]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertvalue { float, i1 } [[TMP8]], i1 [[TMP6]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { float, i1 } [[TMP9]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { float, i1 } [[TMP9]], 0
