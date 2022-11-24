@@ -3485,8 +3485,8 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   bool useCodeAlign = Section->useCodeAlign();
   if ((!HasFillExpr || Lexer.getMAI().getTextAlignFillValue() == FillExpr) &&
       ValueSize == 1 && useCodeAlign) {
-    getStreamer().emitCodeAlignment(Alignment, &getTargetParser().getSTI(),
-                                    MaxBytesToFill);
+    getStreamer().emitCodeAlignment(
+        Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
   } else {
     // FIXME: Target specific behavior about how the "extra" bytes are filled.
     getStreamer().emitValueToAlignment(Alignment, FillExpr, ValueSize,
