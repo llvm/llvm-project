@@ -8765,9 +8765,9 @@ CreateAArch64ABIBuiltinVaListDecl(const ASTContext *Context) {
     // namespace std { struct __va_list {
     auto *NS = NamespaceDecl::Create(
         const_cast<ASTContext &>(*Context), Context->getTranslationUnitDecl(),
-        /*Inline*/ false, SourceLocation(), SourceLocation(),
+        /*Inline=*/false, SourceLocation(), SourceLocation(),
         &Context->Idents.get("std"),
-        /*PrevDecl*/ nullptr);
+        /*PrevDecl=*/nullptr, /*Nested=*/false);
     NS->setImplicit();
     VaListTagDecl->setDeclContext(NS);
   }
@@ -8954,9 +8954,9 @@ CreateAAPCSABIBuiltinVaListDecl(const ASTContext *Context) {
     NamespaceDecl *NS;
     NS = NamespaceDecl::Create(const_cast<ASTContext &>(*Context),
                                Context->getTranslationUnitDecl(),
-                               /*Inline*/false, SourceLocation(),
+                               /*Inline=*/false, SourceLocation(),
                                SourceLocation(), &Context->Idents.get("std"),
-                               /*PrevDecl*/ nullptr);
+                               /*PrevDecl=*/nullptr, /*Nested=*/false);
     NS->setImplicit();
     VaListDecl->setDeclContext(NS);
   }
