@@ -1580,7 +1580,7 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
 // On Linux, the number of physical cores can be computed from /proc/cpuinfo,
 // using the number of unique physical/core id pairs. The following
 // implementation reads the /proc/cpuinfo format on an x86_64 system.
-static int computeHostNumPhysicalCores() {
+int computeHostNumPhysicalCores() {
   // Enabled represents the number of physical id/core id pairs with at least
   // one processor id enabled by the CPU affinity mask.
   cpu_set_t Affinity, Enabled;
@@ -1625,11 +1625,9 @@ static int computeHostNumPhysicalCores() {
   return CPU_COUNT(&Enabled);
 }
 #elif defined(__linux__) && defined(__s390x__)
-static int computeHostNumPhysicalCores() {
-  return sysconf(_SC_NPROCESSORS_ONLN);
-}
+int computeHostNumPhysicalCores() { return sysconf(_SC_NPROCESSORS_ONLN); }
 #elif defined(__linux__) && !defined(__ANDROID__)
-static int computeHostNumPhysicalCores() {
+int computeHostNumPhysicalCores() {
   cpu_set_t Affinity;
   if (sched_getaffinity(0, sizeof(Affinity), &Affinity) == 0)
     return CPU_COUNT(&Affinity);
@@ -1649,7 +1647,7 @@ static int computeHostNumPhysicalCores() {
 }
 #elif defined(__APPLE__)
 // Gets the number of *physical cores* on the machine.
-static int computeHostNumPhysicalCores() {
+int computeHostNumPhysicalCores() {
   uint32_t count;
   size_t len = sizeof(count);
   sysctlbyname("hw.physicalcpu", &count, &len, NULL, 0);
@@ -1664,7 +1662,7 @@ static int computeHostNumPhysicalCores() {
   return count;
 }
 #elif defined(__MVS__)
-static int computeHostNumPhysicalCores() {
+int computeHostNumPhysicalCores() {
   enum {
     // Byte offset of the pointer to the Communications Vector Table (CVT) in
     // the Prefixed Save Area (PSA). The table entry is a 31-bit pointer and
@@ -1687,7 +1685,7 @@ static int computeHostNumPhysicalCores() {
 }
 #elif defined(_WIN32) && LLVM_ENABLE_THREADS != 0
 // Defined in llvm/lib/Support/Windows/Threading.inc
-static int computeHostNumPhysicalCores();
+int computeHostNumPhysicalCores();
 #else
 // On other systems, return -1 to indicate unknown.
 static int computeHostNumPhysicalCores() { return -1; }
