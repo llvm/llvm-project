@@ -16,12 +16,14 @@
 #ifndef LLVM_ADT_NONE_H
 #define LLVM_ADT_NONE_H
 
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
 /// A simple null object to allow implicit construction of Optional<T>
 /// and similar types without having to spell out the specialization's name.
-using NoneType = std::nullopt_t;
+LLVM_DEPRECATED("Use std::nullopt_t instead", "std::nullopt_t")
+typedef std::nullopt_t NoneType;
 inline constexpr std::nullopt_t None = std::nullopt;
 }
 
