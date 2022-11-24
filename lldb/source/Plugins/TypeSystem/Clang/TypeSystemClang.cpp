@@ -1903,7 +1903,7 @@ NamespaceDecl *TypeSystemClang::GetUniqueNamespaceDeclaration(
 
       namespace_decl =
           NamespaceDecl::Create(ast, decl_ctx, false, SourceLocation(),
-                                SourceLocation(), nullptr, nullptr);
+                                SourceLocation(), nullptr, nullptr, false);
       translation_unit_decl->setAnonymousNamespace(namespace_decl);
       translation_unit_decl->addDecl(namespace_decl);
       assert(namespace_decl == translation_unit_decl->getAnonymousNamespace());
@@ -1915,7 +1915,7 @@ NamespaceDecl *TypeSystemClang::GetUniqueNamespaceDeclaration(
           return namespace_decl;
         namespace_decl =
             NamespaceDecl::Create(ast, decl_ctx, false, SourceLocation(),
-                                  SourceLocation(), nullptr, nullptr);
+                                  SourceLocation(), nullptr, nullptr, false);
         parent_namespace_decl->setAnonymousNamespace(namespace_decl);
         parent_namespace_decl->addDecl(namespace_decl);
         assert(namespace_decl ==
