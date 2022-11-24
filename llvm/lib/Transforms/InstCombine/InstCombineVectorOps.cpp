@@ -187,6 +187,7 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
   ElementCount NumElts =
       cast<VectorType>(Ext.getVectorOperandType())->getElementCount();
   Type *DestTy = Ext.getType();
+  unsigned DestWidth = DestTy->getPrimitiveSizeInBits();
   bool IsBigEndian = DL.isBigEndian();
 
   // If we are casting an integer to vector and extracting a portion, that is
@@ -201,12 +202,11 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
     // BigEndian: extelt (bitcast i32 X to v4i8), 0 -> trunc i32 (X >> 24) to i8
     if (IsBigEndian)
       ExtIndexC = NumElts.getKnownMinValue() - 1 - ExtIndexC;
-    unsigned ShiftAmountC = ExtIndexC * DestTy->getPrimitiveSizeInBits();
+    unsigned ShiftAmountC = ExtIndexC * DestWidth;
     if (!ShiftAmountC || Ext.getVectorOperand()->hasOneUse()) {
       Value *Lshr = Builder.CreateLShr(X, ShiftAmountC, "extelt.offset");
       if (DestTy->isFloatingPointTy()) {
-        Type *DstIntTy = IntegerType::getIntNTy(
-            Lshr->getContext(), DestTy->getPrimitiveSizeInBits());
+        Type *DstIntTy = IntegerType::getIntNTy(Lshr->getContext(), DestWidth);
         Value *Trunc = Builder.CreateTrunc(Lshr, DstIntTy);
         return new BitCastInst(Trunc, DestTy);
       }
@@ -283,7 +283,6 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
       return nullptr;
 
     unsigned SrcWidth = SrcTy->getScalarSizeInBits();
-    unsigned DestWidth = DestTy->getPrimitiveSizeInBits();
     unsigned ShAmt = Chunk * DestWidth;
 
     // TODO: This limitation is more strict than necessary. We could sum the
