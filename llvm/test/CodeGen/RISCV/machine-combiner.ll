@@ -129,18 +129,18 @@ define double @test_reassoc_big1(double %a0, double %a1, double %a2, double %a3,
 define double @test_reassoc_big2(double %a0, double %a1, i32 %a2, double %a3, i32 %a4, double %a5) {
 ; CHECK-LABEL: test_reassoc_big2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.d.w ft0, a0
-; CHECK-NEXT:    fcvt.d.w ft1, a1
-; CHECK-NEXT:    fmul.d ft0, fa2, ft0
-; CHECK-NEXT:    fmul.d ft1, ft1, fa1
-; CHECK-NEXT:    fadd.d ft2, fa0, fa1
-; CHECK-NEXT:    fadd.d ft3, fa2, fa1
-; CHECK-NEXT:    fmul.d ft0, ft1, ft0
-; CHECK-NEXT:    fadd.d ft1, fa2, ft2
-; CHECK-NEXT:    fmul.d ft2, fa0, ft3
-; CHECK-NEXT:    fsub.d ft1, fa3, ft1
-; CHECK-NEXT:    fmul.d ft0, ft0, ft2
-; CHECK-NEXT:    fmul.d fa0, ft1, ft0
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fsub.d ft1, fa3, fa2
+; CHECK-NEXT:    fadd.d ft2, fa2, fa1
+; CHECK-NEXT:    fcvt.d.w ft3, a0
+; CHECK-NEXT:    fcvt.d.w ft4, a1
+; CHECK-NEXT:    fmul.d ft3, fa2, ft3
+; CHECK-NEXT:    fmul.d ft4, ft4, fa1
+; CHECK-NEXT:    fsub.d ft0, ft1, ft0
+; CHECK-NEXT:    fmul.d ft1, fa0, ft2
+; CHECK-NEXT:    fmul.d ft2, ft4, ft3
+; CHECK-NEXT:    fmul.d ft0, ft0, ft1
+; CHECK-NEXT:    fmul.d fa0, ft0, ft2
 ; CHECK-NEXT:    ret
   %cvt1 = sitofp i32 %a2 to double
   %cvt2 = sitofp i32 %a4 to double
@@ -235,5 +235,161 @@ define double @test_fnmsub(double %a0, double %a1, double %a2) {
   %t0 = fmul contract double %a0, %a1
   %t1 = fsub contract double %a2, %t0
   %t2 = fdiv double %t1, %t0
+  ret double %t2
+}
+
+define double @test_reassoc_fsub1(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fsub.d ft1, fa2, fa3
+; CHECK-NEXT:    fadd.d fa0, ft0, ft1
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fadd nsz reassoc double %t0, %a2
+  %t2 = fsub nsz reassoc double %t1, %a3
+  ret double %t2
+}
+
+define double @test_reassoc_fsub2(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fsub.d ft1, fa2, fa3
+; CHECK-NEXT:    fsub.d fa0, ft0, ft1
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fsub nsz reassoc double %t0, %a2
+  %t2 = fadd nsz reassoc double %t1, %a3
+  ret double %t2
+}
+
+define double @test_reassoc_fsub3(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fadd.d ft1, fa2, fa3
+; CHECK-NEXT:    fsub.d fa0, ft0, ft1
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fsub nsz reassoc double %t0, %a2
+  %t2 = fsub nsz reassoc double %t1, %a3
+  ret double %t2
+}
+
+define double @test_reassoc_fsub4(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fsub.d ft1, fa2, fa3
+; CHECK-NEXT:    fadd.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fadd nsz reassoc double %a2, %t0
+  %t2 = fsub nsz reassoc double %t1, %a3
+  ret double %t2
+}
+
+define double @test_reassoc_fsub5(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fadd.d ft1, fa2, fa3
+; CHECK-NEXT:    fsub.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fsub nsz reassoc double %a2, %t0
+  %t2 = fadd nsz reassoc double %t1, %a3
+  ret double %t2
+}
+
+define double @test_reassoc_fsub6(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fsub.d ft1, fa2, fa3
+; CHECK-NEXT:    fsub.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fsub nsz reassoc double %a2, %t0
+  %t2 = fsub nsz reassoc double %t1, %a3
+  ret double %t2
+}
+
+define double @test_reassoc_fsub7(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fsub.d ft1, fa3, fa2
+; CHECK-NEXT:    fsub.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fadd nsz reassoc double %t0, %a2
+  %t2 = fsub nsz reassoc double %a3, %t1
+  ret double %t2
+}
+
+define double @test_reassoc_fsub8(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fsub.d ft1, fa3, fa2
+; CHECK-NEXT:    fadd.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fsub nsz reassoc double %t0, %a2
+  %t2 = fadd nsz reassoc double %a3, %t1
+  ret double %t2
+}
+
+define double @test_reassoc_fsub9(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fadd.d ft1, fa3, fa2
+; CHECK-NEXT:    fsub.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fsub nsz reassoc double %t0, %a2
+  %t2 = fsub nsz reassoc double %a3, %t1
+  ret double %t2
+}
+
+define double @test_reassoc_fsub10(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fsub.d ft1, fa3, fa2
+; CHECK-NEXT:    fsub.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fadd nsz reassoc double %a2, %t0
+  %t2 = fsub nsz reassoc double %a3, %t1
+  ret double %t2
+}
+
+define double @test_reassoc_fsub11(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fadd.d ft1, fa3, fa2
+; CHECK-NEXT:    fsub.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fsub nsz reassoc double %a2, %t0
+  %t2 = fadd nsz reassoc double %a3, %t1
+  ret double %t2
+}
+
+define double @test_reassoc_fsub12(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_reassoc_fsub12:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fadd.d ft0, fa0, fa1
+; CHECK-NEXT:    fsub.d ft1, fa3, fa2
+; CHECK-NEXT:    fadd.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fadd nsz reassoc double %a0, %a1
+  %t1 = fsub nsz reassoc double %a2, %t0
+  %t2 = fsub nsz reassoc double %a3, %t1
   ret double %t2
 }

@@ -208,6 +208,8 @@ public:
   bool isAssociativeAndCommutative(const MachineInstr &Inst,
                                    bool Invert) const override;
 
+  std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
+
 protected:
   const RISCVSubtarget &STI;
 };
