@@ -1886,9 +1886,9 @@ NamespaceDecl *TypeSystemClang::GetUniqueNamespaceDeclaration(
         return namespace_decl;
     }
 
-    namespace_decl =
-        NamespaceDecl::Create(ast, decl_ctx, is_inline, SourceLocation(),
-                              SourceLocation(), &identifier_info, nullptr);
+    namespace_decl = NamespaceDecl::Create(ast, decl_ctx, is_inline,
+                                           SourceLocation(), SourceLocation(),
+                                           &identifier_info, nullptr, false);
 
     decl_ctx->addDecl(namespace_decl);
   } else {
