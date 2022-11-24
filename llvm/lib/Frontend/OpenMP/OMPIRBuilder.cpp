@@ -3963,6 +3963,12 @@ std::string OpenMPIRBuilder::getNameWithSeparators(ArrayRef<StringRef> Parts,
   return OS.str().str();
 }
 
+std::string
+OpenMPIRBuilder::createPlatformSpecificName(ArrayRef<StringRef> Parts) const {
+  return OpenMPIRBuilder::getNameWithSeparators(Parts, Config.firstSeparator(),
+                                                Config.separator());
+}
+
 GlobalVariable *
 OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                                              unsigned AddressSpace) {
