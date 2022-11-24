@@ -10,6 +10,7 @@
 #include "HexagonISelDAGToDAG.h"
 #include "HexagonISelLowering.h"
 #include "HexagonTargetMachine.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
@@ -17,15 +18,20 @@
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 
+#include <algorithm>
+#include <cmath>
 #include <deque>
+#include <functional>
 #include <map>
+#include <optional>
 #include <set>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #define DEBUG_TYPE "hexagon-isel"
-
 using namespace llvm;
 
 namespace {
@@ -617,6 +623,7 @@ struct OpRef {
   OpRef(SDValue V) : OpV(V) {}
   bool isValue() const { return OpV.getNode() != nullptr; }
   bool isValid() const { return isValue() || !(OpN & Invalid); }
+  bool isUndef() const { return OpN & Undef; }
   static OpRef res(int N) { return OpRef(Whole | (N & Index)); }
   static OpRef fail() { return OpRef(Invalid); }
 
@@ -921,18 +928,18 @@ namespace llvm {
     const unsigned HwLen;
 
     HvxSelector(HexagonDAGToDAGISel &HS, SelectionDAG &G)
-      : Lower(getHexagonLowering(G)),  ISel(HS), DAG(G),
-        HST(getHexagonSubtarget(G)), HwLen(HST.getVectorLength()) {}
+        : Lower(getHexagonLowering(G)), ISel(HS), DAG(G),
+          HST(getHexagonSubtarget(G)), HwLen(HST.getVectorLength()) {}
 
     MVT getSingleVT(MVT ElemTy) const {
       assert(ElemTy != MVT::i1 && "Use getBoolVT for predicates");
-      unsigned NumElems = HwLen / (ElemTy.getSizeInBits()/8);
+      unsigned NumElems = HwLen / (ElemTy.getSizeInBits() / 8);
       return MVT::getVectorVT(ElemTy, NumElems);
     }
 
     MVT getPairVT(MVT ElemTy) const {
       assert(ElemTy != MVT::i1); // Suspicious: there are no predicate pairs.
-      unsigned NumElems = (2*HwLen) / (ElemTy.getSizeInBits()/8);
+      unsigned NumElems = (2 * HwLen) / (ElemTy.getSizeInBits() / 8);
       return MVT::getVectorVT(ElemTy, NumElems);
     }
 
@@ -946,6 +953,12 @@ namespace llvm {
     void selectRor(SDNode *N);
     void selectVAlign(SDNode *N);
 
+    static SmallVector<uint32_t, 8> getPerfectCompletions(ShuffleMask SM,
+                                                          unsigned Width);
+    static SmallVector<uint32_t, 8> completeToPerfect(
+        ArrayRef<uint32_t> Completions, unsigned Width);
+    static std::optional<int> rotationDistance(ShuffleMask SM, unsigned WrapAt);
+
   private:
     void select(SDNode *ISelN);
     void materialize(const ResultStack &Results);
@@ -958,8 +971,10 @@ namespace llvm {
       PackMux,
     };
     OpRef concats(OpRef Va, OpRef Vb, ResultStack &Results);
+    OpRef funnels(OpRef Va, OpRef Vb, int Amount, ResultStack &Results);
+
     OpRef packs(ShuffleMask SM, OpRef Va, OpRef Vb, ResultStack &Results,
-                 MutableArrayRef<int> NewMask, unsigned Options = None);
+                MutableArrayRef<int> NewMask, unsigned Options = None);
     OpRef packp(ShuffleMask SM, OpRef Va, OpRef Vb, ResultStack &Results,
                 MutableArrayRef<int> NewMask);
     OpRef vmuxs(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
@@ -980,9 +995,8 @@ namespace llvm {
     bool selectVectorConstants(SDNode *N);
     bool scalarizeShuffle(ArrayRef<int> Mask, const SDLoc &dl, MVT ResTy,
                           SDValue Va, SDValue Vb, SDNode *N);
-
   };
-}
+} // namespace llvm
 
 static void splitMask(ArrayRef<int> Mask, MutableArrayRef<int> MaskL,
                       MutableArrayRef<int> MaskR) {
@@ -1029,6 +1043,13 @@ static bool isIdentity(ArrayRef<int> Mask) {
       return false;
   }
   return true;
+}
+
+static bool isLowHalfOnly(ArrayRef<int> Mask) {
+  int L = Mask.size();
+  assert(L % 2 == 0);
+  // Check if the second half of the mask is all-undef.
+  return llvm::all_of(Mask.drop_front(L / 2), [](int M) { return M < 0; });
 }
 
 static SmallVector<unsigned, 4> getInputSegmentList(ShuffleMask SM,
@@ -1107,19 +1128,6 @@ static void packSegmentMask(ArrayRef<int> Mask, ArrayRef<unsigned> OutSegMap,
     }
     PackedMask[I] = M;
   }
-}
-
-static bool isPermutation(ArrayRef<int> Mask) {
-  // Check by adding all numbers only works if there is no overflow.
-  assert(Mask.size() < 0x00007FFF && "Overflow failure");
-  int Sum = 0;
-  for (int Idx : Mask) {
-    if (Idx == -1)
-      return false;
-    Sum += Idx;
-  }
-  int N = Mask.size();
-  return 2*Sum == N*(N-1);
 }
 
 bool HvxSelector::selectVectorConstants(SDNode *N) {
@@ -1220,6 +1228,42 @@ OpRef HvxSelector::concats(OpRef Lo, OpRef Hi, ResultStack &Results) {
   return OpRef::res(Results.top());
 }
 
+OpRef HvxSelector::funnels(OpRef Va, OpRef Vb, int Amount,
+                           ResultStack &Results) {
+  // Do a funnel shift towards the low end (shift right) by Amount bytes.
+  // If Amount < 0, treat it as shift left, i.e. do a shift right by
+  // Amount + HwLen.
+  auto VecLen = static_cast<int>(HwLen);
+
+  if (Amount == 0)
+    return Va;
+  if (Amount == VecLen)
+    return Vb;
+
+  MVT Ty = getSingleVT(MVT::i8);
+  const SDLoc &dl(Results.InpNode);
+
+  if (Amount < 0)
+    Amount += VecLen;
+  if (Amount > VecLen) {
+    Amount -= VecLen;
+    std::swap(Va, Vb);
+  }
+
+  if (isUInt<3>(Amount)) {
+    SDValue A = getConst32(Amount, dl);
+    Results.push(Hexagon::V6_valignbi, Ty, {Vb, Va, A});
+  } else if (isUInt<3>(VecLen - Amount)) {
+    SDValue A = getConst32(VecLen - Amount, dl);
+    Results.push(Hexagon::V6_vlalignbi, Ty, {Vb, Va, A});
+  } else {
+    SDValue A = getConst32(Amount, dl);
+    Results.push(Hexagon::A2_tfrsi, Ty, {A});
+    Results.push(Hexagon::V6_valignb, Ty, {Vb, Va, OpRef::res(-1)});
+  }
+  return OpRef::res(Results.top());
+}
+
 // Va, Vb are single vectors. If SM only uses two vector halves from Va/Vb,
 // pack these halves into a single vector, and remap SM into NewMask to use
 // the new vector instead.
@@ -1229,6 +1273,16 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   if (!Va.isValid() || !Vb.isValid())
     return OpRef::fail();
+
+  if (Vb.isUndef()) {
+    std::copy(SM.Mask.begin(), SM.Mask.end(), NewMask.begin());
+    return Va;
+  }
+  if (Va.isUndef()) {
+    std::copy(SM.Mask.begin(), SM.Mask.end(), NewMask.begin());
+    ShuffleVectorSDNode::commuteMask(NewMask);
+    return Vb;
+  }
 
   MVT Ty = getSingleVT(MVT::i8);
   MVT PairTy = getPairVT(MVT::i8);
@@ -1377,7 +1431,7 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
   }
 
   // Check if the arguments can be packed by valign(Va,Vb) or valign(Vb,Va).
-
+  // FIXME: maybe remove this?
   ShuffleMask SMH(MaskH);
   assert(SMH.Mask.size() == VecLen);
   shuffles::MaskT MaskA(SMH.Mask);
@@ -1518,6 +1572,12 @@ OpRef HvxSelector::shuffs1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   if (isUndef(SM.Mask))
     return OpRef::undef(getSingleVT(MVT::i8));
 
+  // First, check for rotations.
+  if (auto Dist = rotationDistance(SM, VecLen)) {
+    OpRef Rotate = funnels(Va, Va, *Dist, Results);
+    if (Rotate.isValid())
+      return Rotate;
+  }
   unsigned HalfLen = HwLen / 2;
   assert(isPowerOf2_32(HalfLen));
 
@@ -1560,8 +1620,7 @@ OpRef HvxSelector::shuffs2(ShuffleMask SM, OpRef Va, OpRef Vb,
     return shuffs1(ShuffleMask(PackedMask), P, Results);
 
   // TODO: Before we split the mask, try perfect shuffle on concatenated
-  // operands. This won't work now, because the perfect code does not
-  // tolerate undefs in the mask.
+  // operands.
 
   shuffles::MaskT MaskL(VecLen), MaskR(VecLen);
   splitMask(SM.Mask, MaskL, MaskR);
@@ -1602,10 +1661,17 @@ OpRef HvxSelector::shuffp1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
       return concats(L, H, Results);
   }
 
-  OpRef R = perfect(SM, Va, Results);
-  if (R.isValid())
-    return R;
-  // TODO commute the mask and try the opposite order of the halves.
+  if (!isLowHalfOnly(SM.Mask)) {
+    // Doing a perfect shuffle on a low-half mask (i.e. where the upper half
+    // is all-undef) may produce a perfect shuffle that generates legitimate
+    // upper half. This isn't wrong, but if the perfect shuffle was possible,
+    // then there is a good chance that a shorter (contracting) code may be
+    // used as well (e.g. V6_vshuffeb, etc).
+    OpRef R = perfect(SM, Va, Results);
+    if (R.isValid())
+      return R;
+    // TODO commute the mask and try the opposite order of the halves.
+  }
 
   OpRef L = shuffs2(SM.lo(), OpRef::lo(Va), OpRef::hi(Va), Results);
   OpRef H = shuffs2(SM.hi(), OpRef::lo(Va), OpRef::hi(Va), Results);
@@ -1824,20 +1890,145 @@ bool HvxSelector::scalarizeShuffle(ArrayRef<int> Mask, const SDLoc &dl,
   return true;
 }
 
+SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
+                                                            unsigned Width) {
+  auto possibilities = [](ArrayRef<uint8_t> Bs, unsigned Width) -> uint32_t {
+    unsigned Impossible = ~(1u << Width) + 1;
+    for (unsigned I = 0, E = Bs.size(); I != E; ++I) {
+      uint8_t B = Bs[I];
+      if (B == 0xff)
+        continue;
+      if (~Impossible == 0)
+        break;
+      for (unsigned Log = 0; Log != Width; ++Log) {
+        if (Impossible & (1u << Log))
+          continue;
+        unsigned Expected = (I >> Log) % 2;
+        if (B != Expected)
+          Impossible |= (1u << Log);
+      }
+    }
+    return ~Impossible;
+  };
+
+  SmallVector<uint32_t, 8> Worklist(Width);
+
+  for (unsigned BitIdx = 0; BitIdx != Width; ++BitIdx) {
+    SmallVector<uint8_t> BitValues(SM.Mask.size());
+    for (int i = 0, e = SM.Mask.size(); i != e; ++i) {
+      int M = SM.Mask[i];
+      if (M < 0)
+        BitValues[i] = 0xff;
+      else
+        BitValues[i] = (M & (1u << BitIdx)) != 0;
+    }
+    Worklist[BitIdx] = possibilities(BitValues, Width);
+  }
+
+  // If there is a word P in Worklist that matches multiple possibilities,
+  // then if any other word Q matches any of the possibilities matched by P,
+  // then Q matches all the possibilities matched by P. In fact, P == Q.
+  // In other words, for each words P, Q, the sets of possibilities matched
+  // by P and Q are either equal or disjoint (no partial overlap).
+  //
+  // Illustration: For 4-bit values there are 4 complete sequences:
+  // a:  0 1 0 1  0 1 0 1  0 1 0 1  0 1 0 1
+  // b:  0 0 1 1  0 0 1 1  0 0 1 1  0 0 1 1
+  // c:  0 0 0 0  1 1 1 1  0 0 0 0  1 1 1 1
+  // d:  0 0 0 0  0 0 0 0  1 1 1 1  1 1 1 1
+  //
+  // Words containing unknown bits that match two of the complete
+  // sequences:
+  // ab: 0 u u 1  0 u u 1  0 u u 1  0 u u 1
+  // ac: 0 u 0 u  u 1 u 1  0 u 0 u  u 1 u 1
+  // ad: 0 u 0 u  0 u 0 u  u 1 u 1  u 1 u 1
+  // bc: 0 0 u u  u u 1 1  0 0 u u  u u 1 1
+  // bd: 0 0 u u  0 0 u u  u u 1 1  u u 1 1
+  // cd: 0 0 0 0  u u u u  u u u u  1 1 1 1
+  //
+  // Proof of the claim above:
+  // Let P be a word that matches s0 and s1. For that to happen, all known
+  // bits in P must match s0 and s1 exactly.
+  // Assume there is Q that matches s1. Note that since P and Q came from
+  // the same shuffle mask, the positions of unknown bits in P and Q match
+  // exactly, which makes the indices of known bits be exactly the same
+  // between P and Q. Since P matches s0 and s1, the known bits of P much
+  // match both s0 and s1. Also, since Q matches s1, the known bits in Q
+  // are exactly the same as in s1, which means that they are exactly the
+  // same as in P. This implies that P == Q.
+
+  return Worklist;
+}
+
+SmallVector<uint32_t, 8>
+HvxSelector::completeToPerfect(ArrayRef<uint32_t> Completions, unsigned Width) {
+  // Pick a completion if there are multiple possibilities. For now just
+  // select any valid completion.
+  SmallVector<uint32_t, 8> Comps(Completions);
+
+  for (unsigned I = 0; I != Width; ++I) {
+    uint32_t P = Comps[I];
+    assert(P != 0);
+    if (isPowerOf2_32(P))
+      continue;
+    // T = least significant bit of P.
+    uint32_t T = P ^ ((P - 1) & P);
+    // Clear T in all remaining words matching P.
+    for (unsigned J = I + 1; J != Width; ++J) {
+      if (Comps[J] == P)
+        Comps[J] ^= T;
+    }
+    Comps[I] = T;
+  }
+
+  return Comps;
+}
+
+std::optional<int> HvxSelector::rotationDistance(ShuffleMask SM,
+                                                 unsigned WrapAt) {
+  std::optional<int> Dist;
+  for (int I = 0, E = SM.Mask.size(); I != E; ++I) {
+    int M = SM.Mask[I];
+    if (M < 0)
+      continue;
+    if (Dist) {
+      if ((I + *Dist) % static_cast<int>(WrapAt) != M)
+        return std::nullopt;
+    } else {
+      // Integer a%b operator assumes rounding towards zero by /, so it
+      // "misbehaves" when a crosses 0 (the remainder also changes sign).
+      // Add WrapAt in an attempt to keep I+Dist non-negative.
+      Dist = M - I;
+      if (Dist < 0)
+        Dist = *Dist + WrapAt;
+    }
+  }
+  return Dist;
+}
+
 OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
                                ResultStack &Results) {
-  DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
+  DEBUG_WITH_TYPE("isel", { dbgs() << __func__ << '\n'; });
   if (!Va.isValid() || !Vb.isValid())
     return OpRef::fail();
 
   // Contracting shuffles, i.e. instructions that always discard some bytes
   // from the operand vectors.
   //
+  // Funnel shifts
   // V6_vshuff{e,o}b
+  // V6_vshuf{e,o}h
   // V6_vdealb4w
   // V6_vpack{e,o}{b,h}
 
   int VecLen = SM.Mask.size();
+
+  // First, check for funnel shifts.
+  if (auto Dist = rotationDistance(SM, 2 * VecLen)) {
+    OpRef Funnel = funnels(Va, Vb, *Dist, Results);
+    if (Funnel.isValid())
+      return Funnel;
+  }
 
   MVT SingleTy = getSingleVT(MVT::i8);
   MVT PairTy = getPairVT(MVT::i8);
@@ -1916,48 +2107,6 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
     return OpRef::res(Results.top());
   }
 
-  // Still need special treatment of vdealvdd
-  std::pair<int,unsigned> Strip = findStrip(SM.Mask, 1, VecLen);
-  if (Strip.second != 4)
-    return OpRef::fail();
-
-  int NextInMask = SM.Mask[Strip.second];
-  if (NextInMask < VecLen) {
-    // Check if this is vpack{e,o}.
-    int N = VecLen;
-    int L = Strip.second;
-    // Check if the first strip starts at 0 or at L.
-    if (Strip.first != 0 && Strip.first != L)
-      return OpRef::fail();
-    // Examine the rest of the mask.
-    for (int I = L; I < N; I += L) {
-      auto S = findStrip(SM.Mask.drop_front(I), 1, N-I);
-      // Check whether the mask element at the beginning of each strip
-      // increases by 2L each time.
-      if (S.first - Strip.first != 2*I)
-        return OpRef::fail();
-      // Check whether each strip is of the same length.
-      if (S.second != unsigned(L))
-        return OpRef::fail();
-    }
-
-    // Strip.first == 0  =>  vpacke
-    // Strip.first == L  =>  vpacko
-    assert(Strip.first == 0 || Strip.first == L);
-    NodeTemplate Res;
-    // FIXME: remove L=4 case after adding perfect mask completion.
-    if (L == 4) {
-      const SDLoc &dl(Results.InpNode);
-      Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(-L, dl)});
-      OpRef C = OpRef::res(Results.top());
-      MVT JoinTy = MVT::getVectorVT(SingleTy.getVectorElementType(),
-                                    2 * SingleTy.getVectorNumElements());
-      Results.push(Hexagon::V6_vdealvdd, JoinTy, {Vb, Va, C});
-      return Strip.first == 0 ? OpRef::lo(OpRef::res(Results.top()))
-                              : OpRef::hi(OpRef::res(Results.top()));
-    }
-  }
-
   return OpRef::fail();
 }
 
@@ -2016,7 +2165,7 @@ OpRef HvxSelector::expanding(ShuffleMask SM, OpRef Va, ResultStack &Results) {
 }
 
 OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
-  DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
+  DEBUG_WITH_TYPE("isel", { dbgs() << __func__ << '\n'; });
   // V6_vdeal{b,h}
   // V6_vshuff{b,h}
 
@@ -2030,13 +2179,10 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   unsigned HwLog = Log2_32(HwLen);
   // The result length must be the same as the length of a single vector,
   // or a vector pair.
-  assert(LogLen == HwLog || LogLen == HwLog+1);
-  bool HavePairs = LogLen == HwLog+1;
+  assert(LogLen == HwLog || LogLen == HwLog + 1);
+  bool HavePairs = LogLen == HwLog + 1;
 
-  if (!isPermutation(SM.Mask))
-    return OpRef::fail();
-
-  SmallVector<unsigned,8> Perm(LogLen);
+  SmallVector<unsigned, 8> Perm(LogLen);
 
   // Check if this could be a perfect shuffle, or a combination of perfect
   // shuffles.
@@ -2115,51 +2261,28 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   //  E  1 1 1 0      7  0 1 1 1      7  0 1 1 1      7  0 1 1 1
   //  F  1 1 1 1      F  1 1 1 1      F  1 1 1 1      F  1 1 1 1
 
-  // There is one special case that is not a perfect shuffle, but
-  // can be turned into one easily: when the shuffle operates on
-  // a vector pair, but the two vectors in the pair are swapped.
-  // The code below that identifies perfect shuffles will reject
-  // it, unless the order is reversed.
+  // There is one special case that is not a perfect shuffle, but can be
+  // turned into one easily: when the shuffle operates on a vector pair,
+  // but the two vectors in the pair are swapped. The code that identifies
+  // perfect shuffles will reject it, unless the order is reversed.
   shuffles::MaskT MaskStorage(SM.Mask);
   bool InvertedPair = false;
   if (HavePairs && SM.Mask[0] >= int(HwLen)) {
     for (int i = 0, e = SM.Mask.size(); i != e; ++i) {
       int M = SM.Mask[i];
-      MaskStorage[i] = M >= int(HwLen) ? M-HwLen : M+HwLen;
+      MaskStorage[i] = M >= int(HwLen) ? M - HwLen : M + HwLen;
     }
     InvertedPair = true;
+    SM = ShuffleMask(MaskStorage);
   }
-  ArrayRef<int> LocalMask(MaskStorage);
 
-  auto XorPow2 = [] (ArrayRef<int> Mask, unsigned Num) {
-    unsigned X = Mask[0] ^ Mask[Num/2];
-    // Check that the first half has the X's bits clear.
-    if ((Mask[0] & X) != 0)
-      return 0u;
-    for (unsigned I = 1; I != Num/2; ++I) {
-      if (unsigned(Mask[I] ^ Mask[I+Num/2]) != X)
-        return 0u;
-      if ((Mask[I] & X) != 0)
-        return 0u;
-    }
-    return X;
-  };
+  auto Comps = getPerfectCompletions(SM, LogLen);
+  if (llvm::any_of(Comps, [](uint32_t P) { return P == 0; }))
+    return OpRef::fail();
 
-  // Create a vector of log2's for each column: Perm[i] corresponds to
-  // the i-th bit (lsb is 0).
-  assert(VecLen > 2);
-  for (unsigned I = VecLen; I >= 2; I >>= 1) {
-    // Examine the initial segment of Mask of size I.
-    unsigned X = XorPow2(LocalMask, I);
-    if (!isPowerOf2_32(X))
-      return OpRef::fail();
-    // Check the other segments of Mask.
-    for (int J = I; J < VecLen; J += I) {
-      if (XorPow2(LocalMask.slice(J, I), I) != X)
-        return OpRef::fail();
-    }
-    Perm[Log2_32(X)] = Log2_32(I)-1;
-  }
+  auto Pick = completeToPerfect(Comps, LogLen);
+  for (unsigned I = 0; I != LogLen; ++I)
+    Perm[I] = Log2_32(Pick[I]);
 
   // Once we have Perm, represent it as cycles. Denote the maximum log2
   // (equal to log2(VecLen)-1) as M. The cycle containing M can then be
@@ -2186,7 +2309,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   //   (4 0 1)(4 0 2 3)(4 2),
   // which can be implemented as 3 vshufvdd instructions.
 
-  using CycleType = SmallVector<unsigned,8>;
+  using CycleType = SmallVector<unsigned, 8>;
   std::set<CycleType> Cycles;
   std::set<unsigned> All;
 
@@ -2198,13 +2321,13 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   auto canonicalize = [LogLen](const CycleType &C) -> CycleType {
     unsigned LogPos, N = C.size();
     for (LogPos = 0; LogPos != N; ++LogPos)
-      if (C[LogPos] == LogLen-1)
+      if (C[LogPos] == LogLen - 1)
         break;
     if (LogPos == N)
       return C;
 
-    CycleType NewC(C.begin()+LogPos, C.end());
-    NewC.append(C.begin(), C.begin()+LogPos);
+    CycleType NewC(C.begin() + LogPos, C.end());
+    NewC.append(C.begin(), C.begin() + LogPos);
     return NewC;
   };
 
@@ -2214,23 +2337,23 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     if (Cs.size() != 1)
       return 0u;
     const CycleType &C = *Cs.begin();
-    if (C[0] != Len-1)
+    if (C[0] != Len - 1)
       return 0u;
     int D = Len - C.size();
     if (D != 0 && D != 1)
       return 0u;
 
     bool IsDeal = true, IsShuff = true;
-    for (unsigned I = 1; I != Len-D; ++I) {
-      if (C[I] != Len-1-I)
+    for (unsigned I = 1; I != Len - D; ++I) {
+      if (C[I] != Len - 1 - I)
         IsDeal = false;
-      if (C[I] != I-(1-D))  // I-1, I
+      if (C[I] != I - (1 - D)) // I-1, I
         IsShuff = false;
     }
     // At most one, IsDeal or IsShuff, can be non-zero.
     assert(!(IsDeal || IsShuff) || IsDeal != IsShuff);
-    static unsigned Deals[] = { Hexagon::V6_vdealb, Hexagon::V6_vdealh };
-    static unsigned Shufs[] = { Hexagon::V6_vshuffb, Hexagon::V6_vshuffh };
+    static unsigned Deals[] = {Hexagon::V6_vdealb, Hexagon::V6_vdealh};
+    static unsigned Shufs[] = {Hexagon::V6_vshuffb, Hexagon::V6_vshuffh};
     return IsDeal ? Deals[D] : (IsShuff ? Shufs[D] : 0);
   };
 
@@ -2265,7 +2388,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // This essentially strips the M value from the cycles where
   // it's present, and performs the insertion of M (then stripping)
   // for cycles without M (as described in an earlier comment).
-  SmallVector<unsigned,8> SwapElems;
+  SmallVector<unsigned, 8> SwapElems;
   // When the input is extended (i.e. single vector becomes a pair),
   // this is done by using an "undef" vector as the second input.
   // However, then we get
@@ -2277,28 +2400,27 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // Then at the end, this needs to be undone. To accomplish this,
   // artificially add "LogLen-1" at both ends of the sequence.
   if (!HavePairs)
-    SwapElems.push_back(LogLen-1);
+    SwapElems.push_back(LogLen - 1);
   for (const CycleType &C : Cycles) {
     // Do the transformation: (a1..an) -> (M a1..an)(M a1).
-    unsigned First = (C[0] == LogLen-1) ? 1 : 0;
-    SwapElems.append(C.begin()+First, C.end());
+    unsigned First = (C[0] == LogLen - 1) ? 1 : 0;
+    SwapElems.append(C.begin() + First, C.end());
     if (First == 0)
       SwapElems.push_back(C[0]);
   }
   if (!HavePairs)
-    SwapElems.push_back(LogLen-1);
+    SwapElems.push_back(LogLen - 1);
 
   const SDLoc &dl(Results.InpNode);
-  OpRef Arg = HavePairs ? Va
-                        : concats(Va, OpRef::undef(SingleTy), Results);
+  OpRef Arg = HavePairs ? Va : concats(Va, OpRef::undef(SingleTy), Results);
   if (InvertedPair)
     Arg = concats(OpRef::hi(Arg), OpRef::lo(Arg), Results);
 
-  for (unsigned I = 0, E = SwapElems.size(); I != E; ) {
-    bool IsInc = I == E-1 || SwapElems[I] < SwapElems[I+1];
+  for (unsigned I = 0, E = SwapElems.size(); I != E;) {
+    bool IsInc = I == E - 1 || SwapElems[I] < SwapElems[I + 1];
     unsigned S = (1u << SwapElems[I]);
-    if (I < E-1) {
-      while (++I < E-1 && IsInc == (SwapElems[I] < SwapElems[I+1]))
+    if (I < E - 1) {
+      while (++I < E - 1 && IsInc == (SwapElems[I] < SwapElems[I + 1]))
         S |= 1u << SwapElems[I];
       // The above loop will not add a bit for the final SwapElems[I+1],
       // so add it here.
@@ -2310,7 +2432,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(S, dl)});
     Res.Opc = IsInc ? Hexagon::V6_vshuffvdd : Hexagon::V6_vdealvdd;
     Res.Ty = PairTy;
-    Res.Ops = { OpRef::hi(Arg), OpRef::lo(Arg), OpRef::res(-1) };
+    Res.Ops = {OpRef::hi(Arg), OpRef::lo(Arg), OpRef::res(-1)};
     Results.push(Res);
     Arg = OpRef::res(Results.top());
   }
@@ -2391,13 +2513,13 @@ void HvxSelector::selectExtractSubvector(SDNode *N) {
   MVT ResTy = N->getValueType(0).getSimpleVT();
   auto IdxN = cast<ConstantSDNode>(N->getOperand(1));
   unsigned Idx = IdxN->getZExtValue();
-#ifndef NDEBUG
-  MVT InpTy = Inp.getValueType().getSimpleVT();
+
+  [[maybe_unused]] MVT InpTy = Inp.getValueType().getSimpleVT();
+  [[maybe_unused]] unsigned ResLen = ResTy.getVectorNumElements();
   assert(InpTy.getVectorElementType() == ResTy.getVectorElementType());
-  unsigned ResLen = ResTy.getVectorNumElements();
   assert(2 * ResLen == InpTy.getVectorNumElements());
   assert(Idx == 0 || Idx == ResLen);
-#endif
+
   unsigned SubReg = Idx == 0 ? Hexagon::vsub_lo : Hexagon::vsub_hi;
   SDValue Ext = DAG.getTargetExtractSubreg(SubReg, SDLoc(N), ResTy, Inp);
 
@@ -2452,11 +2574,20 @@ void HvxSelector::selectShuffle(SDNode *N) {
 
   SDValue Vec0 = N->getOperand(0);
   SDValue Vec1 = N->getOperand(1);
+  assert(Vec0.getValueType() == ResTy && Vec1.getValueType() == ResTy);
+
   ResultStack Results(SN);
-  Results.push(TargetOpcode::COPY, ResTy, {Vec0});
-  Results.push(TargetOpcode::COPY, ResTy, {Vec1});
-  OpRef Va = OpRef::res(Results.top()-1);
-  OpRef Vb = OpRef::res(Results.top());
+  OpRef Va = OpRef::undef(ResTy);
+  OpRef Vb = OpRef::undef(ResTy);
+
+  if (!Vec0.isUndef()) {
+    Results.push(TargetOpcode::COPY, ResTy, {Vec0});
+    Va = OpRef::OpRef::res(Results.top());
+  }
+  if (!Vec1.isUndef()) {
+    Results.push(TargetOpcode::COPY, ResTy, {Vec1});
+    Vb = OpRef::res(Results.top());
+  }
 
   OpRef Res = !HavePairs ? shuffs2(ShuffleMask(Mask), Va, Vb, Results)
                          : shuffp2(ShuffleMask(Mask), Va, Vb, Results);
@@ -2511,6 +2642,169 @@ void HvxSelector::selectVAlign(SDNode *N) {
                                     N->getValueType(0), {Vv, Vu, Rt});
   ISel.ReplaceNode(N, NewN);
   DAG.RemoveDeadNode(N);
+}
+
+void HexagonDAGToDAGISel::PreprocessHvxISelDAG() {
+  auto getNodes = [this]() -> std::vector<SDNode *> {
+    std::vector<SDNode *> T;
+    T.reserve(CurDAG->allnodes_size());
+    for (SDNode &N : CurDAG->allnodes())
+      T.push_back(&N);
+    return T;
+  };
+
+  ppHvxShuffleOfShuffle(getNodes());
+}
+
+template <> struct std::hash<SDValue> {
+  std::size_t operator()(SDValue V) const {
+    return std::hash<const void *>()(V.getNode()) +
+           std::hash<unsigned>()(V.getResNo());
+  };
+};
+
+void HexagonDAGToDAGISel::ppHvxShuffleOfShuffle(std::vector<SDNode *> &&Nodes) {
+  // Motivating case:
+  //   t10: v64i32 = ...
+  //         t46: v128i8 = vector_shuffle<...> t44, t45
+  //         t48: v128i8 = vector_shuffle<...> t44, t45
+  //       t42: v128i8 = vector_shuffle<...> t46, t48
+  //     t12: v32i32 = extract_subvector t10, Constant:i32<0>
+  //   t44: v128i8 = bitcast t12
+  //     t15: v32i32 = extract_subvector t10, Constant:i32<32>
+  //   t45: v128i8 = bitcast t15
+  SelectionDAG &DAG = *CurDAG;
+  unsigned HwLen = HST->getVectorLength();
+
+  struct SubVectorInfo {
+    SubVectorInfo(SDValue S, unsigned H) : Src(S), HalfIdx(H) {}
+    SDValue Src;
+    unsigned HalfIdx;
+  };
+
+  using MapType = std::unordered_map<SDValue, unsigned>;
+
+  auto getMaskElt = [&](unsigned Idx, ShuffleVectorSDNode *Shuff0,
+                        ShuffleVectorSDNode *Shuff1,
+                        const MapType &OpMap) -> int {
+    // Treat Shuff0 and Shuff1 as operands to another vector shuffle, and
+    // Idx as a (non-undef) element of the top level shuffle's mask, that
+    // is, index into concat(Shuff0, Shuff1).
+    // Assuming that Shuff0 and Shuff1 both operate on subvectors of the
+    // same source vector (as described by OpMap), return the index of
+    // that source vector corresponding to Idx.
+    ShuffleVectorSDNode *OpShuff = Idx < HwLen ? Shuff0 : Shuff1;
+    if (Idx >= HwLen)
+      Idx -= HwLen;
+
+    // Get the mask index that M points at in the corresponding operand.
+    int MaybeN = OpShuff->getMaskElt(Idx);
+    if (MaybeN < 0)
+      return -1;
+
+    auto N = static_cast<unsigned>(MaybeN);
+    unsigned SrcBase = N < HwLen ? OpMap.at(OpShuff->getOperand(0))
+                                 : OpMap.at(OpShuff->getOperand(1));
+    if (N >= HwLen)
+      N -= HwLen;
+
+    return N + SrcBase;
+  };
+
+  auto fold3 = [&](SDValue TopShuff, SDValue Inp, MapType &&OpMap) -> SDValue {
+    // Fold all 3 shuffles into a single one.
+    auto *This = cast<ShuffleVectorSDNode>(TopShuff);
+    auto *S0 = cast<ShuffleVectorSDNode>(TopShuff.getOperand(0));
+    auto *S1 = cast<ShuffleVectorSDNode>(TopShuff.getOperand(1));
+    ArrayRef<int> TopMask = This->getMask();
+    // This should be guaranteed by type checks in the caller, and the fact
+    // that all shuffles should have been promoted to operate on MVT::i8.
+    assert(TopMask.size() == S0->getMask().size() &&
+           TopMask.size() == S1->getMask().size());
+    assert(TopMask.size() == HwLen);
+
+    SmallVector<int, 256> FoldedMask(2 * HwLen);
+    for (unsigned I = 0; I != HwLen; ++I) {
+      int MaybeM = TopMask[I];
+      if (MaybeM >= 0) {
+        FoldedMask[I] =
+            getMaskElt(static_cast<unsigned>(MaybeM), S0, S1, OpMap);
+      } else {
+        FoldedMask[I] = -1;
+      }
+    }
+    // The second half of the result will be all-undef.
+    std::fill(FoldedMask.begin() + HwLen, FoldedMask.end(), -1);
+
+    // Return
+    //   FoldedShuffle = (Shuffle Inp, undef, FoldedMask)
+    //   (LoHalf FoldedShuffle)
+    const SDLoc &dl(TopShuff);
+    MVT SingleTy = MVT::getVectorVT(MVT::i8, HwLen);
+    MVT PairTy = MVT::getVectorVT(MVT::i8, 2 * HwLen);
+    SDValue FoldedShuff =
+        DAG.getVectorShuffle(PairTy, dl, DAG.getBitcast(PairTy, Inp),
+                             DAG.getUNDEF(PairTy), FoldedMask);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SingleTy, FoldedShuff,
+                       DAG.getConstant(0, dl, MVT::i32));
+  };
+
+  auto getSourceInfo = [](SDValue V) -> std::optional<SubVectorInfo> {
+    while (V.getOpcode() == ISD::BITCAST)
+      V = V.getOperand(0);
+    if (V.getOpcode() != ISD::EXTRACT_SUBVECTOR)
+      return std::nullopt;
+    return SubVectorInfo(V.getOperand(0),
+                         !cast<ConstantSDNode>(V.getOperand(1))->isZero());
+  };
+
+  for (SDNode *N : Nodes) {
+    if (N->getOpcode() != ISD::VECTOR_SHUFFLE)
+      continue;
+    EVT ResTy = N->getValueType(0);
+    if (ResTy.getVectorElementType() != MVT::i8)
+      continue;
+    if (ResTy.getVectorNumElements() != HwLen)
+      continue;
+
+    SDValue V0 = N->getOperand(0);
+    SDValue V1 = N->getOperand(1);
+    if (V0.getOpcode() != ISD::VECTOR_SHUFFLE)
+      continue;
+    if (V1.getOpcode() != ISD::VECTOR_SHUFFLE)
+      continue;
+    if (V0.getValueType() != ResTy || V1.getValueType() != ResTy)
+      continue;
+
+    // Check if all operands of the two operand shuffles are extract_subvectors
+    // from the same vector pair.
+    auto V0A = getSourceInfo(V0.getOperand(0));
+    if (!V0A.has_value())
+      continue;
+    auto V0B = getSourceInfo(V0.getOperand(1));
+    if (!V0B.has_value() || V0B->Src != V0A->Src)
+      continue;
+    auto V1A = getSourceInfo(V1.getOperand(0));
+    if (!V1A.has_value() || V1A->Src != V0A->Src)
+      continue;
+    auto V1B = getSourceInfo(V1.getOperand(1));
+    if (!V1B.has_value() || V1B->Src != V0A->Src)
+      continue;
+
+    // The source must be a pair. This should be guaranteed here,
+    // but check just in case.
+    EVT SrcTy = V0A->Src.getValueType();
+    assert(SrcTy.getSizeInBits() == 16 * HwLen);
+
+    MapType OpMap = {
+        {V0.getOperand(0), V0A->HalfIdx * HwLen},
+        {V0.getOperand(1), V0B->HalfIdx * HwLen},
+        {V1.getOperand(0), V1A->HalfIdx * HwLen},
+        {V1.getOperand(1), V1B->HalfIdx * HwLen},
+    };
+    SDValue NewS = fold3(SDValue(N, 0), V0A->Src, std::move(OpMap));
+    ReplaceNode(N, NewS.getNode());
+  }
 }
 
 void HexagonDAGToDAGISel::SelectHvxExtractSubvector(SDNode *N) {
