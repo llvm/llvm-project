@@ -377,6 +377,13 @@ void RecordedPP::RecordedIncludes::add(const Include &I) {
   BySpellingIt->second.push_back(Index);
   if (I.Resolved)
     ByFile[I.Resolved].push_back(Index);
+  ByLine[I.Line] = Index;
+}
+
+const Include *
+RecordedPP::RecordedIncludes::atLine(unsigned OneBasedIndex) const {
+  auto It = ByLine.find(OneBasedIndex);
+  return (It == ByLine.end()) ? nullptr : &All[It->second];
 }
 
 llvm::SmallVector<const Include *>
