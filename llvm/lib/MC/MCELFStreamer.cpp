@@ -140,7 +140,7 @@ void MCELFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
 static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
                                            MCSection *Section) {
   if (Section && Assembler.isBundlingEnabled() && Section->hasInstructions() &&
-      Section->getAlignment() < Assembler.getBundleAlignSize())
+      Section->getAlign() < Assembler.getBundleAlignSize())
     Section->setAlignment(Align(Assembler.getBundleAlignSize()));
 }
 
