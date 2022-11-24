@@ -187,8 +187,7 @@ public:
   void emitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
   void emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) override;
   void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
-                                  MCSymbol *CsectSym,
-                                  unsigned ByteAlign) override;
+                                  MCSymbol *CsectSym, Align Alignment) override;
   void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
                                             MCSymbolAttr Linakge,
                                             MCSymbolAttr Visibility) override;
@@ -859,16 +858,15 @@ void MCAsmStreamer::emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {
 void MCAsmStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
                                                uint64_t Size,
                                                MCSymbol *CsectSym,
-                                               unsigned ByteAlignment) {
+                                               Align Alignment) {
   assert(MAI->getLCOMMDirectiveAlignmentType() == LCOMM::Log2Alignment &&
          "We only support writing log base-2 alignment format with XCOFF.");
-  assert(isPowerOf2_32(ByteAlignment) && "Alignment must be a power of 2.");
 
   OS << "\t.lcomm\t";
   LabelSym->print(OS, MAI);
   OS << ',' << Size << ',';
   CsectSym->print(OS, MAI);
-  OS << ',' << Log2_32(ByteAlignment);
+  OS << ',' << Log2(Alignment);
 
   EmitEOL();
 
