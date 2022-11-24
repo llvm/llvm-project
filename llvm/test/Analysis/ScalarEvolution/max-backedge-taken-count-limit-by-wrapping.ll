@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @max_backedge_taken_count_by_wrapping1_nsw_nuw(i8 %N, i8* %ptr) {
 ; CHECK-LABEL: Determining loop execution counts for: @max_backedge_taken_count_by_wrapping1_nsw_nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%N /u 4)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 63
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 63
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%N /u 4)
 ;
 entry:
@@ -27,7 +27,7 @@ exit:
 define void @max_backedge_taken_count_by_wrapping1_nuw(i8 %N, i8* %ptr) {
 ; CHECK-LABEL: Determining loop execution counts for: @max_backedge_taken_count_by_wrapping1_nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%N /u 4)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 63
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 63
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%N /u 4)
 ;
 entry:
@@ -48,7 +48,7 @@ exit:
 define void @max_backedge_taken_count_by_wrapping2_nsw_nuw(i8 %N, i8* %ptr) {
 ; CHECK-LABEL: Determining loop execution counts for: @max_backedge_taken_count_by_wrapping2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-64 + %N) /u 4)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 63
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 63
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-64 + %N) /u 4)
 ;
 entry:
@@ -69,7 +69,7 @@ exit:
 define void @max_backedge_taken_count_by_wrapping2_nuw(i8 %N, i8* %ptr) {
 ; CHECK-LABEL: Determining loop execution counts for: @max_backedge_taken_count_by_wrapping2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-64  + %N) /u 4)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 63
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 63
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-64 + %N) /u 4)
 ;
 entry:

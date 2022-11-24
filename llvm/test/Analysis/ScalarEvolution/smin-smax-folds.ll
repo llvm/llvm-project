@@ -30,7 +30,7 @@ define void @smin_simplify_with_guard(i32 %n) {
 ; CHECK-NEXT:    --> {(-1 + %n),+,-1}<nw><%for.body> U: full-set S: full-set Exits: -1 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_simplify_with_guard
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is %n
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483647
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is %n
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -67,7 +67,7 @@ define void @smin_to_smax(i32 %n) {
 ; CHECK-NEXT:    --> {(-1 + %n),+,-1}<nw><%for.body> U: full-set S: full-set Exits: (-1 + (0 smin %n)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_to_smax
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 * (0 smin %n)) + %n)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483647
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-1 * (0 smin %n)) + %n)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -102,7 +102,7 @@ define void @smax_simplify_with_guard(i32 %start, i32 %n) {
 ; CHECK-NEXT:    -->  {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set     Exits: (1 + %n)       LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @smax_simplify_with_guard
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %start) + %n)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-1 * %start) +  %n)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1

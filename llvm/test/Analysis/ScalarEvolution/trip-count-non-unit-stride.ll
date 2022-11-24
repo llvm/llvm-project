@@ -15,7 +15,7 @@ define void @test_preinc_ult(i64 %len) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 start:
@@ -48,7 +48,7 @@ define void @test_postinc_ult(i64 %len) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 start:
@@ -80,7 +80,7 @@ define void @test_preinc_slt(i64 %len) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 start:
@@ -113,7 +113,7 @@ define void @test_postinc_slt(i64 %len) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 start:
@@ -145,7 +145,7 @@ define void @test_preinc_sgt(i64 %lim) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 start:
@@ -178,7 +178,7 @@ define void @test_postinc_sgt(i64 %lim) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 start:

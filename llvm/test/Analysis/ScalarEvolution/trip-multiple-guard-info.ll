@@ -6,7 +6,7 @@
 define void @test_trip_multiple_4(i32 %num) {
 ; CHECK-LABEL: @test_trip_multiple_4
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK:       Loop %for.body: Trip multiple is 4
 ;
@@ -32,7 +32,7 @@ exit:
 define void @test_trip_multiple_4_ugt_5(i32 %num) {
 ; CHECK-LABEL: @test_trip_multiple_4_ugt_5
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK:       Loop %for.body: Trip multiple is 4
 ;
@@ -58,7 +58,7 @@ define void @test_trip_multiple_4_ugt_5_order_swapped(i32 %num) {
 ; TODO: Trip multiple can be 4, it is missed due to the processing order of the assumes.
 ; CHECK-LABEL: @test_trip_multiple_4_ugt_5_order_swapped
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK:       Loop %for.body: Trip multiple is 2
 ;
@@ -83,7 +83,7 @@ exit:
 define void @test_trip_multiple_4_sgt_5(i32 %num) {
 ; CHECK-LABEL: @test_trip_multiple_4_sgt_5
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483646
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483646
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK:       Loop %for.body: Trip multiple is 4
 ;
@@ -109,7 +109,7 @@ define void @test_trip_multiple_4_sgt_5_order_swapped(i32 %num) {
 ; TODO: Trip multiple can be 4, it is missed due to the processing order of the assumes.
 ; CHECK-LABEL: @test_trip_multiple_4_sgt_5_order_swapped
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483646
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483646
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK:       Loop %for.body: Trip multiple is 2
 ;
@@ -134,7 +134,7 @@ exit:
 define void @test_trip_multiple_4_uge_5(i32 %num) {
 ; CHECK-LABEL: @test_trip_multiple_4_uge_5
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK:       Loop %for.body: Trip multiple is 4
 ;
@@ -160,7 +160,7 @@ define void @test_trip_multiple_4_uge_5_order_swapped(i32 %num) {
 ; TODO: Trip multiple can be 4, it is missed due to the processing order of the assumes.
 ; CHECK-LABEL: @test_trip_multiple_4_uge_5_order_swapped
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK:       Loop %for.body: Trip multiple is 1
 ;
@@ -186,7 +186,7 @@ define void @test_trip_multiple_4_sge_5(i32 %num) {
 ; TODO: Trip multiple can be 4, it is missed due to the processing order of the assumes.
 ; CHECK-LABEL: @test_trip_multiple_4_sge_5
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483646
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483646
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK:       Loop %for.body: Trip multiple is 4
 ;
@@ -211,7 +211,7 @@ exit:
 define void @test_trip_multiple_4_sge_5_order_swapped(i32 %num) {
 ; CHECK-LABEL: @test_trip_multiple_4_sge_5_order_swapped
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483646
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483646
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK:       Loop %for.body: Trip multiple is 1
 ;
@@ -237,7 +237,7 @@ exit:
 define void @test_trip_multiple_4_icmp_ops_swapped(i32 %num) {
 ; CHECK-LABEL: @test_trip_multiple_4_icmp_ops_swapped
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK:       Loop %for.body: Trip multiple is 4
 ;
@@ -262,7 +262,7 @@ exit:
 define void @test_trip_multiple_5(i32 %num) {
 ; CHECK-LABEL: @test_trip_multiple_5
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK:       Loop %for.body: Trip multiple is 1
 ;
@@ -287,7 +287,7 @@ exit:
 define void @test_trunc_operand_larger_than_urem_expr(i64 %N) {
 ; CHECK-LABEL: @test_trunc_operand_larger_than_urem_expr
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %N)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %N)
 ;
 entry:
