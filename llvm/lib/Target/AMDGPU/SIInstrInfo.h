@@ -231,7 +231,7 @@ private:
                                MachineBasicBlock::iterator MI, Register SrcReg,
                                bool isKill, int FrameIndex,
                                const TargetRegisterClass *RC,
-                               const TargetRegisterInfo *TRI,
+                               const TargetRegisterInfo *TRI, Register VReg,
                                bool NeedsCFI) const;
 
 public:
@@ -239,7 +239,8 @@ public:
                            MachineBasicBlock::iterator MI, Register SrcReg,
                            bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI) const override;
+                           const TargetRegisterInfo *TRI,
+                           Register VReg) const override;
 
   void storeRegToStackSlotCFI(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI, Register SrcReg,
@@ -250,7 +251,8 @@ public:
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, Register DestReg,
                             int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI) const override;
+                            const TargetRegisterInfo *TRI,
+                            Register VReg) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
