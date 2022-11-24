@@ -239,7 +239,7 @@ public:
   using value_type = T;
 
   constexpr Optional() = default;
-  constexpr Optional(NoneType) {}
+  constexpr Optional(std::nullopt_t) {}
 
   constexpr Optional(const T &y) : Storage(std::in_place, y) {}
   constexpr Optional(const Optional &O) = default;
@@ -396,58 +396,62 @@ constexpr bool operator>=(const Optional<T> &X, const Optional<U> &Y) {
 }
 
 template <typename T>
-constexpr bool operator==(const Optional<T> &X, NoneType) {
+constexpr bool operator==(const Optional<T> &X, std::nullopt_t) {
   return !X;
 }
 
 template <typename T>
-constexpr bool operator==(NoneType, const Optional<T> &X) {
+constexpr bool operator==(std::nullopt_t, const Optional<T> &X) {
   return X == None;
 }
 
 template <typename T>
-constexpr bool operator!=(const Optional<T> &X, NoneType) {
+constexpr bool operator!=(const Optional<T> &X, std::nullopt_t) {
   return !(X == None);
 }
 
 template <typename T>
-constexpr bool operator!=(NoneType, const Optional<T> &X) {
+constexpr bool operator!=(std::nullopt_t, const Optional<T> &X) {
   return X != None;
 }
 
-template <typename T> constexpr bool operator<(const Optional<T> &, NoneType) {
+template <typename T>
+constexpr bool operator<(const Optional<T> &, std::nullopt_t) {
   return false;
 }
 
-template <typename T> constexpr bool operator<(NoneType, const Optional<T> &X) {
+template <typename T>
+constexpr bool operator<(std::nullopt_t, const Optional<T> &X) {
   return X.has_value();
 }
 
 template <typename T>
-constexpr bool operator<=(const Optional<T> &X, NoneType) {
+constexpr bool operator<=(const Optional<T> &X, std::nullopt_t) {
   return !(None < X);
 }
 
 template <typename T>
-constexpr bool operator<=(NoneType, const Optional<T> &X) {
+constexpr bool operator<=(std::nullopt_t, const Optional<T> &X) {
   return !(X < None);
 }
 
-template <typename T> constexpr bool operator>(const Optional<T> &X, NoneType) {
+template <typename T>
+constexpr bool operator>(const Optional<T> &X, std::nullopt_t) {
   return None < X;
 }
 
-template <typename T> constexpr bool operator>(NoneType, const Optional<T> &X) {
+template <typename T>
+constexpr bool operator>(std::nullopt_t, const Optional<T> &X) {
   return X < None;
 }
 
 template <typename T>
-constexpr bool operator>=(const Optional<T> &X, NoneType) {
+constexpr bool operator>=(const Optional<T> &X, std::nullopt_t) {
   return None <= X;
 }
 
 template <typename T>
-constexpr bool operator>=(NoneType, const Optional<T> &X) {
+constexpr bool operator>=(std::nullopt_t, const Optional<T> &X) {
   return X <= None;
 }
 
@@ -511,7 +515,7 @@ constexpr bool operator>=(const T &X, const Optional<T> &Y) {
   return !(X < Y);
 }
 
-raw_ostream &operator<<(raw_ostream &OS, NoneType);
+raw_ostream &operator<<(raw_ostream &OS, std::nullopt_t);
 
 template <typename T, typename = decltype(std::declval<raw_ostream &>()
                                           << std::declval<const T &>())>
