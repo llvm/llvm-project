@@ -225,7 +225,7 @@ struct ComposeReassociativeReshapeOps : public OpRewritePattern<ReshapeOpTy> {
 //
 /// When `rank(srcType) < rank(resultType)`, then we just swap `reassociation_1`
 /// `reassociation_2` and produce `expand_shape`.
-template <typename CollapseOpTy, typename ExpandOpTy>
+template <typename CollapseOpTy, typename ExpandOpTy, typename CastOpTy>
 struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
   using OpRewritePattern<CollapseOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(CollapseOpTy collapseOp,
@@ -250,8 +250,7 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
     SmallVector<ReassociationIndices, 4> higherRankReassociation,
         lowerRankReassociation;
 
-    bool isResultCollapsed = srcRank > resultRank;
-    if (isResultCollapsed) {
+    if (srcRank > resultRank) {
       higherRankReassociation = expandOp.getReassociationIndices();
       lowerRankReassociation = collapseOp.getReassociationIndices();
     } else {
@@ -274,12 +273,20 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
       }
       composedReassociation.push_back(composedIndices);
     }
-    if (isResultCollapsed)
+    if (srcRank > resultRank) {
       rewriter.replaceOpWithNewOp<CollapseOpTy>(
           collapseOp, resultType, expandOp.getSrc(), composedReassociation);
-    else
+    } else if (srcRank < resultRank) {
       rewriter.replaceOpWithNewOp<ExpandOpTy>(
           collapseOp, resultType, expandOp.getSrc(), composedReassociation);
+    } else {
+      // Collapses/expansions that do not change the rank are not allowed. Use
+      // a cast instead.
+      assert(llvm::equal(srcType.getShape(), resultType.getShape()) &&
+             "expected same shape");
+      rewriter.replaceOpWithNewOp<CastOpTy>(collapseOp, resultType,
+                                            expandOp.getSrc());
+    }
     return success();
   }
 };
