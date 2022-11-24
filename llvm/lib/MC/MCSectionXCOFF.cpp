@@ -20,7 +20,8 @@ using namespace llvm;
 MCSectionXCOFF::~MCSectionXCOFF() = default;
 
 void MCSectionXCOFF::printCsectDirective(raw_ostream &OS) const {
-  OS << "\t.csect " << QualName->getName() << "," << Log2(getAlign()) << '\n';
+  OS << "\t.csect " << QualName->getName() << "," << Log2_32(getAlignment())
+     << '\n';
 }
 
 void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
