@@ -257,7 +257,7 @@ public:
                             unsigned ValueSize = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
-  void emitCodeAlignment(unsigned ByteAlignment, const MCSubtargetInfo *STI,
+  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
 
   void emitValueToOffset(const MCExpr *Offset,
@@ -1490,15 +1490,15 @@ void MCAsmStreamer::emitValueToAlignment(unsigned ByteAlignment, int64_t Value,
   emitAlignmentDirective(ByteAlignment, Value, ValueSize, MaxBytesToEmit);
 }
 
-void MCAsmStreamer::emitCodeAlignment(unsigned ByteAlignment,
+void MCAsmStreamer::emitCodeAlignment(Align Alignment,
                                       const MCSubtargetInfo *STI,
                                       unsigned MaxBytesToEmit) {
   // Emit with a text fill value.
   if (MAI->getTextAlignFillValue())
-    emitAlignmentDirective(ByteAlignment, MAI->getTextAlignFillValue(), 1,
+    emitAlignmentDirective(Alignment.value(), MAI->getTextAlignFillValue(), 1,
                            MaxBytesToEmit);
   else
-    emitAlignmentDirective(ByteAlignment, None, 1, MaxBytesToEmit);
+    emitAlignmentDirective(Alignment.value(), None, 1, MaxBytesToEmit);
 }
 
 void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,

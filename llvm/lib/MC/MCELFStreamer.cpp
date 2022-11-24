@@ -91,7 +91,8 @@ void MCELFStreamer::mergeFragment(MCDataFragment *DF,
 void MCELFStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
-  emitCodeAlignment(Ctx.getObjectFileInfo()->getTextSectionAlignment(), &STI);
+  emitCodeAlignment(Align(Ctx.getObjectFileInfo()->getTextSectionAlignment()),
+                    &STI);
 
   if (NoExecStack)
     switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
