@@ -44,7 +44,7 @@ define i8 @test_cmpxchg_i8(i8* %arg, i8 %old, i8 %new) {
 ; CHECK:       partword.cmpxchg.end:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP13]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i8
-; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i8, i1 } undef, i8 [[EXTRACTED]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i8, i1 } poison, i8 [[EXTRACTED]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { i8, i1 } [[TMP17]], i1 [[TMP14]], 1
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    [[RET:%.*]] = extractvalue { i8, i1 } [[TMP18]], 0
@@ -91,7 +91,7 @@ define i16 @test_cmpxchg_i16(i16* %arg, i16 %old, i16 %new) {
 ; CHECK:       partword.cmpxchg.end:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP13]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i16, i1 } undef, i16 [[EXTRACTED]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i16, i1 } poison, i16 [[EXTRACTED]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { i16, i1 } [[TMP17]], i1 [[TMP14]], 1
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    [[RET:%.*]] = extractvalue { i16, i1 } [[TMP18]], 0
