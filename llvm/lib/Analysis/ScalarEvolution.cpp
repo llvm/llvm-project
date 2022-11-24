@@ -8552,7 +8552,7 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
     const BasicBlock *ExitingBlock, ScalarEvolution *SE) const {
   for (const auto &ENT : ExitNotTaken)
     if (ENT.ExitingBlock == ExitingBlock && ENT.hasAlwaysTruePredicate())
-      return ENT.MaxNotTaken;
+      return ENT.ConstantMaxNotTaken;
 
   return SE->getCouldNotCompute();
 }
@@ -8602,18 +8602,18 @@ ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E)
 ScalarEvolution::ExitLimit::ExitLimit(
     const SCEV *E, const SCEV *M, bool MaxOrZero,
     ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList)
-    : ExactNotTaken(E), MaxNotTaken(M), MaxOrZero(MaxOrZero) {
+    : ExactNotTaken(E), ConstantMaxNotTaken(M), MaxOrZero(MaxOrZero) {
   // If we prove the max count is zero, so is the symbolic bound.  This happens
   // in practice due to differences in a) how context sensitive we've chosen
   // to be and b) how we reason about bounds implied by UB.
-  if (MaxNotTaken->isZero())
-    ExactNotTaken = MaxNotTaken;
+  if (ConstantMaxNotTaken->isZero())
+    ExactNotTaken = ConstantMaxNotTaken;
 
   assert((isa<SCEVCouldNotCompute>(ExactNotTaken) ||
-          !isa<SCEVCouldNotCompute>(MaxNotTaken)) &&
+          !isa<SCEVCouldNotCompute>(ConstantMaxNotTaken)) &&
          "Exact is not allowed to be less precise than Max");
-  assert((isa<SCEVCouldNotCompute>(MaxNotTaken) ||
-          isa<SCEVConstant>(MaxNotTaken)) &&
+  assert((isa<SCEVCouldNotCompute>(ConstantMaxNotTaken) ||
+          isa<SCEVConstant>(ConstantMaxNotTaken)) &&
          "No point in having a non-constant max backedge taken count!");
   for (const auto *PredSet : PredSetList)
     for (const auto *P : *PredSet)
@@ -8644,14 +8644,14 @@ ScalarEvolution::BackedgeTakenInfo::BackedgeTakenInfo(
   using EdgeExitInfo = ScalarEvolution::BackedgeTakenInfo::EdgeExitInfo;
 
   ExitNotTaken.reserve(ExitCounts.size());
-  std::transform(
-      ExitCounts.begin(), ExitCounts.end(), std::back_inserter(ExitNotTaken),
-      [&](const EdgeExitInfo &EEI) {
+  std::transform(ExitCounts.begin(), ExitCounts.end(),
+                 std::back_inserter(ExitNotTaken),
+                 [&](const EdgeExitInfo &EEI) {
         BasicBlock *ExitBB = EEI.first;
         const ExitLimit &EL = EEI.second;
-        return ExitNotTakenInfo(ExitBB, EL.ExactNotTaken, EL.MaxNotTaken,
-                                EL.Predicates);
-      });
+        return ExitNotTakenInfo(ExitBB, EL.ExactNotTaken,
+                                EL.ConstantMaxNotTaken, EL.Predicates);
+  });
   assert((isa<SCEVCouldNotCompute>(ConstantMax) ||
           isa<SCEVConstant>(ConstantMax)) &&
          "No point in having a non-constant max backedge taken count!");
@@ -8709,25 +8709,26 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
     //
     // If the exit dominates the loop latch, it is a LoopMustExit otherwise it
     // is a LoopMayExit.  If any computable LoopMustExit is found, then
-    // MaxBECount is the minimum EL.MaxNotTaken of computable
+    // MaxBECount is the minimum EL.ConstantMaxNotTaken of computable
     // LoopMustExits. Otherwise, MaxBECount is conservatively the maximum
-    // EL.MaxNotTaken, where CouldNotCompute is considered greater than any
-    // computable EL.MaxNotTaken.
-    if (EL.MaxNotTaken != getCouldNotCompute() && Latch &&
+    // EL.ConstantMaxNotTaken, where CouldNotCompute is considered greater than
+    // any
+    // computable EL.ConstantMaxNotTaken.
+    if (EL.ConstantMaxNotTaken != getCouldNotCompute() && Latch &&
         DT.dominates(ExitBB, Latch)) {
       if (!MustExitMaxBECount) {
-        MustExitMaxBECount = EL.MaxNotTaken;
+        MustExitMaxBECount = EL.ConstantMaxNotTaken;
         MustExitMaxOrZero = EL.MaxOrZero;
       } else {
-        MustExitMaxBECount =
-            getUMinFromMismatchedTypes(MustExitMaxBECount, EL.MaxNotTaken);
+        MustExitMaxBECount = getUMinFromMismatchedTypes(MustExitMaxBECount,
+                                                        EL.ConstantMaxNotTaken);
       }
     } else if (MayExitMaxBECount != getCouldNotCompute()) {
-      if (!MayExitMaxBECount || EL.MaxNotTaken == getCouldNotCompute())
-        MayExitMaxBECount = EL.MaxNotTaken;
+      if (!MayExitMaxBECount || EL.ConstantMaxNotTaken == getCouldNotCompute())
+        MayExitMaxBECount = EL.ConstantMaxNotTaken;
       else {
-        MayExitMaxBECount =
-            getUMaxFromMismatchedTypes(MayExitMaxBECount, EL.MaxNotTaken);
+        MayExitMaxBECount = getUMaxFromMismatchedTypes(MayExitMaxBECount,
+                                                       EL.ConstantMaxNotTaken);
       }
     }
   }
@@ -8738,7 +8739,8 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
   bool MaxOrZero = (MustExitMaxOrZero && ExitingBlocks.size() == 1);
 
   // Remember which SCEVs are used in exit limits for invalidation purposes.
-  // We only care about non-constant SCEVs here, so we can ignore EL.MaxNotTaken
+  // We only care about non-constant SCEVs here, so we can ignore
+  // EL.ConstantMaxNotTaken
   // and MaxBECount, which must be SCEVConstant.
   for (const auto &Pair : ExitCounts)
     if (!isa<SCEVConstant>(Pair.second.ExactNotTaken))
@@ -8945,12 +8947,13 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
           EL0.ExactNotTaken, EL1.ExactNotTaken,
           /*Sequential=*/!isa<BinaryOperator>(ExitCond));
     }
-    if (EL0.MaxNotTaken == getCouldNotCompute())
-      MaxBECount = EL1.MaxNotTaken;
-    else if (EL1.MaxNotTaken == getCouldNotCompute())
-      MaxBECount = EL0.MaxNotTaken;
+    if (EL0.ConstantMaxNotTaken == getCouldNotCompute())
+      MaxBECount = EL1.ConstantMaxNotTaken;
+    else if (EL1.ConstantMaxNotTaken == getCouldNotCompute())
+      MaxBECount = EL0.ConstantMaxNotTaken;
     else
-      MaxBECount = getUMinFromMismatchedTypes(EL0.MaxNotTaken, EL1.MaxNotTaken);
+      MaxBECount = getUMinFromMismatchedTypes(EL0.ConstantMaxNotTaken,
+                                              EL1.ConstantMaxNotTaken);
   } else {
     // Both conditions must be same at the same time for the loop to exit.
     // For now, be conservative.
@@ -8961,8 +8964,8 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
   // There are cases (e.g. PR26207) where computeExitLimitFromCond is able
   // to be more aggressive when computing BECount than when computing
   // MaxBECount.  In these cases it is possible for EL0.ExactNotTaken and
-  // EL1.ExactNotTaken to match, but for EL0.MaxNotTaken and EL1.MaxNotTaken
-  // to not.
+  // EL1.ExactNotTaken to match, but for EL0.ConstantMaxNotTaken and
+  // EL1.ConstantMaxNotTaken to not.
   if (isa<SCEVCouldNotCompute>(MaxBECount) &&
       !isa<SCEVCouldNotCompute>(BECount))
     MaxBECount = getConstant(getUnsignedRangeMax(BECount));
