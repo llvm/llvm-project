@@ -6,3 +6,8 @@ int mul(int a, int b) {
 
 // CHECK: @multiply ={{.*}} alias i16 (i16, i16), ptr addrspace(1) @mul
 int multiply(int x, int y) __attribute__((alias("mul")));
+
+// Make sure the correct address space is used when creating an alias that needs
+// a pointer cast.
+// CHECK: @smallmul = alias i8 (i16, i16), ptr addrspace(1) @mul
+char smallmul(int a, int b) __attribute__((alias("mul")));
