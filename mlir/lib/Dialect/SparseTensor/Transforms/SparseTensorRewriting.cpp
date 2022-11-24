@@ -915,8 +915,8 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
                                {indexTp}, {reader}, EmitCInterface::Off)
                     .getResult(0);
     Value symmetric;
-    // We assume only rank 2 tensors may have the isSymmetric flag set.
-    if (rank == 2) {
+    // The verifier ensures only 2D tensors can have the expandSymmetry flag.
+    if (rank == 2 && op.getExpandSymmetry()) {
       symmetric =
           createFuncCall(rewriter, loc, "getSparseTensorReaderIsSymmetric",
                          {rewriter.getI1Type()}, {reader}, EmitCInterface::Off)
