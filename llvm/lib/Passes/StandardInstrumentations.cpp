@@ -71,22 +71,23 @@ static cl::opt<std::string>
 // An option that determines the colour used for elements that are only
 // in the before part.  Must be a colour named in appendix J of
 // https://graphviz.org/pdf/dotguide.pdf
-cl::opt<std::string>
+static cl::opt<std::string>
     BeforeColour("dot-cfg-before-color",
-                 cl::desc("Color for dot-cfg before elements."), cl::Hidden,
+                 cl::desc("Color for dot-cfg before elements"), cl::Hidden,
                  cl::init("red"));
 // An option that determines the colour used for elements that are only
 // in the after part.  Must be a colour named in appendix J of
 // https://graphviz.org/pdf/dotguide.pdf
-cl::opt<std::string> AfterColour("dot-cfg-after-color",
-                                 cl::desc("Color for dot-cfg after elements."),
-                                 cl::Hidden, cl::init("forestgreen"));
+static cl::opt<std::string>
+    AfterColour("dot-cfg-after-color",
+                cl::desc("Color for dot-cfg after elements"), cl::Hidden,
+                cl::init("forestgreen"));
 // An option that determines the colour used for elements that are in both
 // the before and after parts.  Must be a colour named in appendix J of
 // https://graphviz.org/pdf/dotguide.pdf
-cl::opt<std::string>
+static cl::opt<std::string>
     CommonColour("dot-cfg-common-color",
-                 cl::desc("Color for dot-cfg common elements."), cl::Hidden,
+                 cl::desc("Color for dot-cfg common elements"), cl::Hidden,
                  cl::init("black"));
 
 // An option that determines where the generated website file (named
@@ -100,7 +101,7 @@ static cl::opt<std::string> DotCfgDir(
 static cl::opt<bool>
     PrintCrashIR("print-on-crash",
                  cl::desc("Print the last form of the IR before crash"),
-                 cl::init(false), cl::Hidden);
+                 cl::Hidden);
 
 static cl::opt<std::string> OptBisectPrintIRPath(
     "opt-bisect-print-ir-path",
