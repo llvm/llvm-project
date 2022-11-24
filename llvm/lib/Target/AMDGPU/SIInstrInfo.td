@@ -1151,7 +1151,7 @@ def SDWAVopcDst : BoolRC {
 class NamedMatchClass<string CName, bit Optional = 1> : AsmOperandClass {
   let Name = "Imm"#CName;
   let PredicateMethod = "is"#CName;
-  let ParserMethod = !if(Optional, "parseOptionalOperand", "parse"#CName);
+  let ParserMethod = !if(Optional, "", "parse"#CName);
   let RenderMethod = "addImmOperands";
   let IsOptional = Optional;
   let DefaultMethod = !if(Optional, "default"#CName, ?);
@@ -1208,10 +1208,6 @@ class NamedOperandU32Default1<string Name, AsmOperandClass MatchClass> :
 }
 
 let OperandType = "OPERAND_IMMEDIATE" in {
-
-def offen : NamedOperandBit<"Offen", NamedMatchClass<"Offen">>;
-def idxen : NamedOperandBit<"Idxen", NamedMatchClass<"Idxen">>;
-def addr64 : NamedOperandBit<"Addr64", NamedMatchClass<"Addr64">>;
 
 def flat_offset : NamedOperandU16<"FlatOffset", NamedMatchClass<"FlatOffset">>;
 def offset : NamedOperandU16<"Offset", NamedMatchClass<"Offset">>;
