@@ -71,8 +71,8 @@ class HTMLReportAction : public clang::ASTFrontendAction {
                    << ": " << EC.message() << "\n";
       exit(1);
     }
-    writeHTMLReport(AST.Ctx->getSourceManager().getMainFileID(), AST.Roots,
-                    PP.MacroReferences, *AST.Ctx, &PI, OS);
+    writeHTMLReport(AST.Ctx->getSourceManager().getMainFileID(), PP.Includes,
+                    AST.Roots, PP.MacroReferences, *AST.Ctx, &PI, OS);
   }
 };
 

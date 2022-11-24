@@ -100,8 +100,19 @@ Deprecations and Removals
 - The ``_LIBCPP_DEBUG`` macro is not honored anymore, and it is an error to try to use it. Please migrate to
   ``_LIBCPP_ENABLE_DEBUG_MODE`` instead.
 
+- A base template for ``std::char_traits`` is not provided anymore. The Standard mandates that the library
+  provides specializations for several types like ``char`` and ``wchar_t``, which libc++ does. However, libc++
+  used to additionally provide a default implementation for ``std::char_traits<T>`` for arbitrary ``T``. Not
+  only does the Standard not mandate that one is provided, but such an implementation is bound to be incorrect
+  for some types, so it has been removed. As an exception, ``std::char_traits<unsigned char>`` and
+  ``std::char_traits<signed char>`` are kept for a limited period of time and marked as deprecated to let people
+  move off of those, since we know there were some users of those. They will be removed in LLVM 18.
+
 Upcoming Deprecations and Removals
 ----------------------------------
+- The specializations of ``std::char_traits`` for ``unsigned char`` and ``signed char`` are provided until
+  LLVM 18. Those non-standard specializations are provided for a transition period and marked as deprecated
+  but will be removed in the future.
 
 API Changes
 -----------
@@ -133,7 +144,7 @@ ABI Affecting Changes
 - When building libc++ against newlib/picolibc, the type of ``regex_type_traits::char_class_type`` was changed to
   ``uint16_t`` since all values of ``ctype_base::mask`` are taken. This is technically an ABI break, but including
   ``<regex> `` has triggered a ``static_assert`` failure since libc++ 14, so it is unlikely that this causes
-   problems for existing users.
+  problems for existing users.
 
 Build System Changes
 --------------------
