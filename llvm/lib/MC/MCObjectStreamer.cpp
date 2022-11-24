@@ -652,7 +652,7 @@ void MCObjectStreamer::emitValueToAlignment(unsigned ByteAlignment,
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *CurSec = getCurrentSectionOnly();
-  if (CurSec->getAlign() < ByteAlignment)
+  if (ByteAlignment > CurSec->getAlignment())
     CurSec->setAlignment(Align(ByteAlignment));
 }
 

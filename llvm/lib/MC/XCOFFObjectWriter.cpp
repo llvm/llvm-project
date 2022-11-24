@@ -1192,7 +1192,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
 
       for (auto &Csect : *Group) {
         const MCSectionXCOFF *MCSec = Csect.MCSec;
-        Csect.Address = alignTo(Address, MCSec->getAlign());
+        Csect.Address = alignTo(Address, MCSec->getAlignment());
         Csect.Size = Layout.getSectionAddressSize(MCSec);
         Address = Csect.Address + Csect.Size;
         Csect.SymbolTableIndex = SymbolTableIndex;
@@ -1247,7 +1247,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
   if (!DwarfSections.empty())
     PaddingsBeforeDwarf =
         alignTo(Address,
-                (*DwarfSections.begin()).DwarfSect->MCSec->getAlign()) -
+                (*DwarfSections.begin()).DwarfSect->MCSec->getAlignment()) -
         Address;
 
   DwarfSectionEntry *LastDwarfSection = nullptr;
@@ -1273,7 +1273,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
     // This address is used to tell where is the section in the final object.
     // See writeSectionForDwarfSectionEntry().
     DwarfSection.Address = DwarfSect.Address =
-        alignTo(Address, MCSec->getAlign());
+        alignTo(Address, MCSec->getAlignment());
 
     // Section size.
     // For DWARF section, we must use the real size which may be not aligned.
@@ -1448,7 +1448,9 @@ void XCOFFObjectWriter::writeSectionForExceptionSectionEntry(
 // significant bits of a byte, then or's in the csect type into the least
 // significant 3 bits.
 uint8_t getEncodedType(const MCSectionXCOFF *Sec) {
-  unsigned Log2Align = Log2(Sec->getAlign());
+  unsigned Align = Sec->getAlignment();
+  assert(isPowerOf2_32(Align) && "Alignment must be a power of 2.");
+  unsigned Log2Align = Log2_32(Align);
   // Result is a number in the range [0, 31] which fits in the 5 least
   // significant bits. Shift this value into the 5 most significant bits, and
   // bitwise-or in the csect type.

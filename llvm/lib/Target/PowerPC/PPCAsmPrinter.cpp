@@ -2589,7 +2589,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
         getObjFileLowering().SectionForGlobal(GO, GOKind, TM));
 
     Align GOAlign = getGVAlignment(GO, GO->getParent()->getDataLayout());
-    if (GOAlign > Csect->getAlign())
+    if (GOAlign > Csect->getAlignment())
       Csect->setAlignment(GOAlign);
   };
 
