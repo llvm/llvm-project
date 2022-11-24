@@ -274,15 +274,17 @@ public:
 
   void reset() { Storage.reset(); }
 
+  LLVM_DEPRECATED("Use &*X instead.", "&*X")
   constexpr const T *getPointer() const { return &Storage.value(); }
+  LLVM_DEPRECATED("Use &*X instead.", "&*X")
   T *getPointer() { return &Storage.value(); }
   constexpr const T &value() const & { return Storage.value(); }
   T &value() & { return Storage.value(); }
 
   constexpr explicit operator bool() const { return has_value(); }
   constexpr bool has_value() const { return Storage.has_value(); }
-  constexpr const T *operator->() const { return getPointer(); }
-  T *operator->() { return getPointer(); }
+  constexpr const T *operator->() const { return &Storage.value(); }
+  T *operator->() { return &Storage.value(); }
   constexpr const T &operator*() const & { return value(); }
   T &operator*() & { return value(); }
 
