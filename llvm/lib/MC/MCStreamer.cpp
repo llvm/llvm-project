@@ -1170,7 +1170,7 @@ void MCStreamer::emitCOFFSymbolType(int Type) {
 }
 void MCStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                             MCSymbol *CsectSym,
-                                            unsigned ByteAlign) {
+                                            Align Alignment) {
   llvm_unreachable("this directive only supported on XCOFF targets");
 }
 

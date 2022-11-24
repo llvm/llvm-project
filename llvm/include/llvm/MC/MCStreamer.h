@@ -603,11 +603,9 @@ public:
   /// \param LabelSym - Label on the block of storage.
   /// \param Size - The size of the block of storage.
   /// \param CsectSym - Csect name for the block of storage.
-  /// \param ByteAlignment - The alignment of the symbol in bytes. Must be a
-  /// power of 2.
+  /// \param Alignment - The alignment of the symbol in bytes.
   virtual void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
-                                          MCSymbol *CsectSym,
-                                          unsigned ByteAlignment);
+                                          MCSymbol *CsectSym, Align Alignment);
 
   /// Emit a symbol's linkage and visibility with a linkage directive for XCOFF.
   ///
