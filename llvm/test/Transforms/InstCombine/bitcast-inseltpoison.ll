@@ -367,8 +367,8 @@ define <2 x i32> @bitcast_extelt3(<2 x i32> %A) {
 
 define double @bitcast_extelt4(i128 %A) {
 ; CHECK-LABEL: @bitcast_extelt4(
-; CHECK-NEXT:    [[BC:%.*]] = bitcast i128 [[A:%.*]] to <2 x double>
-; CHECK-NEXT:    [[BC2:%.*]] = extractelement <2 x double> [[BC]], i64 0
+; CHECK-NEXT:    [[EXT:%.*]] = trunc i128 [[A:%.*]] to i64
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast i64 [[EXT]] to double
 ; CHECK-NEXT:    ret double [[BC2]]
 ;
   %bc1 = bitcast i128 %A to <2 x i64>
