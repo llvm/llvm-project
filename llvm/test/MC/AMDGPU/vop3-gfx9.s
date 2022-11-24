@@ -258,17 +258,17 @@ v_fma_f16 v5, v1, v2, v3 clamp
 v_fma_f16 v5, v1, v2, v3 op_sel:[1,0,0,0]
 // GFX9: v_fma_f16 v5, v1, v2, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x06,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_fma_f16 v5, v1, v2, v3 op_sel:[0,1,0,0]
 // GFX9: v_fma_f16 v5, v1, v2, v3 op_sel:[0,1,0,0] ; encoding: [0x05,0x10,0x06,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_fma_f16 v5, v1, v2, v3 op_sel:[1,1,1,1]
 // GFX9: v_fma_f16 v5, v1, v2, v3 op_sel:[1,1,1,1] ; encoding: [0x05,0x78,0x06,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_fma_legacy_f16_e64 v5, v1, v2, v3
 // GFX9: v_fma_legacy_f16 v5, v1, v2, v3 ; encoding:  [0x05,0x00,0xee,0xd1,0x01,0x05,0x0e,0x04]
@@ -319,17 +319,17 @@ v_div_fixup_f16 v5, v1, v2, v3 clamp
 v_div_fixup_f16 v5, v1, v2, v3 op_sel:[1,0,0,0]
 // GFX9: v_div_fixup_f16 v5, v1, v2, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x07,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_div_fixup_f16 v5, v1, v2, v3 op_sel:[0,0,1,0]
 // GFX9: v_div_fixup_f16 v5, v1, v2, v3 op_sel:[0,0,1,0] ; encoding: [0x05,0x20,0x07,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_div_fixup_f16 v5, v1, v2, v3 op_sel:[0,0,0,1]
 // GFX9: v_div_fixup_f16 v5, v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x05,0x40,0x07,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_div_fixup_legacy_f16_e64 v5, 0.5, v2, v3
 // GFX9: v_div_fixup_legacy_f16 v5, 0.5, v2, v3 ; encoding: [0x05,0x00,0xef,0xd1,0xf0,0x04,0x0e,0x04]
@@ -383,32 +383,32 @@ v_mad_f16 v5, v1, v2, |v3|
 v_mad_f16 v5, v1, v2, v3 op_sel:[0,0,0,0]
 // GFX9: v_mad_f16 v5, v1, v2, v3 ; encoding: [0x05,0x00,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_mad_f16 v5, v1, v2, v3 op_sel:[1,0,0,0]
 // GFX9: v_mad_f16 v5, v1, v2, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_mad_f16 v5, v1, v2, v3 op_sel:[0,1,0,0]
 // GFX9: v_mad_f16 v5, v1, v2, v3 op_sel:[0,1,0,0] ; encoding: [0x05,0x10,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_mad_f16 v5, v1, v2, v3 op_sel:[0,0,1,0]
 // GFX9: v_mad_f16 v5, v1, v2, v3 op_sel:[0,0,1,0] ; encoding: [0x05,0x20,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_mad_f16 v5, v1, v2, v3 op_sel:[0,0,0,1]
 // GFX9: v_mad_f16 v5, v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x05,0x40,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_mad_f16 v5, v1, v2, v3 op_sel:[1,1,1,1]
 // GFX9: v_mad_f16 v5, v1, v2, v3 op_sel:[1,1,1,1] ; encoding: [0x05,0x78,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_mad_f16 v5, v1, v2, v3 clamp
 // GFX9: v_mad_f16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0x03,0xd2,0x01,0x05,0x0e,0x04]
@@ -438,12 +438,12 @@ v_mad_i16 v5, v1, v2, v3 clamp
 v_mad_i16 v5, v1, v2, v3 op_sel:[0,0,0,1]
 // GFX9: v_mad_i16 v5, v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x05,0x40,0x05,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_mad_i16 v5, v1, v2, v3 op_sel:[1,1,1,1]
 // GFX9: v_mad_i16 v5, v1, v2, v3 op_sel:[1,1,1,1] ; encoding: [0x05,0x78,0x05,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_mad_legacy_f16_e64 v5, 0.5, v2, v3
 // GFX9: v_mad_legacy_f16 v5, 0.5, v2, v3 ; encoding: [0x05,0x00,0xea,0xd1,0xf0,0x04,0x0e,0x04]
@@ -524,17 +524,17 @@ v_mad_u16 v5, v1, v2, v3 clamp
 v_mad_u16 v5, v1, v2, v3 op_sel:[1,0,0,0]
 // GFX9: v_mad_u16 v5, v1, v2, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x04,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_mad_u16 v5, v1, v2, v3 op_sel:[0,0,0,1]
 // GFX9: v_mad_u16 v5, v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x05,0x40,0x04,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_mad_u16 v5, v1, v2, v3 op_sel:[1,1,1,1]
 // GFX9: v_mad_u16 v5, v1, v2, v3 op_sel:[1,1,1,1] ; encoding: [0x05,0x78,0x04,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: not a valid operand.
 
 v_interp_p2_f16 v5, v2, attr0.x, v3
 // GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 ; encoding: [0x05,0x00,0x77,0xd2,0x00,0x04,0x0e,0x04]
