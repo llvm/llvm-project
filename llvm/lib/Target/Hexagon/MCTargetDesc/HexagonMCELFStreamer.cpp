@@ -117,8 +117,7 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
     }
 
     // Update the maximum alignment of the section if necessary.
-    if (Section.getAlign() < ByteAlignment)
-      Section.setAlignment(Align(ByteAlignment));
+    Section.ensureMinAlignment(Align(ByteAlignment));
 
     switchSection(P.first, P.second);
   } else {
