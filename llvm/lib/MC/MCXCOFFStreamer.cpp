@@ -149,6 +149,6 @@ MCStreamer *llvm::createXCOFFStreamer(MCContext &Context,
 void MCXCOFFStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
                                                  uint64_t Size,
                                                  MCSymbol *CsectSym,
-                                                 unsigned ByteAlignment) {
-  emitCommonSymbol(CsectSym, Size, ByteAlignment);
+                                                 Align Alignment) {
+  emitCommonSymbol(CsectSym, Size, Alignment.value());
 }

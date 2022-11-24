@@ -2432,7 +2432,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
     if (GVKind.isBSSLocal() || GVKind.isThreadBSSLocal())
       OutStreamer->emitXCOFFLocalCommonSymbol(
           OutContext.getOrCreateSymbol(GVSym->getSymbolTableName()), Size,
-          GVSym, Alignment.value());
+          GVSym, Alignment);
     else
       OutStreamer->emitCommonSymbol(GVSym, Size, Alignment.value());
     return;
