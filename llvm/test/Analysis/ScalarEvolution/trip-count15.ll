@@ -13,6 +13,7 @@ define void @umin_unsigned_check(i64 %n) {
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_unsigned_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4097
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -43,6 +44,7 @@ define void @umin_signed_check(i64 %n) {
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_signed_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4097
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -73,6 +75,7 @@ define void @smin_signed_check(i64 %n) {
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_signed_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (0 smax (1 + (4096 smin %n))<nsw>)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4097
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (0 smax (1 + (4096 smin %n))<nsw>)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (0 smax (1 + (4096 smin %n))<nsw>)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -103,6 +106,7 @@ define void @smin_unsigned_check(i64 %n) {
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_unsigned_check
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:

@@ -16,6 +16,7 @@ define void @test_01() {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_01
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -52,9 +53,11 @@ define void @test_02(i32* %p, i32* %q) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_02
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %inner_loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %outer_loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -103,9 +106,11 @@ define void @test_03(i32* %p, i32* %q) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_03
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %inner_loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %outer_loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable predicated backedge-taken count.
 ;
 entry:

@@ -48,6 +48,7 @@ define void @f(i32* %A, i32 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ; CHECK-NEXT:  Loop %bb1: backedge-taken count is (0 smax %N)
 ; CHECK-NEXT:  Loop %bb1: constant max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is (0 smax %N)
 ; CHECK-NEXT:  Loop %bb1: Predicated backedge-taken count is (0 smax %N)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %bb1: Trip multiple is 1

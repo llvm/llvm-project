@@ -15,6 +15,7 @@ define void @test_guard_less_than_16(i32* nocapture %a, i64 %i) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_less_than_16
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 15
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -47,6 +48,7 @@ define void @test_guard_less_than_16_operands_swapped(i32* nocapture %a, i64 %i)
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_less_than_16_operands_swapped
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 15
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -79,6 +81,7 @@ define void @test_guard_less_than_16_branches_flipped(i32* nocapture %a, i64 %i)
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_less_than_16_branches_flipped
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -111,6 +114,7 @@ define void @test_guard_uge_16_branches_flipped(i32* nocapture %a, i64 %i) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_uge_16_branches_flipped
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 15
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (15 + (-1 * %i))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -143,6 +147,7 @@ define void @test_guard_eq_12(i32* nocapture %a, i64 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_eq_12
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is %N
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 12
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %N
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %N
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -175,6 +180,7 @@ define void @test_guard_ule_12(i32* nocapture %a, i64 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ule_12
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is %N
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 12
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %N
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %N
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -207,6 +213,7 @@ define void @test_guard_ule_12_step2(i32* nocapture %a, i64 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ule_12_step2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 6
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -239,6 +246,7 @@ define void @test_multiple_const_guards_order1(i32* nocapture %a, i64 %i) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_const_guards_order1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is %i
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 9
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %i
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %i
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -275,6 +283,7 @@ define void @test_multiple_const_guards_order2(i32* nocapture %a, i64 %i) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_const_guards_order2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is %i
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 9
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %i
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %i
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -312,6 +321,7 @@ define void @test_multiple_var_guards_order1(i32* nocapture %a, i64 %i, i64 %N) 
 ; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_var_guards_order1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is %i
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %i
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %i
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -349,6 +359,7 @@ define void @test_multiple_var_guards_order2(i32* nocapture %a, i64 %i, i64 %N) 
 ; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_var_guards_order2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is %i
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %i
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %i
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -386,6 +397,7 @@ define void @test_multiple_var_guards_cycle(i32* nocapture %a, i64 %i, i64 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_var_guards_cycle
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is %N
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %N
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %N
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -422,6 +434,7 @@ define void @test_guard_ult_ne(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ult_ne
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -458,6 +471,7 @@ define void @test_guard_ne_ult(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ne_ult
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -496,6 +510,7 @@ define void @test_guard_if_and_enter(i32* nocapture readonly %data, i64 %count) 
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_and_enter
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -532,6 +547,7 @@ define void @test_guard_if_and_skip(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_and_skip
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -570,6 +586,7 @@ define void @test_guard_if_and_and(i32* nocapture readonly %data, i64 %count, i1
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_and_and
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -609,6 +626,7 @@ define void @test_guard_if_and_or(i32* nocapture readonly %data, i64 %count, i1 
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_and_or
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -646,6 +664,7 @@ define void @test_guard_if_or_skip(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_or_skip
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -682,6 +701,7 @@ define void @test_guard_if_or_enter(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_or_enter
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -720,6 +740,7 @@ define void @test_guard_if_or_or(i32* nocapture readonly %data, i64 %count, i1 %
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_or_or
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -759,6 +780,7 @@ define void @test_guard_if_or_and(i32* nocapture readonly %data, i64 %count, i1 
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_or_and
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -797,6 +819,7 @@ define void @test_guard_and_assume(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_and_assume
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -833,6 +856,7 @@ define void @test_guard_assume_and(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_assume_and
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -871,6 +895,7 @@ define void @guard_pessimizes_analysis_step1(i1 %c, i32 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @guard_pessimizes_analysis_step1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (9 + (-1 * %init)<nsw>)<nsw>
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 7
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (9 + (-1 * %init)<nsw>)<nsw>
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (9 + (-1 * %init)<nsw>)<nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -911,6 +936,7 @@ define void @guard_pessimizes_analysis_step2(i1 %c, i32 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @guard_pessimizes_analysis_step2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -952,14 +978,17 @@ define void @crash(i8* %ptr) {
 ; CHECK-NEXT:  Determining loop execution counts for: @crash
 ; CHECK-NEXT:  Loop %while.body125: backedge-taken count is {(-2 + (-1 * (ptrtoint i8* %ptr to i64))),+,-1}<nw><%while.cond111>
 ; CHECK-NEXT:  Loop %while.body125: constant max backedge-taken count is -2
+; CHECK-NEXT:  Loop %while.body125: symbolic max backedge-taken count is {(-2 + (-1 * (ptrtoint i8* %ptr to i64))),+,-1}<nw><%while.cond111>
 ; CHECK-NEXT:  Loop %while.body125: Predicated backedge-taken count is {(-2 + (-1 * (ptrtoint i8* %ptr to i64))),+,-1}<nw><%while.cond111>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %while.body125: Trip multiple is 1
 ; CHECK-NEXT:  Loop %while.cond111: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %while.cond111: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %while.cond111: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %while.cond111: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %while.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %while.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %while.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %while.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -1003,6 +1032,7 @@ define void @test_guard_uge(i32 %blockSize) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_uge
 ; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:  Loop %while.body: constant max backedge-taken count is 1073741822
+; CHECK-NEXT:  Loop %while.body: symbolic max backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %while.body: Trip multiple is 1
@@ -1039,6 +1069,7 @@ define void @test_guard_ugt(i32 %blockSize) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ugt
 ; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:  Loop %while.body: constant max backedge-taken count is 1073741822
+; CHECK-NEXT:  Loop %while.body: symbolic max backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %while.body: Trip multiple is 1
@@ -1075,6 +1106,7 @@ define void @test_guard_uge_and_ule(i32 %blockSize) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_uge_and_ule
 ; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:  Loop %while.body: constant max backedge-taken count is 255
+; CHECK-NEXT:  Loop %while.body: symbolic max backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %while.body: Trip multiple is 1
@@ -1115,6 +1147,7 @@ define void @test_guard_ugt_and_ult(i32 %blockSize) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ugt_and_ult
 ; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:  Loop %while.body: constant max backedge-taken count is 255
+; CHECK-NEXT:  Loop %while.body: symbolic max backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %while.body: Trip multiple is 1
@@ -1157,6 +1190,7 @@ define void @test_guard_slt_sgt_1(i32* nocapture %a, i64 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_slt_sgt_1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 10
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -1193,6 +1227,7 @@ define void @test_guard_slt_sgt_2(i32* nocapture %a, i64 %i) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_slt_sgt_2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (17 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 12
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (17 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (17 + (-1 * %i))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -1229,6 +1264,7 @@ define void @test_guard_sle_sge_1(i32* nocapture %a, i64 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_sle_sge_1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 11
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -1265,6 +1301,7 @@ define void @test_guard_sle_sge_2(i32* nocapture %a, i64 %i) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_sle_sge_2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (17 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 13
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (17 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (17 + (-1 * %i))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -1304,6 +1341,7 @@ define void @optimized_range_check_unsigned(i16* %pred, i32 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 6
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -1340,6 +1378,7 @@ define void @optimized_range_check_unsigned_icmp_ops_swapped(i16* %pred, i32 %N)
 ; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned_icmp_ops_swapped
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 6
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -1378,6 +1417,7 @@ define void @optimized_range_check_unsigned2(i16* %pred, i32 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 20
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -1417,6 +1457,7 @@ define void @optimized_range_check_unsigned3(i16* %pred, i1 %c) {
 ; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned3
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)<nsw>
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 2
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)<nsw>
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)<nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -1455,6 +1496,7 @@ define void @not_optimized_range_check_unsigned1(i16* %pred, i32 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @not_optimized_range_check_unsigned1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -2
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -1492,6 +1534,7 @@ define void @not_optimized_range_check_unsigned2(i16* %pred, i32 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @not_optimized_range_check_unsigned2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -2
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -1523,6 +1566,7 @@ define i32 @sle_sgt_ult_umax_to_smax(i32 %num) {
 ; CHECK-NEXT:  Determining loop execution counts for: @sle_sgt_ult_umax_to_smax
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + %num) /u 4)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 6
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + %num) /u 4)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + %num) /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -1560,6 +1604,7 @@ define i32 @ult_sle_sgt_umax_to_smax(i32 %num) {
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_sle_sgt_umax_to_smax
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + %num) /u 4)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1073741823
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + %num) /u 4)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + %num) /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
