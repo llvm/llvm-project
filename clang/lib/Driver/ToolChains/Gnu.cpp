@@ -857,6 +857,12 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
           }
         }
       }
+      // Pass -G0 unless gpopt is enabled
+      Arg *GPOpt = Args.getLastArg(options::OPT_mgpopt, options::OPT_mno_gpopt);
+      bool WantGPOpt = GPOpt && GPOpt->getOption().matches(options::OPT_mgpopt);
+      if (!WantGPOpt) {
+        CmdArgs.push_back("-G0");
+      }
     }
 
     CmdArgs.push_back("-march");
