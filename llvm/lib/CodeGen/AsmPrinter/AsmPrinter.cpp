@@ -2837,7 +2837,7 @@ void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
       STI = TM.getMCSubtargetInfo();
     OutStreamer->emitCodeAlignment(Alignment, STI, MaxBytesToEmit);
   } else
-    OutStreamer->emitValueToAlignment(Alignment.value(), 0, 1, MaxBytesToEmit);
+    OutStreamer->emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
 }
 
 //===----------------------------------------------------------------------===//

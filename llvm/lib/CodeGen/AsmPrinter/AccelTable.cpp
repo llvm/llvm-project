@@ -531,7 +531,7 @@ template <typename DataT> void Dwarf5AccelTableWriter<DataT>::emit() {
   emitOffsets(EntryPool);
   emitAbbrevs();
   emitData();
-  Asm->OutStreamer->emitValueToAlignment(4, 0);
+  Asm->OutStreamer->emitValueToAlignment(Align(4), 0);
   Asm->OutStreamer->emitLabel(ContributionEnd);
 }
 

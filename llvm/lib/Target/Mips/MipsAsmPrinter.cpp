@@ -1053,7 +1053,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   //
   // .align 2
   //
-  OutStreamer->emitValueToAlignment(4);
+  OutStreamer->emitValueToAlignment(Align(4));
   MipsTargetStreamer &TS = getTargetStreamer();
   //
   // .set nomips16

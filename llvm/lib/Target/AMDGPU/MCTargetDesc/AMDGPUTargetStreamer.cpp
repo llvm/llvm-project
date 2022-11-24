@@ -543,9 +543,9 @@ void AMDGPUTargetELFStreamer::EmitNote(
   S.emitValue(DescSZ, 4);                                     // descz
   S.emitInt32(NoteType);                                      // type
   S.emitBytes(Name);                                          // name
-  S.emitValueToAlignment(4, 0, 1, 0);                         // padding 0
+  S.emitValueToAlignment(Align(4), 0, 1, 0);                  // padding 0
   EmitDesc(S);                                                // desc
-  S.emitValueToAlignment(4, 0, 1, 0);                         // padding 0
+  S.emitValueToAlignment(Align(4), 0, 1, 0);                  // padding 0
   S.popSection();
 }
 
@@ -840,7 +840,7 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
 
   MCStreamer &OS = getStreamer();
   OS.pushSection();
-  OS.emitValueToAlignment(CacheLineSize, Encoded_pad, 4);
+  OS.emitValueToAlignment(Align(CacheLineSize), Encoded_pad, 4);
   for (unsigned I = 0; I < FillSize; I += 4)
     OS.emitInt32(Encoded_pad);
   OS.popSection();

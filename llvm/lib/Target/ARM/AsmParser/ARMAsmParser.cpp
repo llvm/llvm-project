@@ -11858,7 +11858,7 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
   if (Section->useCodeAlign())
     getStreamer().emitCodeAlignment(Align(2), &getSTI());
   else
-    getStreamer().emitValueToAlignment(2);
+    getStreamer().emitValueToAlignment(Align(2));
 
   return false;
 }
@@ -12056,7 +12056,7 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     if (Section->useCodeAlign())
       getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
     else
-      getStreamer().emitValueToAlignment(4, 0, 1, 0);
+      getStreamer().emitValueToAlignment(Align(4), 0, 1, 0);
     return false;
   }
   return true;

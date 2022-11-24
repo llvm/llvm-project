@@ -3489,7 +3489,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
         Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
   } else {
     // FIXME: Target specific behavior about how the "extra" bytes are filled.
-    getStreamer().emitValueToAlignment(Alignment, FillExpr, ValueSize,
+    getStreamer().emitValueToAlignment(Align(Alignment), FillExpr, ValueSize,
                                        MaxBytesToFill);
   }
 
