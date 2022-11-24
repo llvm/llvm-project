@@ -51,6 +51,7 @@ constexpr llvm::StringLiteral CSS = R"css(
   #hover p, #hover pre { margin: 0; }
   #hover .target.implicit { background-color: #bbb; }
   #hover .target.ambiguous { background-color: #caf; }
+  .missing, .unused { background-color: #faa !important; }
   #hover th { color: #008; text-align: right; padding-right: 0.5em; }
   #hover .target:not(:first-child) {
     margin-top: 1em;
@@ -110,8 +111,10 @@ class Reporter {
   llvm::raw_ostream &OS;
   const ASTContext &Ctx;
   const SourceManager &SM;
+  const RecordedPP::RecordedIncludes &Includes;
   const PragmaIncludes *PI;
-  FileID File;
+  FileID MainFile;
+  const FileEntry *MainFE;
 
   // References to symbols from the main file.
   // FIXME: should we deduplicate these?
@@ -120,6 +123,8 @@ class Reporter {
     RefType Type;
     SmallVector<SymbolLocation> Locations;
     SmallVector<Header> Headers;
+    SmallVector<const Include *> Includes;
+    bool Satisfied = false; // Is the include present?
   };
   std::vector<Target> Targets;
   // Points within the main file that reference a Target.
@@ -136,7 +141,7 @@ class Reporter {
   std::vector<Ref> Refs;
 
   Target makeTarget(const SymbolReference &SR) {
-    Target T{SR.Target, SR.RT, {}, {}};
+    Target T{SR.Target, SR.RT, {}, {}, {}};
 
     // Duplicates logic from walkUsed(), which doesn't expose SymbolLocations.
     // FIXME: use locateDecl and friends once implemented.
@@ -151,19 +156,35 @@ class Reporter {
     }
 
     for (const auto &Loc : T.Locations)
-      T.Headers = findHeaders(Loc, SM, PI);
+      T.Headers.append(findHeaders(Loc, SM, PI));
+
+    for (const auto &H : T.Headers) {
+      T.Includes.append(Includes.match(H));
+      // FIXME: library should signal main-file refs somehow.
+      // Non-physical refs to the main-file should be possible.
+      if (H.kind() == Header::Physical && H.physical() == MainFE)
+        T.Satisfied = true;
+    }
+    if (!T.Includes.empty())
+      T.Satisfied = true;
+    // Include pointers are meaningfully ordered as they are backed by a vector.
+    llvm::sort(T.Includes);
+    T.Includes.erase(std::unique(T.Includes.begin(), T.Includes.end()),
+                     T.Includes.end());
 
     return T;
   }
 
 public:
-  Reporter(llvm::raw_ostream &OS, ASTContext &Ctx, const PragmaIncludes *PI,
-           FileID File)
-      : OS(OS), Ctx(Ctx), SM(Ctx.getSourceManager()), PI(PI), File(File) {}
+  Reporter(llvm::raw_ostream &OS, ASTContext &Ctx,
+           const RecordedPP::RecordedIncludes &Includes,
+           const PragmaIncludes *PI, FileID MainFile)
+      : OS(OS), Ctx(Ctx), SM(Ctx.getSourceManager()), Includes(Includes),
+        PI(PI), MainFile(MainFile), MainFE(SM.getFileEntryForID(MainFile)) {}
 
   void addRef(const SymbolReference &SR) {
     auto [File, Offset] = SM.getDecomposedLoc(SM.getFileLoc(SR.RefLocation));
-    if (File != this->File) {
+    if (File != this->MainFile) {
       // Can get here e.g. if there's an #include inside a root Decl.
       // FIXME: do something more useful than this.
       llvm::errs() << "Ref location outside file! " << SR.Target << " at "
@@ -289,15 +310,23 @@ private:
       OS << "</td></tr>\n";
     }
 
+    for (const auto *I : T.Includes) {
+      OS << "<tr><th>Included</th><td>";
+      escapeString(I->Spelled);
+      OS << ", <a href='#line" << I->Line << "'>line " << I->Line << "</a>";
+      OS << "</td></tr>";
+    }
+
     OS << "</table>";
   }
 
   void writeCode() {
     llvm::sort(Refs);
-    llvm::StringRef Code = SM.getBufferData(File);
+    llvm::StringRef Code = SM.getBufferData(MainFile);
 
     OS << "<pre onclick='select(event)' class='code'>";
-    OS << "<code class='line'>";
+    OS << "<code class='line' id='line1'>";
+    unsigned LineNum = 1;
     auto Rest = llvm::makeArrayRef(Refs);
     unsigned End = 0;
     for (unsigned I = 0; I < Code.size(); ++I) {
@@ -310,12 +339,14 @@ private:
       while (!Rest.empty() && Rest.front().Offset == I &&
              Rest.front().Implicit) {
         const Ref &R = Rest.front();
-        OS << "<span class='ref sel implicit' data-hover='t" << R.TargetIndex
-           << "'>&loz;</span>";
+        OS << "<span class='ref sel implicit"
+           << (Targets[R.TargetIndex].Satisfied ? "" : " missing")
+           << "' data-hover='t" << R.TargetIndex << "'>&loz;</span>";
         Rest = Rest.drop_front();
       };
       // Accumulate all explicit refs that appear on the same token.
       std::string TargetList;
+      bool Unsatisfied = false;
       Rest = Rest.drop_while([&](const Ref &R) {
         if (R.Offset != I)
           return false;
@@ -323,16 +354,18 @@ private:
           TargetList.push_back(',');
         TargetList.push_back('t');
         TargetList.append(std::to_string(R.TargetIndex));
+        Unsatisfied = Unsatisfied || !Targets[R.TargetIndex].Satisfied;
         return true;
       });
       if (!TargetList.empty()) {
         assert(End == 0 && "Overlapping tokens!");
-        OS << "<span class='ref sel' data-hover='" << TargetList << "'>";
-        End = I + Lexer::MeasureTokenLength(SM.getComposedLoc(File, I), SM,
+        OS << "<span class='ref sel" << (Unsatisfied ? " missing" : "")
+           << "' data-hover='" << TargetList << "'>";
+        End = I + Lexer::MeasureTokenLength(SM.getComposedLoc(MainFile, I), SM,
                                             Ctx.getLangOpts());
       }
       if (Code[I] == '\n')
-        OS << "</code>\n<code class='line'>";
+        OS << "</code>\n<code class='line' id='line" << (++LineNum) << "'>";
       else
         escapeChar(Code[I]);
     }
@@ -342,10 +375,11 @@ private:
 
 } // namespace
 
-void writeHTMLReport(FileID File, llvm::ArrayRef<Decl *> Roots,
+void writeHTMLReport(FileID File, const RecordedPP::RecordedIncludes &Includes,
+                     llvm::ArrayRef<Decl *> Roots,
                      llvm::ArrayRef<SymbolReference> MacroRefs, ASTContext &Ctx,
                      PragmaIncludes *PI, llvm::raw_ostream &OS) {
-  Reporter R(OS, Ctx, PI, File);
+  Reporter R(OS, Ctx, Includes, PI, File);
   for (Decl *Root : Roots)
     walkAST(*Root, [&](SourceLocation Loc, const NamedDecl &D, RefType T) {
       R.addRef(SymbolReference{Loc, D, T});

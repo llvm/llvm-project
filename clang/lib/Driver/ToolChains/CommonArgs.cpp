@@ -941,7 +941,10 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
         SharedRuntimes.push_back("ubsan_standalone");
     }
     if (SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
-      SharedRuntimes.push_back("scudo_standalone");
+      if (SanArgs.requiresMinimalRuntime())
+        SharedRuntimes.push_back("scudo_minimal");
+      else
+        SharedRuntimes.push_back("scudo");
     }
     if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes())
       SharedRuntimes.push_back("tsan");
@@ -1038,9 +1041,15 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     RequiredSymbols.push_back("__sanitizer_stats_register");
   }
   if (!SanArgs.needsSharedRt() && SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
-    StaticRuntimes.push_back("scudo_standalone");
-    if (SanArgs.linkCXXRuntimes())
-      StaticRuntimes.push_back("scudo_standalone_cxx");
+    if (SanArgs.requiresMinimalRuntime()) {
+      StaticRuntimes.push_back("scudo_minimal");
+      if (SanArgs.linkCXXRuntimes())
+        StaticRuntimes.push_back("scudo_cxx_minimal");
+    } else {
+      StaticRuntimes.push_back("scudo");
+      if (SanArgs.linkCXXRuntimes())
+        StaticRuntimes.push_back("scudo_cxx");
+    }
   }
 }
 

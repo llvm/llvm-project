@@ -2389,7 +2389,9 @@ static bool markAliveBlocks(Function &F,
               }
           }
         } else if ((isa<ConstantPointerNull>(Callee) &&
-                    !NullPointerIsDefined(CI->getFunction())) ||
+                    !NullPointerIsDefined(CI->getFunction(),
+                                          cast<PointerType>(Callee->getType())
+                                              ->getAddressSpace())) ||
                    isa<UndefValue>(Callee)) {
           changeToUnreachable(CI, false, DTU);
           Changed = true;
