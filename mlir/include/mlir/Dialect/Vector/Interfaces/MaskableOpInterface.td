@@ -31,7 +31,9 @@ def MaskableOpInterface : OpInterface<"MaskableOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return mlir::isa<mlir::vector::MaskingOpInterface>($_op->getParentOp());
+        mlir::Operation *parentOp = $_op->getParentOp();
+        return parentOp &&
+               mlir::isa<mlir::vector::MaskingOpInterface>(parentOp);
     }]>,
     InterfaceMethod<
       /*desc=*/"Returns the MaskingOpInterface masking this operation.",
@@ -54,18 +56,14 @@ def MaskableOpInterface : OpInterface<"MaskableOpInterface"> {
         return false;
     }]>,
     InterfaceMethod<
-      /*desc=*/"Returns the mask type expected by this operation. It requires "
-               "the operation to be vectorized.",
-      /*retTy=*/"mlir::VectorType",
+      /*desc=*/"Returns the mask type expected by this operation. Mostly used"
+               " for verification purposes. It requires the operation to be "
+               "vectorized.",
+      /*retTy=*/"mlir::Type",
       /*methodName=*/"getExpectedMaskType",
       /*args=*/(ins),
       /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-      // Default implementation is only aimed for operations that implement the
-      // `getVectorType()` method.
-        return $_op.getVectorType().cloneWith(/*shape=*/std::nullopt,
-          IntegerType::get($_op.getContext(), /*width=*/1));
-    }]>,
+      /*defaultImplementation=*/"">,
   ];
 }
 
