@@ -369,10 +369,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __at_extended_grapheme_cluster_break(
 
   if (__prev == __property::__Regional_Indicator && __next == __property::__Regional_Indicator) { // GB12 + GB13
     __ri_break_allowed = !__ri_break_allowed;
-    if (__ri_break_allowed)
-      return true;
-
-    return false;
+    return __ri_break_allowed;
   }
 
   // *** Otherwise, break everywhere. ***
