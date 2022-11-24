@@ -1203,13 +1203,37 @@ bool RISCVInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
 bool RISCVInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
                                                  bool Invert) const {
   unsigned Opc = Inst.getOpcode();
-  if (Invert)
-    return false;
+  if (Invert) {
+    auto InverseOpcode = getInverseOpcode(Opc);
+    if (!InverseOpcode)
+      return false;
+    Opc = *InverseOpcode;
+  }
 
   if (isFADD(Opc) || isFMUL(Opc))
     return Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
            Inst.getFlag(MachineInstr::MIFlag::FmNsz);
   return false;
+}
+
+std::optional<unsigned>
+RISCVInstrInfo::getInverseOpcode(unsigned Opcode) const {
+  switch (Opcode) {
+  default:
+    return std::nullopt;
+  case RISCV::FADD_H:
+    return RISCV::FSUB_H;
+  case RISCV::FADD_S:
+    return RISCV::FSUB_S;
+  case RISCV::FADD_D:
+    return RISCV::FSUB_D;
+  case RISCV::FSUB_H:
+    return RISCV::FADD_H;
+  case RISCV::FSUB_S:
+    return RISCV::FADD_S;
+  case RISCV::FSUB_D:
+    return RISCV::FADD_D;
+  }
 }
 
 static bool canCombineFPFusedMultiply(const MachineInstr &Root,
