@@ -5496,8 +5496,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     // TODO: We restrict this to unmasked loads currently in consideration of
     // the complexity of hanlding all falses masks.
-    if (IsUnmasked && isNullConstant(Stride) &&
-        !Subtarget.hasOptimizedZeroStrideLoad()) {
+    if (IsUnmasked && isNullConstant(Stride)) {
       MVT ScalarVT = ContainerVT.getVectorElementType();
       SDValue ScalarLoad =
           DAG.getExtLoad(ISD::ZEXTLOAD, DL, XLenVT, Load->getChain(), Ptr,
