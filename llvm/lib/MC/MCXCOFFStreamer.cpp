@@ -103,7 +103,7 @@ void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
       Align(ByteAlignment));
 
   // Emit the alignment and storage for the variable to the section.
-  emitValueToAlignment(ByteAlignment);
+  emitValueToAlignment(Align(ByteAlignment));
   emitZeros(Size);
 }
 
