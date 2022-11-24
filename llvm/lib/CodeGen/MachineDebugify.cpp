@@ -153,15 +153,10 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
       NMD->setOperand(Idx, MDNode::get(Ctx, ValueAsMetadata::getConstant(
                                                 ConstantInt::get(Int32Ty, N))));
     };
-    auto getDebugifyOperand = [&](unsigned Idx) {
-      return mdconst::extract<ConstantInt>(NMD->getOperand(Idx)->getOperand(0))
-          ->getZExtValue();
-    };
     // Set number of lines.
     setDebugifyOperand(0, NextLine - 1);
     // Set number of variables.
-    auto OldNumVars = getDebugifyOperand(1);
-    setDebugifyOperand(1, OldNumVars + VarSet.size());
+    setDebugifyOperand(1, VarSet.size());
   }
 
   return true;
@@ -171,9 +166,6 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
 /// legacy module pass manager.
 struct DebugifyMachineModule : public ModulePass {
   bool runOnModule(Module &M) override {
-    // We will insert new debugify metadata, so erasing the old one.
-    assert(!M.getNamedMetadata("llvm.mir.debugify") &&
-           "llvm.mir.debugify metadata already exists! Strip it first");
     MachineModuleInfo &MMI =
         getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
     return applyDebugifyMetadata(
