@@ -12277,14 +12277,14 @@ static Decl *getCommonDecl(Decl *X, Decl *Y) {
 }
 
 template <class T, std::enable_if_t<std::is_base_of_v<Decl, T>, bool> = true>
-T *getCommonDecl(T *X, T *Y) {
+static T *getCommonDecl(T *X, T *Y) {
   return cast_or_null<T>(
       getCommonDecl(const_cast<Decl *>(cast_or_null<Decl>(X)),
                     const_cast<Decl *>(cast_or_null<Decl>(Y))));
 }
 
 template <class T, std::enable_if_t<std::is_base_of_v<Decl, T>, bool> = true>
-T *getCommonDeclChecked(T *X, T *Y) {
+static T *getCommonDeclChecked(T *X, T *Y) {
   return cast<T>(getCommonDecl(const_cast<Decl *>(cast<Decl>(X)),
                                const_cast<Decl *>(cast<Decl>(Y))));
 }

@@ -220,7 +220,7 @@ void DomTreeUpdater::validateDeleteBB(BasicBlock *DelBB) {
     // Replace used instructions with an arbitrary value (poison).
     if (!I.use_empty())
       I.replaceAllUsesWith(PoisonValue::get(I.getType()));
-    DelBB->getInstList().pop_back();
+    DelBB->back().eraseFromParent();
   }
   // Make sure DelBB has a valid terminator instruction. As long as DelBB is a
   // Child of Function F it must contain valid IR.
