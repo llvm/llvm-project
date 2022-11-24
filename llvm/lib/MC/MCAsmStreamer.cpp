@@ -381,7 +381,7 @@ public:
                        uint64_t Attr,
                        const MCPseudoProbeInlineStack &InlineStack, MCSymbol *FnSym) override;
 
-  void emitBundleAlignMode(unsigned AlignPow2) override;
+  void emitBundleAlignMode(Align Alignment) override;
   void emitBundleLock(bool AlignToEnd) override;
   void emitBundleUnlock() override;
 
@@ -2353,8 +2353,8 @@ void MCAsmStreamer::emitPseudoProbe(
   EmitEOL();
 }
 
-void MCAsmStreamer::emitBundleAlignMode(unsigned AlignPow2) {
-  OS << "\t.bundle_align_mode " << AlignPow2;
+void MCAsmStreamer::emitBundleAlignMode(Align Alignment) {
+  OS << "\t.bundle_align_mode " << Log2(Alignment);
   EmitEOL();
 }
 
