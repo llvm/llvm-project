@@ -144,6 +144,7 @@ static size_t findFirstNonVersionCharacter(StringRef Ext) {
   return Pos;
 }
 
+namespace {
 struct FindByName {
   FindByName(StringRef Ext) : Ext(Ext){};
   StringRef Ext;
@@ -151,6 +152,7 @@ struct FindByName {
     return ExtInfo.Name == Ext;
   }
 };
+} // namespace
 
 static Optional<RISCVExtensionVersion> findDefaultVersion(StringRef ExtName) {
   // Find default version of an extension.
