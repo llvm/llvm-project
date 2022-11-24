@@ -27,7 +27,7 @@
   ; VALUE: [[VAR1:![0-9]+]] = !DILocalVariable(name: "1"
   ; VALUE: [[VAR2:![0-9]+]] = !DILocalVariable(name: "2"
   ; STRIP-NOT: !llvm.debugify
-  ; STRIP: !llvm.mir.debugify
+  ; STRIP-NOT: !llvm.mir.debugify
 
 ...
 ---
