@@ -10,28 +10,7 @@ define <64 x i16> @mulhs16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V60-NEXT:     v1:0.w = vmpy(v1.h,v0.h)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     r7:6 = combine(#64,#68)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     r5 = #120
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v1:0 = vshuff(v1,v0,r7)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v3:2 = vdeal(v0,v0,r6)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v31:30 = vdeal(v0,v1,r6)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v3:2 = vshuff(v3,v2,r5)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v1:0 = vshuff(v31,v30,r5)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v0.h = vpacko(v0.w,v2.w)
+; V60-NEXT:     v0.h = vshuffo(v1.h,v0.h)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     jumpr r31
@@ -43,28 +22,7 @@ define <64 x i16> @mulhs16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V65-NEXT:     v1:0.w = vmpy(v1.h,v0.h)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     r7:6 = combine(#64,#68)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     r5 = #120
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v1:0 = vshuff(v1,v0,r7)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v3:2 = vdeal(v0,v0,r6)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v31:30 = vdeal(v0,v1,r6)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v3:2 = vshuff(v3,v2,r5)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v1:0 = vshuff(v31,v30,r5)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v0.h = vpacko(v0.w,v2.w)
+; V65-NEXT:     v0.h = vshuffo(v1.h,v0.h)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
 ; V65-NEXT:     jumpr r31
@@ -76,28 +34,7 @@ define <64 x i16> @mulhs16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V69-NEXT:     v1:0.w = vmpy(v1.h,v0.h)
 ; V69-NEXT:    }
 ; V69-NEXT:    {
-; V69-NEXT:     r7:6 = combine(#64,#68)
-; V69-NEXT:    }
-; V69-NEXT:    {
-; V69-NEXT:     r5 = #120
-; V69-NEXT:    }
-; V69-NEXT:    {
-; V69-NEXT:     v1:0 = vshuff(v1,v0,r7)
-; V69-NEXT:    }
-; V69-NEXT:    {
-; V69-NEXT:     v3:2 = vdeal(v0,v0,r6)
-; V69-NEXT:    }
-; V69-NEXT:    {
-; V69-NEXT:     v31:30 = vdeal(v0,v1,r6)
-; V69-NEXT:    }
-; V69-NEXT:    {
-; V69-NEXT:     v3:2 = vshuff(v3,v2,r5)
-; V69-NEXT:    }
-; V69-NEXT:    {
-; V69-NEXT:     v1:0 = vshuff(v31,v30,r5)
-; V69-NEXT:    }
-; V69-NEXT:    {
-; V69-NEXT:     v0.h = vpacko(v0.w,v2.w)
+; V69-NEXT:     v0.h = vshuffo(v1.h,v0.h)
 ; V69-NEXT:    }
 ; V69-NEXT:    {
 ; V69-NEXT:     jumpr r31
@@ -117,28 +54,7 @@ define <64 x i16> @mulhu16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V60-NEXT:     v1:0.uw = vmpy(v1.uh,v0.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     r7:6 = combine(#64,#68)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     r5 = #120
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v1:0 = vshuff(v1,v0,r7)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v3:2 = vdeal(v0,v0,r6)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v31:30 = vdeal(v0,v1,r6)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v3:2 = vshuff(v3,v2,r5)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v1:0 = vshuff(v31,v30,r5)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v0.h = vpacko(v0.w,v2.w)
+; V60-NEXT:     v0.h = vshuffo(v1.h,v0.h)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     jumpr r31
@@ -150,28 +66,7 @@ define <64 x i16> @mulhu16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V65-NEXT:     v1:0.uw = vmpy(v1.uh,v0.uh)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     r7:6 = combine(#64,#68)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     r5 = #120
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v1:0 = vshuff(v1,v0,r7)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v3:2 = vdeal(v0,v0,r6)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v31:30 = vdeal(v0,v1,r6)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v3:2 = vshuff(v3,v2,r5)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v1:0 = vshuff(v31,v30,r5)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v0.h = vpacko(v0.w,v2.w)
+; V65-NEXT:     v0.h = vshuffo(v1.h,v0.h)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
 ; V65-NEXT:     jumpr r31
