@@ -3349,6 +3349,32 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "VectorTransformOps",
+    srcs = [
+        "lib/Dialect/Vector/TransformOps/VectorTransformOps.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Vector/TransformOps/VectorTransformOps.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":ArithDialect",
+        ":AsmParser",
+        ":IR",
+        ":VectorDialect",
+        ":VectorTransformOpsIncGen",
+        ":VectorTransforms",
+        ":PDLDialect",
+        ":Parser",
+        ":SideEffectInterfaces",
+        ":TransformDialect",
+        ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "VectorPassIncGen",
     strip_include_prefix = "include",
@@ -6798,6 +6824,7 @@ cc_library(
         ":VectorToLLVM",
         ":VectorToSCF",
         ":VectorToSPIRV",
+        ":VectorTransformOps",
         ":VectorTransforms",
         ":X86VectorDialect",
         ":X86VectorTransforms",
@@ -8373,6 +8400,19 @@ td_library(
     ],
 )
 
+td_library(
+    name = "VectorTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Vector/TransformOps/VectorTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":PDLDialectTdFiles",
+        ":SCFTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "MaskableOpInterfaceIncGen",
     strip_include_prefix = "include",
@@ -8459,6 +8499,26 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Vector/IR/VectorOps.td",
     deps = [":VectorOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "VectorTransformOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Vector/TransformOps/VectorTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Vector/TransformOps/VectorTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Vector/TransformOps/VectorTransformOps.td",
+    deps = [
+        ":VectorTransformOpsTdFiles",
+    ],
 )
 
 cc_library(
