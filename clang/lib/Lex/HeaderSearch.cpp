@@ -1928,24 +1928,32 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
     llvm::StringRef File, llvm::StringRef WorkingDir, llvm::StringRef MainFile,
     bool *IsSystem) {
   using namespace llvm::sys;
-  
-  llvm::SmallString<32> FilePath = File;
-  path::remove_dots(FilePath, /*remove_dot_dot=*/true);
-  File = FilePath;
 
   unsigned BestPrefixLength = 0;
   // Checks whether `Dir` is a strict path prefix of `File`. If so and that's
   // the longest prefix we've seen so for it, returns true and updates the
   // `BestPrefixLength` accordingly.
-  auto CheckDir = [&](llvm::SmallString<32> Dir) -> bool {
+  auto CheckDir = [&](llvm::StringRef Dir) -> bool {
+    llvm::SmallString<32> DirPath(Dir.begin(), Dir.end());
     if (!WorkingDir.empty() && !path::is_absolute(Dir))
-      fs::make_absolute(WorkingDir, Dir);
-    path::remove_dots(Dir, /*remove_dot_dot=*/true);
+      fs::make_absolute(WorkingDir, DirPath);
+    path::remove_dots(DirPath, /*remove_dot_dot=*/true);
+    Dir = DirPath;
     for (auto NI = path::begin(File), NE = path::end(File),
               DI = path::begin(Dir), DE = path::end(Dir);
-         NI != NE; ++NI, ++DI) {
+         /*termination condition in loop*/; ++NI, ++DI) {
+      // '.' components in File are ignored.
+      while (NI != NE && *NI == ".")
+        ++NI;
+      if (NI == NE)
+        break;
+
+      // '.' components in Dir are ignored.
+      while (DI != DE && *DI == ".")
+        ++DI;
       if (DI == DE) {
-        // Dir is a prefix of File, up to choice of path separators.
+        // Dir is a prefix of File, up to '.' components and choice of path
+        // separators.
         unsigned PrefixLength = NI - path::begin(File);
         if (PrefixLength > BestPrefixLength) {
           BestPrefixLength = PrefixLength;
