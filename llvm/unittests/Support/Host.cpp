@@ -30,6 +30,37 @@
 
 using namespace llvm;
 
+class HostTest : public testing::Test {
+  Triple Host;
+
+protected:
+  bool isSupportedArchAndOS() {
+    // Initially this is only testing detection of the number of
+    // physical cores, which is currently only supported/tested on
+    // some systems.
+    return (Host.isOSWindows() && llvm_is_multithreaded()) ||
+           Host.isOSDarwin() || (Host.isX86() && Host.isOSLinux()) ||
+           (Host.isOSLinux() && !Host.isAndroid()) ||
+           (Host.isSystemZ() && Host.isOSzOS());
+  }
+
+  HostTest() : Host(Triple::normalize(sys::getProcessTriple())) {}
+};
+
+TEST_F(HostTest, NumPhysicalCoresSupported) {
+  if (!isSupportedArchAndOS())
+    GTEST_SKIP();
+  int Num = sys::getHostNumPhysicalCores();
+  ASSERT_GT(Num, 0);
+}
+
+TEST_F(HostTest, NumPhysicalCoresUnsupported) {
+  if (isSupportedArchAndOS())
+    GTEST_SKIP();
+  int Num = sys::getHostNumPhysicalCores();
+  ASSERT_EQ(Num, -1);
+}
+
 TEST(getLinuxHostCPUName, ARM) {
   StringRef CortexA9ProcCpuinfo = R"(
 processor       : 0
@@ -408,13 +439,13 @@ static bool runAndGetCommandOutput(
   return Success;
 }
 
-TEST(HostTest, DummyRunAndGetCommandOutputUse) {
+TEST_F(HostTest, DummyRunAndGetCommandOutputUse) {
   // Suppress defined-but-not-used warnings when the tests using the helper are
   // disabled.
   (void)&runAndGetCommandOutput;
 }
 
-TEST(HostTest, getMacOSHostVersion) {
+TEST_F(HostTest, getMacOSHostVersion) {
   llvm::Triple HostTriple(llvm::sys::getProcessTriple());
   if (!HostTriple.isMacOSX())
     GTEST_SKIP();
@@ -460,7 +491,7 @@ static void getAIXSystemVersion(VersionTuple &SystemVersion) {
           .getOSVersion();
 }
 
-TEST(HostTest, AIXHostVersionDetect) {
+TEST_F(HostTest, AIXHostVersionDetect) {
   llvm::Triple HostTriple(llvm::sys::getProcessTriple());
   if (HostTriple.getOS() != Triple::AIX)
     GTEST_SKIP();
@@ -486,7 +517,7 @@ TEST(HostTest, AIXHostVersionDetect) {
   ASSERT_EQ(SysMinor, HostVersion.getMinor());
 }
 
-TEST(HostTest, AIXTargetVersionDetect) {
+TEST_F(HostTest, AIXTargetVersionDetect) {
   llvm::Triple TargetTriple(llvm::sys::getDefaultTargetTriple());
   if (TargetTriple.getOS() != Triple::AIX)
     GTEST_SKIP();
@@ -504,7 +535,7 @@ TEST(HostTest, AIXTargetVersionDetect) {
   ASSERT_EQ(SystemVersion.getMinor(), TargetVersion.getMinor());
 }
 
-TEST(HostTest, AIXHostCPUDetect) {
+TEST_F(HostTest, AIXHostCPUDetect) {
   llvm::Triple HostTriple(llvm::sys::getProcessTriple());
   if (HostTriple.getOS() != Triple::AIX)
     GTEST_SKIP();
