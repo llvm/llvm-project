@@ -2695,6 +2695,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   for (unsigned Part = 0; Part < UF; Part++) {
     // Collect the stored vector from each member.
     SmallVector<Value *, 4> StoredVecs;
+    unsigned StoredIdx = 0;
     for (unsigned i = 0; i < InterleaveFactor; i++) {
       assert((Group->getMember(i) || MaskForGaps) &&
              "Fail to get a member from an interleaved store group");
@@ -2707,7 +2708,8 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         continue;
       }
 
-      Value *StoredVec = State.get(StoredValues[i], Part);
+      Value *StoredVec = State.get(StoredValues[StoredIdx], Part);
+      ++StoredIdx;
 
       if (Group->isReverse())
         StoredVec = Builder.CreateVectorReverse(StoredVec, "reverse");
