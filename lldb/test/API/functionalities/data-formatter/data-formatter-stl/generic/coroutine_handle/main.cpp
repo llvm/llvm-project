@@ -45,7 +45,6 @@ int main() {
   std::coroutine_handle<> type_erased_hdl = gen.hdl;
   std::coroutine_handle<int> incorrectly_typed_hdl =
       std::coroutine_handle<int>::from_address(gen.hdl.address());
-  std::coroutine_handle<> noop_hdl = std::noop_coroutine();
   gen.hdl.resume();                            // Break at initial_suspend
   gen.hdl.resume();                            // Break after co_yield
   empty_function_so_we_can_set_a_breakpoint(); // Break at final_suspend
