@@ -40,7 +40,7 @@ return:		; preds = %bb1.return_crit_edge, %entry
 
 ; PR7845
 ; CHECK: Loop %for.cond: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %for.cond: max backedge-taken count is 5
+; CHECK: Loop %for.cond: constant max backedge-taken count is 5
 
 @.str = private constant [4 x i8] c"%d\0A\00"     ; <[4 x i8]*> [#uses=2]
 
@@ -97,12 +97,12 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 
 ; CHECK: Determining loop execution counts for: @test
 ; CHECK-NEXT: backedge-taken count is
-; CHECK-NEXT: max backedge-taken count is 2147483646
+; CHECK-NEXT: constant max backedge-taken count is 2147483646
 
 ; PR19799: Indvars miscompile due to an incorrect max backedge taken count from SCEV.
 ; CHECK-LABEL: @pr19799
 ; CHECK: Loop %for.body.i: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %for.body.i: max backedge-taken count is 1
+; CHECK: Loop %for.body.i: constant max backedge-taken count is 1
 @a = common global i32 0, align 4
 
 define i32 @pr19799() {
@@ -128,7 +128,7 @@ bar.exit:                                         ; preds = %for.cond.i, %for.bo
 ; PR18886: Indvars miscompile due to an incorrect max backedge taken count from SCEV.
 ; CHECK-LABEL: @pr18886
 ; CHECK: Loop %for.body: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %for.body: max backedge-taken count is 3
+; CHECK: Loop %for.body: constant max backedge-taken count is 3
 @aa = global i64 0, align 8
 
 define i32 @pr18886() {
@@ -158,7 +158,7 @@ return:
 ;
 ; CHECK-LABEL: @cannot_compute_mustexit
 ; CHECK: Loop %for.body.i: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %for.body.i: Unpredictable max backedge-taken count.
+; CHECK: Loop %for.body.i: Unpredictable constant max backedge-taken count.
 @b = common global i32 0, align 4
 
 define i32 @cannot_compute_mustexit() {
@@ -187,7 +187,7 @@ bar.exit:                                         ; preds = %for.cond.i, %for.bo
 ;
 ; CHECK-LABEL: @two_mustexit
 ; CHECK: Loop %for.body.i: <multiple exits> backedge-taken count is 1
-; CHECK: Loop %for.body.i: max backedge-taken count is 1
+; CHECK: Loop %for.body.i: constant max backedge-taken count is 1
 define i32 @two_mustexit() {
 entry:
   store i32 -1, i32* @a, align 4
@@ -209,7 +209,7 @@ bar.exit:                                         ; preds = %for.cond.i, %for.bo
 }
 
 ; CHECK-LABEL: @ne_max_trip_count_1
-; CHECK: Loop %for.body: max backedge-taken count is 7
+; CHECK: Loop %for.body: constant max backedge-taken count is 7
 define i32 @ne_max_trip_count_1(i32 %n) {
 entry:
   %masked = and i32 %n, 7
@@ -226,7 +226,7 @@ bar.exit:
 }
 
 ; CHECK-LABEL: @ne_max_trip_count_2
-; CHECK: Loop %for.body: max backedge-taken count is -1
+; CHECK: Loop %for.body: constant max backedge-taken count is -1
 define i32 @ne_max_trip_count_2(i32 %n) {
 entry:
   %masked = and i32 %n, 7
@@ -243,7 +243,7 @@ bar.exit:
 }
 
 ; CHECK-LABEL: @ne_max_trip_count_3
-; CHECK: Loop %for.body: max backedge-taken count is 6
+; CHECK: Loop %for.body: constant max backedge-taken count is 6
 define i32 @ne_max_trip_count_3(i32 %n) {
 entry:
   %masked = and i32 %n, 7
@@ -267,7 +267,7 @@ exit:
 }
 
 ; CHECK-LABEL: @ne_max_trip_count_4
-; CHECK: Loop %for.body: max backedge-taken count is -2
+; CHECK: Loop %for.body: constant max backedge-taken count is -2
 define i32 @ne_max_trip_count_4(i32 %n) {
 entry:
   %guard = icmp eq i32 %n, 0
@@ -294,7 +294,7 @@ exit:
 define void @changing_end_bound(i32* %n_addr, i32* %addr) {
 ; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound
 ; CHECK: Loop %loop: Unpredictable backedge-taken count.
-; CHECK: Loop %loop: max backedge-taken count is 2147483646
+; CHECK: Loop %loop: constant max backedge-taken count is 2147483646
 entry:
   br label %loop
 
@@ -319,7 +319,7 @@ loop.exit:
 define void @changing_end_bound2(i32 %start, i32* %n_addr, i32* %addr) {
 ; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound2
 ; CHECK: Loop %loop: Unpredictable backedge-taken count.
-; CHECK: Loop %loop: max backedge-taken count is -1
+; CHECK: Loop %loop: constant max backedge-taken count is -1
 entry:
   br label %loop
 
@@ -342,7 +342,7 @@ loop.exit:
 define void @changing_end_bound3(i32 %start, i32* %n_addr, i32* %addr) {
 ; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound3
 ; CHECK: Loop %loop: Unpredictable backedge-taken count.
-; CHECK: Loop %loop: max backedge-taken count is 1073741823
+; CHECK: Loop %loop: constant max backedge-taken count is 1073741823
 entry:
   br label %loop
 
@@ -366,7 +366,7 @@ loop.exit:
 define void @changing_end_bound4(i32 %start, i32* %n_addr, i32* %addr) {
 ; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound4
 ; CHECK: Loop %loop: Unpredictable backedge-taken count.
-; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+; CHECK: Loop %loop: Unpredictable constant max backedge-taken count.
 entry:
   br label %loop
 
@@ -390,7 +390,7 @@ loop.exit:
 define void @changing_end_bound5(i32 %stride, i32 %start, i32* %n_addr, i32* %addr) {
 ; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound5
 ; CHECK: Loop %loop: Unpredictable backedge-taken count.
-; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+; CHECK: Loop %loop: Unpredictable constant max backedge-taken count.
 entry:
   br label %loop
 
@@ -413,7 +413,7 @@ loop.exit:
 define void @changing_end_bound6(i32 %start, i32* %n_addr, i32* %addr) {
 ; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound6
 ; CHECK: Loop %loop: Unpredictable backedge-taken count.
-; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+; CHECK: Loop %loop: Unpredictable constant max backedge-taken count.
 entry:
   br label %loop
 
@@ -436,7 +436,7 @@ loop.exit:
 define void @changing_end_bound7(i32 %start, i32* %n_addr, i32* %addr) {
 ; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound7
 ; CHECK: Loop %loop: Unpredictable backedge-taken count.
-; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+; CHECK: Loop %loop: Unpredictable constant max backedge-taken count.
 entry:
   br label %loop
 
@@ -458,7 +458,7 @@ loop.exit:
 define void @max_overflow_se(i8 %n) mustprogress {
 ; CHECK-LABEL: Determining loop execution counts for: @max_overflow_se
 ; CHECK: Loop %loop: backedge-taken count is 0
-; CHECK: Loop %loop: max backedge-taken count is 0
+; CHECK: Loop %loop: constant max backedge-taken count is 0
 entry:
   br label %loop
 
@@ -479,7 +479,7 @@ define void @max_overflow_me(i8 %n) mustprogress {
 ; CHECK: Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK:   exit count for loop: 1
 ; CHECK:   exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK: Loop %loop: max backedge-taken count is 1
+; CHECK: Loop %loop: constant max backedge-taken count is 1
 entry:
   br label %loop
 
@@ -503,7 +503,7 @@ exit:
 define void @bool_stride(i1 %s, i1 %n) mustprogress {
 ; CHECK-LABEL: Determining loop execution counts for: @bool_stride
 ; CHECK: Loop %loop: backedge-taken count is false
-; CHECK: Loop %loop: max backedge-taken count is false
+; CHECK: Loop %loop: constant max backedge-taken count is false
 entry:
   br label %loop
 
@@ -523,7 +523,7 @@ exit:
 define void @ne_zero_max_btc(i32 %a) {
 ; CHECK-LABEL: Determining loop execution counts for: @ne_zero_max_btc
 ; CHECK: Loop %for.body: backedge-taken count is 0
-; CHECK: Loop %for.body: max backedge-taken count is 0
+; CHECK: Loop %for.body: constant max backedge-taken count is 0
 entry:
   %cmp = icmp slt i32 %a, 1
   %spec.select = select i1 %cmp, i32 %a, i32 1

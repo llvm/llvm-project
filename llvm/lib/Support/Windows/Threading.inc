@@ -247,7 +247,7 @@ int computeHostNumPhysicalCores() {
   return Cores;
 }
 
-int computeHostNumHardwareThreads() {
+static int computeHostNumHardwareThreads() {
   static unsigned Threads =
       aggregate(getProcessorGroups(),
                 [](const ProcessorGroup &G) { return G.UsableThreads; });

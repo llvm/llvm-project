@@ -1450,17 +1450,23 @@ void AsmMatcherInfo::buildOperandMatchInfo() {
   typedef std::map<ClassInfo *, unsigned, deref<std::less<>>> OpClassMaskTy;
   OpClassMaskTy OpClassMask;
 
+  bool CallCustomParserForAllOperands =
+      AsmParser->getValueAsBit("CallCustomParserForAllOperands");
   for (const auto &MI : Matchables) {
     OpClassMask.clear();
 
     // Keep track of all operands of this instructions which belong to the
     // same class.
+    unsigned NumOptionalOps = 0;
     for (unsigned i = 0, e = MI->AsmOperands.size(); i != e; ++i) {
       const MatchableInfo::AsmOperand &Op = MI->AsmOperands[i];
-      if (Op.Class->ParserMethod.empty())
-        continue;
-      unsigned &OperandMask = OpClassMask[Op.Class];
-      OperandMask |= (1 << i);
+      if (CallCustomParserForAllOperands || !Op.Class->ParserMethod.empty()) {
+        unsigned &OperandMask = OpClassMask[Op.Class];
+        OperandMask |= maskTrailingOnes<unsigned>(NumOptionalOps + 1)
+                       << (i - NumOptionalOps);
+      }
+      if (Op.Class->IsOptional)
+        ++NumOptionalOps;
     }
 
     // Generate operand match info for each mnemonic/operand class pair.
@@ -2836,12 +2842,12 @@ static bool emitMnemonicAliases(raw_ostream &OS, const AsmMatcherInfo &Info,
   return true;
 }
 
-static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
-                              const AsmMatcherInfo &Info, StringRef ClassName,
-                              StringToOffsetTable &StringTable,
-                              unsigned MaxMnemonicIndex,
-                              unsigned MaxFeaturesIndex,
-                              bool HasMnemonicFirst) {
+static void
+emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
+                         const AsmMatcherInfo &Info, StringRef ClassName,
+                         StringToOffsetTable &StringTable,
+                         unsigned MaxMnemonicIndex, unsigned MaxFeaturesIndex,
+                         bool HasMnemonicFirst, const Record &AsmParser) {
   unsigned MaxMask = 0;
   for (const OperandMatchEntry &OMI : Info.OperandMatchInfo) {
     MaxMask |= OMI.OperandMask;
@@ -2992,9 +2998,12 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
   OS << "      continue;\n\n";
 
   // Emit call to the custom parser method
+  StringRef ParserName = AsmParser.getValueAsString("OperandParserMethod");
+  if (ParserName.empty())
+    ParserName = "tryCustomParseOperand";
   OS << "    // call custom parse method to handle the operand\n";
-  OS << "    OperandMatchResultTy Result = ";
-  OS << "tryCustomParseOperand(Operands, it->Class);\n";
+  OS << "    OperandMatchResultTy Result = " << ParserName
+     << "(Operands, it->Class);\n";
   OS << "    if (Result != MatchOperand_NoMatch)\n";
   OS << "      return Result;\n";
   OS << "  }\n\n";
@@ -3970,7 +3979,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (!Info.OperandMatchInfo.empty())
     emitCustomOperandParsing(OS, Target, Info, ClassName, StringTable,
                              MaxMnemonicIndex, FeatureBitsets.size(),
-                             HasMnemonicFirst);
+                             HasMnemonicFirst, *AsmParser);
 
   OS << "#endif // GET_MATCHER_IMPLEMENTATION\n\n";
 

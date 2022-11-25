@@ -88,7 +88,7 @@ define void @pointer_cmpxchg_expand(i8** %ptr, i8* %v) {
 ; CHECK: %4 = extractvalue { i64, i1 } %3, 0
 ; CHECK: %5 = extractvalue { i64, i1 } %3, 1
 ; CHECK: %6 = inttoptr i64 %4 to i8*
-; CHECK: %7 = insertvalue { i8*, i1 } undef, i8* %6, 0
+; CHECK: %7 = insertvalue { i8*, i1 } poison, i8* %6, 0
 ; CHECK: %8 = insertvalue { i8*, i1 } %7, i1 %5, 1
   cmpxchg i8** %ptr, i8* null, i8* %v seq_cst monotonic
   ret void
@@ -102,7 +102,7 @@ define void @pointer_cmpxchg_expand2(i8** %ptr, i8* %v) {
 ; CHECK: %4 = extractvalue { i64, i1 } %3, 0
 ; CHECK: %5 = extractvalue { i64, i1 } %3, 1
 ; CHECK: %6 = inttoptr i64 %4 to i8*
-; CHECK: %7 = insertvalue { i8*, i1 } undef, i8* %6, 0
+; CHECK: %7 = insertvalue { i8*, i1 } poison, i8* %6, 0
 ; CHECK: %8 = insertvalue { i8*, i1 } %7, i1 %5, 1
   cmpxchg i8** %ptr, i8* null, i8* %v release monotonic
   ret void
@@ -116,7 +116,7 @@ define void @pointer_cmpxchg_expand3(i8** %ptr, i8* %v) {
 ; CHECK: %4 = extractvalue { i64, i1 } %3, 0
 ; CHECK: %5 = extractvalue { i64, i1 } %3, 1
 ; CHECK: %6 = inttoptr i64 %4 to i8*
-; CHECK: %7 = insertvalue { i8*, i1 } undef, i8* %6, 0
+; CHECK: %7 = insertvalue { i8*, i1 } poison, i8* %6, 0
 ; CHECK: %8 = insertvalue { i8*, i1 } %7, i1 %5, 1
   cmpxchg i8** %ptr, i8* null, i8* %v seq_cst seq_cst
   ret void
@@ -130,7 +130,7 @@ define void @pointer_cmpxchg_expand4(i8** %ptr, i8* %v) {
 ; CHECK: %4 = extractvalue { i64, i1 } %3, 0
 ; CHECK: %5 = extractvalue { i64, i1 } %3, 1
 ; CHECK: %6 = inttoptr i64 %4 to i8*
-; CHECK: %7 = insertvalue { i8*, i1 } undef, i8* %6, 0
+; CHECK: %7 = insertvalue { i8*, i1 } poison, i8* %6, 0
 ; CHECK: %8 = insertvalue { i8*, i1 } %7, i1 %5, 1
   cmpxchg weak i8** %ptr, i8* null, i8* %v seq_cst seq_cst
   ret void
@@ -144,7 +144,7 @@ define void @pointer_cmpxchg_expand5(i8** %ptr, i8* %v) {
 ; CHECK: %4 = extractvalue { i64, i1 } %3, 0
 ; CHECK: %5 = extractvalue { i64, i1 } %3, 1
 ; CHECK: %6 = inttoptr i64 %4 to i8*
-; CHECK: %7 = insertvalue { i8*, i1 } undef, i8* %6, 0
+; CHECK: %7 = insertvalue { i8*, i1 } poison, i8* %6, 0
 ; CHECK: %8 = insertvalue { i8*, i1 } %7, i1 %5, 1
   cmpxchg volatile i8** %ptr, i8* null, i8* %v seq_cst seq_cst
   ret void
@@ -159,7 +159,7 @@ define void @pointer_cmpxchg_expand6(i8 addrspace(2)* addrspace(1)* %ptr,
 ; CHECK: %4 = extractvalue { i64, i1 } %3, 0
 ; CHECK: %5 = extractvalue { i64, i1 } %3, 1
 ; CHECK: %6 = inttoptr i64 %4 to i8 addrspace(2)*
-; CHECK: %7 = insertvalue { i8 addrspace(2)*, i1 } undef, i8 addrspace(2)* %6, 0
+; CHECK: %7 = insertvalue { i8 addrspace(2)*, i1 } poison, i8 addrspace(2)* %6, 0
 ; CHECK: %8 = insertvalue { i8 addrspace(2)*, i1 } %7, i1 %5, 1
   cmpxchg i8 addrspace(2)* addrspace(1)* %ptr, i8 addrspace(2)* null, i8 addrspace(2)* %v seq_cst seq_cst
   ret void

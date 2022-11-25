@@ -2412,10 +2412,10 @@ ExpectedDecl ASTNodeImporter::VisitNamespaceDecl(NamespaceDecl *D) {
   // Create the "to" namespace, if needed.
   NamespaceDecl *ToNamespace = MergeWithNamespace;
   if (!ToNamespace) {
-    if (GetImportedOrCreateDecl(
-            ToNamespace, D, Importer.getToContext(), DC, D->isInline(),
-            *BeginLocOrErr, Loc, Name.getAsIdentifierInfo(),
-            /*PrevDecl=*/nullptr))
+    if (GetImportedOrCreateDecl(ToNamespace, D, Importer.getToContext(), DC,
+                                D->isInline(), *BeginLocOrErr, Loc,
+                                Name.getAsIdentifierInfo(),
+                                /*PrevDecl=*/nullptr, D->isNested()))
       return ToNamespace;
     ToNamespace->setRBraceLoc(*RBraceLocOrErr);
     ToNamespace->setLexicalDeclContext(LexicalDC);

@@ -203,6 +203,8 @@ public:
   bool GetCompleteType() const;
   /// \}
 
+  bool IsForcefullyCompleted() const;
+
   /// AST related queries.
   /// \{
   size_t GetPointerByteSize() const;

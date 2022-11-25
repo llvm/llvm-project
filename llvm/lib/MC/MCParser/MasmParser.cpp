@@ -75,8 +75,6 @@
 
 using namespace llvm;
 
-extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
-
 namespace {
 
 /// Helper types for tracking macro definitions.
@@ -1081,6 +1079,8 @@ private:
 } // end anonymous namespace
 
 namespace llvm {
+
+extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
 
 extern MCAsmParserExtension *createCOFFMasmParser();
 

@@ -1452,19 +1452,25 @@ bool ASTReader::ReadSLocEntry(int ID) {
     unsigned RecCode = MaybeRecCode.get();
 
     if (RecCode == SM_SLOC_BUFFER_BLOB_COMPRESSED) {
-      if (!llvm::compression::zlib::isAvailable()) {
-        Error("zlib is not available");
+      // Inspect the first byte to differentiate zlib (\x78) and zstd
+      // (little-endian 0xFD2FB528).
+      const llvm::compression::Format F =
+          Blob.size() > 0 && Blob.data()[0] == 0x78
+              ? llvm::compression::Format::Zlib
+              : llvm::compression::Format::Zstd;
+      if (const char *Reason = llvm::compression::getReasonIfUnsupported(F)) {
+        Error(Reason);
         return nullptr;
       }
-      SmallVector<uint8_t, 0> Uncompressed;
-      if (llvm::Error E = llvm::compression::zlib::decompress(
-              llvm::arrayRefFromStringRef(Blob), Uncompressed, Record[0])) {
+      SmallVector<uint8_t, 0> Decompressed;
+      if (llvm::Error E = llvm::compression::decompress(
+              F, llvm::arrayRefFromStringRef(Blob), Decompressed, Record[0])) {
         Error("could not decompress embedded file contents: " +
               llvm::toString(std::move(E)));
         return nullptr;
       }
       return llvm::MemoryBuffer::getMemBufferCopy(
-          llvm::toStringRef(Uncompressed), Name);
+          llvm::toStringRef(Decompressed), Name);
     } else if (RecCode == SM_SLOC_BUFFER_BLOB) {
       return llvm::MemoryBuffer::getMemBuffer(Blob.drop_back(1), Name, true);
     } else {

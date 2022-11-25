@@ -344,6 +344,63 @@ def Index_ShrUOp : IndexBinaryOp<"shru"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AndOp
+//===----------------------------------------------------------------------===//
+
+def Index_AndOp : IndexBinaryOp<"and"> {
+  let summary = "index bitwise and";
+  let description = [{
+    The `index.and` operation takes two index values and computes their bitwise
+    and.
+
+    Example:
+
+    ```mlir
+    // c = a & b
+    %c = index.and %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// OrOp
+//===----------------------------------------------------------------------===//
+
+def Index_OrOp : IndexBinaryOp<"or"> {
+  let summary = "index bitwise or";
+  let description = [{
+    The `index.or` operation takes two index values and computes their bitwise
+    or.
+
+    Example:
+
+    ```mlir
+    // c = a | b
+    %c = index.or %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// XorOp
+//===----------------------------------------------------------------------===//
+
+def Index_XOrOp : IndexBinaryOp<"xor"> {
+  let summary = "index bitwise xor";
+  let description = [{
+    The `index.xor` operation takes two index values and computes their bitwise
+    xor.
+
+    Example:
+
+    ```mlir
+    // c = a ^ b
+    %c = index.xor %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CastSOp
 //===----------------------------------------------------------------------===//
 
