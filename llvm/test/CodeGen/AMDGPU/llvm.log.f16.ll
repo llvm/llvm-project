@@ -19,12 +19,12 @@ declare <2 x half> @llvm.log.v2f16(<2 x half> %a)
 ; VI:     flat_store_short v{{\[[0-9]+:[0-9]+\]}}, v[[R_F16_0]]
 ; GFX9:   global_store_short v{{\[[0-9]+:[0-9]+\]}}, v[[R_F16_0]]
 define void @log_f16(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %r.val = call half @llvm.log.f16(half %a.val)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -58,11 +58,11 @@ entry:
 ; VI:     flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v[[R_F32_5]]
 ; GFX9:   global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v[[R_F32_5]]
 define void @log_v2f16(
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
+  %a.val = load <2 x half>, ptr addrspace(1) %a
   %r.val = call <2 x half> @llvm.log.v2f16(<2 x half> %a.val)
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }

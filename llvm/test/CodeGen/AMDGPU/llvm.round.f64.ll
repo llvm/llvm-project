@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefix=CI %s
 
-define amdgpu_kernel void @round_f64(double addrspace(1)* %out, double %x) #0 {
+define amdgpu_kernel void @round_f64(ptr addrspace(1) %out, double %x) #0 {
 ; SI-LABEL: round_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -59,11 +59,11 @@ define amdgpu_kernel void @round_f64(double addrspace(1)* %out, double %x) #0 {
 ; CI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; CI-NEXT:    s_endpgm
   %result = call double @llvm.round.f64(double %x) #1
-  store double %result, double addrspace(1)* %out
+  store double %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_round_f64(double addrspace(1)* %out, double addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_round_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_round_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -128,15 +128,15 @@ define amdgpu_kernel void @v_round_f64(double addrspace(1)* %out, double addrspa
 ; CI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
 ; CI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %out.gep = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %x = load double, double addrspace(1)* %gep
+  %gep = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %out.gep = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %x = load double, ptr addrspace(1) %gep
   %result = call double @llvm.round.f64(double %x) #1
-  store double %result, double addrspace(1)* %out.gep
+  store double %result, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @round_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %in) #0 {
+define amdgpu_kernel void @round_v2f64(ptr addrspace(1) %out, <2 x double> %in) #0 {
 ; SI-LABEL: round_v2f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -219,11 +219,11 @@ define amdgpu_kernel void @round_v2f64(<2 x double> addrspace(1)* %out, <2 x dou
 ; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %result = call <2 x double> @llvm.round.v2f64(<2 x double> %in) #1
-  store <2 x double> %result, <2 x double> addrspace(1)* %out
+  store <2 x double> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @round_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %in) #0 {
+define amdgpu_kernel void @round_v4f64(ptr addrspace(1) %out, <4 x double> %in) #0 {
 ; SI-LABEL: round_v4f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x11
@@ -364,11 +364,11 @@ define amdgpu_kernel void @round_v4f64(<4 x double> addrspace(1)* %out, <4 x dou
 ; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %result = call <4 x double> @llvm.round.v4f64(<4 x double> %in) #1
-  store <4 x double> %result, <4 x double> addrspace(1)* %out
+  store <4 x double> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @round_v8f64(<8 x double> addrspace(1)* %out, <8 x double> %in) #0 {
+define amdgpu_kernel void @round_v8f64(ptr addrspace(1) %out, <8 x double> %in) #0 {
 ; SI-LABEL: round_v8f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx16 s[4:19], s[0:1], 0x19
@@ -625,7 +625,7 @@ define amdgpu_kernel void @round_v8f64(<8 x double> addrspace(1)* %out, <8 x dou
 ; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[20:23], 0
 ; CI-NEXT:    s_endpgm
   %result = call <8 x double> @llvm.round.v8f64(<8 x double> %in) #1
-  store <8 x double> %result, <8 x double> addrspace(1)* %out
+  store <8 x double> %result, ptr addrspace(1) %out
   ret void
 }
 
