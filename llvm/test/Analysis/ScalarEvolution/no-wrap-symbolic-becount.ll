@@ -27,9 +27,10 @@ define i32 @test_01(i32 %start, i32* %p, i32* %q) {
 ; CHECK-NEXT:    exit count for loop: (zext i32 %start to i64)
 ; CHECK-NEXT:    exit count for backedge: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4294967295
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 %start to i64) symbolic max exit count for loop: (zext i32 %start to i64)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 %start to i64)
+; CHECK-NEXT:    symbolic max exit count for loop: (zext i32 %start to i64)
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK:       Loop %loop: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %0 = zext i32 %start to i64

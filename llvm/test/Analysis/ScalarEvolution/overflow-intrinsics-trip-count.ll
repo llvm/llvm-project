@@ -386,9 +386,10 @@ define void @sadd_symbolic_non_latch(i16 %start) {
 ; CHECK-NEXT:    exit count for for.body: (32767 + (-1 * %start))
 ; CHECK-NEXT:    exit count for for.latch: (230 + (-1 * %start))
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((230 + (-1 * %start)) umin (32767 + (-1 * %start))) symbolic max exit count for for.body: (32767 + (-1 * %start))
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((230 + (-1 * %start)) umin (32767 + (-1 * %start)))
+; CHECK-NEXT:    symbolic max exit count for for.body: (32767 + (-1 * %start))
 ; CHECK-NEXT:    symbolic max exit count for for.latch: (230 + (-1 * %start))
-; CHECK:       Loop %for.body: Predicated backedge-taken count is ((230 + (-1 * %start)) umin (32767 + (-1 * %start)))
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((230 + (-1 * %start)) umin (32767 + (-1 * %start)))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
 ;

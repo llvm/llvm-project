@@ -223,9 +223,10 @@ define void @test_other_exit(i32 %N) mustprogress {
 ; CHECK-NEXT:    exit count for for.body: 9
 ; CHECK-NEXT:    exit count for for.latch: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 9
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 9 symbolic max exit count for for.body: 9
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 9
+; CHECK-NEXT:    symbolic max exit count for for.body: 9
 ; CHECK-NEXT:    symbolic max exit count for for.latch: ***COULDNOTCOMPUTE***
-; CHECK:       Loop %for.body: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
