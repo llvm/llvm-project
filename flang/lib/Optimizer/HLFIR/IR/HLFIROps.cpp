@@ -337,5 +337,22 @@ mlir::LogicalResult hlfir::DesignateOp::verify() {
   return mlir::success();
 }
 
+//===----------------------------------------------------------------------===//
+// ConcatOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::ConcatOp::verify() {
+  if (getStrings().size() < 2)
+    return emitOpError("must be provided at least two string operands");
+  auto exprTy = getResult().getType().cast<hlfir::ExprType>();
+  unsigned kind = exprTy.getElementType().cast<fir::CharacterType>().getFKind();
+  for (auto string : getStrings())
+    if (kind != getFortranElementType(string.getType())
+                    .cast<fir::CharacterType>()
+                    .getFKind())
+      return emitOpError("strings must have the same KIND as the result type");
+  return mlir::success();
+}
+
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"
