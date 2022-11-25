@@ -23,6 +23,7 @@
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <numeric>
 
 namespace clang::include_cleaner {
 namespace {
@@ -62,7 +63,7 @@ constexpr llvm::StringLiteral CSS = R"css(
     padding-top: 1em;
     border-top: 1px solid #444;
   }
-  .ref.missing #hover .insert { font-weight: bold; }
+  .ref.missing #hover .insert { background-color: #bea; }
   .ref:not(.missing) #hover .insert { font-style: italic; }
 )css";
 
@@ -139,28 +140,17 @@ class Reporter {
   FileID MainFile;
   const FileEntry *MainFE;
 
-  // References to symbols from the main file.
-  // FIXME: should we deduplicate these?
-  struct Target {
-    Symbol Sym;
+  // Points within the main file that reference a Symbol.
+  // Implicit refs will be marked with a symbol just before the token.
+  struct Ref {
+    unsigned Offset;
     RefType Type;
+    Symbol Sym;
     SmallVector<SymbolLocation> Locations;
     SmallVector<Header> Headers;
     SmallVector<const Include *> Includes;
     bool Satisfied = false; // Is the include present?
     std::string Insert;     // If we had no includes, what would we insert?
-  };
-  std::vector<Target> Targets;
-  // Points within the main file that reference a Target.
-  // Implicit refs will be marked with a symbol just before the token.
-  struct Ref {
-    unsigned Offset;
-    bool Implicit;
-    size_t TargetIndex;
-    bool operator<(const Ref &Other) const {
-      return std::forward_as_tuple(Offset, !Implicit, TargetIndex) <
-             std::forward_as_tuple(Other.Offset, !Other.Implicit, TargetIndex);
-    }
   };
   std::vector<Ref> Refs;
   llvm::DenseMap<const Include *, std::vector<unsigned>> IncludeRefs;
@@ -171,7 +161,7 @@ class Reporter {
     if (List.empty())
       return "unused";
     if (llvm::any_of(List, [&](unsigned I) {
-          return Targets[Refs[I].TargetIndex].Type == RefType::Explicit;
+          return Refs[I].Type == RefType::Explicit;
         }))
       return "used";
     return "semiused";
@@ -193,43 +183,39 @@ class Reporter {
     llvm_unreachable("Unknown Header kind");
   }
 
-  Target makeTarget(const SymbolReference &SR) {
-    Target T{SR.Target, SR.RT, {}, {}, {}, {}, {}};
-
+  void fillTarget(Ref &R) {
     // Duplicates logic from walkUsed(), which doesn't expose SymbolLocations.
     // FIXME: use locateDecl and friends once implemented.
     // This doesn't use stdlib::Recognizer, but locateDecl will soon do that.
-    switch (SR.Target.kind()) {
+    switch (R.Sym.kind()) {
     case Symbol::Declaration:
-      T.Locations.push_back(SR.Target.declaration().getLocation());
+      R.Locations.push_back(R.Sym.declaration().getLocation());
       break;
     case Symbol::Macro:
-      T.Locations.push_back(SR.Target.macro().Definition);
+      R.Locations.push_back(R.Sym.macro().Definition);
       break;
     }
 
-    for (const auto &Loc : T.Locations)
-      T.Headers.append(findHeaders(Loc, SM, PI));
+    for (const auto &Loc : R.Locations)
+      R.Headers.append(findHeaders(Loc, SM, PI));
 
-    for (const auto &H : T.Headers) {
-      T.Includes.append(Includes.match(H));
+    for (const auto &H : R.Headers) {
+      R.Includes.append(Includes.match(H));
       // FIXME: library should signal main-file refs somehow.
       // Non-physical refs to the main-file should be possible.
       if (H.kind() == Header::Physical && H.physical() == MainFE)
-        T.Satisfied = true;
+        R.Satisfied = true;
     }
-    if (!T.Includes.empty())
-      T.Satisfied = true;
+    if (!R.Includes.empty())
+      R.Satisfied = true;
     // Include pointers are meaningfully ordered as they are backed by a vector.
-    llvm::sort(T.Includes);
-    T.Includes.erase(std::unique(T.Includes.begin(), T.Includes.end()),
-                     T.Includes.end());
-    
-    if (!T.Headers.empty())
-      // FIXME: library should tell us which header to use.
-      T.Insert = spellHeader(T.Headers.front());
+    llvm::sort(R.Includes);
+    R.Includes.erase(std::unique(R.Includes.begin(), R.Includes.end()),
+                     R.Includes.end());
 
-    return T;
+    if (!R.Headers.empty())
+      // FIXME: library should tell us which header to use.
+      R.Insert = spellHeader(R.Headers.front());
   }
 
 public:
@@ -250,13 +236,14 @@ public:
       return;
     }
 
-    Refs.push_back({Offset, SR.RT == RefType::Implicit, Targets.size()});
-    Targets.push_back(makeTarget(SR));
-    for (const auto *I : Targets.back().Includes)
-      IncludeRefs[I].push_back(Targets.size() - 1);
-    if (Targets.back().Type == RefType::Explicit && !Targets.back().Satisfied &&
-        !Targets.back().Insert.empty())
-      Insertion[Targets.back().Insert].push_back(Targets.size() - 1);
+    int RefIndex = Refs.size();
+    Refs.emplace_back(Ref{Offset, SR.RT, SR.Target});
+    Ref &R = Refs.back();
+    fillTarget(R);
+    for (const auto *I : R.Includes)
+      IncludeRefs[I].push_back(RefIndex);
+    if (R.Type == RefType::Explicit && !R.Satisfied && !R.Insert.empty())
+      Insertion[R.Insert].push_back(RefIndex);
   }
 
   void write() {
@@ -277,9 +264,9 @@ public:
       writeInclude(Inc);
       OS << "</template>\n";
     }
-    for (unsigned I = 0; I < Targets.size(); ++I) {
+    for (unsigned I = 0; I < Refs.size(); ++I) {
       OS << "<template id='t" << I << "'>";
-      writeTarget(Targets[I]);
+      writeTarget(Refs[I]);
       OS << "</template>\n";
     }
     OS << "</head>\n";
@@ -341,29 +328,29 @@ private:
     // We show one ref for each symbol: first by (RefType != Explicit, Sequence)
     llvm::DenseMap<Symbol, /*RefIndex*/ unsigned> FirstRef;
     for (unsigned RefIndex : RefIndices) {
-      const Target &T = Targets[Refs[RefIndex].TargetIndex];
-      auto I = FirstRef.try_emplace(T.Sym, RefIndex);
-      if (!I.second && T.Type == RefType::Explicit &&
-          Targets[Refs[I.first->second].TargetIndex].Type != RefType::Explicit)
+      const Ref &R = Refs[RefIndex];
+      auto I = FirstRef.try_emplace(R.Sym, RefIndex);
+      if (!I.second && R.Type == RefType::Explicit &&
+          Refs[I.first->second].Type != RefType::Explicit)
         I.first->second = RefIndex;
     }
     std::vector<std::pair<Symbol, unsigned>> Sorted = {FirstRef.begin(),
                                                        FirstRef.end()};
     llvm::stable_sort(Sorted, llvm::less_second{});
     for (auto &[S, RefIndex] : Sorted) {
-      auto &T = Targets[Refs[RefIndex].TargetIndex];
+      auto &R = Refs[RefIndex];
       OS << "<tr class='provides'><th>Provides</td><td>";
       std::string Details = printDetails(S);
       if (!Details.empty()) {
-        OS << "<span class='" << refType(T.Type) << "' title='";
+        OS << "<span class='" << refType(R.Type) << "' title='";
         escapeString(Details);
         OS << "'>";
       }
       escapeString(llvm::to_string(S));
       if (!Details.empty())
         OS << "</span>";
-      
-      unsigned Line = SM.getLineNumber(MainFile, Refs[RefIndex].Offset);
+
+      unsigned Line = SM.getLineNumber(MainFile, R.Offset);
       OS << ", <a href='#line" << Line << "'>line " << Line << "</a>";
       OS << "</td></tr>";
     }
@@ -386,22 +373,22 @@ private:
     OS << "</table>";
   }
 
-  void writeTarget(const Target &T) {
-    OS << "<table class='target " << refType(T.Type) << "'>";
+  void writeTarget(const Ref &R) {
+    OS << "<table class='target " << refType(R.Type) << "'>";
 
     OS << "<tr><th>Symbol</th><td>";
-    OS << describeSymbol(T.Sym) << " <code>";
-    escapeString(llvm::to_string(T.Sym));
+    OS << describeSymbol(R.Sym) << " <code>";
+    escapeString(llvm::to_string(R.Sym));
     OS << "</code></td></tr>\n";
 
-    std::string Details = printDetails(T.Sym);
+    std::string Details = printDetails(R.Sym);
     if (!Details.empty()) {
       OS << "<tr><td></td><td><code>";
       escapeString(Details);
       OS << "</code></td></tr>\n";
     }
 
-    for (const auto &Loc : T.Locations) {
+    for (const auto &Loc : R.Locations) {
       OS << "<tr><th>Location</th><td>";
       if (Loc.kind() == SymbolLocation::Physical) // needs SM to print properly.
         printSourceLocation(Loc.physical());
@@ -410,7 +397,7 @@ private:
       OS << "</td></tr>\n";
     }
 
-    for (const auto &H : T.Headers) {
+    for (const auto &H : R.Headers) {
       OS << "<tr><th>Header</th><td>";
       switch (H.kind()) {
       case Header::Physical:
@@ -427,16 +414,16 @@ private:
       OS << "</td></tr>\n";
     }
 
-    for (const auto *I : T.Includes) {
+    for (const auto *I : R.Includes) {
       OS << "<tr><th>Included</th><td>";
       escapeString(I->Spelled);
       OS << ", <a href='#line" << I->Line << "'>line " << I->Line << "</a>";
       OS << "</td></tr>";
     }
-    
-    if (!T.Insert.empty()) {
+
+    if (!R.Insert.empty()) {
       OS << "<tr><th>Insert</th><td class='insert'>";
-      escapeString(T.Insert);
+      escapeString(R.Insert);
       OS << "</td></tr>";
     }
 
@@ -444,7 +431,6 @@ private:
   }
 
   void writeCode() {
-    llvm::sort(Refs);
     llvm::StringRef Code = SM.getBufferData(MainFile);
 
     OS << "<pre onclick='select(event)' class='code'>";
@@ -477,7 +463,13 @@ private:
       OS << "</code>\n";
     };
 
-    auto Rest = llvm::makeArrayRef(Refs);
+    std::vector<unsigned> RefOrder(Refs.size());
+    std::iota(RefOrder.begin(), RefOrder.end(), 0);
+    llvm::stable_sort(RefOrder, [&](unsigned A, unsigned B) {
+      return std::make_pair(Refs[A].Offset, Refs[A].Type != RefType::Implicit) <
+             std::make_pair(Refs[B].Offset, Refs[B].Type != RefType::Implicit);
+    });
+    auto Rest = llvm::makeArrayRef(RefOrder);
     unsigned End = 0;
     StartLine();
     for (unsigned I = 0; I < Code.size(); ++I) {
@@ -487,25 +479,26 @@ private:
         End = 0;
       }
       // Handle implicit refs, which are rendered *before* the token.
-      while (!Rest.empty() && Rest.front().Offset == I &&
-             Rest.front().Implicit) {
-        const Ref &R = Rest.front();
+      while (!Rest.empty() && Refs[Rest.front()].Offset == I &&
+             Refs[Rest.front()].Type == RefType::Implicit) {
+        const Ref &R = Refs[Rest.front()];
         OS << "<span class='ref sel implicit "
-           << (Targets[R.TargetIndex].Satisfied ? "satisfied" : "missing")
-           << "' data-hover='t" << R.TargetIndex << "'>&loz;</span>";
+           << (R.Satisfied ? "satisfied" : "missing") << "' data-hover='t"
+           << Rest.front() << "'>&loz;</span>";
         Rest = Rest.drop_front();
       };
       // Accumulate all explicit refs that appear on the same token.
       std::string TargetList;
       bool Unsatisfied = false;
-      Rest = Rest.drop_while([&](const Ref &R) {
+      Rest = Rest.drop_while([&](unsigned RefIndex) {
+        const Ref &R = Refs[RefIndex];
         if (R.Offset != I)
           return false;
         if (!TargetList.empty())
           TargetList.push_back(',');
         TargetList.push_back('t');
-        TargetList.append(std::to_string(R.TargetIndex));
-        Unsatisfied = Unsatisfied || !Targets[R.TargetIndex].Satisfied;
+        TargetList.append(std::to_string(RefIndex));
+        Unsatisfied = Unsatisfied || !R.Satisfied;
         return true;
       });
       if (!TargetList.empty()) {
