@@ -16,4 +16,6 @@ add_mlir_dialect_library(MLIRVectorTransformOps
   MLIRSideEffectInterfaces
   MLIRTransformDialect
   MLIRVectorDialect
+  MLIRVectorToSCF
+  MLIRX86VectorTransforms
   )
