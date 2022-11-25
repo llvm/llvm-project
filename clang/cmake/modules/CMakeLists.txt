@@ -32,10 +32,6 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in
   ${clang_cmake_builddir}/ClangConfig.cmake
   @ONLY)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfigVersion.cmake.in
-  ${clang_cmake_builddir}/ClangConfigVersion.cmake
-  @ONLY)
 set(CLANG_CONFIG_CMAKE_DIR)
 set(CLANG_CONFIG_LLVM_CMAKE_DIR)
 
@@ -63,10 +59,6 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/ClangConfig.cmake
   @ONLY)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfigVersion.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/ClangConfigVersion.cmake
-  @ONLY)
 set(CLANG_CONFIG_CODE)
 set(CLANG_CONFIG_CMAKE_DIR)
 
@@ -75,7 +67,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/ClangConfig.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/ClangConfigVersion.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddClang.cmake
     DESTINATION ${CLANG_INSTALL_PACKAGE_DIR}
     COMPONENT clang-cmake-exports)

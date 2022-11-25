@@ -31,10 +31,6 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/LLDConfig.cmake.in
   ${lld_cmake_builddir}/LLDConfig.cmake
   @ONLY)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/LLDConfigVersion.cmake.in
-  ${lld_cmake_builddir}/LLDConfigVersion.cmake
-  @ONLY)
 set(LLD_CONFIG_CMAKE_DIR)
 set(LLD_CONFIG_LLVM_CMAKE_DIR)
 
@@ -48,10 +44,6 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/LLDConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLDConfig.cmake
   @ONLY)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/LLDConfigVersion.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLDConfigVersion.cmake
-  @ONLY)
 set(LLD_CONFIG_CODE)
 set(LLD_CONFIG_CMAKE_DIR)
 
@@ -60,7 +52,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLDConfig.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLDConfigVersion.cmake
     DESTINATION ${LLD_INSTALL_PACKAGE_DIR}
     COMPONENT lld-cmake-exports)
 
