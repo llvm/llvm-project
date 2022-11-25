@@ -1613,7 +1613,7 @@ public:
 
 // Pattern to rewrite a ExtractOp(vector<...xT> ConstantOp)[...] -> ConstantOp,
 // where the position array specifies a scalar element.
-class ExtractOpScalarVectorConstantFolder final
+class ExtractOpNonSplatConstantFolder final
     : public OpRewritePattern<ExtractOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -1663,7 +1663,7 @@ public:
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ExtractOpSplatConstantFolder, ExtractOpScalarVectorConstantFolder,
+  results.add<ExtractOpSplatConstantFolder, ExtractOpNonSplatConstantFolder,
               ExtractOpFromBroadcast>(context);
 }
 
