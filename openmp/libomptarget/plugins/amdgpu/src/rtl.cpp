@@ -1517,12 +1517,22 @@ public:
       memcpy(HstPtr, HstOrPoolPtr, Size);
     }
 
-    DeviceInfo().FreeSignalPool.push(signal);
     alreadyCompleted = true;
     return err;
   }
 
   hsa_status_t releaseResources() {
+#ifdef OMPTARGET_DEBUG
+    DP("releaseResource for HstPtr %p\t HstOrPoolPtr %p\n", HstPtr,
+       HstOrPoolPtr);
+#endif
+    OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(signal););
+
+    // Free signal once it's no longer in use.
+    // This *should* always be safe to do at this point as the signal is either
+    // waited for directly or as part of a kernel launch AND-Barrier cascade.
+    DeviceInfo().FreeSignalPool.push(signal);
+
     if (userLocked)
       return HSA_STATUS_SUCCESS;
 
@@ -3667,9 +3677,9 @@ int32_t __tgt_rtl_data_submit_async(int DeviceId, void *TgtPtr, void *HstPtr,
     reinterpret_cast<AMDGPUAsyncInfoQueueTy *>(AsyncInfo->Queue)
         ->addMapEnteringInfo(std::move(AsyncData));
     return rc;
-  } else {
-    return __tgt_rtl_data_submit(DeviceId, TgtPtr, HstPtr, Size);
   }
+
+  // Fall back to synchronous case
   return __tgt_rtl_data_submit(DeviceId, TgtPtr, HstPtr, Size);
 }
 
@@ -3706,8 +3716,10 @@ int32_t __tgt_rtl_data_retrieve_async(int DeviceId, void *HstPtr, void *TgtPtr,
     reinterpret_cast<AMDGPUAsyncInfoQueueTy *>(AsyncInfo->Queue)
         ->addMapExitingInfo(std::move(AsyncData));
     return RC;
-  } else
-    return __tgt_rtl_data_retrieve(DeviceId, HstPtr, TgtPtr, Size);
+  }
+
+  // Fall back to synchronous case
+  return __tgt_rtl_data_retrieve(DeviceId, HstPtr, TgtPtr, Size);
 }
 
 int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr, int32_t) {
