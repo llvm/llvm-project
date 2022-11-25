@@ -184,7 +184,7 @@ typedef unsigned long long kmp_uint64;
 #error "Can't determine size_t printf format specifier."
 #endif
 
-#if KMP_ARCH_X86
+#if KMP_ARCH_X86 || KMP_ARCH_ARM
 #define KMP_SIZE_T_MAX (0xFFFFFFFF)
 #else
 #define KMP_SIZE_T_MAX (0xFFFFFFFFFFFFFFFF)
@@ -456,7 +456,7 @@ enum kmp_mem_fence_type {
 
 // Synchronization primitives
 
-#if KMP_ASM_INTRINS && KMP_OS_WINDOWS && !(KMP_ARCH_AARCH64 && defined(__GNUC__))
+#if KMP_ASM_INTRINS && KMP_OS_WINDOWS && !((KMP_ARCH_AARCH64 || KMP_ARCH_ARM) && defined(__GNUC__))
 
 #if KMP_MSVC_COMPAT && !KMP_COMPILER_CLANG
 #pragma intrinsic(InterlockedExchangeAdd)
