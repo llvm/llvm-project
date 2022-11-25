@@ -181,7 +181,7 @@ ds_wrxchg2st64_rtn_b32 v[6:7], v1, a2, a3 offset0:127
 // GFX90A: error: invalid register class: data and dst should be all VGPR or AGPR
 
 image_load v[0:4], v2, s[0:7] dmask:0xf unorm tfe
-// GFX90A: error: operands are not valid for this GPU or mode
+// GFX90A: error: invalid operand for instruction
 
 image_sample_lz v[0:3], v[0:1], s[4:11], s[16:19] dmask:0xf
 // GFX90A: error: instruction not supported on this GPU

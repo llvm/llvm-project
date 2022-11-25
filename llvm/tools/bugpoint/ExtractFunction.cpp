@@ -105,7 +105,7 @@ BugDriver::deleteInstructionFromProgram(const Instruction *I,
     TheInst->replaceAllUsesWith(Constant::getNullValue(TheInst->getType()));
 
   // Remove the instruction from the program.
-  TheInst->getParent()->getInstList().erase(TheInst);
+  TheInst->eraseFromParent();
 
   // Spiff up the output a little bit.
   std::vector<std::string> Passes;

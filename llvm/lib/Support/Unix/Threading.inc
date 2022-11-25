@@ -290,7 +290,7 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
 
 #include <thread>
 
-int computeHostNumHardwareThreads() {
+static int computeHostNumHardwareThreads() {
 #if defined(__FreeBSD__)
   cpuset_t mask;
   CPU_ZERO(&mask);

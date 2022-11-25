@@ -671,7 +671,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
 
     SmallVector<Type> resultTensorTypes =
         getTensorOutputTypes(op, tiledOperands);
-    res = op.clone(b, loc, resultTensorTypes, tiledOperands);
+    res = clone(b, op, resultTensorTypes, tiledOperands);
     tensorResults =
         insertSlicesBack(builder, loc, op, tiledOperands, res->getResults());
     return scf::ValueVector(tensorResults.begin(), tensorResults.end());

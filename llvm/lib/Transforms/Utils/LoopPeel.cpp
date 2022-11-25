@@ -673,7 +673,7 @@ static void cloneLoopBlocks(
       else
         VMap[&*I] = LatchVal;
     }
-    cast<BasicBlock>(VMap[Header])->getInstList().erase(NewPHI);
+    NewPHI->eraseFromParent();
   }
 
   // Fix up the outgoing values - we need to add a value for the iteration

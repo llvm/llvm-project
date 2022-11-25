@@ -170,6 +170,7 @@ namespace quux::inline frobble {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "quux"
+// CHECK-NEXT:    "isNested": true
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -195,7 +196,7 @@ namespace quux::inline frobble {
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "name": "quux",
+// CHECK-NEXT:  "name": "quux"
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
@@ -220,7 +221,8 @@ namespace quux::inline frobble {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "frobble",
-// CHECK-NEXT:    "isInline": true
+// CHECK-NEXT:    "isInline": true,
+// CHECK-NEXT:    "isNested": true
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
