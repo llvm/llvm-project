@@ -224,6 +224,8 @@ def hlfir_ConcatOp : hlfir_Op<"concat", []> {
      attr-dict `:` functional-type(operands, results)
   }];
 
+  let builders = [OpBuilder<(ins "mlir::ValueRange":$strings,"mlir::Value":$len)>];
+
   let hasVerifier = 1;
 }
 

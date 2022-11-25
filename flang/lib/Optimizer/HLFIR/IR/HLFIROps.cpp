@@ -341,17 +341,47 @@ mlir::LogicalResult hlfir::DesignateOp::verify() {
 // ConcatOp
 //===----------------------------------------------------------------------===//
 
+static unsigned getCharacterKind(mlir::Type t) {
+  return hlfir::getFortranElementType(t).cast<fir::CharacterType>().getFKind();
+}
+
+static llvm::Optional<fir::CharacterType::LenType>
+getCharacterLengthIfStatic(mlir::Type t) {
+  if (auto charType =
+          hlfir::getFortranElementType(t).dyn_cast<fir::CharacterType>())
+    if (charType.hasConstantLen())
+      return charType.getLen();
+  return llvm::None;
+}
+
 mlir::LogicalResult hlfir::ConcatOp::verify() {
   if (getStrings().size() < 2)
     return emitOpError("must be provided at least two string operands");
-  auto exprTy = getResult().getType().cast<hlfir::ExprType>();
-  unsigned kind = exprTy.getElementType().cast<fir::CharacterType>().getFKind();
+  unsigned kind = getCharacterKind(getResult().getType());
   for (auto string : getStrings())
-    if (kind != getFortranElementType(string.getType())
-                    .cast<fir::CharacterType>()
-                    .getFKind())
+    if (kind != getCharacterKind(string.getType()))
       return emitOpError("strings must have the same KIND as the result type");
   return mlir::success();
+}
+
+void hlfir::ConcatOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &result,
+                            mlir::ValueRange strings, mlir::Value len) {
+  fir::CharacterType::LenType resultTypeLen = 0;
+  assert(!strings.empty() && "must contain operands");
+  unsigned kind = getCharacterKind(strings[0].getType());
+  for (auto string : strings)
+    if (auto cstLen = getCharacterLengthIfStatic(string.getType())) {
+      resultTypeLen += *cstLen;
+    } else {
+      resultTypeLen = fir::CharacterType::unknownLen();
+      break;
+    }
+  auto resultType = hlfir::ExprType::get(
+      builder.getContext(), hlfir::ExprType::Shape{},
+      fir::CharacterType::get(builder.getContext(), kind, resultTypeLen),
+      false);
+  build(builder, result, resultType, strings, len);
 }
 
 #define GET_OP_CLASSES
