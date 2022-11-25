@@ -233,6 +233,11 @@ private:
   /// The last `.llvm_bb_addr_map` section fragment that we handled (if any).
   MCSection *YkLastBBAddrMapSection = nullptr;
 
+  /// Symbols marking the call instructions of each block. Used for the Yk JIT.
+  std::map<const MachineBasicBlock *,
+           SmallVector<std::tuple<MCSymbol *, MCSymbol *>>>
+      YkCallMarkerSyms;
+
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
 

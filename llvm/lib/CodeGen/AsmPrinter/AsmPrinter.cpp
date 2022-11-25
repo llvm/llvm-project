@@ -1348,6 +1348,21 @@ void emitYkBBAddrMapSymbol(MCContext &MCtxt, MCStreamer &OutStreamer,
   OutStreamer.emitLabel(Sym);
 }
 
+/// Returns the fallthrough block of `MBB`, or nullptr if there isn't one.
+MachineBasicBlock *findFallthruBlock(const MachineBasicBlock *MBB) {
+  for (MachineBasicBlock *SBB : MBB->successors()) {
+    if (MBB->isLayoutSuccessor(SBB)) {
+      return SBB;
+    }
+  }
+  return nullptr;
+}
+
+inline const MCSymbol *BBSym(const MachineBasicBlock *MBB,
+                             const MCSymbol *FuncSym) {
+  return MBB->isEntryBlock() ? FuncSym : MBB->getSymbol();
+}
+
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
@@ -1408,6 +1423,9 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       MergedBBs.erase(BB);
     }
   }
+
+  const TargetInstrInfo *TI = MF.getSubtarget().getInstrInfo();
+
   // Emit BB Information for each basic block in the funciton.
   for (const MachineBasicBlock &MBB : MF) {
     const MCSymbol *MBBSymbol =
@@ -1455,6 +1473,107 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       if (!Found)
         OutContext.reportError(SMLoc(), "Couldn't find the block's index");
       OutStreamer->emitULEB128IntValue(I);
+    }
+
+    // Emit call marker table for the Yk JIT.
+    //
+    // The table is a size header, followed by call instruction addresses.
+    //
+    // YKOPT: to save space, instead of using absolute symbol addresses, compute
+    // the distance from the start of the block and use uleb128 encoding.
+    const size_t NumCalls = YkCallMarkerSyms[&MBB].size();
+    OutStreamer->emitULEB128IntValue(NumCalls);
+    for (auto Tup : YkCallMarkerSyms[&MBB]) {
+      // Emit address of the call instruction.
+      OutStreamer->emitSymbolValue(std::get<0>(Tup), getPointerSize());
+      // Emit address of target if known, or 0.
+      MCSymbol *Target = std::get<1>(Tup);
+      if (Target)
+        OutStreamer->emitSymbolValue(Target, getPointerSize());
+      else
+        OutStreamer->emitIntValue(0, getPointerSize());
+    }
+
+    // Emit successor information.
+    //
+    // Each codegenned block gets a record indicating any statically known
+    // successors. The record starts with a `SuccessorKind` byte:
+    enum SuccessorKind {
+      // One successor.
+      Unconditional = 0,
+      // Choice of two successors.
+      Conditional = 1,
+      // A control flow edge known only at runtime, e.g. a return or an indirect
+      // branch.
+      Dynamic = 2,
+    };
+
+    // Then depending of the `SuccessorKind` there is a payload describing the
+    // successors:
+    //
+    // `Unconditional`: [target-address: u64]
+    // `Conditional`:   [taken-address: u64, not-taken-address: u64]
+    // `Dynamic`:       [] (i.e. nothing, because nothing is statically known)
+
+    MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+    SmallVector<MachineOperand> Conds;
+
+    if (!TI->analyzeBranch(const_cast<MachineBasicBlock &>(MBB), TBB, FBB,
+                           Conds)) {
+      // The block ends with a branch or a fall-thru.
+      if (!TBB && !FBB) {
+        // Both null: block has no terminator and either falls through or
+        // diverges.
+        OutStreamer->emitInt8(Unconditional);
+        MachineBasicBlock *ThruBB = findFallthruBlock(&MBB);
+        if (ThruBB) {
+          OutStreamer->emitSymbolValue(BBSym(ThruBB, FunctionSymbol),
+                                       getPointerSize());
+        } else {
+          OutStreamer->emitInt64(0); // Divergent.
+        }
+      } else if (TBB && !FBB) {
+        // Only FBB null: block either ends with an unconditional branch or a
+        // conditional branch whose false arm falls through or diverges.
+        if (Conds.empty()) {
+          // No conditions: unconditional branch.
+          OutStreamer->emitInt8(Unconditional);
+          OutStreamer->emitSymbolValue(BBSym(TBB, FunctionSymbol),
+                                       getPointerSize());
+        } else {
+          // Has conditions: conditional branch followed by fallthru or
+          // divergence.
+          MachineBasicBlock *ThruBB = findFallthruBlock(&MBB);
+          OutStreamer->emitInt8(Conditional);
+          OutStreamer->emitSymbolValue(BBSym(TBB, FunctionSymbol),
+                                       getPointerSize());
+          if (ThruBB) {
+            OutStreamer->emitSymbolValue(BBSym(ThruBB, FunctionSymbol),
+                                         getPointerSize());
+          } else {
+            OutStreamer->emitInt64(0); // Divergent.
+          }
+        }
+      } else {
+        // Conditional branch followed by an unconditional branch.
+        assert(TBB && FBB);
+        OutStreamer->emitInt8(Conditional);
+        OutStreamer->emitSymbolValue(BBSym(TBB, FunctionSymbol),
+                                     getPointerSize());
+        OutStreamer->emitSymbolValue(BBSym(FBB, FunctionSymbol),
+                                     getPointerSize());
+      }
+    } else {
+      // Wasn't a branch or a fall-thru. Must be a different kind of terminator.
+      const MachineInstr *LastI = &*MBB.instr_rbegin();
+      if (LastI->isReturn() || LastI->isIndirectBranch()) {
+        OutStreamer->emitInt8(Dynamic);
+      } else {
+        std::string Msg = "unhandled block terminator in block: ";
+        raw_string_ostream OS(Msg);
+        LastI->print(OS);
+        OutContext.reportError(SMLoc(), Msg);
+      }
     }
   }
 
@@ -1577,6 +1696,9 @@ void AsmPrinter::emitFunctionBody() {
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
+
+    YkCallMarkerSyms.insert({&MBB, {}});
+
     DenseMap<StringRef, unsigned> MnemonicCounts;
     for (auto &MI : MBB) {
       // Print the assembly for the instruction.
@@ -1651,6 +1773,24 @@ void AsmPrinter::emitFunctionBody() {
           OutStreamer->emitRawComment("ARITH_FENCE");
         break;
       default:
+
+        if (YkAllocLLVMBBAddrMapSection && MI.isCall() &&
+            (MI.getOpcode() != TargetOpcode::STACKMAP) &&
+            (MI.getOpcode() != TargetOpcode::PATCHPOINT) &&
+            (MI.getOpcode() != TargetOpcode::STATEPOINT)) {
+          MCSymbol *YkPreCallSym =
+              MF->getContext().createTempSymbol("yk_precall", true);
+          OutStreamer->emitLabel(YkPreCallSym);
+          const MachineOperand CallOpnd = MI.getOperand(0);
+          MCSymbol *CallTargetSym = nullptr;
+          if (CallOpnd.isGlobal()) {
+            // Statically known function address.
+            CallTargetSym = getSymbol(CallOpnd.getGlobal());
+          }
+          assert(YkCallMarkerSyms.find(&MBB) != YkCallMarkerSyms.end());
+          YkCallMarkerSyms[&MBB].push_back({YkPreCallSym, CallTargetSym});
+        }
+
         emitInstruction(&MI);
         if (CanDoExtraAnalysis) {
           MCInst MCI;
