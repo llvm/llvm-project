@@ -1615,8 +1615,7 @@ define i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_i32(i32 %__u, <2 x i64> %__a, <
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
 ; VLX-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0 {%k1}
-; VLX-NEXT:    kmovd %k0, %eax
-; VLX-NEXT:    andl $15, %eax
+; VLX-NEXT:    kmovb %k0, %eax
 ; VLX-NEXT:    retq
 ;
 ; NoVLX-LABEL: test_masked_vpcmpeqd_v4i1_v32i1_mask_i32:
