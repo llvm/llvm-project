@@ -134,6 +134,7 @@ static cl::opt<bool>
                                "optimisations and transformations have run."));
 
 extern bool YkAllocLLVMBBAddrMapSection;
+extern bool YkExtendedLLVMBBAddrMapSection;
 
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
@@ -1438,141 +1439,147 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
     OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     PrevMBBEndSymbol = MBB.getEndSymbol();
-    // Find BBs corresponding with this MBB as described above.
-    const BasicBlock *CorrBB = MBB.getBasicBlock();
-    std::vector<const BasicBlock *> CorrBBs;
-    while (CorrBB != nullptr) {
-      CorrBBs.push_back(CorrBB);
-      const Instruction *Term = CorrBB->getTerminator();
-      assert(Term != nullptr);
-      if ((isa<BranchInst>(Term)) &&
-          (!(dyn_cast<const BranchInst>(Term))->isConditional())) {
-        CorrBB = CorrBB->getUniqueSuccessor();
-        assert(CorrBB != nullptr);
-        if (MergedBBs.count(CorrBB) == 0) {
+
+    if (YkExtendedLLVMBBAddrMapSection) {
+      // Find BBs corresponding with this MBB as described above.
+      const BasicBlock *CorrBB = MBB.getBasicBlock();
+      std::vector<const BasicBlock *> CorrBBs;
+      while (CorrBB != nullptr) {
+        CorrBBs.push_back(CorrBB);
+        const Instruction *Term = CorrBB->getTerminator();
+        assert(Term != nullptr);
+        if ((isa<BranchInst>(Term)) &&
+            (!(dyn_cast<const BranchInst>(Term))->isConditional())) {
+          CorrBB = CorrBB->getUniqueSuccessor();
+          assert(CorrBB != nullptr);
+          if (MergedBBs.count(CorrBB) == 0) {
+            CorrBB = nullptr;
+          }
+        } else {
           CorrBB = nullptr;
         }
-      } else {
-        CorrBB = nullptr;
       }
-    }
-    // Emit the number of corresponding BasicBlocks.
-    OutStreamer->emitULEB128IntValue(CorrBBs.size());
-    // Emit the corresponding block indices.
-    for (auto CorrBB : CorrBBs) {
-      size_t I = 0;
-      bool Found = false;
-      for (auto It = F.begin(); It != F.end(); It++) {
-        const BasicBlock *BB = &*It;
-        if (BB == CorrBB) {
-          Found = true;
-          break;
+      // Emit the number of corresponding BasicBlocks.
+      OutStreamer->emitULEB128IntValue(CorrBBs.size());
+      // Emit the corresponding block indices.
+      for (auto CorrBB : CorrBBs) {
+        size_t I = 0;
+        bool Found = false;
+        for (auto It = F.begin(); It != F.end(); It++) {
+          const BasicBlock *BB = &*It;
+          if (BB == CorrBB) {
+            Found = true;
+            break;
+          }
+          I++;
         }
-        I++;
+        if (!Found)
+          OutContext.reportError(SMLoc(), "Couldn't find the block's index");
+        OutStreamer->emitULEB128IntValue(I);
       }
-      if (!Found)
-        OutContext.reportError(SMLoc(), "Couldn't find the block's index");
-      OutStreamer->emitULEB128IntValue(I);
-    }
 
-    // Emit call marker table for the Yk JIT.
-    //
-    // The table is a size header, followed by call instruction addresses.
-    //
-    // YKOPT: to save space, instead of using absolute symbol addresses, compute
-    // the distance from the start of the block and use uleb128 encoding.
-    const size_t NumCalls = YkCallMarkerSyms[&MBB].size();
-    OutStreamer->emitULEB128IntValue(NumCalls);
-    for (auto Tup : YkCallMarkerSyms[&MBB]) {
-      // Emit address of the call instruction.
-      OutStreamer->emitSymbolValue(std::get<0>(Tup), getPointerSize());
-      // Emit address of target if known, or 0.
-      MCSymbol *Target = std::get<1>(Tup);
-      if (Target)
-        OutStreamer->emitSymbolValue(Target, getPointerSize());
-      else
-        OutStreamer->emitIntValue(0, getPointerSize());
-    }
+      // Emit call marker table for the Yk JIT.
+      //
+      // The table is a size header, followed by call instruction addresses.
+      //
+      // YKOPT: to save space, instead of using absolute symbol addresses,
+      // compute the distance from the start of the block and use uleb128
+      // encoding.
+      const size_t NumCalls = YkCallMarkerSyms[&MBB].size();
+      OutStreamer->emitULEB128IntValue(NumCalls);
+      for (auto Tup : YkCallMarkerSyms[&MBB]) {
+        // Emit address of the call instruction.
+        OutStreamer->emitSymbolValue(std::get<0>(Tup), getPointerSize());
+        // Emit address of target if known, or 0.
+        MCSymbol *Target = std::get<1>(Tup);
+        if (Target)
+          OutStreamer->emitSymbolValue(Target, getPointerSize());
+        else
+          OutStreamer->emitIntValue(0, getPointerSize());
+      }
 
-    // Emit successor information.
-    //
-    // Each codegenned block gets a record indicating any statically known
-    // successors. The record starts with a `SuccessorKind` byte:
-    enum SuccessorKind {
-      // One successor.
-      Unconditional = 0,
-      // Choice of two successors.
-      Conditional = 1,
-      // A control flow edge known only at runtime, e.g. a return or an indirect
-      // branch.
-      Dynamic = 2,
-    };
+      // Emit successor information.
+      //
+      // Each codegenned block gets a record indicating any statically known
+      // successors. The record starts with a `SuccessorKind` byte:
+      enum SuccessorKind {
+        // One successor.
+        Unconditional = 0,
+        // Choice of two successors.
+        Conditional = 1,
+        // A control flow edge known only at runtime, e.g. a return or an
+        // indirect
+        // branch.
+        Dynamic = 2,
+      };
 
-    // Then depending of the `SuccessorKind` there is a payload describing the
-    // successors:
-    //
-    // `Unconditional`: [target-address: u64]
-    // `Conditional`:   [taken-address: u64, not-taken-address: u64]
-    // `Dynamic`:       [] (i.e. nothing, because nothing is statically known)
+      // Then depending of the `SuccessorKind` there is a payload describing the
+      // successors:
+      //
+      // `Unconditional`: [target-address: u64]
+      // `Conditional`:   [taken-address: u64, not-taken-address: u64]
+      // `Dynamic`:       [] (i.e. nothing, because nothing is statically known)
 
-    MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
-    SmallVector<MachineOperand> Conds;
+      MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+      SmallVector<MachineOperand> Conds;
 
-    if (!TI->analyzeBranch(const_cast<MachineBasicBlock &>(MBB), TBB, FBB,
-                           Conds)) {
-      // The block ends with a branch or a fall-thru.
-      if (!TBB && !FBB) {
-        // Both null: block has no terminator and either falls through or
-        // diverges.
-        OutStreamer->emitInt8(Unconditional);
-        MachineBasicBlock *ThruBB = findFallthruBlock(&MBB);
-        if (ThruBB) {
-          OutStreamer->emitSymbolValue(BBSym(ThruBB, FunctionSymbol),
-                                       getPointerSize());
-        } else {
-          OutStreamer->emitInt64(0); // Divergent.
-        }
-      } else if (TBB && !FBB) {
-        // Only FBB null: block either ends with an unconditional branch or a
-        // conditional branch whose false arm falls through or diverges.
-        if (Conds.empty()) {
-          // No conditions: unconditional branch.
+      if (!TI->analyzeBranch(const_cast<MachineBasicBlock &>(MBB), TBB, FBB,
+                             Conds)) {
+        // The block ends with a branch or a fall-thru.
+        if (!TBB && !FBB) {
+          // Both null: block has no terminator and either falls through or
+          // diverges.
           OutStreamer->emitInt8(Unconditional);
-          OutStreamer->emitSymbolValue(BBSym(TBB, FunctionSymbol),
-                                       getPointerSize());
-        } else {
-          // Has conditions: conditional branch followed by fallthru or
-          // divergence.
           MachineBasicBlock *ThruBB = findFallthruBlock(&MBB);
-          OutStreamer->emitInt8(Conditional);
-          OutStreamer->emitSymbolValue(BBSym(TBB, FunctionSymbol),
-                                       getPointerSize());
           if (ThruBB) {
             OutStreamer->emitSymbolValue(BBSym(ThruBB, FunctionSymbol),
                                          getPointerSize());
           } else {
             OutStreamer->emitInt64(0); // Divergent.
           }
+        } else if (TBB && !FBB) {
+          // Only FBB null: block either ends with an unconditional branch or a
+          // conditional branch whose false arm falls through or diverges.
+          if (Conds.empty()) {
+            // No conditions: unconditional branch.
+            OutStreamer->emitInt8(Unconditional);
+            OutStreamer->emitSymbolValue(BBSym(TBB, FunctionSymbol),
+                                         getPointerSize());
+          } else {
+            // Has conditions: conditional branch followed by fallthru or
+            // divergence.
+            MachineBasicBlock *ThruBB = findFallthruBlock(&MBB);
+            OutStreamer->emitInt8(Conditional);
+            OutStreamer->emitSymbolValue(BBSym(TBB, FunctionSymbol),
+                                         getPointerSize());
+            if (ThruBB) {
+              OutStreamer->emitSymbolValue(BBSym(ThruBB, FunctionSymbol),
+                                           getPointerSize());
+            } else {
+              OutStreamer->emitInt64(0); // Divergent.
+            }
+          }
+        } else {
+          // Conditional branch followed by an unconditional branch.
+          assert(TBB && FBB);
+          OutStreamer->emitInt8(Conditional);
+          OutStreamer->emitSymbolValue(BBSym(TBB, FunctionSymbol),
+                                       getPointerSize());
+          OutStreamer->emitSymbolValue(BBSym(FBB, FunctionSymbol),
+                                       getPointerSize());
         }
       } else {
-        // Conditional branch followed by an unconditional branch.
-        assert(TBB && FBB);
-        OutStreamer->emitInt8(Conditional);
-        OutStreamer->emitSymbolValue(BBSym(TBB, FunctionSymbol),
-                                     getPointerSize());
-        OutStreamer->emitSymbolValue(BBSym(FBB, FunctionSymbol),
-                                     getPointerSize());
-      }
-    } else {
-      // Wasn't a branch or a fall-thru. Must be a different kind of terminator.
-      const MachineInstr *LastI = &*MBB.instr_rbegin();
-      if (LastI->isReturn() || LastI->isIndirectBranch()) {
-        OutStreamer->emitInt8(Dynamic);
-      } else {
-        std::string Msg = "unhandled block terminator in block: ";
-        raw_string_ostream OS(Msg);
-        LastI->print(OS);
-        OutContext.reportError(SMLoc(), Msg);
+        // Wasn't a branch or a fall-thru. Must be a different kind of
+        // terminator.
+        const MachineInstr *LastI = &*MBB.instr_rbegin();
+        if (LastI->isReturn() || LastI->isIndirectBranch()) {
+          OutStreamer->emitInt8(Dynamic);
+        } else {
+          std::string Msg = "unhandled block terminator in block: ";
+          raw_string_ostream OS(Msg);
+          LastI->print(OS);
+          OutContext.reportError(SMLoc(), Msg);
+        }
       }
     }
   }
@@ -1697,7 +1704,8 @@ void AsmPrinter::emitFunctionBody() {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
 
-    YkCallMarkerSyms.insert({&MBB, {}});
+    if (YkExtendedLLVMBBAddrMapSection)
+      YkCallMarkerSyms.insert({&MBB, {}});
 
     DenseMap<StringRef, unsigned> MnemonicCounts;
     for (auto &MI : MBB) {
@@ -1774,7 +1782,7 @@ void AsmPrinter::emitFunctionBody() {
         break;
       default:
 
-        if (YkAllocLLVMBBAddrMapSection && MI.isCall() &&
+        if (YkExtendedLLVMBBAddrMapSection && MI.isCall() &&
             (MI.getOpcode() != TargetOpcode::STACKMAP) &&
             (MI.getOpcode() != TargetOpcode::PATCHPOINT) &&
             (MI.getOpcode() != TargetOpcode::STATEPOINT)) {
