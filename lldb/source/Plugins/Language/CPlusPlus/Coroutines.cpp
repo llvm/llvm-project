@@ -35,7 +35,7 @@ static ValueObjectSP GetCoroFramePtrFromHandle(ValueObject &valobj) {
   return ptr_sp;
 }
 
-static Function *ExtractFunction(ValueObjectSP &frame_ptr_sp, int offset) {
+static Function *ExtractDestroyFunction(ValueObjectSP &frame_ptr_sp) {
   lldb::TargetSP target_sp = frame_ptr_sp->GetTargetSP();
   lldb::ProcessSP process_sp = frame_ptr_sp->GetProcessSP();
   auto ptr_size = process_sp->GetAddressByteSize();
@@ -47,64 +47,24 @@ static Function *ExtractFunction(ValueObjectSP &frame_ptr_sp, int offset) {
   lldbassert(addr_type == AddressType::eAddressTypeLoad);
 
   Status error;
-  auto func_ptr_addr = frame_ptr_addr + offset * ptr_size;
-  lldb::addr_t func_addr =
-      process_sp->ReadPointerFromMemory(func_ptr_addr, error);
+  // The destroy pointer is the 2nd pointer inside the compiler-generated
+  // `pair<resumePtr,destroyPtr>`.
+  auto destroy_func_ptr_addr = frame_ptr_addr + ptr_size;
+  lldb::addr_t destroy_func_addr =
+      process_sp->ReadPointerFromMemory(destroy_func_ptr_addr, error);
   if (error.Fail())
     return nullptr;
 
-  Address func_address;
-  if (!target_sp->ResolveLoadAddress(func_addr, func_address))
+  Address destroy_func_address;
+  if (!target_sp->ResolveLoadAddress(destroy_func_addr, destroy_func_address))
     return nullptr;
 
-  return func_address.CalculateSymbolContextFunction();
-}
+  Function *destroy_func =
+      destroy_func_address.CalculateSymbolContextFunction();
+  if (!destroy_func)
+    return nullptr;
 
-static Function *ExtractResumeFunction(ValueObjectSP &frame_ptr_sp) {
-  return ExtractFunction(frame_ptr_sp, 0);
-}
-
-static Function *ExtractDestroyFunction(ValueObjectSP &frame_ptr_sp) {
-  return ExtractFunction(frame_ptr_sp, 1);
-}
-
-static bool IsNoopCoroFunction(Function *f) {
-  if (!f)
-    return false;
-
-  // clang's `__builtin_coro_noop` gets lowered to
-  // `_NoopCoro_ResumeDestroy`. This is used by libc++
-  // on clang.
-  auto mangledName = f->GetMangled().GetMangledName();
-  if (mangledName == "__NoopCoro_ResumeDestroy")
-    return true;
-
-  // libc++ uses the following name as a fallback on
-  // compilers without `__builtin_coro_noop`.
-  auto name = f->GetNameNoArguments();
-  static RegularExpression libcxxRegex(
-      "^std::coroutine_handle<std::noop_coroutine_promise>::"
-      "__noop_coroutine_frame_ty_::__dummy_resume_destroy_func$");
-  lldbassert(libcxxRegex.IsValid());
-  if (libcxxRegex.Execute(name.GetStringRef()))
-    return true;
-  static RegularExpression libcxxRegexAbiNS(
-      "^std::__[[:alnum:]]+::coroutine_handle<std::__[[:alnum:]]+::"
-      "noop_coroutine_promise>::__noop_coroutine_frame_ty_::"
-      "__dummy_resume_destroy_func$");
-  lldbassert(libcxxRegexAbiNS.IsValid());
-  if (libcxxRegexAbiNS.Execute(name.GetStringRef()))
-    return true;
-
-  // libstdc++ uses the following name on both gcc and clang.
-  static RegularExpression libstdcppRegex(
-      "^std::__[[:alnum:]]+::coroutine_handle<std::__[[:alnum:]]+::"
-      "noop_coroutine_promise>::__frame::__dummy_resume_destroy$");
-  lldbassert(libstdcppRegex.IsValid());
-  if (libstdcppRegex.Execute(name.GetStringRef()))
-    return true;
-
-  return false;
+  return destroy_func;
 }
 
 static CompilerType InferPromiseType(Function &destroy_func) {
@@ -153,15 +113,9 @@ bool lldb_private::formatters::StdlibCoroutineHandleSummaryProvider(
 
   if (!ptr_sp->GetValueAsUnsigned(0)) {
     stream << "nullptr";
-    return true;
+  } else {
+    stream.Printf("coro frame = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
   }
-  if (IsNoopCoroFunction(ExtractResumeFunction(ptr_sp)) &&
-      IsNoopCoroFunction(ExtractDestroyFunction(ptr_sp))) {
-    stream << "noop_coroutine";
-    return true;
-  }
-
-  stream.Printf("coro frame = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
   return true;
 }
 
@@ -204,14 +158,6 @@ bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
   if (!ptr_sp)
     return false;
 
-  Function *resume_func = ExtractResumeFunction(ptr_sp);
-  Function *destroy_func = ExtractDestroyFunction(ptr_sp);
-
-  if (IsNoopCoroFunction(resume_func) && IsNoopCoroFunction(destroy_func)) {
-    // For `std::noop_coroutine()`, we don't want to display any child nodes.
-    return false;
-  }
-
   // Get the `promise_type` from the template argument
   CompilerType promise_type(
       valobj_sp->GetCompilerType().GetTypeTemplateArgument(0));
@@ -223,10 +169,12 @@ bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
   auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
   if (!ast_ctx)
     return false;
-  if (promise_type.IsVoidType() && destroy_func) {
-    if (CompilerType inferred_type = InferPromiseType(*destroy_func)) {
-      // Copy the type over to the correct `TypeSystemClang` instance
-      promise_type = m_ast_importer->CopyType(*ast_ctx, inferred_type);
+  if (promise_type.IsVoidType()) {
+    if (Function *destroy_func = ExtractDestroyFunction(ptr_sp)) {
+      if (CompilerType inferred_type = InferPromiseType(*destroy_func)) {
+        // Copy the type over to the correct `TypeSystemClang` instance
+        promise_type = m_ast_importer->CopyType(*ast_ctx, inferred_type);
+      }
     }
   }
 
