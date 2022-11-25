@@ -168,7 +168,7 @@ function(set_test_compiler_features)
     # Just use the lowercase of the compiler ID as fallback.
     string(TOLOWER "${OPENMP_TEST_COMPILER_ID}" comp)
   endif()
-  set(OPENMP_TEST_COMPILER_FEATURES "['${comp}', '${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR}', '${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR}', '${comp}-${OPENMP_TEST_COMPILER_VERSION}']" PARENT_SCOPE)
+  set(OPENMP_TEST_COMPILER_FEATURE_LIST ${comp}, ${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR}, ${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR}, ${comp}-${OPENMP_TEST_COMPILER_VERSION} PARENT_SCOPE)
 endfunction()
 set_test_compiler_features()
 
