@@ -8600,9 +8600,10 @@ ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E)
 }
 
 ScalarEvolution::ExitLimit::ExitLimit(
-    const SCEV *E, const SCEV *M, bool MaxOrZero,
+    const SCEV *E, const SCEV *ConstantMaxNotTaken, bool MaxOrZero,
     ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList)
-    : ExactNotTaken(E), ConstantMaxNotTaken(M), MaxOrZero(MaxOrZero) {
+    : ExactNotTaken(E), ConstantMaxNotTaken(ConstantMaxNotTaken),
+      MaxOrZero(MaxOrZero) {
   // If we prove the max count is zero, so is the symbolic bound.  This happens
   // in practice due to differences in a) how context sensitive we've chosen
   // to be and b) how we reason about bounds implied by UB.
@@ -8620,15 +8621,15 @@ ScalarEvolution::ExitLimit::ExitLimit(
       addPredicate(P);
   assert((isa<SCEVCouldNotCompute>(E) || !E->getType()->isPointerTy()) &&
          "Backedge count should be int");
-  assert((isa<SCEVCouldNotCompute>(M) || !M->getType()->isPointerTy()) &&
+  assert((isa<SCEVCouldNotCompute>(ConstantMaxNotTaken) ||
+          !ConstantMaxNotTaken->getType()->isPointerTy()) &&
          "Max backedge count should be int");
 }
 
 ScalarEvolution::ExitLimit::ExitLimit(
-    const SCEV *E, const SCEV *M, bool MaxOrZero,
+    const SCEV *E, const SCEV *ConstantMaxNotTaken, bool MaxOrZero,
     const SmallPtrSetImpl<const SCEVPredicate *> &PredSet)
-    : ExitLimit(E, M, MaxOrZero, {&PredSet}) {
-}
+    : ExitLimit(E, ConstantMaxNotTaken, MaxOrZero, { &PredSet }) {}
 
 /// Allocate memory for BackedgeTakenInfo and copy the not-taken count of each
 /// computable exit into a persistent ExitNotTakenInfo array.
