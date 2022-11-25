@@ -14,6 +14,10 @@ module polymorphic_test
     real :: c
   end type
 
+  type r1
+    real, pointer :: rp(:) => null()
+  end type
+
   contains
 
   ! Test correct access to polymorphic entity component.
@@ -115,5 +119,25 @@ module polymorphic_test
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPcall_up_ret() {
 ! CHECK:         %{{.*}} = fir.call @_QMpolymorphic_testPup_ret() {{.*}} : () -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
+
+  subroutine rebox_f32_to_none(r)
+    class(r1) :: r
+    class(*), pointer :: p(:)
+    p => r%rp
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPrebox_f32_to_none(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTr1{rp:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>> {fir.bindc_name = "r"}) {
+! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?xnone>>> {bindc_name = "p", uniq_name = "_QMpolymorphic_testFrebox_f32_to_noneEp"}
+! CHECK: %[[FIELD_RP:.*]] = fir.field_index rp, !fir.type<_QMpolymorphic_testTr1{rp:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
+! CHECK: %[[COORD_RP:.*]] = fir.coordinate_of %[[ARG0]], %[[FIELD_RP]] : (!fir.class<!fir.type<_QMpolymorphic_testTr1{rp:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK: %[[LOADED_RP:.*]] = fir.load %[[COORD_RP]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK: %[[C0:.*]] = arith.constant 0 : index
+! CHECK: %[[RP_DIMS:.*]]:3 = fir.box_dims %[[LOADED_RP]], %[[C0]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
+! CHECK: %[[SHIFT:.*]] = fir.shift %[[RP_DIMS]]#0 : (index) -> !fir.shift<1>
+! CHECK: %[[REBOX_TO_BOX:.*]] = fir.rebox %[[LOADED_RP]](%[[SHIFT]]) : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.shift<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK: %[[REBOX_TO_UP:.*]] = fir.rebox %[[REBOX_TO_BOX]] : (!fir.box<!fir.array<?xf32>>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
+! CHECK: fir.store %[[REBOX_TO_UP]] to %[[P]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
+! CHECK: return
 
 end module
