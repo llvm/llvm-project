@@ -13181,14 +13181,12 @@ static SDValue lowerShuffleAsPermuteAndUnpack(const SDLoc &DL, MVT VT,
                                               ArrayRef<int> Mask,
                                               const X86Subtarget &Subtarget,
                                               SelectionDAG &DAG) {
-  assert(!VT.isFloatingPoint() &&
-         "This routine only supports integer vectors.");
-  assert(VT.is128BitVector() && "This routine only works on 128-bit vectors.");
-  assert(!V2.isUndef() &&
-         "This routine should only be used when blending two inputs.");
+  int Size = Mask.size();
   assert(Mask.size() >= 2 && "Single element masks are invalid.");
 
-  int Size = Mask.size();
+  // This routine only supports 128-bit integer dual input vectors.
+  if (VT.isFloatingPoint() || !VT.is128BitVector() || V2.isUndef())
+    return SDValue();
 
   int NumLoInputs =
       count_if(Mask, [Size](int M) { return M >= 0 && M % Size < Size / 2; });
@@ -13466,6 +13464,10 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
     if (SDValue BlendPerm = lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask,
                                                           DAG))
       return BlendPerm;
+    if (VT.getScalarSizeInBits() >= 32)
+      if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
+              DL, VT, V1, V2, Mask, Subtarget, DAG))
+        return PermUnpack;
   }
 
   // If the final mask is an alternating blend of vXi8/vXi16, convert to an
