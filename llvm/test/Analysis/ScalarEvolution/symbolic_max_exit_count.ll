@@ -228,3 +228,94 @@ done:
 failed:
   ret i32 -3
 }
+
+define i32 @test_mixup_constant_symbolic(i32 %end, i32 %len) {
+; CHECK-LABEL: 'test_mixup_constant_symbolic'
+; CHECK-NEXT:  Classifying expressions for: @test_mixup_constant_symbolic
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,1001) S: [0,1001) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,1002) S: [1,1002) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %loop_cond = call i1 @cond()
+; CHECK-NEXT:    --> %loop_cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test_mixup_constant_symbolic
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for loop: %end
+; CHECK-NEXT:    exit count for range_check_block: 1000
+; CHECK-NEXT:    exit count for backedge: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1000
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (1000 umin %end)
+; CHECK-NEXT:    symbolic max exit count for loop: %end
+; CHECK-NEXT:    symbolic max exit count for range_check_block: 1000
+; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %zero_check = icmp ne i32 %iv, %end
+  br i1 %zero_check, label %range_check_block, label %failed_1
+
+range_check_block:
+  %range_check = icmp ult i32 %iv, 1000
+  br i1 %range_check, label %backedge, label %failed_2
+
+backedge:
+  %iv.next = add i32 %iv, 1
+  %loop_cond = call i1 @cond()
+  br i1 %loop_cond, label %done, label %loop
+
+done:
+  ret i32 %iv
+
+failed_1:
+  ret i32 -1
+
+failed_2:
+  ret i32 -2
+}
+
+define i32 @test_mixup_constant_symbolic_merged(i32 %end, i32 %len) {
+; CHECK-LABEL: 'test_mixup_constant_symbolic_merged'
+; CHECK-NEXT:  Classifying expressions for: @test_mixup_constant_symbolic_merged
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,1001) S: [0,1001) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %and = and i1 %zero_check, %range_check
+; CHECK-NEXT:    --> (%range_check umin %zero_check) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %iv.next = add i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,1002) S: [1,1002) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %loop_cond = call i1 @cond()
+; CHECK-NEXT:    --> %loop_cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test_mixup_constant_symbolic_merged
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for loop: (1000 umin %end)
+; CHECK-NEXT:    exit count for backedge: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1000
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (1000 umin %end)
+; CHECK-NEXT:    symbolic max exit count for loop: (1000 umin %end)
+; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %zero_check = icmp ne i32 %iv, %end
+  %range_check = icmp ult i32 %iv, 1000
+  %and = and i1 %zero_check, %range_check
+  br i1 %and, label %backedge, label %failed_1
+
+backedge:
+  %iv.next = add i32 %iv, 1
+  %loop_cond = call i1 @cond()
+  br i1 %loop_cond, label %done, label %loop
+
+done:
+  ret i32 %iv
+
+failed_1:
+  ret i32 -1
+}
