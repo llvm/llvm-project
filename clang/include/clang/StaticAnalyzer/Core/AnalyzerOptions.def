@@ -332,7 +332,7 @@ ANALYZER_OPTION(
     "Consider single element arrays as flexible array member candidates. "
     "This will prevent the analyzer from assuming that a single element array "
     "holds a single element.",
-    false)
+    true)
 
 ANALYZER_OPTION(
     bool, ShouldAssumeControlledEnvironment, "assume-controlled-environment",
