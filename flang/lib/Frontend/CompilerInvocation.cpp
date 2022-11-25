@@ -951,7 +951,6 @@ void CompilerInvocation::setLoweringOptions() {
 
   // Lower TRANSPOSE as a runtime call under -O0.
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);
-  loweringOpts.setPolymorphicTypeImpl(true);
 
   const LangOptions &langOptions = getLangOpts();
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
