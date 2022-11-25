@@ -115,6 +115,17 @@ Fortran::lower::CallerInterface::getPassArgIndex() const {
     }
     ++passArgIdx;
   }
+  if (!passArg)
+    return passArg;
+  // Take into account result inserted as arguments.
+  if (std::optional<Fortran::lower::CallInterface<
+          Fortran::lower::CallerInterface>::PassedEntity>
+          resultArg = getPassedResult()) {
+    if (resultArg->passBy == PassEntityBy::AddressAndLength)
+      passArg = *passArg + 2;
+    else if (resultArg->passBy == PassEntityBy::BaseAddress)
+      passArg = *passArg + 1;
+  }
   return passArg;
 }
 
