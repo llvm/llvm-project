@@ -695,15 +695,16 @@ void HexagonDAGToDAGISel::SelectIntrinsicWOChain(SDNode *N) {
 void HexagonDAGToDAGISel::SelectExtractSubvector(SDNode *N) {
   SDValue Inp = N->getOperand(0);
   MVT ResTy = N->getValueType(0).getSimpleVT();
+  auto IdxN = cast<ConstantSDNode>(N->getOperand(1));
+  unsigned Idx = IdxN->getZExtValue();
+#ifndef NDEBUG
   MVT InpTy = Inp.getValueType().getSimpleVT();
   assert(InpTy.getVectorElementType() == ResTy.getVectorElementType());
   unsigned ResLen = ResTy.getVectorNumElements();
   assert(2 * ResLen == InpTy.getVectorNumElements());
   assert(ResTy.getSizeInBits() == 32);
-
-  auto IdxN = cast<ConstantSDNode>(N->getOperand(1));
-  unsigned Idx = IdxN->getZExtValue();
   assert(Idx == 0 || Idx == ResLen);
+#endif
   unsigned SubReg = Idx == 0 ? Hexagon::isub_lo : Hexagon::isub_hi;
   SDValue Ext = CurDAG->getTargetExtractSubreg(SubReg, SDLoc(N), ResTy, Inp);
 
