@@ -18,6 +18,12 @@ module polymorphic_test
     real, pointer :: rp(:) => null()
   end type
 
+  type c1
+    character(2) :: tmp = 'c1'
+  contains
+    procedure :: get_tmp
+  end type
+
   contains
 
   ! Test correct access to polymorphic entity component.
@@ -139,5 +145,24 @@ module polymorphic_test
 ! CHECK: %[[REBOX_TO_UP:.*]] = fir.rebox %[[REBOX_TO_BOX]] : (!fir.box<!fir.array<?xf32>>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
 ! CHECK: fir.store %[[REBOX_TO_UP]] to %[[P]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
 ! CHECK: return
+
+! Test that the fir.dispatch operation is created with the correct pass object
+! and the pass_arg_pos attribute is incremented correctly when character
+! function result is added as argument.
+
+  function get_tmp(this)
+    class(c1) :: this
+    character(2) :: get_tmp
+    get_tmp = this%tmp
+  end function
+
+  subroutine call_get_tmp(c)
+    class(c1) :: c
+    print*, c%get_tmp()
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPcall_get_tmp(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTc1{tmp:!fir.char<1,2>}>> {fir.bindc_name = "c"}) {
+! CHECK: %{{.*}} = fir.dispatch "get_tmp"(%[[ARG0]] : !fir.class<!fir.type<_QMpolymorphic_testTc1{tmp:!fir.char<1,2>}>>) (%{{.*}}, %{{.*}}, %[[ARG0]] : !fir.ref<!fir.char<1,2>>, index, !fir.class<!fir.type<_QMpolymorphic_testTc1{tmp:!fir.char<1,2>}>>) -> !fir.boxchar<1> {pass_arg_pos = 2 : i32}
 
 end module
