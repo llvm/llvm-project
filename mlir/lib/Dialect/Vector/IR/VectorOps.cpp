@@ -1611,8 +1611,7 @@ public:
   }
 };
 
-// Pattern to rewrite a ExtractOp(vector<...xT> ConstantOp)[...] -> ConstantOp,
-// where the position array specifies a scalar element.
+// Pattern to rewrite a ExtractOp(non-splat ConstantOp)[...] -> ConstantOp.
 class ExtractOpNonSplatConstantFolder final
     : public OpRewritePattern<ExtractOp> {
 public:
