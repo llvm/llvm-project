@@ -99,4 +99,21 @@ module polymorphic_test
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpolymorphic_to_nonpolymorphic
 ! Just checking that FIR is generated without error.
 
+! Test that lowering does not crash for function return with unlimited
+! polymoprhic value.
+
+  function up_ret()
+    class(*), pointer :: up_ret(:)
+  end function
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPup_ret() -> !fir.class<!fir.ptr<!fir.array<?xnone>>> {
+
+  subroutine call_up_ret()
+    class(*), pointer :: p(:)
+    p => up_ret()
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPcall_up_ret() {
+! CHECK:         %{{.*}} = fir.call @_QMpolymorphic_testPup_ret() {{.*}} : () -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
+
 end module
