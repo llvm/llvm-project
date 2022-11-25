@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordHelpers.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -167,7 +168,7 @@ private:
 
   Expected<bool> shouldRemapType(const CVType &Type);
 
-  Optional<Error> LastError;
+  std::optional<Error> LastError;
 
   bool UseGlobalHashes = false;
 
