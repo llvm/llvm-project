@@ -264,13 +264,14 @@ public:
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &
   operator=(const OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &) = default;
 
-  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(llvm::NoneType) {}
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(std::nullopt_t) {}
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(DirectoryEntryRef Ref)
       : Optional<DirectoryEntryRef>(Ref) {}
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(Optional<DirectoryEntryRef> MaybeRef)
       : Optional<DirectoryEntryRef>(MaybeRef) {}
 
-  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &operator=(llvm::NoneType) {
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &
+  operator=(std::nullopt_t) {
     Optional<DirectoryEntryRef>::operator=(None);
     return *this;
   }

@@ -1244,7 +1244,7 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopSimple) {
   EXPECT_EQ(Loop->getTripCount(), TripCount);
 
   BasicBlock *Body = Loop->getBody();
-  Instruction *CmpInst = &Body->getInstList().front();
+  Instruction *CmpInst = &Body->front();
   EXPECT_TRUE(isa<ICmpInst>(CmpInst));
   EXPECT_EQ(CmpInst->getOperand(0), IndVar);
 

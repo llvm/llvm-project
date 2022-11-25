@@ -23,7 +23,7 @@ define i1 @test_cmpxchg_seq_cst(i128* %addr, i128 %desire, i128 %new) {
 ; CHECK-NEXT:    [[HI64:%.*]] = zext i64 [[HI]] to i128
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i128 [[HI64]], 64
 ; CHECK-NEXT:    [[VAL64:%.*]] = or i128 [[LO64]], [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i128, i1 } undef, i128 [[VAL64]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i128, i1 } poison, i128 [[VAL64]], 0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = icmp eq i128 [[DESIRE]], [[VAL64]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i128, i1 } [[TMP5]], i1 [[SUCCESS]], 1
 ; CHECK-NEXT:    [[SUCC:%.*]] = extractvalue { i128, i1 } [[TMP6]], 1
@@ -44,7 +44,7 @@ define i1 @test_cmpxchg_seq_cst(i128* %addr, i128 %desire, i128 %new) {
 ; PWR7-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP4]])
 ; PWR7-NEXT:    [[TMP6:%.*]] = load i128, i128* [[TMP1]], align 8
 ; PWR7-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP2]])
-; PWR7-NEXT:    [[TMP7:%.*]] = insertvalue { i128, i1 } undef, i128 [[TMP6]], 0
+; PWR7-NEXT:    [[TMP7:%.*]] = insertvalue { i128, i1 } poison, i128 [[TMP6]], 0
 ; PWR7-NEXT:    [[TMP8:%.*]] = insertvalue { i128, i1 } [[TMP7]], i1 [[TMP5]], 1
 ; PWR7-NEXT:    [[SUCC:%.*]] = extractvalue { i128, i1 } [[TMP8]], 1
 ; PWR7-NEXT:    ret i1 [[SUCC]]

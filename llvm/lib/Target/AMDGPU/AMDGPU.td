@@ -1337,6 +1337,10 @@ def AMDGPUAsmParser : AsmParser {
   // Some of the R600 registers have the same name, so this crashes.
   // For example T0_XYZW and T0_XY both have the asm name T0.
   let ShouldEmitMatchRegisterName = 0;
+
+  // Call the custom operand parser for all operands.
+  let OperandParserMethod = "parseCustomOperand";
+  let CallCustomParserForAllOperands = true;
 }
 
 def AMDGPUAsmWriter : AsmWriter {

@@ -308,13 +308,13 @@ public:
   OptionalFileEntryRefDegradesToFileEntryPtr &
   operator=(const OptionalFileEntryRefDegradesToFileEntryPtr &) = default;
 
-  OptionalFileEntryRefDegradesToFileEntryPtr(llvm::NoneType) {}
+  OptionalFileEntryRefDegradesToFileEntryPtr(std::nullopt_t) {}
   OptionalFileEntryRefDegradesToFileEntryPtr(FileEntryRef Ref)
       : Optional<FileEntryRef>(Ref) {}
   OptionalFileEntryRefDegradesToFileEntryPtr(Optional<FileEntryRef> MaybeRef)
       : Optional<FileEntryRef>(MaybeRef) {}
 
-  OptionalFileEntryRefDegradesToFileEntryPtr &operator=(llvm::NoneType) {
+  OptionalFileEntryRefDegradesToFileEntryPtr &operator=(std::nullopt_t) {
     Optional<FileEntryRef>::operator=(None);
     return *this;
   }

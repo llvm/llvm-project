@@ -40,7 +40,7 @@ ModelUnderTrainingRunner::ModelUnderTrainingRunner(
 
 void *ModelUnderTrainingRunner::evaluateUntyped() {
   LastEvaluationResult = Evaluator->evaluate();
-  if (!LastEvaluationResult.hasValue()) {
+  if (!LastEvaluationResult.has_value()) {
     Ctx.emitError("Error evaluating model.");
     return nullptr;
   }

@@ -182,7 +182,7 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
   TypeRange resultTypes = ValueRange(tiledOperands)
                               .take_back(producerOp.getNumDpsInits())
                               .getTypes();
-  LinalgOp clonedOp = producerOp.clone(b, loc, resultTypes, tiledOperands);
+  LinalgOp clonedOp = clone(b, producerOp, resultTypes, tiledOperands);
 
   // Shift all IndexOp results by the tile offset.
   offsetIndices(b, clonedOp, allIvs);

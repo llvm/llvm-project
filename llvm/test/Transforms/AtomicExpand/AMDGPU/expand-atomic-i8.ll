@@ -427,7 +427,7 @@ define i8 @test_cmpxchg_i8_global(i8 addrspace(1)* %out, i8 %in, i8 %old) {
 ; CHECK:       partword.cmpxchg.end:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP13]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i8
-; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i8, i1 } undef, i8 [[EXTRACTED]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i8, i1 } poison, i8 [[EXTRACTED]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { i8, i1 } [[TMP17]], i1 [[TMP14]], 1
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractvalue { i8, i1 } [[TMP18]], 0
 ; CHECK-NEXT:    ret i8 [[EXTRACT]]
@@ -471,7 +471,7 @@ define i8 @test_cmpxchg_i8_local_align2(i8 addrspace(3)* %out, i8 %in, i8 %old) 
 ; CHECK:       partword.cmpxchg.end:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP13]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i8
-; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i8, i1 } undef, i8 [[EXTRACTED]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i8, i1 } poison, i8 [[EXTRACTED]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { i8, i1 } [[TMP17]], i1 [[TMP14]], 1
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractvalue { i8, i1 } [[TMP18]], 0
 ; CHECK-NEXT:    ret i8 [[EXTRACT]]

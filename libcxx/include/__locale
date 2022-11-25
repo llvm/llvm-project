@@ -701,7 +701,7 @@ public:
     const char_type* scan_not(mask __m, const char_type* __low, const char_type* __high) const
     {
         for (; __low != __high; ++__low)
-            if (!(isascii(*__low) && (__tab_[static_cast<int>(*__low)] & __m)))
+            if (!isascii(*__low) || !(__tab_[static_cast<int>(*__low)] & __m))
                 break;
         return __low;
     }

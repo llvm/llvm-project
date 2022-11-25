@@ -1623,7 +1623,6 @@ public:
       return failure();
 
     auto vecTy = sourceVector.getType().cast<VectorType>();
-    Type elemTy = vecTy.getElementType();
     ArrayAttr positions = extractOp.getPosition();
     if (vecTy.isScalable())
       return failure();
@@ -1631,36 +1630,17 @@ public:
     // constants.
     if (vecTy.getRank() != static_cast<int64_t>(positions.size()))
       return failure();
-    // TODO: Handle more element types, e.g., complex values.
-    if (!elemTy.isIntOrIndexOrFloat())
-      return failure();
 
     // The splat case is handled by `ExtractOpSplatConstantFolder`.
     auto dense = vectorCst.dyn_cast<DenseElementsAttr>();
     if (!dense || dense.isSplat())
       return failure();
 
-    // Calculate the flattened position.
-    int64_t elemPosition = 0;
-    int64_t innerElems = 1;
-    for (auto [dimSize, positionInDim] :
-         llvm::reverse(llvm::zip(vecTy.getShape(), positions))) {
-      int64_t positionVal = positionInDim.cast<IntegerAttr>().getInt();
-      elemPosition += positionVal * innerElems;
-      innerElems *= dimSize;
-    }
-
-    Attribute newAttr;
-    if (vecTy.getElementType().isIntOrIndex()) {
-      auto values = to_vector(dense.getValues<APInt>());
-      newAttr = IntegerAttr::get(extractOp.getType(), values[elemPosition]);
-    } else if (vecTy.getElementType().isa<FloatType>()) {
-      auto values = to_vector(dense.getValues<APFloat>());
-      newAttr = FloatAttr::get(extractOp.getType(), values[elemPosition]);
-    }
-    assert(newAttr && "Unhandled case");
-
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractOp, newAttr);
+    // Calculate the linearized position.
+    int64_t elemPosition =
+        linearize(getI64SubArray(positions), computeStrides(vecTy.getShape()));
+    Attribute elementValue = *(dense.value_begin<Attribute>() + elemPosition);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractOp, elementValue);
     return success();
   }
 };

@@ -102,7 +102,7 @@ static uint32_t GPREncodingToLLDB(uint32_t reg_encode) {
 }
 
 static uint32_t FPREncodingToLLDB(uint32_t reg_encode) {
-  if (reg_encode >= 0 && reg_encode <= 31)
+  if (reg_encode <= 31)
     return fpr_f0_riscv + reg_encode;
   return LLDB_INVALID_REGNUM;
 }

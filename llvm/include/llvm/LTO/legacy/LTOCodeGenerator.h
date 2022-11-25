@@ -51,9 +51,6 @@
 #include <string>
 #include <vector>
 
-/// Enable global value internalization in LTO.
-extern llvm::cl::opt<bool> EnableLTOInternalization;
-
 namespace llvm {
 template <typename T> class ArrayRef;
   class LLVMContext;
@@ -65,6 +62,9 @@ template <typename T> class ArrayRef;
   class TargetMachine;
   class raw_ostream;
   class raw_pwrite_stream;
+
+/// Enable global value internalization in LTO.
+extern cl::opt<bool> EnableLTOInternalization;
 
 //===----------------------------------------------------------------------===//
 /// C++ class which implements the opaque lto_code_gen_t type.

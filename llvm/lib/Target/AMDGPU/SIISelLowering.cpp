@@ -919,11 +919,11 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
     Context, CC, VT, IntermediateVT, NumIntermediates, RegisterVT);
 }
 
-static EVT memVTFromImageData(Type *Ty, unsigned DMaskLanes) {
-  assert(DMaskLanes != 0);
+static EVT memVTFromLoadIntrData(Type *Ty, unsigned MaxNumLanes) {
+  assert(MaxNumLanes != 0);
 
   if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
-    unsigned NumElts = std::min(DMaskLanes, VT->getNumElements());
+    unsigned NumElts = std::min(MaxNumLanes, VT->getNumElements());
     return EVT::getVectorVT(Ty->getContext(),
                             EVT::getEVT(VT->getElementType()),
                             NumElts);
@@ -933,19 +933,15 @@ static EVT memVTFromImageData(Type *Ty, unsigned DMaskLanes) {
 }
 
 // Peek through TFE struct returns to only use the data size.
-static EVT memVTFromImageReturn(Type *Ty, unsigned DMaskLanes) {
+static EVT memVTFromLoadIntrReturn(Type *Ty, unsigned MaxNumLanes) {
   auto *ST = dyn_cast<StructType>(Ty);
   if (!ST)
-    return memVTFromImageData(Ty, DMaskLanes);
+    return memVTFromLoadIntrData(Ty, MaxNumLanes);
 
-  // Some intrinsics return an aggregate type - special case to work out the
-  // correct memVT.
-  //
-  // Only limited forms of aggregate type currently expected.
-  if (ST->getNumContainedTypes() != 2 ||
-      !ST->getContainedType(1)->isIntegerTy(32))
-    return EVT();
-  return memVTFromImageData(ST->getContainedType(0), DMaskLanes);
+  // TFE intrinsics return an aggregate type.
+  assert(ST->getNumContainedTypes() == 2 &&
+         ST->getContainedType(1)->isIntegerTy(32));
+  return memVTFromLoadIntrData(ST->getContainedType(0), MaxNumLanes);
 }
 
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
@@ -978,7 +974,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     Info.flags |= MachineMemOperand::MODereferenceable;
     if (ME.onlyReadsMemory()) {
-      unsigned DMaskLanes = 4;
+      unsigned MaxNumLanes = 4;
 
       if (RsrcIntr->IsImage) {
         const AMDGPU::ImageDimIntrinsicInfo *Intr
@@ -991,12 +987,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
           // IR type. Check the dmask for the real number of elements loaded.
           unsigned DMask
             = cast<ConstantInt>(CI.getArgOperand(0))->getZExtValue();
-          DMaskLanes = DMask == 0 ? 1 : countPopulation(DMask);
+          MaxNumLanes = DMask == 0 ? 1 : countPopulation(DMask);
         }
+      }
 
-        Info.memVT = memVTFromImageReturn(CI.getType(), DMaskLanes);
-      } else
-        Info.memVT = EVT::getEVT(CI.getType());
+      Info.memVT = memVTFromLoadIntrReturn(CI.getType(), MaxNumLanes);
 
       // FIXME: What does alignment mean for an image?
       Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -1008,7 +1003,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       if (RsrcIntr->IsImage) {
         unsigned DMask = cast<ConstantInt>(CI.getArgOperand(1))->getZExtValue();
         unsigned DMaskLanes = DMask == 0 ? 1 : countPopulation(DMask);
-        Info.memVT = memVTFromImageData(DataTy, DMaskLanes);
+        Info.memVT = memVTFromLoadIntrData(DataTy, DMaskLanes);
       } else
         Info.memVT = EVT::getEVT(DataTy);
 
@@ -4854,8 +4849,18 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
 
   bool IsD16 = IsFormat && (EltType.getSizeInBits() == 16);
 
-  unsigned Opc =
-      IsFormat ? AMDGPUISD::BUFFER_LOAD_FORMAT : AMDGPUISD::BUFFER_LOAD;
+  assert(M->getNumValues() == 2 || M->getNumValues() == 3);
+  bool IsTFE = M->getNumValues() == 3;
+
+  unsigned Opc;
+  if (IsFormat) {
+    Opc = IsTFE ? AMDGPUISD::BUFFER_LOAD_FORMAT_TFE
+                : AMDGPUISD::BUFFER_LOAD_FORMAT;
+  } else {
+    // TODO: Support non-format TFE loads.
+    assert(!IsTFE);
+    Opc = AMDGPUISD::BUFFER_LOAD;
+  }
 
   if (IsD16) {
     return adjustLoadValueType(AMDGPUISD::BUFFER_LOAD_FORMAT_D16, M, DAG, Ops);
@@ -7850,35 +7855,54 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 }
 
 // Call DAG.getMemIntrinsicNode for a load, but first widen a dwordx3 type to
-// dwordx4 if on SI.
+// dwordx4 if on SI and handle TFE loads.
 SDValue SITargetLowering::getMemIntrinsicNode(unsigned Opcode, const SDLoc &DL,
                                               SDVTList VTList,
                                               ArrayRef<SDValue> Ops, EVT MemVT,
                                               MachineMemOperand *MMO,
                                               SelectionDAG &DAG) const {
+  LLVMContext &C = *DAG.getContext();
+  MachineFunction &MF = DAG.getMachineFunction();
   EVT VT = VTList.VTs[0];
-  EVT WidenedVT = VT;
-  EVT WidenedMemVT = MemVT;
+
+  assert(VTList.NumVTs == 2 || VTList.NumVTs == 3);
+  bool IsTFE = VTList.NumVTs == 3;
+  if (IsTFE) {
+    unsigned NumValueDWords = divideCeil(VT.getSizeInBits(), 32);
+    unsigned NumOpDWords = NumValueDWords + 1;
+    EVT OpDWordsVT = EVT::getVectorVT(C, MVT::i32, NumOpDWords);
+    SDVTList OpDWordsVTList = DAG.getVTList(OpDWordsVT, VTList.VTs[2]);
+    MachineMemOperand *OpDWordsMMO =
+        MF.getMachineMemOperand(MMO, 0, NumOpDWords * 4);
+    SDValue Op = getMemIntrinsicNode(Opcode, DL, OpDWordsVTList, Ops,
+                                     OpDWordsVT, OpDWordsMMO, DAG);
+    SDValue Status = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op,
+                                 DAG.getVectorIdxConstant(NumValueDWords, DL));
+    SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
+    SDValue ValueDWords =
+        NumValueDWords == 1
+            ? DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op, ZeroIdx)
+            : DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
+                          EVT::getVectorVT(C, MVT::i32, NumValueDWords), Op,
+                          ZeroIdx);
+    SDValue Value = DAG.getNode(ISD::BITCAST, DL, VT, ValueDWords);
+    return DAG.getMergeValues({Value, Status, SDValue(Op.getNode(), 1)}, DL);
+  }
+
   if (!Subtarget->hasDwordx3LoadStores() &&
-      (WidenedVT == MVT::v3i32 || WidenedVT == MVT::v3f32)) {
-    WidenedVT = EVT::getVectorVT(*DAG.getContext(),
-                                 WidenedVT.getVectorElementType(), 4);
-    WidenedMemVT = EVT::getVectorVT(*DAG.getContext(),
-                                    WidenedMemVT.getVectorElementType(), 4);
-    MMO = DAG.getMachineFunction().getMachineMemOperand(MMO, 0, 16);
+      (VT == MVT::v3i32 || VT == MVT::v3f32)) {
+    EVT WidenedVT = EVT::getVectorVT(C, VT.getVectorElementType(), 4);
+    EVT WidenedMemVT = EVT::getVectorVT(C, MemVT.getVectorElementType(), 4);
+    MachineMemOperand *WidenedMMO = MF.getMachineMemOperand(MMO, 0, 16);
+    SDVTList WidenedVTList = DAG.getVTList(WidenedVT, VTList.VTs[1]);
+    SDValue Op = DAG.getMemIntrinsicNode(Opcode, DL, WidenedVTList, Ops,
+                                         WidenedMemVT, WidenedMMO);
+    SDValue Value = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Op,
+                                DAG.getVectorIdxConstant(0, DL));
+    return DAG.getMergeValues({Value, SDValue(Op.getNode(), 1)}, DL);
   }
 
-  assert(VTList.NumVTs == 2);
-  SDVTList WidenedVTList = DAG.getVTList(WidenedVT, VTList.VTs[1]);
-
-  auto NewOp = DAG.getMemIntrinsicNode(Opcode, DL, WidenedVTList, Ops,
-                                       WidenedMemVT, MMO);
-  if (WidenedVT != VT) {
-    auto Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, NewOp,
-                               DAG.getVectorIdxConstant(0, DL));
-    NewOp = DAG.getMergeValues({ Extract, SDValue(NewOp.getNode(), 1) }, DL);
-  }
-  return NewOp;
+  return DAG.getMemIntrinsicNode(Opcode, DL, VTList, Ops, MemVT, MMO);
 }
 
 SDValue SITargetLowering::handleD16VData(SDValue VData, SelectionDAG &DAG,

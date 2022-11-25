@@ -172,35 +172,35 @@ buffer_load_dword v[1:2], v[2:3], ttmp[4:7], ttmp1 idxen offen offset:4 glc slc 
 
 buffer_load_dword v1, v[2:3], s[4:7], s1 addr64
 // SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 ; encoding: [0x00,0x80,0x30,0xe0,0x02,0x01,0x01,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4
 // SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 ; encoding: [0x04,0x80,0x30,0xe0,0x02,0x01,0x01,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc
 // SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc ; encoding: [0x04,0xc0,0x30,0xe0,0x02,0x01,0x01,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 slc
 // SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 slc ; encoding: [0x04,0x80,0x30,0xe0,0x02,0x01,0x41,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_load_dword v[1:2], v[2:3], s[4:7], s1 addr64 offset:4 tfe
 // SICI: buffer_load_dword v[1:2], v[2:3], s[4:7], s1 addr64 offset:4 tfe ; encoding: [0x04,0x80,0x30,0xe0,0x02,0x01,0x81,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_load_dword v[1:2], v[2:3], s[4:7], s1 addr64 glc tfe
 // SICI: buffer_load_dword v[1:2], v[2:3], s[4:7], s1 addr64 glc tfe ; encoding: [0x00,0xc0,0x30,0xe0,0x02,0x01,0x81,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_load_dword v[1:2], v[2:3], s[4:7], s1 addr64 offset:4 glc slc tfe
 // SICI: buffer_load_dword v[1:2], v[2:3], s[4:7], s1 addr64 offset:4 glc slc tfe ; encoding: [0x04,0xc0,0x30,0xe0,0x02,0x01,0xc1,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_load_dword v[1:2], v[2:3], ttmp[4:7], ttmp1 addr64 offset:4 glc slc tfe
 // SICI: buffer_load_dword v[1:2], v[2:3], ttmp[4:7], ttmp1 addr64 offset:4 glc slc tfe ; encoding: [0x04,0xc0,0x30,0xe0,0x02,0x01,0xdd,0x71]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 //===----------------------------------------------------------------------===//
 // store - immediate offset only
@@ -288,19 +288,19 @@ buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 slc
 
 buffer_store_dword v1, v[2:3], s[4:7], s1 addr64
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 ; encoding: [0x00,0x80,0x70,0xe0,0x02,0x01,0x01,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 ; encoding: [0x04,0x80,0x70,0xe0,0x02,0x01,0x01,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc ; encoding: [0x04,0xc0,0x70,0xe0,0x02,0x01,0x01,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 slc
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 slc ; encoding: [0x04,0x80,0x70,0xe0,0x02,0x01,0x41,0x01]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -441,23 +441,23 @@ buffer_wbinvl1_vol
 //===----------------------------------------------------------------------===//
 buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 ; encoding: [0x00,0x80,0xf0,0xe0,0x02,0x01,0x02,0xb8]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_atomic_inc v1, v[2:3], s[8:11], s4 addr64
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], s4 addr64 ; encoding: [0x00,0x80,0xf0,0xe0,0x02,0x01,0x02,0x04]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 slc
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 slc ; encoding: [0x00,0x80,0xf0,0xe0,0x02,0x01,0x42,0xb8]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 offset:4
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 offset:4 ; encoding: [0x04,0x80,0xf0,0xe0,0x02,0x01,0x02,0xb8]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 offset:4 slc
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 offset:4 slc ; encoding: [0x04,0x80,0xf0,0xe0,0x02,0x01,0x42,0xb8]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_atomic_inc v1, off, s[8:11], 56
 // SICI: buffer_atomic_inc v1, off, s[8:11], 56 ; encoding: [0x00,0x00,0xf0,0xe0,0x00,0x01,0x02,0xb8]
@@ -541,23 +541,23 @@ buffer_atomic_inc v1, v[2:3], s[8:11], 56 idxen offen offset:4 slc
 
 buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 glc
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 glc ; encoding: [0x00,0xc0,0xf0,0xe0,0x02,0x01,0x02,0xb8]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_atomic_inc v1, v[2:3], s[8:11], s4 addr64 glc
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], s4 addr64 glc ; encoding: [0x00,0xc0,0xf0,0xe0,0x02,0x01,0x02,0x04]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 glc slc
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 glc slc ; encoding: [0x00,0xc0,0xf0,0xe0,0x02,0x01,0x42,0xb8]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 offset:4 glc
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 offset:4 glc ; encoding: [0x04,0xc0,0xf0,0xe0,0x02,0x01,0x02,0xb8]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 offset:4 glc slc
 // SICI: buffer_atomic_inc v1, v[2:3], s[8:11], 56 addr64 offset:4 glc slc ; encoding: [0x04,0xc0,0xf0,0xe0,0x02,0x01,0x42,0xb8]
-// NOVI: error: operands are not valid for this GPU or mode
+// NOVI: error: invalid operand for instruction
 
 buffer_atomic_inc v1, off, s[8:11], 56 glc
 // SICI: buffer_atomic_inc v1, off, s[8:11], 56 glc ; encoding: [0x00,0x40,0xf0,0xe0,0x00,0x01,0x02,0xb8]

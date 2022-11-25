@@ -47,7 +47,7 @@ unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
 
 #else
 
-int computeHostNumHardwareThreads();
+static int computeHostNumHardwareThreads();
 
 unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
   int MaxThreadCount = UseHyperThreads ? computeHostNumHardwareThreads()

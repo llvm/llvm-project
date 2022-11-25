@@ -2106,6 +2106,7 @@ PRE_SYSCALL(epoll_wait)
 POST_SYSCALL(epoll_wait)
 (long res, long epfd, void *events, long maxevents, long timeout) {
   if (res >= 0) {
+    COMMON_SYSCALL_FD_ACQUIRE(epfd);
     if (events)
       POST_WRITE(events, res * struct_epoll_event_sz);
   }
@@ -2122,6 +2123,7 @@ POST_SYSCALL(epoll_pwait)
 (long res, long epfd, void *events, long maxevents, long timeout,
  const void *sigmask, long sigsetsize) {
   if (res >= 0) {
+    COMMON_SYSCALL_FD_ACQUIRE(epfd);
     if (events)
       POST_WRITE(events, res * struct_epoll_event_sz);
   }
@@ -2142,6 +2144,7 @@ POST_SYSCALL(epoll_pwait2)
  const sanitizer_kernel_timespec *timeout, const void *sigmask,
  long sigsetsize) {
   if (res >= 0) {
+    COMMON_SYSCALL_FD_ACQUIRE(epfd);
     if (events)
       POST_WRITE(events, res * struct_epoll_event_sz);
   }
