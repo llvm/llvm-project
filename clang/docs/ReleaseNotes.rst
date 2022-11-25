@@ -827,6 +827,10 @@ Static Analyzer
   ``scanbuild`` was also updated accordingly.
   Passing these flags will result in a hard error.
 
+- Trailing array objects of structs with single elements will be considered
+  as flexible-array-members. Use ``-fstrict-flex-array=<N>`` to define
+  what should be considered as flexible-array-member if needed.
+
 .. _release-notes-sanitizers:
 
 Sanitizers
