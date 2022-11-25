@@ -30,6 +30,8 @@ public:
 
   uint32_t GetRegisterSetCount() const override;
 
+  uint32_t GetUserRegisterCount() const override;
+
   const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
 
   Status ReadRegister(const RegisterInfo *reg_info,
@@ -42,7 +44,22 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
+  void InvalidateAllRegisters() override;
+
+  std::vector<uint32_t>
+  GetExpeditedRegisters(ExpeditedRegs expType) const override;
+
+  bool RegisterOffsetIsDynamic() const override { return true; }
+
 protected:
+  Status ReadGPR() override;
+
+  Status WriteGPR() override;
+
+  Status ReadFPR() override;
+
+  Status WriteFPR() override;
+
   void *GetGPRBuffer() override { return &m_gpr; }
 
   void *GetFPRBuffer() override { return &m_fpr; }
@@ -52,9 +69,18 @@ protected:
   size_t GetFPRSize() override { return GetRegisterInfo().GetFPRSize(); }
 
 private:
+  bool m_gpr_is_valid;
+  bool m_fpu_is_valid;
+
   RegisterInfoPOSIX_loongarch64::GPR m_gpr;
 
   RegisterInfoPOSIX_loongarch64::FPR m_fpr;
+
+  bool IsGPR(unsigned reg) const;
+
+  bool IsFPR(unsigned reg) const;
+
+  uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 
   const RegisterInfoPOSIX_loongarch64 &GetRegisterInfo() const;
 };
