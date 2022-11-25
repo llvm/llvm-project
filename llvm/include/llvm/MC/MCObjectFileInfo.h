@@ -27,10 +27,6 @@ class MCSection;
 
 class MCObjectFileInfo {
 protected:
-  /// True if .comm supports alignment.  This is a hack for as long as we
-  /// support 10.4 Tiger, whose assembler doesn't support alignment on comm.
-  bool CommDirectiveSupportsAlignment = false;
-
   /// True if target object file supports a weak_definition of constant 0 for an
   /// omitted EH frame.
   bool SupportsWeakOmittedEHFrame = false;
@@ -255,10 +251,6 @@ public:
   }
   bool getOmitDwarfIfHaveCompactUnwind() const {
     return OmitDwarfIfHaveCompactUnwind;
-  }
-
-  bool getCommDirectiveSupportsAlignment() const {
-    return CommDirectiveSupportsAlignment;
   }
 
   unsigned getFDEEncoding() const { return FDECFIEncoding; }
