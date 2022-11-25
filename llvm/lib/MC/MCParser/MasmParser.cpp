@@ -67,6 +67,7 @@
 #include <ctime>
 #include <deque>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -107,7 +108,7 @@ struct ParseStatementInfo {
   bool ParseError = false;
 
   /// The value associated with a macro exit.
-  Optional<std::string> ExitValue;
+  std::optional<std::string> ExitValue;
 
   SmallVectorImpl<AsmRewrite> *AsmRewrites = nullptr;
 
@@ -2883,7 +2884,7 @@ bool MasmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
     Name.clear();
   }
 
-  Optional<char> CurrentQuote;
+  std::optional<char> CurrentQuote;
   while (!Body.empty()) {
     // Scan for the next substitution.
     std::size_t End = Body.size(), Pos = 0;
@@ -4214,7 +4215,7 @@ bool MasmParser::parseStructInitializer(const StructInfo &Structure,
                                         StructInitializer &Initializer) {
   const AsmToken FirstToken = getTok();
 
-  Optional<AsmToken::TokenKind> EndToken;
+  std::optional<AsmToken::TokenKind> EndToken;
   if (parseOptionalToken(AsmToken::LCurly)) {
     EndToken = AsmToken::RCurly;
   } else if (parseOptionalAngleBracketOpen()) {
