@@ -146,11 +146,11 @@ class Reporter {
     unsigned Offset;
     RefType Type;
     Symbol Sym;
-    SmallVector<SymbolLocation> Locations;
-    SmallVector<Header> Headers;
-    SmallVector<const Include *> Includes;
-    bool Satisfied = false; // Is the include present?
-    std::string Insert;     // If we had no includes, what would we insert?
+    SmallVector<SymbolLocation> Locations = {};
+    SmallVector<Header> Headers = {};
+    SmallVector<const Include *> Includes = {};
+    bool Satisfied = false;  // Is the include present?
+    std::string Insert = {}; // If we had no includes, what would we insert?
   };
   std::vector<Ref> Refs;
   llvm::DenseMap<const Include *, std::vector<unsigned>> IncludeRefs;
