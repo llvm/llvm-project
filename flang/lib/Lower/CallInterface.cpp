@@ -251,7 +251,8 @@ void Fortran::lower::CallerInterface::walkResultLengths(
     if (std::optional<Fortran::evaluate::ExtentExpr> length =
             dynamicType.GetCharLength())
       visitor(toEvExpr(*length));
-  } else if (dynamicType.category() == common::TypeCategory::Derived) {
+  } else if (dynamicType.category() == common::TypeCategory::Derived &&
+             !dynamicType.IsUnlimitedPolymorphic()) {
     const Fortran::semantics::DerivedTypeSpec &derivedTypeSpec =
         dynamicType.GetDerivedTypeSpec();
     if (Fortran::semantics::CountLenParameters(derivedTypeSpec) > 0)
