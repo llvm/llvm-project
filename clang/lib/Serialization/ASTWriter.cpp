@@ -3027,7 +3027,9 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
       continue;
     ++NumLocations;
 
-    AddFileID(FileIDAndFile.first, Record);
+    SourceLocation Loc = Diag.SourceMgr->getComposedLoc(FileIDAndFile.first, 0);
+    assert(!Loc.isInvalid() && "start loc for valid FileID is invalid");
+    AddSourceLocation(Loc, Record);
 
     Record.push_back(FileIDAndFile.second.StateTransitions.size());
     for (auto &StatePoint : FileIDAndFile.second.StateTransitions) {
