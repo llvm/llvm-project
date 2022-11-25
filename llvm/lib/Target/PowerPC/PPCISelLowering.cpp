@@ -10186,9 +10186,6 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  bool V1HasXXSWAPD = V1->getOperand(0)->getOpcode() == PPCISD::XXSWAPD;
-  bool V2HasXXSWAPD = V2->getOperand(0)->getOpcode() == PPCISD::XXSWAPD;
-
   // The SHUFFLE_VECTOR mask is almost exactly what we want for vperm, except
   // that it is in input element units, not in bytes.  Convert now.
 
@@ -10198,6 +10195,9 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
   // instruction.
   EVT EltVT = V1.getValueType().getVectorElementType();
   unsigned BytesPerElement = EltVT.getSizeInBits() / 8;
+
+  bool V1HasXXSWAPD = V1->getOperand(0)->getOpcode() == PPCISD::XXSWAPD;
+  bool V2HasXXSWAPD = V2->getOperand(0)->getOpcode() == PPCISD::XXSWAPD;
 
   /*
   Vectors will be appended like so: [ V1 | v2 ]
@@ -10219,24 +10219,27 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
   for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
     unsigned SrcElt = PermMask[i] < 0 ? 0 : PermMask[i];
 
-    if (V1HasXXSWAPD) {
-      if (SrcElt < 8)
-        SrcElt += 8;
-      else if (SrcElt < 16)
-        SrcElt -= 8;
+    if (Opcode == PPCISD::XXPERM) {
+      if (V1HasXXSWAPD) {
+        if (SrcElt < 8)
+          SrcElt += 8;
+        else if (SrcElt < 16)
+          SrcElt -= 8;
+      }
+      if (V2HasXXSWAPD) {
+        if (SrcElt > 23)
+          SrcElt -= 8;
+        else if (SrcElt > 15)
+          SrcElt += 8;
+      }
+      if (NeedSwap) {
+        if (SrcElt < 16)
+          SrcElt += 16;
+        else
+          SrcElt -= 16;
+      }
     }
-    if (V2HasXXSWAPD) {
-      if (SrcElt > 23)
-        SrcElt -= 8;
-      else if (SrcElt > 15)
-        SrcElt += 8;
-    }
-    if (NeedSwap) {
-      if (SrcElt < 16)
-        SrcElt += 16;
-      else
-        SrcElt -= 16;
-    }
+
     for (unsigned j = 0; j != BytesPerElement; ++j)
       if (isLittleEndian)
         ResultMask.push_back(
@@ -10246,16 +10249,15 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
             DAG.getConstant(SrcElt * BytesPerElement + j, dl, MVT::i32));
   }
 
-  if (V1HasXXSWAPD) {
-    dl = SDLoc(V1->getOperand(0));
-    V1 = V1->getOperand(0)->getOperand(1);
-  }
-  if (V2HasXXSWAPD) {
-    dl = SDLoc(V2->getOperand(0));
-    V2 = V2->getOperand(0)->getOperand(1);
-  }
-
-  if (V1HasXXSWAPD || V2HasXXSWAPD || Opcode == PPCISD::XXPERM) {
+  if (Opcode == PPCISD::XXPERM && (V1HasXXSWAPD || V2HasXXSWAPD)) {
+    if (V1HasXXSWAPD) {
+      dl = SDLoc(V1->getOperand(0));
+      V1 = V1->getOperand(0)->getOperand(1);
+    }
+    if (V2HasXXSWAPD) {
+      dl = SDLoc(V2->getOperand(0));
+      V2 = V2->getOperand(0)->getOperand(1);
+    }
     if (isPPC64 && ValType != MVT::v2f64)
       V1 = DAG.getBitcast(MVT::v2f64, V1);
     if (isPPC64 && V2.getValueType() != MVT::v2f64)
