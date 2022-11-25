@@ -1,5 +1,6 @@
 ; Test upgrade of var.annotation intrinsics.
 ;
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 ; RUN: llvm-dis < %s.bc | FileCheck %s
 
 
