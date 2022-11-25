@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef POINTER_COMPARISON_TEST_HELPER_H
 #define POINTER_COMPARISON_TEST_HELPER_H
 
