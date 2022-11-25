@@ -217,7 +217,7 @@ bool InlineAdvisorAnalysis::Result::tryCreate(
     Advisor =
         llvm::getDevelopmentModeAdvisor(M, MAM, [&FAM, Params](CallBase &CB) {
           auto OIC = getDefaultInlineAdvice(CB, FAM, Params);
-          return OIC.hasValue();
+          return OIC.has_value();
         });
 #endif
     break;

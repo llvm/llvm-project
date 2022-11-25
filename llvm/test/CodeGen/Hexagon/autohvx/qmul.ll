@@ -72,31 +72,46 @@ define void @f2(ptr %a0, ptr %a1, ptr %a2) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vmem(r0+#0)
+; CHECK-NEXT:     v0 = vmem(r1+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7 = #-4
+; CHECK-NEXT:     r7 = #64
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r5:4 = combine(#68,#120)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r3 = #15
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vmem(r1+#0)
+; CHECK-NEXT:     v1 = vmem(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1:0.w = vmpy(v0.h,v1.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1:0 = vdeal(v1,v0,r7)
+; CHECK-NEXT:     v1:0 = vshuff(v1,v0,r7)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v3:2 = vdeal(v0,v0,r5)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v31:30 = vdeal(v0,v1,r5)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v3:2 = vshuff(v3,v2,r4)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1:0 = vshuff(v31,v30,r4)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1.uw = vlsr(v2.uw,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v0.uw = vlsr(v0.uw,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1.uw = vlsr(v1.uw,r3)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.h = vpacke(v1.w,v0.w)
+; CHECK-NEXT:     v0.h = vpacke(v0.w,v1.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     vmem(r2+#0) = v0

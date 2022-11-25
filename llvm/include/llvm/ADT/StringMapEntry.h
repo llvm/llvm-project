@@ -85,13 +85,14 @@ public:
   void setValue(const ValueTy &V) { second = V; }
 };
 
-template <> class StringMapEntryStorage<NoneType> : public StringMapEntryBase {
+template <>
+class StringMapEntryStorage<std::nullopt_t> : public StringMapEntryBase {
 public:
-  explicit StringMapEntryStorage(size_t keyLength, NoneType = None)
+  explicit StringMapEntryStorage(size_t keyLength, std::nullopt_t = None)
       : StringMapEntryBase(keyLength) {}
   StringMapEntryStorage(StringMapEntryStorage &entry) = delete;
 
-  NoneType getValue() const { return None; }
+  std::nullopt_t getValue() const { return None; }
 };
 
 /// StringMapEntry - This is used to represent one value that is inserted into

@@ -330,6 +330,33 @@ OpFoldResult ShrUOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// AndOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult AndOp::fold(ArrayRef<Attribute> operands) {
+  return foldBinaryOpUnchecked(
+      operands, [](const APInt &lhs, const APInt &rhs) { return lhs & rhs; });
+}
+
+//===----------------------------------------------------------------------===//
+// OrOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult OrOp::fold(ArrayRef<Attribute> operands) {
+  return foldBinaryOpUnchecked(
+      operands, [](const APInt &lhs, const APInt &rhs) { return lhs | rhs; });
+}
+
+//===----------------------------------------------------------------------===//
+// XOrOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult XOrOp::fold(ArrayRef<Attribute> operands) {
+  return foldBinaryOpUnchecked(
+      operands, [](const APInt &lhs, const APInt &rhs) { return lhs ^ rhs; });
+}
+
+//===----------------------------------------------------------------------===//
 // CastSOp
 //===----------------------------------------------------------------------===//
 

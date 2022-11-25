@@ -679,8 +679,8 @@ static void simplifyExprAndOperands(AffineExpr &expr,
     return;
 
   // Simplify the child expressions first.
-  auto lhs = binExpr.getLHS();
-  auto rhs = binExpr.getRHS();
+  AffineExpr lhs = binExpr.getLHS();
+  AffineExpr rhs = binExpr.getRHS();
   simplifyExprAndOperands(lhs, operands);
   simplifyExprAndOperands(rhs, operands);
   expr = getAffineBinaryOpExpr(binExpr.getKind(), lhs, rhs);
@@ -691,11 +691,18 @@ static void simplifyExprAndOperands(AffineExpr &expr,
     return;
   }
 
+  // The `lhs` and `rhs` may be different post construction of simplified expr.
+  lhs = binExpr.getLHS();
+  rhs = binExpr.getRHS();
   auto rhsConst = rhs.dyn_cast<AffineConstantExpr>();
   if (!rhsConst)
     return;
 
   int64_t rhsConstVal = rhsConst.getValue();
+  // Undefined exprsessions aren't touched; IR can still be valid with them.
+  if (rhsConstVal == 0)
+    return;
+
   AffineExpr quotientTimesDiv, rem;
   int64_t divisor;
 
