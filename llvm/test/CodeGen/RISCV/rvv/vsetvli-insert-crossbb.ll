@@ -592,21 +592,21 @@ define void @vlmax(i64 %N, double* %c, double* %a, double* %b) {
 ; CHECK-NEXT:    vsetvli a6, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    blez a0, .LBB11_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    li a5, 0
+; CHECK-NEXT:    li a4, 0
 ; CHECK-NEXT:    li t1, 0
 ; CHECK-NEXT:    slli a7, a6, 3
 ; CHECK-NEXT:  .LBB11_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add t0, a2, a5
+; CHECK-NEXT:    add t0, a2, a4
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (t0)
-; CHECK-NEXT:    add a4, a3, a5
-; CHECK-NEXT:    vle64.v v9, (a4)
+; CHECK-NEXT:    add a5, a3, a4
+; CHECK-NEXT:    vle64.v v9, (a5)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    add a4, a1, a5
-; CHECK-NEXT:    vse64.v v8, (a4)
+; CHECK-NEXT:    add a5, a1, a4
+; CHECK-NEXT:    vse64.v v8, (a5)
 ; CHECK-NEXT:    add t1, t1, a6
-; CHECK-NEXT:    add a5, a5, a7
+; CHECK-NEXT:    add a4, a4, a7
 ; CHECK-NEXT:    blt t1, a0, .LBB11_2
 ; CHECK-NEXT:  .LBB11_3: # %for.end
 ; CHECK-NEXT:    ret
