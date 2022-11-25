@@ -13373,14 +13373,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
     OS << "Unpredictable constant max backedge-taken count. ";
   }
 
-  OS << "\n";
-  if (ExitingBlocks.size() > 1)
-    for (BasicBlock *ExitingBlock : ExitingBlocks) {
-      OS << "  constant max exit count for " << ExitingBlock->getName() << ": "
-         << *SE->getExitCount(L, ExitingBlock, ScalarEvolution::ConstantMaximum) << "\n";
-    }
-
-  OS << "Loop ";
+  OS << "\n"
+        "Loop ";
   L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
   OS << ": ";
 
