@@ -6,31 +6,64 @@
 [0xc0,0x11,0x1c,0xd5]
 [0x80,0x31,0x1c,0xd5]
 [0xa0,0x31,0x1c,0xd5]
+[0xc0,0x31,0x1c,0xd5]
 
 # CHECK: msr HFGRTR_EL2, x0
 # CHECK: msr HFGWTR_EL2, x0
 # CHECK: msr HFGITR_EL2, x0
 # CHECK: msr HDFGRTR_EL2, x0
 # CHECK: msr HDFGWTR_EL2, x0
+# CHECK: msr HAFGRTR_EL2, x0
 # NOFGT: msr S3_4_C1_C1_4, x0
 # NOFGT: msr S3_4_C1_C1_5, x0
 # NOFGT: msr S3_4_C1_C1_6, x0
 # NOFGT: msr S3_4_C3_C1_4, x0
 # NOFGT: msr S3_4_C3_C1_5, x0
+# NOFGT: msr S3_4_C3_C1_6, x0
 
 [0x80,0x11,0x3c,0xd5]
 [0xa0,0x11,0x3c,0xd5]
 [0xc0,0x11,0x3c,0xd5]
 [0x80,0x31,0x3c,0xd5]
 [0xa0,0x31,0x3c,0xd5]
+[0xc0,0x31,0x3c,0xd5]
 
 # CHECK: mrs x0, HFGRTR_EL2
 # CHECK: mrs x0, HFGWTR_EL2
 # CHECK: mrs x0, HFGITR_EL2
 # CHECK: mrs x0, HDFGRTR_EL2
 # CHECK: mrs x0, HDFGWTR_EL2
+# CHECK: mrs x0, HAFGRTR_EL2
 # NOFGT: mrs x0, S3_4_C1_C1_4
 # NOFGT: mrs x0, S3_4_C1_C1_5
 # NOFGT: mrs x0, S3_4_C1_C1_6
 # NOFGT: mrs x0, S3_4_C3_C1_4
 # NOFGT: mrs x0, S3_4_C3_C1_5
+# NOFGT: mrs x0, S3_4_C3_C1_6
+
+[0x03,0x31,0x3c,0xd5]
+[0x23,0x31,0x3c,0xd5]
+[0x43,0x31,0x3c,0xd5]
+[0x63,0x31,0x3c,0xd5]
+# CHECK: mrs x3, HDFGRTR2_EL2
+# CHECK: mrs x3, HDFGWTR2_EL2
+# CHECK: mrs x3, HFGRTR2_EL2
+# CHECK: mrs x3, HFGWTR2_EL2
+# NOFGT: mrs x3, S3_4_C3_C1_0
+# NOFGT: mrs x3, S3_4_C3_C1_1
+# NOFGT: mrs x3, S3_4_C3_C1_2
+# NOFGT: mrs x3, S3_4_C3_C1_3
+
+
+[0x03,0x31,0x1c,0xd5]
+[0x23,0x31,0x1c,0xd5]
+[0x43,0x31,0x1c,0xd5]
+[0x63,0x31,0x1c,0xd5]
+# CHECK: msr HDFGRTR2_EL2, x3
+# CHECK: msr HDFGWTR2_EL2, x3
+# CHECK: msr HFGRTR2_EL2, x3
+# CHECK: msr HFGWTR2_EL2, x3
+# NOFGT: msr S3_4_C3_C1_0, x3
+# NOFGT: msr S3_4_C3_C1_1, x3
+# NOFGT: msr S3_4_C3_C1_2, x3
+# NOFGT: msr S3_4_C3_C1_3, x3

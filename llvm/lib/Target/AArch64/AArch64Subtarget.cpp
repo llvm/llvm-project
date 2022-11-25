@@ -459,8 +459,8 @@ bool AArch64Subtarget::useAA() const { return UseAA; }
 
 bool AArch64Subtarget::forceStreamingCompatibleSVE() const {
   if (ForceStreamingCompatibleSVE) {
-    assert((hasSVE() || hasSME()) && "Expected SVE to be available");
-    return hasSVE() || hasSME();
+    assert(hasSVEorSME() && "Expected SVE to be available");
+    return hasSVEorSME();
   }
   return false;
 }

@@ -137,7 +137,7 @@ public:
   MCSymbol *getEndSymbol(MCContext &Ctx);
   bool hasEnded() const;
 
-  unsigned getAlignment() const { return Alignment.value(); }
+  Align getAlign() const { return Alignment; }
   void setAlignment(Align Value) { Alignment = Value; }
 
   unsigned getOrdinal() const { return Ordinal; }

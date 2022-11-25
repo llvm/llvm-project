@@ -553,9 +553,10 @@ define void @test-add-not-header3(float* %input, i32 %offset, i32 %numIterations
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop2: (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations) symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
+; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop2: (-1 + %numIterations)
-; CHECK:       Loop %loop: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
   i1* %cond_buf) {
 entry:
@@ -1500,9 +1501,10 @@ define void @test-sext-sub(float* %input, i32 %sub, i32 %numIterations) {
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for cont: (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations) symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
+; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for cont: (-1 + %numIterations)
-; CHECK:       Loop %loop: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -1620,9 +1622,10 @@ define i32 @pr28932() {
 ; CHECK-NEXT:    exit count for if.then: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for if.else: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %for.cond: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %for.cond: Unpredictable symbolic max backedge-taken count. symbolic max exit count for if.then: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %for.cond: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:    symbolic max exit count for if.then: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for if.else: ***COULDNOTCOMPUTE***
-; CHECK:       Loop %for.cond: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.cond: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %pre = load %struct.anon*, %struct.anon** @a, align 8

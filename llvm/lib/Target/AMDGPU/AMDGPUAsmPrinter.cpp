@@ -252,8 +252,8 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
 
   // CP microcode requires the kernel descriptor to be allocated on 64 byte
   // alignment.
-  Streamer.emitValueToAlignment(64, 0, 1, 0);
-  if (ReadOnlySection.getAlignment() < 64)
+  Streamer.emitValueToAlignment(Align(64), 0, 1, 0);
+  if (ReadOnlySection.getAlign() < 64)
     ReadOnlySection.setAlignment(Align(64));
 
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
