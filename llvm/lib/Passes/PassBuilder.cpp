@@ -254,6 +254,7 @@
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -472,7 +473,7 @@ void PassBuilder::registerLoopAnalyses(LoopAnalysisManager &LAM) {
     C(LAM);
 }
 
-static Optional<int> parseRepeatPassName(StringRef Name) {
+static std::optional<int> parseRepeatPassName(StringRef Name) {
   if (!Name.consume_front("repeat<") || !Name.consume_back(">"))
     return None;
   int Count;
@@ -481,7 +482,7 @@ static Optional<int> parseRepeatPassName(StringRef Name) {
   return Count;
 }
 
-static Optional<int> parseDevirtPassName(StringRef Name) {
+static std::optional<int> parseDevirtPassName(StringRef Name) {
   if (!Name.consume_front("devirt<") || !Name.consume_back(">"))
     return None;
   int Count;
