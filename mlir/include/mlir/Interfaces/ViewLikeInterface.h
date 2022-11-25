@@ -21,18 +21,6 @@
 
 namespace mlir {
 
-/// Return a vector of OpFoldResults with the same size a staticValues, but all
-/// elements for which ShapedType::isDynamic is true, will be replaced by
-/// dynamicValues.
-SmallVector<OpFoldResult, 4> getMixedValues(ArrayAttr staticValues,
-                                            ValueRange dynamicValues);
-
-/// Decompose a vector of mixed static or dynamic values into the corresponding
-/// pair of arrays. This is the inverse function of `getMixedValues`.
-std::pair<ArrayAttr, SmallVector<Value>>
-decomposeMixedValues(Builder &b,
-                     const SmallVectorImpl<OpFoldResult> &mixedValues);
-
 class OffsetSizeAndStrideOpInterface;
 
 namespace detail {
@@ -61,7 +49,7 @@ namespace mlir {
 /// idiomatic printing of mixed value and integer attributes in a list. E.g.
 /// `[%arg0, 7, 42, %arg42]`.
 void printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
-                           OperandRange values, ArrayAttr integers);
+                           OperandRange values, ArrayRef<int64_t> integers);
 
 /// Pasrer hook for custom directive in assemblyFormat.
 ///
@@ -79,13 +67,14 @@ void printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
 ParseResult
 parseDynamicIndexList(OpAsmParser &parser,
                       SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-                      ArrayAttr &integers);
+                      DenseI64ArrayAttr &integers);
 
 /// Verify that a the `values` has as many elements as the number of entries in
 /// `attr` for which `isDynamic` evaluates to true.
 LogicalResult verifyListOfOperandsOrIntegers(Operation *op, StringRef name,
                                              unsigned expectedNumElements,
-                                             ArrayAttr attr, ValueRange values);
+                                             ArrayRef<int64_t> attr,
+                                             ValueRange values);
 
 } // namespace mlir
 
