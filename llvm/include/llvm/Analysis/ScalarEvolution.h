@@ -1334,11 +1334,11 @@ private:
     /*implicit*/ ExitLimit(const SCEV *E);
 
     ExitLimit(
-        const SCEV *E, const SCEV *M, bool MaxOrZero,
+        const SCEV *E, const SCEV *ConstantMaxNotTaken, bool MaxOrZero,
         ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList =
             None);
 
-    ExitLimit(const SCEV *E, const SCEV *M, bool MaxOrZero,
+    ExitLimit(const SCEV *E, const SCEV *ConstantMaxNotTaken, bool MaxOrZero,
               const SmallPtrSetImpl<const SCEVPredicate *> &PredSet);
 
     /// Test whether this ExitLimit contains any computed information, or
