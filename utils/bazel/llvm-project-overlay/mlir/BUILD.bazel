@@ -6873,6 +6873,7 @@ cc_binary(
         "//mlir/test:TestGPU",
         "//mlir/test:TestIR",
         "//mlir/test:TestLinalg",
+        "//mlir/test:TestLLVM",
         "//mlir/test:TestMath",
         "//mlir/test:TestMemRef",
         "//mlir/test:TestNVGPU",
