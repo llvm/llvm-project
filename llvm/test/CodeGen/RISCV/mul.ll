@@ -1412,8 +1412,8 @@ define i64 @mulhsu_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    mv a2, s2
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __muldi3@plt
-; RV32I-NEXT:    add a2, a0, s5
-; RV32I-NEXT:    sltu a0, a2, a0
+; RV32I-NEXT:    add s5, a0, s5
+; RV32I-NEXT:    sltu a0, s5, a0
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    add s8, s7, a0
 ; RV32I-NEXT:    mv a0, s0
@@ -1436,18 +1436,18 @@ define i64 @mulhsu_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    mv a2, s1
 ; RV32I-NEXT:    mv a3, s0
 ; RV32I-NEXT:    call __muldi3@plt
-; RV32I-NEXT:    add a3, a0, s2
-; RV32I-NEXT:    add a2, s9, a3
-; RV32I-NEXT:    sltu a4, a2, s9
-; RV32I-NEXT:    sltu a5, s9, s5
-; RV32I-NEXT:    sltu a6, s8, s7
-; RV32I-NEXT:    add a6, s6, a6
-; RV32I-NEXT:    add a5, a6, a5
+; RV32I-NEXT:    add s2, a0, s2
+; RV32I-NEXT:    add a2, s9, s2
+; RV32I-NEXT:    sltu a3, a2, s9
+; RV32I-NEXT:    sltu a4, s9, s5
+; RV32I-NEXT:    sltu a5, s8, s7
+; RV32I-NEXT:    add a5, s6, a5
+; RV32I-NEXT:    add a4, a5, a4
 ; RV32I-NEXT:    add a1, a1, s3
-; RV32I-NEXT:    sltu a0, a3, a0
+; RV32I-NEXT:    sltu a0, s2, a0
 ; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    add a0, a5, a0
-; RV32I-NEXT:    add a1, a0, a4
+; RV32I-NEXT:    add a0, a4, a0
+; RV32I-NEXT:    add a1, a0, a3
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload

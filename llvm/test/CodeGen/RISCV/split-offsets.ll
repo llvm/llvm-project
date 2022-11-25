@@ -56,19 +56,19 @@ define void @test2([65536 x i32]** %sp, [65536 x i32]* %t, i32 %n) {
 ; RV32I-LABEL: test2:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    li a3, 0
-; RV32I-NEXT:    lw a4, 0(a0)
-; RV32I-NEXT:    lui a0, 20
-; RV32I-NEXT:    addi a5, a0, -1920
-; RV32I-NEXT:    add a0, a1, a5
-; RV32I-NEXT:    add a1, a4, a5
+; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    lui a4, 20
+; RV32I-NEXT:    addi a4, a4, -1920
+; RV32I-NEXT:    add a1, a1, a4
+; RV32I-NEXT:    add a0, a0, a4
 ; RV32I-NEXT:    bge a3, a2, .LBB1_2
 ; RV32I-NEXT:  .LBB1_1: # %while_body
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    addi a4, a3, 1
-; RV32I-NEXT:    sw a4, 0(a1)
-; RV32I-NEXT:    sw a3, 4(a1)
 ; RV32I-NEXT:    sw a4, 0(a0)
 ; RV32I-NEXT:    sw a3, 4(a0)
+; RV32I-NEXT:    sw a4, 0(a1)
+; RV32I-NEXT:    sw a3, 4(a1)
 ; RV32I-NEXT:    mv a3, a4
 ; RV32I-NEXT:    blt a3, a2, .LBB1_1
 ; RV32I-NEXT:  .LBB1_2: # %while_end
@@ -77,20 +77,20 @@ define void @test2([65536 x i32]** %sp, [65536 x i32]* %t, i32 %n) {
 ; RV64I-LABEL: test2:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    li a3, 0
-; RV64I-NEXT:    ld a4, 0(a0)
-; RV64I-NEXT:    lui a0, 20
-; RV64I-NEXT:    addiw a5, a0, -1920
-; RV64I-NEXT:    add a0, a1, a5
-; RV64I-NEXT:    add a1, a4, a5
+; RV64I-NEXT:    ld a0, 0(a0)
+; RV64I-NEXT:    lui a4, 20
+; RV64I-NEXT:    addiw a4, a4, -1920
+; RV64I-NEXT:    add a1, a1, a4
+; RV64I-NEXT:    add a0, a0, a4
 ; RV64I-NEXT:    sext.w a2, a2
 ; RV64I-NEXT:    bge a3, a2, .LBB1_2
 ; RV64I-NEXT:  .LBB1_1: # %while_body
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    addiw a4, a3, 1
-; RV64I-NEXT:    sw a4, 0(a1)
-; RV64I-NEXT:    sw a3, 4(a1)
 ; RV64I-NEXT:    sw a4, 0(a0)
 ; RV64I-NEXT:    sw a3, 4(a0)
+; RV64I-NEXT:    sw a4, 0(a1)
+; RV64I-NEXT:    sw a3, 4(a1)
 ; RV64I-NEXT:    mv a3, a4
 ; RV64I-NEXT:    blt a3, a2, .LBB1_1
 ; RV64I-NEXT:  .LBB1_2: # %while_end
