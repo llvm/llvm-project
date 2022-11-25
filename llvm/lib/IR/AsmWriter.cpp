@@ -82,6 +82,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -4613,7 +4614,7 @@ void NamedMDNode::print(raw_ostream &ROS, bool IsForDebug) const {
 
 void NamedMDNode::print(raw_ostream &ROS, ModuleSlotTracker &MST,
                         bool IsForDebug) const {
-  Optional<SlotTracker> LocalST;
+  std::optional<SlotTracker> LocalST;
   SlotTracker *SlotTable;
   if (auto *ST = MST.getMachine())
     SlotTable = ST;
