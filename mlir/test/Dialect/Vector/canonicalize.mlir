@@ -1471,6 +1471,19 @@ func.func @extract_2d_constant() -> (i32, i32, i32, i32) {
 
 // -----
 
+// CHECK-LABEL: func.func @extract_vector_2d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<[0, 1, 2]> : vector<3xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<[3, 4, 5]> : vector<3xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]] : vector<3xi32>, vector<3xi32>
+func.func @extract_vector_2d_constant() -> (vector<3xi32>, vector<3xi32>) {
+  %cst = arith.constant dense<[[0, 1, 2], [3, 4, 5]]> : vector<2x3xi32>
+  %a = vector.extract %cst[0] : vector<2x3xi32>
+  %b = vector.extract %cst[1] : vector<2x3xi32>
+  return %a, %b : vector<3xi32>, vector<3xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func.func @extract_3d_constant
 //   CHECK-DAG: %[[ACST:.*]] = arith.constant 0 : i32
 //   CHECK-DAG: %[[BCST:.*]] = arith.constant 1 : i32
@@ -1484,6 +1497,38 @@ func.func @extract_3d_constant() -> (i32, i32, i32, i32) {
   %c = vector.extract %cst[1, 1, 1] : vector<2x3x2xi32>
   %d = vector.extract %cst[1, 2, 0] : vector<2x3x2xi32>
   return %a, %b, %c, %d : i32, i32, i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_vector_3d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<{{\[\[0, 1\], \[2, 3\], \[4, 5\]\]}}> : vector<3x2xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[6, 7\], \[8, 9\], \[10, 11\]\]}}> : vector<3x2xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<[8, 9]> : vector<2xi32>
+//   CHECK-DAG: %[[DCST:.*]] = arith.constant dense<[10, 11]> : vector<2xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]], %[[DCST]] : vector<3x2xi32>, vector<3x2xi32>, vector<2xi32>, vector<2xi32>
+func.func @extract_vector_3d_constant() -> (vector<3x2xi32>, vector<3x2xi32>, vector<2xi32>, vector<2xi32>) {
+  %cst = arith.constant dense<[[[0, 1], [2, 3], [4, 5]], [[6, 7], [8, 9], [10, 11]]]> : vector<2x3x2xi32>
+  %a = vector.extract %cst[0] : vector<2x3x2xi32>
+  %b = vector.extract %cst[1] : vector<2x3x2xi32>
+  %c = vector.extract %cst[1, 1] : vector<2x3x2xi32>
+  %d = vector.extract %cst[1, 2] : vector<2x3x2xi32>
+  return %a, %b, %c, %d : vector<3x2xi32>, vector<3x2xi32>, vector<2xi32>, vector<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_splat_vector_3d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<0> : vector<2xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<4> : vector<2xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<5> : vector<2xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]] : vector<2xi32>, vector<2xi32>, vector<2xi32>
+func.func @extract_splat_vector_3d_constant() -> (vector<2xi32>, vector<2xi32>, vector<2xi32>) {
+  %cst = arith.constant dense<[[[0, 0], [1, 1], [2, 2]], [[3, 3], [4, 4], [5, 5]]]> : vector<2x3x2xi32>
+  %a = vector.extract %cst[0, 0] : vector<2x3x2xi32>
+  %b = vector.extract %cst[1, 1] : vector<2x3x2xi32>
+  %c = vector.extract %cst[1, 2] : vector<2x3x2xi32>
+  return %a, %b, %c : vector<2xi32>, vector<2xi32>, vector<2xi32>
 }
 
 // -----
