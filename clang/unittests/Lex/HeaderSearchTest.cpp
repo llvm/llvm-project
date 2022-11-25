@@ -150,14 +150,6 @@ TEST_F(HeaderSearchTest, DotDotsWithAbsPath) {
             "z");
 }
 
-TEST_F(HeaderSearchTest, BothDotDots) {
-  addSearchDir("/x/../y/");
-  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/x/../y/z",
-                                                   /*WorkingDir=*/"",
-                                                   /*MainFile=*/""),
-            "z");
-}
-
 TEST_F(HeaderSearchTest, IncludeFromSameDirectory) {
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/y/z/t.h",
                                                    /*WorkingDir=*/"",
