@@ -7,7 +7,11 @@ class Dex;
 } // namespace clang
 
 namespace llvm {
-int get_physical_cores();
+namespace sys {
+
+int getHostNumPhysicalCores();
+
+} // namespace sys
 } // namespace llvm
 
 namespace {
