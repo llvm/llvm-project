@@ -23,6 +23,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -1623,12 +1624,7 @@ public:
       return failure();
 
     auto vecTy = sourceVector.getType().cast<VectorType>();
-    ArrayAttr positions = extractOp.getPosition();
     if (vecTy.isScalable())
-      return failure();
-    // Do not allow extracting sub-vectors to limit the size of the generated
-    // constants.
-    if (vecTy.getRank() != static_cast<int64_t>(positions.size()))
       return failure();
 
     // The splat case is handled by `ExtractOpSplatConstantFolder`.
@@ -1636,11 +1632,25 @@ public:
     if (!dense || dense.isSplat())
       return failure();
 
-    // Calculate the linearized position.
-    int64_t elemPosition =
-        linearize(getI64SubArray(positions), computeStrides(vecTy.getShape()));
-    Attribute elementValue = *(dense.value_begin<Attribute>() + elemPosition);
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractOp, elementValue);
+    // Calculate the linearized position of the continous chunk of elements to
+    // extract.
+    llvm::SmallVector<int64_t> completePositions(vecTy.getRank(), 0);
+    llvm::copy(getI64SubArray(extractOp.getPosition()),
+               completePositions.begin());
+    int64_t elemBeginPosition =
+        linearize(completePositions, computeStrides(vecTy.getShape()));
+    auto denseValuesBegin = dense.value_begin<Attribute>() + elemBeginPosition;
+
+    Attribute newAttr;
+    if (auto resVecTy = extractOp.getType().dyn_cast<VectorType>()) {
+      SmallVector<Attribute> elementValues(
+          denseValuesBegin, denseValuesBegin + resVecTy.getNumElements());
+      newAttr = DenseElementsAttr::get(resVecTy, elementValues);
+    } else {
+      newAttr = *denseValuesBegin;
+    }
+
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractOp, newAttr);
     return success();
   }
 };
