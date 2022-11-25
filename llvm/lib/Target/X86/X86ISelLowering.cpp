@@ -48647,18 +48647,27 @@ static SDValue combineScalarAndWithMaskSetcc(SDNode *N, SelectionDAG &DAG,
   SDValue SubVec = Src.getOperand(0);
   EVT SubVecVT = SubVec.getValueType();
 
-  // First subvector should be a setcc with a legal result type. The RHS of the
-  // AND should be a mask with this many bits.
-  if (SubVec.getOpcode() != ISD::SETCC || !TLI.isTypeLegal(SubVecVT) ||
+  // The RHS of the AND should be a mask with as many bits as SubVec.
+  if (!TLI.isTypeLegal(SubVecVT) ||
       !C1->getAPIntValue().isMask(SubVecVT.getVectorNumElements()))
     return SDValue();
 
-  EVT SetccVT = SubVec.getOperand(0).getValueType();
-  if (!TLI.isTypeLegal(SetccVT) ||
-      !(Subtarget.hasVLX() || SetccVT.is512BitVector()))
-    return SDValue();
-
-  if (!(Subtarget.hasBWI() || SetccVT.getScalarSizeInBits() >= 32))
+  // First subvector should be a setcc with a legal result type or a
+  // AND containing at least one setcc with a legal result type.
+  auto IsLegalSetCC = [&](SDValue V) {
+    if (V.getOpcode() != ISD::SETCC)
+      return false;
+    EVT SetccVT = V.getOperand(0).getValueType();
+    if (!TLI.isTypeLegal(SetccVT) ||
+        !(Subtarget.hasVLX() || SetccVT.is512BitVector()))
+      return false;
+    if (!(Subtarget.hasBWI() || SetccVT.getScalarSizeInBits() >= 32))
+      return false;
+    return true;
+  };
+  if (!(IsLegalSetCC(SubVec) || (SubVec.getOpcode() == ISD::AND &&
+                                 (IsLegalSetCC(SubVec.getOperand(0)) ||
+                                  IsLegalSetCC(SubVec.getOperand(1))))))
     return SDValue();
 
   // We passed all the checks. Rebuild the concat_vectors with zeroes
