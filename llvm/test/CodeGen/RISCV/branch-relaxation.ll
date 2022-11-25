@@ -342,11 +342,9 @@ define void @relax_jal_spill_32() {
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li ra, 1
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    sd ra, 16(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t0, 5
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t1, 6
 ; CHECK-RV64-NEXT:    #NO_APP
@@ -422,24 +420,24 @@ define void @relax_jal_spill_32() {
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t5, 30
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    sext.w t0, t5
+; CHECK-RV64-NEXT:    sd t5, 16(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sext.w t5, t5
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t6, 31
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    sext.w ra, t6
-; CHECK-RV64-NEXT:    beq t0, ra, .LBB2_1
+; CHECK-RV64-NEXT:    sd t6, 8(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sext.w t6, t6
+; CHECK-RV64-NEXT:    beq t5, t6, .LBB2_1
 ; CHECK-RV64-NEXT:  # %bb.3:
-; CHECK-RV64-NEXT:    jump .LBB2_2, t0
+; CHECK-RV64-NEXT:    jump .LBB2_2, t5
 ; CHECK-RV64-NEXT:  .LBB2_1: # %branch_1
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    .zero 1048576
 ; CHECK-RV64-NEXT:    #NO_APP
 ; CHECK-RV64-NEXT:  .LBB2_2: # %branch_2
-; CHECK-RV64-NEXT:    ld ra, 16(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use ra
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    ld t0, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t0
 ; CHECK-RV64-NEXT:    #NO_APP
@@ -515,9 +513,11 @@ define void @relax_jal_spill_32() {
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t4
 ; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    ld t5, 16(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t5
 ; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    ld t6, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t6
 ; CHECK-RV64-NEXT:    #NO_APP
@@ -885,17 +885,9 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li ra, 1
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    lui a0, 1
-; CHECK-RV64-NEXT:    addiw a0, a0, -8
-; CHECK-RV64-NEXT:    add a0, sp, a0
-; CHECK-RV64-NEXT:    sd ra, 0(a0) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t0, 5
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    lui a0, 1
-; CHECK-RV64-NEXT:    addiw a0, a0, -16
-; CHECK-RV64-NEXT:    add a0, sp, a0
-; CHECK-RV64-NEXT:    sd t0, 0(a0) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t1, 6
 ; CHECK-RV64-NEXT:    #NO_APP
@@ -971,30 +963,32 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t5, 30
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    sext.w t0, t5
+; CHECK-RV64-NEXT:    sd t0, 0(sp)
+; CHECK-RV64-NEXT:    lui t0, 1
+; CHECK-RV64-NEXT:    addiw t0, t0, -8
+; CHECK-RV64-NEXT:    add t0, sp, t0
+; CHECK-RV64-NEXT:    sd t5, 0(t0) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sext.w t5, t5
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t6, 31
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    sext.w ra, t6
-; CHECK-RV64-NEXT:    beq t0, ra, .LBB3_1
+; CHECK-RV64-NEXT:    lui t0, 1
+; CHECK-RV64-NEXT:    addiw t0, t0, -16
+; CHECK-RV64-NEXT:    add t0, sp, t0
+; CHECK-RV64-NEXT:    sd t6, 0(t0) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    ld t0, 0(sp)
+; CHECK-RV64-NEXT:    sext.w t6, t6
+; CHECK-RV64-NEXT:    beq t5, t6, .LBB3_1
 ; CHECK-RV64-NEXT:  # %bb.3:
-; CHECK-RV64-NEXT:    jump .LBB3_2, t0
+; CHECK-RV64-NEXT:    jump .LBB3_2, t5
 ; CHECK-RV64-NEXT:  .LBB3_1: # %branch_1
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    .zero 1048576
 ; CHECK-RV64-NEXT:    #NO_APP
 ; CHECK-RV64-NEXT:  .LBB3_2: # %branch_2
-; CHECK-RV64-NEXT:    lui t0, 1
-; CHECK-RV64-NEXT:    addiw t0, t0, -8
-; CHECK-RV64-NEXT:    add t0, sp, t0
-; CHECK-RV64-NEXT:    ld ra, 0(t0) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use ra
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    lui t0, 1
-; CHECK-RV64-NEXT:    addiw t0, t0, -16
-; CHECK-RV64-NEXT:    add t0, sp, t0
-; CHECK-RV64-NEXT:    ld t0, 0(t0) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t0
 ; CHECK-RV64-NEXT:    #NO_APP
@@ -1070,9 +1064,17 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t4
 ; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    lui a0, 1
+; CHECK-RV64-NEXT:    addiw a0, a0, -8
+; CHECK-RV64-NEXT:    add a0, sp, a0
+; CHECK-RV64-NEXT:    ld t5, 0(a0) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t5
 ; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    lui a0, 1
+; CHECK-RV64-NEXT:    addiw a0, a0, -16
+; CHECK-RV64-NEXT:    add a0, sp, a0
+; CHECK-RV64-NEXT:    ld t6, 0(a0) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t6
 ; CHECK-RV64-NEXT:    #NO_APP
