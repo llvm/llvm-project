@@ -1635,11 +1635,10 @@ public:
     if (!dense || dense.isSplat())
       return failure();
 
-    // Calculate the linearized position of the continous chunk of elements to
+    // Calculate the linearized position of the continuous chunk of elements to
     // extract.
     llvm::SmallVector<int64_t> completePositions(vecTy.getRank(), 0);
-    llvm::copy(getI64SubArray(extractOp.getPosition()),
-               completePositions.begin());
+    copy(getI64SubArray(extractOp.getPosition()), completePositions.begin());
     int64_t elemBeginPosition =
         linearize(completePositions, computeStrides(vecTy.getShape()));
     auto denseValuesBegin = dense.value_begin<Attribute>() + elemBeginPosition;
@@ -2084,11 +2083,68 @@ public:
   }
 };
 
+// Pattern to rewrite a InsertOp(ConstantOp into ConstantOp) -> ConstantOp.
+class InsertOpConstantFolder final : public OpRewritePattern<InsertOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  // Do not create constants with more than `vectorSizeFoldThreashold` elements,
+  // unless the source vector constant has a single use.
+  static constexpr int64_t vectorSizeFoldThreshold = 256;
+
+  LogicalResult matchAndRewrite(InsertOp op,
+                                PatternRewriter &rewriter) const override {
+    // Return if 'InsertOp' operand is not defined by a compatible vector
+    // ConstantOp.
+    TypedValue<VectorType> destVector = op.getDest();
+    Attribute vectorDestCst;
+    if (!matchPattern(destVector, m_Constant(&vectorDestCst)))
+      return failure();
+
+    VectorType destTy = destVector.getType();
+    if (destTy.isScalable())
+      return failure();
+
+    // Make sure we do not create too many large constants.
+    if (destTy.getNumElements() > vectorSizeFoldThreshold &&
+        !destVector.hasOneUse())
+      return failure();
+
+    auto denseDest = vectorDestCst.cast<DenseElementsAttr>();
+
+    Value sourceValue = op.getSource();
+    Attribute sourceCst;
+    if (!matchPattern(sourceValue, m_Constant(&sourceCst)))
+      return failure();
+
+    // Calculate the linearized position of the continuous chunk of elements to
+    // insert.
+    llvm::SmallVector<int64_t> completePositions(destTy.getRank(), 0);
+    copy(getI64SubArray(op.getPosition()), completePositions.begin());
+    int64_t insertBeginPosition =
+        linearize(completePositions, computeStrides(destTy.getShape()));
+
+    SmallVector<Attribute> insertedValues;
+    if (auto denseSource = sourceCst.dyn_cast<DenseElementsAttr>())
+      llvm::append_range(insertedValues, denseSource.getValues<Attribute>());
+    else
+      insertedValues.push_back(sourceCst);
+
+    auto allValues = llvm::to_vector(denseDest.getValues<Attribute>());
+    copy(insertedValues, allValues.begin() + insertBeginPosition);
+    auto newAttr = DenseElementsAttr::get(destTy, allValues);
+
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, newAttr);
+    return success();
+  }
+};
+
 } // namespace
 
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat>(context);
+  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
+              InsertOpConstantFolder>(context);
 }
 
 // Eliminates insert operations that produce values identical to their source
@@ -2744,13 +2800,12 @@ public:
 
     // Expand offsets and sizes to match the vector rank.
     SmallVector<int64_t, 4> offsets(sliceRank, 0);
-    llvm::copy(getI64SubArray(extractStridedSliceOp.getOffsets()),
-               offsets.begin());
+    copy(getI64SubArray(extractStridedSliceOp.getOffsets()), offsets.begin());
 
     SmallVector<int64_t, 4> sizes(sourceShape.begin(), sourceShape.end());
-    llvm::copy(getI64SubArray(extractStridedSliceOp.getSizes()), sizes.begin());
+    copy(getI64SubArray(extractStridedSliceOp.getSizes()), sizes.begin());
 
-    // Calcualte the slice elements by enumerating all slice positions and
+    // Calculate the slice elements by enumerating all slice positions and
     // linearizing them. The enumeration order is lexicographic which yields a
     // sequence of monotonically increasing linearized position indices.
     auto denseValuesBegin = dense.value_begin<Attribute>();

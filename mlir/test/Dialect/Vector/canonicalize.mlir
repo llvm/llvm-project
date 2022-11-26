@@ -1795,6 +1795,64 @@ func.func @transpose_splat2(%arg : f32) -> vector<3x4xf32> {
 
 // -----
 
+// CHECK-LABEL: func.func @insert_1d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<[9, 1, 2]> : vector<3xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<[0, 9, 2]> : vector<3xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<[0, 1, 9]> : vector<3xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]] : vector<3xi32>, vector<3xi32>, vector<3xi32>
+func.func @insert_1d_constant() -> (vector<3xi32>, vector<3xi32>, vector<3xi32>) {
+  %vcst = arith.constant dense<[0, 1, 2]> : vector<3xi32>
+  %icst = arith.constant 9 : i32
+  %a = vector.insert %icst, %vcst[0] : i32 into vector<3xi32>
+  %b = vector.insert %icst, %vcst[1] : i32 into vector<3xi32>
+  %c = vector.insert %icst, %vcst[2] : i32 into vector<3xi32>
+  return %a, %b, %c : vector<3xi32>, vector<3xi32>, vector<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @insert_2d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<{{\[\[99, 1, 2\], \[3, 4, 5\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[0, 1, 2\], \[3, 4, 99\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<{{\[\[90, 91, 92\], \[3, 4, 5\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[DCST:.*]] = arith.constant dense<{{\[\[0, 1, 2\], \[90, 91, 92\]\]}}> : vector<2x3xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]], %[[DCST]]
+func.func @insert_2d_constant() -> (vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>) {
+  %vcst = arith.constant dense<[[0, 1, 2], [3, 4, 5]]> : vector<2x3xi32>
+  %cst_scalar = arith.constant 99 : i32
+  %cst_1d = arith.constant dense<[90, 91, 92]> : vector<3xi32>
+  %a = vector.insert %cst_scalar, %vcst[0, 0] : i32 into vector<2x3xi32>
+  %b = vector.insert %cst_scalar, %vcst[1, 2] : i32 into vector<2x3xi32>
+  %c = vector.insert %cst_1d, %vcst[0] : vector<3xi32> into vector<2x3xi32>
+  %d = vector.insert %cst_1d, %vcst[1] : vector<3xi32> into vector<2x3xi32>
+  return %a, %b, %c, %d : vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @insert_2d_splat_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<0> : vector<2x3xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[99, 0, 0\], \[0, 0, 0\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<{{\[\[0, 0, 0\], \[0, 99, 0\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[DCST:.*]] = arith.constant dense<{{\[\[33, 33, 33\], \[0, 0, 0\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[ECST:.*]] = arith.constant dense<{{\[\[0, 0, 0\], \[33, 33, 33\]\]}}> : vector<2x3xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]], %[[DCST]], %[[ECST]]
+func.func @insert_2d_splat_constant()
+  -> (vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>) {
+  %vcst = arith.constant dense<0> : vector<2x3xi32>
+  %cst_zero = arith.constant 0 : i32
+  %cst_scalar = arith.constant 99 : i32
+  %cst_1d = arith.constant dense<33> : vector<3xi32>
+  %a = vector.insert %cst_zero, %vcst[0, 0] : i32 into vector<2x3xi32>
+  %b = vector.insert %cst_scalar, %vcst[0, 0] : i32 into vector<2x3xi32>
+  %c = vector.insert %cst_scalar, %vcst[1, 1] : i32 into vector<2x3xi32>
+  %d = vector.insert %cst_1d, %vcst[0] : vector<3xi32> into vector<2x3xi32>
+  %e = vector.insert %cst_1d, %vcst[1] : vector<3xi32> into vector<2x3xi32>
+  return %a, %b, %c, %d, %e : vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_element_fold
 //       CHECK:   %[[V:.+]] = arith.constant dense<[0, 1, 7, 3]> : vector<4xi32>
 //       CHECK:   return %[[V]]
