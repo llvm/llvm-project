@@ -565,9 +565,10 @@ define void @ptrtoint_of_integer(i8* %arg, i64 %arg1, i1 %arg2) local_unnamed_ad
 ; X64-NEXT:    exit count for bb8: ***COULDNOTCOMPUTE***
 ; X64-NEXT:    exit count for bb10: (-2 + (-1 * %arg1) + (ptrtoint i8* %arg to i64))
 ; X64-NEXT:  Loop %bb8: constant max backedge-taken count is -1
-; X64-NEXT:  Loop %bb8: symbolic max backedge-taken count is (-2 + (-1 * %arg1) + (ptrtoint i8* %arg to i64)) symbolic max exit count for bb8: ***COULDNOTCOMPUTE***
+; X64-NEXT:  Loop %bb8: symbolic max backedge-taken count is (-2 + (-1 * %arg1) + (ptrtoint i8* %arg to i64))
+; X64-NEXT:    symbolic max exit count for bb8: ***COULDNOTCOMPUTE***
 ; X64-NEXT:    symbolic max exit count for bb10: (-2 + (-1 * %arg1) + (ptrtoint i8* %arg to i64))
-; X64:       Loop %bb8: Unpredictable predicated backedge-taken count.
+; X64-NEXT:  Loop %bb8: Unpredictable predicated backedge-taken count.
 ;
 ; X32-LABEL: 'ptrtoint_of_integer'
 ; X32-NEXT:  Classifying expressions for: @ptrtoint_of_integer
@@ -584,9 +585,10 @@ define void @ptrtoint_of_integer(i8* %arg, i64 %arg1, i1 %arg2) local_unnamed_ad
 ; X32-NEXT:    exit count for bb8: ***COULDNOTCOMPUTE***
 ; X32-NEXT:    exit count for bb10: (-2 + (zext i32 (ptrtoint i8* %arg to i32) to i64) + (-1 * %arg1))
 ; X32-NEXT:  Loop %bb8: constant max backedge-taken count is -1
-; X32-NEXT:  Loop %bb8: symbolic max backedge-taken count is (-2 + (zext i32 (ptrtoint i8* %arg to i32) to i64) + (-1 * %arg1)) symbolic max exit count for bb8: ***COULDNOTCOMPUTE***
+; X32-NEXT:  Loop %bb8: symbolic max backedge-taken count is (-2 + (zext i32 (ptrtoint i8* %arg to i32) to i64) + (-1 * %arg1))
+; X32-NEXT:    symbolic max exit count for bb8: ***COULDNOTCOMPUTE***
 ; X32-NEXT:    symbolic max exit count for bb10: (-2 + (zext i32 (ptrtoint i8* %arg to i32) to i64) + (-1 * %arg1))
-; X32:       Loop %bb8: Unpredictable predicated backedge-taken count.
+; X32-NEXT:  Loop %bb8: Unpredictable predicated backedge-taken count.
 ;
 bb:
   %i = icmp eq i8* %arg, null

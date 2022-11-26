@@ -1582,7 +1582,7 @@ bool AVRTargetLowering::CanLowerReturn(
   }
 
   unsigned TotalBytes = getTotalArgumentsSizeInBytes(Outs);
-  return TotalBytes <= (Subtarget.hasTinyEncoding() ? 4 : 8);
+  return TotalBytes <= (unsigned)(Subtarget.hasTinyEncoding() ? 4 : 8);
 }
 
 SDValue

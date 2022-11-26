@@ -83,14 +83,54 @@ public:
       recordMacroRef(MacroName, *MI);
   }
 
+  void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+             const MacroDefinition &MD) override {
+    if (!Active)
+      return;
+    if (const auto *MI = MD.getMacroInfo())
+      recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
+  }
+
+  void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
+              const MacroDefinition &MD) override {
+    if (!Active)
+      return;
+    if (const auto *MI = MD.getMacroInfo())
+      recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
+  }
+
+  void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+               const MacroDefinition &MD) override {
+    if (!Active)
+      return;
+    if (const auto *MI = MD.getMacroInfo())
+      recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
+  }
+
+  void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
+                const MacroDefinition &MD) override {
+    if (!Active)
+      return;
+    if (const auto *MI = MD.getMacroInfo())
+      recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
+  }
+
+  void Defined(const Token &MacroNameTok, const MacroDefinition &MD,
+               SourceRange Range) override {
+    if (!Active)
+      return;
+    if (const auto *MI = MD.getMacroInfo())
+      recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
+  }
+
 private:
-  void recordMacroRef(const Token &Tok, const MacroInfo &MI) {
+  void recordMacroRef(const Token &Tok, const MacroInfo &MI,
+                      RefType RT = RefType::Explicit) {
     if (MI.isBuiltinMacro())
       return; // __FILE__ is not a reference.
-    Recorded.MacroReferences.push_back(
-        SymbolReference{Tok.getLocation(),
-                        Macro{Tok.getIdentifierInfo(), MI.getDefinitionLoc()},
-                        RefType::Explicit});
+    Recorded.MacroReferences.push_back(SymbolReference{
+        Tok.getLocation(),
+        Macro{Tok.getIdentifierInfo(), MI.getDefinitionLoc()}, RT});
   }
 
   bool Active = false;
@@ -337,6 +377,13 @@ void RecordedPP::RecordedIncludes::add(const Include &I) {
   BySpellingIt->second.push_back(Index);
   if (I.Resolved)
     ByFile[I.Resolved].push_back(Index);
+  ByLine[I.Line] = Index;
+}
+
+const Include *
+RecordedPP::RecordedIncludes::atLine(unsigned OneBasedIndex) const {
+  auto It = ByLine.find(OneBasedIndex);
+  return (It == ByLine.end()) ? nullptr : &All[It->second];
 }
 
 llvm::SmallVector<const Include *>

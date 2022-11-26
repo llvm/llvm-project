@@ -91,7 +91,8 @@ void MCELFStreamer::mergeFragment(MCDataFragment *DF,
 void MCELFStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
-  emitCodeAlignment(Ctx.getObjectFileInfo()->getTextSectionAlignment(), &STI);
+  emitCodeAlignment(Align(Ctx.getObjectFileInfo()->getTextSectionAlignment()),
+                    &STI);
 
   if (NoExecStack)
     switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
@@ -140,7 +141,7 @@ void MCELFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
 static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
                                            MCSection *Section) {
   if (Section && Assembler.isBundlingEnabled() && Section->hasInstructions() &&
-      Section->getAlignment() < Assembler.getBundleAlignSize())
+      Section->getAlign() < Assembler.getBundleAlignSize())
     Section->setAlignment(Align(Assembler.getBundleAlignSize()));
 }
 
@@ -321,7 +322,7 @@ void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
     MCSectionSubPair P = getCurrentSection();
     switchSection(&Section);
 
-    emitValueToAlignment(ByteAlignment, 0, 1, 0);
+    emitValueToAlignment(Align(ByteAlignment), 0, 1, 0);
     emitLabel(Symbol);
     emitZeros(Size);
 
@@ -364,14 +365,13 @@ void MCELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   MCObjectStreamer::emitValueImpl(Value, Size, Loc);
 }
 
-void MCELFStreamer::emitValueToAlignment(unsigned ByteAlignment,
-                                         int64_t Value,
+void MCELFStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
                                          unsigned ValueSize,
                                          unsigned MaxBytesToEmit) {
   if (isBundleLocked())
     report_fatal_error("Emitting values inside a locked bundle is forbidden");
-  MCObjectStreamer::emitValueToAlignment(ByteAlignment, Value,
-                                         ValueSize, MaxBytesToEmit);
+  MCObjectStreamer::emitValueToAlignment(Alignment, Value, ValueSize,
+                                         MaxBytesToEmit);
 }
 
 void MCELFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
@@ -635,12 +635,12 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   }
 }
 
-void MCELFStreamer::emitBundleAlignMode(unsigned AlignPow2) {
-  assert(AlignPow2 <= 30 && "Invalid bundle alignment");
+void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
+  assert(Log2(Alignment) <= 30 && "Invalid bundle alignment");
   MCAssembler &Assembler = getAssembler();
-  if (AlignPow2 > 0 && (Assembler.getBundleAlignSize() == 0 ||
-                        Assembler.getBundleAlignSize() == 1U << AlignPow2))
-    Assembler.setBundleAlignSize(1U << AlignPow2);
+  if (Alignment > 1 && (Assembler.getBundleAlignSize() == 0 ||
+                        Assembler.getBundleAlignSize() == Alignment.value()))
+    Assembler.setBundleAlignSize(Alignment.value());
   else
     report_fatal_error(".bundle_align_mode cannot be changed once set");
 }

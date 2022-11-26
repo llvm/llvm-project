@@ -2661,8 +2661,7 @@ HexagonTargetLowering::extractVector(SDValue VecV, SDValue IdxV,
     unsigned Off = IdxN->getZExtValue() * ElemWidth;
     if (VecWidth == 64 && ValWidth == 32) {
       assert(Off == 0 || Off == 32);
-      unsigned SubIdx = Off == 0 ? Hexagon::isub_lo : Hexagon::isub_hi;
-      ExtV = DAG.getTargetExtractSubreg(SubIdx, dl, MVT::i32, VecV);
+      ExtV = Off == 0 ? LoHalf(VecV, DAG) : HiHalf(VecV, DAG);
     } else if (Off == 0 && (ValWidth % 8) == 0) {
       ExtV = DAG.getZeroExtendInReg(VecV, dl, tyScalar(ValTy));
     } else {
@@ -2734,7 +2733,7 @@ HexagonTargetLowering::extractVectorPred(SDValue VecV, SDValue IdxV,
   while (Scale > 1) {
     // The longest possible subvector is at most 32 bits, so it is always
     // contained in the low subregister.
-    T1 = DAG.getTargetExtractSubreg(Hexagon::isub_lo, dl, MVT::i32, T1);
+    T1 = LoHalf(T1, DAG);
     T1 = expandPredicate(T1, dl, DAG);
     Scale /= 2;
   }
@@ -2994,7 +2993,7 @@ HexagonTargetLowering::LowerCONCAT_VECTORS(SDValue Op,
         W = contractPredicate(W, dl, DAG);
         W = getCombine(DAG.getUNDEF(MVT::i32), W, dl, MVT::i64, DAG);
       }
-      W = DAG.getTargetExtractSubreg(Hexagon::isub_lo, dl, MVT::i32, W);
+      W = LoHalf(W, DAG);
       Words[IdxW].push_back(W);
     }
 
