@@ -31,6 +31,7 @@
 #include <__config>
 #include <__format/format_error.h>
 #include <__memory/addressof.h>
+#include <__type_traits/is_convertible.h>
 #include <cstdint>
 #include <ctime>
 #include <limits>
@@ -116,12 +117,23 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
     //   ...  However, if a flag refers to a "time of day" (e.g. %H, %I, %p,
     //   etc.), then a specialization of duration is interpreted as the time of
     //   day elapsed since midnight.
-    uint64_t __sec = chrono::duration_cast<chrono::seconds>(__value).count();
-    __sec %= 24 * 3600;
-    __result.tm_hour = __sec / 3600;
-    __sec %= 3600;
-    __result.tm_min = __sec / 60;
-    __result.tm_sec = __sec % 60;
+
+    // Not all values can be converted to hours, it may run into ratio
+    // conversion errors. In that case the conversion to seconds works.
+    if constexpr (is_convertible_v<_ChronoT, chrono::hours>) {
+      auto __hour      = chrono::floor<chrono::hours>(__value);
+      auto __sec       = chrono::duration_cast<chrono::seconds>(__value - __hour);
+      __result.tm_hour = __hour.count() % 24;
+      __result.tm_min  = __sec.count() / 60;
+      __result.tm_sec  = __sec.count() % 60;
+    } else {
+      uint64_t __sec = chrono::duration_cast<chrono::seconds>(__value).count();
+      __sec %= 24 * 3600;
+      __result.tm_hour = __sec / 3600;
+      __sec %= 3600;
+      __result.tm_min = __sec / 60;
+      __result.tm_sec = __sec % 60;
+    }
   } else if constexpr (same_as<_ChronoT, chrono::day>)
     __result.tm_mday = static_cast<unsigned>(__value);
   else if constexpr (same_as<_ChronoT, chrono::month>)
