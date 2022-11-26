@@ -9,13 +9,13 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @bar(i32 %arg) #0 !dbg !13 {
 bb:
   %i = alloca i32, align 4
-  store i32 %arg, i32* %i, align 4, !tbaa !19
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !18, metadata !DIExpression()), !dbg !23
+  store i32 %arg, ptr %i, align 4, !tbaa !19
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !18, metadata !DIExpression()), !dbg !23
   call void @llvm.pseudoprobe(i64 -2012135647395072713, i64 1, i32 0, i64 -1), !dbg !24
-  %i1 = load i32, i32* %i, align 4, !dbg !24, !tbaa !19
+  %i1 = load i32, ptr %i, align 4, !dbg !24, !tbaa !19
   %i2 = add nsw i32 %i1, 1, !dbg !24
-  store i32 %i2, i32* %i, align 4, !dbg !24, !tbaa !19
-  %i3 = load i32, i32* %i, align 4, !dbg !25, !tbaa !19
+  store i32 %i2, ptr %i, align 4, !dbg !24, !tbaa !19
+  %i3 = load i32, ptr %i, align 4, !dbg !25, !tbaa !19
   %i4 = add nsw i32 %i3, 1, !dbg !26
   ret i32 %i4, !dbg !27
 }
@@ -27,28 +27,27 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 define dso_local i32 @baz(i32 %arg) #0 !dbg !28 {
 bb:
   %i = alloca i32, align 4
-  store i32 %arg, i32* %i, align 4, !tbaa !19
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !30, metadata !DIExpression()), !dbg !31
+  store i32 %arg, ptr %i, align 4, !tbaa !19
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !30, metadata !DIExpression()), !dbg !31
   call void @llvm.pseudoprobe(i64 7546896869197086323, i64 1, i32 0, i64 -1), !dbg !32
-  %i1 = load i32, i32* %i, align 4, !dbg !32, !tbaa !19
+  %i1 = load i32, ptr %i, align 4, !dbg !32, !tbaa !19
   %i2 = add nsw i32 %i1, 10, !dbg !33
   ret i32 %i2, !dbg !34
 }
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @foo(i32 %arg, i32 (...)* %arg1) #0 !dbg !35 {
+define dso_local i32 @foo(i32 %arg, ptr %arg1) #0 !dbg !35 {
 bb:
   %i = alloca i32, align 4
-  %i2 = alloca i32 (...)*, align 8
-  store i32 %arg, i32* %i, align 4, !tbaa !19
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !42, metadata !DIExpression()), !dbg !44
-  store i32 (...)* %arg1, i32 (...)** %i2, align 8, !tbaa !45
-  call void @llvm.dbg.declare(metadata i32 (...)** %i2, metadata !43, metadata !DIExpression()), !dbg !47
+  %i2 = alloca ptr, align 8
+  store i32 %arg, ptr %i, align 4, !tbaa !19
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !42, metadata !DIExpression()), !dbg !44
+  store ptr %arg1, ptr %i2, align 8, !tbaa !45
+  call void @llvm.dbg.declare(metadata ptr %i2, metadata !43, metadata !DIExpression()), !dbg !47
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 1, i32 0, i64 -1), !dbg !48
-  %i3 = load i32 (...)*, i32 (...)** %i2, align 8, !dbg !48, !tbaa !45
-  %i4 = load i32, i32* %i, align 4, !dbg !49, !tbaa !19
-  %i5 = bitcast i32 (...)* %i3 to i32 (i32, ...)*, !dbg !48
-  %i6 = call i32 (i32, ...) %i5(i32 %i4), !dbg !50
+  %i3 = load ptr, ptr %i2, align 8, !dbg !48, !tbaa !45
+  %i4 = load i32, ptr %i, align 4, !dbg !49, !tbaa !19
+  %i6 = call i32 (i32, ...) %i3(i32 %i4), !dbg !50
   ret i32 %i6, !dbg !52
 }
 
@@ -56,89 +55,82 @@ bb:
 define dso_local i32 @main() #0 !dbg !53 {
 bb:
   %i = alloca i32, align 4
-  %i1 = alloca i32 (i32)*, align 8
+  %i1 = alloca ptr, align 8
   %i2 = alloca i32, align 4
   %i3 = alloca i32, align 4
-  store i32 0, i32* %i, align 4
+  store i32 0, ptr %i, align 4
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 1, i32 0, i64 -1), !dbg !62
-  %i4 = bitcast i32 (i32)** %i1 to i8*, !dbg !62
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %i4), !dbg !62
-  call void @llvm.dbg.declare(metadata i32 (i32)** %i1, metadata !57, metadata !DIExpression()), !dbg !63
-  %i5 = bitcast i32* %i2 to i8*, !dbg !64
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %i5), !dbg !64
-  call void @llvm.dbg.declare(metadata i32* %i2, metadata !59, metadata !DIExpression()), !dbg !65
-  store i32 0, i32* %i2, align 4, !dbg !65, !tbaa !19
-  %i6 = bitcast i32* %i3 to i8*, !dbg !66
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %i6), !dbg !66
-  call void @llvm.dbg.declare(metadata i32* %i3, metadata !60, metadata !DIExpression()), !dbg !67
-  store i32 0, i32* %i3, align 4, !dbg !67, !tbaa !19
+  call void @llvm.lifetime.start.p0(i64 8, ptr %i1), !dbg !62
+  call void @llvm.dbg.declare(metadata ptr %i1, metadata !57, metadata !DIExpression()), !dbg !63
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i2), !dbg !64
+  call void @llvm.dbg.declare(metadata ptr %i2, metadata !59, metadata !DIExpression()), !dbg !65
+  store i32 0, ptr %i2, align 4, !dbg !65, !tbaa !19
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i3), !dbg !66
+  call void @llvm.dbg.declare(metadata ptr %i3, metadata !60, metadata !DIExpression()), !dbg !67
+  store i32 0, ptr %i3, align 4, !dbg !67, !tbaa !19
   br label %bb7, !dbg !66
 
 bb7:                                              ; preds = %bb25, %bb
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 2, i32 0, i64 -1), !dbg !68
-  %i8 = load i32, i32* %i3, align 4, !dbg !68, !tbaa !19
+  %i8 = load i32, ptr %i3, align 4, !dbg !68, !tbaa !19
   %i9 = icmp slt i32 %i8, 1000000000, !dbg !70
   br i1 %i9, label %bb12, label %bb10, !dbg !71
 
 bb10:                                             ; preds = %bb7
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 3, i32 0, i64 -1), !dbg !72
-  %i11 = bitcast i32* %i3 to i8*, !dbg !72
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %i11), !dbg !72
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i3), !dbg !72
   br label %bb28
 
 bb12:                                             ; preds = %bb7
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 4, i32 0, i64 -1), !dbg !73
-  %i13 = load i32, i32* %i3, align 4, !dbg !73, !tbaa !19
+  %i13 = load i32, ptr %i3, align 4, !dbg !73, !tbaa !19
   %i14 = srem i32 %i13, 100, !dbg !76
   %i15 = icmp eq i32 %i14, 0, !dbg !77
   br i1 %i15, label %bb16, label %bb17, !dbg !78
 
 bb16:                                             ; preds = %bb12
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 5, i32 0, i64 -1), !dbg !79
-  store i32 (i32)* @bar, i32 (i32)** %i1, align 8, !dbg !79, !tbaa !45
+  store ptr @bar, ptr %i1, align 8, !dbg !79, !tbaa !45
   br label %bb18, !dbg !80
 
 bb17:                                             ; preds = %bb12
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 6, i32 0, i64 -1), !dbg !81
-  store i32 (i32)* @baz, i32 (i32)** %i1, align 8, !dbg !81, !tbaa !45
+  store ptr @baz, ptr %i1, align 8, !dbg !81, !tbaa !45
   br label %bb18
 
 bb18:                                             ; preds = %bb17, %bb16
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 7, i32 0, i64 -1), !dbg !82
-  %i19 = load i32, i32* %i3, align 4, !dbg !82, !tbaa !19
-  %i20 = load i32 (i32)*, i32 (i32)** %i1, align 8, !dbg !83, !tbaa !45
-  %i21 = bitcast i32 (i32)* %i20 to i32 (...)*, !dbg !83
-  %i22 = call i32 @foo(i32 %i19, i32 (...)* %i21), !dbg !84
-  %i23 = load i32, i32* %i2, align 4, !dbg !86, !tbaa !19
+  %i19 = load i32, ptr %i3, align 4, !dbg !82, !tbaa !19
+  %i20 = load ptr, ptr %i1, align 8, !dbg !83, !tbaa !45
+  %i22 = call i32 @foo(i32 %i19, ptr %i20), !dbg !84
+  %i23 = load i32, ptr %i2, align 4, !dbg !86, !tbaa !19
   %i24 = add nsw i32 %i23, %i22, !dbg !86
-  store i32 %i24, i32* %i2, align 4, !dbg !86, !tbaa !19
+  store i32 %i24, ptr %i2, align 4, !dbg !86, !tbaa !19
   br label %bb25, !dbg !87
 
 bb25:                                             ; preds = %bb18
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 8, i32 0, i64 -1), !dbg !88
-  %i26 = load i32, i32* %i3, align 4, !dbg !88, !tbaa !19
+  %i26 = load i32, ptr %i3, align 4, !dbg !88, !tbaa !19
   %i27 = add nsw i32 %i26, 1, !dbg !88
-  store i32 %i27, i32* %i3, align 4, !dbg !88, !tbaa !19
+  store i32 %i27, ptr %i3, align 4, !dbg !88, !tbaa !19
   br label %bb7, !dbg !72, !llvm.loop !89
 
 bb28:                                             ; preds = %bb10
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 9, i32 0, i64 -1), !dbg !92
-  %i29 = load i32, i32* %i2, align 4, !dbg !92, !tbaa !19
-  %i30 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 %i29), !dbg !93
-  %i31 = bitcast i32* %i2 to i8*, !dbg !95
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %i31), !dbg !95
-  %i32 = bitcast i32 (i32)** %i1 to i8*, !dbg !95
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %i32), !dbg !95
+  %i29 = load i32, ptr %i2, align 4, !dbg !92, !tbaa !19
+  %i30 = call i32 (ptr, ...) @printf(ptr @.str, i32 %i29), !dbg !93
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i2), !dbg !95
+  call void @llvm.lifetime.end.p0(i64 8, ptr %i1), !dbg !95
   ret i32 0, !dbg !96
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
-declare dso_local i32 @printf(i8*, ...)
+declare dso_local i32 @printf(ptr, ...)
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 declare void @llvm.pseudoprobe(i64, i64, i32, i64) #3
