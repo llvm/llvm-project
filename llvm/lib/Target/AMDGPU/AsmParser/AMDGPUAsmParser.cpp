@@ -38,6 +38,7 @@
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetParser.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -4990,7 +4991,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
 
   // Track if the asm explicitly contains the directive for the user SGPR
   // count.
-  Optional<unsigned> ExplicitUserSGPRCount;
+  std::optional<unsigned> ExplicitUserSGPRCount;
   bool ReserveVCC = true;
   bool ReserveFlatScr = true;
   Optional<bool> EnableWavefrontSize32;
