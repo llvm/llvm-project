@@ -47,6 +47,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -318,7 +319,7 @@ private:
     // The current working directory, with links resolved. (readlink .).
     SmallString<128> Resolved;
   };
-  Optional<WorkingDirectory> WD;
+  std::optional<WorkingDirectory> WD;
 };
 
 } // namespace
@@ -1633,7 +1634,7 @@ class llvm::vfs::RedirectingFileSystemParser {
     return false;
   }
 
-  Optional<RedirectingFileSystem::RedirectKind>
+  std::optional<RedirectingFileSystem::RedirectKind>
   parseRedirectKind(yaml::Node *N) {
     SmallString<12> Storage;
     StringRef Value;
