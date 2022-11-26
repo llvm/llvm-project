@@ -47,6 +47,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 #define DEBUG_TYPE "aarch64-isel"
 
@@ -1420,7 +1421,7 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
     }
 
     // Attempt to find a suitable operation with a constant on one side.
-    Optional<uint64_t> C;
+    std::optional<uint64_t> C;
     Register TestReg;
     switch (Opc) {
     default:
