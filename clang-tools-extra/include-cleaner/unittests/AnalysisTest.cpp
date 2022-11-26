@@ -18,6 +18,7 @@
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -27,6 +28,7 @@ namespace clang::include_cleaner {
 namespace {
 using testing::Contains;
 using testing::ElementsAre;
+using testing::AllOf;
 using testing::Pair;
 using testing::UnorderedElementsAre;
 
@@ -250,6 +252,120 @@ TEST(FixIncludes, Basic) {
 #include "ab.h"
 #include <e.h>
 )cpp");
+}
+
+MATCHER_P3(expandedAt, FileID, Offset, SM, "") {
+  auto [ExpanedFileID, ExpandedOffset] = SM->getDecomposedExpansionLoc(arg);
+  return ExpanedFileID == FileID && ExpandedOffset == Offset;
+}
+MATCHER_P3(spelledAt, FileID, Offset, SM, "") {
+  auto [SpelledFileID, SpelledOffset] = SM->getDecomposedSpellingLoc(arg);
+  return SpelledFileID == FileID && SpelledOffset == Offset;
+}
+TEST(WalkUsed, FilterRefsNotSpelledInMainFile) {
+  // Each test is expected to have a single expected ref of `target` symbol
+  // (or have none).
+  // The location in the reported ref is a macro location. $expand points to
+  // the macro location, and $spell points to the spelled location.
+  struct {
+    llvm::StringRef Header;
+    llvm::StringRef Main;
+  } TestCases[] = {
+      // Tests for decl references.
+      {
+          /*Header=*/"int target();",
+          R"cpp(
+            #define CALL_FUNC $spell^target()
+
+            int b = $expand^CALL_FUNC;
+          )cpp",
+      },
+      {/*Header=*/R"cpp(
+           int target();
+           #define CALL_FUNC target()
+           )cpp",
+       // No ref of `target` being reported, as it is not spelled in main file.
+       "int a = CALL_FUNC;"},
+      {
+          /*Header=*/R"cpp(
+            int target();
+            #define PLUS_ONE(X) X() + 1
+          )cpp",
+          R"cpp(
+            int a = $expand^PLUS_ONE($spell^target);
+          )cpp",
+      },
+      {
+          /*Header=*/R"cpp(
+            int target();
+            #define PLUS_ONE(X) X() + 1
+          )cpp",
+          R"cpp(
+            int a = $expand^PLUS_ONE($spell^target);
+          )cpp",
+      },
+      // Tests for macro references
+      {/*Header=*/"#define target 1",
+       R"cpp(
+          #define USE_target $spell^target
+          int b = $expand^USE_target;
+        )cpp"},
+      {/*Header=*/R"cpp(
+          #define target 1
+          #define USE_target target
+        )cpp",
+       // No ref of `target` being reported, it is not spelled in main file.
+       R"cpp(
+          int a = USE_target;
+        )cpp"},
+  };
+
+  for (const auto &T : TestCases) {
+    llvm::Annotations Main(T.Main);
+    TestInputs Inputs(Main.code());
+    Inputs.ExtraFiles["header.h"] = guard(T.Header);
+    RecordedPP Recorded;
+    Inputs.MakeAction = [&]() {
+      struct RecordAction : public SyntaxOnlyAction {
+        RecordedPP &Out;
+        RecordAction(RecordedPP &Out) : Out(Out) {}
+        bool BeginSourceFileAction(clang::CompilerInstance &CI) override {
+          auto &PP = CI.getPreprocessor();
+          PP.addPPCallbacks(Out.record(PP));
+          return true;
+        }
+      };
+      return std::make_unique<RecordAction>(Recorded);
+    };
+    Inputs.ExtraArgs.push_back("-include");
+    Inputs.ExtraArgs.push_back("header.h");
+    TestAST AST(Inputs);
+    llvm::SmallVector<Decl *> TopLevelDecls;
+    for (Decl *D : AST.context().getTranslationUnitDecl()->decls())
+      TopLevelDecls.emplace_back(D);
+    auto &SM = AST.sourceManager();
+
+    SourceLocation RefLoc;
+    walkUsed(TopLevelDecls, Recorded.MacroReferences,
+             /*PragmaIncludes=*/nullptr, SM,
+             [&](const SymbolReference &Ref, llvm::ArrayRef<Header>) {
+               if (!Ref.RefLocation.isMacroID())
+                 return;
+               if (llvm::to_string(Ref.Target) == "target") {
+                 ASSERT_TRUE(RefLoc.isInvalid())
+                     << "Expected only one 'target' ref loc per testcase";
+                 RefLoc = Ref.RefLocation;
+               }
+             });
+    FileID MainFID = SM.getMainFileID();
+    if (RefLoc.isValid()) {
+      EXPECT_THAT(RefLoc, AllOf(expandedAt(MainFID, Main.point("expand"), &SM),
+                                 spelledAt(MainFID, Main.point("spell"), &SM)))
+          << T.Main;
+    } else {
+      EXPECT_THAT(Main.points(), testing::IsEmpty());
+    }
+  }
 }
 
 } // namespace
