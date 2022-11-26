@@ -46,7 +46,8 @@ load_i1:
 
 define void @memcpy_fp80_padding() {
 ; CHECK-LABEL: @memcpy_fp80_padding(
-; CHECK-NEXT:    [[X_SROA_0_SROA_0_0_COPYLOAD:%.*]] = load <16 x i8>, ptr @foo_copy_source, align 16
+; CHECK-NEXT:    [[X_SROA_0:%.*]] = alloca x86_fp80, align 16
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[X_SROA_0]], ptr align 16 @foo_copy_source, i32 16, i1 false)
 ; CHECK-NEXT:    [[X_SROA_1_0_COPYLOAD:%.*]] = load i64, ptr getelementptr inbounds (i8, ptr @foo_copy_source, i64 16), align 16
 ; CHECK-NEXT:    [[X_SROA_2_0_COPYLOAD:%.*]] = load i64, ptr getelementptr inbounds (i8, ptr @foo_copy_source, i64 24), align 8
 ; CHECK-NEXT:    store i64 [[X_SROA_1_0_COPYLOAD]], ptr @i64_sink, align 4
