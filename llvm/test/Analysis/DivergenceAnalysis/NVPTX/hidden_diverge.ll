@@ -27,4 +27,4 @@ merge:
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 
 !nvvm.annotations = !{!0}
-!0 = !{i32 (i32, i32, i32)* @hidden_diverge, !"kernel", i32 1}
+!0 = !{ptr @hidden_diverge, !"kernel", i32 1}
