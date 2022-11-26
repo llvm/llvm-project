@@ -69,6 +69,7 @@
 #include <cstdint>
 #include <functional>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -7914,7 +7915,7 @@ private:
 /// *ExtractVectorElement
 static const Optional<ByteProvider>
 calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
-                      Optional<uint64_t> VectorIndex,
+                      std::optional<uint64_t> VectorIndex,
                       unsigned StartingIndex = 0) {
 
   // Typical i64 by i8 pattern requires recursion up to 8 calls depth
@@ -8160,7 +8161,7 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   SmallVector<int64_t, 8> OffsetMap(NumStores, INT64_MAX);
   int64_t FirstOffset = INT64_MAX;
   StoreSDNode *FirstStore = nullptr;
-  Optional<BaseIndexOffset> Base;
+  std::optional<BaseIndexOffset> Base;
   for (auto *Store : Stores) {
     // All the stores store different parts of the CombinedValue. A truncate is
     // required to get the partial value.
@@ -8342,7 +8343,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
             : littleEndianByteAt(LoadByteWidth, P.ByteOffset);
   };
 
-  Optional<BaseIndexOffset> Base;
+  std::optional<BaseIndexOffset> Base;
   SDValue Chain;
 
   SmallPtrSet<LoadSDNode *, 8> Loads;
@@ -18308,7 +18309,7 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
   unsigned SizeInBits = NumStores * ElementSizeBits;
   unsigned NumMemElts = MemVT.isVector() ? MemVT.getVectorNumElements() : 1;
 
-  Optional<MachineMemOperand::Flags> Flags;
+  std::optional<MachineMemOperand::Flags> Flags;
   AAMDNodes AAInfo;
   for (unsigned I = 0; I != NumStores; ++I) {
     StoreSDNode *St = cast<StoreSDNode>(StoreNodes[I].MemNode);
