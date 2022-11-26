@@ -53,21 +53,21 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 define amdgpu_kernel void @kernel1() !dbg !7 {
 entry:
-  %FuncVar0 = alloca i32 addrspace(1)*, align 4, addrspace(5)
-  %FuncVar1 = alloca i32 addrspace(4)*, align 4, addrspace(5)
-  %FuncVar2 = alloca i32 addrspace(3)*, align 4, addrspace(5)
-  %FuncVar3 = alloca i32 addrspace(5)*, align 4, addrspace(5)
-  %FuncVar4 = alloca i32*, align 4, addrspace(5)
-  call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* %FuncVar0, metadata !10, metadata !13), !dbg !14
-  store i32 addrspace(1)* null, i32 addrspace(1)* addrspace(5)* %FuncVar0, align 4, !dbg !14
-  call void @llvm.dbg.declare(metadata i32 addrspace(4)* addrspace(5)* %FuncVar1, metadata !15, metadata !13), !dbg !16
-  store i32 addrspace(4)* null, i32 addrspace(4)* addrspace(5)* %FuncVar1, align 4, !dbg !16
-  call void @llvm.dbg.declare(metadata i32 addrspace(3)* addrspace(5)* %FuncVar2, metadata !17, metadata !13), !dbg !19
-  store i32 addrspace(3)* addrspacecast (i32* null to i32 addrspace(3)*), i32 addrspace(3)* addrspace(5)* %FuncVar2, align 4, !dbg !19
-  call void @llvm.dbg.declare(metadata i32 addrspace(5)* addrspace(5)* %FuncVar3, metadata !20, metadata !13), !dbg !22
-  store i32 addrspace(5)* addrspacecast (i32* null to i32 addrspace(5)*), i32 addrspace(5)* addrspace(5)* %FuncVar3, align 4, !dbg !22
-  call void @llvm.dbg.declare(metadata i32* addrspace(5)* %FuncVar4, metadata !23, metadata !13), !dbg !24
-  store i32* null, i32* addrspace(5)* %FuncVar4, align 4, !dbg !24
+  %FuncVar0 = alloca ptr addrspace(1), align 4, addrspace(5)
+  %FuncVar1 = alloca ptr addrspace(4), align 4, addrspace(5)
+  %FuncVar2 = alloca ptr addrspace(3), align 4, addrspace(5)
+  %FuncVar3 = alloca ptr addrspace(5), align 4, addrspace(5)
+  %FuncVar4 = alloca ptr, align 4, addrspace(5)
+  call void @llvm.dbg.declare(metadata ptr addrspace(5) %FuncVar0, metadata !10, metadata !13), !dbg !14
+  store ptr addrspace(1) null, ptr addrspace(5) %FuncVar0, align 4, !dbg !14
+  call void @llvm.dbg.declare(metadata ptr addrspace(5) %FuncVar1, metadata !15, metadata !13), !dbg !16
+  store ptr addrspace(4) null, ptr addrspace(5) %FuncVar1, align 4, !dbg !16
+  call void @llvm.dbg.declare(metadata ptr addrspace(5) %FuncVar2, metadata !17, metadata !13), !dbg !19
+  store ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), ptr addrspace(5) %FuncVar2, align 4, !dbg !19
+  call void @llvm.dbg.declare(metadata ptr addrspace(5) %FuncVar3, metadata !20, metadata !13), !dbg !22
+  store ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5)), ptr addrspace(5) %FuncVar3, align 4, !dbg !22
+  call void @llvm.dbg.declare(metadata ptr addrspace(5) %FuncVar4, metadata !23, metadata !13), !dbg !24
+  store ptr null, ptr addrspace(5) %FuncVar4, align 4, !dbg !24
   ret void, !dbg !25
 }
 
