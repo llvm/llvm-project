@@ -7,10 +7,10 @@ define void @_Z3barv() {
 ; CHECK:       1:
 ; CHECK-NEXT:    ret void
 ;
-  %result = alloca i32		; <i32*> [#uses=1]
+  %result = alloca i32		; <ptr> [#uses=1]
   ret void
   ; No predecessors!
-  store i32 0, i32* %result
+  store i32 0, ptr %result
   ret void
 }
 
