@@ -72,6 +72,7 @@ void registerTestConstantFold();
 void registerTestControlFlowSink();
 void registerTestGpuSerializeToCubinPass();
 void registerTestGpuSerializeToHsacoPass();
+void registerTestDataLayoutPropagation();
 void registerTestDataLayoutQuery();
 void registerTestDeadCodeAnalysisPass();
 void registerTestDecomposeCallGraphTypes();
@@ -181,6 +182,7 @@ void registerTestPasses() {
   mlir::test::registerTestGpuSerializeToHsacoPass();
 #endif
   mlir::test::registerTestDecomposeCallGraphTypes();
+  mlir::test::registerTestDataLayoutPropagation();
   mlir::test::registerTestDataLayoutQuery();
   mlir::test::registerTestDeadCodeAnalysisPass();
   mlir::test::registerTestDominancePass();
