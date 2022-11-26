@@ -1791,7 +1791,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       // FIXME: Ideally we could vary the LDRB index based on the padding
       // between the sequence and jump table, however that relies on MCExprs
       // for load indexes which are currently not supported.
-      OutStreamer->emitCodeAlignment(4, &getSubtargetInfo());
+      OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tADDhirr)
                                        .addReg(Idx)
                                        .addReg(Idx)

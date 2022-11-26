@@ -1,0 +1,47 @@
+# RUN: llc -run-pass=mir-debugify,mir-check-debugify -o - %s 2>&1 | FileCheck %s
+
+# CHECK: Machine IR debug info check: PASS
+# CHECK-NOT: Assertion `Var <= NumVars && "Unexpected name for DILocalVariable"'
+
+--- |
+  define i32 @foo(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
+    %t0 = add i32 %a0, %a1
+    %t1 = add i32 %t0, %a2
+    %t2 = add i32 %t1, %a3
+    ret i32 %t2
+  }
+
+  define i32 @bar(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
+    %t0 = add i32 %a0, %a1
+    %t1 = add i32 %a2, %t0
+    %t2 = add i32 %t1, %a3
+    ret i32 %t2
+  }
+
+...
+---
+name:            foo
+body:             |
+  bb.1 (%ir-block.0):
+    %0:_(s32) = IMPLICIT_DEF
+    %1:_(s32) = IMPLICIT_DEF
+    %2:_(s32) = IMPLICIT_DEF
+    %3:_(s32) = IMPLICIT_DEF
+    %4:_(s32) = G_ADD %0, %1
+    %5:_(s32) = G_ADD %4, %2
+    %6:_(s32) = G_ADD %5, %3
+
+...
+---
+name:            bar
+body:             |
+  bb.1 (%ir-block.0):
+    %0:_(s32) = IMPLICIT_DEF
+    %1:_(s32) = IMPLICIT_DEF
+    %2:_(s32) = IMPLICIT_DEF
+    %3:_(s32) = IMPLICIT_DEF
+    %4:_(s32) = G_ADD %0, %1
+    %5:_(s32) = G_ADD %2, %4
+    %6:_(s32) = G_ADD %5, %3
+
+...

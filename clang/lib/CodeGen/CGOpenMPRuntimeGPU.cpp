@@ -889,7 +889,7 @@ unsigned CGOpenMPRuntimeGPU::getDefaultLocationReserved2Flags() const {
 }
 
 CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
-    : CGOpenMPRuntime(CGM, "_", "$") {
+    : CGOpenMPRuntime(CGM) {
   llvm::OpenMPIRBuilderConfig Config(CGM.getLangOpts().OpenMPIsDevice, true,
                                      hasRequiresUnifiedSharedMemory());
   OMPBuilder.setConfig(Config);

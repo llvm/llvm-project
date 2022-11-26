@@ -438,7 +438,7 @@ bool X86WinCOFFTargetStreamer::emitFPOData(const MCSymbol *ProcSym, SMLoc L) {
     FSM.emitFrameDataRecord(OS, Inst.Label);
   }
 
-  OS.emitValueToAlignment(4, 0);
+  OS.emitValueToAlignment(Align(4), 0);
   OS.emitLabel(FrameEnd);
   return false;
 }

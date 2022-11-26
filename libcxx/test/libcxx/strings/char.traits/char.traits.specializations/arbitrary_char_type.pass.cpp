@@ -8,8 +8,7 @@
 
 // <string>
 
-// template<> struct char_traits<unsigned char>
-// template<> struct char_traits<signed char>
+// template<> struct char_traits<T> for arbitrary T
 
 // Non-standard but provided temporarily for users to migrate.
 
@@ -135,10 +134,12 @@ TEST_CONSTEXPR_CXX20 bool test() {
 int main(int, char**) {
     test<unsigned char>();
     test<signed char>();
+    test<unsigned long>();
 
 #if TEST_STD_VER > 17
     static_assert(test<unsigned char>());
     static_assert(test<signed char>());
+    static_assert(test<unsigned long>());
 #endif
 
   return 0;

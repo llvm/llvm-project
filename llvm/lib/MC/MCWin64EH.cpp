@@ -156,7 +156,7 @@ static void EmitRuntimeFunction(MCStreamer &streamer,
                                 const WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
 
-  streamer.emitValueToAlignment(4);
+  streamer.emitValueToAlignment(Align(4));
   EmitSymbolRefWithOfs(streamer, info->Begin, info->Begin);
   EmitSymbolRefWithOfs(streamer, info->Begin, info->End);
   streamer.emitValue(MCSymbolRefExpr::create(info->Symbol,
@@ -172,7 +172,7 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
   MCSymbol *Label = context.createTempSymbol();
 
-  streamer.emitValueToAlignment(4);
+  streamer.emitValueToAlignment(Align(4));
   streamer.emitLabel(Label);
   info->Symbol = Label;
 
@@ -1169,7 +1169,7 @@ static void ARM64EmitUnwindInfoForSegment(MCStreamer &streamer,
   MCContext &context = streamer.getContext();
   MCSymbol *Label = context.createTempSymbol();
 
-  streamer.emitValueToAlignment(4);
+  streamer.emitValueToAlignment(Align(4));
   streamer.emitLabel(Label);
   Seg.Symbol = Label;
   // Use the 1st segemnt's label as function's.
@@ -2253,7 +2253,7 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
   MCContext &context = streamer.getContext();
   MCSymbol *Label = context.createTempSymbol();
 
-  streamer.emitValueToAlignment(4);
+  streamer.emitValueToAlignment(Align(4));
   streamer.emitLabel(Label);
   info->Symbol = Label;
 
@@ -2465,7 +2465,7 @@ static void ARM64EmitRuntimeFunction(MCStreamer &streamer,
                                      const WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
 
-  streamer.emitValueToAlignment(4);
+  streamer.emitValueToAlignment(Align(4));
   for (const auto &S : info->Segments) {
     EmitSymbolRefWithOfs(streamer, info->Begin, S.Offset);
     if (info->PackedInfo)
@@ -2483,7 +2483,7 @@ static void ARMEmitRuntimeFunction(MCStreamer &streamer,
                                    const WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
 
-  streamer.emitValueToAlignment(4);
+  streamer.emitValueToAlignment(Align(4));
   EmitSymbolRefWithOfs(streamer, info->Begin, info->Begin);
   if (info->PackedInfo)
     streamer.emitInt32(info->PackedInfo);
