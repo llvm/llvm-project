@@ -13167,6 +13167,124 @@ static SDValue lowerShuffleAsUNPCKAndPermute(const SDLoc &DL, MVT VT,
   return DAG.getVectorShuffle(VT, DL, Unpck, DAG.getUNDEF(VT), PermuteMask);
 }
 
+/// Try to lower a shuffle as a permute of the inputs followed by an
+/// UNPCK instruction.
+///
+/// This specifically targets cases where we end up with alternating between
+/// the two inputs, and so can permute them into something that feeds a single
+/// UNPCK instruction. Note that this routine only targets integer vectors
+/// because for floating point vectors we have a generalized SHUFPS lowering
+/// strategy that handles everything that doesn't *exactly* match an unpack,
+/// making this clever lowering unnecessary.
+static SDValue lowerShuffleAsPermuteAndUnpack(const SDLoc &DL, MVT VT,
+                                              SDValue V1, SDValue V2,
+                                              ArrayRef<int> Mask,
+                                              const X86Subtarget &Subtarget,
+                                              SelectionDAG &DAG) {
+  int Size = Mask.size();
+  assert(Mask.size() >= 2 && "Single element masks are invalid.");
+
+  // This routine only supports 128-bit integer dual input vectors.
+  if (VT.isFloatingPoint() || !VT.is128BitVector() || V2.isUndef())
+    return SDValue();
+
+  int NumLoInputs =
+      count_if(Mask, [Size](int M) { return M >= 0 && M % Size < Size / 2; });
+  int NumHiInputs =
+      count_if(Mask, [Size](int M) { return M % Size >= Size / 2; });
+
+  bool UnpackLo = NumLoInputs >= NumHiInputs;
+
+  auto TryUnpack = [&](int ScalarSize, int Scale) {
+    SmallVector<int, 16> V1Mask((unsigned)Size, -1);
+    SmallVector<int, 16> V2Mask((unsigned)Size, -1);
+
+    for (int i = 0; i < Size; ++i) {
+      if (Mask[i] < 0)
+        continue;
+
+      // Each element of the unpack contains Scale elements from this mask.
+      int UnpackIdx = i / Scale;
+
+      // We only handle the case where V1 feeds the first slots of the unpack.
+      // We rely on canonicalization to ensure this is the case.
+      if ((UnpackIdx % 2 == 0) != (Mask[i] < Size))
+        return SDValue();
+
+      // Setup the mask for this input. The indexing is tricky as we have to
+      // handle the unpack stride.
+      SmallVectorImpl<int> &VMask = (UnpackIdx % 2 == 0) ? V1Mask : V2Mask;
+      VMask[(UnpackIdx / 2) * Scale + i % Scale + (UnpackLo ? 0 : Size / 2)] =
+          Mask[i] % Size;
+    }
+
+    // If we will have to shuffle both inputs to use the unpack, check whether
+    // we can just unpack first and shuffle the result. If so, skip this unpack.
+    if ((NumLoInputs == 0 || NumHiInputs == 0) && !isNoopShuffleMask(V1Mask) &&
+        !isNoopShuffleMask(V2Mask))
+      return SDValue();
+
+    // Shuffle the inputs into place.
+    V1 = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), V1Mask);
+    V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), V2Mask);
+
+    // Cast the inputs to the type we will use to unpack them.
+    MVT UnpackVT =
+        MVT::getVectorVT(MVT::getIntegerVT(ScalarSize), Size / Scale);
+    V1 = DAG.getBitcast(UnpackVT, V1);
+    V2 = DAG.getBitcast(UnpackVT, V2);
+
+    // Unpack the inputs and cast the result back to the desired type.
+    return DAG.getBitcast(
+        VT, DAG.getNode(UnpackLo ? X86ISD::UNPCKL : X86ISD::UNPCKH, DL,
+                        UnpackVT, V1, V2));
+  };
+
+  // We try each unpack from the largest to the smallest to try and find one
+  // that fits this mask.
+  int OrigScalarSize = VT.getScalarSizeInBits();
+  for (int ScalarSize = 64; ScalarSize >= OrigScalarSize; ScalarSize /= 2)
+    if (SDValue Unpack = TryUnpack(ScalarSize, ScalarSize / OrigScalarSize))
+      return Unpack;
+
+  // If we're shuffling with a zero vector then we're better off not doing
+  // VECTOR_SHUFFLE(UNPCK()) as we lose track of those zero elements.
+  if (ISD::isBuildVectorAllZeros(V1.getNode()) ||
+      ISD::isBuildVectorAllZeros(V2.getNode()))
+    return SDValue();
+
+  // If none of the unpack-rooted lowerings worked (or were profitable) try an
+  // initial unpack.
+  if (NumLoInputs == 0 || NumHiInputs == 0) {
+    assert((NumLoInputs > 0 || NumHiInputs > 0) &&
+           "We have to have *some* inputs!");
+    int HalfOffset = NumLoInputs == 0 ? Size / 2 : 0;
+
+    // FIXME: We could consider the total complexity of the permute of each
+    // possible unpacking. Or at the least we should consider how many
+    // half-crossings are created.
+    // FIXME: We could consider commuting the unpacks.
+
+    SmallVector<int, 32> PermMask((unsigned)Size, -1);
+    for (int i = 0; i < Size; ++i) {
+      if (Mask[i] < 0)
+        continue;
+
+      assert(Mask[i] % Size >= HalfOffset && "Found input from wrong half!");
+
+      PermMask[i] =
+          2 * ((Mask[i] % Size) - HalfOffset) + (Mask[i] < Size ? 0 : 1);
+    }
+    return DAG.getVectorShuffle(
+        VT, DL,
+        DAG.getNode(NumLoInputs == 0 ? X86ISD::UNPCKH : X86ISD::UNPCKL, DL, VT,
+                    V1, V2),
+        DAG.getUNDEF(VT), PermMask);
+  }
+
+  return SDValue();
+}
+
 /// Helper to form a PALIGNR-based rotate+permute, merging 2 inputs and then
 /// permuting the elements of the result in place.
 static SDValue lowerShuffleAsByteRotateAndPermute(
@@ -13346,6 +13464,10 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
     if (SDValue BlendPerm = lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask,
                                                           DAG))
       return BlendPerm;
+    if (VT.getScalarSizeInBits() >= 32)
+      if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
+              DL, VT, V1, V2, Mask, Subtarget, DAG))
+        return PermUnpack;
   }
 
   // If the final mask is an alternating blend of vXi8/vXi16, convert to an
@@ -14844,123 +14966,6 @@ static SDValue lowerShuffleAsInsertPS(const SDLoc &DL, SDValue V1, SDValue V2,
   // Insert the V2 element into the desired position.
   return DAG.getNode(X86ISD::INSERTPS, DL, MVT::v4f32, V1, V2,
                      DAG.getTargetConstant(InsertPSMask, DL, MVT::i8));
-}
-
-/// Try to lower a shuffle as a permute of the inputs followed by an
-/// UNPCK instruction.
-///
-/// This specifically targets cases where we end up with alternating between
-/// the two inputs, and so can permute them into something that feeds a single
-/// UNPCK instruction. Note that this routine only targets integer vectors
-/// because for floating point vectors we have a generalized SHUFPS lowering
-/// strategy that handles everything that doesn't *exactly* match an unpack,
-/// making this clever lowering unnecessary.
-static SDValue lowerShuffleAsPermuteAndUnpack(
-    const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
-    const X86Subtarget &Subtarget, SelectionDAG &DAG) {
-  assert(!VT.isFloatingPoint() &&
-         "This routine only supports integer vectors.");
-  assert(VT.is128BitVector() &&
-         "This routine only works on 128-bit vectors.");
-  assert(!V2.isUndef() &&
-         "This routine should only be used when blending two inputs.");
-  assert(Mask.size() >= 2 && "Single element masks are invalid.");
-
-  int Size = Mask.size();
-
-  int NumLoInputs =
-      count_if(Mask, [Size](int M) { return M >= 0 && M % Size < Size / 2; });
-  int NumHiInputs =
-      count_if(Mask, [Size](int M) { return M % Size >= Size / 2; });
-
-  bool UnpackLo = NumLoInputs >= NumHiInputs;
-
-  auto TryUnpack = [&](int ScalarSize, int Scale) {
-    SmallVector<int, 16> V1Mask((unsigned)Size, -1);
-    SmallVector<int, 16> V2Mask((unsigned)Size, -1);
-
-    for (int i = 0; i < Size; ++i) {
-      if (Mask[i] < 0)
-        continue;
-
-      // Each element of the unpack contains Scale elements from this mask.
-      int UnpackIdx = i / Scale;
-
-      // We only handle the case where V1 feeds the first slots of the unpack.
-      // We rely on canonicalization to ensure this is the case.
-      if ((UnpackIdx % 2 == 0) != (Mask[i] < Size))
-        return SDValue();
-
-      // Setup the mask for this input. The indexing is tricky as we have to
-      // handle the unpack stride.
-      SmallVectorImpl<int> &VMask = (UnpackIdx % 2 == 0) ? V1Mask : V2Mask;
-      VMask[(UnpackIdx / 2) * Scale + i % Scale + (UnpackLo ? 0 : Size / 2)] =
-          Mask[i] % Size;
-    }
-
-    // If we will have to shuffle both inputs to use the unpack, check whether
-    // we can just unpack first and shuffle the result. If so, skip this unpack.
-    if ((NumLoInputs == 0 || NumHiInputs == 0) && !isNoopShuffleMask(V1Mask) &&
-        !isNoopShuffleMask(V2Mask))
-      return SDValue();
-
-    // Shuffle the inputs into place.
-    V1 = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), V1Mask);
-    V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), V2Mask);
-
-    // Cast the inputs to the type we will use to unpack them.
-    MVT UnpackVT = MVT::getVectorVT(MVT::getIntegerVT(ScalarSize), Size / Scale);
-    V1 = DAG.getBitcast(UnpackVT, V1);
-    V2 = DAG.getBitcast(UnpackVT, V2);
-
-    // Unpack the inputs and cast the result back to the desired type.
-    return DAG.getBitcast(
-        VT, DAG.getNode(UnpackLo ? X86ISD::UNPCKL : X86ISD::UNPCKH, DL,
-                        UnpackVT, V1, V2));
-  };
-
-  // We try each unpack from the largest to the smallest to try and find one
-  // that fits this mask.
-  int OrigScalarSize = VT.getScalarSizeInBits();
-  for (int ScalarSize = 64; ScalarSize >= OrigScalarSize; ScalarSize /= 2)
-    if (SDValue Unpack = TryUnpack(ScalarSize, ScalarSize / OrigScalarSize))
-      return Unpack;
-
-  // If we're shuffling with a zero vector then we're better off not doing
-  // VECTOR_SHUFFLE(UNPCK()) as we lose track of those zero elements.
-  if (ISD::isBuildVectorAllZeros(V1.getNode()) ||
-      ISD::isBuildVectorAllZeros(V2.getNode()))
-    return SDValue();
-
-  // If none of the unpack-rooted lowerings worked (or were profitable) try an
-  // initial unpack.
-  if (NumLoInputs == 0 || NumHiInputs == 0) {
-    assert((NumLoInputs > 0 || NumHiInputs > 0) &&
-           "We have to have *some* inputs!");
-    int HalfOffset = NumLoInputs == 0 ? Size / 2 : 0;
-
-    // FIXME: We could consider the total complexity of the permute of each
-    // possible unpacking. Or at the least we should consider how many
-    // half-crossings are created.
-    // FIXME: We could consider commuting the unpacks.
-
-    SmallVector<int, 32> PermMask((unsigned)Size, -1);
-    for (int i = 0; i < Size; ++i) {
-      if (Mask[i] < 0)
-        continue;
-
-      assert(Mask[i] % Size >= HalfOffset && "Found input from wrong half!");
-
-      PermMask[i] =
-          2 * ((Mask[i] % Size) - HalfOffset) + (Mask[i] < Size ? 0 : 1);
-    }
-    return DAG.getVectorShuffle(
-        VT, DL, DAG.getNode(NumLoInputs == 0 ? X86ISD::UNPCKH : X86ISD::UNPCKL,
-                            DL, VT, V1, V2),
-        DAG.getUNDEF(VT), PermMask);
-  }
-
-  return SDValue();
 }
 
 /// Handle lowering of 2-lane 64-bit floating point shuffles.
@@ -48647,18 +48652,27 @@ static SDValue combineScalarAndWithMaskSetcc(SDNode *N, SelectionDAG &DAG,
   SDValue SubVec = Src.getOperand(0);
   EVT SubVecVT = SubVec.getValueType();
 
-  // First subvector should be a setcc with a legal result type. The RHS of the
-  // AND should be a mask with this many bits.
-  if (SubVec.getOpcode() != ISD::SETCC || !TLI.isTypeLegal(SubVecVT) ||
+  // The RHS of the AND should be a mask with as many bits as SubVec.
+  if (!TLI.isTypeLegal(SubVecVT) ||
       !C1->getAPIntValue().isMask(SubVecVT.getVectorNumElements()))
     return SDValue();
 
-  EVT SetccVT = SubVec.getOperand(0).getValueType();
-  if (!TLI.isTypeLegal(SetccVT) ||
-      !(Subtarget.hasVLX() || SetccVT.is512BitVector()))
-    return SDValue();
-
-  if (!(Subtarget.hasBWI() || SetccVT.getScalarSizeInBits() >= 32))
+  // First subvector should be a setcc with a legal result type or a
+  // AND containing at least one setcc with a legal result type.
+  auto IsLegalSetCC = [&](SDValue V) {
+    if (V.getOpcode() != ISD::SETCC)
+      return false;
+    EVT SetccVT = V.getOperand(0).getValueType();
+    if (!TLI.isTypeLegal(SetccVT) ||
+        !(Subtarget.hasVLX() || SetccVT.is512BitVector()))
+      return false;
+    if (!(Subtarget.hasBWI() || SetccVT.getScalarSizeInBits() >= 32))
+      return false;
+    return true;
+  };
+  if (!(IsLegalSetCC(SubVec) || (SubVec.getOpcode() == ISD::AND &&
+                                 (IsLegalSetCC(SubVec.getOperand(0)) ||
+                                  IsLegalSetCC(SubVec.getOperand(1))))))
     return SDValue();
 
   // We passed all the checks. Rebuild the concat_vectors with zeroes

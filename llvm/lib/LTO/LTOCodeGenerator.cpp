@@ -118,7 +118,7 @@ cl::opt<std::string> LTOStatsFile(
 
 cl::opt<std::string> AIXSystemAssemblerPath(
     "lto-aix-system-assembler",
-    cl::desc("Absolute path to the system assembler, picked up on AIX only"),
+    cl::desc("Path to a system assembler, picked up on AIX only"),
     cl::value_desc("path"));
 }
 
@@ -253,9 +253,15 @@ bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
          "Runing AIX system assembler when integrated assembler is available!");
 
   // Set the system assembler path.
-  std::string AssemblerPath(llvm::AIXSystemAssemblerPath.empty()
-                                ? "/usr/bin/as"
-                                : llvm::AIXSystemAssemblerPath.c_str());
+  SmallString<256> AssemblerPath("/usr/bin/as");
+  if (!llvm::AIXSystemAssemblerPath.empty()) {
+    if (llvm::sys::fs::real_path(llvm::AIXSystemAssemblerPath, AssemblerPath,
+                                 /* expand_tilde */ true)) {
+      emitError(
+          "Cannot find the assembler specified by lto-aix-system-assembler");
+      return false;
+    }
+  }
 
   // Prepare inputs for the assember.
   const auto &Triple = TargetMach->getTargetTriple();

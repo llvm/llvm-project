@@ -7,10 +7,11 @@
 
 #include "llvm/Support/FormatVariadic.h"
 #include <cassert>
+#include <optional>
 
 using namespace llvm;
 
-static Optional<AlignStyle> translateLocChar(char C) {
+static std::optional<AlignStyle> translateLocChar(char C) {
   switch (C) {
   case '-':
     return AlignStyle::Left;

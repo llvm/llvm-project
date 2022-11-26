@@ -5877,12 +5877,12 @@ define <8 x i64> @mgather_baseidx_zext_v8i16_v8i64(i64* %base, <8 x i16> %idxs, 
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_zext_v8i16_v8i64:
 ; RV64ZVE32F:       # %bb.0:
-; RV64ZVE32F-NEXT:    lui a3, 16
+; RV64ZVE32F-NEXT:    lui a5, 16
 ; RV64ZVE32F-NEXT:    vsetivli zero, 0, e8, mf4, ta, ma
 ; RV64ZVE32F-NEXT:    vmv.x.s a6, v0
-; RV64ZVE32F-NEXT:    andi a4, a6, 1
-; RV64ZVE32F-NEXT:    addiw a5, a3, -1
-; RV64ZVE32F-NEXT:    beqz a4, .LBB53_3
+; RV64ZVE32F-NEXT:    andi a3, a6, 1
+; RV64ZVE32F-NEXT:    addiw a5, a5, -1
+; RV64ZVE32F-NEXT:    beqz a3, .LBB53_3
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.load
 ; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vmv.x.s a3, v8

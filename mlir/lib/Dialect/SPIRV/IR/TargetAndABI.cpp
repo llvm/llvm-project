@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/FunctionInterfaces.h"
@@ -170,10 +171,10 @@ spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {
   auto triple = spirv::VerCapExtAttr::get(spirv::Version::V_1_0,
                                           {spirv::Capability::Shader},
                                           ArrayRef<Extension>(), context);
-  return spirv::TargetEnvAttr::get(triple, spirv::Vendor::Unknown,
-                                   spirv::DeviceType::Unknown,
-                                   spirv::TargetEnvAttr::kUnknownDeviceID,
-                                   spirv::getDefaultResourceLimits(context));
+  return spirv::TargetEnvAttr::get(
+      triple, spirv::getDefaultResourceLimits(context),
+      spirv::ClientAPI::Unknown, spirv::Vendor::Unknown,
+      spirv::DeviceType::Unknown, spirv::TargetEnvAttr::kUnknownDeviceID);
 }
 
 spirv::TargetEnvAttr spirv::lookupTargetEnv(Operation *op) {

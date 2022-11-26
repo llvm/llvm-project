@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef CHECK_CONSECUTIVE_H
 #define CHECK_CONSECUTIVE_H
 
