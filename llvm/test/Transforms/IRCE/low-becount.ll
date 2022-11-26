@@ -5,9 +5,9 @@
 
 ; CHECK-NOT: constrained Loop
 
-define void @low_profiled_be_count(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
+define void @low_profiled_be_count(ptr %arr, ptr %a_len_ptr, i32 %n) {
  entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check = icmp sgt i32 %n, 0
   br i1 %first.itr.check, label %loop, label %exit
 
@@ -18,8 +18,8 @@ define void @low_profiled_be_count(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
 
  in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit, !prof !2
 
