@@ -34,6 +34,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <numeric>
+#include <optional>
 
 #define DEBUG_TYPE "legalizer"
 
@@ -1842,7 +1843,7 @@ LegalizerHelper::widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
                                            LLT WideTy) {
   unsigned Opcode;
   unsigned ExtOpcode;
-  Optional<Register> CarryIn;
+  std::optional<Register> CarryIn;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode!");
