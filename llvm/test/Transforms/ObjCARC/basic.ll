@@ -34,7 +34,7 @@ declare i8* @objc_msgSend(i8*, i8*, ...)
 ; CHECK: define void @test0_precise(i32* %x, i1 %p) [[NUW:#[0-9]+]] {
 ; CHECK: @llvm.objc.retain
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test0_precise(i32* %x, i1 %p) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -59,7 +59,7 @@ return:
 
 ; CHECK: define void @test0_imprecise(i32* %x, i1 %p) [[NUW]] {
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test0_imprecise(i32* %x, i1 %p) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -90,7 +90,7 @@ return:
 ; CHECK: define void @test1_precise(i32* %x, i1 %p, i1 %q) [[NUW]] {
 ; CHECK: @llvm.objc.retain(i8* %a)
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test1_precise(i32* %x, i1 %p, i1 %q) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -120,7 +120,7 @@ alt_return:
 ; CHECK: define void @test1_imprecise(i32* %x, i1 %p, i1 %q) [[NUW]] {
 ; CHECK: @llvm.objc.retain(i8* %a)
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test1_imprecise(i32* %x, i1 %p, i1 %q) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -157,7 +157,7 @@ alt_return:
 ; CHECK: if.end5:
 ; CHECK:   tail call void @llvm.objc.release(i8* %x) [[NUW]]
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test1b_precise(i8* %x, i1 %p, i1 %q) {
 entry:
   tail call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -186,7 +186,7 @@ if.end5:                                          ; preds = %if.then3, %if.end
 ; CHECK: if.end5:
 ; CHECK:   tail call void @llvm.objc.release(i8* %x) [[NUW]], !clang.imprecise_release ![[RELEASE:[0-9]+]]
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test1b_imprecise(i8* %x, i1 %p, i1 %q) {
 entry:
   tail call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -215,7 +215,7 @@ if.end5:                                          ; preds = %if.then3, %if.end
 ; CHECK-LABEL: define void @test2_precise(
 ; CHECK: @llvm.objc.retain(i8* %a)
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test2_precise(i32* %x, i1 %p) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -244,7 +244,7 @@ return:
 ; CHECK-LABEL: define void @test2_imprecise(
 ; CHECK: @llvm.objc.retain(i8* %a)
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test2_imprecise(i32* %x, i1 %p) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -278,7 +278,7 @@ return:
 ; CHECK-LABEL: define void @test3_precise(
 ; TODO: @llvm.objc.retain(i8* %a)
 ; TODO: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test3_precise(i32* %x, i1* %q) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -298,7 +298,7 @@ return:
 ; CHECK-LABEL: define void @test3_imprecise(
 ; TODO: @llvm.objc.retain(i8* %a)
 ; TODO: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test3_imprecise(i32* %x, i1* %q) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -324,7 +324,7 @@ return:
 ; CHECK-LABEL: define void @test4_precise(
 ; TODO: @llvm.objc.retain(i8* %a)
 ; TODO: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test4_precise(i32* %x, i1* %q) nounwind {
 entry:
   br label %loop
@@ -344,7 +344,7 @@ return:
 ; CHECK-LABEL: define void @test4_imprecise(
 ; TODO: @llvm.objc.retain(i8* %a)
 ; TODO: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test4_imprecise(i32* %x, i1* %q) nounwind {
 entry:
   br label %loop
@@ -368,7 +368,7 @@ return:
 ; CHECK-LABEL: define void @test5a(
 ; CHECK: @llvm.objc.retain(i8*
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test5a(i32* %x, i1 %q, i8* %y) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -384,7 +384,7 @@ entry:
 ; CHECK-LABEL: define void @test5b(
 ; CHECK: @llvm.objc.retain(i8*
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test5b(i32* %x, i1 %q, i8* %y) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -409,7 +409,7 @@ entry:
 ; CHECK: f:
 ; CHECK:   call void @llvm.objc.release
 ; CHECK: return:
-; CHECK: }
+; CHECK: {{^}}}
 define void @test6a(i32* %x, i1 %p) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -437,7 +437,7 @@ return:
 
 ; CHECK-LABEL: define void @test6b(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test6b(i32* %x, i1 %p) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -471,7 +471,7 @@ return:
 ; CHECK: f:
 ; CHECK:   call void @llvm.objc.release
 ; CHECK: return:
-; CHECK: }
+; CHECK: {{^}}}
 define void @test6c(i32* %x, i1 %p) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -505,7 +505,7 @@ return:
 ; CHECK: f:
 ; CHECK:   call void @llvm.objc.release
 ; CHECK: return:
-; CHECK: }
+; CHECK: {{^}}}
 define void @test6d(i32* %x, i1 %p) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -544,7 +544,7 @@ return:
 ; CHECK:       call i8* @llvm.objc.retain
 ; CHECK:     return:
 ; CHECK:       call void @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test7(i32* %x, i1 %p) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -571,7 +571,7 @@ return:
 
 ; CHECK-LABEL: define void @test7b(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test7b(i32* %x, i1 %p) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -605,7 +605,7 @@ return:
 ; CHECK:   call i8* @llvm.objc.retain
 ; CHECK: return:
 ; CHECK:   call void @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test7c(i32* %x, i1 %p) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -645,7 +645,7 @@ return:
 ; CHECK: g:
 ; CHECK:   @llvm.objc.release
 ; CHECK: return:
-; CHECK: }
+; CHECK: {{^}}}
 define void @test8a(i32* %x, i1 %p, i1 %q) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -683,7 +683,7 @@ return:
 
 ; CHECK-LABEL: define void @test8b(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test8b(i32* %x, i1 %p, i1 %q) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -732,7 +732,7 @@ return:
 ; CHECK: g:
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: return:
-; CHECK: }
+; CHECK: {{^}}}
 define void @test8c(i32* %x, i1 %p, i1 %q) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -780,7 +780,7 @@ return:
 ; CHECK: g:
 ; CHECK:   @llvm.objc.release
 ; CHECK: return:
-; CHECK: }
+; CHECK: {{^}}}
 define void @test8d(i32* %x, i1 %p, i1 %q) nounwind {
 entry:
   %a = bitcast i32* %x to i8*
@@ -820,7 +820,7 @@ return:
 
 ; CHECK-LABEL: define void @test9(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test9(i8* %x) nounwind {
 entry:
   %0 = call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -833,7 +833,7 @@ entry:
 ; CHECK-LABEL: define void @test9b(
 ; CHECK: @llvm.objc.retain(i8* %x)
 ; CHECK: @llvm.objc.release(i8* %s)
-; CHECK: }
+; CHECK: {{^}}}
 define void @test9b(i8* %x, i1 %j, i8* %p) nounwind {
 entry:
   %0 = call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -849,7 +849,7 @@ entry:
 ; CHECK: @callee
 ; CHECK: @use_pointer
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test10(i8* %x) nounwind {
 entry:
   %0 = call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -866,7 +866,7 @@ entry:
 ; CHECK-LABEL: define void @test11(
 ; CHECK: tail call i8* @llvm.objc.retain(i8* %x) [[NUW]]
 ; CHECK: call i8* @llvm.objc.autorelease(i8* %0) [[NUW]]
-; CHECK: }
+; CHECK: {{^}}}
 define void @test11(i8* %x) nounwind {
 entry:
   %0 = call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -880,7 +880,7 @@ entry:
 ; CHECK-LABEL: define void @test11a(
 ; CHECK: entry:
 ; CHECK-NEXT: ret void
-; CHECK: }
+; CHECK: {{^}}}
 define void @test11a(i8* %x) nounwind {
 entry:
   %0 = call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -895,7 +895,7 @@ entry:
 ; CHECK-LABEL: define i8* @test11b(
 ; CHECK: tail call i8* @llvm.objc.retain(i8* %x) [[NUW]]
 ; CHECK: call i8* @llvm.objc.autorelease(i8* %0) [[NUW]]
-; CHECK: }
+; CHECK: {{^}}}
 define i8* @test11b(i8* %x) nounwind {
 entry:
   %0 = call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -911,7 +911,7 @@ entry:
 ; CHECK-NEXT: @llvm.objc.retain(i8* %x)
 ; CHECK-NEXT: @llvm.objc.retain
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test12(i8* %x, i64 %n) {
 entry:
   call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -929,7 +929,7 @@ entry:
 ; CHECK: tail call i8* @llvm.objc.retain(i8* %x) [[NUW]]
 ; CHECK: @use_pointer(i8* %x)
 ; CHECK: call i8* @llvm.objc.autorelease(i8* %x) [[NUW]]
-; CHECK: }
+; CHECK: {{^}}}
 define void @test13(i8* %x, i64 %n) {
 entry:
   call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -971,7 +971,7 @@ entry:
 ; CHECK: @llvm.objc.retain(i8* %x)
 ; CHECK: @use_pointer
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test13c(i8* %x, i64 %n) {
 entry:
   call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -1091,7 +1091,7 @@ entry:
 ; CHECK: purple:
 ; CHECK: @use_pointer
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test16a(i1 %a, i1 %b, i8* %x) {
 entry:
   call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -1131,7 +1131,7 @@ purple:
 ; CHECK-NEXT: @use_pointer
 ; CHECK-NEXT: @use_pointer
 ; CHECK-NEXT: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test16b(i1 %a, i1 %b, i8* %x) {
 entry:
   call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -1171,7 +1171,7 @@ purple:
 ; CHECK: purple:
 ; CHECK: @use_pointer
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test16c(i1 %a, i1 %b, i8* %x) {
 entry:
   call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -1207,7 +1207,7 @@ purple:
 ; CHECK-LABEL: define void @test16d(
 ; CHECK: @llvm.objc.retain(i8* %x)
 ; CHECK: @llvm.objc
-; CHECK: }
+; CHECK: {{^}}}
 define void @test16d(i1 %a, i1 %b, i8* %x) {
 entry:
   call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -1242,7 +1242,7 @@ purple:
 
 ; CHECK-LABEL: define void @test18(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test18() {
   call i8* @llvm.objc.retain(i8* null)
   call void @llvm.objc.release(i8* null)
@@ -1254,7 +1254,7 @@ define void @test18() {
 
 ; CHECK-LABEL: define void @test18b(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test18b() {
   call i8* @llvm.objc.retain(i8* undef)
   call void @llvm.objc.release(i8* undef)
@@ -1274,7 +1274,7 @@ define void @test18b() {
 ; CHECK:   %2 = bitcast i32* %y to i8*
 ; CHECK:   call void @llvm.objc.release(i8* %2)
 ; CHECK:   ret void
-; CHECK: }
+; CHECK: {{^}}}
 define void @test19(i32* %y) {
 entry:
   %x = bitcast i32* %y to i8*
@@ -1291,7 +1291,7 @@ entry:
 ; CHECK-LABEL: define void @test20(
 ; CHECK: %tmp1 = tail call i8* @llvm.objc.retain(i8* %tmp) [[NUW]]
 ; CHECK-NEXT: invoke
-; CHECK: }
+; CHECK: {{^}}}
 define void @test20(double* %self) personality i32 (...)* @__gxx_personality_v0 {
 if.then12:
   %tmp = bitcast double* %self to i8*
@@ -1337,7 +1337,7 @@ entry:
 ; CHECK:   br label %C
 ; CHECK: C:                                                ; preds = %B, %A
 ; CHECK-NOT: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test22(double* %p, i1 %a) {
   br i1 %a, label %A, label %B
 A:
@@ -1376,7 +1376,7 @@ C:
 ; CHECK-LABEL: define void @test24(
 ; CHECK: @llvm.objc.retain(i8* %a)
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test24(i8* %r, i8* %a) {
   call i8* @llvm.objc.retain(i8* %a)
   call void @use_pointer(i8* %r)
@@ -1394,7 +1394,7 @@ define void @test24(i8* %r, i8* %a) {
 ; CHECK: true:
 ; CHECK: done:
 ; CHECK:   call void @llvm.objc.release(i8* %p)
-; CHECK: }
+; CHECK: {{^}}}
 define void @test25(i8* %p, i1 %x) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1419,7 +1419,7 @@ done:
 ; CHECK: true:
 ; CHECK: done:
 ; CHECK:   call void @llvm.objc.release(i8* %p)
-; CHECK: }
+; CHECK: {{^}}}
 define void @test26(i8* %p, i1 %x) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1444,9 +1444,9 @@ done:
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: done:
 ; CHECK: call void @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test27(i8* %p, i1 %x, i1 %y) {
-entry: 
+entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
   br i1 %x, label %loop, label %done
 
@@ -1454,8 +1454,8 @@ loop:
   call void @callee()
   store i8 0, i8* %p
   br i1 %y, label %done, label %loop
-  
-done: 
+
+done:
   call void @llvm.objc.release(i8* %p)
   ret void
 }
@@ -1471,7 +1471,7 @@ done:
 ; CHECK: call void @llvm.objc.release
 ; CHECK: done:
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test28(i8* %p, i1 %x) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1500,7 +1500,7 @@ done:
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: done:
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test28b(i8* %p, i1 %x, i8* noalias %t) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1529,7 +1529,7 @@ done:
 ; CHECK: call void @llvm.objc.release(i8* %p) [[NUW]], !clang.imprecise_release
 ; CHECK: done:
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test28c(i8* %p, i1 %x, i8* noalias %t) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1557,7 +1557,7 @@ done:
 ; CHECK: call void @llvm.objc.release
 ; CHECK: ohno:
 ; CHECK: call void @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test29(i8* %p, i1 %x, i1 %y) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1590,7 +1590,7 @@ ohno:
 ; CHECK: call void @llvm.objc.release
 ; CHECK: ohno:
 ; CHECK: call void @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test30(i8* %p, i1 %x, i1 %y, i1 %z) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1624,7 +1624,7 @@ ohno:
 ; CHECK: false:
 ; CHECK: call void @llvm.objc.release
 ; CHECK: ret void
-; CHECK: }
+; CHECK: {{^}}}
 define void @test31(i8* %p, i1 %x) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1648,7 +1648,7 @@ false:
 ; CHECK: store
 ; CHECK: done:
 ; CHECK: call void @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test32(i8* %p, i1 %x) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1675,7 +1675,7 @@ done:
 ; CHECK: icmp
 ; CHECK: done:
 ; CHECK: call void @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test33(i8* %p, i1 %x, i8* %y) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1701,7 +1701,7 @@ done:
 ; CHECK: true:
 ; CHECK: done:
 ; CHECK: call void @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test34a(i8* %p, i1 %x, i8* %y) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1720,7 +1720,7 @@ done:
 
 ; CHECK-LABEL: define void @test34b(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test34b(i8* %p, i1 %x, i8* %y) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1748,7 +1748,7 @@ done:
 ; CHECK: true:
 ; CHECK: done:
 ; CHECK:   call void @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test35a(i8* %p, i1 %x, i8* %y) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1768,7 +1768,7 @@ done:
 ; Imprecise.
 ; CHECK-LABEL: define void @test35b(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test35b(i8* %p, i1 %x, i8* %y) {
 entry:
   %f0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1793,7 +1793,7 @@ done:
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: call void @callee()
 ; CHECK: @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test36a(i8* %p) {
 entry:
   call i8* @llvm.objc.retain(i8* %p)
@@ -1807,7 +1807,7 @@ entry:
 
 ; CHECK-LABEL: define void @test36b(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test36b(i8* %p) {
 entry:
   call i8* @llvm.objc.retain(i8* %p)
@@ -1821,7 +1821,7 @@ entry:
 
 ; CHECK-LABEL: define void @test38(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test38(i8* %p, i1 %u, i1 %m, i8* %z, i8* %y, i8* %x, i8* %w) {
 entry:
   call i8* @llvm.objc.retain(i8* %p)
@@ -1855,7 +1855,7 @@ g:
 
 ; CHECK-LABEL: define void @test39(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test39(i8* %p) {
 entry:
   %0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1873,7 +1873,7 @@ exit:                                             ; preds = %loop
 
 ; CHECK-LABEL: define void @test39b(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test39b(i8* %p) {
 entry:
   %0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1892,7 +1892,7 @@ exit:                                             ; preds = %loop
 
 ; CHECK-LABEL: define void @test39c(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test39c(i8* %p) {
 entry:
   %0 = call i8* @llvm.objc.retain(i8* %p)
@@ -1912,7 +1912,7 @@ exit:                                             ; preds = %loop
 
 ; CHECK-LABEL: define void @test40(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test40(i8* %p) {
 entry:
   %0 = call i8* @llvm.objc.retain(i8* %p)
@@ -2013,7 +2013,7 @@ entry:
 
 ; CHECK-LABEL: define void @test44(
 ; CHECK-NOT: llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test44(i8** %pp) {
   %p = load i8*, i8** %pp
   %q = call i8* @llvm.objc.retain(i8* %p)
@@ -2029,7 +2029,7 @@ define void @test44(i8** %pp) {
 ; CHECK: call void @llvm.objc.release(i8* %q)
 ; CHECK: call void @use_pointer(i8* %p)
 ; CHECK: call void @llvm.objc.release(i8* %p)
-; CHECK: }
+; CHECK: {{^}}}
 define void @test45(i8** %pp, i8** %qq) {
   %p = load i8*, i8** %pp
   %q = load i8*, i8** %qq
@@ -2046,7 +2046,7 @@ define void @test45(i8** %pp, i8** %qq) {
 ; CHECK: tail call i8* @llvm.objc.retain(i8* %p) [[NUW]]
 ; CHECK: true:
 ; CHECK: call i8* @llvm.objc.autorelease(i8* %p) [[NUW]]
-; CHECK: }
+; CHECK: {{^}}}
 define void @test46(i8* %p, i1 %a) {
 entry:
   call i8* @llvm.objc.retain(i8* %p)
@@ -2066,7 +2066,7 @@ false:
 ; CHECK-LABEL: define i8* @test47(
 ; CHECK-NOT: call
 ; CHECK: ret i8* %p
-; CHECK: }
+; CHECK: {{^}}}
 define i8* @test47(i8* %p) nounwind {
   %x = call i8* @llvm.objc.retainedObject(i8* %p)
   ret i8* %x
@@ -2077,7 +2077,7 @@ define i8* @test47(i8* %p) nounwind {
 ; CHECK-LABEL: define i8* @test48(
 ; CHECK-NOT: call
 ; CHECK: ret i8* %p
-; CHECK: }
+; CHECK: {{^}}}
 define i8* @test48(i8* %p) nounwind {
   %x = call i8* @llvm.objc.unretainedObject(i8* %p)
   ret i8* %x
@@ -2088,7 +2088,7 @@ define i8* @test48(i8* %p) nounwind {
 ; CHECK-LABEL: define i8* @test49(
 ; CHECK-NOT: call
 ; CHECK: ret i8* %p
-; CHECK: }
+; CHECK: {{^}}}
 define i8* @test49(i8* %p) nounwind {
   %x = call i8* @llvm.objc.unretainedPointer(i8* %p)
   ret i8* %x
@@ -2114,7 +2114,7 @@ define void @test50a(i8* %p, i8** %pp) {
 
 ; CHECK-LABEL: define void @test50b(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test50b(i8* %p, i8** %pp) {
   call i8* @llvm.objc.retain(i8* %p)
   call void @callee()
@@ -2131,7 +2131,7 @@ define void @test50b(i8* %p, i8** %pp) {
 ; CHECK: call i8* @llvm.objc.retain(i8* %p)
 ; CHECK: call void @llvm.objc.release(i8* %p)
 ; CHECK: ret void
-; CHECK: }
+; CHECK: {{^}}}
 define void @test51a(i8* %p) {
   call i8* @llvm.objc.retain(i8* %p)
   call void @callee()
@@ -2144,7 +2144,7 @@ define void @test51a(i8* %p) {
 ; CHECK: call i8* @llvm.objc.retain(i8* %p)
 ; CHECK: call void @llvm.objc.release(i8* %p)
 ; CHECK: ret void
-; CHECK: }
+; CHECK: {{^}}}
 define void @test51b(i8* %p) {
   call i8* @llvm.objc.retain(i8* %p)
   call void @callee()
@@ -2162,7 +2162,7 @@ define void @test51b(i8* %p) {
 ; CHECK: call void @use_pointer(i8* %z)
 ; CHECK: call void @llvm.objc.release
 ; CHECK: ret void
-; CHECK: }
+; CHECK: {{^}}}
 define void @test52a(i8** %zz, i8** %pp) {
   %p = load i8*, i8** %pp
   %1 = call i8* @llvm.objc.retain(i8* %p)
@@ -2179,7 +2179,7 @@ define void @test52a(i8** %zz, i8** %pp) {
 ; CHECK: call void @use_pointer(i8* %z)
 ; CHECK: call void @llvm.objc.release
 ; CHECK: ret void
-; CHECK: }
+; CHECK: {{^}}}
 define void @test52b(i8** %zz, i8** %pp) {
   %p = load i8*, i8** %pp
   %1 = call i8* @llvm.objc.retain(i8* %p)
@@ -2197,7 +2197,7 @@ define void @test52b(i8** %zz, i8** %pp) {
 
 ; CHECK-LABEL: define void @test53(
 ; CHECK: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test53(void ()** %zz, i8** %pp) {
   %p = load i8*, i8** %pp
   %1 = call i8* @llvm.objc.retain(i8* %p)
@@ -2214,7 +2214,7 @@ define void @test53(void ()** %zz, i8** %pp) {
 ; CHECK: call i8* @returner()
 ; CHECK-NEXT: call void @llvm.objc.release(i8* %t) [[NUW]], !clang.imprecise_release ![[RELEASE]]
 ; CHECK-NEXT: ret void
-; CHECK: }
+; CHECK: {{^}}}
 define void @test54() {
   %t = call i8* @returner()
   call i8* @llvm.objc.autorelease(i8* %t)
@@ -2225,14 +2225,14 @@ define void @test54() {
 
 ; CHECK-LABEL: define void @test55(
 ; CHECK-NOT: @objc
-; CHECK: }
-define void @test55(i8* %x) { 
-entry: 
-  %0 = call i8* @llvm.objc.retain(i8* %x) nounwind 
-  %1 = call i8* @llvm.objc.retain(i8* %x) nounwind 
-  call void @llvm.objc.release(i8* %x) nounwind 
-  call void @llvm.objc.release(i8* %x) nounwind 
-  ret void 
+; CHECK: {{^}}}
+define void @test55(i8* %x) {
+entry:
+  %0 = call i8* @llvm.objc.retain(i8* %x) nounwind
+  %1 = call i8* @llvm.objc.retain(i8* %x) nounwind
+  call void @llvm.objc.release(i8* %x) nounwind
+  call void @llvm.objc.release(i8* %x) nounwind
+  ret void
 }
 
 ; Nested retain+release pairs where the inner pair depends
@@ -2249,7 +2249,7 @@ entry:
 ; CHECK-NEXT: tail call void @llvm.objc.release(i8* %x) [[NUW]], !clang.imprecise_release ![[RELEASE]]
 ; CHECK-NEXT: br label %if.end
 ; CHECK-NOT: @objc
-; CHECK: }
+; CHECK: {{^}}}
 define void @test56(i8* %x, i32 %n) {
 entry:
   %0 = tail call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -2353,7 +2353,7 @@ entry:
 ; CHECK-LABEL: define void @test60a(
 ; CHECK: call i8* @llvm.objc.retain
 ; CHECK: call void @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test60a() {
   %t = load i8*, i8** @constptr
   %s = load i8*, i8** @something
@@ -2368,7 +2368,7 @@ define void @test60a() {
 ; CHECK: call i8* @llvm.objc.retain
 ; CHECK-NOT: call i8* @llvm.objc.retain
 ; CHECK-NOT: call i8* @llvm.objc.release
-; CHECK: }
+; CHECK: {{^}}}
 define void @test60b() {
   %t = load i8*, i8** @constptr
   %s = load i8*, i8** @something
@@ -2382,7 +2382,7 @@ define void @test60b() {
 
 ; CHECK-LABEL: define void @test60c(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test60c() {
   %t = load i8*, i8** @constptr
   %s = load i8*, i8** @something
@@ -2395,7 +2395,7 @@ define void @test60c() {
 
 ; CHECK-LABEL: define void @test60d(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test60d() {
   %t = load i8*, i8** @constptr
   %s = load i8*, i8** @something
@@ -2408,7 +2408,7 @@ define void @test60d() {
 
 ; CHECK-LABEL: define void @test60e(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test60e() {
   %t = load i8*, i8** @constptr
   %s = load i8*, i8** @something
@@ -2424,7 +2424,7 @@ define void @test60e() {
 
 ; CHECK-LABEL: define void @test61(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test61() {
   %t = load i8*, i8** @constptr
   call i8* @llvm.objc.retain(i8* %t)
@@ -2439,7 +2439,7 @@ define void @test61() {
 
 ; CHECK-LABEL: define void @test62(
 ; CHECK-NOT: @llvm.objc.
-; CHECK: }
+; CHECK: {{^}}}
 define void @test62(i8* %x, i1* %p) nounwind {
 entry:
   br label %loop
@@ -2466,7 +2466,7 @@ exit:
 ; CHECK:   tail call i8* @llvm.objc.retain(i8* %x)
 ; CHECK: loop.more:
 ; CHECK:   call void @llvm.objc.release(i8* %x)
-; CHECK: }
+; CHECK: {{^}}}
 define void @test63(i8* %x, i1* %p) nounwind {
 entry:
   br label %loop
@@ -2492,7 +2492,7 @@ exit:
 ; CHECK:   tail call i8* @llvm.objc.retain(i8* %x)
 ; CHECK: exit:
 ; CHECK:   call void @llvm.objc.release(i8* %x)
-; CHECK: }
+; CHECK: {{^}}}
 define void @test64(i8* %x, i1* %p) nounwind {
 entry:
   br label %loop
@@ -2517,7 +2517,7 @@ exit:
 ; CHECK:   call i8* @llvm.objc.autorelease(
 ; CHECK: return:
 ; CHECK-NOT: @llvm.objc.autorelease
-; CHECK: }
+; CHECK: {{^}}}
 define i8* @test65(i1 %x) {
 entry:
   br i1 %x, label %return, label %if.then
@@ -2540,7 +2540,7 @@ return:                                           ; preds = %if.then, %entry
 ; CHECK-NOT: @llvm.objc.autorelease
 ; CHECK: return:
 ; CHECK:   call i8* @llvm.objc.autorelease(
-; CHECK: }
+; CHECK: {{^}}}
 define i8* @test65b(i1 %x) {
 entry:
   %t = call i8* @llvm.objc.autoreleasePoolPush()
@@ -2566,7 +2566,7 @@ return:                                           ; preds = %if.then, %entry
 ; CHECK-NOT: @llvm.objc.autorelease
 ; CHECK: return:
 ; CHECK:   call i8* @llvm.objc.autoreleaseReturnValue(
-; CHECK: }
+; CHECK: {{^}}}
 define i8* @test65c(i1 %x) {
 entry:
   br i1 %x, label %return, label %if.then
@@ -2587,7 +2587,7 @@ return:                                           ; preds = %if.then, %entry
 ; CHECK-NOT: @llvm.objc.autorelease
 ; CHECK: return:
 ; CHECK:   call i8* @llvm.objc.autoreleaseReturnValue(
-; CHECK: }
+; CHECK: {{^}}}
 define i8* @test65d(i1 %x) {
 entry:
   br i1 %x, label %return, label %if.then
@@ -2611,7 +2611,7 @@ return:                                           ; preds = %if.then, %entry
 ; CHECK:   tail call void @llvm.objc.release(i8* %call) [[NUW]]
 ; CHECK:   tail call i8* @llvm.objc.retain(i8* %tmp8) [[NUW]]
 ; CHECK:   tail call void @llvm.objc.release(i8* %cond) [[NUW]]
-; CHECK: }
+; CHECK: {{^}}}
 define void @test66a(i8* %tmp5, i8* %bar, i1 %tobool, i1 %tobool1, i8* %call) {
 entry:
   br i1 %tobool, label %cond.true, label %cond.end
@@ -2634,7 +2634,7 @@ cond.end:                                         ; preds = %cond.true, %entry
 ; CHECK:   tail call void @llvm.objc.release(i8* %call) [[NUW]]
 ; CHECK:   tail call i8* @llvm.objc.retain(i8* %tmp8) [[NUW]]
 ; CHECK:   tail call void @llvm.objc.release(i8* %cond) [[NUW]]
-; CHECK: }
+; CHECK: {{^}}}
 define void @test66b(i8* %tmp5, i8* %bar, i1 %tobool, i1 %tobool1, i8* %call) {
 entry:
   br i1 %tobool, label %cond.true, label %cond.end
@@ -2657,7 +2657,7 @@ cond.end:                                         ; preds = %cond.true, %entry
 ; CHECK:   tail call void @llvm.objc.release(i8* %call) [[NUW]]
 ; CHECK:   tail call i8* @llvm.objc.retain(i8* %tmp8) [[NUW]]
 ; CHECK:   tail call void @llvm.objc.release(i8* %cond) [[NUW]]
-; CHECK: }
+; CHECK: {{^}}}
 define void @test66c(i8* %tmp5, i8* %bar, i1 %tobool, i1 %tobool1, i8* %call) {
 entry:
   br i1 %tobool, label %cond.true, label %cond.end
@@ -2680,7 +2680,7 @@ cond.end:                                         ; preds = %cond.true, %entry
 ; CHECK:   tail call void @llvm.objc.release(i8* %call) [[NUW]]
 ; CHECK:   tail call i8* @llvm.objc.retain(i8* %tmp8) [[NUW]]
 ; CHECK:   tail call void @llvm.objc.release(i8* %cond) [[NUW]]
-; CHECK: }
+; CHECK: {{^}}}
 define void @test66d(i8* %tmp5, i8* %bar, i1 %tobool, i1 %tobool1, i8* %call) {
 entry:
   br i1 %tobool, label %cond.true, label %cond.end
@@ -2706,62 +2706,68 @@ declare i32 @printf(i8* nocapture, ...) nounwind
 declare i32 @puts(i8* nocapture) nounwind
 @str = internal constant [16 x i8] c"-[ Top0 _getX ]\00"
 
-; CHECK: define { <2 x float>, <2 x float> } @"\01-[A z]"({}* %self, i8* nocapture %_cmd) [[NUW]] {
-; CHECK-NOT: @llvm.objc.
-; CHECK: }
-
-define {<2 x float>, <2 x float>} @"\01-[A z]"({}* %self, i8* nocapture %_cmd) nounwind {
+; FIXME: Should be able to eliminate the retain and release
+; CHECK-LABEL: define { <2 x float>, <2 x float> } @"\01-[A z]"({}* %self, i8* nocapture %_cmd)
+; CHECK: [[SELF_CAST0:%[0-9]+]] = bitcast {}* %self to i8*
+; CHECK: tail call i8* @llvm.objc.retain(i8* [[SELF_CAST0]])
+; CHECK-NEXT: %call = tail call i32 (i8*, ...) @printf(
+; CHECK: [[SELF_CAST1:%[0-9]+]] = bitcast {}* %self to i8*
+; CHECK: tail call void @llvm.objc.release(i8* [[SELF_CAST1]])
+; CHECK: {{^}}}
+define { <2 x float>, <2 x float> } @"\01-[A z]"({}* %self, i8* nocapture %_cmd) nounwind {
 invoke.cont:
-  %0 = bitcast {}* %self to i8*
-  %1 = tail call i8* @llvm.objc.retain(i8* %0) nounwind
+  %i = bitcast {}* %self to i8*
+  %i1 = tail call i8* @llvm.objc.retain(i8* %i) nounwind
   tail call void @llvm.dbg.value(metadata {}* %self, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
   tail call void @llvm.dbg.value(metadata {}* %self, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
   %ivar = load i64, i64* @"OBJC_IVAR_$_A.myZ", align 8
-  %add.ptr = getelementptr i8, i8* %0, i64 %ivar
+  %add.ptr = getelementptr i8, i8* %i, i64 %ivar
   %tmp1 = bitcast i8* %add.ptr to float*
   %tmp2 = load float, float* %tmp1, align 4
   %conv = fpext float %tmp2 to double
   %add.ptr.sum = add i64 %ivar, 4
-  %tmp6 = getelementptr inbounds i8, i8* %0, i64 %add.ptr.sum
-  %2 = bitcast i8* %tmp6 to float*
-  %tmp7 = load float, float* %2, align 4
+  %tmp6 = getelementptr inbounds i8, i8* %i, i64 %add.ptr.sum
+  %i2 = bitcast i8* %tmp6 to float*
+  %tmp7 = load float, float* %i2, align 4
   %conv8 = fpext float %tmp7 to double
   %add.ptr.sum36 = add i64 %ivar, 8
-  %tmp12 = getelementptr inbounds i8, i8* %0, i64 %add.ptr.sum36
+  %tmp12 = getelementptr inbounds i8, i8* %i, i64 %add.ptr.sum36
   %arrayidx = bitcast i8* %tmp12 to float*
   %tmp13 = load float, float* %arrayidx, align 4
   %conv14 = fpext float %tmp13 to double
   %tmp12.sum = add i64 %ivar, 12
-  %arrayidx19 = getelementptr inbounds i8, i8* %0, i64 %tmp12.sum
-  %3 = bitcast i8* %arrayidx19 to float*
-  %tmp20 = load float, float* %3, align 4
+  %arrayidx19 = getelementptr inbounds i8, i8* %i, i64 %tmp12.sum
+  %i3 = bitcast i8* %arrayidx19 to float*
+  %tmp20 = load float, float* %i3, align 4
   %conv21 = fpext float %tmp20 to double
   %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([33 x i8], [33 x i8]* @.str4, i64 0, i64 0), double %conv, double %conv8, double %conv14, double %conv21)
   %ivar23 = load i64, i64* @"OBJC_IVAR_$_A.myZ", align 8
-  %add.ptr24 = getelementptr i8, i8* %0, i64 %ivar23
-  %4 = bitcast i8* %add.ptr24 to i128*
-  %srcval = load i128, i128* %4, align 4
-  tail call void @llvm.objc.release(i8* %0) nounwind
+  %add.ptr24 = getelementptr i8, i8* %i, i64 %ivar23
+  %i4 = bitcast i8* %add.ptr24 to i128*
+  %srcval = load i128, i128* %i4, align 4
+  tail call void @llvm.objc.release(i8* %i) nounwind
   %tmp29 = trunc i128 %srcval to i64
   %tmp30 = bitcast i64 %tmp29 to <2 x float>
-  %tmp31 = insertvalue {<2 x float>, <2 x float>} undef, <2 x float> %tmp30, 0
+  %tmp31 = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> %tmp30, 0
   %tmp32 = lshr i128 %srcval, 64
   %tmp33 = trunc i128 %tmp32 to i64
   %tmp34 = bitcast i64 %tmp33 to <2 x float>
-  %tmp35 = insertvalue {<2 x float>, <2 x float>} %tmp31, <2 x float> %tmp34, 1
-  ret {<2 x float>, <2 x float>} %tmp35
+  %tmp35 = insertvalue { <2 x float>, <2 x float> } %tmp31, <2 x float> %tmp34, 1
+  ret { <2 x float>, <2 x float> } %tmp35
 }
 
-; CHECK: @"\01-[Top0 _getX]"({}* %self, i8* nocapture %_cmd) [[NUW]] {
-; CHECK-NOT: @llvm.objc.
-; CHECK: }
-
+; FIXME: Should be able to eliminate the retain and release
+; CHECK-LABEL: @"\01-[Top0 _getX]"({}* %self, i8* nocapture %_cmd)
+; CHECK: %i = bitcast {}* %self to i8*
+; CHECK: tail call i8* @llvm.objc.retain(i8* %i)
+; CHECK: %puts = tail call i32 @puts
+; CHECK: tail call void @llvm.objc.release(i8* %i)
 define i32 @"\01-[Top0 _getX]"({}* %self, i8* nocapture %_cmd) nounwind {
 invoke.cont:
-  %0 = bitcast {}* %self to i8*
-  %1 = tail call i8* @llvm.objc.retain(i8* %0) nounwind
+  %i = bitcast {}* %self to i8*
+  %i1 = tail call i8* @llvm.objc.retain(i8* %i) nounwind
   %puts = tail call i32 @puts(i8* getelementptr inbounds ([16 x i8], [16 x i8]* @str, i64 0, i64 0))
-  tail call void @llvm.objc.release(i8* %0) nounwind
+  tail call void @llvm.objc.release(i8* %i) nounwind
   ret i32 0
 }
 
@@ -2777,7 +2783,7 @@ invoke.cont:
 ; CHECK: @objc_msgSend
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: for.end:
-; CHECK: }
+; CHECK: {{^}}}
 define void @loop(i8* %x, i64 %n) {
 entry:
   %0 = tail call i8* @llvm.objc.retain(i8* %x) nounwind
@@ -2803,7 +2809,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 ; CHECK: define void @TextEditTest(%2* %self, %3* %pboard) {
 ; CHECK-NOT: call i8* @llvm.objc.retain(i8* %tmp7)
-; CHECK: }
+; CHECK: {{^}}}
 
 %0 = type { i8* (i8*, %struct._message_ref_t*, ...)*, i8* }
 %1 = type opaque
