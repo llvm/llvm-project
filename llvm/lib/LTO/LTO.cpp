@@ -57,6 +57,7 @@
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
+#include <optional>
 #include <set>
 
 using namespace llvm;
@@ -1254,7 +1255,7 @@ class InProcessThinBackend : public ThinBackendProc {
   std::set<GlobalValue::GUID> CfiFunctionDefs;
   std::set<GlobalValue::GUID> CfiFunctionDecls;
 
-  Optional<Error> Err;
+  std::optional<Error> Err;
   std::mutex ErrMu;
 
   bool ShouldEmitIndexFiles;
