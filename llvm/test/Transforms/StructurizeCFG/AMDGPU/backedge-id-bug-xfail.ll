@@ -4,21 +4,21 @@
 ; FIXME: Merge into backedge-id-bug
 ; Variant which has an issue with region construction
 
-define amdgpu_kernel void @loop_backedge_misidentified_alt(i32 addrspace(1)* %arg0) #0 {
+define amdgpu_kernel void @loop_backedge_misidentified_alt(ptr addrspace(1) %arg0) #0 {
 entry:
-  %tmp = load volatile <2 x i32>, <2 x i32> addrspace(1)* undef, align 16
-  %load1 = load volatile <2 x float>, <2 x float> addrspace(1)* undef
+  %tmp = load volatile <2 x i32>, ptr addrspace(1) undef, align 16
+  %load1 = load volatile <2 x float>, ptr addrspace(1) undef
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg0, i32 %tid
-  %i.initial = load volatile i32, i32 addrspace(1)* %gep, align 4
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %arg0, i32 %tid
+  %i.initial = load volatile i32, ptr addrspace(1) %gep, align 4
   br label %LOOP.HEADER
 
 LOOP.HEADER:
   %i = phi i32 [ %i.final, %END_ELSE_BLOCK ], [ %i.initial, %entry ]
   call void asm sideeffect "s_nop 0x100b ; loop $0 ", "r,~{memory}"(i32 %i) #0
   %tmp12 = zext i32 %i to i64
-  %tmp13 = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* null, i64 %tmp12
-  %tmp14 = load <4 x i32>, <4 x i32> addrspace(1)* %tmp13, align 16
+  %tmp13 = getelementptr inbounds <4 x i32>, ptr addrspace(1) null, i64 %tmp12
+  %tmp14 = load <4 x i32>, ptr addrspace(1) %tmp13, align 16
   %tmp15 = extractelement <4 x i32> %tmp14, i64 0
   %tmp16 = and i32 %tmp15, 65535
   %tmp17 = icmp eq i32 %tmp16, 1
@@ -67,7 +67,7 @@ END_ELSE_BLOCK:
 
 RETURN:
   call void asm sideeffect "s_nop 0x99 ; ClosureEval return", "~{memory}"() #0
-  store volatile <2 x float> %load1, <2 x float> addrspace(1)* undef, align 8
+  store volatile <2 x float> %load1, ptr addrspace(1) undef, align 8
   ret void
 }
 
