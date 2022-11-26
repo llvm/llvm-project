@@ -38,8 +38,8 @@ declare void @f0()
 declare void @f1()
 declare void @f2()
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 define void @_Z4loopi(i32 %width) {
 ; HOIST-LABEL: @_Z4loopi(
@@ -91,8 +91,8 @@ define void @_Z4loopi(i32 %width) {
 entry:
   %width.addr = alloca i32, align 4
   %i = alloca i32, align 4
-  store i32 %width, i32* %width.addr, align 4
-  %i1 = load i32, i32* %width.addr, align 4
+  store i32 %width, ptr %width.addr, align 4
+  %i1 = load i32, ptr %width.addr, align 4
   %cmp = icmp slt i32 %i1, 1
   br i1 %cmp, label %if.then, label %if.end
 
@@ -100,21 +100,19 @@ if.then:
   br label %return
 
 if.end:
-  %i2 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %i2)
-  store i32 0, i32* %i, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i)
+  store i32 0, ptr %i, align 4
   br label %for.cond
 
 for.cond:
-  %i3 = load i32, i32* %i, align 4
-  %i4 = load i32, i32* %width.addr, align 4
+  %i3 = load i32, ptr %i, align 4
+  %i4 = load i32, ptr %width.addr, align 4
   %sub = sub nsw i32 %i4, 1
   %cmp1 = icmp slt i32 %i3, %sub
   br i1 %cmp1, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
-  %i5 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %i5)
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i)
   br label %for.end
 
 for.body:
@@ -123,9 +121,9 @@ for.body:
   br label %for.inc
 
 for.inc:
-  %i6 = load i32, i32* %i, align 4
+  %i6 = load i32, ptr %i, align 4
   %inc = add nsw i32 %i6, 1
-  store i32 %inc, i32* %i, align 4
+  store i32 %inc, ptr %i, align 4
   br label %for.cond
 
 for.end:

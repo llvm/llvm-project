@@ -8,18 +8,18 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; We should retain the TBAA on the load here, not lose it.
 
-define void @licm(double** align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
+define void @licm(ptr align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
 ; O1-LABEL: @licm(
 ; O1-NEXT:  entry:
 ; O1-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i64 [[NUMELEM:%.*]], 0
 ; O1-NEXT:    br i1 [[CMP1_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 ; O1:       for.body.lr.ph:
-; O1-NEXT:    [[TMP0:%.*]] = load double*, double** [[_M_START_I:%.*]], align 8, !tbaa [[TBAA3:![0-9]+]]
+; O1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[_M_START_I:%.*]], align 8, !tbaa [[TBAA3:![0-9]+]]
 ; O1-NEXT:    br label [[FOR_BODY:%.*]]
 ; O1:       for.body:
 ; O1-NEXT:    [[K_02:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; O1-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds double, double* [[TMP0]], i64 [[K_02]]
-; O1-NEXT:    store double 2.000000e+00, double* [[ADD_PTR_I]], align 8, !tbaa [[TBAA8:![0-9]+]]
+; O1-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 [[K_02]]
+; O1-NEXT:    store double 2.000000e+00, ptr [[ADD_PTR_I]], align 8, !tbaa [[TBAA8:![0-9]+]]
 ; O1-NEXT:    [[INC]] = add nuw i64 [[K_02]], 1
 ; O1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[NUMELEM]]
 ; O1-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
@@ -31,7 +31,7 @@ define void @licm(double** align 8 dereferenceable(8) %_M_start.i, i64 %numElem)
 ; O23-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i64 [[NUMELEM:%.*]], 0
 ; O23-NEXT:    br i1 [[CMP1_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 ; O23:       for.body.lr.ph:
-; O23-NEXT:    [[TMP0:%.*]] = load double*, double** [[_M_START_I:%.*]], align 8, !tbaa [[TBAA3:![0-9]+]]
+; O23-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[_M_START_I:%.*]], align 8, !tbaa [[TBAA3:![0-9]+]]
 ; O23-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUMELEM]], 4
 ; O23-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY_PREHEADER:%.*]], label [[VECTOR_PH:%.*]]
 ; O23:       vector.ph:
@@ -39,12 +39,10 @@ define void @licm(double** align 8 dereferenceable(8) %_M_start.i, i64 %numElem)
 ; O23-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; O23:       vector.body:
 ; O23-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; O23-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, double* [[TMP0]], i64 [[INDEX]]
-; O23-NEXT:    [[TMP2:%.*]] = bitcast double* [[TMP1]] to <2 x double>*
-; O23-NEXT:    store <2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double>* [[TMP2]], align 8, !tbaa [[TBAA8:![0-9]+]]
-; O23-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, double* [[TMP1]], i64 2
-; O23-NEXT:    [[TMP4:%.*]] = bitcast double* [[TMP3]] to <2 x double>*
-; O23-NEXT:    store <2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double>* [[TMP4]], align 8, !tbaa [[TBAA8]]
+; O23-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 [[INDEX]]
+; O23-NEXT:    store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr [[TMP1]], align 8, !tbaa [[TBAA8:![0-9]+]]
+; O23-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
+; O23-NEXT:    store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr [[TMP3]], align 8, !tbaa [[TBAA8]]
 ; O23-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; O23-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; O23-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -56,8 +54,8 @@ define void @licm(double** align 8 dereferenceable(8) %_M_start.i, i64 %numElem)
 ; O23-NEXT:    br label [[FOR_BODY:%.*]]
 ; O23:       for.body:
 ; O23-NEXT:    [[K_02:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[K_02_PH]], [[FOR_BODY_PREHEADER]] ]
-; O23-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds double, double* [[TMP0]], i64 [[K_02]]
-; O23-NEXT:    store double 2.000000e+00, double* [[ADD_PTR_I]], align 8, !tbaa [[TBAA8]]
+; O23-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 [[K_02]]
+; O23-NEXT:    store double 2.000000e+00, ptr [[ADD_PTR_I]], align 8, !tbaa [[TBAA8]]
 ; O23-NEXT:    [[INC]] = add nuw i64 [[K_02]], 1
 ; O23-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[NUMELEM]]
 ; O23-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -73,9 +71,9 @@ for.cond:                                         ; preds = %for.body, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.body:                                         ; preds = %for.cond
-  %0 = load double*, double** %_M_start.i, align 8, !tbaa !3
-  %add.ptr.i = getelementptr inbounds double, double* %0, i64 %k.0
-  store double 2.000000e+00, double* %add.ptr.i, align 8, !tbaa !8
+  %0 = load ptr, ptr %_M_start.i, align 8, !tbaa !3
+  %add.ptr.i = getelementptr inbounds double, ptr %0, i64 %k.0
+  store double 2.000000e+00, ptr %add.ptr.i, align 8, !tbaa !8
   %inc = add nuw i64 %k.0, 1
   br label %for.cond
 
