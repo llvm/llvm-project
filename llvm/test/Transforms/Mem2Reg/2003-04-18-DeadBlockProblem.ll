@@ -12,11 +12,11 @@ define i32 @test() {
 ; CHECK:       EndOfLoop:
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
-  %X = alloca i32		; <i32*> [#uses=2]
-  store i32 6, i32* %X
+  %X = alloca i32		; <ptr> [#uses=2]
+  store i32 6, ptr %X
   br label %Loop
 Loop:		; preds = %EndOfLoop, %0
-  store i32 5, i32* %X
+  store i32 5, ptr %X
   br label %EndOfLoop
 Unreachable:		; No predecessors!
   br label %EndOfLoop

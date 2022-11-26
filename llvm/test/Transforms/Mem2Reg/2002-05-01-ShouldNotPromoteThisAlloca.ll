@@ -7,13 +7,13 @@
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[R:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 4, i32* [[R]], align 4
-; CHECK-NEXT:    store i32* [[R]], i32** null, align 8
+; CHECK-NEXT:    store i32 4, ptr [[R]], align 4
+; CHECK-NEXT:    store ptr [[R]], ptr null, align 8
 ; CHECK-NEXT:    ret void
 ;
-  %r = alloca i32		; <i32*> [#uses=2]
-  store i32 4, i32* %r
-  store i32* %r, i32** null
+  %r = alloca i32		; <ptr> [#uses=2]
+  store i32 4, ptr %r
+  store ptr %r, ptr null
   ret void
 }
 
