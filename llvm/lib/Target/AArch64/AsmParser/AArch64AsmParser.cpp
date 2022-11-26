@@ -55,6 +55,7 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -938,7 +939,7 @@ public:
   /// a shifted immediate by value 'Shift' or '0', or if it is an unshifted
   /// immediate that can be shifted by 'Shift'.
   template <unsigned Width>
-  Optional<std::pair<int64_t, unsigned> > getShiftedVal() const {
+  std::optional<std::pair<int64_t, unsigned>> getShiftedVal() const {
     if (isShiftedImm() && Width == getShiftedImmShift())
       if (auto *CE = dyn_cast<MCConstantExpr>(getShiftedImmVal()))
         return std::make_pair(CE->getValue(), Width);
