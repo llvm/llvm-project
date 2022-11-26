@@ -11,7 +11,7 @@ entry:
 ; CHECK-NEXT: localescape
 ; CHECK-NEXT: call void @do_safepoint
   %ptr = alloca i32
-  call void (...) @llvm.localescape(i32* %ptr)
+  call void (...) @llvm.localescape(ptr %ptr)
   ret void
 }
 
