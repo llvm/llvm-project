@@ -43,12 +43,6 @@ public:
   // getNextToken().
   virtual FormatToken *peekNextToken() = 0;
 
-  // Returns the token that would be returned after the next N calls to
-  // getNextToken(). N needs to be greater than zero, and small enough that
-  // there are still tokens. Check for tok::eof with N-1 before calling it with
-  // N.
-  virtual FormatToken *peekNextToken(int N) = 0;
-
   // Returns whether we are at the end of the file.
   // This can be different from whether getNextToken() returned an eof token
   // when the FormatTokenSource is a view on a part of the token stream.
@@ -181,13 +175,6 @@ public:
     return PreviousTokenSource->peekNextToken();
   }
 
-  FormatToken *peekNextToken(int N) override {
-    assert(N > 0);
-    if (eof())
-      return &FakeEOF;
-    return PreviousTokenSource->peekNextToken(N);
-  }
-
   bool isEOF() override { return PreviousTokenSource->isEOF(); }
 
   unsigned getPosition() override { return PreviousTokenSource->getPosition(); }
@@ -305,16 +292,6 @@ public:
     int Next = Position + 1;
     LLVM_DEBUG({
       llvm::dbgs() << "Peeking ";
-      dbgToken(Next);
-    });
-    return Tokens[Next];
-  }
-
-  FormatToken *peekNextToken(int N) override {
-    assert(N > 0);
-    int Next = Position + N;
-    LLVM_DEBUG({
-      llvm::dbgs() << "Peeking (+" << (N - 1) << ") ";
       dbgToken(Next);
     });
     return Tokens[Next];
@@ -3389,37 +3366,41 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
   // So we want basically to check for TYPE NAME, but TYPE can contain all kinds
   // of stuff: typename, const, *, &, &&, ::, identifiers.
 
-  int NextTokenOffset = 1;
-  auto NextToken = Tokens->peekNextToken(NextTokenOffset);
-  auto PeekNext = [&NextTokenOffset, &NextToken, this] {
-    ++NextTokenOffset;
-    NextToken = Tokens->peekNextToken(NextTokenOffset);
+  unsigned StoredPosition = Tokens->getPosition();
+  FormatToken *NextToken = Tokens->getNextToken();
+  int Lookahead = 0;
+  auto PeekNext = [&Lookahead, &NextToken, this] {
+    ++Lookahead;
+    NextToken = Tokens->getNextToken();
   };
 
   bool FoundType = false;
   bool LastWasColonColon = false;
   int OpenAngles = 0;
 
-  for (; NextTokenOffset < 50; PeekNext()) {
+  for (; Lookahead < 50; PeekNext()) {
     switch (NextToken->Tok.getKind()) {
     case tok::kw_volatile:
     case tok::kw_const:
     case tok::comma:
+      FormatTok = Tokens->setPosition(StoredPosition);
       parseRequiresExpression(RequiresToken);
       return false;
     case tok::r_paren:
     case tok::pipepipe:
+      FormatTok = Tokens->setPosition(StoredPosition);
       parseRequiresClause(RequiresToken);
       return true;
     case tok::eof:
       // Break out of the loop.
-      NextTokenOffset = 50;
+      Lookahead = 50;
       break;
     case tok::coloncolon:
       LastWasColonColon = true;
       break;
     case tok::identifier:
       if (FoundType && !LastWasColonColon && OpenAngles == 0) {
+        FormatTok = Tokens->setPosition(StoredPosition);
         parseRequiresExpression(RequiresToken);
         return false;
       }
@@ -3434,14 +3415,15 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
       break;
     default:
       if (NextToken->isSimpleTypeSpecifier()) {
+        FormatTok = Tokens->setPosition(StoredPosition);
         parseRequiresExpression(RequiresToken);
         return false;
       }
       break;
     }
   }
-
   // This seems to be a complicated expression, just assume it's a clause.
+  FormatTok = Tokens->setPosition(StoredPosition);
   parseRequiresClause(RequiresToken);
   return true;
 }
