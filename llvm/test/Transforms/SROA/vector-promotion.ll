@@ -567,9 +567,9 @@ define <4 x float> @test12(<4 x i32> %val) {
 
 define void @swap-8bytes(ptr %x, ptr %y) {
 ; CHECK-LABEL: @swap-8bytes(
-; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr [[X:%.*]], align 1
+; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load <8 x i8>, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 8, i1 false)
-; CHECK-NEXT:    store i64 [[TMP_SROA_0_0_COPYLOAD]], ptr [[Y]], align 1
+; CHECK-NEXT:    store <8 x i8> [[TMP_SROA_0_0_COPYLOAD]], ptr [[Y]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca [2 x i32]
@@ -581,10 +581,9 @@ define void @swap-8bytes(ptr %x, ptr %y) {
 
 define void @swap-7bytes(ptr %x, ptr %y) {
 ; CHECK-LABEL: @swap-7bytes(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 7, i1 false)
+; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load <7 x i8>, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 7, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 7, i1 false)
+; CHECK-NEXT:    store <7 x i8> [[TMP_SROA_0_0_COPYLOAD]], ptr [[Y]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca [7 x i8]
@@ -596,10 +595,9 @@ define void @swap-7bytes(ptr %x, ptr %y) {
 
 define void @swap-16bytes(ptr %x, ptr %y) {
 ; CHECK-LABEL: @swap-16bytes(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca [2 x i64], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load <16 x i8>, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 16, i1 false)
+; CHECK-NEXT:    store <16 x i8> [[TMP_SROA_0_0_COPYLOAD]], ptr [[Y]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca [2 x i64]
@@ -611,10 +609,9 @@ define void @swap-16bytes(ptr %x, ptr %y) {
 
 define void @swap-15bytes(ptr %x, ptr %y) {
 ; CHECK-LABEL: @swap-15bytes(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca [15 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 15, i1 false)
+; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load <15 x i8>, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 15, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 15, i1 false)
+; CHECK-NEXT:    store <15 x i8> [[TMP_SROA_0_0_COPYLOAD]], ptr [[Y]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca [15 x i8]
