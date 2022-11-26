@@ -113,7 +113,7 @@ TEST(TBDv3, ReadFile) {
   }
   llvm::sort(Exports);
 
-  EXPECT_EQ(sizeof(TBDv3Symbols) / sizeof(ExportedSymbol), Exports.size());
+  EXPECT_EQ(std::size(TBDv3Symbols), Exports.size());
   EXPECT_TRUE(
       std::equal(Exports.begin(), Exports.end(), std::begin(TBDv3Symbols)));
 }
@@ -205,7 +205,7 @@ TEST(TBDv3, ReadMultipleDocuments) {
   }
   llvm::sort(Exports);
 
-  EXPECT_EQ(sizeof(TBDv3Symbols) / sizeof(ExportedSymbol), Exports.size());
+  EXPECT_EQ(std::size(TBDv3Symbols), Exports.size());
   EXPECT_TRUE(
       std::equal(Exports.begin(), Exports.end(), std::begin(TBDv3Symbols)));
 
