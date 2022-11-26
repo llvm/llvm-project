@@ -2616,6 +2616,20 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
       } else if (!arguments[2] && fptrRank > 0) {
         context.messages().Say(
             "SHAPE= argument to C_F_POINTER() must appear when FPTR= is an array"_err_en_US);
+      } else if (arguments[2]) {
+        if (const auto *argExpr{arguments[2].value().UnwrapExpr()}) {
+          if (argExpr->Rank() > 1) {
+            context.messages().Say(arguments[2]->sourceLocation(),
+                "SHAPE= argument to C_F_POINTER() must be a rank-one array."_err_en_US);
+          } else if (argExpr->Rank() == 1) {
+            if (auto constShape{GetConstantShape(context, *argExpr)}) {
+              if (constShape->At(ConstantSubscripts{1}).ToInt64() != fptrRank) {
+                context.messages().Say(arguments[2]->sourceLocation(),
+                    "SHAPE= argument to C_F_POINTER() must have size equal to the rank of FPTR="_err_en_US);
+              }
+            }
+          }
+        }
       }
     }
   }
