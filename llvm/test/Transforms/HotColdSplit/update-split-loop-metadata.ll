@@ -14,7 +14,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK: [[LOOP_MD]] = distinct !{[[LOOP_MD]], [[LINE:![0-9]+]], [[LINE]]}
 ; CHECK: [[LINE]] = !DILocation(line: 1, column: 1, scope: [[SCOPE]])
 
-define void @basic(i32* %p, i32 %k) !dbg !6 {
+define void @basic(ptr %p, i32 %k) !dbg !6 {
 entry:
   %cmp3 = icmp slt i32 0, %k
   br i1 %cmp3, label %for.body.lr.ph, label %for.end
@@ -24,9 +24,9 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %i.05 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %p.addr.04 = phi i32* [ %p, %for.body.lr.ph ], [ %incdec.ptr, %for.body ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.04, i32 1
-  store i32 %i.05, i32* %p.addr.04, align 4
+  %p.addr.04 = phi ptr [ %p, %for.body.lr.ph ], [ %incdec.ptr, %for.body ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %p.addr.04, i32 1
+  store i32 %i.05, ptr %p.addr.04, align 4
   %inc = add nsw i32 %i.05, 1
   call void @sink()
   %cmp = icmp slt i32 %inc, %k

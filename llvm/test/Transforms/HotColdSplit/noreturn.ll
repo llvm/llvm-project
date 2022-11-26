@@ -10,13 +10,13 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-LABEL: define {{.*}}@foo(
 ; CHECK-NOT: foo.cold.1
-define void @foo(i32, %struct.__jmp_buf_tag*) {
+define void @foo(i32, ptr) {
   %3 = icmp eq i32 %0, 0
   tail call void @_Z10sideeffectv()
   br i1 %3, label %5, label %4
 
 ; <label>:4:                                      ; preds = %2
-  tail call void @longjmp(%struct.__jmp_buf_tag* %1, i32 0)
+  tail call void @longjmp(ptr %1, i32 0)
   unreachable
 
 ; <label>:5:                                      ; preds = %2
@@ -63,14 +63,14 @@ exit:
 
 ; CHECK-LABEL: define {{.*}}@baz(
 ; CHECK: call {{.*}}@baz.cold.1(
-define void @baz(i32, %struct.__jmp_buf_tag*) {
+define void @baz(i32, ptr) {
   %3 = icmp eq i32 %0, 0
   tail call void @_Z10sideeffectv()
   br i1 %3, label %5, label %4
 
 ; <label>:4:                                      ; preds = %2
   call void @sink()
-  tail call void @longjmp(%struct.__jmp_buf_tag* %1, i32 0)
+  tail call void @longjmp(ptr %1, i32 0)
   unreachable
 
 ; <label>:5:                                      ; preds = %2
@@ -88,4 +88,4 @@ declare void @llvm.trap() noreturn cold
 
 declare void @_Z10sideeffectv()
 
-declare void @longjmp(%struct.__jmp_buf_tag*, i32) noreturn nounwind
+declare void @longjmp(ptr, i32) noreturn nounwind
