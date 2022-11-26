@@ -341,7 +341,7 @@ void DwarfCompileUnit::addLocationAttribute(
     // correctly interpret address space of the variable address.
     const unsigned NVPTX_ADDR_global_space = 5;
     addUInt(*VariableDIE, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
-            NVPTXAddressSpace ? *NVPTXAddressSpace : NVPTX_ADDR_global_space);
+            NVPTXAddressSpace.value_or(NVPTX_ADDR_global_space));
   }
   if (Loc)
     addBlock(*VariableDIE, dwarf::DW_AT_location, DwarfExpr->finalize());
@@ -896,7 +896,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     // correctly interpret address space of the variable address.
     const unsigned NVPTX_ADDR_local_space = 6;
     addUInt(*VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
-            NVPTXAddressSpace ? *NVPTXAddressSpace : NVPTX_ADDR_local_space);
+            NVPTXAddressSpace.value_or(NVPTX_ADDR_local_space));
   }
   addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
   if (DwarfExpr.TagOffset)
