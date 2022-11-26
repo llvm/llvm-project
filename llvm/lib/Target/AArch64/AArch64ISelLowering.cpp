@@ -16933,7 +16933,7 @@ static bool isCMP(SDValue Op) {
 
 // (CSEL 1 0 CC Cond) => CC
 // (CSEL 0 1 CC Cond) => !CC
-static Optional<AArch64CC::CondCode> getCSETCondCode(SDValue Op) {
+static std::optional<AArch64CC::CondCode> getCSETCondCode(SDValue Op) {
   if (Op.getOpcode() != AArch64ISD::CSEL)
     return None;
   auto CC = static_cast<AArch64CC::CondCode>(Op.getConstantOperandVal(2));
