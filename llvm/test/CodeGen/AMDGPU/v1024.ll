@@ -4,7 +4,7 @@
 
 ; GCN-LABEL: {{^}}test_v1024:
 ; GCN-NOT: v_accvgpr
-; GCN-COUNT-10: v_mov_b32_e32
+; GCN-COUNT-32: v_mov_b32_e32
 ; GCN-NOT: v_accvgpr
 define amdgpu_kernel void @test_v1024() {
 entry:
