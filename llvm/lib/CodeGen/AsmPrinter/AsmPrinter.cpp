@@ -119,6 +119,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1191,7 +1192,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
     case MachineOperand::MO_Register:
     case MachineOperand::MO_FrameIndex: {
       Register Reg;
-      Optional<StackOffset> Offset;
+      std::optional<StackOffset> Offset;
       if (Op.isReg()) {
         Reg = Op.getReg();
       } else {
@@ -2045,7 +2046,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
 
   remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
 
-  Optional<SmallString<128>> Filename;
+  std::optional<SmallString<128>> Filename;
   if (Optional<StringRef> FilenameRef = RS.getFilename()) {
     Filename = *FilenameRef;
     sys::fs::make_absolute(*Filename);
