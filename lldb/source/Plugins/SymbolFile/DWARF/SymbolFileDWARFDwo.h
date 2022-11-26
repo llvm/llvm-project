@@ -63,8 +63,8 @@ protected:
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() override;
 
-  lldb::TypeSP FindDefinitionTypeForDWARFDeclContext(
-      const DWARFDeclContext &die_decl_ctx) override;
+  lldb::TypeSP
+  FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) override;
 
   lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
       const DWARFDIE &die, lldb_private::ConstString type_name,

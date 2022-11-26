@@ -3307,7 +3307,7 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
     return INVALID_NUB_PROCESS;
 
   flags = POSIX_SPAWN_START_SUSPENDED | POSIX_SPAWN_SETSIGDEF |
-          POSIX_SPAWN_SETSIGMASK;
+          POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETPGROUP;
   if (disable_aslr)
     flags |= _POSIX_SPAWN_DISABLE_ASLR;
 

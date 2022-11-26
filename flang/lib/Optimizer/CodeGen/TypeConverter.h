@@ -244,7 +244,7 @@ public:
       dataDescFields.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, rank));
     }
     // opt-type-ptr: i8* (see fir.tdesc)
-    if (requiresExtendedDesc(ele)) {
+    if (requiresExtendedDesc(ele) || fir::isUnlimitedPolymorphicType(box)) {
       dataDescFields.push_back(
           getExtendedDescFieldTypeModel<kOptTypePtrPosInBox>()(&getContext()));
       auto rowTy =

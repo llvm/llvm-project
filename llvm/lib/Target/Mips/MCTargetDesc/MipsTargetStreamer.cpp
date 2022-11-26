@@ -899,9 +899,9 @@ void MipsTargetELFStreamer::finish() {
   MCSection &BSSSection = *OFI.getBSSSection();
   MCA.registerSection(BSSSection);
 
-  TextSection.setAlignment(Align(std::max(16u, TextSection.getAlignment())));
-  DataSection.setAlignment(Align(std::max(16u, DataSection.getAlignment())));
-  BSSSection.setAlignment(Align(std::max(16u, BSSSection.getAlignment())));
+  TextSection.setAlignment(std::max(Align(16), TextSection.getAlign()));
+  DataSection.setAlignment(std::max(Align(16), DataSection.getAlign()));
+  BSSSection.setAlignment(std::max(Align(16), BSSSection.getAlign()));
 
   if (RoundSectionSizes) {
     // Make sections sizes a multiple of the alignment. This is useful for
@@ -912,14 +912,12 @@ void MipsTargetELFStreamer::finish() {
     for (MCSection &S : MCA) {
       MCSectionELF &Section = static_cast<MCSectionELF &>(S);
 
-      unsigned Alignment = Section.getAlignment();
-      if (Alignment) {
-        OS.switchSection(&Section);
-        if (Section.useCodeAlign())
-          OS.emitCodeAlignment(Alignment, &STI, Alignment);
-        else
-          OS.emitValueToAlignment(Alignment, 0, 1, Alignment);
-      }
+      Align Alignment = Section.getAlign();
+      OS.switchSection(&Section);
+      if (Section.useCodeAlign())
+        OS.emitCodeAlignment(Alignment, &STI, Alignment.value());
+      else
+        OS.emitValueToAlignment(Alignment, 0, 1, Alignment.value());
     }
   }
 
