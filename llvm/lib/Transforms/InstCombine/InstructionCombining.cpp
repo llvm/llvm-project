@@ -110,6 +110,7 @@
 
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -4244,7 +4245,7 @@ bool InstCombinerImpl::run() {
     // prove that the successor is not executed more frequently than our block.
     // Return the UserBlock if successful.
     auto getOptionalSinkBlockForInst =
-        [this](Instruction *I) -> Optional<BasicBlock *> {
+        [this](Instruction *I) -> std::optional<BasicBlock *> {
       if (!EnableCodeSinking)
         return None;
 
