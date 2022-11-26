@@ -92,27 +92,52 @@ public:
   /// directive is present or not.
   Optional<bool> HasRequiresUnifiedSharedMemory;
 
+  /// First separator used between the initial two parts of a name.
+  Optional<StringRef> FirstSeparator;
+  /// Separator used between all of the rest consecutive parts of s name
+  Optional<StringRef> Separator;
+
   OpenMPIRBuilderConfig() {}
   OpenMPIRBuilderConfig(bool IsEmbedded, bool IsTargetCodegen,
                         bool HasRequiresUnifiedSharedMemory)
       : IsEmbedded(IsEmbedded), IsTargetCodegen(IsTargetCodegen),
         HasRequiresUnifiedSharedMemory(HasRequiresUnifiedSharedMemory) {}
 
-  // Convenience getter functions that assert if the value is not present.
-  bool isEmbedded() {
+  // Getters functions that assert if the required values are not present.
+  bool isEmbedded() const {
     assert(IsEmbedded.has_value() && "IsEmbedded is not set");
     return IsEmbedded.value();
   }
 
-  bool isTargetCodegen() {
+  bool isTargetCodegen() const {
     assert(IsTargetCodegen.has_value() && "IsTargetCodegen is not set");
     return IsTargetCodegen.value();
   }
 
-  bool hasRequiresUnifiedSharedMemory() {
+  bool hasRequiresUnifiedSharedMemory() const {
     assert(HasRequiresUnifiedSharedMemory.has_value() &&
            "HasUnifiedSharedMemory is not set");
     return HasRequiresUnifiedSharedMemory.value();
+  }
+
+  // Returns the FirstSeparator if set, otherwise use the default
+  // separator depending on isTargetCodegen
+  StringRef firstSeparator() const {
+    if (FirstSeparator.has_value())
+      return FirstSeparator.value();
+    if (isTargetCodegen())
+      return "_";
+    return ".";
+  }
+
+  // Returns the Separator if set, otherwise use the default
+  // separator depending on isTargetCodegen
+  StringRef separator() const {
+    if (Separator.has_value())
+      return Separator.value();
+    if (isTargetCodegen())
+      return "$";
+    return ".";
   }
 
   void setIsEmbedded(bool Value) { IsEmbedded = Value; }
@@ -120,6 +145,8 @@ public:
   void setHasRequiresUnifiedSharedMemory(bool Value) {
     HasRequiresUnifiedSharedMemory = Value;
   }
+  void setFirstSeparator(StringRef FS) { FirstSeparator = FS; }
+  void setSeparator(StringRef S) { Separator = S; }
 };
 
 /// An interface to create LLVM-IR for OpenMP directives.
@@ -149,6 +176,16 @@ public:
 
   /// Type used throughout for insertion points.
   using InsertPointTy = IRBuilder<>::InsertPoint;
+
+  /// Get the create a name using the platform specific separators.
+  /// \param Parts parts of the final name that needs separation
+  /// The created name has a first separator between the first and second part
+  /// and a second separator between all other parts.
+  /// E.g. with FirstSeparator "$" and Separator "." and
+  /// parts: "p1", "p2", "p3", "p4"
+  /// The resulting name is "p1$p2.p3.p4"
+  /// The separators are retrieved from the OpenMPIRBuilderConfig.
+  std::string createPlatformSpecificName(ArrayRef<StringRef> Parts) const;
 
   /// Callback type for variable finalization (think destructors).
   ///

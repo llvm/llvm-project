@@ -515,12 +515,27 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
   }
 }
 
+static bool isSpecialSelect(SelectInst *SI) {
+  using namespace llvm::PatternMatch;
+
+  // If the select is a logical-and/logical-or then it is better treated as a
+  // and/or by the backend.
+  if (match(SI, m_CombineOr(m_LogicalAnd(m_Value(), m_Value()),
+                            m_LogicalOr(m_Value(), m_Value()))))
+    return true;
+
+  return false;
+}
+
 void SelectOptimize::collectSelectGroups(BasicBlock &BB,
                                          SelectGroups &SIGroups) {
   BasicBlock::iterator BBIt = BB.begin();
   while (BBIt != BB.end()) {
     Instruction *I = &*BBIt++;
     if (SelectInst *SI = dyn_cast<SelectInst>(I)) {
+      if (isSpecialSelect(SI))
+        continue;
+
       SelectGroup SIGroup;
       SIGroup.push_back(SI);
       while (BBIt != BB.end()) {

@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-include-cleaner/Record.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "gmock/gmock.h"
@@ -215,6 +216,44 @@ TEST_F(RecordPPTest, CapturesMacroRefs) {
   }
   EXPECT_THAT(RefOffsets, ElementsAreArray(MainFile.points()));
   EXPECT_THAT(ExpOffsets, ElementsAreArray(MainFile.points("exp")));
+}
+
+TEST_F(RecordPPTest, CapturesConditionalMacroRefs) {
+  llvm::Annotations MainFile(R"cpp(
+    #define X 1
+
+    #ifdef ^X
+    #endif
+
+    #if defined(^X)
+    #endif
+
+    #ifndef ^X
+    #endif
+
+    #ifdef Y
+    #elifdef ^X
+    #endif
+
+    #ifndef ^X
+    #elifndef ^X
+    #endif
+  )cpp");
+
+  Inputs.Code = MainFile.code();
+  Inputs.ExtraArgs.push_back("-std=c++2b");
+  auto AST = build();
+
+  std::vector<unsigned> RefOffsets;
+  SourceManager &SM = AST.sourceManager();
+  for (const auto &Ref : Recorded.MacroReferences) {
+    auto [FID, Off] = SM.getDecomposedLoc(Ref.RefLocation);
+    ASSERT_EQ(FID, SM.getMainFileID());
+    EXPECT_EQ(Ref.RT, RefType::Ambiguous);
+    EXPECT_EQ("X", Ref.Target.macro().Name->getName());
+    RefOffsets.push_back(Off);
+  }
+  EXPECT_THAT(RefOffsets, ElementsAreArray(MainFile.points()));
 }
 
 // Matches an Include* on the specified line;

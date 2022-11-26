@@ -4289,6 +4289,7 @@ _func:
 	mrs x9, ID_PFR0_EL1
 	mrs x9, ID_PFR1_EL1
 	mrs x9, ID_DFR0_EL1
+	mrs x9, ID_DFR1_EL1
 	mrs x9, ID_AFR0_EL1
 	mrs x9, ID_MMFR0_EL1
 	mrs x9, ID_MMFR1_EL1
@@ -4592,6 +4593,7 @@ _func:
 // CHECK: mrs      x9, {{id_pfr0_el1|ID_PFR0_EL1}}            // encoding: [0x09,0x01,0x38,0xd5]
 // CHECK: mrs      x9, {{id_pfr1_el1|ID_PFR1_EL1}}            // encoding: [0x29,0x01,0x38,0xd5]
 // CHECK: mrs      x9, {{id_dfr0_el1|ID_DFR0_EL1}}            // encoding: [0x49,0x01,0x38,0xd5]
+// CHECK: mrs      x9, {{id_dfr1_el1|ID_DFR1_EL1}}            // encoding: [0xa9,0x03,0x38,0xd5]
 // CHECK: mrs      x9, {{id_afr0_el1|ID_AFR0_EL1}}            // encoding: [0x69,0x01,0x38,0xd5]
 // CHECK: mrs      x9, {{id_mmfr0_el1|ID_MMFR0_EL1}}           // encoding: [0x89,0x01,0x38,0xd5]
 // CHECK: mrs      x9, {{id_mmfr1_el1|ID_MMFR1_EL1}}           // encoding: [0xa9,0x01,0x38,0xd5]

@@ -60,6 +60,7 @@ endif()
 # Getting correct source files to build library
 set(LIBOMP_CXXFILES)
 set(LIBOMP_ASMFILES)
+set(LIBOMP_GNUASMFILES)
 if(STUBS_LIBRARY)
   set(LIBOMP_CXXFILES kmp_stub.cpp)
 else()
@@ -94,12 +95,18 @@ else()
     libomp_append(LIBOMP_CXXFILES z_Windows_NT-586_util.cpp)
     if(${LIBOMP_ARCH} STREQUAL "i386" OR ${LIBOMP_ARCH} STREQUAL "x86_64")
       libomp_append(LIBOMP_ASMFILES z_Windows_NT-586_asm.asm) # Windows assembly file
+    elseif(${LIBOMP_ARCH} STREQUAL "aarch64" AND (NOT MSVC OR CMAKE_C_COMPILER_ID STREQUAL "Clang"))
+      # z_Linux_asm.S works for AArch64 Windows too.
+      libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S)
+    else()
+      # AArch64 with MSVC gets implementations of the functions from
+      # ifdeffed sections in z_Windows_NT-586_util.cpp.
     endif()
   else()
     # Unix specific files
     libomp_append(LIBOMP_CXXFILES z_Linux_util.cpp)
     libomp_append(LIBOMP_CXXFILES kmp_gsupport.cpp)
-    libomp_append(LIBOMP_ASMFILES z_Linux_asm.S) # Unix assembly file
+    libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
   endif()
   libomp_append(LIBOMP_CXXFILES thirdparty/ittnotify/ittnotify_static.cpp LIBOMP_USE_ITT_NOTIFY)
   libomp_append(LIBOMP_CXXFILES kmp_debugger.cpp LIBOMP_USE_DEBUGGER)
@@ -115,7 +122,7 @@ libomp_append(LIBOMP_CXXFILES kmp_version.cpp)
 libomp_append(LIBOMP_CXXFILES ompt-general.cpp IF_TRUE LIBOMP_OMPT_SUPPORT)
 libomp_append(LIBOMP_CXXFILES ompd-specific.cpp IF_TRUE LIBOMP_OMPD_SUPPORT)
 
-set(LIBOMP_SOURCE_FILES ${LIBOMP_CXXFILES} ${LIBOMP_ASMFILES})
+set(LIBOMP_SOURCE_FILES ${LIBOMP_CXXFILES} ${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES})
 # For Windows, there is a resource file (.rc -> .res) that is also compiled
 libomp_append(LIBOMP_SOURCE_FILES libomp.rc WIN32)
 
@@ -124,11 +131,9 @@ libomp_get_cxxflags(LIBOMP_CONFIGURED_CXXFLAGS)
 libomp_get_asmflags(LIBOMP_CONFIGURED_ASMFLAGS)
 # Set the compiler flags for each type of source
 set_source_files_properties(${LIBOMP_CXXFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
-set_source_files_properties(${LIBOMP_ASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
-# Let the compiler handle the assembly files on Unix-like systems
-if(NOT WIN32)
-  set_source_files_properties(${LIBOMP_ASMFILES} PROPERTIES LANGUAGE C)
-endif()
+set_source_files_properties(${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
+# Let the compiler handle the GNU assembly files
+set_source_files_properties(${LIBOMP_GNUASMFILES} PROPERTIES LANGUAGE C)
 
 # Remove any cmake-automatic linking of the standard C++ library.
 # We neither need (nor want) the standard C++ library dependency even though we compile c++ files.

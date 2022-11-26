@@ -148,14 +148,14 @@ public:
   /// can change its size during relaxation.
   virtual void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
 
-  void emitBundleAlignMode(unsigned AlignPow2) override;
+  void emitBundleAlignMode(Align Alignment) override;
   void emitBundleLock(bool AlignToEnd) override;
   void emitBundleUnlock() override;
   void emitBytes(StringRef Data) override;
-  void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
+  void emitValueToAlignment(Align Alignment, int64_t Value = 0,
                             unsigned ValueSize = 1,
                             unsigned MaxBytesToEmit = 0) override;
-  void emitCodeAlignment(unsigned ByteAlignment, const MCSubtargetInfo *STI,
+  void emitCodeAlignment(Align ByteAlignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;

@@ -480,7 +480,7 @@ static const char *const BundlingNotImplementedMsg =
   "Aligned bundling is not implemented for this object format";
 #endif
 
-void MCObjectStreamer::emitBundleAlignMode(unsigned AlignPow2) {
+void MCObjectStreamer::emitBundleAlignMode(Align Alignment) {
   llvm_unreachable(BundlingNotImplementedMsg);
 }
 
@@ -641,25 +641,23 @@ void MCObjectStreamer::emitBytes(StringRef Data) {
   DF->getContents().append(Data.begin(), Data.end());
 }
 
-void MCObjectStreamer::emitValueToAlignment(unsigned ByteAlignment,
-                                            int64_t Value,
+void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
                                             unsigned ValueSize,
                                             unsigned MaxBytesToEmit) {
   if (MaxBytesToEmit == 0)
-    MaxBytesToEmit = ByteAlignment;
-  insert(new MCAlignFragment(Align(ByteAlignment), Value, ValueSize,
-                             MaxBytesToEmit));
+    MaxBytesToEmit = Alignment.value();
+  insert(new MCAlignFragment(Alignment, Value, ValueSize, MaxBytesToEmit));
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *CurSec = getCurrentSectionOnly();
-  if (ByteAlignment > CurSec->getAlignment())
-    CurSec->setAlignment(Align(ByteAlignment));
+  if (CurSec->getAlign() < Alignment)
+    CurSec->setAlignment(Alignment);
 }
 
-void MCObjectStreamer::emitCodeAlignment(unsigned ByteAlignment,
+void MCObjectStreamer::emitCodeAlignment(Align Alignment,
                                          const MCSubtargetInfo *STI,
                                          unsigned MaxBytesToEmit) {
-  emitValueToAlignment(ByteAlignment, 0, 1, MaxBytesToEmit);
+  emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   cast<MCAlignFragment>(getCurrentFragment())->setEmitNops(true, STI);
 }
 

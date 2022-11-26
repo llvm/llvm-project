@@ -11759,6 +11759,23 @@ multiclass ComparisonOp<bit isUnsigned, bit isMin, string asm,
 }
 
 //----------------------------------------------------------------------------
+// 2022 Armv8.9/Armv9.4 Extensions
+//----------------------------------------------------------------------------
+
+//---
+// Instrumentation Extension (FEAT_ITE)
+//---
+
+let Predicates = [HasITE] in
+def TRCIT : RtSystemI<0b0, (outs), (ins GPR64:$Rt), "trcit", "\t$Rt"> {
+  let Inst{20-19} = 0b01;
+  let Inst{18-16} = 0b011;
+  let Inst{15-12} = 0b0111;
+  let Inst{11-8}  = 0b0010;
+  let Inst{7-5}   = 0b111;
+}
+
+//----------------------------------------------------------------------------
 // Allow the size specifier tokens to be upper case, not just lower.
 def : TokenAlias<".4B", ".4b">;  // Add dot product
 def : TokenAlias<".8B", ".8b">;

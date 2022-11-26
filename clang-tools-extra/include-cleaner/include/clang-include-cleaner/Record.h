@@ -147,11 +147,15 @@ struct RecordedPP {
     ///  - for a logical file like <vector>, we check Spelled
     llvm::SmallVector<const Include *> match(Header H) const;
 
+    /// Finds the include written on the specified line.
+    const Include *atLine(unsigned OneBasedIndex) const;
+
   private:
     std::vector<Include> All;
     // Lookup structures for match(), values are index into All.
     llvm::StringMap<llvm::SmallVector<unsigned>> BySpelling;
     llvm::DenseMap<const FileEntry *, llvm::SmallVector<unsigned>> ByFile;
+    llvm::DenseMap<unsigned, unsigned> ByLine;
   } Includes;
 };
 

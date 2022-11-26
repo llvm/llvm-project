@@ -48610,20 +48610,31 @@ static SDValue combineScalarAndWithMaskSetcc(SDNode *N, SelectionDAG &DAG,
 
   // Make sure this is an AND with constant. We will check the value of the
   // constant later.
-  if (!isa<ConstantSDNode>(N->getOperand(1)))
+  auto *C1 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!C1)
     return SDValue();
 
   // This is implied by the ConstantSDNode.
   assert(!VT.isVector() && "Expected scalar VT!");
 
-  if (N->getOperand(0).getOpcode() != ISD::BITCAST ||
-      !N->getOperand(0).hasOneUse() ||
-      !N->getOperand(0).getOperand(0).hasOneUse())
+  SDValue Src = N->getOperand(0);
+  if (!Src.hasOneUse())
     return SDValue();
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SDValue Src = N->getOperand(0).getOperand(0);
+  // (Optionally) peek through any_extend().
+  if (Src.getOpcode() == ISD::ANY_EXTEND) {
+    if (!Src.getOperand(0).hasOneUse())
+      return SDValue();
+    Src = Src.getOperand(0);
+  }
+
+  if (Src.getOpcode() != ISD::BITCAST || !Src.getOperand(0).hasOneUse())
+    return SDValue();
+
+  Src = Src.getOperand(0);
   EVT SrcVT = Src.getValueType();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!SrcVT.isVector() || SrcVT.getVectorElementType() != MVT::i1 ||
       !TLI.isTypeLegal(SrcVT))
     return SDValue();
@@ -48639,7 +48650,7 @@ static SDValue combineScalarAndWithMaskSetcc(SDNode *N, SelectionDAG &DAG,
   // First subvector should be a setcc with a legal result type. The RHS of the
   // AND should be a mask with this many bits.
   if (SubVec.getOpcode() != ISD::SETCC || !TLI.isTypeLegal(SubVecVT) ||
-      !N->getConstantOperandAPInt(1).isMask(SubVecVT.getVectorNumElements()))
+      !C1->getAPIntValue().isMask(SubVecVT.getVectorNumElements()))
     return SDValue();
 
   EVT SetccVT = SubVec.getOperand(0).getValueType();
@@ -48658,7 +48669,8 @@ static SDValue combineScalarAndWithMaskSetcc(SDNode *N, SelectionDAG &DAG,
   Ops[0] = SubVec;
   SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, dl, SrcVT,
                                Ops);
-  return DAG.getBitcast(VT, Concat);
+  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), SrcVT.getSizeInBits());
+  return DAG.getZExtOrTrunc(DAG.getBitcast(IntVT, Concat), dl, VT);
 }
 
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,

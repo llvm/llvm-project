@@ -1057,14 +1057,11 @@ static FieldDecl *addFieldToRecordDecl(ASTContext &C, DeclContext *DC,
   return Field;
 }
 
-CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM, StringRef FirstSeparator,
-                                 StringRef Separator)
-    : CGM(CGM), FirstSeparator(FirstSeparator), Separator(Separator),
-      OMPBuilder(CGM.getModule()), OffloadEntriesInfoManager() {
+CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
+    : CGM(CGM), OMPBuilder(CGM.getModule()), OffloadEntriesInfoManager() {
   KmpCriticalNameTy = llvm::ArrayType::get(CGM.Int32Ty, /*NumElements*/ 8);
   llvm::OpenMPIRBuilderConfig Config(CGM.getLangOpts().OpenMPIsDevice, false,
                                      hasRequiresUnifiedSharedMemory());
-
   // Initialize Types used in OpenMPIRBuilder from OMPKinds.def
   OMPBuilder.initialize();
   OMPBuilder.setConfig(Config);
@@ -1088,14 +1085,7 @@ void CGOpenMPRuntime::clear() {
 }
 
 std::string CGOpenMPRuntime::getName(ArrayRef<StringRef> Parts) const {
-  SmallString<128> Buffer;
-  llvm::raw_svector_ostream OS(Buffer);
-  StringRef Sep = FirstSeparator;
-  for (StringRef Part : Parts) {
-    OS << Sep << Part;
-    Sep = Separator;
-  }
-  return std::string(OS.str());
+  return OMPBuilder.createPlatformSpecificName(Parts);
 }
 
 static llvm::Function *
