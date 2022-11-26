@@ -735,7 +735,7 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   assert(IntermediateVT.isScalableVector() == ValueVT.isScalableVector() &&
          "Mixing scalable and fixed vectors when copying in parts");
 
-  Optional<ElementCount> DestEltCnt;
+  std::optional<ElementCount> DestEltCnt;
 
   if (IntermediateVT.isVector())
     DestEltCnt = IntermediateVT.getVectorElementCount() * NumIntermediates;
@@ -5633,7 +5633,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   }
 
   bool IsIndirect = false;
-  Optional<MachineOperand> Op;
+  std::optional<MachineOperand> Op;
   // Some arguments' frame index is recorded during argument lowering.
   int FI = FuncInfo.getArgumentFrameIndex(Arg);
   if (FI != std::numeric_limits<int>::max())
@@ -7393,7 +7393,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
 }
 
 static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
-  Optional<unsigned> ResOPC;
+  std::optional<unsigned> ResOPC;
   switch (VPIntrin.getIntrinsicID()) {
 #define HELPER_MAP_VPID_TO_VPSD(VPID, VPSD)                                    \
   case Intrinsic::VPID:                                                        \
