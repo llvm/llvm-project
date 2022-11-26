@@ -102,6 +102,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -2263,7 +2264,7 @@ void SelectionDAGISel::Select_PATCHPOINT(SDNode *N) {
 
   // Cache arguments that will be moved to the end in the target node.
   SDValue Chain = *It++;
-  Optional<SDValue> Glue;
+  std::optional<SDValue> Glue;
   if (It->getValueType() == MVT::Glue)
     Glue = *It++;
   SDValue RegMask = *It++;
