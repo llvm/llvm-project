@@ -23,14 +23,13 @@ target triple = "aarch64"
 
 define void @f() {
 entry:
-  %i = getelementptr inbounds %a, %a* null, i64 0, i32 1
+  %i = getelementptr inbounds %a, ptr null, i64 0, i32 1
   br label %label
 
 label:                                            ; preds = %entry
-  %i1 = bitcast i64* %i to %b**
-  %load0 = load %b*, %b** %i1, align 8
-  %i3 = getelementptr inbounds %b, %b* %load0, i64 undef, i32 0
-  %load1 = load i64, i64* %i3, align 8
+  %load0 = load ptr, ptr %i, align 8
+  %i3 = getelementptr inbounds %b, ptr %load0, i64 undef, i32 0
+  %load1 = load i64, ptr %i3, align 8
   %cmp0 = icmp ugt i64 %load1, 1
   br i1 %cmp0, label %if.then, label %if.else
 
@@ -38,16 +37,16 @@ if.then:                                          ; preds = %label
   unreachable
 
 if.else:                                          ; preds = %label
-  call void @g(i8* undef)
-  %load2 = load i64, i64* undef, align 8
+  call void @g(ptr undef)
+  %load2 = load i64, ptr undef, align 8
   %i7 = and i64 %load2, -16
-  %i8 = inttoptr i64 %i7 to i8*
+  %i8 = inttoptr i64 %i7 to ptr
   %cmp1 = icmp eq i64 %load1, 0
   call void @llvm.assume(i1 %cmp1)
   unreachable
 }
 
-declare void @g(i8*)
+declare void @g(ptr)
 
 declare void @llvm.assume(i1 noundef) #0
 
