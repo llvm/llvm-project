@@ -8,8 +8,8 @@
 
 declare void @foo()
 
-@llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [
-  { i32, void ()*, i8* } { i32 0, void ()* @foo, i8* null }
+@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [
+  { i32, ptr, ptr } { i32 0, ptr @foo, ptr null }
 ]
 
-; CHECK: call i32 @__cxa_atexit(void (i8*)* @call_dtors.0, i8* null, i8* bitcast (%struct.mach_header* @__dso_handle to i8*))
+; CHECK: call i32 @__cxa_atexit(ptr @call_dtors.0, ptr null, ptr @__dso_handle)
