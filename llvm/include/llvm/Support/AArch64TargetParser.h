@@ -125,13 +125,12 @@ const ExtName AArch64ARCHExtNames[] = {
 struct CpuNames {
   StringRef Name;
   ArchKind ArchID;
-  bool Default; // is $Name the default CPU for $ArchID ?
   uint64_t DefaultExtensions;
 };
 
 const CpuNames AArch64CPUNames[] = {
-#define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)       \
-  {NAME, AArch64::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT},
+#define AARCH64_CPU_NAME(NAME, ID, DEFAULT_EXT)                                \
+  {NAME, AArch64::ArchKind::ID, DEFAULT_EXT},
 #include "AArch64TargetParser.def"
 };
 
