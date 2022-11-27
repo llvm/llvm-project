@@ -105,13 +105,18 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
   delete[] buffer;
 }
 
-void TestDoubleEndedContainer(size_t capacity) {
-  char *st_beg = new char[capacity];
+void TestDoubleEndedContainer(size_t capacity, size_t off_begin,
+                              bool poison_buffer) {
+  size_t buffer_size = capacity + off_begin + kGranularity * 2;
+  char *buffer = new char[buffer_size];
+  if (poison_buffer)
+    __asan_poison_memory_region(buffer, buffer_size);
+  char *st_beg = buffer + off_begin;
   char *st_end = st_beg + capacity;
   char *beg = st_beg;
-  char *end = st_beg + capacity;
+  char *end = poison_buffer ? st_beg : st_end;
 
-  for (int i = 0; i < 10000; i++) {
+  for (int i = 0; i < 1000; i++) {
     size_t size = rand() % (capacity + 1);
     size_t skipped = rand() % (capacity - size + 1);
     assert(size <= capacity);
@@ -122,19 +127,103 @@ void TestDoubleEndedContainer(size_t capacity) {
 
     __sanitizer_annotate_double_ended_contiguous_container(
         st_beg, st_end, old_beg, old_end, beg, end);
-    for (size_t idx = 0; idx < RoundDown(skipped); idx++)
-      assert(__asan_address_is_poisoned(st_beg + idx));
-    for (size_t idx = 0; idx < size; idx++)
-      assert(!__asan_address_is_poisoned(st_beg + skipped + idx));
-    for (size_t idx = skipped + size; idx < capacity; idx++)
-      assert(__asan_address_is_poisoned(st_beg + idx));
 
-    assert(__sanitizer_verify_double_ended_contiguous_container(st_beg, beg,
-                                                                end, st_end));
+    char *cur = buffer;
+    for (; cur < RoundDown(st_beg); ++cur)
+      assert(__asan_address_is_poisoned(cur) == poison_buffer);
+    // The prefix of the first incomplete granule can switch from poisoned to
+    // unpoisoned but not otherwise.
+    for (; cur < st_beg; ++cur)
+      assert(poison_buffer || !__asan_address_is_poisoned(cur));
+    if (beg != end) {
+      for (; cur < RoundDown(beg); ++cur)
+        assert(__asan_address_is_poisoned(cur));
+
+      for (; cur < end; ++cur)
+        assert(!__asan_address_is_poisoned(cur));
+    }
+    for (; cur < RoundDown(st_end); ++cur)
+      assert(__asan_address_is_poisoned(cur));
+    // The suffix of the last incomplete granule must be poisoned the same as
+    // bytes after the end.
+    for (; cur != st_end + kGranularity; ++cur)
+      assert(__asan_address_is_poisoned(cur) == poison_buffer);
   }
 
-  __asan_unpoison_memory_region(st_beg, st_end - st_beg);
-  delete[] st_beg;
+  // Precalculate masks.
+  std::vector<std::vector<std::vector<bool>>> masks(
+      capacity + 1, std::vector<std::vector<bool>>(capacity + 1));
+  for (int i = 0; i <= capacity; i++) {
+    for (int j = i; j <= capacity; j++) {
+      char *old_beg = beg;
+      char *old_end = end;
+      beg = st_beg + i;
+      end = st_beg + j;
+      __sanitizer_annotate_double_ended_contiguous_container(
+          st_beg, st_end, old_beg, old_end, beg, end);
+      masks[i][j] = GetPoisonedMask(st_beg, st_end);
+    }
+  }
+
+  for (int i = 0; i <= capacity; i++) {
+    for (int j = i; j <= capacity; j++) {
+      char *old_beg = beg;
+      char *old_end = end;
+      beg = st_beg + i;
+      end = st_beg + j;
+      __sanitizer_annotate_double_ended_contiguous_container(
+          st_beg, st_end, old_beg, old_end, beg, end);
+
+      // Try to missmatch the end of the container.
+      char *cur_first = std::max(end - 2 * kGranularity, beg);
+      char *cur_last = std::min(end + 2 * kGranularity, st_end);
+      for (char *cur = cur_first; cur <= cur_last; ++cur) {
+        bool is_valid = __sanitizer_verify_double_ended_contiguous_container(
+            st_beg, beg, cur, st_end);
+        const void *bad_address =
+            __sanitizer_double_ended_contiguous_container_find_bad_address(
+                st_beg, beg, cur, st_end);
+
+        if (cur == end) {
+          assert(is_valid);
+          assert(!bad_address);
+          continue;
+        }
+
+        assert(!is_valid);
+        assert(bad_address);
+        assert(bad_address ==
+               st_beg + GetFirstMissmatch(masks[i][j], masks[i][cur - st_beg]));
+      }
+
+      // Try to missmatch the begin of the container.
+      cur_first = std::max(beg - 2 * kGranularity, st_beg);
+      cur_last = std::min(beg + 2 * kGranularity, end);
+      for (char *cur = cur_first; cur <= cur_last; ++cur) {
+        bool is_valid = __sanitizer_verify_double_ended_contiguous_container(
+            st_beg, cur, end, st_end);
+        const void *bad_address =
+            __sanitizer_double_ended_contiguous_container_find_bad_address(
+                st_beg, cur, end, st_end);
+
+        if (cur == beg ||
+            // The first unaligned granule of non-empty container looks the
+            // same.
+            (std::max(beg, cur) < end && RoundDown(beg) == RoundDown(cur))) {
+          assert(is_valid);
+          assert(!bad_address);
+          continue;
+        }
+        assert(!is_valid);
+        assert(bad_address);
+        assert(bad_address ==
+               st_beg + GetFirstMissmatch(masks[i][j], masks[cur - st_beg][j]));
+      }
+    }
+  }
+
+  __asan_unpoison_memory_region(buffer, buffer_size);
+  delete[] buffer;
 }
 
 __attribute__((noinline)) void Throw() { throw 1; }
@@ -165,9 +254,9 @@ int main(int argc, char **argv) {
     for (int j = 0; j < kGranularity * 2; j++) {
       for (int poison = 0; poison < 2; ++poison) {
         TestContainer(i, j, poison);
+        TestDoubleEndedContainer(i, 0, true);
       }
     }
-    TestDoubleEndedContainer(i);
   }
   TestThrow();
 }
