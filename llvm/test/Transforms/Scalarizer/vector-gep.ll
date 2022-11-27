@@ -58,26 +58,51 @@ bb:
 ; Check that the scalarizer can handle vector GEPs with scalar pointer
 
 ; constant pointer
-define void @test3() {
+define <4 x i16*> @test3_constexpr() {
 bb:
-  %0 = bitcast [4 x i16]* @ptr to i16*
-  %1 = getelementptr i16, i16* %0, <4 x i16> <i16 0, i16 1, i16 2, i16 3>
-
-  ret void
+  ret <4 x i16*> getelementptr (i16, i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ptr, i64 0, i64 0), <4 x i64> <i64 0, i64 1, i64 2, i64 3>)
 }
 
-;CHECK-LABEL: @test3
-;CHECK: %0 = bitcast [4 x i16]* @ptr to i16*
-;CHECK: %.splatinsert = insertelement <4 x i16*> poison, i16* %0, i32 0
-;CHECK: %.splat = shufflevector <4 x i16*> %.splatinsert, <4 x i16*> poison, <4 x i32> zeroinitializer
-;CHECK: %.splat[[I0:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 0
-;CHECK: getelementptr i16, i16* %.splat[[I0]], i16 0
-;CHECK: %.splat[[I1:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 1
-;CHECK: getelementptr i16, i16* %.splat[[I1]], i16 1
-;CHECK: %.splat[[I2:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 2
-;CHECK: getelementptr i16, i16* %.splat[[I2]], i16 2
-;CHECK: %.splat[[I3:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 3
-;CHECK: getelementptr i16, i16* %.splat[[I3]], i16 3
+; CHECK-LABEL: @test3_constexpr
+; CHECK: ret <4 x i16*> getelementptr (i16, i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ptr, i64 0, i64 0), <4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+
+
+define <4 x i16*> @test3_constbase(i16 %idx) {
+bb:
+  %offset = getelementptr [4 x i16], [4 x i16]* @ptr, i16 0, i16 %idx
+  %gep = getelementptr i16, i16* %offset, <4 x i16> <i16 0, i16 1, i16 2, i16 3>
+  ret <4 x i16*> %gep
+}
+
+; CHECK-LABEL: @test3_constbase(
+; CHECK: %offset = getelementptr [4 x i16], [4 x i16]* @ptr, i16 0, i16 %idx
+; CHECK: %.splatinsert = insertelement <4 x i16*> poison, i16* %offset, i32 0
+; CHECK: %.splat = shufflevector <4 x i16*> %.splatinsert, <4 x i16*> poison, <4 x i32> zeroinitializer
+; CHECK: %.splat[[I0:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 0
+; CHECK: getelementptr i16, i16* %.splat[[I0]], i16 0
+; CHECK: %.splat[[I1:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 1
+; CHECK: getelementptr i16, i16* %.splat[[I1]], i16 1
+; CHECK: %.splat[[I2:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 2
+; CHECK: getelementptr i16, i16* %.splat[[I2]], i16 2
+; CHECK: %.splat[[I3:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 3
+; CHECK: getelementptr i16, i16* %.splat[[I3]], i16 3
+
+; Constant pointer with a variable vector offset
+define <4 x i16*> @test3_varoffset(<4 x i16> %offset) {
+bb:
+  %gep = getelementptr i16, i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ptr, i64 0, i64 0), <4 x i16> %offset
+  ret <4 x i16*> %gep
+}
+
+; CHECK-LABEL: @test3_varoffset
+; CHECK: %offset.i0 = extractelement <4 x i16> %offset, i32 0
+; CHECK: %gep.i0 = getelementptr i16, i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ptr, i64 0, i64 0), i16 %offset.i0
+; CHECK: %offset.i1 = extractelement <4 x i16> %offset, i32 1
+; CHECK: %gep.i1 = getelementptr i16, i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ptr, i64 0, i64 0), i16 %offset.i1
+; CHECK: %offset.i2 = extractelement <4 x i16> %offset, i32 2
+; CHECK: %gep.i2 = getelementptr i16, i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ptr, i64 0, i64 0), i16 %offset.i2
+; CHECK: %offset.i3 = extractelement <4 x i16> %offset, i32 3
+; CHECK: %gep.i3 = getelementptr i16, i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ptr, i64 0, i64 0), i16 %offset.i3
 
 ; non-constant pointer
 define void @test4() {
