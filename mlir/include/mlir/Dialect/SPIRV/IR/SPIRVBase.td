@@ -267,7 +267,7 @@ def SPIRV_DT_IntegratedGPU : I32EnumAttrCase<"IntegratedGPU", 2>;
 // An accelerator other than GPU or CPU
 def SPIRV_DT_Other         : I32EnumAttrCase<"Other", 3>;
 // Information missing.
-def SPIRV_DT_Unknown       : I32EnumAttrCase<"Unknown", 4>;
+def SPIRV_DT_Unknown       : I32EnumAttrCase<"Unknown", 0xffffffff>;
 
 def SPIRV_DeviceTypeAttr : SPIRV_I32EnumAttr<
   "DeviceType", "valid SPIR-V device types", "device_type", [
@@ -283,13 +283,25 @@ def SPIRV_V_Intel       : I32EnumAttrCase<"Intel", 4>;
 def SPIRV_V_NVIDIA      : I32EnumAttrCase<"NVIDIA", 5>;
 def SPIRV_V_Qualcomm    : I32EnumAttrCase<"Qualcomm", 6>;
 def SPIRV_V_SwiftShader : I32EnumAttrCase<"SwiftShader", 7>;
-def SPIRV_V_Unknown     : I32EnumAttrCase<"Unknown", 0xff>;
+def SPIRV_V_Unknown     : I32EnumAttrCase<"Unknown", 0xffffffff>;
 
 def SPIRV_VendorAttr : SPIRV_I32EnumAttr<
   "Vendor", "recognized SPIR-V vendor strings", "vendor", [
     SPIRV_V_AMD, SPIRV_V_Apple, SPIRV_V_ARM, SPIRV_V_Imagination,
     SPIRV_V_Intel, SPIRV_V_NVIDIA, SPIRV_V_Qualcomm, SPIRV_V_SwiftShader,
     SPIRV_V_Unknown
+  ]>;
+
+def SPIRV_CA_Metal   : I32EnumAttrCase<"Metal", 0>;
+def SPIRV_CA_OpenCL  : I32EnumAttrCase<"OpenCL", 1>;
+def SPIRV_CA_Vulkan  : I32EnumAttrCase<"Vulkan", 2>;
+def SPIRV_CA_WebGPU  : I32EnumAttrCase<"WebGPU", 3>;
+def SPIRV_CA_Unknown : I32EnumAttrCase<"Unknown", 0xffffffff>;
+
+def SPIRV_ClientAPIAttr : SPIRV_I32EnumAttr<
+  "ClientAPI", "recognized SPIR-V client APIs", "client_api", [
+    SPIRV_CA_Metal, SPIRV_CA_OpenCL, SPIRV_CA_Vulkan, SPIRV_CA_WebGPU,
+    SPIRV_CA_Unknown
   ]>;
 
 //===----------------------------------------------------------------------===//

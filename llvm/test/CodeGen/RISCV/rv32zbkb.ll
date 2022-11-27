@@ -149,8 +149,8 @@ define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: packh_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    andi a0, a0, 255
-; RV32I-NEXT:    slli a1, a2, 24
-; RV32I-NEXT:    srli a1, a1, 16
+; RV32I-NEXT:    slli a2, a2, 24
+; RV32I-NEXT:    srli a1, a2, 16
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret

@@ -26,6 +26,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <sstream>
 
 using namespace llvm;
@@ -507,7 +508,7 @@ bool AArch64LowerHomogeneousPE::lowerProlog(
   DebugLoc DL = MI.getDebugLoc();
   SmallVector<unsigned, 8> Regs;
   int LRIdx = 0;
-  Optional<int> FpOffset;
+  std::optional<int> FpOffset;
   for (auto &MO : MI.operands()) {
     if (MO.isReg()) {
       if (MO.getReg() == AArch64::LR)

@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include <optional>
 
 #define DEBUG_TYPE "amdgpu-isel"
 
@@ -4234,7 +4235,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
 
   // Try to fold a frame index directly into the MUBUF vaddr field, and any
   // offsets.
-  Optional<int> FI;
+  std::optional<int> FI;
   Register VAddr = Root.getReg();
   if (const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg())) {
     Register PtrBase;

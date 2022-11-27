@@ -25,6 +25,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -691,7 +692,8 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
     // to SDWA preserve dst:v4 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE preserve:v3
 
     // Check if one of operands of v_or_b32 is SDWA instruction
-    using CheckRetType = Optional<std::pair<MachineOperand *, MachineOperand *>>;
+    using CheckRetType =
+        std::optional<std::pair<MachineOperand *, MachineOperand *>>;
     auto CheckOROperandsForSDWA =
       [&](const MachineOperand *Op1, const MachineOperand *Op2) -> CheckRetType {
         if (!Op1 || !Op1->isReg() || !Op2 || !Op2->isReg())

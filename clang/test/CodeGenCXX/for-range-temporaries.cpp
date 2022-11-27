@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR %s | opt -passes=instnamer -S | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR %s | opt -passes=instnamer -S | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR -DTEMPLATE %s | opt -passes=instnamer -S | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR -DTEMPLATE %s | opt -passes=instnamer -S | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR -DTEMPLATE -DDEPENDENT %s | opt -passes=instnamer -S | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR -DTEMPLATE -DDEPENDENT %s | opt -passes=instnamer -S | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR -DTEMPLATE %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR -DTEMPLATE %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -UDESUGAR -DTEMPLATE -DDEPENDENT %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - -DDESUGAR -DTEMPLATE -DDEPENDENT %s | FileCheck %s
 
 struct A {
   A();

@@ -55,6 +55,7 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -938,7 +939,7 @@ public:
   /// a shifted immediate by value 'Shift' or '0', or if it is an unshifted
   /// immediate that can be shifted by 'Shift'.
   template <unsigned Width>
-  Optional<std::pair<int64_t, unsigned> > getShiftedVal() const {
+  std::optional<std::pair<int64_t, unsigned>> getShiftedVal() const {
     if (isShiftedImm() && Width == getShiftedImmShift())
       if (auto *CE = dyn_cast<MCConstantExpr>(getShiftedImmVal()))
         return std::make_pair(CE->getValue(), Width);
@@ -7546,6 +7547,15 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     break;
   case MCK__HASH_8:
     ExpectedVal = 8;
+    break;
+  case MCK__HASH__MINUS_4:
+    ExpectedVal = -4;
+    break;
+  case MCK__HASH__MINUS_8:
+    ExpectedVal = -8;
+    break;
+  case MCK__HASH__MINUS_16:
+    ExpectedVal = -16;
     break;
   case MCK_MPR:
     // If the Kind is a token for the MPR register class which has the "za"

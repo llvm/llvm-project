@@ -117,9 +117,6 @@ KMP_PREFIX_UNDERSCORE(\proc):
 .macro ALIGN
 	.align $0
 .endmacro
-.macro COMMON name, size, align_power
-	.comm \name, \size
-.endm
 
 .macro DEBUG_INFO
 /* Not sure what .size does in icc, not sure if we need to do something
@@ -140,9 +137,6 @@ KMP_PREFIX_UNDERSCORE($0):
 .macro ALIGN size
 	.align 1<<(\size)
 .endm
-.macro COMMON name, size, align_power
-	.comm \name, \size, \align_power
-.endm
 
 .macro DEBUG_INFO proc
 	ALIGN 2
@@ -160,9 +154,6 @@ KMP_PREFIX_UNDERSCORE(\proc):
 
 .macro ALIGN size
 	.align 1<<(\size)
-.endm
-.macro COMMON name, size, align_power
-	.comm \name, \size, (1<<(\align_power))
 .endm
 
 .macro DEBUG_INFO proc
@@ -182,6 +173,16 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif // KMP_OS_DARWIN
 
 #endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64
+
+.macro COMMON name, size, align_power
+#if KMP_OS_DARWIN
+	.comm \name, \size
+#elif KMP_OS_WINDOWS
+	.comm \name, \size, \align_power
+#else // !KMP_OS_DARWIN && !KMP_OS_WINDOWS
+	.comm \name, \size, (1<<(\align_power))
+#endif
+.endm
 
 // -----------------------------------------------------------------------
 // data

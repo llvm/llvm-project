@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "NVPTXtti"
@@ -139,10 +140,10 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
   // represents how to replace an NVVM intrinsic with target-generic LLVM IR.
   struct SimplifyAction {
     // Invariant: At most one of these Optionals has a value.
-    Optional<Intrinsic::ID> IID;
-    Optional<Instruction::CastOps> CastOp;
-    Optional<Instruction::BinaryOps> BinaryOp;
-    Optional<SpecialCase> Special;
+    std::optional<Intrinsic::ID> IID;
+    std::optional<Instruction::CastOps> CastOp;
+    std::optional<Instruction::BinaryOps> BinaryOp;
+    std::optional<SpecialCase> Special;
 
     FtzRequirementTy FtzRequirement = FTZ_Any;
     // Denormal handling is guarded by different attributes depending on the

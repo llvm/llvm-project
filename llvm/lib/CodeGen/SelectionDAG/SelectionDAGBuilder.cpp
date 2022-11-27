@@ -9147,7 +9147,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
 
         SDValue AsmOp = InOperandVal;
         if (isFunction(InOperandVal)) {
-          auto *GA = dyn_cast<GlobalAddressSDNode>(InOperandVal);
+          auto *GA = cast<GlobalAddressSDNode>(InOperandVal);
           ResOpType = InlineAsm::getFlagWord(InlineAsm::Kind_Func, 1);
           AsmOp = DAG.getTargetGlobalAddress(GA->getGlobal(), getCurSDLoc(),
                                              InOperandVal.getValueType(),

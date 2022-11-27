@@ -832,7 +832,7 @@ static inline kmp_cmplx128_a16_t operator/(kmp_cmplx128_a16_t &lhs,
 // end of the first part of the workaround for C78287
 #endif // USE_CMPXCHG_FIX
 
-#if KMP_OS_WINDOWS && KMP_ARCH_AARCH64
+#if KMP_OS_WINDOWS && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM)
 // Undo explicit type casts to get MSVC ARM64 to build. Uses
 // OP_CMPXCHG_WORKAROUND definition for OP_CMPXCHG
 #undef OP_CMPXCHG
@@ -863,7 +863,7 @@ static inline kmp_cmplx128_a16_t operator/(kmp_cmplx128_a16_t &lhs,
   (*lhs) = (*lhs)OP rhs;                                                       \
   __kmp_release_atomic_lock(&ATOMIC_LOCK##LCK_ID, gtid);
 
-#endif // KMP_OS_WINDOWS && KMP_ARCH_AARCH64
+#endif // KMP_OS_WINDOWS && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM)
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
 
