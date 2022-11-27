@@ -49,11 +49,11 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
     __sanitizer_annotate_contiguous_container(st_beg, st_end, old_end, end);
 
     char *cur = buffer;
-    for (; cur < buffer + RoundDown(off_begin); ++cur)
+    for (; cur < RoundDown(st_beg); ++cur)
       assert(__asan_address_is_poisoned(cur) == poison_buffer);
     // The prefix of the first incomplete granule can switch from poisoned to
     // unpoisoned but not otherwise.
-    for (; cur < buffer + off_begin; ++cur)
+    for (; cur < st_beg; ++cur)
       assert(poison_buffer || !__asan_address_is_poisoned(cur));
     for (; cur < end; ++cur)
       assert(!__asan_address_is_poisoned(cur));
