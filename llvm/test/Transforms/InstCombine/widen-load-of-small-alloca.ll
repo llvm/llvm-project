@@ -12,10 +12,9 @@ define void @load-1byte-chunk-of-1byte-alloca(ptr %src, i64 %byteOff, ptr %escap
 ; CHECK-ALL-NEXT:    call void @use.v1i8(<1 x i8> [[INIT]])
 ; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
 ; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-ALL-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <1 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-ALL-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <1 x i8> [[INTERMEDIATE_VAL]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <1 x i8>, ptr [[INTERMEDIATE]], align 64
 ; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-ALL-NEXT:    call void @use.v1i8(<1 x i8> [[INTERMEDIATE_VAL_FROZEN]])
+; CHECK-ALL-NEXT:    call void @use.v1i8(<1 x i8> [[CHUNK]])
 ; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [1 x i8], align 64
@@ -33,83 +32,17 @@ define void @load-1byte-chunk-of-1byte-alloca(ptr %src, i64 %byteOff, ptr %escap
 }
 
 define void @load-1byte-chunk-of-2byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-1byte-chunk-of-2byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [2 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <2 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <2 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v2i8(<2 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i16
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i16 [[BYTEOFF_TR]], 3
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <2 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <2 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i16
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i16 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i8
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]], i64 0
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-LE-32-LABEL: @load-1byte-chunk-of-2byte-alloca(
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [2 x i8], align 64
-; CHECK-LE-32-NEXT:    [[INIT:%.*]] = load <2 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-32-NEXT:    store <2 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    call void @use.v2i8(<2 x i8> [[INIT]])
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-32-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i16
-; CHECK-LE-32-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i16 [[BYTEOFF_TR]], 3
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <2 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <2 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i16
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i16 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i8
-; CHECK-LE-32-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]], i64 0
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-32-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-LE-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-1byte-chunk-of-2byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [2 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <2 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <2 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v2i8(<2 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i16
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i16 [[BYTEOFF_TR]], 3
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <2 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <2 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i16
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i16 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 8
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i8
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]], i64 0
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
-;
-; CHECK-BE-32-LABEL: @load-1byte-chunk-of-2byte-alloca(
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [2 x i8], align 64
-; CHECK-BE-32-NEXT:    [[INIT:%.*]] = load <2 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-32-NEXT:    store <2 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    call void @use.v2i8(<2 x i8> [[INIT]])
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-32-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i16
-; CHECK-BE-32-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i16 [[BYTEOFF_TR]], 3
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <2 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <2 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i16
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i16 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 8
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i8
-; CHECK-BE-32-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]], i64 0
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-32-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-BE-32-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-1byte-chunk-of-2byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [2 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <2 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <2 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v2i8(<2 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <1 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v1i8(<1 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [2 x i8], align 64
   %init = load <2 x i8>, ptr %src, align 1
@@ -126,77 +59,17 @@ define void @load-1byte-chunk-of-2byte-alloca(ptr %src, i64 %byteOff, ptr %escap
 }
 
 define void @load-2byte-chunk-of-2byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-2byte-chunk-of-2byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [2 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <2 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <2 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v2i8(<2 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i16
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i16 [[BYTEOFF_TR]], 3
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <2 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <2 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i16
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i16 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <2 x i8>
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-LE-32-LABEL: @load-2byte-chunk-of-2byte-alloca(
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [2 x i8], align 64
-; CHECK-LE-32-NEXT:    [[INIT:%.*]] = load <2 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-32-NEXT:    store <2 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    call void @use.v2i8(<2 x i8> [[INIT]])
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-32-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i16
-; CHECK-LE-32-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i16 [[BYTEOFF_TR]], 3
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <2 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <2 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i16
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i16 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-32-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <2 x i8>
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-32-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-LE-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-2byte-chunk-of-2byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [2 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <2 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <2 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v2i8(<2 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i16
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i16 [[BYTEOFF_TR]], 3
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <2 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <2 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i16
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i16 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <2 x i8>
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
-;
-; CHECK-BE-32-LABEL: @load-2byte-chunk-of-2byte-alloca(
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [2 x i8], align 64
-; CHECK-BE-32-NEXT:    [[INIT:%.*]] = load <2 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-32-NEXT:    store <2 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    call void @use.v2i8(<2 x i8> [[INIT]])
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-32-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i16
-; CHECK-BE-32-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i16 [[BYTEOFF_TR]], 3
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <2 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <2 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i16
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i16 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-32-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <2 x i8>
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-32-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-BE-32-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-2byte-chunk-of-2byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [2 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <2 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <2 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v2i8(<2 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v2i8(<2 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [2 x i8], align 64
   %init = load <2 x i8>, ptr %src, align 1
@@ -213,83 +86,17 @@ define void @load-2byte-chunk-of-2byte-alloca(ptr %src, i64 %byteOff, ptr %escap
 }
 
 define void @load-1byte-chunk-of-4byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-1byte-chunk-of-4byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i8
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]], i64 0
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-LE-32-LABEL: @load-1byte-chunk-of-4byte-alloca(
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-LE-32-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-32-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-32-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-LE-32-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i8
-; CHECK-LE-32-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]], i64 0
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-32-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-LE-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-1byte-chunk-of-4byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 24
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i8
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]], i64 0
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
-;
-; CHECK-BE-32-LABEL: @load-1byte-chunk-of-4byte-alloca(
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-BE-32-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-32-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-32-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-BE-32-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 24
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i8
-; CHECK-BE-32-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]], i64 0
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-32-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-BE-32-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-1byte-chunk-of-4byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <1 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v1i8(<1 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [4 x i8], align 64
   %init = load <4 x i8>, ptr %src, align 1
@@ -306,83 +113,17 @@ define void @load-1byte-chunk-of-4byte-alloca(ptr %src, i64 %byteOff, ptr %escap
 }
 
 define void @load-2byte-chunk-of-4byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-2byte-chunk-of-4byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i16
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]] to <2 x i8>
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-LE-32-LABEL: @load-2byte-chunk-of-4byte-alloca(
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-LE-32-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-32-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-32-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-LE-32-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i16
-; CHECK-LE-32-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]] to <2 x i8>
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-32-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-LE-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-2byte-chunk-of-4byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 16
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i16
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]] to <2 x i8>
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
-;
-; CHECK-BE-32-LABEL: @load-2byte-chunk-of-4byte-alloca(
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-BE-32-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-32-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-32-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-BE-32-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 16
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i16
-; CHECK-BE-32-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]] to <2 x i8>
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-32-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-BE-32-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-2byte-chunk-of-4byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v2i8(<2 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [4 x i8], align 64
   %init = load <4 x i8>, ptr %src, align 1
@@ -399,77 +140,17 @@ define void @load-2byte-chunk-of-4byte-alloca(ptr %src, i64 %byteOff, ptr %escap
 }
 
 define void @load-4byte-chunk-of-4byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-4byte-chunk-of-4byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <4 x i8>
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v4i8(<4 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-LE-32-LABEL: @load-4byte-chunk-of-4byte-alloca(
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-LE-32-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-32-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-32-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-LE-32-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <4 x i8>
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-32-NEXT:    call void @use.v4i8(<4 x i8> [[TMP1]])
-; CHECK-LE-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-4byte-chunk-of-4byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <4 x i8>
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v4i8(<4 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
-;
-; CHECK-BE-32-LABEL: @load-4byte-chunk-of-4byte-alloca(
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
-; CHECK-BE-32-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-32-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-32-NEXT:    [[BYTEOFF_TR:%.*]] = trunc i64 [[BYTEOFF]] to i32
-; CHECK-BE-32-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = shl i32 [[BYTEOFF_TR]], 3
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <4 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <4 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i32
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i32 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <4 x i8>
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-32-NEXT:    call void @use.v4i8(<4 x i8> [[TMP1]])
-; CHECK-BE-32-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-4byte-chunk-of-4byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [4 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <4 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v4i8(<4 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v4i8(<4 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [4 x i8], align 64
   %init = load <4 x i8>, ptr %src, align 1
@@ -486,79 +167,17 @@ define void @load-4byte-chunk-of-4byte-alloca(ptr %src, i64 %byteOff, ptr %escap
 }
 
 define void @load-1byte-chunk-of-8byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-1byte-chunk-of-8byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i8
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]], i64 0
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-LE-32-LABEL: @load-1byte-chunk-of-8byte-alloca(
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-LE-32-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-32-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-32-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i8
-; CHECK-LE-32-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]], i64 0
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-32-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-LE-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-1byte-chunk-of-8byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 56
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i8
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]], i64 0
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
-;
-; CHECK-BE-32-LABEL: @load-1byte-chunk-of-8byte-alloca(
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-BE-32-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-32-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-32-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 56
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i8
-; CHECK-BE-32-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]], i64 0
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-32-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-BE-32-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-1byte-chunk-of-8byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <1 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v1i8(<1 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [8 x i8], align 64
   %init = load <8 x i8>, ptr %src, align 1
@@ -575,79 +194,17 @@ define void @load-1byte-chunk-of-8byte-alloca(ptr %src, i64 %byteOff, ptr %escap
 }
 
 define void @load-2byte-chunk-of-8byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-2byte-chunk-of-8byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i16
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]] to <2 x i8>
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-LE-32-LABEL: @load-2byte-chunk-of-8byte-alloca(
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-LE-32-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-32-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-32-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i16
-; CHECK-LE-32-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]] to <2 x i8>
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-32-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-LE-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-2byte-chunk-of-8byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 48
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i16
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]] to <2 x i8>
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
-;
-; CHECK-BE-32-LABEL: @load-2byte-chunk-of-8byte-alloca(
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-BE-32-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-32-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-32-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 48
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i16
-; CHECK-BE-32-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]] to <2 x i8>
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-32-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-BE-32-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-2byte-chunk-of-8byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v2i8(<2 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [8 x i8], align 64
   %init = load <8 x i8>, ptr %src, align 1
@@ -664,79 +221,17 @@ define void @load-2byte-chunk-of-8byte-alloca(ptr %src, i64 %byteOff, ptr %escap
 }
 
 define void @load-4byte-chunk-of-8byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-4byte-chunk-of-8byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i32
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]] to <4 x i8>
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v4i8(<4 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-LE-32-LABEL: @load-4byte-chunk-of-8byte-alloca(
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-LE-32-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-32-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-32-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i32
-; CHECK-LE-32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]] to <4 x i8>
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-32-NEXT:    call void @use.v4i8(<4 x i8> [[TMP1]])
-; CHECK-LE-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-4byte-chunk-of-8byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 32
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i32
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]] to <4 x i8>
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v4i8(<4 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
-;
-; CHECK-BE-32-LABEL: @load-4byte-chunk-of-8byte-alloca(
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-BE-32-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-32-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-32-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 32
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i32
-; CHECK-BE-32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]] to <4 x i8>
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-32-NEXT:    call void @use.v4i8(<4 x i8> [[TMP1]])
-; CHECK-BE-32-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-4byte-chunk-of-8byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v4i8(<4 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [8 x i8], align 64
   %init = load <8 x i8>, ptr %src, align 1
@@ -753,73 +248,17 @@ define void @load-4byte-chunk-of-8byte-alloca(ptr %src, i64 %byteOff, ptr %escap
 }
 
 define void @load-8byte-chunk-of-8byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-8byte-chunk-of-8byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <8 x i8>
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v8i8(<8 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-LE-32-LABEL: @load-8byte-chunk-of-8byte-alloca(
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-LE-32-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-32-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-32-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-LE-32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <8 x i8>
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-32-NEXT:    call void @use.v8i8(<8 x i8> [[TMP1]])
-; CHECK-LE-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-8byte-chunk-of-8byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <8 x i8>
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v8i8(<8 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
-;
-; CHECK-BE-32-LABEL: @load-8byte-chunk-of-8byte-alloca(
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-BE-32-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-32-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-32-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-BE-32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <8 x i8>
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-32-NEXT:    call void @use.v8i8(<8 x i8> [[TMP1]])
-; CHECK-BE-32-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-8byte-chunk-of-8byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v8i8(<8 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [8 x i8], align 64
   %init = load <8 x i8>, ptr %src, align 1
@@ -836,56 +275,17 @@ define void @load-8byte-chunk-of-8byte-alloca(ptr %src, i64 %byteOff, ptr %escap
 }
 
 define void @load-1byte-chunk-of-16byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-1byte-chunk-of-16byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = zext i64 [[BYTEOFF_NUMBITS]] to i128
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <16 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <16 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i128
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i128 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i8
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]], i64 0
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-SCALAR-32-LABEL: @load-1byte-chunk-of-16byte-alloca(
-; CHECK-SCALAR-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-SCALAR-32-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-SCALAR-32-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-SCALAR-32-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-SCALAR-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-SCALAR-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-SCALAR-32-NEXT:    [[CHUNK:%.*]] = load <1 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
-; CHECK-SCALAR-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-SCALAR-32-NEXT:    call void @use.v1i8(<1 x i8> [[CHUNK]])
-; CHECK-SCALAR-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-1byte-chunk-of-16byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = zext i64 [[BYTEOFF_NUMBITS]] to i128
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <16 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <16 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i128
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i128 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 120
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i8
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = insertelement <1 x i8> poison, i8 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]], i64 0
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v1i8(<1 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-1byte-chunk-of-16byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <1 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v1i8(<1 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [16 x i8], align 64
   %init = load <16 x i8>, ptr %src, align 1
@@ -902,56 +302,17 @@ define void @load-1byte-chunk-of-16byte-alloca(ptr %src, i64 %byteOff, ptr %esca
 }
 
 define void @load-2byte-chunk-of-16byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-2byte-chunk-of-16byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = zext i64 [[BYTEOFF_NUMBITS]] to i128
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <16 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <16 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i128
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i128 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i16
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]] to <2 x i8>
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-SCALAR-32-LABEL: @load-2byte-chunk-of-16byte-alloca(
-; CHECK-SCALAR-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-SCALAR-32-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-SCALAR-32-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-SCALAR-32-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-SCALAR-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-SCALAR-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-SCALAR-32-NEXT:    [[CHUNK:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
-; CHECK-SCALAR-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-SCALAR-32-NEXT:    call void @use.v2i8(<2 x i8> [[CHUNK]])
-; CHECK-SCALAR-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-2byte-chunk-of-16byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = zext i64 [[BYTEOFF_NUMBITS]] to i128
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <16 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <16 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i128
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i128 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 112
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i16
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]] to <2 x i8>
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-2byte-chunk-of-16byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v2i8(<2 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [16 x i8], align 64
   %init = load <16 x i8>, ptr %src, align 1
@@ -968,56 +329,17 @@ define void @load-2byte-chunk-of-16byte-alloca(ptr %src, i64 %byteOff, ptr %esca
 }
 
 define void @load-4byte-chunk-of-16byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-4byte-chunk-of-16byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = zext i64 [[BYTEOFF_NUMBITS]] to i128
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <16 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <16 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i128
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i128 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i32
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]] to <4 x i8>
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v4i8(<4 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-SCALAR-32-LABEL: @load-4byte-chunk-of-16byte-alloca(
-; CHECK-SCALAR-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-SCALAR-32-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-SCALAR-32-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-SCALAR-32-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-SCALAR-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-SCALAR-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-SCALAR-32-NEXT:    [[CHUNK:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
-; CHECK-SCALAR-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-SCALAR-32-NEXT:    call void @use.v4i8(<4 x i8> [[CHUNK]])
-; CHECK-SCALAR-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-4byte-chunk-of-16byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = zext i64 [[BYTEOFF_NUMBITS]] to i128
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <16 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <16 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i128
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i128 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 96
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i32
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]] to <4 x i8>
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v4i8(<4 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-4byte-chunk-of-16byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <4 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v4i8(<4 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [16 x i8], align 64
   %init = load <16 x i8>, ptr %src, align 1
@@ -1034,56 +356,17 @@ define void @load-4byte-chunk-of-16byte-alloca(ptr %src, i64 %byteOff, ptr %esca
 }
 
 define void @load-8byte-chunk-of-16byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-8byte-chunk-of-16byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = zext i64 [[BYTEOFF_NUMBITS]] to i128
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <16 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <16 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i128
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i128 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i64
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]] to <8 x i8>
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v8i8(<8 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-SCALAR-32-LABEL: @load-8byte-chunk-of-16byte-alloca(
-; CHECK-SCALAR-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-SCALAR-32-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-SCALAR-32-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-SCALAR-32-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-SCALAR-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-SCALAR-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-SCALAR-32-NEXT:    [[CHUNK:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
-; CHECK-SCALAR-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-SCALAR-32-NEXT:    call void @use.v8i8(<8 x i8> [[CHUNK]])
-; CHECK-SCALAR-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-8byte-chunk-of-16byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = zext i64 [[BYTEOFF_NUMBITS]] to i128
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <16 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <16 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i128
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i128 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i64
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]] to <8 x i8>
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v8i8(<8 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-8byte-chunk-of-16byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v8i8(<8 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [16 x i8], align 64
   %init = load <16 x i8>, ptr %src, align 1
@@ -1100,53 +383,17 @@ define void @load-8byte-chunk-of-16byte-alloca(ptr %src, i64 %byteOff, ptr %esca
 }
 
 define void @load-16byte-chunk-of-16byte-alloca(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-16byte-chunk-of-16byte-alloca(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = zext i64 [[BYTEOFF_NUMBITS]] to i128
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <16 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <16 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i128
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i128 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = bitcast i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <16 x i8>
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v16i8(<16 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-SCALAR-32-LABEL: @load-16byte-chunk-of-16byte-alloca(
-; CHECK-SCALAR-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-SCALAR-32-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-SCALAR-32-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-SCALAR-32-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-SCALAR-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-SCALAR-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-SCALAR-32-NEXT:    [[CHUNK:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
-; CHECK-SCALAR-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-SCALAR-32-NEXT:    call void @use.v16i8(<16 x i8> [[CHUNK]])
-; CHECK-SCALAR-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-16byte-chunk-of-16byte-alloca(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 3
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS_WIDE:%.*]] = zext i64 [[BYTEOFF_NUMBITS]] to i128
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <16 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <16 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i128
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i128 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS_WIDE]]
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = bitcast i128 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to <16 x i8>
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v16i8(<16 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-16byte-chunk-of-16byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v16i8(<16 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <16 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v16i8(<16 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [16 x i8], align 64
   %init = load <16 x i8>, ptr %src, align 1
@@ -1327,79 +574,17 @@ define void @load-32byte-chunk-of-32byte-alloca(ptr %src, i64 %byteOff, ptr %esc
 ;; Special test
 
 define void @load-2byte-chunk-of-8byte-alloca-with-2byte-step(ptr %src, i64 %byteOff, ptr %escape) {
-; CHECK-LE-64-LABEL: @load-2byte-chunk-of-8byte-alloca-with-2byte-step(
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-LE-64-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-64-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i16, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 4
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-LE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i16
-; CHECK-LE-64-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]] to <2 x i8>
-; CHECK-LE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-64-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-LE-64-NEXT:    ret void
-;
-; CHECK-LE-32-LABEL: @load-2byte-chunk-of-8byte-alloca-with-2byte-step(
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-LE-32-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-LE-32-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i16, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-LE-32-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 4
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-LE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]] to i16
-; CHECK-LE-32-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_EXTRACTED]] to <2 x i8>
-; CHECK-LE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-LE-32-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-LE-32-NEXT:    ret void
-;
-; CHECK-BE-64-LABEL: @load-2byte-chunk-of-8byte-alloca-with-2byte-step(
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-BE-64-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-64-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i16, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-64-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 4
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 48
-; CHECK-BE-64-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i16
-; CHECK-BE-64-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]] to <2 x i8>
-; CHECK-BE-64-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-64-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-BE-64-NEXT:    ret void
-;
-; CHECK-BE-32-LABEL: @load-2byte-chunk-of-8byte-alloca-with-2byte-step(
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
-; CHECK-BE-32-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-BE-32-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i16, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
-; CHECK-BE-32-NEXT:    [[BYTEOFF_NUMBITS:%.*]] = shl nuw nsw i64 [[BYTEOFF]], 4
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL:%.*]] = load <8 x i8>, ptr [[INTERMEDIATE]], align 64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN:%.*]] = freeze <8 x i8> [[INTERMEDIATE_VAL]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS:%.*]] = bitcast <8 x i8> [[INTERMEDIATE_VAL_FROZEN]] to i64
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED:%.*]] = shl i64 [[INTERMEDIATE_VAL_FROZEN_BITS]], [[BYTEOFF_NUMBITS]]
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART:%.*]] = lshr i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED]], 48
-; CHECK-BE-32-NEXT:    [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED:%.*]] = trunc i64 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART]] to i16
-; CHECK-BE-32-NEXT:    [[TMP1:%.*]] = bitcast i16 [[INTERMEDIATE_VAL_FROZEN_BITS_POSITIONED_PART_EXTRACTED]] to <2 x i8>
-; CHECK-BE-32-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
-; CHECK-BE-32-NEXT:    call void @use.v2i8(<2 x i8> [[TMP1]])
-; CHECK-BE-32-NEXT:    ret void
+; CHECK-ALL-LABEL: @load-2byte-chunk-of-8byte-alloca-with-2byte-step(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [8 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <8 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    call void @use.v8i8(<8 x i8> [[INIT]])
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE]])
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i16, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <2 x i8>, ptr [[INTERMEDIATE_OFF_ADDR]], align 2
+; CHECK-ALL-NEXT:    call void @use.ptr(ptr nonnull [[INTERMEDIATE_OFF_ADDR]])
+; CHECK-ALL-NEXT:    call void @use.v2i8(<2 x i8> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
 ;
   %intermediate = alloca [8 x i8], align 64
   %init = load <8 x i8>, ptr %src, align 1
