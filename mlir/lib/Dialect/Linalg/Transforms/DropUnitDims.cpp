@@ -242,7 +242,7 @@ struct UnitExtentReplacementInfo {
 /// - modified index map that can be used to access the replaced result/operand
 /// - the reassociation that converts from the original tensor type to the
 ///   modified tensor type.
-static llvm::Optional<UnitExtentReplacementInfo>
+static std::optional<UnitExtentReplacementInfo>
 replaceUnitExtents(GenericOp genericOp, OpOperand *opOperand,
                    MLIRContext *context) {
   AffineMap indexingMap = genericOp.getMatchingIndexingMap(opOperand);
