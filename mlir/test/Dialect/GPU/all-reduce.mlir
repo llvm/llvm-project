@@ -175,7 +175,7 @@ gpu.module @kernels {
     // CHECK:   cf.br ^bb42
     // CHECK: ^bb42:
     // CHECK:   gpu.barrier
-    %sum = gpu.all_reduce add %arg0 {} : (f32) -> (f32)
+    %sum = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
     gpu.return
   }
 
