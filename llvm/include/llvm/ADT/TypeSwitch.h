@@ -18,6 +18,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 
 namespace llvm {
 namespace detail {
@@ -145,7 +146,7 @@ public:
 private:
   /// The pointer to the result of this switch statement, once known,
   /// null before that.
-  Optional<ResultT> result;
+  std::optional<ResultT> result;
 };
 
 /// Specialization of TypeSwitch for void returning callables.
