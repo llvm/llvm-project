@@ -30,6 +30,7 @@
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/InstructionCost.h"
 #include <functional>
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -2640,7 +2641,7 @@ private:
 /// and is queried by passes.
 class TargetTransformInfoWrapperPass : public ImmutablePass {
   TargetIRAnalysis TIRA;
-  Optional<TargetTransformInfo> TTI;
+  std::optional<TargetTransformInfo> TTI;
 
   virtual void anchor();
 
