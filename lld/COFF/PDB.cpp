@@ -57,6 +57,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <memory>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -1788,8 +1789,8 @@ lld::coff::getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
   if (!findLineTable(c, addr, cvStrTab, checksums, lines, offsetInLinetable))
     return None;
 
-  Optional<uint32_t> nameIndex;
-  Optional<uint32_t> lineNumber;
+  std::optional<uint32_t> nameIndex;
+  std::optional<uint32_t> lineNumber;
   for (const LineColumnEntry &entry : lines) {
     for (const LineNumberEntry &ln : entry.LineNumbers) {
       LineInfo li(ln.Flags);
