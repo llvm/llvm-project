@@ -790,22 +790,30 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
         return true;
 
       if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-        const llvm::APInt &Size = CAT->getSize();
-        if (Size.isZero())
-          return true;
-
         using FAMKind = LangOptions::StrictFlexArraysLevelKind;
         const FAMKind StrictFlexArraysLevel =
           Ctx.getLangOpts().getStrictFlexArraysLevel();
-        if (StrictFlexArraysLevel == FAMKind::ZeroOrIncomplete ||
-            StrictFlexArraysLevel == FAMKind::IncompleteOnly)
-          return false;
-
         const AnalyzerOptions &Opts = SVB.getAnalyzerOptions();
-        // FIXME: this option is probably redundant with -fstrict-flex-arrays=1.
-        if (Opts.ShouldConsiderSingleElementArraysAsFlexibleArrayMembers &&
-            Size.isOne())
+        const llvm::APInt &Size = CAT->getSize();
+
+        if (StrictFlexArraysLevel <= FAMKind::ZeroOrIncomplete && Size.isZero())
           return true;
+
+        // The "-fstrict-flex-arrays" should have precedence over
+        // consider-single-element-arrays-as-flexible-array-members
+        // analyzer-config when checking single element arrays.
+        if (StrictFlexArraysLevel == FAMKind::Default) {
+          // FIXME: After clang-17 released, we should remove this branch.
+          if (Opts.ShouldConsiderSingleElementArraysAsFlexibleArrayMembers &&
+              Size.isOne())
+            return true;
+        } else {
+          // -fstrict-flex-arrays was specified, since it's not the default, so
+          // ignore analyzer-config.
+          if (StrictFlexArraysLevel <= FAMKind::OneZeroOrIncomplete &&
+              Size.isOne())
+            return true;
+        }
       }
       return false;
     };

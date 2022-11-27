@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <optional>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -346,7 +347,7 @@ RISCVGatherScatterLowering::determineBaseAndStride(GetElementPtrInst *GEP,
   if (Ops[0]->getType()->isVectorTy())
     return std::make_pair(nullptr, nullptr);
 
-  Optional<unsigned> VecOperand;
+  std::optional<unsigned> VecOperand;
   unsigned TypeScale = 0;
 
   // Look for a vector operand and scale.

@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include <optional>
 
 using namespace llvm;
 namespace {
@@ -55,7 +56,7 @@ public:
   bool hasOp1(unsigned Opc) const { return OpSet1.contains(Opc); }
   bool hasOp2(unsigned Opc) const { return OpSet2.contains(Opc); }
   bool isSupported() const { return Supported; }
-  Optional<unsigned> depOpIdx() const {
+  std::optional<unsigned> depOpIdx() const {
     if (DepOpIdx < 0)
       return None;
     return DepOpIdx;

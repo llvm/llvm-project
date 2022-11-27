@@ -337,8 +337,7 @@ struct TensorCastExtractSlice : public OpRewritePattern<CastOp> {
 
     SmallVector<OpFoldResult, 4> sizes = extractOperand.getMixedSizes();
     auto dimMask = computeRankReductionMask(
-        extractFromI64ArrayAttr(extractOperand.getStaticSizes()),
-        extractOperand.getType().getShape());
+        extractOperand.getStaticSizes(), extractOperand.getType().getShape());
     size_t dimIndex = 0;
     for (size_t i = 0, e = sizes.size(); i < e; i++) {
       if (dimMask && dimMask->count(i))
@@ -1713,8 +1712,9 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
             .cast<RankedTensorType>();
   }
   build(b, result, resultType, source, dynamicOffsets, dynamicSizes,
-        dynamicStrides, b.getI64ArrayAttr(staticOffsets),
-        b.getI64ArrayAttr(staticSizes), b.getI64ArrayAttr(staticStrides));
+        dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
+        b.getDenseI64ArrayAttr(staticSizes),
+        b.getDenseI64ArrayAttr(staticStrides));
   result.addAttributes(attrs);
 }
 
@@ -1949,13 +1949,13 @@ public:
       return failure();
 
     // Check if there are any dynamic parts, which are not supported.
-    auto offsets = extractFromI64ArrayAttr(op.getStaticOffsets());
+    auto offsets = op.getStaticOffsets();
     if (llvm::is_contained(offsets, ShapedType::kDynamic))
       return failure();
-    auto sizes = extractFromI64ArrayAttr(op.getStaticSizes());
+    auto sizes = op.getStaticSizes();
     if (llvm::is_contained(sizes, ShapedType::kDynamic))
       return failure();
-    auto strides = extractFromI64ArrayAttr(op.getStaticStrides());
+    auto strides = op.getStaticStrides();
     if (llvm::is_contained(strides, ShapedType::kDynamic))
       return failure();
 
@@ -2124,8 +2124,9 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides,
                              ShapedType::kDynamic);
   build(b, result, dest.getType(), source, dest, dynamicOffsets, dynamicSizes,
-        dynamicStrides, b.getI64ArrayAttr(staticOffsets),
-        b.getI64ArrayAttr(staticSizes), b.getI64ArrayAttr(staticStrides));
+        dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
+        b.getDenseI64ArrayAttr(staticSizes),
+        b.getDenseI64ArrayAttr(staticStrides));
   result.addAttributes(attrs);
 }
 
@@ -2153,17 +2154,14 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
 
 /// Rank-reducing type verification for both InsertSliceOp and
 /// ParallelInsertSliceOp.
-static SliceVerificationResult
-verifyInsertSliceOp(ShapedType srcType, ShapedType dstType,
-                    ArrayAttr staticOffsets, ArrayAttr staticSizes,
-                    ArrayAttr staticStrides,
-                    ShapedType *expectedType = nullptr) {
+static SliceVerificationResult verifyInsertSliceOp(
+    ShapedType srcType, ShapedType dstType, ArrayRef<int64_t> staticOffsets,
+    ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides,
+    ShapedType *expectedType = nullptr) {
   // insert_slice is the inverse of extract_slice, use the same type
   // inference.
   RankedTensorType expected = ExtractSliceOp::inferResultType(
-      dstType, extractFromI64ArrayAttr(staticOffsets),
-      extractFromI64ArrayAttr(staticSizes),
-      extractFromI64ArrayAttr(staticStrides));
+      dstType, staticOffsets, staticSizes, staticStrides);
   if (expectedType)
     *expectedType = expected;
   return isRankReducedType(expected, srcType);
@@ -2482,9 +2480,8 @@ ParseResult parseInferType(OpAsmParser &parser,
 LogicalResult PadOp::verify() {
   auto sourceType = getSource().getType().cast<RankedTensorType>();
   auto resultType = getResult().getType().cast<RankedTensorType>();
-  auto expectedType = PadOp::inferResultType(
-      sourceType, extractFromI64ArrayAttr(getStaticLow()),
-      extractFromI64ArrayAttr(getStaticHigh()));
+  auto expectedType =
+      PadOp::inferResultType(sourceType, getStaticLow(), getStaticHigh());
   for (int i = 0, e = sourceType.getRank(); i < e; ++i) {
     if (resultType.getDimSize(i) == expectedType.getDimSize(i))
       continue;
@@ -2556,8 +2553,9 @@ void PadOp::build(OpBuilder &b, OperationState &result, Value source,
                   ArrayRef<NamedAttribute> attrs) {
   auto sourceType = source.getType().cast<RankedTensorType>();
   auto resultType = inferResultType(sourceType, staticLow, staticHigh);
-  build(b, result, resultType, source, low, high, b.getI64ArrayAttr(staticLow),
-        b.getI64ArrayAttr(staticHigh), nofold ? b.getUnitAttr() : UnitAttr());
+  build(b, result, resultType, source, low, high,
+        b.getDenseI64ArrayAttr(staticLow), b.getDenseI64ArrayAttr(staticHigh),
+        nofold ? b.getUnitAttr() : UnitAttr());
   result.addAttributes(attrs);
 }
 
@@ -2591,7 +2589,7 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
   }
   assert(resultType.isa<RankedTensorType>());
   build(b, result, resultType, source, dynamicLow, dynamicHigh,
-        b.getI64ArrayAttr(staticLow), b.getI64ArrayAttr(staticHigh),
+        b.getDenseI64ArrayAttr(staticLow), b.getDenseI64ArrayAttr(staticHigh),
         nofold ? b.getUnitAttr() : UnitAttr());
   result.addAttributes(attrs);
 }
@@ -2658,8 +2656,7 @@ struct FoldSourceTensorCast : public OpRewritePattern<PadOp> {
 
     auto newResultType = PadOp::inferResultType(
         castOp.getSource().getType().cast<RankedTensorType>(),
-        extractFromI64ArrayAttr(padTensorOp.getStaticLow()),
-        extractFromI64ArrayAttr(padTensorOp.getStaticHigh()),
+        padTensorOp.getStaticLow(), padTensorOp.getStaticHigh(),
         padTensorOp.getResultType().getShape());
 
     if (newResultType == padTensorOp.getResultType()) {
@@ -2940,8 +2937,9 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides,
                              ShapedType::kDynamic);
   build(b, result, {}, source, dest, dynamicOffsets, dynamicSizes,
-        dynamicStrides, b.getI64ArrayAttr(staticOffsets),
-        b.getI64ArrayAttr(staticSizes), b.getI64ArrayAttr(staticStrides));
+        dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
+        b.getDenseI64ArrayAttr(staticSizes),
+        b.getDenseI64ArrayAttr(staticStrides));
   result.addAttributes(attrs);
 }
 
@@ -3086,12 +3084,12 @@ template <typename OpTy>
 static SmallVector<OpFoldResult> getMixedTilesImpl(OpTy op) {
   static_assert(llvm::is_one_of<OpTy, PackOp, UnPackOp>::value,
                 "applies to only pack or unpack operations");
+  Builder builder(op);
   SmallVector<OpFoldResult> mixedInnerTiles;
   unsigned dynamicValIndex = 0;
-  for (Attribute attr : op.getStaticInnerTiles()) {
-    auto tileAttr = attr.cast<IntegerAttr>();
-    if (!ShapedType::isDynamic(tileAttr.getInt()))
-      mixedInnerTiles.push_back(tileAttr);
+  for (int64_t staticTile : op.getStaticInnerTiles()) {
+    if (!ShapedType::isDynamic(staticTile))
+      mixedInnerTiles.push_back(builder.getI64IntegerAttr(staticTile));
     else
       mixedInnerTiles.push_back(op.getInnerTiles()[dynamicValIndex++]);
   }

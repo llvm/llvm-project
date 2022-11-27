@@ -104,8 +104,8 @@ define void @fpext_v8f16_v8f64(<8 x half>* %x, <8 x double>* %y) {
 ; LMULMAX1-NEXT:    vse64.v v8, (a1)
 ; LMULMAX1-NEXT:    addi a0, a1, 48
 ; LMULMAX1-NEXT:    vse64.v v11, (a0)
-; LMULMAX1-NEXT:    addi a0, a1, 16
-; LMULMAX1-NEXT:    vse64.v v9, (a0)
+; LMULMAX1-NEXT:    addi a1, a1, 16
+; LMULMAX1-NEXT:    vse64.v v9, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %d = fpext <8 x half> %a to <8 x double>

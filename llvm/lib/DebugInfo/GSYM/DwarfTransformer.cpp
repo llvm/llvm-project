@@ -21,6 +21,7 @@
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
+#include <optional>
 
 using namespace llvm;
 using namespace gsym;
@@ -128,9 +129,8 @@ static DWARFDie GetParentDeclContextDIE(DWARFDie &Die) {
 /// .debug_info. If we create a qualified name string in this function by
 /// combining multiple strings in the DWARF string table or info, we will make
 /// a copy of the string when we add it to the string table.
-static Optional<uint32_t> getQualifiedNameIndex(DWARFDie &Die,
-                                                uint64_t Language,
-                                                GsymCreator &Gsym) {
+static std::optional<uint32_t>
+getQualifiedNameIndex(DWARFDie &Die, uint64_t Language, GsymCreator &Gsym) {
   // If the dwarf has mangled name, use mangled name
   if (auto LinkageName =
           dwarf::toString(Die.findRecursively({dwarf::DW_AT_MIPS_linkage_name,

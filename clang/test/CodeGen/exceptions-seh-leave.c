@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -o - | opt -passes=instnamer -S | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
 
 void g(void);
 

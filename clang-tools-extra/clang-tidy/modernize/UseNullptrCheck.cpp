@@ -62,7 +62,9 @@ StatementMatcher makeCastSequenceMatcher() {
                         ImplicitCastToNull,
                         hasAncestor(cxxRewrittenBinaryOperator().bind(
                             "checkBinopOperands")))
-                        .bind(CastSequence))))));
+                        .bind(CastSequence))),
+                // Skip defaulted comparison operators.
+                unless(hasAncestor(functionDecl(isDefaulted()))))));
 }
 
 bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,

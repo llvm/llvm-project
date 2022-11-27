@@ -443,7 +443,7 @@ protected:
                                lldb_private::SymbolContext &sc);
 
   virtual lldb::TypeSP
-  FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die);
+  FindDefinitionTypeForDWARFDeclContext(const DWARFDeclContext &die_decl_ctx);
 
   virtual lldb::TypeSP
   FindCompleteObjCDefinitionTypeForDIE(const DWARFDIE &die,

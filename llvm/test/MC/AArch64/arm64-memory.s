@@ -498,10 +498,22 @@ foo:
   stlrb  w3, [x6]
   stlrh  w3, [x6]
 
+  stlr   w3, [x6, #0]
+  stlr   x3, [x6, 0]
+  stlrb  w3, [sp]
+  stlrb  w3, [sp, #0]
+  stlrb  w3, [sp, 0]
+
 ; CHECK: stlr   w3, [x6]                ; encoding: [0xc3,0xfc,0x9f,0x88]
 ; CHECK: stlr   x3, [x6]                ; encoding: [0xc3,0xfc,0x9f,0xc8]
 ; CHECK: stlrb  w3, [x6]                ; encoding: [0xc3,0xfc,0x9f,0x08]
 ; CHECK: stlrh  w3, [x6]                ; encoding: [0xc3,0xfc,0x9f,0x48]
+
+; CHECK: stlr   w3, [x6]                ; encoding: [0xc3,0xfc,0x9f,0x88]
+; CHECK: stlr   x3, [x6]                ; encoding: [0xc3,0xfc,0x9f,0xc8]
+; CHECK: stlrb  w3, [sp]                ; encoding: [0xe3,0xff,0x9f,0x08]
+; CHECK: stlrb  w3, [sp]                ; encoding: [0xe3,0xff,0x9f,0x08]
+; CHECK: stlrb  w3, [sp]                ; encoding: [0xe3,0xff,0x9f,0x08]
 
 ;-----------------------------------------------------------------------------
 ; Load-acquire/Store-release exclusive

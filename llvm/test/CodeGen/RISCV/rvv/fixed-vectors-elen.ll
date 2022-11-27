@@ -35,15 +35,15 @@ define void @add_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; RV32-NEXT:    lw t0, 8(a1)
 ; RV32-NEXT:    lw a1, 12(a1)
 ; RV32-NEXT:    add a5, a5, a6
-; RV32-NEXT:    add a6, a4, a7
-; RV32-NEXT:    sltu a4, a6, a4
+; RV32-NEXT:    add a7, a4, a7
+; RV32-NEXT:    sltu a4, a7, a4
 ; RV32-NEXT:    add a4, a5, a4
 ; RV32-NEXT:    add a1, a3, a1
-; RV32-NEXT:    add a3, a2, t0
-; RV32-NEXT:    sltu a2, a3, a2
+; RV32-NEXT:    add t0, a2, t0
+; RV32-NEXT:    sltu a2, t0, a2
 ; RV32-NEXT:    add a1, a1, a2
-; RV32-NEXT:    sw a3, 8(a0)
-; RV32-NEXT:    sw a6, 0(a0)
+; RV32-NEXT:    sw t0, 8(a0)
+; RV32-NEXT:    sw a7, 0(a0)
 ; RV32-NEXT:    sw a1, 12(a0)
 ; RV32-NEXT:    sw a4, 4(a0)
 ; RV32-NEXT:    ret

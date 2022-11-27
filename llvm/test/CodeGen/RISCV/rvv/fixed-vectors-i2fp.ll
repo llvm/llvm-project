@@ -102,8 +102,8 @@ define void @si2fp_v8i32_v8f32(<8 x i32>* %x, <8 x float>* %y) {
 ; LMULMAX1-NEXT:    vfcvt.f.x.v v8, v8
 ; LMULMAX1-NEXT:    vfcvt.f.x.v v9, v9
 ; LMULMAX1-NEXT:    vse32.v v9, (a1)
-; LMULMAX1-NEXT:    addi a0, a1, 16
-; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a1, a1, 16
+; LMULMAX1-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x i32>, <8 x i32>* %x
   %d = sitofp <8 x i32> %a to <8 x float>
@@ -129,8 +129,8 @@ define void @ui2fp_v8i32_v8f32(<8 x i32>* %x, <8 x float>* %y) {
 ; LMULMAX1-NEXT:    vfcvt.f.xu.v v8, v8
 ; LMULMAX1-NEXT:    vfcvt.f.xu.v v9, v9
 ; LMULMAX1-NEXT:    vse32.v v9, (a1)
-; LMULMAX1-NEXT:    addi a0, a1, 16
-; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a1, a1, 16
+; LMULMAX1-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x i32>, <8 x i32>* %x
   %d = uitofp <8 x i32> %a to <8 x float>
@@ -263,8 +263,8 @@ define void @si2fp_v8i16_v8f64(<8 x i16>* %x, <8 x double>* %y) {
 ; LMULMAX1-NEXT:    vse64.v v8, (a1)
 ; LMULMAX1-NEXT:    addi a0, a1, 48
 ; LMULMAX1-NEXT:    vse64.v v11, (a0)
-; LMULMAX1-NEXT:    addi a0, a1, 16
-; LMULMAX1-NEXT:    vse64.v v9, (a0)
+; LMULMAX1-NEXT:    addi a1, a1, 16
+; LMULMAX1-NEXT:    vse64.v v9, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
   %d = sitofp <8 x i16> %a to <8 x double>
@@ -307,8 +307,8 @@ define void @ui2fp_v8i16_v8f64(<8 x i16>* %x, <8 x double>* %y) {
 ; LMULMAX1-NEXT:    vse64.v v8, (a1)
 ; LMULMAX1-NEXT:    addi a0, a1, 48
 ; LMULMAX1-NEXT:    vse64.v v11, (a0)
-; LMULMAX1-NEXT:    addi a0, a1, 16
-; LMULMAX1-NEXT:    vse64.v v9, (a0)
+; LMULMAX1-NEXT:    addi a1, a1, 16
+; LMULMAX1-NEXT:    vse64.v v9, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
   %d = uitofp <8 x i16> %a to <8 x double>

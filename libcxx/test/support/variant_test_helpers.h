@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef SUPPORT_VARIANT_TEST_HELPERS_H
 #define SUPPORT_VARIANT_TEST_HELPERS_H
 

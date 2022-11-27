@@ -82,8 +82,8 @@ define i64 @sext_phi_constants(i32 signext %c) {
 ; RV64I-NEXT:  # %bb.1: # %iffalse
 ; RV64I-NEXT:    li a1, -2
 ; RV64I-NEXT:  .LBB2_2: # %merge
-; RV64I-NEXT:    slli a0, a1, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    srli a0, a1, 32
 ; RV64I-NEXT:    ret
   %a = icmp ne i32 %c, 0
   br i1 %a, label %iftrue, label %iffalse
