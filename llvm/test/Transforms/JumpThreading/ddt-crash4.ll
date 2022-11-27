@@ -6,12 +6,12 @@ bb:
   br label %bb1
 
 bb1:
-  %tmp = load i64, i64* @global, align 8
+  %tmp = load i64, ptr @global, align 8
   %tmp2 = icmp eq i64 %tmp, 0
   br i1 %tmp2, label %bb27, label %bb3
 
 bb3:
-  %tmp4 = load i64, i64* @global, align 8
+  %tmp4 = load i64, ptr @global, align 8
   %tmp5 = icmp eq i64 %tmp4, 0
   br i1 %tmp5, label %bb6, label %bb7
 
@@ -24,7 +24,7 @@ bb7:
   br i1 false, label %bb10, label %bb23
 
 bb10:
-  %tmp11 = load i64, i64* @global, align 8
+  %tmp11 = load i64, ptr @global, align 8
   %tmp12 = icmp slt i64 %tmp11, 5
   br i1 %tmp12, label %bb13, label %bb17
 

@@ -8,7 +8,7 @@
 define i32 @c() {
 ; CHECK-LABEL: @c(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @a, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @a, align 4
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.else:
@@ -25,7 +25,7 @@ define i32 @c() {
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
-  %0 = load i32, i32* @a
+  %0 = load i32, ptr @a
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.else, label %if.then
 

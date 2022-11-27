@@ -6,7 +6,7 @@
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 target triple = "i386-apple-darwin9.6"
-@v1 = external global i32		; <i32*> [#uses=2]
+@v1 = external global i32		; <ptr> [#uses=2]
 
 define i32 @unroll() nounwind {
 entry:
@@ -17,11 +17,11 @@ bb:		; preds = %bb4
 	br i1 %0, label %bb1, label %bb2
 
 bb1:		; preds = %bb
-	store volatile i32 1000, i32* @v1, align 4
+	store volatile i32 1000, ptr @v1, align 4
 	br label %bb3
 
 bb2:		; preds = %bb
-	store volatile i32 1001, i32* @v1, align 4
+	store volatile i32 1001, ptr @v1, align 4
 	br label %bb3
 
 bb3:		; preds = %bb2, %bb1
