@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
+#include <optional>
 
 namespace llvm {
 
@@ -269,7 +270,7 @@ private:
 
   /// The max. distance between array elements accessed in a loop so that the
   /// elements are classified to have temporal reuse.
-  Optional<unsigned> TRT;
+  std::optional<unsigned> TRT;
 
   const LoopInfo &LI;
   ScalarEvolution &SE;
