@@ -30,7 +30,7 @@ define void @foo(i32 %cond1, i32 %cond2) {
 ; CHECK-NEXT:    call void @f3()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       bb.f4:
-; CHECK-NEXT:    [[PTR5:%.*]] = phi i32* [ null, [[BB_COND2]] ]
+; CHECK-NEXT:    [[PTR5:%.*]] = phi ptr [ null, [[BB_COND2]] ]
 ; CHECK-NEXT:    call void @f4()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -45,7 +45,7 @@ bb.f1:
   br label %bb.cond2
 
 bb.cond2:
-  %ptr = phi i32* [ null, %bb.f1 ], [ @a, %entry ]
+  %ptr = phi ptr [ null, %bb.f1 ], [ @a, %entry ]
   %cond2.fr = freeze i32 %cond2
   %x = add i32 %cond2.fr, 1
   %tobool1 = icmp eq i32 %x, 0
@@ -56,7 +56,7 @@ bb.f2:
   br label %exit
 
 bb.file:
-  %cmp = icmp eq i32* %ptr, null
+  %cmp = icmp eq ptr %ptr, null
   br i1 %cmp, label %bb.f4, label %bb.f3
 
 bb.f3:

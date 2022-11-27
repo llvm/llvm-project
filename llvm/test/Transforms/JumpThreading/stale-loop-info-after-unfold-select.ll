@@ -3,7 +3,7 @@
 %"type1" = type { i8 }
 %"type2" = type opaque
 
-define dso_local i16* @func2(%"type1"* %this, %"type2"*) {
+define dso_local ptr @func2(ptr %this, ptr) {
 entry:
   br label %while.cond
 

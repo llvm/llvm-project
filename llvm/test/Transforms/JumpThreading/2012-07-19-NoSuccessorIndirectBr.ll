@@ -4,5 +4,5 @@
 
 define i32 @f() nounwind {
 entry:
-  indirectbr i8* undef, []
+  indirectbr ptr undef, []
 }

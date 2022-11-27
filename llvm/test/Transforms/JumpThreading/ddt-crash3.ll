@@ -13,12 +13,12 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb26, %bb
-  %tmp = load i64, i64* @global, align 8, !tbaa !1
+  %tmp = load i64, ptr @global, align 8, !tbaa !1
   %tmp2 = icmp eq i64 %tmp, 0
   br i1 %tmp2, label %bb27, label %bb3
 
 bb3:                                              ; preds = %bb1
-  %tmp4 = load i64, i64* @global.1, align 8, !tbaa !1
+  %tmp4 = load i64, ptr @global.1, align 8, !tbaa !1
   %tmp5 = icmp eq i64 %tmp4, 0
   br i1 %tmp5, label %bb23, label %bb23
 

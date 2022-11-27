@@ -17,10 +17,10 @@ bb1:
 
 ; CHECK: bb2:
 ; CHECK-NEXT: select
-; CHECK-NEXT: indirectbr i8* %ba, [label %bb3, label %bb5]
+; CHECK-NEXT: indirectbr ptr %ba, [label %bb3, label %bb5]
 bb2:
-  %ba = select i1 %v3, i8* blockaddress(@jtbr, %bb3), i8* blockaddress(@jtbr, %bb4)
-  indirectbr i8* %ba, [label %bb3, label %bb4]
+  %ba = select i1 %v3, ptr blockaddress(@jtbr, %bb3), ptr blockaddress(@jtbr, %bb4)
+  indirectbr ptr %ba, [label %bb3, label %bb4]
 
 ; CHECK: bb3:
 bb3:

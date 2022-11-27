@@ -15,7 +15,7 @@ for.cond1177:
   br i1 %cmp1179, label %for.cond1177, label %land.rhs1320
 
 land.rhs1320:
-  %tmp1324 = load volatile i64, i64* getelementptr inbounds (%0, %0* @g_338, i64 0, i32 2), align 1
+  %tmp1324 = load volatile i64, ptr getelementptr inbounds (%0, ptr @g_338, i64 0, i32 2), align 1
   br label %if.end.i
 
 if.end.i:
