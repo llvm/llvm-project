@@ -2957,8 +2957,8 @@ define double @rmw64_fadd_seq_cst(ptr %p) nounwind {
 ; RV64-NO-ATOMIC-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64-NO-ATOMIC-NEXT:    mv s0, a0
 ; RV64-NO-ATOMIC-NEXT:    ld s2, 0(a0)
-; RV64-NO-ATOMIC-NEXT:    li a0, 1023
-; RV64-NO-ATOMIC-NEXT:    slli s1, a0, 52
+; RV64-NO-ATOMIC-NEXT:    li s1, 1023
+; RV64-NO-ATOMIC-NEXT:    slli s1, s1, 52
 ; RV64-NO-ATOMIC-NEXT:  .LBB54_1: # %atomicrmw.start
 ; RV64-NO-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NO-ATOMIC-NEXT:    mv a0, s2
@@ -2991,8 +2991,8 @@ define double @rmw64_fadd_seq_cst(ptr %p) nounwind {
 ; RV64-ATOMIC-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64-ATOMIC-NEXT:    mv s0, a0
 ; RV64-ATOMIC-NEXT:    ld a0, 0(a0)
-; RV64-ATOMIC-NEXT:    li a1, 1023
-; RV64-ATOMIC-NEXT:    slli s1, a1, 52
+; RV64-ATOMIC-NEXT:    li s1, 1023
+; RV64-ATOMIC-NEXT:    slli s1, s1, 52
 ; RV64-ATOMIC-NEXT:  .LBB54_1: # %atomicrmw.start
 ; RV64-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-ATOMIC-NEXT:    mv s2, a0
@@ -3063,8 +3063,8 @@ define double @rmw64_fsub_seq_cst(ptr %p) nounwind {
 ; RV64-NO-ATOMIC-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64-NO-ATOMIC-NEXT:    mv s0, a0
 ; RV64-NO-ATOMIC-NEXT:    ld s2, 0(a0)
-; RV64-NO-ATOMIC-NEXT:    li a0, -1025
-; RV64-NO-ATOMIC-NEXT:    slli s1, a0, 52
+; RV64-NO-ATOMIC-NEXT:    li s1, -1025
+; RV64-NO-ATOMIC-NEXT:    slli s1, s1, 52
 ; RV64-NO-ATOMIC-NEXT:  .LBB55_1: # %atomicrmw.start
 ; RV64-NO-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NO-ATOMIC-NEXT:    mv a0, s2
@@ -3097,8 +3097,8 @@ define double @rmw64_fsub_seq_cst(ptr %p) nounwind {
 ; RV64-ATOMIC-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64-ATOMIC-NEXT:    mv s0, a0
 ; RV64-ATOMIC-NEXT:    ld a0, 0(a0)
-; RV64-ATOMIC-NEXT:    li a1, -1025
-; RV64-ATOMIC-NEXT:    slli s1, a1, 52
+; RV64-ATOMIC-NEXT:    li s1, -1025
+; RV64-ATOMIC-NEXT:    slli s1, s1, 52
 ; RV64-ATOMIC-NEXT:  .LBB55_1: # %atomicrmw.start
 ; RV64-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-ATOMIC-NEXT:    mv s2, a0
@@ -3169,8 +3169,8 @@ define double @rmw64_fmin_seq_cst(ptr %p) nounwind {
 ; RV64-NO-ATOMIC-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64-NO-ATOMIC-NEXT:    mv s0, a0
 ; RV64-NO-ATOMIC-NEXT:    ld s2, 0(a0)
-; RV64-NO-ATOMIC-NEXT:    li a0, 1023
-; RV64-NO-ATOMIC-NEXT:    slli s1, a0, 52
+; RV64-NO-ATOMIC-NEXT:    li s1, 1023
+; RV64-NO-ATOMIC-NEXT:    slli s1, s1, 52
 ; RV64-NO-ATOMIC-NEXT:  .LBB56_1: # %atomicrmw.start
 ; RV64-NO-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NO-ATOMIC-NEXT:    mv a0, s2
@@ -3203,8 +3203,8 @@ define double @rmw64_fmin_seq_cst(ptr %p) nounwind {
 ; RV64-ATOMIC-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64-ATOMIC-NEXT:    mv s0, a0
 ; RV64-ATOMIC-NEXT:    ld a0, 0(a0)
-; RV64-ATOMIC-NEXT:    li a1, 1023
-; RV64-ATOMIC-NEXT:    slli s1, a1, 52
+; RV64-ATOMIC-NEXT:    li s1, 1023
+; RV64-ATOMIC-NEXT:    slli s1, s1, 52
 ; RV64-ATOMIC-NEXT:  .LBB56_1: # %atomicrmw.start
 ; RV64-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-ATOMIC-NEXT:    mv s2, a0
@@ -3275,8 +3275,8 @@ define double @rmw64_fmax_seq_cst(ptr %p) nounwind {
 ; RV64-NO-ATOMIC-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64-NO-ATOMIC-NEXT:    mv s0, a0
 ; RV64-NO-ATOMIC-NEXT:    ld s2, 0(a0)
-; RV64-NO-ATOMIC-NEXT:    li a0, 1023
-; RV64-NO-ATOMIC-NEXT:    slli s1, a0, 52
+; RV64-NO-ATOMIC-NEXT:    li s1, 1023
+; RV64-NO-ATOMIC-NEXT:    slli s1, s1, 52
 ; RV64-NO-ATOMIC-NEXT:  .LBB57_1: # %atomicrmw.start
 ; RV64-NO-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NO-ATOMIC-NEXT:    mv a0, s2
@@ -3309,8 +3309,8 @@ define double @rmw64_fmax_seq_cst(ptr %p) nounwind {
 ; RV64-ATOMIC-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64-ATOMIC-NEXT:    mv s0, a0
 ; RV64-ATOMIC-NEXT:    ld a0, 0(a0)
-; RV64-ATOMIC-NEXT:    li a1, 1023
-; RV64-ATOMIC-NEXT:    slli s1, a1, 52
+; RV64-ATOMIC-NEXT:    li s1, 1023
+; RV64-ATOMIC-NEXT:    slli s1, s1, 52
 ; RV64-ATOMIC-NEXT:  .LBB57_1: # %atomicrmw.start
 ; RV64-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-ATOMIC-NEXT:    mv s2, a0

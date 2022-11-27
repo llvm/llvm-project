@@ -480,9 +480,8 @@ ProgramStateRef ExprEngine::setIndexOfElementToConstruct(
 Optional<unsigned> ExprEngine::getPendingInitLoop(ProgramStateRef State,
                                                   const CXXConstructExpr *E,
                                                   const LocationContext *LCtx) {
-
-  return Optional<unsigned>::create(
-      State->get<PendingInitLoop>({E, LCtx->getStackFrame()}));
+  const unsigned *V = State->get<PendingInitLoop>({E, LCtx->getStackFrame()});
+  return V ? Optional(*V) : std::nullopt;
 }
 
 ProgramStateRef ExprEngine::removePendingInitLoop(ProgramStateRef State,
@@ -509,9 +508,9 @@ Optional<unsigned>
 ExprEngine::getIndexOfElementToConstruct(ProgramStateRef State,
                                          const CXXConstructExpr *E,
                                          const LocationContext *LCtx) {
-
-  return Optional<unsigned>::create(
-      State->get<IndexOfElementToConstruct>({E, LCtx->getStackFrame()}));
+  const unsigned *V =
+      State->get<IndexOfElementToConstruct>({E, LCtx->getStackFrame()});
+  return V ? Optional(*V) : std::nullopt;
 }
 
 ProgramStateRef
@@ -529,8 +528,9 @@ ExprEngine::getPendingArrayDestruction(ProgramStateRef State,
                                        const LocationContext *LCtx) {
   assert(LCtx && "LocationContext shouldn't be null!");
 
-  return Optional<unsigned>::create(
-      State->get<PendingArrayDestruction>(LCtx->getStackFrame()));
+  const unsigned *V =
+      State->get<PendingArrayDestruction>(LCtx->getStackFrame());
+  return V ? Optional(*V) : std::nullopt;
 }
 
 ProgramStateRef ExprEngine::setPendingArrayDestruction(
@@ -599,7 +599,8 @@ ExprEngine::getObjectUnderConstruction(ProgramStateRef State,
                                        const ConstructionContextItem &Item,
                                        const LocationContext *LC) {
   ConstructedObjectKey Key(Item, LC->getStackFrame());
-  return Optional<SVal>::create(State->get<ObjectsUnderConstruction>(Key));
+  const SVal *V = State->get<ObjectsUnderConstruction>(Key);
+  return V ? Optional(*V) : std::nullopt;
 }
 
 ProgramStateRef

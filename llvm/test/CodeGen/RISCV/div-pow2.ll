@@ -408,9 +408,9 @@ define i64 @sdiv64_pow2_8589934592(i64 %a) {
 ; RV32I-NEXT:    srai a1, a1, 31
 ; RV32I-NEXT:    add a1, a0, a1
 ; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    add a1, a2, a0
-; RV32I-NEXT:    srai a0, a1, 1
-; RV32I-NEXT:    srai a1, a1, 31
+; RV32I-NEXT:    add a2, a2, a0
+; RV32I-NEXT:    srai a0, a2, 1
+; RV32I-NEXT:    srai a1, a2, 31
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sdiv64_pow2_8589934592:

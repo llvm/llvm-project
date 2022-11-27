@@ -1527,8 +1527,14 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           if (!value.getAsInteger(16, addr_value))
             region_info.GetRange().SetRangeBase(addr_value);
         } else if (name.equals("size")) {
-          if (!value.getAsInteger(16, addr_value))
+          if (!value.getAsInteger(16, addr_value)) {
             region_info.GetRange().SetByteSize(addr_value);
+            if (region_info.GetRange().GetRangeEnd() <
+                region_info.GetRange().GetRangeBase()) {
+              // Range size overflowed, truncate it.
+              region_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
+            }
+          }
         } else if (name.equals("permissions") &&
                    region_info.GetRange().IsValid()) {
           saw_permissions = true;

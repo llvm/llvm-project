@@ -64,6 +64,39 @@ public:
 
 namespace {
 
+void printLine(llvm::raw_ostream &OS, const UnwrappedLine &Line,
+               StringRef Prefix = "", bool PrintText = false) {
+  OS << Prefix << "Line(" << Line.Level << ", FSC=" << Line.FirstStartColumn
+     << ")" << (Line.InPPDirective ? " MACRO" : "") << ": ";
+  bool NewLine = false;
+  for (std::list<UnwrappedLineNode>::const_iterator I = Line.Tokens.begin(),
+                                                    E = Line.Tokens.end();
+       I != E; ++I) {
+    if (NewLine) {
+      OS << Prefix;
+      NewLine = false;
+    }
+    OS << I->Tok->Tok.getName() << "["
+       << "T=" << (unsigned)I->Tok->getType()
+       << ", OC=" << I->Tok->OriginalColumn << ", \"" << I->Tok->TokenText
+       << "\"] ";
+    for (SmallVectorImpl<UnwrappedLine>::const_iterator
+             CI = I->Children.begin(),
+             CE = I->Children.end();
+         CI != CE; ++CI) {
+      OS << "\n";
+      printLine(OS, *CI, (Prefix + "  ").str());
+      NewLine = true;
+    }
+  }
+  if (!NewLine)
+    OS << "\n";
+}
+
+LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line) {
+  printLine(llvm::dbgs(), Line);
+}
+
 class ScopedDeclarationState {
 public:
   ScopedDeclarationState(UnwrappedLine &Line, llvm::BitVector &Stack,
@@ -4312,23 +4345,6 @@ void UnwrappedLineParser::parseVerilogCaseLabel() {
   if (CurrentLines->size() > FirstLine)
     (*CurrentLines)[FirstLine].Level = OrigLevel;
   Line->Level = OrigLevel;
-}
-
-LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line,
-                                                 StringRef Prefix = "") {
-  llvm::dbgs() << Prefix << "Line(" << Line.Level
-               << ", FSC=" << Line.FirstStartColumn << ")"
-               << (Line.InPPDirective ? " MACRO" : "") << ": ";
-  for (const auto &Node : Line.Tokens) {
-    llvm::dbgs() << Node.Tok->Tok.getName() << "["
-                 << "T=" << static_cast<unsigned>(Node.Tok->getType())
-                 << ", OC=" << Node.Tok->OriginalColumn << "] ";
-  }
-  for (const auto &Node : Line.Tokens)
-    for (const auto &ChildNode : Node.Children)
-      printDebugInfo(ChildNode, "\nChild: ");
-
-  llvm::dbgs() << "\n";
 }
 
 void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {

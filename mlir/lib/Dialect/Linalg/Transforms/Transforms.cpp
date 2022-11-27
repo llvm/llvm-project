@@ -348,7 +348,7 @@ PadOpTransformationPattern::matchAndRewrite(tensor::PadOp padOp,
   SmallVector<AffineExpr, 4> outputExprs;
   for (unsigned i = 0; i < resultShapedType.getRank(); ++i) {
     outputExprs.push_back(getAffineDimExpr(i, rewriter.getContext()) +
-                          padOp.getStaticLow()[i].cast<IntegerAttr>().getInt());
+                          padOp.getStaticLow()[i]);
   }
 
   SmallVector<AffineMap, 2> transferMaps = {

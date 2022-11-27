@@ -563,8 +563,8 @@ define i64 @fshr64_minsize(i64 %a, i64 %b) minsize nounwind {
 ; RV32I-NEXT:    sll a0, a0, a5
 ; RV32I-NEXT:    or a0, a0, a4
 ; RV32I-NEXT:    srl a1, a1, a2
-; RV32I-NEXT:    slli a2, a3, 1
-; RV32I-NEXT:    sll a2, a2, a5
+; RV32I-NEXT:    slli a3, a3, 1
+; RV32I-NEXT:    sll a2, a3, a5
 ; RV32I-NEXT:    or a1, a2, a1
 ; RV32I-NEXT:    ret
 ;
@@ -631,8 +631,8 @@ define i128 @fshr128_minsize(i128 %a, i128 %b) minsize nounwind {
 ; RV32I-NEXT:    sll a4, a4, t1
 ; RV32I-NEXT:    or a3, a4, a3
 ; RV32I-NEXT:    srl a1, a1, a2
-; RV32I-NEXT:    slli a2, a5, 1
-; RV32I-NEXT:    sll a2, a2, t1
+; RV32I-NEXT:    slli a5, a5, 1
+; RV32I-NEXT:    sll a2, a5, t1
 ; RV32I-NEXT:    or a1, a2, a1
 ; RV32I-NEXT:    sw a1, 12(a0)
 ; RV32I-NEXT:    sw a3, 8(a0)
@@ -665,8 +665,8 @@ define i128 @fshr128_minsize(i128 %a, i128 %b) minsize nounwind {
 ; RV64I-NEXT:    sll a0, a0, a5
 ; RV64I-NEXT:    or a0, a0, a4
 ; RV64I-NEXT:    srl a1, a1, a2
-; RV64I-NEXT:    slli a2, a3, 1
-; RV64I-NEXT:    sll a2, a2, a5
+; RV64I-NEXT:    slli a3, a3, 1
+; RV64I-NEXT:    sll a2, a3, a5
 ; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    ret
   %res = tail call i128 @llvm.fshr.i128(i128 %a, i128 %a, i128 %b)

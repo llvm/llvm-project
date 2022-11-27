@@ -108,7 +108,6 @@ def testSplit():
   # CHECK: %[[F:.+]], %[[S:.+]] = transform.structured.split %{{.*}} after 42 {dimension = 1
   # CHECK: transform.structured.split %[[F]] after %[[S]] {dimension = 3
 
-
 @run
 def testTileCompact():
   sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
@@ -120,14 +119,11 @@ def testTileCompact():
   # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, 8]
   # CHECK: interchange = [0, 1]
 
-
 @run
 def testTileAttributes():
   sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
-  attr = ArrayAttr.get(
-      [IntegerAttr.get(IntegerType.get_signless(64), x) for x in [4, 8]])
-  ichange = ArrayAttr.get(
-      [IntegerAttr.get(IntegerType.get_signless(64), x) for x in [0, 1]])
+  attr = DenseI64ArrayAttr.get([4, 8])
+  ichange = DenseI64ArrayAttr.get([0, 1])
   with InsertionPoint(sequence.body):
     structured.TileOp(sequence.bodyTarget, sizes=attr, interchange=ichange)
     transform.YieldOp()
@@ -135,7 +131,6 @@ def testTileAttributes():
   # CHECK: transform.sequence
   # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, 8]
   # CHECK: interchange = [0, 1]
-
 
 @run
 def testTileZero():
@@ -148,7 +143,6 @@ def testTileZero():
   # CHECK: transform.sequence
   # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, 0, 2, 0]
   # CHECK: interchange = [0, 1, 2, 3]
-
 
 @run
 def testTileDynamic():

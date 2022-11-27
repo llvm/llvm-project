@@ -354,8 +354,8 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   PrintPassOptions PrintPassOpts;
   PrintPassOpts.Verbose = DebugPM == DebugLogging::Verbose;
   PrintPassOpts.SkipAnalyses = DebugPM == DebugLogging::Quiet;
-  StandardInstrumentations SI(DebugPM != DebugLogging::None, VerifyEachPass,
-                              PrintPassOpts);
+  StandardInstrumentations SI(M.getContext(), DebugPM != DebugLogging::None,
+                              VerifyEachPass, PrintPassOpts);
   SI.registerCallbacks(PIC, &FAM);
   DebugifyEachInstrumentation Debugify;
   DebugifyStatsMap DIStatsMap;

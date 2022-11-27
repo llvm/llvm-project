@@ -839,8 +839,8 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
 
   let arguments = (ins PDL_Operation:$target,
                    Variadic<PDL_Operation>:$dynamic_sizes,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$static_sizes,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$interchange);
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sizes,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange);
   let results = (outs PDL_Operation:$tiled_linalg_op,
                       Variadic<PDL_Operation>:$loops);
 
@@ -917,8 +917,8 @@ def TileToForeachThreadOp :
   let arguments = (ins PDL_Operation:$target,
                    Variadic<PDL_Operation>:$num_threads,
                    Variadic<PDL_Operation>:$tile_sizes,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$static_num_threads,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$static_tile_sizes,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_num_threads,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
   let results = (outs PDL_Operation:$foreach_thread_op,
                       PDL_Operation:$tiled_op);
@@ -1009,8 +1009,8 @@ def TileToScfForOp : Op<Transform_Dialect, "structured.tile_to_scf_for",
 
   let arguments = (ins PDL_Operation:$target,
                    Variadic<PDL_Operation>:$dynamic_sizes,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$static_sizes,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$interchange);
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sizes,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange);
   let results = (outs PDL_Operation:$tiled_linalg_op,
                       Variadic<PDL_Operation>:$loops);
 

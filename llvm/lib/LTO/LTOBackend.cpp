@@ -256,7 +256,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   ModuleAnalysisManager MAM;
 
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(Conf.DebugPassManager);
+  StandardInstrumentations SI(Mod.getContext(), Conf.DebugPassManager);
   SI.registerCallbacks(PIC, &FAM);
   PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
 

@@ -44,6 +44,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 #define DEBUG_TYPE "aarch64-postlegalizer-lowering"
 
@@ -111,8 +112,8 @@ static bool isTRNMask(ArrayRef<int> M, unsigned NumElts,
 
 /// Check if a G_EXT instruction can handle a shuffle mask \p M when the vector
 /// sources of the shuffle are different.
-static Optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
-                                                      unsigned NumElts) {
+static std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
+                                                           unsigned NumElts) {
   // Look for the first non-undef element.
   auto FirstRealElt = find_if(M, [](int Elt) { return Elt >= 0; });
   if (FirstRealElt == M.end())
@@ -193,8 +194,8 @@ static bool isZipMask(ArrayRef<int> M, unsigned NumElts,
 /// G_INSERT_VECTOR_ELT destination should be the LHS of the G_SHUFFLE_VECTOR.
 ///
 /// Second element is the destination lane for the G_INSERT_VECTOR_ELT.
-static Optional<std::pair<bool, int>> isINSMask(ArrayRef<int> M,
-                                                int NumInputElements) {
+static std::optional<std::pair<bool, int>> isINSMask(ArrayRef<int> M,
+                                                     int NumInputElements) {
   if (M.size() != static_cast<size_t>(NumInputElements))
     return None;
   int NumLHSMatch = 0, NumRHSMatch = 0;
@@ -557,9 +558,9 @@ static bool applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
 /// be used to optimize the instruction.
 ///
 /// \note This assumes that the comparison has been legalized.
-Optional<std::pair<uint64_t, CmpInst::Predicate>>
+std::optional<std::pair<uint64_t, CmpInst::Predicate>>
 tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
-                          const MachineRegisterInfo &MRI) {
+                        const MachineRegisterInfo &MRI) {
   const auto &Ty = MRI.getType(RHS);
   if (Ty.isVector())
     return None;

@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -322,9 +323,9 @@ YAMLRemarkParser::parseDebugLoc(yaml::KeyValueNode &Node) {
   if (!DebugLoc)
     return error("expected a value of mapping type.", Node);
 
-  Optional<StringRef> File;
-  Optional<unsigned> Line;
-  Optional<unsigned> Column;
+  std::optional<StringRef> File;
+  std::optional<unsigned> Line;
+  std::optional<unsigned> Column;
 
   for (yaml::KeyValueNode &DLNode : *DebugLoc) {
     Expected<StringRef> MaybeKey = parseKey(DLNode);
@@ -364,8 +365,8 @@ Expected<Argument> YAMLRemarkParser::parseArg(yaml::Node &Node) {
   if (!ArgMap)
     return error("expected a value of mapping type.", Node);
 
-  Optional<StringRef> KeyStr;
-  Optional<StringRef> ValueStr;
+  std::optional<StringRef> KeyStr;
+  std::optional<StringRef> ValueStr;
   Optional<RemarkLocation> Loc;
 
   for (yaml::KeyValueNode &ArgEntry : *ArgMap) {

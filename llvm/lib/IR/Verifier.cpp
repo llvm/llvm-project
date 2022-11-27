@@ -109,6 +109,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -6470,7 +6471,7 @@ TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode,
 
   bool Failed = false;
 
-  Optional<APInt> PrevOffset;
+  std::optional<APInt> PrevOffset;
   unsigned BitWidth = ~0u;
 
   // We've already checked that BaseNode is not a degenerate root node with one
