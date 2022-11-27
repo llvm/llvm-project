@@ -1,7 +1,7 @@
-; RUN: opt < %s -mtriple=nvptx64-nvidia-cuda -separate-const-offset-from-gep \
+; RUN: opt < %s -mtriple=nvptx64-nvidia-cuda -passes=separate-const-offset-from-gep \
 ; RUN:       -reassociate-geps-verify-no-dead-code -S | FileCheck %s
 
-; Several unit tests for -separate-const-offset-from-gep. The transformation
+; Several unit tests for separate-const-offset-from-gep. The transformation
 ; heavily relies on TargetTransformInfo, so we put these tests under
 ; target-specific folders.
 

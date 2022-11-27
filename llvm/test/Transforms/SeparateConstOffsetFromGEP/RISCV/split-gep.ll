@@ -2,7 +2,7 @@
 ; RUN: opt < %s -mtriple=riscv64-unknown-elf -passes='separate-const-offset-from-gep,early-cse' \
 ; RUN:       -S | FileCheck %s
 
-; Several tests for -separate-const-offset-from-gep. The transformation
+; Several tests for separate-const-offset-from-gep. The transformation
 ; heavily relies on TargetTransformInfo, so we put these tests under
 ; target-specific folders.
 
