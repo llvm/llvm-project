@@ -133,14 +133,18 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
 
 GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
                                  const llvm::omp::GV &OMPGridValues)
-    : OMP_TeamLimit("OMP_TEAM_LIMIT"), OMP_NumTeams("OMP_NUM_TEAMS"),
+    : MemoryManager(nullptr), OMP_TeamLimit("OMP_TEAM_LIMIT"),
+      OMP_NumTeams("OMP_NUM_TEAMS"),
       OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT"),
       OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG"),
       OMPX_SharedMemorySize("LIBOMPTARGET_SHARED_MEMORY_SIZE"),
       // Do not initialize the following two envars since they depend on the
       // device initialization. These cannot be consulted until the device is
       // initialized correctly. We intialize them in GenericDeviceTy::init().
-      OMPX_TargetStackSize(), OMPX_TargetHeapSize(), MemoryManager(nullptr),
+      OMPX_TargetStackSize(), OMPX_TargetHeapSize(),
+      // By default, the initial number of streams and events are 32.
+      OMPX_InitialNumStreams("LIBOMPTARGET_NUM_INITIAL_STREAMS", 32),
+      OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 32),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock() {
   if (OMP_NumTeams > 0)

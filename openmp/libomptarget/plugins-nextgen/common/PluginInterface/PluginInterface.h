@@ -398,6 +398,9 @@ private:
   /// setupDeviceEnvironment() function.
   virtual bool shouldSetupDeviceEnvironment() const { return true; }
 
+  /// Pointer to the memory manager or nullptr if not available.
+  MemoryManagerTy *MemoryManager;
+
   /// Environment variables defined by the OpenMP standard.
   Int32Envar OMP_TeamLimit;
   Int32Envar OMP_NumTeams;
@@ -409,10 +412,12 @@ private:
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 
-  /// Pointer to the memory manager or nullptr if not available.
-  MemoryManagerTy *MemoryManager;
-
 protected:
+  /// Environment variables defined by the LLVM OpenMP implementation
+  /// regarding the initial number of streams and events.
+  UInt32Envar OMPX_InitialNumStreams;
+  UInt32Envar OMPX_InitialNumEvents;
+
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.
   llvm::SmallVector<DeviceImageTy *> LoadedImages;
@@ -656,11 +661,11 @@ public:
   static GenericGlobalHandlerTy *createGlobalHandler();
 };
 
-/// Auxiliary interface class for GenericDeviceResourcePoolTy. This class acts
-/// as a reference to a device resource, such as a stream, and requires some
-/// basic functions to be implemented. The derived class should define an empty
-/// constructor that creates an empty and invalid resource reference. Do not
-/// create a new resource on the ctor, but on the create() function instead.
+/// Auxiliary interface class for GenericDeviceResourceManagerTy. This class
+/// acts as a reference to a device resource, such as a stream, and requires
+/// some basic functions to be implemented. The derived class should define an
+/// empty constructor that creates an empty and invalid resource reference. Do
+/// not create a new resource on the ctor, but on the create() function instead.
 struct GenericDeviceResourceRef {
   /// Create a new resource and stores a reference.
   virtual Error create(GenericDeviceTy &Device) = 0;
@@ -676,17 +681,17 @@ protected:
 /// operates with references to the actual resources. These reference must
 /// derive from the GenericDeviceResourceRef class and implement the create
 /// and destroy virtual functions.
-template <typename ResourceRef> class GenericDeviceResourcePoolTy {
-  using ResourcePoolTy = GenericDeviceResourcePoolTy<ResourceRef>;
+template <typename ResourceRef> class GenericDeviceResourceManagerTy {
+  using ResourcePoolTy = GenericDeviceResourceManagerTy<ResourceRef>;
 
 public:
   /// Create an empty resource pool for a specific device.
-  GenericDeviceResourcePoolTy(GenericDeviceTy &Device)
+  GenericDeviceResourceManagerTy(GenericDeviceTy &Device)
       : Device(Device), NextAvailable(0) {}
 
   /// Destroy the resource pool. At this point, the deinit() function should
   /// already have been executed so the resource pool should be empty.
-  virtual ~GenericDeviceResourcePoolTy() {
+  virtual ~GenericDeviceResourceManagerTy() {
     assert(ResourcePool.empty() && "Resource pool not empty");
   }
 
@@ -712,7 +717,6 @@ public:
     return Plugin::success();
   }
 
-protected:
   /// Get resource from the pool or create new resources.
   ResourceRef getResource() {
     const std::lock_guard<std::mutex> Lock(Mutex);
@@ -774,16 +778,17 @@ private:
     if (OldSize == NewSize)
       return Plugin::success();
 
-    if (OldSize > NewSize) {
-      // Decrease the number of resources.
-      auto Err = ResourcePoolTy::resizeResourcePoolImpl(OldSize, NewSize);
+    if (OldSize < NewSize) {
+      // Increase the number of resources.
       ResourcePool.resize(NewSize);
-      return Err;
+      return ResourcePoolTy::resizeResourcePoolImpl(OldSize, NewSize);
     }
 
-    // Increase the number of resources otherwise.
+    // Decrease the number of resources otherwise.
+    auto Err = ResourcePoolTy::resizeResourcePoolImpl(OldSize, NewSize);
     ResourcePool.resize(NewSize);
-    return ResourcePoolTy::resizeResourcePoolImpl(OldSize, NewSize);
+
+    return Err;
   }
 
   /// The device to which the resources belong
@@ -795,71 +800,8 @@ private:
   /// The next available resource in the pool.
   uint32_t NextAvailable;
 
-protected:
   /// The actual resource pool.
   std::deque<ResourceRef> ResourcePool;
-};
-
-/// Class implementing a common stream manager. This class can be directly used
-/// by the specific plugins if necessary. The StreamRef type should derive from
-/// the GenericDeviceResourceRef. Look at its description to know the details of
-/// their requirements.
-template <typename StreamRef>
-class GenericStreamManagerTy : public GenericDeviceResourcePoolTy<StreamRef> {
-  using ResourcePoolTy = GenericDeviceResourcePoolTy<StreamRef>;
-
-public:
-  /// Create a stream manager with space for an initial number of streams. No
-  /// stream will be created until the init() function is called.
-  GenericStreamManagerTy(GenericDeviceTy &Device, uint32_t DefNumStreams = 32)
-      : ResourcePoolTy(Device),
-        InitialNumStreams("LIBOMPTARGET_NUM_INITIAL_STREAMS", DefNumStreams) {}
-
-  /// Initialize the stream pool and their resources with the initial number of
-  /// streams.
-  Error init() { return ResourcePoolTy::init(InitialNumStreams.get()); }
-
-  /// Get an available stream or create new.
-  StreamRef getStream() { return ResourcePoolTy::getResource(); }
-
-  /// Return idle stream.
-  void returnStream(StreamRef Stream) {
-    ResourcePoolTy::returnResource(Stream);
-  }
-
-private:
-  /// The initial stream pool size, potentially defined by an envar.
-  UInt32Envar InitialNumStreams;
-};
-
-/// Class implementing a common event manager. This class can be directly used
-/// by the specific plugins if necessary. The EventRef type should derive from
-/// the GenericDeviceResourceRef. Look at its description to know the details of
-/// their requirements.
-template <typename EventRef>
-struct GenericEventManagerTy : public GenericDeviceResourcePoolTy<EventRef> {
-  using ResourcePoolTy = GenericDeviceResourcePoolTy<EventRef>;
-
-public:
-  /// Create an event manager with space for an initial number of events. No
-  /// event will be created until the init() function is called.
-  GenericEventManagerTy(GenericDeviceTy &Device, uint32_t DefNumEvents = 32)
-      : ResourcePoolTy(Device),
-        InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", DefNumEvents) {}
-
-  /// Initialize the event pool and their resources with the initial number of
-  /// events.
-  Error init() { return ResourcePoolTy::init(InitialNumEvents.get()); }
-
-  /// Get an available event or create new.
-  EventRef getEvent() { return ResourcePoolTy::getResource(); }
-
-  /// Return an idle event.
-  void returnEvent(EventRef Event) { ResourcePoolTy::returnResource(Event); }
-
-private:
-  /// The initial event pool size, potentially defined by an envar.
-  UInt32Envar InitialNumEvents;
 };
 
 } // namespace plugin
