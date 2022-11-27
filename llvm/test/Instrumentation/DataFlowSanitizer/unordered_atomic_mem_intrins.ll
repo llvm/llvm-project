@@ -8,30 +8,30 @@ target triple = "x86_64-unknown-linux-gnu"
 ;; verify that dfsan handles these intrinsics properly once they have been
 ;; added to that class hierarchy.
 
-declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture writeonly, i8, i64, i32) nounwind
-declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
-declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
+declare void @llvm.memset.element.unordered.atomic.p0.i64(ptr nocapture writeonly, i8, i64, i32) nounwind
+declare void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i32) nounwind
+declare void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i32) nounwind
 
-define void @test_memcpy(i8* nocapture, i8* nocapture) {
+define void @test_memcpy(ptr nocapture, ptr nocapture) {
   ; CHECK-LABEL: test_memcpy.dfsan
-  ; CHECK: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %0, i8* align 1 %1, i64 16, i32 1)
+  ; CHECK: call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 1 %0, ptr align 1 %1, i64 16, i32 1)
   ; CHECK: ret void
-  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %0, i8* align 1 %1, i64 16, i32 1)
+  call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 1 %0, ptr align 1 %1, i64 16, i32 1)
   ret void
 }
 
-define void @test_memmove(i8* nocapture, i8* nocapture) {
+define void @test_memmove(ptr nocapture, ptr nocapture) {
   ; CHECK-LABEL: test_memmove.dfsan
-  ; CHECK: call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %0, i8* align 1 %1, i64 16, i32 1)
+  ; CHECK: call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 1 %0, ptr align 1 %1, i64 16, i32 1)
   ; CHECK: ret void
-  call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %0, i8* align 1 %1, i64 16, i32 1)
+  call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 1 %0, ptr align 1 %1, i64 16, i32 1)
   ret void
 }
 
-define void @test_memset(i8* nocapture) {
+define void @test_memset(ptr nocapture) {
   ; CHECK-LABEL: test_memset.dfsan
-  ; CHECK: call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %0, i8 88, i64 16, i32 1)
+  ; CHECK: call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 1 %0, i8 88, i64 16, i32 1)
   ; CHECK: ret void
-  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %0, i8 88, i64 16, i32 1)
+  call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 1 %0, i8 88, i64 16, i32 1)
   ret void
 }

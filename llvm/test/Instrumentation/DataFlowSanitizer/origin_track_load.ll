@@ -5,14 +5,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
-define i64 @load64(i64* %p) {
+define i64 @load64(ptr %p) {
   ; CHECK-LABEL: @load64.dfsan
 
-  ; CHECK-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
-  ; CHECK-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
+  ; CHECK-NEXT: %[[#PO:]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
+  ; CHECK-NEXT: %[[#PS:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN:2]]
 
-  ; CHECK-NEXT: %[[#INTP:]] = bitcast i64* %p to i8*
-  ; CHECK-NEXT: %[[#LABEL_ORIGIN:]] = call zeroext i64 @__dfsan_load_label_and_origin(i8* %[[#INTP]], i64 8)
+  ; CHECK-NEXT: %[[#LABEL_ORIGIN:]] = call zeroext i64 @__dfsan_load_label_and_origin(ptr %p, i64 8)
   ; CHECK-NEXT: %[[#LABEL_ORIGIN_H32:]] = lshr i64 %[[#LABEL_ORIGIN]], 32
   ; CHECK-NEXT: %[[#LABEL:]] = trunc i64 %[[#LABEL_ORIGIN_H32]] to i[[#SBITS]]
   ; CHECK-NEXT: %[[#ORIGIN:]] = trunc i64 %[[#LABEL_ORIGIN]] to i32
@@ -22,10 +21,10 @@ define i64 @load64(i64* %p) {
   ; CHECK-NEXT: %[[#NZ:]] = icmp ne i[[#SBITS]] %[[#PS]], 0
   ; CHECK-NEXT: %[[#ORIGIN_SEL:]] = select i1 %[[#NZ]], i32 %[[#PO]], i32 %[[#ORIGIN_CHAINED]]
 
-  ; CHECK-NEXT: %a = load i64, i64* %p
-  ; CHECK-NEXT: store i[[#SBITS]] %[[#LABEL]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
-  ; CHECK-NEXT: store i32 %[[#ORIGIN_SEL]], i32* @__dfsan_retval_origin_tls, align 4
+  ; CHECK-NEXT: %a = load i64, ptr %p
+  ; CHECK-NEXT: store i[[#SBITS]] %[[#LABEL]], ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; CHECK-NEXT: store i32 %[[#ORIGIN_SEL]], ptr @__dfsan_retval_origin_tls, align 4
 
-  %a = load i64, i64* %p
+  %a = load i64, ptr %p
   ret i64 %a
 }
