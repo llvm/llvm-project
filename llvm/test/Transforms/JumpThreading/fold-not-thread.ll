@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -S -verify < %s | FileCheck %s
+; RUN: opt -S -passes=jump-threading,verify < %s | FileCheck %s
 
 declare i32 @f1()
 declare i32 @f2()

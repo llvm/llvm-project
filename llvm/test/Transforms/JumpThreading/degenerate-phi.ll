@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -disable-output < %s
+; RUN: opt -passes=jump-threading -disable-output < %s
 ; PR9112
 
 ; This is actually a test for value tracking. Jump threading produces

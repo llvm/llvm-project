@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -S < %s
+; RUN: opt -passes=jump-threading -S < %s
 
 define void @func(i8 zeroext %p_44) nounwind {
 entry:

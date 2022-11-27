@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading < %s -S -o - | FileCheck %s
+; RUN: opt -passes=jump-threading < %s -S -o - | FileCheck %s
 
 ; Reproducer for PR47297.
 

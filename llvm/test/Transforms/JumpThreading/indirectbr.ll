@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -jump-threading | FileCheck %s
+; RUN: opt -S < %s -passes=jump-threading | FileCheck %s
 
 ; Keep block addresses alive.
 @addresses = constant [4 x ptr] [

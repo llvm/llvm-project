@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -S < %s | FileCheck %s
+; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
 @global = external global ptr, align 8
 
 define i32 @foo(i32 %arg) {
