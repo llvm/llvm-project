@@ -1673,6 +1673,7 @@ let canFoldAsLoad = 1, isReMaterializable = 1, mayLoad = 1,
                          "lpm\t$rd, $z+", []>,
                    Requires<[HasLPMX]>;
 
+    let Constraints = "@earlyclobber $dst" in
     def LPMWRdZ : Pseudo<(outs DREGS
                           : $dst),
                          (ins ZREG
@@ -1712,6 +1713,7 @@ let mayLoad = 1, hasSideEffects = 0 in {
                           "elpmb\t$dst, $z, $p", []>,
                    Requires<[HasELPMX]>;
 
+    let Constraints = "@earlyclobber $dst" in
     def ELPMWRdZ : Pseudo<(outs DREGS:$dst), (ins ZREG:$z, LD8:$p),
                           "elpmw\t$dst, $z, $p", []>,
                    Requires<[HasELPMX]>;
