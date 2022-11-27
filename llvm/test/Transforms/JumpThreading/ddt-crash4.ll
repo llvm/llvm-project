@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading -disable-output -verify-dom-info
+; RUN: opt < %s -passes=jump-threading -disable-output -verify-dom-info
 @global = external global i64, align 8
 
 define void @f() {

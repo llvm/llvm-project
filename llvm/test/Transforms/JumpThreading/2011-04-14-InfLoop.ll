@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading < %s
+; RUN: opt -passes=jump-threading < %s
 ; <rdar://problem/9284786>
 
 %0 = type <{ i64, i16, i64, i8, i8 }>

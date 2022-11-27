@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading -disable-output
+; RUN: opt < %s -passes=jump-threading -disable-output
 
 %struct.aaa = type { i8 }
 

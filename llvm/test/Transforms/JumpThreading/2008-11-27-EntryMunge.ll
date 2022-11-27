@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading -S | grep "ret i32 0"
+; RUN: opt < %s -passes=jump-threading -S | grep "ret i32 0"
 ; PR3138
 
 define i32 @jt() {

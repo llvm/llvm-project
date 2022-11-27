@@ -1,4 +1,4 @@
-; RUN: opt -S -jump-threading %s | FileCheck %s
+; RUN: opt -S -passes=jump-threading %s | FileCheck %s
 ; When simplify a branch based on LVI predicates, we should replace the
 ; comparison itself with a constant (when possible) in case it's otherwise used.
 
