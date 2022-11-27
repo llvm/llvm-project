@@ -37,6 +37,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cstring>
+#include <optional>
 #include <system_error>
 #include <utility>
 
@@ -840,8 +841,8 @@ static std::string normalizePdbPath(StringRef path) {
 }
 
 // If existing, return the actual PDB path on disk.
-static Optional<std::string> findPdbPath(StringRef pdbPath,
-                                         ObjFile *dependentFile) {
+static std::optional<std::string> findPdbPath(StringRef pdbPath,
+                                              ObjFile *dependentFile) {
   // Ensure the file exists before anything else. In some cases, if the path
   // points to a removable device, Driver::enqueuePath() would fail with an
   // error (EAGAIN, "resource unavailable try again") which we want to skip
