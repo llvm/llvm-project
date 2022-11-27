@@ -3,6 +3,8 @@
 // Test __sanitizer_annotate_contiguous_container.
 
 #include <algorithm>
+#include <vector>
+
 #include <assert.h>
 #include <sanitizer/asan_interface.h>
 #include <stdio.h>
@@ -14,6 +16,20 @@ static constexpr size_t kGranularity = 8;
 template <class T> static constexpr T RoundDown(T x) {
   return reinterpret_cast<T>(reinterpret_cast<uintptr_t>(x) &
                              ~(kGranularity - 1));
+}
+
+static std::vector<bool> GetPoisonedMask(char *begin, char *end) {
+  std::vector<bool> result;
+  result.reserve(end - begin);
+  for (; begin != end; ++begin)
+    result.push_back(__asan_address_is_poisoned(begin));
+  return result;
+}
+
+static int GetFirstMissmatch(const std::vector<bool> &a,
+                             const std::vector<bool> &b) {
+  return std::mismatch(a.begin(), a.end(), b.begin(), b.end()).first -
+         a.begin();
 }
 
 void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
@@ -49,6 +65,14 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
       assert(__asan_address_is_poisoned(cur) == poison_buffer);
   }
 
+  // Precalculate masks.
+  std::vector<std::vector<bool>> masks(capacity + 1);
+  for (int i = 0; i <= capacity; i++) {
+    char *old_end = end;
+    end = st_beg + i;
+    __sanitizer_annotate_contiguous_container(st_beg, st_end, old_end, end);
+    masks[i] = GetPoisonedMask(st_beg, st_end);
+  }
   for (int i = 0; i <= capacity; i++) {
     char *old_end = end;
     end = st_beg + i;
@@ -62,20 +86,18 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
       const void *bad_address =
           __sanitizer_contiguous_container_find_bad_address(st_beg, cur,
                                                             st_end);
-
       if (cur == end ||
-          // Any end in the last unaligned granule is OK, if bytes after the
-          // storage are not poisoned.
+          // The last unaligned granule of the storage followed by unpoisoned
+          // bytes looks the same.
           (!poison_buffer && RoundDown(st_end) <= std::min(cur, end))) {
         assert(is_valid);
         assert(!bad_address);
-      } else if (cur < end) {
-        assert(!is_valid);
-        assert(cur == bad_address);
-      } else {
-        assert(!is_valid);
-        assert(end == bad_address);
+        continue;
       }
+      assert(!is_valid);
+      assert(bad_address == std::min(cur, end));
+      assert(bad_address ==
+             st_beg + GetFirstMissmatch(masks[i], masks[cur - st_beg]));
     }
   }
 
