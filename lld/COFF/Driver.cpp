@@ -52,6 +52,7 @@
 #include <algorithm>
 #include <future>
 #include <memory>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -1320,7 +1321,7 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
   AutoExporter exporter(excludedSymbols);
 
   for (auto *arg : args.filtered(OPT_wholearchive_file))
-    if (Optional<StringRef> path = doFindFile(arg->getValue()))
+    if (std::optional<StringRef> path = doFindFile(arg->getValue()))
       exporter.addWholeArchive(*path);
 
   for (auto *arg : args.filtered(OPT_exclude_symbols)) {
@@ -1733,7 +1734,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /opt.
   bool doGC = debug == DebugKind::None || args.hasArg(OPT_profile);
-  Optional<ICFLevel> icfLevel;
+  std::optional<ICFLevel> icfLevel;
   if (args.hasArg(OPT_profile))
     icfLevel = ICFLevel::None;
   unsigned tailMerge = 1;
@@ -1951,7 +1952,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   std::set<sys::fs::UniqueID> wholeArchives;
   for (auto *arg : args.filtered(OPT_wholearchive_file))
-    if (Optional<StringRef> path = doFindFile(arg->getValue()))
+    if (std::optional<StringRef> path = doFindFile(arg->getValue()))
       if (Optional<sys::fs::UniqueID> id = getUniqueID(*path))
         wholeArchives.insert(*id);
 
