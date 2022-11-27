@@ -107,7 +107,7 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &sec, uint64_t pos,
   auto it =
       partition_point(rels, [=](const RelTy &a) { return a.r_offset < pos; });
   if (it == rels.end() || it->r_offset != pos)
-    return None;
+    return std::nullopt;
   const RelTy &rel = *it;
 
   const ObjFile<ELFT> *file = sec.getFile<ELFT>();
