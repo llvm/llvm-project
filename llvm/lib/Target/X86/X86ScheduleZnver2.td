@@ -963,9 +963,6 @@ def Zn2WriteFPU013LdY : SchedWriteRes<[Zn2AGU, Zn2FPU013]> {
 }
 
 // PBLENDW.
-// ymm
-def : InstRW<[Zn2WriteFPU013Y], (instrs VPBLENDWYrri)>;
-
 // x,m,i / v,v,m,i
 def : InstRW<[Zn2WriteFPU013Ld], (instregex "(V?)PBLENDWrmi")>;
 // y,m,i
