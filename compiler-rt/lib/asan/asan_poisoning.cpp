@@ -492,6 +492,12 @@ void __sanitizer_annotate_double_ended_contiguous_container(
     ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
         storage_beg, storage_end, old_beg, old_end, new_beg, new_end, &stack);
   }
+  CHECK_LE(storage_end - storage_beg,
+           FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Sanity check.
+
+  if ((old_beg == old_end && new_beg == new_end) ||
+      (old_beg == new_beg && old_end == new_end))
+    return;  // Nothing to do here.
 
   // Right now, the function does not support:
   // - unaligned storage beginning
@@ -513,9 +519,6 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 
   if (old_beg != new_beg) {
-    CHECK_LE(storage_end - storage_beg,
-             FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Sanity check.
-
     // There are two situations: we are poisoning or unpoisoning.
     // WARNING: at the moment we do not poison prefixes of blocks described by
     // one byte in shadow memory, so we have to unpoison prefixes of blocks with
@@ -566,9 +569,6 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 
   if (old_end != new_end) {
-    CHECK_LE(storage_end - storage_beg,
-             FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Sanity check.
-
     if (old_end < new_end) {  // We are unpoisoning memory
       uptr a = RoundDownTo(old_end, granularity);
       uptr c = RoundDownTo(new_end, granularity);
