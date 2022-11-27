@@ -9,5 +9,5 @@ target triple = "x86_64-apple-macosx10.11.0"
 @g = global [1 x i32] zeroinitializer, align 4
 
 !llvm.asan.globals = !{!0, !1}
-!0 = !{[1 x i32]* @g, null, !"name", i1 false, i1 false}
-!1 = !{i8* bitcast ([1 x i32]* @g to i8*), null, !"name", i1 false, i1 false}
+!0 = !{ptr @g, null, !"name", i1 false, i1 false}
+!1 = !{ptr @g, null, !"name", i1 false, i1 false}
