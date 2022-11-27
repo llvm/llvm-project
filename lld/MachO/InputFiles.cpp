@@ -73,6 +73,7 @@
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 
+#include <optional>
 #include <type_traits>
 
 using namespace llvm;
@@ -258,7 +259,7 @@ InputFile::InputFile(Kind kind, const InterfaceFile &interface)
 //
 // Note that "record" is a term I came up with. In contrast, "literal" is a term
 // used by the Mach-O format.
-static Optional<size_t> getRecordSize(StringRef segname, StringRef name) {
+static std::optional<size_t> getRecordSize(StringRef segname, StringRef name) {
   if (name == section_names::compactUnwind) {
     if (segname == segment_names::ld)
       return target->wordSize == 8 ? 32 : 20;
@@ -1401,7 +1402,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
                         ehFrameSection.addr + isecOff + funcAddrOff;
     uint32_t funcLength = reader.readPointer(&dataOff, cie.funcPtrSize);
     size_t lsdaAddrOff = 0; // Offset of the LSDA address within the EH frame.
-    Optional<uint64_t> lsdaAddrOpt;
+    std::optional<uint64_t> lsdaAddrOpt;
     if (cie.fdesHaveAug) {
       reader.skipLeb128(&dataOff);
       lsdaAddrOff = dataOff;
