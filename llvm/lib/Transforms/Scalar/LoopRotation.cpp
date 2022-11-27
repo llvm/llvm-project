@@ -25,6 +25,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/LoopRotationUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-rotate"
@@ -55,7 +56,7 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
   const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
   const SimplifyQuery SQ = getBestSimplifyQuery(AR, DL);
 
-  Optional<MemorySSAUpdater> MSSAU;
+  std::optional<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = MemorySSAUpdater(AR.MSSA);
   bool Changed = LoopRotation(&L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE,
@@ -116,7 +117,7 @@ public:
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     const SimplifyQuery SQ = getBestSimplifyQuery(*this, F);
-    Optional<MemorySSAUpdater> MSSAU;
+    std::optional<MemorySSAUpdater> MSSAU;
     // Not requiring MemorySSA and getting it only if available will split
     // the loop pass pipeline when LoopRotate is being run first.
     auto *MSSAA = getAnalysisIfAvailable<MemorySSAWrapperPass>();
