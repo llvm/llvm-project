@@ -23,7 +23,7 @@ bb2:
   br i1 %2, label %bb3, label %bb4
 
 bb3:
-  store i16 undef, i16* @a, align 1
+  store i16 undef, ptr @a, align 1
   br label %bb4
 
 bb4:
