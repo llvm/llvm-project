@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading
+; RUN: opt -S -passes=jump-threading < %s
 ; PR9446
 ; Just check that it doesn't crash
 

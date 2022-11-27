@@ -1,4 +1,4 @@
-; RUN: opt -S -jump-threading -verify -o - %s | FileCheck %s
+; RUN: opt -S -passes=jump-threading,verify -o - %s | FileCheck %s
 @a = external global i16, align 1
 
 ; CHECK-LABEL: f

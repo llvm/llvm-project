@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -jump-threading | FileCheck %s
+; RUN: opt -S < %s -passes=jump-threading | FileCheck %s
 
 ; PR40992: Do not incorrectly fold %bb5 into an unconditional br to %bb7.
 ;          Also verify we correctly thread %bb1 -> %bb7 when %c is false.

@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -S %s -o - | FileCheck %s
+; RUN: opt -passes=jump-threading -S %s -o - | FileCheck %s
 
 define i32 @f(ptr %a, i64 %i) {
 entry:

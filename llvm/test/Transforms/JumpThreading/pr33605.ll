@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading -S | FileCheck %s
+; RUN: opt < %s -passes=jump-threading -S | FileCheck %s
 
 ; Skip simplifying unconditional branches from empty blocks in simplifyCFG,
 ; when it can destroy canonical loop structure.

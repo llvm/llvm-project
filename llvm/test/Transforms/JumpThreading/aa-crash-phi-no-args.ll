@@ -1,5 +1,4 @@
 ; REQUIRES: asserts
-; RUN: opt -jump-threading -aa-pipeline basic-aa -S -disable-output %s
 ; RUN: opt -passes=jump-threading -aa-pipeline basic-aa -S -disable-output %s
 
 define void @foo(ptr %arg1, ptr %arg2) {

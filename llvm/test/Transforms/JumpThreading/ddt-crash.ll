@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading -disable-output
+; RUN: opt < %s -passes=jump-threading -disable-output
 
 %struct.ham = type { i8, i8, i16, i32 }
 %struct.zot = type { ptr }

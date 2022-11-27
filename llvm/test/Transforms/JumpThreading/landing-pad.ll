@@ -1,4 +1,4 @@
-; RUN: opt < %s -disable-output -jump-threading
+; RUN: opt -passes=jump-threading -disable-output < %s
 
 %class.E = type { ptr, %class.C }
 %class.C = type { %class.A }

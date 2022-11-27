@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -verify-each -S -mtriple=x86_64-- -o - %s
+; RUN: opt -passes=jump-threading -verify-each -S -mtriple=x86_64-- -o - %s
 
 define void @foo() {
 entry:

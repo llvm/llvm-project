@@ -1,4 +1,4 @@
-; RUN: opt -S -jump-threading < %s | FileCheck %s
+; RUN: opt -S -passes=jump-threading < %s | FileCheck %s
 
 ; Check that based solely on static profile estimation we don't update the
 ; branch-weight metadata.  Even if the function has an entry frequency, a
