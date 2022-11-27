@@ -408,10 +408,12 @@ defm : X86WriteResPairUnsupported<WriteVPMOV256>;
 // Vector insert/extract operations.
 defm : SLMWriteResPair<WriteVecInsert, [SLM_FPC_RSV0],  1>;
 
-def  : WriteRes<WriteVecExtract, [SLM_FPC_RSV0]>;
+def  : WriteRes<WriteVecExtract, [SLM_FPC_RSV0]> {
+  let NumMicroOps = 2;
+}
 def  : WriteRes<WriteVecExtractSt, [SLM_FPC_RSV0, SLM_MEC_RSV]> {
   let Latency = 4;
-  let NumMicroOps = 2;
+  let NumMicroOps = 5;
   let ResourceCycles = [1, 2];
 }
 
