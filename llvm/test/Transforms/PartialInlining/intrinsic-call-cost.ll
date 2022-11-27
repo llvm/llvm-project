@@ -24,7 +24,7 @@ bb:
 ; CHECK-NEXT: br i1 %tmp3.i, label %bb4.i, label %delete_slot_part.exit
 
 ; CHECK: bb4.i
-; CHECK-NEXT: %tmp.i.i = load i8, i8* @emit_notes
+; CHECK-NEXT: %tmp.i.i = load i8, ptr @emit_notes
 ; CHECK-NEXT:   %tmp1.i.i = icmp ne i8 %tmp.i.i, 0
 ; CHECK-NEXT:  tail call void @llvm.assume(i1 %tmp1.i.i)
 ; CHECK-NEXT:  unreachable
@@ -39,7 +39,7 @@ bb:
   br i1 %tmp3.i, label %bb4.i, label %delete_slot_part.exit
 
 bb4.i:
-  %tmp.i.i = load i8, i8* @emit_notes, align 2
+  %tmp.i.i = load i8, ptr @emit_notes, align 2
   %tmp1.i.i = icmp ne i8 %tmp.i.i, 0
   tail call void @llvm.assume(i1 %tmp1.i.i)
   unreachable
