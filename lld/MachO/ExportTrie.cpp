@@ -42,6 +42,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/LEB128.h"
+#include <optional>
 
 using namespace llvm;
 using namespace lld;
@@ -81,7 +82,7 @@ struct ExportInfo {
 
 struct macho::TrieNode {
   std::vector<Edge> edges;
-  Optional<ExportInfo> info;
+  std::optional<ExportInfo> info;
   // Estimated offset from the start of the serialized trie to the current node.
   // This will converge to the true offset when updateOffset() is run to a
   // fixpoint.
