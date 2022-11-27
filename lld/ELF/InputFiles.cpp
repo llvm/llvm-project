@@ -1775,21 +1775,18 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   const ArrayRef<typename ELFT::Sym> eSyms = this->getELFSyms<ELFT>();
   numSymbols = eSyms.size();
   symbols = std::make_unique<Symbol *[]>(numSymbols);
-  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
-    if (eSyms[i].st_shndx != SHN_UNDEF)
-      symbols[i] = symtab.insert(CHECK(eSyms[i].getName(stringTable), this));
 
-  // Replace existing symbols with LazyObject symbols.
-  //
   // resolve() may trigger this->extract() if an existing symbol is an undefined
   // symbol. If that happens, this function has served its purpose, and we can
   // exit from the loop early.
-  for (Symbol *sym : getGlobalSymbols())
-    if (sym) {
-      sym->resolve(LazyObject{*this});
-      if (!lazy)
-        return;
-    }
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
+    if (eSyms[i].st_shndx == SHN_UNDEF)
+      continue;
+    symbols[i] = symtab.insert(CHECK(eSyms[i].getName(stringTable), this));
+    symbols[i]->resolve(LazyObject{*this});
+    if (!lazy)
+      break;
+  }
 }
 
 bool InputFile::shouldExtractForCommon(StringRef name) {
