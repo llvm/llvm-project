@@ -4552,7 +4552,7 @@ let mayLoad = 0, mayStore = 1 in
 class StoreRelease<bits<2> sz, bit o2, bit L, bit o1, bit o0,
                    RegisterClass regtype, string asm>
     : LoadStoreExclusiveSimple<sz, o2, L, o1, o0, (outs),
-                               (ins regtype:$Rt, GPR64sp0:$Rn),
+                               (ins regtype:$Rt, GPR64sp:$Rn),
                                asm, "\t$Rt, [$Rn]">,
       Sched<[WriteST]>;
 
@@ -11761,6 +11761,73 @@ multiclass ComparisonOp<bit isUnsigned, bit isMin, string asm,
 //----------------------------------------------------------------------------
 // 2022 Armv8.9/Armv9.4 Extensions
 //----------------------------------------------------------------------------
+
+//---
+// RCPC instructions (FEAT_LRCPC3)
+//---
+
+class BaseLRCPC3<bits<2> size, bit V, bits<2> opc, dag oops, dag iops,
+                 string asm, string operands, string cstr = "">
+      : I<oops, iops, asm, operands, cstr, []>,
+        Sched<[WriteAtomic]> {
+  bits<5> Rt;
+  bits<5> Rn;
+  let Inst{31-30}    = size;
+  let Inst{29-24}    = {0,1,1,V,0,1};
+  let Inst{23-22}    = opc;
+  let Inst{21}       = 0b0;
+  //  Inst{20-12}
+  let Inst{11-10}    = 0b10;
+  let Inst{9-5}      = Rn;
+  let Inst{4-0}      = Rt;
+
+  let mayLoad = Inst{22};
+  let mayStore = !not(Inst{22});
+  let hasSideEffects = 0;
+}
+
+class BaseLRCPC3IntegerLoadStorePair<bits<2> size, bits<2> opc, bits<4> opc2,
+                                     dag oops, dag iops, string asm,
+                                     string operands, string cstr>
+      : BaseLRCPC3<size, /*V*/0, opc, oops, iops, asm, operands, cstr> {
+  bits<5> Rt2;
+  let Inst{20-16} = Rt2;
+  let Inst{15-12} = opc2;
+}
+
+class BaseLRCPC3IntegerLoadStore<bits<2> size, bits<2> opc, dag oops, dag iops,
+                                 string asm, string operands, string cstr>
+      : BaseLRCPC3<size, /*V*/0, opc, oops, iops, asm, operands, cstr> {
+  let Inst{20-12} = 0b000000000; // imm9
+}
+
+multiclass LRCPC3NEONLoadStoreUnscaledOffset<bits<2> size, bits<2> opc, RegisterClass regtype,
+                                             dag oops, dag iops, string asm> {
+  def i : BaseLRCPC3<size, /*V*/1, opc, oops, iops, asm, "\t$Rt, [$Rn{, $simm}]", /*cstr*/""> {
+    bits<9> simm; // signed immediate encoded in imm9=Rt2:imm4
+    let Inst{20-12} = simm;
+  }
+
+  def a : InstAlias<asm # "\t$Rt, [$Rn]",
+                  (!cast<Instruction>(NAME # "i") regtype:$Rt, GPR64sp:$Rn, 0)>;
+}
+
+class LRCPC3NEONLdStSingle<bit L, dag oops, dag iops, string asm, string cst>
+      : BaseSIMDLdStSingle<L, /*R*/0b0, /*opcode*/0b100, asm,
+                           "\t$Vt$Q, [$Rn]", cst, oops, iops, []>,
+        Sched<[]> {
+  bit Q;
+  let Inst{31}       = 0;
+  let Inst{30}       = Q;
+  let Inst{23}       = 0;
+  let Inst{20-16}    = 0b00001;
+  let Inst{12}       = 0; // S
+  let Inst{11-10}    = 0b01; // size
+
+  let mayLoad = L;
+  let mayStore = !not(L);
+  let hasSideEffects = 1;
+}
 
 //---
 // Instrumentation Extension (FEAT_ITE)

@@ -115,6 +115,17 @@ Fortran::lower::CallerInterface::getPassArgIndex() const {
     }
     ++passArgIdx;
   }
+  if (!passArg)
+    return passArg;
+  // Take into account result inserted as arguments.
+  if (std::optional<Fortran::lower::CallInterface<
+          Fortran::lower::CallerInterface>::PassedEntity>
+          resultArg = getPassedResult()) {
+    if (resultArg->passBy == PassEntityBy::AddressAndLength)
+      passArg = *passArg + 2;
+    else if (resultArg->passBy == PassEntityBy::BaseAddress)
+      passArg = *passArg + 1;
+  }
   return passArg;
 }
 
@@ -251,7 +262,8 @@ void Fortran::lower::CallerInterface::walkResultLengths(
     if (std::optional<Fortran::evaluate::ExtentExpr> length =
             dynamicType.GetCharLength())
       visitor(toEvExpr(*length));
-  } else if (dynamicType.category() == common::TypeCategory::Derived) {
+  } else if (dynamicType.category() == common::TypeCategory::Derived &&
+             !dynamicType.IsUnlimitedPolymorphic()) {
     const Fortran::semantics::DerivedTypeSpec &derivedTypeSpec =
         dynamicType.GetDerivedTypeSpec();
     if (Fortran::semantics::CountLenParameters(derivedTypeSpec) > 0)

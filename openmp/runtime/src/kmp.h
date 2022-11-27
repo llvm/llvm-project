@@ -3616,7 +3616,7 @@ extern void __kmp_check_stack_overlap(kmp_info_t *thr);
 extern void __kmp_expand_host_name(char *buffer, size_t size);
 extern void __kmp_expand_file_name(char *result, size_t rlen, char *pattern);
 
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64 || (KMP_OS_WINDOWS && KMP_ARCH_AARCH64)
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64 || (KMP_OS_WINDOWS && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM))
 extern void
 __kmp_initialize_system_tick(void); /* Initialize timer tick value */
 #endif

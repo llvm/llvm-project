@@ -60,6 +60,7 @@
 #include <iterator>
 #include <limits>
 #include <map>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -989,7 +990,7 @@ bool HexagonFrameLowering::updateExitPaths(MachineBasicBlock &MBB,
   return ReachedExit;
 }
 
-static Optional<MachineBasicBlock::iterator>
+static std::optional<MachineBasicBlock::iterator>
 findCFILocation(MachineBasicBlock &B) {
     // The CFI instructions need to be inserted right after allocframe.
     // An exception to this is a situation where allocframe is bundled

@@ -97,12 +97,20 @@ struct Matcher {
   Matcher(const TokenList &Tokens, TestLexer &Lex)
       : Tokens(Tokens), It(this->Tokens.begin()), Lex(Lex) {}
 
+  bool tokenMatches(const FormatToken *Left, const FormatToken *Right) {
+    if (Left->getType() == Right->getType() &&
+        Left->TokenText == Right->TokenText) {
+      return true;
+    }
+    llvm::dbgs() << Left->TokenText << " != " << Right->TokenText << "\n";
+    return false;
+  }
+
   Chunk consume(StringRef Tokens) {
     TokenList Result;
     for (const FormatToken *Token : uneof(Lex.lex(Tokens))) {
       (void)Token; // Fix unused variable warning when asserts are disabled.
-      assert((*It)->getType() == Token->getType() &&
-             (*It)->TokenText == Token->TokenText);
+      assert(tokenMatches(*It, Token));
       Result.push_back(*It);
       ++It;
     }

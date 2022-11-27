@@ -438,8 +438,8 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    call __truncsfhf2@plt
 ; RV32I-NEXT:    lui a1, 1048568
 ; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    slli a1, s1, 17
-; RV32I-NEXT:    srli a1, a1, 17
+; RV32I-NEXT:    slli s1, s1, 17
+; RV32I-NEXT:    srli a1, s1, 17
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -477,8 +477,8 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    call __truncsfhf2@plt
 ; RV64I-NEXT:    lui a1, 1048568
 ; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    slli a1, s1, 49
-; RV64I-NEXT:    srli a1, a1, 49
+; RV64I-NEXT:    slli s1, s1, 49
+; RV64I-NEXT:    srli a1, s1, 49
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
@@ -908,8 +908,8 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s1, a2
 ; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi s3, a1, -1
+; RV32I-NEXT:    lui s3, 16
+; RV32I-NEXT:    addi s3, s3, -1
 ; RV32I-NEXT:    and a0, a0, s3
 ; RV32I-NEXT:    call __extendhfsf2@plt
 ; RV32I-NEXT:    li a1, 0
@@ -966,8 +966,8 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    mv s0, a1
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s3, a1, -1
+; RV64I-NEXT:    lui s3, 16
+; RV64I-NEXT:    addiw s3, s3, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2@plt
 ; RV64I-NEXT:    li a1, 0
@@ -1040,8 +1040,8 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s1, a2
 ; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s3, a0, -1
+; RV32I-NEXT:    lui s3, 16
+; RV32I-NEXT:    addi s3, s3, -1
 ; RV32I-NEXT:    and a0, a1, s3
 ; RV32I-NEXT:    call __extendhfsf2@plt
 ; RV32I-NEXT:    li a1, 0
@@ -1098,8 +1098,8 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s3, a0, -1
+; RV64I-NEXT:    lui s3, 16
+; RV64I-NEXT:    addiw s3, s3, -1
 ; RV64I-NEXT:    and a0, a1, s3
 ; RV64I-NEXT:    call __extendhfsf2@plt
 ; RV64I-NEXT:    li a1, 0
@@ -1743,8 +1743,8 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a2
 ; RV32I-NEXT:    mv s1, a1
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi s3, a1, -1
+; RV32I-NEXT:    lui s3, 16
+; RV32I-NEXT:    addi s3, s3, -1
 ; RV32I-NEXT:    and a0, a0, s3
 ; RV32I-NEXT:    call __extendhfsf2@plt
 ; RV32I-NEXT:    li a1, 0
@@ -1804,8 +1804,8 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s3, a1, -1
+; RV64I-NEXT:    lui s3, 16
+; RV64I-NEXT:    addiw s3, s3, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2@plt
 ; RV64I-NEXT:    li a1, 0
@@ -1882,8 +1882,8 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a2
 ; RV32I-NEXT:    mv s1, a1
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi s3, a1, -1
+; RV32I-NEXT:    lui s3, 16
+; RV32I-NEXT:    addi s3, s3, -1
 ; RV32I-NEXT:    and a0, a0, s3
 ; RV32I-NEXT:    call __extendhfsf2@plt
 ; RV32I-NEXT:    li a1, 0
@@ -1933,8 +1933,8 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw s3, a1, -1
+; RV64I-NEXT:    lui s3, 16
+; RV64I-NEXT:    addiw s3, s3, -1
 ; RV64I-NEXT:    and a0, a0, s3
 ; RV64I-NEXT:    call __extendhfsf2@plt
 ; RV64I-NEXT:    li a1, 0

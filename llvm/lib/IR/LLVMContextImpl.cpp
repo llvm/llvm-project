@@ -240,7 +240,7 @@ void LLVMContextImpl::getSyncScopeNames(
 /// singleton OptBisect if not explicitly set.
 OptPassGate &LLVMContextImpl::getOptPassGate() const {
   if (!OPG)
-    OPG = &getOptBisector();
+    OPG = &getGlobalPassGate();
   return *OPG;
 }
 

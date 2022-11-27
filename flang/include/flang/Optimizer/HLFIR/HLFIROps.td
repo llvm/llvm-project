@@ -208,4 +208,25 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
+def hlfir_ConcatOp : hlfir_Op<"concat", []> {
+  let summary = "concatenate characters";
+  let description = [{
+    Concatenate two or more character strings of a same character kind.
+  }];
+
+  let arguments = (ins Variadic<AnyScalarCharacterEntity>:$strings,
+                   AnyIntegerType:$length);
+
+  let results = (outs AnyScalarCharacterExpr);
+
+  let assemblyFormat = [{
+    $strings `len` $length
+     attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::ValueRange":$strings,"mlir::Value":$len)>];
+
+  let hasVerifier = 1;
+}
+
 #endif // FORTRAN_DIALECT_HLFIR_OPS

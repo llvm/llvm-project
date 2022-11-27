@@ -458,6 +458,10 @@ def warn_analyzer_deprecated_option : Warning<
   "analyzer option '%0' is deprecated. This flag will be removed in %1, and "
   "passing this option will be an error.">,
   InGroup<DeprecatedStaticAnalyzerFlag>;
+def warn_analyzer_deprecated_option_with_alternative : Warning<
+  "analyzer option '%0' is deprecated. This flag will be removed in %1, and "
+  "passing this option will be an error. Use '%2' instead.">,
+  InGroup<DeprecatedStaticAnalyzerFlag>;
 
 def warn_drv_needs_hvx : Warning<
   "%0 requires HVX, use -mhvx/-mhvx= to enable it">,
