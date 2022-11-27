@@ -2333,11 +2333,19 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
 /// variable on which to base the steps, \p Step is the size of the step.
 static void buildScalarSteps(Value *ScalarIV, Value *Step,
                              const InductionDescriptor &ID, VPValue *Def,
-                             VPTransformState &State) {
+                             Type *TruncToTy, VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
+  Type *ScalarIVTy = ScalarIV->getType()->getScalarType();
+  if (TruncToTy) {
+    assert(Step->getType()->isIntegerTy() &&
+           "Truncation requires an integer step");
+    ScalarIV = State.Builder.CreateTrunc(ScalarIV, TruncToTy);
+    Step = State.Builder.CreateTrunc(Step, TruncToTy);
+    ScalarIVTy = ScalarIV->getType()->getScalarType();
+  }
+
   // We shouldn't have to build scalar steps if we aren't vectorizing.
   // Get the value type and ensure it and the step have the same integer type.
-  Type *ScalarIVTy = ScalarIV->getType()->getScalarType();
   assert(ScalarIVTy == Step->getType() &&
          "Val and Step should have the same type");
 
@@ -9545,17 +9553,11 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
                                       IndDesc);
       ScalarIV->setName("offset.idx");
     }
-    if (TruncToTy) {
-      assert(Step->getType()->isIntegerTy() &&
-             "Truncation requires an integer step");
-      ScalarIV = State.Builder.CreateTrunc(ScalarIV, TruncToTy);
-      Step = State.Builder.CreateTrunc(Step, TruncToTy);
-    }
     return ScalarIV;
   };
 
   Value *ScalarIV = CreateScalarIV(Step);
-  buildScalarSteps(ScalarIV, Step, IndDesc, this, State);
+  buildScalarSteps(ScalarIV, Step, IndDesc, this, TruncToTy, State);
 }
 
 void VPInterleaveRecipe::execute(VPTransformState &State) {
