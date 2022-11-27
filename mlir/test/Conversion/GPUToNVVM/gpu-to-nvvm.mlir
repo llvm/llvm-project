@@ -89,7 +89,7 @@ gpu.module @test_module {
     // CHECK: nvvm.shfl.sync bfly {{.*}}
     // CHECK: nvvm.barrier0
     // CHECK: llvm.fadd
-    %result = gpu.all_reduce add %arg0 {} : (f32) -> (f32)
+    %result = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
 
     gpu.return
   }
@@ -104,7 +104,7 @@ gpu.module @test_module {
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync bfly {{.*}}
     // CHECK: nvvm.barrier0
-    %result = gpu.all_reduce %arg0 {
+    %result = gpu.all_reduce %arg0 uniform {
     ^bb(%lhs : i32, %rhs : i32):
       %xor = arith.xori %lhs, %rhs : i32
       "gpu.yield"(%xor) : (i32) -> ()
