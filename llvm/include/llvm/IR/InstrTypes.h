@@ -36,6 +36,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -2014,7 +2015,7 @@ public:
   ///
   /// It is an error to call this for operand bundle types that may have
   /// multiple instances of them on the same instruction.
-  Optional<OperandBundleUse> getOperandBundle(StringRef Name) const {
+  std::optional<OperandBundleUse> getOperandBundle(StringRef Name) const {
     assert(countOperandBundlesOfType(Name) < 2 && "Precondition violated!");
 
     for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i) {
