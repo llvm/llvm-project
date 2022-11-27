@@ -5,7 +5,7 @@ target triple = "i386-gnu-linux"
 
 define void @exp_averages_intraday__deviation() {
 entry:
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   %1 = shl i32 %0, 2
   %2 = add nsw i32 undef, %1
   %3 = add nsw i32 %2, undef
@@ -22,7 +22,7 @@ entry:
   unreachable
 
 "8":                                              ; preds = %"4"
-  %8 = getelementptr inbounds i8, i8* undef, i32 %6
+  %8 = getelementptr inbounds i8, ptr undef, i32 %6
   br i1 undef, label %"13", label %"12"
 
 "12":                                             ; preds = %"8", %entry

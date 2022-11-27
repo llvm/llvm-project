@@ -16,17 +16,17 @@ define void @fn2() !dbg !6 {
 ; CHECK-NOT: or i16
   %inlinable_call = call i16 @fn1(), !dbg !7
   %dbgless_instruction = or i16 %inlinable_call, 0
-  store i16 %dbgless_instruction, i16* undef, align 1
+  store i16 %dbgless_instruction, ptr undef, align 1
   unreachable
 }
 
 define void @fn3() !dbg !8 {
 ; CHECK-LABEL: @fn3
-; CHECK: load i16, i16* undef, align 2, !dbg ![[LOC2:[0-9]+]]
+; CHECK: load i16, ptr undef, align 2, !dbg ![[LOC2:[0-9]+]]
 ; CHECK-NOT: or i16
-  %instruction = load i16, i16* undef, !dbg !9
+  %instruction = load i16, ptr undef, !dbg !9
   %dbgless_instruction = or i16 %instruction, 0
-  store i16 %dbgless_instruction, i16* undef, align 1
+  store i16 %dbgless_instruction, ptr undef, align 1
   unreachable
 }
 
