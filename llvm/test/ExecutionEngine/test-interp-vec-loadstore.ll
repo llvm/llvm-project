@@ -7,7 +7,7 @@
 @msg_double = internal global [20 x i8] c"double test passed\0A\00"
 @msg_float = internal global [19 x i8] c"float test passed\0A\00"
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 define i32 @main() {
   %a = alloca <4 x i32>, align 16
@@ -27,21 +27,21 @@ define i32 @main() {
   %pfloat_3 = alloca float
 
   ; store constants 1,2,3,4 as vector
-  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32>* %a, align 16
+  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %a, align 16
   ; store constants 1,2,3,4 as scalars
-  store i32 1, i32* %pint_0
-  store i32 2, i32* %pint_1
-  store i32 3, i32* %pint_2
-  store i32 4, i32* %pint_3
+  store i32 1, ptr %pint_0
+  store i32 2, ptr %pint_1
+  store i32 3, ptr %pint_2
+  store i32 4, ptr %pint_3
   
   ; load stored scalars
-  %val_int0 = load i32, i32* %pint_0
-  %val_int1 = load i32, i32* %pint_1
-  %val_int2 = load i32, i32* %pint_2
-  %val_int3 = load i32, i32* %pint_3
+  %val_int0 = load i32, ptr %pint_0
+  %val_int1 = load i32, ptr %pint_1
+  %val_int2 = load i32, ptr %pint_2
+  %val_int3 = load i32, ptr %pint_3
 
   ; load stored vector
-  %val0 = load <4 x i32> , <4 x i32> *%a, align 16
+  %val0 = load <4 x i32> , ptr %a, align 16
 
   ; extract integers from the loaded vector
   %res_i32_0 = extractelement <4 x i32> %val0, i32 0
@@ -72,24 +72,23 @@ define i32 @main() {
   ; if TRUE print message
   br i1 %res_i, label %Print_int, label %Double
 Print_int:
-  %ptr0 = getelementptr [17 x i8], [17 x i8]* @msg_int, i32 0, i32 0
-  call i32 (i8*,...) @printf(i8* %ptr0)
+  call i32 (ptr,...) @printf(ptr @msg_int)
   br label %Double
 Double:
-  store <4 x double> <double 5.0, double 6.0, double 7.0, double 8.0>, <4 x double>* %b, align 16
+  store <4 x double> <double 5.0, double 6.0, double 7.0, double 8.0>, ptr %b, align 16
   ; store constants as scalars
-  store double 5.0, double* %pdouble_0
-  store double 6.0, double* %pdouble_1
-  store double 7.0, double* %pdouble_2
-  store double 8.0, double* %pdouble_3
+  store double 5.0, ptr %pdouble_0
+  store double 6.0, ptr %pdouble_1
+  store double 7.0, ptr %pdouble_2
+  store double 8.0, ptr %pdouble_3
 
   ; load stored vector
-  %val1 = load <4 x double> , <4 x double> *%b, align 16
+  %val1 = load <4 x double> , ptr %b, align 16
   ; load stored scalars
-  %val_double0 = load double, double* %pdouble_0
-  %val_double1 = load double, double* %pdouble_1
-  %val_double2 = load double, double* %pdouble_2
-  %val_double3 = load double, double* %pdouble_3
+  %val_double0 = load double, ptr %pdouble_0
+  %val_double1 = load double, ptr %pdouble_1
+  %val_double2 = load double, ptr %pdouble_2
+  %val_double3 = load double, ptr %pdouble_3
 
   %res_double_0 = extractelement <4 x double> %val1, i32 0
   %res_double_1 = extractelement <4 x double> %val1, i32 1
@@ -116,24 +115,23 @@ Double:
 
   br i1 %res_double, label %Print_double, label %Float
 Print_double:
-  %ptr1 = getelementptr [20 x i8], [20 x i8]* @msg_double, i32 0, i32 0
-  call i32 (i8*,...) @printf(i8* %ptr1)
+  call i32 (ptr,...) @printf(ptr @msg_double)
   br label %Float
 Float:
-  store <4 x float> <float 9.0, float 10.0, float 11.0, float 12.0>, <4 x float>* %c, align 16
+  store <4 x float> <float 9.0, float 10.0, float 11.0, float 12.0>, ptr %c, align 16
 
-  store float 9.0, float* %pfloat_0
-  store float 10.0, float* %pfloat_1
-  store float 11.0, float* %pfloat_2
-  store float 12.0, float* %pfloat_3
+  store float 9.0, ptr %pfloat_0
+  store float 10.0, ptr %pfloat_1
+  store float 11.0, ptr %pfloat_2
+  store float 12.0, ptr %pfloat_3
 
   ; load stored vector
-  %val2 = load <4 x float> , <4 x float> *%c, align 16
+  %val2 = load <4 x float> , ptr %c, align 16
   ; load stored scalars
-  %val_float0 = load float, float* %pfloat_0
-  %val_float1 = load float, float* %pfloat_1
-  %val_float2 = load float, float* %pfloat_2
-  %val_float3 = load float, float* %pfloat_3
+  %val_float0 = load float, ptr %pfloat_0
+  %val_float1 = load float, ptr %pfloat_1
+  %val_float2 = load float, ptr %pfloat_2
+  %val_float3 = load float, ptr %pfloat_3
 
   %res_float_0 = extractelement <4 x float> %val2, i32 0
   %res_float_1 = extractelement <4 x float> %val2, i32 1
@@ -160,8 +158,7 @@ Float:
 
   br i1 %res_float, label %Print_float, label %Exit
 Print_float:
-  %ptr2 = getelementptr [19 x i8], [19 x i8]* @msg_float, i32 0, i32 0
-  call i32 (i8*,...) @printf(i8* %ptr2)
+  call i32 (ptr,...) @printf(ptr @msg_float)
   br label %Exit
 Exit:
 
