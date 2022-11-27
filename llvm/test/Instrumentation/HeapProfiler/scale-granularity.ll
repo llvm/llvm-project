@@ -5,9 +5,9 @@
 ; RUN: opt < %s -passes='function(memprof),memprof-module' -memprof-mapping-granularity 16 -memprof-mapping-scale 0 -S | FileCheck --check-prefix=CHECK-BOTH %s
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @read(i32* %a) {
+define i32 @read(ptr %a) {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }
 ; CHECK-GRAN-LABEL: @read
