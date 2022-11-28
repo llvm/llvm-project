@@ -141,6 +141,11 @@ static void migrateDebugInfo(AllocaInst *OldAlloca,
                              uint64_t SliceSizeInBytes, Instruction *OldInst,
                              Instruction *Inst, Value *Dest, Value *Value,
                              const DataLayout &DL) {
+  auto MarkerRange = at::getAssignmentMarkers(OldInst);
+  // Nothing to do if OldInst has no linked dbg.assign intrinsics.
+  if (MarkerRange.empty())
+    return;
+
   uint64_t RelativeOffset = bytesToBits(RelativeOffsetInBytes);
   uint64_t SliceSize = bytesToBits(SliceSizeInBytes);
 
@@ -162,8 +167,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca,
   DIBuilder DIB(*OldInst->getModule(), /*AllowUnresolved*/ false);
   uint64_t AllocaSize = *OldAlloca->getAllocationSizeInBits(DL);
   assert(OldAlloca->isStaticAlloca());
-
-  for (DbgAssignIntrinsic *DbgAssign : at::getAssignmentMarkers(OldInst)) {
+  for (DbgAssignIntrinsic *DbgAssign : MarkerRange) {
     LLVM_DEBUG(dbgs() << "      existing dbg.assign is: " << *DbgAssign
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
