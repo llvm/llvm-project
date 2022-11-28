@@ -9,12 +9,12 @@ target triple = "x86_64-pc-windows-msvc"
 ; using floats.
 @_fltused = dllexport global i32 0, align 4
 
-define void @foo(<4 x i32>* %p, <4 x float>* %q, i1 %t) nounwind {
+define void @foo(ptr %p, ptr %q, i1 %t) nounwind {
 entry:
   br label %loop
 loop:
-  store <4 x i32><i32 1073741824, i32 1073741824, i32 1073741824, i32 1073741824>, <4 x i32>* %p
-  store <4 x float><float 2.0, float 2.0, float 2.0, float 2.0>, <4 x float>* %q
+  store <4 x i32><i32 1073741824, i32 1073741824, i32 1073741824, i32 1073741824>, ptr %p
+  store <4 x float><float 2.0, float 2.0, float 2.0, float 2.0>, ptr %q
   br i1 %t, label %loop, label %ret
 ret:
   ret void
