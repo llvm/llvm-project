@@ -1194,15 +1194,16 @@ static char GetTrigraphCharForLetter(char Letter) {
 /// whether trigraphs are enabled or not.
 static char DecodeTrigraphChar(const char *CP, Lexer *L, bool Trigraphs) {
   char Res = GetTrigraphCharForLetter(*CP);
-  if (!Res || !L) return Res;
+  if (!Res)
+    return Res;
 
   if (!Trigraphs) {
-    if (!L->isLexingRawMode())
+    if (L && !L->isLexingRawMode())
       L->Diag(CP-2, diag::trigraph_ignored);
     return 0;
   }
 
-  if (!L->isLexingRawMode())
+  if (L && !L->isLexingRawMode())
     L->Diag(CP-2, diag::trigraph_converted) << StringRef(&Res, 1);
   return Res;
 }
@@ -3241,7 +3242,7 @@ llvm::Optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
       if (!Delimited)
         break;
       if (Diagnose)
-        Diag(BufferPtr, diag::warn_delimited_ucn_incomplete)
+        Diag(SlashLoc, diag::warn_delimited_ucn_incomplete)
             << StringRef(KindLoc, 1);
       return std::nullopt;
     }
@@ -3260,7 +3261,7 @@ llvm::Optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
 
   if (Count == 0) {
     if (Diagnose)
-      Diag(StartPtr, FoundEndDelimiter ? diag::warn_delimited_ucn_empty
+      Diag(SlashLoc, FoundEndDelimiter ? diag::warn_delimited_ucn_empty
                                        : diag::warn_ucn_escape_no_digits)
           << StringRef(KindLoc, 1);
     return std::nullopt;
@@ -3268,13 +3269,13 @@ llvm::Optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
 
   if (Delimited && Kind == 'U') {
     if (Diagnose)
-      Diag(StartPtr, diag::err_hex_escape_no_digits) << StringRef(KindLoc, 1);
+      Diag(SlashLoc, diag::err_hex_escape_no_digits) << StringRef(KindLoc, 1);
     return std::nullopt;
   }
 
   if (!Delimited && Count != NumHexDigits) {
     if (Diagnose) {
-      Diag(BufferPtr, diag::warn_ucn_escape_incomplete);
+      Diag(SlashLoc, diag::warn_ucn_escape_incomplete);
       // If the user wrote \U1234, suggest a fixit to \u.
       if (Count == 4 && NumHexDigits == 8) {
         CharSourceRange URange = makeCharRange(*this, KindLoc, KindLoc + 1);
@@ -3286,15 +3287,18 @@ llvm::Optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
   }
 
   if (Delimited && PP) {
-    Diag(BufferPtr, PP->getLangOpts().CPlusPlus2b
-                        ? diag::warn_cxx2b_delimited_escape_sequence
-                        : diag::ext_delimited_escape_sequence)
+    Diag(SlashLoc, PP->getLangOpts().CPlusPlus2b
+                       ? diag::warn_cxx2b_delimited_escape_sequence
+                       : diag::ext_delimited_escape_sequence)
         << /*delimited*/ 0 << (PP->getLangOpts().CPlusPlus ? 1 : 0);
   }
 
   if (Result) {
     Result->setFlag(Token::HasUCN);
-    if (CurPtr - StartPtr == (ptrdiff_t)(Count + 2 + (Delimited ? 2 : 0)))
+    // If the UCN contains either a trigraph or a line splicing,
+    // we need to call getAndAdvanceChar again to set the appropriate flags
+    // on Result.
+    if (CurPtr - StartPtr == (ptrdiff_t)(Count + 1 + (Delimited ? 2 : 0)))
       StartPtr = CurPtr;
     else
       while (StartPtr != CurPtr)
@@ -3306,6 +3310,7 @@ llvm::Optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
 }
 
 llvm::Optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
+                                                const char *SlashLoc,
                                                 Token *Result) {
   unsigned CharSize;
   bool Diagnose = Result && !isLexingRawMode();
@@ -3319,7 +3324,7 @@ llvm::Optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
   C = getCharAndSize(CurPtr, CharSize);
   if (C != '{') {
     if (Diagnose)
-      Diag(StartPtr, diag::warn_ucn_escape_incomplete);
+      Diag(SlashLoc, diag::warn_ucn_escape_incomplete);
     return std::nullopt;
   }
   CurPtr += CharSize;
@@ -3334,28 +3339,29 @@ llvm::Optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
       break;
     }
 
-    if (!isAlphanumeric(C) && C != '_' && C != '-' && C != ' ')
+    if (isVerticalWhitespace(C))
       break;
     Buffer.push_back(C);
   }
 
   if (!FoundEndDelimiter || Buffer.empty()) {
     if (Diagnose)
-      Diag(StartPtr, FoundEndDelimiter ? diag::warn_delimited_ucn_empty
+      Diag(SlashLoc, FoundEndDelimiter ? diag::warn_delimited_ucn_empty
                                        : diag::warn_delimited_ucn_incomplete)
           << StringRef(KindLoc, 1);
     return std::nullopt;
   }
 
   StringRef Name(Buffer.data(), Buffer.size());
-  llvm::Optional<char32_t> Res =
+  llvm::Optional<char32_t> Match =
       llvm::sys::unicode::nameToCodepointStrict(Name);
   llvm::Optional<llvm::sys::unicode::LooseMatchingResult> LooseMatch;
-  if (!Res) {
-    if (!isLexingRawMode()) {
-      Diag(StartPtr, diag::err_invalid_ucn_name)
-          << StringRef(Buffer.data(), Buffer.size());
-      LooseMatch = llvm::sys::unicode::nameToCodepointLooseMatching(Name);
+  if (!Match) {
+    LooseMatch = llvm::sys::unicode::nameToCodepointLooseMatching(Name);
+    if (Diagnose) {
+      Diag(StartName, diag::err_invalid_ucn_name)
+          << StringRef(Buffer.data(), Buffer.size())
+          << makeCharRange(*this, StartName, CurPtr - CharSize);
       if (LooseMatch) {
         Diag(StartName, diag::note_invalid_ucn_name_loose_matching)
             << FixItHint::CreateReplacement(
@@ -3363,27 +3369,30 @@ llvm::Optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
                    LooseMatch->Name);
       }
     }
-    // When finding a match using Unicode loose matching rules
-    // recover after having emitted a diagnostic.
-    if (!LooseMatch)
-      return std::nullopt;
     // We do not offer misspelled character names suggestions here
     // as the set of what would be a valid suggestion depends on context,
     // and we should not make invalid suggestions.
   }
 
-  if (Diagnose && PP && !LooseMatch)
-    Diag(BufferPtr, PP->getLangOpts().CPlusPlus2b
-                        ? diag::warn_cxx2b_delimited_escape_sequence
-                        : diag::ext_delimited_escape_sequence)
+  if (Diagnose && Match)
+    Diag(SlashLoc, PP->getLangOpts().CPlusPlus2b
+                       ? diag::warn_cxx2b_delimited_escape_sequence
+                       : diag::ext_delimited_escape_sequence)
         << /*named*/ 1 << (PP->getLangOpts().CPlusPlus ? 1 : 0);
 
-  if (LooseMatch)
-    Res = LooseMatch->CodePoint;
+  // If no diagnostic has been emitted yet, likely because we are doing a
+  // tentative lexing, we do not want to recover here to make sure the token
+  // will not be incorrectly considered valid. This function will be called
+  // again and a diagnostic emitted then.
+  if (LooseMatch && Diagnose)
+    Match = LooseMatch->CodePoint;
 
   if (Result) {
     Result->setFlag(Token::HasUCN);
-    if (CurPtr - StartPtr == (ptrdiff_t)(Buffer.size() + 4))
+    // If the UCN contains either a trigraph or a line splicing,
+    // we need to call getAndAdvanceChar again to set the appropriate flags
+    // on Result.
+    if (CurPtr - StartPtr == (ptrdiff_t)(Buffer.size() + 3))
       StartPtr = CurPtr;
     else
       while (StartPtr != CurPtr)
@@ -3391,7 +3400,7 @@ llvm::Optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
   } else {
     StartPtr = CurPtr;
   }
-  return *Res;
+  return Match ? llvm::Optional<uint32_t>(*Match) : std::nullopt;
 }
 
 uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
@@ -3403,7 +3412,7 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
   if (Kind == 'u' || Kind == 'U')
     CodePointOpt = tryReadNumericUCN(StartPtr, SlashLoc, Result);
   else if (Kind == 'N')
-    CodePointOpt = tryReadNamedUCN(StartPtr, Result);
+    CodePointOpt = tryReadNamedUCN(StartPtr, SlashLoc, Result);
 
   if (!CodePointOpt)
     return 0;

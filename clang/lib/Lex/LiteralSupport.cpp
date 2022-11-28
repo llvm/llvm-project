@@ -548,11 +548,10 @@ static bool ProcessNamedUCNEscape(const char *ThisTokBegin,
     return false;
   }
   ThisTokBuf++;
-  const char *ClosingBrace =
-      std::find_if_not(ThisTokBuf, ThisTokEnd, [](char C) {
-        return llvm::isAlnum(C) || llvm::isSpace(C) || C == '_' || C == '-';
-      });
-  bool Incomplete = ClosingBrace == ThisTokEnd || *ClosingBrace != '}';
+  const char *ClosingBrace = std::find_if(ThisTokBuf, ThisTokEnd, [](char C) {
+    return C == '}' || isVerticalWhitespace(C);
+  });
+  bool Incomplete = ClosingBrace == ThisTokEnd;
   bool Empty = ClosingBrace == ThisTokBuf;
   if (Incomplete || Empty) {
     if (Diags) {
