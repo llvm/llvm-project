@@ -10,10 +10,8 @@ define void @flat_user(ptr %ptr) {
 }
 
 ; CHECK-LABEL: {{^}}cast_alloca:
-; CHECK: s_getreg_b32 [[GETREG:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 0, 16)
-; CHECK: s_lshl_b32 [[APERTURE:s[0-9]+]], [[GETREG]], 16
-; CHECK: v_lshrrev_b32_e64 v0, 6, s33
-; CHECK-NEXT: v_mov_b32_e32 v1, [[APERTURE]]
+; CHECK: s_mov_b64 s[{{[0-9]+}}:[[HIREG:[0-9]+]]], src_private_base
+; CHECK: v_mov_b32_e32 v1, s[[HIREG]]
 ; CHECK-NOT: v0
 ; CHECK-NOT: v1
 define void @cast_alloca() {
@@ -26,10 +24,9 @@ define void @cast_alloca() {
 @lds = internal unnamed_addr addrspace(3) global i8 undef, align 4
 
 ; CHECK-LABEL: {{^}}cast_lds_gv:
-; CHECK: s_getreg_b32 [[GETREG:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 16, 16)
-; CHECK: s_lshl_b32 [[APERTURE:s[0-9]+]], [[GETREG]], 16
+; CHECK: s_mov_b64 s[{{[0-9]+}}:[[HIREG:[0-9]+]]], src_shared_base
 ; CHECK: v_mov_b32_e32 v0, 0
-; CHECK: v_mov_b32_e32 v1, [[APERTURE]]
+; CHECK: v_mov_b32_e32 v1, s[[HIREG]]
 ; CHECK-NOT: v0
 ; CHECK-NOT: v1
 define void @cast_lds_gv() {
@@ -55,20 +52,18 @@ define void @cast_constant_private_neg1_gv() {
 }
 
 ; CHECK-LABEL: {{^}}cast_constant_lds_other_gv:
-; CHECK: s_getreg_b32 [[GETREG:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 16, 16)
-; CHECK: s_lshl_b32 [[APERTURE:s[0-9]+]], [[GETREG]], 16
+; CHECK: s_mov_b64 s[{{[0-9]+}}:[[HIREG:[0-9]+]]], src_shared_base
 ; CHECK: v_mov_b32_e32 v0, 0x7b
-; CHECK: v_mov_b32_e32 v1, [[APERTURE]]
+; CHECK: v_mov_b32_e32 v1, s[[HIREG]]
 define void @cast_constant_lds_other_gv() {
   call void @flat_user(ptr addrspacecast (ptr addrspace(3) inttoptr (i32 123 to ptr addrspace(3)) to ptr))
   ret void
 }
 
 ; CHECK-LABEL: {{^}}cast_constant_private_other_gv:
-; CHECK: s_getreg_b32 [[GETREG:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 0, 16)
-; CHECK: s_lshl_b32 [[APERTURE:s[0-9]+]], [[GETREG]], 16
+; CHECK: s_mov_b64 s[{{[0-9]+}}:[[HIREG:[0-9]+]]], src_private_base
 ; CHECK: v_mov_b32_e32 v0, 0x7b
-; CHECK: v_mov_b32_e32 v1, [[APERTURE]]
+; CHECK: v_mov_b32_e32 v1, s[[HIREG]]
 define void @cast_constant_private_other_gv() {
   call void @flat_user(ptr addrspacecast (ptr addrspace(5) inttoptr (i32 123 to ptr addrspace(5)) to ptr))
   ret void
