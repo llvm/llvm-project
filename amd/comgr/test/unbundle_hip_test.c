@@ -93,7 +93,7 @@ int main(int Argc, char *Argv[]) {
   checkError(Status, "amd_comgr_create_data");
   Status = amd_comgr_set_data(DataBitcode1, SizeBitcode1, BufBitcode1);
   checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataBitcode1, "source/square.bc");
+  Status = amd_comgr_set_data_name(DataBitcode1, "square");
   checkError(Status, "amd_comgr_set_data_name");
   Status = amd_comgr_data_set_add(DataSetBundled, DataBitcode1);
   checkError(Status, "amd_comgr_data_set_add");
@@ -103,7 +103,7 @@ int main(int Argc, char *Argv[]) {
   checkError(Status, "amd_comgr_create_data");
   Status = amd_comgr_set_data(DataBitcode2, SizeBitcode2, BufBitcode2);
   checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataBitcode2, "source/double.bc");
+  Status = amd_comgr_set_data_name(DataBitcode2, "double");
   checkError(Status, "amd_comgr_set_data_name");
   Status = amd_comgr_data_set_add(DataSetBundled, DataBitcode2);
   checkError(Status, "amd_comgr_data_set_add");
@@ -113,7 +113,7 @@ int main(int Argc, char *Argv[]) {
   checkError(Status, "amd_comgr_create_data");
   Status = amd_comgr_set_data(DataArchive, SizeArchive, BufArchive);
   checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataArchive, "source/cube.a");
+  Status = amd_comgr_set_data_name(DataArchive, "cube");
   checkError(Status, "amd_comgr_set_data_name");
   Status = amd_comgr_data_set_add(DataSetBundled, DataArchive);
   checkError(Status, "amd_comgr_data_set_add");

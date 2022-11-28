@@ -1146,8 +1146,12 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
   // Collect bitcode memory buffers from bitcodes, bundles, and archives
   for (auto *Input : InSet->DataObjects) {
 
-    if (env::shouldSaveTemps())
-      outputToFile(Input, StringRef(std::string("comgr_tmp_") + Input->Name));
+    if (env::shouldSaveTemps()) {
+      if (auto Status = outputToFile(Input,
+                        StringRef(std::string("./comgr_tmp_") + Input->Name))) {
+        return Status;
+      }
+    }
 
     if (Input->DataKind == AMD_COMGR_DATA_KIND_BC) {
       // The data in Input outlives Mod, and the linker destructs Mod after
@@ -1179,7 +1183,10 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
 
       // Write data to file system so that Offload Bundler can process
       // TODO: Switch write to VFS
-      outputToFile(Input, Input->Name);
+      if (auto Status = outputToFile(Input,
+                        StringRef(std::string("./") + Input->Name))) {
+        return Status;
+      }
 
       // Configure Offload Bundler
       OffloadBundlerConfig BundlerConfig;
@@ -1263,7 +1270,10 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
 
       // Write data to file system so that Offload Bundler can process
       // TODO: Switch write to VFS
-      outputToFile(Input, Input->Name);
+      if (auto Status = outputToFile(Input,
+                        StringRef(std::string("./") + Input->Name))) {
+        return Status;
+      }
 
       // Configure Offload Bundler
       OffloadBundlerConfig BundlerConfig;
