@@ -401,6 +401,8 @@ Improvements to Clang's diagnostics
   PCH or modules. When Clang hits this limit, it now produces notes mentioning
   which header and source files are consuming large amounts of this space.
   ``#pragma clang __debug sloc_usage`` can also be used to request this report.
+- Clang no longer permits the keyword 'bool' in a concept declaration as a
+  concepts-ts compatibility extension.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
