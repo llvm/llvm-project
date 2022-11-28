@@ -662,7 +662,8 @@ C++2b Feature Support
 - Support label at end of compound statement (`P2324 <https://wg21.link/p2324r2>`_).
 - Implemented `P1169R4: static operator() <https://wg21.link/P1169R4>`_.
 - Implemented "char8_t Compatibility and Portability Fix" (`P2513R3 <https://wg21.link/P2513R3>`_).
-  This Change was applied to C++20 as a Defect Report.
+  This change was applied to C++20 as a Defect Report.
+- Implemented "Permitting static constexpr variables in constexpr functions" (`P2647R1 <https://wg21.link/P2647R1>_`).
 
 CUDA/HIP Language Changes in Clang
 ----------------------------------

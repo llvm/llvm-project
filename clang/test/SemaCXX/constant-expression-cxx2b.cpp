@@ -6,6 +6,8 @@ struct NonLiteral { // cxx2a-note {{'NonLiteral' is not literal}} \
   NonLiteral() {}
 };
 
+struct Constexpr{};
+
 #if __cplusplus > 202002L
 
 constexpr int f(int n) {  // expected-error {{constexpr function never produces a constant expression}}
@@ -82,15 +84,15 @@ constexpr int k_evaluated(int n) {
 constexpr int ke = k_evaluated(1); // expected-error {{constexpr variable 'ke' must be initialized by a constant expression}} \
                                    // expected-note {{in call}}
 
-constexpr int static_constexpr() { // expected-error {{constexpr function never produces a constant expression}}
-  static constexpr int m = 42;     // expected-note {{control flows through the definition of a static variable}} \
-                                   // cxx2b-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++2b}}
+constexpr int static_constexpr() {
+  static constexpr int m = 42;     // cxx2b-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++2b}}
+  static constexpr Constexpr foo; // cxx2b-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++2b}}
   return m;
 }
 
-constexpr int thread_local_constexpr() { // expected-error {{constexpr function never produces a constant expression}}
-  thread_local constexpr int m = 42;     // expected-note {{control flows through the definition of a thread_local variable}} \
-                                         // cxx2b-warning {{definition of a thread_local variable in a constexpr function is incompatible with C++ standards before C++2b}}
+constexpr int thread_local_constexpr() {
+  thread_local constexpr int m = 42; // cxx2b-warning {{definition of a thread_local variable in a constexpr function is incompatible with C++ standards before C++2b}}
+  thread_local constexpr Constexpr foo; // cxx2b-warning {{definition of a thread_local variable in a constexpr function is incompatible with C++ standards before C++2b}}
   return m;
 }
 
@@ -135,9 +137,8 @@ constexpr int d = label();
 // Test that explicitly constexpr lambdas behave correctly,
 // This is to be contrasted with the test for implicitly constexpr lambdas below.
 int test_in_lambdas() {
-  auto a = []() constexpr {  // expected-error{{constexpr function never produces a constant expression}}
-    static const int m = 32; // expected-note {{control flows through the definition of a static variable}} \
-                             // cxx2b-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++2b}}
+  auto a = []() constexpr {
+    static const int m = 32; // cxx2b-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++2b}}
     return m;
   };
 
@@ -240,3 +241,16 @@ constexpr auto dependent_var_def_lambda() {
 constexpr auto non_literal_valid_in_cxx2b = dependent_var_def_lambda<NonLiteral>()(true); // \
     // cxx2a-error {{constexpr variable 'non_literal_valid_in_cxx2b' must be initialized by a constant expression}} \
     // cxx2a-note {{non-constexpr function}}
+
+
+constexpr double evaluate_static_constexpr() {
+  struct Constexpr{
+    constexpr double f() const {
+      return 42;
+    }
+  };
+  thread_local constexpr Constexpr t; // cxx2b-warning {{before C++2b}}
+  static constexpr Constexpr s; // cxx2b-warning {{before C++2b}}
+  return t.f() + s.f();
+}
+static_assert(evaluate_static_constexpr() == 84);
