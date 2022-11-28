@@ -50,7 +50,7 @@ func.func @affine.yield() {
   // CHECK-NEXT: }
   //
   // GENERIC:      "affine.for"() ({
-  // GENERIC-NEXT: ^bb0(%{{.*}}: index):	
+  // GENERIC-NEXT: ^bb0(%{{.*}}: index):
   // GENERIC-NEXT:   "affine.yield"() : () -> ()
   // GENERIC-NEXT: }) {lower_bound = #map, step = 1 : index, upper_bound = #map1} : () -> ()
   affine.for %i = 0 to 10 {

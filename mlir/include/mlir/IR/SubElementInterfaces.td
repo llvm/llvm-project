@@ -116,7 +116,7 @@ def SubElementAttrInterface
   let description = [{
     An interface used to query and manipulate sub-elements, such as sub-types
     and sub-attributes of a composite attribute.
-    
+
     To support the introspection of custom parameters that hold sub-elements,
     a specialization of the `AttrTypeSubElementHandler` class must be provided.
   }];
@@ -133,7 +133,7 @@ def SubElementTypeInterface
   let description = [{
     An interface used to query and manipulate sub-elements, such as sub-types
     and sub-attributes of a composite type.
-    
+
     To support the introspection of custom parameters that hold sub-elements,
     a specialization of the `AttrTypeSubElementHandler` class must be provided.
   }];
