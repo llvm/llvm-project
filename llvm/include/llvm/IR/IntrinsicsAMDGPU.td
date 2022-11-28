@@ -2067,6 +2067,10 @@ def int_amdgcn_wmma_bf16_16x16x16_bf16 : AMDGPUWmmaIntrinsicOPSEL<llvm_v16i16_ty
 def int_amdgcn_wmma_i32_16x16x16_iu8   : AMDGPUWmmaIntrinsicIU<llvm_v4i32_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_i32_16x16x16_iu4   : AMDGPUWmmaIntrinsicIU<llvm_v2i32_ty, llvm_anyint_ty>;
 
+def int_amdgcn_s_wait_event_export_ready :
+  ClangBuiltin<"__builtin_amdgcn_s_wait_event_export_ready">,
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn]
+>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
