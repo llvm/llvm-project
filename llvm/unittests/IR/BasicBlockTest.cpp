@@ -507,5 +507,39 @@ TEST(BasicBlockTest, SpliceEndBeforeBegin) {
 }
 #endif //EXPENSIVE_CHECKS
 
+TEST(BasicBlockTest, EraseRange) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a) {
+     bb0:
+       %instr1 = add i32 %a, %a
+       %instr2 = sub i32 %a, %a
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+
+  auto BB0It = F->begin();
+  BasicBlock *BB0 = &*BB0It;
+
+  auto It = BB0->begin();
+  Instruction *Instr1 = &*It++;
+  Instruction *Instr2 = &*It++;
+
+  EXPECT_EQ(BB0->size(), 3u);
+
+  // Erase no instruction
+  BB0->erase(Instr1->getIterator(), Instr1->getIterator());
+  EXPECT_EQ(BB0->size(), 3u);
+
+  // Erase %instr1
+  BB0->erase(Instr1->getIterator(), Instr2->getIterator());
+  EXPECT_EQ(BB0->size(), 2u);
+  EXPECT_EQ(&*BB0->begin(), Instr2);
+
+  // Erase all instructions
+  BB0->erase(BB0->begin(), BB0->end());
+  EXPECT_TRUE(BB0->empty());
+}
 } // End anonymous namespace.
 } // End llvm namespace.
