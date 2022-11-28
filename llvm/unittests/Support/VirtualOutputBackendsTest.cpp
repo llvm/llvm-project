@@ -314,7 +314,7 @@ struct OnDiskFile {
     return *CurrentContent == Data;
   }
 
-  bool equalsCurrentContent(NoneType) { return getCurrentContent() == None; }
+  bool equalsCurrentContent(std::nullopt_t) { return getCurrentContent() == None; }
 };
 
 class OnDiskOutputBackendProvider : public OutputBackendProvider {

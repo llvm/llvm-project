@@ -295,7 +295,7 @@ public:
     return makeArrayRef(B, Size);
   }
 
-  InternalRefArrayRef(NoneType = None) {}
+  InternalRefArrayRef(std::nullopt_t = None) {}
 
   InternalRefArrayRef(ArrayRef<InternalRef> Refs)
       : Begin(Refs.begin()), Size(Refs.size()) {}
