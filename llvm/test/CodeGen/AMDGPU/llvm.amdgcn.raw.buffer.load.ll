@@ -110,12 +110,12 @@ main_body:
 ; CHECK-LABEL: buffer_load_mmo:
 ; VI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; VI: ds_write2_b32 v{{[0-9]+}}, [[ZERO]], [[ZERO]] offset1:4
-define amdgpu_ps float @buffer_load_mmo(<4 x i32> inreg %rsrc, float addrspace(3)* %lds) {
+define amdgpu_ps float @buffer_load_mmo(<4 x i32> inreg %rsrc, ptr addrspace(3) %lds) {
 entry:
-  store float 0.0, float addrspace(3)* %lds
+  store float 0.0, ptr addrspace(3) %lds
   %val = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
-  %tmp2 = getelementptr float, float addrspace(3)* %lds, i32 4
-  store float 0.0, float addrspace(3)* %tmp2
+  %tmp2 = getelementptr float, ptr addrspace(3) %lds, i32 4
+  store float 0.0, ptr addrspace(3) %tmp2
   ret float %val
 }
 
@@ -350,10 +350,10 @@ main_body:
 ;CHECK-NEXT: buffer_load_{{ushort|u16}} [[VAL:v[0-9]+]], off, s[0:3], 0
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: ds_{{write|store}}_b16 v0, [[VAL]]
-define amdgpu_ps void @raw_buffer_load_f16(<4 x i32> inreg %rsrc, half addrspace(3)* %ptr) {
+define amdgpu_ps void @raw_buffer_load_f16(<4 x i32> inreg %rsrc, ptr addrspace(3) %ptr) {
 main_body:
   %val = call half @llvm.amdgcn.raw.buffer.load.f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
-  store half %val, half addrspace(3)* %ptr
+  store half %val, ptr addrspace(3) %ptr
   ret void
 }
 
@@ -362,10 +362,10 @@ main_body:
 ;CHECK-NEXT: buffer_load_{{dword|b32}} [[VAL:v[0-9]+]], off, s[0:3], 0
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: ds_{{write|store}}_b32 v0, [[VAL]]
-define amdgpu_ps void @raw_buffer_load_v2f16(<4 x i32> inreg %rsrc, <2 x half> addrspace(3)* %ptr) {
+define amdgpu_ps void @raw_buffer_load_v2f16(<4 x i32> inreg %rsrc, ptr addrspace(3) %ptr) {
 main_body:
   %val = call <2 x half> @llvm.amdgcn.raw.buffer.load.v2f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
-  store <2 x half> %val, <2 x half> addrspace(3)* %ptr
+  store <2 x half> %val, ptr addrspace(3) %ptr
   ret void
 }
 
@@ -374,10 +374,10 @@ main_body:
 ;CHECK-NEXT: buffer_load_{{dwordx2|b64}} [[VAL:v\[[0-9]+:[0-9]+\]]], off, s[0:3], 0
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: ds_{{write|store}}_b64 v0, [[VAL]]
-define amdgpu_ps void @raw_buffer_load_v4f16(<4 x i32> inreg %rsrc, <4 x half> addrspace(3)* %ptr) {
+define amdgpu_ps void @raw_buffer_load_v4f16(<4 x i32> inreg %rsrc, ptr addrspace(3) %ptr) {
 main_body:
   %val = call <4 x half> @llvm.amdgcn.raw.buffer.load.v4f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
-  store <4 x half> %val, <4 x half> addrspace(3)* %ptr
+  store <4 x half> %val, ptr addrspace(3) %ptr
   ret void
 }
 
@@ -386,10 +386,10 @@ main_body:
 ;CHECK-NEXT: buffer_load_{{dword|b32}} [[VAL:v[0-9]+]], off, s[0:3], 0
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: ds_{{write|store}}_b32 v0, [[VAL]]
-define amdgpu_ps void @raw_buffer_load_v2i16(<4 x i32> inreg %rsrc, <2 x i16> addrspace(3)* %ptr) {
+define amdgpu_ps void @raw_buffer_load_v2i16(<4 x i32> inreg %rsrc, ptr addrspace(3) %ptr) {
 main_body:
   %val = call <2 x i16> @llvm.amdgcn.raw.buffer.load.v2i16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
-  store <2 x i16> %val, <2 x i16> addrspace(3)* %ptr
+  store <2 x i16> %val, ptr addrspace(3) %ptr
   ret void
 }
 
@@ -398,10 +398,10 @@ main_body:
 ;CHECK-NEXT: buffer_load_{{dwordx2|b64}} [[VAL:v\[[0-9]+:[0-9]+\]]], off, s[0:3], 0
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: ds_{{write|store}}_b64 v0, [[VAL]]
-define amdgpu_ps void @raw_buffer_load_v4i16(<4 x i32> inreg %rsrc, <4 x i16> addrspace(3)* %ptr) {
+define amdgpu_ps void @raw_buffer_load_v4i16(<4 x i32> inreg %rsrc, ptr addrspace(3) %ptr) {
 main_body:
   %val = call <4 x i16> @llvm.amdgcn.raw.buffer.load.v4i16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
-  store <4 x i16> %val, <4 x i16> addrspace(3)* %ptr
+  store <4 x i16> %val, ptr addrspace(3) %ptr
   ret void
 }
 
