@@ -210,7 +210,7 @@ private:
   const char* __last_;
 };
 
-#    ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 _LIBCPP_HIDE_FROM_ABI constexpr bool __is_surrogate_pair_high(wchar_t __value) {
   return __value >= 0xd800 && __value <= 0xdbff;
 }
@@ -294,7 +294,7 @@ private:
   const wchar_t* __first_;
   const wchar_t* __last_;
 };
-#    endif
+#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 _LIBCPP_HIDE_FROM_ABI constexpr bool __at_extended_grapheme_cluster_break(
     bool& __ri_break_allowed,
