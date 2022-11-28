@@ -44,18 +44,17 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-grtev4-linux-gnu"
 
 %struct.B = type { %struct.A }
-%struct.A = type { i32 (...)** }
+%struct.A = type { ptr }
 
-@_ZTV1B = constant { [3 x i8*] } { [3 x i8*] [i8* undef, i8* undef, i8* undef] }, !type !0
+@_ZTV1B = constant { [3 x ptr] } { [3 x ptr] [ptr undef, ptr undef, ptr undef] }, !type !0
 
-define void @test(i8* %b) {
+define void @test(ptr %b) {
 entry:
-  tail call void @test2(i8* %b)
-  tail call void @test3(i8* %b)
-  %0 = bitcast i8* %b to i8**
-  %vtable2 = load i8*, i8** %0
-  %1 = tail call i1 @llvm.type.test(i8* %vtable2, metadata !"_ZTS1A")
-  br i1 %1, label %cont, label %trap
+  tail call void @test2(ptr %b)
+  tail call void @test3(ptr %b)
+  %vtable2 = load ptr, ptr %b
+  %0 = tail call i1 @llvm.type.test(ptr %vtable2, metadata !"_ZTS1A")
+  br i1 %0, label %cont, label %trap
 
 trap:
   tail call void @llvm.trap()
@@ -65,9 +64,9 @@ cont:
   ret void
 }
 
-declare void @test2(i8*)
-declare void @test3(i8*)
-declare i1 @llvm.type.test(i8*, metadata)
+declare void @test2(ptr)
+declare void @test3(ptr)
+declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.trap()
 
 !0 = !{i64 16, !"_ZTS1A"}

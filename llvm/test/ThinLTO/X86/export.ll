@@ -21,6 +21,6 @@ entry:
 
 define internal void @staticfunc() #0 {
 entry:
-  %0 = load i32, i32* @staticvar, align 4
+  %0 = load i32, ptr @staticvar, align 4
   ret void
 }

@@ -70,8 +70,8 @@ target triple = "x86_64-unknown-linux-gnu"
 @b = internal global i32 1, align 4
 @x = internal global i32 1, align 4
 
-@llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (i32* @b to i8*)], section "llvm.metadata"
-@llvm.used = appending global [1 x i8*] [i8* bitcast (i32* @x to i8*)], section "llvm.metadata"
+@llvm.compiler.used = appending global [1 x ptr] [ptr @b], section "llvm.metadata"
+@llvm.used = appending global [1 x ptr] [ptr @x], section "llvm.metadata"
 
 module asm "\09.text"
 module asm "\09.type\09foo,@function"
@@ -108,12 +108,12 @@ define i32 @func1() #1 {
 }
 
 define i32 @func2() #1 {
-  %1 = load i32, i32* @b, align 4
+  %1 = load i32, ptr @b, align 4
   ret i32 %1
 }
 
 define i32 @func3() #1 {
-  %1 = load i32, i32* @x, align 4
+  %1 = load i32, ptr @x, align 4
   ret i32 %1
 }
 

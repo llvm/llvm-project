@@ -43,23 +43,20 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-%struct.A = type { i32 (...)** }
+%struct.A = type { ptr }
 
 ; CHECK-IR1-LABEL: define i32 @test
-define i32 @test(%struct.A* %obj, i32 %a) {
+define i32 @test(ptr %obj, i32 %a) {
 entry:
-  %0 = bitcast %struct.A* %obj to i8***
-  %vtable = load i8**, i8*** %0
-  %1 = bitcast i8** %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %1, metadata !"_ZTS1A")
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"_ZTS1A")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr i8*, i8** %vtable, i32 1
-  %2 = bitcast i8** %fptrptr to i32 (%struct.A*, i32)**
-  %fptr1 = load i32 (%struct.A*, i32)*, i32 (%struct.A*, i32)** %2, align 8
+  %fptrptr = getelementptr ptr, ptr %vtable, i32 1
+  %fptr1 = load ptr, ptr %fptrptr, align 8
 
   ; Check that the call was devirtualized.
   ; CHECK-IR1: %call = tail call i32 @_ZN1A1nEi
-  %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a)
+  %call = tail call i32 %fptr1(ptr nonnull %obj, i32 %a)
 
   ret i32 %call
 }
@@ -70,7 +67,7 @@ entry:
 ; Check that the call was devirtualized.
 ; CHECK-IR2:   %call4 = tail call i32 @_ZN1A1nEi
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.assume(i1)
 
 attributes #0 = { noinline optnone }
