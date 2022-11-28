@@ -615,6 +615,22 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 }
 
+static const void *FindBadAddress(uptr begin, uptr end, bool poisoned) {
+  CHECK_LE(begin, end);
+  constexpr uptr kMaxRangeToCheck = 32;
+  if (end - begin > kMaxRangeToCheck * 2) {
+    if (auto *bad = FindBadAddress(begin, begin + kMaxRangeToCheck, poisoned))
+      return bad;
+    if (auto *bad = FindBadAddress(end - kMaxRangeToCheck, end, poisoned))
+      return bad;
+  }
+
+  for (uptr i = begin; i < end; ++i)
+    if (AddressIsPoisoned(i) != poisoned)
+      return reinterpret_cast<const void *>(i);
+  return nullptr;
+}
+
 const void *__sanitizer_contiguous_container_find_bad_address(
     const void *beg_p, const void *mid_p, const void *end_p) {
   if (!flags()->detect_container_overflow)
@@ -622,35 +638,22 @@ const void *__sanitizer_contiguous_container_find_bad_address(
   uptr granularity = ASAN_SHADOW_GRANULARITY;
   uptr beg = reinterpret_cast<uptr>(beg_p);
   uptr end = reinterpret_cast<uptr>(end_p);
+  uptr mid = reinterpret_cast<uptr>(mid_p);
+  CHECK_LE(beg, mid);
+  CHECK_LE(mid, end);
+  // If the byte after the storage is unpoisoned, everything in the granule
+  // before must stay unpoisoned.
   uptr annotations_end =
       (!AddrIsAlignedByGranularity(end) && !AddressIsPoisoned(end))
           ? RoundDownTo(end, granularity)
           : end;
-  uptr mid = reinterpret_cast<uptr>(mid_p);
-  CHECK_LE(beg, mid);
-  CHECK_LE(mid, end);
-  // Check some bytes starting from storage_beg, some bytes around mid, and some
-  // bytes ending with end.
-  uptr kMaxRangeToCheck = 32;
-  uptr r1_beg = beg;
-  uptr r1_end = Min(beg + kMaxRangeToCheck, mid);
-  uptr r2_beg = Max(beg, mid - kMaxRangeToCheck);
-  uptr r2_end = Min(annotations_end, mid + kMaxRangeToCheck);
-  uptr r3_beg = Max(annotations_end - kMaxRangeToCheck, mid);
-  uptr r3_end = annotations_end;
-  for (uptr i = r1_beg; i < r1_end; i++)
-    if (AddressIsPoisoned(i))
-      return reinterpret_cast<const void *>(i);
-  for (uptr i = r2_beg; i < mid; i++)
-    if (AddressIsPoisoned(i))
-      return reinterpret_cast<const void *>(i);
-  for (uptr i = mid; i < r2_end; i++)
-    if (!AddressIsPoisoned(i))
-      return reinterpret_cast<const void *>(i);
-  for (uptr i = r3_beg; i < r3_end; i++)
-    if (!AddressIsPoisoned(i))
-      return reinterpret_cast<const void *>(i);
-  return nullptr;
+  beg = Min(beg, annotations_end);
+  mid = Min(mid, annotations_end);
+  if (auto *bad = FindBadAddress(beg, mid, false))
+    return bad;
+  if (auto *bad = FindBadAddress(mid, annotations_end, true))
+    return bad;
+  return FindBadAddress(annotations_end, end, false);
 }
 
 int __sanitizer_verify_contiguous_container(const void *beg_p,
