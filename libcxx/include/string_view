@@ -259,18 +259,18 @@ template<class _CharT, class _Traits>
 class basic_string_view {
 public:
     // types
-    typedef _Traits                                    traits_type;
-    typedef _CharT                                     value_type;
-    typedef _CharT*                                    pointer;
-    typedef const _CharT*                              const_pointer;
-    typedef _CharT&                                    reference;
-    typedef const _CharT&                              const_reference;
-    typedef const_pointer                              const_iterator; // See [string.view.iterators]
-    typedef const_iterator                             iterator;
-    typedef _VSTD::reverse_iterator<const_iterator>    const_reverse_iterator;
-    typedef const_reverse_iterator                     reverse_iterator;
-    typedef size_t                                     size_type;
-    typedef ptrdiff_t                                  difference_type;
+    using traits_type            = _Traits;
+    using value_type             = _CharT;
+    using pointer                = _CharT*;
+    using const_pointer          = const _CharT*;
+    using reference              = _CharT&;
+    using const_reference        = const _CharT&;
+    using const_iterator         = const_pointer; // See [string.view.iterators]
+    using iterator               = const_iterator;
+    using const_reverse_iterator = _VSTD::reverse_iterator<const_iterator>;
+    using reverse_iterator       = const_reverse_iterator;
+    using size_type              = size_t;
+    using difference_type        = ptrdiff_t;
     static _LIBCPP_CONSTEXPR const size_type npos = -1; // size_type(-1);
 
     static_assert((!is_array<value_type>::value), "Character type of basic_string_view must not be an array");
