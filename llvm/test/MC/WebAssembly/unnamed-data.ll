@@ -5,8 +5,8 @@ target triple = "wasm32-unknown-unknown"
 @.str1 = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 @.str2 = private unnamed_addr constant [6 x i8] c"world\00", align 1
 
-@a = global i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str1, i32 0, i32 0), align 8
-@b = global i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str2, i32 0, i32 0), align 8
+@a = global ptr @.str1, align 8
+@b = global ptr @.str2, align 8
 
 
 ; CHECK:        - Type:            DATA{{$}}
