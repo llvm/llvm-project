@@ -14,7 +14,7 @@ declare float @llvm.fabs.f32(float) #0
 declare i64 @llvm.amdgcn.fcmp.f16(half, half, i32) #0
 declare half @llvm.fabs.f16(half) #0
 
-define amdgpu_kernel void @v_fcmp_f32_oeq_with_fabs(i64 addrspace(1)* %out, float %src, float %a) {
+define amdgpu_kernel void @v_fcmp_f32_oeq_with_fabs(ptr addrspace(1) %out, float %src, float %a) {
 ; GFX11-LABEL: v_fcmp_f32_oeq_with_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -66,11 +66,11 @@ define amdgpu_kernel void @v_fcmp_f32_oeq_with_fabs(i64 addrspace(1)* %out, floa
 ; SDAG-VI-NEXT:    s_endpgm
   %temp = call float @llvm.fabs.f32(float %a)
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float %temp, i32 1)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_oeq_both_operands_with_fabs(i64 addrspace(1)* %out, float %src, float %a) {
+define amdgpu_kernel void @v_fcmp_f32_oeq_both_operands_with_fabs(ptr addrspace(1) %out, float %src, float %a) {
 ; GFX11-LABEL: v_fcmp_f32_oeq_both_operands_with_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -123,11 +123,11 @@ define amdgpu_kernel void @v_fcmp_f32_oeq_both_operands_with_fabs(i64 addrspace(
   %temp = call float @llvm.fabs.f32(float %a)
   %src_input = call float @llvm.fabs.f32(float %src)
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src_input, float %temp, i32 1)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32(ptr addrspace(1) %out, float %src) {
 ; SDAG-GFX-LABEL: v_fcmp_f32:
 ; SDAG-GFX:       ; %bb.0:
 ; SDAG-GFX-NEXT:    s_endpgm
@@ -177,11 +177,11 @@ define amdgpu_kernel void @v_fcmp_f32(i64 addrspace(1)* %out, float %src) {
 ; GISEL-GFX-NEXT:    global_store_dwordx2 v0, v[0:1], s[0:1]
 ; GISEL-GFX-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 -1)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_oeq(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_oeq(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_oeq:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -237,11 +237,11 @@ define amdgpu_kernel void @v_fcmp_f32_oeq(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 1)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_one(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_one(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_one:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -297,11 +297,11 @@ define amdgpu_kernel void @v_fcmp_f32_one(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 6)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_ogt(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_ogt(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_ogt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -357,11 +357,11 @@ define amdgpu_kernel void @v_fcmp_f32_ogt(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 2)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_oge(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_oge(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_oge:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -417,11 +417,11 @@ define amdgpu_kernel void @v_fcmp_f32_oge(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 3)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_olt(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_olt(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_olt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -477,11 +477,11 @@ define amdgpu_kernel void @v_fcmp_f32_olt(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 4)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_ole(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_ole(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_ole:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -537,12 +537,12 @@ define amdgpu_kernel void @v_fcmp_f32_ole(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 5)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f32_ueq(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_ueq(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_ueq:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -598,11 +598,11 @@ define amdgpu_kernel void @v_fcmp_f32_ueq(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 9)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_une(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_une(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_une:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -658,11 +658,11 @@ define amdgpu_kernel void @v_fcmp_f32_une(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 14)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_ugt(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_ugt(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_ugt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -718,11 +718,11 @@ define amdgpu_kernel void @v_fcmp_f32_ugt(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 10)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_uge(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_uge(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_uge:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -778,11 +778,11 @@ define amdgpu_kernel void @v_fcmp_f32_uge(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 11)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_ult(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_ult(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_ult:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -838,11 +838,11 @@ define amdgpu_kernel void @v_fcmp_f32_ult(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 12)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f32_ule(i64 addrspace(1)* %out, float %src) {
+define amdgpu_kernel void @v_fcmp_f32_ule(ptr addrspace(1) %out, float %src) {
 ; GFX11-LABEL: v_fcmp_f32_ule:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -898,11 +898,11 @@ define amdgpu_kernel void @v_fcmp_f32_ule(i64 addrspace(1)* %out, float %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float 100.00, i32 13)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_oeq(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_oeq(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_oeq:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -973,11 +973,11 @@ define amdgpu_kernel void @v_fcmp_f64_oeq(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 1)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_one(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_one(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_one:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1048,11 +1048,11 @@ define amdgpu_kernel void @v_fcmp_f64_one(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 6)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_ogt(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_ogt(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_ogt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1123,11 +1123,11 @@ define amdgpu_kernel void @v_fcmp_f64_ogt(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 2)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_oge(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_oge(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_oge:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1198,11 +1198,11 @@ define amdgpu_kernel void @v_fcmp_f64_oge(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 3)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_olt(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_olt(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_olt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1273,11 +1273,11 @@ define amdgpu_kernel void @v_fcmp_f64_olt(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 4)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_ole(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_ole(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_ole:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1348,11 +1348,11 @@ define amdgpu_kernel void @v_fcmp_f64_ole(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 5)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_ueq(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_ueq(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_ueq:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1423,11 +1423,11 @@ define amdgpu_kernel void @v_fcmp_f64_ueq(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 9)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_une(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_une(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_une:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1498,11 +1498,11 @@ define amdgpu_kernel void @v_fcmp_f64_une(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 14)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_ugt(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_ugt(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_ugt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1573,11 +1573,11 @@ define amdgpu_kernel void @v_fcmp_f64_ugt(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 10)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_uge(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_uge(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_uge:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1648,11 +1648,11 @@ define amdgpu_kernel void @v_fcmp_f64_uge(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 11)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_ult(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_ult(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_ult:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1723,11 +1723,11 @@ define amdgpu_kernel void @v_fcmp_f64_ult(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 12)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f64_ule(i64 addrspace(1)* %out, double %src) {
+define amdgpu_kernel void @v_fcmp_f64_ule(ptr addrspace(1) %out, double %src) {
 ; GFX11-LABEL: v_fcmp_f64_ule:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1798,12 +1798,12 @@ define amdgpu_kernel void @v_fcmp_f64_ule(i64 addrspace(1)* %out, double %src) {
 ; SDAG-GFX9-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
 ; SDAG-GFX9-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f64(double %src, double 100.00, i32 13)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_oeq_with_fabs(i64 addrspace(1)* %out, half %src, half %a) {
+define amdgpu_kernel void @v_fcmp_f16_oeq_with_fabs(ptr addrspace(1) %out, half %src, half %a) {
 ; GFX11-LABEL: v_fcmp_f16_oeq_with_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -1865,12 +1865,12 @@ define amdgpu_kernel void @v_fcmp_f16_oeq_with_fabs(i64 addrspace(1)* %out, half
 ; SDAG-VI-NEXT:    s_endpgm
   %temp = call half @llvm.fabs.f16(half %a)
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half %temp, i32 1)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_oeq_both_operands_with_fabs(i64 addrspace(1)* %out, half %src, half %a) {
+define amdgpu_kernel void @v_fcmp_f16_oeq_both_operands_with_fabs(ptr addrspace(1) %out, half %src, half %a) {
 ; GFX11-LABEL: v_fcmp_f16_oeq_both_operands_with_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -1933,11 +1933,11 @@ define amdgpu_kernel void @v_fcmp_f16_oeq_both_operands_with_fabs(i64 addrspace(
   %temp = call half @llvm.fabs.f16(half %a)
   %src_input = call half @llvm.fabs.f16(half %src)
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src_input, half %temp, i32 1)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fcmp_f16(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16(ptr addrspace(1) %out, half %src) {
 ; SDAG-GFX-LABEL: v_fcmp_f16:
 ; SDAG-GFX:       ; %bb.0:
 ; SDAG-GFX-NEXT:    s_endpgm
@@ -1987,12 +1987,12 @@ define amdgpu_kernel void @v_fcmp_f16(i64 addrspace(1)* %out, half %src) {
 ; GISEL-GFX-NEXT:    global_store_dwordx2 v0, v[0:1], s[0:1]
 ; GISEL-GFX-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 -1)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_oeq(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_oeq(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_oeq:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2048,12 +2048,12 @@ define amdgpu_kernel void @v_fcmp_f16_oeq(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 1)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_one(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_one(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_one:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2109,12 +2109,12 @@ define amdgpu_kernel void @v_fcmp_f16_one(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 6)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_ogt(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_ogt(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_ogt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2170,12 +2170,12 @@ define amdgpu_kernel void @v_fcmp_f16_ogt(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 2)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_oge(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_oge(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_oge:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2231,12 +2231,12 @@ define amdgpu_kernel void @v_fcmp_f16_oge(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 3)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_olt(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_olt(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_olt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2292,12 +2292,12 @@ define amdgpu_kernel void @v_fcmp_f16_olt(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 4)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_ole(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_ole(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_ole:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2353,12 +2353,12 @@ define amdgpu_kernel void @v_fcmp_f16_ole(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 5)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_ueq(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_ueq(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_ueq:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2414,12 +2414,12 @@ define amdgpu_kernel void @v_fcmp_f16_ueq(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 9)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_une(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_une(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_une:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2475,12 +2475,12 @@ define amdgpu_kernel void @v_fcmp_f16_une(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 14)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_ugt(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_ugt(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_ugt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2536,12 +2536,12 @@ define amdgpu_kernel void @v_fcmp_f16_ugt(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 10)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_uge(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_uge(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_uge:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2597,12 +2597,12 @@ define amdgpu_kernel void @v_fcmp_f16_uge(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 11)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_ult(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_ult(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_ult:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2658,12 +2658,12 @@ define amdgpu_kernel void @v_fcmp_f16_ult(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 12)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
 
-define amdgpu_kernel void @v_fcmp_f16_ule(i64 addrspace(1)* %out, half %src) {
+define amdgpu_kernel void @v_fcmp_f16_ule(ptr addrspace(1) %out, half %src) {
 ; GFX11-LABEL: v_fcmp_f16_ule:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -2719,7 +2719,7 @@ define amdgpu_kernel void @v_fcmp_f16_ule(i64 addrspace(1)* %out, half %src) {
 ; SDAG-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; SDAG-VI-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.fcmp.f16(half %src, half 100.00, i32 13)
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
