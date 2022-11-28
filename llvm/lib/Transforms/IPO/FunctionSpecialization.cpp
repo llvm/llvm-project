@@ -124,20 +124,6 @@ using CallSpecBinding = std::pair<CallBase *, SpecializationInfo>;
 // order across executions.
 using SpecializationMap = SmallMapVector<CallBase *, SpecializationInfo, 8>;
 
-// Helper to check if \p LV is either a constant or a constant
-// range with a single element. This should cover exactly the same cases as the
-// old ValueLatticeElement::isConstant() and is intended to be used in the
-// transition to ValueLatticeElement.
-static bool isConstant(const ValueLatticeElement &LV) {
-  return LV.isConstant() ||
-         (LV.isConstantRange() && LV.getConstantRange().isSingleElement());
-}
-
-// Helper to check if \p LV is either overdefined or a constant int.
-static bool isOverdefined(const ValueLatticeElement &LV) {
-  return !LV.isUnknownOrUndef() && !isConstant(LV);
-}
-
 static Constant *getPromotableAlloca(AllocaInst *Alloca, CallInst *Call) {
   Value *StoreValue = nullptr;
   for (auto *User : Alloca->users()) {
