@@ -1818,32 +1818,28 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   MachineFunction &MF = B.getMF();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const LLT S32 = LLT::scalar(32);
+  const LLT S64 = LLT::scalar(64);
 
   assert(AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::PRIVATE_ADDRESS);
 
   if (ST.hasApertureRegs()) {
-    // FIXME: Use inline constants (src_{shared, private}_base) instead of
-    // getreg.
-    unsigned Offset = AS == AMDGPUAS::LOCAL_ADDRESS ?
-        AMDGPU::Hwreg::OFFSET_SRC_SHARED_BASE :
-        AMDGPU::Hwreg::OFFSET_SRC_PRIVATE_BASE;
-    unsigned WidthM1 = AS == AMDGPUAS::LOCAL_ADDRESS ?
-        AMDGPU::Hwreg::WIDTH_M1_SRC_SHARED_BASE :
-        AMDGPU::Hwreg::WIDTH_M1_SRC_PRIVATE_BASE;
-    unsigned Encoding =
-        AMDGPU::Hwreg::ID_MEM_BASES << AMDGPU::Hwreg::ID_SHIFT_ |
-        Offset << AMDGPU::Hwreg::OFFSET_SHIFT_ |
-        WidthM1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_;
-
-    Register GetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-    B.buildInstr(AMDGPU::S_GETREG_B32)
-      .addDef(GetReg)
-      .addImm(Encoding);
-    MRI.setType(GetReg, S32);
-
-    auto ShiftAmt = B.buildConstant(S32, WidthM1 + 1);
-    return B.buildShl(S32, GetReg, ShiftAmt).getReg(0);
+    // Note: this register is somewhat broken. When used as a 32-bit operand,
+    // it only returns zeroes. The real value is in the upper 32 bits.
+    // Thus, we must emit extract the high 32 bits.
+    const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
+                                       ? AMDGPU::SRC_SHARED_BASE
+                                       : AMDGPU::SRC_PRIVATE_BASE;
+    // FIXME: It would be more natural to emit a COPY here, but then copy
+    // coalescing would kick in and it would think it's okay to use the "HI"
+    // subregister (instead of extracting the HI 32 bits) which is an artificial
+    // (unusable) register.
+    //  Register TableGen definitions would need an overhaul to get rid of the
+    //  artificial "HI" aperture registers and prevent this kind of issue from
+    //  happening.
+    Register Dst = MRI.createGenericVirtualRegister(S64);
+    MRI.setRegClass(Dst, &AMDGPU::SReg_64RegClass);
+    B.buildInstr(AMDGPU::S_MOV_B64, {Dst}, {Register(ApertureRegNo)});
+    return B.buildUnmerge(S32, Dst).getReg(1);
   }
 
   // TODO: can we be smarter about machine pointer info?

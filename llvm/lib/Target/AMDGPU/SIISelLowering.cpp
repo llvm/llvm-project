@@ -5533,24 +5533,33 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                                              SelectionDAG &DAG) const {
-  // FIXME: Use inline constants (src_{shared, private}_base) instead.
   if (Subtarget->hasApertureRegs()) {
-    unsigned Offset = AS == AMDGPUAS::LOCAL_ADDRESS ?
-        AMDGPU::Hwreg::OFFSET_SRC_SHARED_BASE :
-        AMDGPU::Hwreg::OFFSET_SRC_PRIVATE_BASE;
-    unsigned WidthM1 = AS == AMDGPUAS::LOCAL_ADDRESS ?
-        AMDGPU::Hwreg::WIDTH_M1_SRC_SHARED_BASE :
-        AMDGPU::Hwreg::WIDTH_M1_SRC_PRIVATE_BASE;
-    unsigned Encoding =
-        AMDGPU::Hwreg::ID_MEM_BASES << AMDGPU::Hwreg::ID_SHIFT_ |
-        Offset << AMDGPU::Hwreg::OFFSET_SHIFT_ |
-        WidthM1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_;
-
-    SDValue EncodingImm = DAG.getTargetConstant(Encoding, DL, MVT::i16);
-    SDValue ApertureReg = SDValue(
-        DAG.getMachineNode(AMDGPU::S_GETREG_B32, DL, MVT::i32, EncodingImm), 0);
-    SDValue ShiftAmount = DAG.getTargetConstant(WidthM1 + 1, DL, MVT::i32);
-    return DAG.getNode(ISD::SHL, DL, MVT::i32, ApertureReg, ShiftAmount);
+    const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
+                                       ? AMDGPU::SRC_SHARED_BASE
+                                       : AMDGPU::SRC_PRIVATE_BASE;
+    // Note: this feature (register) is broken. When used as a 32-bit operand,
+    // it returns a wrong value (all zeroes?). The real value is in the upper 32
+    // bits.
+    //
+    // To work around the issue, directly emit a 64 bit mov from this register
+    // then extract the high bits. Note that this shouldn't even result in a
+    // shift being emitted and simply become a pair of registers (e.g.):
+    //    s_mov_b64 s[6:7], src_shared_base
+    //    v_mov_b32_e32 v1, s7
+    //
+    // FIXME: It would be more natural to emit a CopyFromReg here, but then copy
+    // coalescing would kick in and it would think it's okay to use the "HI"
+    // subregister directly (instead of extracting the HI 32 bits) which is an
+    // artificial (unusable) register.
+    //  Register TableGen definitions would need an overhaul to get rid of the
+    //  artificial "HI" aperture registers and prevent this kind of issue from
+    //  happening.
+    SDNode *Mov = DAG.getMachineNode(AMDGPU::S_MOV_B64, DL, MVT::i64,
+                                     DAG.getRegister(ApertureRegNo, MVT::i64));
+    return DAG.getNode(
+        ISD::TRUNCATE, DL, MVT::i32,
+        DAG.getNode(ISD::SRL, DL, MVT::i64,
+                    {SDValue(Mov, 0), DAG.getConstant(32, DL, MVT::i64)}));
   }
 
   // For code object version 5, private_base and shared_base are passed through
