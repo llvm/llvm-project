@@ -8,16 +8,20 @@ target triple = "amdgcn-amd-amdhsa"
 
 define protected amdgpu_kernel void @lds_store(i32 %i) sanitize_address {
 entry:
-  ; CHECK-NOT: call * __asan_report
-  %arrayidx1 = getelementptr inbounds [100 x i32], [100 x i32] addrspace(3)* @count, i32 0, i32 %i
-  store i32 0, i32 addrspace(3)* %arrayidx1, align 4
+  ; CHECK-LABEL: @lds_store(
+  ; CHECK-NOT: call
+  %arrayidx1 = getelementptr inbounds [100 x i32], ptr addrspace(3) @count, i32 0, i32 %i
+  store i32 0, ptr addrspace(3) %arrayidx1, align 4
   ret void
 }
 
 define protected amdgpu_kernel void @lds_load(i32 %i) sanitize_address {
 entry:
-  ; CHECK-NOT: call * __asan_report
-  %arrayidx1 = getelementptr inbounds [100 x i32], [100 x i32] addrspace(3)* @count, i32 0, i32 %i
-  %0 = load i32, i32 addrspace(3)* %arrayidx1, align 4
+  ; CHECK-LABEL: @lds_load(
+  ; CHECK-NOT: call
+  %arrayidx1 = getelementptr inbounds [100 x i32], ptr addrspace(3) @count, i32 0, i32 %i
+  %0 = load i32, ptr addrspace(3) %arrayidx1, align 4
   ret void
 }
+
+; CHECK-LABEL: define internal void @asan.module_ctor()
