@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=nvptx64-nvidia-cuda -infer-address-spaces -o - %s | FileCheck %s
+; RUN: opt -S -mtriple=nvptx64-nvidia-cuda -passes=infer-address-spaces -o - %s | FileCheck %s
 
 ; CHECK-LABEL: @f0
 ; CHECK: addrspacecast ptr {{%.*}} to ptr addrspace(4)

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -infer-address-spaces -o - %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces -o - %s | FileCheck %s
 
 @c0 = addrspace(4) global ptr undef
 

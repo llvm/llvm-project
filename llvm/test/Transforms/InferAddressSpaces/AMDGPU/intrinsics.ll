@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -infer-address-spaces %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
 
 ; CHECK-LABEL: @objectsize_group_to_flat_i32(
 ; CHECK: %val = call i32 @llvm.objectsize.i32.p3(ptr addrspace(3) %group.ptr, i1 true, i1 false, i1 false)

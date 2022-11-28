@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-unknown-unknown -S -o - -infer-address-spaces -assume-default-is-flat-addrspace %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-unknown-unknown -S -o - -passes=infer-address-spaces -assume-default-is-flat-addrspace %s | FileCheck %s
 
 ; Check that assert in X86TargetMachine::isNoopAddrSpaceCast is not triggered.
 
