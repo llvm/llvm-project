@@ -144,9 +144,9 @@ define amdgpu_kernel void @gws_barrier_vgpr_offset_add(i32 %val) #0 {
 ; LOOP: s_mov_b32 m0, -1
 ; LOOP: ds_write_b32
 define amdgpu_kernel void @gws_barrier_save_m0_barrier_constant_offset(i32 %val) #0 {
-  store i32 1, i32 addrspace(3)* @lds
+  store i32 1, ptr addrspace(3) @lds
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 10)
-  store i32 2, i32 addrspace(3)* @lds
+  store i32 2, ptr addrspace(3) @lds
   ret void
 }
 
@@ -165,8 +165,8 @@ define void @gws_barrier_lgkmcnt(i32 %val) {
 ; GCN-LABEL: {{^}}gws_barrier_wait_before:
 ; NOLOOP: s_waitcnt
 ; NOLOOP-NOT: s_waitcnt{{$}}
-define amdgpu_kernel void @gws_barrier_wait_before(i32 %val, i32 addrspace(1)* %ptr) #0 {
-  store i32 0, i32 addrspace(1)* %ptr
+define amdgpu_kernel void @gws_barrier_wait_before(i32 %val, ptr addrspace(1) %ptr) #0 {
+  store i32 0, ptr addrspace(1) %ptr
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 7)
   ret void
 }
@@ -176,9 +176,9 @@ define amdgpu_kernel void @gws_barrier_wait_before(i32 %val, i32 addrspace(1)* %
 ; NOLOOP: ds_gws_barrier v{{[0-9]+}} offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; NOLOOP: load_{{dword|b32}}
-define amdgpu_kernel void @gws_barrier_wait_after(i32 %val, i32 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @gws_barrier_wait_after(i32 %val, ptr addrspace(1) %ptr) #0 {
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 7)
-  %load = load volatile i32, i32 addrspace(1)* %ptr
+  %load = load volatile i32, ptr addrspace(1) %ptr
   ret void
 }
 
@@ -189,8 +189,8 @@ define amdgpu_kernel void @gws_barrier_wait_after(i32 %val, i32 addrspace(1)* %p
 ; NOLOOP: s_waitcnt vmcnt(0) lgkmcnt(0)
 ; NOLOOP: ds_gws_barrier v{{[0-9]+}} offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-define amdgpu_kernel void @gws_barrier_fence_before(i32 %val, i32 addrspace(1)* %ptr) #0 {
-  store i32 0, i32 addrspace(1)* %ptr
+define amdgpu_kernel void @gws_barrier_fence_before(i32 %val, ptr addrspace(1) %ptr) #0 {
+  store i32 0, ptr addrspace(1) %ptr
   fence release
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 7)
   ret void
@@ -204,10 +204,10 @@ define amdgpu_kernel void @gws_barrier_fence_before(i32 %val, i32 addrspace(1)* 
 ; GFX10-NEXT: s_waitcnt_vscnt null, 0x0
 ; NOLOOP-NEXT: load_{{dword|b32}}
 
-define amdgpu_kernel void @gws_barrier_fence_after(i32 %val, i32 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @gws_barrier_fence_after(i32 %val, ptr addrspace(1) %ptr) #0 {
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 7)
   fence release
-  %load = load volatile i32, i32 addrspace(1)* %ptr
+  %load = load volatile i32, ptr addrspace(1) %ptr
   ret void
 }
 
