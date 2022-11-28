@@ -2589,8 +2589,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
         getObjFileLowering().SectionForGlobal(GO, GOKind, TM));
 
     Align GOAlign = getGVAlignment(GO, GO->getParent()->getDataLayout());
-    if (GOAlign > Csect->getAlign())
-      Csect->setAlignment(GOAlign);
+    Csect->ensureMinAlignment(GOAlign);
   };
 
   // We need to know, up front, the alignment of csects for the assembly path,
