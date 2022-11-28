@@ -327,15 +327,7 @@ static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
 //
 
 static CodeGenOpt::Level GetCodeGenOptLevel() {
-  if (CodeGenOptLevel.getNumOccurrences())
-    return static_cast<CodeGenOpt::Level>(unsigned(CodeGenOptLevel));
-  if (OptLevelO1)
-    return CodeGenOpt::Less;
-  if (OptLevelO2)
-    return CodeGenOpt::Default;
-  if (OptLevelO3)
-    return CodeGenOpt::Aggressive;
-  return CodeGenOpt::None;
+  return static_cast<CodeGenOpt::Level>(unsigned(CodeGenOptLevel));
 }
 
 // Returns the TargetMachine instance or zero if no triple is provided.
