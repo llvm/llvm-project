@@ -1,4 +1,4 @@
-; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-amd-amdhsa -infer-address-spaces %s | FileCheck %s
+; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
 
 ; Regression tests from old HSAIL addrspacecast optimization pass
 

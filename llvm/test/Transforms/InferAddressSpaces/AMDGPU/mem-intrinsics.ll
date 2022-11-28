@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -infer-address-spaces %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
 
 ; CHECK-LABEL: @memset_group_to_flat(
 ; CHECK: call void @llvm.memset.p3.i64(ptr addrspace(3) align 4 %group.ptr, i8 4, i64 32, i1 false), !tbaa !0, !alias.scope !3, !noalias !6

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -infer-address-spaces %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
 
 ; Instcombine pulls the addrspacecast out of the select, make sure
 ;  this doesn't do something insane on non-canonical IR.
