@@ -5,7 +5,7 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 %CommonStruct = type opaque
 
 @x = external global %SrcType
-@bar = internal global %CommonStruct* null, !dbg !0
+@bar = internal global ptr null, !dbg !0
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!8}
