@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs -o - %s | FileCheck %s
 
 ; TODO: Could potentially insert it here
-define void @arg_align_8(i8 addrspace(1)* align 8 %arg0) {
+define void @arg_align_8(ptr addrspace(1) align 8 %arg0) {
   ; CHECK-LABEL: name: arg_align_8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -13,12 +13,12 @@ define void @arg_align_8(i8 addrspace(1)* align 8 %arg0) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
   ; CHECK-NEXT:   G_STORE [[C]](s8), [[MV]](p1) :: (store (s8) into %ir.arg0, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  store i8 0, i8 addrspace(1)* %arg0, align 8
+  store i8 0, ptr addrspace(1) %arg0, align 8
   ret void
 }
 
-declare i8 addrspace(1)* @returns_ptr()
-declare align 8 i8 addrspace(1)* @returns_ptr_align8()
+declare ptr addrspace(1) @returns_ptr()
+declare align 8 ptr addrspace(1) @returns_ptr_align8()
 
 define void @call_result_align_1() {
   ; CHECK-LABEL: name: call_result_align_1
@@ -64,8 +64,8 @@ define void @call_result_align_1() {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   G_STORE [[C]](s8), [[MV]](p1) :: (store (s8) into %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  %ptr = call align 1 i8 addrspace(1)* @returns_ptr()
-  store i8 0, i8 addrspace(1)* %ptr, align 1
+  %ptr = call align 1 ptr addrspace(1) @returns_ptr()
+  store i8 0, ptr addrspace(1) %ptr, align 1
   ret void
 }
 
@@ -114,8 +114,8 @@ define void @call_result_align_8() {
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p1) = G_ASSERT_ALIGN [[MV]], 8
   ; CHECK-NEXT:   G_STORE [[C]](s8), [[ASSERT_ALIGN]](p1) :: (store (s8) into %ir.ptr, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  %ptr = call align 8 i8 addrspace(1)* @returns_ptr()
-  store i8 0, i8 addrspace(1)* %ptr, align 8
+  %ptr = call align 8 ptr addrspace(1) @returns_ptr()
+  store i8 0, ptr addrspace(1) %ptr, align 8
   ret void
 }
 
@@ -164,12 +164,12 @@ define void @declaration_result_align_8() {
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p1) = G_ASSERT_ALIGN [[MV]], 8
   ; CHECK-NEXT:   G_STORE [[C]](s8), [[ASSERT_ALIGN]](p1) :: (store (s8) into %ir.ptr, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  %ptr = call i8 addrspace(1)* @returns_ptr_align8()
-  store i8 0, i8 addrspace(1)* %ptr, align 8
+  %ptr = call ptr addrspace(1) @returns_ptr_align8()
+  store i8 0, ptr addrspace(1) %ptr, align 8
   ret void
 }
 
-define i8 addrspace(1)* @tail_call_assert_align() {
+define ptr addrspace(1) @tail_call_assert_align() {
   ; CHECK-LABEL: name: tail_call_assert_align
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -206,6 +206,6 @@ define i8 addrspace(1)* @tail_call_assert_align() {
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY17]](s32)
   ; CHECK-NEXT:   SI_TCRETURN [[GV]](p0), @returns_ptr_align8, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
 entry:
-  %call = tail call i8 addrspace(1)* @returns_ptr_align8()
-  ret i8 addrspace(1)* %call
+  %call = tail call ptr addrspace(1) @returns_ptr_align8()
+  ret ptr addrspace(1) %call
 }
