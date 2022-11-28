@@ -382,30 +382,40 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!IV)
+    auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!WideIV)
       continue;
-    if (HasOnlyVectorVFs &&
-        none_of(IV->users(), [IV](VPUser *U) { return U->usesScalars(IV); }))
+    if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
+          return U->usesScalars(WideIV);
+        }))
       continue;
 
-    const InductionDescriptor &ID = IV->getInductionDescriptor();
+    auto IP = HeaderVPBB->getFirstNonPhi();
+    VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
+    Type *ResultTy = WideIV->getPHINode()->getType();
+    if (Instruction *TruncI = WideIV->getTruncInst())
+      ResultTy = TruncI->getType();
+    const InductionDescriptor &ID = WideIV->getInductionDescriptor();
     VPValue *Step =
         vputils::getOrCreateVPValueForSCEVExpr(Plan, ID.getStep(), SE);
-    Instruction *TruncI = IV->getTruncInst();
-    VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(
-        ID, Plan.getCanonicalIV(), IV->getStartValue(), Step,
-        TruncI ? TruncI->getType() : nullptr);
-    HeaderVPBB->insert(Steps, HeaderVPBB->getFirstNonPhi());
+    VPValue *BaseIV = CanonicalIV;
+    if (!CanonicalIV->isCanonical(ID, ResultTy)) {
+      BaseIV = new VPDerivedIVRecipe(ID, WideIV->getStartValue(), CanonicalIV,
+                                     Step, ResultTy);
+      HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);
+    }
+
+    VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(ID, BaseIV, Step);
+    HeaderVPBB->insert(Steps, IP);
 
     // Update scalar users of IV to use Step instead. Use SetVector to ensure
     // the list of users doesn't contain duplicates.
-    SetVector<VPUser *> Users(IV->user_begin(), IV->user_end());
+    SetVector<VPUser *> Users(WideIV->user_begin(), WideIV->user_end());
     for (VPUser *U : Users) {
-      if (HasOnlyVectorVFs && !U->usesScalars(IV))
+      if (HasOnlyVectorVFs && !U->usesScalars(WideIV))
         continue;
       for (unsigned I = 0, E = U->getNumOperands(); I != E; I++) {
-        if (U->getOperand(I) != IV)
+        if (U->getOperand(I) != WideIV)
           continue;
         U->setOperand(I, Steps);
       }

@@ -13,7 +13,8 @@
 ; DBG-NEXT: <x1> vector loop: {
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; DBG-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<%start>, ir<1>
+; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%start> + vp<[[CAN_IV]]> * ir<1>
+; DBG-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
 ; DBG-NEXT:     CLONE ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
 ; DBG-NEXT:     CLONE ir<%arrayidx> = getelementptr ir<%dst>, vp<[[IV_STEPS]]>
 ; DBG-NEXT:     CLONE store ir<%min>, ir<%arrayidx>
@@ -69,8 +70,9 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT: <x1> vector loop: {
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; DBG-NEXT:     vp<[[STEPS1:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<false>, ir<true>
-; DBG-NEXT:     vp<[[STEPS2:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<false> + vp<[[CAN_IV]]> * ir<true>
+; DBG-NEXT:     vp<[[STEPS1:%.+]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<true>
+; DBG-NEXT:     vp<[[STEPS2:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; DBG-NEXT:   Successor(s): cond.false
 ; DBG-EMPTY:
 ; DBG-NEXT:   cond.false:
@@ -181,13 +183,14 @@ exit:
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
 ; DBG-NEXT:   vector.body:
-; DBG-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION
-; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<%4>
-; DBG-NEXT:     vp<%4>    = SCALAR-STEPS vp<%2>, ir<0>, ir<1>
-; DBG-NEXT:     EMIT vp<%5> = first-order splice ir<%for> vp<%4>
-; DBG-NEXT:     CLONE store vp<%5>, ir<%dst>
-; DBG-NEXT:     EMIT vp<%7> = VF * UF +(nuw)  vp<%2>
-; DBG-NEXT:     EMIT branch-on-count  vp<%7> vp<%1>
+; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
+; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<1> (truncated to i32)
+; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
+; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for> vp<[[SCALAR_STEPS]]>
+; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
+; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
+; DBG-NEXT:     EMIT branch-on-count  vp<[[IV_INC]]> vp<%1>
 ; DBG-NEXT:   No successors
 ; DBG-NEXT: }
 ; DBG-NEXT: Successor(s): middle.block
