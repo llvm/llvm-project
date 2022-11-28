@@ -11,7 +11,7 @@ declare i32 @missing_func() local_unnamed_addr
 define i32 @foo() {
 entry:
   %0 = call i32 @missing_func()
-  %1 = load i32, i32* @missing_data, align 4
+  %1 = load i32, ptr @missing_data, align 4
   ret i32 %1
 }
 

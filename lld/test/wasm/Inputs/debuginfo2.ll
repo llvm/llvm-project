@@ -21,10 +21,10 @@ define hidden void @foo(i32 %p) local_unnamed_addr #0 !dbg !16 {
 entry:
   call void @llvm.dbg.value(metadata i32 %p, metadata !20, metadata !DIExpression()), !dbg !21
   %and = and i32 %p, 1, !dbg !22
-  %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* @y, i32 0, i32 %and, !dbg !23
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !24, !tbaa !25
+  %arrayidx = getelementptr inbounds [2 x i32], ptr @y, i32 0, i32 %and, !dbg !23
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !24, !tbaa !25
   %inc = add nsw i32 %0, 1, !dbg !24
-  store i32 %inc, i32* %arrayidx, align 4, !dbg !24, !tbaa !25
+  store i32 %inc, ptr %arrayidx, align 4, !dbg !24, !tbaa !25
   ret void, !dbg !29
 }
 
