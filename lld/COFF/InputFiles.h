@@ -209,8 +209,8 @@ public:
   std::optional<std::pair<StringRef, uint32_t>>
   getVariableLocation(StringRef var);
 
-  llvm::Optional<llvm::DILineInfo> getDILineInfo(uint32_t offset,
-                                                 uint32_t sectionIndex);
+  std::optional<llvm::DILineInfo> getDILineInfo(uint32_t offset,
+                                                uint32_t sectionIndex);
 
 private:
   const coff_section* getSection(uint32_t i);
