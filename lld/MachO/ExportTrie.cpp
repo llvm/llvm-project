@@ -39,7 +39,6 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/LEB128.h"
 #include <optional>
