@@ -77,14 +77,11 @@ define amdgpu_kernel void @store_load_sindex_kernel(i32 %idx) {
 ; GFX11-NEXT:    s_endpgm
 bb:
   %i = alloca [32 x float], align 4, addrspace(5)
-  %i1 = bitcast [32 x float] addrspace(5)* %i to i8 addrspace(5)*
-  %i7 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %idx
-  %i8 = bitcast float addrspace(5)* %i7 to i32 addrspace(5)*
-  store volatile i32 15, i32 addrspace(5)* %i8, align 4
+  %i7 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %idx
+  store volatile i32 15, ptr addrspace(5) %i7, align 4
   %i9 = and i32 %idx, 15
-  %i10 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i9
-  %i11 = bitcast float addrspace(5)* %i10 to i32 addrspace(5)*
-  %i12 = load volatile i32, i32 addrspace(5)* %i11, align 4
+  %i10 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i9
+  %i12 = load volatile i32, ptr addrspace(5) %i10, align 4
   ret void
 }
 
@@ -148,16 +145,13 @@ define amdgpu_kernel void @store_load_vindex_kernel() {
 ; GFX11-NEXT:    s_endpgm
 bb:
   %i = alloca [32 x float], align 4, addrspace(5)
-  %i1 = bitcast [32 x float] addrspace(5)* %i to i8 addrspace(5)*
   %i2 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %i3 = zext i32 %i2 to i64
-  %i7 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i2
-  %i8 = bitcast float addrspace(5)* %i7 to i32 addrspace(5)*
-  store volatile i32 15, i32 addrspace(5)* %i8, align 4
+  %i7 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i2
+  store volatile i32 15, ptr addrspace(5) %i7, align 4
   %i9 = sub nsw i32 31, %i2
-  %i10 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i9
-  %i11 = bitcast float addrspace(5)* %i10 to i32 addrspace(5)*
-  %i12 = load volatile i32, i32 addrspace(5)* %i11, align 4
+  %i10 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i9
+  %i12 = load volatile i32, ptr addrspace(5) %i10, align 4
   ret void
 }
 
@@ -221,18 +215,15 @@ define void @store_load_vindex_foo(i32 %idx) {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %i = alloca [32 x float], align 4, addrspace(5)
-  %i1 = bitcast [32 x float] addrspace(5)* %i to i8 addrspace(5)*
-  %i7 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %idx
-  %i8 = bitcast float addrspace(5)* %i7 to i32 addrspace(5)*
-  store volatile i32 15, i32 addrspace(5)* %i8, align 4
+  %i7 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %idx
+  store volatile i32 15, ptr addrspace(5) %i7, align 4
   %i9 = and i32 %idx, 15
-  %i10 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i9
-  %i11 = bitcast float addrspace(5)* %i10 to i32 addrspace(5)*
-  %i12 = load volatile i32, i32 addrspace(5)* %i11, align 4
+  %i10 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i9
+  %i12 = load volatile i32, ptr addrspace(5) %i10, align 4
   ret void
 }
 
-define void @private_ptr_foo(float addrspace(5)* nocapture %arg) {
+define void @private_ptr_foo(ptr addrspace(5) nocapture %arg) {
 ; GFX9-LABEL: private_ptr_foo:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -266,8 +257,8 @@ define void @private_ptr_foo(float addrspace(5)* nocapture %arg) {
 ; GFX11-NEXT:    scratch_store_b32 v0, v1, off offset:4
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr inbounds float, float addrspace(5)* %arg, i32 1
-  store float 1.000000e+01, float addrspace(5)* %gep, align 4
+  %gep = getelementptr inbounds float, ptr addrspace(5) %arg, i32 1
+  store float 1.000000e+01, ptr addrspace(5) %gep, align 4
   ret void
 }
 
@@ -353,16 +344,13 @@ define amdgpu_kernel void @store_load_sindex_small_offset_kernel(i32 %idx) {
 bb:
   %padding = alloca [64 x i32], align 4, addrspace(5)
   %i = alloca [32 x float], align 4, addrspace(5)
-  %pad_gep = getelementptr inbounds [64 x i32], [64 x i32] addrspace(5)* %padding, i32 0, i32 undef
-  %pad_load = load volatile i32, i32 addrspace(5)* %pad_gep, align 4
-  %i1 = bitcast [32 x float] addrspace(5)* %i to i8 addrspace(5)*
-  %i7 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %idx
-  %i8 = bitcast float addrspace(5)* %i7 to i32 addrspace(5)*
-  store volatile i32 15, i32 addrspace(5)* %i8, align 4
+  %pad_gep = getelementptr inbounds [64 x i32], ptr addrspace(5) %padding, i32 0, i32 undef
+  %pad_load = load volatile i32, ptr addrspace(5) %pad_gep, align 4
+  %i7 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %idx
+  store volatile i32 15, ptr addrspace(5) %i7, align 4
   %i9 = and i32 %idx, 15
-  %i10 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i9
-  %i11 = bitcast float addrspace(5)* %i10 to i32 addrspace(5)*
-  %i12 = load volatile i32, i32 addrspace(5)* %i11, align 4
+  %i10 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i9
+  %i12 = load volatile i32, ptr addrspace(5) %i10, align 4
   ret void
 }
 
@@ -436,18 +424,15 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel() {
 bb:
   %padding = alloca [64 x i32], align 4, addrspace(5)
   %i = alloca [32 x float], align 4, addrspace(5)
-  %pad_gep = getelementptr inbounds [64 x i32], [64 x i32] addrspace(5)* %padding, i32 0, i32 undef
-  %pad_load = load volatile i32, i32 addrspace(5)* %pad_gep, align 4
-  %i1 = bitcast [32 x float] addrspace(5)* %i to i8 addrspace(5)*
+  %pad_gep = getelementptr inbounds [64 x i32], ptr addrspace(5) %padding, i32 0, i32 undef
+  %pad_load = load volatile i32, ptr addrspace(5) %pad_gep, align 4
   %i2 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %i3 = zext i32 %i2 to i64
-  %i7 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i2
-  %i8 = bitcast float addrspace(5)* %i7 to i32 addrspace(5)*
-  store volatile i32 15, i32 addrspace(5)* %i8, align 4
+  %i7 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i2
+  store volatile i32 15, ptr addrspace(5) %i7, align 4
   %i9 = sub nsw i32 31, %i2
-  %i10 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i9
-  %i11 = bitcast float addrspace(5)* %i10 to i32 addrspace(5)*
-  %i12 = load volatile i32, i32 addrspace(5)* %i11, align 4
+  %i10 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i9
+  %i12 = load volatile i32, ptr addrspace(5) %i10, align 4
   ret void
 }
 
@@ -523,16 +508,13 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 bb:
   %padding = alloca [64 x i32], align 4, addrspace(5)
   %i = alloca [32 x float], align 4, addrspace(5)
-  %pad_gep = getelementptr inbounds [64 x i32], [64 x i32] addrspace(5)* %padding, i32 0, i32 undef
-  %pad_load = load volatile i32, i32 addrspace(5)* %pad_gep, align 4
-  %i1 = bitcast [32 x float] addrspace(5)* %i to i8 addrspace(5)*
-  %i7 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %idx
-  %i8 = bitcast float addrspace(5)* %i7 to i32 addrspace(5)*
-  store volatile i32 15, i32 addrspace(5)* %i8, align 4
+  %pad_gep = getelementptr inbounds [64 x i32], ptr addrspace(5) %padding, i32 0, i32 undef
+  %pad_load = load volatile i32, ptr addrspace(5) %pad_gep, align 4
+  %i7 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %idx
+  store volatile i32 15, ptr addrspace(5) %i7, align 4
   %i9 = and i32 %idx, 15
-  %i10 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i9
-  %i11 = bitcast float addrspace(5)* %i10 to i32 addrspace(5)*
-  %i12 = load volatile i32, i32 addrspace(5)* %i11, align 4
+  %i10 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i9
+  %i12 = load volatile i32, ptr addrspace(5) %i10, align 4
   ret void
 }
 
@@ -622,16 +604,13 @@ define amdgpu_kernel void @store_load_sindex_large_offset_kernel(i32 %idx) {
 bb:
   %padding = alloca [4096 x i32], align 4, addrspace(5)
   %i = alloca [32 x float], align 4, addrspace(5)
-  %pad_gep = getelementptr inbounds [4096 x i32], [4096 x i32] addrspace(5)* %padding, i32 0, i32 undef
-  %pad_load = load volatile i32, i32 addrspace(5)* %pad_gep, align 4
-  %i1 = bitcast [32 x float] addrspace(5)* %i to i8 addrspace(5)*
-  %i7 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %idx
-  %i8 = bitcast float addrspace(5)* %i7 to i32 addrspace(5)*
-  store volatile i32 15, i32 addrspace(5)* %i8, align 4
+  %pad_gep = getelementptr inbounds [4096 x i32], ptr addrspace(5) %padding, i32 0, i32 undef
+  %pad_load = load volatile i32, ptr addrspace(5) %pad_gep, align 4
+  %i7 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %idx
+  store volatile i32 15, ptr addrspace(5) %i7, align 4
   %i9 = and i32 %idx, 15
-  %i10 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i9
-  %i11 = bitcast float addrspace(5)* %i10 to i32 addrspace(5)*
-  %i12 = load volatile i32, i32 addrspace(5)* %i11, align 4
+  %i10 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i9
+  %i12 = load volatile i32, ptr addrspace(5) %i10, align 4
   ret void
 }
 
@@ -709,18 +688,15 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel() {
 bb:
   %padding = alloca [4096 x i32], align 4, addrspace(5)
   %i = alloca [32 x float], align 4, addrspace(5)
-  %pad_gep = getelementptr inbounds [4096 x i32], [4096 x i32] addrspace(5)* %padding, i32 0, i32 undef
-  %pad_load = load volatile i32, i32 addrspace(5)* %pad_gep, align 4
-  %i1 = bitcast [32 x float] addrspace(5)* %i to i8 addrspace(5)*
+  %pad_gep = getelementptr inbounds [4096 x i32], ptr addrspace(5) %padding, i32 0, i32 undef
+  %pad_load = load volatile i32, ptr addrspace(5) %pad_gep, align 4
   %i2 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %i3 = zext i32 %i2 to i64
-  %i7 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i2
-  %i8 = bitcast float addrspace(5)* %i7 to i32 addrspace(5)*
-  store volatile i32 15, i32 addrspace(5)* %i8, align 4
+  %i7 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i2
+  store volatile i32 15, ptr addrspace(5) %i7, align 4
   %i9 = sub nsw i32 31, %i2
-  %i10 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i9
-  %i11 = bitcast float addrspace(5)* %i10 to i32 addrspace(5)*
-  %i12 = load volatile i32, i32 addrspace(5)* %i11, align 4
+  %i10 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i9
+  %i12 = load volatile i32, ptr addrspace(5) %i10, align 4
   ret void
 }
 
@@ -801,16 +777,13 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 bb:
   %padding = alloca [4096 x i32], align 4, addrspace(5)
   %i = alloca [32 x float], align 4, addrspace(5)
-  %pad_gep = getelementptr inbounds [4096 x i32], [4096 x i32] addrspace(5)* %padding, i32 0, i32 undef
-  %pad_load = load volatile i32, i32 addrspace(5)* %pad_gep, align 4
-  %i1 = bitcast [32 x float] addrspace(5)* %i to i8 addrspace(5)*
-  %i7 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %idx
-  %i8 = bitcast float addrspace(5)* %i7 to i32 addrspace(5)*
-  store volatile i32 15, i32 addrspace(5)* %i8, align 4
+  %pad_gep = getelementptr inbounds [4096 x i32], ptr addrspace(5) %padding, i32 0, i32 undef
+  %pad_load = load volatile i32, ptr addrspace(5) %pad_gep, align 4
+  %i7 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %idx
+  store volatile i32 15, ptr addrspace(5) %i7, align 4
   %i9 = and i32 %idx, 15
-  %i10 = getelementptr inbounds [32 x float], [32 x float] addrspace(5)* %i, i32 0, i32 %i9
-  %i11 = bitcast float addrspace(5)* %i10 to i32 addrspace(5)*
-  %i12 = load volatile i32, i32 addrspace(5)* %i11, align 4
+  %i10 = getelementptr inbounds [32 x float], ptr addrspace(5) %i, i32 0, i32 %i9
+  %i12 = load volatile i32, ptr addrspace(5) %i10, align 4
   ret void
 }
 
@@ -876,12 +849,12 @@ define amdgpu_kernel void @store_load_large_imm_offset_kernel() {
 ; GFX11-NEXT:    s_endpgm
 bb:
   %i = alloca [4096 x i32], align 4, addrspace(5)
-  %i1 = getelementptr inbounds [4096 x i32], [4096 x i32] addrspace(5)* %i, i32 0, i32 undef
-  store volatile i32 13, i32 addrspace(5)* %i1, align 4
-  %i7 = getelementptr inbounds [4096 x i32], [4096 x i32] addrspace(5)* %i, i32 0, i32 4000
-  store volatile i32 15, i32 addrspace(5)* %i7, align 4
-  %i10 = getelementptr inbounds [4096 x i32], [4096 x i32] addrspace(5)* %i, i32 0, i32 4000
-  %i12 = load volatile i32, i32 addrspace(5)* %i10, align 4
+  %i1 = getelementptr inbounds [4096 x i32], ptr addrspace(5) %i, i32 0, i32 undef
+  store volatile i32 13, ptr addrspace(5) %i1, align 4
+  %i7 = getelementptr inbounds [4096 x i32], ptr addrspace(5) %i, i32 0, i32 4000
+  store volatile i32 15, ptr addrspace(5) %i7, align 4
+  %i10 = getelementptr inbounds [4096 x i32], ptr addrspace(5) %i, i32 0, i32 4000
+  %i12 = load volatile i32, ptr addrspace(5) %i10, align 4
   ret void
 }
 
@@ -948,12 +921,12 @@ define void @store_load_large_imm_offset_foo() {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %i = alloca [4096 x i32], align 4, addrspace(5)
-  %i1 = getelementptr inbounds [4096 x i32], [4096 x i32] addrspace(5)* %i, i32 0, i32 undef
-  store volatile i32 13, i32 addrspace(5)* %i1, align 4
-  %i7 = getelementptr inbounds [4096 x i32], [4096 x i32] addrspace(5)* %i, i32 0, i32 4000
-  store volatile i32 15, i32 addrspace(5)* %i7, align 4
-  %i10 = getelementptr inbounds [4096 x i32], [4096 x i32] addrspace(5)* %i, i32 0, i32 4000
-  %i12 = load volatile i32, i32 addrspace(5)* %i10, align 4
+  %i1 = getelementptr inbounds [4096 x i32], ptr addrspace(5) %i, i32 0, i32 undef
+  store volatile i32 13, ptr addrspace(5) %i1, align 4
+  %i7 = getelementptr inbounds [4096 x i32], ptr addrspace(5) %i, i32 0, i32 4000
+  store volatile i32 15, ptr addrspace(5) %i7, align 4
+  %i10 = getelementptr inbounds [4096 x i32], ptr addrspace(5) %i, i32 0, i32 4000
+  %i12 = load volatile i32, ptr addrspace(5) %i10, align 4
   ret void
 }
 
@@ -1018,13 +991,13 @@ bb:
   %vidx = tail call i32 @llvm.amdgcn.workitem.id.x()
   %add1 = add nsw i32 %sidx, %vidx
   %add2 = add nsw i32 %add1, 256
-  %gep = getelementptr inbounds [32 x i32], [32 x i32] addrspace(5)* %alloca, i32 0, i32 %add2
-  store volatile i32 15, i32 addrspace(5)* %gep, align 4
-  %load = load volatile i32, i32 addrspace(5)* %gep, align 4
+  %gep = getelementptr inbounds [32 x i32], ptr addrspace(5) %alloca, i32 0, i32 %add2
+  store volatile i32 15, ptr addrspace(5) %gep, align 4
+  %load = load volatile i32, ptr addrspace(5) %gep, align 4
   ret void
 }
 
-define void @store_load_i64_aligned(i64 addrspace(5)* nocapture %arg) {
+define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ; GFX9-LABEL: store_load_i64_aligned:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1070,12 +1043,12 @@ define void @store_load_i64_aligned(i64 addrspace(5)* nocapture %arg) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  store volatile i64 15, i64 addrspace(5)* %arg, align 8
-  %load = load volatile i64, i64 addrspace(5)* %arg, align 8
+  store volatile i64 15, ptr addrspace(5) %arg, align 8
+  %load = load volatile i64, ptr addrspace(5) %arg, align 8
   ret void
 }
 
-define void @store_load_i64_unaligned(i64 addrspace(5)* nocapture %arg) {
+define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX9-LABEL: store_load_i64_unaligned:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1121,12 +1094,12 @@ define void @store_load_i64_unaligned(i64 addrspace(5)* nocapture %arg) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  store volatile i64 15, i64 addrspace(5)* %arg, align 1
-  %load = load volatile i64, i64 addrspace(5)* %arg, align 1
+  store volatile i64 15, ptr addrspace(5) %arg, align 1
+  %load = load volatile i64, ptr addrspace(5) %arg, align 1
   ret void
 }
 
-define void @store_load_v3i32_unaligned(<3 x i32> addrspace(5)* nocapture %arg) {
+define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX9-LABEL: store_load_v3i32_unaligned:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1188,12 +1161,12 @@ define void @store_load_v3i32_unaligned(<3 x i32> addrspace(5)* nocapture %arg) 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  store volatile <3 x i32> <i32 1, i32 2, i32 3>, <3 x i32> addrspace(5)* %arg, align 1
-  %load = load volatile <3 x i32>, <3 x i32> addrspace(5)* %arg, align 1
+  store volatile <3 x i32> <i32 1, i32 2, i32 3>, ptr addrspace(5) %arg, align 1
+  %load = load volatile <3 x i32>, ptr addrspace(5) %arg, align 1
   ret void
 }
 
-define void @store_load_v4i32_unaligned(<4 x i32> addrspace(5)* nocapture %arg) {
+define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX9-LABEL: store_load_v4i32_unaligned:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1260,8 +1233,8 @@ define void @store_load_v4i32_unaligned(<4 x i32> addrspace(5)* nocapture %arg) 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> addrspace(5)* %arg, align 1
-  %load = load volatile <4 x i32>, <4 x i32> addrspace(5)* %arg, align 1
+  store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %arg, align 1
+  %load = load volatile <4 x i32>, ptr addrspace(5) %arg, align 1
   ret void
 }
 

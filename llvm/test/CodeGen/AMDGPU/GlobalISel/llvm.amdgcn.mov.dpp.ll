@@ -5,7 +5,7 @@
 
 ; FIXME: Merge with DAG test
 
-define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in) {
 ; GFX8-LABEL: dpp_test:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -43,10 +43,10 @@ define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in) {
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %in, i32 1, i32 1, i32 1, i1 true) #0
-  store i32 %tmp0, i32 addrspace(1)* %out
+  store i32 %tmp0, ptr addrspace(1) %out
   ret void
 }
-define amdgpu_kernel void @mov_dpp64_test(i64 addrspace(1)* %out, i64 %in1) {
+define amdgpu_kernel void @mov_dpp64_test(ptr addrspace(1) %out, i64 %in1) {
 ; GFX8-LABEL: mov_dpp64_test:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -84,7 +84,7 @@ define amdgpu_kernel void @mov_dpp64_test(i64 addrspace(1)* %out, i64 %in1) {
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   %tmp0 = call i64 @llvm.amdgcn.mov.dpp.i64(i64 %in1, i32 1, i32 1, i32 1, i1 false) #0
-  store i64 %tmp0, i64 addrspace(1)* %out
+  store i64 %tmp0, ptr addrspace(1) %out
   ret void
 }
 

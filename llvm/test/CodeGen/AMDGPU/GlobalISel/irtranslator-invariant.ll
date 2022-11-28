@@ -54,7 +54,7 @@ define { i32, i64 } @load_const_struct_gv() {
   ret { i32, i64 } %load
 }
 
-define void @test_memcpy_p1_constaddr_i64(i8 addrspace(1)* %dst, i8 addrspace(4)* %src) {
+define void @test_memcpy_p1_constaddr_i64(ptr addrspace(1) %dst, ptr addrspace(4) %src) {
   ; CHECK-LABEL: name: test_memcpy_p1_constaddr_i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -68,11 +68,11 @@ define void @test_memcpy_p1_constaddr_i64(i8 addrspace(1)* %dst, i8 addrspace(4)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
   ; CHECK-NEXT:   G_MEMCPY [[MV]](p1), [[MV1]](p4), [[C]](s64), 0 :: (store (s8) into %ir.dst, addrspace 1), (dereferenceable invariant load (s8) from %ir.src, addrspace 4)
   ; CHECK-NEXT:   SI_RETURN
-  call void @llvm.memcpy.p1.p4.i64(i8 addrspace(1)* %dst, i8 addrspace(4)* %src, i64 32, i1 false)
+  call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) %dst, ptr addrspace(4) %src, i64 32, i1 false)
   ret void
 }
 
-define void @test_memcpy_inline_p1_constaddr_i64(i8 addrspace(1)* %dst, i8 addrspace(4)* %src) {
+define void @test_memcpy_inline_p1_constaddr_i64(ptr addrspace(1) %dst, ptr addrspace(4) %src) {
   ; CHECK-LABEL: name: test_memcpy_inline_p1_constaddr_i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -86,11 +86,11 @@ define void @test_memcpy_inline_p1_constaddr_i64(i8 addrspace(1)* %dst, i8 addrs
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
   ; CHECK-NEXT:   G_MEMCPY_INLINE [[MV]](p1), [[MV1]](p4), [[C]](s64) :: (store (s8) into %ir.dst, addrspace 1), (dereferenceable invariant load (s8) from %ir.src, addrspace 4)
   ; CHECK-NEXT:   SI_RETURN
-  call void @llvm.memcpy.inline.p1.p4.i64(i8 addrspace(1)* %dst, i8 addrspace(4)* %src, i64 32, i1 false)
+  call void @llvm.memcpy.inline.p1.p4.i64(ptr addrspace(1) %dst, ptr addrspace(4) %src, i64 32, i1 false)
   ret void
 }
 
-define void @test_memmove_p1_constaddr_i64(i8 addrspace(1)* %dst, i8 addrspace(4)* %src) {
+define void @test_memmove_p1_constaddr_i64(ptr addrspace(1) %dst, ptr addrspace(4) %src) {
   ; CHECK-LABEL: name: test_memmove_p1_constaddr_i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -104,7 +104,7 @@ define void @test_memmove_p1_constaddr_i64(i8 addrspace(1)* %dst, i8 addrspace(4
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
   ; CHECK-NEXT:   G_MEMMOVE [[MV]](p1), [[MV1]](p4), [[C]](s64), 0 :: (store (s8) into %ir.dst, addrspace 1), (dereferenceable invariant load (s8) from %ir.src, addrspace 4)
   ; CHECK-NEXT:   SI_RETURN
-  call void @llvm.memmove.p1.p4.i64(i8 addrspace(1)* %dst, i8 addrspace(4)* %src, i64 32, i1 false)
+  call void @llvm.memmove.p1.p4.i64(ptr addrspace(1) %dst, ptr addrspace(4) %src, i64 32, i1 false)
   ret void
 }
 

@@ -5,7 +5,7 @@
 ; Test end to end matching of addressing modes when MUBUF is used for
 ; global memory.
 
-define amdgpu_ps void @mubuf_store_sgpr_ptr(i32 addrspace(1)* inreg %ptr) {
+define amdgpu_ps void @mubuf_store_sgpr_ptr(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_store_sgpr_ptr:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, s2
@@ -25,11 +25,11 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr(i32 addrspace(1)* inreg %ptr) {
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
-  store i32 0, i32 addrspace(1)* %ptr
+  store i32 0, ptr addrspace(1) %ptr
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4095(i32 addrspace(1)* inreg %ptr) {
+define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4095(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_store_sgpr_ptr_offset4095:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, s2
@@ -51,12 +51,12 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4095(i32 addrspace(1)* inreg %
 ; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], s4
 ; GFX7-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4095
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
+  store i32 0, ptr addrspace(1) %gep
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4294967296(i32 addrspace(1)* inreg %ptr) {
+define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4294967296(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_store_sgpr_ptr_offset4294967296:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s4, 0
@@ -84,12 +84,12 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4294967296(i32 addrspace(1)* i
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; GFX7-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4294967296
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
+  store i32 0, ptr addrspace(1) %gep
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4294967297(i32 addrspace(1)* inreg %ptr) {
+define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4294967297(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_store_sgpr_ptr_offset4294967297:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s4, 4
@@ -117,12 +117,12 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4294967297(i32 addrspace(1)* i
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; GFX7-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4294967297
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967297
+  store i32 0, ptr addrspace(1) %gep
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4096(i32 addrspace(1)* inreg %ptr) {
+define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4096(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_store_sgpr_ptr_offset4096:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, s2
@@ -144,12 +144,12 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4096(i32 addrspace(1)* inreg %
 ; GFX7-NEXT:    s_movk_i32 s4, 0x4000
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], s4
 ; GFX7-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4096
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4096
+  store i32 0, ptr addrspace(1) %gep
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4095(i32 addrspace(1)* %ptr) {
+define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4095(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: mubuf_store_vgpr_ptr_offset4095:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s2, 0
@@ -169,12 +169,12 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4095(i32 addrspace(1)* %ptr) {
 ; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], s4 addr64
 ; GFX7-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4095
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
+  store i32 0, ptr addrspace(1) %gep
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4294967296(i32 addrspace(1)* %ptr) {
+define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4294967296(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: mubuf_store_vgpr_ptr_offset4294967296:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, 0
@@ -194,12 +194,12 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4294967296(i32 addrspace(1)* %
 ; GFX7-NEXT:    s_mov_b32 s2, s0
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; GFX7-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4294967296
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
+  store i32 0, ptr addrspace(1) %gep
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4294967297(i32 addrspace(1)* %ptr) {
+define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4294967297(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: mubuf_store_vgpr_ptr_offset4294967297:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, 4
@@ -219,12 +219,12 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4294967297(i32 addrspace(1)* %
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; GFX7-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4294967297
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967297
+  store i32 0, ptr addrspace(1) %gep
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4096(i32 addrspace(1)* %ptr) {
+define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4096(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: mubuf_store_vgpr_ptr_offset4096:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s2, 0
@@ -244,12 +244,12 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4096(i32 addrspace(1)* %ptr) {
 ; GFX7-NEXT:    s_movk_i32 s4, 0x4000
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], s4 addr64
 ; GFX7-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4096
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4096
+  store i32 0, ptr addrspace(1) %gep
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_sgpr_ptr_sgpr_offset(i32 addrspace(1)* inreg %ptr, i32 inreg %soffset) {
+define amdgpu_ps void @mubuf_store_sgpr_ptr_sgpr_offset(ptr addrspace(1) inreg %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_store_sgpr_ptr_sgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_ashr_i32 s5, s4, 31
@@ -277,12 +277,12 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_sgpr_offset(i32 addrspace(1)* inreg 
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; GFX7-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 %soffset
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 %soffset
+  store i32 0, ptr addrspace(1) %gep
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset(i32 addrspace(1)* %ptr, i32 inreg %soffset) {
+define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset(ptr addrspace(1) %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_store_vgpr_ptr_sgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
@@ -302,12 +302,12 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset(i32 addrspace(1)* %ptr, 
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; GFX7-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 %soffset
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 %soffset
+  store i32 0, ptr addrspace(1) %gep
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset_offset256(i32 addrspace(1)* %ptr, i32 inreg %soffset) {
+define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset_offset256(ptr addrspace(1) %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_store_vgpr_ptr_sgpr_offset_offset256:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
@@ -327,13 +327,13 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset_offset256(i32 addrspace(
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64 offset:1024
 ; GFX7-NEXT:    s_endpgm
-  %gep0 = getelementptr i32, i32 addrspace(1)* %ptr, i32 %soffset
-  %gep1 = getelementptr i32, i32 addrspace(1)* %gep0, i32 256
-  store i32 0, i32 addrspace(1)* %gep1
+  %gep0 = getelementptr i32, ptr addrspace(1) %ptr, i32 %soffset
+  %gep1 = getelementptr i32, ptr addrspace(1) %gep0, i32 256
+  store i32 0, ptr addrspace(1) %gep1
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset256_offset(i32 addrspace(1)* %ptr, i32 inreg %soffset) {
+define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset256_offset(ptr addrspace(1) %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_store_vgpr_ptr_sgpr_offset256_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
@@ -353,13 +353,13 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset256_offset(i32 addrspace(
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64 offset:1024
 ; GFX7-NEXT:    s_endpgm
-  %gep0 = getelementptr i32, i32 addrspace(1)* %ptr, i32 256
-  %gep1 = getelementptr i32, i32 addrspace(1)* %gep0, i32 %soffset
-  store i32 0, i32 addrspace(1)* %gep1
+  %gep0 = getelementptr i32, ptr addrspace(1) %ptr, i32 256
+  %gep1 = getelementptr i32, ptr addrspace(1) %gep0, i32 %soffset
+  store i32 0, ptr addrspace(1) %gep1
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_sgpr_ptr_vgpr_offset(i32 addrspace(1)* inreg %ptr, i32 %voffset) {
+define amdgpu_ps void @mubuf_store_sgpr_ptr_vgpr_offset(ptr addrspace(1) inreg %ptr, i32 %voffset) {
 ; GFX6-LABEL: mubuf_store_sgpr_ptr_vgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
@@ -383,12 +383,12 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_vgpr_offset(i32 addrspace(1)* inreg 
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; GFX7-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 %voffset
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 %voffset
+  store i32 0, ptr addrspace(1) %gep
   ret void
 }
 
-define amdgpu_ps void @mubuf_store_sgpr_ptr_vgpr_offset_offset4095(i32 addrspace(1)* inreg %ptr, i32 %voffset) {
+define amdgpu_ps void @mubuf_store_sgpr_ptr_vgpr_offset_offset4095(ptr addrspace(1) inreg %ptr, i32 %voffset) {
 ; GFX6-LABEL: mubuf_store_sgpr_ptr_vgpr_offset_offset4095:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
@@ -414,12 +414,12 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_vgpr_offset_offset4095(i32 addrspace
 ; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], s4 addr64
 ; GFX7-NEXT:    s_endpgm
-  %gep0 = getelementptr i32, i32 addrspace(1)* %ptr, i32 %voffset
-  %gep1 = getelementptr i32, i32 addrspace(1)* %gep0, i32 4095
-  store i32 0, i32 addrspace(1)* %gep1
+  %gep0 = getelementptr i32, ptr addrspace(1) %ptr, i32 %voffset
+  %gep1 = getelementptr i32, ptr addrspace(1) %gep0, i32 4095
+  store i32 0, ptr addrspace(1) %gep1
   ret void
 }
-define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4095_vgpr_offset(i32 addrspace(1)* inreg %ptr, i32 %voffset) {
+define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4095_vgpr_offset(ptr addrspace(1) inreg %ptr, i32 %voffset) {
 ; GFX6-LABEL: mubuf_store_sgpr_ptr_offset4095_vgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
@@ -445,13 +445,13 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4095_vgpr_offset(i32 addrspace
 ; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], s4 addr64
 ; GFX7-NEXT:    s_endpgm
-  %gep0 = getelementptr i32, i32 addrspace(1)* %ptr, i32 4095
-  %gep1 = getelementptr i32, i32 addrspace(1)* %gep0, i32 %voffset
-  store i32 0, i32 addrspace(1)* %gep1
+  %gep0 = getelementptr i32, ptr addrspace(1) %ptr, i32 4095
+  %gep1 = getelementptr i32, ptr addrspace(1) %gep0, i32 %voffset
+  store i32 0, ptr addrspace(1) %gep1
   ret void
 }
 
-define amdgpu_ps float @mubuf_load_sgpr_ptr(float addrspace(1)* inreg %ptr) {
+define amdgpu_ps float @mubuf_load_sgpr_ptr(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_load_sgpr_ptr:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, s2
@@ -471,11 +471,11 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr(float addrspace(1)* inreg %ptr) {
 ; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %val = load volatile float, float addrspace(1)* %ptr
+  %val = load volatile float, ptr addrspace(1) %ptr
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095(float addrspace(1)* inreg %ptr) {
+define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_load_sgpr_ptr_offset4095:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, s2
@@ -497,12 +497,12 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095(float addrspace(1)* inreg
 ; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], s4 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr float, float addrspace(1)* %ptr, i64 4095
-  %val = load volatile float, float addrspace(1)* %gep
+  %gep = getelementptr float, ptr addrspace(1) %ptr, i64 4095
+  %val = load volatile float, ptr addrspace(1) %gep
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967296(float addrspace(1)* inreg %ptr) {
+define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967296(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_load_sgpr_ptr_offset4294967296:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s4, 0
@@ -530,12 +530,12 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967296(float addrspace(1)*
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967296
-  %val = load volatile float, float addrspace(1)* %gep
+  %gep = getelementptr float, ptr addrspace(1) %ptr, i64 4294967296
+  %val = load volatile float, ptr addrspace(1) %gep
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967297(float addrspace(1)* inreg %ptr) {
+define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967297(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_load_sgpr_ptr_offset4294967297:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s4, 4
@@ -563,12 +563,12 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967297(float addrspace(1)*
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967297
-  %val = load volatile float, float addrspace(1)* %gep
+  %gep = getelementptr float, ptr addrspace(1) %ptr, i64 4294967297
+  %val = load volatile float, ptr addrspace(1) %gep
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4096(float addrspace(1)* inreg %ptr) {
+define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4096(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_load_sgpr_ptr_offset4096:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, s2
@@ -590,12 +590,12 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4096(float addrspace(1)* inreg
 ; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], s4 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr float, float addrspace(1)* %ptr, i64 4096
-  %val = load volatile float, float addrspace(1)* %gep
+  %gep = getelementptr float, ptr addrspace(1) %ptr, i64 4096
+  %val = load volatile float, ptr addrspace(1) %gep
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4095(float addrspace(1)* %ptr) {
+define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4095(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: mubuf_load_vgpr_ptr_offset4095:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s2, 0
@@ -615,12 +615,12 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4095(float addrspace(1)* %ptr)
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr float, float addrspace(1)* %ptr, i64 4095
-  %val = load volatile float, float addrspace(1)* %gep
+  %gep = getelementptr float, ptr addrspace(1) %ptr, i64 4095
+  %val = load volatile float, ptr addrspace(1) %gep
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967296(float addrspace(1)* %ptr) {
+define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967296(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: mubuf_load_vgpr_ptr_offset4294967296:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, 0
@@ -640,12 +640,12 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967296(float addrspace(1)*
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967296
-  %val = load volatile float, float addrspace(1)* %gep
+  %gep = getelementptr float, ptr addrspace(1) %ptr, i64 4294967296
+  %val = load volatile float, ptr addrspace(1) %gep
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967297(float addrspace(1)* %ptr) {
+define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967297(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: mubuf_load_vgpr_ptr_offset4294967297:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, 4
@@ -665,12 +665,12 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967297(float addrspace(1)*
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967297
-  %val = load volatile float, float addrspace(1)* %gep
+  %gep = getelementptr float, ptr addrspace(1) %ptr, i64 4294967297
+  %val = load volatile float, ptr addrspace(1) %gep
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4096(float addrspace(1)* %ptr) {
+define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4096(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: mubuf_load_vgpr_ptr_offset4096:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s2, 0
@@ -690,12 +690,12 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4096(float addrspace(1)* %ptr)
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr float, float addrspace(1)* %ptr, i64 4096
-  %val = load volatile float, float addrspace(1)* %gep
+  %gep = getelementptr float, ptr addrspace(1) %ptr, i64 4096
+  %val = load volatile float, ptr addrspace(1) %gep
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_sgpr_ptr_sgpr_offset(float addrspace(1)* inreg %ptr, i32 inreg %soffset) {
+define amdgpu_ps float @mubuf_load_sgpr_ptr_sgpr_offset(ptr addrspace(1) inreg %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_load_sgpr_ptr_sgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_ashr_i32 s5, s4, 31
@@ -723,12 +723,12 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_sgpr_offset(float addrspace(1)* inre
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr float, float addrspace(1)* %ptr, i32 %soffset
-  %val = load volatile float, float addrspace(1)* %gep
+  %gep = getelementptr float, ptr addrspace(1) %ptr, i32 %soffset
+  %val = load volatile float, ptr addrspace(1) %gep
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset(float addrspace(1)* %ptr, i32 inreg %soffset) {
+define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset(ptr addrspace(1) %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_load_vgpr_ptr_sgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
@@ -748,12 +748,12 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset(float addrspace(1)* %ptr
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr float, float addrspace(1)* %ptr, i32 %soffset
-  %val = load volatile float, float addrspace(1)* %gep
+  %gep = getelementptr float, ptr addrspace(1) %ptr, i32 %soffset
+  %val = load volatile float, ptr addrspace(1) %gep
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset_offset256(float addrspace(1)* %ptr, i32 inreg %soffset) {
+define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset_offset256(ptr addrspace(1) %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_load_vgpr_ptr_sgpr_offset_offset256:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
@@ -773,13 +773,13 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset_offset256(float addrspac
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep0 = getelementptr float, float addrspace(1)* %ptr, i32 %soffset
-  %gep1 = getelementptr float, float addrspace(1)* %gep0, i32 256
-  %val = load volatile float, float addrspace(1)* %gep1
+  %gep0 = getelementptr float, ptr addrspace(1) %ptr, i32 %soffset
+  %gep1 = getelementptr float, ptr addrspace(1) %gep0, i32 256
+  %val = load volatile float, ptr addrspace(1) %gep1
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset256_offset(float addrspace(1)* %ptr, i32 inreg %soffset) {
+define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset256_offset(ptr addrspace(1) %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_load_vgpr_ptr_sgpr_offset256_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
@@ -799,13 +799,13 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset256_offset(float addrspac
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 256
-  %gep1 = getelementptr float, float addrspace(1)* %gep0, i32 %soffset
-  %val = load volatile float, float addrspace(1)* %gep1
+  %gep0 = getelementptr float, ptr addrspace(1) %ptr, i64 256
+  %gep1 = getelementptr float, ptr addrspace(1) %gep0, i32 %soffset
+  %val = load volatile float, ptr addrspace(1) %gep1
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset(float addrspace(1)* inreg %ptr, i32 %voffset) {
+define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset(ptr addrspace(1) inreg %ptr, i32 %voffset) {
 ; GFX6-LABEL: mubuf_load_sgpr_ptr_vgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
@@ -829,12 +829,12 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset(float addrspace(1)* inre
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr float, float addrspace(1)* %ptr, i32 %voffset
-  %val = load volatile float, float addrspace(1)* %gep
+  %gep = getelementptr float, ptr addrspace(1) %ptr, i32 %voffset
+  %val = load volatile float, ptr addrspace(1) %gep
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset_offset4095(float addrspace(1)* inreg %ptr, i32 %voffset) {
+define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset_offset4095(ptr addrspace(1) inreg %ptr, i32 %voffset) {
 ; GFX6-LABEL: mubuf_load_sgpr_ptr_vgpr_offset_offset4095:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
@@ -860,12 +860,12 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset_offset4095(float addrspa
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep0 = getelementptr float, float addrspace(1)* %ptr, i32 %voffset
-  %gep1 = getelementptr float, float addrspace(1)* %gep0, i64 4095
-  %val = load volatile float, float addrspace(1)* %gep1
+  %gep0 = getelementptr float, ptr addrspace(1) %ptr, i32 %voffset
+  %gep1 = getelementptr float, ptr addrspace(1) %gep0, i64 4095
+  %val = load volatile float, ptr addrspace(1) %gep1
   ret float %val
 }
-define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095_vgpr_offset(float addrspace(1)* inreg %ptr, i32 %voffset) {
+define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095_vgpr_offset(ptr addrspace(1) inreg %ptr, i32 %voffset) {
 ; GFX6-LABEL: mubuf_load_sgpr_ptr_offset4095_vgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
@@ -891,13 +891,13 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095_vgpr_offset(float addrspa
 ; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 4095
-  %gep1 = getelementptr float, float addrspace(1)* %gep0, i32 %voffset
-  %val = load volatile float, float addrspace(1)* %gep1
+  %gep0 = getelementptr float, ptr addrspace(1) %ptr, i64 4095
+  %gep1 = getelementptr float, ptr addrspace(1) %gep0, i32 %voffset
+  %val = load volatile float, ptr addrspace(1) %gep1
   ret float %val
 }
 
-define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4095(i32 addrspace(1)* inreg %ptr) {
+define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4095(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_atomicrmw_sgpr_ptr_offset4095:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, s2
@@ -926,13 +926,13 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4095(i32 addrspace(1)* in
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4095
-  %result = atomicrmw add i32 addrspace(1)* %gep, i32 2 seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
 
-define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4294967296(i32 addrspace(1)* inreg %ptr) {
+define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4294967296(ptr addrspace(1) inreg %ptr) {
 ; GFX6-LABEL: mubuf_atomicrmw_sgpr_ptr_offset4294967296:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s4, 0
@@ -967,13 +967,13 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4294967296(i32 addrspace(
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4294967296
-  %result = atomicrmw add i32 addrspace(1)* %gep, i32 2 seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
 
-define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4095(i32 addrspace(1)* %ptr) {
+define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4095(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: mubuf_atomicrmw_vgpr_ptr_offset4095:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 2
@@ -1002,13 +1002,13 @@ define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4095(i32 addrspace(1)* %p
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4095
-  %result = atomicrmw add i32 addrspace(1)* %gep, i32 2 seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
 
-define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4294967296(i32 addrspace(1)* %ptr) {
+define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4294967296(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: mubuf_atomicrmw_vgpr_ptr_offset4294967296:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, 0
@@ -1037,13 +1037,13 @@ define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4294967296(i32 addrspace(
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4294967296
-  %result = atomicrmw add i32 addrspace(1)* %gep, i32 2 seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
 
-define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_vgpr_offset(i32 addrspace(1)* inreg %ptr, i32 %voffset) {
+define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_vgpr_offset(ptr addrspace(1) inreg %ptr, i32 %voffset) {
 ; GFX6-LABEL: mubuf_atomicrmw_sgpr_ptr_vgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
@@ -1076,13 +1076,13 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_vgpr_offset(i32 addrspace(1)* i
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 %voffset
-  %result = atomicrmw add i32 addrspace(1)* %gep, i32 2 seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 %voffset
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
 
-define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4095(i32 addrspace(1)* inreg %ptr, i32 %old, i32 %in) {
+define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4095(ptr addrspace(1) inreg %ptr, i32 %old, i32 %in) {
 ; GFX6-LABEL: mubuf_cmpxchg_sgpr_ptr_offset4095:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, s2
@@ -1113,14 +1113,14 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4095(i32 addrspace(1)* inre
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4095
-  %result.struct = cmpxchg i32 addrspace(1)* %gep, i32 %old, i32 %in seq_cst seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
 }
 
-define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4294967296(i32 addrspace(1)* inreg %ptr, i32 %old, i32 %in) {
+define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4294967296(ptr addrspace(1) inreg %ptr, i32 %old, i32 %in) {
 ; GFX6-LABEL: mubuf_cmpxchg_sgpr_ptr_offset4294967296:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s4, 0
@@ -1157,14 +1157,14 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4294967296(i32 addrspace(1)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4294967296
-  %result.struct = cmpxchg i32 addrspace(1)* %gep, i32 %old, i32 %in seq_cst seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
 }
 
-define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4095(i32 addrspace(1)* %ptr, i32 %old, i32 %in) {
+define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4095(ptr addrspace(1) %ptr, i32 %old, i32 %in) {
 ; GFX6-LABEL: mubuf_cmpxchg_vgpr_ptr_offset4095:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_mov_b32_e32 v4, v2
@@ -1193,14 +1193,14 @@ define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4095(i32 addrspace(1)* %ptr
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4095
-  %result.struct = cmpxchg i32 addrspace(1)* %gep, i32 %old, i32 %in seq_cst seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
 }
 
-define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4294967296(i32 addrspace(1)* %ptr, i32 %old, i32 %in) {
+define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4294967296(ptr addrspace(1) %ptr, i32 %old, i32 %in) {
 ; GFX6-LABEL: mubuf_cmpxchg_vgpr_ptr_offset4294967296:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_mov_b32 s0, 0
@@ -1229,14 +1229,14 @@ define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4294967296(i32 addrspace(1)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4294967296
-  %result.struct = cmpxchg i32 addrspace(1)* %gep, i32 %old, i32 %in seq_cst seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
 }
 
-define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_vgpr_offset(i32 addrspace(1)* inreg %ptr, i32 %voffset, i32 %old, i32 %in) {
+define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_vgpr_offset(ptr addrspace(1) inreg %ptr, i32 %voffset, i32 %old, i32 %in) {
 ; GFX6-LABEL: mubuf_cmpxchg_sgpr_ptr_vgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_mov_b32_e32 v3, v1
@@ -1269,8 +1269,8 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_vgpr_offset(i32 addrspace(1)* inr
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 %voffset
-  %result.struct = cmpxchg i32 addrspace(1)* %gep, i32 %old, i32 %in seq_cst seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 %voffset
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
