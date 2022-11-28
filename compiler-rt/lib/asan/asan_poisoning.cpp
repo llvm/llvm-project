@@ -493,11 +493,9 @@ void __sanitizer_annotate_double_ended_contiguous_container(
 
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
 
-  if (!(storage_beg <= new_beg && new_beg <= storage_end) ||
-      !(storage_beg <= new_end && new_end <= storage_end) ||
-      !(storage_beg <= old_beg && old_beg <= storage_end) ||
-      !(storage_beg <= old_end && old_end <= storage_end) ||
-      !(old_beg <= old_end && new_beg <= new_end)) {
+  if (!(old_beg <= old_end && new_beg <= new_end) ||
+      !(storage_beg <= new_beg && new_end <= storage_end) ||
+      !(storage_beg <= old_beg && old_end <= storage_end)) {
     GET_STACK_TRACE_FATAL_HERE;
     ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
         storage_beg, storage_end, old_beg, old_end, new_beg, new_end, &stack);
