@@ -23,6 +23,8 @@
 #include <__format/parser_std_format_spec.h>
 #include <__format/unicode.h>
 #include <__iterator/back_insert_iterator.h>
+#include <__iterator/concepts.h>
+#include <__iterator/readable_traits.h> // iter_value_t
 #include <__type_traits/make_unsigned.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
@@ -261,11 +263,11 @@ __write(basic_string_view<_CharT> __str,
   return __formatter::__fill(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
 }
 
-template <class _CharT, class _ParserCharT>
+template <contiguous_iterator _Iterator, class _ParserCharT>
 _LIBCPP_HIDE_FROM_ABI auto
-__write(const _CharT* __first,
-        const _CharT* __last,
-        output_iterator<const _CharT&> auto __out_it,
+__write(_Iterator __first,
+        _Iterator __last,
+        output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
         __format_spec::__parsed_specifications<_ParserCharT> __specs,
         ptrdiff_t __size) -> decltype(__out_it) {
   _LIBCPP_ASSERT(__first <= __last, "Not a valid range");
@@ -275,11 +277,11 @@ __write(const _CharT* __first,
 /// \overload
 ///
 /// Calls the function above where \a __size = \a __last - \a __first.
-template <class _CharT, class _ParserCharT>
+template <contiguous_iterator _Iterator, class _ParserCharT>
 _LIBCPP_HIDE_FROM_ABI auto
-__write(const _CharT* __first,
-        const _CharT* __last,
-        output_iterator<const _CharT&> auto __out_it,
+__write(_Iterator __first,
+        _Iterator __last,
+        output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
         __format_spec::__parsed_specifications<_ParserCharT> __specs) -> decltype(__out_it) {
   _LIBCPP_ASSERT(__first <= __last, "Not a valid range");
   return __formatter::__write(__first, __last, _VSTD::move(__out_it), __specs, __last - __first);
@@ -359,7 +361,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_string_no_precision(
 
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI int __truncate(basic_string_view<_CharT>& __str, int __precision) {
-  __format_spec::__column_width_result<_CharT> __result =
+  __format_spec::__column_width_result __result =
       __format_spec::__estimate_column_width(__str, __precision, __format_spec::__column_width_rounding::__down);
   __str = basic_string_view<_CharT>{__str.begin(), __result.__last_};
   return __result.__width_;

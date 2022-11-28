@@ -1012,7 +1012,10 @@ module std [system] {
       module permutable            { private header "__iterator/permutable.h" }
       module prev                  { private header "__iterator/prev.h" }
       module projected             { private header "__iterator/projected.h" }
-      module readable_traits       { private header "__iterator/readable_traits.h" }
+      module readable_traits       {
+        private header "__iterator/readable_traits.h"
+        export __iterator.iterator_traits
+      }
       module reverse_access        { private header "__iterator/reverse_access.h" }
       module reverse_iterator      { private header "__iterator/reverse_iterator.h" }
       module segmented_iterator    { private header "__iterator/segmented_iterator.h" }
