@@ -26,7 +26,6 @@ namespace clang::include_cleaner {
 namespace {
 
 // Specifies a test of which symbols are referenced by a piece of code.
-// If `// c++-header` is present, treats referencing code as a header file.
 // Target should contain points annotated with the reference kind.
 // Example:
 //   Target:      int $explicit^foo();
@@ -41,8 +40,6 @@ void testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode) {
   Inputs.ExtraArgs.push_back("-include");
   Inputs.ExtraArgs.push_back("target.h");
   Inputs.ExtraArgs.push_back("-std=c++17");
-  if (Referencing.code().contains("// c++-header\n"))
-    Inputs.ExtraArgs.push_back("-xc++-header");
   TestAST AST(Inputs);
   const auto &SM = AST.sourceManager();
 
@@ -88,12 +85,10 @@ void testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode) {
     auto RTStr = llvm::to_string(RT);
     for (auto Expected : Target.points(RTStr))
       if (!llvm::is_contained(ReferencedOffsets[RT], Expected))
-        DiagnosePoint("location not marked used with type " + RTStr,
-                      Expected);
+        DiagnosePoint("location not marked used with type " + RTStr, Expected);
     for (auto Actual : ReferencedOffsets[RT])
       if (!llvm::is_contained(Target.points(RTStr), Actual))
-        DiagnosePoint("location unexpectedly used with type " + RTStr,
-                      Actual);
+        DiagnosePoint("location unexpectedly used with type " + RTStr, Actual);
   }
 
   // If there were any differences, we print the entire referencing code once.
@@ -129,19 +124,32 @@ TEST(WalkAST, Alias) {
 }
 
 TEST(WalkAST, Using) {
-  // Make sure we ignore unused overloads.
+  // We should report unused overloads as ambiguous.
   testWalk(R"cpp(
     namespace ns {
-      void $explicit^x(); void x(int); void x(char);
+      void $explicit^x(); void $ambiguous^x(int); void $ambiguous^x(char);
     })cpp",
            "using ns::^x; void foo() { x(); }");
-  // We should report unused overloads if main file is a header.
   testWalk(R"cpp(
     namespace ns {
       void $ambiguous^x(); void $ambiguous^x(int); void $ambiguous^x(char);
     })cpp",
-           "// c++-header\n using ns::^x;");
+           "using ns::^x;");
   testWalk("namespace ns { struct S; } using ns::$explicit^S;", "^S *s;");
+
+  testWalk(R"cpp(
+    namespace ns {
+      template<class T>
+      class $ambiguous^Y {};
+    })cpp",
+           "using ns::^Y;");
+  testWalk(R"cpp(
+    namespace ns {
+      template<class T>
+      class Y {};
+    }
+    using ns::$explicit^Y;)cpp",
+           "^Y<int> x;");
 }
 
 TEST(WalkAST, Namespaces) {
