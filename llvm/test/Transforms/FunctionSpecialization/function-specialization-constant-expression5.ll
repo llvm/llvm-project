@@ -12,25 +12,23 @@
 @global.5 = external dso_local global i128
 @global.12 = external global %struct.quux
 
-define internal i16 @wobble(%struct.quux* %arg, i16 %arg1, i128* byval(i128) %arg2, %struct.quux* %arg3) {
+define internal i16 @wobble(ptr %arg, i16 %arg1, ptr byval(i128) %arg2, ptr %arg3) {
 ; CHECK-LABEL: @wobble(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP34:%.*]] = bitcast i128* [[ARG2:%.*]] to i16*
 ; CHECK-NEXT:    unreachable
 ;
 bb:
-  %tmp34 = bitcast i128* %arg2 to i16*
   unreachable
 }
 
 define internal i16 @snork() {
 ; CHECK-LABEL: @snork(
 ; CHECK-NEXT:  bb4:
-; CHECK-NEXT:    [[TMP35:%.*]] = call i16 @wobble(%struct.quux* undef, i16 2, i128* byval(i128) @global.5, %struct.quux* @global.12)
+; CHECK-NEXT:    [[TMP35:%.*]] = call i16 @wobble(ptr undef, i16 2, ptr byval(i128) @global.5, ptr @global.12)
 ; CHECK-NEXT:    unreachable
 ;
 bb4:
-  %tmp35 = call i16 @wobble(%struct.quux* undef, i16 2, i128* byval(i128) @global.5, %struct.quux* @global.12)
+  %tmp35 = call i16 @wobble(ptr undef, i16 2, ptr byval(i128) @global.5, ptr @global.12)
   unreachable
 }
 
