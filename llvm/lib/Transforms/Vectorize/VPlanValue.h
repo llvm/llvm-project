@@ -90,7 +90,6 @@ public:
   /// type identification.
   enum {
     VPValueSC,
-    VPVDerivedIVSC,
     VPVInstructionSC,
     VPVMemoryInstructionSC,
     VPVReductionSC,
@@ -356,7 +355,6 @@ public:
   /// type identification.
   using VPRecipeTy = enum {
     VPBranchOnMaskSC,
-    VPDerivedIVSC,
     VPExpandSCEVSC,
     VPInstructionSC,
     VPInterleaveSC,
