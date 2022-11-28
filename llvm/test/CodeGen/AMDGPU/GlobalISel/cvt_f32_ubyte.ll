@@ -96,7 +96,7 @@ define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.8 = lshr i32 %arg0, 8
-  store i32 %lshr.8, i32 addrspace(1)* undef
+  store i32 %lshr.8, ptr addrspace(1) undef
   %masked = and i32 %lshr.8, 255
   %cvt = uitofp i32 %masked to float
   ret float %cvt
@@ -449,7 +449,7 @@ define double @v_uitofp_i8_to_f64(i8 %arg0) nounwind {
   ret double %cvt
 }
 
-define amdgpu_kernel void @load_i8_to_f32(float addrspace(1)* noalias %out, i8 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @load_i8_to_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: load_i8_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -483,14 +483,14 @@ define amdgpu_kernel void @load_i8_to_f32(float addrspace(1)* noalias %out, i8 a
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i8, i8 addrspace(1)* %in, i32 %tid
-  %load = load i8, i8 addrspace(1)* %gep, align 1
+  %gep = getelementptr i8, ptr addrspace(1) %in, i32 %tid
+  %load = load i8, ptr addrspace(1) %gep, align 1
   %cvt = uitofp i8 %load to float
-  store float %cvt, float addrspace(1)* %out, align 4
+  store float %cvt, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @load_v2i8_to_v2f32(<2 x float> addrspace(1)* noalias %out, <2 x i8> addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @load_v2i8_to_v2f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: load_v2i8_to_v2f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -529,14 +529,14 @@ define amdgpu_kernel void @load_v2i8_to_v2f32(<2 x float> addrspace(1)* noalias 
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <2 x i8>, <2 x i8> addrspace(1)* %in, i32 %tid
-  %load = load <2 x i8>, <2 x i8> addrspace(1)* %gep, align 2
+  %gep = getelementptr <2 x i8>, ptr addrspace(1) %in, i32 %tid
+  %load = load <2 x i8>, ptr addrspace(1) %gep, align 2
   %cvt = uitofp <2 x i8> %load to <2 x float>
-  store <2 x float> %cvt, <2 x float> addrspace(1)* %out, align 16
+  store <2 x float> %cvt, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @load_v3i8_to_v3f32(<3 x float> addrspace(1)* noalias %out, <3 x i8> addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @load_v3i8_to_v3f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: load_v3i8_to_v3f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -579,14 +579,14 @@ define amdgpu_kernel void @load_v3i8_to_v3f32(<3 x float> addrspace(1)* noalias 
 ; VI-NEXT:    flat_store_dwordx3 v[3:4], v[0:2]
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <3 x i8>, <3 x i8> addrspace(1)* %in, i32 %tid
-  %load = load <3 x i8>, <3 x i8> addrspace(1)* %gep, align 4
+  %gep = getelementptr <3 x i8>, ptr addrspace(1) %in, i32 %tid
+  %load = load <3 x i8>, ptr addrspace(1) %gep, align 4
   %cvt = uitofp <3 x i8> %load to <3 x float>
-  store <3 x float> %cvt, <3 x float> addrspace(1)* %out, align 16
+  store <3 x float> %cvt, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @load_v4i8_to_v4f32(<4 x float> addrspace(1)* noalias %out, <4 x i8> addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @load_v4i8_to_v4f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: load_v4i8_to_v4f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -630,10 +630,10 @@ define amdgpu_kernel void @load_v4i8_to_v4f32(<4 x float> addrspace(1)* noalias 
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid
-  %load = load <4 x i8>, <4 x i8> addrspace(1)* %gep, align 4
+  %gep = getelementptr <4 x i8>, ptr addrspace(1) %in, i32 %tid
+  %load = load <4 x i8>, ptr addrspace(1) %gep, align 4
   %cvt = uitofp <4 x i8> %load to <4 x float>
-  store <4 x float> %cvt, <4 x float> addrspace(1)* %out, align 16
+  store <4 x float> %cvt, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -641,7 +641,7 @@ define amdgpu_kernel void @load_v4i8_to_v4f32(<4 x float> addrspace(1)* noalias 
 ; position in the word for the component.
 
 ; FIXME: Packing bytes
-define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned(<4 x float> addrspace(1)* noalias %out, <4 x i8> addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: load_v4i8_to_v4f32_unaligned:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -715,14 +715,14 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned(<4 x float> addrspace(1)
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid
-  %load = load <4 x i8>, <4 x i8> addrspace(1)* %gep, align 1
+  %gep = getelementptr <4 x i8>, ptr addrspace(1) %in, i32 %tid
+  %load = load <4 x i8>, ptr addrspace(1) %gep, align 1
   %cvt = uitofp <4 x i8> %load to <4 x float>
-  store <4 x float> %cvt, <4 x float> addrspace(1)* %out, align 16
+  store <4 x float> %cvt, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* noalias %out, <4 x i8> addrspace(1)* noalias %out2, <4 x i8> addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %out2, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: load_v4i8_to_v4f32_2_uses:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
@@ -808,16 +808,16 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
-  %in.ptr = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid.x
-  %load = load <4 x i8>, <4 x i8> addrspace(1)* %in.ptr, align 4
+  %in.ptr = getelementptr <4 x i8>, ptr addrspace(1) %in, i32 %tid.x
+  %load = load <4 x i8>, ptr addrspace(1) %in.ptr, align 4
   %cvt = uitofp <4 x i8> %load to <4 x float>
-  store <4 x float> %cvt, <4 x float> addrspace(1)* %out, align 16
+  store <4 x float> %cvt, ptr addrspace(1) %out, align 16
   %add = add <4 x i8> %load, <i8 9, i8 9, i8 9, i8 9> ; Second use of %load
-  store <4 x i8> %add, <4 x i8> addrspace(1)* %out2, align 4
+  store <4 x i8> %add, ptr addrspace(1) %out2, align 4
   ret void
 }
 
-define amdgpu_kernel void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias %out, <7 x i8> addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @load_v7i8_to_v7f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: load_v7i8_to_v7f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -907,14 +907,14 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias 
 ; VI-NEXT:    flat_store_dwordx3 v[9:10], v[4:6]
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <7 x i8>, <7 x i8> addrspace(1)* %in, i32 %tid
-  %load = load <7 x i8>, <7 x i8> addrspace(1)* %gep, align 1
+  %gep = getelementptr <7 x i8>, ptr addrspace(1) %in, i32 %tid
+  %load = load <7 x i8>, ptr addrspace(1) %gep, align 1
   %cvt = uitofp <7 x i8> %load to <7 x float>
-  store <7 x float> %cvt, <7 x float> addrspace(1)* %out, align 16
+  store <7 x float> %cvt, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @load_v8i8_to_v8f32(<8 x float> addrspace(1)* noalias %out, <8 x i8> addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @load_v8i8_to_v8f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: load_v8i8_to_v8f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -975,14 +975,14 @@ define amdgpu_kernel void @load_v8i8_to_v8f32(<8 x float> addrspace(1)* noalias 
 ; VI-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <8 x i8>, <8 x i8> addrspace(1)* %in, i32 %tid
-  %load = load <8 x i8>, <8 x i8> addrspace(1)* %gep, align 8
+  %gep = getelementptr <8 x i8>, ptr addrspace(1) %in, i32 %tid
+  %load = load <8 x i8>, ptr addrspace(1) %gep, align 8
   %cvt = uitofp <8 x i8> %load to <8 x float>
-  store <8 x float> %cvt, <8 x float> addrspace(1)* %out, align 16
+  store <8 x float> %cvt, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @i8_zext_inreg_i32_to_f32(float addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @i8_zext_inreg_i32_to_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: i8_zext_inreg_i32_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1020,16 +1020,16 @@ define amdgpu_kernel void @i8_zext_inreg_i32_to_f32(float addrspace(1)* noalias 
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
-  %load = load i32, i32 addrspace(1)* %gep, align 4
+  %gep = getelementptr i32, ptr addrspace(1) %in, i32 %tid
+  %load = load i32, ptr addrspace(1) %gep, align 4
   %add = add i32 %load, 2
   %inreg = and i32 %add, 255
   %cvt = uitofp i32 %inreg to float
-  store float %cvt, float addrspace(1)* %out, align 4
+  store float %cvt, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @i8_zext_inreg_hi1_to_f32(float addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @i8_zext_inreg_hi1_to_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: i8_zext_inreg_hi1_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1065,18 +1065,18 @@ define amdgpu_kernel void @i8_zext_inreg_hi1_to_f32(float addrspace(1)* noalias 
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
-  %load = load i32, i32 addrspace(1)* %gep, align 4
+  %gep = getelementptr i32, ptr addrspace(1) %in, i32 %tid
+  %load = load i32, ptr addrspace(1) %gep, align 4
   %inreg = and i32 %load, 65280
   %shr = lshr i32 %inreg, 8
   %cvt = uitofp i32 %shr to float
-  store float %cvt, float addrspace(1)* %out, align 4
+  store float %cvt, ptr addrspace(1) %out, align 4
   ret void
 }
 
 ; We don't get these ones because of the zext, but instcombine removes
 ; them so it shouldn't really matter.
-define amdgpu_kernel void @i8_zext_i32_to_f32(float addrspace(1)* noalias %out, i8 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @i8_zext_i32_to_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: i8_zext_i32_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1110,15 +1110,15 @@ define amdgpu_kernel void @i8_zext_i32_to_f32(float addrspace(1)* noalias %out, 
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i8, i8 addrspace(1)* %in, i32 %tid
-  %load = load i8, i8 addrspace(1)* %gep, align 1
+  %gep = getelementptr i8, ptr addrspace(1) %in, i32 %tid
+  %load = load i8, ptr addrspace(1) %gep, align 1
   %ext = zext i8 %load to i32
   %cvt = uitofp i32 %ext to float
-  store float %cvt, float addrspace(1)* %out, align 4
+  store float %cvt, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @v4i8_zext_v4i32_to_v4f32(<4 x float> addrspace(1)* noalias %out, <4 x i8> addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @v4i8_zext_v4i32_to_v4f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: v4i8_zext_v4i32_to_v4f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1192,15 +1192,15 @@ define amdgpu_kernel void @v4i8_zext_v4i32_to_v4f32(<4 x float> addrspace(1)* no
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid
-  %load = load <4 x i8>, <4 x i8> addrspace(1)* %gep, align 1
+  %gep = getelementptr <4 x i8>, ptr addrspace(1) %in, i32 %tid
+  %load = load <4 x i8>, ptr addrspace(1) %gep, align 1
   %ext = zext <4 x i8> %load to <4 x i32>
   %cvt = uitofp <4 x i32> %ext to <4 x float>
-  store <4 x float> %cvt, <4 x float> addrspace(1)* %out, align 16
+  store <4 x float> %cvt, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @extract_byte0_to_f32(float addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @extract_byte0_to_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: extract_byte0_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1235,15 +1235,15 @@ define amdgpu_kernel void @extract_byte0_to_f32(float addrspace(1)* noalias %out
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
-  %val = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %in, i32 %tid
+  %val = load i32, ptr addrspace(1) %gep
   %and = and i32 %val, 255
   %cvt = uitofp i32 %and to float
-  store float %cvt, float addrspace(1)* %out
+  store float %cvt, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @extract_byte1_to_f32(float addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @extract_byte1_to_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: extract_byte1_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1279,16 +1279,16 @@ define amdgpu_kernel void @extract_byte1_to_f32(float addrspace(1)* noalias %out
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
-  %val = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %in, i32 %tid
+  %val = load i32, ptr addrspace(1) %gep
   %srl = lshr i32 %val, 8
   %and = and i32 %srl, 255
   %cvt = uitofp i32 %and to float
-  store float %cvt, float addrspace(1)* %out
+  store float %cvt, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @extract_byte2_to_f32(float addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @extract_byte2_to_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: extract_byte2_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1324,16 +1324,16 @@ define amdgpu_kernel void @extract_byte2_to_f32(float addrspace(1)* noalias %out
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
-  %val = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %in, i32 %tid
+  %val = load i32, ptr addrspace(1) %gep
   %srl = lshr i32 %val, 16
   %and = and i32 %srl, 255
   %cvt = uitofp i32 %and to float
-  store float %cvt, float addrspace(1)* %out
+  store float %cvt, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @extract_byte3_to_f32(float addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @extract_byte3_to_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: extract_byte3_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1368,16 +1368,16 @@ define amdgpu_kernel void @extract_byte3_to_f32(float addrspace(1)* noalias %out
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
-  %val = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %in, i32 %tid
+  %val = load i32, ptr addrspace(1) %gep
   %srl = lshr i32 %val, 24
   %and = and i32 %srl, 255
   %cvt = uitofp i32 %and to float
-  store float %cvt, float addrspace(1)* %out
+  store float %cvt, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @cvt_ubyte0_or_multiuse(i32 addrspace(1)* %in, float addrspace(1)* %out) {
+define amdgpu_kernel void @cvt_ubyte0_or_multiuse(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; SI-LABEL: cvt_ubyte0_or_multiuse:
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1418,14 +1418,14 @@ define amdgpu_kernel void @cvt_ubyte0_or_multiuse(i32 addrspace(1)* %in, float a
 ; VI-NEXT:    s_endpgm
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i32 %lid
-  %load = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i32 %lid
+  %load = load i32, ptr addrspace(1) %gep
   %or = or i32 %load, -2147483647
   %and = and i32 %or, 255
   %uitofp = uitofp i32 %and to float
   %cast = bitcast i32 %or to float
   %add = fadd float %cast, %uitofp
-  store float %add, float addrspace(1)* %out
+  store float %add, ptr addrspace(1) %out
   ret void
 }
 
