@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -infer-address-spaces %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -passes=infer-address-spaces %s | FileCheck %s
 
 ; Make sure addrspace(0) is still treated as flat on targets without
 ; flat instructions. It's still flat, it just doesn't work.
