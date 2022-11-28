@@ -9,15 +9,15 @@ target triple = "wasm32-unknown-wasi"
 ; Function Attrs: nounwind
 define hidden i32 @d() local_unnamed_addr #0 {
 entry:
-  %0 = call i32 bitcast (i32 (...)* @g to i32 ()*)() #3
-  call void @llvm.memset.p0i8.i32(i8* nonnull align 4 inttoptr (i32 4 to i8*), i8 0, i32 %0, i1 false)                                        ; preds = %for.body.preheader, %entry
+  %0 = call i32 @g() #3
+  call void @llvm.memset.p0.i32(ptr nonnull align 4 inttoptr (i32 4 to ptr), i8 0, i32 %0, i1 false)                                        ; preds = %for.body.preheader, %entry
   ret i32 undef
 }
 
 declare i32 @g(...) local_unnamed_addr #1
 
 ; Function Attrs: argmemonly nofree nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg) #2
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg) #2
 
 attributes #0 = { nounwind "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" }
 attributes #1 = { "frame-pointer"="none" "no-prototype" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" }
