@@ -197,12 +197,13 @@ static cl::opt<std::string>
     ProfileRemappingFile("profile-remapping-file",
                          cl::desc("Path to the profile remapping file."),
                          cl::Hidden);
+
 static cl::opt<bool> DebugInfoForProfiling(
-    "new-pm-debug-info-for-profiling", cl::init(false), cl::Hidden,
+    "debug-info-for-profiling", cl::init(false), cl::Hidden,
     cl::desc("Emit special debug info to enable PGO profile generation."));
 
 static cl::opt<bool> PseudoProbeForProfiling(
-    "new-pm-pseudo-probe-for-profiling", cl::init(false), cl::Hidden,
+    "pseudo-probe-for-profiling", cl::init(false), cl::Hidden,
     cl::desc("Emit pseudo probes to enable PGO profile generation."));
 
 static cl::opt<bool> DisableLoopUnrolling(
