@@ -948,25 +948,10 @@ def : InstRW<[WriteMicrocoded], (instrs FNINIT)>;
 //=== Integer MMX and XMM Instructions ===//
 
 def Zn2WriteFPU013 : SchedWriteRes<[Zn2FPU013]> ;
-def Zn2WriteFPU013Y : SchedWriteRes<[Zn2FPU013]> ;
 def Zn2WriteFPU013m : SchedWriteRes<[Zn2AGU, Zn2FPU013]> {
   let Latency = 8;
   let NumMicroOps = 2;
 }
-def Zn2WriteFPU013Ld : SchedWriteRes<[Zn2AGU, Zn2FPU013]> {
-  let Latency = 8;
-  let NumMicroOps = 2;
-}
-def Zn2WriteFPU013LdY : SchedWriteRes<[Zn2AGU, Zn2FPU013]> {
-  let Latency = 8;
-  let NumMicroOps = 2;
-}
-
-// PBLENDW.
-// x,m,i / v,v,m,i
-def : InstRW<[Zn2WriteFPU013Ld], (instregex "(V?)PBLENDWrmi")>;
-// y,m,i
-def : InstRW<[Zn2WriteFPU013LdY], (instrs VPBLENDWYrmi)>;
 
 def Zn2WriteFPU01 : SchedWriteRes<[Zn2FPU01]> ;
 def Zn2WriteFPU01Y : SchedWriteRes<[Zn2FPU01]> {
