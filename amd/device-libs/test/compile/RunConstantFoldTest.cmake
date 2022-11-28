@@ -26,6 +26,7 @@ endif()
 
 execute_process(COMMAND ${FILECHECK_BIN} -v --enable-var-scope
     ${INPUT_FILE} --input-file ${OUTPUT_FILE}
+    --check-prefix=CONSTANTFOLD
     RESULT_VARIABLE FILECHECK_RESULT
     ERROR_VARIABLE FILECHECK_ERROR)
 if(FILECHECK_RESULT)

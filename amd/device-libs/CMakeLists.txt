@@ -70,7 +70,7 @@ add_subdirectory(hip)
 add_subdirectory(asanrtl)
 
 enable_testing()
-add_subdirectory(test/constant_folding)
+add_subdirectory(test/compile)
 
 include(Packages)
 
