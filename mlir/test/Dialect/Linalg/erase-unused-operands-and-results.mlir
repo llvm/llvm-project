@@ -159,7 +159,7 @@ func.func @drop_dead_results(%arg0 : tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>, t
       %1 = arith.addf %b0, %b0: f32
       linalg.yield %1, %1, %1, %1 : f32, f32, f32, f32
     } -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>, tensor<?x?x?xf32>, tensor<?x?x?xf32>)
-  return %0#0, %0#2 : tensor<?x?x?xf32>, tensor<?x?x?xf32>     
+  return %0#0, %0#2 : tensor<?x?x?xf32>, tensor<?x?x?xf32>
 }
 //  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 //  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d2, d1)>
@@ -361,7 +361,7 @@ func.func @drop_dead_results_with_different_tensors(%arg0 : tensor<?x?x?xf32>) -
     ^bb0(%b0 : f32, %b1 : f32, %b2 : f32, %b3 : f32, %b4 : f32) :
       linalg.yield %b0, %b0, %b3, %b4 : f32, f32, f32, f32
     } -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>, tensor<?x?x?xf32>, tensor<?x?x?xf32>)
-  return %0#0, %0#1 : tensor<?x?x?xf32>, tensor<?x?x?xf32>     
+  return %0#0, %0#1 : tensor<?x?x?xf32>, tensor<?x?x?xf32>
 }
 
 //  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
@@ -403,7 +403,7 @@ func.func @drop_dead_results_with_unused_cycles(%arg0 : tensor<?x?x?xf32>) -> (t
       %3 = arith.addf %b0, %b4: f32
       linalg.yield %1, %1, %2, %3 : f32, f32, f32, f32
     } -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>, tensor<?x?x?xf32>, tensor<?x?x?xf32>)
-  return %0#0, %0#1 : tensor<?x?x?xf32>, tensor<?x?x?xf32>     
+  return %0#0, %0#1 : tensor<?x?x?xf32>, tensor<?x?x?xf32>
 }
 
 //  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>

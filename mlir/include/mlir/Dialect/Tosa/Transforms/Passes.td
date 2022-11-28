@@ -57,7 +57,7 @@ def TosaOptionalDecompositions
   : Pass<"tosa-optional-decompositions", "func::FuncOp"> {
   let summary = "Applies Tosa operations optional decompositions";
   let description = [{
-    Pass to apply the Tosa operations decompositions 
+    Pass to apply the Tosa operations decompositions
     exposed as populate functions in include/mlir/Dialect/Tosa/Transforms/Passes.h
   }];
 

@@ -50,5 +50,5 @@ func.func @entry() {
   vector.print %d#0 : vector<3x2xf32>
   vector.print %d#1 : vector<3xf32>
 
-  return 
+  return
 }
