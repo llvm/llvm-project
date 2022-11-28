@@ -482,7 +482,7 @@ void BasicBlock::splice(BasicBlock::iterator ToIt, BasicBlock *FromBB,
 
 BasicBlock::iterator BasicBlock::erase(BasicBlock::iterator FromIt,
                                        BasicBlock::iterator ToIt) {
-  return getInstList().erase(FromIt, ToIt);
+  return InstList.erase(FromIt, ToIt);
 }
 
 void BasicBlock::replacePhiUsesWith(BasicBlock *Old, BasicBlock *New) {
