@@ -1,4 +1,4 @@
-; RUN: opt -S --passes=function-specialization -force-function-specialization -function-specialization-for-literal-constant < %s | FileCheck %s
+; RUN: opt -S --passes=ipsccp -specialize-functions -force-function-specialization -function-specialization-for-literal-constant < %s | FileCheck %s
 define internal i32 @f(i32 %x, i32 %y) noinline {
     ret i32 %x
 }
