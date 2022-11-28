@@ -1633,14 +1633,10 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
       swift::VarDecl *decl = variable_info.GetDecl();
       if (decl) {
-        if (decl->isLet()) {
-          llvm::cast<SwiftExpressionVariable>(persistent_variable.get())
-              ->SetIsModifiable(false);
-        }
-        if (!decl->hasStorage()) {
-          llvm::cast<SwiftExpressionVariable>(persistent_variable.get())
-              ->SetIsComputed(true);
-        }
+        auto swift_var =
+            llvm::cast<SwiftExpressionVariable>(persistent_variable.get());
+        swift_var->SetIsModifiable(!decl->isLet());
+        swift_var->SetIsComputed(!decl->hasStorage());
       }
 
       variable_info.m_metadata.reset(
