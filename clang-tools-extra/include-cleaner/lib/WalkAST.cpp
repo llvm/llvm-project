@@ -16,7 +16,6 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 
@@ -27,10 +26,6 @@ using DeclCallback =
 
 class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   DeclCallback Callback;
-  // Whether we're traversing declarations coming from a header file.
-  // This helps figure out whether certain symbols can be assumed as unused
-  // (e.g. overloads brought into an implementation file, but not used).
-  bool IsHeader = false;
 
   bool handleTemplateName(SourceLocation Loc, TemplateName TN) {
     // For using-templates, only mark the alias.
@@ -50,8 +45,7 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   }
 
 public:
-  ASTWalker(DeclCallback Callback, bool IsHeader)
-      : Callback(Callback), IsHeader(IsHeader) {}
+  ASTWalker(DeclCallback Callback) : Callback(Callback) {}
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
     report(DRE->getLocation(), DRE->getFoundDecl());
@@ -82,10 +76,6 @@ public:
     for (const auto *Shadow : UD->shadows()) {
       auto *TD = Shadow->getTargetDecl();
       auto IsUsed = TD->isUsed() || TD->isReferenced();
-      // We ignore unused overloads inside implementation files, as the ones in
-      // headers might still be used by the dependents of the header.
-      if (!IsUsed && !IsHeader)
-        continue;
       report(UD->getLocation(), TD,
              IsUsed ? RefType::Explicit : RefType::Ambiguous);
     }
@@ -151,14 +141,7 @@ public:
 } // namespace
 
 void walkAST(Decl &Root, DeclCallback Callback) {
-  auto &AST = Root.getASTContext();
-  auto &SM = AST.getSourceManager();
-  // If decl isn't written in main file, assume it's coming from an include,
-  // hence written in a header.
-  bool IsRootedAtHeader =
-      AST.getLangOpts().IsHeaderFile ||
-      !SM.isWrittenInMainFile(SM.getSpellingLoc(Root.getLocation()));
-  ASTWalker(Callback, IsRootedAtHeader).TraverseDecl(&Root);
+  ASTWalker(Callback).TraverseDecl(&Root);
 }
 
 } // namespace clang::include_cleaner
