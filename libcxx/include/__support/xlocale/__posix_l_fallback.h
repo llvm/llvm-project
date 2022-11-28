@@ -12,8 +12,8 @@
 // Android's bionic and Newlib).
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
-#define _LIBCPP_SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
+#ifndef _LIBCPP___SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
+#define _LIBCPP___SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
 
 #include <__config>
 #include <ctype.h>
@@ -173,4 +173,4 @@ wcsxfrm_l(wchar_t *__dest, const wchar_t *__src, size_t __n, locale_t) {
 }
 #endif
 
-#endif // _LIBCPP_SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
+#endif // _LIBCPP___SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
