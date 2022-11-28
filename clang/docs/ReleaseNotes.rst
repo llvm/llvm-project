@@ -655,6 +655,7 @@ C++20 Feature Support
 
 - Do not hide templated base members introduced via using-decl in derived class
   (useful specially for constrained members). Fixes `GH50886 <https://github.com/llvm/llvm-project/issues/50886>`_.
+- Implemented CWG2635 as a Defect Report, which prohibits structured bindings from being constrained.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

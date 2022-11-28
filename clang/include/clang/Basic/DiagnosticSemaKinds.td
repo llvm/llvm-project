@@ -492,6 +492,8 @@ def warn_cxx17_compat_decomp_decl_spec : Warning<
 def err_decomp_decl_type : Error<
   "decomposition declaration cannot be declared with type %0; "
   "declared type must be 'auto' or reference to 'auto'">;
+def err_decomp_decl_constraint : Error<
+  "decomposition declaration cannot be declared with constrained 'auto'">;
 def err_decomp_decl_parens : Error<
   "decomposition declaration cannot be declared with parentheses">;
 def err_decomp_decl_template : Error<
