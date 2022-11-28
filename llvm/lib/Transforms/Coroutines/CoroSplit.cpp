@@ -201,8 +201,8 @@ static bool replaceCoroEndAsync(AnyCoroEndInst *End) {
   assert(MustTailCallFuncBlock && "Must have a single predecessor block");
   auto It = MustTailCallFuncBlock->getTerminator()->getIterator();
   auto *MustTailCall = cast<CallInst>(&*std::prev(It));
-  CoroEndBlock->getInstList().splice(
-      End->getIterator(), MustTailCallFuncBlock->getInstList(), MustTailCall);
+  CoroEndBlock->splice(End->getIterator(), MustTailCallFuncBlock,
+                       MustTailCall->getIterator());
 
   // Insert the return instruction.
   Builder.SetInsertPoint(End);
