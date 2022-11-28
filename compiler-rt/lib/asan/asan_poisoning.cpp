@@ -653,58 +653,35 @@ int __sanitizer_verify_contiguous_container(const void *beg_p,
 const void *__sanitizer_double_ended_contiguous_container_find_bad_address(
     const void *storage_beg_p, const void *container_beg_p,
     const void *container_end_p, const void *storage_end_p) {
+  if (!flags()->detect_container_overflow)
+    return nullptr;
   uptr granularity = ASAN_SHADOW_GRANULARITY;
-  // This exists to verify double ended containers.
-  // We assume that such collection's internal memory layout
-  // consists of contiguous blocks:
-  // [a; b) [b; c) [c; d)
-  // where
-  // a - beginning address of contiguous memory block,
-  // b - beginning address of contiguous memory in use
-  //      (address of the first element in the block)
-  // c - end address of contiguous memory in use
-  //      (address just after the last element in the block)
-  // d - end address of contiguous memory block
-  // [a; b) - poisoned
-  // [b; c) - accessible
-  // [c; d) - poisoned
-  // WARNING: We can't poison [a; b) fully in all cases.
-  // This is because the current shadow memory encoding
-  // does not allow for marking/poisoning that a prefix
-  // of an 8-byte block (or, ASAN_SHADOW_GRANULARITY sized block)
-  // cannot be used by the instrumented program. It only has the
-  // 01, 02, 03, 04, 05, 06, 07 and 00 encodings
-  // for usable/addressable memory
-  // (where 00 means that the whole 8-byte block can be used).
-  //
-  // This means that there are cases where not whole of the [a; b)
-  // region is poisoned and instead only the [a; RoundDown(b))
-  // region is poisoned and we may not detect invalid memory accesses on
-  // [RegionDown(b), b).
-  // This is an inherent design limitation of how AddressSanitizer granularity
-  // and shadow memory encoding works at the moment.
+  uptr storage_beg = reinterpret_cast<uptr>(storage_beg_p);
+  uptr storage_end = reinterpret_cast<uptr>(storage_end_p);
+  uptr beg = reinterpret_cast<uptr>(container_beg_p);
+  uptr end = reinterpret_cast<uptr>(container_end_p);
 
-  // If empty, storage_beg_p == container_beg_p == container_end_p
+  // The prefix of the firs granule of the container is unpoisoned.
+  if (beg != end)
+    beg = Max(storage_beg, RoundDownTo(beg, granularity));
 
-  const void *a = storage_beg_p;
-  // We do not suport poisoning prefixes of blocks, so
-  // memory in the first block with data in us,
-  // just before container beginning cannot be poisoned, as described above.
-  const void *b = reinterpret_cast<const void *>(
-      RoundDownTo(reinterpret_cast<uptr>(container_beg_p), granularity));
-  const void *c = container_end_p;
-  const void *d = storage_end_p;
-  if (container_beg_p == container_end_p)
-    return __sanitizer_contiguous_container_find_bad_address(a, a, d);
-  const void *result;
-  if (a < b &&
-      (result = __sanitizer_contiguous_container_find_bad_address(a, a, b)))
-    return result;
-  if (b < d &&
-      (result = __sanitizer_contiguous_container_find_bad_address(b, c, d)))
-    return result;
+  // If the byte after the storage is unpoisoned, the prefix of the last granule
+  // is unpoisoned.
+  uptr annotations_end = (!AddrIsAlignedByGranularity(storage_end) &&
+                          !AddressIsPoisoned(storage_end))
+                             ? RoundDownTo(storage_end, granularity)
+                             : storage_end;
+  storage_beg = Min(storage_beg, annotations_end);
+  beg = Min(beg, annotations_end);
+  end = Min(end, annotations_end);
 
-  return nullptr;
+  if (auto *bad = FindBadAddress(storage_beg, beg, true))
+    return bad;
+  if (auto *bad = FindBadAddress(beg, end, false))
+    return bad;
+  if (auto *bad = FindBadAddress(end, annotations_end, true))
+    return bad;
+  return FindBadAddress(annotations_end, storage_end, false);
 }
 
 int __sanitizer_verify_double_ended_contiguous_container(
