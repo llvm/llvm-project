@@ -4014,7 +4014,8 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
         else
         {
              if (__extbufend_ != __extbufnext_) {
-                _LIBCPP_ASSERT(__extbufnext_ != NULL, "underflow moving from NULL" );
+                _LIBCPP_ASSERT(__extbufnext_ != nullptr, "underflow moving from nullptr");
+                _LIBCPP_ASSERT(__extbuf_ != nullptr, "underflow moving into nullptr");
                 _VSTD::memmove(__extbuf_, __extbufnext_, __extbufend_ - __extbufnext_);
              }
             __extbufnext_ = __extbuf_ + (__extbufend_ - __extbufnext_);
