@@ -127,7 +127,7 @@ static std::vector<std::string> getSymbolLocations(BitcodeFile *file) {
 
 static std::optional<std::pair<StringRef, uint32_t>>
 getFileLineDwarf(const SectionChunk *c, uint32_t addr) {
-  Optional<DILineInfo> optionalLineInfo =
+  std::optional<DILineInfo> optionalLineInfo =
       c->file->getDILineInfo(addr, c->getSectionNumber() - 1);
   if (!optionalLineInfo)
     return std::nullopt;
