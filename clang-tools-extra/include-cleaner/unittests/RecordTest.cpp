@@ -346,18 +346,30 @@ TEST_F(PragmaIncludeTest, IWYUPrivate) {
   Inputs.Code = R"cpp(
     #include "public.h"
   )cpp";
-  Inputs.ExtraFiles["public.h"] = "#include \"private.h\"";
+  Inputs.ExtraFiles["public.h"] = R"cpp(
+    #include "private.h"
+    #include "private2.h"
+  )cpp";
   Inputs.ExtraFiles["private.h"] = R"cpp(
     // IWYU pragma: private, include "public2.h"
-    class Private {};
+  )cpp";
+  Inputs.ExtraFiles["private2.h"] = R"cpp(
+    // IWYU pragma: private
   )cpp";
   TestAST Processed = build();
   auto PrivateFE = Processed.fileManager().getFile("private.h");
   assert(PrivateFE);
+  EXPECT_TRUE(PI.isPrivate(PrivateFE.get()));
   EXPECT_EQ(PI.getPublic(PrivateFE.get()), "\"public2.h\"");
+
   auto PublicFE = Processed.fileManager().getFile("public.h");
   assert(PublicFE);
   EXPECT_EQ(PI.getPublic(PublicFE.get()), ""); // no mapping.
+  EXPECT_FALSE(PI.isPrivate(PublicFE.get()));
+
+  auto Private2FE = Processed.fileManager().getFile("private2.h");
+  assert(Private2FE);
+  EXPECT_TRUE(PI.isPrivate(Private2FE.get()));
 }
 
 TEST_F(PragmaIncludeTest, IWYUExport) {
