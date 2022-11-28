@@ -1486,6 +1486,21 @@ include "VOP3Instructions.td"
 include "VOP3PInstructions.td"
 include "VOPDInstructions.td"
 
+class ClassPat<Instruction inst, ValueType vt> : GCNPat <
+  (is_fpclass (vt (VOP3Mods vt:$src0, i32:$src0_mods)), (i32 timm:$mask)),
+  (inst i32:$src0_mods, vt:$src0, (V_MOV_B32_e32 timm:$mask))
+>;
+
+def : ClassPat<V_CMP_CLASS_F16_e64, f16> {
+  let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts];
+}
+
+def : ClassPat<V_CMP_CLASS_F16_t16_e64, f16> {
+  let OtherPredicates = [HasTrue16BitInsts];
+}
+
+def : ClassPat<V_CMP_CLASS_F32_e64, f32>;
+def : ClassPat<V_CMP_CLASS_F64_e64, f64>;
 
 class VOPInfoTable <string Format> : GenericTable {
   let FilterClass = Format # "_Real";
