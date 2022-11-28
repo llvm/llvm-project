@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple armv8.6a-arm-none-eabi -target-abi aapcs -mfloat-abi hard -target-feature +bf16 -target-feature +neon -emit-llvm -O2 -o - %s | opt -S -mem2reg -sroa | FileCheck %s --check-prefix=CHECK32-HARD
-// RUN: %clang_cc1 -triple armv8.6a-arm-none-eabi -target-abi aapcs -mfloat-abi softfp -target-feature +bf16 -target-feature +neon -emit-llvm -O2 -o - %s | opt -S -mem2reg -sroa | FileCheck %s --check-prefix=CHECK32-SOFTFP
-// RUN: %clang_cc1 -triple aarch64-arm-none-eabi -target-abi aapcs -target-feature +bf16 -target-feature +neon -emit-llvm -O2 -o - %s | opt -S -mem2reg -sroa | FileCheck %s --check-prefixes=CHECK64,CHECK64NEON
-// RUN: %clang_cc1 -triple aarch64-arm-none-eabi -target-abi aapcs -target-feature -bf16 -target-feature +neon -DNONEON -emit-llvm -O2 -o - %s | opt -S -mem2reg -sroa | FileCheck %s --check-prefix=CHECK64
+// RUN: %clang_cc1 -triple armv8.6a-arm-none-eabi -target-abi aapcs -mfloat-abi hard -target-feature +bf16 -target-feature +neon -emit-llvm -O2 -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefix=CHECK32-HARD
+// RUN: %clang_cc1 -triple armv8.6a-arm-none-eabi -target-abi aapcs -mfloat-abi softfp -target-feature +bf16 -target-feature +neon -emit-llvm -O2 -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefix=CHECK32-SOFTFP
+// RUN: %clang_cc1 -triple aarch64-arm-none-eabi -target-abi aapcs -target-feature +bf16 -target-feature +neon -emit-llvm -O2 -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=CHECK64,CHECK64NEON
+// RUN: %clang_cc1 -triple aarch64-arm-none-eabi -target-abi aapcs -target-feature -bf16 -target-feature +neon -DNONEON -emit-llvm -O2 -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefix=CHECK64
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
