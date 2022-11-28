@@ -539,65 +539,40 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   CHECK_LT(new_beg, old_end);
   CHECK_GT(new_end, old_beg);
 
-  // There are two situations: we are poisoning or unpoisoning.
-  // WARNING: at the moment we do not poison prefixes of blocks described by
-  // one byte in shadow memory, so we have to unpoison prefixes of blocks with
-  // content. Up to (granularity - 1) bytes not-in-use may not be poisoned.
-
   if (new_beg < old_beg) {
-    // We are unpoisoning.
+    // Round down because we can't poison prefixes.
     uptr a = RoundDownTo(new_beg, granularity);
+    // Round down and ignore the [c, old_beg) as its state defined by unchanged
+    // [old_beg, old_end).
     uptr c = RoundDownTo(old_beg, granularity);
-    // State at the moment is:
-    // [storage_beg, a] is poisoned and should remain like that.
-    // [a, c] is poisoned as well (interval may be empty if new_beg
-    // and old_beg are in the same block). If the container is not
-    // empty, first element starts somewhere in [c, c+granularity]. Because we
-    // do not poison prefixes, memory [c, container_end] is not poisoned and
-    // we won't change it. If container is empty, we have to unpoison memory
-    // for elements after c, so [c, container_end]
     PoisonShadow(a, c - a, 0);
   } else if (new_beg > old_beg) {
-    // We are poisoning as beginning moved further in memory.
+    // Round down and poison [a, old_beg) because it was unpoisoned only as a
+    // prefix.
     uptr a = RoundDownTo(old_beg, granularity);
+    // Round down and ignore the [c, new_beg) as its state defined by unchanged
+    // [new_beg, old_end).
     uptr c = RoundDownTo(new_beg, granularity);
-    // State at the moment is:
-    // [storage_beg, a] is poisoned and should remain like that.
-    // [a, c] is not poisoned (interval may be empty if new_beg and
-    // old_beg are in the same block) [c, container_end] is not
-    // poisoned. If there are remaining elements in the container:
-    //   We have to poison [a, c], but because we do not poison prefixes, we
-    //   cannot poison memory after c (even that there are not elements of the
-    //   container). Up to granularity-1 unused bytes will not be poisoned.
-    // Otherwise:
-    //   We have to poison the last byte as well.
+
     PoisonShadow(a, c - a, kAsanContiguousContainerOOBMagic);
   }
 
   if (new_end > old_end) {
-    // We are unpoisoning memory.
+    // Round down to poison the prefix.
     uptr a = RoundDownTo(old_end, granularity);
+    // Round down and handle remainder below.
     uptr c = RoundDownTo(new_end, granularity);
-    // State at the moment is:
-    // if container_beg < a : [container_beg, a] is correct and we will not be
-    // changing it. else [a, container_beg] cannot be poisoned, so we do not
-    // have to think about it. we have to makr as unpoisoned [a, c]. [c, end]
-    // is correctly poisoned.
     PoisonShadow(a, c - a, 0);
-    if (!AddrIsAlignedByGranularity(new_end))  // ends in the middle of a block
+    if (!AddrIsAlignedByGranularity(new_end))
       *(u8 *)MemToShadow(c) = static_cast<u8>(new_end - c);
   } else if (new_end < old_end) {
-    // We are poisoning memory.
-    // State at the moment is:
-    // [storage_beg, a] is correctly annotated
-    // if container is empty after the removal, then a < container_beg and we
-    // will have to poison memory which is adressable only because we are not
-    // poisoning prefixes.
+    // Round up and handle remained below.
     uptr a2 = RoundUpTo(new_end, granularity);
+    // Round up to poison entire granule as we had nothing in [old_end, c2).
     uptr c2 = RoundUpTo(old_end, granularity);
     PoisonShadow(a2, c2 - a2, kAsanContiguousContainerOOBMagic);
+
     if (!AddrIsAlignedByGranularity(new_end)) {
-      // Starts in the middle of the block
       uptr a = RoundDownTo(new_end, granularity);
       *(u8 *)MemToShadow(a) = static_cast<u8>(new_end - a);
     }
