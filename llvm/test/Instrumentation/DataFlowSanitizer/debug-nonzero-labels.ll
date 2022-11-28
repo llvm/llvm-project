@@ -18,15 +18,15 @@ define i32 @f(i32, i32) {
   ; CHECK: [[ARGCMP2:%.*]] = icmp ne i[[#SBITS]] [[ARGLABEL2]], 0
   ; CHECK: br i1 [[ARGCMP2]]
   %x = add i32 %0, %1
-  store i32 %x, i32* %i
+  store i32 %x, ptr %i
   ; CHECK: [[CALL:%.*]] = call i32 @g.dfsan()
   ; CHECK: [[RETLABEL:%.*]] = load i[[#SBITS]], {{.*}} @__dfsan_retval_tls
   ; CHECK: [[CALLCMP:%.*]] = icmp ne i[[#SBITS]] [[RETLABEL]], 0
   ; CHECK: br i1 [[CALLCMP]]
   %call = call i32 @g()
-  ; CHECK: [[LOCALLABEL:%.*]] = load i[[#SBITS]], i[[#SBITS]]* [[LOCALLABELALLOCA]]
+  ; CHECK: [[LOCALLABEL:%.*]] = load i[[#SBITS]], ptr [[LOCALLABELALLOCA]]
   ; CHECK: [[LOCALCMP:%.*]] = icmp ne i[[#SBITS]] [[LOCALLABEL]], 0
   ; CHECK: br i1 [[LOCALCMP]]
-  %load = load i32, i32* %i
+  %load = load i32, ptr %i
   ret i32 %load
 }
