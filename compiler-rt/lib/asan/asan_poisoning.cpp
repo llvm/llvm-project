@@ -370,6 +370,37 @@ void __asan_unpoison_stack_memory(uptr addr, uptr size) {
   PoisonAlignedStackMemory(addr, size, false);
 }
 
+static void FixUnalignedStorage(uptr storage_beg, uptr storage_end,
+                                uptr &old_end, uptr &new_end) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  if (UNLIKELY(!AddrIsAlignedByGranularity(storage_end))) {
+    uptr end_down = RoundDownTo(storage_end, granularity);
+    // Ignore the last unaligned granule if the storage is followed by
+    // unpoisoned byte, because we can't poison the prefix anyway. Don't call
+    // AddressIsPoisoned at all if container changes does not affect the last
+    // granule at all.
+    if (Max(old_end, new_end) > end_down && !AddressIsPoisoned(storage_end)) {
+      old_end = Min(end_down, old_end);
+      new_end = Min(end_down, new_end);
+    }
+  }
+
+  // Handle misaligned begin and cut it off.
+  if (UNLIKELY(!AddrIsAlignedByGranularity(storage_beg))) {
+    uptr beg_up = RoundUpTo(storage_beg, granularity);
+    // The first unaligned granule needs special handling only if we had bytes
+    // there before and will have none after.
+    if (storage_beg == new_end && storage_beg != old_end &&
+        storage_beg < beg_up) {
+      // Keep granule prefix outside of the storage unpoisoned.
+      uptr beg_down = RoundDownTo(storage_beg, granularity);
+      *(u8 *)MemToShadow(beg_down) = storage_beg - beg_down;
+      old_end = Max(beg_up, old_end);
+      new_end = Max(beg_up, new_end);
+    }
+  }
+}
+
 void __sanitizer_annotate_contiguous_container(const void *beg_p,
                                                const void *end_p,
                                                const void *old_mid_p,
@@ -395,51 +426,7 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   if (old_end == new_end)
     return;  // Nothing to do here.
 
-  // Handle misaligned end and cut it off.
-  if (UNLIKELY(!AddrIsAlignedByGranularity(storage_end))) {
-    uptr end_down = RoundDownTo(storage_end, granularity);
-    // Either new or old mid must be in the granule to affect it.
-    if (new_end > end_down || old_end > end_down) {
-      // Do nothing if the byte after the container is unpoisoned. Asan can't
-      // poison only the begining of the granule.
-      if (AddressIsPoisoned(storage_end)) {
-        *(u8 *)MemToShadow(end_down) = new_end > end_down
-                                           ? static_cast<u8>(new_end - end_down)
-                                           : kAsanContiguousContainerOOBMagic;
-      }
-      old_end = Min(end_down, old_end);
-      new_end = Min(end_down, new_end);
-
-      if (old_end == new_end)
-        return;
-    }
-
-    if (storage_beg >= end_down)
-      return;  // Same granule.
-
-    storage_end = end_down;
-  }
-
-  // Handle misaligned begin and cut it off.
-  if (UNLIKELY(!AddrIsAlignedByGranularity(storage_beg))) {
-    uptr beg_up = RoundUpTo(storage_beg, granularity);
-    // As soon as we add first byte into container we will not be able to
-    // determine the state of the byte before the container. So we assume it's
-    // always unpoison.
-
-    // Either new or old mid must be in the granule to affect it.
-    if (new_end < beg_up || old_end < beg_up) {
-      uptr beg_down = RoundDownTo(storage_beg, granularity);
-      *(u8 *)MemToShadow(beg_down) =
-          new_end < beg_up ? static_cast<u8>(new_end - beg_down) : 0;
-      old_end = Max(beg_up, old_end);
-      new_end = Max(beg_up, new_end);
-      if (old_end == new_end)
-        return;
-    }
-
-    storage_beg = beg_up;
-  }
+  FixUnalignedStorage(storage_beg, storage_end, old_end, new_end);
 
   uptr a = RoundDownTo(Min(old_end, new_end), granularity);
   uptr c = RoundUpTo(Max(old_end, new_end), granularity);
