@@ -16,8 +16,7 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm-c/Target.h"
-#include "llvm-c/Transforms/PassManagerBuilder.h"
-#include "llvm-c/Transforms/Scalar.h"
+#include "llvm-c/Transforms/PassBuilder.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Host.h"
@@ -286,40 +285,29 @@ protected:
   }
   
   void buildAndRunPasses() {
-    LLVMPassManagerRef pass = LLVMCreatePassManager();
-    LLVMAddInstructionCombiningPass(pass);
-    LLVMRunPassManager(pass, Module);
-    LLVMDisposePassManager(pass);
+    LLVMPassBuilderOptionsRef Options = LLVMCreatePassBuilderOptions();
+    if (LLVMErrorRef E =
+            LLVMRunPasses(Module, "instcombine", nullptr, Options)) {
+        char *Msg = LLVMGetErrorMessage(E);
+        LLVMConsumeError(E);
+        LLVMDisposePassBuilderOptions(Options);
+        FAIL() << "Failed to run passes: " << Msg;
+    }
+
+    LLVMDisposePassBuilderOptions(Options);
   }
   
   void buildAndRunOptPasses() {
-    LLVMPassManagerBuilderRef passBuilder;
-    
-    passBuilder = LLVMPassManagerBuilderCreate();
-    LLVMPassManagerBuilderSetOptLevel(passBuilder, 2);
-    LLVMPassManagerBuilderSetSizeLevel(passBuilder, 0);
-    
-    LLVMPassManagerRef functionPasses =
-      LLVMCreateFunctionPassManagerForModule(Module);
-    LLVMPassManagerRef modulePasses =
-      LLVMCreatePassManager();
-    
-    LLVMPassManagerBuilderPopulateFunctionPassManager(passBuilder,
-                                                      functionPasses);
-    LLVMPassManagerBuilderPopulateModulePassManager(passBuilder, modulePasses);
-    
-    LLVMPassManagerBuilderDispose(passBuilder);
-    
-    LLVMInitializeFunctionPassManager(functionPasses);
-    for (LLVMValueRef value = LLVMGetFirstFunction(Module);
-         value; value = LLVMGetNextFunction(value))
-      LLVMRunFunctionPassManager(functionPasses, value);
-    LLVMFinalizeFunctionPassManager(functionPasses);
-    
-    LLVMRunPassManager(modulePasses, Module);
-    
-    LLVMDisposePassManager(functionPasses);
-    LLVMDisposePassManager(modulePasses);
+    LLVMPassBuilderOptionsRef Options = LLVMCreatePassBuilderOptions();
+    if (LLVMErrorRef E =
+            LLVMRunPasses(Module, "default<O2>", nullptr, Options)) {
+        char *Msg = LLVMGetErrorMessage(E);
+        LLVMConsumeError(E);
+        LLVMDisposePassBuilderOptions(Options);
+        FAIL() << "Failed to run passes: " << Msg;
+    }
+
+    LLVMDisposePassBuilderOptions(Options);
   }
   
   LLVMModuleRef Module;
