@@ -91,9 +91,8 @@ def : WriteRes<WriteZero,    []>;
 defm : X86WriteResUnsupported<WriteVecMaskedGatherWriteback>;
 
 // Load/store MXCSR.
-// FIXME: These are probably wrong. They are copy pasted from WriteStore/Load.
-def : WriteRes<WriteSTMXCSR, [SLM_IEC_RSV01, SLM_MEC_RSV]>;
-def : WriteRes<WriteLDMXCSR,  [SLM_MEC_RSV]> { let Latency = 3; }
+defm : X86WriteRes<WriteSTMXCSR, [SLM_MEC_RSV], 12,[11], 4>;
+defm : X86WriteRes<WriteLDMXCSR, [SLM_MEC_RSV], 10, [8], 5>;
 
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
