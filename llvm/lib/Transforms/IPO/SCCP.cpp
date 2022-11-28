@@ -23,8 +23,10 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/FunctionSpecialization.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
@@ -39,6 +41,13 @@ STATISTIC(NumGlobalConst, "Number of globals found to be constant");
 STATISTIC(NumDeadBlocks , "Number of basic blocks unreachable");
 STATISTIC(NumInstReplaced,
           "Number of instructions replaced with (simpler) instruction");
+
+static cl::opt<bool> SpecializeFunctions("specialize-functions",
+    cl::init(false), cl::Hidden, cl::desc("Enable function specialization"));
+
+static cl::opt<unsigned> FuncSpecializationMaxIters(
+    "func-specialization-max-iters", cl::init(1), cl::Hidden, cl::desc(
+    "The maximum number of iterations function specialization is run"));
 
 static void findReturnsToZap(Function &F,
                              SmallVector<ReturnInst *, 8> &ReturnsToZap,
@@ -93,10 +102,13 @@ static void findReturnsToZap(Function &F,
 }
 
 static bool runIPSCCP(
-    Module &M, const DataLayout &DL,
+    Module &M, const DataLayout &DL, FunctionAnalysisManager *FAM,
     std::function<const TargetLibraryInfo &(Function &)> GetTLI,
+    std::function<TargetTransformInfo &(Function &)> GetTTI,
+    std::function<AssumptionCache &(Function &)> GetAC,
     function_ref<AnalysisResultsForFn(Function &)> getAnalysis) {
   SCCPSolver Solver(DL, GetTLI, M.getContext());
+  FunctionSpecializer Specializer(Solver, M, FAM, GetTLI, GetTTI, GetAC);
 
   // Loop over all functions, marking arguments to those with their addresses
   // taken or that are external as overdefined.
@@ -136,24 +148,16 @@ static bool runIPSCCP(
   }
 
   // Solve for constants.
-  bool ResolvedUndefs = true;
-  Solver.solve();
-  while (ResolvedUndefs) {
-    LLVM_DEBUG(dbgs() << "RESOLVING UNDEFS\n");
-    ResolvedUndefs = false;
-    for (Function &F : M) {
-      if (Solver.resolvedUndefsIn(F))
-        ResolvedUndefs = true;
-    }
-    if (ResolvedUndefs)
-      Solver.solve();
-  }
+  Solver.solveWhileResolvedUndefsIn(M);
 
-  bool MadeChanges = false;
+  if (SpecializeFunctions) {
+    unsigned Iters = 0;
+    while (Iters++ < FuncSpecializationMaxIters && Specializer.run());
+  }
 
   // Iterate over all of the instructions in the module, replacing them with
   // constants if we have found them to be of constant values.
-
+  bool MadeChanges = false;
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
@@ -213,7 +217,10 @@ static bool runIPSCCP(
                                           NumInstRemoved, NumInstReplaced);
     }
 
-    DomTreeUpdater DTU = Solver.getDTU(F);
+    DomTreeUpdater DTU = SpecializeFunctions && Specializer.isClonedFunction(&F)
+        ? DomTreeUpdater(DomTreeUpdater::UpdateStrategy::Lazy)
+        : Solver.getDTU(F);
+
     // Change dead blocks to unreachable. We do it after replacing constants
     // in all executable blocks, because changeToUnreachable may remove PHI
     // nodes in executable blocks we found values for. The function's entry
@@ -364,15 +371,21 @@ PreservedAnalyses IPSCCPPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto GetTLI = [&FAM](Function &F) -> const TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
+  auto GetTTI = [&FAM](Function &F) -> TargetTransformInfo & {
+    return FAM.getResult<TargetIRAnalysis>(F);
+  };
+  auto GetAC = [&FAM](Function &F) -> AssumptionCache & {
+    return FAM.getResult<AssumptionAnalysis>(F);
+  };
   auto getAnalysis = [&FAM](Function &F) -> AnalysisResultsForFn {
     DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
     return {
         std::make_unique<PredicateInfo>(F, DT, FAM.getResult<AssumptionAnalysis>(F)),
         &DT, FAM.getCachedResult<PostDominatorTreeAnalysis>(F),
-        nullptr};
+        SpecializeFunctions ? &FAM.getResult<LoopAnalysis>(F) : nullptr };
   };
 
-  if (!runIPSCCP(M, DL, GetTLI, getAnalysis))
+  if (!runIPSCCP(M, DL, &FAM, GetTLI, GetTTI, GetAC, getAnalysis))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -404,6 +417,12 @@ public:
     auto GetTLI = [this](Function &F) -> const TargetLibraryInfo & {
       return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     };
+    auto GetTTI = [this](Function &F) -> TargetTransformInfo & {
+      return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    };
+    auto GetAC = [this](Function &F) -> AssumptionCache & {
+      return this->getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    };
     auto getAnalysis = [this](Function &F) -> AnalysisResultsForFn {
       DominatorTree &DT =
           this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
@@ -417,13 +436,14 @@ public:
           nullptr};
     };
 
-    return runIPSCCP(M, DL, GetTLI, getAnalysis);
+    return runIPSCCP(M, DL, nullptr, GetTLI, GetTTI, GetAC, getAnalysis);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 };
 
@@ -444,95 +464,3 @@ INITIALIZE_PASS_END(IPSCCPLegacyPass, "ipsccp",
 // createIPSCCPPass - This is the public interface to this file.
 ModulePass *llvm::createIPSCCPPass() { return new IPSCCPLegacyPass(); }
 
-PreservedAnalyses FunctionSpecializationPass::run(Module &M,
-                                                  ModuleAnalysisManager &AM) {
-  const DataLayout &DL = M.getDataLayout();
-  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
-  auto GetTTI = [&FAM](Function &F) -> TargetTransformInfo & {
-    return FAM.getResult<TargetIRAnalysis>(F);
-  };
-  auto GetAC = [&FAM](Function &F) -> AssumptionCache & {
-    return FAM.getResult<AssumptionAnalysis>(F);
-  };
-  auto GetAnalysis = [&FAM](Function &F) -> AnalysisResultsForFn {
-    DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-    return {std::make_unique<PredicateInfo>(
-                F, DT, FAM.getResult<AssumptionAnalysis>(F)),
-            &DT, FAM.getCachedResult<PostDominatorTreeAnalysis>(F),
-            &FAM.getResult<LoopAnalysis>(F)};
-  };
-
-  if (!runFunctionSpecialization(M, &FAM, DL, GetTLI, GetTTI, GetAC, GetAnalysis))
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<PostDominatorTreeAnalysis>();
-  PA.preserve<FunctionAnalysisManagerModuleProxy>();
-  return PA;
-}
-
-namespace {
-struct FunctionSpecializationLegacyPass : public ModulePass {
-  static char ID; // Pass identification, replacement for typeid
-  FunctionSpecializationLegacyPass() : ModulePass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    const DataLayout &DL = M.getDataLayout();
-    auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
-      return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    };
-    auto GetTTI = [this](Function &F) -> TargetTransformInfo & {
-      return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    };
-    auto GetAC = [this](Function &F) -> AssumptionCache & {
-      return this->getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    };
-
-    auto GetAnalysis = [this](Function &F) -> AnalysisResultsForFn {
-      DominatorTree &DT =
-          this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-      return {
-          std::make_unique<PredicateInfo>(
-              F, DT,
-              this->getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
-                  F)),
-          nullptr, // We cannot preserve the LI, DT, or PDT with the legacy pass
-          nullptr, // manager, so set them to nullptr.
-          nullptr};
-    };
-    return runFunctionSpecialization(M, nullptr, DL, GetTLI, GetTTI, GetAC, GetAnalysis);
-  }
-};
-} // namespace
-
-char FunctionSpecializationLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(
-    FunctionSpecializationLegacyPass, "function-specialization",
-    "Propagate constant arguments by specializing the function", false, false)
-
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(FunctionSpecializationLegacyPass, "function-specialization",
-                    "Propagate constant arguments by specializing the function",
-                    false, false)
-
-ModulePass *llvm::createFunctionSpecializationPass() {
-  return new FunctionSpecializationLegacyPass();
-}
