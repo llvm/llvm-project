@@ -81,12 +81,12 @@ define i1 @gep_constant_negative_index(ptr %dst, ptr %lower, ptr %upper) {
 ; CHECK-NEXT:    [[CMP_DST_SUB_4_LOWER:%.*]] = icmp uge ptr [[DST_SUB_4]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_DST_SUB_4_UPPER:%.*]] = icmp ult ptr [[DST_SUB_4]], [[UPPER]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[CMP_DST_SUB_4_LOWER]]
-; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[CMP_DST_SUB_4_UPPER]]
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
 ; CHECK-NEXT:    [[DST_SUB_5:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 -5
 ; CHECK-NEXT:    [[CMP_DST_SUB_5_LOWER:%.*]] = icmp uge ptr [[DST_SUB_5]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_DST_SUB_5_UPPER:%.*]] = icmp ult ptr [[DST_SUB_5]], [[UPPER]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[CMP_DST_SUB_5_LOWER]]
-; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[CMP_DST_SUB_5_UPPER]]
+; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], true
 ; CHECK-NEXT:    ret i1 [[RES_7]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[ELSE_CMP_DST_LOWER:%.*]] = icmp uge ptr [[DST]], [[LOWER]]
