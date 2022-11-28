@@ -541,8 +541,7 @@ bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB) {
   return MadeChanges;
 }
 
-void llvm::ReplaceInstWithValue(BasicBlock::InstListType &BIL,
-                                BasicBlock::iterator &BI, Value *V) {
+void llvm::ReplaceInstWithValue(BasicBlock::iterator &BI, Value *V) {
   Instruction &I = *BI;
   // Replaces all of the uses of the instruction with uses of the value
   I.replaceAllUsesWith(V);
@@ -552,7 +551,7 @@ void llvm::ReplaceInstWithValue(BasicBlock::InstListType &BIL,
     V->takeName(&I);
 
   // Delete the unnecessary instruction now...
-  BI = BIL.erase(BI);
+  BI = BI->eraseFromParent();
 }
 
 void llvm::ReplaceInstWithInst(BasicBlock *BB, BasicBlock::iterator &BI,
@@ -569,7 +568,7 @@ void llvm::ReplaceInstWithInst(BasicBlock *BB, BasicBlock::iterator &BI,
   BasicBlock::iterator New = I->insertAt(BB, BI);
 
   // Replace all uses of the old instruction, and delete it.
-  ReplaceInstWithValue(BB->getInstList(), BI, I);
+  ReplaceInstWithValue(BI, I);
 
   // Move BI back to point to the newly inserted instruction
   BI = New;
