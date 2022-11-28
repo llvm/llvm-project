@@ -7,7 +7,7 @@
 ; CHECK: irce: in function test_03: constrained Loop
 
 ; RC against known negative value. We should not do IRCE here.
-define void @test_01(i32 *%arr, i32 %n) {
+define void @test_01(ptr %arr, i32 %n) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FIRST_ITR_CHECK:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -20,8 +20,8 @@ define void @test_01(i32 *%arr, i32 %n) {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], -9
 ; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof !0
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[NEXT]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       out.of.bounds:
@@ -43,8 +43,8 @@ define void @test_01(i32 *%arr, i32 %n) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !0
 
   in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 
@@ -56,7 +56,7 @@ define void @test_01(i32 *%arr, i32 %n) {
 }
 
 ; Same as test_01, but the latch condition is unsigned.
-define void @test_02(i32 *%arr, i32 %n) {
+define void @test_02(ptr %arr, i32 %n) {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FIRST_ITR_CHECK:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -69,8 +69,8 @@ define void @test_02(i32 *%arr, i32 %n) {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], -9
 ; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof !0
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[NEXT]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       out.of.bounds:
@@ -92,8 +92,8 @@ define void @test_02(i32 *%arr, i32 %n) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !0
 
   in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 
@@ -106,7 +106,7 @@ define void @test_02(i32 *%arr, i32 %n) {
 
 ; RC against a value which is not known to be non-negative. Here we should
 ; expand runtime checks against bound being positive or negative.
-define void @test_03(i32 *%arr, i32 %n, i32 %bound) {
+define void @test_03(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-LABEL: @test_03(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FIRST_ITR_CHECK:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -131,8 +131,8 @@ define void @test_03(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], [[BOUND]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT5:%.*]], !prof !0
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], [[N]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -164,8 +164,8 @@ define void @test_03(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp slt i32 [[IDX_POSTLOOP]], [[BOUND]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof !0
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp slt i32 [[IDX_NEXT_POSTLOOP]], [[N]]
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], [[LOOP1:!llvm.loop !.*]], !irce.loop.clone !6
 ;
@@ -181,8 +181,8 @@ define void @test_03(i32 *%arr, i32 %n, i32 %bound) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !0
 
   in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 
@@ -195,7 +195,7 @@ define void @test_03(i32 *%arr, i32 %n, i32 %bound) {
 
 ; RC against a value which is not known to be non-negative. Here we should
 ; expand runtime checks against bound being positive or negative.
-define void @test_04(i32 *%arr, i32 %n, i32 %bound) {
+define void @test_04(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-LABEL: @test_04(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FIRST_ITR_CHECK:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -217,8 +217,8 @@ define void @test_04(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], [[BOUND]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]], !prof !0
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], [[N]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -250,8 +250,8 @@ define void @test_04(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp slt i32 [[IDX_POSTLOOP]], [[BOUND]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof !0
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp ult i32 [[IDX_NEXT_POSTLOOP]], [[N]]
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], [[LOOP7:!llvm.loop !.*]], !irce.loop.clone !6
 ;
@@ -267,8 +267,8 @@ define void @test_04(i32 *%arr, i32 %n, i32 %bound) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !0
 
   in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 
@@ -283,7 +283,7 @@ define void @test_04(i32 *%arr, i32 %n, i32 %bound) {
 ; FIXME: We could remove the range check here, but it does not happen due to the
 ; limintation we posed to fix the miscompile (see comments in the method
 ; computeSafeIterationSpace).
-define void @test_05(i32 *%arr, i32 %n) {
+define void @test_05(ptr %arr, i32 %n) {
 ; CHECK-LABEL: @test_05(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FIRST_ITR_CHECK:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -296,8 +296,8 @@ define void @test_05(i32 *%arr, i32 %n) {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX]], -9
 ; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof !0
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[NEXT]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       out.of.bounds:
@@ -318,8 +318,8 @@ define void @test_05(i32 *%arr, i32 %n) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !0
 
   in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 
@@ -334,7 +334,7 @@ define void @test_05(i32 *%arr, i32 %n) {
 ; FIXME: We could remove the range check here, but it does not happen due to the
 ; limintation we posed to fix the miscompile (see comments in the method
 ; computeSafeIterationSpace).
-define void @test_06(i32 *%arr, i32 %n) {
+define void @test_06(ptr %arr, i32 %n) {
 ; CHECK-LABEL: @test_06(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FIRST_ITR_CHECK:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -347,8 +347,8 @@ define void @test_06(i32 *%arr, i32 %n) {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX]], -9
 ; CHECK-NEXT:    br i1 [[ABC]], label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS:%.*]], !prof !0
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[NEXT]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       out.of.bounds:
@@ -369,8 +369,8 @@ define void @test_06(i32 *%arr, i32 %n) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !0
 
   in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 
@@ -386,7 +386,7 @@ define void @test_06(i32 *%arr, i32 %n) {
 ; %bound is negative (i.e. in [SINT_MAX + 1, UINT_MAX)). We should be able to
 ; safely remove this check (see comments in the method
 ; computeSafeIterationSpace).
-define void @test_07(i32 *%arr, i32 %n, i32 %bound) {
+define void @test_07(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-LABEL: @test_07(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FIRST_ITR_CHECK:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -411,8 +411,8 @@ define void @test_07(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX]], [[BOUND]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT5:%.*]], !prof !0
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], [[N]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -444,8 +444,8 @@ define void @test_07(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp ult i32 [[IDX_POSTLOOP]], [[BOUND]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof !0
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp slt i32 [[IDX_NEXT_POSTLOOP]], [[N]]
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], [[LOOP8:!llvm.loop !.*]], !irce.loop.clone !6
 ;
@@ -460,8 +460,8 @@ define void @test_07(i32 *%arr, i32 %n, i32 %bound) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !0
 
   in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 
@@ -477,7 +477,7 @@ define void @test_07(i32 *%arr, i32 %n, i32 %bound) {
 ; %bound is negative (i.e. in [SINT_MAX + 1, UINT_MAX)). We should be able to
 ; safely remove this check (see comments in the method
 ; computeSafeIterationSpace).
-define void @test_08(i32 *%arr, i32 %n, i32 %bound) {
+define void @test_08(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-LABEL: @test_08(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FIRST_ITR_CHECK:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -499,8 +499,8 @@ define void @test_08(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp ult i32 [[IDX]], [[BOUND]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]], !prof !0
 ; CHECK:       in.bounds:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], [[N]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -532,8 +532,8 @@ define void @test_08(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[ABC_POSTLOOP:%.*]] = icmp ult i32 [[IDX_POSTLOOP]], [[BOUND]]
 ; CHECK-NEXT:    br i1 [[ABC_POSTLOOP]], label [[IN_BOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof !0
 ; CHECK:       in.bounds.postloop:
-; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_POSTLOOP]]
-; CHECK-NEXT:    store i32 0, i32* [[ADDR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp ult i32 [[IDX_NEXT_POSTLOOP]], [[N]]
 ; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], [[LOOP9:!llvm.loop !.*]], !irce.loop.clone !6
 ;
@@ -548,8 +548,8 @@ define void @test_08(i32 *%arr, i32 %n, i32 %bound) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !0
 
   in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 
