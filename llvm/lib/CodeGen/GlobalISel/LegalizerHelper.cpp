@@ -4232,6 +4232,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_ICMP:
   case G_FCMP:
     return fewerElementsVectorMultiEltType(GMI, NumElts, {1 /*cpm predicate*/});
+  case G_IS_FPCLASS:
+    return fewerElementsVectorMultiEltType(GMI, NumElts, {2, 3 /*mask,fpsem*/});
   case G_SELECT:
     if (MRI.getType(MI.getOperand(1).getReg()).isVector())
       return fewerElementsVectorMultiEltType(GMI, NumElts);
