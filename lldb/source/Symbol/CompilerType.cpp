@@ -874,7 +874,7 @@ void CompilerType::DumpTypeDescription(Stream *s, lldb::DescriptionLevel level,
                                        ExecutionContextScope *exe_scope) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      type_system_sp->DumpTypeDescription(m_type, level, exe_scope);
+      type_system_sp->DumpTypeDescription(m_type, s, level, exe_scope);
 }
 
 
