@@ -38,6 +38,10 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                             int &FrameIdx) const override;
 
+  // Update DestReg to have the value of SrcReg plus an Offset.
+  void adjustReg(MachineBasicBlock::iterator II, Register DestReg,
+                 Register SrcReg, StackOffset Offset) const;
+
   bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
