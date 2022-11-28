@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes='default<O2>' -new-pm-debug-info-for-profiling -S | FileCheck %s --check-prefix=DEBUG
-; RUN: opt < %s -passes='default<O2>' -new-pm-debug-info-for-profiling -new-pm-pseudo-probe-for-profiling -S | FileCheck %s --check-prefix=PROBE
-; RUN: opt < %s -passes='thinlto-pre-link<O2>' -new-pm-debug-info-for-profiling -new-pm-pseudo-probe-for-profiling -S | FileCheck %s --check-prefix=PROBE
+; RUN: opt < %s -passes='default<O2>' -debug-info-for-profiling -S | FileCheck %s --check-prefix=DEBUG
+; RUN: opt < %s -passes='default<O2>' -debug-info-for-profiling -pseudo-probe-for-profiling -S | FileCheck %s --check-prefix=PROBE
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -debug-info-for-profiling -pseudo-probe-for-profiling -S | FileCheck %s --check-prefix=PROBE
 
 
 @a = dso_local global i32 0, align 4
