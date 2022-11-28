@@ -2162,8 +2162,8 @@ let Predicates = [HasSVEorSME] in {
 } // End HasSVEorSME
 
 let Predicates = [HasBF16, HasSVEorSME] in {
-  defm BFDOT_ZZZ    : sve_bfloat_dot<"bfdot", int_aarch64_sve_bfdot>;
-  defm BFDOT_ZZI    : sve_bfloat_dot_indexed<"bfdot", int_aarch64_sve_bfdot_lane>;
+  defm BFDOT_ZZZ    : sve_float_dot<0b1, "bfdot", nxv8bf16, int_aarch64_sve_bfdot>;
+  defm BFDOT_ZZI    : sve_float_dot_indexed<0b1, "bfdot", nxv8bf16, int_aarch64_sve_bfdot_lane_v2>;
 } // End HasBF16, HasSVEorSME
 
 let Predicates = [HasBF16, HasSVE] in {
@@ -2173,8 +2173,8 @@ let Predicates = [HasBF16, HasSVE] in {
 let Predicates = [HasBF16, HasSVEorSME] in {
   defm BFMLALB_ZZZ : sve_bfloat_matmul_longvecl<0b0, 0b0, "bfmlalb", int_aarch64_sve_bfmlalb>;
   defm BFMLALT_ZZZ : sve_bfloat_matmul_longvecl<0b1, 0b0, "bfmlalt", int_aarch64_sve_bfmlalt>;
-  defm BFMLALB_ZZZI : sve_bfloat_matmul_longvecl_idx<0b0, 0b0, "bfmlalb", int_aarch64_sve_bfmlalb_lane>;
-  defm BFMLALT_ZZZI : sve_bfloat_matmul_longvecl_idx<0b1, 0b0, "bfmlalt", int_aarch64_sve_bfmlalt_lane>;
+  defm BFMLALB_ZZZI : sve_bfloat_matmul_longvecl_idx<0b0, 0b0, "bfmlalb", int_aarch64_sve_bfmlalb_lane_v2>;
+  defm BFMLALT_ZZZI : sve_bfloat_matmul_longvecl_idx<0b1, 0b0, "bfmlalt", int_aarch64_sve_bfmlalt_lane_v2>;
   defm BFCVT_ZPmZ   : sve_bfloat_convert<0b1, "bfcvt",   int_aarch64_sve_fcvt_bf16f32>;
   defm BFCVTNT_ZPmZ : sve_bfloat_convert<0b0, "bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32>;
 } // End HasBF16, HasSVEorSME

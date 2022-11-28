@@ -8317,13 +8317,13 @@ class sve_float_dot<bit bf, string asm>
   let DestructiveInstType = DestructiveOther;
 }
 
-multiclass sve_bfloat_dot<string asm, SDPatternOperator op> {
-  def NAME : sve_float_dot<0b1, asm>;
-  def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16 ,!cast<Instruction>(NAME)>;
+multiclass sve_float_dot<bit bf, string asm, ValueType InVT, SDPatternOperator op> {
+  def NAME : sve_float_dot<bf, asm>;
+  def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, InVT, InVT, !cast<Instruction>(NAME)>;
 }
 
 class sve_float_dot_indexed<bit bf, string asm>
-: I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexS:$iop),
+: I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexS32b:$iop),
     asm, "\t$Zda, $Zn, $Zm$iop", "", []>, Sched<[]> {
   bits<5> Zda;
   bits<5> Zn;
@@ -8342,9 +8342,9 @@ class sve_float_dot_indexed<bit bf, string asm>
   let DestructiveInstType = DestructiveOther;
 }
 
-multiclass sve_bfloat_dot_indexed<string asm, SDPatternOperator op> {
-  def NAME : sve_float_dot_indexed<0b1, asm>;
-  def : SVE_4_Op_Imm_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16, i64, VectorIndexS_timm, !cast<Instruction>(NAME)>;
+multiclass sve_float_dot_indexed<bit bf, string asm, ValueType InVT, SDPatternOperator op> {
+  def NAME : sve_float_dot_indexed<bf, asm>;
+  def : SVE_4_Op_Imm_Pat<nxv4f32, op, nxv4f32, InVT, InVT, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME)>;
 }
 
 class sve_bfloat_matmul<string asm>
@@ -8383,7 +8383,7 @@ multiclass sve_bfloat_matmul_longvecl<bit BT, bit sub, string asm, SDPatternOper
 }
 
 class sve_bfloat_matmul_longvecl_idx<bit BT, bit sub, string asm>
-: I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexH:$iop),
+: I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexH32b:$iop),
     asm, "\t$Zda, $Zn, $Zm$iop", "", []>, Sched<[]> {
   bits<5> Zda;
   bits<5> Zn;
@@ -8407,7 +8407,7 @@ class sve_bfloat_matmul_longvecl_idx<bit BT, bit sub, string asm>
 
 multiclass sve_bfloat_matmul_longvecl_idx<bit BT, bit sub, string asm, SDPatternOperator op> {
   def NAME : sve_bfloat_matmul_longvecl_idx<BT, sub, asm>;
-  def : SVE_4_Op_Imm_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16, i64, VectorIndexH_timm, !cast<Instruction>(NAME)>;
+  def : SVE_4_Op_Imm_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16, i32, VectorIndexH32b_timm, !cast<Instruction>(NAME)>;
 }
 
 class sve_bfloat_convert<bit N, string asm>
@@ -8784,7 +8784,7 @@ class sve2p1_two_way_dot_vv<string mnemonic, bit u>
 
 // SVE two-way dot product (indexed)
 class sve2p1_two_way_dot_vvi<string mnemonic, bit u>
-    : I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexS:$i2),
+    : I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexS32b:$i2),
         mnemonic, "\t$Zda, $Zn, $Zm$i2",
         "", []>, Sched<[]> {
   bits<5> Zda;
