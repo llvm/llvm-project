@@ -43,18 +43,18 @@ target triple = "mips-unknown-linux"
 
 define i32 @main() nounwind {
 entry:
-  %0 = load i32, i32* @x, align 4
+  %0 = load i32, ptr @x, align 4
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.end, label %foo
 
 if.end:                                           ; preds = %entry
-  %puts = tail call i32 @puts(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @str, i32 0, i32 0))
+  %puts = tail call i32 @puts(ptr @str)
   br label %foo
 
 foo:                                              ; preds = %entry, %if.end
-  %puts2 = tail call i32 @puts(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @str2, i32 0, i32 0))
+  %puts2 = tail call i32 @puts(ptr @str2)
   ret i32 0
 }
 
-declare i32 @puts(i8* nocapture) nounwind
+declare i32 @puts(ptr nocapture) nounwind
 
