@@ -1350,11 +1350,10 @@ bool LoopInterchangeTransform::transform() {
 /// \brief Move all instructions except the terminator from FromBB right before
 /// InsertBefore
 static void moveBBContents(BasicBlock *FromBB, Instruction *InsertBefore) {
-  auto &ToList = InsertBefore->getParent()->getInstList();
-  auto &FromList = FromBB->getInstList();
+  BasicBlock *ToBB = InsertBefore->getParent();
 
-  ToList.splice(InsertBefore->getIterator(), FromList, FromList.begin(),
-                FromBB->getTerminator()->getIterator());
+  ToBB->splice(InsertBefore->getIterator(), FromBB, FromBB->begin(),
+               FromBB->getTerminator()->getIterator());
 }
 
 /// Swap instructions between \p BB1 and \p BB2 but keep terminators intact.
