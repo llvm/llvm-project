@@ -494,12 +494,6 @@ endif()
 
 include(HandleLibCXXABI) # Setup the ABI library flags
 
-# Remove flags that may have snuck in.
-# TODO: This shouldn't be necessary anymore since we don't support the Project
-#       build anymore, so the rest of LLVM can't pollute our flags.
-remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG -lc++abi)
-remove_flags(--stdlib=libc++ -stdlib=libc++ --stdlib=libstdc++ -stdlib=libstdc++)
-
 # FIXME: Remove all debug flags and flags that change which Windows
 # default libraries are linked. Currently we only support linking the
 # non-debug DLLs
