@@ -397,7 +397,7 @@ public:
     assert(New && !New->getParent() &&
            "New instruction already inserted into a basic block!");
     BasicBlock *BB = Old.getParent();
-    BB->getInstList().insert(Old.getIterator(), New); // Insert inst
+    New->insertAt(BB, Old.getIterator()); // Insert inst
     Worklist.push(New);
     return New;
   }
