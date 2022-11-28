@@ -1850,3 +1850,222 @@ define i32 @loadCombine_4consecutive_badinsert2(ptr %p) {
   %o3 = or i32 %o2, %s4
   ret i32 %o3
 }
+
+define i32 @loadCombine_4consecutive_badinsert3(ptr %p) {
+; LE-LABEL: @loadCombine_4consecutive_badinsert3(
+; LE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P1]], align 1
+; LE-NEXT:    ret i32 [[L1]]
+;
+; BE-LABEL: @loadCombine_4consecutive_badinsert3(
+; BE-NEXT:    [[P4:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 4
+; BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P4]], align 1
+; BE-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
+; BE-NEXT:    [[S4:%.*]] = shl i32 [[E4]], 24
+; BE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
+; BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P3]], align 1
+; BE-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
+; BE-NEXT:    [[S3:%.*]] = shl i32 [[E3]], 16
+; BE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 2
+; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P2]], align 1
+; BE-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
+; BE-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 8
+; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i32 1
+; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P1]], align 1
+; BE-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
+; BE-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
+; BE-NEXT:    [[O2:%.*]] = or i32 [[O1]], [[S3]]
+; BE-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
+; BE-NEXT:    ret i32 [[O3]]
+;
+  %p4 = getelementptr i8, ptr %p, i32 4
+  %l4 = load i8, ptr %p4
+  %e4 = zext i8 %l4 to i32
+  %s4 = shl i32 %e4, 24
+
+  %p3 = getelementptr i8, ptr %p, i32 3
+  %l3 = load i8, ptr %p3
+  %e3 = zext i8 %l3 to i32
+  %s3 = shl i32 %e3, 16
+
+  %p2 = getelementptr i8, ptr %p, i32 2
+  %l2 = load i8, ptr %p2
+  %e2 = zext i8 %l2 to i32
+  %s2 = shl i32 %e2, 8
+
+  %p1 = getelementptr i8, ptr %p, i32 1
+  %l1 = load i8, ptr %p1
+  %e1 = zext i8 %l1 to i32
+
+  %o1 = or i32 %e1, %s2
+  %o2 = or i32 %o1, %s3
+  %o3 = or i32 %o2, %s4
+  ret i32 %o3
+}
+
+
+define i32 @loadCombine_4consecutive_badinsert4(ptr %p) {
+; LE-LABEL: @loadCombine_4consecutive_badinsert4(
+; LE-NEXT:  entry:
+; LE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
+; LE-NEXT:    [[C1:%.*]] = load i8, ptr [[P1]], align 1
+; LE-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C1]], 0
+; LE-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[BB2:%.*]]
+; LE:       bb2:
+; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P1]], align 1
+; LE-NEXT:    br label [[END]]
+; LE:       end:
+; LE-NEXT:    [[COND:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[L1]], [[BB2]] ]
+; LE-NEXT:    ret i32 [[COND]]
+;
+; BE-LABEL: @loadCombine_4consecutive_badinsert4(
+; BE-NEXT:  entry:
+; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
+; BE-NEXT:    [[C1:%.*]] = load i8, ptr [[P1]], align 1
+; BE-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C1]], 0
+; BE-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[BB2:%.*]]
+; BE:       bb2:
+; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P1]], align 1
+; BE-NEXT:    [[C2:%.*]] = zext i8 [[L1]] to i32
+; BE-NEXT:    [[P4:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P4]], align 1
+; BE-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
+; BE-NEXT:    [[S4:%.*]] = shl nuw i32 [[E4]], 24
+; BE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 3
+; BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P3]], align 1
+; BE-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
+; BE-NEXT:    [[S3:%.*]] = shl nuw nsw i32 [[E3]], 16
+; BE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P2]], align 1
+; BE-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
+; BE-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
+; BE-NEXT:    [[O1:%.*]] = or i32 [[S2]], [[C2]]
+; BE-NEXT:    [[O2:%.*]] = or i32 [[O1]], [[S3]]
+; BE-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
+; BE-NEXT:    br label [[END]]
+; BE:       end:
+; BE-NEXT:    [[COND:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[O3]], [[BB2]] ]
+; BE-NEXT:    ret i32 [[COND]]
+;
+entry:
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %c1 = load i8, ptr %p1, align 1
+  %cmp = icmp eq i8 %c1, 0
+  br i1 %cmp, label %end, label %bb2
+
+bb2:
+  %l1 = load i8, ptr %p1, align 1
+  %c2 = zext i8 %l1 to i32
+  %p4 = getelementptr i8, ptr %p, i64 4
+  %l4 = load i8, ptr %p4, align 1
+  %e4 = zext i8 %l4 to i32
+  %s4 = shl nuw i32 %e4, 24
+  %p3 = getelementptr i8, ptr %p, i64 3
+  %l3 = load i8, ptr %p3, align 1
+  %e3 = zext i8 %l3 to i32
+  %s3 = shl nuw nsw i32 %e3, 16
+  %p2 = getelementptr i8, ptr %p, i64 2
+  %l2 = load i8, ptr %p2, align 1
+  %e2 = zext i8 %l2 to i32
+  %s2 = shl nuw nsw i32 %e2, 8
+  %o1 = or i32 %s2, %c2
+  %o2 = or i32 %o1, %s3
+  %o3 = or i32 %o2, %s4
+  br label %end
+
+end:
+  %cond = phi i32 [ 0, %entry ], [ %o3, %bb2 ]
+  ret i32 %cond
+}
+
+define i32 @loadCombine_4consecutive_badinsert5(ptr %p) {
+; ALL-LABEL: @loadCombine_4consecutive_badinsert5(
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; ALL-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 2
+; ALL-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
+; ALL-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
+; ALL-NEXT:    store i8 0, ptr [[P2]], align 1
+; ALL-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; ALL-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
+; ALL-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
+; ALL-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
+; ALL-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
+; ALL-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
+; ALL-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
+; ALL-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 8
+; ALL-NEXT:    [[S3:%.*]] = shl i32 [[E3]], 16
+; ALL-NEXT:    [[S4:%.*]] = shl i32 [[E4]], 24
+; ALL-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
+; ALL-NEXT:    [[O2:%.*]] = or i32 [[O1]], [[S3]]
+; ALL-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
+; ALL-NEXT:    ret i32 [[O3]]
+;
+  %p1 = getelementptr i8, ptr %p, i32 1
+  %p2 = getelementptr i8, ptr %p, i32 2
+  %p3 = getelementptr i8, ptr %p, i32 3
+  %l4 = load i8, ptr %p3
+  store i8 0, ptr %p2, align 1
+  %l1 = load i8, ptr %p
+  %l2 = load i8, ptr %p1
+  %l3 = load i8, ptr %p2
+
+  %e1 = zext i8 %l1 to i32
+  %e2 = zext i8 %l2 to i32
+  %e3 = zext i8 %l3 to i32
+  %e4 = zext i8 %l4 to i32
+
+  %s2 = shl i32 %e2, 8
+  %s3 = shl i32 %e3, 16
+  %s4 = shl i32 %e4, 24
+
+  %o1 = or i32 %e1, %s2
+  %o2 = or i32 %o1, %s3
+  %o3 = or i32 %o2, %s4
+  ret i32 %o3
+}
+
+define i32 @loadCombine_4consecutive_badinsert6(ptr %p) {
+; ALL-LABEL: @loadCombine_4consecutive_badinsert6(
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; ALL-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 2
+; ALL-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
+; ALL-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; ALL-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
+; ALL-NEXT:    store i8 0, ptr [[P3]], align 1
+; ALL-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
+; ALL-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
+; ALL-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
+; ALL-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
+; ALL-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
+; ALL-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
+; ALL-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 8
+; ALL-NEXT:    [[S3:%.*]] = shl i32 [[E3]], 16
+; ALL-NEXT:    [[S4:%.*]] = shl i32 [[E4]], 24
+; ALL-NEXT:    [[O1:%.*]] = or i32 [[S3]], [[S4]]
+; ALL-NEXT:    [[O2:%.*]] = or i32 [[O1]], [[S2]]
+; ALL-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[E1]]
+; ALL-NEXT:    ret i32 [[O3]]
+;
+  %p1 = getelementptr i8, ptr %p, i32 1
+  %p2 = getelementptr i8, ptr %p, i32 2
+  %p3 = getelementptr i8, ptr %p, i32 3
+  %l1 = load i8, ptr %p
+  %l2 = load i8, ptr %p1
+  store i8 0, ptr %p3, align 1
+  %l3 = load i8, ptr %p2
+  %l4 = load i8, ptr %p3
+
+  %e1 = zext i8 %l1 to i32
+  %e2 = zext i8 %l2 to i32
+  %e3 = zext i8 %l3 to i32
+  %e4 = zext i8 %l4 to i32
+
+  %s2 = shl i32 %e2, 8
+  %s3 = shl i32 %e3, 16
+  %s4 = shl i32 %e4, 24
+
+  %o1 = or i32 %s3, %s4
+  %o2 = or i32 %o1, %s2
+  %o3 = or i32 %o2, %e1
+  ret i32 %o3
+}
