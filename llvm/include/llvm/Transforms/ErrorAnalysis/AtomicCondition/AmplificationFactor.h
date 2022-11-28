@@ -85,6 +85,25 @@ void fAFCreateAFComponent(AFProduct **AddressToAllocateAt) {
   return ;
 }
 
+AFProduct **fAFFlattenAFComponentsPath(AFProduct *ProductObject) {
+  AFProduct *ProductObjectWalker = ProductObject;
+  AFProduct **ProductPath;
+
+  if((ProductPath =
+           (AFProduct **)malloc(sizeof(AFProduct*) * ProductObject->Height)) == NULL) {
+    printf("#fAF: Not enough memory for AFProduct pointers!");
+    exit(EXIT_FAILURE);
+  }
+  ProductPath[0] = &*ProductObject;
+
+  for (int I = 1; I < ProductObject->Height; ++I) {
+    ProductPath[I] = &*(ProductObjectWalker->ProductTail);
+    ProductObjectWalker = ProductObjectWalker->ProductTail;
+  }
+
+  return ProductPath;
+}
+
 /* ---------------------------------- AFItem ---------------------------------*/
 
 struct AFItem {
@@ -104,6 +123,54 @@ void fAFCreateAFItem(AFItem **AddressToAllocateAt) {
   return ;
 }
 
+// Function to write NumObjects from ObjectPointerList into file with descriptor
+// FP.
+void fAFStoreAFItems(FILE *FP, AFItem **ObjectPointerList, uint64_t NumObjects) {
+  assert(FP != NULL && "File descriptor is NULL.");
+  assert(ObjectPointerList != NULL && "ObjectPointerList is NULL");
+
+  fprintf(FP, "{\n");
+
+  fprintf(FP, "\t\"AFs\": [\n");
+  int I = 0;
+  while ((uint64_t)I < NumObjects) {
+    for (int J = 0; J < ObjectPointerList[I]->NumAFComponents; ++J) {
+      AFProduct **ProductPath= fAFFlattenAFComponentsPath(ObjectPointerList[I]->Components[J]);
+      if (fprintf(FP,
+                  "\t\t{\n"
+                  "\t\t\t\"ProductItemId\": %d,\n"
+                  "\t\t\t\"ACItemId\":%d,\n"
+                  "\t\t\t\"ACItemString\": \"%s\",\n"
+                  "\t\t\t\"ProductTailItemId\": %d,\n"
+                  "\t\t\t\"Input\": \"%s\",\n"
+                  "\t\t\t\"AF\": %lf,\n",
+                  ObjectPointerList[I]->Components[J]->ItemId,
+                  ObjectPointerList[I]->Components[J]->Factor->ItemId,
+                  ObjectPointerList[I]->Components[J]->Factor->ResultVar,
+                  ObjectPointerList[I]->Components[J]->
+                          ProductTail!=NULL?ObjectPointerList[I]->Components[J]->ProductTail->ItemId:
+                      -1,
+                  ObjectPointerList[I]->Components[J]->Input,
+                  ObjectPointerList[I]->Components[J]->AF) > 0) {
+
+        fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
+        for (int K = 1; K < ObjectPointerList[I]->Components[J]->Height; ++K)
+          fprintf(FP, ", %d", ProductPath[K]->ItemId);
+
+        if ((uint64_t)I == NumObjects-1 && J == ObjectPointerList[I]->NumAFComponents-1)
+          fprintf(FP, "]\n\t\t}\n");
+        else
+          fprintf(FP, "]\n\t\t},\n");
+      }
+    }
+
+    I++;
+
+  }
+  fprintf(FP, "\t]\n");
+
+  fprintf(FP, "}\n");
+}
 /* --------------------------------- AFTable ---------------------------------*/
 
 struct AFTable {
@@ -149,25 +216,6 @@ void fAFfp64markForResult(double res) {
 
 int min(int a, int b) {
   return (a > b)? b : a;
-}
-
-AFProduct **fAFFlattenAFComponentsPath(AFProduct *ProductObject) {
-  AFProduct *ProductObjectWalker = ProductObject;
-  AFProduct **ProductPath;
-
-  if((ProductPath =
-           (AFProduct **)malloc(sizeof(AFProduct*) * ProductObject->Height)) == NULL) {
-    printf("#fAF: Not enough memory for AFProduct pointers!");
-    exit(EXIT_FAILURE);
-  }
-  ProductPath[0] = &*ProductObject;
-
-  for (int I = 1; I < ProductObject->Height; ++I) {
-    ProductPath[I] = &*(ProductObjectWalker->ProductTail);
-    ProductObjectWalker = ProductObjectWalker->ProductTail;
-  }
-
-  return ProductPath;
 }
 
 AFProduct **fAFFlattenAllComponentPaths() {
@@ -523,50 +571,13 @@ void fAFStoreAFs() {
   fAFGenerateFileString(File, "fAF_", ".json");
 
   // Table Output
-  FILE *FP = fopen(File, "w");
-  fprintf(FP, "{\n");
-
-  fprintf(FP, "\t\"AFs\": [\n");
-  int I = 0;
-  while ((uint64_t)I < AFs->ListLength) {
-    for (int J = 0; J < AFs->AFItems[I]->NumAFComponents; ++J) {
-      AFProduct **ProductPath= fAFFlattenAFComponentsPath(AFs->AFItems[I]->Components[J]);
-      if (fprintf(FP,
-                  "\t\t{\n"
-                  "\t\t\t\"ProductItemId\": %d,\n"
-                  "\t\t\t\"ACItemId\":%d,\n"
-                  "\t\t\t\"ACItemString\": \"%s\",\n"
-                  "\t\t\t\"ProductTailItemId\": %d,\n"
-                  "\t\t\t\"Input\": \"%s\",\n"
-                  "\t\t\t\"AF\": %lf,\n",
-                  AFs->AFItems[I]->Components[J]->ItemId,
-                  AFs->AFItems[I]->Components[J]->Factor->ItemId,
-                  AFs->AFItems[I]->Components[J]->Factor->ResultVar,
-                  AFs->AFItems[I]->Components[J]->
-                          ProductTail!=NULL?AFs->AFItems[I]->Components[J]->ProductTail->ItemId:
-                      -1,
-                  AFs->AFItems[I]->Components[J]->Input,
-                  AFs->AFItems[I]->Components[J]->AF) > 0) {
-
-        fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
-        for (int K = 1; K < AFs->AFItems[I]->Components[J]->Height; ++K)
-          fprintf(FP, ", %d", ProductPath[K]->ItemId);
-
-        if ((uint64_t)I == AFs->ListLength-1 && J == AFs->AFItems[I]->NumAFComponents-1)
-          fprintf(FP, "]\n\t\t}\n");
-        else
-          fprintf(FP, "]\n\t\t},\n");
-      }
-    }
-
-    I++;
-    
+  FILE *FP;
+  if((FP = fopen(File, "w")) != NULL) {
+    fAFStoreAFItems(FP, AFs->AFItems, AFs->ListLength);
+    fclose(FP);
+  } else {
+    printf("%s cannot be opened.\n", File);
   }
-  fprintf(FP, "\t]\n");
-
-  fprintf(FP, "}\n");
-
-  fclose(FP);
 
   printf("Amplification Factors written to file: %s\n", File);
 #endif

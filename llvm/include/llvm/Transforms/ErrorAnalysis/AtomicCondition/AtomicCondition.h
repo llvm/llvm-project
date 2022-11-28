@@ -16,6 +16,19 @@
 #include <stdint.h>
 #include <sys/stat.h>
 
+/*----------------------------------------------------------------------------*/
+/* Constants                                                                  */
+/*----------------------------------------------------------------------------*/
+#define LOG_DIRECTORY_NAME ".fAF_logs"
+#define AC_ITEM_LIST_SIZE 1000000
+
+
+/*----------------------------------------------------------------------------*/
+/* Globals                                                                    */
+/*----------------------------------------------------------------------------*/
+
+struct ACTable *ACs;
+int ACItemCounter;
 
 /*----------------------------------------------------------------------------*/
 /* Data Structures and Types                                                  */
@@ -65,21 +78,67 @@ struct ACTable {
   struct ACItem **ACItems;
 };
 
+// Function to write NumObjects from ObjectPointerList into file with descriptor
+// FP.
+void fACStoreACItems(FILE *FP, ACItem **ObjectPointerList, uint64_t NumObjects) {
+  assert(FP != NULL && "File descriptor is NULL.");
+  assert(ObjectPointerList != NULL && "ObjectPointerList is NULL");
+
+  long unsigned int RecordsStored = 0;
+
+  fprintf(FP, "{\n");
+
+  fprintf(FP, "\t\"ACs\": [\n");
+  int I = 0;
+  while (I < AC_ITEM_LIST_SIZE) {
+    if (ObjectPointerList[I]!=NULL) {
+      fprintf(FP,
+              "\t\t{\n"
+              "\t\t\t\"ItemId\": %d,\n"
+              "\t\t\t\"Function\": %d,\n"
+              "\t\t\t\"ResultVar\": \"%s\",\n",
+              ObjectPointerList[I]->ItemId,
+              ObjectPointerList[I]->F,
+              ObjectPointerList[I]->ResultVar);
+      for (int J = 0; J < ObjectPointerList[I]->NumOperands; ++J) {
+        fprintf(FP,
+                "\t\t\t\"Operand %d Name\": \"%s\",\n"
+                "\t\t\t\"Operand %d Value\": %lf,\n",
+                J,
+                ObjectPointerList[I]->OperandNames[J],
+                J,
+                ObjectPointerList[I]->OperandValues[J]);
+      }
+      for (int J = 0; J < ObjectPointerList[I]->NumOperands; ++J) {
+        fprintf(FP,
+                "\t\t\t\"ACWRTOperand %d\": %lf,\n",
+                J,
+                ObjectPointerList[I]->ACWRTOperands[J]);
+      }
+      for (int J = 0; J < ObjectPointerList[I]->NumOperands; ++J) {
+        fprintf(FP,
+                "\t\t\t\"ACStringWRTOp %d\": \"%s\",\n",
+                J,
+                ObjectPointerList[I]->ACStrings[J]);
+      }
+      fprintf(FP,"\t\t\t\"File Name\": \"%s\",\n", ObjectPointerList[I]->FileName);
+      fprintf(FP,"\t\t\t\"Line Number\": %d\n", ObjectPointerList[I]->LineNumber);
+
+      RecordsStored++;
+
+      if (RecordsStored != NumObjects)
+        fprintf(FP, "\t\t},\n");
+      else
+        fprintf(FP, "\t\t}\n");
+    }
+    I++;
+  }
+  fprintf(FP, "\t]\n");
+
+  fprintf(FP, "}\n");
+}
+
 typedef struct ACTable ACTable;
-
-/*----------------------------------------------------------------------------*/
-/* Constants                                                                  */
-/*----------------------------------------------------------------------------*/
-#define LOG_DIRECTORY_NAME ".fAF_logs"
-#define AC_ITEM_LIST_SIZE 1000000
-
-
-/*----------------------------------------------------------------------------*/
-/* Globals                                                                    */
-/*----------------------------------------------------------------------------*/
-
-struct ACTable *ACs;
-int ACItemCounter;
 
 // ---------------------------------------------------------------------------
 // ---------------------------- Utility Functions ----------------------------
@@ -933,61 +992,13 @@ void fACStoreACs() {
   fAFGenerateFileString(File, "fAC_", ".json");
 
   // Table Output
-  FILE *FP = fopen(File, "w");
-  fprintf(FP, "{\n");
-
-  long unsigned int RecordsStored = 0;
-
-  fprintf(FP, "\t\"ACs\": [\n");
-  int I = 0;
-  while (I < AC_ITEM_LIST_SIZE) {
-    if (ACs->ACItems[I]!=NULL) {
-      fprintf(FP,
-                  "\t\t{\n"
-                  "\t\t\t\"ItemId\": %d,\n"
-                  "\t\t\t\"Function\": %d,\n"
-                  "\t\t\t\"ResultVar\": \"%s\",\n",
-                  ACs->ACItems[I]->ItemId,
-                  ACs->ACItems[I]->F,
-                  ACs->ACItems[I]->ResultVar);
-      for (int J = 0; J < ACs->ACItems[I]->NumOperands; ++J) {
-        fprintf(FP,
-                "\t\t\t\"Operand %d Name\": \"%s\",\n"
-               "\t\t\t\"Operand %d Value\": %lf,\n",
-               J,
-               ACs->ACItems[I]->OperandNames[J],
-               J,
-               ACs->ACItems[I]->OperandValues[J]);
-      }
-      for (int J = 0; J < ACs->ACItems[I]->NumOperands; ++J) {
-        fprintf(FP,
-                "\t\t\t\"ACWRTOperand %d\": %lf,\n",
-               J,
-               ACs->ACItems[I]->ACWRTOperands[J]);
-      }
-      for (int J = 0; J < ACs->ACItems[I]->NumOperands; ++J) {
-        fprintf(FP,
-                "\t\t\t\"ACStringWRTOp %d\": \"%s\",\n",
-               J,
-               ACs->ACItems[I]->ACStrings[J]);
-      }
-      fprintf(FP,"\t\t\t\"File Name\": \"%s\",\n", ACs->ACItems[I]->FileName);
-      fprintf(FP,"\t\t\t\"Line Number\": %d\n", ACs->ACItems[I]->LineNumber);
-
-      RecordsStored++;
-
-      if (RecordsStored != ACs->ListLength)
-        fprintf(FP, "\t\t},\n");
-      else
-        fprintf(FP, "\t\t}\n");
-    }
-    I++;
+  FILE *FP;
+  if((FP = fopen(File, "w")) != NULL) {
+    fACStoreACItems(FP, ACs->ACItems, ACs->ListLength);
+    fclose(FP);
+  } else {
+    printf("%s cannot be opened.\n", File);
   }
-  fprintf(FP, "\t]\n");
-
-  fprintf(FP, "}\n");
-
-  fclose(FP);
 
   printf("Atomic Conditions written to file: %s\n", File);
 #endif
