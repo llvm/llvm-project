@@ -26,8 +26,8 @@ static std::vector<bool> GetPoisonedMask(char *begin, char *end) {
   return result;
 }
 
-static int GetFirstMissmatch(const std::vector<bool> &a,
-                             const std::vector<bool> &b) {
+static int GetFirstMismatch(const std::vector<bool> &a,
+                            const std::vector<bool> &b) {
   return std::mismatch(a.begin(), a.end(), b.begin(), b.end()).first -
          a.begin();
 }
@@ -97,7 +97,7 @@ void TestContainer(size_t capacity, size_t off_begin, bool poison_buffer) {
       assert(!is_valid);
       assert(bad_address == std::min(cur, end));
       assert(bad_address ==
-             st_beg + GetFirstMissmatch(masks[i], masks[cur - st_beg]));
+             st_beg + GetFirstMismatch(masks[i], masks[cur - st_beg]));
     }
   }
 
@@ -174,7 +174,7 @@ void TestDoubleEndedContainer(size_t capacity, size_t off_begin,
       __sanitizer_annotate_double_ended_contiguous_container(
           st_beg, st_end, old_beg, old_end, beg, end);
 
-      // Try to missmatch the end of the container.
+      // Try to mismatch the end of the container.
       char *cur_first = std::max(end - 2 * kGranularity, beg);
       char *cur_last = std::min(end + 2 * kGranularity, st_end);
       for (char *cur = cur_first; cur <= cur_last; ++cur) {
@@ -193,10 +193,10 @@ void TestDoubleEndedContainer(size_t capacity, size_t off_begin,
         assert(!is_valid);
         assert(bad_address);
         assert(bad_address ==
-               st_beg + GetFirstMissmatch(masks[i][j], masks[i][cur - st_beg]));
+               st_beg + GetFirstMismatch(masks[i][j], masks[i][cur - st_beg]));
       }
 
-      // Try to missmatch the begin of the container.
+      // Try to mismatch the begin of the container.
       cur_first = std::max(beg - 2 * kGranularity, st_beg);
       cur_last = std::min(beg + 2 * kGranularity, end);
       for (char *cur = cur_first; cur <= cur_last; ++cur) {
@@ -217,7 +217,7 @@ void TestDoubleEndedContainer(size_t capacity, size_t off_begin,
         assert(!is_valid);
         assert(bad_address);
         assert(bad_address ==
-               st_beg + GetFirstMissmatch(masks[i][j], masks[cur - st_beg][j]));
+               st_beg + GetFirstMismatch(masks[i][j], masks[cur - st_beg][j]));
       }
     }
   }
