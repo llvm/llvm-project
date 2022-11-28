@@ -233,14 +233,18 @@ public:
     if (!Pragma)
       return false;
 
-    if (Pragma->consume_front("private, include ")) {
-      // We always insert using the spelling from the pragma.
-      if (auto *FE = SM.getFileEntryForID(SM.getFileID(Range.getBegin())))
-        Out->IWYUPublic.insert(
-            {FE->getLastRef().getUniqueID(),
-             save(Pragma->startswith("<") || Pragma->startswith("\"")
-                      ? (*Pragma)
-                      : ("\"" + *Pragma + "\"").str())});
+    if (Pragma->consume_front("private")) {
+      auto *FE = SM.getFileEntryForID(SM.getFileID(Range.getBegin()));
+      if (!FE)
+        return false;
+      StringRef PublicHeader;
+      if (Pragma->consume_front(", include ")) {
+        // We always insert using the spelling from the pragma.
+        PublicHeader = save(Pragma->startswith("<") || Pragma->startswith("\"")
+                                ? (*Pragma)
+                                : ("\"" + *Pragma + "\"").str());
+      }
+      Out->IWYUPublic.insert({FE->getLastRef().getUniqueID(), PublicHeader});
       return false;
     }
     FileID CommentFID = SM.getFileID(Range.getBegin());
@@ -344,6 +348,10 @@ PragmaIncludes::getExporters(const FileEntry *File, FileManager &FM) const {
 
 bool PragmaIncludes::isSelfContained(const FileEntry *FE) const {
   return !NonSelfContainedFiles.contains(FE->getUniqueID());
+}
+
+bool PragmaIncludes::isPrivate(const FileEntry *FE) const {
+  return IWYUPublic.find(FE->getUniqueID()) != IWYUPublic.end();
 }
 
 std::unique_ptr<ASTConsumer> RecordedAST::record() {
