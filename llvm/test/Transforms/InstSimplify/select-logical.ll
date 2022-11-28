@@ -122,3 +122,241 @@ define i1 @logical_and_of_or_no_common_op(i1 %x, i1 %y, i1 %z) {
   %and = select i1 %xorynot, i1 %xorz, i1 false
   ret i1 %and
 }
+
+; !(X || Y) && X --> false
+
+define i1 @logical_not_or_and_case0(i1 %x, i1 %y) {
+; CHECK-LABEL: @logical_not_or_and_case0(
+; CHECK-NEXT:    [[L_AND:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[L_AND]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT]], i1 [[X]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %l.and = select i1 %x, i1 true, i1 %y
+  %not = xor i1 %l.and, true
+  %r = select i1 %not, i1 %x, i1 false
+  ret i1 %r
+}
+
+
+; !(X || Y) && Y --> false
+
+define i1 @logical_not_or_and_case1(i1 %x, i1 %y) {
+; CHECK-LABEL: @logical_not_or_and_case1(
+; CHECK-NEXT:    [[L_AND:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[L_AND]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT]], i1 [[Y]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %l.and = select i1 %x, i1 true, i1 %y
+  %not = xor i1 %l.and, true
+  %r = select i1 %not, i1 %y, i1 false
+  ret i1 %r
+}
+
+; vector case !(X || Y) && X --> false
+
+define <3 x i1> @logical_not_or_and_vector1(<3 x i1> %x, <3 x i1> %y) {
+; CHECK-LABEL: @logical_not_or_and_vector1(
+; CHECK-NEXT:    [[L_AND:%.*]] = select <3 x i1> [[X:%.*]], <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> [[Y:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i1> [[L_AND]], <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[NOT]], <3 x i1> [[X]], <3 x i1> zeroinitializer
+; CHECK-NEXT:    ret <3 x i1> [[R]]
+;
+  %l.and = select <3 x i1> %x, <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> %y
+  %not = xor <3 x i1> %l.and, <i1 true, i1 true, i1 true>
+  %r = select <3 x i1> %not, <3 x i1> %x, <3 x i1> <i1 false, i1 false, i1 false>
+  ret <3 x i1> %r
+}
+
+; vector case !(X || Y) && X --> false
+
+define <3 x i1> @logical_not_or_and_vector1_poison(<3 x i1> %x, <3 x i1> %y) {
+; CHECK-LABEL: @logical_not_or_and_vector1_poison(
+; CHECK-NEXT:    [[L_AND:%.*]] = select <3 x i1> [[X:%.*]], <3 x i1> <i1 true, i1 true, i1 poison>, <3 x i1> [[Y:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i1> [[L_AND]], <i1 true, i1 poison, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[NOT]], <3 x i1> [[X]], <3 x i1> <i1 poison, i1 false, i1 false>
+; CHECK-NEXT:    ret <3 x i1> [[R]]
+;
+  %l.and = select <3 x i1> %x, <3 x i1> <i1 true, i1 true, i1 poison>, <3 x i1> %y
+  %not = xor <3 x i1> %l.and, <i1 true, i1 poison, i1 true>
+  %r = select <3 x i1> %not, <3 x i1> %x, <3 x i1> <i1 poison, i1 false, i1 false>
+  ret <3 x i1> %r
+}
+
+; negative test - must have common operands
+
+define i1 @logical_not_or_and_negative1(i1 %x, i1 %y, i1 %z) {
+; CHECK-LABEL: @logical_not_or_and_negative1(
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 false, i1 [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %or = or i1 %x, %y
+  %r = select i1 %or, i1 false, i1 %z
+  ret i1 %r
+}
+
+
+; another way for !(X || Y) && X --> false
+
+define i1 @logical_not_or_and_case2(i1 %x, i1 %y) {
+; CHECK-LABEL: @logical_not_or_and_case2(
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 false, i1 [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %or = or i1 %x, %y
+  %r = select i1 %or, i1 false, i1 %x
+  ret i1 %r
+}
+
+; another way for !(X || Y) && Y --> false
+
+define i1 @logical_not_or_and_case3(i1 %x, i1 %y) {
+; CHECK-LABEL: @logical_not_or_and_case3(
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 false, i1 [[Y]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %or = or i1 %x, %y
+  %r = select i1 %or, i1 false, i1 %y
+  ret i1 %r
+}
+
+; vector case !(X || Y) && X --> false
+
+define <2 x i1> @logical_not_or_and_vector2(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @logical_not_or_and_vector2(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[OR]], <2 x i1> zeroinitializer, <2 x i1> [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %or = or <2 x i1> %x, %y
+  %r = select <2 x i1> %or, <2 x i1> <i1 false, i1 false>, <2 x i1> %x
+  ret <2 x i1> %r
+}
+
+; vector case !(X || Y) && X --> false
+
+define <2 x i1> @logical_not_or_and_vector2_poison(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @logical_not_or_and_vector2_poison(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[OR]], <2 x i1> <i1 poison, i1 false>, <2 x i1> [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %or = or <2 x i1> %x, %y
+  %r = select <2 x i1> %or, <2 x i1> <i1 poison, i1 false>, <2 x i1> %x
+  ret <2 x i1> %r
+}
+
+; negative test - must have common operands
+
+define i1 @logical_not_or_and_negative2(i1 %x, i1 %y, i1 %z) {
+; CHECK-LABEL: @logical_not_or_and_negative2(
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 false, i1 [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %or = or i1 %x, %y
+  %r = select i1 %or, i1 false, i1 %z
+  ret i1 %r
+}
+
+; (X || Y) ? X : Y --> X
+
+define i1 @select_or_same_op(i1 %x, i1 %y) {
+; CHECK-LABEL: @select_or_same_op(
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 [[X]], i1 [[Y]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %or = or i1 %x, %y
+  %r = select i1 %or, i1 %x, i1 %y
+  ret i1 %r
+}
+
+
+define i1 @select_or_same_op_commute(i1 %x, i1 %y) {
+; CHECK-LABEL: @select_or_same_op_commute(
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 [[Y]], i1 [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %or = or i1 %x, %y
+  %r = select i1 %or, i1 %y, i1 %x
+  ret i1 %r
+}
+
+
+define <2 x i1> @select_or_same_op_vector1(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @select_or_same_op_vector1(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[OR]], <2 x i1> [[X]], <2 x i1> [[Y]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %or = or <2 x i1> %x, %y
+  %r = select <2 x i1> %or, <2 x i1> %x, <2 x i1> %y
+  ret <2 x i1> %r
+}
+
+
+define i1 @select_logic_or1_same_op(i1 %x, i1 %y) {
+; CHECK-LABEL: @select_logic_or1_same_op(
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 [[X]], i1 [[Y]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %or = select i1 %x, i1 true, i1 %y
+  %r = select i1 %or, i1 %x, i1 %y
+  ret i1 %r
+}
+
+
+define i1 @select_logic_or2_same_op(i1 %x, i1 %y) {
+; CHECK-LABEL: @select_logic_or2_same_op(
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[Y:%.*]], i1 true, i1 [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 [[X]], i1 [[Y]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %or = select i1 %y, i1 true, i1 %x
+  %r = select i1 %or, i1 %x, i1 %y
+  ret i1 %r
+}
+
+
+define <2 x i1> @select_or_same_op_vector2(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @select_or_same_op_vector2(
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[OR]], <2 x i1> [[X]], <2 x i1> [[Y]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %or = select <2 x i1> %x, <2 x i1> <i1 true, i1 true>, <2 x i1> %y
+  %r = select <2 x i1> %or, <2 x i1> %x, <2 x i1> %y
+  ret <2 x i1> %r
+}
+
+
+define <2 x i1> @select_or_same_op_vector2_poison(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @select_or_same_op_vector2_poison(
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> <i1 true, i1 poison>, <2 x i1> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[OR]], <2 x i1> [[X]], <2 x i1> [[Y]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %or = select <2 x i1> %x, <2 x i1> <i1 true, i1 poison>, <2 x i1> %y
+  %r = select <2 x i1> %or, <2 x i1> %x, <2 x i1> %y
+  ret <2 x i1> %r
+}
+
+; negative test - must have common operands
+
+define i1 @select_or_same_op_negatvie(i1 %x, i1 %y, i1 %z) {
+; CHECK-LABEL: @select_or_same_op_negatvie(
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 [[X]], i1 [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %or = or i1 %x, %y
+  %r = select i1 %or, i1 %x, i1 %z
+  ret i1 %r
+}
