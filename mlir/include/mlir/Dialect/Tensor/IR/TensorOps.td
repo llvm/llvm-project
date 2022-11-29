@@ -1761,6 +1761,14 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     `into` $dest attr-dict `:` type($source) `->` type($dest)
   }];
 
+  let builders = [
+    OpBuilder<(ins "Value":$source, "Value":$dest,
+      "ArrayRef<int64_t>":$innerDimsPos,
+      "ArrayRef<OpFoldResult>":$innerTiles,
+      CArg<"Optional<Value>", "llvm::None">:$paddingValue,
+      CArg<"ArrayRef<int64_t>", "{}">:$outerDimsPerm)>
+  ];
+
   let extraClassDeclaration = commonExtraClassDeclaration # [{
     // Method to get the `ShapedType` of the result based on the inner tiles,
     // position of the inner tiles (innerDimsPos)  and interchange vector of  
