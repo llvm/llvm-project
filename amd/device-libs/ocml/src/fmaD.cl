@@ -13,15 +13,25 @@ MATH_MANGLE(fma)(double a, double b, double c)
     return BUILTIN_FMA_F64(a, b, c);
 }
 
-#define GEN(LN,UN) \
+CONSTATTR double
+MATH_MANGLE(fma_rte)(double a, double b, double c)
+{
+    return BUILTIN_FMA_F64(a, b, c);
+}
+
+#pragma STDC FENV_ACCESS ON
+
+#define GEN(LN,RM) \
 CONSTATTR double \
 MATH_MANGLE(LN)(double a, double b, double c) \
 { \
-    return BUILTIN_##UN##_F64(a, b, c); \
+    BUILTIN_SETROUND_F16F64(RM); \
+    double ret = BUILTIN_FMA_F64(a, b, c); \
+    BUILTIN_SETROUND_F16F64(ROUND_RTE); \
+    return ret; \
 }
 
-// GEN(fma_rte,FMA_RTE)
-// GEN(fma_rtn,FMA_RTN)
-// GEN(fma_rtp,FMA_RTP)
-// GEN(fma_rtz,FMA_RTZ)
+GEN(fma_rtn, ROUND_RTN)
+GEN(fma_rtp, ROUND_RTP)
+GEN(fma_rtz, ROUND_RTZ)
 

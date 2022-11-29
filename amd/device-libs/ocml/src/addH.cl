@@ -7,15 +7,25 @@
 
 #include "mathH.h"
 
-#define GEN(LN,UN) \
+CONSTATTR half
+MATH_MANGLE(add_rte)(half x, half y)
+{
+    return x + y;
+}
+
+#pragma STDC FENV_ACCESS ON
+
+#define GEN(LN,RM) \
 CONSTATTR half \
 MATH_MANGLE(LN)(half x, half y) \
 { \
-    return BUILTIN_##UN##_F16(x, y); \
+    BUILTIN_SETROUND_F16F64(RM); \
+    half ret = x + y; \
+    BUILTIN_SETROUND_F16F64(ROUND_RTE); \
+    return ret; \
 }
 
-// GEN(add_rte,ADD_RTE)
-// GEN(add_rtn,ADD_RTN)
-// GEN(add_rtp,ADD_RTP)
-// GEN(add_rtz,ADD_RTZ)
+GEN(add_rtn, ROUND_RTN)
+GEN(add_rtp, ROUND_RTP)
+GEN(add_rtz, ROUND_RTZ)
 

@@ -19,15 +19,25 @@ MATH_MANGLE(fma)(float a, float b, float c)
     return BUILTIN_FMA_F32(a, b, c);
 }
 
-#define GEN(LN,UN) \
+CONSTATTR float
+MATH_MANGLE(fma_rte)(float a, float b, float c)
+{
+    return BUILTIN_FMA_F32(a, b, c);
+}
+
+#pragma STDC FENV_ACCESS ON
+
+#define GEN(LN,RM) \
 CONSTATTR float \
 MATH_MANGLE(LN)(float a, float b, float c) \
 { \
-    return BUILTIN_##UN##_F32(a, b, c); \
+    BUILTIN_SETROUND_F32(RM); \
+    float ret = BUILTIN_FMA_F32(a, b, c); \
+    BUILTIN_SETROUND_F32(ROUND_RTE); \
+    return ret; \
 }
 
-// GEN(fma_rte,FMA_RTE)
-// GEN(fma_rtn,FMA_RTN)
-// GEN(fma_rtp,FMA_RTP)
-// GEN(fma_rtz,FMA_RTZ)
+GEN(fma_rtn, ROUND_RTN)
+GEN(fma_rtp, ROUND_RTP)
+GEN(fma_rtz, ROUND_RTZ)
 
