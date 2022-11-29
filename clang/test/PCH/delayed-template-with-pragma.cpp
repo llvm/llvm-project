@@ -20,14 +20,14 @@ void a(T t) {
   }
 }
 #else
-// CHECK: !llvm.loop !3
-// CHECK: !llvm.loop !7
-// CHECK: !3 = distinct !{!3, !4, !5}
-// CHECK: !4 = !{!"llvm.loop.mustprogress"}
-// CHECK: !5 = !{!"llvm.loop.unroll.count", i32 4}
-// CHECK: !7 = distinct !{!7, !8, !9}
-// CHECK: !8 = !{!"llvm.loop.parallel_accesses", !6}
-// CHECK: !9 = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: !llvm.loop [[LOOP1:!.*]]
+// CHECK: !llvm.loop [[LOOP2:!.*]]
+// CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[LOOP1A:!.*]], [[LOOP1B:!.*]]}
+// CHECK: [[LOOP1A]] = !{!"llvm.loop.mustprogress"}
+// CHECK: [[LOOP1B]] = !{!"llvm.loop.unroll.count", i32 4}
+// CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[LOOP2A:!.*]], [[LOOP2B:!.*]]}
+// CHECK: [[LOOP2A]] = !{!"llvm.loop.parallel_accesses", [[LOOP2C:!.*]]}
+// CHECK: [[LOOP2B]] = !{!"llvm.loop.vectorize.enable", i1 true}
 // expected-warning@17 {{unused variable 'zz'}}
 void foo()
 {
