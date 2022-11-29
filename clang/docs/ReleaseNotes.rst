@@ -607,6 +607,8 @@ C++ Language Changes in Clang
   conforming GNU extensions. Projects incompatible with C++17 can add
   ``-std=gnu++14`` to their build settings to restore the previous behaviour.
 - Implemented DR2358 allowing init captures in lambdas in default arguments.
+- implemented `DR2654 <https://wg21.link/cwg2654>`_ which undeprecates
+  all compound assignements operations on volatile qualified variables.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
