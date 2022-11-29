@@ -195,7 +195,10 @@ void TestDoubleEndedContainer(size_t capacity, size_t off_begin,
               __sanitizer_double_ended_contiguous_container_find_bad_address(
                   st_beg, beg, cur, st_end);
 
-          if (cur == end) {
+          if (cur == end ||
+              // The last unaligned granule of the storage followed by unpoisoned
+              // bytes looks the same.
+              (!poison_buffer && RoundDown(st_end) <= std::min(cur, end))) {
             assert(is_valid);
             assert(!bad_address);
             continue;
@@ -219,9 +222,13 @@ void TestDoubleEndedContainer(size_t capacity, size_t off_begin,
                   st_beg, cur, end, st_end);
 
           if (cur == beg ||
-              // The first unaligned granule of non-empty container looks the
-              // same.
-              (std::max(beg, cur) < end && RoundDown(beg) == RoundDown(cur))) {
+              // The last unaligned granule of the storage followed by unpoisoned
+              // bytes looks the same.
+              (!poison_buffer && RoundDown(st_end) <= std::min(cur, beg) ||
+               // The first unaligned granule of non-empty container looks the
+               // same.
+               (std::max(beg, cur) < end &&
+                RoundDown(beg) == RoundDown(cur)))) {
             assert(is_valid);
             assert(!bad_address);
             continue;
@@ -268,7 +275,7 @@ int main(int argc, char **argv) {
     for (int j = 0; j < kGranularity * 2; j++) {
       for (int poison = 0; poison < 2; ++poison) {
         TestContainer(i, j, poison);
-        TestDoubleEndedContainer(i, 0, true);
+        TestDoubleEndedContainer(i, j, poison);
       }
     }
   }

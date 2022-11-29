@@ -24,6 +24,10 @@ module polymorphic_test
     procedure :: get_tmp
   end type
 
+  type p3
+    class(p3), pointer :: p(:)
+  end type
+
   contains
 
   ! Test correct access to polymorphic entity component.
@@ -181,5 +185,11 @@ module polymorphic_test
 ! CHECK: %[[CLASS:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[CLASS]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>) -> !fir.box<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
 ! CHECK: fir.call @_QMpolymorphic_testPsub_with_type_array(%[[REBOX]]) {{.*}} : (!fir.box<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> ()
+
+  subroutine derived_type_assignment_with_class()
+    type(p3) :: a
+    type(p3), target :: b(10)
+    a = p3(b)
+  end subroutine
 
 end module

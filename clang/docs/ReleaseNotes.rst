@@ -306,6 +306,11 @@ Bug Fixes
   `Issue 58229 <https://github.com/llvm/llvm-project/issues/58229>`_
 - The builtin type trait ``__is_aggregate`` now returns ``true`` for arrays of incomplete
   types in accordance with the suggested fix for `LWG3823 <https://cplusplus.github.io/LWG/issue3823>`_
+- Fix bug with using enum that could lead to enumerators being treated as if
+  they were part of an overload set. This fixes
+  `Issue 58067 <https://github.com/llvm/llvm-project/issues/58057>`_
+  `Issue 59014 <https://github.com/llvm/llvm-project/issues/59014>`_
+  `Issue 54746 <https://github.com/llvm/llvm-project/issues/54746>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -445,6 +450,10 @@ Non-comprehensive list of changes in this release
   It can be used to writing conditionally constexpr code that uses builtins.
 - The time profiler (using ``-ftime-trace`` option) now traces various constant
   evaluation events.
+- Clang can now generate a PCH when using ``-fdelayed-template-parsing`` for
+  code with templates containing loop hint pragmas, OpenMP pragmas, and
+  ``#pragma unused``.
+
 
 New Compiler Flags
 ------------------
