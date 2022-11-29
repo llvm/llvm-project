@@ -1,4 +1,6 @@
-// RUN: %libomptarget-compilexx-run-and-check-generic
+// The test is disabled for now because of the flaky failure which can cause
+// Buildbot gives false negative results.
+// %libomptarget-compilexx-run-and-check-generic
 
 // Currently hangs on amdgpu
 // UNSUPPORTED: amdgcn-amd-amdhsa
