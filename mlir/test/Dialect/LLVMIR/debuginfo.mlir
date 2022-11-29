@@ -81,16 +81,16 @@
   file = #file, line = 4, scopeLine = 4, subprogramFlags = "Definition", type = #spType1
 >
 
-// CHECK-DAG: #[[VAR0:.*]] = #llvm.di_local_variable<scope = #[[SP0]], name = "arg", file = #[[FILE]], line = 6, arg = 1, alignInBits = 0, type = #[[INT0]]>
+// CHECK-DAG: #[[VAR0:.*]] = #llvm.di_local_variable<scope = #[[SP0]], name = "alloc", file = #[[FILE]], line = 6, arg = 1, alignInBits = 32, type = #[[INT0]]>
 #var0 = #llvm.di_local_variable<
-  scope = #sp0, name = "arg", file = #file,
-  line = 6, arg = 1, alignInBits = 0, type = #int0
+  scope = #sp0, name = "alloc", file = #file,
+  line = 6, arg = 1, alignInBits = 32, type = #int0
 >
 
-// CHECK-DAG: #[[VAR1:.*]] = #llvm.di_local_variable<scope = #[[SP1]], name = "arg", file = #[[FILE]], line = 7, arg = 2, alignInBits = 0, type = #[[INT1]]>
+// CHECK-DAG: #[[VAR1:.*]] = #llvm.di_local_variable<scope = #[[SP1]], name = "arg">
 #var1 = #llvm.di_local_variable<
-  scope = #sp1, name = "arg", file = #file,
-  line = 7, arg = 2, alignInBits = 0, type = #int1
+  // Omit the optional parameters.
+  scope = #sp1, name = "arg"
 >
 
 // CHECK: llvm.func @addr(%[[ARG:.*]]: i64)
@@ -99,16 +99,16 @@ llvm.func @addr(%arg: i64) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr<i64>
 
-  // CHECK: llvm.dbg.addr #[[VAR0]] = %[[ALLOC]]
-  // CHECK: llvm.dbg.declare #[[VAR0]] = %[[ALLOC]]
-  llvm.dbg.addr #var0 = %alloc : !llvm.ptr<i64>
-  llvm.dbg.declare #var0 = %alloc : !llvm.ptr<i64>
+  // CHECK: llvm.intr.dbg.addr #[[VAR0]] = %[[ALLOC]]
+  // CHECK: llvm.intr.dbg.declare #[[VAR0]] = %[[ALLOC]]
+  llvm.intr.dbg.addr #var0 = %alloc : !llvm.ptr<i64>
+  llvm.intr.dbg.declare #var0 = %alloc : !llvm.ptr<i64>
   llvm.return
 }
 
 // CHECK: llvm.func @value(%[[ARG:.*]]: i32)
 llvm.func @value(%arg: i32) -> i32 {
-  // CHECK: llvm.dbg.value #[[VAR1]] = %[[ARG]]
-  llvm.dbg.value #var1 = %arg : i32
+  // CHECK: llvm.intr.dbg.value #[[VAR1]] = %[[ARG]]
+  llvm.intr.dbg.value #var1 = %arg : i32
   llvm.return %arg : i32
 }
