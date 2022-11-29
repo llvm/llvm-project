@@ -290,14 +290,14 @@ define hidden void @blam() {
 ; GCN-NEXT:    v_writelane_b32 v40, s47, 15
 ; GCN-NEXT:    v_writelane_b32 v40, s48, 16
 ; GCN-NEXT:    v_writelane_b32 v40, s49, 17
+; GCN-NEXT:    s_mov_b64 s[34:35], s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v41, v31
 ; GCN-NEXT:    s_mov_b32 s44, s15
 ; GCN-NEXT:    s_mov_b32 s45, s14
 ; GCN-NEXT:    s_mov_b32 s46, s13
 ; GCN-NEXT:    s_mov_b32 s47, s12
-; GCN-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; GCN-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; GCN-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; GCN-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; GCN-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; GCN-NEXT:    s_mov_b64 s[40:41], s[4:5]
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
@@ -354,9 +354,9 @@ define hidden void @blam() {
 ; GCN-NEXT:    ; in Loop: Header=BB1_4 Depth=2
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[40:41]
-; GCN-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; GCN-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; GCN-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; GCN-NEXT:    s_mov_b64 s[6:7], s[34:35]
+; GCN-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; GCN-NEXT:    s_mov_b64 s[10:11], s[36:37]
 ; GCN-NEXT:    s_mov_b32 s12, s47
 ; GCN-NEXT:    s_mov_b32 s13, s46
 ; GCN-NEXT:    s_mov_b32 s14, s45

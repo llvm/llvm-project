@@ -32,7 +32,7 @@ define void @tail_recursive_with_stack() {
 ; For an arbitrary recursive call, report a large number for unknown stack
 ; usage for code object v4 and older
 ; CHECK-LABEL: {{^}}calls_recursive:
-; CHECK: .amdhsa_private_segment_fixed_size 16400{{$}}
+; CHECK: .amdhsa_private_segment_fixed_size 16{{$}}
 ;
 ; V5-LABEL: {{^}}calls_recursive:
 ; V5: .amdhsa_private_segment_fixed_size 0{{$}}
@@ -56,7 +56,7 @@ define amdgpu_kernel void @kernel_indirectly_calls_tail_recursive() {
 ; in the kernel.
 
 ; CHECK-LABEL: {{^}}kernel_calls_tail_recursive:
-; CHECK: .amdhsa_private_segment_fixed_size 16384{{$}}
+; CHECK: .amdhsa_private_segment_fixed_size 0{{$}}
 ;
 ; V5-LABEL: {{^}}kernel_calls_tail_recursive:
 ; V5: .amdhsa_private_segment_fixed_size 0{{$}}
@@ -67,7 +67,7 @@ define amdgpu_kernel void @kernel_calls_tail_recursive() {
 }
 
 ; CHECK-LABEL: {{^}}kernel_calls_tail_recursive_with_stack:
-; CHECK: .amdhsa_private_segment_fixed_size 16384{{$}}
+; CHECK: .amdhsa_private_segment_fixed_size 8{{$}}
 ;
 ; V5-LABEL: {{^}}kernel_calls_tail_recursive_with_stack:
 ; V5: .amdhsa_private_segment_fixed_size 8{{$}}
