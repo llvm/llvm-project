@@ -5,13 +5,13 @@
 //===----------------------------------------------------------------------===//
 
 s_waitcnt_expcnt exec_hi, 0x1234
-// CHECK: error: instruction not supported on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_waitcnt_lgkmcnt exec_hi, 0x1234
-// CHECK: error: instruction not supported on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_waitcnt_vmcnt exec_hi, 0x1234
-// CHECK: error: instruction not supported on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_waitcnt_vscnt exec_hi, 0x1234
-// CHECK: error: instruction not supported on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
