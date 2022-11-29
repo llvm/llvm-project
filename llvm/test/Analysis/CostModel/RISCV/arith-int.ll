@@ -802,3 +802,54 @@ define i32 @srem() {
 
   ret i32 undef
 }
+
+
+; For constants, have to account for cost of materializing the constant itself
+; This test exercises a few interesting constant patterns at VLEN=128
+define void @add_of_constant() {
+; CHECK-LABEL: 'add_of_constant'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = add <4 x i32> poison, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = add <4 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = add <4 x i32> zeroinitializer, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = add <2 x i64> zeroinitializer, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = add <4 x i32> <i32 1, i32 1, i32 1, i32 1>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = add <2 x i64> <i64 1, i64 1>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = add <4 x i32> <i32 4096, i32 4096, i32 4096, i32 4096>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = add <4 x i32> <i32 1, i32 1, i32 2, i32 1>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = add <4 x i32> <i32 2, i32 1, i32 1, i32 1>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = add <4 x i32> <i32 0, i32 1, i32 2, i32 3>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = add <4 x i32> <i32 1, i32 2, i32 3, i32 4>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = add <4 x i32> <i32 -1, i32 -2, i32 -3, i32 -4>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = add <4 x i32> <i32 2, i32 4, i32 6, i32 8>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = add <4 x i32> <i32 -1, i32 0, i32 2, i32 1>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = add <4 x i32> <i32 256, i32 4096, i32 57, i32 1>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+
+  ; poison and undef
+  add <4 x i32> poison, undef
+  add <4 x i32> undef, undef
+
+  ; Various splats
+  add <4 x i32> zeroinitializer, undef
+  add <2 x i64> zeroinitializer, undef
+  add <4 x i32> <i32 1, i32 1, i32 1, i32 1>, undef
+  add <2 x i64> <i64 1, i64 1>, undef
+  add <4 x i32> <i32 4096, i32 4096, i32 4096, i32 4096>, undef
+
+  ; Nearly splats
+  add <4 x i32> <i32 1, i32 1, i32 2, i32 1>, undef
+  add <4 x i32> <i32 2, i32 1, i32 1, i32 1>, undef
+
+  ; Step vector functions
+  add <4 x i32> <i32 0, i32 1, i32 2, i32 3>, undef
+  add <4 x i32> <i32 1, i32 2, i32 3, i32 4>, undef
+  add <4 x i32> <i32 -1, i32 -2, i32 -3, i32 -4>, undef
+  add <4 x i32> <i32 2, i32 4, i32 6, i32 8>, undef
+
+  ; General case 128 bit constants
+  add <4 x i32> <i32 -1, i32 0, i32 2, i32 1>, undef
+  add <4 x i32> <i32 256, i32 4096, i32 57, i32 1>, undef
+
+  ret void
+}
