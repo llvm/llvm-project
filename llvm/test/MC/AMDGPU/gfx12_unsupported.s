@@ -21,3 +21,15 @@ s_subvector_loop_begin s0, 0x1234
 
 s_subvector_loop_end s0, 0x1234
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cbranch_cdbgsys 0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cbranch_cdbguser 0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cbranch_cdbgsys_or_user 0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cbranch_cdbgsys_and_user 0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
