@@ -31,6 +31,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
@@ -38,6 +39,7 @@
 #include "llvm/ADT/bit.h"
 
 #include <cassert>
+#include <cstdint>
 #include <numeric>
 
 #include "mlir/Dialect/Vector/IR/VectorOpsDialect.cpp.inc"
@@ -210,6 +212,28 @@ bool mlir::vector::isDisjointTransferSet(VectorTransferOpInterface transferA,
   if (transferA.source() != transferB.source())
     return false;
   return isDisjointTransferIndices(transferA, transferB);
+}
+
+// Helper to iterate over n-D vector slice elements. Calculate the next
+// `position` in the n-D vector of size `shape`, applying an offset `offsets`.
+// Modifies the `position` in place. Returns a failure when `position` becomes
+// the end position.
+static LogicalResult incSlicePosition(MutableArrayRef<int64_t> position,
+                                      ArrayRef<int64_t> shape,
+                                      ArrayRef<int64_t> offsets) {
+  assert(position.size() == shape.size());
+  assert(position.size() == offsets.size());
+  for (auto [posInDim, dimSize, offsetInDim] :
+       llvm::reverse(llvm::zip(position, shape, offsets))) {
+    ++posInDim;
+    if (posInDim < dimSize + offsetInDim)
+      return success();
+
+    // Carry the overflow to the next loop iteration.
+    posInDim = offsetInDim;
+  }
+
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2392,12 +2416,88 @@ public:
   }
 };
 
+// Pattern to rewrite an InsertStridedSliceOp(ConstantOp into ConstantOp) ->
+// ConstantOp.
+class InsertStridedSliceConstantFolder final
+    : public OpRewritePattern<InsertStridedSliceOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  // Do not create constants with more than `vectorSizeFoldThreashold` elements,
+  // unless the source vector constant has a single use.
+  static constexpr int64_t vectorSizeFoldThreshold = 256;
+
+  LogicalResult matchAndRewrite(InsertStridedSliceOp op,
+                                PatternRewriter &rewriter) const override {
+    // Return if 'InsertOp' operand is not defined by a compatible vector
+    // ConstantOp.
+    TypedValue<VectorType> destVector = op.getDest();
+    Attribute vectorDestCst;
+    if (!matchPattern(destVector, m_Constant(&vectorDestCst)))
+      return failure();
+
+    VectorType destTy = destVector.getType();
+    if (destTy.isScalable())
+      return failure();
+
+    // Make sure we do not create too many large constants.
+    if (destTy.getNumElements() > vectorSizeFoldThreshold &&
+        !destVector.hasOneUse())
+      return failure();
+
+    auto denseDest = vectorDestCst.cast<DenseElementsAttr>();
+
+    TypedValue<VectorType> sourceValue = op.getSource();
+    Attribute sourceCst;
+    if (!matchPattern(sourceValue, m_Constant(&sourceCst)))
+      return failure();
+
+    // TODO: Handle non-unit strides when they become available.
+    if (op.hasNonUnitStrides())
+      return failure();
+
+    VectorType sliceVecTy = sourceValue.getType();
+    ArrayRef<int64_t> sliceShape = sliceVecTy.getShape();
+    int64_t rankDifference = destTy.getRank() - sliceVecTy.getRank();
+    SmallVector<int64_t, 4> offsets = getI64SubArray(op.getOffsets());
+    SmallVector<int64_t, 4> destStrides = computeStrides(destTy.getShape());
+
+    // Calcualte the destination element indices by enumerating all slice
+    // positions within the destination and linearizing them. The enumeration
+    // order is lexicographic which yields a sequence of monotonically
+    // increasing linearized position indices.
+    // Because the destination may have higher dimensionality then the slice,
+    // we keep track of two overlapping sets of positions and offsets.
+    auto denseSlice = sourceCst.cast<DenseElementsAttr>();
+    auto sliceValuesIt = denseSlice.value_begin<Attribute>();
+    auto newValues = llvm::to_vector(denseDest.getValues<Attribute>());
+    SmallVector<int64_t> currDestPosition(offsets.begin(), offsets.end());
+    MutableArrayRef<int64_t> currSlicePosition(
+        currDestPosition.begin() + rankDifference, currDestPosition.end());
+    ArrayRef<int64_t> sliceOffsets(offsets.begin() + rankDifference,
+                                   offsets.end());
+    do {
+      int64_t linearizedPosition = linearize(currDestPosition, destStrides);
+      assert(linearizedPosition < destTy.getNumElements() && "Invalid index");
+      assert(sliceValuesIt != denseSlice.value_end<Attribute>() &&
+             "Invalid slice element");
+      newValues[linearizedPosition] = *sliceValuesIt;
+      ++sliceValuesIt;
+    } while (succeeded(
+        incSlicePosition(currSlicePosition, sliceShape, sliceOffsets)));
+
+    auto newAttr = DenseElementsAttr::get(destTy, newValues);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, newAttr);
+    return success();
+  }
+};
+
 } // namespace
 
 void vector::InsertStridedSliceOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<FoldInsertStridedSliceSplat, FoldInsertStridedSliceOfExtract>(
-      context);
+  results.add<FoldInsertStridedSliceSplat, FoldInsertStridedSliceOfExtract,
+              InsertStridedSliceConstantFolder>(context);
 }
 
 OpFoldResult InsertStridedSliceOp::fold(ArrayRef<Attribute> operands) {
@@ -2855,7 +2955,8 @@ public:
       assert(linearizedPosition < sourceVecTy.getNumElements() &&
              "Invalid index");
       sliceValues.push_back(*(denseValuesBegin + linearizedPosition));
-    } while (succeeded(incPosition(currSlicePosition, sliceShape, offsets)));
+    } while (
+        succeeded(incSlicePosition(currSlicePosition, sliceShape, offsets)));
 
     assert(static_cast<int64_t>(sliceValues.size()) ==
                sliceVecTy.getNumElements() &&
@@ -2864,28 +2965,6 @@ public:
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractStridedSliceOp,
                                                    newAttr);
     return success();
-  }
-
-private:
-  // Calculate the next `position` in the n-D vector of size `shape`,
-  // applying an offset `offsets`. Modifies the `position` in place.
-  // Returns a failure when `position` becomes the end position.
-  static LogicalResult incPosition(MutableArrayRef<int64_t> position,
-                                   ArrayRef<int64_t> shape,
-                                   ArrayRef<int64_t> offsets) {
-    assert(position.size() == shape.size());
-    assert(position.size() == offsets.size());
-    for (auto [posInDim, dimSize, offsetInDim] :
-         llvm::reverse(llvm::zip(position, shape, offsets))) {
-      ++posInDim;
-      if (posInDim < dimSize + offsetInDim)
-        return success();
-
-      // Carry the overflow to the next loop iteration.
-      posInDim = offsetInDim;
-    }
-
-    return failure();
   }
 };
 
