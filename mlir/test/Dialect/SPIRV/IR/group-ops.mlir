@@ -112,3 +112,87 @@ func.func @subgroup_block_write_intel_vector(%ptr : !spirv.ptr<i32, StorageBuffe
   spirv.INTEL.SubgroupBlockWrite "StorageBuffer" %ptr, %value : vector<3xi32>
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Group ops
+//===----------------------------------------------------------------------===//
+
+func.func @group_iadd(%value: i32) -> i32 {
+  // CHECK: spirv.GroupIAdd <Workgroup> <Reduce> %{{.*}} : i32
+  %0 = spirv.GroupIAdd <Workgroup> <Reduce> %value : i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_fadd(%value: f32) -> f32 {
+  // CHECK: spirv.GroupFAdd <Workgroup> <Reduce> %{{.*}} : f32
+  %0 = spirv.GroupFAdd <Workgroup> <Reduce> %value : f32
+  return %0: f32
+}
+
+// -----
+
+func.func @group_fmin(%value: f32) -> f32 {
+  // CHECK: spirv.GroupFMin <Workgroup> <Reduce> %{{.*}} : f32
+  %0 = spirv.GroupFMin <Workgroup> <Reduce> %value : f32
+  return %0: f32
+}
+
+// -----
+
+func.func @group_umin(%value: i32) -> i32 {
+  // CHECK: spirv.GroupUMin <Workgroup> <Reduce> %{{.*}} : i32
+  %0 = spirv.GroupUMin <Workgroup> <Reduce> %value : i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_smin(%value: i32) -> i32 {
+  // CHECK: spirv.GroupSMin <Workgroup> <Reduce> %{{.*}} : i32
+  %0 = spirv.GroupSMin <Workgroup> <Reduce> %value : i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_fmax(%value: f32) -> f32 {
+  // CHECK: spirv.GroupFMax <Workgroup> <Reduce> %{{.*}} : f32
+  %0 = spirv.GroupFMax <Workgroup> <Reduce> %value : f32
+  return %0: f32
+}
+
+// -----
+
+func.func @group_umax(%value: i32) -> i32 {
+  // CHECK: spirv.GroupUMax <Workgroup> <Reduce> %{{.*}} : i32
+  %0 = spirv.GroupUMax <Workgroup> <Reduce> %value : i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_smax(%value: i32) -> i32 {
+  // CHECK: spirv.GroupSMax <Workgroup> <Reduce> %{{.*}} : i32
+  %0 = spirv.GroupSMax <Workgroup> <Reduce> %value : i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_imul(%value: i32) -> i32 {
+  // CHECK: spirv.KHR.GroupIMul <Workgroup> <Reduce> %{{.*}} : i32
+  %0 = spirv.KHR.GroupIMul <Workgroup> <Reduce> %value : i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_fmul(%value: f32) -> f32 {
+  // CHECK: spirv.KHR.GroupFMul <Workgroup> <Reduce> %{{.*}} : f32
+  %0 = spirv.KHR.GroupFMul <Workgroup> <Reduce> %value : f32
+  return %0: f32
+}

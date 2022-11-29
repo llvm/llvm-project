@@ -4770,6 +4770,39 @@ LogicalResult spirv::VectorTimesScalarOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// Group ops
+//===----------------------------------------------------------------------===//
+
+template <typename Op>
+static LogicalResult verifyGroupOp(Op op) {
+  spirv::Scope scope = op.getExecutionScope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return op.emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
+
+  return success();
+}
+
+LogicalResult spirv::GroupIAddOp::verify() { return verifyGroupOp(*this); }
+
+LogicalResult spirv::GroupFAddOp::verify() { return verifyGroupOp(*this); }
+
+LogicalResult spirv::GroupFMinOp::verify() { return verifyGroupOp(*this); }
+
+LogicalResult spirv::GroupUMinOp::verify() { return verifyGroupOp(*this); }
+
+LogicalResult spirv::GroupSMinOp::verify() { return verifyGroupOp(*this); }
+
+LogicalResult spirv::GroupFMaxOp::verify() { return verifyGroupOp(*this); }
+
+LogicalResult spirv::GroupUMaxOp::verify() { return verifyGroupOp(*this); }
+
+LogicalResult spirv::GroupSMaxOp::verify() { return verifyGroupOp(*this); }
+
+LogicalResult spirv::GroupIMulKHROp::verify() { return verifyGroupOp(*this); }
+
+LogicalResult spirv::GroupFMulKHROp::verify() { return verifyGroupOp(*this); }
+
 // TableGen'erated operation interfaces for querying versions, extensions, and
 // capabilities.
 #include "mlir/Dialect/SPIRV/IR/SPIRVAvailability.cpp.inc"
