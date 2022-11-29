@@ -55,6 +55,8 @@ class __bit_reference
     friend class __bit_const_reference<_Cp>;
     friend class __bit_iterator<_Cp, false>;
 public:
+    using __container = typename _Cp::__self;
+
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     __bit_reference(const __bit_reference&) = default;
 
