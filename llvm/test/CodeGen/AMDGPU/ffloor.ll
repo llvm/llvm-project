@@ -5,9 +5,9 @@
 ; FUNC-LABEL: {{^}}floor_f32:
 ; SI: v_floor_f32_e32
 ; R600: FLOOR
-define amdgpu_kernel void @floor_f32(float addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @floor_f32(ptr addrspace(1) %out, float %in) {
   %tmp = call float @llvm.floor.f32(float %in) #0
-  store float %tmp, float addrspace(1)* %out
+  store float %tmp, ptr addrspace(1) %out
   ret void
 }
 
@@ -15,9 +15,9 @@ define amdgpu_kernel void @floor_f32(float addrspace(1)* %out, float %in) {
 ; SI: v_floor_f32_e32
 ; SI: v_floor_f32_e32
 
-define amdgpu_kernel void @floor_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %in) {
+define amdgpu_kernel void @floor_v2f32(ptr addrspace(1) %out, <2 x float> %in) {
   %tmp = call <2 x float> @llvm.floor.v2f32(<2 x float> %in) #0
-  store <2 x float> %tmp, <2 x float> addrspace(1)* %out
+  store <2 x float> %tmp, ptr addrspace(1) %out
   ret void
 }
 
@@ -31,9 +31,9 @@ define amdgpu_kernel void @floor_v2f32(<2 x float> addrspace(1)* %out, <2 x floa
 ; R600: FLOOR
 ; R600: FLOOR
 ; R600: FLOOR
-define amdgpu_kernel void @floor_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %in) {
+define amdgpu_kernel void @floor_v4f32(ptr addrspace(1) %out, <4 x float> %in) {
   %tmp = call <4 x float> @llvm.floor.v4f32(<4 x float> %in) #0
-  store <4 x float> %tmp, <4 x float> addrspace(1)* %out
+  store <4 x float> %tmp, ptr addrspace(1) %out
   ret void
 }
 
