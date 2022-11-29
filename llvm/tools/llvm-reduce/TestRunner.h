@@ -33,7 +33,7 @@ public:
 
   /// Runs the interesting-ness test for the specified file
   /// @returns 0 if test was successful, 1 if otherwise
-  int run(StringRef Filename) const;
+  int run(StringRef Filename, const std::atomic<bool> &Killed) const;
 
   /// Returns the most reduced version of the original testcase
   ReducerWorkItem &getProgram() const { return *Program; }
