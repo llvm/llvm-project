@@ -274,11 +274,11 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
   let parameters = (ins
     "DIScopeAttr":$scope,
     "StringAttr":$name,
-    "DIFileAttr":$file,
-    "unsigned":$line,
-    "unsigned":$arg,
-    "unsigned":$alignInBits,
-    "DITypeAttr":$type
+    OptionalParameter<"DIFileAttr">:$file,
+    OptionalParameter<"unsigned">:$line,
+    OptionalParameter<"unsigned">:$arg,
+    OptionalParameter<"unsigned">:$alignInBits,
+    OptionalParameter<"DITypeAttr">:$type
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins

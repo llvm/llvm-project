@@ -226,3 +226,43 @@ define void @func_loc() !dbg !3 {
 ; Verify the module location is set to the source filename.
 ; CHECK: loc("debug-info.ll":0:0)
 source_filename = "debug-info.ll"
+
+; // -----
+
+; CHECK: #[[$SP:.+]] = #llvm.di_subprogram<
+; CHECK: #[[$VAR0:.+]] = #llvm.di_local_variable<scope = #[[$SP]], name = "arg", file = #{{.*}}, line = 1, arg = 1, alignInBits = 32, type = #{{.*}}>
+; CHECK: #[[$VAR1:.+]] = #llvm.di_local_variable<scope = #[[$SP]], name = "arg">
+
+; CHECK-LABEL: @intrinsic
+; CHECK-SAME:  %[[ARG0:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
+define void @intrinsic(i64 %0, ptr %1) {
+  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
+  call void @llvm.dbg.value(metadata i64 %0, metadata !5, metadata !DIExpression()), !dbg !7
+  ; CHECK: llvm.intr.dbg.addr #[[$VAR1]] = %[[ARG1]] : !llvm.ptr loc(#[[LOC1:.+]])
+  call void @llvm.dbg.addr(metadata ptr %1, metadata !6, metadata !DIExpression()), !dbg !8
+  ; CHECK: llvm.intr.dbg.declare #[[$VAR1]] = %[[ARG1]] : !llvm.ptr loc(#[[LOC2:.+]])
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !6, metadata !DIExpression()), !dbg !9
+  ret void
+}
+
+; CHECK: #[[LOC0]] = loc(fused<#[[$SP]]>["debug-info.ll":1:2])
+; CHECK: #[[LOC1]] = loc(fused<#[[$SP]]>["debug-info.ll":2:2])
+; CHECK: #[[LOC2]] = loc(fused<#[[$SP]]>["debug-info.ll":3:2])
+
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+declare void @llvm.dbg.addr(metadata, metadata, metadata)
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!3 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, line: 42, scopeLine: 42, spFlags: DISPFlagDefinition, unit: !1)
+!4 = !DIBasicType(name: "int")
+!5 = !DILocalVariable(scope: !3, name: "arg", file: !2, line: 1, arg: 1, align: 32, type: !4);
+!6 = !DILocalVariable(scope: !3, name: "arg")
+!7 = !DILocation(line: 1, column: 2, scope: !3)
+!8 = !DILocation(line: 2, column: 2, scope: !3)
+!9 = !DILocation(line: 3, column: 2, scope: !3)

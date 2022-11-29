@@ -64,6 +64,7 @@ llvm.func @func_no_debug() {
 >
 #fileScope = #llvm.di_lexical_block_file<scope = #sp, file = #file, discriminator = 0>
 #variable = #llvm.di_local_variable<scope = #fileScope, name = "arg", file = #file, line = 6, arg = 1, alignInBits = 0, type = #si64>
+#variableAddr = #llvm.di_local_variable<scope = #fileScope, name = "alloc">
 
 // CHECK-LABEL: define void @func_with_debug(
 // CHECK-SAME: i64 %[[ARG:.*]]) !dbg ![[FUNC_LOC:[0-9]+]]
@@ -73,11 +74,11 @@ llvm.func @func_with_debug(%arg: i64) {
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr<i64>
 
   // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression())
-  // CHECK: call void @llvm.dbg.addr(metadata ptr %[[ALLOC]], metadata ![[VAR_LOC]], metadata !DIExpression())
-  // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[VAR_LOC]], metadata !DIExpression())
-  llvm.dbg.value #variable = %arg : i64
-  llvm.dbg.addr #variable = %alloc : !llvm.ptr<i64>
-  llvm.dbg.declare #variable = %alloc : !llvm.ptr<i64>
+  // CHECK: call void @llvm.dbg.addr(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression())
+  // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC]], metadata !DIExpression())
+  llvm.intr.dbg.value #variable = %arg : i64
+  llvm.intr.dbg.addr #variableAddr = %alloc : !llvm.ptr<i64>
+  llvm.intr.dbg.declare #variableAddr = %alloc : !llvm.ptr<i64>
 
   // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc(callsite("mysource.cc":3:4 at "mysource.cc":5:6))
@@ -116,6 +117,7 @@ llvm.func @func_with_debug(%arg: i64) {
 
 // CHECK: ![[VAR_LOC]] = !DILocalVariable(name: "arg", arg: 1, scope: ![[VAR_SCOPE:.*]], file: ![[CU_FILE_LOC]], line: 6, type: ![[ARG_TYPE]])
 // CHECK: ![[VAR_SCOPE]] = distinct !DILexicalBlockFile(scope: ![[FUNC_LOC]], file: ![[CU_FILE_LOC]], discriminator: 0)
+// CHECK: ![[ADDR_LOC]] = !DILocalVariable(name: "alloc", scope: ![[VAR_SCOPE:.*]])
 
 // CHECK-DAG: ![[CALLSITE_LOC]] = !DILocation(line: 3, column: 4,
 // CHECK-DAG: ![[FILE_LOC]] = !DILocation(line: 1, column: 2,
