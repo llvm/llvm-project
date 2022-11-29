@@ -7627,9 +7627,6 @@ def warn_deprecated_increment_decrement_volatile : Warning<
 def warn_deprecated_simple_assign_volatile : Warning<
   "use of result of assignment to object of volatile-qualified type %0 "
   "is deprecated">, InGroup<DeprecatedVolatile>;
-def warn_deprecated_compound_assign_volatile : Warning<
-  "compound assignment to object of volatile-qualified type %0 is deprecated">,
-  InGroup<DeprecatedVolatile>;
 def warn_deprecated_volatile_return : Warning<
   "volatile-qualified return type %0 is deprecated">,
   InGroup<DeprecatedVolatile>;
