@@ -1,6 +1,9 @@
 // The test is disabled for now because of the flaky failure which can cause
 // Buildbot gives false negative results.
 
+// RUN: nothing
+// REQUIRES: testToBeFixed
+
 #include <cassert>
 #include <cmath>
 #include <iostream>
