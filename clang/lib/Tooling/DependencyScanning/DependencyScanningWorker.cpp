@@ -474,6 +474,14 @@ public:
         (void)CacheFS->excludeFromTracking(
             ScanInstance.getHeaderSearchOpts().ModuleCachePath);
 
+      // Handle profile mappings.
+      (void)CacheFS->status(
+          OriginalInvocation.getCodeGenOpts().ProfileInstrumentUsePath);
+      (void)CacheFS->status(
+          OriginalInvocation.getCodeGenOpts().SampleProfileFile);
+      (void)CacheFS->status(
+          OriginalInvocation.getCodeGenOpts().ProfileRemappingFile);
+
       auto Tree = CacheFS->createTreeFromNewAccesses(RemapPath);
       if (Tree) {
         if (MDC)
