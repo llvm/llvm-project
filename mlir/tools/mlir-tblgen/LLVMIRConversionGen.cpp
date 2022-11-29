@@ -237,18 +237,24 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
         return emitError(
             record, "expected non-negative operand index for argument " + name);
       }
-      bool isVariadicOperand = isVariadicOperandName(op, name);
-      auto result =
-          isVariadicOperand
-              ? formatv("convertValues(llvmOperands.drop_front({0}))", idx)
-              : formatv("convertValue(llvmOperands[{0}])", idx);
-      bs << result;
+      if (isAttributeName(op, name)) {
+        bs << formatv("llvmOperands[{0}]", idx);
+      } else {
+        bool isVariadicOperand = isVariadicOperandName(op, name);
+        auto result =
+            isVariadicOperand
+                ? formatv("convertValues(llvmOperands.drop_front({0}))", idx)
+                : formatv("convertValue(llvmOperands[{0}])", idx);
+        bs << result;
+      }
     } else if (isResultName(op, name)) {
       if (op.getNumResults() != 1)
         return emitError(record, "expected op to have one result");
       bs << formatv("mapValue(inst)");
     } else if (name == "_int_attr") {
       bs << "matchIntegerAttr";
+    } else if (name == "_var_attr") {
+      bs << "matchLocalVariableAttr";
     } else if (name == "_resultType") {
       bs << "convertType(inst->getType())";
     } else if (name == "_location") {
