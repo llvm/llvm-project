@@ -32,11 +32,11 @@ func.func @m16n8k32_int8_row_row_row(%arg0: memref<128x128xi8, 3>, %arg1: memref
   %cst_0 = arith.constant dense<0> : vector<32x8xi8>
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %c17 = arith.constant 17 : index  
-  %c39 = arith.constant 39 : index  
-  %c40 = arith.constant 40 : index  
-  %c49 = arith.constant 49 : index  
-  %c50 = arith.constant 50 : index  
+  %c17 = arith.constant 17 : index
+  %c39 = arith.constant 39 : index
+  %c40 = arith.constant 40 : index
+  %c49 = arith.constant 49 : index
+  %c50 = arith.constant 50 : index
   %cst = arith.constant 0 : i8
   %cst0 = arith.constant 0 : i32
 
@@ -62,7 +62,7 @@ func.func @m16n8k32_int8_row_row_row(%arg0: memref<128x128xi8, 3>, %arg1: memref
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colB0_map]]()[{{%.+}}]
   // CHECK: memref.load %arg1[[[row]], [[col]]] : memref<128x128xi8, 3>
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colB0_map]]()[{{%.+}}]
-  // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowB4_map]]()[{{%.+}}]  
+  // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowB4_map]]()[{{%.+}}]
   // CHECK: memref.load %arg1[[[row]], [[col]]] : memref<128x128xi8, 3>
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowB5_map]]()[{{%.+}}]
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colB0_map]]()[{{%.+}}]
@@ -124,11 +124,11 @@ func.func @m8n8k4_f64_row_row_row(%arg0: memref<128x128xf64>, %arg1: memref<128x
   %cst_0 = arith.constant dense<0.0> : vector<4x8xf64>
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %c17 = arith.constant 17 : index  
-  %c39 = arith.constant 39 : index  
-  %c40 = arith.constant 40 : index  
-  %c49 = arith.constant 49 : index  
-  %c50 = arith.constant 50 : index  
+  %c17 = arith.constant 17 : index
+  %c39 = arith.constant 39 : index
+  %c40 = arith.constant 40 : index
+  %c49 = arith.constant 49 : index
+  %c50 = arith.constant 50 : index
   %cst = arith.constant 0.0 : f64
   %cst0 = arith.constant 0.0 : f64
 
@@ -147,7 +147,7 @@ func.func @m8n8k4_f64_row_row_row(%arg0: memref<128x128xf64>, %arg1: memref<128x
 
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowC0_map]]
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colC0_map]]
-  // CHECK: vector.load %arg2[[[row]], [[col]]] : memref<128x128xf64>, vector<2xf64>  
+  // CHECK: vector.load %arg2[[[row]], [[col]]] : memref<128x128xf64>, vector<2xf64>
 
   %A = vector.transfer_read %arg0[%c1, %c1], %cst {in_bounds = [true, true]} : memref<128x128xf64>, vector<8x4xf64>
   %B = vector.transfer_read %arg1[%c39, %c40], %cst {in_bounds = [true, true], permutation_map = #map0} : memref<128x128xf64>, vector<8x4xf64>
@@ -157,7 +157,7 @@ func.func @m8n8k4_f64_row_row_row(%arg0: memref<128x128xf64>, %arg1: memref<128x
 
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowC0_map]]
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colC0_map]]
-  // CHECK: vector.store {{%.+}}, %arg2[[[row]], [[col]]] : memref<128x128xf64>, vector<2xf64>  
+  // CHECK: vector.store {{%.+}}, %arg2[[[row]], [[col]]] : memref<128x128xf64>, vector<2xf64>
   vector.transfer_write %D, %arg2[%c49, %c40] {in_bounds = [true, true]} : vector<8x8xf64>, memref<128x128xf64>
   return
 }
@@ -188,7 +188,7 @@ func.func @m16n8k16_fp16_row_row_row(%arg0: memref<20x20xf16, 3>, %arg1: memref<
   %cst = arith.constant 0.000000e+00 : f16
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowA_map]]
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colA_map]]
-  // CHECK: nvgpu.ldmatrix %arg0[[[row]], [[col]]] {numTiles = 4 : i32, transpose = false}  
+  // CHECK: nvgpu.ldmatrix %arg0[[[row]], [[col]]] {numTiles = 4 : i32, transpose = false}
 
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowB_map]]
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colB_map]]
@@ -226,7 +226,7 @@ func.func @m16n16k16_mmasync16816_fp16_f16_row_row_row(%arg0: memref<42x32xf16, 
 
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowA_map]]
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colA_map]]
-  // CHECK: [[fragmentA:%.+]] = nvgpu.ldmatrix %arg0[[[row]], [[col]]] {numTiles = 4 : i32, transpose = false}  
+  // CHECK: [[fragmentA:%.+]] = nvgpu.ldmatrix %arg0[[[row]], [[col]]] {numTiles = 4 : i32, transpose = false}
   %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<42x32xf16, 3>, vector<16x16xf16>
 
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowB_map]]
@@ -277,17 +277,17 @@ func.func @batch_m16n8k16_fp16_row_row_row(%arg0: memref<2x20x20xf16, 3>, %arg1:
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
   %cst = arith.constant 0.000000e+00 : f16
-  
+
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$Arow_map]]
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$Acol_map]]
   // CHECK: nvgpu.ldmatrix %arg0[[[C0]], [[row]], [[col]]] {numTiles = 4 : i32, transpose = false} : memref<2x20x20xf16, 3> -> vector<4x2xf16>
   %A = vector.transfer_read %arg0[%c0, %c1, %c3], %cst {in_bounds = [true, true]} : memref<2x20x20xf16, 3>, vector<16x16xf16>
-  
+
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$Brow_map]]
-  // CHECK-DAG: [[col:%.+]] = affine.apply [[$Bcol_map]]  
+  // CHECK-DAG: [[col:%.+]] = affine.apply [[$Bcol_map]]
   // CHECK: nvgpu.ldmatrix %arg1[[[C0]], [[row]], [[col]]] {numTiles = 2 : i32, transpose = true} : memref<2x20x20xf16, 3> -> vector<2x2xf16>
   %B = vector.transfer_read %arg1[%c0, %c3, %c3], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<2x20x20xf16, 3>, vector<8x16xf16>
-  
+
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$Arow_map]]
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$Acol_map]]
   // CHECK: nvgpu.ldmatrix %arg2[[[C0]], [[row]], [[col]]] {numTiles = 2 : i32, transpose = false} : memref<2x20x20xf16, 3> -> vector<2x2xf16>
@@ -324,14 +324,14 @@ func.func @m16n8k16_fp16_row_col_row(%arg0: memref<20x20xf16, 3>, %arg1: memref<
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colA_map]]
   // CHECK: nvgpu.ldmatrix %arg0[[[row]], [[col]]] {numTiles = 4 : i32
   // CHECK-SAME: transpose = false
-  
+
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowB_map]]
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colB_map]]
   // CHECK: nvgpu.ldmatrix %arg1[[[row]], [[col]]] {numTiles = 2 : i32
   // CHECK-SAME: transpose = false
 
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowA_map]]
-  // CHECK-DAG: [[col:%.+]] = affine.apply [[$colA_map]]   
+  // CHECK-DAG: [[col:%.+]] = affine.apply [[$colA_map]]
   // CHECK: nvgpu.ldmatrix %arg2[[[row]], [[col]]] {numTiles = 2 : i32
   // CHECK-SAME: transpose = false
   %A = vector.transfer_read %arg0[%c1, %c3], %cst {in_bounds = [true, true]} : memref<20x20xf16, 3>, vector<16x16xf16>
@@ -375,21 +375,21 @@ func.func @m16n8k4_tf32_f32_row_row_row(%arg0: memref<20x20xf32, 3>, %arg1: memr
 
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowA_map]]
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colA_map]]
-  // CHECK: [[a_frag:%.+]] = nvgpu.ldmatrix %arg0[[[row]], [[col]]] {numTiles = 2 : i32, transpose = false}  
+  // CHECK: [[a_frag:%.+]] = nvgpu.ldmatrix %arg0[[[row]], [[col]]] {numTiles = 2 : i32, transpose = false}
 
   // b and c are not loaded by ldmatrix in this test.
   // CHECK-NOT: nvgpu.ldmatrix
 
   // CHECK-DAG: [[row:%.+]] = affine.apply [[$rowB_map]]
   // CHECK-DAG: [[col:%.+]] = affine.apply [[$colB_map]]
-  // CHECK: [[b_el:%.+]] = memref.load {{%.+}} : memref<20x20xf32, 3>  
+  // CHECK: [[b_el:%.+]] = memref.load {{%.+}} : memref<20x20xf32, 3>
   // CHECK: [[b_frag:%.+]] = vector.insert [[b_el]], {{.*}} : f32 into vector<1x1xf32>
 
   // CHECK: [[d_frag:%.+]] = nvgpu.mma.sync([[a_frag]], [[b_frag]], [[c_frag]])
   // CHECK-SAME: mmaShape = [16, 8, 4]
   // CHECK-SAME: -> vector<2x2xf32>
   %A = vector.transfer_read %arg0[%c1, %c3], %cst {in_bounds = [true, true]} : memref<20x20xf32, 3>, vector<16x4xf32>
-  %B = vector.transfer_read %arg1[%c3, %c3], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<20x20xf32, 3>, vector<8x4xf32>  
+  %B = vector.transfer_read %arg1[%c3, %c3], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<20x20xf32, 3>, vector<8x4xf32>
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %cst_0 : vector<16x4xf32>, vector<8x4xf32> into vector<16x8xf32>
 
   // CHECK: vector.extract [[d_frag]][0] : vector<2x2xf32>
@@ -498,7 +498,7 @@ func.func @m16n8k64_int4_row_col_row(%arg0: memref<128x128xi4, 3>, %arg1: memref
   // CHECK: [[row:%.+]] = affine.apply [[$rowB0_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colB0_map]]()[[[lane]]]
   // CHECK: nvgpu.ldmatrix %arg1[[[row]], [[col]]] {numTiles = 2 : i32, transpose = false} : memref<128x128xi4, 3> -> vector<2x8xi4>
-  
+
   // CHECK: [[lane:%.+]] = gpu.lane_id
   // CHECK: [[row:%.+]] = affine.apply [[$rowC0_map]]()[{{%.+}}]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[{{%.+}}]
@@ -516,11 +516,11 @@ func.func @m16n8k64_int4_row_col_row(%arg0: memref<128x128xi4, 3>, %arg1: memref
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x64xi4>, vector<8x64xi4> into vector<16x8xi32>
 
   // CHECK: [[lane:%.+]] = gpu.lane_id
-  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2x2xi32>  
+  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2x2xi32>
   // CHECK: [[row:%.+]] = affine.apply [[$rowC0_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
   // CHECK: vector.store [[v]], %arg2[[[row]], [[col]]] : memref<128x128xi32>, vector<2xi32>
-  
+
   // CHECK: [[v:%.+]] = vector.extract [[d]][1] : vector<2x2xi32>
   // CHECK: [[row:%.+]] = affine.apply [[$rowC8_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
@@ -567,7 +567,7 @@ func.func @m16n8k32_int8_row_col_row(%arg0: memref<128x128xi8, 3>, %arg1: memref
   // CHECK: [[row:%.+]] = affine.apply [[$rowB0_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colB0_map]]()[[[lane]]]
   // CHECK: nvgpu.ldmatrix %arg1[[[row]], [[col]]] {numTiles = 2 : i32, transpose = false} : memref<128x128xi8, 3> -> vector<2x4xi8>
-  
+
   // CHECK: [[lane:%.+]] = gpu.lane_id
   // CHECK: [[row:%.+]] = affine.apply [[$rowC0_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
@@ -584,7 +584,7 @@ func.func @m16n8k32_int8_row_col_row(%arg0: memref<128x128xi8, 3>, %arg1: memref
   %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %A, %B, %C : vector<16x32xi8>, vector<8x32xi8> into vector<16x8xi32>
 
   // CHECK: [[lane:%.+]] = gpu.lane_id
-  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2x2xi32>  
+  // CHECK: [[v:%.+]] = vector.extract [[d]][0] : vector<2x2xi32>
   // CHECK: [[row:%.+]] = affine.apply [[$rowC0_map]]()[[[lane]]]
   // CHECK: [[col:%.+]] = affine.apply [[$colC0_map]]()[[[lane]]]
   // CHECK: vector.store [[v]], %arg2[[[row]], [[col]]] : memref<128x128xi32>, vector<2xi32>
@@ -651,7 +651,7 @@ func.func @m16n8k8_tf32_f32_col_col_row(%arg0: memref<20x20xf32, 3>, %arg1: memr
   // CHECK-SAME: -> vector<2x2xf32>
   %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true], permutation_map = #map0} : memref<20x20xf32, 3>, vector<16x8xf32>
   %B = vector.transfer_read %arg1[%c0, %c0], %cst {in_bounds = [true, true]} : memref<20x20xf32, 3>, vector<8x8xf32>
-  %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], 
+  %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"],
     kind = #vector.kind<add>} %A, %B, %cst_0 : vector<16x8xf32>, vector<8x8xf32> into vector<16x8xf32>
 
   // CHECK: vector.extract [[d_frag]][0] : vector<2x2xf32>

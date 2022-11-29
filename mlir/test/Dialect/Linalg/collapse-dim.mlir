@@ -20,8 +20,8 @@ func.func @collapse_reduction(
 
 // CHECK-LABEL: func @collapse_reduction
 //       CHECK:   %[[T:.*]] = tensor.collapse_shape %{{.*}} {{\[}}[0], [1], [2, 3]] : tensor<2x32x10x4096xf32> into tensor<2x32x40960xf32>
-//       CHECK:   linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], 
-//  CHECK-SAME:     iterator_types = ["parallel", "parallel", "reduction"]} 
+//       CHECK:   linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]],
+//  CHECK-SAME:     iterator_types = ["parallel", "parallel", "reduction"]}
 //  CHECK-SAME:     ins(%[[T]] : tensor<2x32x40960xf32>) outs(%{{.*}} : tensor<2x32xf32>) {
 //       CHECK:   } -> tensor<2x32xf32>
 
@@ -48,8 +48,8 @@ func.func @collapse_parallel(
 // CHECK-LABEL: func @collapse_parallel
 //   CHECK-DAG:  %[[S:.*]] = tensor.collapse_shape %{{.*}} {{\[}}[0], [1], [2, 3]] : tensor<32x2x10x4096xf32> into tensor<32x2x40960xf32>
 //   CHECK-DAG:  %[[D:.*]] = tensor.collapse_shape %{{.*}} {{\[}}[0], [1], [2, 3]] : tensor<2x32x10x4096xf32> into tensor<2x32x40960xf32>
-//       CHECK:  %[[R:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], 
-//  CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel"]} 
+//       CHECK:  %[[R:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]],
+//  CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel"]}
 //  CHECK-SAME:     ins(%[[S]] : tensor<32x2x40960xf32>) outs(%[[D]] : tensor<2x32x40960xf32>) {
 //       CHECK:   } -> tensor<2x32x40960xf32>
 //       CHECK:  tensor.expand_shape %[[R]] {{\[}}[0], [1], [2, 3]] : tensor<2x32x40960xf32> into tensor<2x32x10x4096xf32>

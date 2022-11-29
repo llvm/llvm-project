@@ -111,8 +111,8 @@ def Async_FuncOp : Async_Op<"func",
   let description = [{
     An async function is like a normal function, but supports non-blocking
     await. Internally, async function is lowered to the LLVM coroutinue with
-    async runtime intrinsic. It can return an async token and/or async values. 
-    The token represents the execution state of async function and can be used 
+    async runtime intrinsic. It can return an async token and/or async values.
+    The token represents the execution state of async function and can be used
     when users want to express dependencies on some side effects, e.g.,
     the token becomes available once every thing in the func body is executed.
 

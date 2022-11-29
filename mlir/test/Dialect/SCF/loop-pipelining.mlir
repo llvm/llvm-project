@@ -43,7 +43,7 @@ func.func @simple_pipeline(%A: memref<?xf32>, %result: memref<?xf32>) {
 //   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
 // Prologue:
-//       CHECK:   %[[L0:.*]] = scf.execute_region 
+//       CHECK:   %[[L0:.*]] = scf.execute_region
 //  CHECK-NEXT:     memref.load %[[A]][%[[C0]]] : memref<?xf32>
 // Kernel:
 //       CHECK:   %[[L1:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[C3]]
@@ -352,7 +352,7 @@ func.func @multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:   %[[MUL2:.*]] = scf.execute_region
 // arith.mulf %[[LR]]#2, %[[LR]]#0 : f32
 //       CHECK:   memref.store %[[LR]]#3, %[[R]][%[[C7]]] : memref<?xf32>
-//  CHECK-NEXT:   %[[MUL3:.*]] = scf.execute_region 
+//  CHECK-NEXT:   %[[MUL3:.*]] = scf.execute_region
 /// %[[ADD3]], %[[LR]]#1 : f32
 //       CHECK:   memref.store %[[MUL2]], %[[R]][%[[C8]]] : memref<?xf32>
 //  CHECK-NEXT:   memref.store %[[MUL3]], %[[R]][%[[C9]]] : memref<?xf32>
@@ -488,10 +488,10 @@ func.func @region_backedge_different_stage(%A: memref<?xf32>) -> f32 {
     %A_elem = scf.execute_region -> f32 {
       %A_elem1 = memref.load %A[%i0] : memref<?xf32>
       scf.yield %A_elem1 : f32
-    } { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 }    
+    } { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 }
     %A1_elem = scf.execute_region -> f32 {
       %inner = arith.addf %A_elem, %arg0 : f32
-      scf.yield %inner : f32 
+      scf.yield %inner : f32
     }  { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 }
     %A2_elem = arith.mulf %cf, %A1_elem { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 0 } : f32
     scf.yield %A2_elem : f32
@@ -544,35 +544,35 @@ func.func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
 // CHECK:   %[[C1:.+]] = arith.constant 1 :
 // CHECK:   %[[APRO:.+]] = memref.alloc() :
 // CHECK:   %[[BPRO:.+]] = memref.alloc() :
-// CHECK:   %[[ASV0:.+]] = memref.subview %[[ARG0]][%[[C0]]] [8] [1] : 
-// CHECK:   %[[BSV0:.+]] = memref.subview %[[ARG1]][%[[C0]]] [8] [1] : 
+// CHECK:   %[[ASV0:.+]] = memref.subview %[[ARG0]][%[[C0]]] [8] [1] :
+// CHECK:   %[[BSV0:.+]] = memref.subview %[[ARG1]][%[[C0]]] [8] [1] :
 
 // Prologue:
 // CHECK:   %[[PAV0:.+]] = memref.subview %[[APRO]][%[[C0]], 0] [1, 8] [1, 1] :
 // CHECK:   %[[PBV0:.+]] = memref.subview %[[BPRO]][%[[C0]], 0] [1, 8] [1, 1] :
-// CHECK:   memref.copy %[[ASV0]], %[[PAV0]] : 
-// CHECK:   memref.copy %[[BSV0]], %[[PBV0]] : 
+// CHECK:   memref.copy %[[ASV0]], %[[PAV0]] :
+// CHECK:   memref.copy %[[BSV0]], %[[PBV0]] :
 
 // Kernel:
-// CHECK:   %[[R:.+]]:2 = scf.for %[[IV:.+]] = %[[C0]] to %[[C3]] step %[[C1]] 
+// CHECK:   %[[R:.+]]:2 = scf.for %[[IV:.+]] = %[[C0]] to %[[C3]] step %[[C1]]
 // CHECK-SAME: iter_args(%[[IA:.+]] = %[[PAV0]], %[[IB:.+]] = %[[PBV0:.+]])
 // CHECK:     %[[CV:.+]] = memref.subview %[[ARG2]]
 // CHECK:     linalg.generic
 // CHECK-SAME:  ins(%[[IA]], %[[IB]], %{{.*}} : {{.*}}) outs(%[[CV]] :
-// CHECK:     %[[NEXT:.+]] = arith.addi %[[IV]], %[[C1]] 
+// CHECK:     %[[NEXT:.+]] = arith.addi %[[IV]], %[[C1]]
 // CHECK:     %[[ASV:.+]] = memref.subview %[[ARG0]][%[[NEXT]]] [8] [1] :
 // CHECK:     %[[NEXT:.+]] = arith.addi %[[IV]], %[[C1]] :
 // CHECK:     %[[BSV:.+]] = memref.subview %[[ARG1]][%[[NEXT]]] [8] [1] :
 // CHECK:     %[[NEXT:.+]] = arith.addi %[[IV]], %[[C1]] :
 // CHECK:     %[[BUFIDX:.+]] = affine.apply
-// CHECK:     %[[APROSV:.+]] = memref.subview %[[APRO]][%[[BUFIDX]], 0] [1, 8] [1, 1] : 
-// CHECK:     %[[BPROSV:.+]] = memref.subview %[[BPRO]][%[[BUFIDX]], 0] [1, 8] [1, 1] : 
+// CHECK:     %[[APROSV:.+]] = memref.subview %[[APRO]][%[[BUFIDX]], 0] [1, 8] [1, 1] :
+// CHECK:     %[[BPROSV:.+]] = memref.subview %[[BPRO]][%[[BUFIDX]], 0] [1, 8] [1, 1] :
 // CHECK:     memref.copy %[[ASV]], %[[APROSV]] :
 // CHECK:     memref.copy %[[BSV]], %[[BPROSV]] :
 // CHECK:     scf.yield %[[APROSV]], %[[BPROSV]] :
 // CHECK:   }
 // CHECK:   %[[CV:.+]] = memref.subview %[[ARG2]][%[[C3]]] [8] [1] :
-// CHECK:   linalg.generic 
+// CHECK:   linalg.generic
 // CHECK-SAME: ins(%[[R]]#0, %[[R]]#1, %{{.*}} : {{.*}}) outs(%[[CV]] :
 
 
@@ -584,7 +584,7 @@ func.func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
       #map1,
       #map1,
       #map2,
-      #map1        
+      #map1
     ],
   iterator_types = ["parallel"],
   __test_pipelining_stage__ = 1,
@@ -598,7 +598,7 @@ func.func @pipeline_op_with_region(%A: memref<?xf32>, %B: memref<?xf32>, %result
   %a_buf = memref.alloc() : memref<2x8xf32>
   %b_buf = memref.alloc() : memref<2x8xf32>
   scf.for %i0 = %c0 to %c4 step %c1 {
-    %A_view = memref.subview %A[%i0][8][1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 3 } : memref<?xf32> to memref<8xf32, #map>    
+    %A_view = memref.subview %A[%i0][8][1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 3 } : memref<?xf32> to memref<8xf32, #map>
     %B_view = memref.subview %B[%i0][8][1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 4 } : memref<?xf32> to memref<8xf32, #map>
     %buf_idx = affine.apply  affine_map<(d0)->(d0 mod 2)> (%i0)[] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 5 }
     %a_buf_view = memref.subview %a_buf[%buf_idx,0][1,8][1,1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 6 } : memref<2x8xf32> to memref<8xf32, #map>
@@ -611,9 +611,9 @@ func.func @pipeline_op_with_region(%A: memref<?xf32>, %B: memref<?xf32>, %result
       outs(%C_view: memref<8xf32, #map>) {
       ^bb0(%a: f32, %b: f32, %s: f32, %c: f32):
         %add = arith.addf %a, %b : f32
-        %accum = arith.addf %add, %c : f32 
+        %accum = arith.addf %add, %c : f32
         %accum1 = arith.addf %scalar, %accum : f32
-        %accum2 = arith.addf %s, %accum1 : f32        
+        %accum2 = arith.addf %s, %accum1 : f32
         linalg.yield %accum2 : f32
     }
     scf.yield
