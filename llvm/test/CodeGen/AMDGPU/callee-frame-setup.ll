@@ -40,7 +40,7 @@ define void @callee_no_stack_no_fp_elim_nonleaf() #2 {
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack() #0 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   ret void
 }
 
@@ -64,7 +64,7 @@ define void @callee_with_stack() #0 {
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack_no_fp_elim_all() #1 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   ret void
 }
 
@@ -78,7 +78,7 @@ define void @callee_with_stack_no_fp_elim_all() #1 {
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack_no_fp_elim_non_leaf() #2 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   ret void
 }
 
@@ -117,7 +117,7 @@ define void @callee_with_stack_no_fp_elim_non_leaf() #2 {
 ; GCN-NEXT: s_setpc_b64 s[30:31]
 define void @callee_with_stack_and_call() #0 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   call void @external_void_func_void()
   ret void
 }
@@ -257,7 +257,7 @@ define void @spill_only_csr_sgpr() {
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   call void asm sideeffect "; clobber v41", "~{v41}"()
   ret void
 }
@@ -294,7 +294,7 @@ define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
 ; GCN-NEXT: s_setpc_b64
 define void @last_lane_vgpr_for_fp_csr() #1 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   call void asm sideeffect "; clobber v41", "~{v41}"()
   call void asm sideeffect "",
     "~{s40},~{s41},~{s42},~{s43},~{s44},~{s45},~{s46},~{s47},~{s48},~{s49}
@@ -343,7 +343,7 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 ; GCN-NEXT: s_setpc_b64
 define void @no_new_vgpr_for_fp_csr() #1 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   call void asm sideeffect "; clobber v41", "~{v41}"()
   call void asm sideeffect "",
     "~{s39},~{s40},~{s41},~{s42},~{s43},~{s44},~{s45},~{s46},~{s47},~{s48},~{s49}
@@ -379,7 +379,7 @@ define void @no_new_vgpr_for_fp_csr() #1 {
 ; GCN-NEXT: s_setpc_b64
 define void @realign_stack_no_fp_elim() #1 {
   %alloca = alloca i32, align 8192, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   ret void
 }
 
@@ -413,7 +413,7 @@ define void @realign_stack_no_fp_elim() #1 {
 ; GCN-NEXT: s_setpc_b64 s[30:31]
 define void @no_unused_non_csr_sgpr_for_fp() #1 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   ; Use all clobberable registers, so FP has to spill to a VGPR.
   call void asm sideeffect "",
@@ -452,7 +452,7 @@ define void @no_unused_non_csr_sgpr_for_fp() #1 {
 ; GCN-NEXT: s_setpc_b64 s[30:31]
 define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   ; Use all clobberable registers, so FP has to spill to a VGPR.
   call void asm sideeffect "",
@@ -499,9 +499,9 @@ define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64 s[30:31]
-define void @scratch_reg_needed_mubuf_offset([4096 x i8] addrspace(5)* byval([4096 x i8]) align 4 %arg) #1 {
+define void @scratch_reg_needed_mubuf_offset(ptr addrspace(5) byval([4096 x i8]) align 4 %arg) #1 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   ; Use all clobberable registers, so FP has to spill to a VGPR.
   call void asm sideeffect "; clobber nonpreserved SGPRs",
@@ -542,7 +542,7 @@ define internal void @local_empty_func() #0 {
 ; GCN: v_readlane_b32 s33, v0, 2
 define void @ipra_call_with_stack() #0 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   call void @local_empty_func()
   ret void
 }
@@ -661,9 +661,9 @@ define void @callee_need_to_spill_fp_to_reg() #1 {
 ; FLATSCR: v_mov_b32_e32 v0, 0
 ; FLATSCR: s_add_i32 [[SOFF:s[0-9]+]], s33, 0x1000
 ; FLATSCR: scratch_store_dword off, v0, [[SOFF]]
-define void @spill_fp_to_memory_scratch_reg_needed_mubuf_offset([4096 x i8] addrspace(5)* byval([4096 x i8]) align 4 %arg) #3 {
+define void @spill_fp_to_memory_scratch_reg_needed_mubuf_offset(ptr addrspace(5) byval([4096 x i8]) align 4 %arg) #3 {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   call void asm sideeffect "; clobber nonpreserved SGPRs and 64 CSRs",
     "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
