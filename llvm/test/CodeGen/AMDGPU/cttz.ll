@@ -19,7 +19,7 @@ declare <4 x i64> @llvm.cttz.v4i64(<4 x i64>, i1) nounwind readnone
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-define amdgpu_kernel void @s_cttz_i32(i32 addrspace(1)* noalias %out, i32 %val) nounwind {
+define amdgpu_kernel void @s_cttz_i32(ptr addrspace(1) noalias %out, i32 %val) nounwind {
 ; SI-LABEL: s_cttz_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -84,11 +84,11 @@ define amdgpu_kernel void @s_cttz_i32(i32 addrspace(1)* noalias %out, i32 %val) 
 ; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %cttz = call i32 @llvm.cttz.i32(i32 %val, i1 false) nounwind readnone
-  store i32 %cttz, i32 addrspace(1)* %out, align 4
+  store i32 %cttz, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @v_cttz_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_cttz_i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
 ; SI-LABEL: v_cttz_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -172,14 +172,14 @@ define amdgpu_kernel void @v_cttz_i32(i32 addrspace(1)* noalias %out, i32 addrsp
 ; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr i32, i32 addrspace(1)* %valptr, i32 %tid
-  %val = load i32, i32 addrspace(1)* %in.gep, align 4
+  %in.gep = getelementptr i32, ptr addrspace(1) %valptr, i32 %tid
+  %val = load i32, ptr addrspace(1) %in.gep, align 4
   %cttz = call i32 @llvm.cttz.i32(i32 %val, i1 false) nounwind readnone
-  store i32 %cttz, i32 addrspace(1)* %out, align 4
+  store i32 %cttz, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @v_cttz_v2i32(<2 x i32> addrspace(1)* noalias %out, <2 x i32> addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_cttz_v2i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
 ; SI-LABEL: v_cttz_v2i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -274,14 +274,14 @@ define amdgpu_kernel void @v_cttz_v2i32(<2 x i32> addrspace(1)* noalias %out, <2
 ; GFX10-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %valptr, i32 %tid
-  %val = load <2 x i32>, <2 x i32> addrspace(1)* %in.gep, align 8
+  %in.gep = getelementptr <2 x i32>, ptr addrspace(1) %valptr, i32 %tid
+  %val = load <2 x i32>, ptr addrspace(1) %in.gep, align 8
   %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %val, i1 false) nounwind readnone
-  store <2 x i32> %cttz, <2 x i32> addrspace(1)* %out, align 8
+  store <2 x i32> %cttz, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @v_cttz_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_cttz_v4i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
 ; SI-LABEL: v_cttz_v4i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -398,14 +398,14 @@ define amdgpu_kernel void @v_cttz_v4i32(<4 x i32> addrspace(1)* noalias %out, <4
 ; GFX10-GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %valptr, i32 %tid
-  %val = load <4 x i32>, <4 x i32> addrspace(1)* %in.gep, align 16
+  %in.gep = getelementptr <4 x i32>, ptr addrspace(1) %valptr, i32 %tid
+  %val = load <4 x i32>, ptr addrspace(1) %in.gep, align 16
   %cttz = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %val, i1 false) nounwind readnone
-  store <4 x i32> %cttz, <4 x i32> addrspace(1)* %out, align 16
+  store <4 x i32> %cttz, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @v_cttz_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_cttz_i8(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
 ; SI-LABEL: v_cttz_i8:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -496,13 +496,13 @@ define amdgpu_kernel void @v_cttz_i8(i8 addrspace(1)* noalias %out, i8 addrspace
 ; GFX10-GISEL-NEXT:    v_ffbl_b32_e32 v1, v1
 ; GFX10-GISEL-NEXT:    global_store_byte v0, v1, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
-  %val = load i8, i8 addrspace(1)* %valptr
+  %val = load i8, ptr addrspace(1) %valptr
   %cttz = call i8 @llvm.cttz.i8(i8 %val, i1 false) nounwind readnone
-  store i8 %cttz, i8 addrspace(1)* %out
+  store i8 %cttz, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_cttz_i64(i64 addrspace(1)* noalias %out, [8 x i32], i64 %val) nounwind {
+define amdgpu_kernel void @s_cttz_i64(ptr addrspace(1) noalias %out, [8 x i32], i64 %val) nounwind {
 ; SI-LABEL: s_cttz_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x13
@@ -582,11 +582,11 @@ define amdgpu_kernel void @s_cttz_i64(i64 addrspace(1)* noalias %out, [8 x i32],
 ; GFX10-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %cttz = call i64 @llvm.cttz.i64(i64 %val, i1 false)
-  store i64 %cttz, i64 addrspace(1)* %out
+  store i64 %cttz, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_cttz_i64_trunc(i32 addrspace(1)* noalias %out, i64 %val) nounwind {
+define amdgpu_kernel void @s_cttz_i64_trunc(ptr addrspace(1) noalias %out, i64 %val) nounwind {
 ; SI-LABEL: s_cttz_i64_trunc:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -660,11 +660,11 @@ define amdgpu_kernel void @s_cttz_i64_trunc(i32 addrspace(1)* noalias %out, i64 
 ; GFX10-GISEL-NEXT:    s_endpgm
   %cttz = call i64 @llvm.cttz.i64(i64 %val, i1 false)
   %trunc = trunc i64 %cttz to i32
-  store i32 %trunc, i32 addrspace(1)* %out
+  store i32 %trunc, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_cttz_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @v_cttz_i64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: v_cttz_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -765,15 +765,15 @@ define amdgpu_kernel void @v_cttz_i64(i64 addrspace(1)* noalias %out, i64 addrsp
 ; GFX10-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
-  %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
-  %val = load i64, i64 addrspace(1)* %in.gep
+  %in.gep = getelementptr i64, ptr addrspace(1) %in, i32 %tid
+  %out.gep = getelementptr i64, ptr addrspace(1) %out, i32 %tid
+  %val = load i64, ptr addrspace(1) %in.gep
   %cttz = call i64 @llvm.cttz.i64(i64 %val, i1 false)
-  store i64 %cttz, i64 addrspace(1)* %out.gep
+  store i64 %cttz, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_cttz_i64_trunc(i32 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
+define amdgpu_kernel void @v_cttz_i64_trunc(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; SI-LABEL: v_cttz_i64_trunc:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -874,16 +874,16 @@ define amdgpu_kernel void @v_cttz_i64_trunc(i32 addrspace(1)* noalias %out, i64 
 ; GFX10-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
-  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
-  %val = load i64, i64 addrspace(1)* %in.gep
+  %in.gep = getelementptr i64, ptr addrspace(1) %in, i32 %tid
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  %val = load i64, ptr addrspace(1) %in.gep
   %cttz = call i64 @llvm.cttz.i64(i64 %val, i1 false)
   %trunc = trunc i64 %cttz to i32
-  store i32 %trunc, i32 addrspace(1)* %out.gep
+  store i32 %trunc, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_cttz_i32_sel_eq_neg1(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_cttz_i32_sel_eq_neg1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
 ; SI-LABEL: v_cttz_i32_sel_eq_neg1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -968,16 +968,16 @@ define amdgpu_kernel void @v_cttz_i32_sel_eq_neg1(i32 addrspace(1)* noalias %out
 ; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr i32, i32 addrspace(1)* %valptr, i32 %tid
-  %val = load i32, i32 addrspace(1)* %in.gep
+  %in.gep = getelementptr i32, ptr addrspace(1) %valptr, i32 %tid
+  %val = load i32, ptr addrspace(1) %in.gep
   %cttz = call i32 @llvm.cttz.i32(i32 %val, i1 false) nounwind readnone
   %cmp = icmp eq i32 %val, 0
   %sel = select i1 %cmp, i32 -1, i32 %cttz
-  store i32 %sel, i32 addrspace(1)* %out
+  store i32 %sel, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_cttz_i32_sel_ne_neg1(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_cttz_i32_sel_ne_neg1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
 ; SI-LABEL: v_cttz_i32_sel_ne_neg1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1062,17 +1062,17 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_neg1(i32 addrspace(1)* noalias %out
 ; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr i32, i32 addrspace(1)* %valptr, i32 %tid
-  %val = load i32, i32 addrspace(1)* %in.gep
+  %in.gep = getelementptr i32, ptr addrspace(1) %valptr, i32 %tid
+  %val = load i32, ptr addrspace(1) %in.gep
   %cttz = call i32 @llvm.cttz.i32(i32 %val, i1 false) nounwind readnone
   %cmp = icmp ne i32 %val, 0
   %sel = select i1 %cmp, i32 %cttz, i32 -1
-  store i32 %sel, i32 addrspace(1)* %out
+  store i32 %sel, ptr addrspace(1) %out
   ret void
 }
 
 ; TODO: Should be able to eliminate select here as well.
-define amdgpu_kernel void @v_cttz_i32_sel_eq_bitwidth(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_cttz_i32_sel_eq_bitwidth(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
 ; SI-LABEL: v_cttz_i32_sel_eq_bitwidth:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1168,16 +1168,16 @@ define amdgpu_kernel void @v_cttz_i32_sel_eq_bitwidth(i32 addrspace(1)* noalias 
 ; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr i32, i32 addrspace(1)* %valptr, i32 %tid
-  %val = load i32, i32 addrspace(1)* %in.gep
+  %in.gep = getelementptr i32, ptr addrspace(1) %valptr, i32 %tid
+  %val = load i32, ptr addrspace(1) %in.gep
   %cttz = call i32 @llvm.cttz.i32(i32 %val, i1 false) nounwind readnone
   %cmp = icmp eq i32 %cttz, 32
   %sel = select i1 %cmp, i32 -1, i32 %cttz
-  store i32 %sel, i32 addrspace(1)* %out
+  store i32 %sel, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
 ; SI-LABEL: v_cttz_i32_sel_ne_bitwidth:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1273,16 +1273,16 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias 
 ; GFX10-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr i32, i32 addrspace(1)* %valptr, i32 %tid
-  %val = load i32, i32 addrspace(1)* %in.gep
+  %in.gep = getelementptr i32, ptr addrspace(1) %valptr, i32 %tid
+  %val = load i32, ptr addrspace(1) %in.gep
   %cttz = call i32 @llvm.cttz.i32(i32 %val, i1 false) nounwind readnone
   %cmp = icmp ne i32 %cttz, 32
   %sel = select i1 %cmp, i32 %cttz, i32 -1
-  store i32 %sel, i32 addrspace(1)* %out
+  store i32 %sel, ptr addrspace(1) %out
   ret void
 }
 
- define amdgpu_kernel void @v_cttz_i8_sel_eq_neg1(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
+ define amdgpu_kernel void @v_cttz_i8_sel_eq_neg1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
 ; SI-LABEL: v_cttz_i8_sel_eq_neg1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1373,16 +1373,16 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias 
 ; GFX10-GISEL-NEXT:    global_store_byte v2, v0, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %valptr.gep = getelementptr i8, i8 addrspace(1)* %valptr, i32 %tid
-  %val = load i8, i8 addrspace(1)* %valptr.gep
+  %valptr.gep = getelementptr i8, ptr addrspace(1) %valptr, i32 %tid
+  %val = load i8, ptr addrspace(1) %valptr.gep
   %cttz = call i8 @llvm.cttz.i8(i8 %val, i1 false) nounwind readnone
   %cmp = icmp eq i8 %val, 0
   %sel = select i1 %cmp, i8 -1, i8 %cttz
-  store i8 %sel, i8 addrspace(1)* %out
+  store i8 %sel, ptr addrspace(1) %out
   ret void
 }
 
- define amdgpu_kernel void @v_cttz_i16_sel_eq_neg1(i16 addrspace(1)* noalias %out, i16 addrspace(1)* noalias %valptr) nounwind {
+ define amdgpu_kernel void @v_cttz_i16_sel_eq_neg1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
 ; SI-LABEL: v_cttz_i16_sel_eq_neg1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1480,16 +1480,16 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias 
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, 0xffff, vcc_lo
 ; GFX10-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
-  %val = load i16, i16 addrspace(1)* %valptr
+  %val = load i16, ptr addrspace(1) %valptr
   %cttz = call i16 @llvm.cttz.i16(i16 %val, i1 false) nounwind readnone
   %cmp = icmp eq i16 %val, 0
   %sel = select i1 %cmp, i16 -1, i16 %cttz
-  store i16 %sel, i16 addrspace(1)* %out
+  store i16 %sel, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_cttz_i7_sel_eq_neg1(i7 addrspace(1)* noalias %out, i7 addrspace(1)* noalias %valptr) nounwind {
+define amdgpu_kernel void @v_cttz_i7_sel_eq_neg1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) nounwind {
 ; SI-LABEL: v_cttz_i7_sel_eq_neg1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1585,11 +1585,11 @@ define amdgpu_kernel void @v_cttz_i7_sel_eq_neg1(i7 addrspace(1)* noalias %out, 
 ; GFX10-GISEL-NEXT:    global_store_byte v1, v0, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %valptr.gep = getelementptr i7, i7 addrspace(1)* %valptr, i32 %tid
-  %val = load i7, i7 addrspace(1)* %valptr.gep
+  %valptr.gep = getelementptr i7, ptr addrspace(1) %valptr, i32 %tid
+  %val = load i7, ptr addrspace(1) %valptr.gep
   %cttz = call i7 @llvm.cttz.i7(i7 %val, i1 false) nounwind readnone
   %cmp = icmp eq i7 %val, 0
   %sel = select i1 %cmp, i7 -1, i7 %cttz
-  store i7 %sel, i7 addrspace(1)* %out
+  store i7 %sel, ptr addrspace(1) %out
   ret void
 }
