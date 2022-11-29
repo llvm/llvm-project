@@ -723,7 +723,18 @@ int main(int argc, char **argv) {
     errs() << "Cannot use -O# with legacy PM.\n";
     return 1;
   }
-
+  if (EmitSummaryIndex) {
+    errs() << "Cannot use -module-summary with legacy PM.\n";
+    return 1;
+  }
+  if (EmitModuleHash) {
+    errs() << "Cannot use -module-hash with legacy PM.\n";
+    return 1;
+  }
+  if (OutputThinLTOBC) {
+    errs() << "Cannot use -thinlto-bc with legacy PM.\n";
+    return 1;
+  }
   // Create a PassManager to hold and optimize the collection of passes we are
   // about to build. If the -debugify-each option is set, wrap each pass with
   // the (-check)-debugify passes.
@@ -844,18 +855,10 @@ int main(int argc, char **argv) {
       BOS = std::make_unique<raw_svector_ostream>(Buffer);
       OS = BOS.get();
     }
-    if (OutputAssembly) {
-      if (EmitSummaryIndex)
-        report_fatal_error("Text output is incompatible with -module-summary");
-      if (EmitModuleHash)
-        report_fatal_error("Text output is incompatible with -module-hash");
+    if (OutputAssembly)
       Passes.add(createPrintModulePass(*OS, "", PreserveAssemblyUseListOrder));
-    } else if (OutputThinLTOBC)
-      report_fatal_error(
-          "Use the new pass manager for printing ThinLTO bitcode");
     else
-      Passes.add(createBitcodeWriterPass(*OS, PreserveBitcodeUseListOrder,
-                                         EmitSummaryIndex, EmitModuleHash));
+      Passes.add(createBitcodeWriterPass(*OS, PreserveBitcodeUseListOrder));
   }
 
   // Before executing passes, print the final values of the LLVM options.
