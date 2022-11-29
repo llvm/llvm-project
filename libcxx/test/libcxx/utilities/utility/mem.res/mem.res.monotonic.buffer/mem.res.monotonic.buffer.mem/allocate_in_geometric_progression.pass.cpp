@@ -24,7 +24,7 @@ int main(int, char**) {
   std::pmr::monotonic_buffer_resource mono;
 
   for (int i = 0; i < 100; ++i) {
-    mono.allocate(1);
+    (void)mono.allocate(1);
     assert(globalMemCounter.last_new_size < 1000000000);
     mono.release();
     assert(globalMemCounter.checkOutstandingNewEq(0));

@@ -66,7 +66,7 @@ int main(int, char**) {
     P2.throw_on_alloc             = true;
     std::pmr::memory_resource& M2 = R2;
     try {
-      M2.allocate(42);
+      (void)M2.allocate(42);
       assert(false);
     } catch (TestException const&) {
       // do nothing.
