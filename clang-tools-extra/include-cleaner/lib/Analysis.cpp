@@ -12,28 +12,18 @@
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang::include_cleaner {
-
-namespace {
-// Gets all the providers for a symbol by tarversing each location.
-llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
-                                           const SourceManager &SM,
-                                           const PragmaIncludes *PI) {
-  llvm::SmallVector<Header> Headers;
-  for (auto &Loc : locateSymbol(S))
-    Headers.append(findHeaders(Loc, SM, PI));
-  return Headers;
-}
-} // namespace
 
 void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
               llvm::ArrayRef<SymbolReference> MacroRefs,
@@ -55,7 +45,7 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
     assert(MacroRef.Target.kind() == Symbol::Macro);
     if (!SM.isWrittenInMainFile(SM.getSpellingLoc(MacroRef.RefLocation)))
       continue;
-    CB(MacroRef, findHeaders(MacroRef.Target.macro().Definition, SM, PI));
+    CB(MacroRef, headersForSymbol(MacroRef.Target, SM, PI));
   }
 }
 
