@@ -292,6 +292,14 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
     RC = &AMDGPU::VReg_224RegClass;
   } else if (Info->VAddrDwords == 8) {
     RC = &AMDGPU::VReg_256RegClass;
+  } else if (Info->VAddrDwords == 9) {
+    RC = &AMDGPU::VReg_288RegClass;
+  } else if (Info->VAddrDwords == 10) {
+    RC = &AMDGPU::VReg_320RegClass;
+  } else if (Info->VAddrDwords == 11) {
+    RC = &AMDGPU::VReg_352RegClass;
+  } else if (Info->VAddrDwords == 12) {
+    RC = &AMDGPU::VReg_384RegClass;
   } else {
     RC = &AMDGPU::VReg_512RegClass;
     NewAddrDwords = 16;

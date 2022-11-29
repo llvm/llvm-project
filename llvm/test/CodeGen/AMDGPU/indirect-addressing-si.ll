@@ -385,22 +385,19 @@ bb7:                                              ; preds = %bb4, %bb1
 ; GCN: s_load_dword [[ARG:s[0-9]+]]
 
 ; MOVREL: v_mov_b32_e32 v{{[0-9]+}}, 0x41900000
+; MOVREL: v_mov_b32_e32 v{{[0-9]+}}, 0x41b0cccd
 ; MOVREL: s_waitcnt
 ; MOVREL: s_add_i32 m0, [[ARG]], -16
 ; MOVREL: v_movreld_b32_e32 v{{[0-9]+}}, 4.0
-; MOVREL: v_mov_b32_e32 v{{[0-9]+}}, 0x41b0cccd
 ; MOVREL: v_movreld_b32_e32 v{{[0-9]+}}, -4.0
 ; MOVREL: s_mov_b32 m0, -1
 
 
 ; IDXMODE: v_mov_b32_e32 v{{[0-9]+}}, 0x41900000
+; IDXMODE: v_mov_b32_e32 v{{[0-9]+}}, 0x41b0cccd
 ; IDXMODE: s_waitcnt
 ; IDXMODE: s_add_i32 [[ARG]], [[ARG]], -16
-; IDXMODE: s_set_gpr_idx_on [[ARG]], gpr_idx(DST)
 ; IDXMODE: v_mov_b32_e32 v{{[0-9]+}}, 4.0
-; IDXMODE: s_set_gpr_idx_off
-; IDXMODE: v_mov_b32_e32 v{{[0-9]+}}, 0x41b0cccd
-; IDXMODE: s_set_gpr_idx_on [[ARG]], gpr_idx(DST)
 ; IDXMODE: v_mov_b32_e32 v{{[0-9]+}}, -4.0
 ; IDXMODE: s_set_gpr_idx_off
 

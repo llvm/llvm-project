@@ -2360,6 +2360,14 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
         return AMDGPU::VReg_224RegClassID;
       case 256:
         return AMDGPU::VReg_256RegClassID;
+      case 288:
+        return AMDGPU::VReg_288RegClassID;
+      case 320:
+        return AMDGPU::VReg_320RegClassID;
+      case 352:
+        return AMDGPU::VReg_352RegClassID;
+      case 384:
+        return AMDGPU::VReg_384RegClassID;
       case 512:
         return AMDGPU::VReg_512RegClassID;
       case 1024:
@@ -2398,6 +2406,14 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
         return AMDGPU::SGPR_224RegClassID;
       case 256:
         return AMDGPU::SGPR_256RegClassID;
+      case 288:
+        return AMDGPU::SGPR_288RegClassID;
+      case 320:
+        return AMDGPU::SGPR_320RegClassID;
+      case 352:
+        return AMDGPU::SGPR_352RegClassID;
+      case 384:
+        return AMDGPU::SGPR_384RegClassID;
       case 512:
         return AMDGPU::SGPR_512RegClassID;
     }
@@ -2420,6 +2436,14 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
         return AMDGPU::AReg_224RegClassID;
       case 256:
         return AMDGPU::AReg_256RegClassID;
+      case 288:
+        return AMDGPU::AReg_288RegClassID;
+      case 320:
+        return AMDGPU::AReg_320RegClassID;
+      case 352:
+        return AMDGPU::AReg_352RegClassID;
+      case 384:
+        return AMDGPU::AReg_384RegClassID;
       case 512:
         return AMDGPU::AReg_512RegClassID;
       case 1024:
@@ -3684,7 +3708,7 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
       AMDGPU::getAddrSizeMIMGOp(BaseOpcode, DimInfo, IsA16, hasG16());
 
   if (!IsNSA) {
-    if (ExpectedAddrSize > 8)
+    if (ExpectedAddrSize > 12)
       ExpectedAddrSize = 16;
 
     // Allow oversized 8 VGPR vaddr when only 5/6/7 VGPRs are required.
