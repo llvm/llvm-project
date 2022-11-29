@@ -17,4 +17,4 @@ template<int N, typename T> struct X : X<N+1, T*> {};
 X<0, int> x; // expected-note {{in instantiation of}}
 
 // FIXME: It crashes. Investigating.
-// UNSUPPORTED: windows-gnu
+// UNSUPPORTED: target={{.*-windows-gnu}}
