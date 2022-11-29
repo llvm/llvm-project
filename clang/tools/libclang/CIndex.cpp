@@ -1374,7 +1374,7 @@ bool CursorVisitor::VisitConceptRequirement(const concepts::Requirement &R) {
   }
   case Requirement::RK_Nested: {
     const NestedRequirement &NR = cast<NestedRequirement>(R);
-    if (!NR.isSubstitutionFailure()) {
+    if (!NR.hasInvalidConstraint()) {
       if (Visit(NR.getConstraintExpr()))
         return true;
     }

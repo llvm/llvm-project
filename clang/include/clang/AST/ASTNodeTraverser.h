@@ -246,7 +246,7 @@ public:
                     .getTypeConstraint()
                     ->getImmediatelyDeclaredConstraint());
       } else if (auto *NR = dyn_cast<concepts::NestedRequirement>(R)) {
-        if (!NR->isSubstitutionFailure())
+        if (!NR->hasInvalidConstraint())
           Visit(NR->getConstraintExpr());
       }
     });
