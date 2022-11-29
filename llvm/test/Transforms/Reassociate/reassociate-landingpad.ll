@@ -1,7 +1,7 @@
 ; Reassociate used to move the negation of $time_1_P14.0 above the
 ; landingpad.
 ;
-; RUN: opt -reassociate -disable-output < %s
+; RUN: opt -passes=reassociate -disable-output < %s
 ;
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
